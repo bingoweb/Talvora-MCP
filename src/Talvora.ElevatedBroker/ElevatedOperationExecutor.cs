@@ -115,7 +115,7 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
                 ExecuteProcessAndWaitAsync(request, CreateProcessStartInfo(operation, redirectStandardStreams: true), cancellationToken),
             ProcessExecutionMode.StartOnly =>
                 Task.FromResult(StartProcessOnly(request, CreateProcessStartInfo(operation, redirectStandardStreams: false), cancellationToken)),
-            _ => throw new ArgumentOutOfRangeException(nameof(operation), operation.Mode, "Unsupported process execution mode."),
+            _ => throw new InvalidEnumArgumentException(nameof(operation.Mode), (int)operation.Mode, typeof(ProcessExecutionMode)),
         };
     }
 
