@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+option csharp_namespace = "Talvora.Ipc.Contracts.Grpc";
+
+package talvora.ipc.v1;
+
+service BrokerControl {
+  rpc Health (BrokerHealthRequest) returns (BrokerHealthResponse);
+}
+
+message BrokerHealthRequest {
+  int32 protocol_version = 1;
+}
+
+message BrokerHealthResponse {
+  int32 protocol_version = 1;
+  bool ready = 2;
+  string service_version = 3;
+  bool is_elevated = 4;
+  int32 process_id = 5;
+}

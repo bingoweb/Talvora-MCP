@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <ProjectReference Include="../Talvora.Abstractions/Talvora.Abstractions.csproj" />
+    <ProjectReference Include="../Talvora.Core/Talvora.Core.csproj" />
+    <ProjectReference Include="../Talvora.Modules.FileSystem/Talvora.Modules.FileSystem.csproj" />
+    <ProjectReference Include="../Talvora.Modules.Shell/Talvora.Modules.Shell.csproj" />
+    <ProjectReference Include="../Talvora.Modules.Processes/Talvora.Modules.Processes.csproj" />
+  </ItemGroup>
+</Project>

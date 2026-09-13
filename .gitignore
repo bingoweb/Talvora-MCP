@@ -1,0 +1,15 @@
+.vs/
+.vscode/
+.idea/
+**/bin/
+**/obj/
+artifacts/
+TestResults/
+.talvora/
+.pytest_cache/
+**/__pycache__/
+*.pyc
+*.user
+*.suo
+*.log
+*.trx
