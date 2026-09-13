@@ -18,6 +18,7 @@ builder.Services.AddWindowsService(options =>
     options.ServiceName = "Talvora Elevated Broker";
 });
 builder.Services.AddGrpc();
+builder.Services.AddSingleton<ElevatedOperationExecutor>();
 
 var pipeName = builder.Configuration[BrokerProtocol.PipeNameConfigurationKey]
     ?? BrokerProtocol.DefaultPipeName;
