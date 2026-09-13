@@ -29,18 +29,27 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
             return Failure(request, "invalid_input", "OperationId is required.", "elevated.execute");
         }
 
-        if (request.OperationCase != ElevatedOperationRequest.OperationOneofCase.Shell)
+        var operationName = request.OperationCase switch
         {
-            return Failure(
-                request,
-                "unsupported_operation",
-                $"Elevated operation '{request.OperationCase}' is not supported yet.",
-                "elevated.execute");
-        }
+            ElevatedOperationRequest.OperationOneofCase.Shell => "elevated.shell.execute",
+            ElevatedOperationRequest.OperationOneofCase.Process => "elevated.process.execute",
+            _ => "elevated.execute",
+        };
 
         try
         {
-            return await ExecuteShellAsync(request, cancellationToken).ConfigureAwait(false);
+            return request.OperationCase switch
+            {
+                ElevatedOperationRequest.OperationOneofCase.Shell =>
+                    await ExecuteShellAsync(request, cancellationToken).ConfigureAwait(false),
+                ElevatedOperationRequest.OperationOneofCase.Process =>
+                    await ExecuteProcessAsync(request, cancellationToken).ConfigureAwait(false),
+                _ => Failure(
+                    request,
+                    "unsupported_operation",
+                    $"Elevated operation '{request.OperationCase}' is not supported.",
+                    operationName),
+            };
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -48,7 +57,7 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
                 request,
                 "operation_cancelled",
                 "The elevated operation was cancelled.",
-                "elevated.shell.execute");
+                operationName);
         }
         catch (TimeoutException exception)
         {
@@ -56,7 +65,7 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
                 request,
                 "timeout",
                 exception.Message,
-                "elevated.shell.execute",
+                operationName,
                 retryable: true);
         }
         catch (UnauthorizedAccessException exception)
@@ -65,7 +74,7 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
                 request,
                 "access_denied",
                 exception.Message,
-                "elevated.shell.execute",
+                operationName,
                 nativeCode: exception.HResult);
         }
         catch (FileNotFoundException exception)
@@ -74,7 +83,7 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
                 request,
                 "not_found",
                 exception.Message,
-                "elevated.shell.execute",
+                operationName,
                 nativeCode: exception.HResult);
         }
         catch (DirectoryNotFoundException exception)
@@ -83,7 +92,7 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
                 request,
                 "not_found",
                 exception.Message,
-                "elevated.shell.execute",
+                operationName,
                 nativeCode: exception.HResult);
         }
         catch (ArgumentException exception)
@@ -92,7 +101,7 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
                 request,
                 "invalid_input",
                 exception.Message,
-                "elevated.shell.execute",
+                operationName,
                 nativeCode: exception.HResult);
         }
         catch (Win32Exception exception)
@@ -101,7 +110,7 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
                 request,
                 "native_error",
                 exception.Message,
-                "elevated.shell.execute",
+                operationName,
                 nativeCode: exception.NativeErrorCode);
         }
         catch (IOException exception)
@@ -110,7 +119,7 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
                 request,
                 "io_error",
                 exception.Message,
-                "elevated.shell.execute",
+                operationName,
                 nativeCode: exception.HResult,
                 retryable: true);
         }
@@ -120,19 +129,34 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
                 request,
                 "operation_failed",
                 exception.Message,
-                "elevated.shell.execute",
+                operationName,
                 nativeCode: exception.HResult);
         }
     }
 
-    private async Task<ElevatedOperationResponse> ExecuteShellAsync(
+    private Task<ElevatedOperationResponse> ExecuteShellAsync(
         ElevatedOperationRequest request,
         CancellationToken cancellationToken)
     {
         var shell = request.Shell;
         ArgumentException.ThrowIfNullOrWhiteSpace(shell.Command);
+        return ExecuteProcessCoreAsync(request, CreateShellStartInfo(shell), cancellationToken);
+    }
 
-        var startInfo = CreateShellStartInfo(shell);
+    private Task<ElevatedOperationResponse> ExecuteProcessAsync(
+        ElevatedOperationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var operation = request.Process;
+        ArgumentException.ThrowIfNullOrWhiteSpace(operation.FileName);
+        return ExecuteProcessCoreAsync(request, CreateProcessStartInfo(operation), cancellationToken);
+    }
+
+    private async Task<ElevatedOperationResponse> ExecuteProcessCoreAsync(
+        ElevatedOperationRequest request,
+        ProcessStartInfo startInfo,
+        CancellationToken cancellationToken)
+    {
         using var process = new Process { StartInfo = startInfo };
         var started = _timeProvider.GetTimestamp();
 
@@ -180,7 +204,7 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
         {
             TryKill(process);
             throw new TimeoutException(
-                $"Elevated command exceeded the configured timeout of {request.TimeoutMilliseconds} ms.");
+                $"Elevated process exceeded the configured timeout of {request.TimeoutMilliseconds} ms.");
         }
     }
 
@@ -188,22 +212,8 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
     {
         var startInfo = shell.Shell switch
         {
-            ElevatedShellKind.Powershell => new ProcessStartInfo
-            {
-                FileName = "pwsh.exe",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            },
-            ElevatedShellKind.Cmd => new ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            },
+            ElevatedShellKind.Powershell => CreateRedirectedStartInfo("pwsh.exe", createNoWindow: true),
+            ElevatedShellKind.Cmd => CreateRedirectedStartInfo("cmd.exe", createNoWindow: true),
             _ => throw new ArgumentOutOfRangeException(nameof(shell), shell.Shell, "Unsupported elevated shell."),
         };
 
@@ -227,13 +237,40 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
             startInfo.ArgumentList.Add(shell.Command);
         }
 
-        if (!string.IsNullOrWhiteSpace(shell.WorkingDirectory))
-        {
-            startInfo.WorkingDirectory = Path.GetFullPath(shell.WorkingDirectory);
-        }
-
+        ApplyWorkingDirectory(startInfo, shell.WorkingDirectory);
         ApplyEnvironment(startInfo, shell.Environment);
         return startInfo;
+    }
+
+    private static ProcessStartInfo CreateProcessStartInfo(ProcessExecutionOperation operation)
+    {
+        var startInfo = CreateRedirectedStartInfo(operation.FileName, operation.CreateNoWindow);
+        foreach (var argument in operation.Arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        ApplyWorkingDirectory(startInfo, operation.WorkingDirectory);
+        ApplyEnvironment(startInfo, operation.Environment);
+        return startInfo;
+    }
+
+    private static ProcessStartInfo CreateRedirectedStartInfo(string fileName, bool createNoWindow) =>
+        new()
+        {
+            FileName = fileName,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = createNoWindow,
+        };
+
+    private static void ApplyWorkingDirectory(ProcessStartInfo startInfo, string workingDirectory)
+    {
+        if (!string.IsNullOrWhiteSpace(workingDirectory))
+        {
+            startInfo.WorkingDirectory = Path.GetFullPath(workingDirectory);
+        }
     }
 
     private static void ApplyEnvironment(
