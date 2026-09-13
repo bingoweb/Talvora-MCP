@@ -11,6 +11,8 @@ namespace Talvora.Ipc.Tests;
 [TestClass]
 public sealed class ExecutionRouterAutoProcessTests
 {
+    private static readonly string[] ExpectedArguments = ["--test"];
+
     [TestMethod]
     public async Task AutoProcessStartFallsBackToBrokerWhenWindowsRequiresElevation()
     {
@@ -23,7 +25,7 @@ public sealed class ExecutionRouterAutoProcessTests
             brokerClient);
 
         var result = await router.StartProcessAsync(
-            new StartProcessRequest("requires-admin.exe", ["--test"], @"C:\Windows"),
+            new StartProcessRequest("requires-admin.exe", ExpectedArguments, @"C:\Windows"),
             ExecutionPrivilege.Auto,
             CancellationToken.None);
 
@@ -34,7 +36,7 @@ public sealed class ExecutionRouterAutoProcessTests
         Assert.IsNotNull(brokerClient.LastProcessRequest);
         Assert.AreEqual(BrokerProcessExecutionMode.StartOnly, brokerClient.LastProcessRequest.Mode);
         Assert.AreEqual("requires-admin.exe", brokerClient.LastProcessRequest.FileName);
-        CollectionAssert.AreEqual(new[] { "--test" }, brokerClient.LastProcessRequest.Arguments?.ToArray());
+        CollectionAssert.AreEqual(ExpectedArguments, brokerClient.LastProcessRequest.Arguments?.ToArray());
         Assert.AreEqual(@"C:\Windows", brokerClient.LastProcessRequest.WorkingDirectory);
         Assert.AreEqual(9090, result.Value.ProcessId);
     }
