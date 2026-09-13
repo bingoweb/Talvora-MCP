@@ -1,3 +1,4 @@
+using Grpc.Core;
 using Talvora.Ipc.Contracts;
 using Talvora.Ipc.Contracts.Grpc;
 
@@ -150,5 +151,25 @@ public sealed class ElevatedOperationExecutorTests
         Assert.AreEqual("operation_cancelled", cancellationResponse.Error.Code);
         Assert.AreEqual("elevated.shell.execute", cancellationResponse.Error.Operation);
         Assert.IsFalse(cancellationResponse.Error.Retryable);
+    }
+
+    [TestMethod]
+    public void BrokerControlServiceOwnsExecuteRpc()
+    {
+        var serviceType = typeof(Talvora.ElevatedBroker.BrokerControlService);
+        var executeMethod = serviceType.GetMethod(
+            "Execute",
+            [typeof(ElevatedOperationRequest), typeof(ServerCallContext)]);
+
+        Assert.IsNotNull(executeMethod, "BrokerControlService must override the generated Execute RPC.");
+        Assert.AreEqual(
+            serviceType,
+            executeMethod.DeclaringType,
+            "Execute must be owned by BrokerControlService, not inherited from the generated base implementation.");
+
+        var constructor = serviceType.GetConstructor([typeof(Talvora.ElevatedBroker.ElevatedOperationExecutor)]);
+        Assert.IsNotNull(
+            constructor,
+            "BrokerControlService must receive ElevatedOperationExecutor through constructor injection.");
     }
 }
