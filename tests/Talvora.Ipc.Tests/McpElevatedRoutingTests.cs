@@ -44,8 +44,9 @@ public sealed class McpElevatedRoutingTests
         }).ToArray();
 
         var invocation = method.Invoke(tools, arguments);
-        Assert.IsInstanceOfType<Task<ToolEnvelope<ShellExecutionResult>>>(invocation);
-        var envelope = await (Task<ToolEnvelope<ShellExecutionResult>>)invocation;
+        var invocationTask = invocation as Task<ToolEnvelope<ShellExecutionResult>>;
+        Assert.IsNotNull(invocationTask);
+        var envelope = await invocationTask;
 
         Assert.IsTrue(envelope.Ok, envelope.Error?.Message);
         Assert.IsNotNull(envelope.Data);
