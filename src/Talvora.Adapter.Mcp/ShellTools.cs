@@ -74,9 +74,17 @@ public sealed class ShellTools(
         }
 
         var value = result.Value;
+        if (value.ExitCode is not { } exitCode)
+        {
+            return TalvoraResult.Failure<ShellExecutionResult>(new TalvoraError(
+                "operation_failed",
+                "Elevated Broker returned a completed shell operation without an exit code.",
+                "elevated.shell.execute"));
+        }
+
         return TalvoraResult.Success(new ShellExecutionResult(
             value.ProcessId,
-            value.ExitCode,
+            exitCode,
             value.StandardOutput,
             value.StandardError,
             value.Duration));
