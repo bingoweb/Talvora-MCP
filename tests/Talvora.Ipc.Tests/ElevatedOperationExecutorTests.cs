@@ -1,4 +1,4 @@
-using System.Reflection;
+using Talvora.Ipc.Contracts;
 using Talvora.Ipc.Contracts.Grpc;
 
 namespace Talvora.Ipc.Tests;
@@ -20,18 +20,31 @@ public sealed class ElevatedOperationExecutorTests
     }
 
     [TestMethod]
-    public void OperationExecutorExposesSingleRequestEntryPoint()
+    public async Task OperationExecutorExposesSingleRequestEntryPoint()
     {
-        var executeMethod = typeof(Talvora.ElevatedBroker.ElevatedOperationExecutor).GetMethod(
-            "ExecuteAsync",
-            BindingFlags.Instance | BindingFlags.Public,
-            binder: null,
-            types: [typeof(ElevatedOperationRequest), typeof(CancellationToken)],
-            modifiers: null);
+        const string operationId = "op-powershell-001";
+        var request = new ElevatedOperationRequest
+        {
+            OperationId = operationId,
+            ProtocolVersion = BrokerProtocol.CurrentVersion,
+            TimeoutMilliseconds = 10_000,
+            Shell = new ShellExecutionOperation
+            {
+                Shell = ElevatedShellKind.Powershell,
+                Command = "Write-Output 'talvora-elevated-ok'; [Console]::Error.WriteLine('talvora-elevated-err'); exit 7",
+            },
+        };
 
-        Assert.IsNotNull(
-            executeMethod,
-            "Elevated execution must flow through ExecuteAsync(ElevatedOperationRequest, CancellationToken).");
-        Assert.AreEqual(typeof(Task<ElevatedOperationResponse>), executeMethod.ReturnType);
+        var response = await new Talvora.ElevatedBroker.ElevatedOperationExecutor()
+            .ExecuteAsync(request, CancellationToken.None);
+
+        Assert.AreEqual(operationId, response.OperationId);
+        Assert.AreEqual(BrokerProtocol.CurrentVersion, response.ProtocolVersion);
+        Assert.IsTrue(response.Success);
+        Assert.IsNotNull(response.Execution);
+        Assert.IsTrue(response.Execution.ProcessId > 0);
+        Assert.AreEqual(7, response.Execution.ExitCode);
+        StringAssert.Contains(response.Execution.Stdout, "talvora-elevated-ok");
+        StringAssert.Contains(response.Execution.Stderr, "talvora-elevated-err");
     }
 }
