@@ -22,8 +22,10 @@ public sealed class ElevatedOperationExecutorTests
     [TestMethod]
     public async Task OperationExecutorExposesSingleRequestEntryPoint()
     {
+        var executor = new Talvora.ElevatedBroker.ElevatedOperationExecutor();
+
         const string operationId = "op-powershell-001";
-        var request = new ElevatedOperationRequest
+        var powerShellRequest = new ElevatedOperationRequest
         {
             OperationId = operationId,
             ProtocolVersion = BrokerProtocol.CurrentVersion,
@@ -35,16 +37,42 @@ public sealed class ElevatedOperationExecutorTests
             },
         };
 
-        var response = await new Talvora.ElevatedBroker.ElevatedOperationExecutor()
-            .ExecuteAsync(request, CancellationToken.None);
+        var powerShellResponse = await executor.ExecuteAsync(powerShellRequest, CancellationToken.None);
 
-        Assert.AreEqual(operationId, response.OperationId);
-        Assert.AreEqual(BrokerProtocol.CurrentVersion, response.ProtocolVersion);
-        Assert.IsTrue(response.Success);
-        Assert.IsNotNull(response.Execution);
-        Assert.IsTrue(response.Execution.ProcessId > 0);
-        Assert.AreEqual(7, response.Execution.ExitCode);
-        StringAssert.Contains(response.Execution.Stdout, "talvora-elevated-ok");
-        StringAssert.Contains(response.Execution.Stderr, "talvora-elevated-err");
+        Assert.AreEqual(operationId, powerShellResponse.OperationId);
+        Assert.AreEqual(BrokerProtocol.CurrentVersion, powerShellResponse.ProtocolVersion);
+        Assert.IsTrue(powerShellResponse.Success);
+        Assert.IsNotNull(powerShellResponse.Execution);
+        Assert.IsTrue(powerShellResponse.Execution.ProcessId > 0);
+        Assert.AreEqual(7, powerShellResponse.Execution.ExitCode);
+        StringAssert.Contains(powerShellResponse.Execution.Stdout, "talvora-elevated-ok");
+        StringAssert.Contains(powerShellResponse.Execution.Stderr, "talvora-elevated-err");
+
+        var workingDirectory = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar);
+        var cmdRequest = new ElevatedOperationRequest
+        {
+            OperationId = "op-cmd-001",
+            ProtocolVersion = BrokerProtocol.CurrentVersion,
+            TimeoutMilliseconds = 10_000,
+            Shell = new ShellExecutionOperation
+            {
+                Shell = ElevatedShellKind.Cmd,
+                Command = "echo %TALVORA_TEST_VAR% && cd",
+                WorkingDirectory = workingDirectory,
+            },
+        };
+        cmdRequest.Shell.Environment.Add(new EnvironmentVariable
+        {
+            Name = "TALVORA_TEST_VAR",
+            Value = "talvora-env-ok",
+        });
+
+        var cmdResponse = await executor.ExecuteAsync(cmdRequest, CancellationToken.None);
+
+        Assert.IsTrue(cmdResponse.Success);
+        Assert.IsNotNull(cmdResponse.Execution);
+        Assert.AreEqual(0, cmdResponse.Execution.ExitCode);
+        StringAssert.Contains(cmdResponse.Execution.Stdout, "talvora-env-ok");
+        StringAssert.Contains(cmdResponse.Execution.Stdout, workingDirectory);
     }
 }
