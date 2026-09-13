@@ -105,4 +105,50 @@ public sealed class ElevatedOperationExecutorTests
         Assert.AreEqual(5, processResponse.Execution.ExitCode);
         StringAssert.Contains(processResponse.Execution.Stdout, "talvora-process-ok");
     }
+
+    [TestMethod]
+    public async Task TimeoutAndCancellationAreNormalized()
+    {
+        var executor = new Talvora.ElevatedBroker.ElevatedOperationExecutor();
+        var timeoutRequest = new ElevatedOperationRequest
+        {
+            OperationId = "op-timeout-001",
+            ProtocolVersion = BrokerProtocol.CurrentVersion,
+            TimeoutMilliseconds = 150,
+            Shell = new ShellExecutionOperation
+            {
+                Shell = ElevatedShellKind.Powershell,
+                Command = "Start-Sleep -Seconds 5",
+            },
+        };
+
+        var timeoutResponse = await executor.ExecuteAsync(timeoutRequest, CancellationToken.None);
+
+        Assert.IsFalse(timeoutResponse.Success);
+        Assert.IsNotNull(timeoutResponse.Error);
+        Assert.AreEqual("timeout", timeoutResponse.Error.Code);
+        Assert.AreEqual("elevated.shell.execute", timeoutResponse.Error.Operation);
+        Assert.IsTrue(timeoutResponse.Error.Retryable);
+
+        var cancellationRequest = new ElevatedOperationRequest
+        {
+            OperationId = "op-cancel-001",
+            ProtocolVersion = BrokerProtocol.CurrentVersion,
+            TimeoutMilliseconds = 10_000,
+            Shell = new ShellExecutionOperation
+            {
+                Shell = ElevatedShellKind.Powershell,
+                Command = "Start-Sleep -Seconds 5",
+            },
+        };
+        using var cancellationSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(150));
+
+        var cancellationResponse = await executor.ExecuteAsync(cancellationRequest, cancellationSource.Token);
+
+        Assert.IsFalse(cancellationResponse.Success);
+        Assert.IsNotNull(cancellationResponse.Error);
+        Assert.AreEqual("operation_cancelled", cancellationResponse.Error.Code);
+        Assert.AreEqual("elevated.shell.execute", cancellationResponse.Error.Operation);
+        Assert.IsFalse(cancellationResponse.Error.Retryable);
+    }
 }
