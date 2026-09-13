@@ -74,5 +74,35 @@ public sealed class ElevatedOperationExecutorTests
         Assert.AreEqual(0, cmdResponse.Execution.ExitCode);
         StringAssert.Contains(cmdResponse.Execution.Stdout, "talvora-env-ok");
         StringAssert.Contains(cmdResponse.Execution.Stdout, workingDirectory);
+
+        var processRequest = new ElevatedOperationRequest
+        {
+            OperationId = "op-process-001",
+            ProtocolVersion = BrokerProtocol.CurrentVersion,
+            TimeoutMilliseconds = 10_000,
+            Process = new ProcessExecutionOperation
+            {
+                FileName = "cmd.exe",
+                WorkingDirectory = workingDirectory,
+                CreateNoWindow = true,
+            },
+        };
+        processRequest.Process.Arguments.Add("/d");
+        processRequest.Process.Arguments.Add("/s");
+        processRequest.Process.Arguments.Add("/c");
+        processRequest.Process.Arguments.Add("echo %TALVORA_PROCESS_VAR% & exit /b 5");
+        processRequest.Process.Environment.Add(new EnvironmentVariable
+        {
+            Name = "TALVORA_PROCESS_VAR",
+            Value = "talvora-process-ok",
+        });
+
+        var processResponse = await executor.ExecuteAsync(processRequest, CancellationToken.None);
+
+        Assert.IsTrue(processResponse.Success);
+        Assert.IsNotNull(processResponse.Execution);
+        Assert.IsTrue(processResponse.Execution.ProcessId > 0);
+        Assert.AreEqual(5, processResponse.Execution.ExitCode);
+        StringAssert.Contains(processResponse.Execution.Stdout, "talvora-process-ok");
     }
 }
