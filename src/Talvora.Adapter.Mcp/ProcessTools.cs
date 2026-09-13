@@ -24,18 +24,18 @@ public sealed class ProcessTools(
         return ToolEnvelope.From(result);
     }
 
-    [McpServerTool, Description("Starts an executable with explicit argument boundaries. Can run with administrator privileges when requested.")]
+    [McpServerTool, Description("Starts an executable with explicit argument boundaries. Uses automatic Windows privilege routing by default and can run as administrator when explicitly requested.")]
     public async Task<ToolEnvelope<ProcessStartResult>> StartProcess(
         [Description("Executable path or executable name resolvable by Windows.")] string fileName,
         [Description("Arguments passed to the executable as separate values.")] string[]? arguments = null,
         [Description("Working directory. Optional.")] string? workingDirectory = null,
-        [Description("Run with administrator privileges when true; otherwise use the normal Talvora host context.")] bool elevated = false,
+        [Description("Run directly with administrator privileges when true. When false, Talvora starts normally and automatically uses administrator privileges only when Windows requires elevation.")] bool runAsAdministrator = false,
         CancellationToken cancellationToken = default)
     {
         var request = new StartProcessRequest(fileName, arguments, workingDirectory);
         var result = await executionRouter.StartProcessAsync(
             request,
-            elevated ? ExecutionPrivilege.Elevated : ExecutionPrivilege.Normal,
+            runAsAdministrator ? ExecutionPrivilege.Elevated : ExecutionPrivilege.Auto,
             cancellationToken).ConfigureAwait(false);
 
         return ToolEnvelope.From(result);
