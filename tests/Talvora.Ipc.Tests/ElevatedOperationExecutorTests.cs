@@ -172,4 +172,47 @@ public sealed class ElevatedOperationExecutorTests
             constructor,
             "BrokerControlService must receive ElevatedOperationExecutor through constructor injection.");
     }
+
+    [TestMethod]
+    public void BrokerClientExposesTransportNeutralExecutionApi()
+    {
+        var clientType = typeof(Talvora.Ipc.Client.IBrokerClient);
+        var clientAssembly = clientType.Assembly;
+        var shellRequestType = clientAssembly.GetType(
+            "Talvora.Ipc.Client.BrokerShellExecutionRequest",
+            throwOnError: false,
+            ignoreCase: false);
+        var processRequestType = clientAssembly.GetType(
+            "Talvora.Ipc.Client.BrokerProcessExecutionRequest",
+            throwOnError: false,
+            ignoreCase: false);
+        var executionResultType = clientAssembly.GetType(
+            "Talvora.Ipc.Client.BrokerExecutionResult",
+            throwOnError: false,
+            ignoreCase: false);
+
+        Assert.IsNotNull(shellRequestType, "Broker client must expose a transport-neutral shell request model.");
+        Assert.IsNotNull(processRequestType, "Broker client must expose a transport-neutral process request model.");
+        Assert.IsNotNull(executionResultType, "Broker client must expose a transport-neutral execution result model.");
+
+        var shellMethod = clientType.GetMethods().SingleOrDefault(method => method.Name == "ExecuteShellAsync");
+        var processMethod = clientType.GetMethods().SingleOrDefault(method => method.Name == "ExecuteProcessAsync");
+
+        Assert.IsNotNull(shellMethod, "IBrokerClient must expose ExecuteShellAsync.");
+        Assert.IsNotNull(processMethod, "IBrokerClient must expose ExecuteProcessAsync.");
+        Assert.IsFalse(UsesGrpcContract(shellMethod), "ExecuteShellAsync must not expose generated gRPC contract types.");
+        Assert.IsFalse(UsesGrpcContract(processMethod), "ExecuteProcessAsync must not expose generated gRPC contract types.");
+    }
+
+    private static bool UsesGrpcContract(System.Reflection.MethodInfo method) =>
+        IsGrpcContractType(method.ReturnType)
+        || method.GetParameters().Any(parameter => IsGrpcContractType(parameter.ParameterType));
+
+    private static bool IsGrpcContractType(Type type)
+    {
+        var effectiveType = type.IsGenericType
+            ? type.GetGenericArguments().FirstOrDefault() ?? type
+            : type;
+        return effectiveType.Namespace?.StartsWith("Talvora.Ipc.Contracts.Grpc", StringComparison.Ordinal) == true;
+    }
 }
