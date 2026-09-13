@@ -232,7 +232,26 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
             startInfo.WorkingDirectory = Path.GetFullPath(shell.WorkingDirectory);
         }
 
+        ApplyEnvironment(startInfo, shell.Environment);
         return startInfo;
+    }
+
+    private static void ApplyEnvironment(
+        ProcessStartInfo startInfo,
+        IEnumerable<EnvironmentVariable> environment)
+    {
+        foreach (var variable in environment)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(variable.Name);
+            if (variable.HasValue)
+            {
+                startInfo.Environment[variable.Name] = variable.Value;
+            }
+            else
+            {
+                startInfo.Environment.Remove(variable.Name);
+            }
+        }
     }
 
     private static ElevatedOperationResponse Failure(
