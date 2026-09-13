@@ -21,7 +21,9 @@ public sealed class ExecutionRouter(
 
         return privilege switch
         {
-            ExecutionPrivilege.Auto or ExecutionPrivilege.Normal =>
+            ExecutionPrivilege.Auto =>
+                await ExecuteShellAutoAsync(request, cancellationToken).ConfigureAwait(false),
+            ExecutionPrivilege.Normal =>
                 await executor.ExecuteAsync(
                     "shell.execute",
                     token => shellService.ExecuteAsync(request, token),
@@ -52,6 +54,23 @@ public sealed class ExecutionRouter(
                 await StartElevatedProcessAsync(request, cancellationToken).ConfigureAwait(false),
             _ => throw new InvalidEnumArgumentException(nameof(privilege), (int)privilege, typeof(ExecutionPrivilege)),
         };
+    }
+
+    private async ValueTask<TalvoraResult<ShellExecutionResult>> ExecuteShellAutoAsync(
+        ShellExecutionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var localResult = await executor.ExecuteAsync(
+            "shell.execute",
+            token => shellService.ExecuteAsync(request, token),
+            cancellationToken).ConfigureAwait(false);
+
+        if (localResult.IsSuccess || !RequiresElevation(localResult.Error))
+        {
+            return localResult;
+        }
+
+        return await ExecuteElevatedShellAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
     private async ValueTask<TalvoraResult<ProcessStartResult>> StartProcessAutoAsync(
