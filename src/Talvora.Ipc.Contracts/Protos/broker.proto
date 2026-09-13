@@ -54,12 +54,18 @@ message ShellExecutionOperation {
   repeated EnvironmentVariable environment = 5;
 }
 
+enum ProcessExecutionMode {
+  PROCESS_EXECUTION_MODE_WAIT_FOR_EXIT = 0;
+  PROCESS_EXECUTION_MODE_START_ONLY = 1;
+}
+
 message ProcessExecutionOperation {
   string file_name = 1;
   repeated string arguments = 2;
   string working_directory = 3;
   repeated EnvironmentVariable environment = 4;
   bool create_no_window = 5;
+  ProcessExecutionMode mode = 6;
 }
 
 message EnvironmentVariable {
@@ -69,7 +75,7 @@ message EnvironmentVariable {
 
 message ElevatedExecutionResult {
   int32 process_id = 1;
-  int32 exit_code = 2;
+  optional int32 exit_code = 2;
   string stdout = 3;
   string stderr = 4;
   int64 duration_milliseconds = 5;
