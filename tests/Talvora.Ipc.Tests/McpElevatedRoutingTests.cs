@@ -1,7 +1,9 @@
 using Talvora.Abstractions;
 using Talvora.Adapter.Mcp;
+using Talvora.Application;
 using Talvora.Core;
 using Talvora.Ipc.Client;
+using Talvora.Modules.Processes;
 using Talvora.Modules.Shell;
 
 namespace Talvora.Ipc.Tests;
@@ -10,47 +12,29 @@ namespace Talvora.Ipc.Tests;
 public sealed class McpElevatedRoutingTests
 {
     [TestMethod]
-    public async Task RunShellRoutesElevatedExecutionToBroker()
+    public async Task RunShellRoutesAdministratorRequestToBroker()
     {
         var localShell = new RecordingShellService();
         var brokerClient = new RecordingBrokerClient();
         var operationExecutor = new OperationExecutor(new DefaultErrorMapper());
+        var router = new ExecutionRouter(
+            localShell,
+            new UnusedProcessService(),
+            operationExecutor,
+            brokerClient);
+        var tools = new ShellTools(router);
 
-        var constructor = typeof(ShellTools).GetConstructor(
-            [typeof(IShellService), typeof(IOperationExecutor), typeof(IBrokerClient)]);
-        Assert.IsNotNull(
-            constructor,
-            "ShellTools must accept IBrokerClient so elevated execution can use the broker without exposing gRPC types.");
-
-        var tools = (ShellTools)constructor.Invoke([localShell, operationExecutor, brokerClient]);
-        var method = typeof(ShellTools).GetMethod(nameof(ShellTools.RunShell));
-        Assert.IsNotNull(method);
-
-        var parameters = method.GetParameters();
-        var elevatedParameter = parameters.SingleOrDefault(parameter =>
-            string.Equals(parameter.Name, "elevated", StringComparison.Ordinal) &&
-            parameter.ParameterType == typeof(bool));
-        Assert.IsNotNull(elevatedParameter, "RunShell must expose an explicit elevated boolean option.");
-
-        var arguments = parameters.Select(parameter => parameter.Name switch
-        {
-            "command" => (object)"echo elevated-routing",
-            "shell" => ShellKind.Cmd,
-            "workingDirectory" => @"C:\Windows",
-            "loadProfile" => false,
-            "elevated" => true,
-            "cancellationToken" => CancellationToken.None,
-            _ => throw new InvalidOperationException($"Unexpected RunShell parameter '{parameter.Name}'."),
-        }).ToArray();
-
-        var invocation = method.Invoke(tools, arguments);
-        var invocationTask = invocation as Task<ToolEnvelope<ShellExecutionResult>>;
-        Assert.IsNotNull(invocationTask);
-        var envelope = await invocationTask;
+        var envelope = await tools.RunShell(
+            "echo elevated-routing",
+            ShellKind.Cmd,
+            @"C:\Windows",
+            loadProfile: false,
+            runAsAdministrator: true,
+            cancellationToken: CancellationToken.None);
 
         Assert.IsTrue(envelope.Ok, envelope.Error?.Message);
         Assert.IsNotNull(envelope.Data);
-        Assert.AreEqual(0, localShell.CallCount, "Elevated shell execution must not run through the non-elevated local shell service.");
+        Assert.AreEqual(0, localShell.CallCount, "Explicit administrator shell execution must bypass the normal local shell service.");
         Assert.AreEqual(1, brokerClient.ShellCallCount);
         Assert.IsNotNull(brokerClient.LastShellRequest);
         Assert.AreEqual("echo elevated-routing", brokerClient.LastShellRequest.Command);
@@ -78,6 +62,23 @@ public sealed class McpElevatedRoutingTests
                 "local-stderr",
                 TimeSpan.Zero));
         }
+    }
+
+    private sealed class UnusedProcessService : IProcessService
+    {
+        public ValueTask<IReadOnlyList<ProcessSnapshot>> ListAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public ValueTask<ProcessStartResult> StartAsync(
+            StartProcessRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public ValueTask StopAsync(
+            int processId,
+            bool entireProcessTree = true,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     private sealed class RecordingBrokerClient : IBrokerClient
