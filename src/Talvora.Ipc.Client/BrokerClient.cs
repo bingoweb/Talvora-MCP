@@ -128,6 +128,12 @@ public sealed class BrokerClient : IBrokerClient, IDisposable
             FileName = request.FileName,
             WorkingDirectory = request.WorkingDirectory ?? string.Empty,
             CreateNoWindow = request.CreateNoWindow,
+            Mode = request.Mode switch
+            {
+                BrokerProcessExecutionMode.WaitForExit => ProcessExecutionMode.WaitForExit,
+                BrokerProcessExecutionMode.StartOnly => ProcessExecutionMode.StartOnly,
+                _ => throw new ArgumentOutOfRangeException(nameof(request), request.Mode, "Unsupported process execution mode."),
+            },
         };
         if (request.Arguments is not null)
         {
@@ -169,7 +175,7 @@ public sealed class BrokerClient : IBrokerClient, IDisposable
             return TalvoraResult.Success(new BrokerExecutionResult(
                 response.OperationId,
                 response.Execution.ProcessId,
-                response.Execution.ExitCode,
+                response.Execution.HasExitCode ? response.Execution.ExitCode : null,
                 response.Execution.Stdout,
                 response.Execution.Stderr,
                 TimeSpan.FromMilliseconds(response.Execution.DurationMilliseconds)));
