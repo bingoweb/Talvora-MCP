@@ -218,21 +218,29 @@ Bunlar özellik kısıtı değil, IPC doğruluğu içindir:
 
 **Henüz yapılmaması gerekenler:** GUI, hot-plugin sistemi, erken Native AOT zorlaması, geniş kapsamlı registry/service/driver modüllerini IPC execution contract oturmadan eklemek.
 
-## 10. Git Geçmişi / Branch Durumu
+## 10. Git / GitHub Durumu
 
-Bu handoff yazılmadan hemen önce aktif geliştirme dalı:
+GitHub kanonik uzak depo:
 
-`feature/elevated-broker-service-v1`
+`https://github.com/bingoweb/Talvora-MCP`
 
-Ana baseline commit:
+GitHub varsayılan dalı:
 
-`a7ad9a3 chore: establish Talvora core baseline`
+`main`
 
-Elevated Broker servis zincirindeki son commit:
+Alpha.18 doğrulanmış kaynak ağacının GitHub import snapshot commit'i:
 
-`676bfad fix: pin elevated broker pipe owner identity`
+`9743f4fce601ce2c7350ff38c757a10ffb61b8e3` — `import: Talvora alpha.18 verified Windows baseline`
 
-GitHub aktarımında varsayılan `main` dalı bugüne kadarki tüm bu commit'leri içerecek şekilde güncellenmelidir.
+Önemli tarihçe notu: yeni GitHub deposu connector üzerinden oluşturulduğu için alpha.18 kaynakları **tam dosya snapshot'ı** olarak aktarıldı; yerel geliştirme reposundaki önceki commit zinciri GitHub'a birebir replay edilmedi. Ayrıntılı yerel provenance için önemli commitler:
+
+- `a7ad9a3 chore: establish Talvora core baseline`
+- `26c0ef6 feat: add elevated broker named-pipe grpc transport`
+- `a4da250 feat: install elevated broker as Windows service`
+- `676bfad fix: pin elevated broker pipe owner identity`
+- `ec4ff7e docs: add canonical Talvora handoff`
+
+Yeni geliştirme GitHub `main` üzerinden devam ettirilebilir. Kaynak snapshot bütünlüğü kökteki `SOURCE-SHA256.txt` ile izlenir.
 
 ---
 
