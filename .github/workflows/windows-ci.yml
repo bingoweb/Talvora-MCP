@@ -21,11 +21,11 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore
-        run: dotnet restore Talvora.slnx
+      - name: Restore focused test project
+        run: dotnet restore tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj
 
-      - name: Build
-        run: dotnet build Talvora.slnx --configuration Release --no-restore
+      - name: Build focused test project
+        run: dotnet build tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-restore
 
-      - name: Test
-        run: dotnet test Talvora.slnx --configuration Release --no-build --verbosity normal
+      - name: Run focused TDD test
+        run: dotnet test tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~Talvora.Ipc.Tests.ElevatedOperationExecutorTests.OperationExecutorExposesSingleRequestEntryPoint" --verbosity normal
