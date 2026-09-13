@@ -22,6 +22,7 @@ concurrency:
 jobs:
   build-test:
     runs-on: windows-latest
+    timeout-minutes: 5
     env:
       TALVORA_TEST_FILTER: ${{ github.event.inputs.test_filter || 'FullyQualifiedName~Talvora.Ipc.Tests.McpElevatedRoutingTests.RunShellRoutesElevatedExecutionToBroker' }}
     steps:
