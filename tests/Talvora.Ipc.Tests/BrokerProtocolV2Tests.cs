@@ -8,8 +8,14 @@ public sealed class BrokerProtocolV2Tests
     [TestMethod]
     public void BrokerProtocolAndInstallScriptsUseV2()
     {
-        Assert.AreEqual(2, BrokerProtocol.CurrentVersion);
-        Assert.AreEqual("Talvora.ElevatedBroker.v2", BrokerProtocol.DefaultPipeName);
+        var protocolType = typeof(BrokerProtocol);
+        var versionField = protocolType.GetField(nameof(BrokerProtocol.CurrentVersion));
+        var pipeField = protocolType.GetField(nameof(BrokerProtocol.DefaultPipeName));
+
+        Assert.IsNotNull(versionField);
+        Assert.IsNotNull(pipeField);
+        Assert.AreEqual(2, versionField.GetRawConstantValue());
+        Assert.AreEqual("Talvora.ElevatedBroker.v2", pipeField.GetRawConstantValue());
 
         var root = FindRepositoryRoot();
         var installScript = File.ReadAllText(Path.Combine(root, "scripts", "Install-BrokerService.ps1"));
