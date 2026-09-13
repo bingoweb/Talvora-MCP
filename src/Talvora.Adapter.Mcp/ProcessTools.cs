@@ -38,7 +38,8 @@ public sealed class ProcessTools(
                 new BrokerProcessExecutionRequest(
                     fileName,
                     Arguments: arguments,
-                    WorkingDirectory: workingDirectory),
+                    WorkingDirectory: workingDirectory,
+                    Mode: BrokerProcessExecutionMode.StartOnly),
                 cancellationToken).ConfigureAwait(false);
 
             return ToolEnvelope.From(MapElevatedStartResult(brokerResult));
