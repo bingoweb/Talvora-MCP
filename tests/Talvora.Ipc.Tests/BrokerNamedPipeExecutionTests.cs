@@ -41,9 +41,13 @@ public sealed class BrokerNamedPipeExecutionTests
         {
             using var client = new BrokerClient(pipeName);
             var probe = await WaitUntilReadyAsync(client, brokerProcess);
-            Assert.IsTrue(
-                probe.Connected && probe.Health?.Ready == true,
-                $"Broker did not become ready. Last probe error: {probe.Error}");
+            if (!probe.Connected || probe.Health?.Ready != true)
+            {
+                var processDetails = brokerProcess.HasExited
+                    ? $" Broker exit code: {brokerProcess.ExitCode}. stdout: {await brokerStdout} stderr: {await brokerStderr}"
+                    : string.Empty;
+                Assert.Fail($"Broker did not become ready. Last probe error: {probe.Error}.{processDetails}");
+            }
 
             const string operationId = "pipe-e2e-shell-001";
             var result = await client.ExecuteShellAsync(
