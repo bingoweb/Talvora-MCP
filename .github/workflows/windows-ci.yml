@@ -32,4 +32,4 @@ jobs:
         run: dotnet build tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-restore
 
       - name: Run focused TDD test
-        run: dotnet test tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~Talvora.Ipc.Tests.ElevatedOperationExecutorTests.BrokerControlServiceOwnsExecuteRpc" --verbosity normal
+        run: dotnet test tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~Talvora.Ipc.Tests.ElevatedOperationExecutorTests.BrokerClientExposesTransportNeutralExecutionApi" --verbosity normal
