@@ -13,7 +13,7 @@ on:
       test_filter:
         description: Fully qualified dotnet test filter
         required: false
-        default: FullyQualifiedName~Talvora.Ipc.Tests.McpApplicationBoundaryTests.McpAdapterDoesNotReferenceIpcClient
+        default: FullyQualifiedName~Talvora.Ipc.Tests.ExecutionRouterAutoProcessTests.AutoProcessStartFallsBackToBrokerWhenWindowsRequiresElevation
 
 concurrency:
   group: talvora-focused-tdd-${{ github.ref }}
@@ -24,7 +24,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 5
     env:
-      TALVORA_TEST_FILTER: ${{ github.event.inputs.test_filter || 'FullyQualifiedName~Talvora.Ipc.Tests.McpApplicationBoundaryTests.McpAdapterDoesNotReferenceIpcClient' }}
+      TALVORA_TEST_FILTER: ${{ github.event.inputs.test_filter || 'FullyQualifiedName~Talvora.Ipc.Tests.ExecutionRouterAutoProcessTests.AutoProcessStartFallsBackToBrokerWhenWindowsRequiresElevation' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
