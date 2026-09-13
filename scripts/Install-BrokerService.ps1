@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [switch]$ElevatedChild,
     [string]$AllowedUserSid
@@ -59,7 +59,7 @@ function Write-BrokerConfiguration {
 
     $configuration = [ordered]@{
         Broker = [ordered]@{
-            PipeName = 'Talvora.ElevatedBroker.v1'
+            PipeName = 'Talvora.ElevatedBroker.v2'
             AllowedUserSid = $UserSid
         }
         Logging = [ordered]@{
@@ -195,7 +195,7 @@ try {
     Write-Host '  account:      LocalSystem'
     Write-Host '  startup:      Automatic'
     Write-Host '  recovery:     restart / restart / restart'
-    Write-Host '  pipe:         Talvora.ElevatedBroker.v1'
+    Write-Host '  pipe:         Talvora.ElevatedBroker.v2'
 }
 finally {
     if (Test-Path -LiteralPath $stagingDirectory) {

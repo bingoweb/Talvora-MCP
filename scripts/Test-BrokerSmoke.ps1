@@ -105,7 +105,7 @@ try {
         throw "Elevated Broker named-pipe smoke testi zaman aşımına uğradı. LastError=$lastBrokerError Broker: $brokerError Host: $hostError"
     }
 
-    if ($brokerHealth.protocolVersion -ne 1) {
+    if ($brokerHealth.protocolVersion -ne 2) {
         throw "Beklenmeyen broker protokol sürümü: $($brokerHealth.protocolVersion)"
     }
     if (-not $brokerHealth.connected -or -not $brokerHealth.ready) {
