@@ -6,6 +6,12 @@ public enum BrokerShellKind
     Cmd,
 }
 
+public enum BrokerProcessExecutionMode
+{
+    WaitForExit,
+    StartOnly,
+}
+
 public sealed record BrokerShellExecutionRequest(
     string Command,
     BrokerShellKind Shell = BrokerShellKind.PowerShell,
@@ -22,12 +28,13 @@ public sealed record BrokerProcessExecutionRequest(
     IReadOnlyDictionary<string, string?>? Environment = null,
     bool CreateNoWindow = false,
     TimeSpan? Timeout = null,
-    string? OperationId = null);
+    string? OperationId = null,
+    BrokerProcessExecutionMode Mode = BrokerProcessExecutionMode.WaitForExit);
 
 public sealed record BrokerExecutionResult(
     string OperationId,
     int ProcessId,
-    int ExitCode,
+    int? ExitCode,
     string StandardOutput,
     string StandardError,
     TimeSpan Duration);
