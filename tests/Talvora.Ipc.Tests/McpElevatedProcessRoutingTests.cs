@@ -9,6 +9,8 @@ namespace Talvora.Ipc.Tests;
 [TestClass]
 public sealed class McpElevatedProcessRoutingTests
 {
+    private static readonly string[] ExpectedArguments = ["/d", "/c", "exit 0"];
+
     [TestMethod]
     public async Task StartProcessRoutesElevatedExecutionToBroker()
     {
@@ -35,7 +37,7 @@ public sealed class McpElevatedProcessRoutingTests
         var arguments = parameters.Select(parameter => parameter.Name switch
         {
             "fileName" => (object)"cmd.exe",
-            "arguments" => new[] { "/d", "/c", "exit 0" },
+            "arguments" => ExpectedArguments,
             "workingDirectory" => @"C:\Windows",
             "elevated" => true,
             "cancellationToken" => CancellationToken.None,
@@ -53,7 +55,7 @@ public sealed class McpElevatedProcessRoutingTests
         Assert.AreEqual(1, brokerClient.ProcessCallCount);
         Assert.IsNotNull(brokerClient.LastProcessRequest);
         Assert.AreEqual("cmd.exe", brokerClient.LastProcessRequest.FileName);
-        CollectionAssert.AreEqual(new[] { "/d", "/c", "exit 0" }, brokerClient.LastProcessRequest.Arguments?.ToArray());
+        CollectionAssert.AreEqual(ExpectedArguments, brokerClient.LastProcessRequest.Arguments?.ToArray());
         Assert.AreEqual(@"C:\Windows", brokerClient.LastProcessRequest.WorkingDirectory);
         Assert.AreEqual(5151, envelope.Data.ProcessId);
     }
