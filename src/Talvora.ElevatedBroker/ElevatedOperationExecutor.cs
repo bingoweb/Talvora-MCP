@@ -5,8 +5,10 @@ using Talvora.Ipc.Contracts.Grpc;
 
 namespace Talvora.ElevatedBroker;
 
-public sealed class ElevatedOperationExecutor
+public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
 {
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
     public async Task<ElevatedOperationResponse> ExecuteAsync(
         ElevatedOperationRequest request,
         CancellationToken cancellationToken)
@@ -123,7 +125,7 @@ public sealed class ElevatedOperationExecutor
         }
     }
 
-    private static async Task<ElevatedOperationResponse> ExecuteShellAsync(
+    private async Task<ElevatedOperationResponse> ExecuteShellAsync(
         ElevatedOperationRequest request,
         CancellationToken cancellationToken)
     {
@@ -132,7 +134,7 @@ public sealed class ElevatedOperationExecutor
 
         var startInfo = CreateShellStartInfo(shell);
         using var process = new Process { StartInfo = startInfo };
-        var started = Stopwatch.GetTimestamp();
+        var started = _timeProvider.GetTimestamp();
 
         if (!process.Start())
         {
@@ -169,7 +171,7 @@ public sealed class ElevatedOperationExecutor
                     ExitCode = process.ExitCode,
                     Stdout = stdout,
                     Stderr = stderr,
-                    DurationMilliseconds = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                    DurationMilliseconds = (long)_timeProvider.GetElapsedTime(started).TotalMilliseconds,
                 },
             };
         }
