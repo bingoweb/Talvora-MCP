@@ -1,0 +1,31 @@
+name: Talvora Windows CI
+
+on:
+  push:
+    branches:
+      - main
+      - feat/elevated-operation-execution
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore Talvora.slnx
+
+      - name: Build
+        run: dotnet build Talvora.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test Talvora.slnx --configuration Release --no-build --verbosity normal
