@@ -1,5 +1,6 @@
 using Talvora.Abstractions;
 using Talvora.Adapter.Mcp;
+using Talvora.Application;
 using Talvora.Core;
 using Talvora.Ipc.Client;
 using Talvora.Ipc.Contracts;
@@ -25,6 +26,7 @@ builder.Services.AddSingleton<IProcessService, ProcessService>();
 var brokerPipeName = builder.Configuration[BrokerProtocol.PipeNameConfigurationKey]
     ?? BrokerProtocol.DefaultPipeName;
 builder.Services.AddTalvoraBrokerClient(brokerPipeName);
+builder.Services.AddSingleton<IExecutionRouter, ExecutionRouter>();
 builder.Services.AddTalvoraMcp();
 
 var app = builder.Build();
