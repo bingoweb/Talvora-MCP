@@ -8,6 +8,12 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      test_filter:
+        description: Fully qualified dotnet test filter
+        required: false
+        default: FullyQualifiedName~Talvora.Ipc.Tests.ElevatedOperationExecutorTests.BrokerClientExposesTransportNeutralExecutionApi
 
 concurrency:
   group: talvora-focused-tdd-${{ github.ref }}
@@ -16,6 +22,8 @@ concurrency:
 jobs:
   build-test:
     runs-on: windows-latest
+    env:
+      TALVORA_TEST_FILTER: ${{ github.event.inputs.test_filter || 'FullyQualifiedName~Talvora.Ipc.Tests.ElevatedOperationExecutorTests.BrokerClientExposesTransportNeutralExecutionApi' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -32,4 +40,4 @@ jobs:
         run: dotnet build tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-restore
 
       - name: Run focused TDD test
-        run: dotnet test tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~Talvora.Ipc.Tests.ElevatedOperationExecutorTests.BrokerClientExposesTransportNeutralExecutionApi" --verbosity normal
+        run: dotnet test tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-build --filter "$env:TALVORA_TEST_FILTER" --verbosity normal
