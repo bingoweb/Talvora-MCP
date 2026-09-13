@@ -41,7 +41,9 @@ public sealed class ExecutionRouter(
 
         return privilege switch
         {
-            ExecutionPrivilege.Auto or ExecutionPrivilege.Normal =>
+            ExecutionPrivilege.Auto =>
+                await StartProcessAutoAsync(request, cancellationToken).ConfigureAwait(false),
+            ExecutionPrivilege.Normal =>
                 await executor.ExecuteAsync(
                     "process.start",
                     token => processService.StartAsync(request, token),
@@ -50,6 +52,23 @@ public sealed class ExecutionRouter(
                 await StartElevatedProcessAsync(request, cancellationToken).ConfigureAwait(false),
             _ => throw new InvalidEnumArgumentException(nameof(privilege), (int)privilege, typeof(ExecutionPrivilege)),
         };
+    }
+
+    private async ValueTask<TalvoraResult<ProcessStartResult>> StartProcessAutoAsync(
+        StartProcessRequest request,
+        CancellationToken cancellationToken)
+    {
+        var localResult = await executor.ExecuteAsync(
+            "process.start",
+            token => processService.StartAsync(request, token),
+            cancellationToken).ConfigureAwait(false);
+
+        if (localResult.IsSuccess || !RequiresElevation(localResult.Error))
+        {
+            return localResult;
+        }
+
+        return await StartElevatedProcessAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
     private async ValueTask<TalvoraResult<ShellExecutionResult>> ExecuteElevatedShellAsync(
@@ -127,6 +146,11 @@ public sealed class ExecutionRouter(
 
         return TalvoraResult.Success(new ProcessStartResult(value.ProcessId));
     }
+
+    private static bool RequiresElevation(TalvoraError? error) =>
+        error is not null &&
+        (string.Equals(error.Code, "access_denied", StringComparison.Ordinal) ||
+         error.NativeCode is 5 or 740);
 
     private static TalvoraError MissingBrokerError(string operation, string description) =>
         new(
