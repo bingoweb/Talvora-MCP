@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option csharp_namespace = "Talvora.Ipc.Contracts.Grpc";
 
-package talvora.ipc.v1;
+package talvora.ipc.v2;
 
 service BrokerControl {
   rpc Health (BrokerHealthRequest) returns (BrokerHealthResponse);
