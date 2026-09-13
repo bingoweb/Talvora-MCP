@@ -61,76 +61,35 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
         }
         catch (TimeoutException exception)
         {
-            return Failure(
-                request,
-                "timeout",
-                exception.Message,
-                operationName,
-                retryable: true);
+            return Failure(request, "timeout", exception.Message, operationName, retryable: true);
         }
         catch (UnauthorizedAccessException exception)
         {
-            return Failure(
-                request,
-                "access_denied",
-                exception.Message,
-                operationName,
-                nativeCode: exception.HResult);
+            return Failure(request, "access_denied", exception.Message, operationName, nativeCode: exception.HResult);
         }
         catch (FileNotFoundException exception)
         {
-            return Failure(
-                request,
-                "not_found",
-                exception.Message,
-                operationName,
-                nativeCode: exception.HResult);
+            return Failure(request, "not_found", exception.Message, operationName, nativeCode: exception.HResult);
         }
         catch (DirectoryNotFoundException exception)
         {
-            return Failure(
-                request,
-                "not_found",
-                exception.Message,
-                operationName,
-                nativeCode: exception.HResult);
+            return Failure(request, "not_found", exception.Message, operationName, nativeCode: exception.HResult);
         }
         catch (ArgumentException exception)
         {
-            return Failure(
-                request,
-                "invalid_input",
-                exception.Message,
-                operationName,
-                nativeCode: exception.HResult);
+            return Failure(request, "invalid_input", exception.Message, operationName, nativeCode: exception.HResult);
         }
         catch (Win32Exception exception)
         {
-            return Failure(
-                request,
-                "native_error",
-                exception.Message,
-                operationName,
-                nativeCode: exception.NativeErrorCode);
+            return Failure(request, "native_error", exception.Message, operationName, nativeCode: exception.NativeErrorCode);
         }
         catch (IOException exception)
         {
-            return Failure(
-                request,
-                "io_error",
-                exception.Message,
-                operationName,
-                nativeCode: exception.HResult,
-                retryable: true);
+            return Failure(request, "io_error", exception.Message, operationName, nativeCode: exception.HResult, retryable: true);
         }
         catch (Exception exception)
         {
-            return Failure(
-                request,
-                "operation_failed",
-                exception.Message,
-                operationName,
-                nativeCode: exception.HResult);
+            return Failure(request, "operation_failed", exception.Message, operationName, nativeCode: exception.HResult);
         }
     }
 
@@ -140,7 +99,7 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
     {
         var shell = request.Shell;
         ArgumentException.ThrowIfNullOrWhiteSpace(shell.Command);
-        return ExecuteProcessCoreAsync(request, CreateShellStartInfo(shell), cancellationToken);
+        return ExecuteProcessAndWaitAsync(request, CreateShellStartInfo(shell), cancellationToken);
     }
 
     private Task<ElevatedOperationResponse> ExecuteProcessAsync(
@@ -149,10 +108,47 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
     {
         var operation = request.Process;
         ArgumentException.ThrowIfNullOrWhiteSpace(operation.FileName);
-        return ExecuteProcessCoreAsync(request, CreateProcessStartInfo(operation), cancellationToken);
+
+        return operation.Mode switch
+        {
+            ProcessExecutionMode.WaitForExit =>
+                ExecuteProcessAndWaitAsync(request, CreateProcessStartInfo(operation, redirectStandardStreams: true), cancellationToken),
+            ProcessExecutionMode.StartOnly =>
+                Task.FromResult(StartProcessOnly(request, CreateProcessStartInfo(operation, redirectStandardStreams: false), cancellationToken)),
+            _ => throw new ArgumentOutOfRangeException(nameof(operation), operation.Mode, "Unsupported process execution mode."),
+        };
     }
 
-    private async Task<ElevatedOperationResponse> ExecuteProcessCoreAsync(
+    private ElevatedOperationResponse StartProcessOnly(
+        ElevatedOperationRequest request,
+        ProcessStartInfo startInfo,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var started = _timeProvider.GetTimestamp();
+
+        using var process = new Process { StartInfo = startInfo };
+        if (!process.Start())
+        {
+            throw new InvalidOperationException($"Failed to start {startInfo.FileName}.");
+        }
+
+        return new ElevatedOperationResponse
+        {
+            OperationId = request.OperationId,
+            ProtocolVersion = BrokerProtocol.CurrentVersion,
+            Success = true,
+            Execution = new ElevatedExecutionResult
+            {
+                ProcessId = process.Id,
+                Stdout = string.Empty,
+                Stderr = string.Empty,
+                DurationMilliseconds = (long)_timeProvider.GetElapsedTime(started).TotalMilliseconds,
+            },
+        };
+    }
+
+    private async Task<ElevatedOperationResponse> ExecuteProcessAndWaitAsync(
         ElevatedOperationRequest request,
         ProcessStartInfo startInfo,
         CancellationToken cancellationToken)
@@ -212,8 +208,8 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
     {
         var startInfo = shell.Shell switch
         {
-            ElevatedShellKind.Powershell => CreateRedirectedStartInfo("pwsh.exe", createNoWindow: true),
-            ElevatedShellKind.Cmd => CreateRedirectedStartInfo("cmd.exe", createNoWindow: true),
+            ElevatedShellKind.Powershell => CreateStartInfo("pwsh.exe", createNoWindow: true, redirectStandardStreams: true),
+            ElevatedShellKind.Cmd => CreateStartInfo("cmd.exe", createNoWindow: true, redirectStandardStreams: true),
             _ => throw new ArgumentOutOfRangeException(nameof(shell), shell.Shell, "Unsupported elevated shell."),
         };
 
@@ -242,9 +238,11 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
         return startInfo;
     }
 
-    private static ProcessStartInfo CreateProcessStartInfo(ProcessExecutionOperation operation)
+    private static ProcessStartInfo CreateProcessStartInfo(
+        ProcessExecutionOperation operation,
+        bool redirectStandardStreams)
     {
-        var startInfo = CreateRedirectedStartInfo(operation.FileName, operation.CreateNoWindow);
+        var startInfo = CreateStartInfo(operation.FileName, operation.CreateNoWindow, redirectStandardStreams);
         foreach (var argument in operation.Arguments)
         {
             startInfo.ArgumentList.Add(argument);
@@ -255,13 +253,16 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
         return startInfo;
     }
 
-    private static ProcessStartInfo CreateRedirectedStartInfo(string fileName, bool createNoWindow) =>
+    private static ProcessStartInfo CreateStartInfo(
+        string fileName,
+        bool createNoWindow,
+        bool redirectStandardStreams) =>
         new()
         {
             FileName = fileName,
             UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
+            RedirectStandardOutput = redirectStandardStreams,
+            RedirectStandardError = redirectStandardStreams,
             CreateNoWindow = createNoWindow,
         };
 
