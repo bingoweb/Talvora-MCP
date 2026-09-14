@@ -8,14 +8,23 @@ namespace Talvora.Ipc.Client;
 
 public sealed class BrokerClient : IBrokerClient, IDisposable
 {
+    private static readonly TimeSpan DefaultConnectTimeout = TimeSpan.FromSeconds(3);
+
     private readonly SocketsHttpHandler _handler;
     private readonly GrpcChannel _channel;
     private readonly BrokerControl.BrokerControlClient _client;
     private bool _disposed;
 
     public BrokerClient(string pipeName)
+        : this(pipeName, DefaultConnectTimeout)
     {
-        var connectionFactory = new NamedPipeConnectionFactory(pipeName);
+    }
+
+    public BrokerClient(string pipeName, TimeSpan connectTimeout)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(connectTimeout, TimeSpan.Zero);
+
+        var connectionFactory = new NamedPipeConnectionFactory(pipeName, connectTimeout);
         _handler = new SocketsHttpHandler
         {
             ConnectCallback = connectionFactory.ConnectAsync,
@@ -158,9 +167,45 @@ public sealed class BrokerClient : IBrokerClient, IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        var response = await _client.ExecuteAsync(
-            request,
-            cancellationToken: cancellationToken).ResponseAsync.ConfigureAwait(false);
+        ElevatedOperationResponse response;
+        try
+        {
+            response = await _client.ExecuteAsync(
+                request,
+                cancellationToken: cancellationToken).ResponseAsync.ConfigureAwait(false);
+        }
+        catch (RpcException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(
+                "Elevated Broker execution was cancelled by the caller.",
+                exception,
+                cancellationToken);
+        }
+        catch (RpcException exception)
+        {
+            return TalvoraResult.Failure<BrokerExecutionResult>(MapTransportError(exception));
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            return TalvoraResult.Failure<BrokerExecutionResult>(new TalvoraError(
+                "access_denied",
+                exception.Message,
+                "elevated.execute",
+                exception.HResult));
+        }
+        catch (IOException exception)
+        {
+            return TalvoraResult.Failure<BrokerExecutionResult>(BrokerUnavailable(exception.Message, exception.HResult));
+        }
+        catch (TimeoutException exception)
+        {
+            return TalvoraResult.Failure<BrokerExecutionResult>(BrokerUnavailable(exception.Message));
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return TalvoraResult.Failure<BrokerExecutionResult>(BrokerUnavailable(
+                "Timed out while connecting to the Elevated Broker."));
+        }
 
         if (response.ProtocolVersion != BrokerProtocol.CurrentVersion)
         {
@@ -183,6 +228,47 @@ public sealed class BrokerClient : IBrokerClient, IDisposable
 
         return TalvoraResult.Failure<BrokerExecutionResult>(MapError(response));
     }
+
+    private static TalvoraError MapTransportError(RpcException exception)
+    {
+        var message = string.IsNullOrWhiteSpace(exception.Status.Detail)
+            ? exception.Message
+            : exception.Status.Detail;
+        var details = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["grpc_status"] = exception.StatusCode.ToString(),
+        };
+
+        return exception.StatusCode switch
+        {
+            StatusCode.PermissionDenied or StatusCode.Unauthenticated => new TalvoraError(
+                "access_denied",
+                message,
+                "elevated.execute",
+                Retryable: false,
+                Details: details),
+            StatusCode.Unavailable or StatusCode.DeadlineExceeded or StatusCode.Cancelled => new TalvoraError(
+                "broker_unavailable",
+                message,
+                "elevated.execute",
+                Retryable: true,
+                Details: details),
+            _ => new TalvoraError(
+                "broker_transport_error",
+                message,
+                "elevated.execute",
+                Retryable: true,
+                Details: details),
+        };
+    }
+
+    private static TalvoraError BrokerUnavailable(string message, int? nativeCode = null) =>
+        new(
+            "broker_unavailable",
+            message,
+            "elevated.execute",
+            nativeCode,
+            Retryable: true);
 
     private static TalvoraError MapError(ElevatedOperationResponse response)
     {
