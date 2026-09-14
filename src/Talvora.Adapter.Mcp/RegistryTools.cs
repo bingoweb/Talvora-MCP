@@ -51,4 +51,23 @@ public sealed class RegistryTools(
 
         return ToolEnvelope.From(result);
     }
+
+    [McpServerTool, Description("Lists Windows Registry value names for a key using the Windows account running Talvora. The unnamed default value is returned as an empty string.")]
+    public async Task<ToolEnvelope<IReadOnlyList<string>>> ListRegistryValueNames(
+        [Description("Registry hive containing the key.")] RegistryHiveId hive,
+        [Description("Registry subkey path relative to the selected hive.")] string subKeyPath,
+        [Description("Registry view to read: Default, Registry32, or Registry64.")] RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await executor.ExecuteAsync(
+            "registry.list_value_names",
+            token => registry.ListValueNamesAsync(
+                hive,
+                subKeyPath,
+                view,
+                token),
+            cancellationToken);
+
+        return ToolEnvelope.From(result);
+    }
 }
