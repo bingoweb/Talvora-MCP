@@ -239,6 +239,19 @@ public sealed class BrokerClient : IBrokerClient, IDisposable
             ["grpc_status"] = exception.StatusCode.ToString(),
         };
 
+        var connectionStartupFailure =
+            (exception.StatusCode is StatusCode.Internal or StatusCode.Unknown) &&
+            message.StartsWith("Error starting gRPC call", StringComparison.Ordinal);
+        if (connectionStartupFailure)
+        {
+            return new TalvoraError(
+                "broker_unavailable",
+                message,
+                "elevated.execute",
+                Retryable: true,
+                Details: details);
+        }
+
         return exception.StatusCode switch
         {
             StatusCode.PermissionDenied or StatusCode.Unauthenticated => new TalvoraError(
