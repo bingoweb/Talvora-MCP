@@ -7,6 +7,8 @@ namespace Talvora.Registry.Tests;
 [TestClass]
 public sealed class RegistryListSubKeysTests
 {
+    private static readonly string[] ExpectedNames = ["Beta", "Zulu", "alpha"];
+
     [TestMethod]
     public async Task ListSubKeyNamesReturnsOrdinalSortedNames()
     {
@@ -38,12 +40,10 @@ public sealed class RegistryListSubKeysTests
                 service,
                 [RegistryHiveId.CurrentUser, subKeyPath, RegistryViewId.Default, CancellationToken.None]);
 
-            Assert.IsInstanceOfType<ValueTask<IReadOnlyList<string>>>(pending);
-            var names = await ((ValueTask<IReadOnlyList<string>>)pending).ConfigureAwait(false);
+            var pendingNames = Assert.IsInstanceOfType<ValueTask<IReadOnlyList<string>>>(pending);
+            var names = await pendingNames.ConfigureAwait(false);
 
-            CollectionAssert.AreEqual(
-                new[] { "Beta", "Zulu", "alpha" },
-                names.ToArray());
+            CollectionAssert.AreEqual(ExpectedNames, names.ToArray());
         }
         finally
         {
