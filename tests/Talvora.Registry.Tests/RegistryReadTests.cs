@@ -37,7 +37,7 @@ public sealed class RegistryReadTests
                 expandEnvironmentStrings: false,
                 CancellationToken.None);
 
-            Assert.AreEqual(RegistryValueType.ExpandString, value.Type);
+            Assert.AreEqual(RegistryValueType.ExpandableText, value.Type);
             Assert.AreEqual("hello %USERNAME%", value.StringValue);
             Assert.AreEqual(subKeyPath, value.SubKeyPath);
             Assert.AreEqual("Greeting", value.ValueName);

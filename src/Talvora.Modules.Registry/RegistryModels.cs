@@ -20,11 +20,11 @@ public enum RegistryValueType
 {
     Unknown,
     None,
-    String,
-    ExpandString,
+    Text,
+    ExpandableText,
     Binary,
     DWord,
-    MultiString,
+    MultiText,
     QWord,
 }
 
