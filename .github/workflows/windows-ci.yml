@@ -34,5 +34,5 @@ jobs:
       - name: Restore Registry target test
         run: dotnet restore tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj
 
-      - name: Run Registry read target
-        run: dotnet test tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Registry.Tests.RegistryReadTests.ReadValueAsyncReadsExpandStringWithoutExpandingByDefault" --verbosity normal
+      - name: Run Registry MCP RED target
+        run: dotnet test tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Registry.Tests.RegistryMcpTests.ReadRegistryValueRoutesParametersThroughRegistryService" --verbosity normal
