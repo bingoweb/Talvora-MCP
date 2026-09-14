@@ -192,8 +192,8 @@ public sealed class BrokerClient : IBrokerClient, IDisposable
             View = request.View switch
             {
                 BrokerRegistryView.Default => RegistryView.Default,
-                BrokerRegistryView.Registry32 => RegistryView.Registry32,
-                BrokerRegistryView.Registry64 => RegistryView.Registry64,
+                BrokerRegistryView.Registry32 => RegistryView._32,
+                BrokerRegistryView.Registry64 => RegistryView._64,
                 _ => throw new ArgumentOutOfRangeException(nameof(request), request.View, "Unsupported Registry view."),
             },
             Recursive = request.Recursive,
@@ -201,11 +201,11 @@ public sealed class BrokerClient : IBrokerClient, IDisposable
             {
                 BrokerRegistryValueType.Unknown => RegistryValueType.Unspecified,
                 BrokerRegistryValueType.None => RegistryValueType.None,
-                BrokerRegistryValueType.Text => RegistryValueType.String,
-                BrokerRegistryValueType.ExpandableText => RegistryValueType.ExpandString,
+                BrokerRegistryValueType.Text => RegistryValueType.Text,
+                BrokerRegistryValueType.ExpandableText => RegistryValueType.ExpandableText,
                 BrokerRegistryValueType.Binary => RegistryValueType.Binary,
                 BrokerRegistryValueType.DWord => RegistryValueType.Dword,
-                BrokerRegistryValueType.MultiText => RegistryValueType.MultiString,
+                BrokerRegistryValueType.MultiText => RegistryValueType.MultiText,
                 BrokerRegistryValueType.QWord => RegistryValueType.Qword,
                 _ => throw new ArgumentOutOfRangeException(nameof(request), request.ValueType, "Unsupported Registry value type."),
             },
