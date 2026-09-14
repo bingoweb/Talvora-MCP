@@ -50,6 +50,25 @@ public sealed class WindowsRegistryService : IRegistryService
         return ValueTask.FromResult(value);
     }
 
+    public ValueTask<IReadOnlyList<string>> ListSubKeyNamesAsync(
+        RegistryHiveId hive,
+        string subKeyPath,
+        RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(subKeyPath);
+
+        using var baseKey = RegistryKey.OpenBaseKey(MapHive(hive), MapView(view));
+        using var key = baseKey.OpenSubKey(subKeyPath, writable: false)
+            ?? throw new KeyNotFoundException($"Registry key was not found: {hive}\\{subKeyPath}");
+
+        var names = key.GetSubKeyNames();
+        Array.Sort(names, StringComparer.Ordinal);
+
+        return ValueTask.FromResult<IReadOnlyList<string>>(names);
+    }
+
     private static RegistryHive MapHive(RegistryHiveId hive) => hive switch
     {
         RegistryHiveId.ClassesRoot => RegistryHive.ClassesRoot,

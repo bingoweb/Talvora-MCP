@@ -9,4 +9,10 @@ public interface IRegistryService
         RegistryViewId view = RegistryViewId.Default,
         bool expandEnvironmentStrings = false,
         CancellationToken cancellationToken = default);
+
+    ValueTask<IReadOnlyList<string>> ListSubKeyNamesAsync(
+        RegistryHiveId hive,
+        string subKeyPath,
+        RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default);
 }
