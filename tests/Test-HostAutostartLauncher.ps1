@@ -31,8 +31,8 @@ $scriptContent = [System.IO.File]::ReadAllText($scriptPath)
 $requiredScriptFragments = @(
     'Resolve-DotNet.ps1',
     'dotnetPath publish',
-    "LOCALAPPDATA",
-    "Talvora\\Host",
+    'LOCALAPPDATA',
+    'Talvora\Host',
     'New-ScheduledTaskAction',
     'New-ScheduledTaskTrigger',
     '-AtLogOn',
