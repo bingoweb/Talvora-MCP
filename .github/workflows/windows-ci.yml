@@ -11,13 +11,13 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: talvora-focused-tdd-${{ github.ref }}
+  group: talvora-windows-ci-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
   build-test:
     runs-on: windows-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -27,11 +27,36 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore IPC tests
-        run: dotnet restore tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj
+      - name: Restore production entry points
+        shell: pwsh
+        run: |
+          dotnet restore src/Talvora.Host/Talvora.Host.csproj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet restore src/Talvora.ElevatedBroker/Talvora.ElevatedBroker.csproj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Build IPC tests
-        run: dotnet build tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-restore
+      - name: Restore all test projects
+        shell: pwsh
+        run: |
+          $projects = Get-ChildItem tests -Recurse -Filter *.csproj | Sort-Object FullName
+          foreach ($project in $projects) {
+            Write-Host "Restoring $($project.FullName)"
+            dotnet restore $project.FullName
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
-      - name: Run normalized unavailable broker transport test
-        run: dotnet test tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~Talvora.Ipc.Tests.BrokerClientTransportFailureTests.ExecuteShellNormalizesUnavailableBrokerWithoutHanging" --verbosity normal
+      - name: Build Host
+        run: dotnet build src/Talvora.Host/Talvora.Host.csproj --configuration Release --no-restore
+
+      - name: Build Elevated Broker
+        run: dotnet build src/Talvora.ElevatedBroker/Talvora.ElevatedBroker.csproj --configuration Release --no-restore
+
+      - name: Run all .NET tests
+        shell: pwsh
+        run: |
+          $projects = Get-ChildItem tests -Recurse -Filter *.csproj | Sort-Object FullName
+          foreach ($project in $projects) {
+            Write-Host "Testing $($project.FullName)"
+            dotnet test $project.FullName --configuration Release --no-restore --verbosity normal
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
