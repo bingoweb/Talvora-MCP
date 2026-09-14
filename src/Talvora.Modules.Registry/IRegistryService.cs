@@ -15,6 +15,13 @@ public interface IRegistryService
         RegistryViewId view = RegistryViewId.Default,
         CancellationToken cancellationToken = default);
 
+    ValueTask DeleteValueAsync(
+        RegistryHiveId hive,
+        string subKeyPath,
+        string? valueName = null,
+        RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default);
+
     ValueTask<IReadOnlyList<string>> ListSubKeyNamesAsync(
         RegistryHiveId hive,
         string subKeyPath,

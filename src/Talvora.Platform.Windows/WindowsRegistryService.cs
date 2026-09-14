@@ -97,6 +97,24 @@ public sealed class WindowsRegistryService : IRegistryService
         return ValueTask.CompletedTask;
     }
 
+    public ValueTask DeleteValueAsync(
+        RegistryHiveId hive,
+        string subKeyPath,
+        string? valueName = null,
+        RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(subKeyPath);
+
+        using var baseKey = RegistryKey.OpenBaseKey(MapHive(hive), MapView(view));
+        using var key = baseKey.OpenSubKey(subKeyPath, writable: true)
+            ?? throw new KeyNotFoundException($"Registry key was not found: {hive}\\{subKeyPath}");
+
+        key.DeleteValue(valueName ?? string.Empty, throwOnMissingValue: true);
+        return ValueTask.CompletedTask;
+    }
+
     public ValueTask<IReadOnlyList<string>> ListSubKeyNamesAsync(
         RegistryHiveId hive,
         string subKeyPath,

@@ -21,26 +21,12 @@ public sealed class RegistryMcpTests
             .GetType("Talvora.Adapter.Mcp.RegistryTools", throwOnError: false);
 
         Assert.IsNotNull(toolType, "Talvora.Adapter.Mcp must expose RegistryTools.");
-
         var tool = Activator.CreateInstance(toolType, registry, executor);
         Assert.IsNotNull(tool);
-
         var method = toolType.GetMethod("ReadRegistryValue");
         Assert.IsNotNull(method, "RegistryTools must expose ReadRegistryValue.");
-
-        var invocation = method.Invoke(
-            tool,
-            [
-                RegistryHiveId.CurrentUser,
-                "Software\\Talvora",
-                "Greeting",
-                RegistryViewId.Registry64,
-                false,
-                CancellationToken.None,
-            ]);
-
+        var invocation = method.Invoke(tool, [RegistryHiveId.CurrentUser, "Software\\Talvora", "Greeting", RegistryViewId.Registry64, false, CancellationToken.None]);
         var envelope = await (Task<ToolEnvelope<RegistryValueData>>)invocation!;
-
         Assert.IsTrue(envelope.Ok);
         Assert.IsNotNull(envelope.Data);
         Assert.AreEqual("registry.read", executor.LastOperation);
@@ -56,28 +42,14 @@ public sealed class RegistryMcpTests
     {
         var registry = new RecordingRegistryService();
         var executor = new PassthroughOperationExecutor();
-        var toolType = typeof(FileSystemTools).Assembly
-            .GetType("Talvora.Adapter.Mcp.RegistryTools", throwOnError: false);
-
+        var toolType = typeof(FileSystemTools).Assembly.GetType("Talvora.Adapter.Mcp.RegistryTools", throwOnError: false);
         Assert.IsNotNull(toolType, "Talvora.Adapter.Mcp must expose RegistryTools.");
-
         var tool = Activator.CreateInstance(toolType, registry, executor);
         Assert.IsNotNull(tool);
-
         var method = toolType.GetMethod("ListRegistrySubKeys");
         Assert.IsNotNull(method, "RegistryTools must expose ListRegistrySubKeys.");
-
-        var invocation = method.Invoke(
-            tool,
-            [
-                RegistryHiveId.CurrentUser,
-                "Software\\Talvora",
-                RegistryViewId.Registry64,
-                CancellationToken.None,
-            ]);
-
+        var invocation = method.Invoke(tool, [RegistryHiveId.CurrentUser, "Software\\Talvora", RegistryViewId.Registry64, CancellationToken.None]);
         var envelope = await (Task<ToolEnvelope<IReadOnlyList<string>>>)invocation!;
-
         Assert.IsTrue(envelope.Ok);
         Assert.IsNotNull(envelope.Data);
         CollectionAssert.AreEqual(ListedSubKeys, envelope.Data.ToArray());
@@ -92,28 +64,14 @@ public sealed class RegistryMcpTests
     {
         var registry = new RecordingRegistryService();
         var executor = new PassthroughOperationExecutor();
-        var toolType = typeof(FileSystemTools).Assembly
-            .GetType("Talvora.Adapter.Mcp.RegistryTools", throwOnError: false);
-
+        var toolType = typeof(FileSystemTools).Assembly.GetType("Talvora.Adapter.Mcp.RegistryTools", throwOnError: false);
         Assert.IsNotNull(toolType, "Talvora.Adapter.Mcp must expose RegistryTools.");
-
         var tool = Activator.CreateInstance(toolType, registry, executor);
         Assert.IsNotNull(tool);
-
         var method = toolType.GetMethod("ListRegistryValueNames");
         Assert.IsNotNull(method, "RegistryTools must expose ListRegistryValueNames.");
-
-        var invocation = method.Invoke(
-            tool,
-            [
-                RegistryHiveId.CurrentUser,
-                "Software\\Talvora",
-                RegistryViewId.Registry64,
-                CancellationToken.None,
-            ]);
-
+        var invocation = method.Invoke(tool, [RegistryHiveId.CurrentUser, "Software\\Talvora", RegistryViewId.Registry64, CancellationToken.None]);
         var envelope = await (Task<ToolEnvelope<IReadOnlyList<string>>>)invocation!;
-
         Assert.IsTrue(envelope.Ok);
         Assert.IsNotNull(envelope.Data);
         CollectionAssert.AreEqual(ListedValueNames, envelope.Data.ToArray());
@@ -128,37 +86,21 @@ public sealed class RegistryMcpTests
     {
         var registry = new RecordingRegistryService();
         var executor = new PassthroughOperationExecutor();
-        var toolType = typeof(FileSystemTools).Assembly
-            .GetType("Talvora.Adapter.Mcp.RegistryTools", throwOnError: false);
-
+        var toolType = typeof(FileSystemTools).Assembly.GetType("Talvora.Adapter.Mcp.RegistryTools", throwOnError: false);
         Assert.IsNotNull(toolType, "Talvora.Adapter.Mcp must expose RegistryTools.");
-
         var tool = Activator.CreateInstance(toolType, registry, executor);
         Assert.IsNotNull(tool);
-
         var method = toolType.GetMethod("WriteRegistryValue");
         Assert.IsNotNull(method, "RegistryTools must expose WriteRegistryValue.");
-
         var attribute = method.GetCustomAttribute<McpServerToolAttribute>();
         Assert.IsNotNull(attribute, "WriteRegistryValue must be exposed as an MCP tool.");
         Assert.IsTrue(attribute.Destructive);
         Assert.IsTrue(attribute.Idempotent);
         Assert.IsFalse(attribute.ReadOnly);
         Assert.IsFalse(attribute.OpenWorld);
-
-        var value = new RegistryValueData(
-            RegistryHiveId.CurrentUser,
-            "Software\\Talvora",
-            "Answer",
-            RegistryValueType.DWord,
-            DWordValue: 42);
-
-        var invocation = method.Invoke(
-            tool,
-            [value, RegistryViewId.Registry64, CancellationToken.None]);
-
+        var value = new RegistryValueData(RegistryHiveId.CurrentUser, "Software\\Talvora", "Answer", RegistryValueType.DWord, DWordValue: 42);
+        var invocation = method.Invoke(tool, [value, RegistryViewId.Registry64, CancellationToken.None]);
         var envelope = await (Task<ToolEnvelope<bool>>)invocation!;
-
         Assert.IsTrue(envelope.Ok);
         Assert.IsTrue(envelope.Data);
         Assert.AreEqual("registry.write_value", executor.LastOperation);
@@ -175,13 +117,7 @@ public sealed class RegistryMcpTests
         public bool LastExpandEnvironmentStrings { get; private set; }
         public RegistryValueData? LastWrittenValue { get; private set; }
 
-        public ValueTask<RegistryValueData> ReadValueAsync(
-            RegistryHiveId hive,
-            string subKeyPath,
-            string? valueName = null,
-            RegistryViewId view = RegistryViewId.Default,
-            bool expandEnvironmentStrings = false,
-            CancellationToken cancellationToken = default)
+        public ValueTask<RegistryValueData> ReadValueAsync(RegistryHiveId hive, string subKeyPath, string? valueName = null, RegistryViewId view = RegistryViewId.Default, bool expandEnvironmentStrings = false, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             LastHive = hive;
@@ -189,19 +125,10 @@ public sealed class RegistryMcpTests
             LastValueName = valueName;
             LastView = view;
             LastExpandEnvironmentStrings = expandEnvironmentStrings;
-
-            return ValueTask.FromResult(new RegistryValueData(
-                hive,
-                subKeyPath,
-                valueName,
-                RegistryValueType.Text,
-                StringValue: "hello"));
+            return ValueTask.FromResult(new RegistryValueData(hive, subKeyPath, valueName, RegistryValueType.Text, StringValue: "hello"));
         }
 
-        public ValueTask WriteValueAsync(
-            RegistryValueData value,
-            RegistryViewId view = RegistryViewId.Default,
-            CancellationToken cancellationToken = default)
+        public ValueTask WriteValueAsync(RegistryValueData value, RegistryViewId view = RegistryViewId.Default, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             LastWrittenValue = value;
@@ -212,31 +139,27 @@ public sealed class RegistryMcpTests
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask<IReadOnlyList<string>> ListSubKeyNamesAsync(
-            RegistryHiveId hive,
-            string subKeyPath,
-            RegistryViewId view = RegistryViewId.Default,
-            CancellationToken cancellationToken = default)
+        public ValueTask DeleteValueAsync(RegistryHiveId hive, string subKeyPath, string? valueName = null, RegistryViewId view = RegistryViewId.Default, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask<IReadOnlyList<string>> ListSubKeyNamesAsync(RegistryHiveId hive, string subKeyPath, RegistryViewId view = RegistryViewId.Default, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             LastHive = hive;
             LastSubKeyPath = subKeyPath;
             LastView = view;
-
             return ValueTask.FromResult<IReadOnlyList<string>>(ListedSubKeys);
         }
 
-        public ValueTask<IReadOnlyList<string>> ListValueNamesAsync(
-            RegistryHiveId hive,
-            string subKeyPath,
-            RegistryViewId view = RegistryViewId.Default,
-            CancellationToken cancellationToken = default)
+        public ValueTask<IReadOnlyList<string>> ListValueNamesAsync(RegistryHiveId hive, string subKeyPath, RegistryViewId view = RegistryViewId.Default, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             LastHive = hive;
             LastSubKeyPath = subKeyPath;
             LastView = view;
-
             return ValueTask.FromResult<IReadOnlyList<string>>(ListedValueNames);
         }
     }
@@ -244,11 +167,7 @@ public sealed class RegistryMcpTests
     private sealed class PassthroughOperationExecutor : IOperationExecutor
     {
         public string? LastOperation { get; private set; }
-
-        public async ValueTask<TalvoraResult<T>> ExecuteAsync<T>(
-            string operation,
-            Func<CancellationToken, ValueTask<T>> action,
-            CancellationToken cancellationToken = default)
+        public async ValueTask<TalvoraResult<T>> ExecuteAsync<T>(string operation, Func<CancellationToken, ValueTask<T>> action, CancellationToken cancellationToken = default)
         {
             LastOperation = operation;
             var value = await action(cancellationToken);
