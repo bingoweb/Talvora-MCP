@@ -4,5 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Talvora.Abstractions/Talvora.Abstractions.csproj" />
+    <ProjectReference Include="../Talvora.Modules.Registry/Talvora.Modules.Registry.csproj" />
   </ItemGroup>
 </Project>
