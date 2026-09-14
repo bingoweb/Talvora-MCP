@@ -29,6 +29,7 @@ message ElevatedOperationRequest {
   oneof operation {
     ShellExecutionOperation shell = 10;
     ProcessExecutionOperation process = 11;
+    RegistryMutationOperation registry = 12;
   }
 }
 
@@ -38,6 +39,7 @@ message ElevatedOperationResponse {
   bool success = 3;
   ElevatedExecutionResult execution = 4;
   TalvoraErrorContract error = 5;
+  RegistryOperationResult registry = 6;
 }
 
 enum ElevatedShellKind {
@@ -66,6 +68,59 @@ message ProcessExecutionOperation {
   repeated EnvironmentVariable environment = 4;
   bool create_no_window = 5;
   ProcessExecutionMode mode = 6;
+}
+
+enum RegistryMutationKind {
+  REGISTRY_MUTATION_KIND_UNSPECIFIED = 0;
+  REGISTRY_MUTATION_KIND_WRITE_VALUE = 1;
+  REGISTRY_MUTATION_KIND_DELETE_VALUE = 2;
+  REGISTRY_MUTATION_KIND_CREATE_KEY = 3;
+  REGISTRY_MUTATION_KIND_DELETE_KEY = 4;
+}
+
+enum RegistryHive {
+  REGISTRY_HIVE_UNSPECIFIED = 0;
+  REGISTRY_HIVE_CLASSES_ROOT = 1;
+  REGISTRY_HIVE_CURRENT_USER = 2;
+  REGISTRY_HIVE_LOCAL_MACHINE = 3;
+  REGISTRY_HIVE_USERS = 4;
+  REGISTRY_HIVE_CURRENT_CONFIG = 5;
+}
+
+enum RegistryView {
+  REGISTRY_VIEW_DEFAULT = 0;
+  REGISTRY_VIEW_32 = 1;
+  REGISTRY_VIEW_64 = 2;
+}
+
+enum RegistryValueType {
+  REGISTRY_VALUE_TYPE_UNSPECIFIED = 0;
+  REGISTRY_VALUE_TYPE_NONE = 1;
+  REGISTRY_VALUE_TYPE_TEXT = 2;
+  REGISTRY_VALUE_TYPE_EXPANDABLE_TEXT = 3;
+  REGISTRY_VALUE_TYPE_BINARY = 4;
+  REGISTRY_VALUE_TYPE_DWORD = 5;
+  REGISTRY_VALUE_TYPE_MULTI_TEXT = 6;
+  REGISTRY_VALUE_TYPE_QWORD = 7;
+}
+
+message RegistryMutationOperation {
+  RegistryMutationKind kind = 1;
+  RegistryHive hive = 2;
+  string sub_key_path = 3;
+  optional string value_name = 4;
+  RegistryView view = 5;
+  bool recursive = 6;
+  RegistryValueType value_type = 7;
+  optional string string_value = 8;
+  optional int32 dword_value = 9;
+  optional int64 qword_value = 10;
+  repeated string multi_string_value = 11;
+  optional bytes binary_value = 12;
+}
+
+message RegistryOperationResult {
+  bool completed = 1;
 }
 
 message EnvironmentVariable {
