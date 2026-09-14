@@ -9,22 +9,15 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      test_filter:
-        description: Fully qualified dotnet test filter
-        required: false
-        default: FullyQualifiedName~Talvora.Architecture.Tests
 
 concurrency:
-  group: talvora-focused-tdd-${{ github.ref }}
+  group: talvora-windows-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build-test:
     runs-on: windows-latest
-    timeout-minutes: 5
-    env:
-      TALVORA_TEST_FILTER: ${{ github.event.inputs.test_filter || 'FullyQualifiedName~Talvora.Architecture.Tests' }}
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -34,11 +27,36 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore architecture test project
-        run: dotnet restore tests/Talvora.Architecture.Tests/Talvora.Architecture.Tests.csproj
+      - name: Restore production entry points
+        shell: pwsh
+        run: |
+          dotnet restore src/Talvora.Host/Talvora.Host.csproj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet restore src/Talvora.ElevatedBroker/Talvora.ElevatedBroker.csproj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Build architecture test project
-        run: dotnet build tests/Talvora.Architecture.Tests/Talvora.Architecture.Tests.csproj --configuration Release --no-restore
+      - name: Restore all test projects
+        shell: pwsh
+        run: |
+          $projects = Get-ChildItem tests -Recurse -Filter *.csproj | Sort-Object FullName
+          foreach ($project in $projects) {
+            Write-Host "Restoring $($project.FullName)"
+            dotnet restore $project.FullName
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
-      - name: Run architecture boundary tests
-        run: dotnet test tests/Talvora.Architecture.Tests/Talvora.Architecture.Tests.csproj --configuration Release --no-build --filter "$env:TALVORA_TEST_FILTER" --verbosity normal
+      - name: Build Host
+        run: dotnet build src/Talvora.Host/Talvora.Host.csproj --configuration Release --no-restore
+
+      - name: Build Elevated Broker
+        run: dotnet build src/Talvora.ElevatedBroker/Talvora.ElevatedBroker.csproj --configuration Release --no-restore
+
+      - name: Run all .NET tests
+        shell: pwsh
+        run: |
+          $projects = Get-ChildItem tests -Recurse -Filter *.csproj | Sort-Object FullName
+          foreach ($project in $projects) {
+            Write-Host "Testing $($project.FullName)"
+            dotnet test $project.FullName --configuration Release --no-restore --verbosity normal
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
