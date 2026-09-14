@@ -125,6 +125,9 @@ try {
     if ($toolNames -notcontains 'get_system_info') {
         throw 'MCP tools/list get_system_info aracını döndürmedi.'
     }
+    if ($toolNames -notcontains 'read_registry_value') {
+        throw 'MCP tools/list read_registry_value aracını döndürmedi.'
+    }
 
     $call = Invoke-McpRequest `
         -Method 'tools/call' `
@@ -145,7 +148,7 @@ try {
     Write-Host 'Talvora MCP smoke test: GREEN'
     Write-Host "  health:          GREEN"
     Write-Host "  server/discover: GREEN"
-    Write-Host "  tools/list:      GREEN ($($toolNames.Count) araç)"
+    Write-Host "  tools/list:      GREEN ($($toolNames.Count) araç, Registry dahil)"
     Write-Host "  tools/call:      GREEN (get_system_info)"
 }
 finally {
