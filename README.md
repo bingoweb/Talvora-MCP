@@ -60,7 +60,7 @@ Varsayılan endpointler:
 - Broker health: `http://127.0.0.1:7676/health/broker`
 - MCP: `http://127.0.0.1:7676/mcp`
 
-Varsayılan yerel broker pipe adı: `Talvora.ElevatedBroker.v1`.
+Varsayılan yerel broker pipe adı: `Talvora.ElevatedBroker.v2`.
 
 ## Mimari
 

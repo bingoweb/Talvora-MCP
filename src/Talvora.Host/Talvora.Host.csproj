@@ -10,6 +10,7 @@
     <ProjectReference Include="../Talvora.Modules.FileSystem/Talvora.Modules.FileSystem.csproj" />
     <ProjectReference Include="../Talvora.Modules.Shell/Talvora.Modules.Shell.csproj" />
     <ProjectReference Include="../Talvora.Modules.Processes/Talvora.Modules.Processes.csproj" />
+    <ProjectReference Include="../Talvora.Application/Talvora.Application.csproj" />
     <ProjectReference Include="../Talvora.Adapter.Mcp/Talvora.Adapter.Mcp.csproj" />
     <ProjectReference Include="../Talvora.Ipc.Contracts/Talvora.Ipc.Contracts.csproj" />
     <ProjectReference Include="../Talvora.Ipc.Client/Talvora.Ipc.Client.csproj" />

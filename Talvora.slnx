@@ -6,6 +6,7 @@
     <Project Path="src/Talvora.Modules.FileSystem/Talvora.Modules.FileSystem.csproj" />
     <Project Path="src/Talvora.Modules.Shell/Talvora.Modules.Shell.csproj" />
     <Project Path="src/Talvora.Modules.Processes/Talvora.Modules.Processes.csproj" />
+    <Project Path="src/Talvora.Application/Talvora.Application.csproj" />
     <Project Path="src/Talvora.Adapter.Mcp/Talvora.Adapter.Mcp.csproj" />
     <Project Path="src/Talvora.Ipc.Contracts/Talvora.Ipc.Contracts.csproj" />
     <Project Path="src/Talvora.Ipc.Client/Talvora.Ipc.Client.csproj" />

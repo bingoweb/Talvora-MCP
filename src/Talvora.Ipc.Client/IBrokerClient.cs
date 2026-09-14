@@ -1,3 +1,5 @@
+using Talvora.Abstractions;
+
 namespace Talvora.Ipc.Client;
 
 public interface IBrokerClient
@@ -6,5 +8,13 @@ public interface IBrokerClient
 
     Task<BrokerProbeResult> ProbeAsync(
         TimeSpan timeout,
+        CancellationToken cancellationToken = default);
+
+    Task<TalvoraResult<BrokerExecutionResult>> ExecuteShellAsync(
+        BrokerShellExecutionRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<TalvoraResult<BrokerExecutionResult>> ExecuteProcessAsync(
+        BrokerProcessExecutionRequest request,
         CancellationToken cancellationToken = default);
 }

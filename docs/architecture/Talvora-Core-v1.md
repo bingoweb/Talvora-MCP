@@ -7,13 +7,13 @@ Talvora, ChatGPT ile Windows arasında yüksek yetenekli yerel kontrol köprüs�
 ## Değişmez mimari kurallar
 
 1. `Talvora.Abstractions` ve `Talvora.Core`, MCP SDK veya Windows platform projesine referans vermez.
-2. MCP iş mantığı içermez; yalnız protokol girdisini Talvora servislerine çevirir.
-3. Modüller birbirini doğrudan çağırmaz. Ortak orkestrasyon gerektiğinde Core/application katmanında yapılır.
+2. MCP iş mantığı içermez; protokol girdisini `Talvora.Application` orkestrasyon katmanına ve ilgili capability servislerine çevirir.
+3. Modüller birbirini doğrudan çağırmaz. Ortak orkestrasyon `Talvora.Application` katmanında yapılır.
 4. Windows'a özgü native entegrasyonlar `Talvora.Platform.Windows` altında tutulur.
 5. Yönetici yetkisi isteyen işlemler ana MCP process'ini SYSTEM olarak çalıştırmak yerine `Talvora.ElevatedBroker` süreç sınırından yürütülür.
 6. Kullanıcı tarafından istenen işlevlere yapay klasör sandbox'ı, komut deny-list'i veya keyfî işlem limiti eklenmez. Etkin yetki Windows hesabı ve gerektiğinde elevated broker tarafından belirlenir.
 7. Yeni özellik eklemek Core'u şişirmek yerine yeni, küçük bir capability/module üzerinden yapılır.
-8. Host gRPC veya Named-Pipe ayrıntılarını doğrudan taşımaz; broker istemci transportu `Talvora.Ipc.Client` içinde kapsüllenir.
+8. Host ve MCP Adapter gRPC veya Named-Pipe ayrıntılarını taşımaz; broker istemci transportu `Talvora.Ipc.Client` içinde kapsüllenir.
 
 ## Katmanlar
 
@@ -24,15 +24,21 @@ ChatGPT
 Talvora.Adapter.Mcp
   |
   v
+Talvora.Application
+  |
+  +--> Talvora.Modules.Shell
+  +--> Talvora.Modules.Processes
+  +--> Talvora.Ipc.Client --> Talvora.Ipc.Contracts --> gRPC/Named Pipe --> Talvora.ElevatedBroker
+  |
+  `--> Talvora.Abstractions
+
 Talvora.Core / Talvora.Abstractions
   |
-  +--> Modules.FileSystem
-  +--> Modules.Shell
-  +--> Modules.Processes
-  +--> Platform.Windows
-  |
-  `--> Ipc.Client --> Ipc.Contracts --> gRPC/Named Pipe --> ElevatedBroker
+  +--> Talvora.Modules.FileSystem
+  `--> Talvora.Platform.Windows
 ```
+
+`Talvora.Application`, normal kullanıcı bağlamındaki servislerle transport-neutral `IBrokerClient` arasında execution routing yapar. MCP Adapter generated gRPC/protobuf tiplerini veya named-pipe implementation ayrıntılarını bilmez.
 
 ## Çalışma modeli
 
@@ -42,7 +48,7 @@ MCP HTTP transport stateless olarak yapılandırılır. Araç kayıtları reflec
 
 ## Elevated Broker IPC
 
-Broker protokolü `Talvora.Ipc.Contracts` içinde Protocol Buffers ile sürümlüdür. V1 protokolü `BrokerProtocol.CurrentVersion == 1` değerini kullanır.
+Broker protokolü `Talvora.Ipc.Contracts` içinde Protocol Buffers ile sürümlüdür. Güncel wire protokolü `talvora.ipc.v2`, `BrokerProtocol.CurrentVersion == 2` ve varsayılan pipe adı `Talvora.ElevatedBroker.v2` değerlerini kullanır.
 
 Windows üzerinde Host ile Broker arasındaki transport:
 
@@ -53,9 +59,11 @@ Windows üzerinde Host ile Broker arasındaki transport:
 - elevated ve non-elevated süreçlerin konuşabilmesi için `CurrentUserOnly` yerine açık SID ACL
 - broker pipe owner doğrulaması: beklenen kullanıcı veya LocalSystem
 
-Named-pipe/gRPC transport bağımsız `Talvora.Ipc.Client` katmanında kapsüllenir. Böylece Host, gRPC ve pipe implementation ayrıntılarını bilmez.
+Named-pipe/gRPC transport bağımsız `Talvora.Ipc.Client` katmanında kapsüllenir. Böylece Host, MCP Adapter ve application orkestrasyonu generated gRPC/pipe implementation ayrıntılarını bilmez.
 
-Windows Service olarak kalıcı broker kurulumu ve yönetici işlem routing'i sonraki alt fazdır.
+Elevated Broker kalıcı Windows Service olarak `LocalSystem` hesabında çalışabilir. Kurulum bir kez UAC ister; normal Host yükseltilmeden kalır. `ExecutionRouter`, açık administrator isteğini doğrudan broker'a yönlendirir; `Auto` modu ise desteklenen Windows process-start privilege hatalarında normal yürütmeden broker yürütmesine geçer.
+
+Shell komutu başarıyla başladıktan sonra non-zero exit code alınması aynı komutun otomatik ikinci kez elevated çalıştırılması anlamına gelmez; yan etkili komutların iki kez uygulanmasını önlemek için böyle bir yeniden yürütme yapılmaz. Yönetici hakkı gerektiği önceden bilinen shell komutları açık administrator isteğiyle çalıştırılır.
 
 ## Performans yaklaşımı
 
@@ -64,6 +72,7 @@ Windows Service olarak kalıcı broker kurulumu ve yönetici işlem routing'i so
 - Native AOT: başlangıç varsayımı değildir; önce ölçüm yapılır.
 - Shell ve process I/O asenkron yürütülür; iptal child process tree'yi sonlandırabilir.
 - Yerel privilege-boundary IPC için TCP yerine Named Pipes kullanılır.
+- Broker bağlantı süresi yalnız named-pipe bağlantı aşamasında sınırlandırılır; uzun süren gerçek shell/process execution bu bağlantı timeout'u tarafından kesilmez.
 
 ## Genişleme modeli
 

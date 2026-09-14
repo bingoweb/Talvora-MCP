@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Talvora.Abstractions;
+using Talvora.Application;
 using Talvora.Modules.Processes;
 
 namespace Talvora.Adapter.Mcp;
@@ -8,7 +9,8 @@ namespace Talvora.Adapter.Mcp;
 [McpServerToolType]
 public sealed class ProcessTools(
     IProcessService processService,
-    IOperationExecutor executor)
+    IOperationExecutor executor,
+    IExecutionRouter executionRouter)
 {
     [McpServerTool, Description("Lists processes visible to the Windows account running Talvora.")]
     public async Task<ToolEnvelope<IReadOnlyList<ProcessSnapshot>>> ListProcesses(
@@ -22,18 +24,19 @@ public sealed class ProcessTools(
         return ToolEnvelope.From(result);
     }
 
-    [McpServerTool, Description("Starts an executable with explicit argument boundaries.")]
+    [McpServerTool, Description("Starts an executable with explicit argument boundaries. Uses automatic Windows privilege routing by default and can run as administrator when explicitly requested.")]
     public async Task<ToolEnvelope<ProcessStartResult>> StartProcess(
         [Description("Executable path or executable name resolvable by Windows.")] string fileName,
         [Description("Arguments passed to the executable as separate values.")] string[]? arguments = null,
         [Description("Working directory. Optional.")] string? workingDirectory = null,
+        [Description("Run directly with administrator privileges when true. When false, Talvora starts normally and automatically uses administrator privileges only when Windows requires elevation.")] bool runAsAdministrator = false,
         CancellationToken cancellationToken = default)
     {
         var request = new StartProcessRequest(fileName, arguments, workingDirectory);
-        var result = await executor.ExecuteAsync(
-            "process.start",
-            token => processService.StartAsync(request, token),
-            cancellationToken);
+        var result = await executionRouter.StartProcessAsync(
+            request,
+            runAsAdministrator ? ExecutionPrivilege.Elevated : ExecutionPrivilege.Auto,
+            cancellationToken).ConfigureAwait(false);
 
         return ToolEnvelope.From(result);
     }

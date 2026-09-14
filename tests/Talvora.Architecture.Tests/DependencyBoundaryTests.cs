@@ -1,4 +1,6 @@
 using Talvora.Abstractions;
+using Talvora.Adapter.Mcp;
+using Talvora.Application;
 using Talvora.Core;
 using Talvora.Ipc.Client;
 using Talvora.Ipc.Contracts;
@@ -43,6 +45,30 @@ public sealed class DependencyBoundaryTests
             typeof(BrokerClient).Assembly,
             "Talvora.Host",
             "ModelContextProtocol");
+    }
+
+    [TestMethod]
+    public void ApplicationDoesNotReferenceAdapterHostBrokerMcpOrWindowsPlatformAssemblies()
+    {
+        AssertNoForbiddenReferences(
+            typeof(ExecutionRouter).Assembly,
+            "Talvora.Adapter.Mcp",
+            "Talvora.Host",
+            "Talvora.ElevatedBroker",
+            "ModelContextProtocol",
+            "Talvora.Platform.Windows");
+    }
+
+    [TestMethod]
+    public void McpAdapterDoesNotReferenceIpcTransportBrokerHostOrWindowsPlatformAssemblies()
+    {
+        AssertNoForbiddenReferences(
+            typeof(ShellTools).Assembly,
+            "Talvora.Ipc.Client",
+            "Talvora.Ipc.Contracts",
+            "Talvora.ElevatedBroker",
+            "Talvora.Host",
+            "Talvora.Platform.Windows");
     }
 
     private static void AssertNoForbiddenReferences(

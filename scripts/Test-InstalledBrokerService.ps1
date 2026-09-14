@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$DotNetPath,
     [string]$Configuration = 'Release',
@@ -99,7 +99,7 @@ try {
     if (-not $brokerHealth.connected -or -not $brokerHealth.ready) {
         throw 'Kurulu broker connected/ready durumunu doğrulamadı.'
     }
-    if ($brokerHealth.protocolVersion -ne 1) {
+    if ($brokerHealth.protocolVersion -ne 2) {
         throw "Beklenmeyen broker protocol version: $($brokerHealth.protocolVersion)"
     }
     if (-not $brokerHealth.isElevated) {

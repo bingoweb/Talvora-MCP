@@ -2,10 +2,11 @@ syntax = "proto3";
 
 option csharp_namespace = "Talvora.Ipc.Contracts.Grpc";
 
-package talvora.ipc.v1;
+package talvora.ipc.v2;
 
 service BrokerControl {
   rpc Health (BrokerHealthRequest) returns (BrokerHealthResponse);
+  rpc Execute (ElevatedOperationRequest) returns (ElevatedOperationResponse);
 }
 
 message BrokerHealthRequest {
@@ -18,4 +19,73 @@ message BrokerHealthResponse {
   string service_version = 3;
   bool is_elevated = 4;
   int32 process_id = 5;
+}
+
+message ElevatedOperationRequest {
+  string operation_id = 1;
+  int32 protocol_version = 2;
+  int64 timeout_milliseconds = 3;
+
+  oneof operation {
+    ShellExecutionOperation shell = 10;
+    ProcessExecutionOperation process = 11;
+  }
+}
+
+message ElevatedOperationResponse {
+  string operation_id = 1;
+  int32 protocol_version = 2;
+  bool success = 3;
+  ElevatedExecutionResult execution = 4;
+  TalvoraErrorContract error = 5;
+}
+
+enum ElevatedShellKind {
+  ELEVATED_SHELL_KIND_UNSPECIFIED = 0;
+  ELEVATED_SHELL_KIND_POWERSHELL = 1;
+  ELEVATED_SHELL_KIND_CMD = 2;
+}
+
+message ShellExecutionOperation {
+  string command = 1;
+  ElevatedShellKind shell = 2;
+  bool load_profile = 3;
+  string working_directory = 4;
+  repeated EnvironmentVariable environment = 5;
+}
+
+enum ProcessExecutionMode {
+  PROCESS_EXECUTION_MODE_WAIT_FOR_EXIT = 0;
+  PROCESS_EXECUTION_MODE_START_ONLY = 1;
+}
+
+message ProcessExecutionOperation {
+  string file_name = 1;
+  repeated string arguments = 2;
+  string working_directory = 3;
+  repeated EnvironmentVariable environment = 4;
+  bool create_no_window = 5;
+  ProcessExecutionMode mode = 6;
+}
+
+message EnvironmentVariable {
+  string name = 1;
+  optional string value = 2;
+}
+
+message ElevatedExecutionResult {
+  int32 process_id = 1;
+  optional int32 exit_code = 2;
+  string stdout = 3;
+  string stderr = 4;
+  int64 duration_milliseconds = 5;
+}
+
+message TalvoraErrorContract {
+  string code = 1;
+  string message = 2;
+  string operation = 3;
+  optional int32 native_code = 4;
+  bool retryable = 5;
+  map<string, string> details = 6;
 }
