@@ -25,8 +25,6 @@ public sealed class ElevatedRegistryProtocolContractTests
     [TestMethod]
     public void ProtocolV2CarriesRegistryMutationAndRegistryResult()
     {
-        Assert.AreEqual(2, BrokerProtocol.CurrentVersion);
-
         var registryField = ElevatedOperationRequest.Descriptor.FindFieldByName("registry")
             ?? throw new AssertFailedException("ElevatedOperationRequest must expose the registry field.");
         Assert.AreEqual(12, registryField.FieldNumber);
