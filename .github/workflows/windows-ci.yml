@@ -17,7 +17,7 @@ concurrency:
 jobs:
   build-test:
     runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -27,14 +27,18 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore Host smoke target
-        run: dotnet restore src/Talvora.Host/Talvora.Host.csproj
+      - name: Run architecture gate
+        shell: pwsh
+        run: ./scripts/Test-Architecture.ps1
 
-      - name: Build Host smoke target
+      - name: Restore solution
+        run: dotnet restore Talvora.slnx
+
+      - name: Build Host Release
         run: dotnet build src/Talvora.Host/Talvora.Host.csproj --configuration Release --no-restore
 
-      - name: Run MCP Registry catalog RED target
-        shell: pwsh
-        run: |
-          $dotnetPath = (Get-Command dotnet).Source
-          & ./scripts/Test-McpSmoke.ps1 -DotNetPath $dotnetPath -Configuration Release
+      - name: Build Elevated Broker Release
+        run: dotnet build src/Talvora.ElevatedBroker/Talvora.ElevatedBroker.csproj --configuration Release --no-restore
+
+      - name: Run all .NET tests
+        run: dotnet test --solution Talvora.slnx --configuration Release --no-restore --verbosity normal
