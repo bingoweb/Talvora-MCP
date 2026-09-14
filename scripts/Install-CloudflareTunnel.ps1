@@ -22,10 +22,19 @@ function Test-Administrator {
 }
 
 function Resolve-CloudflaredArchitecture {
-    $architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
-    switch ($architecture) {
-        'X64' { return 'amd64' }
-        'Arm64' { return 'arm64' }
+    $architecture = [System.Environment]::GetEnvironmentVariable('PROCESSOR_ARCHITEW6432')
+    if ([string]::IsNullOrWhiteSpace($architecture)) {
+        $architecture = [System.Environment]::GetEnvironmentVariable('PROCESSOR_ARCHITECTURE')
+    }
+
+    if ([string]::IsNullOrWhiteSpace($architecture)) {
+        throw 'Windows işlemci mimarisi belirlenemedi.'
+    }
+
+    switch ($architecture.Trim().ToUpperInvariant()) {
+        'AMD64' { return 'amd64' }
+        'ARM64' { return 'arm64' }
+        'X86' { return '386' }
         default { throw "Desteklenmeyen Windows mimarisi: $architecture" }
     }
 }
@@ -196,7 +205,6 @@ try {
 
     Write-Host ''
     Write-Host 'Cloudflare remotely-managed tunnel Windows servisi kuruluyor...' -ForegroundColor Cyan
-    # Cloudflare resmi Windows akışı: cloudflared service install <TUNNEL_TOKEN>
     & $cloudflaredExe service install $resolvedToken | Out-Host
     if ($LASTEXITCODE -ne 0) {
         throw "cloudflared service install başarısız. ExitCode=$LASTEXITCODE"
