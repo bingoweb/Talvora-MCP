@@ -1,0 +1,12 @@
+<Project Sdk="MSTest.Sdk/4.4.0">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Talvora.Abstractions/Talvora.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Talvora.Adapter.Mcp/Talvora.Adapter.Mcp.csproj" />
+    <ProjectReference Include="../../src/Talvora.Core/Talvora.Core.csproj" />
+    <ProjectReference Include="../../src/Talvora.Modules.Registry/Talvora.Modules.Registry.csproj" />
+    <ProjectReference Include="../../src/Talvora.Platform.Windows/Talvora.Platform.Windows.csproj" />
+  </ItemGroup>
+</Project>

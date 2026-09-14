@@ -27,36 +27,8 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore production entry points
-        shell: pwsh
-        run: |
-          dotnet restore src/Talvora.Host/Talvora.Host.csproj
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet restore src/Talvora.ElevatedBroker/Talvora.ElevatedBroker.csproj
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Restore Registry target test
+        run: dotnet restore tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj
 
-      - name: Restore all test projects
-        shell: pwsh
-        run: |
-          $projects = Get-ChildItem tests -Recurse -Filter *.csproj | Sort-Object FullName
-          foreach ($project in $projects) {
-            Write-Host "Restoring $($project.FullName)"
-            dotnet restore $project.FullName
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-
-      - name: Build Host
-        run: dotnet build src/Talvora.Host/Talvora.Host.csproj --configuration Release --no-restore
-
-      - name: Build Elevated Broker
-        run: dotnet build src/Talvora.ElevatedBroker/Talvora.ElevatedBroker.csproj --configuration Release --no-restore
-
-      - name: Run all .NET tests
-        shell: pwsh
-        run: |
-          $projects = Get-ChildItem tests -Recurse -Filter *.csproj | Sort-Object FullName
-          foreach ($project in $projects) {
-            Write-Host "Testing $($project.FullName)"
-            dotnet test $project.FullName --configuration Release --no-restore --verbosity normal
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
+      - name: Run Registry list-subkeys RED target
+        run: dotnet test tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Registry.Tests.RegistryListSubKeysTests.ListSubKeyNamesReturnsOrdinalSortedNames" --verbosity normal

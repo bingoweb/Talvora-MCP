@@ -1,0 +1,12 @@
+namespace Talvora.Modules.Registry;
+
+public interface IRegistryService
+{
+    ValueTask<RegistryValueData> ReadValueAsync(
+        RegistryHiveId hive,
+        string subKeyPath,
+        string? valueName = null,
+        RegistryViewId view = RegistryViewId.Default,
+        bool expandEnvironmentStrings = false,
+        CancellationToken cancellationToken = default);
+}
