@@ -115,6 +115,45 @@ public sealed class WindowsRegistryService : IRegistryService
         return ValueTask.CompletedTask;
     }
 
+    public ValueTask CreateKeyAsync(
+        RegistryHiveId hive,
+        string subKeyPath,
+        RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(subKeyPath);
+
+        using var baseKey = RegistryKey.OpenBaseKey(MapHive(hive), MapView(view));
+        using var key = baseKey.CreateSubKey(subKeyPath, writable: true)
+            ?? throw new InvalidOperationException($"Registry key could not be created: {hive}\\{subKeyPath}");
+
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DeleteKeyAsync(
+        RegistryHiveId hive,
+        string subKeyPath,
+        bool recursive = false,
+        RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(subKeyPath);
+
+        using var baseKey = RegistryKey.OpenBaseKey(MapHive(hive), MapView(view));
+        if (recursive)
+        {
+            baseKey.DeleteSubKeyTree(subKeyPath, throwOnMissingSubKey: true);
+        }
+        else
+        {
+            baseKey.DeleteSubKey(subKeyPath, throwOnMissingSubKey: true);
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
     public ValueTask<IReadOnlyList<string>> ListSubKeyNamesAsync(
         RegistryHiveId hive,
         string subKeyPath,

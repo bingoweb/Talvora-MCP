@@ -90,6 +90,21 @@ public sealed class RegistryMcpDeleteValueTests
             return ValueTask.CompletedTask;
         }
 
+        public ValueTask CreateKeyAsync(
+            RegistryHiveId hive,
+            string subKeyPath,
+            RegistryViewId view = RegistryViewId.Default,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public ValueTask DeleteKeyAsync(
+            RegistryHiveId hive,
+            string subKeyPath,
+            bool recursive = false,
+            RegistryViewId view = RegistryViewId.Default,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public ValueTask<IReadOnlyList<string>> ListSubKeyNamesAsync(
             RegistryHiveId hive,
             string subKeyPath,

@@ -22,6 +22,19 @@ public interface IRegistryService
         RegistryViewId view = RegistryViewId.Default,
         CancellationToken cancellationToken = default);
 
+    ValueTask CreateKeyAsync(
+        RegistryHiveId hive,
+        string subKeyPath,
+        RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default);
+
+    ValueTask DeleteKeyAsync(
+        RegistryHiveId hive,
+        string subKeyPath,
+        bool recursive = false,
+        RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default);
+
     ValueTask<IReadOnlyList<string>> ListSubKeyNamesAsync(
         RegistryHiveId hive,
         string subKeyPath,
