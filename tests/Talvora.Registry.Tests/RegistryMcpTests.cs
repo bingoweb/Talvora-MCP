@@ -152,6 +152,15 @@ public sealed class RegistryMcpTests
                 StringValue: "hello"));
         }
 
+        public ValueTask WriteValueAsync(
+            RegistryValueData value,
+            RegistryViewId view = RegistryViewId.Default,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.CompletedTask;
+        }
+
         public ValueTask<IReadOnlyList<string>> ListSubKeyNamesAsync(
             RegistryHiveId hive,
             string subKeyPath,

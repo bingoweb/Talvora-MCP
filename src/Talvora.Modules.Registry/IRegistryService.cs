@@ -10,6 +10,11 @@ public interface IRegistryService
         bool expandEnvironmentStrings = false,
         CancellationToken cancellationToken = default);
 
+    ValueTask WriteValueAsync(
+        RegistryValueData value,
+        RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default);
+
     ValueTask<IReadOnlyList<string>> ListSubKeyNamesAsync(
         RegistryHiveId hive,
         string subKeyPath,

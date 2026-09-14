@@ -50,6 +50,35 @@ public sealed class WindowsRegistryService : IRegistryService
         return ValueTask.FromResult(value);
     }
 
+    public ValueTask WriteValueAsync(
+        RegistryValueData value,
+        RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(value);
+        ArgumentException.ThrowIfNullOrWhiteSpace(value.SubKeyPath);
+
+        if (value.Type != RegistryValueType.ExpandableText)
+        {
+            throw new NotSupportedException($"Registry value type is not supported for writing yet: {value.Type}");
+        }
+
+        if (value.StringValue is null)
+        {
+            throw new ArgumentException(
+                "Expandable text registry values require StringValue.",
+                nameof(value));
+        }
+
+        using var baseKey = RegistryKey.OpenBaseKey(MapHive(value.Hive), MapView(view));
+        using var key = baseKey.OpenSubKey(value.SubKeyPath, writable: true)
+            ?? throw new KeyNotFoundException($"Registry key was not found: {value.Hive}\\{value.SubKeyPath}");
+
+        key.SetValue(value.ValueName, value.StringValue, RegistryValueKind.ExpandString);
+        return ValueTask.CompletedTask;
+    }
+
     public ValueTask<IReadOnlyList<string>> ListSubKeyNamesAsync(
         RegistryHiveId hive,
         string subKeyPath,
