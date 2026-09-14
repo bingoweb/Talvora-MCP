@@ -96,7 +96,7 @@ public sealed class RegistryWriteValueTests
             await service.WriteValueAsync(new RegistryValueData(
                 RegistryHiveId.CurrentUser,
                 subKeyPath,
-                valueName: null,
+                null,
                 RegistryValueType.DWord,
                 DWordValue: 5280));
 
@@ -130,8 +130,8 @@ public sealed class RegistryWriteValueTests
             Assert.AreEqual(RegistryValueKind.Binary, key.GetValueKind("Binary"));
             CollectionAssert.AreEqual(BinaryPayload, (byte[])key.GetValue("Binary")!);
 
-            Assert.AreEqual(RegistryValueKind.DWord, key.GetValueKind(valueName: null));
-            Assert.AreEqual(5280, key.GetValue(valueName: null));
+            Assert.AreEqual(RegistryValueKind.DWord, key.GetValueKind(null));
+            Assert.AreEqual(5280, key.GetValue(null));
 
             Assert.AreEqual(RegistryValueKind.MultiString, key.GetValueKind("Multi"));
             CollectionAssert.AreEqual(MultiTextPayload, (string[])key.GetValue("Multi")!);
