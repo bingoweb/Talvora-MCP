@@ -30,5 +30,5 @@ jobs:
       - name: Restore Registry target test
         run: dotnet restore tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj
 
-      - name: Run Registry write-value MCP RED target
-        run: dotnet test tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Registry.Tests.RegistryMcpTests.WriteRegistryValueRoutesTypedPayloadThroughRegistryService" --verbosity normal
+      - name: Run Registry delete-value RED target
+        run: dotnet test tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Registry.Tests.RegistryDeleteValueTests.DeleteValueAsyncDeletesNamedAndDefaultValues" --verbosity normal
