@@ -27,7 +27,7 @@ public sealed class RegistryMcpKeyManagementTests
 
         var createInvocation = createMethod.Invoke(
             tool,
-            [RegistryHiveId.CurrentUser, "Software\\Talvora\\Created", RegistryViewId.Registry64, CancellationToken.None]);
+            [RegistryHiveId.CurrentUser, "Software\\Talvora\\Created", RegistryViewId.Registry64, false, CancellationToken.None]);
         var createEnvelope = await (Task<ToolEnvelope<bool>>)createInvocation!;
 
         Assert.IsTrue(createEnvelope.Ok);
@@ -43,7 +43,7 @@ public sealed class RegistryMcpKeyManagementTests
 
         var deleteInvocation = deleteMethod.Invoke(
             tool,
-            [RegistryHiveId.LocalMachine, "Software\\Talvora\\Obsolete", true, RegistryViewId.Registry32, CancellationToken.None]);
+            [RegistryHiveId.LocalMachine, "Software\\Talvora\\Obsolete", true, RegistryViewId.Registry32, false, CancellationToken.None]);
         var deleteEnvelope = await (Task<ToolEnvelope<bool>>)deleteInvocation!;
 
         Assert.IsTrue(deleteEnvelope.Ok);

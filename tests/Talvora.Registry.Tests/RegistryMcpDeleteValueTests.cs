@@ -39,6 +39,7 @@ public sealed class RegistryMcpDeleteValueTests
                 "Software\\Talvora",
                 "Obsolete",
                 RegistryViewId.Registry64,
+                false,
                 CancellationToken.None,
             ]);
 

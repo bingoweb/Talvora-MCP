@@ -99,7 +99,7 @@ public sealed class RegistryMcpTests
         Assert.IsFalse(attribute.ReadOnly);
         Assert.IsFalse(attribute.OpenWorld);
         var value = new RegistryValueData(RegistryHiveId.CurrentUser, "Software\\Talvora", "Answer", RegistryValueType.DWord, DWordValue: 42);
-        var invocation = method.Invoke(tool, [value, RegistryViewId.Registry64, CancellationToken.None]);
+        var invocation = method.Invoke(tool, [value, RegistryViewId.Registry64, false, CancellationToken.None]);
         var envelope = await (Task<ToolEnvelope<bool>>)invocation!;
         Assert.IsTrue(envelope.Ok);
         Assert.IsTrue(envelope.Data);

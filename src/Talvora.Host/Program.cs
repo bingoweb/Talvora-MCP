@@ -28,6 +28,7 @@ var brokerPipeName = builder.Configuration[BrokerProtocol.PipeNameConfigurationK
     ?? BrokerProtocol.DefaultPipeName;
 builder.Services.AddTalvoraBrokerClient(brokerPipeName);
 builder.Services.AddSingleton<IExecutionRouter, ExecutionRouter>();
+builder.Services.AddSingleton<IRegistryExecutionRouter, RegistryExecutionRouter>();
 builder.Services.AddTalvoraMcp();
 
 var app = builder.Build();

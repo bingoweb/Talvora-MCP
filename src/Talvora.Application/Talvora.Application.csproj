@@ -6,6 +6,7 @@
     <ProjectReference Include="../Talvora.Abstractions/Talvora.Abstractions.csproj" />
     <ProjectReference Include="../Talvora.Modules.Shell/Talvora.Modules.Shell.csproj" />
     <ProjectReference Include="../Talvora.Modules.Processes/Talvora.Modules.Processes.csproj" />
+    <ProjectReference Include="../Talvora.Modules.Registry/Talvora.Modules.Registry.csproj" />
     <ProjectReference Include="../Talvora.Ipc.Client/Talvora.Ipc.Client.csproj" />
   </ItemGroup>
 </Project>
