@@ -19,6 +19,7 @@ public static class McpServiceCollectionExtensions
             .WithTools<FileSystemTools>()
             .WithTools<ShellTools>()
             .WithTools<ProcessTools>()
+            .WithTools<RegistryTools>()
             .WithTools<SystemTools>();
 
         return services;
