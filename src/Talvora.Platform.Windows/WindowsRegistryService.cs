@@ -59,23 +59,41 @@ public sealed class WindowsRegistryService : IRegistryService
         ArgumentNullException.ThrowIfNull(value);
         ArgumentException.ThrowIfNullOrWhiteSpace(value.SubKeyPath);
 
-        if (value.Type != RegistryValueType.ExpandableText)
+        (object RawValue, RegistryValueKind Kind) writableValue = value.Type switch
         {
-            throw new NotSupportedException($"Registry value type is not supported for writing yet: {value.Type}");
-        }
-
-        if (value.StringValue is null)
-        {
-            throw new ArgumentException(
-                "Expandable text registry values require StringValue.",
-                nameof(value));
-        }
+            RegistryValueType.Text => (
+                value.StringValue ?? throw MissingPayload(value.Type, nameof(value.StringValue)),
+                RegistryValueKind.String),
+            RegistryValueType.ExpandableText => (
+                value.StringValue ?? throw MissingPayload(value.Type, nameof(value.StringValue)),
+                RegistryValueKind.ExpandString),
+            RegistryValueType.Binary => (
+                value.BinaryValue ?? throw MissingPayload(value.Type, nameof(value.BinaryValue)),
+                RegistryValueKind.Binary),
+            RegistryValueType.DWord => (
+                value.DWordValue ?? throw MissingPayload(value.Type, nameof(value.DWordValue)),
+                RegistryValueKind.DWord),
+            RegistryValueType.MultiText => (
+                value.MultiStringValue?.ToArray()
+                    ?? throw MissingPayload(value.Type, nameof(value.MultiStringValue)),
+                RegistryValueKind.MultiString),
+            RegistryValueType.QWord => (
+                value.QWordValue ?? throw MissingPayload(value.Type, nameof(value.QWordValue)),
+                RegistryValueKind.QWord),
+            RegistryValueType.None => (
+                value.BinaryValue ?? throw MissingPayload(value.Type, nameof(value.BinaryValue)),
+                RegistryValueKind.None),
+            _ => throw new InvalidEnumArgumentException(
+                nameof(value.Type),
+                (int)value.Type,
+                typeof(RegistryValueType)),
+        };
 
         using var baseKey = RegistryKey.OpenBaseKey(MapHive(value.Hive), MapView(view));
         using var key = baseKey.OpenSubKey(value.SubKeyPath, writable: true)
             ?? throw new KeyNotFoundException($"Registry key was not found: {value.Hive}\\{value.SubKeyPath}");
 
-        key.SetValue(value.ValueName, value.StringValue, RegistryValueKind.ExpandString);
+        key.SetValue(value.ValueName, writableValue.RawValue, writableValue.Kind);
         return ValueTask.CompletedTask;
     }
 
@@ -116,6 +134,9 @@ public sealed class WindowsRegistryService : IRegistryService
 
         return ValueTask.FromResult<IReadOnlyList<string>>(names);
     }
+
+    private static ArgumentException MissingPayload(RegistryValueType type, string propertyName) =>
+        new($"Registry value type {type} requires {propertyName}.", propertyName);
 
     private static RegistryHive MapHive(RegistryHiveId hive) => hive switch
     {
