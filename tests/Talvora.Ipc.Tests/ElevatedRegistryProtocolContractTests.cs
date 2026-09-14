@@ -6,49 +6,46 @@ namespace Talvora.Ipc.Tests;
 [TestClass]
 public sealed class ElevatedRegistryProtocolContractTests
 {
+    private static readonly string[] RegistryMutationFieldNames =
+    [
+        "kind",
+        "hive",
+        "sub_key_path",
+        "value_name",
+        "view",
+        "recursive",
+        "value_type",
+        "string_value",
+        "dword_value",
+        "qword_value",
+        "multi_string_value",
+        "binary_value",
+    ];
+
     [TestMethod]
-    public void BrokerProtocolCarriesTypedRegistryMutationWithoutVersionBump()
+    public void ProtocolV2CarriesRegistryMutationAndRegistryResult()
     {
         Assert.AreEqual(2, BrokerProtocol.CurrentVersion);
-        Assert.AreEqual("Talvora.ElevatedBroker.v2", BrokerProtocol.DefaultPipeName);
 
-        var requestType = typeof(ElevatedOperationRequest);
-        var registryProperty = requestType.GetProperty("Registry");
-        Assert.IsNotNull(registryProperty, "ElevatedOperationRequest must expose a Registry oneof member.");
+        var registryField = ElevatedOperationRequest.Descriptor.FindFieldByName("registry")
+            ?? throw new AssertFailedException("ElevatedOperationRequest must expose the registry field.");
+        Assert.AreEqual(12, registryField.FieldNumber);
+        Assert.AreEqual("RegistryMutationOperation", registryField.MessageType.Name);
 
-        var operationCases = Enum.GetNames(typeof(ElevatedOperationRequest.OperationOneofCase));
-        CollectionAssert.Contains(operationCases, "Registry");
+        var operationOneof = registryField.ContainingOneof
+            ?? throw new AssertFailedException("Registry field must belong to the operation oneof.");
+        Assert.AreEqual("operation", operationOneof.Name);
 
-        var contractAssembly = requestType.Assembly;
-        var registryOperationType = contractAssembly.GetType(
-            "Talvora.Ipc.Contracts.Grpc.RegistryMutationOperation",
-            throwOnError: false);
-        Assert.IsNotNull(registryOperationType, "Broker protocol must define RegistryMutationOperation.");
-
-        foreach (var propertyName in new[]
-        {
-            "Kind",
-            "Hive",
-            "SubKeyPath",
-            "ValueName",
-            "View",
-            "Recursive",
-            "ValueType",
-            "StringValue",
-            "DwordValue",
-            "QwordValue",
-            "MultiStringValue",
-            "BinaryValue",
-        })
+        foreach (var fieldName in RegistryMutationFieldNames)
         {
             Assert.IsNotNull(
-                registryOperationType.GetProperty(propertyName),
-                $"RegistryMutationOperation must expose {propertyName}.");
+                RegistryMutationOperation.Descriptor.FindFieldByName(fieldName),
+                $"RegistryMutationOperation must expose proto field '{fieldName}'.");
         }
 
-        var responseRegistryProperty = typeof(ElevatedOperationResponse).GetProperty("Registry");
-        Assert.IsNotNull(
-            responseRegistryProperty,
-            "ElevatedOperationResponse must expose a Registry completion result without replacing the existing execution result.");
+        var responseRegistryField = ElevatedOperationResponse.Descriptor.FindFieldByName("registry")
+            ?? throw new AssertFailedException("ElevatedOperationResponse must expose the registry field.");
+        Assert.AreEqual(6, responseRegistryField.FieldNumber);
+        Assert.AreEqual("RegistryOperationResult", responseRegistryField.MessageType.Name);
     }
 }
