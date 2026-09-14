@@ -7,6 +7,8 @@ namespace Talvora.Registry.Tests;
 [TestClass]
 public sealed class RegistryMcpTests
 {
+    private static readonly string[] ListedSubKeys = ["Beta", "Zulu", "alpha"];
+
     [TestMethod]
     public async Task ReadRegistryValueRoutesParametersThroughRegistryService()
     {
@@ -44,6 +46,42 @@ public sealed class RegistryMcpTests
         Assert.AreEqual("Greeting", registry.LastValueName);
         Assert.AreEqual(RegistryViewId.Registry64, registry.LastView);
         Assert.IsFalse(registry.LastExpandEnvironmentStrings);
+    }
+
+    [TestMethod]
+    public async Task ListRegistrySubKeysRoutesParametersThroughRegistryService()
+    {
+        var registry = new RecordingRegistryService();
+        var executor = new PassthroughOperationExecutor();
+        var toolType = typeof(FileSystemTools).Assembly
+            .GetType("Talvora.Adapter.Mcp.RegistryTools", throwOnError: false);
+
+        Assert.IsNotNull(toolType, "Talvora.Adapter.Mcp must expose RegistryTools.");
+
+        var tool = Activator.CreateInstance(toolType, registry, executor);
+        Assert.IsNotNull(tool);
+
+        var method = toolType.GetMethod("ListRegistrySubKeys");
+        Assert.IsNotNull(method, "RegistryTools must expose ListRegistrySubKeys.");
+
+        var invocation = method.Invoke(
+            tool,
+            [
+                RegistryHiveId.CurrentUser,
+                "Software\\Talvora",
+                RegistryViewId.Registry64,
+                CancellationToken.None,
+            ]);
+
+        var envelope = await (Task<ToolEnvelope<IReadOnlyList<string>>>)invocation!;
+
+        Assert.IsTrue(envelope.Ok);
+        Assert.IsNotNull(envelope.Data);
+        CollectionAssert.AreEqual(ListedSubKeys, envelope.Data.ToArray());
+        Assert.AreEqual("registry.list_subkeys", executor.LastOperation);
+        Assert.AreEqual(RegistryHiveId.CurrentUser, registry.LastHive);
+        Assert.AreEqual("Software\\Talvora", registry.LastSubKeyPath);
+        Assert.AreEqual(RegistryViewId.Registry64, registry.LastView);
     }
 
     private sealed class RecordingRegistryService : IRegistryService
@@ -84,7 +122,11 @@ public sealed class RegistryMcpTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return ValueTask.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+            LastHive = hive;
+            LastSubKeyPath = subKeyPath;
+            LastView = view;
+
+            return ValueTask.FromResult<IReadOnlyList<string>>(ListedSubKeys);
         }
     }
 
