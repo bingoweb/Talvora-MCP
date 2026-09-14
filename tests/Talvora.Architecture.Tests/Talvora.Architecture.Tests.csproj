@@ -7,5 +7,7 @@
     <ProjectReference Include="../../src/Talvora.Core/Talvora.Core.csproj" />
     <ProjectReference Include="../../src/Talvora.Ipc.Contracts/Talvora.Ipc.Contracts.csproj" />
     <ProjectReference Include="../../src/Talvora.Ipc.Client/Talvora.Ipc.Client.csproj" />
+    <ProjectReference Include="../../src/Talvora.Application/Talvora.Application.csproj" />
+    <ProjectReference Include="../../src/Talvora.Adapter.Mcp/Talvora.Adapter.Mcp.csproj" />
   </ItemGroup>
 </Project>
