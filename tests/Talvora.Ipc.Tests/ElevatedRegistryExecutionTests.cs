@@ -1,6 +1,7 @@
 using Microsoft.Win32;
 using Talvora.Ipc.Contracts;
 using Talvora.Ipc.Contracts.Grpc;
+using Talvora.Platform.Windows;
 
 namespace Talvora.Ipc.Tests;
 
@@ -17,7 +18,7 @@ public sealed class ElevatedRegistryExecutionTests
 
         try
         {
-            var executor = new Talvora.ElevatedBroker.ElevatedOperationExecutor();
+            var executor = new Talvora.ElevatedBroker.ElevatedOperationExecutor(new WindowsRegistryService());
 
             var createResponse = await executor.ExecuteAsync(
                 CreateRequest(

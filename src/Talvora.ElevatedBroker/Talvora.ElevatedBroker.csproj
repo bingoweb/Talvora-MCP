@@ -8,5 +8,7 @@
     <PackageReference Include="Grpc.AspNetCore" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
     <ProjectReference Include="../Talvora.Ipc.Contracts/Talvora.Ipc.Contracts.csproj" />
+    <ProjectReference Include="../Talvora.Modules.Registry/Talvora.Modules.Registry.csproj" />
+    <ProjectReference Include="../Talvora.Platform.Windows/Talvora.Platform.Windows.csproj" />
   </ItemGroup>
 </Project>

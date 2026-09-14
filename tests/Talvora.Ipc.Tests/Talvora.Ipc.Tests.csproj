@@ -8,5 +8,6 @@
     <ProjectReference Include="../../src/Talvora.ElevatedBroker/Talvora.ElevatedBroker.csproj" />
     <ProjectReference Include="../../src/Talvora.Application/Talvora.Application.csproj" />
     <ProjectReference Include="../../src/Talvora.Adapter.Mcp/Talvora.Adapter.Mcp.csproj" />
+    <ProjectReference Include="../../src/Talvora.Platform.Windows/Talvora.Platform.Windows.csproj" />
   </ItemGroup>
 </Project>

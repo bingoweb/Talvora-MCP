@@ -6,6 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Talvora.ElevatedBroker;
 using Talvora.Ipc.Contracts;
+using Talvora.Modules.Registry;
+using Talvora.Platform.Windows;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -18,7 +20,9 @@ builder.Services.AddWindowsService(options =>
     options.ServiceName = "Talvora Elevated Broker";
 });
 builder.Services.AddGrpc();
-builder.Services.AddSingleton<ElevatedOperationExecutor>();
+builder.Services.AddWindowsRegistry();
+builder.Services.AddSingleton(serviceProvider =>
+    new ElevatedOperationExecutor(serviceProvider.GetRequiredService<IRegistryService>()));
 
 var pipeName = builder.Configuration[BrokerProtocol.PipeNameConfigurationKey]
     ?? BrokerProtocol.DefaultPipeName;

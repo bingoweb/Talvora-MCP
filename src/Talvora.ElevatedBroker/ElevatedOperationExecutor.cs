@@ -2,12 +2,31 @@ using System.ComponentModel;
 using System.Diagnostics;
 using Talvora.Ipc.Contracts;
 using Talvora.Ipc.Contracts.Grpc;
+using Talvora.Modules.Registry;
+using ModuleRegistryHive = Talvora.Modules.Registry.RegistryHiveId;
+using ModuleRegistryValueType = Talvora.Modules.Registry.RegistryValueType;
+using ModuleRegistryView = Talvora.Modules.Registry.RegistryViewId;
 
 namespace Talvora.ElevatedBroker;
 
-public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
+public sealed class ElevatedOperationExecutor
 {
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly IRegistryService? _registryService;
+    private readonly TimeProvider _timeProvider;
+
+    public ElevatedOperationExecutor(TimeProvider? timeProvider = null)
+    {
+        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
+
+    public ElevatedOperationExecutor(
+        IRegistryService registryService,
+        TimeProvider? timeProvider = null)
+    {
+        ArgumentNullException.ThrowIfNull(registryService);
+        _registryService = registryService;
+        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
 
     public async Task<ElevatedOperationResponse> ExecuteAsync(
         ElevatedOperationRequest request,
@@ -33,6 +52,7 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
         {
             ElevatedOperationRequest.OperationOneofCase.Shell => "elevated.shell.execute",
             ElevatedOperationRequest.OperationOneofCase.Process => "elevated.process.execute",
+            ElevatedOperationRequest.OperationOneofCase.Registry => "elevated.registry.execute",
             _ => "elevated.execute",
         };
 
@@ -44,6 +64,8 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
                     await ExecuteShellAsync(request, cancellationToken).ConfigureAwait(false),
                 ElevatedOperationRequest.OperationOneofCase.Process =>
                     await ExecuteProcessAsync(request, cancellationToken).ConfigureAwait(false),
+                ElevatedOperationRequest.OperationOneofCase.Registry =>
+                    await ExecuteRegistryAsync(request, cancellationToken).ConfigureAwait(false),
                 _ => Failure(
                     request,
                     "unsupported_operation",
@@ -116,6 +138,68 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
             ProcessExecutionMode.StartOnly =>
                 Task.FromResult(StartProcessOnly(request, CreateProcessStartInfo(operation, redirectStandardStreams: false), cancellationToken)),
             _ => throw new InvalidEnumArgumentException(nameof(operation.Mode), (int)operation.Mode, typeof(ProcessExecutionMode)),
+        };
+    }
+
+    private async Task<ElevatedOperationResponse> ExecuteRegistryAsync(
+        ElevatedOperationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var registryService = _registryService
+            ?? throw new InvalidOperationException("Registry execution requires an IRegistryService.");
+        var operation = request.Registry;
+        ArgumentException.ThrowIfNullOrWhiteSpace(operation.SubKeyPath);
+
+        var hive = MapRegistryHive(operation.Hive);
+        var view = MapRegistryView(operation.View);
+
+        switch (operation.Kind)
+        {
+            case RegistryMutationKind.WriteValue:
+                await registryService.WriteValueAsync(
+                    CreateRegistryValue(operation, hive),
+                    view,
+                    cancellationToken).ConfigureAwait(false);
+                break;
+            case RegistryMutationKind.DeleteValue:
+                await registryService.DeleteValueAsync(
+                    hive,
+                    operation.SubKeyPath,
+                    operation.HasValueName ? operation.ValueName : null,
+                    view,
+                    cancellationToken).ConfigureAwait(false);
+                break;
+            case RegistryMutationKind.CreateKey:
+                await registryService.CreateKeyAsync(
+                    hive,
+                    operation.SubKeyPath,
+                    view,
+                    cancellationToken).ConfigureAwait(false);
+                break;
+            case RegistryMutationKind.DeleteKey:
+                await registryService.DeleteKeyAsync(
+                    hive,
+                    operation.SubKeyPath,
+                    operation.Recursive,
+                    view,
+                    cancellationToken).ConfigureAwait(false);
+                break;
+            default:
+                throw new InvalidEnumArgumentException(
+                    nameof(operation.Kind),
+                    (int)operation.Kind,
+                    typeof(RegistryMutationKind));
+        }
+
+        return new ElevatedOperationResponse
+        {
+            OperationId = request.OperationId,
+            ProtocolVersion = BrokerProtocol.CurrentVersion,
+            Success = true,
+            Registry = new RegistryOperationResult
+            {
+                Completed = true,
+            },
         };
     }
 
@@ -203,6 +287,53 @@ public sealed class ElevatedOperationExecutor(TimeProvider? timeProvider = null)
                 $"Elevated process exceeded the configured timeout of {request.TimeoutMilliseconds} ms.");
         }
     }
+
+    private static RegistryValueData CreateRegistryValue(
+        RegistryMutationOperation operation,
+        ModuleRegistryHive hive) =>
+        new(
+            hive,
+            operation.SubKeyPath,
+            operation.HasValueName ? operation.ValueName : null,
+            MapRegistryValueType(operation.ValueType),
+            StringValue: operation.HasStringValue ? operation.StringValue : null,
+            DWordValue: operation.HasDwordValue ? operation.DwordValue : null,
+            QWordValue: operation.HasQwordValue ? operation.QwordValue : null,
+            MultiStringValue: operation.ValueType == Talvora.Ipc.Contracts.Grpc.RegistryValueType.MultiText
+                ? operation.MultiStringValue.ToArray()
+                : null,
+            BinaryValue: operation.HasBinaryValue ? operation.BinaryValue.ToByteArray() : null);
+
+    private static ModuleRegistryHive MapRegistryHive(Talvora.Ipc.Contracts.Grpc.RegistryHive hive) => hive switch
+    {
+        Talvora.Ipc.Contracts.Grpc.RegistryHive.ClassesRoot => ModuleRegistryHive.ClassesRoot,
+        Talvora.Ipc.Contracts.Grpc.RegistryHive.CurrentUser => ModuleRegistryHive.CurrentUser,
+        Talvora.Ipc.Contracts.Grpc.RegistryHive.LocalMachine => ModuleRegistryHive.LocalMachine,
+        Talvora.Ipc.Contracts.Grpc.RegistryHive.Users => ModuleRegistryHive.Users,
+        Talvora.Ipc.Contracts.Grpc.RegistryHive.CurrentConfig => ModuleRegistryHive.CurrentConfig,
+        _ => throw new InvalidEnumArgumentException(nameof(hive), (int)hive, typeof(Talvora.Ipc.Contracts.Grpc.RegistryHive)),
+    };
+
+    private static ModuleRegistryView MapRegistryView(Talvora.Ipc.Contracts.Grpc.RegistryView view) => view switch
+    {
+        Talvora.Ipc.Contracts.Grpc.RegistryView.Default => ModuleRegistryView.Default,
+        Talvora.Ipc.Contracts.Grpc.RegistryView._32 => ModuleRegistryView.Registry32,
+        Talvora.Ipc.Contracts.Grpc.RegistryView._64 => ModuleRegistryView.Registry64,
+        _ => throw new InvalidEnumArgumentException(nameof(view), (int)view, typeof(Talvora.Ipc.Contracts.Grpc.RegistryView)),
+    };
+
+    private static ModuleRegistryValueType MapRegistryValueType(Talvora.Ipc.Contracts.Grpc.RegistryValueType type) => type switch
+    {
+        Talvora.Ipc.Contracts.Grpc.RegistryValueType.Unspecified => ModuleRegistryValueType.Unknown,
+        Talvora.Ipc.Contracts.Grpc.RegistryValueType.None => ModuleRegistryValueType.None,
+        Talvora.Ipc.Contracts.Grpc.RegistryValueType.Text => ModuleRegistryValueType.Text,
+        Talvora.Ipc.Contracts.Grpc.RegistryValueType.ExpandableText => ModuleRegistryValueType.ExpandableText,
+        Talvora.Ipc.Contracts.Grpc.RegistryValueType.Binary => ModuleRegistryValueType.Binary,
+        Talvora.Ipc.Contracts.Grpc.RegistryValueType.Dword => ModuleRegistryValueType.DWord,
+        Talvora.Ipc.Contracts.Grpc.RegistryValueType.MultiText => ModuleRegistryValueType.MultiText,
+        Talvora.Ipc.Contracts.Grpc.RegistryValueType.Qword => ModuleRegistryValueType.QWord,
+        _ => throw new InvalidEnumArgumentException(nameof(type), (int)type, typeof(Talvora.Ipc.Contracts.Grpc.RegistryValueType)),
+    };
 
     private static ProcessStartInfo CreateShellStartInfo(ShellExecutionOperation shell)
     {
