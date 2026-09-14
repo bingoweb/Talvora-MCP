@@ -30,5 +30,5 @@ jobs:
       - name: Restore IPC target test
         run: dotnet restore tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj
 
-      - name: Run elevated Registry execution RED target
-        run: dotnet test tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Ipc.Tests.ElevatedRegistryExecutionTests.RegistryMutationsExecuteThroughElevatedOperationExecutor" --verbosity normal
+      - name: Run Registry mutation routing RED target
+        run: dotnet test tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Ipc.Tests.RegistryMutationRoutingTests.RegistryMutationsFallBackToBrokerAndHonorExplicitElevation" --verbosity normal
