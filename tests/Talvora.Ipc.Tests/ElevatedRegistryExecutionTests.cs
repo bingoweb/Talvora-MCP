@@ -11,7 +11,9 @@ public sealed class ElevatedRegistryExecutionTests
     public async Task RegistryMutationsExecuteThroughElevatedOperationExecutor()
     {
         var subKeyPath = $"Software\\Talvora.Tests\\ElevatedRegistry\\{Guid.NewGuid():N}";
-        using var currentUser = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default);
+        using var currentUser = RegistryKey.OpenBaseKey(
+            Microsoft.Win32.RegistryHive.CurrentUser,
+            Microsoft.Win32.RegistryView.Default);
 
         try
         {
