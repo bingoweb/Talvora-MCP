@@ -89,4 +89,25 @@ public sealed class RegistryTools(
 
         return ToolEnvelope.From(result);
     }
+
+    [McpServerTool(Destructive = true, Idempotent = true, OpenWorld = false, ReadOnly = false),
+     Description("Deletes a Windows Registry value using the Windows account running Talvora.")]
+    public async Task<ToolEnvelope<bool>> DeleteRegistryValue(
+        [Description("Registry hive containing the key.")] RegistryHiveId hive,
+        [Description("Registry subkey path relative to the selected hive.")] string subKeyPath,
+        [Description("Value name. Use null or empty for the unnamed (Default) value.")] string? valueName = null,
+        [Description("Registry view to write: Default, Registry32, or Registry64.")] RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await executor.ExecuteAsync(
+            "registry.delete_value",
+            async token =>
+            {
+                await registry.DeleteValueAsync(hive, subKeyPath, valueName, view, token);
+                return true;
+            },
+            cancellationToken);
+
+        return ToolEnvelope.From(result);
+    }
 }
