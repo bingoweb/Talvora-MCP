@@ -33,5 +33,5 @@ jobs:
       - name: Build IPC tests
         run: dotnet build tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-restore
 
-      - name: Run unavailable broker transport test
+      - name: Run normalized unavailable broker transport test
         run: dotnet test tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~Talvora.Ipc.Tests.BrokerClientTransportFailureTests.ExecuteShellNormalizesUnavailableBrokerWithoutHanging" --verbosity normal
