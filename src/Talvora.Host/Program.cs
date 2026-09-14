@@ -22,6 +22,7 @@ builder.Services.AddSingleton<IPlatformInfoProvider, WindowsPlatformInfoProvider
 builder.Services.AddSingleton<IFileSystemService, FileSystemService>();
 builder.Services.AddSingleton<IShellService, ShellService>();
 builder.Services.AddSingleton<IProcessService, ProcessService>();
+builder.Services.AddWindowsRegistry();
 
 var brokerPipeName = builder.Configuration[BrokerProtocol.PipeNameConfigurationKey]
     ?? BrokerProtocol.DefaultPipeName;
