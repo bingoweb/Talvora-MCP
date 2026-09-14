@@ -76,6 +76,16 @@ public sealed class RegistryMcpTests
                 RegistryValueType.Text,
                 StringValue: "hello"));
         }
+
+        public ValueTask<IReadOnlyList<string>> ListSubKeyNamesAsync(
+            RegistryHiveId hive,
+            string subKeyPath,
+            RegistryViewId view = RegistryViewId.Default,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+        }
     }
 
     private sealed class PassthroughOperationExecutor : IOperationExecutor
