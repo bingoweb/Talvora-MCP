@@ -37,13 +37,18 @@ $requiredScriptFragments = @(
     'Start-Process',
     '-Verb RunAs',
     '127.0.0.1:7676',
-    "Get-Service -Name 'cloudflared'"
+    "Get-Service -Name 'cloudflared'",
+    'PROCESSOR_ARCHITECTURE'
 )
 
 foreach ($fragment in $requiredScriptFragments) {
     if (-not $scriptContent.Contains($fragment, [System.StringComparison]::Ordinal)) {
         throw "Cloudflare launcher contract missing fragment: $fragment"
     }
+}
+
+if ($scriptContent.Contains('RuntimeInformation]::OSArchitecture', [System.StringComparison]::Ordinal)) {
+    throw 'Cloudflare launcher must not depend on RuntimeInformation.OSArchitecture because Windows PowerShell 5.1 does not expose it reliably.'
 }
 
 $batchContent = [System.IO.File]::ReadAllText($batchPath)
