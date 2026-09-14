@@ -17,4 +17,8 @@ public interface IBrokerClient
     Task<TalvoraResult<BrokerExecutionResult>> ExecuteProcessAsync(
         BrokerProcessExecutionRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<TalvoraResult<BrokerRegistryMutationResult>> ExecuteRegistryAsync(
+        BrokerRegistryMutationRequest request,
+        CancellationToken cancellationToken = default);
 }

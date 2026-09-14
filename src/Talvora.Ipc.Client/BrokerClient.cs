@@ -161,6 +161,92 @@ public sealed class BrokerClient : IBrokerClient, IDisposable
         return ExecuteAsync(envelope, cancellationToken);
     }
 
+    public Task<TalvoraResult<BrokerRegistryMutationResult>> ExecuteRegistryAsync(
+        BrokerRegistryMutationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.SubKeyPath);
+
+        var operation = new RegistryMutationOperation
+        {
+            Kind = request.Kind switch
+            {
+                BrokerRegistryMutationKind.Unknown => RegistryMutationKind.Unspecified,
+                BrokerRegistryMutationKind.WriteValue => RegistryMutationKind.WriteValue,
+                BrokerRegistryMutationKind.DeleteValue => RegistryMutationKind.DeleteValue,
+                BrokerRegistryMutationKind.CreateKey => RegistryMutationKind.CreateKey,
+                BrokerRegistryMutationKind.DeleteKey => RegistryMutationKind.DeleteKey,
+                _ => throw new ArgumentOutOfRangeException(nameof(request), request.Kind, "Unsupported Registry mutation kind."),
+            },
+            Hive = request.Hive switch
+            {
+                BrokerRegistryHive.ClassesRoot => RegistryHive.ClassesRoot,
+                BrokerRegistryHive.CurrentUser => RegistryHive.CurrentUser,
+                BrokerRegistryHive.LocalMachine => RegistryHive.LocalMachine,
+                BrokerRegistryHive.Users => RegistryHive.Users,
+                BrokerRegistryHive.CurrentConfig => RegistryHive.CurrentConfig,
+                _ => throw new ArgumentOutOfRangeException(nameof(request), request.Hive, "Unsupported Registry hive."),
+            },
+            SubKeyPath = request.SubKeyPath,
+            View = request.View switch
+            {
+                BrokerRegistryView.Default => RegistryView.Default,
+                BrokerRegistryView.Registry32 => RegistryView.Registry32,
+                BrokerRegistryView.Registry64 => RegistryView.Registry64,
+                _ => throw new ArgumentOutOfRangeException(nameof(request), request.View, "Unsupported Registry view."),
+            },
+            Recursive = request.Recursive,
+            ValueType = request.ValueType switch
+            {
+                BrokerRegistryValueType.Unknown => RegistryValueType.Unspecified,
+                BrokerRegistryValueType.None => RegistryValueType.None,
+                BrokerRegistryValueType.Text => RegistryValueType.String,
+                BrokerRegistryValueType.ExpandableText => RegistryValueType.ExpandString,
+                BrokerRegistryValueType.Binary => RegistryValueType.Binary,
+                BrokerRegistryValueType.DWord => RegistryValueType.Dword,
+                BrokerRegistryValueType.MultiText => RegistryValueType.MultiString,
+                BrokerRegistryValueType.QWord => RegistryValueType.Qword,
+                _ => throw new ArgumentOutOfRangeException(nameof(request), request.ValueType, "Unsupported Registry value type."),
+            },
+        };
+
+        if (request.ValueName is not null)
+        {
+            operation.ValueName = request.ValueName;
+        }
+        if (request.StringValue is not null)
+        {
+            operation.StringValue = request.StringValue;
+        }
+        if (request.DWordValue is not null)
+        {
+            operation.DwordValue = request.DWordValue.Value;
+        }
+        if (request.QWordValue is not null)
+        {
+            operation.QwordValue = request.QWordValue.Value;
+        }
+        if (request.MultiStringValue is not null)
+        {
+            operation.MultiStringValue.Add(request.MultiStringValue);
+        }
+        if (request.BinaryValue is not null)
+        {
+            operation.BinaryValue = Google.Protobuf.ByteString.CopyFrom(request.BinaryValue);
+        }
+
+        var envelope = new ElevatedOperationRequest
+        {
+            OperationId = ResolveOperationId(request.OperationId),
+            ProtocolVersion = BrokerProtocol.CurrentVersion,
+            TimeoutMilliseconds = GetTimeoutMilliseconds(request.Timeout),
+            Registry = operation,
+        };
+
+        return ExecuteRegistryAsync(envelope, cancellationToken);
+    }
+
     private async Task<TalvoraResult<BrokerExecutionResult>> ExecuteAsync(
         ElevatedOperationRequest request,
         CancellationToken cancellationToken)
@@ -227,6 +313,70 @@ public sealed class BrokerClient : IBrokerClient, IDisposable
         }
 
         return TalvoraResult.Failure<BrokerExecutionResult>(MapError(response));
+    }
+
+    private async Task<TalvoraResult<BrokerRegistryMutationResult>> ExecuteRegistryAsync(
+        ElevatedOperationRequest request,
+        CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        ElevatedOperationResponse response;
+        try
+        {
+            response = await _client.ExecuteAsync(
+                request,
+                cancellationToken: cancellationToken).ResponseAsync.ConfigureAwait(false);
+        }
+        catch (RpcException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(
+                "Elevated Broker Registry execution was cancelled by the caller.",
+                exception,
+                cancellationToken);
+        }
+        catch (RpcException exception)
+        {
+            return TalvoraResult.Failure<BrokerRegistryMutationResult>(MapTransportError(exception));
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            return TalvoraResult.Failure<BrokerRegistryMutationResult>(new TalvoraError(
+                "access_denied",
+                exception.Message,
+                "elevated.execute",
+                exception.HResult));
+        }
+        catch (IOException exception)
+        {
+            return TalvoraResult.Failure<BrokerRegistryMutationResult>(BrokerUnavailable(exception.Message, exception.HResult));
+        }
+        catch (TimeoutException exception)
+        {
+            return TalvoraResult.Failure<BrokerRegistryMutationResult>(BrokerUnavailable(exception.Message));
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return TalvoraResult.Failure<BrokerRegistryMutationResult>(BrokerUnavailable(
+                "Timed out while connecting to the Elevated Broker."));
+        }
+
+        if (response.ProtocolVersion != BrokerProtocol.CurrentVersion)
+        {
+            return TalvoraResult.Failure<BrokerRegistryMutationResult>(new TalvoraError(
+                "protocol_mismatch",
+                $"Broker returned protocol version {response.ProtocolVersion}; expected {BrokerProtocol.CurrentVersion}.",
+                "elevated.execute"));
+        }
+
+        if (response.Success && response.Registry is not null)
+        {
+            return TalvoraResult.Success(new BrokerRegistryMutationResult(
+                response.OperationId,
+                response.Registry.Completed));
+        }
+
+        return TalvoraResult.Failure<BrokerRegistryMutationResult>(MapError(response));
     }
 
     private static TalvoraError MapTransportError(RpcException exception)

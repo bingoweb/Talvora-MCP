@@ -30,5 +30,5 @@ jobs:
       - name: Restore IPC target test
         run: dotnet restore tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj
 
-      - name: Run Registry broker client RED target
+      - name: Run Registry broker client target
         run: dotnet test tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Ipc.Tests.BrokerRegistryClientContractTests.BrokerClientExposesTransportNeutralRegistryMutationContract" --verbosity normal
