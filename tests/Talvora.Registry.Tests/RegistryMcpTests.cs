@@ -128,6 +128,16 @@ public sealed class RegistryMcpTests
 
             return ValueTask.FromResult<IReadOnlyList<string>>(ListedSubKeys);
         }
+
+        public ValueTask<IReadOnlyList<string>> ListValueNamesAsync(
+            RegistryHiveId hive,
+            string subKeyPath,
+            RegistryViewId view = RegistryViewId.Default,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+        }
     }
 
     private sealed class PassthroughOperationExecutor : IOperationExecutor

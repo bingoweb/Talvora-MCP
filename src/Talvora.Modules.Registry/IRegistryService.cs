@@ -15,4 +15,10 @@ public interface IRegistryService
         string subKeyPath,
         RegistryViewId view = RegistryViewId.Default,
         CancellationToken cancellationToken = default);
+
+    ValueTask<IReadOnlyList<string>> ListValueNamesAsync(
+        RegistryHiveId hive,
+        string subKeyPath,
+        RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default);
 }
