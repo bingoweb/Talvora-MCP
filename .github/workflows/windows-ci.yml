@@ -31,4 +31,4 @@ jobs:
         run: dotnet restore tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj
 
       - name: Run elevated Registry protocol RED target
-        run: dotnet test tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Ipc.Tests.ElevatedRegistryProtocolContractTests.BrokerProtocolCarriesTypedRegistryMutationWithoutVersionBump" --verbosity normal
+        run: dotnet test tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Ipc.Tests.ElevatedRegistryProtocolContractTests.ProtocolV2CarriesRegistryMutationAndRegistryResult" --verbosity normal
