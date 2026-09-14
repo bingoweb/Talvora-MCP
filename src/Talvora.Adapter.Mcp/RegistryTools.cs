@@ -110,4 +110,45 @@ public sealed class RegistryTools(
 
         return ToolEnvelope.From(result);
     }
+
+    [McpServerTool(Destructive = true, Idempotent = true, OpenWorld = false, ReadOnly = false),
+     Description("Creates a Windows Registry key, including missing parent keys, using the Windows account running Talvora.")]
+    public async Task<ToolEnvelope<bool>> CreateRegistryKey(
+        [Description("Registry hive in which to create the key.")] RegistryHiveId hive,
+        [Description("Registry subkey path relative to the selected hive.")] string subKeyPath,
+        [Description("Registry view to write: Default, Registry32, or Registry64.")] RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await executor.ExecuteAsync(
+            "registry.create_key",
+            async token =>
+            {
+                await registry.CreateKeyAsync(hive, subKeyPath, view, token);
+                return true;
+            },
+            cancellationToken);
+
+        return ToolEnvelope.From(result);
+    }
+
+    [McpServerTool(Destructive = true, Idempotent = true, OpenWorld = false, ReadOnly = false),
+     Description("Deletes a Windows Registry key using the Windows account running Talvora.")]
+    public async Task<ToolEnvelope<bool>> DeleteRegistryKey(
+        [Description("Registry hive containing the key.")] RegistryHiveId hive,
+        [Description("Registry subkey path relative to the selected hive.")] string subKeyPath,
+        [Description("Delete all descendant subkeys when true; require the target key to be empty when false.")] bool recursive = false,
+        [Description("Registry view to write: Default, Registry32, or Registry64.")] RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await executor.ExecuteAsync(
+            "registry.delete_key",
+            async token =>
+            {
+                await registry.DeleteKeyAsync(hive, subKeyPath, recursive, view, token);
+                return true;
+            },
+            cancellationToken);
+
+        return ToolEnvelope.From(result);
+    }
 }
