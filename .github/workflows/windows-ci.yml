@@ -27,8 +27,8 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore Registry target test
-        run: dotnet restore tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj
+      - name: Restore IPC target test
+        run: dotnet restore tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj
 
-      - name: Run Registry key-management MCP RED target
-        run: dotnet test tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Registry.Tests.RegistryMcpKeyManagementTests.RegistryKeyToolsRouteParametersThroughRegistryService" --verbosity normal
+      - name: Run elevated Registry protocol RED target
+        run: dotnet test tests/Talvora.Ipc.Tests/Talvora.Ipc.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Ipc.Tests.ElevatedRegistryProtocolContractTests.BrokerProtocolCarriesTypedRegistryMutationWithoutVersionBump" --verbosity normal
