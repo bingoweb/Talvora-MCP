@@ -1,6 +1,7 @@
 using Microsoft.Win32;
 using Talvora.Modules.Registry;
 using Talvora.Platform.Windows;
+using WinRegistry = Microsoft.Win32.Registry;
 
 namespace Talvora.Registry.Tests;
 
@@ -12,7 +13,7 @@ public sealed class RegistryReadTests
     {
         var subKeyPath = $"Software\\Talvora\\Tests\\{Guid.NewGuid():N}";
 
-        using (var key = Registry.CurrentUser.CreateSubKey(subKeyPath, writable: true))
+        using (var key = WinRegistry.CurrentUser.CreateSubKey(subKeyPath, writable: true))
         {
             Assert.IsNotNull(key);
             key.SetValue("Greeting", "hello %USERNAME%", RegistryValueKind.ExpandString);
@@ -44,7 +45,7 @@ public sealed class RegistryReadTests
         }
         finally
         {
-            Registry.CurrentUser.DeleteSubKeyTree(subKeyPath, throwOnMissingSubKey: false);
+            WinRegistry.CurrentUser.DeleteSubKeyTree(subKeyPath, throwOnMissingSubKey: false);
         }
     }
 }
