@@ -104,5 +104,10 @@ public sealed class ExecutionRouterAutoProcessTests
                 string.Empty,
                 TimeSpan.FromMilliseconds(2))));
         }
+
+        public Task<TalvoraResult<BrokerRegistryMutationResult>> ExecuteRegistryAsync(
+            BrokerRegistryMutationRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }

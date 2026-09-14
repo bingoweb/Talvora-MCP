@@ -114,5 +114,10 @@ public sealed class McpElevatedRoutingTests
             BrokerProcessExecutionRequest request,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
+
+        public Task<TalvoraResult<BrokerRegistryMutationResult>> ExecuteRegistryAsync(
+            BrokerRegistryMutationRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }

@@ -108,5 +108,10 @@ public sealed class McpElevatedProcessRoutingTests
                 string.Empty,
                 TimeSpan.FromMilliseconds(10))));
         }
+
+        public Task<TalvoraResult<BrokerRegistryMutationResult>> ExecuteRegistryAsync(
+            BrokerRegistryMutationRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }
