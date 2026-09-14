@@ -15,13 +15,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  host-autostart-contract:
+  build-test:
     runs-on: windows-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Run Cloudflare tunnel launcher contract
+        shell: pwsh
+        run: ./tests/Test-CloudflareTunnelLauncher.ps1
+
       - name: Run Talvora host autostart launcher contract
         shell: pwsh
         run: ./tests/Test-HostAutostartLauncher.ps1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Run architecture gate
+        shell: pwsh
+        run: ./scripts/Test-Architecture.ps1
+
+      - name: Restore solution
+        run: dotnet restore Talvora.slnx
+
+      - name: Build Host Release
+        run: dotnet build src/Talvora.Host/Talvora.Host.csproj --configuration Release --no-restore
+
+      - name: Build Elevated Broker Release
+        run: dotnet build src/Talvora.ElevatedBroker/Talvora.ElevatedBroker.csproj --configuration Release --no-restore
+
+      - name: Run all .NET tests
+        run: dotnet test --solution Talvora.slnx --configuration Release --no-restore --verbosity normal
