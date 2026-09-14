@@ -31,8 +31,8 @@ jobs:
             throw "Expected a .NET 10 SDK, got $version"
           }
 
-      - name: Restore Host
-        run: dotnet restore src/Talvora.Host/Talvora.Host.csproj
+      - name: Restore Registry target test
+        run: dotnet restore tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj
 
-      - name: Build Host registry composition
-        run: dotnet build src/Talvora.Host/Talvora.Host.csproj --configuration Release --no-restore --verbosity normal
+      - name: Run Registry missing-key RED target
+        run: dotnet test tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Registry.Tests.RegistryMissingKeyTests.ReadRegistryValueReturnsNotFoundWhenKeyDoesNotExist" --verbosity normal
