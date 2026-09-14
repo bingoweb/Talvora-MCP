@@ -70,4 +70,23 @@ public sealed class RegistryTools(
 
         return ToolEnvelope.From(result);
     }
+
+    [McpServerTool(Destructive = true, Idempotent = true, OpenWorld = false, ReadOnly = false),
+     Description("Creates or updates a Windows Registry value using the Windows account running Talvora.")]
+    public async Task<ToolEnvelope<bool>> WriteRegistryValue(
+        [Description("Typed Registry value payload including hive, key path, value name, value type, and value data.")] RegistryValueData value,
+        [Description("Registry view to write: Default, Registry32, or Registry64.")] RegistryViewId view = RegistryViewId.Default,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await executor.ExecuteAsync(
+            "registry.write_value",
+            async token =>
+            {
+                await registry.WriteValueAsync(value, view, token);
+                return true;
+            },
+            cancellationToken);
+
+        return ToolEnvelope.From(result);
+    }
 }
