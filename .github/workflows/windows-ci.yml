@@ -22,13 +22,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          global-json-file: global.json
+      - name: Verify preinstalled .NET SDK
+        shell: pwsh
+        run: |
+          $version = dotnet --version
+          Write-Host "Using .NET SDK $version"
+          if (-not $version.StartsWith("10.0.")) {
+            throw "Expected a .NET 10 SDK, got $version"
+          }
 
       - name: Restore Registry target test
         run: dotnet restore tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj
 
-      - name: Run Registry read RED target
+      - name: Run Registry read target
         run: dotnet test tests/Talvora.Registry.Tests/Talvora.Registry.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~Talvora.Registry.Tests.RegistryReadTests.ReadValueAsyncReadsExpandStringWithoutExpandingByDefault" --verbosity normal
