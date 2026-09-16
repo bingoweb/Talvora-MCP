@@ -1,0 +1,30 @@
+name: local-maintenance-ci
+on:
+  push:
+    branches: ['talvora-2/**']
+  pull_request:
+    paths: ['v2/**', '.github/workflows/local-maintenance-ci.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: powershell
+        working-directory: v2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Legacy maintenance regression
+        run: ./tests/local-recovery/legacy-maintenance.ps1
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build existing Gateway and smoke client
+        run: |
+          dotnet build src/Talvora.Gateway/Talvora.Gateway.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build tests/Talvora.McpSmoke/Talvora.McpSmoke.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Real local maintenance and repeat-run verification
+        run: ./tests/local-recovery/legacy-maintenance.ps1 -Integration
