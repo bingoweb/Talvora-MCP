@@ -43,19 +43,17 @@ try {
     $xml = Export-ScheduledTask -TaskName $taskName
     Assert-True ($xml.Contains('<RunLevel>HighestAvailable</RunLevel>')) 'Windows accepts and persists the task definition'
     Assert-True ($xml.Contains('<LogonTrigger>')) 'Persisted task includes a real logon trigger'
-    $source = Join-Path $root 'src\Talvora.Gateway\bin\Release\net10.0'
-    $deploy = Join-Path $tempRoot 'release with spaces'
-    New-Item -ItemType Directory -Path $deploy | Out-Null
-    Get-ChildItem -LiteralPath $source -Force | Copy-Item -Destination $deploy -Recurse -Force
-    $config = @{
-        DotNetPath = (Get-Command dotnet.exe).Source
-        GatewayDll = (Join-Path $deploy 'Talvora.Gateway.dll')
-        LogRoot = (Join-Path $tempRoot 'logs')
-        RepoRoot = $root
-    }
-    $configPath = Join-Path $tempRoot 'local.json'
-    $config | ConvertTo-Json | Set-Content -LiteralPath $configPath -Encoding UTF8
-    $launcher = Join-Path $root 'scripts\run-local.ps1'
+    $state = Join-Path $tempRoot 'local state'
+    $clientHome = Join-Path $tempRoot 'client settings'
+    & (Join-Path $root 'scripts\install-local.ps1') -RepoRoot ([IO.Path]::GetDirectoryName($root)) -StateRoot $state -ClientHome $clientHome -NoStart
+    if (-not $?) { throw 'Local installer failed.' }
+    $configPath = Join-Path $state 'current.json'
+    Assert-True (Test-Path -LiteralPath $configPath) 'Actual installer creates its deployed state'
+    Assert-True (Test-Path -LiteralPath (Join-Path $clientHome 'config.toml')) 'Actual installer writes local client configuration'
+    $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+    $launcher = Join-Path ([IO.Path]::GetDirectoryName($config.GatewayDll)) 'run-local.ps1'
+    $savedTask = Get-ScheduledTask -TaskName 'Talvora Local MCP' -TaskPath '\'
+    Assert-True ($savedTask.Actions[0].Arguments.Contains($launcher)) 'Installed task points at the deployed launcher, not a build directory'
     $ps = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
     $child = Start-Process $ps -ArgumentList ('-NoProfile -ExecutionPolicy Bypass -File "{0}" -ConfigPath "{1}"' -f $launcher,$configPath) -PassThru
     $deadline = [DateTime]::UtcNow.AddSeconds(35)
@@ -74,6 +72,7 @@ try {
     Write-Host 'Local recovery integration GREEN: task-registration, launcher, 6 tools, Unicode file lifecycle, process execution.'
 }
 finally {
+    Unregister-ScheduledTask -TaskName 'Talvora Local MCP' -TaskPath '\' -Confirm:$false -ErrorAction SilentlyContinue
     Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
     $health = Get-TalvoraLocalHealth
     if ($null -ne $health) {
