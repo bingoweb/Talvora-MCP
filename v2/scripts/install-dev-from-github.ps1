@@ -4,6 +4,8 @@ Set-StrictMode -Version Latest
 $repoUrl = 'https://github.com/bingoweb/Talvora-MCP.git'
 $branch = 'talvora-2/foundation'
 $installRoot = Join-Path $env:USERPROFILE 'Talvora-MCP'
+$healthUri = 'http://127.0.0.1:7676/healthz'
+$mcpUri = 'http://127.0.0.1:7676/mcp'
 
 function Refresh-Path {
     $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
@@ -23,6 +25,21 @@ function Ensure-ChocoPackage([string] $package, [string] $command) {
     & choco.exe install $package -y --no-progress
     if ($LASTEXITCODE -notin 0, 1641, 3010) { throw "Chocolatey failed installing $package (exit $LASTEXITCODE)." }
     Refresh-Path
+}
+
+function Get-TalvoraHealth {
+    try {
+        $health = Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 2
+        if ($health.product -eq 'Talvora') { return $health }
+    }
+    catch { }
+
+    return $null
+}
+
+function Write-LiveStatus($health, [string] $prefix = 'Talvora Gateway is live') {
+    Write-Host "${prefix}: $mcpUri" -ForegroundColor Green
+    $health | ConvertTo-Json -Depth 4
 }
 
 Ensure-Chocolatey
@@ -58,22 +75,23 @@ if ($LASTEXITCODE -ne 0) { throw 'Talvora restore failed.' }
 & dotnet build $project -c Release --no-restore
 if ($LASTEXITCODE -ne 0) { throw 'Talvora build failed.' }
 
-$existing = Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*Talvora.Gateway*' -and $_.CommandLine -like '*7676*' }
-if (-not $existing) {
-    Start-Process -FilePath 'dotnet.exe' -ArgumentList @('run','--project',$project,'-c','Release','--no-launch-profile') -WorkingDirectory $v2Root -WindowStyle Hidden
+$existingHealth = Get-TalvoraHealth
+if ($null -ne $existingHealth) {
+    Write-LiveStatus $existingHealth 'Talvora Gateway is already live'
+    exit 0
 }
+
+Start-Process -FilePath 'dotnet.exe' -ArgumentList @('run','--project',$project,'-c','Release','--no-build','--no-launch-profile') -WorkingDirectory $v2Root -WindowStyle Hidden
 
 $deadline = (Get-Date).AddSeconds(30)
 do {
-    try {
-        $health = Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 2
-        if ($health.product -eq 'Talvora') {
-            Write-Host "Talvora Gateway is live: http://127.0.0.1:7676/mcp" -ForegroundColor Green
-            $health | ConvertTo-Json -Depth 4
-            exit 0
-        }
+    $health = Get-TalvoraHealth
+    if ($null -ne $health) {
+        Write-LiveStatus $health
+        exit 0
     }
-    catch { Start-Sleep -Milliseconds 500 }
+
+    Start-Sleep -Milliseconds 500
 } while ((Get-Date) -lt $deadline)
 
 throw 'Talvora Gateway did not become healthy within 30 seconds.'
