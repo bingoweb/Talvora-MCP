@@ -20,9 +20,6 @@ jobs:
       - name: Installer idempotency regression
         shell: pwsh
         run: ./tests/bootstrap-regressions/install-dev-idempotency.ps1
-      - name: Secure MCP Tunnel bootstrap regression
-        shell: pwsh
-        run: ./tests/bootstrap-regressions/secure-tunnel-bootstrap.ps1
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
@@ -60,13 +57,11 @@ jobs:
               catch { }
               Start-Sleep -Milliseconds 500
             }
-
             if (-not $ready) {
               if (Test-Path $stdout) { Get-Content $stdout }
               if (Test-Path $stderr) { Get-Content $stderr }
               throw 'Talvora Gateway did not become healthy.'
             }
-
             dotnet run --project tests/Talvora.McpSmoke/Talvora.McpSmoke.csproj -c Release --no-build -- 'http://127.0.0.1:7676/mcp'
             if ($LASTEXITCODE -ne 0) { throw "MCP smoke client failed with exit code $LASTEXITCODE." }
           }

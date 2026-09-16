@@ -29,8 +29,8 @@ Assert-True ((Get-TalvoraClientConfigText -Content '') -match '^\[mcp_servers\.t
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $task = New-TalvoraLocalTask -Launcher 'C:\Test Folder\run-local.ps1' -ConfigPath 'C:\Test Folder\local.json' -UserId $identity.Name
 Assert-True ($task.Actions[0].Arguments.Contains('"C:\Test Folder\run-local.ps1"')) 'Paths with spaces are quoted in task actions'
-Assert-True ([string]$task.Principal.RunLevel -eq '1') 'Task requests the highest available Windows user token'
-Assert-True ([string]$task.Principal.LogonType -eq '3') 'Task uses the interactive user session, not SYSTEM'
+Assert-True ([int]$task.Principal.RunLevel -eq 1) 'Task requests the highest available Windows user token'
+Assert-True ([int]$task.Principal.LogonType -eq 3) 'Task uses the interactive user session, not SYSTEM'
 Assert-True ([string]$task.Settings.ExecutionTimeLimit -eq 'PT0S') 'Task has no default three-day execution limit'
 Assert-True ($task.Triggers[0].CimClass.CimClassName -eq 'MSFT_TaskLogonTrigger') 'Task is triggered at user logon'
 if (-not $Integration) { Write-Host 'Local recovery contract tests GREEN.'; exit 0 }
