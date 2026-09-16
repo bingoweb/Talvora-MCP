@@ -78,7 +78,8 @@ try {
     }
     foreach ($legacy in (Get-ScheduledTask)) {
         $direct = @($legacy.Actions | Where-Object {
-            [Environment]::ExpandEnvironmentVariables([string]$_.Execute).Trim().Trim('"') -ieq $oldExe
+            $execute = $_.PSObject.Properties['Execute']
+            $null -ne $execute -and [Environment]::ExpandEnvironmentVariables([string]$execute.Value).Trim().Trim('"') -ieq $oldExe
         })
         if ($direct.Count) {
             Export-ScheduledTask -TaskName $legacy.TaskName -TaskPath $legacy.TaskPath | Set-Content -LiteralPath (Join-Path $backup ('legacy-' + [Guid]::NewGuid().ToString('N') + '.xml')) -Encoding Unicode
