@@ -20,6 +20,9 @@ jobs:
       - name: Installer idempotency regression
         shell: pwsh
         run: ./tests/bootstrap-regressions/install-dev-idempotency.ps1
+      - name: Secure MCP Tunnel bootstrap regression
+        shell: pwsh
+        run: ./tests/bootstrap-regressions/secure-tunnel-bootstrap.ps1
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
