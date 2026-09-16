@@ -27,13 +27,39 @@ function Ensure-ChocoPackage([string] $package, [string] $command) {
     Refresh-Path
 }
 
+function Ensure-DotNet10Sdk {
+    # An existing dotnet host may contain only a runtime or an older SDK.
+    if (Get-Command dotnet.exe -ErrorAction SilentlyContinue) {
+        $sdks = @(& dotnet.exe --list-sdks)
+        if ($LASTEXITCODE -eq 0 -and @($sdks | Where-Object { $_ -match '^10\.\d+\.\d+\s+\[' }).Count -gt 0) {
+            return
+        }
+    }
+
+    & choco.exe install dotnet-10.0-sdk -y --no-progress
+    $installExitCode = $LASTEXITCODE
+    if ($installExitCode -notin 0, 1641, 3010) {
+        throw "Chocolatey failed installing .NET 10 SDK (exit $installExitCode)."
+    }
+    Refresh-Path
+    if (-not (Get-Command dotnet.exe -ErrorAction SilentlyContinue)) {
+        throw '.NET 10 SDK installation did not expose dotnet.exe in PATH.'
+    }
+    $sdks = @(& dotnet.exe --list-sdks)
+    if ($LASTEXITCODE -ne 0 -or @($sdks | Where-Object { $_ -match '^10\.\d+\.\d+\s+\[' }).Count -eq 0) {
+        throw '.NET 10 SDK is not available after installation. Restart the terminal and check dotnet --list-sdks.'
+    }
+    if ($installExitCode -in 1641, 3010) {
+        Write-Warning 'The .NET installer reported a Windows restart requirement.'
+    }
+}
+
 function Get-TalvoraHealth {
     try {
         $health = Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 2
         if ($health.product -eq 'Talvora') { return $health }
     }
     catch { }
-
     return $null
 }
 
@@ -44,7 +70,7 @@ function Write-LiveStatus($health, [string] $prefix = 'Talvora Gateway is live')
 
 Ensure-Chocolatey
 Ensure-ChocoPackage 'git' 'git.exe'
-Ensure-ChocoPackage 'dotnet-10.0-sdk' 'dotnet.exe'
+Ensure-DotNet10Sdk
 Ensure-ChocoPackage 'powershell-core' 'pwsh.exe'
 
 if (Test-Path $installRoot) {
@@ -90,7 +116,6 @@ do {
         Write-LiveStatus $health
         exit 0
     }
-
     Start-Sleep -Milliseconds 500
 } while ((Get-Date) -lt $deadline)
 
