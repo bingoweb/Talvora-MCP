@@ -17,15 +17,61 @@ jobs:
         working-directory: v2
     steps:
       - uses: actions/checkout@v4
+      - name: Installer idempotency regression
+        shell: pwsh
+        run: ./tests/bootstrap-regressions/install-dev-idempotency.ps1
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
       - name: Restore
-        run: dotnet restore tests/Talvora.Foundation.Tests/Talvora.Foundation.Tests.csproj
+        shell: pwsh
+        run: |
+          dotnet restore tests/Talvora.Foundation.Tests/Talvora.Foundation.Tests.csproj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet restore tests/Talvora.McpSmoke/Talvora.McpSmoke.csproj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Test
         run: dotnet test tests/Talvora.Foundation.Tests/Talvora.Foundation.Tests.csproj -c Release --no-restore
       - name: Build Gateway
         run: dotnet build src/Talvora.Gateway/Talvora.Gateway.csproj -c Release --no-restore
+      - name: Build MCP smoke client
+        run: dotnet build tests/Talvora.McpSmoke/Talvora.McpSmoke.csproj -c Release --no-restore
+      - name: Run live MCP smoke
+        shell: pwsh
+        run: |
+          $stdout = Join-Path $env:RUNNER_TEMP 'talvora-gateway.stdout.log'
+          $stderr = Join-Path $env:RUNNER_TEMP 'talvora-gateway.stderr.log'
+          $gateway = Start-Process dotnet -ArgumentList @('run','--project','src/Talvora.Gateway/Talvora.Gateway.csproj','-c','Release','--no-build') -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          try {
+            $ready = $false
+            $deadline = [DateTime]::UtcNow.AddSeconds(30)
+            while ([DateTime]::UtcNow -lt $deadline) {
+              if ($gateway.HasExited) { break }
+              try {
+                $health = Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 2
+                if ($health.product -eq 'Talvora') {
+                  $ready = $true
+                  break
+                }
+              }
+              catch { }
+              Start-Sleep -Milliseconds 500
+            }
+            if (-not $ready) {
+              if (Test-Path $stdout) { Get-Content $stdout }
+              if (Test-Path $stderr) { Get-Content $stderr }
+              throw 'Talvora Gateway did not become healthy.'
+            }
+            dotnet run --project tests/Talvora.McpSmoke/Talvora.McpSmoke.csproj -c Release --no-build -- 'http://127.0.0.1:7676/mcp'
+            if ($LASTEXITCODE -ne 0) { throw "MCP smoke client failed with exit code $LASTEXITCODE." }
+          }
+          finally {
+            if (-not $gateway.HasExited) {
+              Stop-Process -Id $gateway.Id -Force -ErrorAction SilentlyContinue
+            }
+            if (Test-Path $stdout) { Get-Content $stdout }
+            if (Test-Path $stderr) { Get-Content $stderr }
+          }
       - name: Reject WinGet command usage
         shell: pwsh
         run: |
