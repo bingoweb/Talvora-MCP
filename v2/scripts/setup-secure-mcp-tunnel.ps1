@@ -129,7 +129,7 @@ function Install-TunnelClient($asset) {
 function Invoke-TunnelClient([string] $binary, [string[]] $arguments) {
     & $binary @arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "tunnel-client failed with exit code $LASTEXITCODE: $($arguments -join ' ')"
+        throw "tunnel-client failed with exit code ${LASTEXITCODE}: $($arguments -join ' ')"
     }
 }
 
