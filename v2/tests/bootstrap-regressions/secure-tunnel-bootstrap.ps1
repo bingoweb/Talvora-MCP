@@ -8,6 +8,14 @@ if (-not (Test-Path -LiteralPath $script)) {
 
 $content = Get-Content -Raw -LiteralPath $script
 
+$tokens = $null
+$parseErrors = $null
+[System.Management.Automation.Language.Parser]::ParseFile($script, [ref] $tokens, [ref] $parseErrors) | Out-Null
+if ($parseErrors.Count -ne 0) {
+    $messages = ($parseErrors | ForEach-Object { $_.Message }) -join '; '
+    throw "Secure tunnel bootstrap has PowerShell parse errors: $messages"
+}
+
 $required = @(
     'https://api.github.com/repos/openai/tunnel-client/releases/latest',
     'CONTROL_PLANE_API_KEY',
@@ -32,6 +40,10 @@ if ($content -match 'v0\.0\.14') {
 
 if ($content -match '(?i)winget(?:\.exe)?') {
     throw 'Secure tunnel bootstrap must not use WinGet.'
+}
+
+if ($content.Contains('Copy-Item -LiteralPath (Join-Path $extractRoot ''*'')', [StringComparison]::Ordinal)) {
+    throw 'Secure tunnel bootstrap must not use a wildcard with Copy-Item -LiteralPath.'
 }
 
 Write-Host 'Secure MCP Tunnel bootstrap regression GREEN.' -ForegroundColor Green
