@@ -64,6 +64,12 @@ function Get-LatestTunnelClientAsset([string] $architectureToken) {
     }
 }
 
+function Find-TunnelClientBinary([string] $root) {
+    return Get-ChildItem -LiteralPath $root -Filter 'tunnel-client.exe' -File -Recurse |
+        Sort-Object { $_.FullName.Length } |
+        Select-Object -First 1
+}
+
 function Install-TunnelClient($asset) {
     New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
 
@@ -71,9 +77,9 @@ function Install-TunnelClient($asset) {
     $pathFile = Join-Path $InstallRoot 'current-path.txt'
 
     if (Test-Path -LiteralPath $versionRoot) {
-        $existing = Get-ChildItem -LiteralPath $versionRoot -Filter 'tunnel-client.exe' -File -Recurse | Sort-Object { $_.FullName.Length } | Select-Object -First 1
+        $existing = Find-TunnelClientBinary $versionRoot
         if ($null -ne $existing) {
-            Set-Content -LiteralPath $pathFile -Value $existing.FullName -Encoding utf8NoBOM
+            Set-Content -LiteralPath $pathFile -Value $existing.FullName -Encoding utf8
             return $existing.FullName
         }
     }
@@ -91,7 +97,7 @@ function Install-TunnelClient($asset) {
         }
 
         Expand-Archive -LiteralPath $archive -DestinationPath $extractRoot -Force
-        $binary = Get-ChildItem -LiteralPath $extractRoot -Filter 'tunnel-client.exe' -File -Recurse | Sort-Object { $_.FullName.Length } | Select-Object -First 1
+        $binary = Find-TunnelClientBinary $extractRoot
         if ($null -eq $binary) {
             throw "Downloaded tunnel-client archive '$($asset.Name)' did not contain tunnel-client.exe."
         }
@@ -100,14 +106,17 @@ function Install-TunnelClient($asset) {
             Remove-Item -LiteralPath $versionRoot -Recurse -Force
         }
         New-Item -ItemType Directory -Force -Path $versionRoot | Out-Null
-        Copy-Item -LiteralPath (Join-Path $extractRoot '*') -Destination $versionRoot -Recurse -Force
 
-        $installedBinary = Get-ChildItem -LiteralPath $versionRoot -Filter 'tunnel-client.exe' -File -Recurse | Sort-Object { $_.FullName.Length } | Select-Object -First 1
+        Get-ChildItem -LiteralPath $extractRoot -Force | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination $versionRoot -Recurse -Force
+        }
+
+        $installedBinary = Find-TunnelClientBinary $versionRoot
         if ($null -eq $installedBinary) {
             throw 'Tunnel-client copy completed without an executable.'
         }
 
-        Set-Content -LiteralPath $pathFile -Value $installedBinary.FullName -Encoding utf8NoBOM
+        Set-Content -LiteralPath $pathFile -Value $installedBinary.FullName -Encoding utf8
         return $installedBinary.FullName
     }
     finally {
@@ -179,7 +188,7 @@ do {
     }
 
     if (Test-TunnelReady) {
-        Write-Host "Talvora Secure MCP Tunnel is ready." -ForegroundColor Green
+        Write-Host 'Talvora Secure MCP Tunnel is ready.' -ForegroundColor Green
         Write-Host "Tunnel: $TunnelId"
         Write-Host "MCP: $McpServerUrl"
         Write-Host "Ready: $tunnelReadyUri"
