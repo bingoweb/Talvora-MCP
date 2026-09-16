@@ -81,4 +81,7 @@ try {
 catch { $failed = $true }
 if (-not $failed) { throw 'A failed Chocolatey SDK install must stop bootstrap.' }
 Write-Host 'PASS failed SDK installation stops bootstrap.'
+# The preceding failure is intentional and asserted. Do not leak its simulated
+# native exit code into the GitHub Actions PowerShell runner wrapper.
+$global:LASTEXITCODE = 0
 Write-Host 'Installer regression GREEN: startup order and SDK bootstrap cases.' -ForegroundColor Green
