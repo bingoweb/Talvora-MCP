@@ -78,11 +78,28 @@ try {
     if (-not (Test-Path -LiteralPath $smoke)) {throw 'Derlenmis MCP test dosyasi bulunamadi. Calisan Gateway degistirilmedi.'}
     $smokeLog=Join-Path $logRoot ('maintenance-'+$stamp+'.smoke.log')
     $smokeError=Join-Path $logRoot ('maintenance-'+$stamp+'.smoke-error.log')
-    $check=Start-Process -FilePath $status.Config.DotNetPath -ArgumentList ('"{0}" http://127.0.0.1:7676/mcp' -f $smoke) -PassThru -WindowStyle Hidden -RedirectStandardOutput $smokeLog -RedirectStandardError $smokeError
-    if (-not $check.WaitForExit(90000)) {Stop-Process -Id $check.Id -Force; throw 'MCP testi 90 saniyede tamamlanamadi.'}
-    $check.Refresh()
+    # Own the native process handle instead of the PS 5.1 Start-Process wrapper.
+    $info=[Diagnostics.ProcessStartInfo]::new()
+    $info.FileName=$status.Config.DotNetPath
+    $info.Arguments='"{0}" http://127.0.0.1:7676/mcp' -f $smoke
+    $info.UseShellExecute=$false
+    $info.CreateNoWindow=$true
+    $info.RedirectStandardOutput=$true
+    $info.RedirectStandardError=$true
+    $check=[Diagnostics.Process]::new()
+    $check.StartInfo=$info
+    try {
+        if (-not $check.Start()) {throw 'MCP test islemi baslatilamadi.'}
+        $stdoutTask=$check.StandardOutput.ReadToEndAsync()
+        $stderrTask=$check.StandardError.ReadToEndAsync()
+        if (-not $check.WaitForExit(90000)) {$check.Kill(); $check.WaitForExit(); throw 'MCP testi 90 saniyede tamamlanamadi.'}
+        $smokeExitCode=$check.ExitCode
+        [IO.File]::WriteAllText($smokeLog,$stdoutTask.GetAwaiter().GetResult())
+        [IO.File]::WriteAllText($smokeError,$stderrTask.GetAwaiter().GetResult())
+    }
+    finally {$check.Dispose()}
     Get-Content -LiteralPath $smokeLog | Out-Host
-    if ($check.ExitCode -ne 0) {Get-Content -LiteralPath $smokeError | Out-Host; throw "MCP testi basarisiz: $($check.ExitCode)"}
+    if ($smokeExitCode -ne 0) {Get-Content -LiteralPath $smokeError | Out-Host; throw "MCP testi basarisiz: $smokeExitCode"}
     $report.SmokePassed=$true
     $clientPath=Join-Path $ClientHome 'config.toml'
     $before=if (Test-Path -LiteralPath $clientPath) {[IO.File]::ReadAllText($clientPath)} else {''}
