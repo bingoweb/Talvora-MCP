@@ -30,9 +30,12 @@ foreach (var name in required)
     if (!byName.ContainsKey(name)) throw new InvalidOperationException($"Missing MCP tool: {name}");
 }
 
-static async Task<CallToolResult> EnsureSuccess(McpClientTool tool, Dictionary<string, object?> arguments)
+static async Task<CallToolResult> EnsureSuccess(
+    McpClientTool tool,
+    Dictionary<string, object?> arguments,
+    CancellationToken cancellationToken = default)
 {
-    var result = await tool.CallAsync(arguments);
+    var result = await tool.CallAsync(arguments, cancellationToken: cancellationToken);
     if (result.IsError is true)
     {
         throw new InvalidOperationException($"Tool failed: {tool.Name}");
@@ -68,7 +71,11 @@ try
         ["timeoutSeconds"] = 30,
     });
 
-    var searchResult = await EnsureSuccess(byName["search"], new() { ["query"] = searchToken });
+    using var searchDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+    var searchResult = await EnsureSuccess(
+        byName["search"],
+        new() { ["query"] = searchToken },
+        searchDeadline.Token);
     if (searchResult.StructuredContent is not { } searchJson)
         throw new InvalidOperationException("search did not return structured content.");
     if (!searchJson.TryGetProperty("results", out var results) || results.ValueKind != System.Text.Json.JsonValueKind.Array)
