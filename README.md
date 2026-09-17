@@ -40,4 +40,4 @@ As of 2026-09-17, ChatGPT Business supports custom MCP apps with full MCP capabi
 
 Run `TALVORA-KUR.cmd` from an Administrator-capable Windows account. It launches the reset installer, removes prior Talvora runtime state, recreates the source checkout from `main`, builds a fresh self-contained Windows service, installs it, verifies `S-1-5-18`, runs the real MCP smoke suite, and configures the local `talvora_local` MCP registration.
 
-The source of truth is the repository root. There is no legacy `v2` product tree.
+The source of truth is the repository root and `main` is the canonical branch. There is no legacy `v2` product tree. Historical branch names may remain as Git refs for repository compatibility, but they are not independent product lines and are kept aligned with the canonical tree.
