@@ -59,7 +59,9 @@ if (-not (Get-Command dotnet.exe -ErrorAction SilentlyContinue)) { choco install
 $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
 
 $project = Join-Path $RepoRoot 'src\Talvora\Talvora.csproj'
+$smokeProject = Join-Path $RepoRoot 'tests\Talvora.Smoke\Talvora.Smoke.csproj'
 if (-not (Test-Path -LiteralPath $project -PathType Leaf)) { throw "Talvora project not found: $project" }
+if (-not (Test-Path -LiteralPath $smokeProject -PathType Leaf)) { throw "Talvora smoke project not found: $smokeProject" }
 
 $stage = Join-Path $env:TEMP ('Talvora-publish-' + [Guid]::NewGuid().ToString('N'))
 try {
@@ -68,9 +70,24 @@ try {
 
     $service = Get-Service -Name Talvora -ErrorAction SilentlyContinue
     if ($null -ne $service) {
-        if ($service.Status -ne 'Stopped') { Stop-Service Talvora -Force; $service.WaitForStatus('Stopped',[TimeSpan]::FromSeconds(30)) }
+        if ($service.Status -ne 'Stopped') {
+            Stop-Service Talvora -Force
+            $service.WaitForStatus('Stopped',[TimeSpan]::FromSeconds(30))
+        }
         & "$env:SystemRoot\System32\sc.exe" delete Talvora | Out-Host
-        Start-Sleep -Milliseconds 800
+        if ($LASTEXITCODE -ne 0) { throw "Failed to delete previous Talvora service: $LASTEXITCODE" }
+        $deadline = [DateTime]::UtcNow.AddSeconds(20)
+        do {
+            Start-Sleep -Milliseconds 300
+            $service = Get-Service -Name Talvora -ErrorAction SilentlyContinue
+        } while ($null -ne $service -and [DateTime]::UtcNow -lt $deadline)
+        if ($null -ne $service) { throw 'Previous Talvora service was not removed.' }
+    }
+
+    $listeners = @(Get-NetTCPConnection -LocalPort 7676 -State Listen -ErrorAction SilentlyContinue)
+    if ($listeners.Count) {
+        $owners = @($listeners | Select-Object -ExpandProperty OwningProcess -Unique)
+        throw "Port 7676 is already in use by PID(s): $($owners -join ','). Reset installer must remove previous Talvora first."
     }
 
     if (Test-Path -LiteralPath $InstallRoot) { Remove-Item -LiteralPath $InstallRoot -Recurse -Force }
@@ -78,10 +95,15 @@ try {
     Copy-Item -Path (Join-Path $stage '*') -Destination $InstallRoot -Recurse -Force
 
     $exe = Join-Path $InstallRoot 'Talvora.exe'
-    & "$env:SystemRoot\System32\sc.exe" create Talvora "binPath=\"$exe\"" start= auto obj= LocalSystem DisplayName= "Talvora" | Out-Host
-    if ($LASTEXITCODE -ne 0) { throw "sc.exe create failed: $LASTEXITCODE" }
-    & "$env:SystemRoot\System32\sc.exe" description Talvora "Talvora LocalSystem MCP service" | Out-Host
+    if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "Published executable missing: $exe" }
+
+    New-Service -Name Talvora -BinaryPathName ('"{0}"' -f $exe) -DisplayName 'Talvora' -Description 'Talvora LocalSystem MCP service' -StartupType Automatic | Out-Null
+    $definition = Get-CimInstance Win32_Service -Filter "Name='Talvora'"
+    if ($definition.StartName -ne 'LocalSystem') { throw "Talvora service account is not LocalSystem: $($definition.StartName)" }
+
     & "$env:SystemRoot\System32\sc.exe" failure Talvora reset= 60 actions= restart/1000/restart/3000/restart/10000 | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw "Failed to configure Talvora recovery: $LASTEXITCODE" }
+
     Start-Service Talvora
 
     $deadline = [DateTime]::UtcNow.AddSeconds(45)
@@ -95,6 +117,13 @@ try {
     if ($null -eq $health) { throw 'Talvora health endpoint did not become ready.' }
     if ($health.product -ne 'Talvora') { throw 'Unexpected service answered on port 7676.' }
     if ($health.sid -ne 'S-1-5-18') { throw "Talvora is not running as LocalSystem. SID=$($health.sid)" }
+
+    Push-Location $RepoRoot
+    try {
+        dotnet run --project $smokeProject -c Release -- 'http://127.0.0.1:7676/mcp'
+        if ($LASTEXITCODE -ne 0) { throw "Talvora MCP smoke failed: $LASTEXITCODE" }
+    }
+    finally { Pop-Location }
 
     $clientPath = Join-Path $ClientHome 'config.toml'
     Set-TalvoraClientConfig -Path $clientPath
@@ -115,6 +144,7 @@ try {
     Write-Host ''
     Write-Host 'TALVORA READY' -ForegroundColor Green
     Write-Host 'Service account: LocalSystem (S-1-5-18)'
+    Write-Host 'MCP smoke: GREEN'
     Write-Host 'MCP: http://127.0.0.1:7676/mcp'
     Write-Host "Client config: $clientPath"
 }

@@ -7,6 +7,21 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+function Remove-TalvoraClientTables {
+    param([Parameter(Mandatory)][string] $Path)
+    if (-not (Test-Path -LiteralPath $Path)) { return }
+
+    $lines = [IO.File]::ReadAllLines($Path)
+    $result = [Collections.Generic.List[string]]::new()
+    $skip = $false
+    foreach ($line in $lines) {
+        if ($line -match '^\s*\[mcp_servers\.talvora[^\]]*\]\s*$') { $skip = $true; continue }
+        if ($skip -and $line -match '^\s*\[') { $skip = $false }
+        if (-not $skip) { $result.Add($line) }
+    }
+    [IO.File]::WriteAllLines($Path, $result, [Text.UTF8Encoding]::new($false))
+}
+
 if (-not $FromTemp) {
     $tempScript = Join-Path $env:TEMP ('Talvora-reset-' + [Guid]::NewGuid().ToString('N') + '.ps1')
     Copy-Item -LiteralPath $PSCommandPath -Destination $tempScript -Force
@@ -21,7 +36,7 @@ $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = [Security.Principal.WindowsPrincipal]::new($identity)
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Administrator rights are required.' }
 
-Write-Host 'Removing every previous Talvora runtime component...'
+Write-Host 'Removing every previous Talvora component...' -ForegroundColor Yellow
 
 Get-CimInstance Win32_Service | Where-Object { $_.Name -like 'Talvora*' -or $_.DisplayName -like 'Talvora*' } | ForEach-Object {
     & "$env:SystemRoot\System32\sc.exe" stop $_.Name | Out-Null
@@ -46,6 +61,9 @@ foreach ($path in @(
     if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force }
 }
 
+$clientHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE '.codex' }
+Remove-TalvoraClientTables -Path (Join-Path $clientHome 'config.toml')
+
 if (Test-Path -LiteralPath $RepoRoot) { Remove-Item -LiteralPath $RepoRoot -Recurse -Force }
 
 if (-not (Get-Command choco.exe -ErrorAction SilentlyContinue)) {
@@ -62,5 +80,5 @@ Write-Host 'Cloning the clean Talvora main branch...'
 git clone --branch main --single-branch https://github.com/bingoweb/Talvora-MCP.git $RepoRoot
 if ($LASTEXITCODE -ne 0) { throw "git clone failed: $LASTEXITCODE" }
 
-& (Join-Path $RepoRoot 'scripts\Install.ps1') -RepoRoot $RepoRoot
+& (Join-Path $RepoRoot 'scripts\Install.ps1') -RepoRoot $RepoRoot -ClientHome $clientHome
 if ($LASTEXITCODE -ne 0) { throw "Talvora installation failed: $LASTEXITCODE" }

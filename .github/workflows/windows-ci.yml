@@ -2,7 +2,9 @@ name: windows-ci
 
 on:
   push:
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
 
 jobs:
   build-and-smoke:
@@ -13,10 +15,16 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Restore
-        run: dotnet restore src/Talvora/Talvora.csproj
+        shell: pwsh
+        run: |
+          dotnet restore src/Talvora/Talvora.csproj
+          dotnet restore tests/Talvora.Smoke/Talvora.Smoke.csproj
       - name: Build
-        run: dotnet build src/Talvora/Talvora.csproj -c Release --no-restore
-      - name: Start and verify health
+        shell: pwsh
+        run: |
+          dotnet build src/Talvora/Talvora.csproj -c Release --no-restore
+          dotnet build tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-restore
+      - name: Start and verify real MCP tools
         shell: pwsh
         run: |
           $process = Start-Process dotnet -ArgumentList @('run','--project','src/Talvora/Talvora.csproj','-c','Release','--no-build') -PassThru -WindowStyle Hidden
@@ -30,6 +38,8 @@ jobs:
             } while ([DateTime]::UtcNow -lt $deadline)
             if ($null -eq $health) { throw 'Talvora health check did not become ready.' }
             if ($health.product -ne 'Talvora') { throw 'Unexpected health product.' }
+            dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-build -- 'http://127.0.0.1:7676/mcp'
+            if ($LASTEXITCODE -ne 0) { throw "MCP smoke failed: $LASTEXITCODE" }
           }
           finally {
             Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
@@ -45,5 +55,5 @@ jobs:
       - name: Reject WinGet
         shell: pwsh
         run: |
-          $hits = Get-ChildItem -Recurse -File src,scripts,TALVORA-KUR.cmd | Select-String -Pattern '(?i)(^|[^A-Za-z0-9_])winget(\.exe)?([^A-Za-z0-9_]|$)'
+          $hits = Get-ChildItem -Recurse -File src,scripts,tests,TALVORA-KUR.cmd | Select-String -Pattern '(?i)(^|[^A-Za-z0-9_])winget(\.exe)?([^A-Za-z0-9_]|$)'
           if ($hits) { $hits | ForEach-Object { Write-Error $_.ToString() }; throw 'WinGet is forbidden. Use Chocolatey.' }
