@@ -1,4 +1,5 @@
 using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 
 var endpoint = args.Length > 0 ? args[0] : "http://127.0.0.1:7676/mcp";
 var transport = new HttpClientTransport(new HttpClientTransportOptions
@@ -20,6 +21,8 @@ string[] required =
     "talvora_delete",
     "talvora_list",
     "talvora_run_process",
+    "search",
+    "fetch",
 ];
 
 foreach (var name in required)
@@ -27,25 +30,33 @@ foreach (var name in required)
     if (!byName.ContainsKey(name)) throw new InvalidOperationException($"Missing MCP tool: {name}");
 }
 
-static async Task EnsureSuccess(McpClientTool tool, Dictionary<string, object?> arguments)
+static async Task<CallToolResult> EnsureSuccess(McpClientTool tool, Dictionary<string, object?> arguments)
 {
     var result = await tool.CallAsync(arguments);
     if (result.IsError is true)
     {
         throw new InvalidOperationException($"Tool failed: {tool.Name}");
     }
+    return result;
 }
 
 await EnsureSuccess(byName["talvora_system_info"], []);
 
-var root = Path.Combine(Path.GetTempPath(), "Talvora-Smoke-" + Guid.NewGuid().ToString("N"));
+var smokeId = Guid.NewGuid().ToString("N");
+var publicDocuments = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments);
+if (string.IsNullOrWhiteSpace(publicDocuments))
+{
+    publicDocuments = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Talvora", "SmokeDocuments");
+}
+var root = Path.Combine(publicDocuments, "Talvora-Smoke-" + smokeId);
 var file = Path.Combine(root, "hello.txt");
+var searchToken = "talvora-search-" + smokeId;
 try
 {
     await EnsureSuccess(byName["talvora_write_text"], new()
     {
         ["path"] = file,
-        ["content"] = "talvora-smoke",
+        ["content"] = searchToken,
     });
 
     await EnsureSuccess(byName["talvora_read_text"], new() { ["path"] = file });
@@ -56,6 +67,24 @@ try
         ["arguments"] = new[] { "/d", "/c", "echo", "talvora-smoke" },
         ["timeoutSeconds"] = 30,
     });
+
+    var searchResult = await EnsureSuccess(byName["search"], new() { ["query"] = searchToken });
+    if (searchResult.StructuredContent is not { } searchJson)
+        throw new InvalidOperationException("search did not return structured content.");
+    if (!searchJson.TryGetProperty("results", out var results) || results.ValueKind != System.Text.Json.JsonValueKind.Array)
+        throw new InvalidOperationException("search did not return a results array.");
+
+    var found = results.EnumerateArray().Any(item =>
+        item.TryGetProperty("id", out var id) &&
+        string.Equals(id.GetString(), Path.GetFullPath(file), StringComparison.OrdinalIgnoreCase));
+    if (!found) throw new InvalidOperationException("search did not return the smoke document.");
+
+    var fetchResult = await EnsureSuccess(byName["fetch"], new() { ["id"] = Path.GetFullPath(file) });
+    if (fetchResult.StructuredContent is not { } fetchJson)
+        throw new InvalidOperationException("fetch did not return structured content.");
+    if (!fetchJson.TryGetProperty("text", out var text) || !string.Equals(text.GetString(), searchToken, StringComparison.Ordinal))
+        throw new InvalidOperationException("fetch did not return the full smoke document content.");
+
     await EnsureSuccess(byName["talvora_delete"], new() { ["path"] = file });
 }
 finally
