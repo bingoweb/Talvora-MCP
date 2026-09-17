@@ -1,33 +1,30 @@
-# Talvora 2.0 - yerel Windows MCP
+# Talvora
 
-Aktif gelistirme `talvora-2/foundation` dalinin `v2/` klasorundedir.
-Kokteki eski `.bat`, `src/` ve broker belgeleri onceki surume aittir; v2 kurulumu bunlari kullanmaz.
+Talvora is a Windows-local MCP server built for one owner machine with a full-capability philosophy.
 
-## Yerel kurulum
+## Canonical architecture
 
-Daha once derlenmis ve alti araci test edilmis Windows kurulumunda:
+- Windows 10/11 runtime and development target.
+- One `Talvora` Windows Service running as `LocalSystem`.
+- MCP binds only to `http://127.0.0.1:7676/mcp`.
+- No artificial command or path allowlist.
+- Chocolatey is the only package manager used by Talvora setup. WinGet is forbidden.
+- No OpenAI API account, API key, public ingress, or tunnel is required by the local runtime.
+- Old Talvora services, scheduled tasks, runtime folders, and source checkout are intentionally removed by the reset installer.
 
-```text
-v2\TALVORA-KUR.cmd
-```
+## Core tools
 
-Bu giris noktasi Windows UAC iznini kendisi ister; hazir Gateway dosyalarini kaynak/derleme klasorunden ayri bir calisma klasorune kopyalar. `Talvora Local MCP` gorevi kullanici oturum acilisinda en yuksek kullanici yetkisiyle baslar. Calistirma gunlukleri ve istemci ayari yedekleri tutulur.
+- `talvora_system_info`
+- `talvora_read_text`
+- `talvora_write_text`
+- `talvora_delete`
+- `talvora_list`
+- `talvora_run_process`
 
-- MCP: `http://127.0.0.1:7676/mcp`
-- Health: `http://127.0.0.1:7676/healthz`
-- Durum: `v2\TALVORA-DURUM.cmd`
-- Yerel istemci kaydi: `~/.codex/config.toml` icinde `mcp_servers.talvora_local`
+Because the MCP host itself runs as LocalSystem, these tools execute with the service account's Windows privileges.
 
-Talvora kurulumu API hesabi, API anahtari, OpenAI Tunnel veya public endpoint istemez. Yerel ChatGPT/Codex istemcisi MCP'ye dogrudan baglanir. Tarayicidaki sohbet yerel bilgisayara bu kayitla otomatik erisim kazanmaz. Istemcinin model oturumu ayri bir konudur; ChatGPT hesabi ile giris kullanilabilir.
+## Rebuild from zero
 
-## Mevcut araclar
+Run `TALVORA-KUR.cmd` from an Administrator-capable Windows account. It launches the reset installer, removes prior Talvora runtime state, recreates the source checkout from `main`, builds a fresh self-contained Windows service, installs it, verifies `S-1-5-18`, and configures the local `talvora_local` MCP registration.
 
-`talvora_read_text`, `talvora_write_text`, `talvora_delete`, `talvora_list`, `talvora_run_process`, `talvora_system_info`.
-
-Cekirdek Windows'ta gercek Unicode dosya yaz/oku/listele/sil ve process cikti testinden gecmistir. Yeni kurulum da ayni smoke testini calistirir. Yeni kurulumun kullanicinin bilgisayarinda uygulanmasi ve yerel istemci baglantisi ayri dogrulama adimlaridir.
-
-## Temel kararlar
-
-Tam Windows yetenekleri; yapay dosya sandbox'i veya komut deny-list'i yok. Paket yonetimi Chocolatey-first; WinGet yok. Bu kurulum Administrator baglamini kullanir; ayri SYSTEM broker'i v2'de henuz hazir degildir. Windows'un ve istemcinin gercek yetki gereksinimleri capability olarak gizlenmez.
-
-Yerel kurulum ayrintilari: `v2/LOCAL-SETUP.md`.
+The source of truth is the repository root. There is no legacy `v2` product tree.

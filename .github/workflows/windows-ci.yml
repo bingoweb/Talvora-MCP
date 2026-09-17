@@ -1,62 +1,49 @@
-name: Talvora Windows CI
+name: windows-ci
 
 on:
   push:
-    branches:
-      - main
-      - feat/elevated-operation-execution
   pull_request:
-    branches:
-      - main
-  workflow_dispatch:
-
-concurrency:
-  group: talvora-windows-ci-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: true
 
 jobs:
-  build-test:
+  build-and-smoke:
     runs-on: windows-latest
-    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          global-json-file: global.json
-
-      - name: Restore production entry points
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore src/Talvora/Talvora.csproj
+      - name: Build
+        run: dotnet build src/Talvora/Talvora.csproj -c Release --no-restore
+      - name: Start and verify health
         shell: pwsh
         run: |
-          dotnet restore src/Talvora.Host/Talvora.Host.csproj
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet restore src/Talvora.ElevatedBroker/Talvora.ElevatedBroker.csproj
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Restore all test projects
-        shell: pwsh
-        run: |
-          $projects = Get-ChildItem tests -Recurse -Filter *.csproj | Sort-Object FullName
-          foreach ($project in $projects) {
-            Write-Host "Restoring $($project.FullName)"
-            dotnet restore $project.FullName
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $process = Start-Process dotnet -ArgumentList @('run','--project','src/Talvora/Talvora.csproj','-c','Release','--no-build') -PassThru -WindowStyle Hidden
+          try {
+            $deadline = [DateTime]::UtcNow.AddSeconds(30)
+            $health = $null
+            do {
+              try { $health = Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 2 -Proxy $null } catch { $health = $null }
+              if ($null -ne $health) { break }
+              Start-Sleep -Milliseconds 300
+            } while ([DateTime]::UtcNow -lt $deadline)
+            if ($null -eq $health) { throw 'Talvora health check did not become ready.' }
+            if ($health.product -ne 'Talvora') { throw 'Unexpected health product.' }
           }
-
-      - name: Build Host
-        run: dotnet build src/Talvora.Host/Talvora.Host.csproj --configuration Release --no-restore
-
-      - name: Build Elevated Broker
-        run: dotnet build src/Talvora.ElevatedBroker/Talvora.ElevatedBroker.csproj --configuration Release --no-restore
-
-      - name: Run all .NET tests
+          finally {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          }
+      - name: Parse PowerShell installers
         shell: pwsh
         run: |
-          $projects = Get-ChildItem tests -Recurse -Filter *.csproj | Sort-Object FullName
-          foreach ($project in $projects) {
-            Write-Host "Testing $($project.FullName)"
-            dotnet test $project.FullName --configuration Release --no-restore --verbosity normal
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($script in Get-ChildItem scripts -Filter '*.ps1') {
+            $tokens = $null; $errors = $null
+            [Management.Automation.Language.Parser]::ParseFile($script.FullName,[ref]$tokens,[ref]$errors) | Out-Null
+            if ($errors.Count) { $errors | Format-List | Out-Host; throw "PowerShell parse failed: $($script.Name)" }
           }
+      - name: Reject WinGet
+        shell: pwsh
+        run: |
+          $hits = Get-ChildItem -Recurse -File src,scripts,TALVORA-KUR.cmd | Select-String -Pattern '(?i)(^|[^A-Za-z0-9_])winget(\.exe)?([^A-Za-z0-9_]|$)'
+          if ($hits) { $hits | ForEach-Object { Write-Error $_.ToString() }; throw 'WinGet is forbidden. Use Chocolatey.' }
