@@ -66,8 +66,9 @@ jobs:
             throw 'Windows CI runner must be elevated for the real service test.'
           }
           $clientHome = Join-Path $env:RUNNER_TEMP 'talvora-codex'
-          & ./scripts/Install.ps1 -RepoRoot $PWD.Path -ClientHome $clientHome
+          $installOutput = @(& ./scripts/Install.ps1 -RepoRoot $PWD.Path -ClientHome $clientHome 2>&1 | Tee-Object -Variable installLines)
           if ($LASTEXITCODE -ne 0) { throw "Install.ps1 failed: $LASTEXITCODE" }
+          if (-not ($installOutput -match '^MCP_SMOKE_OK$')) { throw 'Install.ps1 did not prove a real MCP smoke before READY.' }
           $service = Get-CimInstance Win32_Service -Filter "Name='Talvora'"
           if ($service.State -ne 'Running') { throw "Talvora service state is $($service.State)" }
           if ($service.StartName -ne 'LocalSystem') { throw "Talvora service account is $($service.StartName)" }
