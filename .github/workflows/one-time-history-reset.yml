@@ -1,0 +1,44 @@
+name: one-time-history-reset
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  reset:
+    if: github.event.head_commit.message == 'chore: run one-time history reset'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Replace repository history with clean root
+        shell: pwsh
+        run: |
+          git config user.name "Taylan Soylu"
+          git config user.email "6751394+bingoweb@users.noreply.github.com"
+
+          git checkout --orphan talvora-clean-root
+          git rm -rf --cached . | Out-Null
+          Remove-Item -LiteralPath '.github/workflows/one-time-history-reset.yml' -Force
+          git add -A
+          git commit -m "chore: establish Talvora clean root"
+          if ($LASTEXITCODE -ne 0) { throw "Clean-root commit failed: $LASTEXITCODE" }
+
+          git push origin HEAD:main --force
+          if ($LASTEXITCODE -ne 0) { throw "Force-push of clean main failed: $LASTEXITCODE" }
+
+          foreach ($branch in @(
+            'talvora-2/foundation',
+            'talvora-2/foundation-red',
+            'talvora-2/legacy-maintenance',
+            'talvora-2/system-broker'
+          )) {
+            git push origin --delete $branch
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "Branch already absent or could not be deleted: $branch"
+            }
+          }
