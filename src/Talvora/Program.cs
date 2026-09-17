@@ -1,6 +1,7 @@
 using System.Security.Principal;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using ModelContextProtocol.AspNetCore;
+using ModelContextProtocol.Server;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
