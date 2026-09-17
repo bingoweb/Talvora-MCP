@@ -57,3 +57,32 @@ jobs:
         run: |
           $hits = Get-ChildItem -Recurse -File src,scripts,tests,TALVORA-KUR.cmd | Select-String -Pattern '(?i)(^|[^A-Za-z0-9_])winget(\.exe)?([^A-Za-z0-9_]|$)'
           if ($hits) { $hits | ForEach-Object { Write-Error $_.ToString() }; throw 'WinGet is forbidden. Use Chocolatey.' }
+      - name: Install and verify LocalSystem service
+        shell: pwsh
+        run: |
+          $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+          $principal = [Security.Principal.WindowsPrincipal]::new($identity)
+          if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+            throw 'Windows CI runner must be elevated for the real service test.'
+          }
+          $clientHome = Join-Path $env:RUNNER_TEMP 'talvora-codex'
+          & ./scripts/Install.ps1 -RepoRoot $PWD.Path -ClientHome $clientHome
+          if ($LASTEXITCODE -ne 0) { throw "Install.ps1 failed: $LASTEXITCODE" }
+          $service = Get-CimInstance Win32_Service -Filter "Name='Talvora'"
+          if ($service.State -ne 'Running') { throw "Talvora service state is $($service.State)" }
+          if ($service.StartName -ne 'LocalSystem') { throw "Talvora service account is $($service.StartName)" }
+          $health = Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 5 -Proxy $null
+          if ($health.sid -ne 'S-1-5-18') { throw "Talvora service SID is $($health.sid)" }
+          if (-not $health.isWindowsService) { throw 'Talvora process did not detect Windows Service hosting.' }
+      - name: Clean service test
+        if: always()
+        shell: pwsh
+        run: |
+          $service = Get-Service -Name Talvora -ErrorAction SilentlyContinue
+          if ($null -ne $service) {
+            if ($service.Status -ne 'Stopped') { Stop-Service Talvora -Force -ErrorAction SilentlyContinue }
+            & "$env:SystemRoot\System32\sc.exe" delete Talvora | Out-Host
+          }
+          Remove-Item -LiteralPath (Join-Path $env:ProgramData 'Talvora') -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'Talvora') -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'talvora-codex') -Recurse -Force -ErrorAction SilentlyContinue
