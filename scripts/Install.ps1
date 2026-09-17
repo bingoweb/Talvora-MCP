@@ -124,7 +124,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Talvora MCP smoke failed: $LASTEXITCODE" }
     }
     finally { Pop-Location }
-    Write-Host 'MCP_SMOKE_OK'
+    Write-Output 'MCP_SMOKE_OK'
 
     $clientPath = Join-Path $ClientHome 'config.toml'
     Set-TalvoraClientConfig -Path $clientPath
