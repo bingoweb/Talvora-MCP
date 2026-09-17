@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Security;
 using ModelContextProtocol.Server;
 
@@ -19,6 +20,7 @@ public static class KnowledgeTools
 {
     private const int MaxResults = 20;
     private const long MaxSearchFileBytes = 4L * 1024 * 1024;
+    private static readonly TimeSpan SearchBudget = TimeSpan.FromSeconds(8);
 
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -39,7 +41,7 @@ public static class KnowledgeTools
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraSearchResponse)),
-     Description("Search local Windows text documents available to Talvora. Returns document IDs that can be passed to fetch. The default corpus is Public Documents, user profiles, and ProgramData; set TALVORA_KNOWLEDGE_ROOTS to override the roots.")]
+     Description("Search local Windows text documents available to Talvora. Returns document IDs that can be passed to fetch. By default Talvora searches Public Documents plus each local user's Documents, Desktop, Downloads, and OneDrive folders. Set TALVORA_KNOWLEDGE_ROOTS to replace the default corpus.")]
     public static async Task<TalvoraSearchResponse> Search(
         string query,
         CancellationToken cancellationToken = default)
@@ -52,12 +54,17 @@ public static class KnowledgeTools
         var term = query.Trim();
         var results = new List<TalvoraSearchResult>(MaxResults);
         var seenFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var stopwatch = Stopwatch.StartNew();
 
         foreach (var root in GetSearchRoots())
         {
             foreach (var file in EnumerateFilesSafe(root))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (stopwatch.Elapsed >= SearchBudget)
+                {
+                    return new TalvoraSearchResponse(results);
+                }
 
                 string fullPath;
                 try
@@ -181,23 +188,7 @@ public static class KnowledgeTools
         }
         else
         {
-            var publicDocuments = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments);
-            if (!string.IsNullOrWhiteSpace(publicDocuments))
-            {
-                roots.Add(publicDocuments);
-            }
-
-            var systemDrive = Path.GetPathRoot(Environment.SystemDirectory);
-            if (!string.IsNullOrWhiteSpace(systemDrive))
-            {
-                roots.Add(Path.Combine(systemDrive, "Users"));
-            }
-
-            var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-            if (!string.IsNullOrWhiteSpace(programData))
-            {
-                roots.Add(programData);
-            }
+            AddDefaultSearchRoots(roots);
         }
 
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -217,6 +208,55 @@ public static class KnowledgeTools
             {
                 yield return fullPath;
             }
+        }
+    }
+
+    private static void AddDefaultSearchRoots(List<string> roots)
+    {
+        var publicDocuments = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments);
+        if (!string.IsNullOrWhiteSpace(publicDocuments))
+        {
+            roots.Add(publicDocuments);
+        }
+
+        var systemDrive = Path.GetPathRoot(Environment.SystemDirectory);
+        if (!string.IsNullOrWhiteSpace(systemDrive))
+        {
+            var usersRoot = Path.Combine(systemDrive, "Users");
+            string[] profiles;
+            try
+            {
+                profiles = Directory.GetDirectories(usersRoot);
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or SecurityException or DirectoryNotFoundException)
+            {
+                profiles = [];
+            }
+
+            foreach (var profile in profiles)
+            {
+                roots.Add(Path.Combine(profile, "Documents"));
+                roots.Add(Path.Combine(profile, "Desktop"));
+                roots.Add(Path.Combine(profile, "Downloads"));
+
+                string[] oneDriveRoots;
+                try
+                {
+                    oneDriveRoots = Directory.GetDirectories(profile, "OneDrive*", SearchOption.TopDirectoryOnly);
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or SecurityException)
+                {
+                    oneDriveRoots = [];
+                }
+
+                roots.AddRange(oneDriveRoots);
+            }
+        }
+
+        var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        if (!string.IsNullOrWhiteSpace(programData))
+        {
+            roots.Add(Path.Combine(programData, "Talvora"));
         }
     }
 
