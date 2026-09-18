@@ -572,13 +572,19 @@ TDD/CI evidence:
 - A JavaScript replacement-string `$'` metacharacter accident later duplicated/corrupted the bootstrap file. Repeated parser failures exposed that the file had grown to 1,344 lines with duplicated major functions. The file was not incrementally patched; it was reconstructed as one canonical 534-line script at `b5266e156a472f9d0040dc86206f46f523f3654f`.
 - Windows CI **#352** then passed build, 32-tool MCP smoke, parser and WinGet gates and reached the Business self-test. It exposed that PowerShell `-match` is case-insensitive by default, so uppercase tunnel IDs were incorrectly accepted.
 - Final behavior fix: `56732fd38904f3491bbc319823e3744b2a7ad24a` uses case-sensitive `-cmatch`.
-- Windows CI **#353** completed fully **SUCCESS**, including:
+- Windows CI **#353** completed fully **SUCCESS** for the final bootstrap behavior, including PowerShell 7 + Windows PowerShell 5.1 self-tests and the real LocalSystem installation gate.
+- The Business distribution gate was then strengthened at `dd72b4348bf064700a0707545b2af69e9eba4431` to exercise the official OpenAI Windows distribution itself rather than only helper logic.
+- Windows CI **#355** completed fully **SUCCESS**, including:
   - restore/build;
   - direct real 32-tool MCP smoke;
   - all PowerShell installer parsing;
   - WinGet rejection including the Business bootstrap CMD;
   - Business bootstrap self-test under PowerShell 7;
   - Business bootstrap self-test under Windows PowerShell 5.1;
+  - real download of official `openai/tunnel-client` v0.0.14 for Windows;
+  - SHA256 verification against the official `SHA256SUMS.txt`;
+  - successful `tunnel-client.exe --version`;
+  - successful `tunnel-client runtimes connect --help` contract checks for `--tunnel-id`, `--runtime-api-key`, and `--mcp-server-url`;
   - real elevated LocalSystem `Install.ps1` service installation and 32-tool installed manifest;
   - cleanup.
 
