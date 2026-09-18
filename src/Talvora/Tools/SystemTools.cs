@@ -1,3 +1,4 @@
+using Talvora;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
@@ -12,8 +13,11 @@ public static class SystemTools
     public static object GetSystemInfo()
     {
         var identity = OperatingSystem.IsWindows() ? WindowsIdentity.GetCurrent() : null;
+        var runtime = TalvoraRuntimeMetadata.Load();
         return new
         {
+            runtime.SourceCommit,
+            runtime.InstalledAtUtc,
             Environment.MachineName,
             Environment.UserName,
             OperatingSystem = RuntimeInformation.OSDescription,
