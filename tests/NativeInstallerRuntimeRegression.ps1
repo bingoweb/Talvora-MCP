@@ -72,7 +72,7 @@ if ($result.ServiceState -ne 'Running' -or
     -not $result.FailureRestart60000 -or
     -not $result.FailureActionsOnNonCrash -or
     -not $result.ServiceSidUnrestricted -or
-    $result.ToolCount -ne 45 -or
+    $result.ToolCount -ne 57 -or
     -not $result.ServiceUsesVersionedPath -or
     -not $result.TrayExecutableExists -or
     -not $result.TrayStartupRegistered -or

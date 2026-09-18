@@ -7,6 +7,8 @@ $ErrorActionPreference = 'Stop'
 $serviceProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Program.cs'))
 $serviceProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Talvora.csproj'))
 $developerTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\DeveloperTools.cs'))
+$jobTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\JobTools.cs'))
+$gitTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\GitTools.cs'))
 $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Program.cs'))
@@ -17,6 +19,24 @@ $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
 
 $result = [pscustomobject]@{
+    JobAndGitToolContract = (
+        $jobTools -match 'talvora_job_start' -and
+        $jobTools -match 'talvora_job_get' -and
+        $jobTools -match 'talvora_job_list' -and
+        $jobTools -match 'talvora_job_read_output' -and
+        $jobTools -match 'talvora_job_write_stdin' -and
+        $jobTools -match 'talvora_job_stop' -and
+        $gitTools -match 'talvora_git_info' -and
+        $gitTools -match 'talvora_git_status' -and
+        $gitTools -match 'talvora_git_diff' -and
+        $gitTools -match 'talvora_git_log' -and
+        $gitTools -match 'talvora_git_branches' -and
+        $gitTools -match 'talvora_git_run' -and
+        $gitTools -match 'No Git subcommand, ref, remote, path, or option denylist/allowlist'
+    )
+    InstallerDeclares57Tools = (
+        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 57
+    )
     DeveloperCoreToolContract = (
         $developerTools -match 'talvora_path_info' -and
         $developerTools -match 'talvora_file_hash' -and
@@ -32,9 +52,6 @@ $result = [pscustomobject]@{
         $developerTools -match 'talvora_project_discover' -and
         $developerTools -match 'talvora_resolve_command' -and
         $installerProgram -match 'talvora_project_discover'
-    )
-    InstallerDeclares45Tools = (
-        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 45
     )
     ServiceRejectsStopControl = (
         $serviceProgram -match 'CanStop\s*=\s*false' -and

@@ -55,6 +55,32 @@ Talvora exposes a first-class application-development toolkit in addition to the
 
 These tools are designed for day-to-day application development: source discovery, literal/regex search, exact text patching, binary asset access, file hashing, local/remote API testing, port ownership diagnostics, readiness checks, project-manifest discovery, and executable resolution. Filesystem tools operate on any path accessible to the LocalSystem service and do not introduce a path allowlist. Search/result limits are response controls and can be set to `0` for unlimited operation where supported. The HTTP tool accepts arbitrary methods and destinations; the process and PowerShell primitives remain available for anything not modeled by this structured layer.
 
+## Long-running development jobs
+
+Talvora can keep development processes alive without blocking one MCP request:
+
+- `talvora_job_start`
+- `talvora_job_get`
+- `talvora_job_list`
+- `talvora_job_read_output`
+- `talvora_job_write_stdin`
+- `talvora_job_stop`
+
+A job may launch any executable with arbitrary arguments, working directory, and environment overrides under the LocalSystem service. stdout/stderr are persisted under `%ProgramData%\Talvora\Jobs\<jobId>` and can be tailed incrementally. Job metadata keeps PID/start-time identity so running processes remain discoverable across a Talvora service restart; stdin remains available while the originating service instance owns the redirected pipe. Stopping a job can terminate the complete process tree. These tools do not replace or restrict the unrestricted process/Powershell controls.
+
+## Structured Git tools
+
+Talvora also exposes repository-aware Git operations:
+
+- `talvora_git_info`
+- `talvora_git_status`
+- `talvora_git_diff`
+- `talvora_git_log`
+- `talvora_git_branches`
+- `talvora_git_run`
+
+The read-only tools use Git's machine-oriented output where appropriate and return structured repository, branch, history, status, and diff data. `talvora_git_run` accepts arbitrary Git arguments plus environment overrides in any accessible working directory; no subcommand, ref, remote, path, or option allowlist/denylist is applied. This preserves full Git functionality for add/commit/fetch/push/rebase/worktree/submodule and other workflows without requiring Talvora to pre-model every Git command.
+
 ## Environment variable tools
 
 - `talvora_env_get`

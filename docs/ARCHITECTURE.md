@@ -16,6 +16,10 @@ The structured filesystem mutation layer adds create-directory, copy, and move o
 
 The developer-core layer adds structured source/file discovery, literal or regex text search, raw binary read/write, exact text replacement, hashing, arbitrary HTTP requests, TCP diagnostics/readiness checks, project-manifest discovery, and command resolution. These tools are ergonomic additions for application development; they do not replace or narrow the unrestricted process, PowerShell, filesystem, registry, service, or environment-variable capabilities. Where a response can become large, callers may set the corresponding result/byte limit to `0` for unlimited operation.
 
+The long-running job layer starts unrestricted child processes with redirected stdin/stdout/stderr, persists logs and metadata under ProgramData, and allows later inspection, incremental log reads, stdin writes, and process-tree termination. It adds developer-server/watch/test ergonomics without narrowing the unrestricted process primitives.
+
+The Git layer exposes structured repository identity, porcelain status, diffs, logs, and branch refs plus an unrestricted `talvora_git_run` argument surface. No repository, ref, remote, path, Git subcommand, or option allowlist is introduced.
+
 The environment-variable layer exposes structured process/user/machine get/list/set/delete behavior directly through System.Environment. It applies no variable-name allowlist and does not reduce the unrestricted process or PowerShell primitives.
 
 The Event Log layer exposes structured local-log discovery and XPath queries through Windows Eventing APIs. It applies no log/provider/event-ID allowlist. Per-call event limits bound MCP response size only; unrestricted process and PowerShell primitives remain available for Event Log operations outside this read-only layer.
@@ -51,6 +55,22 @@ File discovery walks the requested tree directly and can optionally follow repar
 The HTTP tool is an arbitrary `HttpClient.SendAsync` surface supporting custom methods, headers, text/Base64 bodies, redirect control, optional TLS validation bypass, and text/Base64/no-body response modes. TCP inspection returns `netstat -ano` data as structured local/remote endpoint, connection state, PID, and process-name records; readiness polling uses direct `TcpClient` connections.
 
 Project discovery recognizes common .NET, Node, Python, Rust, Go, Maven, Gradle, CMake, Docker, and Git markers. Command resolution follows the service process PATH/PATHEXT environment. None of these tools add command, path, host, port, project-type, or executable allowlists.
+
+## Long-running development jobs
+
+The job suite exposes `talvora_job_start`, `talvora_job_get`, `talvora_job_list`, `talvora_job_read_output`, `talvora_job_write_stdin`, and `talvora_job_stop`.
+
+Start uses `ProcessStartInfo.ArgumentList` with shell execution disabled and supports arbitrary child environment overrides. It redirects all three standard streams. stdout/stderr are pumped continuously into UTF-8 log files under `%ProgramData%\Talvora\Jobs\<jobId>`; callers tail them by byte offset without waiting for the child to exit. Metadata records the original PID and UTC start time so Talvora can distinguish a restarted process ID from PID reuse after the service itself restarts.
+
+The live service instance owns the redirected stdin pipe, so `talvora_job_write_stdin` works while that same Talvora process remains attached. Job get/list still recover persisted process state after a service restart. Stop defaults to complete process-tree termination. Arbitrary PID control remains available through `talvora_process_kill`.
+
+## Git
+
+The Git suite exposes `talvora_git_info`, `talvora_git_status`, `talvora_git_diff`, `talvora_git_log`, `talvora_git_branches`, and `talvora_git_run`.
+
+Info resolves repository root, Git directory, HEAD, branch/detached state, dirty state, and remotes. Status uses porcelain v2 branch output. Branch enumeration uses `for-each-ref` with field separators. Log uses an explicit field-separated format. Diff supports staging, arbitrary revision ranges, context sizes, and path filters.
+
+`talvora_git_run` launches the installed Git executable with exactly the argument vector supplied by the caller, optional environment overrides, and an explicit timeout. It intentionally provides the complete Git command surface rather than a command allowlist. Dedicated read-only tools are convenience APIs, not capability boundaries.
 
 ## Environment variables
 

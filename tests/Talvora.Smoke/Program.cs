@@ -2,6 +2,7 @@ using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
 var endpoint = args.Length > 0 ? args[0] : "http://127.0.0.1:7676/mcp";
+var repositoryPath = args.Length > 1 ? Path.GetFullPath(args[1]) : Directory.GetCurrentDirectory();
 var transport = new HttpClientTransport(new HttpClientTransportOptions
 {
     Endpoint = new Uri(endpoint),
@@ -60,6 +61,18 @@ string[] required =
         "talvora_wait_tcp",
         "talvora_project_discover",
         "talvora_resolve_command",
+    "talvora_job_start",
+    "talvora_job_get",
+    "talvora_job_list",
+    "talvora_job_read_output",
+    "talvora_job_write_stdin",
+    "talvora_job_stop",
+    "talvora_git_info",
+    "talvora_git_status",
+    "talvora_git_diff",
+    "talvora_git_log",
+    "talvora_git_branches",
+    "talvora_git_run",
 ];
 
 foreach (var name in required)
@@ -733,6 +746,193 @@ try
         !waitTcpJson.GetProperty("connected").GetBoolean())
     {
         throw new InvalidOperationException("wait_tcp did not connect to the Talvora listener.");
+    }
+
+    var jobToken = "TALVORA_JOB_SMOKE_" + smokeId;
+    var cmdPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.System),
+        "cmd.exe");
+    var jobStartResult = await EnsureSuccess(byName["talvora_job_start"], new()
+    {
+        ["executable"] = cmdPath,
+        ["arguments"] = new[] { "/d", "/q" },
+        ["workingDirectory"] = root,
+    });
+    if (jobStartResult.StructuredContent is not { } jobStartJson ||
+        !jobStartJson.TryGetProperty("jobId", out var jobIdJson) ||
+        string.IsNullOrWhiteSpace(jobIdJson.GetString()) ||
+        !jobStartJson.TryGetProperty("processId", out var jobPidJson) ||
+        jobPidJson.GetInt32() <= 0)
+    {
+        throw new InvalidOperationException("job_start did not return a live job identity.");
+    }
+
+    var jobId = jobIdJson.GetString()!;
+    var jobPid = jobPidJson.GetInt32();
+
+    try
+    {
+        var jobGetResult = await EnsureSuccess(byName["talvora_job_get"], new()
+        {
+            ["jobId"] = jobId,
+        });
+        if (jobGetResult.StructuredContent is not { } jobGetJson ||
+            jobGetJson.GetProperty("processId").GetInt32() != jobPid ||
+            !string.Equals(jobGetJson.GetProperty("state").GetString(), "Running", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("job_get did not report the started job as running.");
+        }
+
+        var jobListResult = await EnsureSuccess(byName["talvora_job_list"], new()
+        {
+            ["includeExited"] = true,
+            ["maxResults"] = 0,
+        });
+        if (jobListResult.StructuredContent is not { } jobListJson ||
+            !jobListJson.GetProperty("jobs").EnumerateArray().Any(job =>
+                job.TryGetProperty("jobId", out var listedJobId) &&
+                string.Equals(listedJobId.GetString(), jobId, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException("job_list did not include the started job.");
+        }
+
+        var stdinResult = await EnsureSuccess(byName["talvora_job_write_stdin"], new()
+        {
+            ["jobId"] = jobId,
+            ["text"] = "echo " + jobToken,
+            ["appendNewLine"] = true,
+        });
+        if (stdinResult.StructuredContent is not { } stdinJson ||
+            stdinJson.GetProperty("processId").GetInt32() != jobPid)
+        {
+            throw new InvalidOperationException("job_write_stdin did not target the expected process.");
+        }
+
+        var observedOutput = false;
+        for (var attempt = 0; attempt < 20 && !observedOutput; attempt++)
+        {
+            await Task.Delay(100);
+            var outputResult = await EnsureSuccess(byName["talvora_job_read_output"], new()
+            {
+                ["jobId"] = jobId,
+                ["stream"] = "stdout",
+                ["offset"] = 0L,
+                ["maxBytes"] = 0,
+            });
+            if (outputResult.StructuredContent is { } outputJson &&
+                (outputJson.GetProperty("text").GetString() ?? string.Empty)
+                    .Contains(jobToken, StringComparison.Ordinal))
+            {
+                observedOutput = true;
+            }
+        }
+
+        if (!observedOutput)
+        {
+            throw new InvalidOperationException("job_read_output did not observe stdin-triggered stdout.");
+        }
+    }
+    finally
+    {
+        var stopResult = await EnsureSuccess(byName["talvora_job_stop"], new()
+        {
+            ["jobId"] = jobId,
+            ["entireProcessTree"] = true,
+            ["timeoutSeconds"] = 15,
+        });
+        if (stopResult.StructuredContent is not { } stopJson ||
+            !stopJson.GetProperty("found").GetBoolean() ||
+            !stopJson.GetProperty("exited").GetBoolean())
+        {
+            throw new InvalidOperationException("job_stop did not terminate the smoke job.");
+        }
+    }
+
+    var gitInfoResult = await EnsureSuccess(byName["talvora_git_info"], new()
+    {
+        ["repositoryPath"] = repositoryPath,
+    });
+    if (gitInfoResult.StructuredContent is not { } gitInfoJson ||
+        !gitInfoJson.TryGetProperty("root", out var gitRootJson) ||
+        string.IsNullOrWhiteSpace(gitRootJson.GetString()) ||
+        !gitInfoJson.TryGetProperty("head", out var gitHeadJson) ||
+        string.IsNullOrWhiteSpace(gitHeadJson.GetString()))
+    {
+        throw new InvalidOperationException("git_info did not return repository root and HEAD.");
+    }
+
+    var gitRoot = gitRootJson.GetString()!;
+    var gitHead = gitHeadJson.GetString()!;
+
+    var gitStatusResult = await EnsureSuccess(byName["talvora_git_status"], new()
+    {
+        ["repositoryPath"] = repositoryPath,
+        ["includeUntracked"] = true,
+    });
+    if (gitStatusResult.StructuredContent is not { } gitStatusJson ||
+        !string.Equals(
+            Path.GetFullPath(gitStatusJson.GetProperty("root").GetString() ?? string.Empty),
+            Path.GetFullPath(gitRoot),
+            StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException("git_status returned an unexpected repository root.");
+    }
+
+    var gitDiffResult = await EnsureSuccess(byName["talvora_git_diff"], new()
+    {
+        ["repositoryPath"] = repositoryPath,
+        ["revisionRange"] = "HEAD~1..HEAD",
+        ["paths"] = new[] { "src/Talvora/Tools/JobTools.cs" },
+        ["contextLines"] = 2,
+    });
+    if (gitDiffResult.StructuredContent is not { } gitDiffJson ||
+        !(gitDiffJson.GetProperty("diff").GetString() ?? string.Empty)
+            .Contains("talvora_job_start", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("git_diff did not return the committed job-tool change.");
+    }
+
+    var gitLogResult = await EnsureSuccess(byName["talvora_git_log"], new()
+    {
+        ["repositoryPath"] = repositoryPath,
+        ["maxCount"] = 5,
+    });
+    if (gitLogResult.StructuredContent is not { } gitLogJson ||
+        gitLogJson.GetProperty("count").GetInt32() < 1 ||
+        !gitLogJson.GetProperty("commits").EnumerateArray().Any(commit =>
+            commit.TryGetProperty("commit", out var commitId) &&
+            string.Equals(commitId.GetString(), gitHead, StringComparison.Ordinal)))
+    {
+        throw new InvalidOperationException("git_log did not include HEAD.");
+    }
+
+    var gitBranchesResult = await EnsureSuccess(byName["talvora_git_branches"], new()
+    {
+        ["repositoryPath"] = repositoryPath,
+        ["includeRemote"] = true,
+    });
+    if (gitBranchesResult.StructuredContent is not { } gitBranchesJson ||
+        gitBranchesJson.GetProperty("count").GetInt32() < 1 ||
+        !gitBranchesJson.GetProperty("branches").EnumerateArray().Any(branch =>
+            branch.TryGetProperty("current", out var current) && current.GetBoolean()))
+    {
+        throw new InvalidOperationException("git_branches did not identify the current branch.");
+    }
+
+    var gitRunResult = await EnsureSuccess(byName["talvora_git_run"], new()
+    {
+        ["repositoryPath"] = repositoryPath,
+        ["arguments"] = new[] { "rev-parse", "HEAD" },
+        ["timeoutSeconds"] = 30,
+    });
+    if (gitRunResult.StructuredContent is not { } gitRunJson ||
+        gitRunJson.GetProperty("exitCode").GetInt32() != 0 ||
+        !string.Equals(
+            (gitRunJson.GetProperty("standardOutput").GetString() ?? string.Empty).Trim(),
+            gitHead,
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("git_run rev-parse HEAD did not match git_info HEAD.");
     }
 
     await EnsureSuccess(byName["talvora_write_text"], new()
