@@ -59,7 +59,7 @@ jobs:
       - name: Reject WinGet
         shell: pwsh
         run: |
-          $hits = Get-ChildItem -Recurse -File src,scripts,tests,TALVORA-KUR.cmd | Select-String -Pattern '(?i)(^|[^A-Za-z0-9_])winget(\.exe)?([^A-Za-z0-9_]|$)'
+          $hits = Get-ChildItem -Recurse -File src,scripts,tests,TALVORA-KUR.cmd,TALVORA-BUSINESS-KUR.cmd | Select-String -Pattern '(?i)(^|[^A-Za-z0-9_])winget(\.exe)?([^A-Za-z0-9_]|$)'
           if ($hits) { $hits | ForEach-Object { Write-Error $_.ToString() }; throw 'WinGet is forbidden. Use Chocolatey.' }
       - name: Validate ChatGPT Business tunnel bootstrap
         shell: pwsh
