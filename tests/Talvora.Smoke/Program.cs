@@ -21,6 +21,7 @@ string[] required =
     "talvora_delete",
     "talvora_list",
     "talvora_run_process",
+    "talvora_run_powershell",
     "search",
     "fetch",
     "talvora_registry_create_key",
@@ -76,6 +77,45 @@ try
         ["arguments"] = new[] { "/d", "/c", "echo", "talvora-smoke" },
         ["timeoutSeconds"] = 30,
     });
+
+    var powerShellRoot = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+        "Talvora",
+        "PowerShell Smoke " + smokeId);
+    Directory.CreateDirectory(powerShellRoot);
+    try
+    {
+        var powerShellResult = await EnsureSuccess(byName["talvora_run_powershell"], new()
+        {
+            ["script"] = """
+                $ErrorActionPreference = 'Stop'
+                [Console]::Out.WriteLine('talvora-ps-stdout')
+                [Console]::Error.WriteLine('talvora-ps-stderr')
+                [Console]::Out.WriteLine((Get-Location).Path)
+                exit 7
+                """,
+            ["engine"] = "auto",
+            ["workingDirectory"] = powerShellRoot,
+            ["timeoutSeconds"] = 30,
+        });
+        if (powerShellResult.StructuredContent is not { } psJson ||
+            !psJson.TryGetProperty("exitCode", out var psExit) ||
+            psExit.GetInt32() != 7 ||
+            !psJson.TryGetProperty("timedOut", out var psTimedOut) ||
+            psTimedOut.GetBoolean() ||
+            !psJson.TryGetProperty("standardOutput", out var psStdout) ||
+            !psStdout.GetString()!.Contains("talvora-ps-stdout", StringComparison.Ordinal) ||
+            !psStdout.GetString()!.Contains(powerShellRoot, StringComparison.OrdinalIgnoreCase) ||
+            !psJson.TryGetProperty("standardError", out var psStderr) ||
+            !psStderr.GetString()!.Contains("talvora-ps-stderr", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("PowerShell tool did not preserve multiline script, working directory, stdout/stderr, and exit code.");
+        }
+    }
+    finally
+    {
+        if (Directory.Exists(powerShellRoot)) Directory.Delete(powerShellRoot, recursive: true);
+    }
 
     using var searchDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
     var searchResult = await EnsureSuccess(
