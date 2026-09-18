@@ -23,6 +23,14 @@ Talvora is a Windows-local MCP server built for one owner machine with a full-ca
 
 Because the MCP host itself runs as LocalSystem, these tools execute with the service account's Windows privileges. The file and process primitives are not restricted to the knowledge-search corpus.
 
+## PowerShell execution
+
+- `talvora_run_powershell`
+
+This tool runs arbitrary multiline PowerShell scripts under the same LocalSystem capability boundary. Scripts are encoded as UTF-16LE Base64 and passed with PowerShell's `-EncodedCommand` option, avoiding nested quoting loss. It runs with `-NoProfile -NonInteractive -ExecutionPolicy Bypass`, captures stdout/stderr, preserves the script exit code, supports a working directory and timeout, and kills the process tree on timeout.
+
+The default `engine = "auto"` uses `pwsh.exe` when PowerShell 7 is already available and otherwise falls back to built-in Windows PowerShell. PowerShell 7 is not a Talvora runtime dependency. No command or script deny-list is applied.
+
 ## Windows registry tools
 
 Talvora exposes dedicated local registry tools so agents do not need to compose fragile `reg.exe` or PowerShell quoting for routine registry work:
