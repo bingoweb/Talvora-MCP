@@ -10,6 +10,8 @@ $developerTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools
 $jobTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\JobTools.cs'))
 $gitTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\GitTools.cs'))
 $configAssetTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ConfigAssetTools.cs'))
+$watchTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\WatchTools.cs'))
+$chocoTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ChocolateyTools.cs'))
 $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Program.cs'))
@@ -20,6 +22,25 @@ $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
 
 $result = [pscustomobject]@{
+    WatchToolContract = (
+        $watchTools -match 'talvora_watch_start' -and
+        $watchTools -match 'talvora_watch_get' -and
+        $watchTools -match 'talvora_watch_list' -and
+        $watchTools -match 'talvora_watch_read' -and
+        $watchTools -match 'talvora_watch_wait' -and
+        $watchTools -match 'talvora_watch_stop'
+    )
+    ChocolateyToolContract = (
+        $chocoTools -match 'talvora_choco_info' -and
+        $chocoTools -match 'talvora_choco_list' -and
+        $chocoTools -match 'talvora_choco_search' -and
+        $chocoTools -match 'talvora_choco_install' -and
+        $chocoTools -match 'talvora_choco_upgrade' -and
+        $chocoTools -match 'talvora_choco_uninstall' -and
+        $chocoTools -match 'talvora_choco_run' -and
+        $chocoTools -match 'complete Chocolatey CLI surface' -and
+        $chocoTools -notmatch '(?i)winget'
+    )
     ConfigAssetToolContract = (
         $configAssetTools -match 'talvora_read_text_range' -and
         $configAssetTools -match 'talvora_tail_text' -and
@@ -55,8 +76,8 @@ $result = [pscustomobject]@{
         $gitTools -match 'talvora_git_run' -and
         $gitTools -match 'No Git subcommand, ref, remote, path, or option denylist/allowlist'
     )
-    InstallerDeclares68Tools = (
-        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 68
+    InstallerDeclares80Tools = (
+        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 80
     )
     DeveloperCoreToolContract = (
         $developerTools -match 'talvora_path_info' -and

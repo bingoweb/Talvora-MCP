@@ -317,6 +317,18 @@ internal static class InstallerEngine
         "talvora_archive_create",
         "talvora_archive_extract",
         "talvora_http_download",
+        "talvora_watch_start",
+        "talvora_watch_list",
+        "talvora_watch_read",
+        "talvora_watch_wait",
+        "talvora_watch_stop",
+        "talvora_choco_info",
+        "talvora_choco_list",
+        "talvora_choco_search",
+        "talvora_choco_install",
+        "talvora_choco_upgrade",
+        "talvora_choco_uninstall",
+        "talvora_choco_run",
     };
 
     public static async Task<HealthSnapshot> InstallAsync(

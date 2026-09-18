@@ -22,6 +22,10 @@ The Git layer exposes structured repository identity, porcelain status, diffs, l
 
 The config/asset layer adds line-ranged and tail text reads, append semantics, mutable JSON Pointer operations, ZIP listing/creation/extraction, and streaming HTTP downloads to disk. These operations retain Talvora's unrestricted path capability; response-oriented line bounds can be disabled explicitly, and archive extraction exposes an opt-in outside-destination mode when exact archive path semantics are required.
 
+The filesystem-watch layer uses `FileSystemWatcher` to expose live Created/Changed/Deleted/Renamed/Error events for any accessible directory. Watch configuration can be recursive, filtered, and bounded or unbounded at the MCP queue layer; it does not impose a watched-path allowlist.
+
+The Chocolatey layer exposes structured package discovery and package lifecycle operations while preserving a generic arbitrary-argument Chocolatey runner. It follows the project rule that Chocolatey is the Windows package manager and does not introduce WinGet.
+
 The environment-variable layer exposes structured process/user/machine get/list/set/delete behavior directly through System.Environment. It applies no variable-name allowlist and does not reduce the unrestricted process or PowerShell primitives.
 
 The Event Log layer exposes structured local-log discovery and XPath queries through Windows Eventing APIs. It applies no log/provider/event-ID allowlist. Per-call event limits bound MCP response size only; unrestricted process and PowerShell primitives remain available for Event Log operations outside this read-only layer.
@@ -85,6 +89,22 @@ JSON operations are based on the mutable `System.Text.Json.Nodes` DOM and RFC 69
 ZIP creation stages through a temporary archive before replacing the requested destination, so the output path may intentionally reside inside the source directory without recursively archiving itself. Extraction normally resolves entries under the requested destination to prevent accidental traversal; `allowOutsideDestination=true` explicitly enables entries whose normalized path resolves elsewhere, matching Talvora's unrestricted filesystem authority.
 
 HTTP download uses response-header streaming rather than buffering an MCP body. Resume requests use a Range header and append only when the server answers with HTTP 206; a normal 200 response restarts the destination file. A final SHA-256 is returned after the stream is persisted.
+
+## Filesystem watchers
+
+The watcher suite exposes `talvora_watch_start`, `talvora_watch_list`, `talvora_watch_read`, `talvora_watch_wait`, and `talvora_watch_stop`.
+
+Each watcher is a live `FileSystemWatcher` owned by the current Talvora service process. Callers choose the directory, wildcard filter, recursive behavior, `NotifyFilters`, internal OS buffer size, and Talvora event-queue limit. Created/Changed/Deleted/Renamed events are normalized into structured records with a monotonically increasing sequence. The FileSystemWatcher Error event is also queued so buffer overflow or underlying watch failures are visible instead of silently dropping monitoring state.
+
+Watchers do not persist across Talvora service restarts. This is deliberate: they represent active development subscriptions, not machine configuration.
+
+## Chocolatey
+
+The Chocolatey suite exposes `talvora_choco_info`, `talvora_choco_list`, `talvora_choco_search`, `talvora_choco_install`, `talvora_choco_upgrade`, `talvora_choco_uninstall`, and `talvora_choco_run`.
+
+Read operations use Chocolatey's machine-oriented `--limit-output` where applicable and parse package name/version rows. Mutating package operations execute as Talvora's LocalSystem account, so package installation and removal have the same machine-level authority as the service itself. `talvora_choco_run` preserves the complete Chocolatey CLI surface by accepting an arbitrary argument vector and environment overrides.
+
+No Chocolatey package/source/subcommand/option allowlist is introduced. Talvora continues to use Chocolatey rather than WinGet for Windows package-management workflows.
 
 ## Environment variables
 

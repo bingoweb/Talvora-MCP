@@ -99,6 +99,59 @@ Talvora includes structured helpers for common development assets and configurat
 
 Text range/tail operations avoid loading large logs or source files into one MCP response, while `lineCount=0` preserves an explicit unbounded mode. JSON tools use RFC 6901 JSON Pointer syntax and can create, update, query, or delete arbitrary configuration nodes. ZIP tools expose complete archive listing, directory creation, and extraction; extraction is destination-contained by default but `allowOutsideDestination=true` preserves full filesystem semantics when intentionally required. `talvora_http_download` streams HTTP response bodies directly to any accessible path, supports custom headers, redirects, TLS override, overwrite, and byte-range resume, and returns a SHA-256 of the downloaded file.
 
+## Filesystem change watchers
+
+Talvora exposes live filesystem monitoring for development workflows:
+
+- `talvora_watch_start`
+- `talvora_watch_list`
+- `talvora_watch_read`
+- `talvora_watch_wait`
+- `talvora_watch_stop`
+
+Watchers use .NET `FileSystemWatcher` directly against any directory accessible to the LocalSystem service. Recursive monitoring, wildcard filters, `NotifyFilters`, internal buffer size, and queued-event limits are caller-controlled. A queue limit of `0` means unlimited Talvora-side event retention. Watchers are intentionally live service-instance resources rather than persistent configuration; a Talvora service restart clears active watchers.
+
+## Chocolatey developer environment tools
+
+Chocolatey remains Talvora's supported Windows package manager. The MCP surface now includes:
+
+- `talvora_choco_info`
+- `talvora_choco_list`
+- `talvora_choco_search`
+- `talvora_choco_install`
+- `talvora_choco_upgrade`
+- `talvora_choco_uninstall`
+- `talvora_choco_run`
+
+List/search use Chocolatey's `--limit-output` format for structured package name/version results. Install/upgrade/uninstall expose common automation options while `talvora_choco_run` accepts an arbitrary Chocolatey argument vector, working directory, and environment overrides. No package, source, subcommand, or Chocolatey-option allowlist/denylist is added. WinGet is still not used by Talvora setup or package-management tooling.
+
+## Filesystem watch tools
+
+Talvora can monitor any accessible directory in real time:
+
+- `talvora_watch_start`
+- `talvora_watch_get`
+- `talvora_watch_list`
+- `talvora_watch_read`
+- `talvora_watch_wait`
+- `talvora_watch_stop`
+
+The watcher layer uses .NET `FileSystemWatcher` with Created/Changed/Deleted/Renamed/Error events, wildcard filters, optional recursive monitoring, selectable `NotifyFilters`, configurable native buffer size, and bounded or unlimited queued events. Watch IDs are in-memory handles owned by the current Talvora service instance. No watched-path allowlist is applied.
+
+## Chocolatey developer tools
+
+Chocolatey remains Talvora's package manager for Windows development tooling:
+
+- `talvora_choco_info`
+- `talvora_choco_list`
+- `talvora_choco_search`
+- `talvora_choco_install`
+- `talvora_choco_upgrade`
+- `talvora_choco_uninstall`
+- `talvora_choco_run`
+
+List/search use Chocolatey's `--limit-output` form so package name/version rows can be returned as structured MCP data. Install/upgrade/uninstall expose package, version, source, package parameters, native install arguments, prerelease/force/noninteractive controls, plus arbitrary extra arguments. `talvora_choco_run` accepts an unrestricted Chocolatey argument vector and environment overrides, preserving the complete Chocolatey CLI surface. No package, source, subcommand, or option allowlist/denylist is applied. Talvora does not use WinGet.
+
 ## Environment variable tools
 
 - `talvora_env_get`

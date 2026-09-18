@@ -84,6 +84,19 @@ string[] required =
     "talvora_archive_create",
     "talvora_archive_extract",
     "talvora_http_download",
+    "talvora_watch_start",
+    "talvora_watch_get",
+    "talvora_watch_list",
+    "talvora_watch_read",
+    "talvora_watch_wait",
+    "talvora_watch_stop",
+    "talvora_choco_info",
+    "talvora_choco_list",
+    "talvora_choco_search",
+    "talvora_choco_install",
+    "talvora_choco_upgrade",
+    "talvora_choco_uninstall",
+    "talvora_choco_run",
 ];
 
 foreach (var name in required)
@@ -511,6 +524,7 @@ var developerBinaryFile = Path.Combine(root, "developer-bytes.bin");
 var developerPatchFile = Path.Combine(root, "developer-patch.txt");
 var developerProjectRoot = Path.Combine(root, "developer-project");
 var developerPackageJson = Path.Combine(developerProjectRoot, "package.json");
+var developerWatchFile = Path.Combine(root, "watch-" + smokeId + ".txt");
 
 var developerRangeFile = Path.Combine(root, "developer-range.txt");
 var developerJsonFile = Path.Combine(root, "developer-config.json");
@@ -717,6 +731,43 @@ try
         throw new InvalidOperationException("resolve_command did not resolve cmd.exe.");
     }
 
+    var chocoInfoResult = await EnsureSuccess(byName["talvora_choco_info"], new());
+    if (chocoInfoResult.StructuredContent is not { } chocoInfoJson ||
+        string.IsNullOrWhiteSpace(chocoInfoJson.GetProperty("executable").GetString()) ||
+        string.IsNullOrWhiteSpace(chocoInfoJson.GetProperty("version").GetString()))
+    {
+        throw new InvalidOperationException("choco_info did not return executable/version metadata.");
+    }
+
+    var chocoVersion = chocoInfoJson.GetProperty("version").GetString()!;
+
+    var chocoListResult = await EnsureSuccess(byName["talvora_choco_list"], new()
+    {
+        ["timeoutSeconds"] = 120,
+    });
+    if (chocoListResult.StructuredContent is not { } chocoListJson ||
+        chocoListJson.GetProperty("exitCode").GetInt32() != 0 ||
+        chocoListJson.GetProperty("timedOut").GetBoolean())
+    {
+        throw new InvalidOperationException("choco_list did not complete successfully.");
+    }
+
+    var chocoRunResult = await EnsureSuccess(byName["talvora_choco_run"], new()
+    {
+        ["arguments"] = new[] { "--version" },
+        ["timeoutSeconds"] = 30,
+    });
+    if (chocoRunResult.StructuredContent is not { } chocoRunJson ||
+        chocoRunJson.GetProperty("exitCode").GetInt32() != 0 ||
+        chocoRunJson.GetProperty("timedOut").GetBoolean() ||
+        !string.Equals(
+            (chocoRunJson.GetProperty("standardOutput").GetString() ?? string.Empty).Trim(),
+            chocoVersion,
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("choco_run --version did not match choco_info.");
+    }
+
     var httpResult = await EnsureSuccess(byName["talvora_http_request"], new()
     {
         ["method"] = "GET",
@@ -764,6 +815,109 @@ try
         !waitTcpJson.GetProperty("connected").GetBoolean())
     {
         throw new InvalidOperationException("wait_tcp did not connect to the Talvora listener.");
+    }
+
+    var watchStartResult = await EnsureSuccess(byName["talvora_watch_start"], new()
+    {
+        ["path"] = root,
+        ["filter"] = "watch-*.txt",
+        ["includeSubdirectories"] = true,
+        ["internalBufferSize"] = 32768,
+        ["maxQueuedEvents"] = 0,
+    });
+    if (watchStartResult.StructuredContent is not { } watchStartJson ||
+        !watchStartJson.TryGetProperty("watchId", out var watchIdJson) ||
+        string.IsNullOrWhiteSpace(watchIdJson.GetString()))
+    {
+        throw new InvalidOperationException("watch_start did not return a watch ID.");
+    }
+
+    var watchId = watchIdJson.GetString()!;
+    try
+    {
+        var watchListResult = await EnsureSuccess(byName["talvora_watch_list"], new());
+        if (watchListResult.StructuredContent is not { } watchListJson ||
+            !watchListJson.GetProperty("watches").EnumerateArray().Any(watch =>
+                watch.TryGetProperty("watchId", out var listedWatchId) &&
+                string.Equals(listedWatchId.GetString(), watchId, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException("watch_list did not include the active watcher.");
+        }
+
+        var watchGetResult = await EnsureSuccess(byName["talvora_watch_get"], new()
+        {
+            ["watchId"] = watchId,
+        });
+        if (watchGetResult.StructuredContent is not { } watchGetJson ||
+            !string.Equals(
+                watchGetJson.GetProperty("watchId").GetString(),
+                watchId,
+                StringComparison.OrdinalIgnoreCase) ||
+            !watchGetJson.GetProperty("enabled").GetBoolean() ||
+            !string.Equals(
+                Path.GetFullPath(watchGetJson.GetProperty("path").GetString() ?? string.Empty),
+                Path.GetFullPath(root),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("watch_get did not report the active watcher.");
+        }
+
+        await EnsureSuccess(byName["talvora_write_text"], new()
+        {
+            ["path"] = developerWatchFile,
+            ["content"] = "watch-payload-" + smokeId,
+        });
+
+        var watchWaitResult = await EnsureSuccess(byName["talvora_watch_wait"], new()
+        {
+            ["watchId"] = watchId,
+            ["afterSequence"] = 0L,
+            ["timeoutSeconds"] = 10,
+            ["pollIntervalMilliseconds"] = 50,
+        });
+        if (watchWaitResult.StructuredContent is not { } watchWaitJson ||
+            !watchWaitJson.GetProperty("signaled").GetBoolean() ||
+            !watchWaitJson.TryGetProperty("event", out var waitedEvent) ||
+            waitedEvent.ValueKind != System.Text.Json.JsonValueKind.Object ||
+            !string.Equals(
+                waitedEvent.GetProperty("fullPath").GetString(),
+                Path.GetFullPath(developerWatchFile),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("watch_wait did not observe the smoke file change.");
+        }
+
+        var watchReadResult = await EnsureSuccess(byName["talvora_watch_read"], new()
+        {
+            ["watchId"] = watchId,
+            ["afterSequence"] = 0L,
+            ["maxEvents"] = 0,
+            ["consume"] = true,
+        });
+        if (watchReadResult.StructuredContent is not { } watchReadJson ||
+            watchReadJson.GetProperty("count").GetInt32() < 1 ||
+            !watchReadJson.GetProperty("events").EnumerateArray().Any(change =>
+                change.TryGetProperty("fullPath", out var changedPath) &&
+                string.Equals(
+                    changedPath.GetString(),
+                    Path.GetFullPath(developerWatchFile),
+                    StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException("watch_read did not return the smoke file change.");
+        }
+    }
+    finally
+    {
+        var watchStopResult = await EnsureSuccess(byName["talvora_watch_stop"], new()
+        {
+            ["watchId"] = watchId,
+        });
+        if (watchStopResult.StructuredContent is not { } watchStopJson ||
+            !watchStopJson.GetProperty("found").GetBoolean() ||
+            !watchStopJson.GetProperty("stopped").GetBoolean())
+        {
+            throw new InvalidOperationException("watch_stop did not stop the smoke watcher.");
+        }
     }
 
     var jobToken = "TALVORA_JOB_SMOKE_" + smokeId;
