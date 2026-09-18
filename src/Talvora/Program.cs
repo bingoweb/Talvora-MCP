@@ -22,7 +22,7 @@ var app = builder.Build();
 
 app.MapGet("/healthz", () =>
 {
-    var identity = OperatingSystem.IsWindows() ? WindowsIdentity.GetCurrent() : null;
+    using var identity = OperatingSystem.IsWindows() ? WindowsIdentity.GetCurrent() : null;
     var runtime = TalvoraRuntimeMetadata.Load();
     return Results.Json(new
     {
