@@ -35,6 +35,19 @@ These tools provide structured create/copy/move behavior without replacing or re
 
 `talvora_move` supports files and directories. `overwrite=false` rejects a destination collision, while `overwrite=true` removes/replaces the destination and then performs the move. No path allowlist is applied to any of these tools.
 
+## Environment variable tools
+
+- `talvora_env_get`
+- `talvora_env_list`
+- `talvora_env_set`
+- `talvora_env_delete`
+
+These tools provide structured access to Windows environment variables at the Talvora process, current-user, and local-machine scopes. Process values live only for the Talvora process. User and Machine values use Windows' persistent environment-variable stores; because the installed service runs as LocalSystem, the User scope is the LocalSystem account's user environment.
+
+`talvora_env_list` returns deterministic name-sorted data and can filter by variable name. `talvora_env_set` preserves an explicit empty-string value, while `talvora_env_delete` removes a value and is idempotent when it is already missing.
+
+No environment-variable name allowlist or deny-list is applied. These tools do not replace or restrict `talvora_run_process` or `talvora_run_powershell`.
+
 ## Process inspection and control
 
 - `talvora_process_list`
