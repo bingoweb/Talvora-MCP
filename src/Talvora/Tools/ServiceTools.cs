@@ -298,13 +298,26 @@ public static class ServiceTools
     private static ServiceController? FindService(string serviceName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(serviceName);
-        ServiceController? matched = null;
 
+        // The overwhelmingly common path is an exact service name. Resolve it directly
+        // so get/start/stop/restart do not enumerate every installed Windows service.
+        var direct = new ServiceController(serviceName);
+        try
+        {
+            _ = direct.Status;
+            return direct;
+        }
+        catch (InvalidOperationException)
+        {
+            direct.Dispose();
+        }
+
+        // Preserve the existing capability to address a service by exact display name.
+        ServiceController? matched = null;
         foreach (var service in ServiceController.GetServices())
         {
             if (matched is null &&
-                (string.Equals(service.ServiceName, serviceName, StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(service.DisplayName, serviceName, StringComparison.OrdinalIgnoreCase)))
+                string.Equals(service.DisplayName, serviceName, StringComparison.OrdinalIgnoreCase))
             {
                 matched = service;
             }
