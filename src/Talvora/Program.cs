@@ -1,5 +1,4 @@
 using Talvora;
-using System.Security.Principal;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using ModelContextProtocol.AspNetCore;
 using ModelContextProtocol.Server;
@@ -22,7 +21,6 @@ var app = builder.Build();
 
 app.MapGet("/healthz", () =>
 {
-    using var identity = OperatingSystem.IsWindows() ? WindowsIdentity.GetCurrent() : null;
     var runtime = TalvoraRuntimeMetadata.Load();
     return Results.Json(new
     {
@@ -33,7 +31,7 @@ app.MapGet("/healthz", () =>
         mcp = "/mcp",
         processId = Environment.ProcessId,
         user = Environment.UserName,
-        sid = identity?.User?.Value,
+        sid = TalvoraRuntimeIdentity.Sid,
         isWindowsService = OperatingSystem.IsWindows() && WindowsServiceHelpers.IsWindowsService(),
     });
 });
