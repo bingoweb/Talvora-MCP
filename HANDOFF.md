@@ -59,10 +59,10 @@ Repository:
 - GitHub: `bingoweb/Talvora-MCP`
 - Canonical branch: `main`
 - Last fully verified code/workflow commit before this handoff update:  
-  `56732fd38904f3491bbc319823e3744b2a7ad24a`
-- Windows CI run for that commit: **#353 — SUCCESS**
-- That run proved the direct 32-tool MCP smoke, PowerShell parser gate, WinGet rejection, dual-shell ChatGPT Business bootstrap self-tests, and the real elevated LocalSystem installer/service smoke.
-- A temporary draft PR was used only to obtain Windows pull-request CI during TDD; close it after the final handoff HEAD is verified and promoted to `main`.
+  `dd72b4348bf064700a0707545b2af69e9eba4431`
+- Windows CI run for that commit: **#355 — SUCCESS**
+- That run proved the direct 32-tool MCP smoke, PowerShell parser gate, WinGet rejection, dual-shell ChatGPT Business bootstrap self-tests, the actual pinned official tunnel-client Windows distribution/CLI contract, and the real elevated LocalSystem installer/service smoke.
+- Temporary draft PR **#8** was used only to obtain pull-request Windows CI during the Business TDD thread and is now closed. Final repository state must remain at zero open PRs.
 - Historical branch refs must be aligned to the final verified handoff HEAD after promotion.
 
 Important: after this `HANDOFF.md` is committed, `main` will naturally have a newer documentation-only SHA. Always refresh the real branch before modifying anything.
