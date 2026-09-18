@@ -19,6 +19,7 @@ $networkDiagnosticTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvo
 $windowsToolchainTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\WindowsToolchainTools.cs'))
 $httpMockTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\HttpMockTools.cs'))
 $configFormatTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ConfigFormatTools.cs'))
+$sqliteTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\SqliteTools.cs'))
 $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Program.cs'))
@@ -214,8 +215,24 @@ $result = [pscustomobject]@{
         $gitTools -match 'talvora_git_run' -and
         $gitTools -match 'No Git subcommand, ref, remote, path, or option denylist/allowlist'
     )
-    InstallerDeclares146Tools = (
-        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 146
+    SqliteToolContract = (
+        $sqliteTools -match 'talvora_sqlite_info' -and
+        $sqliteTools -match 'talvora_sqlite_query' -and
+        $sqliteTools -match 'talvora_sqlite_execute' -and
+        $sqliteTools -match 'talvora_sqlite_schema' -and
+        $sqliteTools -match 'talvora_sqlite_backup' -and
+        $sqliteTools -match 'Microsoft\.Data\.Sqlite' -and
+        $sqliteTools -match 'SqliteOpenMode\.ReadOnly' -and
+        $sqliteTools -match 'BackupDatabase' -and
+        $serviceProject -match 'Microsoft\.Data\.Sqlite" Version="10\.0\.12"' -and
+        $installerProgram -match 'talvora_sqlite_info' -and
+        $installerProgram -match 'talvora_sqlite_query' -and
+        $installerProgram -match 'talvora_sqlite_execute' -and
+        $installerProgram -match 'talvora_sqlite_schema' -and
+        $installerProgram -match 'talvora_sqlite_backup'
+    )
+    InstallerDeclares151Tools = (
+        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 151
     )
     DeveloperCoreToolContract = (
         $developerTools -match 'talvora_path_info' -and

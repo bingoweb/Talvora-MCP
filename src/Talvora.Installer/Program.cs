@@ -395,6 +395,11 @@ internal static class InstallerEngine
         "talvora_http_mock_read",
         "talvora_http_mock_reply",
         "talvora_http_mock_stop",
+        "talvora_sqlite_info",
+        "talvora_sqlite_query",
+        "talvora_sqlite_execute",
+        "talvora_sqlite_schema",
+        "talvora_sqlite_backup",
     };
 
     public static async Task<HealthSnapshot> InstallAsync(

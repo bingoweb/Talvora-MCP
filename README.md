@@ -255,6 +255,22 @@ Python tools resolve the machine interpreter or an explicitly supplied Python/py
 
 On Windows, installing Python/Docker prerequisites remains a machine-software task and should use Talvora's Chocolatey layer rather than WinGet.
 
+## SQLite application-development tools
+
+Talvora includes a first-class embedded SQLite workflow powered by `Microsoft.Data.Sqlite`:
+
+- `talvora_sqlite_info`
+- `talvora_sqlite_query`
+- `talvora_sqlite_execute`
+- `talvora_sqlite_schema`
+- `talvora_sqlite_backup`
+
+The provider is bundled with Talvora, so structured SQLite workflows do not depend on a separately installed `sqlite3.exe`. Query/execute accept arbitrary SQL against any accessible database source and support named parameter binding. `talvora_sqlite_query` defaults to SQLite read-only mode and supports `maxRows=0` for an unbounded result; `talvora_sqlite_execute` can wrap writes/DDL in one transaction and can explicitly refuse creation of a missing database.
+
+Schema inspection reads `sqlite_schema` with optional type/name filters. Backup uses SQLite's online backup API, supports overwrite control, and returns the resulting file length plus SHA-256. Connections are non-pooled so one MCP call does not leave a pooled file handle behind.
+
+These convenience tools do not narrow the existing capability surface: `talvora_run_process` and `talvora_run_powershell` remain unrestricted escape hatches for external database CLIs, migration frameworks, or workflows not modeled here. No Talvora database/path/SQL allowlist or denylist is introduced.
+
 ## Configuration formats and test reports
 
 Talvora adds first-class structured helpers for common project configuration formats:

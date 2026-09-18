@@ -160,6 +160,16 @@ Python discovery resolves the service PATH or an explicitly supplied interpreter
 
 Docker discovery distinguishes CLI presence from engine and Compose availability. Container/image listings use Docker's JSON formatter and are returned as structured rows. Log/exec conveniences sit above unrestricted `docker_run`; Compose similarly preserves arbitrary `docker compose` arguments. Missing Docker is a normal structured state rather than a Talvora startup requirement.
 
+## SQLite application-development layer
+
+The SQLite suite exposes `talvora_sqlite_info`, `talvora_sqlite_query`, `talvora_sqlite_execute`, `talvora_sqlite_schema`, and `talvora_sqlite_backup`. Talvora references `Microsoft.Data.Sqlite 10.0.12`, which brings the native SQLite bundle into the normal service publish/installer payload; no external SQLite CLI is required for these structured calls.
+
+Each operation builds a `SqliteConnectionStringBuilder` with pooling disabled. Query defaults to `SqliteOpenMode.ReadOnly`, while execute explicitly selects `ReadWrite` or `ReadWriteCreate` according to `createIfMissing`. Caller-controlled command/default timeouts are forwarded to the provider. Named MCP parameter values are bound through `SqliteParameter` rather than concatenated into SQL; scalar JSON values keep numeric/string/boolean/null semantics and array/object values are stored as JSON text.
+
+Query results preserve SQLite's dynamic storage classes in a structured cell representation: integer, real, text, blob-as-Base64, or null. Duplicate result-column names are deterministically disambiguated. `maxRows` limits one MCP response and `0` means unlimited.
+
+Schema discovery reads the standard `sqlite_schema` table with bound filters. Online backup uses `SqliteConnection.BackupDatabase`, writes to any accessible destination path, and returns file length plus SHA-256 so callers can verify the artifact. These structured tools add ergonomics without changing the unrestricted process/PowerShell primitives, so external SQLite tools and migration stacks remain fully reachable.
+
 ## Configuration formats and test reports
 
 The configuration-format suite exposes `talvora_dotenv_list`, `talvora_dotenv_get`, `talvora_dotenv_set`, `talvora_dotenv_delete`, `talvora_ini_list`, `talvora_ini_get`, `talvora_ini_set`, `talvora_ini_delete`, `talvora_xml_query`, `talvora_xml_set`, `talvora_xml_delete`, and `talvora_test_report_summary`.
