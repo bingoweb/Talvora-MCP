@@ -9,8 +9,6 @@ $serviceController = Get-Service Talvora
 $qfailure = (& sc.exe qfailure Talvora | Out-String)
 $qfailureFlag = (& sc.exe qfailureflag Talvora | Out-String)
 $qSidType = (& sc.exe qsidtype Talvora | Out-String)
-$currentStatePath = Join-Path $env:LOCALAPPDATA 'Talvora\current.json'
-$currentState = if (Test-Path $currentStatePath) { Get-Content $currentStatePath -Raw | ConvertFrom-Json } else { $null }
 
 $versionedServicePattern = '^"?C:\\Program Files\\Talvora\\Versions\\[0-9a-f]{40}-[0-9]{17}\\Service\\Talvora\.exe"?$'
 $versionedTrayPattern = '^"?C:\\Program Files\\Talvora\\Versions\\[0-9a-f]{40}-[0-9]{17}\\Tray\\Talvora\.Tray\.exe"?$'
@@ -19,6 +17,9 @@ $interactiveUser = (Get-CimInstance Win32_ComputerSystem).UserName
 if ([string]::IsNullOrWhiteSpace($interactiveUser)) { throw 'No interactive Windows user is logged on.' }
 
 $sid = ([Security.Principal.NTAccount]$interactiveUser).Translate([Security.Principal.SecurityIdentifier]).Value
+$userProfile = Get-CimInstance Win32_UserProfile | Where-Object { $_.SID -eq $sid } | Select-Object -First 1
+$currentStatePath = if ($null -ne $userProfile) { Join-Path $userProfile.LocalPath 'AppData\Local\Talvora\current.json' } else { $null }
+$currentState = if ($null -ne $currentStatePath -and (Test-Path $currentStatePath)) { Get-Content $currentStatePath -Raw | ConvertFrom-Json } else { $null }
 $runKey = "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Run"
 $trayRun = if (Test-Path $runKey) { (Get-ItemProperty $runKey -Name 'TalvoraTray' -ErrorAction SilentlyContinue).TalvoraTray } else { $null }
 
