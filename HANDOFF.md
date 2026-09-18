@@ -352,6 +352,8 @@ A transient implementation bug occurred while patching `Install.ps1`: a JavaScri
 15. verify 32-tool manifest;
 16. cleanup service and runtime state.
 
+Restore and Build explicitly check `$LASTEXITCODE` after every `dotnet` invocation. This was hardened at `17dde234c2514af78b7a09790732df7ecb49ee45` after Event Log package testing exposed that a later successful smoke-project command could otherwise mask an earlier Talvora restore/build failure inside the same PowerShell step.
+
 A change is not complete until the final canonical HEAD has a fresh successful run of this workflow.
 
 ---
