@@ -92,7 +92,7 @@ HTTP download uses response-header streaming rather than buffering an MCP body. 
 
 ## Filesystem watchers
 
-The watcher suite exposes `talvora_watch_start`, `talvora_watch_list`, `talvora_watch_read`, `talvora_watch_wait`, and `talvora_watch_stop`.
+The watcher suite exposes `talvora_watch_start`, `talvora_watch_get`, `talvora_watch_list`, `talvora_watch_read`, `talvora_watch_wait`, and `talvora_watch_stop`.
 
 Each watcher is a live `FileSystemWatcher` owned by the current Talvora service process. Callers choose the directory, wildcard filter, recursive behavior, `NotifyFilters`, internal OS buffer size, and Talvora event-queue limit. Created/Changed/Deleted/Renamed events are normalized into structured records with a monotonically increasing sequence. The FileSystemWatcher Error event is also queued so buffer overflow or underlying watch failures are visible instead of silently dropping monitoring state.
 

@@ -318,6 +318,7 @@ internal static class InstallerEngine
         "talvora_archive_extract",
         "talvora_http_download",
         "talvora_watch_start",
+        "talvora_watch_get",
         "talvora_watch_list",
         "talvora_watch_read",
         "talvora_watch_wait",

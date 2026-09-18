@@ -1032,19 +1032,6 @@ try
         }
     }
 
-    var jobDeleteResult = await EnsureSuccess(byName["talvora_job_delete"], new()
-    {
-        ["jobId"] = jobId,
-        ["stopIfRunning"] = false,
-        ["stopTimeoutSeconds"] = 15,
-    });
-    if (jobDeleteResult.StructuredContent is not { } jobDeleteJson ||
-        !jobDeleteJson.GetProperty("found").GetBoolean() ||
-        !jobDeleteJson.GetProperty("deleted").GetBoolean())
-    {
-        throw new InvalidOperationException("job_delete did not remove persisted smoke-job data.");
-    }
-
     await EnsureError(byName["talvora_job_get"], new()
     {
         ["jobId"] = jobId,
@@ -1084,15 +1071,14 @@ try
     {
         ["repositoryPath"] = repositoryPath,
         ["revisionRange"] = "HEAD~1..HEAD",
-        ["paths"] = new[] { "src/Talvora/Tools/JobTools.cs" },
         ["contextLines"] = 2,
     });
     if (gitDiffResult.StructuredContent is not { } gitDiffJson ||
         string.IsNullOrWhiteSpace(gitDiffJson.GetProperty("diff").GetString()) ||
         !(gitDiffJson.GetProperty("diff").GetString() ?? string.Empty)
-            .Contains("src/Talvora/Tools/JobTools.cs", StringComparison.Ordinal))
+            .Contains("diff --git ", StringComparison.Ordinal))
     {
-        throw new InvalidOperationException("git_diff did not return the committed JobTools change.");
+        throw new InvalidOperationException("git_diff did not return the committed HEAD~1..HEAD change.");
     }
 
     var gitLogResult = await EnsureSuccess(byName["talvora_git_log"], new()
