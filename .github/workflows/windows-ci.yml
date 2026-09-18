@@ -64,10 +64,15 @@ jobs:
       - name: Validate ChatGPT Business tunnel bootstrap
         shell: pwsh
         run: |
-          $script = './scripts/Configure-ChatGPT-Business.ps1'
+          $ErrorActionPreference = 'Stop'
+          $script = (Resolve-Path './scripts/Configure-ChatGPT-Business.ps1').Path
           if (-not (Test-Path -LiteralPath $script -PathType Leaf)) { throw "Business tunnel bootstrap missing: $script" }
+
           & $script -SelfTest
-          if ($LASTEXITCODE -ne 0) { throw "Business tunnel bootstrap self-test failed: $LASTEXITCODE" }
+
+          $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+          & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Windows PowerShell 5.1 Business tunnel bootstrap self-test failed: $LASTEXITCODE" }
       - name: Install and verify LocalSystem service
         shell: pwsh
         run: |
