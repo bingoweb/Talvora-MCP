@@ -48,6 +48,17 @@ These tools provide structured access to Windows environment variables at the Ta
 
 No environment-variable name allowlist or deny-list is applied. These tools do not replace or restrict `talvora_run_process` or `talvora_run_powershell`.
 
+## Windows Event Log query tools
+
+- `talvora_eventlog_list`
+- `talvora_eventlog_query`
+
+`talvora_eventlog_list` enumerates local Windows Event Log names, supports an optional case-insensitive name filter, and returns deterministic ordering.
+
+`talvora_eventlog_query` accepts any local log name plus an XPath query, an explicit maximum event count, and newest-first/oldest-first direction. It returns structured event metadata including log/provider identity, event ID, record ID, timestamp, level, process/thread IDs, machine/user identity when available, and a best-effort formatted message. Provider message formatting failures do not discard the underlying event record.
+
+No log-name, provider, or event-ID allowlist is applied. The event-count limit bounds one MCP response rather than reducing which Event Logs can be addressed. The unrestricted process and PowerShell primitives remain available for Event Log operations not modeled by this read-only query layer.
+
 ## Process inspection and control
 
 - `talvora_process_list`
