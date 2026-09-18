@@ -47,17 +47,18 @@ public static class FileTools
     {
         var fullPath = Path.GetFullPath(path);
         var option = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        return Directory.EnumerateFileSystemEntries(fullPath, "*", option)
-            .Select(item =>
+        var directory = new DirectoryInfo(fullPath);
+
+        return directory.EnumerateFileSystemInfos("*", option)
+            .Select(info =>
             {
-                var isDirectory = Directory.Exists(item);
-                var info = isDirectory ? null : new FileInfo(item);
+                var isDirectory = (info.Attributes & FileAttributes.Directory) != 0;
                 return new TalvoraPathEntry(
-                    item,
-                    Path.GetFileName(item),
+                    info.FullName,
+                    info.Name,
                     isDirectory,
-                    info?.Length,
-                    isDirectory ? Directory.GetLastWriteTimeUtc(item) : info!.LastWriteTimeUtc);
+                    isDirectory ? null : ((FileInfo)info).Length,
+                    info.LastWriteTimeUtc);
             })
             .ToArray();
     }
