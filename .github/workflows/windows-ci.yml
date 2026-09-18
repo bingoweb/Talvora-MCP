@@ -112,6 +112,12 @@ jobs:
 
           # Regression guard: repeated health polling must not leak OS handles in the Talvora service.
           $serviceProcess = Get-Process -Id $service.ProcessId
+          # Warm up Kestrel/HTTP connection pools before measuring steady-state handle growth.
+          1..200 | ForEach-Object {
+            Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 5 -Proxy $null | Out-Null
+          }
+          Start-Sleep -Milliseconds 500
+          $serviceProcess.Refresh()
           $handlesBefore = $serviceProcess.HandleCount
           1..200 | ForEach-Object {
             Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 5 -Proxy $null | Out-Null
