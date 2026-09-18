@@ -15,6 +15,112 @@ $TrayPayload = Join-Path $PayloadRoot 'Tray'
 $InstallerProject = Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'
 $PayloadZip = Join-Path $RepoRoot 'src\Talvora.Installer\Payload.zip'
 
+function Assert-PayloadReadable {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Root
+    )
+
+    $required = @(
+        (Join-Path $Root 'Service\Talvora.exe'),
+        (Join-Path $Root 'Tray\Talvora.Tray.exe'),
+        (Join-Path $Root 'source-commit.txt')
+    )
+
+    foreach ($requiredPath in $required) {
+        if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
+            throw "Required installer payload file is missing: $requiredPath"
+        }
+    }
+
+    $files = @(Get-ChildItem -LiteralPath $Root -File -Recurse -Force)
+    if ($files.Count -lt 3) {
+        throw "Installer payload is unexpectedly small: $($files.Count) file(s)."
+    }
+
+    foreach ($file in $files) {
+        $stream = $null
+        try {
+            $stream = [IO.File]::Open(
+                $file.FullName,
+                [IO.FileMode]::Open,
+                [IO.FileAccess]::Read,
+                [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete)
+
+            if ($stream.Length -ne $file.Length) {
+                throw "Payload file length changed while validating: $($file.FullName)"
+            }
+        }
+        finally {
+            if ($null -ne $stream) {
+                $stream.Dispose()
+            }
+        }
+    }
+
+    return $files.Count
+}
+
+function New-VerifiedPayloadArchive {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Source,
+
+        [Parameter(Mandatory = $true)]
+        [string] $Destination,
+
+        [int] $Attempts = 5
+    )
+
+    if ($Attempts -lt 1) {
+        throw 'Archive retry count must be at least 1.'
+    }
+
+    $expectedFileCount = Assert-PayloadReadable -Root $Source
+
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        Remove-Item -LiteralPath $Destination -Force -ErrorAction SilentlyContinue
+
+        try {
+            [IO.Compression.ZipFile]::CreateFromDirectory(
+                $Source,
+                $Destination,
+                [IO.Compression.CompressionLevel]::Optimal,
+                $false)
+
+            if (-not (Test-Path -LiteralPath $Destination -PathType Leaf)) {
+                throw "Payload archive was not created: $Destination"
+            }
+
+            $archive = [IO.Compression.ZipFile]::OpenRead($Destination)
+            try {
+                if ($archive.Entries.Count -ne $expectedFileCount) {
+                    throw "Payload archive entry count mismatch. Expected=$expectedFileCount Actual=$($archive.Entries.Count)"
+                }
+            }
+            finally {
+                $archive.Dispose()
+            }
+
+            return
+        }
+        catch [IO.IOException] {
+            Remove-Item -LiteralPath $Destination -Force -ErrorAction SilentlyContinue
+
+            if ($attempt -ge $Attempts) {
+                throw
+            }
+
+            Write-Warning "Payload archive attempt $attempt/$Attempts hit a transient IO error: $($_.Exception.Message)"
+            Start-Sleep -Milliseconds (250 * $attempt)
+            $expectedFileCount = Assert-PayloadReadable -Root $Source
+        }
+    }
+
+    throw "Unable to create verified payload archive after $Attempts attempts."
+}
+
+
 Remove-Item $ArtifactsRoot -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item $WorkRoot -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item $PayloadZip -Force -ErrorAction SilentlyContinue
@@ -65,11 +171,7 @@ Remove-Item (Join-Path $TrayPayload '*.pdb') -Force -ErrorAction SilentlyContinu
     [Text.UTF8Encoding]::new($false))
 
 Write-Host 'Creating embedded installer payload...' -ForegroundColor Cyan
-[IO.Compression.ZipFile]::CreateFromDirectory(
-    $PayloadRoot,
-    $PayloadZip,
-    [IO.Compression.CompressionLevel]::Optimal,
-    $false)
+New-VerifiedPayloadArchive -Source $PayloadRoot -Destination $PayloadZip -Attempts 5
 
 try {
     Write-Host 'Publishing Talvora Setup EXE...' -ForegroundColor Cyan

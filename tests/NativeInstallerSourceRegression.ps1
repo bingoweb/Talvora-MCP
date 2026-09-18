@@ -22,12 +22,21 @@ $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Pro
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Program.cs'))
 $installerProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'))
+$buildInstallerScript = [IO.File]::ReadAllText((Join-Path $RepoRoot 'scripts\Build-Windows-Installer.ps1'))
 $manifest = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\app.manifest'))
 $iconPath = Join-Path $RepoRoot 'assets\Talvora.ico'
 $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
 
 $result = [pscustomobject]@{
+    BuildScriptVerifiesPayloadArchive = (
+        $buildInstallerScript -match 'function New-VerifiedPayloadArchive' -and
+        $buildInstallerScript -match 'function Assert-PayloadReadable' -and
+        $buildInstallerScript -match 'catch \[IO\.IOException\]' -and
+        $buildInstallerScript -match 'Remove-Item -LiteralPath \$Destination' -and
+        $buildInstallerScript -match '\$archive\.Entries\.Count -ne \$expectedFileCount' -and
+        $buildInstallerScript -match 'New-VerifiedPayloadArchive -Source \$PayloadRoot -Destination \$PayloadZip -Attempts 5'
+    )
     WindowsToolchainContract = (
         $windowsToolchainTools -match 'talvora_visual_studio_instances' -and
         $windowsToolchainTools -match 'talvora_vs_dev_environment' -and
