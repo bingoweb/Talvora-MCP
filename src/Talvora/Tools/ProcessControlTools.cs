@@ -21,6 +21,7 @@ public sealed record TalvoraProcessGetResponse(
 
 public sealed record TalvoraProcessKillResponse(
     bool Found,
+    bool Killed,
     bool Exited,
     int ProcessId,
     string? ProcessName,
@@ -143,7 +144,7 @@ public static class ProcessControlTools
         using var process = TryGetProcess(processId);
         if (process is null)
         {
-            return new TalvoraProcessKillResponse(false, true, processId, null, entireProcessTree);
+            return new TalvoraProcessKillResponse(false, false, true, processId, null, entireProcessTree);
         }
 
         string? processName = null;
@@ -152,7 +153,7 @@ public static class ProcessControlTools
             processName = process.ProcessName;
             if (process.HasExited)
             {
-                return new TalvoraProcessKillResponse(false, true, processId, processName, entireProcessTree);
+                return new TalvoraProcessKillResponse(false, false, true, processId, processName, entireProcessTree);
             }
 
             process.Kill(entireProcessTree);
@@ -165,14 +166,14 @@ public static class ProcessControlTools
             }
             catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
-                return new TalvoraProcessKillResponse(true, false, processId, processName, entireProcessTree);
+                return new TalvoraProcessKillResponse(true, true, false, processId, processName, entireProcessTree);
             }
 
-            return new TalvoraProcessKillResponse(true, true, processId, processName, entireProcessTree);
+            return new TalvoraProcessKillResponse(true, true, true, processId, processName, entireProcessTree);
         }
         catch (InvalidOperationException)
         {
-            return new TalvoraProcessKillResponse(false, true, processId, processName, entireProcessTree);
+            return new TalvoraProcessKillResponse(false, false, true, processId, processName, entireProcessTree);
         }
     }
 
