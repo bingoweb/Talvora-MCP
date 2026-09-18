@@ -339,7 +339,7 @@ public static class ServiceTools
 
             if (started.Elapsed >= timeout)
             {
-                throw new TimeoutException($"Service '{service.ServiceName}' did not reach a stable status within {timeout.TotalSeconds:F1} seconds.");
+                throw new System.TimeoutException($"Service '{service.ServiceName}' did not reach a stable status within {timeout.TotalSeconds:F1} seconds.");
             }
 
             Thread.Sleep(100);
@@ -364,7 +364,7 @@ public static class ServiceTools
 
             if (started.Elapsed >= timeout)
             {
-                throw new TimeoutException(
+                throw new System.TimeoutException(
                     $"Service '{service.ServiceName}' did not reach {desiredStatus} within {timeout.TotalSeconds:F1} seconds. Current status: {service.Status}.");
             }
 
@@ -402,7 +402,7 @@ public static class ServiceTools
         var remaining = TimeSpan.FromSeconds(timeoutSeconds) - stopwatch.Elapsed;
         if (remaining <= TimeSpan.Zero)
         {
-            throw new TimeoutException($"Service operation exceeded {timeoutSeconds} seconds.");
+            throw new System.TimeoutException($"Service operation exceeded {timeoutSeconds} seconds.");
         }
 
         return remaining;
