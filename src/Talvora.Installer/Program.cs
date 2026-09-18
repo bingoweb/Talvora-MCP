@@ -344,6 +344,18 @@ internal static class InstallerEngine
         "talvora_session_list",
         "talvora_session_get",
         "talvora_user_process_start",
+        "talvora_python_info",
+        "talvora_python_run",
+        "talvora_python_venv_create",
+        "talvora_pip_install",
+        "talvora_pip_run",
+        "talvora_docker_info",
+        "talvora_docker_ps",
+        "talvora_docker_images",
+        "talvora_docker_logs",
+        "talvora_docker_exec",
+        "talvora_docker_run",
+        "talvora_docker_compose_run",
     };
 
     public static async Task<HealthSnapshot> InstallAsync(

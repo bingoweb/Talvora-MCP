@@ -122,6 +122,14 @@ The LocalSystem service enumerates Windows Terminal Services sessions with `WTSE
 
 The caller can explicitly select a session or let Talvora choose an active logged-on session. Executable, arguments, working directory, environment, visibility, and console behavior are unrestricted. These tools complement LocalSystem process execution; they do not reduce the authority of the existing process/job/PowerShell primitives.
 
+## Python and Docker runtimes
+
+The runtime suite exposes `talvora_python_info`, `talvora_python_run`, `talvora_python_venv_create`, `talvora_pip_install`, `talvora_pip_run`, `talvora_docker_info`, `talvora_docker_ps`, `talvora_docker_images`, `talvora_docker_logs`, `talvora_docker_exec`, `talvora_docker_run`, and `talvora_docker_compose_run`.
+
+Python discovery resolves the service PATH or an explicitly supplied interpreter/Windows `py` launcher, then probes `sys.executable`, version, prefix/base-prefix, virtual-environment state, and `python -m pip --version`. Venv creation uses the standard-library `venv` module. Generic Python and pip runners forward arbitrary argument vectors and environment overrides.
+
+Docker discovery distinguishes CLI presence from engine and Compose availability. Container/image listings use Docker's JSON formatter and are returned as structured rows. Log/exec conveniences sit above unrestricted `docker_run`; Compose similarly preserves arbitrary `docker compose` arguments. Missing Docker is a normal structured state rather than a Talvora startup requirement.
+
 ## Environment variables
 
 The environment suite exposes `talvora_env_get`, `talvora_env_list`, `talvora_env_set`, and `talvora_env_delete`.

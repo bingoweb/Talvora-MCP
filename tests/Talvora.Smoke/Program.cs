@@ -111,6 +111,18 @@ string[] required =
     "talvora_session_list",
     "talvora_session_get",
     "talvora_user_process_start",
+    "talvora_python_info",
+    "talvora_python_run",
+    "talvora_python_venv_create",
+    "talvora_pip_install",
+    "talvora_pip_run",
+    "talvora_docker_info",
+    "talvora_docker_ps",
+    "talvora_docker_images",
+    "talvora_docker_logs",
+    "talvora_docker_exec",
+    "talvora_docker_run",
+    "talvora_docker_compose_run",
 ];
 
 foreach (var name in required)
@@ -544,6 +556,7 @@ var dotnetProjectRoot = Path.Combine(root, "dotnet-smoke");
 var dotnetProjectFile = Path.Combine(dotnetProjectRoot, "Talvora.Dotnet.Smoke.csproj");
 var dotnetProgramFile = Path.Combine(dotnetProjectRoot, "Program.cs");
 var dotnetOutputDll = Path.Combine(dotnetProjectRoot, "bin", "Release", "net10.0", "Talvora.Dotnet.Smoke.dll");
+var pythonVenvRoot = Path.Combine(root, "python-venv");
 
 var developerRangeFile = Path.Combine(root, "developer-range.txt");
 var developerJsonFile = Path.Combine(root, "developer-config.json");
@@ -1043,6 +1056,115 @@ try
                 StringComparison.Ordinal))
         {
             throw new InvalidOperationException("npm_run --version did not match node_info.");
+        }
+    }
+
+    var pythonInfoResult = await EnsureSuccess(byName["talvora_python_info"], new());
+    if (pythonInfoResult.StructuredContent is not { } pythonInfoJson ||
+        !pythonInfoJson.GetProperty("found").GetBoolean() ||
+        string.IsNullOrWhiteSpace(pythonInfoJson.GetProperty("interpreterExecutable").GetString()) ||
+        string.IsNullOrWhiteSpace(pythonInfoJson.GetProperty("version").GetString()))
+    {
+        throw new InvalidOperationException("python_info did not report the installed Python runtime.");
+    }
+
+    var pythonExecutable = pythonInfoJson.GetProperty("interpreterExecutable").GetString()!;
+
+    var pythonRunResult = await EnsureSuccess(byName["talvora_python_run"], new()
+    {
+        ["pythonExecutable"] = pythonExecutable,
+        ["workingDirectory"] = root,
+        ["arguments"] = new[] { "-c", "print('TALVORA_PYTHON_SMOKE')" },
+        ["timeoutSeconds"] = 30,
+    });
+    if (pythonRunResult.StructuredContent is not { } pythonRunJson ||
+        pythonRunJson.GetProperty("exitCode").GetInt32() != 0 ||
+        pythonRunJson.GetProperty("timedOut").GetBoolean() ||
+        !(pythonRunJson.GetProperty("standardOutput").GetString() ?? string.Empty)
+            .Contains("TALVORA_PYTHON_SMOKE", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("python_run did not execute the smoke expression.");
+    }
+
+    if (pythonInfoJson.GetProperty("pipAvailable").GetBoolean())
+    {
+        var pipRunResult = await EnsureSuccess(byName["talvora_pip_run"], new()
+        {
+            ["pythonExecutable"] = pythonExecutable,
+            ["workingDirectory"] = root,
+            ["arguments"] = new[] { "--version" },
+            ["timeoutSeconds"] = 30,
+        });
+        if (pipRunResult.StructuredContent is not { } pipRunJson ||
+            pipRunJson.GetProperty("exitCode").GetInt32() != 0 ||
+            pipRunJson.GetProperty("timedOut").GetBoolean() ||
+            !(pipRunJson.GetProperty("standardOutput").GetString() ?? string.Empty)
+                .Contains("pip", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("pip_run --version failed.");
+        }
+    }
+
+    var venvCreateResult = await EnsureSuccess(byName["talvora_python_venv_create"], new()
+    {
+        ["path"] = pythonVenvRoot,
+        ["pythonExecutable"] = pythonExecutable,
+        ["workingDirectory"] = root,
+        ["withoutPip"] = true,
+        ["timeoutSeconds"] = 120,
+    });
+    if (venvCreateResult.StructuredContent is not { } venvCreateJson ||
+        venvCreateJson.GetProperty("command").GetProperty("exitCode").GetInt32() != 0 ||
+        venvCreateJson.GetProperty("command").GetProperty("timedOut").GetBoolean() ||
+        string.IsNullOrWhiteSpace(venvCreateJson.GetProperty("pythonExecutable").GetString()))
+    {
+        throw new InvalidOperationException("python_venv_create did not create a usable virtual environment.");
+    }
+
+    var venvPythonExecutable = venvCreateJson.GetProperty("pythonExecutable").GetString()!;
+    var venvInfoResult = await EnsureSuccess(byName["talvora_python_info"], new()
+    {
+        ["pythonExecutable"] = venvPythonExecutable,
+        ["workingDirectory"] = root,
+    });
+    if (venvInfoResult.StructuredContent is not { } venvInfoJson ||
+        !venvInfoJson.GetProperty("found").GetBoolean() ||
+        !venvInfoJson.GetProperty("inVirtualEnvironment").GetBoolean())
+    {
+        throw new InvalidOperationException("python_info did not identify the created virtual environment.");
+    }
+
+    var dockerInfoResult = await EnsureSuccess(byName["talvora_docker_info"], new()
+    {
+        ["workingDirectory"] = root,
+    });
+    if (dockerInfoResult.StructuredContent is not { } dockerInfoJson)
+    {
+        throw new InvalidOperationException("docker_info did not return structured content.");
+    }
+
+    if (dockerInfoJson.GetProperty("found").GetBoolean())
+    {
+        var dockerExecutable = dockerInfoJson.GetProperty("executable").GetString();
+        if (string.IsNullOrWhiteSpace(dockerExecutable))
+        {
+            throw new InvalidOperationException("docker_info reported Docker without an executable.");
+        }
+
+        var dockerRunResult = await EnsureSuccess(byName["talvora_docker_run"], new()
+        {
+            ["dockerExecutable"] = dockerExecutable,
+            ["workingDirectory"] = root,
+            ["arguments"] = new[] { "--version" },
+            ["timeoutSeconds"] = 30,
+        });
+        if (dockerRunResult.StructuredContent is not { } dockerRunJson ||
+            dockerRunJson.GetProperty("exitCode").GetInt32() != 0 ||
+            dockerRunJson.GetProperty("timedOut").GetBoolean() ||
+            !(dockerRunJson.GetProperty("standardOutput").GetString() ?? string.Empty)
+                .Contains("Docker", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("docker_run --version failed.");
         }
     }
 

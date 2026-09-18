@@ -14,6 +14,7 @@ $watchTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\Wat
 $chocoTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ChocolateyTools.cs'))
 $buildRunnerTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\BuildRunnerTools.cs'))
 $sessionTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\SessionTools.cs'))
+$runtimeTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\RuntimeTools.cs'))
 $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Program.cs'))
@@ -24,6 +25,22 @@ $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
 
 $result = [pscustomobject]@{
+    PythonDockerToolContract = (
+        $runtimeTools -match 'talvora_python_info' -and
+        $runtimeTools -match 'talvora_python_run' -and
+        $runtimeTools -match 'talvora_python_venv_create' -and
+        $runtimeTools -match 'talvora_pip_install' -and
+        $runtimeTools -match 'talvora_pip_run' -and
+        $runtimeTools -match 'talvora_docker_info' -and
+        $runtimeTools -match 'talvora_docker_ps' -and
+        $runtimeTools -match 'talvora_docker_images' -and
+        $runtimeTools -match 'talvora_docker_logs' -and
+        $runtimeTools -match 'talvora_docker_exec' -and
+        $runtimeTools -match 'talvora_docker_run' -and
+        $runtimeTools -match 'talvora_docker_compose_run' -and
+        $runtimeTools -match 'complete Docker CLI surface' -and
+        $runtimeTools -match 'No pip subcommand, package, index, target, or option allowlist/denylist'
+    )
     SessionToolContract = (
         $sessionTools -match 'talvora_session_list' -and
         $sessionTools -match 'talvora_session_get' -and
@@ -102,8 +119,8 @@ $result = [pscustomobject]@{
         $gitTools -match 'talvora_git_run' -and
         $gitTools -match 'No Git subcommand, ref, remote, path, or option denylist/allowlist'
     )
-    InstallerDeclares95Tools = (
-        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 95
+    InstallerDeclares107Tools = (
+        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 107
     )
     DeveloperCoreToolContract = (
         $developerTools -match 'talvora_path_info' -and

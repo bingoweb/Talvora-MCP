@@ -184,6 +184,27 @@ Session discovery uses Windows Terminal Services APIs and exposes local console/
 
 This is the preferred bridge for GUI tools, browser/dev-server helpers, user-profile package managers, and anything that must run as the signed-in developer rather than as LocalSystem.
 
+## Python and Docker runtime tools
+
+Talvora exposes Python/venv/pip and Docker/Compose helpers for application development:
+
+- `talvora_python_info`
+- `talvora_python_run`
+- `talvora_python_venv_create`
+- `talvora_pip_install`
+- `talvora_pip_run`
+- `talvora_docker_info`
+- `talvora_docker_ps`
+- `talvora_docker_images`
+- `talvora_docker_logs`
+- `talvora_docker_exec`
+- `talvora_docker_run`
+- `talvora_docker_compose_run`
+
+Python tools resolve the machine interpreter or an explicitly supplied Python/py launcher, report virtual-environment and pip state, create venvs, and preserve the complete Python/pip argument surface through `python_run` and `pip_run`. Docker discovery reports missing CLI/engine/Compose structurally; Docker commands remain available without container/image/path/subcommand allowlists through `docker_run` and `docker_compose_run`.
+
+On Windows, installing Python/Docker prerequisites remains a machine-software task and should use Talvora's Chocolatey layer rather than WinGet.
+
 ## Environment variable tools
 
 - `talvora_env_get`
