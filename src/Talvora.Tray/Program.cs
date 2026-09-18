@@ -601,6 +601,7 @@ internal static class BusinessTunnelClient
         var startInfo = new ProcessStartInfo
         {
             FileName = config.TunnelClient,
+            WorkingDirectory = config.StateRoot,
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,

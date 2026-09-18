@@ -23,6 +23,9 @@ $result = [pscustomobject]@{
         $trayProgram.IndexOf('new Mutex', [StringComparison]::Ordinal) -gt
             $trayProgram.IndexOf('--reconnect', [StringComparison]::Ordinal)
     )
+    TrayTunnelClientUsesStateWorkingDirectory = (
+        $trayProgram -match 'WorkingDirectory\s*=\s*config\.StateRoot'
+    )
     InstallerEmbedsPayload = ($installerProject -match 'EmbeddedResource Include="Payload\.zip"')
     InstallerRequiresAdmin = ($manifest -match 'requestedExecutionLevel level="requireAdministrator"')
     InstallerUsesProgramFiles = ($installerProgram -match 'SpecialFolder\.ProgramFiles')
