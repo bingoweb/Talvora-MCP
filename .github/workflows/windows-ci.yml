@@ -109,6 +109,35 @@ jobs:
           $health = Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 5 -Proxy $null
           if ($health.sid -ne 'S-1-5-18') { throw "Talvora service SID is $($health.sid)" }
           if (-not $health.isWindowsService) { throw 'Talvora process did not detect Windows Service hosting.' }
+
+          # Regression guard: repeated health polling over one persistent HTTP connection must not leak OS handles.
+          $serviceProcess = Get-Process -Id $service.ProcessId
+          $httpClient = [System.Net.Http.HttpClient]::new()
+          $httpClient.Timeout = [TimeSpan]::FromSeconds(5)
+          try {
+            # Warm up the server and connection pool before steady-state measurement.
+            1..100 | ForEach-Object {
+              $response = $httpClient.GetAsync('http://127.0.0.1:7676/healthz').GetAwaiter().GetResult()
+              try { $response.EnsureSuccessStatusCode() | Out-Null } finally { $response.Dispose() }
+            }
+            Start-Sleep -Milliseconds 250
+            $serviceProcess.Refresh()
+            $handlesBefore = $serviceProcess.HandleCount
+            1..200 | ForEach-Object {
+              $response = $httpClient.GetAsync('http://127.0.0.1:7676/healthz').GetAwaiter().GetResult()
+              try { $response.EnsureSuccessStatusCode() | Out-Null } finally { $response.Dispose() }
+            }
+            Start-Sleep -Milliseconds 250
+            $serviceProcess.Refresh()
+            $handleDelta = $serviceProcess.HandleCount - $handlesBefore
+            if ($handleDelta -gt 10) {
+              throw "Talvora health polling leaked process handles. Before=$handlesBefore After=$($serviceProcess.HandleCount) Delta=$handleDelta"
+            }
+          }
+          finally {
+            $httpClient.Dispose()
+          }
+
           $expectedCommit = (git rev-parse HEAD).Trim()
           if ($health.sourceCommit -ne $expectedCommit) { throw "Health sourceCommit mismatch. Expected=$expectedCommit Actual=$($health.sourceCommit)" }
           $statePath = Join-Path $env:LOCALAPPDATA 'Talvora\current.json'
