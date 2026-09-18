@@ -65,8 +65,9 @@ Talvora can keep development processes alive without blocking one MCP request:
 - `talvora_job_read_output`
 - `talvora_job_write_stdin`
 - `talvora_job_stop`
+- `talvora_job_delete`
 
-A job may launch any executable with arbitrary arguments, working directory, and environment overrides under the LocalSystem service. stdout/stderr are persisted under `%ProgramData%\Talvora\Jobs\<jobId>` and can be tailed incrementally. Job metadata keeps PID/start-time identity so running processes remain discoverable across a Talvora service restart; stdin remains available while the originating service instance owns the redirected pipe. Stopping a job can terminate the complete process tree. These tools do not replace or restrict the unrestricted process/Powershell controls.
+A job may launch any executable with arbitrary arguments, working directory, and environment overrides under the LocalSystem service. stdout/stderr are persisted under `%ProgramData%\Talvora\Jobs\<jobId>` and can be tailed incrementally. Job metadata keeps PID/start-time identity so running processes remain discoverable across a Talvora service restart; stdin remains available while the originating service instance owns the redirected pipe. Stopping a job can terminate the complete process tree. `talvora_job_delete` removes persisted metadata/stdout/stderr and can optionally stop a still-running job before cleanup. These tools do not replace or restrict the unrestricted process/Powershell controls.
 
 ## Structured Git tools
 

@@ -60,11 +60,11 @@ Project discovery recognizes common .NET, Node, Python, Rust, Go, Maven, Gradle,
 
 ## Long-running development jobs
 
-The job suite exposes `talvora_job_start`, `talvora_job_get`, `talvora_job_list`, `talvora_job_read_output`, `talvora_job_write_stdin`, and `talvora_job_stop`.
+The job suite exposes `talvora_job_start`, `talvora_job_get`, `talvora_job_list`, `talvora_job_read_output`, `talvora_job_write_stdin`, `talvora_job_stop`, and `talvora_job_delete`.
 
 Start uses `ProcessStartInfo.ArgumentList` with shell execution disabled and supports arbitrary child environment overrides. It redirects all three standard streams. stdout/stderr are pumped continuously into UTF-8 log files under `%ProgramData%\Talvora\Jobs\<jobId>`; callers tail them by byte offset without waiting for the child to exit. Metadata records the original PID and UTC start time so Talvora can distinguish a restarted process ID from PID reuse after the service itself restarts.
 
-The live service instance owns the redirected stdin pipe, so `talvora_job_write_stdin` works while that same Talvora process remains attached. Job get/list still recover persisted process state after a service restart. Stop defaults to complete process-tree termination. Arbitrary PID control remains available through `talvora_process_kill`.
+The live service instance owns the redirected stdin pipe, so `talvora_job_write_stdin` works while that same Talvora process remains attached. Job get/list still recover persisted process state after a service restart. Stop defaults to complete process-tree termination. Delete removes the persisted job directory and can stop a running job first when explicitly requested. Arbitrary PID control remains available through `talvora_process_kill`.
 
 ## Git
 

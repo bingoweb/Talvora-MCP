@@ -300,6 +300,7 @@ internal static class InstallerEngine
         "talvora_job_read_output",
         "talvora_job_write_stdin",
         "talvora_job_stop",
+        "talvora_job_delete",
         "talvora_git_info",
         "talvora_git_status",
         "talvora_git_diff",

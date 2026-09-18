@@ -67,6 +67,7 @@ string[] required =
     "talvora_job_read_output",
     "talvora_job_write_stdin",
     "talvora_job_stop",
+    "talvora_job_delete",
     "talvora_git_info",
     "talvora_git_status",
     "talvora_git_diff",
@@ -863,7 +864,37 @@ try
         {
             throw new InvalidOperationException("job_stop did not terminate the smoke job.");
         }
+
+        var deleteJobResult = await EnsureSuccess(byName["talvora_job_delete"], new()
+        {
+            ["jobId"] = jobId,
+            ["stopIfRunning"] = false,
+        });
+        if (deleteJobResult.StructuredContent is not { } deleteJobJson ||
+            !deleteJobJson.GetProperty("found").GetBoolean() ||
+            !deleteJobJson.GetProperty("deleted").GetBoolean())
+        {
+            throw new InvalidOperationException("job_delete did not remove the smoke job metadata.");
+        }
     }
+
+    var jobDeleteResult = await EnsureSuccess(byName["talvora_job_delete"], new()
+    {
+        ["jobId"] = jobId,
+        ["stopIfRunning"] = false,
+        ["stopTimeoutSeconds"] = 15,
+    });
+    if (jobDeleteResult.StructuredContent is not { } jobDeleteJson ||
+        !jobDeleteJson.GetProperty("found").GetBoolean() ||
+        !jobDeleteJson.GetProperty("deleted").GetBoolean())
+    {
+        throw new InvalidOperationException("job_delete did not remove persisted smoke-job data.");
+    }
+
+    await EnsureError(byName["talvora_job_get"], new()
+    {
+        ["jobId"] = jobId,
+    });
 
     var gitInfoResult = await EnsureSuccess(byName["talvora_git_info"], new()
     {

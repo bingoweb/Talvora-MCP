@@ -46,6 +46,7 @@ $result = [pscustomobject]@{
         $jobTools -match 'talvora_job_read_output' -and
         $jobTools -match 'talvora_job_write_stdin' -and
         $jobTools -match 'talvora_job_stop' -and
+        $jobTools -match 'talvora_job_delete' -and
         $gitTools -match 'talvora_git_info' -and
         $gitTools -match 'talvora_git_status' -and
         $gitTools -match 'talvora_git_diff' -and
@@ -54,8 +55,8 @@ $result = [pscustomobject]@{
         $gitTools -match 'talvora_git_run' -and
         $gitTools -match 'No Git subcommand, ref, remote, path, or option denylist/allowlist'
     )
-    InstallerDeclares67Tools = (
-        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 67
+    InstallerDeclares68Tools = (
+        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 68
     )
     DeveloperCoreToolContract = (
         $developerTools -match 'talvora_path_info' -and

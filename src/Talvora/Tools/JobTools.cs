@@ -61,6 +61,12 @@ public sealed record TalvoraJobStopResponse(
     string State,
     int? ExitCode);
 
+public sealed record TalvoraJobDeleteResponse(
+    string JobId,
+    bool Found,
+    bool Stopped,
+    bool Deleted);
+
 internal sealed record TalvoraJobMetadata(
     string JobId,
     int ProcessId,
@@ -550,6 +556,87 @@ public static class JobTools
                 process.Dispose();
             }
         }
+    }
+
+    [McpServerTool(
+        Name = "talvora_job_delete",
+        Destructive = true,
+        Idempotent = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraJobDeleteResponse)),
+     Description("Delete persisted metadata and stdout/stderr logs for a Talvora background job. If the job is still running, stopIfRunning=true first terminates its process tree; otherwise deletion is rejected so live output is not orphaned.")]
+    public static async Task<TalvoraJobDeleteResponse> Delete(
+        string jobId,
+        bool stopIfRunning = false,
+        int stopTimeoutSeconds = 15,
+        CancellationToken cancellationToken = default)
+    {
+        var metadataPath = GetMetadataPath(jobId);
+        var directory = Path.GetDirectoryName(metadataPath)
+            ?? throw new InvalidOperationException("Job directory could not be resolved.");
+
+        if (!File.Exists(metadataPath) && !Directory.Exists(directory))
+        {
+            return new TalvoraJobDeleteResponse(
+                jobId,
+                false,
+                false,
+                false);
+        }
+
+        var stopped = false;
+
+        if (File.Exists(metadataPath))
+        {
+            var metadata = await ReadMetadataFileAsync(metadataPath, cancellationToken);
+            var state = await RefreshStateAsync(metadata, cancellationToken);
+
+            if (string.Equals(state.State, "Running", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!stopIfRunning)
+                {
+                    throw new InvalidOperationException(
+                        "The Talvora job is still running. Set stopIfRunning=true to stop and delete it.");
+                }
+
+                var stop = await Stop(
+                    jobId,
+                    entireProcessTree: true,
+                    timeoutSeconds: stopTimeoutSeconds,
+                    cancellationToken);
+                stopped = stop.Exited;
+
+                if (!stop.Exited)
+                {
+                    throw new TimeoutException(
+                        $"Talvora job did not exit before cleanup: {jobId}");
+                }
+            }
+        }
+
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (LiveJobs.ContainsKey(jobId) && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(50, cancellationToken);
+        }
+
+        if (LiveJobs.ContainsKey(jobId))
+        {
+            throw new InvalidOperationException(
+                $"Talvora job is still attached to the service and cannot be deleted yet: {jobId}");
+        }
+
+        if (Directory.Exists(directory))
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+
+        return new TalvoraJobDeleteResponse(
+            jobId,
+            true,
+            stopped,
+            !Directory.Exists(directory));
     }
 
     private static string GetJobsRoot()
