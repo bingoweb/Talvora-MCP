@@ -333,13 +333,23 @@ try
         if (processKill.StructuredContent is not { } processKillJson ||
             !processKillJson.TryGetProperty("found", out var killFound) ||
             !killFound.GetBoolean() ||
-            !processKillJson.TryGetProperty("killed", out var killed) ||
-            !killed.GetBoolean() ||
             !processKillJson.TryGetProperty("exited", out var exited) ||
             !exited.GetBoolean())
         {
             throw new InvalidOperationException("process kill did not terminate the spawned process.");
         }
+
+        var processMissing = await EnsureSuccess(byName["talvora_process_get"], new()
+        {
+            ["processId"] = processChildPid,
+        });
+        if (processMissing.StructuredContent is not { } processMissingJson ||
+            !processMissingJson.TryGetProperty("found", out var processMissingFound) ||
+            processMissingFound.GetBoolean())
+        {
+            throw new InvalidOperationException("process get must return found=false after process termination.");
+        }
+
         processSmokePid = null;
     }
     finally
