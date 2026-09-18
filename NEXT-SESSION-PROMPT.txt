@@ -1,0 +1,50 @@
+Talvora MCP projesine kaldığımız yerden devam et.
+
+Önce şu handoff dosyasını oku:
+C:\Users\tayla\Talvora-MCP\HANDOFF-2026-09-18.md
+
+Ardından mevcut Talvora local MCP araçlarını kullanarak durumu bizzat doğrula:
+- talvora_system_info
+- Talvora servis durumu
+- C:\Users\tayla\AppData\Local\Talvora\current.json
+- C:\Users\tayla\Talvora-MCP git branch/status/HEAD
+- origin/main
+
+Başlangıç referansı:
+- Repo: C:\Users\tayla\Talvora-MCP
+- GitHub: bingoweb/Talvora-MCP
+- main HEAD ve origin/main: 12d29453b4354cc76f81356a88a476c32f096cb1
+- Canlı servis sourceCommit: f907ca13cb4f65dfd8324c226986d1f447fb79d4
+- Canlı ToolCount: 146
+- MCP: http://127.0.0.1:7676/mcp
+- Health: http://127.0.0.1:7676/healthz
+
+Repo HEAD ile canlı sourceCommit farkı normal: son commit installer paketleme/build mantığını sertleştiriyor; servis runtime kodu f907ca13 commitinde ve 146 araçlık canlı sürüm GREEN durumda. Sırf hashleri eşitlemek için gereksiz reinstall yapma.
+
+Sabit kurallar:
+- Windows-native geliştirme.
+- Talvora tam yetenek / full access felsefesiyle devam edecek; proje yeteneğini keyfi allowlist/denylist ile daraltma.
+- Chocolatey kullanılacak; WinGet ekleme.
+- Yeni runtime/toolchain/harici entegrasyon tasarımında Context7 ve resmi dokümanları kullan.
+- Talvora LocalSystem Windows servisi olarak Automatic çalışacak; mevcut servis hardeningini zayıflatma.
+- Transactional installer/update mimarisini koru: stage -> verify -> switch -> health/tray verify -> rollback on failure -> success sonrası cleanup.
+- Common workflows için structured MCP araçları ekleyebilirsin ama unrestricted process/PowerShell/Git/Chocolatey/dotnet/npm/Python/Docker gibi escape hatch'leri kısıtlama.
+- Büyük değişikliklerde feature branch kullan.
+- Build/source/smoke/runtime GREEN olmadan main'e merge etme.
+- GitHub'a ancak ben açıkça istersem push et.
+- Installer servis swap sırasında MCP kısa süreli düşerse yeniden bağlanıp devam et; ilk timeout'u failure sanma.
+- Uzun çalışmalarda her 2-3 anlamlı tool çağrısında kısa ilerleme mesajı ver. Sessiz kalıp donmuş izlenimi yaratma.
+- Rutin onay istemeden ilerle.
+
+Mevcut tamamlanmış yetenekler arasında developer core, long-running jobs, Git, file watcher, Chocolatey, .NET, Node/npm, interactive user session, Python, Docker, network diagnostics, dotenv/INI/XML, Windows native toolchain/PE inspection ve HTTP mock/webhook listener bulunuyor.
+
+Şimdi:
+1. Handoff'u ve gerçek runtime/git durumunu doğrula.
+2. Mevcut 146-tool tabanı bozmadan sıradaki en yüksek getirili uygulama geliştirme yeteneğini seç.
+3. Context7 ile tasarımı doğrula.
+4. Feature branch aç.
+5. Implement et.
+6. Source/build/smoke/runtime testlerini gerçek makinede çalıştır.
+7. Yalnız tam GREEN durumda main'e fast-forward et.
+8. GitHub push yapma; ben ayrıca istersem push edeceğiz.
+9. Durma; kaldığın yerden geliştirmeye başla.
