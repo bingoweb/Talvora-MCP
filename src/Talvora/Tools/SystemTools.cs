@@ -12,7 +12,7 @@ public static class SystemTools
     [McpServerTool(Name = "talvora_system_info", ReadOnly = true, OpenWorld = false), Description("Return operating system, process and Windows identity information for the Talvora service.")]
     public static object GetSystemInfo()
     {
-        var identity = OperatingSystem.IsWindows() ? WindowsIdentity.GetCurrent() : null;
+        using var identity = OperatingSystem.IsWindows() ? WindowsIdentity.GetCurrent() : null;
         var runtime = TalvoraRuntimeMetadata.Load();
         return new
         {
