@@ -38,10 +38,16 @@ function Test-TalvoraWindows {
 }
 
 function Get-TunnelClientArchitecture {
-    $architecture = [Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
-    switch ($architecture) {
-        'X64' { return 'amd64' }
-        'Arm64' { return 'arm64' }
+    $architecture = if (-not [string]::IsNullOrWhiteSpace($env:PROCESSOR_ARCHITEW6432)) {
+        $env:PROCESSOR_ARCHITEW6432
+    }
+    else {
+        $env:PROCESSOR_ARCHITECTURE
+    }
+
+    switch ([string]$architecture.ToUpperInvariant()) {
+        'AMD64' { return 'amd64' }
+        'ARM64' { return 'arm64' }
         default { throw "Unsupported Windows architecture for OpenAI tunnel-client: $architecture" }
     }
 }
@@ -167,8 +173,8 @@ function Install-OpenAITunnelClient {
     try {
         $archivePath = Join-Path $tempRoot $selected.ArchiveName
         $checksumsPath = Join-Path $tempRoot 'SHA256SUMS.txt'
-        Invoke-WebRequest -Uri $selected.ArchiveUrl -OutFile $archivePath -Headers @{ 'User-Agent' = 'Talvora-Business-Tunnel-Bootstrap' }
-        Invoke-WebRequest -Uri $selected.ChecksumsUrl -OutFile $checksumsPath -Headers @{ 'User-Agent' = 'Talvora-Business-Tunnel-Bootstrap' }
+        Invoke-WebRequest -UseBasicParsing -Uri $selected.ArchiveUrl -OutFile $archivePath -Headers @{ 'User-Agent' = 'Talvora-Business-Tunnel-Bootstrap' }
+        Invoke-WebRequest -UseBasicParsing -Uri $selected.ChecksumsUrl -OutFile $checksumsPath -Headers @{ 'User-Agent' = 'Talvora-Business-Tunnel-Bootstrap' }
 
         $expectedHash = Get-ExpectedSha256 -ChecksumsPath $checksumsPath -ArchiveName $selected.ArchiveName
         $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -256,6 +262,8 @@ function Write-BusinessConfig {
 
 function Invoke-SelfTest {
     Assert-True -Condition (Test-TalvoraWindows) -Message 'Windows platform detection failed.'
+    $selfTestArchitecture = Get-TunnelClientArchitecture
+    Assert-True -Condition ($selfTestArchitecture -in @('amd64', 'arm64')) -Message 'Windows architecture mapping failed.'
     Assert-True -Condition ($TunnelClientVersion -match '^v[0-9]+\.[0-9]+\.[0-9]+$') -Message 'pinned tunnel-client version is invalid.'
     Assert-True -Condition (Test-TalvoraTunnelId -Value 'tunnel_0123456789abcdef0123456789abcdef') -Message 'valid tunnel ID was rejected.'
     Assert-True -Condition (-not (Test-TalvoraTunnelId -Value 'not-a-tunnel')) -Message 'invalid tunnel ID was accepted.'
