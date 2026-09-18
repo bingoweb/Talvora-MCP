@@ -81,9 +81,9 @@ jobs:
           if (-not (Test-Path -LiteralPath $statePath -PathType Leaf)) { throw "Talvora state file missing: $statePath" }
           $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
           if ($state.SourceCommit -ne $expectedCommit) { throw "State SourceCommit mismatch. Expected=$expectedCommit Actual=$($state.SourceCommit)" }
-          if ($state.ToolCount -ne 23) { throw "State ToolCount mismatch. Expected=23 Actual=$($state.ToolCount)" }
-          if (@($state.ToolNames).Count -ne 23) { throw "State ToolNames count mismatch. Expected=23 Actual=$(@($state.ToolNames).Count)" }
-          foreach ($toolName in @('talvora_system_info','talvora_run_process','talvora_run_powershell','talvora_process_list','talvora_service_list','talvora_registry_get','search','fetch')) {
+          if ($state.ToolCount -ne 26) { throw "State ToolCount mismatch. Expected=26 Actual=$($state.ToolCount)" }
+          if (@($state.ToolNames).Count -ne 26) { throw "State ToolNames count mismatch. Expected=26 Actual=$(@($state.ToolNames).Count)" }
+          foreach ($toolName in @('talvora_system_info','talvora_create_directory','talvora_copy','talvora_move','talvora_run_process','talvora_run_powershell','talvora_process_list','talvora_service_list','talvora_registry_get','search','fetch')) {
             if ($toolName -notin @($state.ToolNames)) { throw "State ToolNames missing $toolName" }
           }
       - name: Clean service test
