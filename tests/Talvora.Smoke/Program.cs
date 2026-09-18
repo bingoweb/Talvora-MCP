@@ -163,6 +163,26 @@ if (eventLogResult.StructuredContent is not { } eventLogJson ||
     throw new InvalidOperationException("service get did not return EventLog.");
 }
 
+if (!eventLogService.TryGetProperty("displayName", out var eventLogDisplayNameJson) ||
+    string.IsNullOrWhiteSpace(eventLogDisplayNameJson.GetString()))
+{
+    throw new InvalidOperationException("EventLog service did not expose a display name.");
+}
+
+var eventLogByDisplayName = await EnsureSuccess(byName["talvora_service_get"], new()
+{
+    ["serviceName"] = eventLogDisplayNameJson.GetString()!,
+});
+if (eventLogByDisplayName.StructuredContent is not { } eventLogByDisplayJson ||
+    !eventLogByDisplayJson.TryGetProperty("found", out var eventLogByDisplayFound) ||
+    !eventLogByDisplayFound.GetBoolean() ||
+    !eventLogByDisplayJson.TryGetProperty("service", out var eventLogByDisplayService) ||
+    !eventLogByDisplayService.TryGetProperty("serviceName", out var eventLogByDisplayServiceName) ||
+    !string.Equals(eventLogByDisplayServiceName.GetString(), "EventLog", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException("service get by display name did not return EventLog.");
+}
+
 var missingServiceResult = await EnsureSuccess(byName["talvora_service_get"], new()
 {
     ["serviceName"] = "Talvora-Smoke-Missing-" + Guid.NewGuid().ToString("N"),
