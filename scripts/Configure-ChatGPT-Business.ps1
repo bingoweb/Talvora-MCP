@@ -38,7 +38,7 @@ function Test-TalvoraWindows {
 function Test-TalvoraTunnelId {
     param([Parameter(Mandatory = $true)][string] $Value)
 
-    return $Value -match '^tunnel_[0-9a-f]{32}$'
+    return $Value -cmatch '^tunnel_[0-9a-f]{32}$'
 }
 
 function Get-TunnelClientArchitecture {
