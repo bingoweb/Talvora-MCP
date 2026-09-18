@@ -81,9 +81,9 @@ jobs:
           if (-not (Test-Path -LiteralPath $statePath -PathType Leaf)) { throw "Talvora state file missing: $statePath" }
           $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
           if ($state.SourceCommit -ne $expectedCommit) { throw "State SourceCommit mismatch. Expected=$expectedCommit Actual=$($state.SourceCommit)" }
-          if ($state.ToolCount -ne 30) { throw "State ToolCount mismatch. Expected=30 Actual=$($state.ToolCount)" }
-          if (@($state.ToolNames).Count -ne 30) { throw "State ToolNames count mismatch. Expected=30 Actual=$(@($state.ToolNames).Count)" }
-          foreach ($toolName in @('talvora_system_info','talvora_create_directory','talvora_copy','talvora_move','talvora_env_get','talvora_env_list','talvora_env_set','talvora_env_delete','talvora_run_process','talvora_run_powershell','talvora_process_list','talvora_service_list','talvora_registry_get','search','fetch')) {
+          if ($state.ToolCount -ne 32) { throw "State ToolCount mismatch. Expected=32 Actual=$($state.ToolCount)" }
+          if (@($state.ToolNames).Count -ne 32) { throw "State ToolNames count mismatch. Expected=32 Actual=$(@($state.ToolNames).Count)" }
+          foreach ($toolName in @('talvora_system_info','talvora_create_directory','talvora_copy','talvora_move','talvora_env_get','talvora_env_list','talvora_env_set','talvora_env_delete','talvora_eventlog_list','talvora_eventlog_query','talvora_run_process','talvora_run_powershell','talvora_process_list','talvora_service_list','talvora_registry_get','search','fetch')) {
             if ($toolName -notin @($state.ToolNames)) { throw "State ToolNames missing $toolName" }
           }
       - name: Clean service test
