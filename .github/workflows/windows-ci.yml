@@ -18,12 +18,16 @@ jobs:
         shell: pwsh
         run: |
           dotnet restore src/Talvora/Talvora.csproj
+          if ($LASTEXITCODE -ne 0) { throw "Talvora restore failed: $LASTEXITCODE" }
           dotnet restore tests/Talvora.Smoke/Talvora.Smoke.csproj
+          if ($LASTEXITCODE -ne 0) { throw "Talvora.Smoke restore failed: $LASTEXITCODE" }
       - name: Build
         shell: pwsh
         run: |
           dotnet build src/Talvora/Talvora.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw "Talvora build failed: $LASTEXITCODE" }
           dotnet build tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw "Talvora.Smoke build failed: $LASTEXITCODE" }
       - name: Start and verify real MCP tools
         shell: pwsh
         run: |
