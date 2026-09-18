@@ -7,8 +7,8 @@ if ($null -eq $service) {
     throw 'Talvora service is missing.'
 }
 
-$expectedService = 'C:\Program Files\Talvora\Service\Talvora.exe'
-$expectedTray = 'C:\Program Files\Talvora\Tray\Talvora.Tray.exe'
+$versionedServicePattern = '^"?C:\\Program Files\\Talvora\\Versions\\[0-9a-f]{40}-[0-9]{17}\\Service\\Talvora\.exe"?$'
+$versionedTrayPattern = '^"?C:\\Program Files\\Talvora\\Versions\\[0-9a-f]{40}-[0-9]{17}\\Tray\\Talvora\.Tray\.exe"?$'
 
 $interactiveUser = (Get-CimInstance Win32_ComputerSystem).UserName
 if ([string]::IsNullOrWhiteSpace($interactiveUser)) {
@@ -23,26 +23,32 @@ $trayRun = if (Test-Path $runKey) {
     $null
 }
 
-$servicePathNormalized = $service.PathName.Trim('"')
+$serviceUsesVersionedPath = [string]$service.PathName -match $versionedServicePattern
+$trayStartupRegistered = [string]$trayRun -match $versionedTrayPattern
+$trayExecutable = if ($trayStartupRegistered) { ([string]$trayRun).Trim('"') } else { $null }
 
 $result = [pscustomobject]@{
     ServicePath = $service.PathName
-    ServiceUsesProgramFiles = ($servicePathNormalized -ieq $expectedService)
-    TrayExecutableExists = (Test-Path -LiteralPath $expectedTray -PathType Leaf)
-    TrayStartupRegistered = ([string]$trayRun -match [regex]::Escape($expectedTray))
+    ServiceUsesVersionedPath = $serviceUsesVersionedPath
+    TrayExecutableExists = ($trayStartupRegistered -and (Test-Path -LiteralPath $trayExecutable -PathType Leaf))
+    TrayStartupRegistered = $trayStartupRegistered
     LegacyCloudflaredServiceExists = [bool](Get-Service Cloudflared -ErrorAction SilentlyContinue)
     LegacyCloudflaredDataExists = (Test-Path 'C:\ProgramData\cloudflared')
     LegacyProgramDataServiceExists = (Test-Path 'C:\ProgramData\Talvora\Service')
+    LegacyProgramFilesServiceExists = (Test-Path 'C:\Program Files\Talvora\Service')
+    LegacyProgramFilesTrayExists = (Test-Path 'C:\Program Files\Talvora\Tray')
 }
 
 $result | Format-List
 
-if (-not $result.ServiceUsesProgramFiles -or
+if (-not $result.ServiceUsesVersionedPath -or
     -not $result.TrayExecutableExists -or
     -not $result.TrayStartupRegistered -or
     $result.LegacyCloudflaredServiceExists -or
     $result.LegacyCloudflaredDataExists -or
-    $result.LegacyProgramDataServiceExists) {
+    $result.LegacyProgramDataServiceExists -or
+    $result.LegacyProgramFilesServiceExists -or
+    $result.LegacyProgramFilesTrayExists) {
     throw 'Native Talvora installer runtime state is not complete.'
 }
 

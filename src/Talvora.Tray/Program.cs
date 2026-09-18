@@ -90,6 +90,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly ToolStripMenuItem _reconnectItem;
     private readonly ToolStripMenuItem _refreshItem;
     private readonly System.Windows.Forms.Timer _timer;
+    private readonly System.Windows.Forms.Timer _shutdownTimer;
+    private readonly EventWaitHandle _shutdownEvent = new(
+        initialState: false,
+        EventResetMode.AutoReset,
+        @"Local\Talvora.Tray.Shutdown");
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private Icon? _statusIcon;
     private TalvoraStatus _lastStatus = new(
@@ -147,6 +152,19 @@ internal sealed class TrayApplicationContext : ApplicationContext
             Enabled = true,
         };
         _timer.Tick += async (_, _) => await RefreshStatusAsync(showBalloon: false);
+
+        _shutdownTimer = new System.Windows.Forms.Timer
+        {
+            Interval = 250,
+            Enabled = true,
+        };
+        _shutdownTimer.Tick += (_, _) =>
+        {
+            if (_shutdownEvent.WaitOne(0))
+            {
+                ExitTray();
+            }
+        };
 
         _ = RefreshStatusAsync(showBalloon: false);
     }
@@ -264,10 +282,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private void ExitTray()
     {
         _timer.Stop();
+        _shutdownTimer.Stop();
         _notifyIcon.Visible = false;
-        _notifyIcon.Dispose();
-        _statusIcon?.Dispose();
-        _operationGate.Dispose();
         ExitThread();
     }
 
@@ -276,6 +292,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         if (disposing)
         {
             _timer.Dispose();
+            _shutdownTimer.Dispose();
+            _shutdownEvent.Dispose();
             _notifyIcon.Dispose();
             _statusIcon?.Dispose();
             _operationGate.Dispose();

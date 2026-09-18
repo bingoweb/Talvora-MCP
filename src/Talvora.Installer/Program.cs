@@ -295,6 +295,10 @@ internal static class InstallerEngine
 
         Directory.CreateDirectory(tempRoot);
 
+        string? previousServiceExecutable = null;
+        string? previousTrayExecutable = null;
+        var switchedService = false;
+
         try
         {
             ExtractPayload(tempRoot);
@@ -306,32 +310,40 @@ internal static class InstallerEngine
                 throw new InvalidOperationException("Kurulum paketinde source commit bilgisi yok.");
             }
 
-            progress.Report(new InstallProgress(8, "Eski Talvora kalıntıları temizleniyor..."));
-            await RemoveLegacyInstallationAsync(cancellationToken);
-
-            progress.Report(new InstallProgress(18, "Çalışan Talvora servisi durduruluyor..."));
-            await StopAndDeleteServiceAsync(ServiceName, cancellationToken);
-
-            var legacyProgramDataService = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "Talvora",
-                "Service");
-            TryDeleteDirectory(legacyProgramDataService);
-
-            KillTrayProcesses();
-
             var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
             var installRoot = Path.Combine(programFiles, "Talvora");
-            var serviceRoot = Path.Combine(installRoot, "Service");
-            var trayRoot = Path.Combine(installRoot, "Tray");
+            var versionsRoot = Path.Combine(installRoot, "Versions");
+            var versionId = sourceCommit + "-" + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+            var versionRoot = Path.Combine(versionsRoot, versionId);
+            var serviceRoot = Path.Combine(versionRoot, "Service");
+            var trayRoot = Path.Combine(versionRoot, "Tray");
+            var serviceExecutable = Path.Combine(serviceRoot, "Talvora.exe");
+            var trayExecutable = Path.Combine(trayRoot, "Talvora.Tray.exe");
 
-            progress.Report(new InstallProgress(30, "Talvora dosyaları kuruluyor..."));
-            ReplaceDirectory(
-                Path.Combine(tempRoot, "Service"),
-                serviceRoot);
-            ReplaceDirectory(
-                Path.Combine(tempRoot, "Tray"),
-                trayRoot);
+            previousServiceExecutable = await GetExistingServiceExecutableAsync(cancellationToken);
+            previousTrayExecutable = ReadTrayStartupExecutable();
+
+            progress.Report(new InstallProgress(8, "Yeni Talvora sürümü hazırlanıyor..."));
+            Directory.CreateDirectory(versionsRoot);
+            Directory.CreateDirectory(serviceRoot);
+            Directory.CreateDirectory(trayRoot);
+
+            CopyTree(Path.Combine(tempRoot, "Service"), serviceRoot);
+            CopyTree(Path.Combine(tempRoot, "Tray"), trayRoot);
+
+            if (!File.Exists(serviceExecutable))
+            {
+                throw new FileNotFoundException(
+                    "Talvora servis executable bulunamadı.",
+                    serviceExecutable);
+            }
+
+            if (!File.Exists(trayExecutable))
+            {
+                throw new FileNotFoundException(
+                    "Talvora Tray executable bulunamadı.",
+                    trayExecutable);
+            }
 
             var installedAtUtc = DateTime.UtcNow.ToString("O");
             var runtimeMetadata = new
@@ -347,16 +359,16 @@ internal static class InstallerEngine
                 }),
                 new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
-            progress.Report(new InstallProgress(50, "Windows servisi oluşturuluyor..."));
-            var serviceExecutable = Path.Combine(serviceRoot, "Talvora.exe");
-            if (!File.Exists(serviceExecutable))
-            {
-                throw new FileNotFoundException(
-                    "Talvora servis executable bulunamadı.",
-                    serviceExecutable);
-            }
+            progress.Report(new InstallProgress(22, "Eski Talvora kalıntıları temizleniyor..."));
+            await RemoveLegacyInstallationAsync(cancellationToken);
 
+            progress.Report(new InstallProgress(34, "Çalışan Talvora kontrollü olarak değiştiriliyor..."));
+            await StopAndDeleteServiceAsync(ServiceName, cancellationToken);
+            await StopTrayProcessesAsync(cancellationToken);
+
+            progress.Report(new InstallProgress(50, "Windows servisi yeni sürüme bağlanıyor..."));
             await CreateServiceAsync(serviceExecutable, cancellationToken);
+            switchedService = true;
 
             progress.Report(new InstallProgress(63, "Talvora servisi başlatılıyor..."));
             await RunScAsync(
@@ -368,25 +380,53 @@ internal static class InstallerEngine
             var health = await WaitForHealthAsync(sourceCommit, cancellationToken);
 
             progress.Report(new InstallProgress(76, "Sistem tepsisi uygulaması kaydediliyor..."));
-            var trayExecutable = Path.Combine(trayRoot, "Talvora.Tray.exe");
-            if (!File.Exists(trayExecutable))
-            {
-                throw new FileNotFoundException(
-                    "Talvora Tray executable bulunamadı.",
-                    trayExecutable);
-            }
-
             RegisterTrayStartup(trayExecutable);
             WriteCurrentState(health, sourceCommit, installedAtUtc);
             UpsertCodexConfiguration();
 
-            progress.Report(new InstallProgress(90, "Talvora tepsi uygulaması başlatılıyor..."));
-            StartTray(trayExecutable);
+            progress.Report(new InstallProgress(88, "Talvora tepsi uygulaması başlatılıyor..."));
+            await StartTrayAsync(trayExecutable, cancellationToken);
+
+            progress.Report(new InstallProgress(94, "Eski sürüm dosyaları temizleniyor..."));
+            CleanupObsoleteInstallations(installRoot, versionRoot);
 
             progress.Report(new InstallProgress(100, "Talvora hazır."));
             InstallerLog.Write(
                 $"Install succeeded. Commit={sourceCommit} PID={health.ProcessId}");
             return health;
+        }
+        catch
+        {
+            if (switchedService &&
+                !string.IsNullOrWhiteSpace(previousServiceExecutable) &&
+                File.Exists(previousServiceExecutable))
+            {
+                try
+                {
+                    InstallerLog.Write(
+                        $"Install failed after service switch; rolling back to {previousServiceExecutable}");
+                    await StopAndDeleteServiceAsync(ServiceName, cancellationToken);
+                    await CreateServiceAsync(previousServiceExecutable, cancellationToken);
+                    await RunScAsync(
+                        allowNonZero: false,
+                        cancellationToken,
+                        "start",
+                        ServiceName);
+
+                    if (!string.IsNullOrWhiteSpace(previousTrayExecutable) &&
+                        File.Exists(previousTrayExecutable))
+                    {
+                        RegisterTrayStartup(previousTrayExecutable);
+                        await StartTrayAsync(previousTrayExecutable, cancellationToken);
+                    }
+                }
+                catch (Exception rollbackError)
+                {
+                    InstallerLog.Write("Rollback failed", rollbackError);
+                }
+            }
+
+            throw;
         }
         finally
         {
@@ -667,55 +707,185 @@ internal static class InstallerEngine
             RegistryValueKind.String);
     }
 
-    private static void StartTray(string trayExecutable)
+    private static string? ReadTrayStartupExecutable()
     {
-        KillTrayProcesses();
+        using var runKey = Registry.CurrentUser.OpenSubKey(
+            @"Software\Microsoft\Windows\CurrentVersion\Run",
+            writable: false);
 
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = trayExecutable,
-                UseShellExecute = true,
-                WorkingDirectory = Path.GetDirectoryName(trayExecutable) ?? string.Empty,
-            });
-        }
-        catch (Exception ex)
-        {
-            InstallerLog.Write("Tray launch failed", ex);
-        }
+        var value = runKey?.GetValue(RunValueName) as string;
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim().Trim('"');
     }
 
-    private static void KillTrayProcesses()
+    private static Task<string?> GetExistingServiceExecutableAsync(
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        using var key = Registry.LocalMachine.OpenSubKey(
+            @"SYSTEM\CurrentControlSet\Services\" + ServiceName,
+            writable: false);
+
+        var imagePath = key?.GetValue("ImagePath") as string;
+        if (string.IsNullOrWhiteSpace(imagePath))
+        {
+            return Task.FromResult<string?>(null);
+        }
+
+        var expanded = Environment.ExpandEnvironmentVariables(imagePath).Trim();
+        var executable = expanded.StartsWith('"')
+            ? expanded[1..].Split('"', 2)[0]
+            : expanded.Split(' ', 2)[0];
+
+        return Task.FromResult<string?>(executable);
+    }
+
+    private static async Task StartTrayAsync(
+        string trayExecutable,
+        CancellationToken cancellationToken)
+    {
+        await StopTrayProcessesAsync(cancellationToken);
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = trayExecutable,
+            UseShellExecute = true,
+        });
+
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (DateTime.UtcNow < deadline)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            foreach (var process in Process.GetProcessesByName("Talvora.Tray"))
+            {
+                try
+                {
+                    var path = process.MainModule?.FileName;
+                    if (string.Equals(
+                            path,
+                            trayExecutable,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        InstallerLog.Write($"Tray started. PID={process.Id} Path={path}");
+                        return;
+                    }
+                }
+                catch
+                {
+                }
+                finally
+                {
+                    process.Dispose();
+                }
+            }
+
+            await Task.Delay(250, cancellationToken);
+        }
+
+        throw new TimeoutException("Talvora Tray 10 saniye içinde başlayamadı.");
+    }
+
+    private static async Task StopTrayProcessesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var shutdownEvent = EventWaitHandle.OpenExisting(
+                @"Local\Talvora.Tray.Shutdown");
+            shutdownEvent.Set();
+        }
+        catch (WaitHandleCannotBeOpenedException)
+        {
+        }
+
+        var gracefulDeadline = DateTime.UtcNow.AddSeconds(4);
+        while (DateTime.UtcNow < gracefulDeadline)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (Process.GetProcessesByName("Talvora.Tray").Length == 0)
+            {
+                return;
+            }
+
+            await Task.Delay(200, cancellationToken);
+        }
+
         foreach (var process in Process.GetProcessesByName("Talvora.Tray"))
         {
             try
             {
                 process.Kill(entireProcessTree: true);
-                process.WaitForExit(5000);
+                await process.WaitForExitAsync(cancellationToken);
             }
-            catch
+            catch (Exception ex)
             {
+                InstallerLog.Write($"Tray force-stop failed. PID={process.Id}", ex);
             }
             finally
             {
                 process.Dispose();
             }
         }
-    }
 
-    private static void ReplaceDirectory(string source, string destination)
-    {
-        if (!Directory.Exists(source))
+        var forcedDeadline = DateTime.UtcNow.AddSeconds(6);
+        while (DateTime.UtcNow < forcedDeadline)
         {
-            throw new DirectoryNotFoundException(
-                $"Kurulum payload klasörü bulunamadı: {source}");
+            cancellationToken.ThrowIfCancellationRequested();
+            if (Process.GetProcessesByName("Talvora.Tray").Length == 0)
+            {
+                return;
+            }
+
+            await Task.Delay(200, cancellationToken);
         }
 
-        TryDeleteDirectory(destination);
-        Directory.CreateDirectory(destination);
-        CopyTree(source, destination);
+        throw new IOException("Talvora Tray kapatılamadı; güncelleme güvenle devam edemiyor.");
+    }
+
+    private static void CleanupObsoleteInstallations(
+        string installRoot,
+        string activeVersionRoot)
+    {
+        var legacyProgramDataService = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "Talvora",
+            "Service");
+        DeleteDirectoryBestEffort(legacyProgramDataService);
+
+        DeleteDirectoryBestEffort(Path.Combine(installRoot, "Service"));
+        DeleteDirectoryBestEffort(Path.Combine(installRoot, "Tray"));
+        DeleteDirectoryBestEffort(Path.Combine(installRoot, "Cloudflare"));
+
+        var versionsRoot = Path.Combine(installRoot, "Versions");
+        if (!Directory.Exists(versionsRoot))
+        {
+            return;
+        }
+
+        foreach (var directory in Directory.EnumerateDirectories(versionsRoot))
+        {
+            if (!string.Equals(
+                    Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar),
+                    Path.GetFullPath(activeVersionRoot).TrimEnd(Path.DirectorySeparatorChar),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                DeleteDirectoryBestEffort(directory);
+            }
+        }
+    }
+
+    private static void DeleteDirectoryBestEffort(string path)
+    {
+        try
+        {
+            TryDeleteDirectory(path);
+        }
+        catch (Exception ex)
+        {
+            InstallerLog.Write($"Old installation cleanup deferred: {path}", ex);
+        }
     }
 
     private static void CopyTree(string source, string destination)

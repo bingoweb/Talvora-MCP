@@ -22,6 +22,19 @@ $result = [pscustomobject]@{
     InstallerRequiresAdmin = ($manifest -match 'requestedExecutionLevel level="requireAdministrator"')
     InstallerUsesProgramFiles = ($installerProgram -match 'SpecialFolder\.ProgramFiles')
     InstallerRegistersTrayStartup = ($installerProgram -match 'TalvoraTray')
+    InstallerUsesVersionedPayload = (
+        $installerProgram -match 'Versions' -and
+        $installerProgram -match 'versionId' -and
+        $installerProgram -match 'CleanupObsoleteInstallations'
+    )
+    InstallerSupportsRollback = (
+        $installerProgram -match 'rolling back' -and
+        $installerProgram -match 'previousServiceExecutable'
+    )
+    TraySupportsGracefulShutdown = (
+        $trayProgram -match 'Talvora\.Tray\.Shutdown' -and
+        $installerProgram -match 'EventWaitHandle\.OpenExisting'
+    )
 }
 
 $result | Format-List
