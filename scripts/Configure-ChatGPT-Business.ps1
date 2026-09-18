@@ -260,7 +260,7 @@ function Invoke-SelfTest {
     Assert-True -Condition (Test-TalvoraTunnelId -Value 'tunnel_0123456789abcdef0123456789abcdef') -Message 'valid tunnel ID was rejected.'
     Assert-True -Condition (-not (Test-TalvoraTunnelId -Value 'not-a-tunnel')) -Message 'invalid tunnel ID was accepted.'
     Assert-True -Condition (-not (Test-TalvoraTunnelId -Value 'tunnel_0123456789ABCDEF0123456789ABCDEF')) -Message 'uppercase tunnel ID was accepted.'
-    Assert-True -Condition (-not (Test-TalvoraTunnelId -Value 'tunnel_0123456789abcdef0123456789abcdef')) -Message 'short tunnel ID was accepted.'
+    Assert-True -Condition (-not (Test-TalvoraTunnelId -Value 'tunnel_0123456789abcdef')) -Message 'short tunnel ID was accepted.'
 
     $fakeRelease = [pscustomobject]@{
         tag_name = 'v9.8.7'
@@ -287,7 +287,7 @@ function Invoke-SelfTest {
         Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    $args = Get-ConnectArguments -RuntimeAlias 'talvora-business' -RuntimeTunnelId 'tunnel_0123456789abcdef' -ServerUrl $McpUrl
+    $args = Get-ConnectArguments -RuntimeAlias 'talvora-business' -RuntimeTunnelId 'tunnel_0123456789abcdef0123456789abcdef' -ServerUrl $McpUrl
     Assert-True -Condition ($args -contains 'env:CONTROL_PLANE_API_KEY') -Message 'runtime key must be passed by environment reference.'
     Assert-True -Condition (-not (($args -join ' ') -match 'sk-[A-Za-z0-9]')) -Message 'connect arguments unexpectedly contain a literal API key.'
     Assert-True -Condition (($args -join ' ') -match [regex]::Escape($McpUrl)) -Message 'connect arguments do not target Talvora loopback MCP.'
