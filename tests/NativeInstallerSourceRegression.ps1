@@ -16,6 +16,7 @@ $buildRunnerTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Too
 $sessionTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\SessionTools.cs'))
 $runtimeTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\RuntimeTools.cs'))
 $networkDiagnosticTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\NetworkDiagnosticTools.cs'))
+$windowsToolchainTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\WindowsToolchainTools.cs'))
 $configFormatTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ConfigFormatTools.cs'))
 $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
@@ -27,6 +28,40 @@ $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
 
 $result = [pscustomobject]@{
+    WindowsToolchainContract = (
+        $windowsToolchainTools -match 'talvora_visual_studio_instances' -and
+        $windowsToolchainTools -match 'talvora_vs_dev_environment' -and
+        $windowsToolchainTools -match 'talvora_msbuild_info' -and
+        $windowsToolchainTools -match 'talvora_msbuild_run' -and
+        $windowsToolchainTools -match 'talvora_windows_sdk_info' -and
+        $windowsToolchainTools -match 'talvora_cmake_info' -and
+        $windowsToolchainTools -match 'talvora_cmake_run' -and
+        $windowsToolchainTools -match 'talvora_ninja_info' -and
+        $windowsToolchainTools -match 'talvora_ninja_run' -and
+        $windowsToolchainTools -match 'talvora_pe_info' -and
+        $windowsToolchainTools -match 'talvora_file_version_info'
+    )
+    WindowsToolchainToolContract = (
+        $windowsToolchainTools -match 'talvora_windows_toolchain_info' -and
+        $windowsToolchainTools -match 'talvora_vs_instances' -and
+        $windowsToolchainTools -match 'talvora_windows_sdk_list' -and
+        $windowsToolchainTools -match 'talvora_vsdev_environment' -and
+        $windowsToolchainTools -match 'talvora_visual_studio_instances' -and
+        $windowsToolchainTools -match 'talvora_vs_dev_environment' -and
+        $windowsToolchainTools -match 'talvora_msbuild_info' -and
+        $windowsToolchainTools -match 'talvora_msbuild_run' -and
+        $windowsToolchainTools -match 'talvora_windows_sdk_info' -and
+        $windowsToolchainTools -match 'talvora_cmake_info' -and
+        $windowsToolchainTools -match 'talvora_cmake_run' -and
+        $windowsToolchainTools -match 'talvora_ninja_info' -and
+        $windowsToolchainTools -match 'talvora_ninja_run' -and
+        $windowsToolchainTools -match 'talvora_pe_info' -and
+        $windowsToolchainTools -match 'talvora_file_version_info' -and
+        $windowsToolchainTools -match 'VsDevCmd\.bat' -and
+        $windowsToolchainTools -match 'dotnet msbuild' -and
+        $windowsToolchainTools -match 'No target/property/project/option allowlist or denylist' -and
+        $windowsToolchainTools -match 'No generator/preset/source/build-directory/option allowlist or denylist'
+    )
     ConfigFormatToolContract = (
         $configFormatTools -match 'talvora_dotenv_list' -and
         $configFormatTools -match 'talvora_dotenv_get' -and
@@ -146,8 +181,8 @@ $result = [pscustomobject]@{
         $gitTools -match 'talvora_git_run' -and
         $gitTools -match 'No Git subcommand, ref, remote, path, or option denylist/allowlist'
     )
-    InstallerDeclares125Tools = (
-        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 125
+    InstallerDeclares140Tools = (
+        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 140
     )
     DeveloperCoreToolContract = (
         $developerTools -match 'talvora_path_info' -and

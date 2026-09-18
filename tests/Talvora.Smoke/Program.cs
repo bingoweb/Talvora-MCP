@@ -141,6 +141,24 @@ string[] required =
     "talvora_xml_set",
     "talvora_xml_delete",
     "talvora_test_report_summary",
+    "talvora_windows_toolchain_info",
+    "talvora_vs_instances",
+    "talvora_windows_sdk_list",
+    "talvora_vsdev_environment",
+    "talvora_msbuild_run",
+    "talvora_cmake_run",
+    "talvora_ninja_run",
+    "talvora_visual_studio_instances",
+    "talvora_vs_dev_environment",
+    "talvora_msbuild_info",
+    "talvora_msbuild_run",
+    "talvora_windows_sdk_info",
+    "talvora_cmake_info",
+    "talvora_cmake_run",
+    "talvora_ninja_info",
+    "talvora_ninja_run",
+    "talvora_pe_info",
+    "talvora_file_version_info",
 ];
 
 foreach (var name in required)
@@ -1039,6 +1057,169 @@ try
         !string.Equals(dotnetOutputJson.GetProperty("kind").GetString(), "file", StringComparison.Ordinal))
     {
         throw new InvalidOperationException("dotnet_build did not create the expected output assembly.");
+    }
+
+    var dotnetExecutable = dotnetInfoJson.GetProperty("executable").GetString()
+        ?? throw new InvalidOperationException("dotnet_info executable was empty.");
+
+    var peInfoResult = await EnsureSuccess(byName["talvora_pe_info"], new()
+    {
+        ["path"] = dotnetExecutable,
+    });
+    if (peInfoResult.StructuredContent is not { } peInfoJson ||
+        !peInfoJson.GetProperty("isPe").GetBoolean() ||
+        peInfoJson.GetProperty("length").GetInt64() < 1 ||
+        string.IsNullOrWhiteSpace(peInfoJson.GetProperty("machine").GetString()))
+    {
+        throw new InvalidOperationException("pe_info did not identify dotnet.exe as a PE image.");
+    }
+
+    var fileVersionResult = await EnsureSuccess(byName["talvora_file_version_info"], new()
+    {
+        ["path"] = dotnetExecutable,
+    });
+    if (fileVersionResult.StructuredContent is not { } fileVersionJson ||
+        !string.Equals(
+            Path.GetFullPath(fileVersionJson.GetProperty("path").GetString() ?? string.Empty),
+            Path.GetFullPath(dotnetExecutable),
+            StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException("file_version_info returned an unexpected file path.");
+    }
+
+    var msbuildInfoResult = await EnsureSuccess(byName["talvora_msbuild_info"], new());
+    if (msbuildInfoResult.StructuredContent is not { } msbuildInfoJson ||
+        !msbuildInfoJson.GetProperty("found").GetBoolean() ||
+        string.IsNullOrWhiteSpace(msbuildInfoJson.GetProperty("executable").GetString()) ||
+        string.IsNullOrWhiteSpace(msbuildInfoJson.GetProperty("version").GetString()))
+    {
+        throw new InvalidOperationException("msbuild_info did not resolve MSBuild or dotnet msbuild.");
+    }
+
+    var msbuildRunResult = await EnsureSuccess(byName["talvora_msbuild_run"], new()
+    {
+        ["workingDirectory"] = root,
+        ["arguments"] = new[] { "-version", "-nologo" },
+        ["timeoutSeconds"] = 60,
+    });
+    if (msbuildRunResult.StructuredContent is not { } msbuildRunJson ||
+        msbuildRunJson.GetProperty("exitCode").GetInt32() != 0 ||
+        msbuildRunJson.GetProperty("timedOut").GetBoolean() ||
+        string.IsNullOrWhiteSpace(msbuildRunJson.GetProperty("standardOutput").GetString()))
+    {
+        throw new InvalidOperationException("msbuild_run -version failed.");
+    }
+
+    var visualStudioResult = await EnsureSuccess(byName["talvora_visual_studio_instances"], new());
+    if (visualStudioResult.StructuredContent is not { } visualStudioJson)
+    {
+        throw new InvalidOperationException("visual_studio_instances did not return structured content.");
+    }
+
+    var visualStudioCount = visualStudioJson.GetProperty("count").GetInt32();
+    var visualStudioAliasResult = await EnsureSuccess(byName["talvora_vs_instances"], new());
+    if (visualStudioAliasResult.StructuredContent is not { } visualStudioAliasJson ||
+        visualStudioAliasJson.GetProperty("count").GetInt32() != visualStudioCount)
+    {
+        throw new InvalidOperationException("vs_instances alias did not match visual_studio_instances.");
+    }
+
+    var toolchainInfoResult = await EnsureSuccess(byName["talvora_windows_toolchain_info"], new());
+    if (toolchainInfoResult.StructuredContent is not { } toolchainInfoJson ||
+        !toolchainInfoJson.TryGetProperty("msbuild", out var aggregateMsbuild) ||
+        !aggregateMsbuild.GetProperty("found").GetBoolean())
+    {
+        throw new InvalidOperationException("windows_toolchain_info did not report the resolved MSBuild toolchain.");
+    }
+
+    if (visualStudioCount > 0)
+    {
+        var usableInstance = visualStudioJson
+            .GetProperty("instances")
+            .EnumerateArray()
+            .FirstOrDefault(instance =>
+                instance.GetProperty("isComplete").GetBoolean() &&
+                instance.GetProperty("isLaunchable").GetBoolean() &&
+                !string.IsNullOrWhiteSpace(instance.GetProperty("installationPath").GetString()));
+
+        if (usableInstance.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            var installationPath = usableInstance.GetProperty("installationPath").GetString()!;
+            var devEnvironmentResult = await EnsureSuccess(byName["talvora_vs_dev_environment"], new()
+            {
+                ["installationPath"] = installationPath,
+                ["architecture"] = "x64",
+                ["hostArchitecture"] = "x64",
+                ["timeoutSeconds"] = 120,
+            });
+
+            if (devEnvironmentResult.StructuredContent is not { } devEnvironmentJson ||
+                devEnvironmentJson.GetProperty("count").GetInt32() < 1 ||
+                string.IsNullOrWhiteSpace(devEnvironmentJson.GetProperty("scriptPath").GetString()))
+            {
+                throw new InvalidOperationException("vs_dev_environment did not return a Visual Studio developer environment.");
+            }
+        }
+    }
+
+    var windowsSdkResult = await EnsureSuccess(byName["talvora_windows_sdk_info"], new());
+    if (windowsSdkResult.StructuredContent is not { } windowsSdkJson)
+    {
+        throw new InvalidOperationException("windows_sdk_info did not return structured content.");
+    }
+    if (windowsSdkJson.GetProperty("found").GetBoolean() &&
+        string.IsNullOrWhiteSpace(windowsSdkJson.GetProperty("kitsRoot10").GetString()))
+    {
+        throw new InvalidOperationException("windows_sdk_info reported an SDK without KitsRoot10.");
+    }
+
+    var windowsSdkAliasResult = await EnsureSuccess(byName["talvora_windows_sdk_list"], new());
+    if (windowsSdkAliasResult.StructuredContent is not { } windowsSdkAliasJson ||
+        windowsSdkAliasJson.GetProperty("found").GetBoolean() != windowsSdkJson.GetProperty("found").GetBoolean())
+    {
+        throw new InvalidOperationException("windows_sdk_list alias did not match windows_sdk_info.");
+    }
+
+    var cmakeInfoResult = await EnsureSuccess(byName["talvora_cmake_info"], new());
+    if (cmakeInfoResult.StructuredContent is not { } cmakeInfoJson)
+    {
+        throw new InvalidOperationException("cmake_info did not return structured content.");
+    }
+    if (cmakeInfoJson.GetProperty("found").GetBoolean())
+    {
+        var cmakeRunResult = await EnsureSuccess(byName["talvora_cmake_run"], new()
+        {
+            ["workingDirectory"] = root,
+            ["arguments"] = new[] { "--version" },
+            ["timeoutSeconds"] = 30,
+        });
+        if (cmakeRunResult.StructuredContent is not { } cmakeRunJson ||
+            cmakeRunJson.GetProperty("exitCode").GetInt32() != 0 ||
+            cmakeRunJson.GetProperty("timedOut").GetBoolean())
+        {
+            throw new InvalidOperationException("cmake_run --version failed.");
+        }
+    }
+
+    var ninjaInfoResult = await EnsureSuccess(byName["talvora_ninja_info"], new());
+    if (ninjaInfoResult.StructuredContent is not { } ninjaInfoJson)
+    {
+        throw new InvalidOperationException("ninja_info did not return structured content.");
+    }
+    if (ninjaInfoJson.GetProperty("found").GetBoolean())
+    {
+        var ninjaRunResult = await EnsureSuccess(byName["talvora_ninja_run"], new()
+        {
+            ["workingDirectory"] = root,
+            ["arguments"] = new[] { "--version" },
+            ["timeoutSeconds"] = 30,
+        });
+        if (ninjaRunResult.StructuredContent is not { } ninjaRunJson ||
+            ninjaRunJson.GetProperty("exitCode").GetInt32() != 0 ||
+            ninjaRunJson.GetProperty("timedOut").GetBoolean())
+        {
+            throw new InvalidOperationException("ninja_run --version failed.");
+        }
     }
 
     var nodeInfoResult = await EnsureSuccess(byName["talvora_node_info"], new());

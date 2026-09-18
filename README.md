@@ -99,6 +99,26 @@ Talvora includes structured helpers for common development assets and configurat
 
 Text range/tail operations avoid loading large logs or source files into one MCP response, while `lineCount=0` preserves an explicit unbounded mode. JSON tools use RFC 6901 JSON Pointer syntax and can create, update, query, or delete arbitrary configuration nodes. ZIP tools expose complete archive listing, directory creation, and extraction; extraction is destination-contained by default but `allowOutsideDestination=true` preserves full filesystem semantics when intentionally required. `talvora_http_download` streams HTTP response bodies directly to any accessible path, supports custom headers, redirects, TLS override, overwrite, and byte-range resume, and returns a SHA-256 of the downloaded file.
 
+## Windows native build toolchain
+
+Talvora exposes structured Windows-native development tooling:
+
+- `talvora_visual_studio_instances`
+- `talvora_vs_dev_environment`
+- `talvora_msbuild_info`
+- `talvora_msbuild_run`
+- `talvora_windows_sdk_info`
+- `talvora_cmake_info`
+- `talvora_cmake_run`
+- `talvora_ninja_info`
+- `talvora_ninja_run`
+- `talvora_pe_info`
+- `talvora_file_version_info`
+
+Visual Studio discovery uses Microsoft's `vswhere` when available. `talvora_vs_dev_environment` loads the full `VsDevCmd.bat` environment for a selected Visual Studio/Build Tools instance. MSBuild prefers a Visual Studio MSBuild installation and falls back to `dotnet msbuild` when only the .NET SDK is available. `talvora_msbuild_run`, `talvora_cmake_run`, and `talvora_ninja_run` accept unrestricted argument vectors and environment overrides.
+
+Windows SDK discovery reads the installed Windows Kits root and versioned SDK directories and reports common tools such as SignTool, MakeAppx, MT, RC, and MIDL when present. PE/file-version inspection works directly on arbitrary accessible binaries and complements the existing file hash and binary read tools.
+
 ## Network diagnostics
 
 Talvora exposes structured network-debugging tools for local and remote application development:

@@ -90,6 +90,16 @@ ZIP creation stages through a temporary archive before replacing the requested d
 
 HTTP download uses response-header streaming rather than buffering an MCP body. Resume requests use a Range header and append only when the server answers with HTTP 206; a normal 200 response restarts the destination file. A final SHA-256 is returned after the stream is persisted.
 
+## Windows native build toolchain
+
+The Windows-toolchain suite exposes Visual Studio instance discovery, Visual Studio developer-environment capture, MSBuild discovery/execution, Windows SDK discovery, CMake/Ninja discovery/execution, and PE/file-version inspection.
+
+Visual Studio discovery uses `vswhere.exe` when present. The developer-environment tool executes the selected instance's `VsDevCmd.bat` and parses the resulting environment block so callers can reuse the complete compiler/linker/SDK configuration. MSBuild resolution prefers the Visual Studio component discovered through `vswhere -requires Microsoft.Component.MSBuild`; if unavailable, Talvora falls back to `dotnet msbuild`.
+
+Windows SDK discovery reads `HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots\KitsRoot10`, enumerates versioned SDK bin directories, and surfaces common x64 SDK tools. CMake and Ninja resolution checks standard installations, Chocolatey, and the service PATH. Their run tools preserve arbitrary CLI arguments.
+
+PE inspection uses `PEReader` to expose COFF/PE headers, subsystem, image metadata, architecture, .NET metadata presence, and COR flags. File-version inspection uses Windows version resources. None of these tools add project, target, generator, property, SDK-tool, or build-option allowlists.
+
 ## Network diagnostics
 
 The network-diagnostics suite exposes `talvora_network_interfaces`, `talvora_dns_lookup`, `talvora_ping`, `talvora_tcp_exchange`, `talvora_tls_inspect`, and `talvora_websocket_exchange`.
