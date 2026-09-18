@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 using ModelContextProtocol.Server;
 
@@ -9,8 +10,8 @@ namespace Talvora.Tools;
 
 public sealed record TalvoraSqliteInfoResponse(
     string ProviderVersion,
-    string SQLiteVersion,
-    string SQLiteSourceId);
+    [property: JsonPropertyName("sqliteVersion")] string SQLiteVersion,
+    [property: JsonPropertyName("sqliteSourceId")] string SQLiteSourceId);
 
 public sealed record TalvoraSqliteValue(
     string StorageClass,
