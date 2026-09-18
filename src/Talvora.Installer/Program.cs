@@ -330,6 +330,20 @@ internal static class InstallerEngine
         "talvora_choco_upgrade",
         "talvora_choco_uninstall",
         "talvora_choco_run",
+        "talvora_dotnet_info",
+        "talvora_dotnet_restore",
+        "talvora_dotnet_build",
+        "talvora_dotnet_test",
+        "talvora_dotnet_publish",
+        "talvora_dotnet_run",
+        "talvora_node_info",
+        "talvora_npm_install",
+        "talvora_npm_ci",
+        "talvora_npm_run_script",
+        "talvora_npm_run",
+        "talvora_session_list",
+        "talvora_session_get",
+        "talvora_user_process_start",
     };
 
     public static async Task<HealthSnapshot> InstallAsync(

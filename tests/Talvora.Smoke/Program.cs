@@ -97,6 +97,20 @@ string[] required =
     "talvora_choco_upgrade",
     "talvora_choco_uninstall",
     "talvora_choco_run",
+    "talvora_dotnet_info",
+    "talvora_dotnet_restore",
+    "talvora_dotnet_build",
+    "talvora_dotnet_test",
+    "talvora_dotnet_publish",
+    "talvora_dotnet_run",
+    "talvora_node_info",
+    "talvora_npm_install",
+    "talvora_npm_ci",
+    "talvora_npm_run_script",
+    "talvora_npm_run",
+    "talvora_session_list",
+    "talvora_session_get",
+    "talvora_user_process_start",
 ];
 
 foreach (var name in required)
@@ -524,7 +538,12 @@ var developerBinaryFile = Path.Combine(root, "developer-bytes.bin");
 var developerPatchFile = Path.Combine(root, "developer-patch.txt");
 var developerProjectRoot = Path.Combine(root, "developer-project");
 var developerPackageJson = Path.Combine(developerProjectRoot, "package.json");
+var interactiveSessionMarker = Path.Combine(root, "interactive-session-" + smokeId + ".json");
 var developerWatchFile = Path.Combine(root, "watch-" + smokeId + ".txt");
+var dotnetProjectRoot = Path.Combine(root, "dotnet-smoke");
+var dotnetProjectFile = Path.Combine(dotnetProjectRoot, "Talvora.Dotnet.Smoke.csproj");
+var dotnetProgramFile = Path.Combine(dotnetProjectRoot, "Program.cs");
+var dotnetOutputDll = Path.Combine(dotnetProjectRoot, "bin", "Release", "net10.0", "Talvora.Dotnet.Smoke.dll");
 
 var developerRangeFile = Path.Combine(root, "developer-range.txt");
 var developerJsonFile = Path.Combine(root, "developer-config.json");
@@ -603,6 +622,141 @@ try
     {
         throw new InvalidOperationException("path_info did not report the created directory.");
     }
+
+    var sessionListResult = await EnsureSuccess(byName["talvora_session_list"], new());
+    if (sessionListResult.StructuredContent is not { } sessionListJson ||
+        !sessionListJson.TryGetProperty("sessions", out var sessionsJson) ||
+        sessionsJson.ValueKind != System.Text.Json.JsonValueKind.Array)
+    {
+        throw new InvalidOperationException("session_list did not return a sessions array.");
+    }
+
+    var activeSession = sessionsJson
+        .EnumerateArray()
+        .FirstOrDefault(session =>
+            session.TryGetProperty("isActive", out var activeJson) &&
+            activeJson.GetBoolean() &&
+            session.TryGetProperty("userName", out var userNameJson) &&
+            !string.IsNullOrWhiteSpace(userNameJson.GetString()));
+
+    if (activeSession.ValueKind != System.Text.Json.JsonValueKind.Object)
+    {
+        throw new InvalidOperationException("session_list did not return an active logged-on user session.");
+    }
+
+    var activeSessionId = activeSession.GetProperty("sessionId").GetInt32();
+    var activeSessionUser = activeSession.GetProperty("user").GetString() ?? string.Empty;
+    if (activeSessionId <= 0 || string.IsNullOrWhiteSpace(activeSessionUser))
+    {
+        throw new InvalidOperationException("active session identity is incomplete.");
+    }
+
+    var sessionGetResult = await EnsureSuccess(byName["talvora_session_get"], new()
+    {
+        ["sessionId"] = activeSessionId,
+    });
+    if (sessionGetResult.StructuredContent is not { } sessionGetJson ||
+        !sessionGetJson.GetProperty("found").GetBoolean() ||
+        sessionGetJson.GetProperty("session").GetProperty("sessionId").GetInt32() != activeSessionId)
+    {
+        throw new InvalidOperationException("session_get did not return the selected active session.");
+    }
+
+    var markerPathBase64 = Convert.ToBase64String(
+        System.Text.Encoding.Unicode.GetBytes(interactiveSessionMarker));
+    var sessionProbeScript = $$"""
+        $path = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('{{markerPathBase64}}'))
+        $payload = [ordered]@{
+            user = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+            sessionId = [Diagnostics.Process]::GetCurrentProcess().SessionId
+        }
+        [IO.File]::WriteAllText(
+            $path,
+            ($payload | ConvertTo-Json -Compress),
+            [Text.UTF8Encoding]::new($false))
+        """;
+    var encodedSessionProbe = Convert.ToBase64String(
+        System.Text.Encoding.Unicode.GetBytes(sessionProbeScript));
+    var interactivePowerShell = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.System),
+        "WindowsPowerShell",
+        "v1.0",
+        "powershell.exe");
+
+    var userProcessResult = await EnsureSuccess(byName["talvora_user_process_start"], new()
+    {
+        ["executable"] = interactivePowerShell,
+        ["arguments"] = new[]
+        {
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-EncodedCommand",
+            encodedSessionProbe,
+        },
+        ["sessionId"] = activeSessionId,
+        ["workingDirectory"] = root,
+        ["visible"] = false,
+        ["newConsole"] = false,
+    });
+    if (userProcessResult.StructuredContent is not { } userProcessJson ||
+        userProcessJson.GetProperty("sessionId").GetInt32() != activeSessionId ||
+        userProcessJson.GetProperty("processId").GetInt32() <= 0 ||
+        !string.Equals(
+            userProcessJson.GetProperty("user").GetString(),
+            activeSessionUser,
+            StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException("user_process_start did not target the expected interactive session.");
+    }
+
+    var interactiveMarkerFound = false;
+    for (var attempt = 0; attempt < 100 && !interactiveMarkerFound; attempt++)
+    {
+        await Task.Delay(100);
+        var markerInfoResult = await EnsureSuccess(byName["talvora_path_info"], new()
+        {
+            ["path"] = interactiveSessionMarker,
+        });
+
+        if (markerInfoResult.StructuredContent is { } markerInfoJson &&
+            markerInfoJson.GetProperty("exists").GetBoolean())
+        {
+            interactiveMarkerFound = true;
+        }
+    }
+
+    if (!interactiveMarkerFound)
+    {
+        throw new InvalidOperationException("interactive user process did not create its identity marker.");
+    }
+
+    var interactiveMarkerText = await ReadToolText(
+        byName["talvora_read_text"],
+        interactiveSessionMarker);
+    using (var interactiveMarkerDocument = System.Text.Json.JsonDocument.Parse(interactiveMarkerText))
+    {
+        var markerRoot = interactiveMarkerDocument.RootElement;
+        var launchedUser = markerRoot.GetProperty("user").GetString() ?? string.Empty;
+        var launchedSessionId = markerRoot.GetProperty("sessionId").GetInt32();
+
+        if (launchedSessionId != activeSessionId ||
+            !string.Equals(
+                launchedUser,
+                activeSessionUser,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"interactive process identity mismatch. Expected={activeSessionUser}/session {activeSessionId}; Actual={launchedUser}/session {launchedSessionId}");
+        }
+    }
+
+    await EnsureSuccess(byName["talvora_delete"], new()
+    {
+        ["path"] = interactiveSessionMarker,
+    });
 
     var binaryPayload = new byte[] { 0, 1, 2, 3, 127, 128, 254, 255 };
     var binaryBase64 = Convert.ToBase64String(binaryPayload);
@@ -766,6 +920,130 @@ try
             StringComparison.Ordinal))
     {
         throw new InvalidOperationException("choco_run --version did not match choco_info.");
+    }
+
+    var dotnetInfoResult = await EnsureSuccess(byName["talvora_dotnet_info"], new());
+    if (dotnetInfoResult.StructuredContent is not { } dotnetInfoJson ||
+        !dotnetInfoJson.GetProperty("found").GetBoolean() ||
+        string.IsNullOrWhiteSpace(dotnetInfoJson.GetProperty("executable").GetString()) ||
+        string.IsNullOrWhiteSpace(dotnetInfoJson.GetProperty("version").GetString()) ||
+        dotnetInfoJson.GetProperty("sdks").GetArrayLength() < 1)
+    {
+        throw new InvalidOperationException("dotnet_info did not report the installed .NET SDK.");
+    }
+
+    var dotnetVersion = dotnetInfoJson.GetProperty("version").GetString()!;
+
+    var dotnetRunResult = await EnsureSuccess(byName["talvora_dotnet_run"], new()
+    {
+        ["workingDirectory"] = root,
+        ["arguments"] = new[] { "--version" },
+        ["timeoutSeconds"] = 30,
+    });
+    if (dotnetRunResult.StructuredContent is not { } dotnetRunJson ||
+        dotnetRunJson.GetProperty("exitCode").GetInt32() != 0 ||
+        dotnetRunJson.GetProperty("timedOut").GetBoolean() ||
+        !string.Equals(
+            (dotnetRunJson.GetProperty("standardOutput").GetString() ?? string.Empty).Trim(),
+            dotnetVersion,
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("dotnet_run --version did not match dotnet_info.");
+    }
+
+    await EnsureSuccess(byName["talvora_create_directory"], new()
+    {
+        ["path"] = dotnetProjectRoot,
+    });
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = dotnetProjectFile,
+        ["content"] = "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>",
+    });
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = dotnetProgramFile,
+        ["content"] = "Console.WriteLine(\"TALVORA_DOTNET_SMOKE\");",
+    });
+
+    var dotnetRestoreResult = await EnsureSuccess(byName["talvora_dotnet_restore"], new()
+    {
+        ["workingDirectory"] = dotnetProjectRoot,
+        ["target"] = dotnetProjectFile,
+        ["timeoutSeconds"] = 120,
+    });
+    if (dotnetRestoreResult.StructuredContent is not { } dotnetRestoreJson ||
+        dotnetRestoreJson.GetProperty("exitCode").GetInt32() != 0 ||
+        dotnetRestoreJson.GetProperty("timedOut").GetBoolean())
+    {
+        throw new InvalidOperationException("dotnet_restore failed for the smoke project.");
+    }
+
+    var dotnetBuildResult = await EnsureSuccess(byName["talvora_dotnet_build"], new()
+    {
+        ["workingDirectory"] = dotnetProjectRoot,
+        ["target"] = dotnetProjectFile,
+        ["configuration"] = "Release",
+        ["noRestore"] = true,
+        ["additionalArguments"] = new[] { "--nologo" },
+        ["timeoutSeconds"] = 120,
+    });
+    if (dotnetBuildResult.StructuredContent is not { } dotnetBuildJson ||
+        dotnetBuildJson.GetProperty("exitCode").GetInt32() != 0 ||
+        dotnetBuildJson.GetProperty("timedOut").GetBoolean())
+    {
+        throw new InvalidOperationException("dotnet_build failed for the smoke project.");
+    }
+
+    var dotnetOutputInfo = await EnsureSuccess(byName["talvora_path_info"], new()
+    {
+        ["path"] = dotnetOutputDll,
+    });
+    if (dotnetOutputInfo.StructuredContent is not { } dotnetOutputJson ||
+        !dotnetOutputJson.GetProperty("exists").GetBoolean() ||
+        !string.Equals(dotnetOutputJson.GetProperty("kind").GetString(), "file", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("dotnet_build did not create the expected output assembly.");
+    }
+
+    var nodeInfoResult = await EnsureSuccess(byName["talvora_node_info"], new());
+    if (nodeInfoResult.StructuredContent is not { } nodeInfoJson)
+    {
+        throw new InvalidOperationException("node_info did not return structured content.");
+    }
+
+    var nodeFound = nodeInfoJson.GetProperty("nodeFound").GetBoolean();
+    var npmFound = nodeInfoJson.GetProperty("npmFound").GetBoolean();
+
+    if (nodeFound && string.IsNullOrWhiteSpace(nodeInfoJson.GetProperty("nodeVersion").GetString()))
+    {
+        throw new InvalidOperationException("node_info reported Node.js without a version.");
+    }
+
+    if (npmFound)
+    {
+        var npmVersion = nodeInfoJson.GetProperty("npmVersion").GetString();
+        if (string.IsNullOrWhiteSpace(npmVersion))
+        {
+            throw new InvalidOperationException("node_info reported npm without a version.");
+        }
+
+        var npmRunResult = await EnsureSuccess(byName["talvora_npm_run"], new()
+        {
+            ["workingDirectory"] = root,
+            ["arguments"] = new[] { "--version" },
+            ["timeoutSeconds"] = 30,
+        });
+        if (npmRunResult.StructuredContent is not { } npmRunJson ||
+            npmRunJson.GetProperty("exitCode").GetInt32() != 0 ||
+            npmRunJson.GetProperty("timedOut").GetBoolean() ||
+            !string.Equals(
+                (npmRunJson.GetProperty("standardOutput").GetString() ?? string.Empty).Trim(),
+                npmVersion,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("npm_run --version did not match node_info.");
+        }
     }
 
     var httpResult = await EnsureSuccess(byName["talvora_http_request"], new()

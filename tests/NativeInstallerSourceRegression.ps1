@@ -12,6 +12,8 @@ $gitTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\GitTo
 $configAssetTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ConfigAssetTools.cs'))
 $watchTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\WatchTools.cs'))
 $chocoTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ChocolateyTools.cs'))
+$buildRunnerTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\BuildRunnerTools.cs'))
+$sessionTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\SessionTools.cs'))
 $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Program.cs'))
@@ -22,6 +24,30 @@ $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
 
 $result = [pscustomobject]@{
+    SessionToolContract = (
+        $sessionTools -match 'talvora_session_list' -and
+        $sessionTools -match 'talvora_session_get' -and
+        $sessionTools -match 'talvora_user_process_start' -and
+        $sessionTools -match 'WTSQueryUserToken' -and
+        $sessionTools -match 'CreateEnvironmentBlock' -and
+        $sessionTools -match 'CreateProcessAsUserW' -and
+        $sessionTools -match 'winsta0\\default'
+    )
+    BuildRunnerToolContract = (
+        $buildRunnerTools -match 'talvora_dotnet_info' -and
+        $buildRunnerTools -match 'talvora_dotnet_restore' -and
+        $buildRunnerTools -match 'talvora_dotnet_build' -and
+        $buildRunnerTools -match 'talvora_dotnet_test' -and
+        $buildRunnerTools -match 'talvora_dotnet_publish' -and
+        $buildRunnerTools -match 'talvora_dotnet_run' -and
+        $buildRunnerTools -match 'talvora_node_info' -and
+        $buildRunnerTools -match 'talvora_npm_install' -and
+        $buildRunnerTools -match 'talvora_npm_ci' -and
+        $buildRunnerTools -match 'talvora_npm_run_script' -and
+        $buildRunnerTools -match 'talvora_npm_run' -and
+        $buildRunnerTools -match 'complete dotnet CLI surface' -and
+        $buildRunnerTools -match 'complete npm CLI surface'
+    )
     WatchToolContract = (
         $watchTools -match 'talvora_watch_start' -and
         $watchTools -match 'talvora_watch_get' -and
@@ -76,8 +102,8 @@ $result = [pscustomobject]@{
         $gitTools -match 'talvora_git_run' -and
         $gitTools -match 'No Git subcommand, ref, remote, path, or option denylist/allowlist'
     )
-    InstallerDeclares81Tools = (
-        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 81
+    InstallerDeclares95Tools = (
+        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 95
     )
     DeveloperCoreToolContract = (
         $developerTools -match 'talvora_path_info' -and

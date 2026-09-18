@@ -152,6 +152,38 @@ Chocolatey remains Talvora's package manager for Windows development tooling:
 
 List/search use Chocolatey's `--limit-output` form so package name/version rows can be returned as structured MCP data. Install/upgrade/uninstall expose package, version, source, package parameters, native install arguments, prerelease/force/noninteractive controls, plus arbitrary extra arguments. `talvora_choco_run` accepts an unrestricted Chocolatey argument vector and environment overrides, preserving the complete Chocolatey CLI surface. No package, source, subcommand, or option allowlist/denylist is applied. Talvora does not use WinGet.
 
+## .NET and Node build runners
+
+Talvora exposes structured build/runtime helpers for common application stacks:
+
+- `talvora_dotnet_info`
+- `talvora_dotnet_restore`
+- `talvora_dotnet_build`
+- `talvora_dotnet_test`
+- `talvora_dotnet_publish`
+- `talvora_dotnet_run`
+- `talvora_node_info`
+- `talvora_npm_install`
+- `talvora_npm_ci`
+- `talvora_npm_run_script`
+- `talvora_npm_run`
+
+The .NET helpers wrap the installed `dotnet` CLI and expose the common restore/build/test/publish controls while keeping `talvora_dotnet_run` as an unrestricted argument-vector surface. The Node helper reports whether Node/npm are installed; npm operations expose install/ci/script ergonomics while `talvora_npm_run` keeps the complete npm CLI surface available. These are convenience APIs, not capability boundaries: unrestricted process/job execution remains available for custom toolchains.
+
+Node.js itself is not installed by Talvora automatically. When needed on Windows, install/upgrade it through the Chocolatey tools rather than WinGet.
+
+## Interactive Windows sessions
+
+Talvora runs as LocalSystem but can intentionally launch application-development processes in a logged-on user's desktop session:
+
+- `talvora_session_list`
+- `talvora_session_get`
+- `talvora_user_process_start`
+
+Session discovery uses Windows Terminal Services APIs and exposes local console/RDP session ID, station, state, user/domain, and client metadata. `talvora_user_process_start` obtains the selected session's user token, builds that user's environment block, and calls `CreateProcessAsUserW` on `winsta0\default`. Callers can choose any session, executable, arguments, working directory, environment overrides, visibility, and console mode; no executable/path/user/session allowlist is added.
+
+This is the preferred bridge for GUI tools, browser/dev-server helpers, user-profile package managers, and anything that must run as the signed-in developer rather than as LocalSystem.
+
 ## Environment variable tools
 
 - `talvora_env_get`

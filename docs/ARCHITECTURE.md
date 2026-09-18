@@ -106,6 +106,22 @@ Read operations use Chocolatey's machine-oriented `--limit-output` where applica
 
 No Chocolatey package/source/subcommand/option allowlist is introduced. Talvora continues to use Chocolatey rather than WinGet for Windows package-management workflows.
 
+## Build runners
+
+The build-runner suite exposes `talvora_dotnet_info`, `talvora_dotnet_restore`, `talvora_dotnet_build`, `talvora_dotnet_test`, `talvora_dotnet_publish`, `talvora_dotnet_run`, `talvora_node_info`, `talvora_npm_install`, `talvora_npm_ci`, `talvora_npm_run_script`, and `talvora_npm_run`.
+
+All runners use `ProcessStartInfo.ArgumentList` and capture stdout/stderr/exit code/timeout metadata as structured MCP output. The .NET convenience methods model common CLI switches, but `talvora_dotnet_run` forwards an arbitrary argument vector and environment overrides. npm follows the same model: convenience methods for install/ci/package scripts plus unrestricted `talvora_npm_run`.
+
+Node/npm discovery is non-fatal; `talvora_node_info` reports missing runtimes structurally. npm mutation tools fail with a clear missing-runtime error until Node/npm are installed. On Windows, installation is expected to happen through Talvora's Chocolatey tools.
+
+## Interactive user sessions
+
+The session suite exposes `talvora_session_list`, `talvora_session_get`, and `talvora_user_process_start`.
+
+The LocalSystem service enumerates Windows Terminal Services sessions with `WTSEnumerateSessionsW`/`WTSQuerySessionInformationW`. To launch a process as a logged-on user, Talvora obtains the session token with `WTSQueryUserToken`, creates a user environment block with `CreateEnvironmentBlock`, applies caller environment overrides, resolves the executable using the user's PATH/PATHEXT where possible, and calls `CreateProcessAsUserW` on the interactive `winsta0\default` desktop.
+
+The caller can explicitly select a session or let Talvora choose an active logged-on session. Executable, arguments, working directory, environment, visibility, and console behavior are unrestricted. These tools complement LocalSystem process execution; they do not reduce the authority of the existing process/job/PowerShell primitives.
+
 ## Environment variables
 
 The environment suite exposes `talvora_env_get`, `talvora_env_list`, `talvora_env_set`, and `talvora_env_delete`.
