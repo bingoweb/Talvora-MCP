@@ -23,6 +23,16 @@ Talvora is a Windows-local MCP server built for one owner machine with a full-ca
 
 Because the MCP host itself runs as LocalSystem, these tools execute with the service account's Windows privileges. The file and process primitives are not restricted to the knowledge-search corpus.
 
+## Process inspection and control
+
+- `talvora_process_list`
+- `talvora_process_get`
+- `talvora_process_kill`
+
+These tools provide structured PID/name/session/start-time/working-set/executable metadata when Windows permits each field to be read. Inaccessible metadata on protected processes is returned as unavailable rather than causing the complete process list to fail.
+
+`talvora_process_kill` can terminate a PID with or without its entire process tree, waits for exit with an explicit timeout, and distinguishes whether a kill was issued from whether exit was confirmed. Missing/exited PIDs are handled idempotently. No PID or process-name allowlist is applied.
+
 ## PowerShell execution
 
 - `talvora_run_powershell`
