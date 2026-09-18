@@ -12,6 +12,8 @@ There is no user-session gateway, named-pipe broker, compatibility shim, legacy 
 
 The service account is the capability boundary. Talvora does not implement command deny-lists or filesystem allow-lists for its primitive capability surface. Six primitive tools expose system information, filesystem read/write/delete/list, and arbitrary executable execution. Higher-level Windows capabilities are composed from these primitives until a dedicated tool materially improves reliability or ergonomics.
 
+The structured filesystem mutation layer adds create-directory, copy, and move operations without reducing the primitive filesystem surface. It applies no path allowlist. Directory copy is recursive by default, rejects non-recursive partial copies, uses deterministic overwrite behavior, and rejects source reparse points before mutation so traversal cannot loop through junctions/symlinks.
+
 The registry layer is the first dedicated Windows capability built on that rule. It exposes structured create/get/set/list/delete operations directly through Microsoft.Win32 instead of requiring an agent to compose shell commands. It does not introduce a registry hive/path allowlist and does not reduce the unrestricted process primitive.
 
 The process-control layer exposes structured process discovery and PID-based termination while preserving `talvora_run_process` as the unrestricted process-creation primitive. It does not add a PID/name allowlist.
@@ -23,6 +25,18 @@ The Windows service layer exposes structured Service Control Manager inspection 
 The process-control layer exposes structured process discovery and termination. It complements `talvora_run_process` by making existing processes inspectable by PID/name and by providing a direct process-tree kill operation without a PID or process-name allowlist.
 
 The read-only knowledge layer is separate from that capability boundary. `search` and `fetch` provide structured document discovery/retrieval for ChatGPT knowledge workflows without reducing the privileges or addressable paths of the primitive tools.
+
+## Filesystem mutation tools
+
+The structured filesystem suite exposes `talvora_create_directory`, `talvora_copy`, and `talvora_move`.
+
+`talvora_create_directory` normalizes the requested path, creates missing parent directories, and reports whether the operation changed filesystem state. Repeating the call for an existing directory is idempotent.
+
+`talvora_copy` supports file and directory sources. Files honor `overwrite`; directories require `recursive=true`. With `overwrite=false`, an existing destination is rejected before mutation. With `overwrite=true`, conflicting copied entries are replaced while non-conflicting entries already present in a destination directory are preserved. Before any directory-copy destination is created, Talvora walks the source tree and rejects reparse points. This deliberately prevents accidental recursion through junctions or symbolic links rather than silently following them.
+
+`talvora_move` supports files and directories. Destination collisions fail deterministically unless `overwrite=true`, in which case the destination entry is removed/replaced before the source is moved. Same-path and directory-into-descendant moves are rejected as invalid filesystem operations, not as capability restrictions.
+
+These tools use the same LocalSystem filesystem authority as the primitive read/write/delete/list tools. They do not introduce a path allowlist or deny-list.
 
 ## Windows registry
 
@@ -50,16 +64,6 @@ List/get use `System.Diagnostics.Process` and return deterministic structured pr
 Kill is PID-based, optionally terminates the complete process tree, and waits for exit up to an explicit timeout. The response distinguishes `killed` (a kill request was successfully issued) from `exited` (process termination was observed). A missing/already-exited PID returns an idempotent not-found result.
 
 No PID or process-name allowlist is applied. Therefore the API can target any process accessible to Talvora's LocalSystem service, including processes whose termination may destabilize Windows or Talvora itself.
-
-## Process inspection and control
-
-The process suite exposes `talvora_process_list`, `talvora_process_get`, and `talvora_process_kill`.
-
-List/get return structured PID, process name, session ID, UTC start time, working-set bytes, and executable path when Windows permits each field to be queried. Access-denied or unavailable optional metadata is represented as unavailable instead of failing the complete operation. Missing or already-exited PIDs return `found=false`.
-
-Kill accepts a PID, an `entireProcessTree` switch, and an explicit timeout. Its structured response distinguishes whether the target was found, whether a kill request was issued, and whether process exit was confirmed. The operation is idempotent for missing/exited PIDs.
-
-No PID or process-name allowlist is applied. Since Talvora runs as LocalSystem, the tool uses that account's process privileges and can target the Talvora process itself; doing so can terminate the active MCP connection.
 
 ## PowerShell execution
 
