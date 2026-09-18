@@ -23,7 +23,7 @@ Do these steps in order:
 4. Check the latest Windows CI run for the current `main`.
 5. If a local MCP namespace/connector named `talvora_local` is actually available in the new session, call `talvora_system_info` before doing local-machine work and compare its `SourceCommit` with current GitHub `main`.
 6. If `talvora_local` is **not** available in that session, do not claim access to the user's Windows machine and do not stall. Continue GitHub/Windows-CI development and say only when relevant that physical-PC deployment cannot be executed from that surface.
-7. Read sections 11 and 12 for the completed filesystem-mutation and environment-variable TDD evidence. There is no further bounded subsystem pre-approved by this handoff.
+7. Read sections 11 through 13 for the completed filesystem-mutation, environment-variable, and Event Log query TDD evidence. There is no further bounded subsystem pre-approved by this handoff.
 8. For the next genuinely new architectural subsystem, reassess current `main`, present a short bounded design when needed, and follow the normal approval rules before implementation.
 
 ---
@@ -59,9 +59,9 @@ Repository:
 - GitHub: `bingoweb/Talvora-MCP`
 - Canonical branch: `main`
 - Last fully verified code/workflow commit before this handoff update:  
-  `97a1eaef6280511e5a4268ab82877ed849edef6d`
-- Windows CI run for that commit: **#319 — SUCCESS**
-- That run proved the direct MCP smoke and the real elevated LocalSystem installer/service smoke with **30 tools**.
+  `ae5f1e3b895a41c1777b6bac8825c8a91971e5f1`
+- Windows CI run for that commit: **#328 — SUCCESS**
+- That run proved the direct MCP smoke and the real elevated LocalSystem installer/service smoke with **32 tools**.
 - A temporary draft PR was used only to obtain Windows pull-request CI during TDD; close it after the final handoff HEAD is verified and promoted to `main`.
 - Historical branch refs must be aligned to the final verified handoff HEAD after promotion.
 
@@ -106,7 +106,7 @@ The `approve` tool mode was intentionally kept because current Codex MCP semanti
 
 ---
 
-## 4. Current MCP tool surface: 30 verified tools
+## 4. Current MCP tool surface: 32 verified tools
 
 ### Full-capability primitives — 6
 
@@ -154,11 +154,26 @@ Behavior:
 - Explicit empty-string values are preserved; delete uses platform removal semantics and is idempotent for missing values.
 - No environment-variable name allowlist or deny-list is applied.
 
+### Windows Event Log query — 2
+
+14. `talvora_eventlog_list`
+15. `talvora_eventlog_query`
+
+Behavior:
+
+- List enumerates local Windows Event Log names with optional case-insensitive filtering and deterministic ordering.
+- Query accepts any local log name plus XPath, max-event count, and newest-first/oldest-first direction.
+- Structured records include log/provider name, event ID, record ID, timestamp, level, process/thread IDs, machine/user identity when available, and a best-effort formatted message.
+- Provider message-formatting failures do not discard the underlying event record.
+- Per-call event count bounds one MCP response; it is not a log/provider/event-ID allowlist.
+- No log-name, provider, or event-ID allowlist or deny-list is applied.
+- Existing unrestricted process and PowerShell primitives remain available for Event Log operations outside this read-only query layer.
+
 ### Structured process inspection/control — 3
 
-14. `talvora_process_list`
-15. `talvora_process_get`
-16. `talvora_process_kill`
+16. `talvora_process_list`
+17. `talvora_process_get`
+18. `talvora_process_kill`
 
 Behavior:
 
@@ -170,7 +185,7 @@ Behavior:
 
 ### PowerShell execution — 1
 
-17. `talvora_run_powershell`
+19. `talvora_run_powershell`
 
 Behavior:
 
@@ -185,29 +200,29 @@ Behavior:
 
 ### Windows registry — 6
 
-18. `talvora_registry_create_key`
-19. `talvora_registry_get`
-20. `talvora_registry_set`
-21. `talvora_registry_list`
-22. `talvora_registry_delete_value`
-23. `talvora_registry_delete_key`
+20. `talvora_registry_create_key`
+21. `talvora_registry_get`
+22. `talvora_registry_set`
+23. `talvora_registry_list`
+24. `talvora_registry_delete_value`
+25. `talvora_registry_delete_key`
 
 Behavior remains unchanged: HKLM/HKCU/HKCR/HKU/HKCC/HKPD, default/32/64-bit views, structured value kinds, deterministic listings, and no hive/path allowlist.
 
 ### Windows service control — 5
 
-24. `talvora_service_list`
-25. `talvora_service_get`
-26. `talvora_service_start`
-27. `talvora_service_stop`
-28. `talvora_service_restart`
+26. `talvora_service_list`
+27. `talvora_service_get`
+28. `talvora_service_start`
+29. `talvora_service_stop`
+30. `talvora_service_restart`
 
 Behavior remains unchanged: structured SCM access, state-aware waits, missing-service handling, and no service-name allowlist.
 
 ### Business knowledge surface — 2
 
-29. `search`
-30. `fetch`
+31. `search`
+32. `fetch`
 
 The knowledge corpus remains a read-only retrieval surface and does not restrict primitive or structured filesystem/process capabilities.
 
@@ -298,8 +313,8 @@ The CI service-install gate now proves:
 - it detects Windows Service hosting;
 - `health.sourceCommit == git rev-parse HEAD`;
 - `current.json.SourceCommit == git rev-parse HEAD`;
-- `current.json.ToolCount == 30`;
-- `ToolNames` count is 30;
+- `current.json.ToolCount == 32`;
+- `ToolNames` count is 32;
 - core expected tools are present in the manifest.
 
 The filesystem-mutation thread has a fully successful Windows verification before this handoff update:
@@ -334,7 +349,7 @@ A transient implementation bug occurred while patching `Install.ps1`: a JavaScri
 12. verify Windows Service detection;
 13. verify exact source commit provenance;
 14. verify installed state file;
-15. verify 30-tool manifest;
+15. verify 32-tool manifest;
 16. cleanup service and runtime state.
 
 A change is not complete until the final canonical HEAD has a fresh successful run of this workflow.
@@ -474,7 +489,45 @@ API/library basis:
 
 ---
 
-## 13. Next development task
+## 13. COMPLETED TASK — Windows Event Log structured queries
+
+This bounded capability was implemented entirely through GitHub + real Windows CI because the user was not on the physical Windows machine.
+
+Implemented:
+
+1. `talvora_eventlog_list`
+2. `talvora_eventlog_query`
+
+Contract:
+
+- List discovers local Windows Event Log names with deterministic ordering and optional case-insensitive filtering.
+- Query accepts an unrestricted local log name and XPath expression.
+- `newestFirst=true` reads newest-to-oldest; false reads oldest-to-newest.
+- `maxEvents` bounds a single MCP response rather than restricting addressable logs or providers.
+- Structured records preserve core event metadata even when Windows cannot format a provider-specific message.
+- No log/provider/event-ID allowlist or deny-list.
+- Existing unrestricted process/PowerShell primitives remain available for clear/export/provider/source operations not modeled by this read-only convenience layer.
+
+TDD/CI evidence:
+
+- RED smoke commit: `963e848db3d9be853081bf739b07b84d899587c8`.
+- Windows CI **#324** restored and built both projects with zero errors, then failed the real MCP smoke specifically with `Missing MCP tool: talvora_eventlog_list`.
+- An initial explicit `System.Diagnostics.EventLog 10.0.12` PackageReference was tested and rejected by Windows CI **#326** with SDK error `NU1510`: the package was already automatically available to this project and the explicit reference had to be removed. The dependency decision was corrected from the log rather than guessed.
+- Production Event Log implementation was retained while the redundant package reference was removed at `8c6780beb01d5190fd40ddf9d4686e91d2c902ae`.
+- Windows CI **#327** passed restore/build, direct Event Log MCP smoke, installer parsing, and WinGet rejection; the real LocalSystem installer reached `TALVORA READY`, SID `S-1-5-18`, and produced a live **32-tool** manifest, then failed only because the old CI assertion still expected 30.
+- The manifest gate was updated to 32 at `ae5f1e3b895a41c1777b6bac8825c8a91971e5f1`.
+- Windows CI **#328** completed fully SUCCESS, including direct MCP smoke and the real elevated LocalSystem installation/service smoke with all 32 tools.
+
+API/library basis:
+
+- Windows Eventing is accessed through `System.Diagnostics.Eventing.Reader`.
+- `EventLogSession.GetLogNames()` supplies registered local log names.
+- `EventLogQuery` + `EventLogReader` perform XPath reads, and `ReverseDirection` controls newest-first traversal.
+- Do not re-add an explicit `System.Diagnostics.EventLog` PackageReference unless the project shape changes and CI proves it is required; the current .NET 10 project reports it as automatically available.
+
+---
+
+## 14. Next development task
 
 There is no additional bounded subsystem pre-approved by this handoff. Reassess current `main` and choose the next highest-value Windows capability one bounded change at a time.
 
@@ -486,7 +539,6 @@ Likely future candidates, subject to a new short design:
 - Windows account/session/token ergonomics;
 - filesystem ACL/ownership tools;
 - device/driver inspection;
-- Event Log structured query;
 - update/self-maintenance flow for the installed Talvora service;
 - API-key-free Secure MCP Tunnel path if current official OpenAI docs support it.
 
@@ -494,13 +546,13 @@ Do not add several of these in one commit. Continue one bounded capability at a 
 
 ---
 
-## 14. Housekeeping status
+## 15. Housekeeping status
 
 The duplicate `Process inspection and control` section in `docs/ARCHITECTURE.md` was removed during the filesystem mutation documentation update. The file now has one canonical process section.
 
 ---
 
-## 15. Communication style expected by the user
+## 16. Communication style expected by the user
 
 - Turkish.
 - Direct and technically concrete.
@@ -514,7 +566,7 @@ The duplicate `Process inspection and control` section in `docs/ARCHITECTURE.md`
 
 ---
 
-## 16. Compact continuity checklist
+## 17. Compact continuity checklist
 
 Before doing new code:
 
@@ -525,9 +577,9 @@ Before doing new code:
 - [ ] Preserve full-capability/LocalSystem design.
 - [ ] Chocolatey only; reject WinGet.
 - [ ] No OpenAI API key requirement.
-- [ ] Confirm the 30-tool manifest is still current.
+- [ ] Confirm the 32-tool manifest is still current.
 - [ ] Preserve direct MCP smoke + real LocalSystem installer smoke for every behavior change.
-- [ ] Do not reopen the completed filesystem-mutation or environment-variable tasks unless fixing a discovered defect.
+- [ ] Do not reopen the completed filesystem-mutation, environment-variable, or Event Log query tasks unless fixing a discovered defect.
 - [ ] For a new subsystem, keep the change bounded and use RED -> GREEN.
 - [ ] Final CI on canonical HEAD.
 - [ ] Keep historical branch refs aligned.
