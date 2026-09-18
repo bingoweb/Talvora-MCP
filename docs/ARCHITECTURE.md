@@ -14,6 +14,8 @@ The service account is the capability boundary. Talvora does not implement comma
 
 The structured filesystem mutation layer adds create-directory, copy, and move operations without reducing the primitive filesystem surface. It applies no path allowlist. Directory copy is recursive by default, rejects non-recursive partial copies, uses deterministic overwrite behavior, and rejects source reparse points before mutation so traversal cannot loop through junctions/symlinks.
 
+The environment-variable layer exposes structured process/user/machine get/list/set/delete behavior directly through System.Environment. It applies no variable-name allowlist and does not reduce the unrestricted process or PowerShell primitives.
+
 The registry layer is the first dedicated Windows capability built on that rule. It exposes structured create/get/set/list/delete operations directly through Microsoft.Win32 instead of requiring an agent to compose shell commands. It does not introduce a registry hive/path allowlist and does not reduce the unrestricted process primitive.
 
 The process-control layer exposes structured process discovery and PID-based termination while preserving `talvora_run_process` as the unrestricted process-creation primitive. It does not add a PID/name allowlist.
@@ -35,6 +37,16 @@ The structured filesystem suite exposes `talvora_create_directory`, `talvora_cop
 `talvora_move` supports files and directories. Destination collisions fail deterministically unless `overwrite=true`, in which case the destination entry is removed/replaced before the source is moved. Same-path and directory-into-descendant moves are rejected as invalid filesystem operations, not as capability restrictions.
 
 These tools use the same LocalSystem filesystem authority as the primitive read/write/delete/list tools. They do not introduce a path allowlist or deny-list.
+
+## Environment variables
+
+The environment suite exposes `talvora_env_get`, `talvora_env_list`, `talvora_env_set`, and `talvora_env_delete`.
+
+Targets are explicit and case-insensitive: Process, User, or Machine. Process values belong only to the running Talvora service process. On Windows, User and Machine values use the operating system's persistent environment-variable stores. Because the installed Talvora service runs as LocalSystem, the User target refers to the LocalSystem account's user environment rather than an interactive desktop user's environment.
+
+Get returns a structured found/not-found result. List returns deterministic name-sorted entries and supports an optional case-insensitive name query. Set preserves an explicit empty-string value. Delete uses the platform removal semantics and is idempotent for a missing variable.
+
+No environment-variable name allowlist or deny-list is applied. Machine-scope writes therefore use Talvora's LocalSystem authority, and callers can modify any machine environment variable Windows permits that account to change.
 
 ## Windows registry
 
