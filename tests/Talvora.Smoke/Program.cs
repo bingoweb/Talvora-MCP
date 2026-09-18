@@ -470,8 +470,40 @@ var moveDirectorySource = Path.Combine(root, "move-directory-source");
 var moveDirectoryDestination = Path.Combine(root, "move-directory-destination");
 var moveCollisionSource = Path.Combine(root, "move-collision-source.txt");
 var moveCollisionDestination = Path.Combine(root, "move-collision-destination.txt");
+const string knowledgeRootsEnvironmentName = "TALVORA_KNOWLEDGE_ROOTS";
+var knowledgeRootsCaptured = false;
+var knowledgeRootsWasPresent = false;
+string? knowledgeRootsOriginalValue = null;
 try
 {
+    var knowledgeRootsBefore = await EnsureSuccess(byName["talvora_env_get"], new()
+    {
+        ["name"] = knowledgeRootsEnvironmentName,
+        ["target"] = "process",
+    });
+    if (knowledgeRootsBefore.StructuredContent is not { } knowledgeRootsBeforeJson ||
+        !knowledgeRootsBeforeJson.TryGetProperty("found", out var knowledgeRootsFoundJson))
+    {
+        throw new InvalidOperationException("environment get did not return the knowledge roots state.");
+    }
+
+    knowledgeRootsWasPresent = knowledgeRootsFoundJson.GetBoolean();
+    if (knowledgeRootsWasPresent)
+    {
+        if (!knowledgeRootsBeforeJson.TryGetProperty("value", out var knowledgeRootsValueJson))
+        {
+            throw new InvalidOperationException("environment get did not return the knowledge roots value.");
+        }
+        knowledgeRootsOriginalValue = knowledgeRootsValueJson.GetString() ?? string.Empty;
+    }
+    knowledgeRootsCaptured = true;
+
+    await EnsureSuccess(byName["talvora_env_set"], new()
+    {
+        ["name"] = knowledgeRootsEnvironmentName,
+        ["value"] = root,
+        ["target"] = "process",
+    });
     var createdDirectory = await EnsureSuccess(byName["talvora_create_directory"], new()
     {
         ["path"] = nestedDirectory,
@@ -906,8 +938,34 @@ try
 }
 finally
 {
-    if (Directory.Exists(reparseLoop)) Directory.Delete(reparseLoop);
-    if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+    try
+    {
+        if (knowledgeRootsCaptured)
+        {
+            if (knowledgeRootsWasPresent)
+            {
+                await EnsureSuccess(byName["talvora_env_set"], new()
+                {
+                    ["name"] = knowledgeRootsEnvironmentName,
+                    ["value"] = knowledgeRootsOriginalValue ?? string.Empty,
+                    ["target"] = "process",
+                });
+            }
+            else
+            {
+                await EnsureSuccess(byName["talvora_env_delete"], new()
+                {
+                    ["name"] = knowledgeRootsEnvironmentName,
+                    ["target"] = "process",
+                });
+            }
+        }
+    }
+    finally
+    {
+        if (Directory.Exists(reparseLoop)) Directory.Delete(reparseLoop);
+        if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+    }
 }
 
 var registryPath = $"Software\\Talvora\\Smoke\\{smokeId}";
