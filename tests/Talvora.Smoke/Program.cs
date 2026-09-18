@@ -22,6 +22,9 @@ string[] required =
     "talvora_list",
     "talvora_run_process",
     "talvora_run_powershell",
+    "talvora_process_list",
+    "talvora_process_get",
+    "talvora_process_kill",
     "talvora_service_list",
     "talvora_service_get",
     "talvora_service_start",
@@ -56,6 +59,98 @@ static async Task<CallToolResult> EnsureSuccess(
 }
 
 await EnsureSuccess(byName["talvora_system_info"], []);
+
+var processSmokeResult = await EnsureSuccess(byName["talvora_run_powershell"], new()
+{
+    ["script"] = """
+        $cmd = Join-Path $env:SystemRoot 'System32\cmd.exe'
+        $p = Start-Process -FilePath $cmd -ArgumentList @('/d','/c','ping 127.0.0.1 -t') -WindowStyle Hidden -PassThru
+        [Console]::Out.WriteLine($p.Id)
+        """,
+    ["engine"] = "auto",
+    ["timeoutSeconds"] = 30,
+});
+if (processSmokeResult.StructuredContent is not { } processSmokeJson ||
+    !processSmokeJson.TryGetProperty("standardOutput", out var processSmokeStdout) ||
+    !int.TryParse(processSmokeStdout.GetString()!.Trim(), out var spawnedPid))
+{
+    throw new InvalidOperationException("Failed to spawn the process-control smoke child.");
+}
+
+try
+{
+    var getProcessResult = await EnsureSuccess(byName["talvora_process_get"], new()
+    {
+        ["processId"] = spawnedPid,
+    });
+    if (getProcessResult.StructuredContent is not { } getProcessJson ||
+        !getProcessJson.TryGetProperty("found", out var processFound) ||
+        !processFound.GetBoolean() ||
+        !getProcessJson.TryGetProperty("process", out var processInfo) ||
+        !processInfo.TryGetProperty("processId", out var returnedPid) ||
+        returnedPid.GetInt32() != spawnedPid)
+    {
+        throw new InvalidOperationException("process get did not return the spawned process.");
+    }
+
+    var listProcessResult = await EnsureSuccess(byName["talvora_process_list"], new()
+    {
+        ["query"] = "cmd",
+    });
+    if (listProcessResult.StructuredContent is not { } listProcessJson ||
+        !listProcessJson.TryGetProperty("processes", out var processList) ||
+        processList.ValueKind != System.Text.Json.JsonValueKind.Array ||
+        !processList.EnumerateArray().Any(item =>
+            item.TryGetProperty("processId", out var pid) && pid.GetInt32() == spawnedPid))
+    {
+        throw new InvalidOperationException("process list did not return the spawned process.");
+    }
+
+    var killProcessResult = await EnsureSuccess(byName["talvora_process_kill"], new()
+    {
+        ["processId"] = spawnedPid,
+        ["entireProcessTree"] = true,
+        ["timeoutSeconds"] = 30,
+    });
+    if (killProcessResult.StructuredContent is not { } killProcessJson ||
+        !killProcessJson.TryGetProperty("found", out var killFound) ||
+        !killFound.GetBoolean() ||
+        !killProcessJson.TryGetProperty("exited", out var processExited) ||
+        !processExited.GetBoolean())
+    {
+        throw new InvalidOperationException("process kill did not terminate the spawned process.");
+    }
+
+    var missingProcessResult = await EnsureSuccess(byName["talvora_process_get"], new()
+    {
+        ["processId"] = spawnedPid,
+    });
+    if (missingProcessResult.StructuredContent is not { } missingProcessJson ||
+        !missingProcessJson.TryGetProperty("found", out var missingProcessFound) ||
+        missingProcessFound.GetBoolean())
+    {
+        throw new InvalidOperationException("process get must return found=false after process termination.");
+    }
+}
+finally
+{
+    if (byName.TryGetValue("talvora_process_kill", out var processKillTool))
+    {
+        try
+        {
+            await EnsureSuccess(processKillTool, new()
+            {
+                ["processId"] = spawnedPid,
+                ["entireProcessTree"] = true,
+                ["timeoutSeconds"] = 5,
+            });
+        }
+        catch
+        {
+            // Best-effort cleanup for the smoke child.
+        }
+    }
+}
 
 var serviceListResult = await EnsureSuccess(byName["talvora_service_list"], new()
 {
