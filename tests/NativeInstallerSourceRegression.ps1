@@ -17,6 +17,7 @@ $sessionTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\S
 $runtimeTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\RuntimeTools.cs'))
 $networkDiagnosticTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\NetworkDiagnosticTools.cs'))
 $windowsToolchainTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\WindowsToolchainTools.cs'))
+$httpMockTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\HttpMockTools.cs'))
 $configFormatTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ConfigFormatTools.cs'))
 $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
@@ -36,6 +37,17 @@ $result = [pscustomobject]@{
         $buildInstallerScript -match 'Remove-Item -LiteralPath \$Destination' -and
         $buildInstallerScript -match '\$archive\.Entries\.Count -ne \$expectedFileCount' -and
         $buildInstallerScript -match 'New-VerifiedPayloadArchive -Source \$PayloadRoot -Destination \$PayloadZip -Attempts 5'
+    )
+    HttpMockToolContract = (
+        $httpMockTools -match 'talvora_http_mock_start' -and
+        $httpMockTools -match 'talvora_http_mock_get' -and
+        $httpMockTools -match 'talvora_http_mock_list' -and
+        $httpMockTools -match 'talvora_http_mock_read' -and
+        $httpMockTools -match 'talvora_http_mock_reply' -and
+        $httpMockTools -match 'talvora_http_mock_stop' -and
+        $httpMockTools -match 'HttpListener' -and
+        $httpMockTools -match 'autoReply=false' -and
+        $httpMockTools -match 'maxQueuedRequests <= 0'
     )
     WindowsToolchainContract = (
         $windowsToolchainTools -match 'talvora_visual_studio_instances' -and
@@ -190,8 +202,8 @@ $result = [pscustomobject]@{
         $gitTools -match 'talvora_git_run' -and
         $gitTools -match 'No Git subcommand, ref, remote, path, or option denylist/allowlist'
     )
-    InstallerDeclares140Tools = (
-        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 140
+    InstallerDeclares146Tools = (
+        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 146
     )
     DeveloperCoreToolContract = (
         $developerTools -match 'talvora_path_info' -and

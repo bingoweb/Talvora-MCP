@@ -389,6 +389,12 @@ internal static class InstallerEngine
         "talvora_ninja_run",
         "talvora_pe_info",
         "talvora_file_version_info",
+        "talvora_http_mock_start",
+        "talvora_http_mock_get",
+        "talvora_http_mock_list",
+        "talvora_http_mock_read",
+        "talvora_http_mock_reply",
+        "talvora_http_mock_stop",
     };
 
     public static async Task<HealthSnapshot> InstallAsync(

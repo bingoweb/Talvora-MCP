@@ -100,6 +100,16 @@ Windows SDK discovery reads `HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Root
 
 PE inspection uses `PEReader` to expose COFF/PE headers, subsystem, image metadata, architecture, .NET metadata presence, and COR flags. File-version inspection uses Windows version resources. None of these tools add project, target, generator, property, SDK-tool, or build-option allowlists.
 
+## HTTP mock and webhook listeners
+
+The HTTP-mock suite exposes `talvora_http_mock_start`, `talvora_http_mock_get`, `talvora_http_mock_list`, `talvora_http_mock_read`, `talvora_http_mock_reply`, and `talvora_http_mock_stop`.
+
+Each listener is an in-process `HttpListener` owned by the current Talvora service instance. The caller supplies one or more prefixes and chooses automatic or manual response mode. Automatic mode captures the request and immediately emits the configured default response. Manual mode stores the live `HttpListenerContext` in a pending-request table until a matching reply arrives, the configured timeout expires, or the listener is stopped.
+
+Request capture is sequence-numbered and queue-backed, with caller-controlled body and queue limits. Text, Base64, or no-body capture modes are supported. Manual responses expose arbitrary status code, headers, content type, and text/Base64 body. Stopping a listener closes any still-pending contexts with HTTP 503.
+
+Listener state is deliberately service-instance-local rather than persistent machine configuration. The feature adds webhook/API integration ergonomics without narrowing `talvora_http_request`, raw TCP tools, PowerShell, or process execution.
+
 ## Network diagnostics
 
 The network-diagnostics suite exposes `talvora_network_interfaces`, `talvora_dns_lookup`, `talvora_ping`, `talvora_tcp_exchange`, `talvora_tls_inspect`, and `talvora_websocket_exchange`.

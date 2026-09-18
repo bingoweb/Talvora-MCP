@@ -119,6 +119,21 @@ Visual Studio discovery uses Microsoft's `vswhere` when available. `talvora_vs_d
 
 Windows SDK discovery reads the installed Windows Kits root and versioned SDK directories and reports common tools such as SignTool, MakeAppx, MT, RC, and MIDL when present. PE/file-version inspection works directly on arbitrary accessible binaries and complements the existing file hash and binary read tools.
 
+## HTTP mock and webhook listeners
+
+Talvora can host in-process HTTP endpoints for application and webhook testing:
+
+- `talvora_http_mock_start`
+- `talvora_http_mock_get`
+- `talvora_http_mock_list`
+- `talvora_http_mock_read`
+- `talvora_http_mock_reply`
+- `talvora_http_mock_stop`
+
+Listeners use .NET `HttpListener` inside the LocalSystem Talvora service and accept caller-selected HTTP/HTTPS prefixes. Auto-reply mode can immediately return a configured status, content type, headers, and text/Base64 body while capturing the request. Manual mode keeps requests pending, exposes a request ID, and lets the caller send a later response with `talvora_http_mock_reply`.
+
+Captured requests include method, URL/raw URL, protocol, headers, query values, endpoints, request body, byte count, truncation state, and pending-response state. Queue and body limits can be set to `0` for unlimited Talvora-side capture. Prefixes, ports, headers, status codes, and payloads are not restricted by a Talvora allowlist.
+
 ## Network diagnostics
 
 Talvora exposes structured network-debugging tools for local and remote application development:
