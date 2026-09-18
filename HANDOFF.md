@@ -2,7 +2,7 @@
 
 This file is the canonical handoff for continuing Talvora development in a new ChatGPT/Codex session.
 
-The user explicitly wants the next session to **continue automatically without asking for routine confirmation**. Read this file first, refresh the actual GitHub `main` state, then continue from the approved next bounded task below.
+The user explicitly wants the next session to **continue automatically without asking for routine confirmation**. Read this file first, refresh the actual GitHub `main` state, then continue from the current verified state below.
 
 ---
 
@@ -326,7 +326,7 @@ A change is not complete until the final canonical HEAD has a fresh successful r
 
 ## 8. Branch/repository hygiene
 
-At the last verification before this handoff, there were no open PRs.
+Before the filesystem-mutation TDD thread there were no open PRs. That thread used a temporary draft PR to obtain real Windows pull-request CI; finalization requires that PR to be merged/closed and the repository to return to zero open PRs.
 
 Historical branch names included:
 
