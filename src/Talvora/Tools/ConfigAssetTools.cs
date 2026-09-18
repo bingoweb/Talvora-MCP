@@ -756,7 +756,7 @@ public static class ConfigAssetTools
             cancellationToken: cancellationToken);
     }
 
-    private static string[] ParsePointer(string pointer)
+    internal static string[] ParsePointer(string pointer)
     {
         if (pointer is null)
         {
@@ -781,7 +781,7 @@ public static class ConfigAssetTools
             .ToArray();
     }
 
-    private static bool TryResolve(
+    internal static bool TryResolve(
         JsonNode? root,
         IReadOnlyList<string> tokens,
         out JsonNode? node)
@@ -826,7 +826,7 @@ public static class ConfigAssetTools
         return true;
     }
 
-    private static JsonNode? SetPointer(
+    internal static JsonNode? SetPointer(
         JsonNode? root,
         IReadOnlyList<string> tokens,
         JsonNode? value,
@@ -952,7 +952,7 @@ public static class ConfigAssetTools
             "JSON Pointer parent is a scalar value.");
     }
 
-    private static bool DeletePointer(
+    internal static bool DeletePointer(
         ref JsonNode? root,
         IReadOnlyList<string> tokens)
     {
@@ -1022,7 +1022,7 @@ public static class ConfigAssetTools
             ? new JsonArray()
             : new JsonObject();
 
-    private static string GetJsonKind(JsonNode? node) =>
+    internal static string GetJsonKind(JsonNode? node) =>
         node switch
         {
             null => "Null",
@@ -1038,7 +1038,7 @@ public static class ConfigAssetTools
         return document.RootElement.ValueKind.ToString();
     }
 
-    private static string ToJson(JsonNode? node, bool indented) =>
+    internal static string ToJson(JsonNode? node, bool indented) =>
         node?.ToJsonString(new JsonSerializerOptions { WriteIndented = indented })
         ?? "null";
 

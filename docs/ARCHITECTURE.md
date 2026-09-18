@@ -184,9 +184,11 @@ Schema discovery reads the standard `sqlite_schema` table with bound filters. On
 
 ## Configuration formats and test reports
 
-The configuration-format suite exposes `talvora_dotenv_list`, `talvora_dotenv_get`, `talvora_dotenv_set`, `talvora_dotenv_delete`, `talvora_ini_list`, `talvora_ini_get`, `talvora_ini_set`, `talvora_ini_delete`, `talvora_xml_query`, `talvora_xml_set`, `talvora_xml_delete`, and `talvora_test_report_summary`.
+The configuration-format suite exposes `talvora_dotenv_list`, `talvora_dotenv_get`, `talvora_dotenv_set`, `talvora_dotenv_delete`, `talvora_ini_list`, `talvora_ini_get`, `talvora_ini_set`, `talvora_ini_delete`, `talvora_xml_query`, `talvora_xml_set`, `talvora_xml_delete`, `talvora_yaml_get`, `talvora_yaml_set`, `talvora_yaml_delete`, `talvora_toml_get`, `talvora_toml_set`, `talvora_toml_delete`, and `talvora_test_report_summary`.
 
 Dotenv parsing supports ordinary assignments plus the `export` prefix and quoted values; mutations retain unrelated file content. INI parsing supports global keys, named sections, and both equals/colon separators. XML operations use editable `XmlDocument`/XPath navigators and arbitrary namespace prefix mappings, so elements, attributes, and text nodes can be queried or mutated without a schema allowlist.
+
+YAML uses YamlDotNet 18.1.0 and TOML uses Tomlyn 2.10.1. Both formats are projected into a JSON-compatible DOM and reuse the JSON helper's RFC 6901 pointer traversal/mutation logic, so nested object and array paths behave consistently across JSON, YAML, and TOML. Mutations accept JSON text as the value representation, can create missing containers, and can create a backup before writing. Serialization intentionally normalizes the document; comments and original whitespace/quoting are not guaranteed to round-trip. No path, key, or pointer allowlist is introduced.
 
 The test-report reader detects TRX, JUnit/xUnit-style XML, and NUnit3 roots and maps runner-specific counters and failures to a common summary. It is read-only and accepts any accessible report path.
 

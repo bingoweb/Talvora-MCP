@@ -405,6 +405,12 @@ internal static class InstallerEngine
         "talvora_dev_server_list",
         "talvora_dev_server_wait",
         "talvora_dev_server_stop",
+        "talvora_yaml_get",
+        "talvora_yaml_set",
+        "talvora_yaml_delete",
+        "talvora_toml_get",
+        "talvora_toml_set",
+        "talvora_toml_delete",
     };
 
     public static async Task<HealthSnapshot> InstallAsync(

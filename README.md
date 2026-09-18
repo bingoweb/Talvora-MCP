@@ -302,9 +302,15 @@ Talvora adds first-class structured helpers for common project configuration for
 - `talvora_xml_query`
 - `talvora_xml_set`
 - `talvora_xml_delete`
+- `talvora_yaml_get`
+- `talvora_yaml_set`
+- `talvora_yaml_delete`
+- `talvora_toml_get`
+- `talvora_toml_set`
+- `talvora_toml_delete`
 - `talvora_test_report_summary`
 
-The dotenv and INI tools preserve unrelated lines/comments while allowing direct key updates on any accessible file. XML tools accept arbitrary XPath expressions and namespace mappings for query/set/delete operations. Test-report parsing normalizes TRX, JUnit/xUnit-style XML, and NUnit3 into one summary with failed-test details, which makes build/test diagnosis easier without parsing runner-specific XML manually.
+The dotenv and INI tools preserve unrelated lines/comments while allowing direct key updates on any accessible file. XML tools accept arbitrary XPath expressions and namespace mappings for query/set/delete operations. YAML and TOML tools use the same RFC 6901 JSON Pointer model as Talvora's JSON helpers, with JSON text as the language-neutral value representation for mutations. YAML/TOML rewrites are normalized and do not promise comment or original-format preservation; optional `.bak` creation is available before a mutation. Test-report parsing normalizes TRX, JUnit/xUnit-style XML, and NUnit3 into one summary with failed-test details, which makes build/test diagnosis easier without parsing runner-specific XML manually.
 
 ## Environment variable tools
 

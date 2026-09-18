@@ -21,6 +21,7 @@ $httpMockTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\
 $configFormatTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ConfigFormatTools.cs'))
 $sqliteTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\SqliteTools.cs'))
 $devServerTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\DevServerTools.cs'))
+$structuredConfigTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\StructuredConfigTools.cs'))
 $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Program.cs'))
@@ -246,8 +247,23 @@ $result = [pscustomobject]@{
         $installerProgram -match 'talvora_dev_server_start' -and
         $installerProgram -match 'talvora_dev_server_stop'
     )
-    InstallerDeclares156Tools = (
-        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 156
+    StructuredConfigToolContract = (
+        $structuredConfigTools -match 'talvora_yaml_get' -and
+        $structuredConfigTools -match 'talvora_yaml_set' -and
+        $structuredConfigTools -match 'talvora_yaml_delete' -and
+        $structuredConfigTools -match 'talvora_toml_get' -and
+        $structuredConfigTools -match 'talvora_toml_set' -and
+        $structuredConfigTools -match 'talvora_toml_delete' -and
+        $structuredConfigTools -match 'ConfigAssetTools\.ParsePointer' -and
+        $structuredConfigTools -match 'TomlSerializer' -and
+        $structuredConfigTools -match 'YamlDeserializer' -and
+        $serviceProject -match 'YamlDotNet" Version="18\.1\.0"' -and
+        $serviceProject -match 'Tomlyn" Version="2\.10\.1"' -and
+        $installerProgram -match 'talvora_yaml_get' -and
+        $installerProgram -match 'talvora_toml_delete'
+    )
+    InstallerDeclares162Tools = (
+        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 162
     )
     DeveloperCoreToolContract = (
         $developerTools -match 'talvora_path_info' -and
