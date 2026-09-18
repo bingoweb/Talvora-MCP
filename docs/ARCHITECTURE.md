@@ -20,6 +20,8 @@ The PowerShell layer applies the same principle to multiline automation. `talvor
 
 The Windows service layer exposes structured Service Control Manager inspection and control without a service-name allowlist. It uses `System.ServiceProcess.ServiceController` for list/get/start/stop/restart while keeping `talvora_run_process` available for service creation, deletion, configuration, custom control codes, and any operation not modeled by the dedicated layer.
 
+The process-control layer exposes structured process discovery and termination. It complements `talvora_run_process` by making existing processes inspectable by PID/name and by providing a direct process-tree kill operation without a PID or process-name allowlist.
+
 The read-only knowledge layer is separate from that capability boundary. `search` and `fetch` provide structured document discovery/retrieval for ChatGPT knowledge workflows without reducing the privileges or addressable paths of the primitive tools.
 
 ## Windows registry
@@ -48,6 +50,16 @@ List/get use `System.Diagnostics.Process` and return deterministic structured pr
 Kill is PID-based, optionally terminates the complete process tree, and waits for exit up to an explicit timeout. The response distinguishes `killed` (a kill request was successfully issued) from `exited` (process termination was observed). A missing/already-exited PID returns an idempotent not-found result.
 
 No PID or process-name allowlist is applied. Therefore the API can target any process accessible to Talvora's LocalSystem service, including processes whose termination may destabilize Windows or Talvora itself.
+
+## Process inspection and control
+
+The process suite exposes `talvora_process_list`, `talvora_process_get`, and `talvora_process_kill`.
+
+List/get return structured PID, process name, session ID, UTC start time, working-set bytes, and executable path when Windows permits each field to be queried. Access-denied or unavailable optional metadata is represented as unavailable instead of failing the complete operation. Missing or already-exited PIDs return `found=false`.
+
+Kill accepts a PID, an `entireProcessTree` switch, and an explicit timeout. Its structured response distinguishes whether the target was found, whether a kill request was issued, and whether process exit was confirmed. The operation is idempotent for missing/exited PIDs.
+
+No PID or process-name allowlist is applied. Since Talvora runs as LocalSystem, the tool uses that account's process privileges and can target the Talvora process itself; doing so can terminate the active MCP connection.
 
 ## PowerShell execution
 
