@@ -84,14 +84,14 @@ try
 {
     var getProcessResult = await EnsureSuccess(byName["talvora_process_get"], new()
     {
-        ["processId"] = spawnedPid,
+        ["processId"] = processChildPid,
     });
     if (getProcessResult.StructuredContent is not { } getProcessJson ||
         !getProcessJson.TryGetProperty("found", out var processFound) ||
         !processFound.GetBoolean() ||
         !getProcessJson.TryGetProperty("process", out var processInfo) ||
         !processInfo.TryGetProperty("processId", out var returnedPid) ||
-        returnedPid.GetInt32() != spawnedPid)
+        returnedPid.GetInt32() != processChildPid)
     {
         throw new InvalidOperationException("process get did not return the spawned process.");
     }
@@ -111,7 +111,7 @@ try
 
     var killProcessResult = await EnsureSuccess(byName["talvora_process_kill"], new()
     {
-        ["processId"] = spawnedPid,
+        ["processId"] = processChildPid,
         ["entireProcessTree"] = true,
         ["timeoutSeconds"] = 30,
     });
@@ -126,7 +126,7 @@ try
 
     var missingProcessResult = await EnsureSuccess(byName["talvora_process_get"], new()
     {
-        ["processId"] = spawnedPid,
+        ["processId"] = processChildPid,
     });
     if (missingProcessResult.StructuredContent is not { } missingProcessJson ||
         !missingProcessJson.TryGetProperty("found", out var missingProcessFound) ||
@@ -143,7 +143,7 @@ finally
         {
             await EnsureSuccess(processKillTool, new()
             {
-                ["processId"] = spawnedPid,
+                ["processId"] = processChildPid,
                 ["entireProcessTree"] = true,
                 ["timeoutSeconds"] = 5,
             });
@@ -385,22 +385,22 @@ try
         });
         if (processStart.StructuredContent is not { } processStartJson ||
             !processStartJson.TryGetProperty("standardOutput", out var processStartOutput) ||
-            !int.TryParse(processStartOutput.GetString()?.Trim(), out var spawnedPid))
+            !int.TryParse(processStartOutput.GetString()?.Trim(), out var processChildPid))
         {
             throw new InvalidOperationException("failed to spawn process smoke child.");
         }
-        processSmokePid = spawnedPid;
+        processSmokePid = processChildPid;
 
         var processGet = await EnsureSuccess(byName["talvora_process_get"], new()
         {
-            ["processId"] = spawnedPid,
+            ["processId"] = processChildPid,
         });
         if (processGet.StructuredContent is not { } processGetJson ||
             !processGetJson.TryGetProperty("found", out var processFound) ||
             !processFound.GetBoolean() ||
             !processGetJson.TryGetProperty("process", out var processInfo) ||
             !processInfo.TryGetProperty("processId", out var returnedPid) ||
-            returnedPid.GetInt32() != spawnedPid)
+            returnedPid.GetInt32() != processChildPid)
         {
             throw new InvalidOperationException("process get did not return the spawned process.");
         }
@@ -414,14 +414,14 @@ try
             processes.ValueKind != System.Text.Json.JsonValueKind.Array ||
             !processes.EnumerateArray().Any(item =>
                 item.TryGetProperty("processId", out var listedPid) &&
-                listedPid.GetInt32() == spawnedPid))
+                listedPid.GetInt32() == processChildPid))
         {
             throw new InvalidOperationException("process list did not return the spawned process.");
         }
 
         var processKill = await EnsureSuccess(byName["talvora_process_kill"], new()
         {
-            ["processId"] = spawnedPid,
+            ["processId"] = processChildPid,
             ["entireProcessTree"] = true,
             ["timeoutSeconds"] = 30,
         });
