@@ -23,6 +23,18 @@ Talvora is a Windows-local MCP server built for one owner machine with a full-ca
 
 Because the MCP host itself runs as LocalSystem, these tools execute with the service account's Windows privileges. The file and process primitives are not restricted to the knowledge-search corpus.
 
+## Structured filesystem mutation tools
+
+- `talvora_create_directory`
+- `talvora_copy`
+- `talvora_move`
+
+These tools provide structured create/copy/move behavior without replacing or restricting the primitive filesystem surface. `talvora_create_directory` creates missing parent directories and is idempotent when the requested directory already exists.
+
+`talvora_copy` supports files and recursive directory trees. `overwrite=false` rejects an existing destination deterministically. With `overwrite=true`, file destinations are replaced and directory copies merge non-conflicting destination entries while replacing conflicting copied entries. Directory copies with `recursive=false` fail before creating a partial destination. Source reparse points are rejected before copy mutation so junctions/symlinks cannot create accidental traversal loops.
+
+`talvora_move` supports files and directories. `overwrite=false` rejects a destination collision, while `overwrite=true` removes/replaces the destination and then performs the move. No path allowlist is applied to any of these tools.
+
 ## Process inspection and control
 
 - `talvora_process_list`
