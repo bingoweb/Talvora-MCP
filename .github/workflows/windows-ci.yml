@@ -109,6 +109,20 @@ jobs:
           $health = Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 5 -Proxy $null
           if ($health.sid -ne 'S-1-5-18') { throw "Talvora service SID is $($health.sid)" }
           if (-not $health.isWindowsService) { throw 'Talvora process did not detect Windows Service hosting.' }
+
+          # Regression guard: repeated health polling must not leak OS handles in the Talvora service.
+          $serviceProcess = Get-Process -Id $service.ProcessId
+          $handlesBefore = $serviceProcess.HandleCount
+          1..200 | ForEach-Object {
+            Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 5 -Proxy $null | Out-Null
+          }
+          Start-Sleep -Milliseconds 500
+          $serviceProcess.Refresh()
+          $handleDelta = $serviceProcess.HandleCount - $handlesBefore
+          if ($handleDelta -gt 25) {
+            throw "Talvora health polling leaked process handles. Before=$handlesBefore After=$($serviceProcess.HandleCount) Delta=$handleDelta"
+          }
+
           $expectedCommit = (git rev-parse HEAD).Trim()
           if ($health.sourceCommit -ne $expectedCommit) { throw "Health sourceCommit mismatch. Expected=$expectedCommit Actual=$($health.sourceCommit)" }
           $statePath = Join-Path $env:LOCALAPPDATA 'Talvora\current.json'
