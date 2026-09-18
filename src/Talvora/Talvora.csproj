@@ -2,6 +2,7 @@
   <PropertyGroup>
     <AssemblyName>Talvora</AssemblyName>
     <RootNamespace>Talvora</RootNamespace>
+    <ApplicationIcon>..\..\assets\Talvora.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
