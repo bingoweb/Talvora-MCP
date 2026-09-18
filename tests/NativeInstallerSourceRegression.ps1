@@ -6,6 +6,7 @@ $ErrorActionPreference = 'Stop'
 
 $serviceProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Program.cs'))
 $serviceProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Talvora.csproj'))
+$developerTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\DeveloperTools.cs'))
 $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Program.cs'))
@@ -16,6 +17,25 @@ $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
 
 $result = [pscustomobject]@{
+    DeveloperCoreToolContract = (
+        $developerTools -match 'talvora_path_info' -and
+        $developerTools -match 'talvora_file_hash' -and
+        $developerTools -match 'talvora_find_files' -and
+        $developerTools -match 'talvora_search_text' -and
+        $developerTools -match 'talvora_read_bytes' -and
+        $developerTools -match 'talvora_write_bytes' -and
+        $developerTools -match 'talvora_replace_text' -and
+        $developerTools -match 'talvora_http_request' -and
+        $developerTools -match 'talvora_tcp_connections' -and
+        $developerTools -match 'talvora_tcp_listeners' -and
+        $developerTools -match 'talvora_wait_tcp' -and
+        $developerTools -match 'talvora_project_discover' -and
+        $developerTools -match 'talvora_resolve_command' -and
+        $installerProgram -match 'talvora_project_discover'
+    )
+    InstallerDeclares45Tools = (
+        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 45
+    )
     ServiceRejectsStopControl = (
         $serviceProgram -match 'CanStop\s*=\s*false' -and
         $serviceProgram -match 'CanPauseAndContinue\s*=\s*false'

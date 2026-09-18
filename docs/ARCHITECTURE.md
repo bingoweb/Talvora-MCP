@@ -14,6 +14,8 @@ The service account is the capability boundary. Talvora does not implement comma
 
 The structured filesystem mutation layer adds create-directory, copy, and move operations without reducing the primitive filesystem surface. It applies no path allowlist. Directory copy is recursive by default, rejects non-recursive partial copies, uses deterministic overwrite behavior, and rejects source reparse points before mutation so traversal cannot loop through junctions/symlinks.
 
+The developer-core layer adds structured source/file discovery, literal or regex text search, raw binary read/write, exact text replacement, hashing, arbitrary HTTP requests, TCP diagnostics/readiness checks, project-manifest discovery, and command resolution. These tools are ergonomic additions for application development; they do not replace or narrow the unrestricted process, PowerShell, filesystem, registry, service, or environment-variable capabilities. Where a response can become large, callers may set the corresponding result/byte limit to `0` for unlimited operation.
+
 The environment-variable layer exposes structured process/user/machine get/list/set/delete behavior directly through System.Environment. It applies no variable-name allowlist and does not reduce the unrestricted process or PowerShell primitives.
 
 The Event Log layer exposes structured local-log discovery and XPath queries through Windows Eventing APIs. It applies no log/provider/event-ID allowlist. Per-call event limits bound MCP response size only; unrestricted process and PowerShell primitives remain available for Event Log operations outside this read-only layer.
@@ -39,6 +41,16 @@ The structured filesystem suite exposes `talvora_create_directory`, `talvora_cop
 `talvora_move` supports files and directories. Destination collisions fail deterministically unless `overwrite=true`, in which case the destination entry is removed/replaced before the source is moved. Same-path and directory-into-descendant moves are rejected as invalid filesystem operations, not as capability restrictions.
 
 These tools use the same LocalSystem filesystem authority as the primitive read/write/delete/list tools. They do not introduce a path allowlist or deny-list.
+
+## Developer core
+
+The developer-core suite exposes `talvora_path_info`, `talvora_file_hash`, `talvora_find_files`, `talvora_search_text`, `talvora_read_bytes`, `talvora_write_bytes`, `talvora_replace_text`, `talvora_http_request`, `talvora_tcp_connections`, `talvora_tcp_listeners`, `talvora_wait_tcp`, `talvora_project_discover`, and `talvora_resolve_command`.
+
+File discovery walks the requested tree directly and can optionally follow reparse points. Text search supports literal or .NET regular-expression matching plus include/exclude wildcards. Binary tools expose byte ranges and writes as Base64 so images, archives, compiled assets, and other non-text files can be handled without shell encoding workarounds. Exact text replacement supports literal or regex patches, expected-match assertions, first/all replacement modes, and optional backup creation.
+
+The HTTP tool is an arbitrary `HttpClient.SendAsync` surface supporting custom methods, headers, text/Base64 bodies, redirect control, optional TLS validation bypass, and text/Base64/no-body response modes. TCP inspection returns `netstat -ano` data as structured local/remote endpoint, connection state, PID, and process-name records; readiness polling uses direct `TcpClient` connections.
+
+Project discovery recognizes common .NET, Node, Python, Rust, Go, Maven, Gradle, CMake, Docker, and Git markers. Command resolution follows the service process PATH/PATHEXT environment. None of these tools add command, path, host, port, project-type, or executable allowlists.
 
 ## Environment variables
 

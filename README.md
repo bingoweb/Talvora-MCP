@@ -35,6 +35,26 @@ These tools provide structured create/copy/move behavior without replacing or re
 
 `talvora_move` supports files and directories. `overwrite=false` rejects a destination collision, while `overwrite=true` removes/replaces the destination and then performs the move. No path allowlist is applied to any of these tools.
 
+## Developer core tools
+
+Talvora exposes a first-class application-development toolkit in addition to the unrestricted process and PowerShell primitives:
+
+- `talvora_path_info`
+- `talvora_file_hash`
+- `talvora_find_files`
+- `talvora_search_text`
+- `talvora_read_bytes`
+- `talvora_write_bytes`
+- `talvora_replace_text`
+- `talvora_http_request`
+- `talvora_tcp_connections`
+- `talvora_tcp_listeners`
+- `talvora_wait_tcp`
+- `talvora_project_discover`
+- `talvora_resolve_command`
+
+These tools are designed for day-to-day application development: source discovery, literal/regex search, exact text patching, binary asset access, file hashing, local/remote API testing, port ownership diagnostics, readiness checks, project-manifest discovery, and executable resolution. Filesystem tools operate on any path accessible to the LocalSystem service and do not introduce a path allowlist. Search/result limits are response controls and can be set to `0` for unlimited operation where supported. The HTTP tool accepts arbitrary methods and destinations; the process and PowerShell primitives remain available for anything not modeled by this structured layer.
+
 ## Environment variable tools
 
 - `talvora_env_get`

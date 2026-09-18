@@ -281,6 +281,19 @@ internal static class InstallerEngine
         "talvora_registry_list",
         "talvora_registry_delete_value",
         "talvora_registry_delete_key",
+        "talvora_path_info",
+        "talvora_file_hash",
+        "talvora_find_files",
+        "talvora_search_text",
+        "talvora_read_bytes",
+        "talvora_write_bytes",
+        "talvora_replace_text",
+        "talvora_http_request",
+        "talvora_tcp_connections",
+        "talvora_tcp_listeners",
+        "talvora_wait_tcp",
+        "talvora_project_discover",
+        "talvora_resolve_command",
     };
 
     public static async Task<HealthSnapshot> InstallAsync(

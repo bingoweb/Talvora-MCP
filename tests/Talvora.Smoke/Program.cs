@@ -47,6 +47,19 @@ string[] required =
     "talvora_registry_list",
     "talvora_registry_delete_value",
     "talvora_registry_delete_key",
+        "talvora_path_info",
+        "talvora_file_hash",
+        "talvora_find_files",
+        "talvora_search_text",
+        "talvora_read_bytes",
+        "talvora_write_bytes",
+        "talvora_replace_text",
+        "talvora_http_request",
+        "talvora_tcp_connections",
+        "talvora_tcp_listeners",
+        "talvora_wait_tcp",
+        "talvora_project_discover",
+        "talvora_resolve_command",
 ];
 
 foreach (var name in required)
@@ -470,6 +483,10 @@ var moveDirectorySource = Path.Combine(root, "move-directory-source");
 var moveDirectoryDestination = Path.Combine(root, "move-directory-destination");
 var moveCollisionSource = Path.Combine(root, "move-collision-source.txt");
 var moveCollisionDestination = Path.Combine(root, "move-collision-destination.txt");
+var developerBinaryFile = Path.Combine(root, "developer-bytes.bin");
+var developerPatchFile = Path.Combine(root, "developer-patch.txt");
+var developerProjectRoot = Path.Combine(root, "developer-project");
+var developerPackageJson = Path.Combine(developerProjectRoot, "package.json");
 const string knowledgeRootsEnvironmentName = "TALVORA_KNOWLEDGE_ROOTS";
 var knowledgeRootsCaptured = false;
 var knowledgeRootsWasPresent = false;
@@ -528,6 +545,195 @@ try
         throw new InvalidOperationException("create_directory must be idempotent for an existing directory.");
     }
     await EnsureSuccess(byName["talvora_list"], new() { ["path"] = nestedDirectory });
+
+    var pathInfoResult = await EnsureSuccess(byName["talvora_path_info"], new()
+    {
+        ["path"] = nestedDirectory,
+    });
+    if (pathInfoResult.StructuredContent is not { } pathInfoJson ||
+        !pathInfoJson.TryGetProperty("exists", out var pathInfoExists) ||
+        !pathInfoExists.GetBoolean() ||
+        !pathInfoJson.TryGetProperty("kind", out var pathInfoKind) ||
+        !string.Equals(pathInfoKind.GetString(), "directory", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("path_info did not report the created directory.");
+    }
+
+    var binaryPayload = new byte[] { 0, 1, 2, 3, 127, 128, 254, 255 };
+    var binaryBase64 = Convert.ToBase64String(binaryPayload);
+    var writeBytesResult = await EnsureSuccess(byName["talvora_write_bytes"], new()
+    {
+        ["path"] = developerBinaryFile,
+        ["base64"] = binaryBase64,
+    });
+    if (writeBytesResult.StructuredContent is not { } writeBytesJson ||
+        writeBytesJson.GetProperty("bytesWritten").GetInt32() != binaryPayload.Length)
+    {
+        throw new InvalidOperationException("write_bytes did not report the expected byte count.");
+    }
+
+    var readBytesResult = await EnsureSuccess(byName["talvora_read_bytes"], new()
+    {
+        ["path"] = developerBinaryFile,
+    });
+    if (readBytesResult.StructuredContent is not { } readBytesJson ||
+        !string.Equals(readBytesJson.GetProperty("base64").GetString(), binaryBase64, StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("read_bytes did not round-trip the binary payload.");
+    }
+
+    var fileHashResult = await EnsureSuccess(byName["talvora_file_hash"], new()
+    {
+        ["path"] = developerBinaryFile,
+        ["algorithm"] = "SHA256",
+    });
+    var expectedHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(binaryPayload));
+    if (fileHashResult.StructuredContent is not { } fileHashJson ||
+        !string.Equals(fileHashJson.GetProperty("hash").GetString(), expectedHash, StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("file_hash did not return the expected SHA256.");
+    }
+
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = developerPatchFile,
+        ["content"] = "alpha PATCH_TOKEN omega",
+    });
+    var replaceResult = await EnsureSuccess(byName["talvora_replace_text"], new()
+    {
+        ["path"] = developerPatchFile,
+        ["search"] = "PATCH_TOKEN",
+        ["replacement"] = "PATCHED_TOKEN",
+        ["expectedMatches"] = 1,
+    });
+    if (replaceResult.StructuredContent is not { } replaceJson ||
+        replaceJson.GetProperty("replacements").GetInt32() != 1 ||
+        !replaceJson.GetProperty("changed").GetBoolean() ||
+        !string.Equals(
+            await ReadToolText(byName["talvora_read_text"], developerPatchFile),
+            "alpha PATCHED_TOKEN omega",
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("replace_text did not patch exactly one occurrence.");
+    }
+
+    var findFilesResult = await EnsureSuccess(byName["talvora_find_files"], new()
+    {
+        ["root"] = root,
+        ["patterns"] = new[] { "*.txt" },
+        ["recursive"] = true,
+        ["maxResults"] = 0,
+    });
+    if (findFilesResult.StructuredContent is not { } findFilesJson ||
+        !findFilesJson.TryGetProperty("entries", out var foundEntries) ||
+        !foundEntries.EnumerateArray().Any(entry =>
+            entry.TryGetProperty("path", out var foundPath) &&
+            string.Equals(foundPath.GetString(), developerPatchFile, StringComparison.OrdinalIgnoreCase)))
+    {
+        throw new InvalidOperationException("find_files did not return the expected text file.");
+    }
+
+    var searchTextResult = await EnsureSuccess(byName["talvora_search_text"], new()
+    {
+        ["root"] = root,
+        ["query"] = "PATCHED_[A-Z]+",
+        ["regex"] = true,
+        ["includePatterns"] = new[] { "*.txt" },
+        ["maxMatches"] = 0,
+    });
+    if (searchTextResult.StructuredContent is not { } searchTextJson ||
+        searchTextJson.GetProperty("matchCount").GetInt32() < 1 ||
+        !searchTextJson.GetProperty("matches").EnumerateArray().Any(match =>
+            match.TryGetProperty("path", out var matchPath) &&
+            string.Equals(matchPath.GetString(), developerPatchFile, StringComparison.OrdinalIgnoreCase)))
+    {
+        throw new InvalidOperationException("search_text did not return the regex match.");
+    }
+
+    await EnsureSuccess(byName["talvora_create_directory"], new()
+    {
+        ["path"] = developerProjectRoot,
+    });
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = developerPackageJson,
+        ["content"] = "{\"name\":\"talvora-smoke-project\",\"private\":true}",
+    });
+    var projectDiscoverResult = await EnsureSuccess(byName["talvora_project_discover"], new()
+    {
+        ["root"] = root,
+        ["recursive"] = true,
+        ["maxResults"] = 0,
+    });
+    if (projectDiscoverResult.StructuredContent is not { } projectDiscoverJson ||
+        !projectDiscoverJson.GetProperty("projects").EnumerateArray().Any(project =>
+            project.TryGetProperty("type", out var projectType) &&
+            string.Equals(projectType.GetString(), "node", StringComparison.Ordinal) &&
+            project.TryGetProperty("path", out var projectPath) &&
+            string.Equals(projectPath.GetString(), developerPackageJson, StringComparison.OrdinalIgnoreCase)))
+    {
+        throw new InvalidOperationException("project_discover did not identify package.json as a Node project.");
+    }
+
+    var resolveCommandResult = await EnsureSuccess(byName["talvora_resolve_command"], new()
+    {
+        ["command"] = "cmd.exe",
+    });
+    if (resolveCommandResult.StructuredContent is not { } resolveCommandJson ||
+        !resolveCommandJson.GetProperty("found").GetBoolean() ||
+        resolveCommandJson.GetProperty("paths").GetArrayLength() < 1)
+    {
+        throw new InvalidOperationException("resolve_command did not resolve cmd.exe.");
+    }
+
+    var httpResult = await EnsureSuccess(byName["talvora_http_request"], new()
+    {
+        ["method"] = "GET",
+        ["url"] = "http://127.0.0.1:7676/healthz",
+        ["responseMode"] = "text",
+        ["maxResponseBytes"] = 0,
+    });
+    if (httpResult.StructuredContent is not { } httpJson ||
+        httpJson.GetProperty("statusCode").GetInt32() != 200 ||
+        !(httpJson.GetProperty("body").GetString() ?? string.Empty).Contains("Talvora", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("http_request did not return the Talvora health response.");
+    }
+
+    var tcpListenersResult = await EnsureSuccess(byName["talvora_tcp_listeners"], new()
+    {
+        ["localPort"] = 7676,
+    });
+    if (tcpListenersResult.StructuredContent is not { } tcpListenersJson ||
+        tcpListenersJson.GetProperty("count").GetInt32() < 1 ||
+        !tcpListenersJson.GetProperty("connections").EnumerateArray().Any(connection =>
+            connection.GetProperty("localPort").GetInt32() == 7676 &&
+            connection.GetProperty("processId").GetInt32() > 0))
+    {
+        throw new InvalidOperationException("tcp_listeners did not report the Talvora listener.");
+    }
+
+    var tcpConnectionsResult = await EnsureSuccess(byName["talvora_tcp_connections"], new()
+    {
+        ["localPort"] = 7676,
+    });
+    if (tcpConnectionsResult.StructuredContent is not { } tcpConnectionsJson ||
+        tcpConnectionsJson.GetProperty("count").GetInt32() < 1)
+    {
+        throw new InvalidOperationException("tcp_connections did not report Talvora TCP rows.");
+    }
+
+    var waitTcpResult = await EnsureSuccess(byName["talvora_wait_tcp"], new()
+    {
+        ["host"] = "127.0.0.1",
+        ["port"] = 7676,
+        ["timeoutSeconds"] = 5,
+    });
+    if (waitTcpResult.StructuredContent is not { } waitTcpJson ||
+        !waitTcpJson.GetProperty("connected").GetBoolean())
+    {
+        throw new InvalidOperationException("wait_tcp did not connect to the Talvora listener.");
+    }
 
     await EnsureSuccess(byName["talvora_write_text"], new()
     {
