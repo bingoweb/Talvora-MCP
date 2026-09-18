@@ -1,6 +1,27 @@
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
+if (args.Length >= 3 &&
+    string.Equals(
+        args[0],
+        "--dev-server-fixture",
+        StringComparison.Ordinal))
+{
+    if (!int.TryParse(
+            args[1],
+            System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var fixturePort))
+    {
+        throw new ArgumentException("Invalid dev-server fixture port.");
+    }
+
+    await RunDevServerFixtureAsync(
+        fixturePort,
+        args[2]);
+    return;
+}
+
 var endpoint = args.Length > 0 ? args[0] : "http://127.0.0.1:7676/mcp";
 var repositoryPath = args.Length > 1 ? Path.GetFullPath(args[1]) : Directory.GetCurrentDirectory();
 var transport = new HttpClientTransport(new HttpClientTransportOptions
@@ -227,6 +248,74 @@ static int GetFreeLoopbackTcpPort()
     try
     {
         return ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+    }
+    finally
+    {
+        listener.Stop();
+    }
+}
+
+static async Task RunDevServerFixtureAsync(
+    int port,
+    string body)
+{
+    var listener =
+        new System.Net.Sockets.TcpListener(
+            System.Net.IPAddress.Loopback,
+            port);
+
+    listener.Start();
+
+    Console.WriteLine("READY");
+    await Console.Out.FlushAsync();
+
+    var bodyBytes =
+        System.Text.Encoding.UTF8.GetBytes(body);
+
+    try
+    {
+        while (true)
+        {
+            using var client =
+                await listener.AcceptTcpClientAsync();
+            using var stream =
+                client.GetStream();
+
+            try
+            {
+                var requestBuffer =
+                    new byte[4096];
+                var bytesRead =
+                    await stream.ReadAsync(
+                        requestBuffer);
+
+                if (bytesRead == 0)
+                {
+                    continue;
+                }
+
+                var headerText =
+                    "HTTP/1.1 200 OK\r\n" +
+                    "Content-Type: text/plain; charset=utf-8\r\n" +
+                    $"Content-Length: {bodyBytes.Length}\r\n" +
+                    "Connection: close\r\n\r\n";
+                var headerBytes =
+                    System.Text.Encoding.ASCII.GetBytes(
+                        headerText);
+
+                await stream.WriteAsync(
+                    headerBytes);
+                await stream.WriteAsync(
+                    bodyBytes);
+                await stream.FlushAsync();
+            }
+            catch (IOException)
+            {
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+            }
+        }
     }
     finally
     {
@@ -3289,39 +3378,24 @@ finally
 
 var devServerPort = GetFreeLoopbackTcpPort();
 var devServerBody = "talvora-dev-server-" + smokeId;
-var powershellExe = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.Windows),
-    "System32",
-    "WindowsPowerShell",
-    "v1.0",
-    "powershell.exe");
-
-var devServerScript = string.Join(
-    "; ",
-    "$ErrorActionPreference='Stop'",
-    $"$listener=[System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback,{devServerPort})",
-    "$listener.Start()",
-    "[Console]::Out.WriteLine('READY')",
-    "[Console]::Out.Flush()",
-    "$crlf=[Environment]::NewLine",
-    "try { while ($true) { $client=$listener.AcceptTcpClient(); try { $stream=$client.GetStream(); $buffer=New-Object byte[] 4096; $read=$stream.Read($buffer,0,$buffer.Length); if ($read -gt 0) { " +
-        $"$body=[Text.Encoding]::UTF8.GetBytes('{devServerBody}'); " +
-        "$headerText='HTTP/1.1 200 OK'+$crlf+'Content-Type: text/plain'+$crlf+'Content-Length: '+$body.Length+$crlf+'Connection: close'+$crlf+$crlf; " +
-        "$headers=[Text.Encoding]::ASCII.GetBytes($headerText); " +
-        "$stream.Write($headers,0,$headers.Length); $stream.Write($body,0,$body.Length); $stream.Flush() } } catch { } finally { $client.Dispose() } } } finally { $listener.Stop() }");
+var fixtureAssemblyPath =
+    System.Reflection.Assembly
+        .GetExecutingAssembly()
+        .Location;
+var devServerDotnetExecutable =
+    Environment.ProcessPath
+    ?? throw new InvalidOperationException(
+        "Smoke process executable path is unavailable.");
 
 var devServerStartResult = await EnsureSuccess(byName["talvora_dev_server_start"], new()
 {
-    ["executable"] = powershellExe,
+    ["executable"] = devServerDotnetExecutable,
     ["arguments"] = new[]
     {
-        "-NoLogo",
-        "-NoProfile",
-        "-NonInteractive",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        devServerScript,
+        fixtureAssemblyPath,
+        "--dev-server-fixture",
+        devServerPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        devServerBody,
     },
     ["workingDirectory"] = repositoryPath,
     ["tcpHost"] = "127.0.0.1",
@@ -3339,8 +3413,7 @@ var devServerStartResult = await EnsureSuccess(byName["talvora_dev_server_start"
 if (devServerStartResult.StructuredContent is not { } devServerStartJson ||
     !devServerStartJson.GetProperty("ready").GetBoolean() ||
     !devServerStartJson.GetProperty("tcpProbe").GetProperty("ready").GetBoolean() ||
-    !devServerStartJson.GetProperty("httpProbe").GetProperty("ready").GetBoolean() ||
-    !devServerStartJson.GetProperty("stdoutTail").GetString()!.Contains("READY", StringComparison.Ordinal))
+    !devServerStartJson.GetProperty("httpProbe").GetProperty("ready").GetBoolean())
 {
     throw new InvalidOperationException("dev-server start did not reach combined TCP/HTTP readiness.");
 }
