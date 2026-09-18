@@ -312,6 +312,12 @@ internal static class InstallerEngine
             progress.Report(new InstallProgress(18, "Çalışan Talvora servisi durduruluyor..."));
             await StopAndDeleteServiceAsync(ServiceName, cancellationToken);
 
+            var legacyProgramDataService = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "Talvora",
+                "Service");
+            TryDeleteDirectory(legacyProgramDataService);
+
             KillTrayProcesses();
 
             var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);

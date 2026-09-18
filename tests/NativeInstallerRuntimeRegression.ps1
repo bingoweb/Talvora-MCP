@@ -32,6 +32,7 @@ $result = [pscustomobject]@{
     TrayStartupRegistered = ([string]$trayRun -match [regex]::Escape($expectedTray))
     LegacyCloudflaredServiceExists = [bool](Get-Service Cloudflared -ErrorAction SilentlyContinue)
     LegacyCloudflaredDataExists = (Test-Path 'C:\ProgramData\cloudflared')
+    LegacyProgramDataServiceExists = (Test-Path 'C:\ProgramData\Talvora\Service')
 }
 
 $result | Format-List
@@ -40,7 +41,8 @@ if (-not $result.ServiceUsesProgramFiles -or
     -not $result.TrayExecutableExists -or
     -not $result.TrayStartupRegistered -or
     $result.LegacyCloudflaredServiceExists -or
-    $result.LegacyCloudflaredDataExists) {
+    $result.LegacyCloudflaredDataExists -or
+    $result.LegacyProgramDataServiceExists) {
     throw 'Native Talvora installer runtime state is not complete.'
 }
 
