@@ -61,6 +61,13 @@ jobs:
         run: |
           $hits = Get-ChildItem -Recurse -File src,scripts,tests,TALVORA-KUR.cmd | Select-String -Pattern '(?i)(^|[^A-Za-z0-9_])winget(\.exe)?([^A-Za-z0-9_]|$)'
           if ($hits) { $hits | ForEach-Object { Write-Error $_.ToString() }; throw 'WinGet is forbidden. Use Chocolatey.' }
+      - name: Validate ChatGPT Business tunnel bootstrap
+        shell: pwsh
+        run: |
+          $script = './scripts/Configure-ChatGPT-Business.ps1'
+          if (-not (Test-Path -LiteralPath $script -PathType Leaf)) { throw "Business tunnel bootstrap missing: $script" }
+          & $script -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Business tunnel bootstrap self-test failed: $LASTEXITCODE" }
       - name: Install and verify LocalSystem service
         shell: pwsh
         run: |
