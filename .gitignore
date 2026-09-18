@@ -6,3 +6,4 @@
 *.suo
 *.log
 artifacts/
+src/Talvora.Installer/Payload.zip
