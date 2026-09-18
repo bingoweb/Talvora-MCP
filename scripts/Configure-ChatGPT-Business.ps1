@@ -251,6 +251,8 @@ function Invoke-SelfTest {
     Assert-True -Condition (Test-TalvoraWindows) -Message 'Windows platform detection failed.'
     Assert-True -Condition (Test-TalvoraTunnelId -Value 'tunnel_0123456789abcdef0123456789abcdef') -Message 'valid tunnel ID was rejected.'
     Assert-True -Condition (-not (Test-TalvoraTunnelId -Value 'not-a-tunnel')) -Message 'invalid tunnel ID was accepted.'
+    Assert-True -Condition (-not (Test-TalvoraTunnelId -Value 'tunnel_0123456789ABCDEF0123456789ABCDEF')) -Message 'uppercase tunnel ID was accepted.'
+    Assert-True -Condition (-not (Test-TalvoraTunnelId -Value 'tunnel_0123456789abcdef')) -Message 'short tunnel ID was accepted.'
 
     $fakeRelease = [pscustomobject]@{
         tag_name = 'v9.8.7'
