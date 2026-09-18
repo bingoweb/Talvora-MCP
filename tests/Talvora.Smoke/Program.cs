@@ -123,6 +123,24 @@ string[] required =
     "talvora_docker_exec",
     "talvora_docker_run",
     "talvora_docker_compose_run",
+    "talvora_network_interfaces",
+    "talvora_dns_lookup",
+    "talvora_ping",
+    "talvora_tcp_exchange",
+    "talvora_tls_inspect",
+    "talvora_websocket_exchange",
+    "talvora_dotenv_list",
+    "talvora_dotenv_get",
+    "talvora_dotenv_set",
+    "talvora_dotenv_delete",
+    "talvora_ini_list",
+    "talvora_ini_get",
+    "talvora_ini_set",
+    "talvora_ini_delete",
+    "talvora_xml_query",
+    "talvora_xml_set",
+    "talvora_xml_delete",
+    "talvora_test_report_summary",
 ];
 
 foreach (var name in required)
@@ -560,6 +578,10 @@ var pythonVenvRoot = Path.Combine(root, "python-venv");
 
 var developerRangeFile = Path.Combine(root, "developer-range.txt");
 var developerJsonFile = Path.Combine(root, "developer-config.json");
+var developerDotenvFile = Path.Combine(root, ".env");
+var developerIniFile = Path.Combine(root, "developer.ini");
+var developerXmlFile = Path.Combine(root, "developer.xml");
+var developerJUnitFile = Path.Combine(root, "junit.xml");
 var developerArchiveSource = Path.Combine(root, "developer-archive-source");
 var developerArchiveZip = Path.Combine(root, "developer-assets.zip");
 var developerArchiveExtract = Path.Combine(root, "developer-archive-extract");
@@ -1217,6 +1239,58 @@ try
         throw new InvalidOperationException("wait_tcp did not connect to the Talvora listener.");
     }
 
+    var networkInterfacesResult = await EnsureSuccess(byName["talvora_network_interfaces"], new());
+    if (networkInterfacesResult.StructuredContent is not { } networkInterfacesJson ||
+        networkInterfacesJson.GetProperty("count").GetInt32() < 1)
+    {
+        throw new InvalidOperationException("network_interfaces did not return any network interfaces.");
+    }
+
+    var dnsLookupResult = await EnsureSuccess(byName["talvora_dns_lookup"], new()
+    {
+        ["host"] = "localhost",
+    });
+    if (dnsLookupResult.StructuredContent is not { } dnsLookupJson ||
+        dnsLookupJson.GetProperty("addresses").GetArrayLength() < 1)
+    {
+        throw new InvalidOperationException("dns_lookup did not resolve localhost.");
+    }
+
+    var pingResult = await EnsureSuccess(byName["talvora_ping"], new()
+    {
+        ["host"] = "127.0.0.1",
+        ["timeoutMilliseconds"] = 3000,
+        ["payloadBytes"] = 16,
+    });
+    if (pingResult.StructuredContent is not { } pingJson ||
+        !string.Equals(
+            pingJson.GetProperty("status").GetString(),
+            "Success",
+            StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException("ping did not reach loopback.");
+    }
+
+    var tcpExchangeResult = await EnsureSuccess(byName["talvora_tcp_exchange"], new()
+    {
+        ["host"] = "127.0.0.1",
+        ["port"] = 7676,
+        ["text"] = "GET /healthz HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        ["responseMode"] = "text",
+        ["maxResponseBytes"] = 65536L,
+        ["timeoutSeconds"] = 10,
+        ["idleReadTimeoutMilliseconds"] = 2000,
+    });
+    if (tcpExchangeResult.StructuredContent is not { } tcpExchangeJson ||
+        tcpExchangeJson.GetProperty("bytesReceived").GetInt64() < 1 ||
+        !(tcpExchangeJson.GetProperty("response").GetString() ?? string.Empty)
+            .Contains("200 OK", StringComparison.OrdinalIgnoreCase) ||
+        !(tcpExchangeJson.GetProperty("response").GetString() ?? string.Empty)
+            .Contains("Talvora", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException("tcp_exchange did not return the Talvora health response.");
+    }
+
     var watchStartResult = await EnsureSuccess(byName["talvora_watch_start"], new()
     {
         ["path"] = root,
@@ -1570,6 +1644,227 @@ try
             StringComparison.Ordinal))
     {
         throw new InvalidOperationException("tail_text returned unexpected lines.");
+    }
+
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = developerDotenvFile,
+        ["content"] = "ALPHA=one\r\nexport BETA=\"two words\"\r\n",
+    });
+
+    var dotenvListResult = await EnsureSuccess(byName["talvora_dotenv_list"], new()
+    {
+        ["path"] = developerDotenvFile,
+    });
+    if (dotenvListResult.StructuredContent is not { } dotenvListJson ||
+        dotenvListJson.GetProperty("count").GetInt32() != 2)
+    {
+        throw new InvalidOperationException("dotenv_list did not parse two entries.");
+    }
+
+    var dotenvGetResult = await EnsureSuccess(byName["talvora_dotenv_get"], new()
+    {
+        ["path"] = developerDotenvFile,
+        ["key"] = "BETA",
+    });
+    if (dotenvGetResult.StructuredContent is not { } dotenvGetJson ||
+        !dotenvGetJson.GetProperty("found").GetBoolean() ||
+        !dotenvGetJson.GetProperty("exported").GetBoolean() ||
+        !string.Equals(dotenvGetJson.GetProperty("value").GetString(), "two words", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("dotenv_get did not decode the exported quoted value.");
+    }
+
+    var dotenvSetResult = await EnsureSuccess(byName["talvora_dotenv_set"], new()
+    {
+        ["path"] = developerDotenvFile,
+        ["key"] = "ALPHA",
+        ["value"] = "updated value",
+        ["replaceAll"] = true,
+    });
+    if (dotenvSetResult.StructuredContent is not { } dotenvSetJson ||
+        !dotenvSetJson.GetProperty("changed").GetBoolean() ||
+        dotenvSetJson.GetProperty("matches").GetInt32() != 1)
+    {
+        throw new InvalidOperationException("dotenv_set did not update ALPHA.");
+    }
+
+    var dotenvUpdatedGet = await EnsureSuccess(byName["talvora_dotenv_get"], new()
+    {
+        ["path"] = developerDotenvFile,
+        ["key"] = "ALPHA",
+    });
+    if (dotenvUpdatedGet.StructuredContent is not { } dotenvUpdatedJson ||
+        !string.Equals(dotenvUpdatedJson.GetProperty("value").GetString(), "updated value", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("dotenv_get did not return the updated value.");
+    }
+
+    var dotenvDeleteResult = await EnsureSuccess(byName["talvora_dotenv_delete"], new()
+    {
+        ["path"] = developerDotenvFile,
+        ["key"] = "BETA",
+    });
+    if (dotenvDeleteResult.StructuredContent is not { } dotenvDeleteJson ||
+        !dotenvDeleteJson.GetProperty("changed").GetBoolean() ||
+        dotenvDeleteJson.GetProperty("matches").GetInt32() != 1)
+    {
+        throw new InvalidOperationException("dotenv_delete did not remove BETA.");
+    }
+
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = developerIniFile,
+        ["content"] = "[app]\r\nmode=dev\r\nport=7000\r\n",
+    });
+
+    var iniGetResult = await EnsureSuccess(byName["talvora_ini_get"], new()
+    {
+        ["path"] = developerIniFile,
+        ["section"] = "app",
+        ["key"] = "mode",
+    });
+    if (iniGetResult.StructuredContent is not { } iniGetJson ||
+        !iniGetJson.GetProperty("found").GetBoolean() ||
+        !string.Equals(iniGetJson.GetProperty("value").GetString(), "dev", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("ini_get did not return app.mode.");
+    }
+
+    var iniSetResult = await EnsureSuccess(byName["talvora_ini_set"], new()
+    {
+        ["path"] = developerIniFile,
+        ["section"] = "app",
+        ["key"] = "port",
+        ["value"] = "7676",
+    });
+    if (iniSetResult.StructuredContent is not { } iniSetJson ||
+        !iniSetJson.GetProperty("changed").GetBoolean() ||
+        iniSetJson.GetProperty("matches").GetInt32() != 1)
+    {
+        throw new InvalidOperationException("ini_set did not update app.port.");
+    }
+
+    var iniListResult = await EnsureSuccess(byName["talvora_ini_list"], new()
+    {
+        ["path"] = developerIniFile,
+        ["section"] = "app",
+    });
+    if (iniListResult.StructuredContent is not { } iniListJson ||
+        iniListJson.GetProperty("count").GetInt32() != 2 ||
+        !iniListJson.GetProperty("entries").EnumerateArray().Any(entry =>
+            string.Equals(entry.GetProperty("key").GetString(), "port", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(entry.GetProperty("value").GetString(), "7676", StringComparison.Ordinal)))
+    {
+        throw new InvalidOperationException("ini_list did not show the updated app.port.");
+    }
+
+    var iniDeleteResult = await EnsureSuccess(byName["talvora_ini_delete"], new()
+    {
+        ["path"] = developerIniFile,
+        ["section"] = "app",
+        ["key"] = "mode",
+    });
+    if (iniDeleteResult.StructuredContent is not { } iniDeleteJson ||
+        !iniDeleteJson.GetProperty("changed").GetBoolean() ||
+        iniDeleteJson.GetProperty("matches").GetInt32() != 1)
+    {
+        throw new InvalidOperationException("ini_delete did not remove app.mode.");
+    }
+
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = developerXmlFile,
+        ["content"] = "<root><app mode=\"dev\"><port>7000</port><remove>yes</remove></app></root>",
+    });
+
+    var xmlQueryResult = await EnsureSuccess(byName["talvora_xml_query"], new()
+    {
+        ["path"] = developerXmlFile,
+        ["xpath"] = "/root/app/port",
+    });
+    if (xmlQueryResult.StructuredContent is not { } xmlQueryJson ||
+        xmlQueryJson.GetProperty("count").GetInt32() != 1 ||
+        !string.Equals(
+            xmlQueryJson.GetProperty("nodes").EnumerateArray().Single().GetProperty("value").GetString(),
+            "7000",
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("xml_query did not return the port element.");
+    }
+
+    var xmlSetResult = await EnsureSuccess(byName["talvora_xml_set"], new()
+    {
+        ["path"] = developerXmlFile,
+        ["xpath"] = "/root/app/port",
+        ["value"] = "7676",
+        ["expectedMatches"] = 1,
+    });
+    if (xmlSetResult.StructuredContent is not { } xmlSetJson ||
+        !xmlSetJson.GetProperty("changed").GetBoolean() ||
+        xmlSetJson.GetProperty("matches").GetInt32() != 1)
+    {
+        throw new InvalidOperationException("xml_set did not update the port element.");
+    }
+
+    var xmlAttributeSet = await EnsureSuccess(byName["talvora_xml_set"], new()
+    {
+        ["path"] = developerXmlFile,
+        ["xpath"] = "/root/app/@mode",
+        ["value"] = "prod",
+        ["expectedMatches"] = 1,
+    });
+    if (xmlAttributeSet.StructuredContent is not { } xmlAttributeSetJson ||
+        !xmlAttributeSetJson.GetProperty("changed").GetBoolean())
+    {
+        throw new InvalidOperationException("xml_set did not update the mode attribute.");
+    }
+
+    var xmlDeleteResult = await EnsureSuccess(byName["talvora_xml_delete"], new()
+    {
+        ["path"] = developerXmlFile,
+        ["xpath"] = "/root/app/remove",
+        ["expectedMatches"] = 1,
+    });
+    if (xmlDeleteResult.StructuredContent is not { } xmlDeleteJson ||
+        !xmlDeleteJson.GetProperty("changed").GetBoolean())
+    {
+        throw new InvalidOperationException("xml_delete did not remove the requested element.");
+    }
+
+    var xmlVerifyResult = await EnsureSuccess(byName["talvora_xml_query"], new()
+    {
+        ["path"] = developerXmlFile,
+        ["xpath"] = "concat(/root/app/@mode, ':', /root/app/port)",
+    });
+    if (xmlVerifyResult.StructuredContent is not { } xmlVerifyJson ||
+        !string.Equals(xmlVerifyJson.GetProperty("scalarValue").GetString(), "prod:7676", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("xml_query scalar verification failed.");
+    }
+
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = developerJUnitFile,
+        ["content"] = "<testsuites><testsuite name=\"smoke\" tests=\"2\" failures=\"1\" errors=\"0\" skipped=\"0\" time=\"0.12\"><testcase classname=\"Smoke\" name=\"Pass\" time=\"0.01\"/><testcase classname=\"Smoke\" name=\"Fail\" time=\"0.02\"><failure message=\"boom\">stack line</failure></testcase></testsuite></testsuites>",
+    });
+
+    var reportResult = await EnsureSuccess(byName["talvora_test_report_summary"], new()
+    {
+        ["path"] = developerJUnitFile,
+        ["format"] = "auto",
+        ["maxFailures"] = 0,
+    });
+    if (reportResult.StructuredContent is not { } reportJson ||
+        !string.Equals(reportJson.GetProperty("format").GetString(), "junit", StringComparison.OrdinalIgnoreCase) ||
+        reportJson.GetProperty("total").GetInt32() != 2 ||
+        reportJson.GetProperty("passed").GetInt32() != 1 ||
+        reportJson.GetProperty("failed").GetInt32() != 1 ||
+        reportJson.GetProperty("failureCount").GetInt32() != 1 ||
+        !reportJson.GetProperty("failures").EnumerateArray().Any(failure =>
+            (failure.GetProperty("name").GetString() ?? string.Empty).Contains("Smoke.Fail", StringComparison.Ordinal)))
+    {
+        throw new InvalidOperationException("test_report_summary did not parse the JUnit failure.");
     }
 
     await EnsureSuccess(byName["talvora_write_text"], new()

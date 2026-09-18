@@ -15,6 +15,8 @@ $chocoTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\Cho
 $buildRunnerTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\BuildRunnerTools.cs'))
 $sessionTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\SessionTools.cs'))
 $runtimeTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\RuntimeTools.cs'))
+$networkDiagnosticTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\NetworkDiagnosticTools.cs'))
+$configFormatTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ConfigFormatTools.cs'))
 $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Program.cs'))
@@ -25,6 +27,31 @@ $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
 
 $result = [pscustomobject]@{
+    ConfigFormatToolContract = (
+        $configFormatTools -match 'talvora_dotenv_list' -and
+        $configFormatTools -match 'talvora_dotenv_get' -and
+        $configFormatTools -match 'talvora_dotenv_set' -and
+        $configFormatTools -match 'talvora_dotenv_delete' -and
+        $configFormatTools -match 'talvora_ini_list' -and
+        $configFormatTools -match 'talvora_ini_get' -and
+        $configFormatTools -match 'talvora_ini_set' -and
+        $configFormatTools -match 'talvora_ini_delete' -and
+        $configFormatTools -match 'talvora_xml_query' -and
+        $configFormatTools -match 'talvora_xml_set' -and
+        $configFormatTools -match 'talvora_xml_delete' -and
+        $configFormatTools -match 'talvora_test_report_summary' -and
+        $configFormatTools -match 'TRX, JUnit/xUnit-style XML, or NUnit3'
+    )
+    NetworkDiagnosticToolContract = (
+        $networkDiagnosticTools -match 'talvora_network_interfaces' -and
+        $networkDiagnosticTools -match 'talvora_dns_lookup' -and
+        $networkDiagnosticTools -match 'talvora_ping' -and
+        $networkDiagnosticTools -match 'talvora_tcp_exchange' -and
+        $networkDiagnosticTools -match 'talvora_tls_inspect' -and
+        $networkDiagnosticTools -match 'talvora_websocket_exchange' -and
+        $networkDiagnosticTools -match 'ClientWebSocket' -and
+        $networkDiagnosticTools -match 'SslStream'
+    )
     PythonDockerToolContract = (
         $runtimeTools -match 'talvora_python_info' -and
         $runtimeTools -match 'talvora_python_run' -and
@@ -119,8 +146,8 @@ $result = [pscustomobject]@{
         $gitTools -match 'talvora_git_run' -and
         $gitTools -match 'No Git subcommand, ref, remote, path, or option denylist/allowlist'
     )
-    InstallerDeclares107Tools = (
-        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 107
+    InstallerDeclares125Tools = (
+        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 125
     )
     DeveloperCoreToolContract = (
         $developerTools -match 'talvora_path_info' -and

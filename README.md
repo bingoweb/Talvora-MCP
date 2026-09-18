@@ -99,6 +99,21 @@ Talvora includes structured helpers for common development assets and configurat
 
 Text range/tail operations avoid loading large logs or source files into one MCP response, while `lineCount=0` preserves an explicit unbounded mode. JSON tools use RFC 6901 JSON Pointer syntax and can create, update, query, or delete arbitrary configuration nodes. ZIP tools expose complete archive listing, directory creation, and extraction; extraction is destination-contained by default but `allowOutsideDestination=true` preserves full filesystem semantics when intentionally required. `talvora_http_download` streams HTTP response bodies directly to any accessible path, supports custom headers, redirects, TLS override, overwrite, and byte-range resume, and returns a SHA-256 of the downloaded file.
 
+## Network diagnostics
+
+Talvora exposes structured network-debugging tools for local and remote application development:
+
+- `talvora_network_interfaces`
+- `talvora_dns_lookup`
+- `talvora_ping`
+- `talvora_tcp_exchange`
+- `talvora_tls_inspect`
+- `talvora_websocket_exchange`
+
+These tools complement `talvora_http_request`, `talvora_tcp_connections`, `talvora_tcp_listeners`, and `talvora_wait_tcp`. They provide direct DNS/ICMP/TCP/TLS/WebSocket visibility without forcing every diagnostic through shell text parsing. Targets, ports, headers, subprotocols, and payloads are caller-controlled; no host, network, port, or protocol allowlist is introduced.
+
+`talvora_tcp_exchange` can send raw text or Base64 bytes and return text or Base64 responses. `talvora_tls_inspect` reports negotiated protocol/cipher/ALPN plus certificate and chain details, with optional invalid-certificate continuation for diagnostics. `talvora_websocket_exchange` supports arbitrary ws/wss URLs, headers, subprotocols, text/binary payloads, and bounded or unlimited message capture.
+
 ## Filesystem change watchers
 
 Talvora exposes live filesystem monitoring for development workflows:
@@ -204,6 +219,25 @@ Talvora exposes Python/venv/pip and Docker/Compose helpers for application devel
 Python tools resolve the machine interpreter or an explicitly supplied Python/py launcher, report virtual-environment and pip state, create venvs, and preserve the complete Python/pip argument surface through `python_run` and `pip_run`. Docker discovery reports missing CLI/engine/Compose structurally; Docker commands remain available without container/image/path/subcommand allowlists through `docker_run` and `docker_compose_run`.
 
 On Windows, installing Python/Docker prerequisites remains a machine-software task and should use Talvora's Chocolatey layer rather than WinGet.
+
+## Configuration formats and test reports
+
+Talvora adds first-class structured helpers for common project configuration formats:
+
+- `talvora_dotenv_list`
+- `talvora_dotenv_get`
+- `talvora_dotenv_set`
+- `talvora_dotenv_delete`
+- `talvora_ini_list`
+- `talvora_ini_get`
+- `talvora_ini_set`
+- `talvora_ini_delete`
+- `talvora_xml_query`
+- `talvora_xml_set`
+- `talvora_xml_delete`
+- `talvora_test_report_summary`
+
+The dotenv and INI tools preserve unrelated lines/comments while allowing direct key updates on any accessible file. XML tools accept arbitrary XPath expressions and namespace mappings for query/set/delete operations. Test-report parsing normalizes TRX, JUnit/xUnit-style XML, and NUnit3 into one summary with failed-test details, which makes build/test diagnosis easier without parsing runner-specific XML manually.
 
 ## Environment variable tools
 

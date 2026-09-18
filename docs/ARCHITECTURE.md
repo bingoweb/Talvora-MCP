@@ -90,6 +90,16 @@ ZIP creation stages through a temporary archive before replacing the requested d
 
 HTTP download uses response-header streaming rather than buffering an MCP body. Resume requests use a Range header and append only when the server answers with HTTP 206; a normal 200 response restarts the destination file. A final SHA-256 is returned after the stream is persisted.
 
+## Network diagnostics
+
+The network-diagnostics suite exposes `talvora_network_interfaces`, `talvora_dns_lookup`, `talvora_ping`, `talvora_tcp_exchange`, `talvora_tls_inspect`, and `talvora_websocket_exchange`.
+
+Network-interface discovery uses `NetworkInterface.GetAllNetworkInterfaces` and returns addresses, gateways, DNS/DHCP servers, operational state, type, and speed. DNS and ICMP use the .NET/Windows networking stack directly.
+
+Raw TCP exchange uses `TcpClient` and permits arbitrary host/port/payload combinations with text or Base64 encoding, caller-controlled timeouts, optional half-close, and bounded or unlimited response capture. TLS inspection layers `SslStream` over a direct TCP connection and reports the negotiated protocol, cipher suite, ALPN, certificate, chain, and policy errors. Diagnostic continuation across invalid certificates is explicit and does not hide the reported validation errors.
+
+WebSocket exchange uses `ClientWebSocket` against arbitrary ws/wss URLs with caller-supplied headers, subprotocols, text/binary messages, and receive limits. These APIs add structured observability and protocol testing; they do not narrow the existing unrestricted process, PowerShell, HTTP, or TCP capabilities.
+
 ## Filesystem watchers
 
 The watcher suite exposes `talvora_watch_start`, `talvora_watch_get`, `talvora_watch_list`, `talvora_watch_read`, `talvora_watch_wait`, and `talvora_watch_stop`.
@@ -129,6 +139,14 @@ The runtime suite exposes `talvora_python_info`, `talvora_python_run`, `talvora_
 Python discovery resolves the service PATH or an explicitly supplied interpreter/Windows `py` launcher, then probes `sys.executable`, version, prefix/base-prefix, virtual-environment state, and `python -m pip --version`. Venv creation uses the standard-library `venv` module. Generic Python and pip runners forward arbitrary argument vectors and environment overrides.
 
 Docker discovery distinguishes CLI presence from engine and Compose availability. Container/image listings use Docker's JSON formatter and are returned as structured rows. Log/exec conveniences sit above unrestricted `docker_run`; Compose similarly preserves arbitrary `docker compose` arguments. Missing Docker is a normal structured state rather than a Talvora startup requirement.
+
+## Configuration formats and test reports
+
+The configuration-format suite exposes `talvora_dotenv_list`, `talvora_dotenv_get`, `talvora_dotenv_set`, `talvora_dotenv_delete`, `talvora_ini_list`, `talvora_ini_get`, `talvora_ini_set`, `talvora_ini_delete`, `talvora_xml_query`, `talvora_xml_set`, `talvora_xml_delete`, and `talvora_test_report_summary`.
+
+Dotenv parsing supports ordinary assignments plus the `export` prefix and quoted values; mutations retain unrelated file content. INI parsing supports global keys, named sections, and both equals/colon separators. XML operations use editable `XmlDocument`/XPath navigators and arbitrary namespace prefix mappings, so elements, attributes, and text nodes can be queried or mutated without a schema allowlist.
+
+The test-report reader detects TRX, JUnit/xUnit-style XML, and NUnit3 roots and maps runner-specific counters and failures to a common summary. It is read-only and accepts any accessible report path.
 
 ## Environment variables
 
