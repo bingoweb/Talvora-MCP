@@ -65,16 +65,7 @@ public static class KnowledgeTools
                 {
                     return new TalvoraSearchResponse(results);
                 }
-
-                string fullPath;
-                try
-                {
-                    fullPath = Path.GetFullPath(file);
-                }
-                catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
-                {
-                    continue;
-                }
+                var fullPath = file;
 
                 if (!seenFiles.Add(fullPath))
                 {
@@ -95,7 +86,7 @@ public static class KnowledgeTools
                 try
                 {
                     info = new FileInfo(fullPath);
-                    if (!info.Exists || info.Length > MaxSearchFileBytes)
+                    if (info.Length > MaxSearchFileBytes)
                     {
                         continue;
                     }
