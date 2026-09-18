@@ -27,6 +27,8 @@ string[] required =
     "talvora_env_list",
     "talvora_env_set",
     "talvora_env_delete",
+    "talvora_eventlog_list",
+    "talvora_eventlog_query",
     "talvora_run_process",
     "talvora_run_powershell",
     "talvora_process_list",
@@ -92,6 +94,46 @@ static async Task<string> ReadToolText(
 }
 
 await EnsureSuccess(byName["talvora_system_info"], []);
+
+var eventLogListResult = await EnsureSuccess(byName["talvora_eventlog_list"], new()
+{
+    ["query"] = "System",
+});
+if (eventLogListResult.StructuredContent is not { } eventLogListJson ||
+    !eventLogListJson.TryGetProperty("logs", out var eventLogs) ||
+    eventLogs.ValueKind != System.Text.Json.JsonValueKind.Array ||
+    !eventLogs.EnumerateArray().Any(item =>
+        item.TryGetProperty("logName", out var logName) &&
+        string.Equals(logName.GetString(), "System", StringComparison.OrdinalIgnoreCase)))
+{
+    throw new InvalidOperationException("event log list did not return the System log.");
+}
+
+var eventLogQueryResult = await EnsureSuccess(byName["talvora_eventlog_query"], new()
+{
+    ["logName"] = "System",
+    ["xpath"] = "*",
+    ["maxEvents"] = 5,
+    ["newestFirst"] = true,
+});
+if (eventLogQueryResult.StructuredContent is not { } eventLogQueryJson ||
+    !eventLogQueryJson.TryGetProperty("events", out var eventLogEvents) ||
+    eventLogEvents.ValueKind != System.Text.Json.JsonValueKind.Array ||
+    eventLogEvents.GetArrayLength() == 0 ||
+    eventLogEvents.GetArrayLength() > 5)
+{
+    throw new InvalidOperationException("event log query did not return a bounded System event result.");
+}
+foreach (var eventItem in eventLogEvents.EnumerateArray())
+{
+    if (!eventItem.TryGetProperty("logName", out var eventItemLogName) ||
+        !string.Equals(eventItemLogName.GetString(), "System", StringComparison.OrdinalIgnoreCase) ||
+        !eventItem.TryGetProperty("id", out _) ||
+        !eventItem.TryGetProperty("recordId", out _))
+    {
+        throw new InvalidOperationException("event log query returned an incomplete structured event.");
+    }
+}
 
 var serviceListResult = await EnsureSuccess(byName["talvora_service_list"], new()
 {
