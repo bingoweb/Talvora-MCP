@@ -143,8 +143,12 @@ Get-ChildItem -LiteralPath $env:TEMP -Directory -Filter 'Talvora*' -ErrorAction 
 $clientHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE '.codex' }
 Remove-TalvoraClientTables -Path (Join-Path $clientHome 'config.toml')
 
-if (Test-Path -LiteralPath $RepoRoot) {
-    Remove-Item -LiteralPath $RepoRoot -Recurse -Force
+if (-not (Test-Path -LiteralPath $RepoRoot -PathType Container)) {
+    throw "Talvora local repository was not found: $RepoRoot"
+}
+
+if (-not (Test-Path -LiteralPath (Join-Path $RepoRoot 'src\Talvora\Talvora.csproj') -PathType Leaf)) {
+    throw "Talvora local repository is incomplete: $RepoRoot"
 }
 
 if (-not (Get-Command choco.exe -ErrorAction SilentlyContinue)) {
@@ -157,9 +161,7 @@ if (-not (Get-Command git.exe -ErrorAction SilentlyContinue)) { choco install gi
 if (-not (Get-Command dotnet.exe -ErrorAction SilentlyContinue)) { choco install dotnet-10.0-sdk --version=10.0.400 -y --no-progress }
 $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
 
-Write-Host 'Cloning the clean Talvora main branch...'
-git clone --branch main --single-branch https://github.com/bingoweb/Talvora-MCP.git $RepoRoot
-if ($LASTEXITCODE -ne 0) { throw "git clone failed: $LASTEXITCODE" }
+Write-Host "Installing Talvora from local repository: $RepoRoot"
 
 & (Join-Path $RepoRoot 'scripts\Install.ps1') -RepoRoot $RepoRoot -ClientHome $clientHome
 if ($LASTEXITCODE -ne 0) { throw "Talvora installation failed: $LASTEXITCODE" }
