@@ -30,13 +30,25 @@ $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
 
 $result = [pscustomobject]@{
+    BuildScriptPreventsConcurrentBuilds = (
+        $buildInstallerScript -match "Global\\Talvora\.BuildWindowsInstaller" -and
+        $buildInstallerScript -match '\$BuildMutex\.WaitOne\(0\)' -and
+        $buildInstallerScript -match 'Another Talvora Windows installer build is already running' -and
+        $buildInstallerScript -match '\$BuildMutex\.ReleaseMutex\(\)' -and
+        $buildInstallerScript -match 'finally\s*\{'
+    )
     BuildScriptVerifiesPayloadArchive = (
+        $buildInstallerScript -match 'Add-Type -AssemblyName System\.IO\.Compression' -and
+        $buildInstallerScript -match 'function Get-PayloadFileManifest' -and
+        $buildInstallerScript -match 'function Assert-RequiredPayloadFiles' -and
+        $buildInstallerScript -match 'function Wait-PayloadFilesReady' -and
         $buildInstallerScript -match 'function New-VerifiedPayloadArchive' -and
-        $buildInstallerScript -match 'function Assert-PayloadReadable' -and
-        $buildInstallerScript -match 'catch \[IO\.IOException\]' -and
-        $buildInstallerScript -match 'Remove-Item -LiteralPath \$Destination' -and
-        $buildInstallerScript -match '\$archive\.Entries\.Count -ne \$expectedFileCount' -and
-        $buildInstallerScript -match 'New-VerifiedPayloadArchive -Source \$PayloadRoot -Destination \$PayloadZip -Attempts 5'
+        $buildInstallerScript -match '\$ServicePayloadManifest' -and
+        $buildInstallerScript -match '\$TrayPayloadManifest' -and
+        $buildInstallerScript -match '\$PayloadManifest' -and
+        $buildInstallerScript -match '\$archive\.CreateEntry' -and
+        $buildInstallerScript -match '\$verified\.Entries\.Count -ne \$Files\.Count' -and
+        $buildInstallerScript -match 'New-VerifiedPayloadArchive -Files \$PayloadManifest -Destination \$PayloadZip -Attempts 5'
     )
     HttpMockToolContract = (
         $httpMockTools -match 'talvora_http_mock_start' -and
