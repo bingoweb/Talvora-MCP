@@ -73,6 +73,24 @@ jobs:
           $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
           & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script -SelfTest
           if ($LASTEXITCODE -ne 0) { throw "Windows PowerShell 5.1 Business tunnel bootstrap self-test failed: $LASTEXITCODE" }
+
+          $distributionRoot = Join-Path $env:RUNNER_TEMP 'talvora-openai-tunnel-client'
+          & $script -InstallOnly -InstallRoot $distributionRoot
+          if (-not $?) { throw 'Business tunnel distribution install failed.' }
+
+          $tunnelClient = Join-Path $distributionRoot 'bin\tunnel-client.exe'
+          if (-not (Test-Path -LiteralPath $tunnelClient -PathType Leaf)) { throw "Installed tunnel-client missing: $tunnelClient" }
+
+          $versionOutput = @(& $tunnelClient --version 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "tunnel-client --version failed: $LASTEXITCODE" }
+          if (($versionOutput -join ' ') -notmatch '0\.0\.14') { throw "Unexpected tunnel-client version: $($versionOutput -join ' ')" }
+
+          $connectHelp = @(& $tunnelClient runtimes connect --help 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "tunnel-client runtimes connect --help failed: $LASTEXITCODE" }
+          $connectHelpText = $connectHelp -join [Environment]::NewLine
+          foreach ($requiredFlag in @('--tunnel-id','--runtime-api-key','--mcp-server-url')) {
+            if ($connectHelpText -notmatch [regex]::Escape($requiredFlag)) { throw "tunnel-client connect help missing $requiredFlag" }
+          }
       - name: Install and verify LocalSystem service
         shell: pwsh
         run: |
