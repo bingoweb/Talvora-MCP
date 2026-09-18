@@ -1,3 +1,4 @@
+using Talvora;
 using System.Security.Principal;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using ModelContextProtocol.AspNetCore;
@@ -22,10 +23,13 @@ var app = builder.Build();
 app.MapGet("/healthz", () =>
 {
     var identity = OperatingSystem.IsWindows() ? WindowsIdentity.GetCurrent() : null;
+    var runtime = TalvoraRuntimeMetadata.Load();
     return Results.Json(new
     {
         product = "Talvora",
         version = "3.0.0-dev",
+        sourceCommit = runtime.SourceCommit,
+        installedAtUtc = runtime.InstalledAtUtc,
         mcp = "/mcp",
         processId = Environment.ProcessId,
         user = Environment.UserName,
