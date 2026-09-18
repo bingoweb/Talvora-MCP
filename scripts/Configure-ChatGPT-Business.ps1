@@ -511,7 +511,7 @@ try {
     Write-Host '1. Enable Developer mode as a Business workspace Admin/Owner.'
     Write-Host '2. Open Workspace settings > Apps > Create.'
     Write-Host '3. Choose Connection: Tunnel and select/paste the tunnel ID above.'
-    Write-Host '4. Review the 151 Talvora actions and publish the app to the workspace.'
+    Write-Host '4. Review the 156 Talvora actions and publish the app to the workspace.'
     Write-Host 'Connector settings: https://chatgpt.com/#settings/Connectors'
 }
 finally {

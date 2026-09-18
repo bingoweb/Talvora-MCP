@@ -20,6 +20,7 @@ $windowsToolchainTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvor
 $httpMockTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\HttpMockTools.cs'))
 $configFormatTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ConfigFormatTools.cs'))
 $sqliteTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\SqliteTools.cs'))
+$devServerTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\DevServerTools.cs'))
 $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Program.cs'))
@@ -231,8 +232,22 @@ $result = [pscustomobject]@{
         $installerProgram -match 'talvora_sqlite_schema' -and
         $installerProgram -match 'talvora_sqlite_backup'
     )
-    InstallerDeclares151Tools = (
-        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 151
+    DevServerToolContract = (
+        $devServerTools -match 'talvora_dev_server_start' -and
+        $devServerTools -match 'talvora_dev_server_get' -and
+        $devServerTools -match 'talvora_dev_server_list' -and
+        $devServerTools -match 'talvora_dev_server_wait' -and
+        $devServerTools -match 'talvora_dev_server_stop' -and
+        $devServerTools -match 'JobTools\.Start' -and
+        $devServerTools -match 'JobTools\.Stop' -and
+        $devServerTools -match 'TcpClient' -and
+        $devServerTools -match 'HttpClient' -and
+        $devServerTools -match 'DevServers' -and
+        $installerProgram -match 'talvora_dev_server_start' -and
+        $installerProgram -match 'talvora_dev_server_stop'
+    )
+    InstallerDeclares156Tools = (
+        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 156
     )
     DeveloperCoreToolContract = (
         $developerTools -match 'talvora_path_info' -and

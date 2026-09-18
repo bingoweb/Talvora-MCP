@@ -400,6 +400,11 @@ internal static class InstallerEngine
         "talvora_sqlite_execute",
         "talvora_sqlite_schema",
         "talvora_sqlite_backup",
+        "talvora_dev_server_start",
+        "talvora_dev_server_get",
+        "talvora_dev_server_list",
+        "talvora_dev_server_wait",
+        "talvora_dev_server_stop",
     };
 
     public static async Task<HealthSnapshot> InstallAsync(

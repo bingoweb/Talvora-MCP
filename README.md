@@ -69,6 +69,22 @@ Talvora can keep development processes alive without blocking one MCP request:
 
 A job may launch any executable with arbitrary arguments, working directory, and environment overrides under the LocalSystem service. stdout/stderr are persisted under `%ProgramData%\Talvora\Jobs\<jobId>` and can be tailed incrementally. Job metadata keeps PID/start-time identity so running processes remain discoverable across a Talvora service restart; stdin remains available while the originating service instance owns the redirected pipe. Stopping a job can terminate the complete process tree. `talvora_job_delete` removes persisted metadata/stdout/stderr and can optionally stop a still-running job before cleanup. These tools do not replace or restrict the unrestricted process/Powershell controls.
 
+## Development-server orchestration
+
+Talvora can turn the existing persistent job/process layer into a one-handle development-server workflow:
+
+- `talvora_dev_server_start`
+- `talvora_dev_server_get`
+- `talvora_dev_server_list`
+- `talvora_dev_server_wait`
+- `talvora_dev_server_stop`
+
+`talvora_dev_server_start` launches any executable through the unrestricted `JobTools` path and optionally waits for TCP and/or HTTP readiness. TCP host/port, HTTP URL/method/headers/status expectations, probe timeout, poll interval, TLS-validation bypass, and all-vs-any readiness semantics are caller-controlled. With no readiness probe, a successfully running job is immediately ready.
+
+Definitions are persisted under `%ProgramData%\Talvora\DevServers` while stdout/stderr and process identity remain owned by the existing Jobs subsystem. This means get/list/wait continue to work after a Talvora service restart. Status calls include bounded stdout/stderr tails so a failed readiness probe can be diagnosed without a second log call; `logTailBytes=0` requests the complete currently persisted stream.
+
+`stopOnFailure` can terminate the complete process tree after a readiness timeout, and `talvora_dev_server_stop` can optionally remove both job artifacts and the orchestration definition. These helpers do not replace or restrict `talvora_job_*`, raw process control, PowerShell, TCP, or HTTP tools; they simply collapse the common start → wait → inspect → stop loop into one structured workflow.
+
 ## Structured Git tools
 
 Talvora also exposes repository-aware Git operations:

@@ -167,6 +167,11 @@ string[] required =
     "talvora_sqlite_execute",
     "talvora_sqlite_schema",
     "talvora_sqlite_backup",
+    "talvora_dev_server_start",
+    "talvora_dev_server_get",
+    "talvora_dev_server_list",
+    "talvora_dev_server_wait",
+    "talvora_dev_server_stop",
 ];
 
 foreach (var name in required)
@@ -3278,6 +3283,152 @@ finally
     }
     catch
     {
+    }
+}
+
+
+var devServerPort = GetFreeLoopbackTcpPort();
+var devServerBody = "talvora-dev-server-" + smokeId;
+var powershellExe = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+    "System32",
+    "WindowsPowerShell",
+    "v1.0",
+    "powershell.exe");
+
+var devServerScript = string.Join(
+    "; ",
+    "$ErrorActionPreference='Stop'",
+    $"$listener=[System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback,{devServerPort})",
+    "$listener.Start()",
+    "[Console]::Out.WriteLine('READY')",
+    "[Console]::Out.Flush()",
+    "$crlf=[Environment]::NewLine",
+    "try { while ($true) { $client=$listener.AcceptTcpClient(); try { $stream=$client.GetStream(); $buffer=New-Object byte[] 4096; $read=$stream.Read($buffer,0,$buffer.Length); if ($read -gt 0) { " +
+        $"$body=[Text.Encoding]::UTF8.GetBytes('{devServerBody}'); " +
+        "$headerText='HTTP/1.1 200 OK'+$crlf+'Content-Type: text/plain'+$crlf+'Content-Length: '+$body.Length+$crlf+'Connection: close'+$crlf+$crlf; " +
+        "$headers=[Text.Encoding]::ASCII.GetBytes($headerText); " +
+        "$stream.Write($headers,0,$headers.Length); $stream.Write($body,0,$body.Length); $stream.Flush() } } catch { } finally { $client.Dispose() } } } finally { $listener.Stop() }");
+
+var devServerStartResult = await EnsureSuccess(byName["talvora_dev_server_start"], new()
+{
+    ["executable"] = powershellExe,
+    ["arguments"] = new[]
+    {
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        devServerScript,
+    },
+    ["workingDirectory"] = repositoryPath,
+    ["tcpHost"] = "127.0.0.1",
+    ["tcpPort"] = devServerPort,
+    ["httpUrl"] = $"http://127.0.0.1:{devServerPort}/health",
+    ["expectedStatusCodes"] = new[] { 200 },
+    ["requireAll"] = true,
+    ["timeoutSeconds"] = 15,
+    ["probeTimeoutSeconds"] = 2,
+    ["pollIntervalMilliseconds"] = 100,
+    ["stopOnFailure"] = true,
+    ["logTailBytes"] = 4096,
+});
+
+if (devServerStartResult.StructuredContent is not { } devServerStartJson ||
+    !devServerStartJson.GetProperty("ready").GetBoolean() ||
+    !devServerStartJson.GetProperty("tcpProbe").GetProperty("ready").GetBoolean() ||
+    !devServerStartJson.GetProperty("httpProbe").GetProperty("ready").GetBoolean() ||
+    !devServerStartJson.GetProperty("stdoutTail").GetString()!.Contains("READY", StringComparison.Ordinal))
+{
+    throw new InvalidOperationException("dev-server start did not reach combined TCP/HTTP readiness.");
+}
+
+var devServerJobId = devServerStartJson.GetProperty("jobId").GetString()
+    ?? throw new InvalidOperationException("dev-server start returned no job ID.");
+
+try
+{
+    var devServerGetResult = await EnsureSuccess(byName["talvora_dev_server_get"], new()
+    {
+        ["jobId"] = devServerJobId,
+        ["logTailBytes"] = 4096,
+    });
+
+    if (devServerGetResult.StructuredContent is not { } devServerGetJson ||
+        !devServerGetJson.GetProperty("ready").GetBoolean() ||
+        !string.Equals(
+            devServerGetJson.GetProperty("state").GetString(),
+            "Running",
+            StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException("dev-server get did not report a ready running server.");
+    }
+
+    var devServerListResult = await EnsureSuccess(byName["talvora_dev_server_list"], new()
+    {
+        ["includeExited"] = false,
+        ["maxResults"] = 0,
+    });
+
+    if (devServerListResult.StructuredContent is not { } devServerListJson ||
+        !devServerListJson.GetProperty("servers").EnumerateArray().Any(server =>
+            string.Equals(
+                server.GetProperty("jobId").GetString(),
+                devServerJobId,
+                StringComparison.OrdinalIgnoreCase)))
+    {
+        throw new InvalidOperationException("dev-server list did not include the running smoke server.");
+    }
+
+    var devServerWaitResult = await EnsureSuccess(byName["talvora_dev_server_wait"], new()
+    {
+        ["jobId"] = devServerJobId,
+        ["timeoutSeconds"] = 5,
+        ["stopOnFailure"] = false,
+        ["logTailBytes"] = 4096,
+    });
+
+    if (devServerWaitResult.StructuredContent is not { } devServerWaitJson ||
+        !devServerWaitJson.GetProperty("ready").GetBoolean())
+    {
+        throw new InvalidOperationException("dev-server wait did not preserve ready state.");
+    }
+
+    var directHttpResult = await EnsureSuccess(byName["talvora_http_request"], new()
+    {
+        ["method"] = "GET",
+        ["url"] = $"http://127.0.0.1:{devServerPort}/smoke",
+        ["responseMode"] = "text",
+        ["maxResponseBytes"] = 4096,
+    });
+
+    if (directHttpResult.StructuredContent is not { } directHttpJson ||
+        directHttpJson.GetProperty("statusCode").GetInt32() != 200 ||
+        !string.Equals(
+            directHttpJson.GetProperty("body").GetString(),
+            devServerBody,
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("dev-server smoke endpoint returned an unexpected response.");
+    }
+}
+finally
+{
+    var devServerStopResult = await EnsureSuccess(byName["talvora_dev_server_stop"], new()
+    {
+        ["jobId"] = devServerJobId,
+        ["entireProcessTree"] = true,
+        ["timeoutSeconds"] = 15,
+        ["deleteArtifacts"] = true,
+    });
+
+    if (devServerStopResult.StructuredContent is not { } devServerStopJson ||
+        !devServerStopJson.GetProperty("exited").GetBoolean() ||
+        !devServerStopJson.GetProperty("deleted").GetBoolean())
+    {
+        throw new InvalidOperationException("dev-server stop did not exit and clean up the smoke server.");
     }
 }
 

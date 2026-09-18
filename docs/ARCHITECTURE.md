@@ -70,6 +70,18 @@ Start uses `ProcessStartInfo.ArgumentList` with shell execution disabled and sup
 
 The live service instance owns the redirected stdin pipe, so `talvora_job_write_stdin` works while that same Talvora process remains attached. Job get/list still recover persisted process state after a service restart. Stop defaults to complete process-tree termination. Delete removes the persisted job directory and can stop a running job first when explicitly requested. Arbitrary PID control remains available through `talvora_process_kill`.
 
+## Development-server orchestration
+
+The dev-server suite exposes `talvora_dev_server_start`, `talvora_dev_server_get`, `talvora_dev_server_list`, `talvora_dev_server_wait`, and `talvora_dev_server_stop`. It deliberately reuses `JobTools.Start/Get/Stop/Delete` rather than maintaining a second process manager.
+
+A dev-server definition stores its job ID plus optional TCP and HTTP readiness probes under `%ProgramData%\Talvora\DevServers\<jobId>.json`. Metadata writes stage through a temporary file and atomically replace the target. Because the underlying job metadata and stdout/stderr also live under ProgramData, orchestration state remains recoverable after the Talvora service restarts.
+
+TCP readiness uses cancellation-aware `TcpClient.ConnectAsync`. HTTP readiness uses shared `HttpClient` instances with response-header completion, caller headers/method, optional TLS validation bypass, and optional explicit acceptable status codes; an empty status-code set treats any HTTP response as proof that the HTTP stack is accepting requests. When both probes are present, callers choose all-or-any semantics.
+
+Wait polls the persisted definition while checking the root job state. A process that exits before readiness is reported distinctly from a readiness timeout. Optional timeout cleanup delegates to the existing full process-tree stop behavior. Get performs one probe pass and returns stdout/stderr tails for immediate diagnosis. List intentionally avoids network probes and combines persisted definitions with current job state.
+
+This layer is orchestration only. Executables, arguments, environment overrides, hosts, ports, URLs, and headers are not constrained by a Talvora allowlist; the lower-level job, process, PowerShell, TCP, and HTTP surfaces remain available unchanged.
+
 ## Git
 
 The Git suite exposes `talvora_git_info`, `talvora_git_status`, `talvora_git_diff`, `talvora_git_log`, `talvora_git_branches`, and `talvora_git_run`.
