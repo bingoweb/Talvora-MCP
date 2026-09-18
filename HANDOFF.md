@@ -23,8 +23,8 @@ Do these steps in order:
 4. Check the latest Windows CI run for the current `main`.
 5. If a local MCP namespace/connector named `talvora_local` is actually available in the new session, call `talvora_system_info` before doing local-machine work and compare its `SourceCommit` with current GitHub `main`.
 6. If `talvora_local` is **not** available in that session, do not claim access to the user's Windows machine and do not stall. Continue GitHub/Windows-CI development and say only when relevant that physical-PC deployment cannot be executed from that surface.
-7. Continue directly with the **approved next bounded task in section 11**. The user's request for automatic continuation is explicit approval of that already-presented bounded design. Do not ask for another routine approval before starting that task.
-8. For any genuinely new architectural subsystem not covered by this handoff, follow the normal design/approval rules before implementation.
+7. Read section 11 for the completed filesystem-mutation TDD evidence. There is no further bounded subsystem pre-approved by this handoff.
+8. For the next genuinely new architectural subsystem, reassess current `main`, present a short bounded design when needed, and follow the normal approval rules before implementation.
 
 ---
 
@@ -58,11 +58,12 @@ Repository:
 
 - GitHub: `bingoweb/Talvora-MCP`
 - Canonical branch: `main`
-- Last fully verified product/runtime commit before this handoff file:  
-  `efd880137d6dfeb912d0e6e388d3a2fdadd9abcb`
-- Windows CI run for that commit: **#302 — SUCCESS**
-- Open PRs at that point: none.
-- Historical branch names existed, but all branch refs were aligned to the same verified commit before this handoff was created.
+- Last fully verified code/docs commit before this handoff update:  
+  `093bab372ae5ae6bcb727a32882b9697ca5f9ef1`
+- Windows CI run for that commit: **#308 — SUCCESS**
+- That run proved the direct MCP smoke and the real elevated LocalSystem installer/service smoke with **26 tools**.
+- A temporary draft PR was used only to obtain Windows pull-request CI during TDD; close it after the final handoff HEAD is verified and promoted to `main`.
+- Historical branch refs must be aligned to the final verified handoff HEAD after promotion.
 
 Important: after this `HANDOFF.md` is committed, `main` will naturally have a newer documentation-only SHA. Always refresh the real branch before modifying anything.
 
@@ -105,7 +106,7 @@ The `approve` tool mode was intentionally kept because current Codex MCP semanti
 
 ---
 
-## 4. Current MCP tool surface: 23 verified tools
+## 4. Current MCP tool surface: 26 verified tools
 
 ### Full-capability primitives — 6
 
@@ -116,13 +117,31 @@ The `approve` tool mode was intentionally kept because current Codex MCP semanti
 5. `talvora_list`
 6. `talvora_run_process`
 
-The filesystem/process primitives are not restricted to the knowledge corpus. They run with the Talvora service account's Windows privileges.
+The filesystem/process primitives remain unrestricted by the knowledge corpus and run with the Talvora service account's Windows privileges.
+
+### Structured filesystem mutation — 3
+
+7. `talvora_create_directory`
+8. `talvora_copy`
+9. `talvora_move`
+
+Behavior:
+
+- Create-directory creates missing parents and is idempotent for an existing directory.
+- Copy supports files and directories.
+- Directory copy requires `recursive=true`; `recursive=false` fails before creating a partial destination.
+- `overwrite=false` rejects collisions.
+- `overwrite=true` replaces conflicting copied entries while preserving non-conflicting entries already present in a destination directory.
+- Directory copy preflights the complete source tree and rejects source reparse points before destination mutation, preventing accidental junction/symlink recursion loops.
+- Move supports files and directories; with `overwrite=true` the destination is removed/replaced before moving.
+- Same-path operations and directory-into-descendant operations are rejected as invalid filesystem operations.
+- No path allowlist or deny-list is applied.
 
 ### Structured process inspection/control — 3
 
-7. `talvora_process_list`
-8. `talvora_process_get`
-9. `talvora_process_kill`
+10. `talvora_process_list`
+11. `talvora_process_get`
+12. `talvora_process_kill`
 
 Behavior:
 
@@ -134,7 +153,7 @@ Behavior:
 
 ### PowerShell execution — 1
 
-10. `talvora_run_powershell`
+13. `talvora_run_powershell`
 
 Behavior:
 
@@ -149,56 +168,31 @@ Behavior:
 
 ### Windows registry — 6
 
-11. `talvora_registry_create_key`
-12. `talvora_registry_get`
-13. `talvora_registry_set`
-14. `talvora_registry_list`
-15. `talvora_registry_delete_value`
-16. `talvora_registry_delete_key`
+14. `talvora_registry_create_key`
+15. `talvora_registry_get`
+16. `talvora_registry_set`
+17. `talvora_registry_list`
+18. `talvora_registry_delete_value`
+19. `talvora_registry_delete_key`
 
-Behavior:
-
-- Hives: HKLM, HKCU, HKCR, HKU, HKCC, HKPD.
-- Registry views: default, 32-bit, 64-bit.
-- Value kinds: String, ExpandString, MultiString, DWORD, QWORD, Binary, None.
-- ExpandString reads are not environment-expanded.
-- Deterministic ordinal listings.
-- No registry hive/path allowlist.
-- Under LocalSystem, HKCU means the LocalSystem profile. User-specific registry work can use HKU with the target SID.
+Behavior remains unchanged: HKLM/HKCU/HKCR/HKU/HKCC/HKPD, default/32/64-bit views, structured value kinds, deterministic listings, and no hive/path allowlist.
 
 ### Windows service control — 5
 
-17. `talvora_service_list`
-18. `talvora_service_get`
-19. `talvora_service_start`
-20. `talvora_service_stop`
-21. `talvora_service_restart`
+20. `talvora_service_list`
+21. `talvora_service_get`
+22. `talvora_service_start`
+23. `talvora_service_stop`
+24. `talvora_service_restart`
 
-Behavior:
-
-- Structured Service Control Manager access through `System.ServiceProcess.ServiceController`.
-- List/get/start/stop/restart.
-- Missing service get returns `found=false`.
-- State-aware waits with explicit timeout.
-- No service-name allowlist.
-- Talvora does not block targeting its own service; doing so can terminate the MCP connection. That is an accepted consequence of the full-capability model.
+Behavior remains unchanged: structured SCM access, state-aware waits, missing-service handling, and no service-name allowlist.
 
 ### Business knowledge surface — 2
 
-22. `search`
-23. `fetch`
+25. `search`
+26. `fetch`
 
-Behavior:
-
-- `search(query)` returns structured `{ results: [{ id, title, text, url }] }`.
-- `fetch(id)` returns complete text + URL + metadata.
-- Default knowledge roots focus on useful documents instead of blindly traversing the whole disk:
-  - Public Documents
-  - each Windows user's Documents/Desktop/Downloads/OneDrive*
-  - `%ProgramData%\Talvora`
-- `TALVORA_KNOWLEDGE_ROOTS` can replace the knowledge corpus.
-- That environment variable affects only knowledge retrieval; it does **not** restrict the primitive filesystem/process tools.
-- Search has a bounded time budget and can return partial results.
+The knowledge corpus remains a read-only retrieval surface and does not restrict primitive or structured filesystem/process capabilities.
 
 ---
 
@@ -287,16 +281,19 @@ The CI service-install gate now proves:
 - it detects Windows Service hosting;
 - `health.sourceCommit == git rev-parse HEAD`;
 - `current.json.SourceCommit == git rev-parse HEAD`;
-- `current.json.ToolCount == 23`;
-- `ToolNames` count is 23;
+- `current.json.ToolCount == 26`;
+- `ToolNames` count is 26;
 - core expected tools are present in the manifest.
 
-The final verified CI for this thread is:
+The filesystem-mutation thread has a fully successful Windows verification before this handoff update:
 
-- Commit: `efd880137d6dfeb912d0e6e388d3a2fdadd9abcb`
+- Commit: `093bab372ae5ae6bcb727a32882b9697ca5f9ef1`
 - Workflow: `windows-ci`
-- Run: **#302**
+- Run: **#308**
 - Result: **SUCCESS**
+- Direct MCP smoke: SUCCESS
+- Real LocalSystem installer/service smoke: SUCCESS
+- Installed manifest: 26 tools
 
 A transient implementation bug occurred while patching `Install.ps1`: a JavaScript replacement string interpreted the PowerShell regex's trailing `$'` as a replacement metacharacter and duplicated/corrupted the installer tail. This was diagnosed from the PowerShell parser output and fixed by reconstructing one canonical 187-line installer while preserving the provenance + manifest behavior. Do not reintroduce that broken 376-line duplicate form.
 
@@ -320,7 +317,7 @@ A transient implementation bug occurred while patching `Install.ps1`: a JavaScri
 12. verify Windows Service detection;
 13. verify exact source commit provenance;
 14. verify installed state file;
-15. verify 23-tool manifest;
+15. verify 26-tool manifest;
 16. cleanup service and runtime state.
 
 A change is not complete until the final canonical HEAD has a fresh successful run of this workflow.
@@ -390,80 +387,39 @@ Current project policy:
 
 ---
 
-## 11. NEXT TASK — already approved for automatic continuation
+## 11. COMPLETED TASK — structured filesystem mutation tools
 
-This is the next bounded change and should start immediately in the new session after refreshing current repository state.
+The approved filesystem mutation task is complete in the verified code/docs commit `093bab372ae5ae6bcb727a32882b9697ca5f9ef1`.
 
-### Goal
-
-Add three structured full-capability filesystem mutation tools:
+Implemented:
 
 1. `talvora_create_directory`
 2. `talvora_copy`
 3. `talvora_move`
 
-These are ergonomic structured tools. They must not reduce or replace the unrestricted filesystem/process primitives.
+TDD/CI evidence:
 
-### Contract
+- RED commit: `fdf539a0f34edea264b1b60db81f7cb917cb6d5a`.
+- Windows CI **#304** restored and built both projects with zero errors, then failed the real MCP smoke specifically with `Missing MCP tool: talvora_create_directory`.
+- Production implementation commit: `583f2d11bda4e12a13ffd3f8ccc31422fee440ab`.
+- Windows CI **#305** passed build, direct MCP smoke, installer parsing and WinGet rejection; its real installer wrote `ToolCount=26` and then failed only because the old CI assertion still expected 23. This proved the runtime/tool manifest changed before the gate was updated.
+- CI manifest expectation was then changed from 23 to 26.
+- README and architecture were updated; the duplicate Process inspection/control architecture section was collapsed to one canonical section.
+- Windows CI **#308** on `093bab372ae5ae6bcb727a32882b9697ca5f9ef1` completed fully SUCCESS, including direct MCP smoke and the real elevated LocalSystem installation/service smoke.
 
-#### `talvora_create_directory(path)`
+Chosen reparse-point contract:
 
-- Creates the complete directory path, including missing parents.
-- Idempotent when the directory already exists.
-- Returns structured data with at least normalized/full path and whether creation changed filesystem state.
-- No path allowlist.
+- Directory copy preflights the source tree.
+- A source reparse point causes a tool error before destination mutation.
+- This avoids accidental infinite traversal while preserving unrestricted path addressability; it is traversal semantics, not an allowlist.
 
-#### `talvora_copy(source, destination, overwrite = false, recursive = true)`
-
-- Supports files and directories.
-- File copy honors `overwrite`.
-- Directory copy is recursive when `recursive=true`.
-- If a directory source is used with `recursive=false`, fail clearly rather than silently producing a partial tree.
-- Existing destination collisions must be deterministic:
-  - `overwrite=false` => structured/tool error;
-  - `overwrite=true` => replace conflicting file destination and merge/replace conflicting copied entries predictably.
-- Preserve unrestricted addressability; no path allowlist.
-- Reparse points must not create accidental infinite recursion. Treat them deliberately and test the chosen behavior.
-
-#### `talvora_move(source, destination, overwrite = false)`
-
-- Supports files and directories.
-- `overwrite=false` => deterministic error when destination exists.
-- `overwrite=true` => remove/replace the destination then move.
-- Return structured source/destination/type/change information.
-- No path allowlist.
-
-### TDD sequence
-
-1. Read current `FileTools.cs` and current smoke test before editing.
-2. Add the three names to the smoke required-tool set.
-3. Add real filesystem smoke behavior under a disposable temp/Public Documents tree:
-   - create nested directory;
-   - create a source file using existing `talvora_write_text`;
-   - copy file and verify via existing `talvora_read_text`;
-   - construct nested directory tree and copy it recursively;
-   - move a file;
-   - move a directory;
-   - prove `overwrite=false` rejects collision;
-   - prove `overwrite=true` replaces as designed;
-   - cleanup in `finally`.
-4. Commit/run RED and verify failure is specifically due to missing new tool(s), not a typo/build error.
-5. Implement the minimal production behavior.
-6. Run the full Windows workflow to GREEN.
-7. Update installer provenance/tool-manifest CI expectations from **23 to 26**.
-8. Run full Windows workflow again. The real installed LocalSystem service must report and smoke all **26** tools.
-9. Update README + architecture.
-10. Run final canonical HEAD CI again.
-11. Align all historical branch refs to that verified HEAD.
-12. Confirm open PR count and branch alignment.
-
-Do not ask the user to approve this bounded task again. Their request for the next session to continue automatically is the approval.
+No primitive tool was removed or restricted.
 
 ---
 
-## 12. After the next filesystem task
+## 12. Next development task
 
-Do not automatically invent a large new subsystem. Reassess current repo and choose the next highest-value Windows capability.
+There is no additional bounded subsystem pre-approved by this handoff. Reassess current `main` and choose the next highest-value Windows capability one bounded change at a time.
 
 Likely future candidates, subject to a new short design:
 
@@ -482,11 +438,9 @@ Do not add several of these in one commit. Continue one bounded capability at a 
 
 ---
 
-## 13. Known housekeeping item
+## 13. Housekeeping status
 
-`docs/ARCHITECTURE.md` currently contains a duplicated `Process inspection and control` section from overlapping documentation commits. This is documentation-only duplication, not a runtime defect.
-
-When updating architecture docs for the next filesystem task, collapse the duplicate process section into one canonical section without changing runtime behavior.
+The duplicate `Process inspection and control` section in `docs/ARCHITECTURE.md` was removed during the filesystem mutation documentation update. The file now has one canonical process section.
 
 ---
 
@@ -515,12 +469,12 @@ Before doing new code:
 - [ ] Preserve full-capability/LocalSystem design.
 - [ ] Chocolatey only; reject WinGet.
 - [ ] No OpenAI API key requirement.
-- [ ] Start the approved filesystem tools task with RED smoke.
-- [ ] Update 23 -> 26 manifest expectation only after the tool implementation is real.
-- [ ] Verify direct MCP smoke + real LocalSystem installer smoke.
-- [ ] Update docs and collapse duplicate process documentation section.
+- [ ] Confirm the 26-tool manifest is still current.
+- [ ] Preserve direct MCP smoke + real LocalSystem installer smoke for every behavior change.
+- [ ] Do not reopen the completed filesystem-mutation task unless fixing a discovered defect.
+- [ ] For a new subsystem, keep the change bounded and use RED -> GREEN.
 - [ ] Final CI on canonical HEAD.
-- [ ] Align historical branch refs.
+- [ ] Keep historical branch refs aligned.
 - [ ] No open PRs unless intentionally created.
 
 This handoff is intended to let the next session continue without relying on hidden prior-chat context.
