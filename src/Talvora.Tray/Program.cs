@@ -40,12 +40,6 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        using var mutex = new Mutex(initiallyOwned: true, @"Local\Talvora.Tray", out var createdNew);
-        if (!createdNew)
-        {
-            return 0;
-        }
-
         if (args.Any(arg => string.Equals(arg, "--reconnect", StringComparison.OrdinalIgnoreCase)))
         {
             try
@@ -74,6 +68,12 @@ internal static class Program
                 TrayLog.Write("Self-test failed", ex);
                 return 1;
             }
+        }
+
+        using var mutex = new Mutex(initiallyOwned: true, @"Local\Talvora.Tray", out var createdNew);
+        if (!createdNew)
+        {
+            return 0;
         }
 
         Application.EnableVisualStyles();

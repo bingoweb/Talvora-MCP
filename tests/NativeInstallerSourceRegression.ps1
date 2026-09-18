@@ -18,6 +18,11 @@ $result = [pscustomobject]@{
         $trayProgram -match 'CryptUnprotectData' -and
         $trayProgram -notmatch 'powershell\.exe'
     )
+    TrayCommandModesBeforeMutex = (
+        $trayProgram.IndexOf('--reconnect', [StringComparison]::Ordinal) -ge 0 -and
+        $trayProgram.IndexOf('new Mutex', [StringComparison]::Ordinal) -gt
+            $trayProgram.IndexOf('--reconnect', [StringComparison]::Ordinal)
+    )
     InstallerEmbedsPayload = ($installerProject -match 'EmbeddedResource Include="Payload\.zip"')
     InstallerRequiresAdmin = ($manifest -match 'requestedExecutionLevel level="requireAdministrator"')
     InstallerUsesProgramFiles = ($installerProgram -match 'SpecialFolder\.ProgramFiles')
