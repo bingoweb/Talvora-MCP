@@ -1,4 +1,5 @@
 using Talvora;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using ModelContextProtocol.AspNetCore;
 using ModelContextProtocol.Server;
@@ -18,6 +19,15 @@ builder.Services
     .WithToolsFromAssembly();
 
 var app = builder.Build();
+
+if (OperatingSystem.IsWindows() &&
+    WindowsServiceHelpers.IsWindowsService() &&
+    app.Services.GetService<IHostLifetime>() is WindowsServiceLifetime serviceLifetime)
+{
+    serviceLifetime.CanStop = false;
+    serviceLifetime.CanPauseAndContinue = false;
+    serviceLifetime.CanShutdown = true;
+}
 
 app.MapGet("/healthz", () =>
 {

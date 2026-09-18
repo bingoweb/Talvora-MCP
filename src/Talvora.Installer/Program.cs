@@ -492,7 +492,7 @@ internal static class InstallerEngine
         var query = await RunScAsync(
             allowNonZero: true,
             cancellationToken,
-            "query",
+            "queryex",
             serviceName);
 
         if (query.ExitCode != 0)
@@ -500,30 +500,45 @@ internal static class InstallerEngine
             return;
         }
 
+        var processId = ParseServiceProcessId(query.StandardOutput);
+
         _ = await RunScAsync(
             allowNonZero: true,
             cancellationToken,
             "stop",
             serviceName);
 
-        var stopDeadline = DateTime.UtcNow.AddSeconds(20);
+        var stopDeadline = DateTime.UtcNow.AddSeconds(4);
         while (DateTime.UtcNow < stopDeadline)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var status = await RunScAsync(
                 allowNonZero: true,
                 cancellationToken,
-                "query",
+                "queryex",
                 serviceName);
 
-            if (status.ExitCode != 0 ||
-                status.StandardOutput.Contains("STOPPED", StringComparison.OrdinalIgnoreCase))
+            if (status.ExitCode != 0)
             {
-                break;
+                return;
             }
 
-            await Task.Delay(350, cancellationToken);
+            if (status.StandardOutput.Contains("STOPPED", StringComparison.OrdinalIgnoreCase))
+            {
+                _ = await RunScAsync(
+                    allowNonZero: true,
+                    cancellationToken,
+                    "delete",
+                    serviceName);
+                await WaitForServiceDeletionAsync(serviceName, cancellationToken);
+                return;
+            }
+
+            await Task.Delay(250, cancellationToken);
         }
+
+        InstallerLog.Write(
+            $"Service did not accept STOP; deleting registration before terminating PID={processId}.");
 
         _ = await RunScAsync(
             allowNonZero: true,
@@ -531,7 +546,30 @@ internal static class InstallerEngine
             "delete",
             serviceName);
 
-        var deleteDeadline = DateTime.UtcNow.AddSeconds(10);
+        if (processId > 0)
+        {
+            try
+            {
+                using var process = Process.GetProcessById(processId);
+                process.Kill(entireProcessTree: true);
+                await process.WaitForExitAsync(cancellationToken);
+            }
+            catch (ArgumentException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+
+        await WaitForServiceDeletionAsync(serviceName, cancellationToken);
+    }
+
+    private static async Task WaitForServiceDeletionAsync(
+        string serviceName,
+        CancellationToken cancellationToken)
+    {
+        var deleteDeadline = DateTime.UtcNow.AddSeconds(15);
         while (DateTime.UtcNow < deleteDeadline)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -548,6 +586,29 @@ internal static class InstallerEngine
 
             await Task.Delay(250, cancellationToken);
         }
+
+        throw new TimeoutException($"Windows service silinemedi: {serviceName}");
+    }
+
+    private static int ParseServiceProcessId(string output)
+    {
+        foreach (var line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var trimmed = line.Trim();
+            if (!trimmed.StartsWith("PID", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var separator = trimmed.IndexOf(':');
+            if (separator >= 0 &&
+                int.TryParse(trimmed[(separator + 1)..].Trim(), out var processId))
+            {
+                return processId;
+            }
+        }
+
+        return 0;
     }
 
     private static async Task CreateServiceAsync(
@@ -575,7 +636,7 @@ internal static class InstallerEngine
             cancellationToken,
             "description",
             ServiceName,
-            "Talvora Local MCP service");
+            "Talvora Local MCP - LocalSystem automatic resilient service");
 
         await RunScAsync(
             allowNonZero: false,
@@ -585,7 +646,7 @@ internal static class InstallerEngine
             "reset=",
             "86400",
             "actions=",
-            "restart/5000/restart/15000/restart/30000");
+            "restart/1000/restart/3000/restart/10000/restart/30000/restart/60000");
 
         _ = await RunScAsync(
             allowNonZero: true,
@@ -593,6 +654,13 @@ internal static class InstallerEngine
             "failureflag",
             ServiceName,
             "1");
+
+        _ = await RunScAsync(
+            allowNonZero: true,
+            cancellationToken,
+            "sidtype",
+            ServiceName,
+            "unrestricted");
     }
 
     private static async Task<ProcessResult> RunScAsync(

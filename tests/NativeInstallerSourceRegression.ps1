@@ -4,6 +4,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+$serviceProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Program.cs'))
 $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Program.cs'))
@@ -11,6 +12,20 @@ $installerProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Ins
 $manifest = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\app.manifest'))
 
 $result = [pscustomobject]@{
+    ServiceRejectsStopControl = (
+        $serviceProgram -match 'CanStop\s*=\s*false' -and
+        $serviceProgram -match 'CanPauseAndContinue\s*=\s*false'
+    )
+    InstallerCanReplaceNonStoppableService = (
+        $installerProgram -match 'queryex' -and
+        $installerProgram -match 'deleting registration before terminating PID' -and
+        $installerProgram -match 'Kill\(entireProcessTree:\s*true\)'
+    )
+    InstallerConfiguresResilientSystemService = (
+        $installerProgram -match 'restart/1000/restart/3000/restart/10000/restart/30000/restart/60000' -and
+        $installerProgram -match '"sidtype"' -and
+        $installerProgram -match '"unrestricted"'
+    )
     TrayIsWinExe = ($trayProject -match '<OutputType>WinExe</OutputType>')
     TrayUsesNotifyIcon = ($trayProgram -match '\bNotifyIcon\b')
     TrayReconnectIsNative = (

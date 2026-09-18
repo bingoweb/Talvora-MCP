@@ -4,6 +4,13 @@ $ErrorActionPreference = 'Stop'
 
 $service = Get-CimInstance Win32_Service -Filter "Name='Talvora'"
 if ($null -eq $service) { throw 'Talvora service is missing.' }
+$serviceController = Get-Service Talvora
+
+$qfailure = (& sc.exe qfailure Talvora | Out-String)
+$qfailureFlag = (& sc.exe qfailureflag Talvora | Out-String)
+$qSidType = (& sc.exe qsidtype Talvora | Out-String)
+$currentStatePath = Join-Path $env:LOCALAPPDATA 'Talvora\current.json'
+$currentState = if (Test-Path $currentStatePath) { Get-Content $currentStatePath -Raw | ConvertFrom-Json } else { $null }
 
 $versionedServicePattern = '^"?C:\\Program Files\\Talvora\\Versions\\[0-9a-f]{40}-[0-9]{17}\\Service\\Talvora\.exe"?$'
 $versionedTrayPattern = '^"?C:\\Program Files\\Talvora\\Versions\\[0-9a-f]{40}-[0-9]{17}\\Tray\\Talvora\.Tray\.exe"?$'
@@ -25,6 +32,19 @@ $pendingDeletes = @($sessionManager.PendingFileRenameOperations)
 $legacyTrayPendingDelete = @($pendingDeletes | Where-Object { ([string]$_) -match [regex]::Escape($legacyTrayPath) }).Count -gt 0
 
 $result = [pscustomobject]@{
+    ServiceState = $service.State
+    ServiceStartMode = $service.StartMode
+    ServiceStartName = $service.StartName
+    ServiceCanStop = $serviceController.CanStop
+    ServiceCanPauseAndContinue = $serviceController.CanPauseAndContinue
+    FailureRestart1000 = ($qfailure -match '1000 milliseconds')
+    FailureRestart3000 = ($qfailure -match '3000 milliseconds')
+    FailureRestart10000 = ($qfailure -match '10000 milliseconds')
+    FailureRestart30000 = ($qfailure -match '30000 milliseconds')
+    FailureRestart60000 = ($qfailure -match '60000 milliseconds')
+    FailureActionsOnNonCrash = ($qfailureFlag -match 'TRUE')
+    ServiceSidUnrestricted = ($qSidType -match 'UNRESTRICTED')
+    ToolCount = if ($null -ne $currentState) { [int]$currentState.ToolCount } else { -1 }
     ServicePath = $service.PathName
     ServiceUsesVersionedPath = $serviceUsesVersionedPath
     TrayExecutableExists = ($trayStartupRegistered -and (Test-Path -LiteralPath $trayExecutable -PathType Leaf))
@@ -39,7 +59,20 @@ $result = [pscustomobject]@{
 
 $result | Format-List
 
-if (-not $result.ServiceUsesVersionedPath -or
+if ($result.ServiceState -ne 'Running' -or
+    $result.ServiceStartMode -ne 'Auto' -or
+    $result.ServiceStartName -ne 'LocalSystem' -or
+    $result.ServiceCanStop -or
+    $result.ServiceCanPauseAndContinue -or
+    -not $result.FailureRestart1000 -or
+    -not $result.FailureRestart3000 -or
+    -not $result.FailureRestart10000 -or
+    -not $result.FailureRestart30000 -or
+    -not $result.FailureRestart60000 -or
+    -not $result.FailureActionsOnNonCrash -or
+    -not $result.ServiceSidUnrestricted -or
+    $result.ToolCount -ne 32 -or
+    -not $result.ServiceUsesVersionedPath -or
     -not $result.TrayExecutableExists -or
     -not $result.TrayStartupRegistered -or
     $result.LegacyCloudflaredServiceExists -or
