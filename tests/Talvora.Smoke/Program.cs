@@ -20,6 +20,9 @@ string[] required =
     "talvora_write_text",
     "talvora_delete",
     "talvora_list",
+    "talvora_create_directory",
+    "talvora_copy",
+    "talvora_move",
     "talvora_run_process",
     "talvora_run_powershell",
     "talvora_process_list",
@@ -56,6 +59,32 @@ static async Task<CallToolResult> EnsureSuccess(
         throw new InvalidOperationException($"Tool failed: {tool.Name}");
     }
     return result;
+}
+
+static async Task<CallToolResult> EnsureError(
+    McpClientTool tool,
+    Dictionary<string, object?> arguments,
+    CancellationToken cancellationToken = default)
+{
+    var result = await tool.CallAsync(arguments, cancellationToken: cancellationToken);
+    if (result.IsError is not true)
+    {
+        throw new InvalidOperationException($"Tool unexpectedly succeeded: {tool.Name}");
+    }
+    return result;
+}
+
+static async Task<string> ReadToolText(
+    McpClientTool tool,
+    string path,
+    CancellationToken cancellationToken = default)
+{
+    var result = await EnsureSuccess(
+        tool,
+        new Dictionary<string, object?> { ["path"] = path },
+        cancellationToken);
+    return result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text
+        ?? throw new InvalidOperationException($"Tool did not return text content: {tool.Name}");
 }
 
 await EnsureSuccess(byName["talvora_system_info"], []);
@@ -219,8 +248,290 @@ if (string.IsNullOrWhiteSpace(publicDocuments))
 var root = Path.Combine(publicDocuments, "Talvora-Smoke-" + smokeId);
 var file = Path.Combine(root, "hello.txt");
 var searchToken = "talvora-search-" + smokeId;
+var nestedDirectory = Path.Combine(root, "created", "nested", "leaf");
+var copySourceFile = Path.Combine(root, "copy-source.txt");
+var copyDestinationFile = Path.Combine(root, "copy-destination.txt");
+var copyCollisionFile = Path.Combine(root, "copy-collision.txt");
+var directorySource = Path.Combine(root, "directory-source");
+var directorySourceNested = Path.Combine(directorySource, "child", "grandchild");
+var directoryDestination = Path.Combine(root, "directory-destination");
+var directoryNonRecursiveDestination = Path.Combine(root, "directory-nonrecursive");
+var reparseSource = Path.Combine(root, "reparse-source");
+var reparseLoop = Path.Combine(reparseSource, "loop");
+var reparseDestination = Path.Combine(root, "reparse-destination");
+var moveFileSource = Path.Combine(root, "move-file-source.txt");
+var moveFileDestination = Path.Combine(root, "move-file-destination.txt");
+var moveDirectorySource = Path.Combine(root, "move-directory-source");
+var moveDirectoryDestination = Path.Combine(root, "move-directory-destination");
+var moveCollisionSource = Path.Combine(root, "move-collision-source.txt");
+var moveCollisionDestination = Path.Combine(root, "move-collision-destination.txt");
 try
 {
+    var createdDirectory = await EnsureSuccess(byName["talvora_create_directory"], new()
+    {
+        ["path"] = nestedDirectory,
+    });
+    if (createdDirectory.StructuredContent is not { } createdDirectoryJson ||
+        !createdDirectoryJson.TryGetProperty("path", out var createdPath) ||
+        !string.Equals(createdPath.GetString(), Path.GetFullPath(nestedDirectory), StringComparison.OrdinalIgnoreCase) ||
+        !createdDirectoryJson.TryGetProperty("created", out var createdChanged) ||
+        !createdChanged.GetBoolean())
+    {
+        throw new InvalidOperationException("create_directory did not report the first nested directory creation.");
+    }
+
+    var createAgain = await EnsureSuccess(byName["talvora_create_directory"], new()
+    {
+        ["path"] = nestedDirectory,
+    });
+    if (createAgain.StructuredContent is not { } createAgainJson ||
+        !createAgainJson.TryGetProperty("created", out var createAgainChanged) ||
+        createAgainChanged.GetBoolean())
+    {
+        throw new InvalidOperationException("create_directory must be idempotent for an existing directory.");
+    }
+    await EnsureSuccess(byName["talvora_list"], new() { ["path"] = nestedDirectory });
+
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = copySourceFile,
+        ["content"] = "copy-source-" + smokeId,
+    });
+    await EnsureSuccess(byName["talvora_copy"], new()
+    {
+        ["source"] = copySourceFile,
+        ["destination"] = copyDestinationFile,
+    });
+    if (!string.Equals(
+        await ReadToolText(byName["talvora_read_text"], copyDestinationFile),
+        "copy-source-" + smokeId,
+        StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("copy did not preserve file content.");
+    }
+
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = copyCollisionFile,
+        ["content"] = "copy-old-" + smokeId,
+    });
+    await EnsureError(byName["talvora_copy"], new()
+    {
+        ["source"] = copySourceFile,
+        ["destination"] = copyCollisionFile,
+        ["overwrite"] = false,
+    });
+    if (!string.Equals(
+        await ReadToolText(byName["talvora_read_text"], copyCollisionFile),
+        "copy-old-" + smokeId,
+        StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("copy overwrite=false modified an existing destination.");
+    }
+
+    await EnsureSuccess(byName["talvora_copy"], new()
+    {
+        ["source"] = copySourceFile,
+        ["destination"] = copyCollisionFile,
+        ["overwrite"] = true,
+    });
+    if (!string.Equals(
+        await ReadToolText(byName["talvora_read_text"], copyCollisionFile),
+        "copy-source-" + smokeId,
+        StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("copy overwrite=true did not replace the destination file.");
+    }
+
+    await EnsureSuccess(byName["talvora_create_directory"], new()
+    {
+        ["path"] = directorySourceNested,
+    });
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = Path.Combine(directorySource, "root.txt"),
+        ["content"] = "directory-root-" + smokeId,
+    });
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = Path.Combine(directorySourceNested, "nested.txt"),
+        ["content"] = "directory-nested-" + smokeId,
+    });
+    await EnsureSuccess(byName["talvora_copy"], new()
+    {
+        ["source"] = directorySource,
+        ["destination"] = directoryDestination,
+        ["recursive"] = true,
+    });
+    if (!string.Equals(
+        await ReadToolText(byName["talvora_read_text"], Path.Combine(directoryDestination, "child", "grandchild", "nested.txt")),
+        "directory-nested-" + smokeId,
+        StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("recursive directory copy did not preserve nested content.");
+    }
+
+    await EnsureError(byName["talvora_copy"], new()
+    {
+        ["source"] = directorySource,
+        ["destination"] = directoryNonRecursiveDestination,
+        ["recursive"] = false,
+    });
+    if (Directory.Exists(directoryNonRecursiveDestination))
+    {
+        throw new InvalidOperationException("recursive=false must fail before creating a partial directory copy.");
+    }
+
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = Path.Combine(directoryDestination, "child", "grandchild", "nested.txt"),
+        ["content"] = "directory-stale-" + smokeId,
+    });
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = Path.Combine(directoryDestination, "keep.txt"),
+        ["content"] = "directory-keep-" + smokeId,
+    });
+    await EnsureError(byName["talvora_copy"], new()
+    {
+        ["source"] = directorySource,
+        ["destination"] = directoryDestination,
+        ["overwrite"] = false,
+        ["recursive"] = true,
+    });
+    await EnsureSuccess(byName["talvora_copy"], new()
+    {
+        ["source"] = directorySource,
+        ["destination"] = directoryDestination,
+        ["overwrite"] = true,
+        ["recursive"] = true,
+    });
+    if (!string.Equals(
+        await ReadToolText(byName["talvora_read_text"], Path.Combine(directoryDestination, "child", "grandchild", "nested.txt")),
+        "directory-nested-" + smokeId,
+        StringComparison.Ordinal) ||
+        !string.Equals(
+            await ReadToolText(byName["talvora_read_text"], Path.Combine(directoryDestination, "keep.txt")),
+            "directory-keep-" + smokeId,
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("directory overwrite=true must replace conflicting entries while merging non-conflicting destination entries.");
+    }
+
+    await EnsureSuccess(byName["talvora_create_directory"], new()
+    {
+        ["path"] = reparseSource,
+    });
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = Path.Combine(reparseSource, "payload.txt"),
+        ["content"] = "reparse-payload-" + smokeId,
+    });
+    var reparsePathBase64 = Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(reparseLoop));
+    var reparseTargetBase64 = Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(reparseSource));
+    await EnsureSuccess(byName["talvora_run_powershell"], new()
+    {
+        ["script"] = $"""
+            $link = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('{reparsePathBase64}'))
+            $target = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('{reparseTargetBase64}'))
+            New-Item -ItemType Junction -Path $link -Target $target -Force | Out-Null
+            """,
+        ["engine"] = "auto",
+        ["timeoutSeconds"] = 30,
+    });
+    await EnsureError(byName["talvora_copy"], new()
+    {
+        ["source"] = reparseSource,
+        ["destination"] = reparseDestination,
+        ["overwrite"] = true,
+        ["recursive"] = true,
+    });
+    if (Directory.Exists(reparseDestination))
+    {
+        throw new InvalidOperationException("reparse-point rejection must occur before a partial destination tree is created.");
+    }
+
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = moveFileSource,
+        ["content"] = "move-file-" + smokeId,
+    });
+    await EnsureSuccess(byName["talvora_move"], new()
+    {
+        ["source"] = moveFileSource,
+        ["destination"] = moveFileDestination,
+    });
+    if (File.Exists(moveFileSource) ||
+        !string.Equals(
+            await ReadToolText(byName["talvora_read_text"], moveFileDestination),
+            "move-file-" + smokeId,
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("move did not relocate the source file.");
+    }
+
+    await EnsureSuccess(byName["talvora_create_directory"], new()
+    {
+        ["path"] = Path.Combine(moveDirectorySource, "nested"),
+    });
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = Path.Combine(moveDirectorySource, "nested", "moved.txt"),
+        ["content"] = "move-directory-" + smokeId,
+    });
+    await EnsureSuccess(byName["talvora_move"], new()
+    {
+        ["source"] = moveDirectorySource,
+        ["destination"] = moveDirectoryDestination,
+    });
+    if (Directory.Exists(moveDirectorySource) ||
+        !string.Equals(
+            await ReadToolText(byName["talvora_read_text"], Path.Combine(moveDirectoryDestination, "nested", "moved.txt")),
+            "move-directory-" + smokeId,
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("move did not relocate the source directory.");
+    }
+
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = moveCollisionSource,
+        ["content"] = "move-new-" + smokeId,
+    });
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = moveCollisionDestination,
+        ["content"] = "move-old-" + smokeId,
+    });
+    await EnsureError(byName["talvora_move"], new()
+    {
+        ["source"] = moveCollisionSource,
+        ["destination"] = moveCollisionDestination,
+        ["overwrite"] = false,
+    });
+    if (!File.Exists(moveCollisionSource) ||
+        !string.Equals(
+            await ReadToolText(byName["talvora_read_text"], moveCollisionDestination),
+            "move-old-" + smokeId,
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("move overwrite=false changed source or destination on collision.");
+    }
+
+    await EnsureSuccess(byName["talvora_move"], new()
+    {
+        ["source"] = moveCollisionSource,
+        ["destination"] = moveCollisionDestination,
+        ["overwrite"] = true,
+    });
+    if (File.Exists(moveCollisionSource) ||
+        !string.Equals(
+            await ReadToolText(byName["talvora_read_text"], moveCollisionDestination),
+            "move-new-" + smokeId,
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("move overwrite=true did not replace the existing destination.");
+    }
     await EnsureSuccess(byName["talvora_write_text"], new()
     {
         ["path"] = file,
@@ -390,6 +701,7 @@ try
 }
 finally
 {
+    if (Directory.Exists(reparseLoop)) Directory.Delete(reparseLoop);
     if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
 }
 
