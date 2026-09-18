@@ -30,7 +30,13 @@ function Assert-True {
 
 function Test-TalvoraTunnelId {
     param([Parameter(Mandatory)][string] $Value)
-    return $Value -match '^tunnel_[A-Za-z0-9]+
+    return $Value -match '^tunnel_[0-9a-f]{32}$'
+}
+
+function Test-TalvoraWindows {
+    return [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
+}
+
 function Get-TunnelClientArchitecture {
     $architecture = [Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
     switch ($architecture) {
