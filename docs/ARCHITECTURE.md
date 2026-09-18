@@ -16,6 +16,8 @@ The structured filesystem mutation layer adds create-directory, copy, and move o
 
 The environment-variable layer exposes structured process/user/machine get/list/set/delete behavior directly through System.Environment. It applies no variable-name allowlist and does not reduce the unrestricted process or PowerShell primitives.
 
+The Event Log layer exposes structured local-log discovery and XPath queries through Windows Eventing APIs. It applies no log/provider/event-ID allowlist. Per-call event limits bound MCP response size only; unrestricted process and PowerShell primitives remain available for Event Log operations outside this read-only layer.
+
 The registry layer is the first dedicated Windows capability built on that rule. It exposes structured create/get/set/list/delete operations directly through Microsoft.Win32 instead of requiring an agent to compose shell commands. It does not introduce a registry hive/path allowlist and does not reduce the unrestricted process primitive.
 
 The process-control layer exposes structured process discovery and PID-based termination while preserving `talvora_run_process` as the unrestricted process-creation primitive. It does not add a PID/name allowlist.
@@ -47,6 +49,16 @@ Targets are explicit and case-insensitive: Process, User, or Machine. Process va
 Get returns a structured found/not-found result. List returns deterministic name-sorted entries and supports an optional case-insensitive name query. Set preserves an explicit empty-string value. Delete uses the platform removal semantics and is idempotent for a missing variable.
 
 No environment-variable name allowlist or deny-list is applied. Machine-scope writes therefore use Talvora's LocalSystem authority, and callers can modify any machine environment variable Windows permits that account to change.
+
+## Windows Event Log queries
+
+The Event Log suite exposes `talvora_eventlog_list` and `talvora_eventlog_query` using `System.Diagnostics.Eventing.Reader`.
+
+List enumerates local log names through the Windows Event Log session, applies an optional case-insensitive name filter, and returns deterministic ordering.
+
+Query accepts any local log name and XPath expression. `newestFirst=true` uses reverse-direction Event Log reading; `maxEvents` bounds one response so a broad XPath cannot create an unbounded MCP payload. Returned records include the log/provider identity, event ID, record ID, timestamp, level, process/thread IDs, machine/user identity when available, and a best-effort formatted message. If Windows cannot resolve provider message metadata, Talvora keeps the record and returns a null message rather than dropping the event.
+
+No log-name, provider, or event-ID allowlist or deny-list is applied. The dedicated tools are intentionally read-only ergonomics; callers retain the unrestricted process and PowerShell primitives for clearing logs, exporting logs, provider/source management, or other Event Log operations not modeled here.
 
 ## Windows registry
 
