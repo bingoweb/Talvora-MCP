@@ -23,6 +23,21 @@ Talvora is a Windows-local MCP server built for one owner machine with a full-ca
 
 Because the MCP host itself runs as LocalSystem, these tools execute with the service account's Windows privileges. The file and process primitives are not restricted to the knowledge-search corpus.
 
+## Windows registry tools
+
+Talvora exposes dedicated local registry tools so agents do not need to compose fragile `reg.exe` or PowerShell quoting for routine registry work:
+
+- `talvora_registry_create_key`
+- `talvora_registry_get`
+- `talvora_registry_set`
+- `talvora_registry_list`
+- `talvora_registry_delete_value`
+- `talvora_registry_delete_key`
+
+The registry tools support HKLM, HKCU, HKCR, HKU, HKCC, and HKPD together with default, 32-bit, and 64-bit registry views. String, ExpandString, MultiString, DWORD, QWORD, Binary, and None values are supported. Reads preserve ExpandString data without environment expansion, listings are deterministic, and missing keys/values are handled idempotently where appropriate.
+
+No registry hive or path allowlist is applied. These dedicated tools improve structured MCP ergonomics; they do not replace or reduce the unrestricted `talvora_run_process` capability.
+
 ## Business knowledge tools
 
 Talvora also exposes two read-only MCP tools that follow the `search` -> `fetch` retrieval pattern used by ChatGPT custom MCP apps and company knowledge workflows:
