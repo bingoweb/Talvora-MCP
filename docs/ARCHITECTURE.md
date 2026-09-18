@@ -22,8 +22,6 @@ The PowerShell layer applies the same principle to multiline automation. `talvor
 
 The Windows service layer exposes structured Service Control Manager inspection and control without a service-name allowlist. It uses `System.ServiceProcess.ServiceController` for list/get/start/stop/restart while keeping `talvora_run_process` available for service creation, deletion, configuration, custom control codes, and any operation not modeled by the dedicated layer.
 
-The process-control layer exposes structured process discovery and termination. It complements `talvora_run_process` by making existing processes inspectable by PID/name and by providing a direct process-tree kill operation without a PID or process-name allowlist.
-
 The read-only knowledge layer is separate from that capability boundary. `search` and `fetch` provide structured document discovery/retrieval for ChatGPT knowledge workflows without reducing the privileges or addressable paths of the primitive tools.
 
 ## Filesystem mutation tools
