@@ -45,7 +45,8 @@ function Get-TunnelClientArchitecture {
         $env:PROCESSOR_ARCHITECTURE
     }
 
-    switch ([string]$architecture.ToUpperInvariant()) {
+    $normalizedArchitecture = ([string] $architecture).ToUpperInvariant()
+    switch ($normalizedArchitecture) {
         'AMD64' { return 'amd64' }
         'ARM64' { return 'arm64' }
         default { throw "Unsupported Windows architecture for OpenAI tunnel-client: $architecture" }
