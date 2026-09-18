@@ -22,7 +22,7 @@ $trayExecutable = if ($trayStartupRegistered) { ([string]$trayRun).Trim('"') } e
 $legacyTrayPath = 'C:\Program Files\Talvora\Tray'
 $sessionManager = Get-ItemProperty 'Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager' -Name 'PendingFileRenameOperations' -ErrorAction SilentlyContinue
 $pendingDeletes = @($sessionManager.PendingFileRenameOperations)
-$legacyTrayPendingDelete = @($pendingDeletes | Where-Object { ([string]$_).TrimEnd('\') -ieq ('\??\' + $legacyTrayPath).TrimEnd('\') }).Count -gt 0
+$legacyTrayPendingDelete = @($pendingDeletes | Where-Object { ([string]$_) -match [regex]::Escape($legacyTrayPath) }).Count -gt 0
 
 $result = [pscustomobject]@{
     ServicePath = $service.PathName
