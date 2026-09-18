@@ -46,6 +46,20 @@ The registry tools support HKLM, HKCU, HKCR, HKU, HKCC, and HKPD together with d
 
 No registry hive or path allowlist is applied. These dedicated tools improve structured MCP ergonomics; they do not replace or reduce the unrestricted `talvora_run_process` capability.
 
+## Windows service tools
+
+Talvora exposes structured Service Control Manager operations:
+
+- `talvora_service_list`
+- `talvora_service_get`
+- `talvora_service_start`
+- `talvora_service_stop`
+- `talvora_service_restart`
+
+Service listing can be filtered by service/display name and can optionally include driver services. Get returns a structured not-found result instead of relying on localized shell output. Start/stop/restart are state-aware, wait for the requested final state, support explicit timeouts, and preserve idempotent behavior when a service is already running or stopped.
+
+No service-name allowlist is applied. Because the MCP host runs as LocalSystem, these controls use the service account's Service Control Manager privileges. Stopping or restarting the Talvora service itself is intentionally not blocked; doing so can terminate the active MCP connection.
+
 ## Business knowledge tools
 
 Talvora also exposes two read-only MCP tools that follow the `search` -> `fetch` retrieval pattern used by ChatGPT custom MCP apps and company knowledge workflows:
