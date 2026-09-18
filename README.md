@@ -117,7 +117,26 @@ The default search corpus is intentionally optimized for useful local knowledge 
 
 Set the machine environment variable `TALVORA_KNOWLEDGE_ROOTS` to a semicolon-separated list of directories to replace the default search corpus. This setting changes only the read-only knowledge search surface; it does not restrict `talvora_read_text`, `talvora_write_text`, `talvora_delete`, `talvora_list`, `talvora_create_directory`, `talvora_copy`, `talvora_move`, or `talvora_run_process`.
 
-As of 2026-09-17, ChatGPT Business supports custom MCP apps with full MCP capabilities, while company knowledge includes custom apps that provide search/fetch access. ChatGPT web does not connect directly to a localhost MCP endpoint, so web publication/remote connectivity remains a separate deployment concern and is not required by Talvora's local runtime.
+As of 2026-09-18, ChatGPT Business supports custom MCP apps with full MCP capabilities. The read-only `search`/`fetch` pair remains useful for company-knowledge workflows, but it does not limit the other Talvora tools.
+
+## ChatGPT Business via Secure MCP Tunnel
+
+ChatGPT web cannot connect directly to Talvora's loopback-only `http://127.0.0.1:7676/mcp` endpoint. The supported private/local connection path is OpenAI Secure MCP Tunnel.
+
+Talvora keeps that transport separate from the core runtime:
+
+- The `Talvora` Windows Service remains the only Talvora service and still listens only on loopback.
+- The core local MCP installation does not require an OpenAI Platform account or API key.
+- `scripts/Configure-ChatGPT-Business.ps1` downloads the current official `openai/tunnel-client` Windows release, verifies it against the release `SHA256SUMS.txt`, and manages a long-lived tunnel runtime pointed at Talvora's loopback MCP.
+- A restricted tunnel runtime credential is passed to `tunnel-client` by environment reference rather than as a literal command-line/config value. The stored reconnect copy is protected with the current Windows user's DPAPI.
+- The runtime credential is transport authentication for Secure MCP Tunnel; Talvora does not use it for model inference or Responses API calls.
+- No inbound public firewall rule or public Talvora listener is created.
+
+First install/rebuild Talvora with `TALVORA-KUR.cmd`. Then run `TALVORA-BUSINESS-KUR.cmd` (or `scripts\Configure-ChatGPT-Business.ps1`) and provide the existing OpenAI tunnel ID plus a least-privilege runtime key with Tunnels Read + Use. The script does not report success until `tunnel-client runtimes status --json` reports `process_running=true`, `healthy=true`, and `ready=true`.
+
+After a reboot, `TALVORA-BUSINESS-KUR.cmd reconnect` reuses the saved tunnel metadata and DPAPI-protected runtime credential. Talvora deliberately does not install a hidden second Windows service or scheduled task for tunnel startup.
+
+The final one-time ChatGPT Business workspace step is performed by a Business Admin/Owner: enable Developer mode, create a custom MCP app, choose **Connection: Tunnel**, select/paste the tunnel ID, review the Talvora actions, and publish the app to the workspace.
 
 ## Rebuild from zero
 
