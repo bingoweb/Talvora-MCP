@@ -35,6 +35,10 @@ $result = [pscustomobject]@{
         $trayProgram -match 'Talvora\.Tray\.Shutdown' -and
         $installerProgram -match 'EventWaitHandle\.OpenExisting'
     )
+    InstallerSchedulesLockedCleanup = (
+        $installerProgram -match 'MoveFileEx' -and
+        $installerProgram -match 'DelayUntilReboot'
+    )
 }
 
 $result | Format-List

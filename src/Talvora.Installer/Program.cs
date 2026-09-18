@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO.Compression;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
@@ -884,7 +885,46 @@ internal static class InstallerEngine
         }
         catch (Exception ex)
         {
-            InstallerLog.Write($"Old installation cleanup deferred: {path}", ex);
+            InstallerLog.Write($"Old installation cleanup deferred until reboot: {path}", ex);
+            ScheduleDirectoryDeletionOnReboot(path);
+        }
+    }
+
+    private static void ScheduleDirectoryDeletionOnReboot(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
+        foreach (var file in Directory.EnumerateFiles(
+                     path,
+                     "*",
+                     SearchOption.AllDirectories)
+                 .OrderByDescending(item => item.Length))
+        {
+            _ = MoveFileEx(
+                file,
+                null,
+                MoveFileFlags.DelayUntilReboot);
+        }
+
+        foreach (var directory in Directory.EnumerateDirectories(
+                     path,
+                     "*",
+                     SearchOption.AllDirectories)
+                 .OrderByDescending(item => item.Length))
+        {
+            _ = MoveFileEx(
+                directory,
+                null,
+                MoveFileFlags.DelayUntilReboot);
+        }
+
+        if (!MoveFileEx(path, null, MoveFileFlags.DelayUntilReboot))
+        {
+            InstallerLog.Write(
+                $"Unable to schedule legacy directory deletion. Path={path} Win32={Marshal.GetLastWin32Error()}");
         }
     }
 
@@ -1048,6 +1088,19 @@ internal static class InstallerEngine
 
         return value.Length <= 500 ? value : value[..500];
     }
+
+    [Flags]
+    private enum MoveFileFlags : uint
+    {
+        DelayUntilReboot = 0x00000004,
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool MoveFileEx(
+        string existingFileName,
+        string? newFileName,
+        MoveFileFlags flags);
 }
 
 internal static class InstallerLog
