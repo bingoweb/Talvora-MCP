@@ -306,6 +306,16 @@ internal static class InstallerEngine
         "talvora_git_log",
         "talvora_git_branches",
         "talvora_git_run",
+        "talvora_read_text_range",
+        "talvora_tail_text",
+        "talvora_append_text",
+        "talvora_json_get",
+        "talvora_json_set",
+        "talvora_json_delete",
+        "talvora_archive_list",
+        "talvora_archive_create",
+        "talvora_archive_extract",
+        "talvora_http_download",
     };
 
     public static async Task<HealthSnapshot> InstallAsync(

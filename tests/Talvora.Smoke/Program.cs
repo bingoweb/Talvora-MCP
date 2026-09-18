@@ -73,6 +73,16 @@ string[] required =
     "talvora_git_log",
     "talvora_git_branches",
     "talvora_git_run",
+    "talvora_read_text_range",
+    "talvora_tail_text",
+    "talvora_append_text",
+    "talvora_json_get",
+    "talvora_json_set",
+    "talvora_json_delete",
+    "talvora_archive_list",
+    "talvora_archive_create",
+    "talvora_archive_extract",
+    "talvora_http_download",
 ];
 
 foreach (var name in required)
@@ -500,6 +510,13 @@ var developerBinaryFile = Path.Combine(root, "developer-bytes.bin");
 var developerPatchFile = Path.Combine(root, "developer-patch.txt");
 var developerProjectRoot = Path.Combine(root, "developer-project");
 var developerPackageJson = Path.Combine(developerProjectRoot, "package.json");
+
+var developerRangeFile = Path.Combine(root, "developer-range.txt");
+var developerJsonFile = Path.Combine(root, "developer-config.json");
+var developerArchiveSource = Path.Combine(root, "developer-archive-source");
+var developerArchiveZip = Path.Combine(root, "developer-assets.zip");
+var developerArchiveExtract = Path.Combine(root, "developer-archive-extract");
+var developerDownloadFile = Path.Combine(root, "developer-health-download.json");
 const string knowledgeRootsEnvironmentName = "TALVORA_KNOWLEDGE_ROOTS";
 var knowledgeRootsCaptured = false;
 var knowledgeRootsWasPresent = false;
@@ -933,6 +950,196 @@ try
             StringComparison.Ordinal))
     {
         throw new InvalidOperationException("git_run rev-parse HEAD did not match git_info HEAD.");
+    }
+
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = developerRangeFile,
+        ["content"] = "line-one\r\nline-two\r\nline-three",
+    });
+    var appendTextResult = await EnsureSuccess(byName["talvora_append_text"], new()
+    {
+        ["path"] = developerRangeFile,
+        ["content"] = "\r\nline-four",
+        ["appendNewLine"] = false,
+    });
+    if (appendTextResult.StructuredContent is not { } appendTextJson ||
+        appendTextJson.GetProperty("charactersAppended").GetInt32() <= 0)
+    {
+        throw new InvalidOperationException("append_text did not append content.");
+    }
+
+    var rangeResult = await EnsureSuccess(byName["talvora_read_text_range"], new()
+    {
+        ["path"] = developerRangeFile,
+        ["startLine"] = 2,
+        ["lineCount"] = 2,
+    });
+    if (rangeResult.StructuredContent is not { } rangeJson ||
+        rangeJson.GetProperty("linesRead").GetInt32() != 2 ||
+        !string.Equals(
+            rangeJson.GetProperty("text").GetString(),
+            "line-two" + Environment.NewLine + "line-three",
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("read_text_range returned unexpected lines.");
+    }
+
+    var tailResult = await EnsureSuccess(byName["talvora_tail_text"], new()
+    {
+        ["path"] = developerRangeFile,
+        ["lineCount"] = 2,
+    });
+    if (tailResult.StructuredContent is not { } tailJson ||
+        tailJson.GetProperty("totalLines").GetInt32() != 4 ||
+        !string.Equals(
+            tailJson.GetProperty("text").GetString(),
+            "line-three" + Environment.NewLine + "line-four",
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("tail_text returned unexpected lines.");
+    }
+
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = developerJsonFile,
+        ["content"] = "{\"name\":\"talvora\",\"settings\":{\"mode\":\"dev\"},\"items\":[1,2]}",
+    });
+    var jsonSetResult = await EnsureSuccess(byName["talvora_json_set"], new()
+    {
+        ["path"] = developerJsonFile,
+        ["pointer"] = "/settings/port",
+        ["valueJson"] = "7676",
+        ["createMissing"] = true,
+        ["indented"] = true,
+    });
+    if (jsonSetResult.StructuredContent is not { } jsonSetJson ||
+        !jsonSetJson.GetProperty("changed").GetBoolean())
+    {
+        throw new InvalidOperationException("json_set did not report the config change.");
+    }
+
+    await EnsureSuccess(byName["talvora_json_set"], new()
+    {
+        ["path"] = developerJsonFile,
+        ["pointer"] = "/items/-",
+        ["valueJson"] = "3",
+        ["createMissing"] = true,
+    });
+
+    var jsonGetResult = await EnsureSuccess(byName["talvora_json_get"], new()
+    {
+        ["path"] = developerJsonFile,
+        ["pointer"] = "/settings/port",
+        ["indented"] = false,
+    });
+    if (jsonGetResult.StructuredContent is not { } jsonGetJson ||
+        !jsonGetJson.GetProperty("found").GetBoolean() ||
+        !string.Equals(jsonGetJson.GetProperty("valueJson").GetString(), "7676", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("json_get did not return the configured port.");
+    }
+
+    var jsonDeleteResult = await EnsureSuccess(byName["talvora_json_delete"], new()
+    {
+        ["path"] = developerJsonFile,
+        ["pointer"] = "/settings/mode",
+    });
+    if (jsonDeleteResult.StructuredContent is not { } jsonDeleteJson ||
+        !jsonDeleteJson.GetProperty("changed").GetBoolean())
+    {
+        throw new InvalidOperationException("json_delete did not remove the configured mode.");
+    }
+
+    var deletedJsonGetResult = await EnsureSuccess(byName["talvora_json_get"], new()
+    {
+        ["path"] = developerJsonFile,
+        ["pointer"] = "/settings/mode",
+    });
+    if (deletedJsonGetResult.StructuredContent is not { } deletedJsonGetJson ||
+        deletedJsonGetJson.GetProperty("found").GetBoolean())
+    {
+        throw new InvalidOperationException("json_get reported a deleted JSON pointer as present.");
+    }
+
+    await EnsureSuccess(byName["talvora_create_directory"], new()
+    {
+        ["path"] = Path.Combine(developerArchiveSource, "nested"),
+    });
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = Path.Combine(developerArchiveSource, "a.txt"),
+        ["content"] = "archive-a-" + smokeId,
+    });
+    await EnsureSuccess(byName["talvora_write_text"], new()
+    {
+        ["path"] = Path.Combine(developerArchiveSource, "nested", "b.txt"),
+        ["content"] = "archive-b-" + smokeId,
+    });
+
+    var archiveCreateResult = await EnsureSuccess(byName["talvora_archive_create"], new()
+    {
+        ["sourceDirectory"] = developerArchiveSource,
+        ["archivePath"] = developerArchiveZip,
+        ["overwrite"] = true,
+        ["includeBaseDirectory"] = false,
+        ["compression"] = "optimal",
+    });
+    if (archiveCreateResult.StructuredContent is not { } archiveCreateJson ||
+        archiveCreateJson.GetProperty("entryCount").GetInt32() < 2)
+    {
+        throw new InvalidOperationException("archive_create did not create the expected entries.");
+    }
+
+    var archiveListResult = await EnsureSuccess(byName["talvora_archive_list"], new()
+    {
+        ["archivePath"] = developerArchiveZip,
+    });
+    if (archiveListResult.StructuredContent is not { } archiveListJson ||
+        archiveListJson.GetProperty("count").GetInt32() < 2 ||
+        !archiveListJson.GetProperty("entries").EnumerateArray().Any(entry =>
+            entry.TryGetProperty("fullName", out var fullName) &&
+            fullName.GetString() is { } entryName &&
+            entryName.Replace('\\', '/').EndsWith("nested/b.txt", StringComparison.OrdinalIgnoreCase)))
+    {
+        throw new InvalidOperationException("archive_list did not report the nested entry.");
+    }
+
+    var archiveExtractResult = await EnsureSuccess(byName["talvora_archive_extract"], new()
+    {
+        ["archivePath"] = developerArchiveZip,
+        ["destinationDirectory"] = developerArchiveExtract,
+        ["overwrite"] = true,
+        ["allowOutsideDestination"] = false,
+    });
+    if (archiveExtractResult.StructuredContent is not { } archiveExtractJson ||
+        archiveExtractJson.GetProperty("entriesExtracted").GetInt32() < 2 ||
+        !string.Equals(
+            await ReadToolText(
+                byName["talvora_read_text"],
+                Path.Combine(developerArchiveExtract, "nested", "b.txt")),
+            "archive-b-" + smokeId,
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("archive_extract did not restore the nested payload.");
+    }
+
+    var downloadResult = await EnsureSuccess(byName["talvora_http_download"], new()
+    {
+        ["url"] = "http://127.0.0.1:7676/healthz",
+        ["destinationPath"] = developerDownloadFile,
+        ["overwrite"] = true,
+        ["resume"] = false,
+        ["timeoutSeconds"] = 30,
+    });
+    if (downloadResult.StructuredContent is not { } downloadJson ||
+        downloadJson.GetProperty("statusCode").GetInt32() != 200 ||
+        downloadJson.GetProperty("fileLength").GetInt64() <= 0 ||
+        string.IsNullOrWhiteSpace(downloadJson.GetProperty("sha256").GetString()) ||
+        !(await ReadToolText(byName["talvora_read_text"], developerDownloadFile))
+            .Contains("Talvora", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("http_download did not persist the Talvora health response.");
     }
 
     await EnsureSuccess(byName["talvora_write_text"], new()

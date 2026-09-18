@@ -20,6 +20,8 @@ The long-running job layer starts unrestricted child processes with redirected s
 
 The Git layer exposes structured repository identity, porcelain status, diffs, logs, and branch refs plus an unrestricted `talvora_git_run` argument surface. No repository, ref, remote, path, Git subcommand, or option allowlist is introduced.
 
+The config/asset layer adds line-ranged and tail text reads, append semantics, mutable JSON Pointer operations, ZIP listing/creation/extraction, and streaming HTTP downloads to disk. These operations retain Talvora's unrestricted path capability; response-oriented line bounds can be disabled explicitly, and archive extraction exposes an opt-in outside-destination mode when exact archive path semantics are required.
+
 The environment-variable layer exposes structured process/user/machine get/list/set/delete behavior directly through System.Environment. It applies no variable-name allowlist and does not reduce the unrestricted process or PowerShell primitives.
 
 The Event Log layer exposes structured local-log discovery and XPath queries through Windows Eventing APIs. It applies no log/provider/event-ID allowlist. Per-call event limits bound MCP response size only; unrestricted process and PowerShell primitives remain available for Event Log operations outside this read-only layer.
@@ -71,6 +73,18 @@ The Git suite exposes `talvora_git_info`, `talvora_git_status`, `talvora_git_dif
 Info resolves repository root, Git directory, HEAD, branch/detached state, dirty state, and remotes. Status uses porcelain v2 branch output. Branch enumeration uses `for-each-ref` with field separators. Log uses an explicit field-separated format. Diff supports staging, arbitrary revision ranges, context sizes, and path filters.
 
 `talvora_git_run` launches the installed Git executable with exactly the argument vector supplied by the caller, optional environment overrides, and an explicit timeout. It intentionally provides the complete Git command surface rather than a command allowlist. Dedicated read-only tools are convenience APIs, not capability boundaries.
+
+## Config and asset workflows
+
+The config/asset suite exposes `talvora_read_text_range`, `talvora_tail_text`, `talvora_append_text`, `talvora_json_get`, `talvora_json_set`, `talvora_json_delete`, `talvora_archive_list`, `talvora_archive_create`, `talvora_archive_extract`, and `talvora_http_download`.
+
+Range reads use one-based line positions and support `lineCount=0` for the remainder of the file. Tail reads maintain only the requested trailing lines in memory unless `lineCount=0` requests the complete file. Append writes UTF-8 without adding a BOM and can optionally add a platform newline.
+
+JSON operations are based on the mutable `System.Text.Json.Nodes` DOM and RFC 6901 JSON Pointer paths. Set can create missing object/array containers and supports the array `-` append token. Delete is idempotent for missing targets. No JSON property or file-path allowlist is applied.
+
+ZIP creation stages through a temporary archive before replacing the requested destination, so the output path may intentionally reside inside the source directory without recursively archiving itself. Extraction normally resolves entries under the requested destination to prevent accidental traversal; `allowOutsideDestination=true` explicitly enables entries whose normalized path resolves elsewhere, matching Talvora's unrestricted filesystem authority.
+
+HTTP download uses response-header streaming rather than buffering an MCP body. Resume requests use a Range header and append only when the server answers with HTTP 206; a normal 200 response restarts the destination file. A final SHA-256 is returned after the stream is persisted.
 
 ## Environment variables
 

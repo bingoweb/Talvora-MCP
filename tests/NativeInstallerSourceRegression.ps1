@@ -9,6 +9,7 @@ $serviceProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Talvo
 $developerTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\DeveloperTools.cs'))
 $jobTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\JobTools.cs'))
 $gitTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\GitTools.cs'))
+$configAssetTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ConfigAssetTools.cs'))
 $trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Program.cs'))
@@ -19,6 +20,18 @@ $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
 
 $result = [pscustomobject]@{
+    ConfigAssetToolContract = (
+        $configAssetTools -match 'talvora_read_text_range' -and
+        $configAssetTools -match 'talvora_tail_text' -and
+        $configAssetTools -match 'talvora_append_text' -and
+        $configAssetTools -match 'talvora_json_get' -and
+        $configAssetTools -match 'talvora_json_set' -and
+        $configAssetTools -match 'talvora_json_delete' -and
+        $configAssetTools -match 'talvora_archive_list' -and
+        $configAssetTools -match 'talvora_archive_create' -and
+        $configAssetTools -match 'talvora_archive_extract' -and
+        $configAssetTools -match 'talvora_http_download'
+    )
     JobAndGitToolContract = (
         $jobTools -match 'talvora_job_start' -and
         $jobTools -match 'talvora_job_get' -and
@@ -34,8 +47,8 @@ $result = [pscustomobject]@{
         $gitTools -match 'talvora_git_run' -and
         $gitTools -match 'No Git subcommand, ref, remote, path, or option denylist/allowlist'
     )
-    InstallerDeclares57Tools = (
-        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 57
+    InstallerDeclares67Tools = (
+        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 67
     )
     DeveloperCoreToolContract = (
         $developerTools -match 'talvora_path_info' -and

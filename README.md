@@ -81,6 +81,23 @@ Talvora also exposes repository-aware Git operations:
 
 The read-only tools use Git's machine-oriented output where appropriate and return structured repository, branch, history, status, and diff data. `talvora_git_run` accepts arbitrary Git arguments plus environment overrides in any accessible working directory; no subcommand, ref, remote, path, or option allowlist/denylist is applied. This preserves full Git functionality for add/commit/fetch/push/rebase/worktree/submodule and other workflows without requiring Talvora to pre-model every Git command.
 
+## Config, text, archive, and download tools
+
+Talvora includes structured helpers for common development assets and configuration:
+
+- `talvora_read_text_range`
+- `talvora_tail_text`
+- `talvora_append_text`
+- `talvora_json_get`
+- `talvora_json_set`
+- `talvora_json_delete`
+- `talvora_archive_list`
+- `talvora_archive_create`
+- `talvora_archive_extract`
+- `talvora_http_download`
+
+Text range/tail operations avoid loading large logs or source files into one MCP response, while `lineCount=0` preserves an explicit unbounded mode. JSON tools use RFC 6901 JSON Pointer syntax and can create, update, query, or delete arbitrary configuration nodes. ZIP tools expose complete archive listing, directory creation, and extraction; extraction is destination-contained by default but `allowOutsideDestination=true` preserves full filesystem semantics when intentionally required. `talvora_http_download` streams HTTP response bodies directly to any accessible path, supports custom headers, redirects, TLS override, overwrite, and byte-range resume, and returns a SHA-256 of the downloaded file.
+
 ## Environment variable tools
 
 - `talvora_env_get`
