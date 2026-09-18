@@ -115,10 +115,24 @@ By default, search walks knowledge-oriented locations rather than crawling the w
 
 The local scan skips reparse-point directory recursion, ignores inaccessible files/directories, searches text-oriented files up to 4 MiB each, caps a response at 20 results, and uses an internal time budget so an oversized corpus returns partial results rather than holding the MCP request indefinitely. These are retrieval-engine constraints only; they are not filesystem or execution restrictions on Talvora's primitive tools.
 
+## ChatGPT Business transport
+
+The privileged MCP runtime and the ChatGPT Business transport are deliberately separate layers.
+
+Talvora itself remains a single LocalSystem Windows Service bound only to `127.0.0.1:7676`. ChatGPT web cannot dial that loopback address directly. For a Business custom MCP app, Talvora uses OpenAI Secure MCP Tunnel as an optional outbound-only transport.
+
+`scripts/Configure-ChatGPT-Business.ps1` manages that transport in the interactive Windows user's context. It downloads the current official `openai/tunnel-client` Windows archive directly from the project's GitHub release, verifies the archive against the release SHA-256 manifest, and places the client under `%LOCALAPPDATA%\Talvora\TunnelClient`.
+
+The script attaches an existing tunnel with `tunnel-client runtimes connect`, points it at `http://127.0.0.1:7676/mcp`, and passes the restricted runtime key through an environment-variable secret reference. Reconnect metadata is non-secret JSON; the runtime key is stored separately using current-user Windows DPAPI. The key authenticates the tunnel runtime and is not consumed by Talvora or used to invoke OpenAI models.
+
+A Business connection is considered ready only after native `runtimes status --json` reports the managed runtime as running, healthy, and ready. There is no inbound Talvora firewall exposure, public MCP listener, user-session gateway, second Talvora Windows Service, or scheduled-task broker.
+
+Automatic reboot persistence is not invented beyond what the official tunnel client documents. The explicit `-Reconnect` flow restores the managed runtime from the saved tunnel metadata and DPAPI-protected credential.
+
 ## Installation
 
 The reset installer deletes prior Talvora Windows services, scheduled tasks, known Talvora runtime processes, `%LOCALAPPDATA%\Talvora`, `%PROGRAMDATA%\Talvora`, and the previous source checkout. It then clones a clean `main`, publishes a self-contained `win-x64` service, installs it as LocalSystem, verifies health and SID `S-1-5-18`, runs the real MCP smoke suite, and writes the `talvora_local` client registration.
 
 Chocolatey is the only package manager used. WinGet is not used.
 
-The local runtime does not require an OpenAI API account, API key, public ingress, or tunnel. Remote publication to ChatGPT web is a separate deployment concern from the Windows-local Talvora runtime.
+The local Talvora runtime does not require an OpenAI Platform account, API key, public ingress, or tunnel. ChatGPT Business web connectivity is an optional deployment layer and, under the current official Secure MCP Tunnel design, requires a tunnel ID plus a restricted tunnel runtime credential.
