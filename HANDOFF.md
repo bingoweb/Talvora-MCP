@@ -23,7 +23,7 @@ Do these steps in order:
 4. Check the latest Windows CI run for the current `main`.
 5. If a local MCP namespace/connector named `talvora_local` is actually available in the new session, call `talvora_system_info` before doing local-machine work and compare its `SourceCommit` with current GitHub `main`.
 6. If `talvora_local` is **not** available in that session, do not claim access to the user's Windows machine and do not stall. Continue GitHub/Windows-CI development and say only when relevant that physical-PC deployment cannot be executed from that surface.
-7. Read sections 11 through 13 for the completed filesystem-mutation, environment-variable, and Event Log query TDD evidence. There is no further bounded subsystem pre-approved by this handoff.
+7. Read sections 11 through 14 for the completed filesystem-mutation, environment-variable, Event Log query, and ChatGPT Business Secure MCP Tunnel evidence. There is no further bounded subsystem pre-approved by this handoff.
 8. For the next genuinely new architectural subsystem, reassess current `main`, present a short bounded design when needed, and follow the normal approval rules before implementation.
 
 ---
@@ -40,7 +40,7 @@ Hard rules:
 - Talvora should run with machine authority. The canonical runtime is a single Windows Service running as `LocalSystem`.
 - Chocolatey is the package manager. **WinGet is forbidden.**
 - Do not require an OpenAI API account or OpenAI API key for the local runtime.
-- A secure tunnel may be considered only if it is useful for ChatGPT Business/web access and an API-key-free path is verified from current official OpenAI documentation. It is never a prerequisite for the local runtime.
+- ChatGPT Business/web connectivity may use the current official OpenAI Secure MCP Tunnel. The Talvora core runtime must remain independent of OpenAI Platform credentials; the optional tunnel transport may use the restricted runtime credential required by current official tunnel-client documentation. It is never a prerequisite for the local runtime.
 - Do not reintroduce the old Gateway + SYSTEM broker + scheduled-task architecture.
 - Do not add artificial deny-lists/allow-lists to the primitive capability surface.
 - Prefer structured dedicated MCP tools when they materially reduce quoting/parsing fragility, while keeping unrestricted primitives available.
@@ -59,9 +59,9 @@ Repository:
 - GitHub: `bingoweb/Talvora-MCP`
 - Canonical branch: `main`
 - Last fully verified code/workflow commit before this handoff update:  
-  `ae5f1e3b895a41c1777b6bac8825c8a91971e5f1`
-- Windows CI run for that commit: **#328 — SUCCESS**
-- That run proved the direct MCP smoke and the real elevated LocalSystem installer/service smoke with **32 tools**.
+  `56732fd38904f3491bbc319823e3744b2a7ad24a`
+- Windows CI run for that commit: **#353 — SUCCESS**
+- That run proved the direct 32-tool MCP smoke, PowerShell parser gate, WinGet rejection, dual-shell ChatGPT Business bootstrap self-tests, and the real elevated LocalSystem installer/service smoke.
 - A temporary draft PR was used only to obtain Windows pull-request CI during TDD; close it after the final handoff HEAD is verified and promoted to `main`.
 - Historical branch refs must be aligned to the final verified handoff HEAD after promotion.
 
@@ -406,18 +406,24 @@ Therefore:
 
 ## 10. OpenAI / ChatGPT Business integration constraints
 
-Do not conflate ChatGPT Business with the OpenAI API.
+Do not conflate ChatGPT Business with the OpenAI API or with the Talvora core runtime.
 
 Current project policy:
 
-- No OpenAI API account/key is required by Talvora local runtime.
-- Full MCP write/modify capabilities are intended to be usable where ChatGPT Business supports them.
-- The `search`/`fetch` surface exists for company-knowledge-style retrieval compatibility.
-- ChatGPT web does not directly reach a loopback-only `localhost` MCP.
-- OpenAI has documented a Secure MCP Tunnel concept for private/local MCP connectivity, but do not add a tunnel as a mandatory runtime dependency.
-- If pursuing web connectivity, verify current official OpenAI documentation first.
-- If there is a genuinely API-key-free secure tunnel path, it is allowed by the user.
-- If a proposed tunnel requires an OpenAI API key, do not make it part of the Talvora core installation.
+- Talvora core remains a Windows-local, API-key-free MCP runtime.
+- The Talvora service still binds only to `http://127.0.0.1:7676/mcp` and requires no public ingress.
+- ChatGPT web cannot directly dial the loopback MCP endpoint.
+- Current official ChatGPT Business connectivity for a private/local MCP uses OpenAI Secure MCP Tunnel.
+- The optional Business transport is deliberately separate from Talvora core and uses the official `openai/tunnel-client`.
+- The verified/pinned tunnel client is `v0.0.14`; upgrade it only with a new explicit Windows CI validation.
+- Current official tunnel attach requires an existing `tunnel_id` plus a restricted Runtime API key/principal with **Tunnels Read + Use**.
+- That runtime credential authenticates Secure MCP Tunnel transport. Talvora does not use it for model inference, Responses API calls, or its local MCP tools.
+- Do not use an organization/admin key when a least-privilege Runtime API key is sufficient.
+- The reconnect credential is stored separately using current-user Windows DPAPI; it is not written into command-line arguments or Talvora config.
+- No inbound firewall rule, public Talvora listener, secondary Talvora service, Gateway, broker, or scheduled task is added for Business connectivity.
+- Reboot recovery is explicit via `TALVORA-BUSINESS-KUR.cmd reconnect` unless future official tunnel-client documentation provides a different supported persistence contract.
+- Business Admin/Owner performs the final workspace UI step: Developer mode -> Workspace settings/Apps -> custom MCP app -> Connection: Tunnel -> select/paste the tunnel ID -> review/publish.
+
 
 ---
 
@@ -529,7 +535,62 @@ API/library basis:
 
 ---
 
-## 14. Next development task
+## 14. COMPLETED TASK — ChatGPT Business Secure MCP Tunnel transport
+
+The user explicitly requested Windows installation to be fully compatible with ChatGPT Business. The transport was added as a separate optional layer without changing Talvora's 32-tool MCP surface or the LocalSystem/loopback core architecture.
+
+Implemented:
+
+1. `scripts/Configure-ChatGPT-Business.ps1`
+2. `TALVORA-BUSINESS-KUR.cmd`
+3. Windows CI gate for both PowerShell 7 and Windows PowerShell 5.1 bootstrap self-tests.
+4. README/architecture/install output describing the separate Business pairing flow.
+
+Contract:
+
+- Talvora remains one `LocalSystem` Windows Service on `127.0.0.1:7676`.
+- The Business layer uses official `openai/tunnel-client` and an outbound Secure MCP Tunnel.
+- Tunnel client version is pinned to verified `v0.0.14`.
+- The Windows archive is downloaded from the official GitHub release and verified against official `SHA256SUMS.txt` before use.
+- Supported local tunnel-client architectures are Windows amd64 and arm64.
+- Tunnel IDs are validated using the current official shape: `tunnel_` plus 32 lowercase hexadecimal characters.
+- Runtime credential is supplied to the native client by `env:CONTROL_PLANE_API_KEY`, not as a literal command-line secret.
+- Reconnect copy of the restricted runtime credential is protected with current-user Windows DPAPI.
+- Non-secret pairing metadata is stored under `%LOCALAPPDATA%\Talvora\TunnelClient`.
+- Pairing uses `runtimes connect` to `http://127.0.0.1:7676/mcp`.
+- Success is not reported until `runtimes status <alias> --json` reports `process_running=true`, `healthy=true`, and `ready=true`.
+- No public MCP listener or inbound firewall opening is created.
+- No hidden second service or scheduled task is created.
+- `TALVORA-BUSINESS-KUR.cmd reconnect` is the explicit reboot/reconnect path.
+- The Talvora MCP tool manifest remains **32 tools**.
+
+TDD/CI evidence:
+
+- RED commit: `15583176080a873d1d645c4bb1b3cb0f37d16c43`.
+- Windows CI **#336** passed Talvora build, real 32-tool MCP smoke, parser and WinGet gates, then failed exactly because `scripts/Configure-ChatGPT-Business.ps1` did not yet exist.
+- Windows CI **#337** showed the bootstrap's own self-test GREEN but exposed a CI-gate bug: `$LASTEXITCODE` was incorrectly inspected after invoking a PowerShell script. The gate was corrected and expanded to run Windows PowerShell 5.1 explicitly.
+- A JavaScript replacement-string `$'` metacharacter accident later duplicated/corrupted the bootstrap file. Repeated parser failures exposed that the file had grown to 1,344 lines with duplicated major functions. The file was not incrementally patched; it was reconstructed as one canonical 534-line script at `b5266e156a472f9d0040dc86206f46f523f3654f`.
+- Windows CI **#352** then passed build, 32-tool MCP smoke, parser and WinGet gates and reached the Business self-test. It exposed that PowerShell `-match` is case-insensitive by default, so uppercase tunnel IDs were incorrectly accepted.
+- Final behavior fix: `56732fd38904f3491bbc319823e3744b2a7ad24a` uses case-sensitive `-cmatch`.
+- Windows CI **#353** completed fully **SUCCESS**, including:
+  - restore/build;
+  - direct real 32-tool MCP smoke;
+  - all PowerShell installer parsing;
+  - WinGet rejection including the Business bootstrap CMD;
+  - Business bootstrap self-test under PowerShell 7;
+  - Business bootstrap self-test under Windows PowerShell 5.1;
+  - real elevated LocalSystem `Install.ps1` service installation and 32-tool installed manifest;
+  - cleanup.
+
+Physical-PC caveat:
+
+- This development thread did not expose a `talvora_local` tool namespace in ChatGPT, so GitHub/Windows-runner validation must not be described as physical deployment to the user's own PC.
+- On the physical Windows PC, run `TALVORA-KUR.cmd` first, then `TALVORA-BUSINESS-KUR.cmd` for Business pairing.
+
+
+---
+
+## 15. Next development task
 
 There is no additional bounded subsystem pre-approved by this handoff. Reassess current `main` and choose the next highest-value Windows capability one bounded change at a time.
 
@@ -541,20 +602,19 @@ Likely future candidates, subject to a new short design:
 - Windows account/session/token ergonomics;
 - filesystem ACL/ownership tools;
 - device/driver inspection;
-- update/self-maintenance flow for the installed Talvora service;
-- API-key-free Secure MCP Tunnel path if current official OpenAI docs support it.
+- update/self-maintenance flow for the installed Talvora service.
 
 Do not add several of these in one commit. Continue one bounded capability at a time with real Windows smoke coverage.
 
 ---
 
-## 15. Housekeeping status
+## 16. Housekeeping status
 
 The duplicate `Process inspection and control` section in `docs/ARCHITECTURE.md` was removed during the filesystem mutation documentation update. The file now has one canonical process section.
 
 ---
 
-## 16. Communication style expected by the user
+## 17. Communication style expected by the user
 
 - Turkish.
 - Direct and technically concrete.
@@ -568,7 +628,7 @@ The duplicate `Process inspection and control` section in `docs/ARCHITECTURE.md`
 
 ---
 
-## 17. Compact continuity checklist
+## 18. Compact continuity checklist
 
 Before doing new code:
 
@@ -578,10 +638,10 @@ Before doing new code:
 - [ ] Check whether `talvora_local` exists in the current session.
 - [ ] Preserve full-capability/LocalSystem design.
 - [ ] Chocolatey only; reject WinGet.
-- [ ] No OpenAI API key requirement.
+- [ ] No OpenAI Platform/API-key requirement for Talvora core. Keep the optional Business tunnel runtime credential isolated to the tunnel transport.
 - [ ] Confirm the 32-tool manifest is still current.
 - [ ] Preserve direct MCP smoke + real LocalSystem installer smoke for every behavior change.
-- [ ] Do not reopen the completed filesystem-mutation, environment-variable, or Event Log query tasks unless fixing a discovered defect.
+- [ ] Do not reopen the completed filesystem-mutation, environment-variable, Event Log query, or ChatGPT Business tunnel tasks unless fixing a discovered defect.
 - [ ] For a new subsystem, keep the change bounded and use RED -> GREEN.
 - [ ] Final CI on canonical HEAD.
 - [ ] Keep historical branch refs aligned.
