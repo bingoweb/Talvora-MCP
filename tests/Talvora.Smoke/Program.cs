@@ -21,6 +21,9 @@ string[] required =
     "talvora_delete",
     "talvora_list",
     "talvora_run_process",
+    "talvora_process_list",
+    "talvora_process_get",
+    "talvora_process_kill",
     "talvora_run_powershell",
     "talvora_process_list",
     "talvora_process_get",
@@ -365,6 +368,86 @@ try
     finally
     {
         if (Directory.Exists(powerShellRoot)) Directory.Delete(powerShellRoot, recursive: true);
+    }
+
+    int? processSmokePid = null;
+    try
+    {
+        var processStart = await EnsureSuccess(byName["talvora_run_powershell"], new()
+        {
+            ["script"] = """
+                $exe = Join-Path $env:SystemRoot 'System32\cmd.exe'
+                $p = Start-Process -FilePath $exe -ArgumentList @('/d','/c','ping -t 127.0.0.1 >NUL') -WindowStyle Hidden -PassThru
+                [Console]::Out.Write($p.Id)
+                """,
+            ["engine"] = "auto",
+            ["timeoutSeconds"] = 30,
+        });
+        if (processStart.StructuredContent is not { } processStartJson ||
+            !processStartJson.TryGetProperty("standardOutput", out var processStartOutput) ||
+            !int.TryParse(processStartOutput.GetString()?.Trim(), out var spawnedPid))
+        {
+            throw new InvalidOperationException("failed to spawn process smoke child.");
+        }
+        processSmokePid = spawnedPid;
+
+        var processGet = await EnsureSuccess(byName["talvora_process_get"], new()
+        {
+            ["processId"] = spawnedPid,
+        });
+        if (processGet.StructuredContent is not { } processGetJson ||
+            !processGetJson.TryGetProperty("found", out var processFound) ||
+            !processFound.GetBoolean() ||
+            !processGetJson.TryGetProperty("process", out var processInfo) ||
+            !processInfo.TryGetProperty("processId", out var returnedPid) ||
+            returnedPid.GetInt32() != spawnedPid)
+        {
+            throw new InvalidOperationException("process get did not return the spawned process.");
+        }
+
+        var processList = await EnsureSuccess(byName["talvora_process_list"], new()
+        {
+            ["query"] = "cmd",
+        });
+        if (processList.StructuredContent is not { } processListJson ||
+            !processListJson.TryGetProperty("processes", out var processes) ||
+            processes.ValueKind != System.Text.Json.JsonValueKind.Array ||
+            !processes.EnumerateArray().Any(item =>
+                item.TryGetProperty("processId", out var listedPid) &&
+                listedPid.GetInt32() == spawnedPid))
+        {
+            throw new InvalidOperationException("process list did not return the spawned process.");
+        }
+
+        var processKill = await EnsureSuccess(byName["talvora_process_kill"], new()
+        {
+            ["processId"] = spawnedPid,
+            ["entireProcessTree"] = true,
+            ["timeoutSeconds"] = 30,
+        });
+        if (processKill.StructuredContent is not { } processKillJson ||
+            !processKillJson.TryGetProperty("found", out var killFound) ||
+            !killFound.GetBoolean() ||
+            !processKillJson.TryGetProperty("killed", out var killed) ||
+            !killed.GetBoolean() ||
+            !processKillJson.TryGetProperty("exited", out var exited) ||
+            !exited.GetBoolean())
+        {
+            throw new InvalidOperationException("process kill did not terminate the spawned process.");
+        }
+        processSmokePid = null;
+    }
+    finally
+    {
+        if (processSmokePid is int leakedPid)
+        {
+            await EnsureSuccess(byName["talvora_run_powershell"], new()
+            {
+                ["script"] = $"Stop-Process -Id {leakedPid} -Force -ErrorAction SilentlyContinue",
+                ["engine"] = "auto",
+                ["timeoutSeconds"] = 30,
+            });
+        }
     }
 
     using var searchDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
