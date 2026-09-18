@@ -36,7 +36,11 @@ public sealed record TalvoraWindowsToolchainInfoResponse(
     string? CMakeExecutable,
     string? CMakeVersion,
     string? NinjaExecutable,
-    string? NinjaVersion);
+    string? NinjaVersion,
+    TalvoraToolInfoResponse Msbuild,
+    TalvoraWindowsSdkInfoResponse WindowsSdk,
+    TalvoraToolInfoResponse CMake,
+    TalvoraToolInfoResponse Ninja);
 
 public sealed record TalvoraVsDevEnvironmentResponse(
     string InstallationPath,
@@ -109,7 +113,7 @@ public static class WindowsToolchainTools
     public static async Task<TalvoraVisualStudioInstancesResponse> VisualStudioInstancesCompat(
         CancellationToken cancellationToken = default)
     {
-        var instances = await VisualStudioInstances(cancellationToken);
+        var instances = await DiscoverVisualStudioInstancesAsync(cancellationToken);
         return new TalvoraVisualStudioInstancesResponse(instances.Count, instances);
     }
 
@@ -153,7 +157,7 @@ public static class WindowsToolchainTools
     public static async Task<TalvoraToolInfoResponse> MsBuildInfo(
         CancellationToken cancellationToken = default)
     {
-        var instances = await VisualStudioInstances(cancellationToken);
+        var instances = await DiscoverVisualStudioInstancesAsync(cancellationToken);
         var msbuild = ResolveMsBuild(instances);
 
         if (!string.IsNullOrWhiteSpace(msbuild) && File.Exists(msbuild))
@@ -359,9 +363,7 @@ public static class WindowsToolchainTools
         CancellationToken cancellationToken = default)
     {
         var vsWhere = ResolveVsWhere();
-        var instances = vsWhere is null
-            ? []
-            : await ReadVisualStudioInstancesAsync(vsWhere, cancellationToken);
+        var instances = await DiscoverVisualStudioInstancesAsync(cancellationToken);
 
         var msBuild = ResolveMsBuild(instances);
         var sdks = DiscoverWindowsSdks();
@@ -385,6 +387,11 @@ public static class WindowsToolchainTools
             ? null
             : await ReadFirstLineAsync(ninja, ["--version"], cancellationToken);
 
+        var msbuildInfo = await MsBuildInfo(cancellationToken);
+        var sdkInfo = WindowsSdkInfo();
+        var cmakeInfo = await CMakeInfo(cancellationToken);
+        var ninjaInfo = await NinjaInfo(cancellationToken);
+
         return new TalvoraWindowsToolchainInfoResponse(
             vsWhere,
             instances,
@@ -393,7 +400,11 @@ public static class WindowsToolchainTools
             cmake,
             cmakeVersion,
             ninja,
-            ninjaVersion);
+            ninjaVersion,
+            msbuildInfo,
+            sdkInfo,
+            cmakeInfo,
+            ninjaInfo);
     }
 
     [McpServerTool(
@@ -401,15 +412,13 @@ public static class WindowsToolchainTools
         ReadOnly = true,
         OpenWorld = true,
         UseStructuredContent = true,
-        OutputSchemaType = typeof(List<TalvoraVisualStudioInstance>)),
-     Description("Return installed Visual Studio / Build Tools instances discovered through vswhere when available. Missing vswhere returns an empty list.")]
-    public static async Task<IReadOnlyList<TalvoraVisualStudioInstance>> VisualStudioInstances(
+        OutputSchemaType = typeof(TalvoraVisualStudioInstancesResponse)),
+     Description("Alias of talvora_visual_studio_instances. Returns count plus all Visual Studio / Build Tools instances discovered through vswhere.")]
+    public static async Task<TalvoraVisualStudioInstancesResponse> VisualStudioInstances(
         CancellationToken cancellationToken = default)
     {
-        var vsWhere = ResolveVsWhere();
-        return vsWhere is null
-            ? []
-            : await ReadVisualStudioInstancesAsync(vsWhere, cancellationToken);
+        var instances = await DiscoverVisualStudioInstancesAsync(cancellationToken);
+        return new TalvoraVisualStudioInstancesResponse(instances.Count, instances);
     }
 
     [McpServerTool(
@@ -417,10 +426,10 @@ public static class WindowsToolchainTools
         ReadOnly = true,
         OpenWorld = true,
         UseStructuredContent = true,
-        OutputSchemaType = typeof(List<TalvoraWindowsSdkEntry>)),
-     Description("List installed Windows 10/11 SDK bin versions and architecture/tool availability such as rc.exe, mt.exe, and signtool.exe.")]
-    public static IReadOnlyList<TalvoraWindowsSdkEntry> WindowsSdkList() =>
-        DiscoverWindowsSdks();
+        OutputSchemaType = typeof(TalvoraWindowsSdkInfoResponse)),
+     Description("Alias of talvora_windows_sdk_info. Returns found/root/latest-version plus all discovered Windows SDK entries.")]
+    public static TalvoraWindowsSdkInfoResponse WindowsSdkList() =>
+        WindowsSdkInfo();
 
     [McpServerTool(
         Name = "talvora_vsdev_environment",
@@ -441,7 +450,7 @@ public static class WindowsToolchainTools
             throw new ArgumentOutOfRangeException(nameof(timeoutSeconds));
         }
 
-        var instances = await VisualStudioInstances(cancellationToken);
+        var instances = await DiscoverVisualStudioInstancesAsync(cancellationToken);
         var selectedPath = string.IsNullOrWhiteSpace(installationPath)
             ? instances.FirstOrDefault()?.InstallationPath
             : Path.GetFullPath(installationPath);
@@ -556,7 +565,7 @@ public static class WindowsToolchainTools
         ArgumentNullException.ThrowIfNull(arguments);
 
         var executable = string.IsNullOrWhiteSpace(msBuildExecutable)
-            ? ResolveMsBuild(await VisualStudioInstances(cancellationToken))
+            ? ResolveMsBuild(await DiscoverVisualStudioInstancesAsync(cancellationToken))
             : Path.GetFullPath(msBuildExecutable);
 
         if (!string.IsNullOrWhiteSpace(executable) && File.Exists(executable))
@@ -650,6 +659,15 @@ public static class WindowsToolchainTools
             environment,
             timeoutSeconds,
             cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<TalvoraVisualStudioInstance>> DiscoverVisualStudioInstancesAsync(
+        CancellationToken cancellationToken)
+    {
+        var vsWhere = ResolveVsWhere();
+        return vsWhere is null
+            ? []
+            : await ReadVisualStudioInstancesAsync(vsWhere, cancellationToken);
     }
 
     private static string? ResolveKitsRoot10()
