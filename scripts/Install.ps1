@@ -181,6 +181,7 @@ try {
     Write-Host 'MCP smoke: GREEN'
     Write-Host 'MCP: http://127.0.0.1:7676/mcp'
     Write-Host "Client config: $clientPath"
+    Write-Host 'ChatGPT Business: run TALVORA-BUSINESS-KUR.cmd after this local install is complete.'
 }
 finally {
     Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
