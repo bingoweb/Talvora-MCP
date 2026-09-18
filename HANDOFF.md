@@ -23,7 +23,7 @@ Do these steps in order:
 4. Check the latest Windows CI run for the current `main`.
 5. If a local MCP namespace/connector named `talvora_local` is actually available in the new session, call `talvora_system_info` before doing local-machine work and compare its `SourceCommit` with current GitHub `main`.
 6. If `talvora_local` is **not** available in that session, do not claim access to the user's Windows machine and do not stall. Continue GitHub/Windows-CI development and say only when relevant that physical-PC deployment cannot be executed from that surface.
-7. Read section 11 for the completed filesystem-mutation TDD evidence. There is no further bounded subsystem pre-approved by this handoff.
+7. Read sections 11 and 12 for the completed filesystem-mutation and environment-variable TDD evidence. There is no further bounded subsystem pre-approved by this handoff.
 8. For the next genuinely new architectural subsystem, reassess current `main`, present a short bounded design when needed, and follow the normal approval rules before implementation.
 
 ---
@@ -58,10 +58,10 @@ Repository:
 
 - GitHub: `bingoweb/Talvora-MCP`
 - Canonical branch: `main`
-- Last fully verified code/docs commit before this handoff update:  
-  `093bab372ae5ae6bcb727a32882b9697ca5f9ef1`
-- Windows CI run for that commit: **#308 — SUCCESS**
-- That run proved the direct MCP smoke and the real elevated LocalSystem installer/service smoke with **26 tools**.
+- Last fully verified code/workflow commit before this handoff update:  
+  `97a1eaef6280511e5a4268ab82877ed849edef6d`
+- Windows CI run for that commit: **#319 — SUCCESS**
+- That run proved the direct MCP smoke and the real elevated LocalSystem installer/service smoke with **30 tools**.
 - A temporary draft PR was used only to obtain Windows pull-request CI during TDD; close it after the final handoff HEAD is verified and promoted to `main`.
 - Historical branch refs must be aligned to the final verified handoff HEAD after promotion.
 
@@ -106,7 +106,7 @@ The `approve` tool mode was intentionally kept because current Codex MCP semanti
 
 ---
 
-## 4. Current MCP tool surface: 26 verified tools
+## 4. Current MCP tool surface: 30 verified tools
 
 ### Full-capability primitives — 6
 
@@ -137,11 +137,28 @@ Behavior:
 - Same-path operations and directory-into-descendant operations are rejected as invalid filesystem operations.
 - No path allowlist or deny-list is applied.
 
+### Environment-variable management — 4
+
+10. `talvora_env_get`
+11. `talvora_env_list`
+12. `talvora_env_set`
+13. `talvora_env_delete`
+
+Behavior:
+
+- Targets: Process, User, Machine.
+- Process values live only in the Talvora service process.
+- User/Machine values use Windows' persistent environment-variable stores.
+- Under the installed LocalSystem service, User refers to the LocalSystem account's user environment.
+- List supports an optional case-insensitive name query and deterministic sorting.
+- Explicit empty-string values are preserved; delete uses platform removal semantics and is idempotent for missing values.
+- No environment-variable name allowlist or deny-list is applied.
+
 ### Structured process inspection/control — 3
 
-10. `talvora_process_list`
-11. `talvora_process_get`
-12. `talvora_process_kill`
+14. `talvora_process_list`
+15. `talvora_process_get`
+16. `talvora_process_kill`
 
 Behavior:
 
@@ -153,7 +170,7 @@ Behavior:
 
 ### PowerShell execution — 1
 
-13. `talvora_run_powershell`
+17. `talvora_run_powershell`
 
 Behavior:
 
@@ -168,29 +185,29 @@ Behavior:
 
 ### Windows registry — 6
 
-14. `talvora_registry_create_key`
-15. `talvora_registry_get`
-16. `talvora_registry_set`
-17. `talvora_registry_list`
-18. `talvora_registry_delete_value`
-19. `talvora_registry_delete_key`
+18. `talvora_registry_create_key`
+19. `talvora_registry_get`
+20. `talvora_registry_set`
+21. `talvora_registry_list`
+22. `talvora_registry_delete_value`
+23. `talvora_registry_delete_key`
 
 Behavior remains unchanged: HKLM/HKCU/HKCR/HKU/HKCC/HKPD, default/32/64-bit views, structured value kinds, deterministic listings, and no hive/path allowlist.
 
 ### Windows service control — 5
 
-20. `talvora_service_list`
-21. `talvora_service_get`
-22. `talvora_service_start`
-23. `talvora_service_stop`
-24. `talvora_service_restart`
+24. `talvora_service_list`
+25. `talvora_service_get`
+26. `talvora_service_start`
+27. `talvora_service_stop`
+28. `talvora_service_restart`
 
 Behavior remains unchanged: structured SCM access, state-aware waits, missing-service handling, and no service-name allowlist.
 
 ### Business knowledge surface — 2
 
-25. `search`
-26. `fetch`
+29. `search`
+30. `fetch`
 
 The knowledge corpus remains a read-only retrieval surface and does not restrict primitive or structured filesystem/process capabilities.
 
@@ -281,8 +298,8 @@ The CI service-install gate now proves:
 - it detects Windows Service hosting;
 - `health.sourceCommit == git rev-parse HEAD`;
 - `current.json.SourceCommit == git rev-parse HEAD`;
-- `current.json.ToolCount == 26`;
-- `ToolNames` count is 26;
+- `current.json.ToolCount == 30`;
+- `ToolNames` count is 30;
 - core expected tools are present in the manifest.
 
 The filesystem-mutation thread has a fully successful Windows verification before this handoff update:
@@ -317,7 +334,7 @@ A transient implementation bug occurred while patching `Install.ps1`: a JavaScri
 12. verify Windows Service detection;
 13. verify exact source commit provenance;
 14. verify installed state file;
-15. verify 26-tool manifest;
+15. verify 30-tool manifest;
 16. cleanup service and runtime state.
 
 A change is not complete until the final canonical HEAD has a fresh successful run of this workflow.
@@ -417,7 +434,47 @@ No primitive tool was removed or restricted.
 
 ---
 
-## 12. Next development task
+## 12. COMPLETED TASK — environment-variable management
+
+The next bounded Windows capability was implemented entirely through GitHub + Windows CI because the user was not on the Windows machine.
+
+Implemented:
+
+1. `talvora_env_get`
+2. `talvora_env_list`
+3. `talvora_env_set`
+4. `talvora_env_delete`
+
+Contract:
+
+- Explicit targets: Process, User, Machine.
+- Get returns structured found/not-found data.
+- List returns deterministic name-sorted entries and optional case-insensitive name filtering.
+- Set creates/replaces values and preserves explicit empty strings.
+- Delete is idempotent and removes values using the platform's null-removal semantics.
+- No environment-variable name allowlist or deny-list.
+- No existing process/PowerShell primitive was removed or restricted.
+
+TDD/CI evidence:
+
+- Initial smoke-only commit: `8bb9849a9d63146d1ce0df48d269d42f3f4915e5`.
+- Windows CI **#316** was **not** accepted as RED because the smoke used `smokeId` before declaration and failed at compile time. The test was corrected before any production implementation.
+- Corrected RED commit: `2327e715e3ffdd3a491196b9764c66e92d32564d`.
+- Windows CI **#317** restored and built both projects with zero errors, then failed the real MCP smoke specifically with `Missing MCP tool: talvora_env_get`.
+- Production implementation commit: `4ef585fbc83b44176224bcadf069767cc7167d81`.
+- Windows CI **#318** passed build, direct MCP behavior smoke, installer parsing and WinGet rejection. The real LocalSystem installer reached `TALVORA READY`, SID `S-1-5-18`, and wrote a live 30-tool manifest, then failed only because the old CI assertion still expected 26.
+- The manifest gate was updated to 30 at `97a1eaef6280511e5a4268ab82877ed849edef6d`.
+- Windows CI **#319** completed fully SUCCESS, including direct MCP smoke and the real elevated LocalSystem installation/service smoke with all 30 tools.
+
+API/library basis:
+
+- Current .NET 10 `System.Environment` APIs support Process/User/Machine targets on Windows.
+- Passing `null` removes a variable; an explicit empty string is preserved on current .NET.
+- Machine-scope writes require administrative authority; Talvora's installed LocalSystem service has that authority.
+
+---
+
+## 13. Next development task
 
 There is no additional bounded subsystem pre-approved by this handoff. Reassess current `main` and choose the next highest-value Windows capability one bounded change at a time.
 
@@ -426,7 +483,6 @@ Likely future candidates, subject to a new short design:
 - scheduled task inspection/control;
 - Windows package management through Chocolatey only;
 - network/port/interface inspection and control;
-- environment-variable management;
 - Windows account/session/token ergonomics;
 - filesystem ACL/ownership tools;
 - device/driver inspection;
@@ -438,13 +494,13 @@ Do not add several of these in one commit. Continue one bounded capability at a 
 
 ---
 
-## 13. Housekeeping status
+## 14. Housekeeping status
 
 The duplicate `Process inspection and control` section in `docs/ARCHITECTURE.md` was removed during the filesystem mutation documentation update. The file now has one canonical process section.
 
 ---
 
-## 14. Communication style expected by the user
+## 15. Communication style expected by the user
 
 - Turkish.
 - Direct and technically concrete.
@@ -458,7 +514,7 @@ The duplicate `Process inspection and control` section in `docs/ARCHITECTURE.md`
 
 ---
 
-## 15. Compact continuity checklist
+## 16. Compact continuity checklist
 
 Before doing new code:
 
@@ -469,9 +525,9 @@ Before doing new code:
 - [ ] Preserve full-capability/LocalSystem design.
 - [ ] Chocolatey only; reject WinGet.
 - [ ] No OpenAI API key requirement.
-- [ ] Confirm the 26-tool manifest is still current.
+- [ ] Confirm the 30-tool manifest is still current.
 - [ ] Preserve direct MCP smoke + real LocalSystem installer smoke for every behavior change.
-- [ ] Do not reopen the completed filesystem-mutation task unless fixing a discovered defect.
+- [ ] Do not reopen the completed filesystem-mutation or environment-variable tasks unless fixing a discovered defect.
 - [ ] For a new subsystem, keep the change bounded and use RED -> GREEN.
 - [ ] Final CI on canonical HEAD.
 - [ ] Keep historical branch refs aligned.
