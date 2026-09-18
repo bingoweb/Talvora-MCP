@@ -628,8 +628,11 @@ public static class JobTools
         }
         finally
         {
+            // Do not dispose the shared Process wrapper here. A concurrent job_stop/get
+            // call may still be completing against the same exited process. Removing
+            // the runtime drops Talvora's long-lived reference; SafeHandle/GC cleanup
+            // can reclaim the wrapper after in-flight callers release their references.
             LiveJobs.TryRemove(jobId, out _);
-            runtime.Dispose();
         }
     }
 

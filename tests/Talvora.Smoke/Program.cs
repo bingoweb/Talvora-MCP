@@ -903,10 +903,11 @@ try
         ["contextLines"] = 2,
     });
     if (gitDiffResult.StructuredContent is not { } gitDiffJson ||
+        string.IsNullOrWhiteSpace(gitDiffJson.GetProperty("diff").GetString()) ||
         !(gitDiffJson.GetProperty("diff").GetString() ?? string.Empty)
-            .Contains("talvora_job_start", StringComparison.Ordinal))
+            .Contains("src/Talvora/Tools/JobTools.cs", StringComparison.Ordinal))
     {
-        throw new InvalidOperationException("git_diff did not return the committed job-tool change.");
+        throw new InvalidOperationException("git_diff did not return the committed JobTools change.");
     }
 
     var gitLogResult = await EnsureSuccess(byName["talvora_git_log"], new()

@@ -32,6 +32,13 @@ $result = [pscustomobject]@{
         $configAssetTools -match 'talvora_archive_extract' -and
         $configAssetTools -match 'talvora_http_download'
     )
+    JobExitAvoidsDisposeRace = (
+        $jobTools -notmatch 'LiveJobs\.TryRemove\(jobId, out _\);\s*runtime\.Dispose\(\);'
+    )
+    JobObserverAvoidsDisposeRace = (
+        $jobTools -match 'LiveJobs\.TryRemove\(jobId, out _\)' -and
+        $jobTools -notmatch 'LiveJobs\.TryRemove\(jobId, out _\);\s*runtime\.Dispose\(\)'
+    )
     JobAndGitToolContract = (
         $jobTools -match 'talvora_job_start' -and
         $jobTools -match 'talvora_job_get' -and
