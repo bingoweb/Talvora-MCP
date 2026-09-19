@@ -827,4 +827,4 @@ Playwright kartını yalnız process var diye Ready sayma. Mümkün olan en kuvv
 - Exact-installed Playwright smoke: initialize + tools/list + expected capability set + gerçek navigate + accessibility snapshot GREEN, 45 tools.
 - Final `git diff --check` GREEN.
 - Git branch: `main`. Remotes: `origin` = local Gitea, `github` = GitHub mirror.
-- Bu handoff yazıldıktan sonra kullanıcı açıkça commit/push istedi; sıradaki işlem tüm Faz 12 değişikliklerini tek production-hardening commit'i olarak oluşturup `origin/main` ve `github/main` üzerine push etmektir.
+- Production-hardening commit'i `9fc9bc87c197b367ced6993d782f299575577b2f` (`feat: production harden Playwright MCP management`) oluşturuldu ve hem local Gitea `origin/main` hem GitHub `github/main` üzerine başarıyla push edildi. İki remote bu commit'te senkronlandı; bu final handoff closeout notu ayrıca docs commit olarak iki remote'a gönderilecektir.
