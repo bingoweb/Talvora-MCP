@@ -212,63 +212,44 @@ public static class SqliteTools
             ? connection.BeginTransaction()
             : null;
 
-        try
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.CommandTimeout = timeoutSeconds;
+        command.Transaction = transaction;
+        BindParameters(command, parameters);
+
+        var rowsAffected =
+            await command.ExecuteNonQueryAsync(cancellationToken);
+
+        await using var metadata = connection.CreateCommand();
+        metadata.CommandText =
+            "SELECT changes(), last_insert_rowid();";
+        metadata.CommandTimeout = timeoutSeconds;
+        metadata.Transaction = transaction;
+
+        await using var reader =
+            await metadata.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
         {
-            await using var command = connection.CreateCommand();
-            command.CommandText = sql;
-            command.CommandTimeout = timeoutSeconds;
-            command.Transaction = transaction;
-            BindParameters(command, parameters);
-
-            var rowsAffected =
-                await command.ExecuteNonQueryAsync(cancellationToken);
-
-            await using var metadata = connection.CreateCommand();
-            metadata.CommandText =
-                "SELECT changes(), last_insert_rowid();";
-            metadata.CommandTimeout = timeoutSeconds;
-            metadata.Transaction = transaction;
-
-            await using var reader =
-                await metadata.ExecuteReaderAsync(cancellationToken);
-            if (!await reader.ReadAsync(cancellationToken))
-            {
-                throw new InvalidOperationException(
-                    "SQLite mutation metadata returned no row.");
-            }
-
-            var changes = reader.GetInt64(0);
-            var lastInsertRowId = reader.GetInt64(1);
-
-            if (transaction is not null)
-            {
-                await transaction.CommitAsync(cancellationToken);
-            }
-
-            return new TalvoraSqliteExecuteResponse(
-                database,
-                sql,
-                transactional,
-                rowsAffected,
-                changes,
-                lastInsertRowId);
+            throw new InvalidOperationException(
+                "SQLite mutation metadata returned no row.");
         }
-        catch
+
+        var changes = reader.GetInt64(0);
+        var lastInsertRowId = reader.GetInt64(1);
+
+        if (transaction is not null)
         {
-            if (transaction is not null)
-            {
-                try
-                {
-                    await transaction.RollbackAsync(
-                        CancellationToken.None);
-                }
-                catch
-                {
-                }
-            }
-
-            throw;
+            await transaction.CommitAsync(cancellationToken);
         }
+
+        return new TalvoraSqliteExecuteResponse(
+            database,
+            sql,
+            transactional,
+            rowsAffected,
+            changes,
+            lastInsertRowId);
     }
 
     [McpServerTool(
@@ -346,7 +327,7 @@ public static class SqliteTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraSqliteBackupResponse)),
-     Description("Create an online SQLite backup from any accessible database file to any accessible destination path using Microsoft.Data.Sqlite BackupDatabase. overwrite=true replaces an existing destination.")]
+     Description("Create an online SQLite backup from any accessible database file to any accessible destination path using Microsoft.Data.Sqlite BackupDatabase. overwrite=true stages the new backup beside the destination and replaces the existing file only after the backup succeeds.")]
     public static async Task<TalvoraSqliteBackupResponse> Backup(
         string sourcePath,
         string destinationPath,
@@ -377,15 +358,10 @@ public static class SqliteTools
                 "SQLite backup source and destination must differ.");
         }
 
-        if (File.Exists(destination))
+        if (File.Exists(destination) && !overwrite)
         {
-            if (!overwrite)
-            {
-                throw new IOException(
-                    $"SQLite backup destination already exists: {destination}");
-            }
-
-            File.Delete(destination);
+            throw new IOException(
+                $"SQLite backup destination already exists: {destination}");
         }
 
         var parent = Path.GetDirectoryName(destination);
@@ -394,36 +370,92 @@ public static class SqliteTools
             Directory.CreateDirectory(parent);
         }
 
-        await using var sourceConnection = CreateConnection(
-            source,
-            SqliteOpenMode.ReadOnly,
-            timeoutSeconds);
-        await sourceConnection.OpenAsync(cancellationToken);
+        var temporaryDestination = Path.Combine(
+            parent!,
+            $".{Path.GetFileName(destination)}.{Guid.NewGuid():N}.tmp");
 
-        await using var destinationConnection = CreateConnection(
-            destination,
-            SqliteOpenMode.ReadWriteCreate,
-            timeoutSeconds);
-        await destinationConnection.OpenAsync(cancellationToken);
+        try
+        {
+            await using var sourceConnection = CreateConnection(
+                source,
+                SqliteOpenMode.ReadOnly,
+                timeoutSeconds);
+            await sourceConnection.OpenAsync(cancellationToken);
 
-        sourceConnection.BackupDatabase(destinationConnection);
+            await using var destinationConnection = CreateConnection(
+                temporaryDestination,
+                SqliteOpenMode.ReadWriteCreate,
+                timeoutSeconds);
+            await destinationConnection.OpenAsync(cancellationToken);
 
-        await destinationConnection.CloseAsync();
-        await sourceConnection.CloseAsync();
+            sourceConnection.BackupDatabase(destinationConnection);
 
-        var fileInfo = new FileInfo(destination);
-        await using var stream = File.OpenRead(destination);
-        using var sha256 = SHA256.Create();
-        var hash =
-            await sha256.ComputeHashAsync(
-                stream,
-                cancellationToken);
+            await destinationConnection.CloseAsync();
+            await sourceConnection.CloseAsync();
 
-        return new TalvoraSqliteBackupResponse(
-            source,
-            destination,
-            fileInfo.Length,
-            Convert.ToHexString(hash));
+            var length = new FileInfo(temporaryDestination).Length;
+            byte[] hash;
+            await using (var stream = File.OpenRead(temporaryDestination))
+            {
+                using var sha256 = SHA256.Create();
+                hash =
+                    await sha256.ComputeHashAsync(
+                        stream,
+                        cancellationToken);
+            }
+
+            if (File.Exists(destination))
+            {
+                if (!overwrite)
+                {
+                    throw new IOException(
+                        $"SQLite backup destination already exists: {destination}");
+                }
+
+                File.Replace(
+                    temporaryDestination,
+                    destination,
+                    destinationBackupFileName: null);
+            }
+            else
+            {
+                File.Move(
+                    temporaryDestination,
+                    destination);
+            }
+
+            return new TalvoraSqliteBackupResponse(
+                source,
+                destination,
+                length,
+                Convert.ToHexString(hash));
+        }
+        finally
+        {
+            _ = TryDeleteFile(temporaryDestination);
+        }
+    }
+
+    private static bool TryDeleteFile(
+        string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+
+            return true;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     private static SqliteConnection CreateConnection(

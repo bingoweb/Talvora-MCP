@@ -32,6 +32,24 @@ public sealed record TalvoraNodeInfoResponse(
     string? NpmExecutable,
     string? NpmVersion);
 
+public sealed record TalvoraJavaInfoResponse(
+    bool JavaFound,
+    string? JavaExecutable,
+    string? JavaVersion,
+    bool JavacFound,
+    string? JavacExecutable,
+    string? JavacVersion,
+    string? JavaHome);
+
+public sealed record TalvoraBuildToolInfoResponse(
+    string Tool,
+    bool Found,
+    string? Executable,
+    string? Version,
+    bool UsingWrapper,
+    string? WrapperDistribution,
+    string WorkingDirectory);
+
 [McpServerToolType]
 public static partial class BuildRunnerTools
 {

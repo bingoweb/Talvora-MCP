@@ -1,6 +1,7 @@
 using Talvora.Shared;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using ModelContextProtocol.Server;
 
 namespace Talvora.Tools;
@@ -89,20 +90,10 @@ public static class GitTools
         CancellationToken cancellationToken = default)
     {
         var path = NormalizeRepositoryPath(repositoryPath);
-        var root = (await RunGitCheckedAsync(
-            path,
-            ["rev-parse", "--show-toplevel"],
-            cancellationToken: cancellationToken)).StandardOutput.Trim();
-
-        var gitDirectory = (await RunGitCheckedAsync(
-            path,
-            ["rev-parse", "--absolute-git-dir"],
-            cancellationToken: cancellationToken)).StandardOutput.Trim();
-
-        var bareText = (await RunGitCheckedAsync(
-            path,
-            ["rev-parse", "--is-bare-repository"],
-            cancellationToken: cancellationToken)).StandardOutput.Trim();
+        var identity =
+            await ResolveRepositoryIdentityAsync(
+                path,
+                cancellationToken);
 
         var head = (await RunGitCheckedAsync(
             path,
@@ -119,10 +110,14 @@ public static class GitTools
             ? branchResult.StandardOutput.Trim()
             : null;
 
-        var status = await RunGitCheckedAsync(
-            path,
-            ["status", "--porcelain=v1", "--untracked-files=all"],
-            cancellationToken: cancellationToken);
+        TalvoraGitRunResponse? status = null;
+        if (!identity.Bare)
+        {
+            status = await RunGitCheckedAsync(
+                path,
+                ["status", "--porcelain=v1", "--untracked-files=all"],
+                cancellationToken: cancellationToken);
+        }
 
         var remotes = await RunGitCheckedAsync(
             path,
@@ -131,13 +126,14 @@ public static class GitTools
 
         return new TalvoraGitInfoResponse(
             Path.GetFullPath(repositoryPath),
-            root,
-            gitDirectory,
-            string.Equals(bareText, "true", StringComparison.OrdinalIgnoreCase),
+            identity.Root,
+            identity.GitDirectory,
+            identity.Bare,
             head,
             branch,
             branch is null,
-            !string.IsNullOrEmpty(status.StandardOutput),
+            status is not null &&
+                !string.IsNullOrEmpty(status.StandardOutput),
             TextLines.Split(remotes.StandardOutput));
     }
 
@@ -217,10 +213,10 @@ public static class GitTools
             }
         }
 
-        var root = (await RunGitCheckedAsync(
-            path,
-            ["rev-parse", "--show-toplevel"],
-            cancellationToken: cancellationToken)).StandardOutput.Trim();
+        var root = (
+            await ResolveRepositoryIdentityAsync(
+                path,
+                cancellationToken)).Root;
 
         return new TalvoraGitStatusResponse(
             root,
@@ -285,10 +281,10 @@ public static class GitTools
             timeoutSeconds: 120,
             cancellationToken: cancellationToken);
 
-        var root = (await RunGitCheckedAsync(
-            path,
-            ["rev-parse", "--show-toplevel"],
-            cancellationToken: cancellationToken)).StandardOutput.Trim();
+        var root = (
+            await ResolveRepositoryIdentityAsync(
+                path,
+                cancellationToken)).Root;
 
         return new TalvoraGitDiffResponse(
             root,
@@ -314,9 +310,18 @@ public static class GitTools
         bool all = false,
         CancellationToken cancellationToken = default)
     {
-        if (maxCount < 0 || skip < 0)
+        if (maxCount < 0)
         {
-            throw new ArgumentOutOfRangeException("maxCount and skip cannot be negative.");
+            throw new ArgumentOutOfRangeException(
+                nameof(maxCount),
+                "maxCount cannot be negative.");
+        }
+
+        if (skip < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(skip),
+                "skip cannot be negative.");
         }
 
         var path = NormalizeRepositoryPath(repositoryPath);
@@ -359,7 +364,11 @@ public static class GitTools
                 continue;
             }
 
-            if (!DateTimeOffset.TryParse(fields[4], out var date))
+            if (!DateTimeOffset.TryParse(
+                    fields[4],
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind,
+                    out var date))
             {
                 date = default;
             }
@@ -373,10 +382,10 @@ public static class GitTools
                 fields[5]));
         }
 
-        var root = (await RunGitCheckedAsync(
-            path,
-            ["rev-parse", "--show-toplevel"],
-            cancellationToken: cancellationToken)).StandardOutput.Trim();
+        var root = (
+            await ResolveRepositoryIdentityAsync(
+                path,
+                cancellationToken)).Root;
 
         return new TalvoraGitLogResponse(
             root,
@@ -430,7 +439,11 @@ public static class GitTools
             }
 
             DateTimeOffset? date = null;
-            if (DateTimeOffset.TryParse(fields[5], out var parsed))
+            if (DateTimeOffset.TryParse(
+                    fields[5],
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind,
+                    out var parsed))
             {
                 date = parsed;
             }
@@ -445,10 +458,10 @@ public static class GitTools
                 fields[6]));
         }
 
-        var root = (await RunGitCheckedAsync(
-            path,
-            ["rev-parse", "--show-toplevel"],
-            cancellationToken: cancellationToken)).StandardOutput.Trim();
+        var root = (
+            await ResolveRepositoryIdentityAsync(
+                path,
+                cancellationToken)).Root;
 
         return new TalvoraGitBranchesResponse(root, branches.Count, branches);
     }
@@ -479,6 +492,41 @@ public static class GitTools
             environment,
             timeoutSeconds,
             cancellationToken);
+    }
+
+    private static async Task<(
+        string Root,
+        string GitDirectory,
+        bool Bare)> ResolveRepositoryIdentityAsync(
+        string workingDirectory,
+        CancellationToken cancellationToken)
+    {
+        var bareText = (await RunGitCheckedAsync(
+            workingDirectory,
+            ["rev-parse", "--is-bare-repository"],
+            cancellationToken: cancellationToken)).StandardOutput.Trim();
+
+        var bare = string.Equals(
+            bareText,
+            "true",
+            StringComparison.OrdinalIgnoreCase);
+
+        var gitDirectory = (await RunGitCheckedAsync(
+            workingDirectory,
+            ["rev-parse", "--absolute-git-dir"],
+            cancellationToken: cancellationToken)).StandardOutput.Trim();
+
+        if (bare)
+        {
+            return (gitDirectory, gitDirectory, true);
+        }
+
+        var root = (await RunGitCheckedAsync(
+            workingDirectory,
+            ["rev-parse", "--show-toplevel"],
+            cancellationToken: cancellationToken)).StandardOutput.Trim();
+
+        return (root, gitDirectory, false);
     }
 
     private static string NormalizeRepositoryPath(string repositoryPath)

@@ -181,23 +181,27 @@ public static class ProcessRunner
             CreateNoWindow = true,
         };
 
-        script.ArgumentList.Add("/d");
-        script.ArgumentList.Add("/s");
-        script.ArgumentList.Add("/c");
-        script.ArgumentList.Add(BuildCommandScriptCommand(executable, arguments));
+        script.Arguments = BuildCommandScriptArguments(
+            executable,
+            arguments);
         return script;
     }
 
-    private static string BuildCommandScriptCommand(
+    private static string BuildCommandScriptArguments(
         string executable,
         IReadOnlyList<string> arguments)
     {
         static string Quote(string value) =>
             "\"" + value.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
 
-        return string.Join(
+        var command = string.Join(
             " ",
             new[] { Quote(executable) }.Concat(arguments.Select(Quote)));
+
+        // cmd.exe /s /c applies special quote stripping to its command string.
+        // Supplying the complete raw command line preserves the required outer
+        // quote pair while each batch argument remains independently quoted.
+        return "/d /v:off /s /c \"" + command + "\"";
     }
 
     private static void TryKill(Process process)
