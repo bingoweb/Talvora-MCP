@@ -111,19 +111,47 @@ internal sealed class TalvoraWatchRuntime : IDisposable
         }
     }
 
-    public TalvoraWatchInfoResponse ToInfo() =>
-        new(
+    public TalvoraWatchInfoResponse ToInfo()
+    {
+        var enabled = false;
+        var internalBufferSize = 0;
+        try
+        {
+            enabled = Watcher.EnableRaisingEvents;
+            internalBufferSize = Watcher.InternalBufferSize;
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+
+        return new TalvoraWatchInfoResponse(
             WatchId,
             Path,
             Filter,
             IncludeSubdirectories,
             NotifyFilter.ToString(),
-            Watcher.InternalBufferSize,
+            internalBufferSize,
             MaxQueuedEvents,
             StartedAtUtc,
             Math.Max(0, Volatile.Read(ref QueuedEvents)),
             Math.Max(0, Interlocked.Read(ref DroppedEvents)),
-            Watcher.EnableRaisingEvents);
+            enabled);
+    }
+
+    public bool IsEnabled
+    {
+        get
+        {
+            try
+            {
+                return Watcher.EnableRaisingEvents;
+            }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
+        }
+    }
 
     public void Dispose()
     {
@@ -321,8 +349,7 @@ public static class WatchTools
         {
             IEnumerable<TalvoraWatchEvent> query = runtime.Events
                 .ToArray()
-                .Where(item => item.Sequence > afterSequence)
-                .OrderBy(item => item.Sequence);
+                .Where(item => item.Sequence > afterSequence);
 
             if (maxEvents > 0)
             {
@@ -369,13 +396,11 @@ public static class WatchTools
 
         var stopwatch = Stopwatch.StartNew();
 
-        while (!timeout.IsCancellationRequested)
+        while (!timeout.IsCancellationRequested && runtime.IsEnabled)
         {
             var item = runtime.Events
                 .ToArray()
-                .Where(value => value.Sequence > afterSequence)
-                .OrderBy(value => value.Sequence)
-                .FirstOrDefault();
+                .FirstOrDefault(value => value.Sequence > afterSequence);
 
             if (item is not null)
             {

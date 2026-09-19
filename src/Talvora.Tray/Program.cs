@@ -71,15 +71,86 @@ internal static class Program
             }
         }
 
-        using var mutex = new Mutex(initiallyOwned: true, @"Local\Talvora.Tray", out var createdNew);
-        if (!createdNew)
+        if (args.Any(arg => string.Equals(arg, "--gitea-status", StringComparison.OrdinalIgnoreCase)))
         {
+            try
+            {
+                var status = GiteaTrayClient
+                    .GetStatusAsync(CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                TrayLog.Write($"Gitea status command: {status.Summary}; {status.Detail}");
+                return status.State == GiteaConnectionState.Running ? 0 : 1;
+            }
+            catch (Exception ex)
+            {
+                TrayLog.Write("Gitea status command failed", ex);
+                return 1;
+            }
+        }
+
+        if (args.Any(arg => string.Equals(arg, "--gitea-restart", StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                var status = GiteaTrayClient
+                    .RestartAsync(CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                TrayLog.Write($"Gitea restart command: {status.Summary}; {status.Detail}");
+                return status.State == GiteaConnectionState.Running ? 0 : 1;
+            }
+            catch (Exception ex)
+            {
+                TrayLog.Write("Gitea restart command failed", ex);
+                return 1;
+            }
+        }
+
+        var replaceExisting = args.Any(arg =>
+            string.Equals(arg, "--replace", StringComparison.OrdinalIgnoreCase));
+
+        TrayLog.Write(
+            $"Tray startup requested. PID={Environment.ProcessId}; " +
+            $"Session={Process.GetCurrentProcess().SessionId}; ReplaceExisting={replaceExisting}");
+
+        using var mutex = new Mutex(
+            initiallyOwned: true,
+            @"Local\Talvora.Tray",
+            out var createdNew);
+
+        var ownsMutex = createdNew;
+        if (!ownsMutex && replaceExisting)
+        {
+            try
+            {
+                ownsMutex = mutex.WaitOne(TimeSpan.FromSeconds(10));
+            }
+            catch (AbandonedMutexException)
+            {
+                ownsMutex = true;
+            }
+        }
+
+        if (!ownsMutex)
+        {
+            TrayLog.Write("Tray startup skipped because another tray instance owns the mutex.");
             return 0;
         }
 
-        Application.EnableVisualStyles();
-        Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run(new TrayApplicationContext());
-        return 0;
+        try
+        {
+            TrayLog.Write("Tray mutex acquired; entering message loop.");
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            using var applicationContext = new TrayApplicationContext();
+            Application.Run(applicationContext);
+            TrayLog.Write("Tray message loop exited.");
+            return 0;
+        }
+        finally
+        {
+            mutex.ReleaseMutex();
+        }
     }
 }

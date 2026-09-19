@@ -81,6 +81,8 @@ public static partial class JobTools
             StartInfo = startInfo,
             EnableRaisingEvents = true,
         };
+        Task? stdoutPump = null;
+        Task? stderrPump = null;
 
         try
         {
@@ -97,7 +99,7 @@ public static partial class JobTools
                 executable,
                 arguments ?? [],
                 cwd,
-                DateTime.UtcNow,
+                GetProcessStartedAtUtc(process),
                 null,
                 stdoutPath,
                 stderrPath,
@@ -105,8 +107,8 @@ public static partial class JobTools
 
             await WriteMetadataAsync(metadata, cancellationToken);
 
-            var stdoutPump = PumpReaderAsync(process.StandardOutput, stdoutPath);
-            var stderrPump = PumpReaderAsync(process.StandardError, stderrPath);
+            stdoutPump = PumpReaderAsync(process.StandardOutput, stdoutPath);
+            stderrPump = PumpReaderAsync(process.StandardError, stderrPath);
 
             var runtime = new TalvoraJobRuntime
             {
@@ -119,8 +121,6 @@ public static partial class JobTools
 
             if (!LiveJobs.TryAdd(jobId, runtime))
             {
-                try { process.Kill(entireProcessTree: true); } catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or System.ComponentModel.Win32Exception) { }
-                runtime.Dispose();
                 throw new InvalidOperationException($"Failed to register Talvora job: {jobId}");
             }
 
@@ -140,8 +140,85 @@ public static partial class JobTools
         }
         catch
         {
+            LiveJobs.TryRemove(jobId, out _);
+            await CleanupFailedStartAsync(process);
+            await DrainFailedPumpsAsync(stdoutPump, stderrPump);
             process.Dispose();
+            TryDeleteFailedJobDirectory(jobDirectory);
             throw;
+        }
+    }
+
+    private static DateTime GetProcessStartedAtUtc(Process process)
+    {
+        try
+        {
+            return process.StartTime.ToUniversalTime();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or Win32Exception)
+        {
+            return DateTime.UtcNow;
+        }
+    }
+
+    private static async Task CleanupFailedStartAsync(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or Win32Exception)
+        {
+        }
+
+        try
+        {
+            if (!process.HasExited)
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                await process.WaitForExitAsync(timeout.Token);
+            }
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or OperationCanceledException)
+        {
+        }
+    }
+
+    private static async Task DrainFailedPumpsAsync(Task? stdoutPump, Task? stderrPump)
+    {
+        var pumps = new[] { stdoutPump, stderrPump }
+            .Where(task => task is not null)
+            .Cast<Task>()
+            .ToArray();
+
+        if (pumps.Length == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await Task.WhenAll(pumps);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ObjectDisposedException)
+        {
+        }
+    }
+
+    private static void TryDeleteFailedJobDirectory(string jobDirectory)
+    {
+        try
+        {
+            if (Directory.Exists(jobDirectory))
+            {
+                Directory.Delete(jobDirectory, recursive: true);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
         }
     }
 

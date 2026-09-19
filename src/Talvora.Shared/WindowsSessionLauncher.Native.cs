@@ -147,6 +147,19 @@ private static Win32Exception NewWin32Exception(string message)
             ref STARTUPINFO lpStartupInfo,
             out PROCESS_INFORMATION lpProcessInformation);
 
+        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool CreateProcessWithTokenW(
+            IntPtr hToken,
+            uint logonFlags,
+            string? lpApplicationName,
+            StringBuilder lpCommandLine,
+            uint creationFlags,
+            IntPtr lpEnvironment,
+            string? lpCurrentDirectory,
+            ref STARTUPINFO lpStartupInfo,
+            out PROCESS_INFORMATION lpProcessInformation);
+
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool CloseHandle(IntPtr hObject);

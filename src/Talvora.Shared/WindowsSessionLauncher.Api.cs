@@ -90,6 +90,7 @@ public static IReadOnlyList<WindowsSessionInfo> ListSessions()
             }
 
             var mutableCommandLine = new StringBuilder(commandLine);
+            NativeMethods.PROCESS_INFORMATION processInformation;
             if (!NativeMethods.CreateProcessAsUserW(
                     userToken,
                     resolvedExecutable.ApplicationName,
@@ -101,10 +102,38 @@ public static IReadOnlyList<WindowsSessionInfo> ListSessions()
                     environmentPointer,
                     cwd,
                     ref startupInfo,
-                    out var processInformation))
+                    out processInformation))
             {
-                throw NewWin32Exception(
-                    $"CreateProcessAsUserW failed for session {target.SessionId}");
+                var createAsUserError = Marshal.GetLastWin32Error();
+                if (createAsUserError is 5 or 1314)
+                {
+                    mutableCommandLine = new StringBuilder(commandLine);
+                    if (!NativeMethods.CreateProcessWithTokenW(
+                            userToken,
+                            logonFlags: 0,
+                            resolvedExecutable.ApplicationName,
+                            mutableCommandLine,
+                            creationFlags,
+                            environmentPointer,
+                            cwd,
+                            ref startupInfo,
+                            out processInformation))
+                    {
+                        var createWithTokenError = Marshal.GetLastWin32Error();
+                        throw new Win32Exception(
+                            createWithTokenError,
+                            $"Interactive process launch failed for session {target.SessionId}. " +
+                            $"CreateProcessAsUserW={createAsUserError}; " +
+                            $"CreateProcessWithTokenW={createWithTokenError}");
+                    }
+                }
+                else
+                {
+                    throw new Win32Exception(
+                        createAsUserError,
+                        $"CreateProcessAsUserW failed for session {target.SessionId}. " +
+                        $"Win32Error={createAsUserError}");
+                }
             }
 
             try

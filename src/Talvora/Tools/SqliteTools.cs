@@ -619,7 +619,9 @@ public static class SqliteTools
                 new TalvoraSqliteValue(
                     "integer",
                     null,
-                    Convert.ToInt64(value),
+                    Convert.ToInt64(
+                        value,
+                        System.Globalization.CultureInfo.InvariantCulture),
                     null,
                     null),
             ulong unsigned when unsigned <= long.MaxValue =>

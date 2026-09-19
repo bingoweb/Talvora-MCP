@@ -9,26 +9,31 @@ public static partial class QualityTools
     private static readonly Regex MsbuildDiagnosticRegex = new(
         @"^(?<file>.+?)\((?<line>\d+)(?:,(?<column>\d+))?\):\s*(?<severity>error|warning|info)\s*(?<code>[A-Za-z]+\d+)?\s*:?\s*(?<message>.*?)(?:\s+\[(?<project>.+)\])?$",
         RegexOptions.IgnoreCase |
-        RegexOptions.CultureInvariant);
+        RegexOptions.CultureInvariant |
+        RegexOptions.NonBacktracking);
 
     private static readonly Regex UnixDiagnosticRegex = new(
         @"^(?<file>.+?):(?<line>\d+):(?<column>\d+):\s*(?<severity>fatal error|error|warning|note|info):\s*(?<message>.*)$",
         RegexOptions.IgnoreCase |
-        RegexOptions.CultureInvariant);
+        RegexOptions.CultureInvariant |
+        RegexOptions.NonBacktracking);
 
     private static readonly Regex EslintDiagnosticRegex = new(
         @"^\s*(?<line>\d+):(?<column>\d+)\s+(?<severity>error|warning)\s+(?<message>.*?)(?:\s{2,}(?<code>[@\w./-]+))?\s*$",
         RegexOptions.IgnoreCase |
-        RegexOptions.CultureInvariant);
+        RegexOptions.CultureInvariant |
+        RegexOptions.NonBacktracking);
 
     private static readonly Regex RustDiagnosticRegex = new(
         @"^(?<severity>error|warning)(?:\[(?<code>[^\]]+)\])?:\s*(?<message>.+)$",
         RegexOptions.IgnoreCase |
-        RegexOptions.CultureInvariant);
+        RegexOptions.CultureInvariant |
+        RegexOptions.NonBacktracking);
 
     private static readonly Regex RustLocationRegex = new(
         @"^\s*-->\s*(?<file>.+?):(?<line>\d+):(?<column>\d+)\s*$",
-        RegexOptions.CultureInvariant);
+        RegexOptions.CultureInvariant |
+        RegexOptions.NonBacktracking);
 
     [McpServerTool(
         Name = "talvora_diagnostics_parse",
@@ -55,6 +60,7 @@ public static partial class QualityTools
         }
 
         var source = "inline";
+        IEnumerable<string> lines;
         if (!string.IsNullOrWhiteSpace(path))
         {
             var fullPath = Path.GetFullPath(path);
@@ -65,8 +71,12 @@ public static partial class QualityTools
                     fullPath);
             }
 
-            text = File.ReadAllText(fullPath);
+            lines = File.ReadLines(fullPath);
             source = fullPath;
+        }
+        else
+        {
+            lines = SplitLines(text ?? string.Empty);
         }
 
         var diagnostics = new List<TalvoraDiagnosticEntry>();
@@ -74,7 +84,7 @@ public static partial class QualityTools
         string? eslintFile = null;
         PendingRustDiagnostic? pendingRust = null;
 
-        foreach (var rawLine in SplitLines(text ?? string.Empty))
+        foreach (var rawLine in lines)
         {
             if (maxDiagnostics > 0 &&
                 diagnostics.Count >= maxDiagnostics)
@@ -209,7 +219,11 @@ public static partial class QualityTools
     }
 
     private static int? ParseNullableInt(string value) =>
-        int.TryParse(value, out var parsed)
+        int.TryParse(
+            value,
+            System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var parsed)
             ? parsed
             : null;
 

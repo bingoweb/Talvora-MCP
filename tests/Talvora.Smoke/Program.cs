@@ -24,8 +24,39 @@ if (args.Length >= 3 &&
     return;
 }
 
-var endpoint = args.Length > 0 ? args[0] : "http://127.0.0.1:7676/mcp";
-var repositoryPath = args.Length > 1 ? Path.GetFullPath(args[1]) : Directory.GetCurrentDirectory();
+if (args.Length == 1 &&
+    string.Equals(
+        args[0],
+        "--shared-infrastructure-only",
+        StringComparison.Ordinal))
+{
+    await SmokeScenarios.RunSharedInfrastructureAsync();
+    Console.WriteLine("TALVORA SHARED INFRASTRUCTURE GREEN");
+    return;
+}
+
+var devServerOnly =
+    args.Length > 0 &&
+    string.Equals(
+        args[0],
+        "--dev-server-only",
+        StringComparison.Ordinal);
+
+var endpoint = devServerOnly
+    ? args.Length > 1
+        ? args[1]
+        : "http://127.0.0.1:7676/mcp"
+    : args.Length > 0
+        ? args[0]
+        : "http://127.0.0.1:7676/mcp";
+
+var repositoryPath = devServerOnly
+    ? args.Length > 2
+        ? Path.GetFullPath(args[2])
+        : Directory.GetCurrentDirectory()
+    : args.Length > 1
+        ? Path.GetFullPath(args[1])
+        : Directory.GetCurrentDirectory();
 var transport = new HttpClientTransport(new HttpClientTransportOptions
 {
     Endpoint = new Uri(endpoint),
@@ -44,6 +75,18 @@ foreach (var name in required)
     if (!byName.ContainsKey(name)) throw new InvalidOperationException($"Missing MCP tool: {name}");
 }
 
+if (devServerOnly)
+{
+    await SmokeScenarios.RunDevServerAsync(
+        byName,
+        Guid.NewGuid().ToString("N"),
+        repositoryPath);
+    Console.WriteLine("TALVORA DEV SERVER SMOKE GREEN");
+    return;
+}
+
+await SmokeScenarios.RunSharedInfrastructureAsync();
+
 await SmokeScenarios.RunServiceAsync(byName);
 
 var smokeId = Guid.NewGuid().ToString("N");
@@ -58,6 +101,11 @@ await SmokeScenarios.RunSqliteAsync(byName, smokeId);
 await SmokeScenarios.RunStructuredConfigAsync(byName, smokeId);
 
 await SmokeScenarios.RunDevServerAsync(byName, smokeId, repositoryPath);
+
+await SmokeScenarios.RunApplicationDevelopmentAsync(
+    byName,
+    smokeId,
+    repositoryPath);
 
 Console.WriteLine("TALVORA MCP SMOKE GREEN");
 Console.WriteLine($"endpoint={endpoint}");

@@ -196,12 +196,20 @@ public static class GitTools
                              .Split(' ', StringSplitOptions.RemoveEmptyEntries))
                 {
                     if (token.StartsWith('+') &&
-                        int.TryParse(token.AsSpan(1), out var parsedAhead))
+                        int.TryParse(
+                            token.AsSpan(1),
+                            System.Globalization.NumberStyles.None,
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            out var parsedAhead))
                     {
                         ahead = parsedAhead;
                     }
                     else if (token.StartsWith('-') &&
-                             int.TryParse(token.AsSpan(1), out var parsedBehind))
+                             int.TryParse(
+                                 token.AsSpan(1),
+                                 System.Globalization.NumberStyles.None,
+                                 System.Globalization.CultureInfo.InvariantCulture,
+                                 out var parsedBehind))
                     {
                         behind = parsedBehind;
                     }

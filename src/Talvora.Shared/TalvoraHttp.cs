@@ -7,20 +7,32 @@ public static class TalvoraHttp
         bool allowAutoRedirect = true,
         TimeSpan? timeout = null)
     {
-        var handler = new HttpClientHandler
-        {
-            AllowAutoRedirect = allowAutoRedirect,
-        };
+        HttpClientHandler? handler = null;
+        HttpClient? client = null;
 
-        if (ignoreTlsErrors)
+        try
         {
-            handler.ServerCertificateCustomValidationCallback =
-                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+            handler = new HttpClientHandler
+            {
+                AllowAutoRedirect = allowAutoRedirect,
+            };
+
+            if (ignoreTlsErrors)
+            {
+                handler.ServerCertificateCustomValidationCallback =
+                    HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+            }
+
+            client = new HttpClient(handler, disposeHandler: true);
+            handler = null; // Ownership transferred to HttpClient.
+            client.Timeout = timeout ?? Timeout.InfiniteTimeSpan;
+            return client;
         }
-
-        return new HttpClient(handler)
+        catch
         {
-            Timeout = timeout ?? Timeout.InfiniteTimeSpan,
-        };
+            client?.Dispose();
+            handler?.Dispose();
+            throw;
+        }
     }
 }

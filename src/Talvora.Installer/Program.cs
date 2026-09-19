@@ -71,7 +71,8 @@ internal static class Program
 
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run(new InstallerForm());
+        using var form = new InstallerForm();
+        Application.Run(form);
         return 0;
     }
 

@@ -216,7 +216,7 @@ private static async Task CleanupObsoleteInstallationsAsync(
 
         var path = Path.Combine(codexRoot, "config.toml");
         var original = File.Exists(path)
-            ? File.ReadAllText(path)
+            ? await File.ReadAllTextAsync(path, cancellationToken)
             : string.Empty;
 
         const string header = "[mcp_servers.talvora_local]";

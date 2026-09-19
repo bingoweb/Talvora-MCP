@@ -11,21 +11,33 @@ internal static partial class SmokeScenarios
             System.Reflection.Assembly
                 .GetExecutingAssembly()
                 .Location;
-        var devServerDotnetExecutable =
+        var devServerHostExecutable =
             Environment.ProcessPath
             ?? throw new InvalidOperationException(
                 "Smoke process executable path is unavailable.");
-        
-        var devServerStartResult = await EnsureSuccess(byName["talvora_dev_server_start"], new()
-        {
-            ["executable"] = devServerDotnetExecutable,
-            ["arguments"] = new[]
+        var runningUnderDotnetHost = string.Equals(
+            Path.GetFileNameWithoutExtension(devServerHostExecutable),
+            "dotnet",
+            StringComparison.OrdinalIgnoreCase);
+        var fixtureArguments = runningUnderDotnetHost
+            ? new[]
             {
                 fixtureAssemblyPath,
                 "--dev-server-fixture",
                 devServerPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 devServerBody,
-            },
+            }
+            : new[]
+            {
+                "--dev-server-fixture",
+                devServerPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                devServerBody,
+            };
+
+        var devServerStartResult = await EnsureSuccess(byName["talvora_dev_server_start"], new()
+        {
+            ["executable"] = devServerHostExecutable,
+            ["arguments"] = fixtureArguments,
             ["workingDirectory"] = repositoryPath,
             ["tcpHost"] = "127.0.0.1",
             ["tcpPort"] = devServerPort,
@@ -38,26 +50,32 @@ internal static partial class SmokeScenarios
             ["stopOnFailure"] = true,
             ["logTailBytes"] = 4096,
         });
-        
-        if (devServerStartResult.StructuredContent is not { } devServerStartJson ||
-            !devServerStartJson.GetProperty("ready").GetBoolean() ||
-            !devServerStartJson.GetProperty("tcpProbe").GetProperty("ready").GetBoolean() ||
-            !devServerStartJson.GetProperty("httpProbe").GetProperty("ready").GetBoolean())
+
+        if (devServerStartResult.StructuredContent is not { } devServerStartJson)
         {
-            throw new InvalidOperationException("dev-server start did not reach combined TCP/HTTP readiness.");
+            throw new InvalidOperationException("dev-server start returned no structured result.");
         }
-        
+
         var devServerJobId = devServerStartJson.GetProperty("jobId").GetString()
             ?? throw new InvalidOperationException("dev-server start returned no job ID.");
-        
+
         try
         {
+            if (!devServerStartJson.GetProperty("ready").GetBoolean() ||
+                !devServerStartJson.GetProperty("tcpProbe").GetProperty("ready").GetBoolean() ||
+                !devServerStartJson.GetProperty("httpProbe").GetProperty("ready").GetBoolean())
+            {
+                throw new InvalidOperationException(
+                    "dev-server start did not reach combined TCP/HTTP readiness. " +
+                    $"stdout={devServerStartJson.GetProperty("stdoutTail").GetString()} " +
+                    $"stderr={devServerStartJson.GetProperty("stderrTail").GetString()}");
+            }
             var devServerGetResult = await EnsureSuccess(byName["talvora_dev_server_get"], new()
             {
                 ["jobId"] = devServerJobId,
                 ["logTailBytes"] = 4096,
             });
-        
+
             if (devServerGetResult.StructuredContent is not { } devServerGetJson ||
                 !devServerGetJson.GetProperty("ready").GetBoolean() ||
                 !string.Equals(
@@ -67,13 +85,13 @@ internal static partial class SmokeScenarios
             {
                 throw new InvalidOperationException("dev-server get did not report a ready running server.");
             }
-        
+
             var devServerListResult = await EnsureSuccess(byName["talvora_dev_server_list"], new()
             {
                 ["includeExited"] = false,
                 ["maxResults"] = 0,
             });
-        
+
             if (devServerListResult.StructuredContent is not { } devServerListJson ||
                 !devServerListJson.GetProperty("servers").EnumerateArray().Any(server =>
                     string.Equals(
@@ -83,7 +101,7 @@ internal static partial class SmokeScenarios
             {
                 throw new InvalidOperationException("dev-server list did not include the running smoke server.");
             }
-        
+
             var devServerWaitResult = await EnsureSuccess(byName["talvora_dev_server_wait"], new()
             {
                 ["jobId"] = devServerJobId,
@@ -91,13 +109,13 @@ internal static partial class SmokeScenarios
                 ["stopOnFailure"] = false,
                 ["logTailBytes"] = 4096,
             });
-        
+
             if (devServerWaitResult.StructuredContent is not { } devServerWaitJson ||
                 !devServerWaitJson.GetProperty("ready").GetBoolean())
             {
                 throw new InvalidOperationException("dev-server wait did not preserve ready state.");
             }
-        
+
             var directHttpResult = await EnsureSuccess(byName["talvora_http_request"], new()
             {
                 ["method"] = "GET",
@@ -105,7 +123,7 @@ internal static partial class SmokeScenarios
                 ["responseMode"] = "text",
                 ["maxResponseBytes"] = 4096,
             });
-        
+
             if (directHttpResult.StructuredContent is not { } directHttpJson ||
                 directHttpJson.GetProperty("statusCode").GetInt32() != 200 ||
                 !string.Equals(
@@ -125,7 +143,7 @@ internal static partial class SmokeScenarios
                 ["timeoutSeconds"] = 15,
                 ["deleteArtifacts"] = true,
             });
-        
+
             if (devServerStopResult.StructuredContent is not { } devServerStopJson ||
                 !devServerStopJson.GetProperty("exited").GetBoolean() ||
                 !devServerStopJson.GetProperty("deleted").GetBoolean())

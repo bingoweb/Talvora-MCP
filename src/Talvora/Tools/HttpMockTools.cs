@@ -19,7 +19,8 @@ public sealed record TalvoraHttpMockListenerInfo(
     int QueuedRequests,
     int PendingRequests,
     long DroppedRequests,
-    bool IsListening);
+    bool IsListening,
+    string? LastError);
 
 public sealed record TalvoraHttpMockStartResponse(
     string ListenerId,
@@ -107,9 +108,25 @@ internal sealed class TalvoraHttpMockRuntime : IDisposable
     public long Sequence;
     public int QueuedRequests;
     public long DroppedRequests;
+    private string? _lastError;
 
-    public TalvoraHttpMockListenerInfo ToInfo() =>
-        new(
+    public void RecordError(Exception exception) =>
+        Volatile.Write(
+            ref _lastError,
+            $"{exception.GetType().Name}: {exception.Message}");
+
+    public TalvoraHttpMockListenerInfo ToInfo()
+    {
+        var isListening = false;
+        try
+        {
+            isListening = Listener.IsListening;
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+
+        return new TalvoraHttpMockListenerInfo(
             ListenerId,
             Prefixes,
             AutoReply,
@@ -122,7 +139,9 @@ internal sealed class TalvoraHttpMockRuntime : IDisposable
             Math.Max(0, Volatile.Read(ref QueuedRequests)),
             Pending.Count,
             Math.Max(0, Interlocked.Read(ref DroppedRequests)),
-            Listener.IsListening);
+            isListening,
+            Volatile.Read(ref _lastError));
+    }
 
     public void Enqueue(TalvoraHttpMockRequest request)
     {

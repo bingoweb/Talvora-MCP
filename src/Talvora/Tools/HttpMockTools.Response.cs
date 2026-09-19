@@ -26,6 +26,10 @@ private static async Task<bool> TrySendResponseAsync(
                 cancellationToken);
             return true;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch
         {
             return false;

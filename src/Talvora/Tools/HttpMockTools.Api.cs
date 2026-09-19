@@ -203,8 +203,7 @@ public static partial class HttpMockTools
         {
             IEnumerable<TalvoraHttpMockRequest> query = runtime.Requests
                 .ToArray()
-                .Where(request => request.Sequence > afterSequence)
-                .OrderBy(request => request.Sequence);
+                .Where(request => request.Sequence > afterSequence);
 
             if (maxRequests > 0)
             {

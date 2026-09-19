@@ -230,6 +230,106 @@ internal static partial class SmokeScenarios
                     ["jobId"] = jobId,
                 });
                 
+                var staleVictimExecutable = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.System),
+                    @"WindowsPowerShell\v1.0\powershell.exe");
+                using (var staleVictim = System.Diagnostics.Process.Start(
+                    new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = staleVictimExecutable,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        ArgumentList =
+                        {
+                            "-NoLogo",
+                            "-NoProfile",
+                            "-NonInteractive",
+                            "-Command",
+                            "Start-Sleep -Seconds 120",
+                        },
+                    }) ?? throw new InvalidOperationException("stale PID smoke victim did not start."))
+                {
+                    var staleJobId = Guid.NewGuid().ToString("N");
+                    var staleJobDirectory = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                        "Talvora",
+                        "Jobs",
+                        staleJobId);
+                    var staleMetadataPath = Path.Combine(staleJobDirectory, "job.json");
+                    var staleStdoutPath = Path.Combine(staleJobDirectory, "stdout.log");
+                    var staleStderrPath = Path.Combine(staleJobDirectory, "stderr.log");
+
+                    try
+                    {
+                        var staleMetadata = System.Text.Json.JsonSerializer.Serialize(
+                            new
+                            {
+                                jobId = staleJobId,
+                                processId = staleVictim.Id,
+                                state = "Running",
+                                exitCode = (int?)null,
+                                executable = staleVictimExecutable,
+                                arguments = Array.Empty<string>(),
+                                workingDirectory = root,
+                                startedAtUtc = DateTime.UtcNow.AddMinutes(-10),
+                                exitedAtUtc = (DateTime?)null,
+                                stdoutPath = staleStdoutPath,
+                                stderrPath = staleStderrPath,
+                                metadataPath = staleMetadataPath,
+                            });
+
+                        await EnsureSuccess(byName["talvora_write_text"], new()
+                        {
+                            ["path"] = staleStdoutPath,
+                            ["content"] = string.Empty,
+                        });
+                        await EnsureSuccess(byName["talvora_write_text"], new()
+                        {
+                            ["path"] = staleStderrPath,
+                            ["content"] = string.Empty,
+                        });
+                        await EnsureSuccess(byName["talvora_write_text"], new()
+                        {
+                            ["path"] = staleMetadataPath,
+                            ["content"] = staleMetadata,
+                        });
+
+                        var staleStop = await EnsureSuccess(byName["talvora_job_stop"], new()
+                        {
+                            ["jobId"] = staleJobId,
+                            ["entireProcessTree"] = true,
+                            ["timeoutSeconds"] = 2,
+                        });
+
+                        staleVictim.Refresh();
+                        if (staleStop.StructuredContent is not { } staleStopJson ||
+                            staleStopJson.GetProperty("killIssued").GetBoolean() ||
+                            !staleStopJson.GetProperty("exited").GetBoolean() ||
+                            !string.Equals(
+                                staleStopJson.GetProperty("state").GetString(),
+                                "ExitedUnknown",
+                                StringComparison.Ordinal) ||
+                            staleVictim.HasExited)
+                        {
+                            throw new InvalidOperationException(
+                                "job_stop did not reject a stale/reused PID safely.");
+                        }
+                    }
+                    finally
+                    {
+                        if (!staleVictim.HasExited)
+                        {
+                            staleVictim.Kill(entireProcessTree: true);
+                            await staleVictim.WaitForExitAsync();
+                        }
+
+                        await EnsureSuccess(byName["talvora_delete"], new()
+                        {
+                            ["path"] = staleJobDirectory,
+                        });
+                    }
+                }
+
                 var gitInfoResult = await EnsureSuccess(byName["talvora_git_info"], new()
                 {
                     ["repositoryPath"] = repositoryPath,

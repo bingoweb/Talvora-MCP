@@ -14,8 +14,8 @@ $qfailure = (& sc.exe qfailure Talvora | Out-String)
 $qfailureFlag = (& sc.exe qfailureflag Talvora | Out-String)
 $qSidType = (& sc.exe qsidtype Talvora | Out-String)
 
-$versionedServicePattern = '^"?C:\\Program Files\\Talvora\\Versions\\[0-9a-f]{40}-[0-9]{17}\\Service\\Talvora\.exe"?$'
-$versionedTrayPattern = '^"?C:\\Program Files\\Talvora\\Versions\\[0-9a-f]{40}-[0-9]{17}\\Tray\\Talvora\.Tray\.exe"?$'
+$versionedServicePattern = '^"?C:\\Program Files\\Talvora\\Versions\\[0-9a-f]{40}(?:-dirty(?:-[0-9a-f]{12})?)?-[0-9]{17}\\Service\\Talvora\.exe"?$'
+$versionedTrayPattern = '^"?C:\\Program Files\\Talvora\\Versions\\[0-9a-f]{40}(?:-dirty(?:-[0-9a-f]{12})?)?-[0-9]{17}\\Tray\\Talvora\.Tray\.exe"?$'
 
 $interactiveUser = (Get-CimInstance Win32_ComputerSystem).UserName
 if ([string]::IsNullOrWhiteSpace($interactiveUser)) { throw 'No interactive Windows user is logged on.' }

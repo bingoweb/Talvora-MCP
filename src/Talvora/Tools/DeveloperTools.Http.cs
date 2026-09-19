@@ -208,7 +208,7 @@ public static partial class DeveloperTools
         {
             return Encoding.GetEncoding(charset.Trim().Trim('"'));
         }
-        catch
+        catch (ArgumentException)
         {
             return Encoding.UTF8;
         }

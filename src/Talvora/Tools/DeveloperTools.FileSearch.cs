@@ -331,7 +331,10 @@ public static partial class DeveloperTools
             {
                 relative = Path.GetRelativePath(root, relativeOrFullPath);
             }
-            catch
+            catch (Exception ex) when (
+                ex is ArgumentException or
+                NotSupportedException or
+                PathTooLongException)
             {
             }
         }

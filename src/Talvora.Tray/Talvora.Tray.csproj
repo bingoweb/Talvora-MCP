@@ -12,5 +12,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Talvora.Shared\Talvora.Shared.csproj" />
+    <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
   </ItemGroup>
 </Project>

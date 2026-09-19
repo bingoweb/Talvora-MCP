@@ -18,6 +18,13 @@ private static string GetJobsRoot()
         return root;
     }
 
+    private static string GetJobErrorLogPath() =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "Talvora",
+            "Logs",
+            "jobs.log");
+
     private static string GetMetadataPath(string jobId)
     {
         if (string.IsNullOrWhiteSpace(jobId) ||
@@ -59,7 +66,6 @@ private static string GetJobsRoot()
             }
 
             await writer.WriteAsync(buffer.AsMemory(0, read));
-            await writer.FlushAsync();
         }
     }
 
@@ -70,19 +76,33 @@ private static string GetJobsRoot()
         try
         {
             await runtime.Process.WaitForExitAsync();
-            await Task.WhenAll(runtime.StdoutPump, runtime.StderrPump);
+            var exitCode = runtime.Process.ExitCode;
+
+            try
+            {
+                await Task.WhenAll(runtime.StdoutPump, runtime.StderrPump);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ObjectDisposedException)
+            {
+                // The process exit state is authoritative even if log pumping failed.
+                // Persist terminal metadata so a logging error cannot leave a job marked Running.
+            }
 
             var metadata = runtime.Metadata with
             {
                 State = "Exited",
-                ExitCode = runtime.Process.ExitCode,
+                ExitCode = exitCode,
                 ExitedAtUtc = DateTime.UtcNow,
             };
 
             await WriteMetadataAsync(metadata, CancellationToken.None);
         }
-        catch
+        catch (Exception ex)
         {
+            FileLog.Write(
+                GetJobErrorLogPath(),
+                $"Job exit observer failed. JobId={jobId}; ProcessId={runtime.Metadata.ProcessId}",
+                ex);
         }
         finally
         {
@@ -178,11 +198,26 @@ private static string GetJobsRoot()
         try
         {
             var delta = (process.StartTime.ToUniversalTime() - metadata.StartedAtUtc).Duration();
-            return delta < TimeSpan.FromSeconds(10);
+            if (delta >= TimeSpan.FromSeconds(2))
+            {
+                return false;
+            }
+
+            if (!Path.IsPathRooted(metadata.Executable))
+            {
+                return true;
+            }
+
+            var actualExecutable = process.MainModule?.FileName;
+            return !string.IsNullOrWhiteSpace(actualExecutable) &&
+                   string.Equals(
+                       Path.GetFullPath(actualExecutable),
+                       Path.GetFullPath(metadata.Executable),
+                       StringComparison.OrdinalIgnoreCase);
         }
-        catch
+        catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or IOException or UnauthorizedAccessException)
         {
-            return true;
+            return false;
         }
     }
 

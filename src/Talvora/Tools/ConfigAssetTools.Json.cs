@@ -202,8 +202,7 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
             }
             else if (node is JsonArray array)
             {
-                if (!int.TryParse(tokens[i], out var index) ||
-                    index < 0 ||
+                if (!TryParseArrayIndex(tokens[i], out var index) ||
                     index >= array.Count)
                 {
                     return false;
@@ -262,7 +261,7 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
             }
             else if (current is JsonArray array)
             {
-                if (!int.TryParse(token, out var index) || index < 0)
+                if (!TryParseArrayIndex(token, out var index))
                 {
                     throw new InvalidOperationException(
                         $"JSON Pointer array segment is not a non-negative integer: {token}");
@@ -272,7 +271,7 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
                 {
                     if (!createMissing)
                     {
-                        throw new IndexOutOfRangeException(
+                        throw new InvalidOperationException(
                             $"JSON Pointer array index is outside the array: {index}");
                     }
 
@@ -320,7 +319,7 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
                 return root;
             }
 
-            if (!int.TryParse(finalToken, out var index) || index < 0)
+            if (!TryParseArrayIndex(finalToken, out var index))
             {
                 throw new InvalidOperationException(
                     $"JSON Pointer array segment is not a non-negative integer or '-': {finalToken}");
@@ -334,7 +333,7 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
 
             if (!createMissing)
             {
-                throw new IndexOutOfRangeException(
+                throw new InvalidOperationException(
                     $"JSON Pointer array index is outside the array: {index}");
             }
 
@@ -404,8 +403,7 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
         }
 
         if (current is JsonArray finalArray &&
-            int.TryParse(finalToken, out var finalIndex) &&
-            finalIndex >= 0 &&
+            TryParseArrayIndex(finalToken, out var finalIndex) &&
             finalIndex < finalArray.Count)
         {
             finalArray.RemoveAt(finalIndex);
@@ -417,9 +415,16 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
 
     private static JsonNode CreateContainerForToken(string token) =>
         string.Equals(token, "-", StringComparison.Ordinal) ||
-        int.TryParse(token, out _)
+        TryParseArrayIndex(token, out _)
             ? new JsonArray()
             : new JsonObject();
+
+    private static bool TryParseArrayIndex(string token, out int index) =>
+        int.TryParse(
+            token,
+            System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out index);
 
     internal static string GetJsonKind(JsonNode? node) =>
         node switch

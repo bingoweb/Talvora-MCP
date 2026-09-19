@@ -1,5 +1,5 @@
 param(
-    [string] $SourcePath = (Join-Path $PSScriptRoot 'Talvora.Smoke\Program.cs')
+    [string] $SourcePath = (Join-Path $PSScriptRoot 'Talvora.Smoke\SmokeScenarios.Workspace.cs')
 )
 
 $ErrorActionPreference = 'Stop'

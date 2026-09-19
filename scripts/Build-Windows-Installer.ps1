@@ -251,6 +251,86 @@ function New-VerifiedPayloadArchive {
     throw "Unable to create verified payload archive after $Attempts attempts."
 }
 
+function Test-RuntimeBuildInput {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $RelativePath
+    )
+
+    $normalized = $RelativePath.Replace('\\', '/')
+    if ($normalized.StartsWith('src/', [StringComparison]::OrdinalIgnoreCase) -or
+        $normalized.StartsWith('assets/', [StringComparison]::OrdinalIgnoreCase)) {
+        return $true
+    }
+
+    if ([string]::Equals(
+            $normalized,
+            'scripts/Build-Windows-Installer.ps1',
+            [StringComparison]::OrdinalIgnoreCase)) {
+        return $true
+    }
+
+    $fileName = [IO.Path]::GetFileName($normalized)
+    return $fileName -in @(
+        'Directory.Build.props',
+        'Directory.Build.targets',
+        'Directory.Packages.props',
+        'global.json',
+        'NuGet.config'
+    )
+}
+
+function Get-WorkingTreeFingerprint {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Root
+    )
+
+    $changed = @(& git -C $Root diff --name-only HEAD --)
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to enumerate tracked Talvora working-tree changes.'
+    }
+
+    $untracked = @(& git -C $Root ls-files --others --exclude-standard)
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to enumerate untracked Talvora working-tree files.'
+    }
+
+    $entries = New-Object System.Collections.Generic.List[string]
+    foreach ($relativePath in @($changed + $untracked | Sort-Object -Unique)) {
+        if ([string]::IsNullOrWhiteSpace($relativePath) -or
+            -not (Test-RuntimeBuildInput -RelativePath $relativePath)) {
+            continue
+        }
+
+        $fullPath = Join-Path $Root $relativePath
+        if (Test-Path -LiteralPath $fullPath -PathType Leaf) {
+            $blobHash = (& git -C $Root hash-object -- $relativePath).Trim()
+            if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($blobHash)) {
+                throw "Unable to hash dirty working-tree file: $relativePath"
+            }
+            $entries.Add([string]::Concat($relativePath, [char]9, $blobHash))
+        }
+        else {
+            $entries.Add([string]::Concat($relativePath, [char]9, '<deleted>'))
+        }
+    }
+
+    if ($entries.Count -eq 0) {
+        return $null
+    }
+
+    $fingerprintText = [string]::Join([Environment]::NewLine, $entries)
+    $payload = [Text.UTF8Encoding]::new($false).GetBytes($fingerprintText)
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+        return -join ($sha256.ComputeHash($payload) | ForEach-Object { $_.ToString('x2') })
+    }
+    finally {
+        $sha256.Dispose()
+    }
+}
+
 $BuildMutexName = 'Global\Talvora.BuildWindowsInstaller.v2'
 $BuildMutex = [Threading.Mutex]::new($false, $BuildMutexName)
 $BuildMutexOwned = $false
@@ -284,6 +364,17 @@ New-Item -ItemType Directory -Path $TrayPayload -Force | Out-Null
 $SourceCommit = (& git -C $RepoRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($SourceCommit)) {
     throw 'Unable to resolve local Talvora source commit.'
+}
+
+$SourceStatus = @(& git -C $RepoRoot status --porcelain=v1 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) {
+    throw 'Unable to resolve local Talvora working-tree state.'
+}
+if ($SourceStatus.Count -gt 0) {
+    $WorkingTreeFingerprint = Get-WorkingTreeFingerprint -Root $RepoRoot
+    if (-not [string]::IsNullOrWhiteSpace($WorkingTreeFingerprint)) {
+        $SourceCommit += '-dirty-' + $WorkingTreeFingerprint.Substring(0, 12)
+    }
 }
 
 Write-Host 'Publishing Talvora service...' -ForegroundColor Cyan

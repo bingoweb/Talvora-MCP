@@ -1,656 +1,430 @@
-# Talvora Handoff — 2026-09-18
+# Talvora MCP Handoff — 2026-09-19
 
-This file is the canonical handoff for continuing Talvora development in a new ChatGPT/Codex session.
+## Zorunlu ve ihlal edilemez proje kuralları
 
-The user explicitly wants the next session to **continue automatically without asking for routine confirmation**. Read this file first, refresh the actual GitHub `main` state, then continue from the current verified state below.
+Aşağıdaki maddeler tavsiye değil, **kesin proje kurallarıdır**. Yeni oturumlarda, refactorlarda, hata düzeltmelerinde ve yeni özellik eklerken aynen uygulanacaktır.
 
----
+1. **Her runtime değişikliğinden sonra çalışan Talvora prosesleri mutlaka güncellenecek.**
+   - `src/`, Talvora.Shared, Talvora service, Tray, installer veya runtime davranışını etkileyen build girdilerinde değişiklik yapıldıysa yalnız kaynak kodu değiştirmek yeterli değildir.
+   - Zorunlu sıra:
+     `source change -> targeted build/test -> canonical installer build -> live deploy -> talvora_system_info -> service/Tray PID + version root doğrulaması -> ilgili canlı davranış testi`.
+   - Final doğrulamada gerekiyorsa current source publish edilip kurulu `Talvora.dll`, `Talvora.Shared.dll` ve `Talvora.Tray.exe` ile SHA256 karşılaştırması yapılacak.
+   - Eski/stale binary ile geliştirmeye devam edilmeyecek.
+   - Çalışan servis/Tray güncellenmeden bir runtime değişikliği “tamamlandı” kabul edilmeyecek.
 
-## 1. Immediate startup procedure for the next session
+2. **Context7 kullanımı zorunludur.**
+   - Yeni framework, kütüphane, SDK, CLI, API, runtime veya yazılım geliştirme yeteneği eklenirken/değiştirilirken önce Context7 kullanılacak.
+   - Context7 çıktısı mümkün olduğunda resmi üretici dokümantasyonu ile birlikte değerlendirilecek.
+   - Eski hafızaya veya deprecated kullanım örneklerine dayanarak API/CLI tasarlanmayacak.
+   - Sürüm, API veya davranış güncelliği önemliyse Context7 ve resmi doküman doğrulanmadan implementasyon yapılmayacak.
 
-Do these steps in order:
+3. **Modern mimari ve güncel stabil teknoloji zorunludur.**
+   - Her zaman güncel, desteklenen ve modern yaklaşım tercih edilecek.
+   - Deprecated CLI, eski SDK, legacy API veya uyumluluk katmanı yalnız “eski sistem desteklensin” diye tutulmayacak.
+   - Yeni ve güncel teknoloji mevcutsa eski teknoloji korunmayacak.
+   - Project-local wrapper/toolchain pin kullanılabilir; fakat deprecated teknolojiye fallback eklenmeyecek.
+   - Modern async, cancellation, structured diagnostics, deterministic build/provenance ve atomic persistence yaklaşımları tercih edilecek.
 
-1. Read this `HANDOFF.md`.
-2. Fetch the current `main` branch from `bingoweb/Talvora-MCP`. Do not assume the SHA in this document is still HEAD.
-3. Read at minimum:
-   - `README.md`
-   - `docs/ARCHITECTURE.md`
-   - `.github/workflows/windows-ci.yml`
-   - `scripts/Reset-And-Install.ps1`
-   - `scripts/Install.ps1`
-   - `tests/Talvora.Smoke/Program.cs`
-   - the files under `src/Talvora/Tools/`
-4. Check the latest Windows CI run for the current `main`.
-5. If a local MCP namespace/connector named `talvora_local` is actually available in the new session, call `talvora_system_info` before doing local-machine work and compare its `SourceCommit` with current GitHub `main`.
-6. If `talvora_local` is **not** available in that session, do not claim access to the user's Windows machine and do not stall. Continue GitHub/Windows-CI development and say only when relevant that physical-PC deployment cannot be executed from that surface.
-7. Read sections 11 through 14 for the completed filesystem-mutation, environment-variable, Event Log query, and ChatGPT Business Secure MCP Tunnel evidence. There is no further bounded subsystem pre-approved by this handoff.
-8. For the next genuinely new architectural subsystem, reassess current `main`, present a short bounded design when needed, and follow the normal approval rules before implementation.
+4. **Özellik kırpma veya yapay yetenek kısıtlaması yasaktır.**
+   - Talvora yalnız kullanıcının kendi Windows bilgisayarında çalışan kişisel geliştirme MCP'sidir.
+   - Güvenlik/gizlilik kolaylığı adına path, command, host, package, user, session, repository veya geliştirme yeteneği yapay olarak kısıtlanmayacak.
+   - Refactor veya bug fix sırasında mevcut yetenek sessizce azaltılmayacak.
+   - Mümkün olan yerlerde performans, gözlemlenebilirlik, hata raporlama ve geliştirici ergonomisi artırılacak.
 
----
+5. **Windows-native mimari korunacaktır.**
+   - Talvora'nın ana çalışma ortamı Windows'tur.
+   - Windows Service, LocalSystem, interactive user session, registry, Windows SDK ve native installer davranışları birinci sınıf desteklenecek.
+   - Installer ve MCP session araçları ortak WindowsSessionLauncher altyapısını kullanmaya devam edecek; paralel/tekrarlı session-launch stack oluşturulmayacak.
 
-## 2. User intent and non-negotiable rules
+6. **Paket yönetiminde Chocolatey kullanılacak; WinGet kullanılmayacak.**
+   - Yeni sistem paketi kurulumlarında Chocolatey tercih edilecek.
+   - WinGet Talvora production/bootstrap yollarında kullanılmayacak.
+   - Chocolatey paketi güncel stabil sürümün gerisindeyse resmi vendor installer/package tercih edilebilir; eski paketi sırf Chocolatey'de var diye kurmak zorunlu değildir.
 
-Talvora is a Windows-native local MCP/agent system for one owner machine.
+7. **En yeni uygun stabil sürüm kullanılacaktır.**
+   - Yeni kurulumlarda veya yeni yetenek eklerken mevcut en güncel uygun/stabil sürüm doğrulanacak.
+   - Eski sürümler yalnız zorunlu teknik gerekçe varsa tutulacak.
+   - Legacy JDK, Android tools, Yarn Classic, eski SDK/CLI gibi kalıntılar modern karşılığı mevcutsa temizlenecek.
 
-The governing philosophy is **full capability**. Security/privacy must not be implemented by artificially removing functionality or by adding hidden command/path/service/process/registry allowlists. Local identity, loopback-only networking, provenance, auditability, explicit structured contracts, deterministic behavior, and tests are acceptable. Capability reduction is not.
+8. **Test disiplini uygulanacaktır.**
+   - Geliştirme sırasında yalnız değişen alan hedefli test edilecek.
+   - Aynı geniş smoke/regression testleri gereksiz yere tekrar tekrar çalıştırılmayacak.
+   - Shared/runtime değişiklikleri ilgili targeted regression geçmeden deploy edilmeyecek.
+   - Exact deployed build üzerinde final aşamada bir kez full MCP smoke çalıştırılabilir.
+   - Bir test hata verirse aynı full test körlemesine yeniden çalıştırılmayacak; önce kök neden hedefli olarak bulunacak.
 
-Hard rules:
+9. **Canlılık doğrulaması sadece PID görmekle sınırlı değildir.**
+   - `talvora_system_info`, `current.json`, Service PathName/version root ve Tray executable path birlikte doğrulanacak.
+   - Service ve Tray aynı güncel version root'tan çalışmalı.
+   - ToolCount canonical `TalvoraToolManifest` ile eşleşmeli.
+   - Gerekli durumlarda installed binary hashleri current source publish hashleriyle karşılaştırılmalı.
 
-- Windows is the runtime and development target.
-- Talvora should run with machine authority. The canonical runtime is a single Windows Service running as `LocalSystem`.
-- Chocolatey is the package manager. **WinGet is forbidden.**
-- Do not require an OpenAI API account or OpenAI API key for the local runtime.
-- ChatGPT Business/web connectivity may use the current official OpenAI Secure MCP Tunnel. The Talvora core runtime must remain independent of OpenAI Platform credentials; the optional tunnel transport may use the restricted runtime credential required by current official tunnel-client documentation. It is never a prerequisite for the local runtime.
-- Do not reintroduce the old Gateway + SYSTEM broker + scheduled-task architecture.
-- Do not add artificial deny-lists/allow-lists to the primitive capability surface.
-- Prefer structured dedicated MCP tools when they materially reduce quoting/parsing fragility, while keeping unrestricted primitives available.
-- Use Context7/current official documentation for library/API decisions where freshness matters.
-- Use TDD for behavior changes: RED must be observed for the expected reason before GREEN implementation.
-- Before claiming a phase is complete, obtain fresh Windows CI evidence.
-- Avoid repeated confirmation questions. Continue through ordinary debugging/fixes automatically.
-- If the user sends only `devam et`, continue the current approved development thread rather than re-planning from scratch.
+10. **Canonical installer tek kurulum otoritesidir.**
+    - `scripts\Build-Windows-Installer.ps1` canonical build/package yoludur.
+    - Native installer canonical runtime install/update motorudur.
+    - `Install.ps1` ikinci bir service/state/install engine'e dönüştürülmeyecek.
+    - Stale installer artifact kullanılmayacak; runtime source değiştiyse installer yeniden build edilecek.
 
----
+11. **Tek canonical tool manifest kullanılacaktır.**
+    - Araç sayısı ve araç isimleri `TalvoraToolManifest.cs` üzerinden türetilecek.
+    - Test/CI içinde 159, 162, 198 gibi tarihsel sayılar hard-code edilmeyecek.
+    - Legacy aliaslar yalnız araç sayısını yükseltmek amacıyla geri getirilmeyecek.
 
-## 3. Canonical repository/runtime state
+12. **Tek canonical handoff dosyası kullanılacaktır.**
+    - Yalnız `HANDOFF.md` tutulacak.
+    - Yeni tarihli handoff dosyaları veya NEXT-SESSION-PROMPT benzeri paralel geçiş dosyaları oluşturulmayacak.
+    - Her devirde aynı `HANDOFF.md` tamamen güncellenip yeniden yazılacak.
 
-Repository:
+13. **Kod yapısı performans ve sağlıklılık odaklı tutulacaktır.**
+    - Çöp, dead code, yarım implementasyon, sessiz exception yutma, kaynak sızıntısı, sınırsız büyüyen log/queue ve gereksiz sync blocking düzenli olarak temizlenecek.
+    - Kod yalnız satır sayısını düşürmek için parçalanmayacak.
+    - Shared abstraction ancak gerçek tekrar/sorumluluk sınırı varsa oluşturulacak.
+    - Atomic file operations, bounded logs, cancellation-aware async ve deterministic state tercih edilecek.
 
-- GitHub: `bingoweb/Talvora-MCP`
-- Canonical branch: `main`
-- Last fully verified code/workflow commit before this handoff update:  
-  `dd72b4348bf064700a0707545b2af69e9eba4431`
-- Windows CI run for that commit: **#355 — SUCCESS**
-- That run proved the direct 32-tool MCP smoke, PowerShell parser gate, WinGet rejection, dual-shell ChatGPT Business bootstrap self-tests, the actual pinned official tunnel-client Windows distribution/CLI contract, and the real elevated LocalSystem installer/service smoke.
-- Temporary draft PR **#8** was used only to obtain pull-request Windows CI during the Business TDD thread and is now closed. Final repository state must remain at zero open PRs.
-- Historical branch refs must be aligned to the final verified handoff HEAD after promotion.
+14. **Git kuralları kesindir ve birincil Git sunucusu yerel Gitea'dır.**
+    - Ana dal `main`dir.
+    - Birincil remote `origin` = yerel Gitea: `ssh://git@127.0.0.1:2222/taylan/Talvora-MCP.git`.
+    - GitHub artık birincil remote değildir; yalnız ikincil/yedek remote adı `github` ile tutulur: `https://github.com/bingoweb/Talvora-MCP.git`.
+    - Kullanıcı yalnız “commit/push” derse varsayılan hedef kesinlikle `origin/main` yani yerel Gitea'dır.
+    - GitHub'a push/sync yalnız kullanıcı açıkça GitHub'ı isterse yapılacak.
+    - Gereksiz alt dallar bırakılmayacak.
+    - Commit/push yalnız kullanıcı açıkça istediğinde yapılacak.
+    - Push istenirse önce `git diff --check`, branch/upstream ve working tree kontrol edilecek.
+    - Talvora LocalSystem bağlamından `git fetch origin` ve `git ls-remote origin` çalıştığı doğrulanmıştır; Git işlemleri interaktif kullanıcı terminaline bağımlı değildir.
+    - Runtime clean commit SHA ile temsil edilecekse commit sonrası canonical installer yeniden build/deploy edilip SourceCommit doğrulanacak.
 
-Important: after this `HANDOFF.md` is committed, `main` will naturally have a newer documentation-only SHA. Always refresh the real branch before modifying anything.
+15. **Geliştirme tamamlandı demeden önce uygulama gerçeği doğrulanacaktır.**
+    - “Kod yazıldı”, “build geçti” veya “test geçti” tek başına yeterli değildir.
+    - Runtime değişikliği varsa çalışan Talvora'nın yeni kodu kullandığı kesinleştirilmelidir.
+    - ChatGPT tarafındaki Talvora tool schema değiştiyse bu oturumun/connector'ın yeni tool yüzeyini gerçekten gördüğü de doğrulanmalıdır.
 
-Runtime:
+## Canonical repository and live runtime
 
-- Service name: `Talvora`
-- Service account: `LocalSystem`
-- Expected Windows SID: `S-1-5-18`
+- Repository: `C:\Users\tayla\Talvora-MCP`
+- Primary remote/origin: `ssh://git@127.0.0.1:2222/taylan/Talvora-MCP.git`
+- Secondary backup remote/github: `https://github.com/bingoweb/Talvora-MCP.git`
+- Branch: `main`
+- Branch/upstream: `main -> origin/main`.
+- Finalization rule: after the requested commit/push, resolve the exact Git HEAD with `git rev-parse HEAD`; do not rely on a hard-coded historical SHA in this handoff.
+- This audit/development batch is ready for the requested commit/push after final Git gates.
 - MCP endpoint: `http://127.0.0.1:7676/mcp`
-- Health endpoint: `http://127.0.0.1:7676/healthz`
-- Transport: Streamable HTTP / stateless MCP
-- Listener: loopback only
-- Product version currently reported by health: `3.0.0-dev`
-- No user-session Gateway.
-- No named-pipe SYSTEM broker.
-- No legacy maintenance shim.
-
-Primary Windows paths:
-
-- Source checkout after reset: `%USERPROFILE%\Talvora-MCP`
-- Installed service payload: `%ProgramData%\Talvora\Service`
-- Runtime state: `%LOCALAPPDATA%\Talvora\current.json`
-- Installed runtime provenance: `%ProgramData%\Talvora\Service\talvora-runtime.json`
-- Local client config:
-  - `%CODEX_HOME%\config.toml` when `CODEX_HOME` exists, otherwise
-  - `%USERPROFILE%\.codex\config.toml`
-
-Canonical MCP client table written by the installer:
-
-~~~toml
-[mcp_servers.talvora_local]
-url = "http://127.0.0.1:7676/mcp"
-enabled = true
-startup_timeout_sec = 20
-tool_timeout_sec = 300
-default_tools_approval_mode = "approve"
-~~~
-
-The `approve` tool mode was intentionally kept because current Codex MCP semantics treat that server tool mode as automatic approval/always-allow behavior for the configured MCP, matching the user's no-routine-confirmation preference.
-
----
-
-## 4. Current MCP tool surface: 32 verified tools
-
-### Full-capability primitives — 6
-
-1. `talvora_system_info`
-2. `talvora_read_text`
-3. `talvora_write_text`
-4. `talvora_delete`
-5. `talvora_list`
-6. `talvora_run_process`
-
-The filesystem/process primitives remain unrestricted by the knowledge corpus and run with the Talvora service account's Windows privileges.
-
-### Structured filesystem mutation — 3
-
-7. `talvora_create_directory`
-8. `talvora_copy`
-9. `talvora_move`
-
-Behavior:
-
-- Create-directory creates missing parents and is idempotent for an existing directory.
-- Copy supports files and directories.
-- Directory copy requires `recursive=true`; `recursive=false` fails before creating a partial destination.
-- `overwrite=false` rejects collisions.
-- `overwrite=true` replaces conflicting copied entries while preserving non-conflicting entries already present in a destination directory.
-- Directory copy preflights the complete source tree and rejects source reparse points before destination mutation, preventing accidental junction/symlink recursion loops.
-- Move supports files and directories; with `overwrite=true` the destination is removed/replaced before moving.
-- Same-path operations and directory-into-descendant operations are rejected as invalid filesystem operations.
-- No path allowlist or deny-list is applied.
-
-### Environment-variable management — 4
-
-10. `talvora_env_get`
-11. `talvora_env_list`
-12. `talvora_env_set`
-13. `talvora_env_delete`
-
-Behavior:
-
-- Targets: Process, User, Machine.
-- Process values live only in the Talvora service process.
-- User/Machine values use Windows' persistent environment-variable stores.
-- Under the installed LocalSystem service, User refers to the LocalSystem account's user environment.
-- List supports an optional case-insensitive name query and deterministic sorting.
-- Explicit empty-string values are preserved; delete uses platform removal semantics and is idempotent for missing values.
-- No environment-variable name allowlist or deny-list is applied.
-
-### Windows Event Log query — 2
-
-14. `talvora_eventlog_list`
-15. `talvora_eventlog_query`
-
-Behavior:
-
-- List enumerates local Windows Event Log names with optional case-insensitive filtering and deterministic ordering.
-- Query accepts any local log name plus XPath, max-event count, and newest-first/oldest-first direction.
-- Structured records include log/provider name, event ID, record ID, timestamp, level, process/thread IDs, machine/user identity when available, and a best-effort formatted message.
-- Provider message-formatting failures do not discard the underlying event record.
-- Per-call event count bounds one MCP response; it is not a log/provider/event-ID allowlist.
-- No log-name, provider, or event-ID allowlist or deny-list is applied.
-- Existing unrestricted process and PowerShell primitives remain available for Event Log operations outside this read-only query layer.
-
-### Structured process inspection/control — 3
-
-16. `talvora_process_list`
-17. `talvora_process_get`
-18. `talvora_process_kill`
-
-Behavior:
-
-- Structured PID/name/session/start-time/working-set/executable metadata where Windows permits it.
-- Protected/unavailable optional metadata does not fail the whole list.
-- Kill is PID-based, optionally kills the complete process tree, waits with a timeout, and distinguishes kill request from observed exit.
-- Missing/exited PIDs are idempotent not-found.
-- No PID/process-name allowlist.
-
-### PowerShell execution — 1
-
-19. `talvora_run_powershell`
-
-Behavior:
-
-- Arbitrary multiline script.
-- UTF-16LE Base64 via `-EncodedCommand`.
-- `-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass`.
-- Captures stdout/stderr, exit code, PID, timeout state, engine and executable.
-- Timeout kills the process tree.
-- `engine=auto` prefers existing `pwsh.exe`, otherwise built-in Windows PowerShell.
-- PowerShell 7 is not a runtime prerequisite.
-- No script/command deny-list.
-
-### Windows registry — 6
-
-20. `talvora_registry_create_key`
-21. `talvora_registry_get`
-22. `talvora_registry_set`
-23. `talvora_registry_list`
-24. `talvora_registry_delete_value`
-25. `talvora_registry_delete_key`
-
-Behavior remains unchanged: HKLM/HKCU/HKCR/HKU/HKCC/HKPD, default/32/64-bit views, structured value kinds, deterministic listings, and no hive/path allowlist.
-
-### Windows service control — 5
-
-26. `talvora_service_list`
-27. `talvora_service_get`
-28. `talvora_service_start`
-29. `talvora_service_stop`
-30. `talvora_service_restart`
-
-Behavior remains unchanged: structured SCM access, state-aware waits, missing-service handling, and no service-name allowlist.
-
-### Business knowledge surface — 2
-
-31. `search`
-32. `fetch`
-
-The knowledge corpus remains a read-only retrieval surface and does not restrict primitive or structured filesystem/process capabilities.
-
----
-
-## 5. Installation/reset behavior
-
-Entry point:
-
-- `TALVORA-KUR.cmd`
-
-Important bootstrap behavior:
-
-- It first copies itself into `%TEMP%`.
-- The temporary bootstrap downloads the current `main/scripts/Reset-And-Install.ps1` from GitHub.
-- Therefore running an old local `TALVORA-KUR.cmd` still pulls the current reset logic rather than trusting an old local PowerShell installer.
-
-`scripts/Reset-And-Install.ps1` intentionally removes prior Talvora state before cloning fresh `main`:
-
-- Talvora-named Windows services.
-- Talvora scheduled tasks.
-- Known Talvora processes.
-- Talvora firewall rules.
-- Talvora startup/Run values.
-- `TALVORA*` user/machine environment variables.
-- Talvora entries from user/machine PATH.
-- Known Talvora registry keys.
-- `%LOCALAPPDATA%\Talvora`
-- roaming AppData Talvora
-- `%ProgramData%\Talvora`
-- Program Files Talvora locations.
-- Talvora shortcuts.
-- Talvora temp directories.
-- Talvora MCP tables from the Codex config.
-- Existing source checkout at `%USERPROFILE%\Talvora-MCP`.
-
-It then:
-
-1. Ensures Chocolatey.
-2. Installs Git and .NET 10 SDK through Chocolatey if missing.
-3. Clones clean `main`.
-4. Executes `scripts/Install.ps1`.
-
-`scripts/Install.ps1`:
-
-1. Ensures admin rights.
-2. Publishes self-contained `win-x64`.
-3. Resolves exact source Git commit.
-4. Writes `talvora-runtime.json` into the service payload before service start.
-5. Removes/recreates the `Talvora` Windows service.
-6. Verifies LocalSystem.
-7. Configures service restart recovery.
-8. Starts Talvora.
-9. Verifies health, SID and source provenance.
-10. Runs the real MCP smoke project against the installed service.
-11. Extracts the live tool manifest from smoke output.
-12. Writes `MCP_SMOKE_OK` only after the real smoke succeeds.
-13. Writes local MCP client config.
-14. Writes `%LOCALAPPDATA%\Talvora\current.json` containing:
-    - product/version
-    - source commit
-    - service/SID/PID
-    - MCP URL
-    - client config path
-    - tool count
-    - tool names
-    - install timestamp
-15. Prints `TALVORA READY`.
-
----
-
-## 6. Provenance/install-manifest work that was just completed
-
-The latest development thread added install provenance and a live installed-tool manifest.
-
-Why it exists:
-
-- A successful CI build is not enough to prove which source revision is physically installed.
-- Talvora now records the exact Git commit used to build the installed service.
-- `/healthz` exposes `sourceCommit` and `installedAtUtc`.
-- `talvora_system_info` exposes the same runtime provenance.
-- `current.json` records the source commit and the actual smoke-observed tool manifest.
-
-The CI service-install gate now proves:
-
-- service runs as LocalSystem;
-- SID is `S-1-5-18`;
-- it detects Windows Service hosting;
-- `health.sourceCommit == git rev-parse HEAD`;
-- `current.json.SourceCommit == git rev-parse HEAD`;
-- `current.json.ToolCount == 32`;
-- `ToolNames` count is 32;
-- core expected tools are present in the manifest.
-
-The filesystem-mutation thread has a fully successful Windows verification before this handoff update:
-
-- Commit: `093bab372ae5ae6bcb727a32882b9697ca5f9ef1`
-- Workflow: `windows-ci`
-- Run: **#308**
-- Result: **SUCCESS**
-- Direct MCP smoke: SUCCESS
-- Real LocalSystem installer/service smoke: SUCCESS
-- Installed manifest: 26 tools
-
-A transient implementation bug occurred while patching `Install.ps1`: a JavaScript replacement string interpreted the PowerShell regex's trailing `$'` as a replacement metacharacter and duplicated/corrupted the installer tail. This was diagnosed from the PowerShell parser output and fixed by reconstructing one canonical 187-line installer while preserving the provenance + manifest behavior. Do not reintroduce that broken 376-line duplicate form.
-
----
-
-## 7. Windows CI quality gates
-
-`.github/workflows/windows-ci.yml` currently requires:
-
-1. checkout;
-2. .NET 10 setup;
-3. restore;
-4. build Talvora;
-5. build smoke project;
-6. launch Talvora directly and run the real MCP smoke suite;
-7. parse every PowerShell installer script;
-8. reject any WinGet usage;
-9. run the installer on an elevated Windows runner;
-10. verify the real Windows Service is Running as LocalSystem;
-11. verify SID `S-1-5-18`;
-12. verify Windows Service detection;
-13. verify exact source commit provenance;
-14. verify installed state file;
-15. verify 32-tool manifest;
-16. cleanup service and runtime state.
-
-Restore and Build explicitly check `$LASTEXITCODE` after every `dotnet` invocation. This was hardened at `17dde234c2514af78b7a09790732df7ecb49ee45` after Event Log package testing exposed that a later successful smoke-project command could otherwise mask an earlier Talvora restore/build failure inside the same PowerShell step.
-
-A change is not complete until the final canonical HEAD has a fresh successful run of this workflow.
-
----
-
-## 8. Branch/repository hygiene
-
-Before the filesystem-mutation TDD thread there were no open PRs. That thread used a temporary draft PR to obtain real Windows pull-request CI; finalization requires that PR to be merged/closed and the repository to return to zero open PRs.
-
-Historical branch names included:
-
-- `feat/elevated-operation-execution`
-- `feat/windows-registry-management`
-- `noop`
-- `talvora-2/foundation`
-- `talvora-2/foundation-red`
-- `talvora-2/legacy-maintenance`
-- `talvora-2/system-broker`
-
-They were repeatedly force-aligned to the canonical verified `main` tree so they did not expose divergent old product code.
-
-Important nuance:
-
-- This does **not** guarantee GitHub has physically erased all unreachable historical objects, PR refs, backups, or provider-internal retention.
-- An earlier attempt to perform an orphan/history reset was blocked by the environment/security surface.
-- Do not claim the Git provider's underlying object history is physically erased.
-- The practical requirement is that canonical/current branches expose only the new Talvora product.
-
-After committing this handoff, align historical branch refs to the new handoff HEAD once its CI is verified.
-
----
-
-## 9. Local Windows access caveat
-
-The previous web ChatGPT session did not expose the user's local `talvora_local` MCP namespace even though the project is designed to install it locally.
-
-Therefore:
-
-- Never pretend a GitHub/CI change was physically deployed to the user's Windows machine unless a real local connector/tool proves it.
-- If `talvora_local` becomes available in the new session, immediately verify with `talvora_system_info`.
-- A good physical-PC verification sequence is:
-  1. `talvora_system_info`
-  2. compare `SourceCommit` to GitHub `main`
-  3. confirm SID `S-1-5-18`
-  4. list tools / verify installed manifest
-  5. perform a harmless temp-file roundtrip
-  6. only then perform local maintenance/development actions.
-- If physical PC is stale, the reset/install entry point is `TALVORA-KUR.cmd`.
-
----
-
-## 10. OpenAI / ChatGPT Business integration constraints
-
-Do not conflate ChatGPT Business with the OpenAI API or with the Talvora core runtime.
-
-Current project policy:
-
-- Talvora core remains a Windows-local, API-key-free MCP runtime.
-- The Talvora service still binds only to `http://127.0.0.1:7676/mcp` and requires no public ingress.
-- ChatGPT web cannot directly dial the loopback MCP endpoint.
-- Current official ChatGPT Business connectivity for a private/local MCP uses OpenAI Secure MCP Tunnel.
-- The optional Business transport is deliberately separate from Talvora core and uses the official `openai/tunnel-client`.
-- The verified/pinned tunnel client is `v0.0.14`; upgrade it only with a new explicit Windows CI validation.
-- Current official tunnel attach requires an existing `tunnel_id` plus a restricted Runtime API key/principal with **Tunnels Read + Use**.
-- That runtime credential authenticates Secure MCP Tunnel transport. Talvora does not use it for model inference, Responses API calls, or its local MCP tools.
-- Do not use an organization/admin key when a least-privilege Runtime API key is sufficient.
-- The reconnect credential is stored separately using current-user Windows DPAPI; it is not written into command-line arguments or Talvora config.
-- No inbound firewall rule, public Talvora listener, secondary Talvora service, Gateway, broker, or scheduled task is added for Business connectivity.
-- Reboot recovery is explicit via `TALVORA-BUSINESS-KUR.cmd reconnect` unless future official tunnel-client documentation provides a different supported persistence contract.
-- Business Admin/Owner performs the final workspace UI step: Developer mode -> Workspace settings/Apps -> custom MCP app -> Connection: Tunnel -> select/paste the tunnel ID -> review/publish.
-
-
----
-
-## 11. COMPLETED TASK — structured filesystem mutation tools
-
-The approved filesystem mutation task is complete in the verified code/docs commit `093bab372ae5ae6bcb727a32882b9697ca5f9ef1`.
-
-Implemented:
-
-1. `talvora_create_directory`
-2. `talvora_copy`
-3. `talvora_move`
-
-TDD/CI evidence:
-
-- RED commit: `fdf539a0f34edea264b1b60db81f7cb917cb6d5a`.
-- Windows CI **#304** restored and built both projects with zero errors, then failed the real MCP smoke specifically with `Missing MCP tool: talvora_create_directory`.
-- Production implementation commit: `583f2d11bda4e12a13ffd3f8ccc31422fee440ab`.
-- Windows CI **#305** passed build, direct MCP smoke, installer parsing and WinGet rejection; its real installer wrote `ToolCount=26` and then failed only because the old CI assertion still expected 23. This proved the runtime/tool manifest changed before the gate was updated.
-- CI manifest expectation was then changed from 23 to 26.
-- README and architecture were updated; the duplicate Process inspection/control architecture section was collapsed to one canonical section.
-- Windows CI **#308** on `093bab372ae5ae6bcb727a32882b9697ca5f9ef1` completed fully SUCCESS, including direct MCP smoke and the real elevated LocalSystem installation/service smoke.
-
-Chosen reparse-point contract:
-
-- Directory copy preflights the source tree.
-- A source reparse point causes a tool error before destination mutation.
-- This avoids accidental infinite traversal while preserving unrestricted path addressability; it is traversal semantics, not an allowlist.
-
-No primitive tool was removed or restricted.
-
----
-
-## 12. COMPLETED TASK — environment-variable management
-
-The next bounded Windows capability was implemented entirely through GitHub + Windows CI because the user was not on the Windows machine.
-
-Implemented:
-
-1. `talvora_env_get`
-2. `talvora_env_list`
-3. `talvora_env_set`
-4. `talvora_env_delete`
-
-Contract:
-
-- Explicit targets: Process, User, Machine.
-- Get returns structured found/not-found data.
-- List returns deterministic name-sorted entries and optional case-insensitive name filtering.
-- Set creates/replaces values and preserves explicit empty strings.
-- Delete is idempotent and removes values using the platform's null-removal semantics.
-- No environment-variable name allowlist or deny-list.
-- No existing process/PowerShell primitive was removed or restricted.
-
-TDD/CI evidence:
-
-- Initial smoke-only commit: `8bb9849a9d63146d1ce0df48d269d42f3f4915e5`.
-- Windows CI **#316** was **not** accepted as RED because the smoke used `smokeId` before declaration and failed at compile time. The test was corrected before any production implementation.
-- Corrected RED commit: `2327e715e3ffdd3a491196b9764c66e92d32564d`.
-- Windows CI **#317** restored and built both projects with zero errors, then failed the real MCP smoke specifically with `Missing MCP tool: talvora_env_get`.
-- Production implementation commit: `4ef585fbc83b44176224bcadf069767cc7167d81`.
-- Windows CI **#318** passed build, direct MCP behavior smoke, installer parsing and WinGet rejection. The real LocalSystem installer reached `TALVORA READY`, SID `S-1-5-18`, and wrote a live 30-tool manifest, then failed only because the old CI assertion still expected 26.
-- The manifest gate was updated to 30 at `97a1eaef6280511e5a4268ab82877ed849edef6d`.
-- Windows CI **#319** completed fully SUCCESS, including direct MCP smoke and the real elevated LocalSystem installation/service smoke with all 30 tools.
-
-API/library basis:
-
-- Current .NET 10 `System.Environment` APIs support Process/User/Machine targets on Windows.
-- Passing `null` removes a variable; an explicit empty string is preserved on current .NET.
-- Machine-scope writes require administrative authority; Talvora's installed LocalSystem service has that authority.
-
----
-
-## 13. COMPLETED TASK — Windows Event Log structured queries
-
-This bounded capability was implemented entirely through GitHub + real Windows CI because the user was not on the physical Windows machine.
-
-Implemented:
-
-1. `talvora_eventlog_list`
-2. `talvora_eventlog_query`
-
-Contract:
-
-- List discovers local Windows Event Log names with deterministic ordering and optional case-insensitive filtering.
-- Query accepts an unrestricted local log name and XPath expression.
-- `newestFirst=true` reads newest-to-oldest; false reads oldest-to-newest.
-- `maxEvents` bounds a single MCP response rather than restricting addressable logs or providers.
-- Structured records preserve core event metadata even when Windows cannot format a provider-specific message.
-- No log/provider/event-ID allowlist or deny-list.
-- Existing unrestricted process/PowerShell primitives remain available for clear/export/provider/source operations not modeled by this read-only convenience layer.
-
-TDD/CI evidence:
-
-- RED smoke commit: `963e848db3d9be853081bf739b07b84d899587c8`.
-- Windows CI **#324** restored and built both projects with zero errors, then failed the real MCP smoke specifically with `Missing MCP tool: talvora_eventlog_list`.
-- An initial explicit `System.Diagnostics.EventLog 10.0.12` PackageReference was tested and rejected by Windows CI **#326** with SDK error `NU1510`: the package was already automatically available to this project and the explicit reference had to be removed. The dependency decision was corrected from the log rather than guessed.
-- Production Event Log implementation was retained while the redundant package reference was removed at `8c6780beb01d5190fd40ddf9d4686e91d2c902ae`.
-- Windows CI **#327** passed restore/build, direct Event Log MCP smoke, installer parsing, and WinGet rejection; the real LocalSystem installer reached `TALVORA READY`, SID `S-1-5-18`, and produced a live **32-tool** manifest, then failed only because the old CI assertion still expected 30.
-- The manifest gate was updated to 32 at `ae5f1e3b895a41c1777b6bac8825c8a91971e5f1`.
-- Windows CI **#328** completed fully SUCCESS, including direct MCP smoke and the real elevated LocalSystem installation/service smoke with all 32 tools.
-
-API/library basis:
-
-- Windows Eventing is accessed through `System.Diagnostics.Eventing.Reader`.
-- `EventLogSession.GetLogNames()` supplies registered local log names.
-- `EventLogQuery` + `EventLogReader` perform XPath reads, and `ReverseDirection` controls newest-first traversal.
-- Do not re-add an explicit `System.Diagnostics.EventLog` PackageReference unless the project shape changes and CI proves it is required; the current .NET 10 project reports it as automatically available.
-
----
-
-## 14. COMPLETED TASK — ChatGPT Business Secure MCP Tunnel transport
-
-The user explicitly requested Windows installation to be fully compatible with ChatGPT Business. The transport was added as a separate optional layer without changing Talvora's 32-tool MCP surface or the LocalSystem/loopback core architecture.
-
-Implemented:
-
-1. `scripts/Configure-ChatGPT-Business.ps1`
-2. `TALVORA-BUSINESS-KUR.cmd`
-3. Windows CI gate for both PowerShell 7 and Windows PowerShell 5.1 bootstrap self-tests.
-4. README/architecture/install output describing the separate Business pairing flow.
-
-Contract:
-
-- Talvora remains one `LocalSystem` Windows Service on `127.0.0.1:7676`.
-- The Business layer uses official `openai/tunnel-client` and an outbound Secure MCP Tunnel.
-- Tunnel client version is pinned to verified `v0.0.14`.
-- The Windows archive is downloaded from the official GitHub release and verified against official `SHA256SUMS.txt` before use.
-- Supported local tunnel-client architectures are Windows amd64 and arm64.
-- Tunnel IDs are validated using the current official shape: `tunnel_` plus 32 lowercase hexadecimal characters.
-- Runtime credential is supplied to the native client by `env:CONTROL_PLANE_API_KEY`, not as a literal command-line secret.
-- Reconnect copy of the restricted runtime credential is protected with current-user Windows DPAPI.
-- Non-secret pairing metadata is stored under `%LOCALAPPDATA%\Talvora\TunnelClient`.
-- Pairing uses `runtimes connect` to `http://127.0.0.1:7676/mcp`.
-- Success is not reported until `runtimes status <alias> --json` reports `process_running=true`, `healthy=true`, and `ready=true`.
-- No public MCP listener or inbound firewall opening is created.
-- No hidden second service or scheduled task is created.
-- `TALVORA-BUSINESS-KUR.cmd reconnect` is the explicit reboot/reconnect path.
-- The Talvora MCP tool manifest remains **32 tools**.
-
-TDD/CI evidence:
-
-- RED commit: `15583176080a873d1d645c4bb1b3cb0f37d16c43`.
-- Windows CI **#336** passed Talvora build, real 32-tool MCP smoke, parser and WinGet gates, then failed exactly because `scripts/Configure-ChatGPT-Business.ps1` did not yet exist.
-- Windows CI **#337** showed the bootstrap's own self-test GREEN but exposed a CI-gate bug: `$LASTEXITCODE` was incorrectly inspected after invoking a PowerShell script. The gate was corrected and expanded to run Windows PowerShell 5.1 explicitly.
-- A JavaScript replacement-string `$'` metacharacter accident later duplicated/corrupted the bootstrap file. Repeated parser failures exposed that the file had grown to 1,344 lines with duplicated major functions. The file was not incrementally patched; it was reconstructed as one canonical 534-line script at `b5266e156a472f9d0040dc86206f46f523f3654f`.
-- Windows CI **#352** then passed build, 32-tool MCP smoke, parser and WinGet gates and reached the Business self-test. It exposed that PowerShell `-match` is case-insensitive by default, so uppercase tunnel IDs were incorrectly accepted.
-- Final behavior fix: `56732fd38904f3491bbc319823e3744b2a7ad24a` uses case-sensitive `-cmatch`.
-- Windows CI **#353** completed fully **SUCCESS** for the final bootstrap behavior, including PowerShell 7 + Windows PowerShell 5.1 self-tests and the real LocalSystem installation gate.
-- The Business distribution gate was then strengthened at `dd72b4348bf064700a0707545b2af69e9eba4431` to exercise the official OpenAI Windows distribution itself rather than only helper logic.
-- Windows CI **#355** completed fully **SUCCESS**, including:
-  - restore/build;
-  - direct real 32-tool MCP smoke;
-  - all PowerShell installer parsing;
-  - WinGet rejection including the Business bootstrap CMD;
-  - Business bootstrap self-test under PowerShell 7;
-  - Business bootstrap self-test under Windows PowerShell 5.1;
-  - real download of official `openai/tunnel-client` v0.0.14 for Windows;
-  - SHA256 verification against the official `SHA256SUMS.txt`;
-  - successful `tunnel-client.exe --version`;
-  - successful `tunnel-client runtimes connect --help` contract checks for `--tunnel-id`, `--runtime-api-key`, and `--mcp-server-url`;
-  - real elevated LocalSystem `Install.ps1` service installation and 32-tool installed manifest;
-  - cleanup.
-
-Physical-PC caveat:
-
-- This development thread did not expose a `talvora_local` tool namespace in ChatGPT, so GitHub/Windows-runner validation must not be described as physical deployment to the user's own PC.
-- On the physical Windows PC, run `TALVORA-KUR.cmd` first, then `TALVORA-BUSINESS-KUR.cmd` for Business pairing.
-
-
----
-
-## 15. Next development task
-
-There is no additional bounded subsystem pre-approved by this handoff. Reassess current `main` and choose the next highest-value Windows capability one bounded change at a time.
-
-Likely future candidates, subject to a new short design:
-
-- scheduled task inspection/control;
-- Windows package management through Chocolatey only;
-- network/port/interface inspection and control;
-- Windows account/session/token ergonomics;
-- filesystem ACL/ownership tools;
-- device/driver inspection;
-- update/self-maintenance flow for the installed Talvora service.
-
-Do not add several of these in one commit. Continue one bounded capability at a time with real Windows smoke coverage.
-
----
-
-## 16. Housekeeping status
-
-The duplicate `Process inspection and control` section in `docs/ARCHITECTURE.md` was removed during the filesystem mutation documentation update. The file now has one canonical process section.
-
----
-
-## 17. Communication style expected by the user
-
-- Turkish.
-- Direct and technically concrete.
-- Do not ask repetitive questions when the answer is already known.
-- Do not say to wait or promise background work.
-- Keep the user updated during long tool sequences with short progress messages.
-- If something fails, report the actual root cause when known and continue fixing it.
-- Do not call a partial CI state “green”.
-- Do not pretend the physical Windows PC was modified when only GitHub/CI was modified.
-- When the user says `devam et`, continue.
-
----
-
-## 18. Compact continuity checklist
-
-Before doing new code:
-
-- [ ] Read this handoff.
-- [ ] Refresh `main`.
-- [ ] Check latest CI.
-- [ ] Check whether `talvora_local` exists in the current session.
-- [ ] Preserve full-capability/LocalSystem design.
-- [ ] Chocolatey only; reject WinGet.
-- [ ] No OpenAI Platform/API-key requirement for Talvora core. Keep the optional Business tunnel runtime credential isolated to the tunnel transport.
-- [ ] Confirm the 32-tool manifest is still current.
-- [ ] Preserve direct MCP smoke + real LocalSystem installer smoke for every behavior change.
-- [ ] Do not reopen the completed filesystem-mutation, environment-variable, Event Log query, or ChatGPT Business tunnel tasks unless fixing a discovered defect.
-- [ ] For a new subsystem, keep the change bounded and use RED -> GREEN.
-- [ ] Final CI on canonical HEAD.
-- [ ] Keep historical branch refs aligned.
-- [ ] No open PRs unless intentionally created.
-
-This handoff is intended to let the next session continue without relying on hidden prior-chat context.
+- Canonical tool manifest: **198 tools**
+- Current ChatGPT session also exposes **198 Talvora tools**.
+- Pre-commit exact deployed audit runtime identity:
+  `c8d8e5f602b6cea26c3cb32d698f59b78553721d-dirty-b02df0355735`.
+- Pre-commit exact deployed version root:
+  `C:\Program Files\Talvora\Versions\c8d8e5f602b6cea26c3cb32d698f59b78553721d-dirty-b02df0355735-20260919143139356`.
+- Pre-commit audit service PID: **10064**.
+- Pre-commit audit Tray PID: **4444**.
+- After the final commit, rebuild/redeploy once so live `SourceCommit` equals the clean final `main` SHA.
+- Service account/SID: LocalSystem / `S-1-5-18`
+- `current.json`: `C:\Users\tayla\AppData\Local\Talvora\current.json`, ToolCount=198.
+
+## Yerel Gitea — birincil Git altyapısı
+
+- Gitea sürümü: **1.27.3**.
+- Kurulum binary: `C:\Program Files\Gitea\gitea.exe`.
+- Work/data root: `C:\ProgramData\Gitea`.
+- Config: `C:\ProgramData\Gitea\custom\conf\app.ini`.
+- SQLite DB: `C:\ProgramData\Gitea\data\gitea.db`, WAL modu.
+- Repository root: `C:\ProgramData\Gitea\data\gitea-repositories`.
+- Windows service: `gitea`, LocalSystem, Automatic/Delayed Auto.
+- Built-in SSH: `127.0.0.1:2222`.
+- Built-in SSH kullanıcı adı: `git` (`BUILTIN_SSH_SERVER_USER = git`, `SSH_USER = git`).
+- Gitea backend HTTP yalnız localhost: `127.0.0.1:3001`.
+- Dış/browser URL: `http://127.0.0.1:3000/`.
+- Kullanıcı/admin: `taylan`.
+- Registration kapalı; Actions, Packages, LFS ve normal Gitea yetenekleri açık.
+- Push-to-create açık; yeni kullanıcı repoları varsayılan private ve default branch `main`.
+- Dedicated local Git SSH key:
+  - private: `C:\Users\tayla\.ssh\id_ed25519_gitea`
+  - public: `C:\Users\tayla\.ssh\id_ed25519_gitea.pub`
+  - known hosts: `C:\Users\tayla\.ssh\known_hosts_gitea`
+- Talvora repo-local `core.sshCommand` dedicated Gitea keyini ve known_hosts dosyasını kullanır.
+- `taylan/Talvora-MCP` reposu push-to-create ile oluşturuldu ve `main` başarıyla push edildi.
+- Talvora LocalSystem bağlamından `fetch origin --prune` ve `ls-remote --heads origin` GREEN.
+
+### Parolasız tarayıcı erişimi
+
+- Caddy sürümü: **2.11.4**, güncel stabil ve Chocolatey paketi resmi latest ile eşleşiyor.
+- Caddy config: `C:\ProgramData\Caddy\Caddyfile`.
+- Windows service: `caddy`, LocalSystem, Automatic.
+- `caddy` servisi `gitea` servisine bağımlıdır; reboot sonrası Gitea önce ayağa kalkar.
+- Caddy yalnız `127.0.0.1:3000` dinler ve `127.0.0.1:3001` Gitea backend'ine proxy eder.
+- Caddy upstream isteğinde `X-WEBAUTH-USER: taylan` başlığını zorla set eder.
+- Gitea'da `ENABLE_REVERSE_PROXY_AUTHENTICATION = true`; auto-registration kapalıdır.
+- Böylece bu makinede tarayıcıdan `http://127.0.0.1:3000/` açıldığında parola/login ekranı olmadan doğrudan `taylan` admin oturumu kullanılır.
+- Doğrulama:
+  - `http://127.0.0.1:3001/user/settings` -> **303 /user/login**
+  - `http://127.0.0.1:3000/user/settings` -> **200**, `taylan` görünür
+  - `http://127.0.0.1:3000/taylan/Talvora-MCP` -> **200**, private repo oturumsuz HTTP client ile erişilebilir
+- Gitea ve Caddy yalnız localhost'a bağlıdır; bu SSO modeli ağdaki başka cihazlara açılmış değildir.
+
+## Resmî Gitea MCP — ChatGPT entegrasyonu
+
+- Resmî proje: Gitea'nın kendi `gitea-mcp` sunucusu.
+- Kurulu sürüm: **1.7.0**.
+- Binary: `C:\Program Files\Gitea MCP\gitea-mcp.exe`.
+- Release SHA256 doğrulandı.
+- Transport: HTTP/stateless.
+- Yerel MCP endpoint: `http://127.0.0.1:8081/mcp`.
+- Health endpoint: `http://127.0.0.1:8081/healthz` -> **200 ok**.
+- Gitea host: `http://127.0.0.1:3000`.
+- Gitea reverse-proxy API authentication açık olduğu için MCP ayrı PAT taşımadan `taylan` admin yetkileriyle localhost Gitea API'sine bağlanır.
+- Read-only veya scope/tool filtresi kullanılmıyor; resmî sunucunun tüm araçları yükleniyor.
+- MCP initialize doğrulandı:
+  - server name: `Gitea MCP Server`
+  - server version: `1.7.0`
+  - negotiated protocol: `2025-06-18`
+  - tool count: **55**
+  - write araçları açık; ör. `create_repo`, `create_or_update_file`, `delete_file`, Actions/PR/issue/release araçları.
+- Kalıcılık:
+  - Scheduled Task: `Gitea MCP Server`
+  - principal: SYSTEM / Highest
+  - trigger: AtStartup
+  - restart: 1 dakika aralıkla, 999 deneme
+  - execution time limit: unlimited
+  - lifecycle stop/start testi GREEN
+  - son doğrulanan PID: **9488**
+- ChatGPT yerel MCP'ye doğrudan bağlanamaz; ChatGPT Business custom MCP oluştururken **Secure MCP Tunnel / Tünel** kullanılacak.
+- ChatGPT Create App ekranında `Sunucu URL'si` yerine `Tünel` seçilecek.
+- Bu MCP için public internet URL açılmayacak; localhost MCP Secure MCP Tunnel üzerinden ChatGPT'ye taşınacak.
+- ChatGPT app oluşturulup tool scan tamamlandıktan sonra 55 aracın tamamının göründüğü doğrulanmalı.
+- Secure MCP Tunnel:
+  - tunnel ID: `tunnel_6aae935c5da0819193da4a5160b81aaa`
+  - runtime alias: `gitea-business`
+  - local target: `http://127.0.0.1:8081/mcp`
+  - final audit status: `process_running=true`, `healthy=true`, `ready=true`
+  - watchdog Scheduled Task: `Gitea MCP Tunnel`
+  - watchdog keeps the managed runtime alive and fails on unexpected runtime exit so Task Scheduler retries
+  - task execution time limit: unlimited
+  - PowerShell 7 action includes `-WindowStyle Hidden`; no terminal window remains open in the user session
+  - final integration audit: Gitea backend/proxy/MCP all HTTP 200; visible user PowerShell window count 0.
+
+## Standing project rules
+
+- Windows-native Talvora.
+- Full capability / TAM YETKI philosophy. Do not add artificial path, command, host, package, user, session, repository, or development-capability restrictions.
+- Package management is Chocolatey; WinGet remains forbidden in Talvora production/bootstrap paths.
+- Use the newest suitable/current stable software versions. Do not retain deprecated CLIs or old technologies merely for compatibility.
+- Project-local wrappers/toolchain pins are fine; compatibility fallbacks to deprecated tooling are not.
+- Use Context7 plus official documentation when adding/changing library/framework/software-development capabilities.
+- Playwright remains a separate ChatGPT integration and is not part of Talvora.
+- Do not split code merely to reduce line counts; split only at real responsibility boundaries.
+- Test only changed areas while developing. Run a full MCP smoke only as a final runtime gate after the exact build has been deployed.
+- Every runtime/shared/installer/Tray source change must follow:
+  source change -> targeted build/regression -> canonical installer build -> live deploy -> system_info/version-root/PID check -> relevant live behavior check.
+- For final runtime confidence, verify installed binaries against a publish from current source by SHA256.
+- Git commit/push only when explicitly requested by the user.
+
+## Exact live-deployment verification
+
+The final deployed runtime was built by the canonical:
+`scripts\Build-Windows-Installer.ps1 -RuntimeIdentifier win-x64`
+
+Final installer artifact produced:
+- SourceCommit: `c8d8e5f602b6cea26c3cb32d698f59b78553721d-dirty-882cb1fde36e`
+- Installer: `artifacts\installer\Talvora-Setup.exe`
+- SHA256 at build: `ECBA99B2C0936B5EA83EEC5DF87429BD414B64544746844F289B229E7BDC685D`
+
+The installer completed successfully and started both service and Tray from the same version root. Installer log explicitly confirmed the Tray remained stable for the required interval.
+
+A fresh publish from the current source was compared against installed binaries. All matched exactly:
+- `Service\Talvora.dll`: SHA256 match
+- `Service\Talvora.Shared.dll`: SHA256 match
+- `Tray\Talvora.Tray.exe`: SHA256 match
+
+Therefore the currently running service/Tray are not stale artifacts; they are byte-for-byte aligned with the current runtime source.
+
+## Major fixes in this audit batch
+
+### ProcessRunner
+- Timeout/cancellation no longer waits forever after a failed tree kill; termination waiting is bounded.
+- Batch files use a short-lived wrapper and unique environment transport variables so cmd metacharacters are not expanded by the wrapper.
+- Internal transport variables are filtered from captured VS developer environments.
+- Embedded quote handling was hardened: literal `"` in batch arguments is encoded as `""`, preventing following arguments from collapsing into the quoted token.
+- Native executable ArgumentList semantics remain unchanged/unrestricted.
+- Added service-independent `tests\ProcessRunnerRegression.ps1`.
+- Added `--shared-infrastructure-only` smoke mode.
+- Live multi-argument batch test passed with quote, `<`, `>`, `&&`, spaces, `&`, pipe, percent, exclamation, parentheses, empty values, and trailing backslash cases.
+
+### Background jobs
+- Failed job startup no longer leaves an orphan process/job directory.
+- Persisted PID reuse is guarded by actual process start time and executable-path validation where applicable.
+- Stale/reused PID smoke confirms an unrelated process is not killed.
+- Removed redundant per-chunk flush from stdout/stderr pumps.
+- Exit metadata is persisted even when an output pump faults.
+- Observer failures go to bounded Talvora job error logging instead of being swallowed.
+
+### HTTP mock / watchers / HTTP ownership
+- HTTP mock runtime exposes `LastError`.
+- Listener/context failures are recorded and cancellation is propagated correctly.
+- File watcher disposed-state races were hardened.
+- FIFO watch queues no longer perform redundant sequence sorting.
+- HttpClient handler/client ownership is explicit so construction failures do not leak handlers.
+
+### Installer / Tray / Windows session launcher
+- Installer and MCP session tools share the same WindowsSessionLauncher.
+- WindowsSessionLauncher supports CreateProcessWithTokenW fallback when CreateProcessAsUserW fails for access/privilege reasons.
+- Installer Tray startup is retried and requires the launched PID to remain stable.
+- Tray supports `--replace` and waits for the single-instance mutex when replacing an old instance.
+- Installer and Tray now use the same global graceful-shutdown event.
+- Tray/menu/timer/event/synchronization resources are explicitly disposed.
+- A previously observed state where service was updated but Tray stayed old was eliminated and verified by SHA256.
+- Dirty installer provenance now includes a deterministic 12-hex working-tree fingerprint.
+- Fingerprint inputs are runtime/build inputs (`src/`, `assets/`, canonical installer build script, root build/toolchain config), so test/docs-only changes do not create fake runtime identities.
+
+### Developer/tooling capability additions
+Canonical manifest is 198 tools and includes the added capabilities:
+- JVM/JDK/Gradle/Maven
+- Go/Rust
+- Flutter/Dart
+- modern Android CLI/ADB/emulator
+- pnpm/Yarn Modern/Bun
+- workspace inspection and inferred commands
+- coverage summary
+- normalized diagnostics parser
+- artifact inventory
+- Windows release/signing/resource tools
+- GitHub CLI
+
+Removed/kept removed:
+- `talvora_sdkmanager_run`
+- `talvora_corepack_info`
+- old legacy VS aliases
+- deprecated Android `tools\bin` fallback
+- JDK 21 compatibility fallback
+- Yarn Classic compatibility path
+
+### SQLite / Git / misc quality
+- SQLite backup stages beside target, closes stream before hash, then atomically publishes.
+- SQLite transaction cleanup relies on transaction disposal instead of an empty rollback catch.
+- Numeric conversions use invariant culture.
+- Git bare repository inspection/log/branches/diff support was corrected.
+- Multiple broad operational catches were narrowed where failure families are known.
+- Machine-data parsing was made invariant in several diagnostic/process/service paths.
+- No production TODO/FIXME/HACK, old 159/162 tool-count constants, old sdkmanager/Corepack/Yarn Classic/JDK21 references, async-void, Thread.Sleep, .Result, or .Wait() remained in the final static scan.
+
+## Smoke and regression state
+
+Final exact deployed runtime:
+- Full **198-tool MCP smoke: GREEN**.
+- Native installer runtime regression: `NATIVE_INSTALLER_RUNTIME_GREEN`.
+- Native installer source regression: `NATIVE_INSTALLER_SOURCE_GREEN`.
+- ProcessRunner regression: `PROCESS_RUNNER_REGRESSION_GREEN`.
+- File list metadata regression: `FILE_LIST_METADATA_GREEN`.
+- Knowledge search scan: `KNOWLEDGE_SEARCH_SCAN_GREEN`.
+- Runtime identity cache: `RUNTIME_IDENTITY_CACHE_GREEN`.
+- Runtime metadata cache: `RUNTIME_METADATA_CACHE_GREEN`.
+- Smoke knowledge-root isolation: `SMOKE_KNOWLEDGE_ROOTS_ISOLATION_GREEN`.
+- ChatGPT Business bootstrap self-test: GREEN under PowerShell 7 and Windows PowerShell 5.1.
+- YAML parse of `.github\workflows\windows-ci.yml`: GREEN.
+- Final `git diff --check`: GREEN.
+- Final static TODO/legacy/blocking scan: no hits.
+
+The full MCP smoke should not be repeated again unless runtime source changes after this handoff.
+
+## CI changes
+
+`.github\workflows\windows-ci.yml` now:
+- builds current projects including Talvora.Shared,
+- runs the real ProcessRunner regression,
+- derives tool count from TalvoraToolManifest,
+- builds and installs the canonical native installer,
+- verifies installed LocalSystem runtime and then runs MCP smoke,
+- rejects WinGet in production/bootstrap paths using tracked-source `git grep -I` rather than recursively scanning generated bin/obj binaries,
+- allows regression tests themselves to mention the string "WinGet" while asserting the prohibition.
+
+## Current toolchain verified on the Windows machine
+
+- Windows SDK: **10.0.28000.0**
+- Temurin JDK: **25.0.4.1 LTS**
+- Flutter: **3.47.5 stable**
+- Dart: **3.13.4 stable**
+- pnpm: **12.4.2**
+- Yarn Modern: **4.18.0**
+- Bun: **1.4.2**
+- GitHub CLI: **2.101.0**
+- GitHub CLI in LocalSystem context is not authenticated; bu artık birincil Git akışını etkilemez çünkü birincil Git sunucusu yerel Gitea'dır.
+- Gitea: **1.27.3**
+- Caddy: **2.11.4**
+
+The earlier pending Windows SDK 10.0.28000 install note is obsolete; 10.0.28000.0 is now installed and selected by Talvora.
+
+## Logging/retention decision
+
+`Talvora-LogMaintenance` runs hourly.
+- Tunnel/client and small operational logs are bounded/rotated.
+- Completed job stdout/stderr files are trimmed after exit.
+- Live job stdout/stderr are intentionally not truncated while the job is running, preserving stream offsets/full-capability behavior.
+
+## Working-tree notes
+
+This audit/refactor/runtime batch is finalized through the requested main commit/push. Always verify the actual state with `git status --short --branch` rather than assuming this sentence describes a future working tree.
+
+Stale dated handoffs and the old transition prompt are deleted in the working tree:
+- `HANDOFF-2026-09-18.md`
+- `HANDOFF-2026-09-19.md`
+- `NEXT-SESSION-PROMPT.txt`
+
+`HANDOFF.md` is the single canonical handoff going forward.
+`BUG-AUDIT.md` is the living detailed defect log.
+
+Do not restore the old handoff files or old tool-count assumptions.
+
+## Next action
+
+There is no remaining known runtime blocker from this audit.
+
+Finalization rule for this batch: commit the complete tree on `main`, rebuild/redeploy from the clean commit so live `SourceCommit` equals `git rev-parse HEAD`, verify the live Service/Tray/Gitea integration, then push `main` to `origin/main`.
+
+## Gitea bağımsız sistem tepsisi ikonu
+
+- Talvora ana ikonundan ayrı ikinci bir `NotifyIcon` bulunur.
+- Sorumluluk sınıfı: `src\Talvora.Tray\GiteaNotifyIconController.cs`.
+- Gitea ikonu Talvora ikonunun durumunu değiştirmez; iki ikon bağımsızdır.
+- Görsel:
+  - Gitea/Git branch temalı yeşil ana ikon.
+  - sağ-alt durum rozeti:
+    - yeşil + check: Gitea sağlıklı,
+    - sarı: yeniden başlatılıyor/kontrol ediliyor,
+    - kırmızı + x: Gitea kapalı/yanıt vermiyor.
+- Durum kaynağı iki katmanlıdır:
+  - backend: `http://127.0.0.1:3001/api/healthz`
+  - tarayıcı/SSO proxy yolu: `http://127.0.0.1:3000/api/healthz`
+- Backend sağlıklı ama proxy bozuksa ikon yeşil kalmaz; sarı/degraded durum gösterir.
+- Kontrol aralığı: 10 saniye.
+- Gitea ikonuna çift tıklama: `http://127.0.0.1:3000/` tarayıcıda açılır.
+- Sağ tık menüsü:
+  - canlı Gitea durumu,
+  - `Gitea'yı Aç`,
+  - `Gitea'yı Yeniden Başlat`,
+  - `Durumu Yenile`.
+- Restart kullanıcı/UAC yetkisine bağlı değildir; Tray yerel Talvora MCP'ye bağlanıp LocalSystem bağlamında restart zincirini çalıştırır.
+- Caddy raw service kontrol modeli nedeniyle restart zinciri:
+  1. Caddy PID force terminate,
+  2. SCM'de Caddy `Stopped` bekle,
+  3. Gitea restart/start,
+  4. Caddy start,
+  5. iki servisi `Running` doğrula,
+  6. Gitea health endpoint'ini doğrula.
+- Headless doğrulama komutları:
+  - `Talvora.Tray.exe --gitea-status`
+  - `Talvora.Tray.exe --gitea-restart`
+- Son doğrulama:
+  - source build status -> exit 0
+  - source build restart -> exit 0
+  - installed binary status -> exit 0
+  - installed binary restart -> exit 0
+  - Gitea -> Running
+  - Caddy -> Running
+  - Tray log -> `Gitea tray icon initialized.`
+  - pre-commit live SourceCommit -> `c8d8e5f602b6cea26c3cb32d698f59b78553721d-dirty-b02df0355735`
+  - source-published `Talvora.dll`, `Talvora.Shared.dll` ve `Talvora.Tray.exe` SHA256 == installed binaries
+  - exact deployed 198-tool MCP smoke -> GREEN
+  - installed Tray `--gitea-status` -> exit 0
+  - installed Tray `--gitea-restart` -> exit 0
+  - restart sonrası Gitea backend/proxy/MCP -> HTTP 200
+  - restart sonrası Secure MCP Tunnel -> running/healthy/ready
+  - visible user PowerShell window count -> 0.
+- Tray artık `ModelContextProtocol` 2.2.0 client paketini kullanır; doğrulama sırasında NuGet'te görünen en güncel sürüm 2.2.0 idi.

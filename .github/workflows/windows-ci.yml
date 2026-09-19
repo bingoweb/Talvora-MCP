@@ -63,9 +63,14 @@ jobs:
       - name: Reject WinGet
         shell: pwsh
         run: |
-          $hits = Get-ChildItem -Recurse -File src,scripts,tests,TALVORA-KUR.cmd,TALVORA-BUSINESS-KUR.cmd | Select-String -Pattern '(?i)(^|[^A-Za-z0-9_])winget(\.exe)?([^A-Za-z0-9_]|$)'
-          if ($hits) {
-            $hits | ForEach-Object { Write-Error $_.ToString() }
+          $hits = @(
+            & git grep -n -I -i -E '(^|[^A-Za-z0-9_])winget(\.exe)?([^A-Za-z0-9_]|$)' -- src scripts TALVORA-KUR.cmd TALVORA-BUSINESS-KUR.cmd
+          )
+          if ($LASTEXITCODE -notin 0, 1) {
+            throw "git grep failed with exit code $LASTEXITCODE."
+          }
+          if ($hits.Count -gt 0) {
+            $hits | ForEach-Object { Write-Error $_ }
             throw 'WinGet is forbidden. Use Chocolatey.'
           }
 
@@ -80,7 +85,8 @@ jobs:
             './tests/KnowledgeSearchScanRegression.ps1',
             './tests/RuntimeIdentityCacheRegression.ps1',
             './tests/RuntimeMetadataCacheRegression.ps1',
-            './tests/SmokeKnowledgeRootsIsolationRegression.ps1'
+            './tests/SmokeKnowledgeRootsIsolationRegression.ps1',
+            './tests/ProcessRunnerRegression.ps1'
           )) {
             & $test
             if (-not $?) { throw "Regression failed: $test" }

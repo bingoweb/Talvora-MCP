@@ -103,6 +103,10 @@ internal static class BusinessTunnelClient
                 "Talvora çalışıyor, tunnel hazır değil",
                 "İkona çift tıklayın veya menüden yeniden bağlanın.");
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             TrayLog.Write("Tunnel status check failed", ex);
@@ -126,7 +130,15 @@ internal static class BusinessTunnelClient
                 cancellationToken);
             return response.IsSuccessStatusCode;
         }
-        catch
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (HttpRequestException)
+        {
+            return false;
+        }
+        catch (OperationCanceledException)
         {
             return false;
         }
@@ -198,6 +210,10 @@ internal static class BusinessTunnelClient
                         TrayLog.Write($"Reconnect succeeded. Alias={config.Alias}");
                         return;
                     }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {

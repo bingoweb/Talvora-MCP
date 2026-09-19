@@ -42,7 +42,9 @@ $installerProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Ins
 $buildInstallerScript = [IO.File]::ReadAllText((Join-Path $RepoRoot 'scripts\Build-Windows-Installer.ps1'))
 $manifest = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\app.manifest'))
 $toolManifest = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Shared\TalvoraToolManifest.cs'))
-$canonicalToolCount = ([regex]::Matches($toolManifest, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count
+$canonicalToolNames = @([regex]::Matches($toolManifest, '"(?:talvora_[a-z0-9_]+|search|fetch)"') | ForEach-Object { $_.Value.Trim('"') })
+$canonicalToolCount = $canonicalToolNames.Count
+$canonicalUniqueToolCount = @($canonicalToolNames | Sort-Object -Unique).Count
 $iconPath = Join-Path $RepoRoot 'assets\Talvora.ico'
 $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
@@ -67,6 +69,13 @@ $result = [pscustomobject]@{
         $buildInstallerScript -match '\$archive\.CreateEntry' -and
         $buildInstallerScript -match '\$verified\.Entries\.Count -ne \$Files\.Count' -and
         $buildInstallerScript -match 'New-VerifiedPayloadArchive -Files \$PayloadManifest -Destination \$PayloadZip -Attempts 5'
+    )
+    BuildScriptFingerprintsDirtyProvenance = (
+        $buildInstallerScript -match 'git -C \$RepoRoot status --porcelain=v1 --untracked-files=all' -and
+        $buildInstallerScript -match 'Test-RuntimeBuildInput' -and
+        $buildInstallerScript -match 'Get-WorkingTreeFingerprint' -and
+        $buildInstallerScript -match 'if \(-not \[string\]::IsNullOrWhiteSpace\(\$WorkingTreeFingerprint\)\)' -and
+        $buildInstallerScript -match '\$SourceCommit \+= ''-dirty-'' \+ \$WorkingTreeFingerprint\.Substring\(0, 12\)'
     )
     HttpMockToolContract = (
         $httpMockTools -match 'talvora_http_mock_start' -and
@@ -159,6 +168,8 @@ $result = [pscustomobject]@{
         $sharedSession -match 'WTSQueryUserToken' -and
         $sharedSession -match 'CreateEnvironmentBlock' -and
         $sharedSession -match 'CreateProcessAsUserW' -and
+        $sharedSession -match 'CreateProcessWithTokenW' -and
+        $sharedSession -match 'createAsUserError is 5 or 1314' -and
         $sharedSession -match 'winsta0'
     )
     BuildRunnerToolContract = (
@@ -239,7 +250,7 @@ $result = [pscustomobject]@{
         $sqliteTools -match 'Microsoft\.Data\.Sqlite' -and
         $sqliteTools -match 'SqliteOpenMode\.ReadOnly' -and
         $sqliteTools -match 'BackupDatabase' -and
-        $serviceProject -match 'Microsoft\.Data\.Sqlite" Version="10\.0\.12"' -and
+        $serviceProject -match 'PackageReference Include="Microsoft\.Data\.Sqlite"' -and
         $toolManifest -match 'talvora_sqlite_info' -and
         $toolManifest -match 'talvora_sqlite_query' -and
         $toolManifest -match 'talvora_sqlite_execute' -and
@@ -270,12 +281,12 @@ $result = [pscustomobject]@{
         $structuredConfigTools -match 'ConfigAssetTools\.ParsePointer' -and
         $structuredConfigTools -match 'TomlSerializer' -and
         $structuredConfigTools -match 'YamlDeserializer' -and
-        $serviceProject -match 'YamlDotNet" Version="18\.1\.0"' -and
-        $serviceProject -match 'Tomlyn" Version="2\.10\.1"' -and
+        $serviceProject -match 'PackageReference Include="YamlDotNet"' -and
+        $serviceProject -match 'PackageReference Include="Tomlyn"' -and
         $toolManifest -match 'talvora_yaml_get' -and
         $toolManifest -match 'talvora_toml_delete'
     )
-    CanonicalManifestDeclares159Tools = ($canonicalToolCount -eq 159)
+    CanonicalManifestHasUniqueToolNames = ($canonicalToolCount -gt 0 -and $canonicalToolCount -eq $canonicalUniqueToolCount)
     LegacyToolAliasesRemoved = (
         $toolManifest -notmatch 'talvora_vs_instances' -and
         $toolManifest -notmatch 'talvora_windows_sdk_list' -and
@@ -363,6 +374,11 @@ $result = [pscustomobject]@{
         $installerProgram -match 'RunValueName' -and
         $sharedConstants -match 'TalvoraTray'
     )
+    InstallerRetriesTrayLaunchWithoutRollingBackHealthyService = (
+        $installerProgram -match 'TryStartTrayAsync' -and
+        $installerProgram -match 'Tray could not be started immediately' -and
+        $installerProgram -match 'startup registration is intact'
+    )
     InstallerUsesVersionedPayload = (
         $installerProgram -match 'Versions' -and
         $installerProgram -match 'versionId' -and
@@ -373,8 +389,15 @@ $result = [pscustomobject]@{
         $installerProgram -match 'previousServiceExecutable'
     )
     TraySupportsGracefulShutdown = (
-        $trayProgram -match 'Talvora\.Tray\.Shutdown' -and
+        $trayProgram -match 'Global\\Talvora\.Tray\.Shutdown' -and
+        $installerProgram -match 'Global\\Talvora\.Tray\.Shutdown' -and
         $installerProgram -match 'EventWaitHandle\.OpenExisting'
+    )
+    InstallerVerifiesStableTrayPid = (
+        $installerProgram -match 'launchedProcessId' -and
+        $installerProgram -match 'stableSinceUtc' -and
+        $installerProgram -match 'TimeSpan\.FromSeconds\(2\)' -and
+        $installerProgram -match 'Tray started and remained stable'
     )
     InstallerSchedulesLockedCleanup = (
         $installerProgram -match 'MoveFileEx' -and

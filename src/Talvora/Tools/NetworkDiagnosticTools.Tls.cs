@@ -118,14 +118,18 @@ public static partial class NetworkDiagnosticTools
             using var key = certificate.GetRSAPublicKey();
             publicKeySize = key?.KeySize ?? 0;
         }
-        catch
+        catch (Exception ex) when (
+            ex is System.Security.Cryptography.CryptographicException or
+            NotSupportedException)
         {
             try
             {
                 using var key = certificate.GetECDsaPublicKey();
                 publicKeySize = key?.KeySize ?? 0;
             }
-            catch
+            catch (Exception fallbackError) when (
+                fallbackError is System.Security.Cryptography.CryptographicException or
+                NotSupportedException)
             {
             }
         }

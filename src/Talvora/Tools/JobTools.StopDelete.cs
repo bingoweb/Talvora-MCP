@@ -73,6 +73,19 @@ public static partial class JobTools
                     currentState.ExitCode);
             }
 
+            if (ownsProcess && !MatchesOriginalProcess(process, metadata))
+            {
+                var final = await MarkExitedUnknownAsync(metadata, cancellationToken);
+                return new TalvoraJobStopResponse(
+                    jobId,
+                    metadata.ProcessId,
+                    true,
+                    false,
+                    true,
+                    final.State,
+                    final.ExitCode);
+            }
+
             process.Kill(entireProcessTree);
             var exited = true;
 

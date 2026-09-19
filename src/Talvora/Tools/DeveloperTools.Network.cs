@@ -221,7 +221,11 @@ public static partial class DeveloperTools
 
             if (!TryParseEndpoint(parts[1], out var localAddress, out var localPort) ||
                 !TryParseEndpoint(parts[2], out var remoteAddress, out var remotePort) ||
-                !int.TryParse(parts[^1], out var pid))
+                !int.TryParse(
+                    parts[^1],
+                    System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var pid))
             {
                 continue;
             }
@@ -233,7 +237,10 @@ public static partial class DeveloperTools
                 using var owner = Process.GetProcessById(pid);
                 processName = owner.ProcessName;
             }
-            catch
+            catch (Exception ex) when (
+                ex is ArgumentException or
+                InvalidOperationException or
+                System.ComponentModel.Win32Exception)
             {
             }
 
@@ -269,7 +276,12 @@ public static partial class DeveloperTools
 
             address = value[1..bracket];
             var portText = value[(bracket + 2)..];
-            return portText == "*" || int.TryParse(portText, out port);
+            return portText == "*" ||
+                   int.TryParse(
+                       portText,
+                       System.Globalization.NumberStyles.None,
+                       System.Globalization.CultureInfo.InvariantCulture,
+                       out port);
         }
 
         var separator = value.LastIndexOf(':');
@@ -280,6 +292,11 @@ public static partial class DeveloperTools
 
         address = value[..separator];
         var text = value[(separator + 1)..];
-        return text == "*" || int.TryParse(text, out port);
+        return text == "*" ||
+               int.TryParse(
+                   text,
+                   System.Globalization.NumberStyles.None,
+                   System.Globalization.CultureInfo.InvariantCulture,
+                   out port);
     }
 }

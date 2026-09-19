@@ -36,8 +36,9 @@ public static async Task<HealthSnapshot> InstallAsync(
         try
         {
             ExtractPayload(tempRoot);
-            var sourceCommit = File.ReadAllText(
-                Path.Combine(tempRoot, "source-commit.txt")).Trim();
+            var sourceCommit = (await File.ReadAllTextAsync(
+                Path.Combine(tempRoot, "source-commit.txt"),
+                cancellationToken)).Trim();
 
             if (string.IsNullOrWhiteSpace(sourceCommit))
             {
@@ -47,7 +48,9 @@ public static async Task<HealthSnapshot> InstallAsync(
             var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
             var installRoot = Path.Combine(programFiles, "Talvora");
             var versionsRoot = Path.Combine(installRoot, "Versions");
-            var versionId = sourceCommit + "-" + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+            var versionId = sourceCommit + "-" + DateTime.UtcNow.ToString(
+                "yyyyMMddHHmmssfff",
+                System.Globalization.CultureInfo.InvariantCulture);
             var versionRoot = Path.Combine(versionsRoot, versionId);
             var serviceRoot = Path.Combine(versionRoot, "Service");
             var trayRoot = Path.Combine(versionRoot, "Tray");
@@ -79,16 +82,19 @@ public static async Task<HealthSnapshot> InstallAsync(
                     trayExecutable);
             }
 
-            var installedAtUtc = DateTime.UtcNow.ToString("O");
+            var installedAtUtc = DateTime.UtcNow.ToString(
+                "O",
+                System.Globalization.CultureInfo.InvariantCulture);
             var runtimeMetadata = new
             {
                 SourceCommit = sourceCommit,
                 InstalledAtUtc = installedAtUtc,
             };
-            File.WriteAllText(
+            await File.WriteAllTextAsync(
                 Path.Combine(serviceRoot, "talvora-runtime.json"),
                 JsonSerializer.Serialize(runtimeMetadata, IndentedJsonOptions),
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                cancellationToken);
 
             progress.Report(new InstallProgress(22, "Eski Talvora kalıntıları temizleniyor..."));
             await RemoveLegacyInstallationAsync(installUser, cancellationToken);
@@ -123,7 +129,16 @@ public static async Task<HealthSnapshot> InstallAsync(
                 cancellationToken);
 
             progress.Report(new InstallProgress(88, "Talvora tepsi uygulaması başlatılıyor..."));
-            await StartTrayAsync(trayExecutable, installUser, cancellationToken);
+            var trayStarted = await TryStartTrayAsync(
+                trayExecutable,
+                installUser,
+                cancellationToken);
+            if (!trayStarted)
+            {
+                InstallerLog.Write(
+                    "Tray could not be started immediately. " +
+                    "The startup registration is intact, so the core Talvora service remains installed.");
+            }
 
             progress.Report(new InstallProgress(94, "Eski sürüm dosyaları temizleniyor..."));
             await CleanupObsoleteInstallationsAsync(

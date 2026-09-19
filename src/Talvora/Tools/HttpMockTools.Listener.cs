@@ -35,6 +35,18 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
             {
                 break;
             }
+            catch (Exception ex)
+            {
+                runtime.RecordError(ex);
+                try
+                {
+                    runtime.Listener.Stop();
+                }
+                catch (Exception stopError) when (stopError is ObjectDisposedException or HttpListenerException)
+                {
+                }
+                break;
+            }
 
             _ = HandleContextAsync(runtime, context);
         }
@@ -110,8 +122,9 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
                             runtime.DefaultResponse,
                             CancellationToken.None);
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        runtime.RecordError(ex);
                     }
                 }
             }
@@ -120,8 +133,9 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
                 runtime.Pending.TryRemove(requestId, out _);
             }
         }
-        catch
+        catch (Exception ex)
         {
+            runtime.RecordError(ex);
             try
             {
                 if (context.Response.OutputStream.CanWrite)
@@ -131,7 +145,7 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
                     context.Response.Close();
                 }
             }
-            catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException or HttpListenerException)
+            catch (Exception responseError) when (responseError is ObjectDisposedException or InvalidOperationException or HttpListenerException)
             {
             }
         }

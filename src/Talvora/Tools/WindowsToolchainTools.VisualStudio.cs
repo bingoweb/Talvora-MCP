@@ -87,19 +87,41 @@ public static partial class WindowsToolchainTools
             throw new FileNotFoundException("VsDevCmd.bat was not found.", script);
         }
 
-        var cmd = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.System),
-            "cmd.exe");
+        var wrapper = Path.Combine(
+            Path.GetTempPath(),
+            $"talvora-vsdev-{Guid.NewGuid():N}.cmd");
 
-        var command =
-            $"call \"{script}\" -arch={architecture} -host_arch={hostArchitecture} >nul && set";
+        ProcessExecutionResult result;
+        try
+        {
+            var wrapperText =
+                "@echo off\r\n" +
+                $"call \"{script}\" -arch=%~1 -host_arch=%~2 >nul\r\n" +
+                "if errorlevel 1 exit /b %errorlevel%\r\n" +
+                "set\r\n";
 
-        var result = await ProcessRunner.RunAsync(
-            cmd,
-            Environment.CurrentDirectory,
-            ["/d", "/s", "/c", command],
-            timeoutSeconds: timeoutSeconds,
-            cancellationToken: cancellationToken);
+            await File.WriteAllTextAsync(
+                wrapper,
+                wrapperText,
+                cancellationToken);
+
+            result = await ProcessRunner.RunAsync(
+                wrapper,
+                Environment.CurrentDirectory,
+                [architecture, hostArchitecture],
+                timeoutSeconds: timeoutSeconds,
+                cancellationToken: cancellationToken);
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(wrapper);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
 
         if (result.TimedOut)
         {
@@ -121,7 +143,13 @@ public static partial class WindowsToolchainTools
                 continue;
             }
 
-            environment[line[..separator]] = line[(separator + 1)..];
+            var name = line[..separator];
+            if (IsProcessRunnerTransportVariable(name))
+            {
+                continue;
+            }
+
+            environment[name] = line[(separator + 1)..];
         }
 
         return new TalvoraVsDevEnvironmentResponse(
@@ -130,6 +158,42 @@ public static partial class WindowsToolchainTools
             hostArchitecture,
             script,
             environment);
+    }
+
+    private static bool IsProcessRunnerTransportVariable(string name)
+    {
+        const string prefix = "TALVORA_";
+        if (!name.StartsWith(prefix, StringComparison.Ordinal) ||
+            name.Length <= prefix.Length + 32 + 1)
+        {
+            return false;
+        }
+
+        var fingerprint = name.AsSpan(prefix.Length, 32);
+        foreach (var character in fingerprint)
+        {
+            if (!Uri.IsHexDigit(character))
+            {
+                return false;
+            }
+        }
+
+        var suffix = name[(prefix.Length + 32)..];
+        if (string.Equals(suffix, "_SCRIPT", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (!suffix.StartsWith("_ARG_", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return int.TryParse(
+            suffix.AsSpan("_ARG_".Length),
+            System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out _);
     }
 
     private static async Task<IReadOnlyList<TalvoraVisualStudioInstance>> DiscoverVisualStudioInstancesAsync(

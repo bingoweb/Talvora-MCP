@@ -172,7 +172,11 @@ private static async Task RemoveLegacyInstallationAsync(
 
             var separator = trimmed.IndexOf(':');
             if (separator >= 0 &&
-                int.TryParse(trimmed[(separator + 1)..].Trim(), out var processId))
+                int.TryParse(
+                    trimmed[(separator + 1)..].Trim(),
+                    System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var processId))
             {
                 return processId;
             }

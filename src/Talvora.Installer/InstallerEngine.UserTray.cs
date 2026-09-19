@@ -120,6 +120,53 @@ private static InstallUserContext ResolveInstallUserContext()
         return Task.FromResult<string?>(executable);
     }
 
+    private static async Task<bool> TryStartTrayAsync(
+        string trayExecutable,
+        InstallUserContext installUser,
+        CancellationToken cancellationToken,
+        int attempts = 3)
+    {
+        if (attempts < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(attempts));
+        }
+
+        for (var attempt = 1; attempt <= attempts; attempt++)
+        {
+            try
+            {
+                await StartTrayAsync(
+                    trayExecutable,
+                    installUser,
+                    cancellationToken);
+                return true;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (
+                ex is System.ComponentModel.Win32Exception or
+                TimeoutException or
+                IOException or
+                InvalidOperationException)
+            {
+                InstallerLog.Write(
+                    $"Tray launch attempt {attempt}/{attempts} failed. Path={trayExecutable}",
+                    ex);
+
+                if (attempt >= attempts)
+                {
+                    return false;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(attempt), cancellationToken);
+            }
+        }
+
+        return false;
+    }
+
     private static async Task StartTrayAsync(
         string trayExecutable,
         InstallUserContext installUser,
@@ -127,58 +174,88 @@ private static InstallUserContext ResolveInstallUserContext()
     {
         await StopTrayProcessesAsync(cancellationToken);
 
+        int launchedProcessId;
         if (installUser.UseInteractiveSession)
         {
             var launched = WindowsSessionLauncher.StartProcess(
                 trayExecutable,
+                arguments: ["--replace"],
                 sessionId: installUser.SessionId,
                 workingDirectory: Path.GetDirectoryName(trayExecutable),
                 visible: true,
                 newConsole: false);
+            launchedProcessId = launched.ProcessId;
             InstallerLog.Write(
                 $"Tray launch requested in session {launched.SessionId}. PID={launched.ProcessId}");
         }
         else
         {
-            using var launched = Process.Start(new ProcessStartInfo
+            var startInfo = new ProcessStartInfo
             {
                 FileName = trayExecutable,
                 UseShellExecute = true,
-            });
+            };
+            startInfo.ArgumentList.Add("--replace");
+
+            using var launched = Process.Start(startInfo)
+                ?? throw new InvalidOperationException(
+                $"Tray process could not be started: {trayExecutable}");
+            launchedProcessId = launched.Id;
         }
 
         var deadline = DateTime.UtcNow.AddSeconds(10);
+        DateTime? stableSinceUtc = null;
+
         while (DateTime.UtcNow < deadline)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            foreach (var process in Process.GetProcessesByName("Talvora.Tray"))
+            try
             {
-                try
+                using var process = Process.GetProcessById(launchedProcessId);
+                if (process.HasExited)
                 {
-                    var path = process.MainModule?.FileName;
-                    if (string.Equals(
-                            path,
-                            trayExecutable,
-                            StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException(
+                        $"Tray process exited before becoming stable. PID={launchedProcessId}");
+                }
+
+                var path = process.MainModule?.FileName;
+                if (string.Equals(
+                        path,
+                        trayExecutable,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    stableSinceUtc ??= DateTime.UtcNow;
+                    if (DateTime.UtcNow - stableSinceUtc >= TimeSpan.FromSeconds(2))
                     {
-                        InstallerLog.Write($"Tray started. PID={process.Id} Path={path}");
+                        InstallerLog.Write(
+                            $"Tray started and remained stable. PID={process.Id} Path={path}");
                         return;
                     }
                 }
-                catch
+                else
                 {
+                    stableSinceUtc = null;
                 }
-                finally
-                {
-                    process.Dispose();
-                }
+            }
+            catch (ArgumentException ex)
+            {
+                throw new InvalidOperationException(
+                    $"Tray process exited before becoming stable. PID={launchedProcessId}",
+                    ex);
+            }
+            catch (Exception ex) when (
+                ex is NotSupportedException or
+                System.ComponentModel.Win32Exception)
+            {
+                stableSinceUtc = null;
             }
 
             await Task.Delay(250, cancellationToken);
         }
 
-        throw new TimeoutException("Talvora Tray 10 saniye içinde başlayamadı.");
+        throw new TimeoutException(
+            $"Talvora Tray 10 saniye içinde kararlı şekilde başlayamadı. PID={launchedProcessId}");
     }
 
     private static async Task StopTrayProcessesAsync(CancellationToken cancellationToken)
@@ -186,7 +263,7 @@ private static InstallUserContext ResolveInstallUserContext()
         try
         {
             using var shutdownEvent = EventWaitHandle.OpenExisting(
-                @"Local\Talvora.Tray.Shutdown");
+                @"Global\Talvora.Tray.Shutdown");
             shutdownEvent.Set();
         }
         catch (WaitHandleCannotBeOpenedException)

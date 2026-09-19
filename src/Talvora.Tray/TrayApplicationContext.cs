@@ -11,6 +11,7 @@ namespace Talvora.Tray;
 internal sealed class TrayApplicationContext : ApplicationContext
 {
     private readonly NotifyIcon _notifyIcon;
+    private readonly ContextMenuStrip _menu;
     private readonly ToolStripMenuItem _statusItem;
     private readonly ToolStripMenuItem _reconnectItem;
     private readonly ToolStripMenuItem _refreshItem;
@@ -19,8 +20,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private readonly EventWaitHandle _shutdownEvent = new(
         initialState: false,
         EventResetMode.AutoReset,
-        @"Local\Talvora.Tray.Shutdown");
+        @"Global\Talvora.Tray.Shutdown");
     private readonly SemaphoreSlim _operationGate = new(1, 1);
+    private readonly GiteaNotifyIconController _giteaTrayIcon;
     private Icon? _statusIcon;
     private int _automaticReconnectFailures;
     private DateTime _nextAutomaticReconnectUtc = DateTime.MinValue;
@@ -45,17 +47,17 @@ internal sealed class TrayApplicationContext : ApplicationContext
         var exitItem = new ToolStripMenuItem("Tepsi uygulamasından çık");
         exitItem.Click += (_, _) => ExitTray();
 
-        var menu = new ContextMenuStrip();
-        menu.Items.Add(_statusItem);
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(_reconnectItem);
-        menu.Items.Add(_refreshItem);
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(exitItem);
+        _menu = new ContextMenuStrip();
+        _menu.Items.Add(_statusItem);
+        _menu.Items.Add(new ToolStripSeparator());
+        _menu.Items.Add(_reconnectItem);
+        _menu.Items.Add(_refreshItem);
+        _menu.Items.Add(new ToolStripSeparator());
+        _menu.Items.Add(exitItem);
 
         _notifyIcon = new NotifyIcon
         {
-            ContextMenuStrip = menu,
+            ContextMenuStrip = _menu,
             Text = "Talvora",
             Visible = true,
         };
@@ -67,6 +69,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 await ReconnectAsync();
             }
         };
+
+        _giteaTrayIcon = new GiteaNotifyIconController();
 
         SetTrayState(
             TalvoraConnectionState.LocalOnly,
@@ -348,7 +352,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
             _timer.Dispose();
             _shutdownTimer.Dispose();
             _shutdownEvent.Dispose();
+            _giteaTrayIcon.Dispose();
+            _notifyIcon.ContextMenuStrip = null;
             _notifyIcon.Dispose();
+            _menu.Dispose();
             _statusIcon?.Dispose();
             _operationGate.Dispose();
         }

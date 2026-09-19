@@ -167,7 +167,12 @@ public static partial class WindowsToolchainTools
                     return match;
                 }
             }
-            catch
+            catch (Exception ex) when (
+                ex is IOException or
+                UnauthorizedAccessException or
+                DirectoryNotFoundException or
+                PathTooLongException or
+                System.Security.SecurityException)
             {
             }
         }
