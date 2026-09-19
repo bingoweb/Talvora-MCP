@@ -6,30 +6,32 @@ Bu bölüm **mevcut gerçeği** temsil eder ve aşağıdaki tarihsel/pre-commit 
 
 - Repository: `C:\Users\tayla\Talvora-MCP`
 - Branch: `main`
-- Son runtime/source commit (canlı `SourceCommit`): `c758157ce5698c602084650bb3c12c34e431dba4`
-- Son commit: `feat: harden runtime and add Gitea integration`
+- Son canlı runtime `SourceCommit`: `74601595e4727d1cfd09388ae3c8b4d25dc136fa-dirty-89135c8503e5`
+- Repository HEAD (dokümantasyon dahil): `74601595e4727d1cfd09388ae3c8b4d25dc136fa`
+- Repository HEAD subject: `docs: redesign GitHub project presentation`
 - Primary remote: `origin = ssh://git@127.0.0.1:2222/taylan/Talvora-MCP.git`
 - Secondary backup remote: `github = https://github.com/bingoweb/Talvora-MCP.git`
-- `main -> origin/main`: **ahead 0 / behind 0**
-- Runtime/source final batch commit edilip yerel Gitea `origin/main` üzerine push edilmiştir.
+- `origin/main` ve `github/main`: `74601595e4727d1cfd09388ae3c8b4d25dc136fa` olarak doğrulandı.
 - 2026-09-19 GitHub sunum batch'i yalnız dokümantasyon/README değişikliğidir; runtime/source değişikliği değildir ve yeniden deploy gerektirmez.
 - Kök `README.md`, GitHub ziyaretçisinin Talvora'yı hızlı anlaması için modern hero/badge, Mermaid mimari, capability matrix, quick-start ve proje haritası yapısına dönüştürüldü.
-- Kullanıcı bu batch için GitHub sync'i açıkça istedi; final dokümantasyon commit'i hem `origin/main` hem `github/main` üzerine push edilecek.
-- Final push sonrası gerçek repo HEAD/working-tree durumu her zaman `git status` / `git log -1` ile doğrulanacak.
+- Talvora Control Center Faz 0-11 tamamlandı; ürün, recovery, event/log, tunnel provisioning, first-run ve final doğrulama kapıları kapandı.
+- `MCP-CONTROL-CENTER-TODO.md` kanonik uygulama planıdır; yeni oturumda mevcut tamamlanma noktasından devam edilecektir.
+- Control Center kaynak/doküman değişiklikleri çalışma ağacında kasıtlı olarak uncommitted durumdadır; kullanıcı açıkça istemeden commit/push yapılmayacak.
+- Yeni oturum başlangıcında gerçek repo HEAD/working-tree durumu `git status` / `git log -1` ile tekrar doğrulanacak.
 
 ### Canlı Talvora
 
-- `talvora_system_info.sourceCommit`: `c758157ce5698c602084650bb3c12c34e431dba4`
-- Service PID: **5364**
-- Tray PID: **2580**
+- `talvora_system_info.sourceCommit`: `74601595e4727d1cfd09388ae3c8b4d25dc136fa-dirty-89135c8503e5`
+- Service PID: **1872**
+- Tray PID: **2356**
 - Service root:
-  `C:\Program Files\Talvora\Versions\c758157ce5698c602084650bb3c12c34e431dba4-20260919144046405\Service`
+  `C:\Program Files\Talvora\Versions\74601595e4727d1cfd09388ae3c8b4d25dc136fa-dirty-89135c8503e5-20260919183843581\Service`
 - Tray root:
-  `C:\Program Files\Talvora\Versions\c758157ce5698c602084650bb3c12c34e431dba4-20260919144046405\Tray`
-- Service ve Tray aynı clean-commit version root'tan çalışıyor.
+  `C:\Program Files\Talvora\Versions\74601595e4727d1cfd09388ae3c8b4d25dc136fa-dirty-89135c8503e5-20260919183843581\Tray`
+- Service ve Tray aynı dirty-fingerprint version root'tan çalışıyor.
 - Canonical tool manifest: **198**
-- Exact deployed full 198-tool MCP smoke: **GREEN**
-- Source -> installed binary doğrulaması daha önce current source ile `Talvora.dll`, `Talvora.Shared.dll`, `Talvora.Tray.exe` için SHA256 GREEN geçti.
+- Son Control Center exact-installed visual smoke: **GREEN**.
+- Final exact-deployed **198-tool MCP smoke GREEN** (`TALVORA MCP SMOKE GREEN`, exit 0). Bu runtime kaynak kodu değişmedikçe tekrar çalıştırma.
 - Runtime değişikliği yapılmadıkça full smoke'u tekrar etme.
 
 ### Gitea / Caddy / resmî Gitea MCP
@@ -51,7 +53,7 @@ Bu bölüm **mevcut gerçeği** temsil eder ve aşağıdaki tarihsel/pre-commit 
 - Watchdog runtime prosesini foreground gözetler; runtime beklenmedik kapanırsa task hata ile çıkar ve Task Scheduler 1 dakika aralıkla yeniden dener.
 - Task execution time limit: unlimited.
 
-### Ayrı Gitea tray ikonu
+### [TARİHSEL / ARTIK GEÇERSİZ] Ayrı Gitea tray ikonu
 
 - Talvora ikonundan bağımsız ikinci Gitea `NotifyIcon` vardır.
 - Çift tıklama: Gitea browser UI açılır.
@@ -87,16 +89,121 @@ Context7 + resmî doküman doğrulamasıyla son Gitea/Tray denetiminde düzeltil
 - `git diff --check`: GREEN.
 - Final exact deployed 198-tool MCP smoke: GREEN.
 
+### Talvora Control Center — planlama tamamlandı
+
+Kullanıcı MCP sayısının hızla artması nedeniyle merkezi bir yönetim UI istedi. Kodlamaya geçmeden önce soru-cevapla ürün kararları netleştirildi. Ayrıntılı yaşayan plan:
+`C:\Users\tayla\Talvora-MCP\MCP-CONTROL-CENTER-TODO.md`
+
+Kesinleşen ürün/mimari kararları:
+- Ürün adı: **Talvora Control Center**.
+- Tamamen Windows-native.
+- **C# + WPF**, mevcut .NET 10 Windows hedefi.
+- Mevcut Talvora Tray ile **tek uygulama / tek EXE**.
+- WPF + mevcut WinForms tray aynı kullanıcı prosesinde yaşayacak.
+- Temel WPF + **WPF-UI 4.3.0** kullanılıyor; ancak görünüm kütüphane demosu gibi bırakılmıyor. Fluent altyapısı Talvora'ya özgü koyu ürün tokenları, sıkı spacing/type ramp ve kontrollü etkileşimlerle özelleştiriliyor.
+- Varsayılan görünüm koyu, modern developer dashboard; çok hafif premium control-room dokunuşları.
+- UI tamamen Türkçe.
+- Teknik terimler kullanıcıya dönük yerde Türkçe + gerektiğinde İngilizce teknik karşılığı parantez içinde.
+- Tek Talvora tray ikonu:
+  - sol tık -> Control Center
+  - sağ tık -> MCP bazlı hızlı işlemler
+  - ikon -> genel sistem sağlığı
+- Ayrı Gitea tray ikonu yeni mimaride kaldırılacak/birleştirilecek.
+- Control Center yalnız **bizim bu Windows makinesine kurduğumuz/yönettiğimiz yerel MCP'leri** kapsar.
+- Yeni yönetilen MCP'ler **tam otomatik keşfedilir ve sahiplenilir**; kullanıcıdan ekleme/onay beklenmez.
+- Keşif modeli hibrit:
+  - primary: Talvora managed-MCP merkezi registry
+  - recovery: bilinen servis/process/tunnel/config kurulum izleri
+  - kayıt kaybolursa otomatik onarım.
+- Ana ekran: tek Home Dashboard; derin navigation/menü yok.
+- Üstte sade sağlık cümlesi + küçük teknik özet.
+- Responsive MCP kartları; arama kolay erişilebilir; filtreler yalnız gerekince; sorunlu MCP'ler üste.
+- Kartlarda resmi logo varsa kullan; yoksa Talvora fallback MCP ikonu.
+- Kartta yalnız durum + kısa açıklama + tek bağlamsal ana eylem; teknik ayrıntılar detail'de.
+- Detail: sekmesiz tek sayfa + açılır gelişmiş bölümler.
+- Gitea gibi çok bileşenli MCP ana ekranda tek kart; detail'de health chain.
+- CPU/RAM/süreç sayısı dashboard kapsamı dışında.
+- MCP tools/list / Inspector / tool execution UI **yok**.
+- Config düzenleme **yok**.
+- MCP uninstall **yok**.
+- MCP update kurma **yok**; yalnız sürüm bilgisi gösterilebilir.
+- Ayrı Ayarlar sayfası **yok**.
+- İlk kullanımda wizard'a kilitleme yok; dashboard açılır, kritik eksik varsa `Kurulumu Tamamla` kartı.
+- Yetkili işlemler mevcut **Talvora LocalSystem MCP servisi** üzerinden; UI normal kullanıcı.
+- Windows açılışında Control Center tray'de sessiz başlar ve tüm yönetilen MCP + gerekli tunnel'ları ayağa kaldırır.
+- Ciddi/kullanıcı müdahalesi isteyen sorun varsa pencere otomatik açılabilir; küçük/geçici sorunlarda açılmaz.
+- Kullanıcı `Durdur` derse yerel MCP + tunnel birlikte durur; onay istenir.
+- Elle durdurulan MCP o oturum boyunca auto-recovery tarafından yeniden başlatılmaz.
+- Sonraki Windows boot'ta tüm yönetilen MCP'ler tekrar otomatik başlar.
+- `Yeniden Başlat` onay istemeden çalışır; sonunda health doğrulaması yapılır.
+- Recovery: bilinen/güvenli sorunları otomatik düzelt; belirsiz/riskli durumda kullanıcıya anlaşılır öneri.
+- Bildirimler düşük gürültülü: küçük/kendi kendine düzelen olaylar sessiz; önemli/tekrarlayan hata bildirilir.
+- Son olaylar: ana dashboard'da küçük özet, aynı pencere içinde genişleyen panel.
+- Event retention akıllı: info kısa, warning/error daha uzun, tekrarlar gruplanır, otomatik temizlik.
+- Canlı log gelişmiş panelde; arama/filtre/kopya; ham üçüncü taraf logu çevrilmeden gösterilir.
+- Yeni managed MCP'de Secure MCP Tunnel yoksa **otomatik oluşturulacak**.
+- Runtime key ile Admin key rolleri ayrı:
+  - runtime key mevcut DPAPI modeli
+  - Admin API key ilk gerektiğinde bir kez alınır, ayrı current-user DPAPI ile saklanır
+  - secret değerler UI/log'a açık yazılmaz.
+- Pencere X -> yalnız UI kapanır/gizlenir; tray devam eder.
+- Tam çıkış -> tray menüsünden.
+- Pencere son boyut/konum/maximized durumunu hatırlar; off-screen/multi-monitor recovery yapar.
+- UI/UX önceliği: acemi kullanıcı menülerde kaybolmamalı, bir sonraki adım açık olmalı.
+
+Control Center implementasyonu tamamlandı. Faz 0-11 kapalıdır; dashboard/detail, recovery, Faz 7 olay/log, Faz 8 Secure MCP Tunnel provisioning, Faz 9 first-run/incomplete setup, Faz 10 pencere UX ve Faz 11 exact-deployed verification tamamlandı.
+
+2026-09-19 canlı durum:
+- Kullanıcı Material Design yönünü beğenmeyip önceki Wpf.Ui/Fluent tabanına dönülmesini istedi.
+- UI tabanı: WPF + **WPF-UI 4.3.0**; `ThemesDictionary` + `ControlsDictionary` ve explicit Dark theme uygulanıyor.
+- Görsel yön: ticari kalite hedefli koyu grafit Fluent yüzey; tek soğuk mavi vurgu, 8/12/16 tabanlı spacing, Segoe UI Variable Text, ince border, düşük elevation, Wpf.Ui SymbolIcon/TextBox/Button kullanımı, küçük durum pill'leri ve dengeli kart iç boşlukları.
+- MaterialDesignThemes / PackIcon / ElevationAssist / HintAssist kaynak referansı artık **0**.
+- NuGet vulnerability taraması WPF-UI 4.3.0 dahil mevcut paketlerde bilinen güvenlik açığı bulmadı.
+- Ayrı Gitea tray ikonu kaldırıldı; tek Talvora tray aktif.
+- Managed-MCP registry Talvora + Gitea için çalışıyor ve bozuk registry recovery testi GREEN.
+- Dashboard + aynı-pencere detail navigation + component health/version alanları çalışıyor. Kartlarda bağlamsal ana eylem; detail'de Start/Stop/Restart, stop confirmation, işlem sonucu banner'ı ve varsayılan kapalı `CardExpander` teknik ayrıntıları tamamlandı.
+- Gerçek `Wpf.Ui.Controls.TitleBar` eklendi: pencere sürüklenebilir; küçült/büyüt/kapat caption düğmeleri görünür. X yalnız pencereyi gizler, tray çalışmaya devam eder.
+- Pencere boyut/konum/maximized durumu kalıcıdır; ekran dışı/multi-monitor recovery, responsive dar-geniş header, DPI kontrolü ve Ctrl+F / Ctrl+R / F5 / Esc / Alt+Left klavye akışları tamamlandı.
+- Beyaz/boş pencere regresyonu visual smoke ile kapatıldı.
+- Smoke penceresi artık off-screen çalışıyor; kullanıcı masaüstünde test penceresi görmüyor.
+- Son canlı deploy sourceCommit: **74601595e4727d1cfd09388ae3c8b4d25dc136fa-dirty-89135c8503e5**.
+- Son doğrulanan Service PID: **1872**.
+- Son doğrulanan Tray PID: **2356**.
+- Kurulu version root: `C:\Program Files\Talvora\Versions\74601595e4727d1cfd09388ae3c8b4d25dc136fa-dirty-89135c8503e5-20260919183843581`.
+- Installed Control Center visual smoke: GREEN (exact deployed Tray; TitleBar/caption controls, DPI, dashboard/detail/technical panel, X-hide/reopen doğrulandı).
+- Installed `--self-test`: GREEN; managed-MCP registry + Faz 6 backoff/serious-incident policy contract doğrulandı.
+- Faz 6 canlı fault injection: `Gitea MCP Tunnel` görevi elle durduruldu; hiçbir manuel restart verilmeden **26,5 saniyede** otomatik recovery tamamlandı. Tunnel + MCP Server görevleri Running; backend 3001, proxy 3000, MCP 8081, tunnel `/healthz` ve `/readyz` sağlıklı. Log: `Automatic Gitea MCP recovery succeeded.`
+- Exact-installed Gitea full-chain restart: GREEN; Gitea/Caddy Running, backend/proxy/MCP HTTP 200, tunnel `/healthz` + `/readyz` HTTP 200.
+- Talvora standard-user service lifecycle regression: `MSI\tayla`, stop exit 0 -> Stopped -> start exit 0 -> Running -> `/healthz` 200.
+- Talvora tunnel lifecycle regression: stop exit 0 -> reconnect exit 0 -> tunnel health/ready true.
+- Talvora service `CanStop=true`; installer install-user SID'e sınırlı service query/start/stop/interrogate DACL ekliyor.
+- Gitea/Caddy stop zinciri `sc.exe stop` + 4 saniye bounded grace + PID force fallback kullanıyor; `StopPending` takılması kapatıldı.
+- Final exact deployed full **198-tool MCP smoke GREEN**; bu runtime için yalnız bir kez çalıştırıldı ve TODO final gate kapatıldı.
+- Faz 7 structured events/logs tamam: current-user `events.json`, Info=3 gün / Warning=14 gün / Error=30 gün retention, 6 saat dedup, 500 kayıt hard cap, dashboard event summary, expandable event panel ve bounded canlı raw log viewer.
+- Faz 8 tunnel provisioning tamam: `tunnel-client v0.0.14`; Runtime/Admin credential ayrımı; current-user DPAPI; mevcut Runtime key reuse; mevcut tunnel metadata'sından 1 organization + 1 workspace scope keşfi; missing tunnel için admin CRUD + profile generation + health/ready doğrulaması. Bu makinede iki tunnel zaten mevcut olduğu için Admin credential dosyası yok ve kullanıcıdan Admin key istenmiyor.
+- Faz 9 first-run/incomplete setup tamam: dashboard-first açılış ve yalnız gerçekten eksik bilgi varsa tek `Kurulumu Tamamla` kartı; ayrı Settings sayfası yok.
+- Canonical installer SHA256: `BEF881E6C1E20B871661345394715A7B6E92C9CBD4B1D39573AC444C1AF6CC54`.
+- Exact-installed CLI regression: self-test, Control Center smoke, tunnel provisioning preflight, Talvora reconnect, Gitea status ve Gitea restart GREEN.
+- Native installer runtime regression: `NATIVE_INSTALLER_RUNTIME_GREEN`; `ServiceCanStop=True`, `ServiceCanPauseAndContinue=False`, ToolCount=198.
+- Interactive tray mutex regression GREEN: ikinci `--replace` instance doğru şekilde geri çekildi; canlı Tray PID **2356** olarak sabit kaldı.
+- Smoke placement isolation doğrulandı: off-screen visual smoke gerçek `window-placement.json` dosyasının hash'ini değiştirmiyor.
+- Kullanıcı açıkça istemediği için Control Center çalışma ağacı commit/push edilmedi.
+- Kullanıcı açıkça istemediği için commit/push yapılmadı.
+
+Yeni oturumda bu kararlar **tekrar sorulmayacak**. Önce bu HANDOFF ve `MCP-CONTROL-CENTER-TODO.md` okunacak; TODO'daki mevcut tamamlanma işaretlerinden devam edilecek.
+
 ### Yeni oturumda ilk yapılacaklar
 
 1. Önce bu `HANDOFF.md` dosyasını oku.
-2. Talvora MCP araçlarını keşfet ve `talvora_system_info` ile bağlantıyı doğrula.
-3. `git status --short --branch` / Talvora git status ile `main`, clean tree ve `origin/main` sync durumunu doğrula.
-4. Gerekmedikçe yukarıdaki full testleri tekrar çalışma.
-5. Kullanıcının yeni geliştirme talebine doğrudan geç.
-6. Runtime kodu değişirse zorunlu canlı-update zinciri uygulanacak:
+2. Hemen ardından `MCP-CONTROL-CENTER-TODO.md` dosyasını baştan sona oku; ürün kararlarını tekrar sorma.
+3. Talvora MCP araçlarını keşfet ve `talvora_system_info` ile bağlantıyı doğrula.
+4. Talvora git araçlarıyla `main`, HEAD, remotes ve çalışma ağacını doğrula. Planlama sonunda beklenen docs-only değişiklikler `HANDOFF.md` + yeni `MCP-CONTROL-CENTER-TODO.md` olabilir; bunları kaybetme veya kullanıcı istemeden commit/push yapma.
+5. Gerekmedikçe yukarıdaki full testleri tekrar çalışma.
+6. Context7 + resmi dokümanla WPF/WPF-UI ve OpenAI tunnel-client güncel durumunu doğrula; ardından TODO'daki mevcut tamamlanma noktasından **Talvora Control Center implementasyonuna otomatik devam et**.
+7. Runtime kodu değişirse zorunlu canlı-update zinciri uygulanacak:
    source -> targeted test -> canonical installer -> deploy -> PID/version root -> live behavior -> gerektiğinde SHA256.
-7. Context7 ve modern mimari kuralları her yeni teknoloji/API değişikliğinde zorunludur.
+8. Geliştirme sırasında yalnız değişen alanları hedefli test et; final exact deployed full smoke en fazla bir kez.
+9. Bulunan hata/riskleri mevcut `BUG-AUDIT.md` yaşayan envanterine anında kaydet.
 
 
 ## Zorunlu ve ihlal edilemez proje kuralları
@@ -204,17 +311,16 @@ Aşağıdaki maddeler tavsiye değil, **kesin proje kurallarıdır**. Yeni oturu
 - Secondary backup remote/github: `https://github.com/bingoweb/Talvora-MCP.git`
 - Branch: `main`
 - Branch/upstream: `main -> origin/main`.
-- Current live runtime/source baseline: `c758157ce5698c602084650bb3c12c34e431dba4`; docs-only commits can advance repository HEAD without a runtime redeploy.
-- Current repo state: clean, ahead/behind `0/0`, final batch committed and pushed to local Gitea `origin/main`.
+- Current live runtime/source baseline: `74601595e4727d1cfd09388ae3c8b4d25dc136fa-dirty-89135c8503e5`.
+- Current repo state: `main`, ahead/behind `0/0`, dirty çalışma ağacı beklenen Control Center implementasyonunu içeriyor; commit/push yapılmadı.
 - MCP endpoint: `http://127.0.0.1:7676/mcp`
 - Canonical tool manifest: **198 tools**
-- Current ChatGPT session also exposes **198 Talvora tools**.
-- Current live runtime identity: `c758157ce5698c602084650bb3c12c34e431dba4`.
+- Current live runtime identity: `74601595e4727d1cfd09388ae3c8b4d25dc136fa-dirty-89135c8503e5`.
 - Current live version root:
-  `C:\Program Files\Talvora\Versions\c758157ce5698c602084650bb3c12c34e431dba4-20260919144046405`.
-- Current service PID: **5364**.
-- Current Tray PID: **2580**.
-- Clean commit rebuild/redeploy completed; live `SourceCommit` equals `git rev-parse HEAD`.
+  `C:\Program Files\Talvora\Versions\74601595e4727d1cfd09388ae3c8b4d25dc136fa-dirty-89135c8503e5-20260919183843581`.
+- Current service PID: **1872**.
+- Current Tray PID: **2356**.
+- Canonical installer build/deploy tamamlandı; live `SourceCommit` dirty working-tree fingerprint ile doğrulandı.
 - Service account/SID: LocalSystem / `S-1-5-18`
 - `current.json`: `C:\Users\tayla\AppData\Local\Talvora\current.json`, ToolCount=198.
 
@@ -458,7 +564,7 @@ The earlier pending Windows SDK 10.0.28000 install note is obsolete; 10.0.28000.
 
 ## Working-tree notes
 
-This audit/refactor/runtime batch is finalized through the requested main commit/push. Always verify the actual state with `git status --short --branch` rather than assuming this sentence describes a future working tree.
+Control Center Faz 0-11 batch'i çalışma ağacında kasıtlı olarak uncommitted durumdadır. Kullanıcı açıkça istemeden commit/push yapılmayacak; gerçek durum her zaman `git status --short --branch` ile doğrulanacak.
 
 Stale dated handoffs and the old transition prompt are deleted in the working tree:
 - `HANDOFF-2026-09-18.md`
@@ -472,11 +578,11 @@ Do not restore the old handoff files or old tool-count assumptions.
 
 ## Next action
 
-There is no remaining known runtime blocker from this audit.
+Control Center Faz 0-11 tamamlandı ve bilinen runtime blocker yok.
 
-Finalization rule for this batch: commit the complete tree on `main`, rebuild/redeploy from the clean commit so live `SourceCommit` equals `git rev-parse HEAD`, verify the live Service/Tray/Gitea integration, then push `main` to `origin/main`.
+Kullanıcı açıkça istemedikçe commit/push yapma. Yeni özellik veya runtime değişikliği istenirse mevcut tamamlanmış Control Center tabanından devam et; runtime kodu değişirse zorunlu source -> targeted test -> canonical installer -> live deploy zincirini uygula. Mevcut dirty-89135c8503e5 runtime için final 198-tool smoke zaten bir kez GREEN çalıştırıldı; runtime source değişmeden tekrar etme.
 
-## Gitea bağımsız sistem tepsisi ikonu
+## [TARİHSEL / ARTIK GEÇERSİZ] Gitea bağımsız sistem tepsisi ikonu
 
 - Talvora ana ikonundan ayrı ikinci bir `NotifyIcon` bulunur.
 - Sorumluluk sınıfı: `src\Talvora.Tray\GiteaNotifyIconController.cs`.

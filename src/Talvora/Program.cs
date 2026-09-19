@@ -24,7 +24,7 @@ if (OperatingSystem.IsWindows() &&
     WindowsServiceHelpers.IsWindowsService() &&
     app.Services.GetService<IHostLifetime>() is WindowsServiceLifetime serviceLifetime)
 {
-    serviceLifetime.CanStop = false;
+    serviceLifetime.CanStop = true;
     serviceLifetime.CanPauseAndContinue = false;
     serviceLifetime.CanShutdown = true;
 }

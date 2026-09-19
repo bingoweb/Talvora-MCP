@@ -19,6 +19,17 @@ internal static class NativeDpapi
 
     [DllImport("crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CryptProtectData(
+        ref DataBlob dataIn,
+        string? description,
+        IntPtr optionalEntropy,
+        IntPtr reserved,
+        IntPtr promptStruct,
+        int flags,
+        out DataBlob dataOut);
+
+    [DllImport("crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool CryptUnprotectData(
         ref DataBlob dataIn,
         IntPtr description,
@@ -30,6 +41,57 @@ internal static class NativeDpapi
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern IntPtr LocalFree(IntPtr memory);
+
+    public static byte[] Protect(byte[] plaintext)
+    {
+        ArgumentNullException.ThrowIfNull(plaintext);
+
+        var inputPointer = Marshal.AllocHGlobal(Math.Max(1, plaintext.Length));
+        try
+        {
+            if (plaintext.Length > 0)
+            {
+                Marshal.Copy(plaintext, 0, inputPointer, plaintext.Length);
+            }
+
+            var input = new DataBlob
+            {
+                Length = plaintext.Length,
+                Data = inputPointer,
+            };
+
+            if (!CryptProtectData(
+                    ref input,
+                    "Talvora current-user credential",
+                    IntPtr.Zero,
+                    IntPtr.Zero,
+                    IntPtr.Zero,
+                    0,
+                    out var output))
+            {
+                throw new InvalidOperationException(
+                    $"DPAPI koruma başarısız. Win32={Marshal.GetLastWin32Error()}");
+            }
+
+            try
+            {
+                var result = new byte[output.Length];
+                Marshal.Copy(output.Data, result, 0, output.Length);
+                return result;
+            }
+            finally
+            {
+                if (output.Data != IntPtr.Zero)
+                {
+                    _ = LocalFree(output.Data);
+                }
+            }
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(inputPointer);
+        }
+    }
 
     public static byte[] Unprotect(byte[] encrypted)
     {

@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.IO;
+using System.Net.Http;
 using Talvora.Shared;
 using System.Drawing;
 using System.Runtime.InteropServices;
@@ -24,9 +26,10 @@ internal static class BusinessTunnelClient
             "Talvora",
             "TunnelClient");
 
-    private static string ConfigPath => Path.Combine(TunnelRoot, "business.json");
+    internal static string ConfigPath => Path.Combine(TunnelRoot, "business.json");
 
-    private static string CredentialPath => Path.Combine(TunnelRoot, "runtime-key.dpapi");
+    internal static string RuntimeCredentialPath =>
+        Path.Combine(TunnelRoot, "runtime-key.dpapi");
 
     public static BusinessConfig LoadConfig()
     {
@@ -231,44 +234,56 @@ internal static class BusinessTunnelClient
         }
     }
 
-    public static string ReadRuntimeCredential()
+    public static async Task DisconnectAsync(CancellationToken cancellationToken)
     {
-        if (!File.Exists(CredentialPath))
+        var config = LoadConfig();
+        if (!File.Exists(config.TunnelClient))
         {
-            throw new FileNotFoundException(
-                "Kaydedilmiş tunnel Runtime API key bulunamadı.",
-                CredentialPath);
+            return;
         }
 
-        var hex = File.ReadAllText(CredentialPath).Trim();
-        if (hex.Length == 0 || hex.Length % 2 != 0)
-        {
-            throw new InvalidOperationException("Kaydedilmiş Runtime API key biçimi geçersiz.");
-        }
+        Directory.CreateDirectory(config.StateRoot);
 
-        byte[] encrypted;
-        try
-        {
-            encrypted = Convert.FromHexString(hex);
-        }
-        catch (FormatException ex)
+        var result = await RunClientAsync(
+            config,
+            new[] { "runtimes", "stop", config.Alias, "--json" },
+            credential: null,
+            TimeSpan.FromSeconds(20),
+            cancellationToken);
+
+        if (result.ExitCode != 0)
         {
             throw new InvalidOperationException(
-                "Kaydedilmiş Runtime API key DPAPI hex biçiminde değil.",
-                ex);
+                $"tunnel-client stop başarısız: {Collapse(result.StandardError, result.StandardOutput)}");
         }
 
-        var decrypted = NativeDpapi.Unprotect(encrypted);
-        try
+        var deadline = DateTime.UtcNow.AddSeconds(15);
+        while (DateTime.UtcNow < deadline)
         {
-            return Encoding.Unicode.GetString(decrypted).TrimEnd('\0');
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var status = await ReadTunnelStatusAsync(
+                config,
+                credential: string.Empty,
+                cancellationToken);
+
+            if (status is null || !status.ProcessRunning)
+            {
+                TrayLog.Write($"Tunnel disconnected. Alias={config.Alias}");
+                return;
+            }
+
+            await Task.Delay(300, cancellationToken);
         }
-        finally
-        {
-            Array.Clear(decrypted);
-            Array.Clear(encrypted);
-        }
+
+        TrayLog.Write(
+            $"Tunnel stop command completed but runtime still reports running. Alias={config.Alias}");
     }
+
+    public static string ReadRuntimeCredential() =>
+        DpapiSecretStore.ReadString(
+            RuntimeCredentialPath,
+            "tunnel Runtime API key");
 
     private static async Task<TunnelClientStatus?> ReadTunnelStatusAsync(
         BusinessConfig config,
@@ -313,17 +328,21 @@ internal static class BusinessTunnelClient
     private static async Task<ProcessExecutionResult> RunClientAsync(
         BusinessConfig config,
         IReadOnlyList<string> arguments,
-        string credential,
+        string? credential,
         TimeSpan timeout,
         CancellationToken cancellationToken)
     {
         var environment = new Dictionary<string, string?>
         {
-            ["CONTROL_PLANE_API_KEY"] = credential,
             ["TUNNEL_CLIENT_STATE_DIR"] = config.StateRoot,
             ["LOG_LEVEL"] = "warn",
             ["ADMIN_UI_LOG_BUFFER_EVENTS"] = "500",
         };
+
+        if (!string.IsNullOrWhiteSpace(credential))
+        {
+            environment["CONTROL_PLANE_API_KEY"] = credential;
+        }
 
         var result = await ProcessRunner.RunAsync(
             config.TunnelClient,

@@ -187,6 +187,7 @@ private static async Task RemoveLegacyInstallationAsync(
 
     private static async Task CreateServiceAsync(
         string executable,
+        InstallUserContext installUser,
         CancellationToken cancellationToken)
     {
         var quotedExecutable = $"\"{executable}\"";
@@ -235,6 +236,41 @@ private static async Task RemoveLegacyInstallationAsync(
             "sidtype",
             ServiceName,
             "unrestricted");
+
+        await ConfigureInteractiveUserServiceAccessAsync(
+            installUser,
+            cancellationToken);
+    }
+
+    private static async Task ConfigureInteractiveUserServiceAccessAsync(
+        InstallUserContext installUser,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(installUser.Sid) ||
+            !installUser.Sid.StartsWith("S-1-", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Talvora service control access could not be configured because the install user SID is invalid.");
+        }
+
+        // Keep service configuration/delete/DACL changes privileged, but allow the
+        // interactive owner to query, start, stop, pause and interrogate Talvora.
+        // This lets the tray restart its own LocalSystem service without UAC, even
+        // when that service is currently stopped.
+        var serviceSddl =
+            "D:" +
+            "(A;;CCLCSWRPWPDTLOCRRC;;;SY)" +
+            "(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)" +
+            "(A;;CCLCSWLOCRRC;;;IU)" +
+            "(A;;CCLCSWLOCRRC;;;SU)" +
+            $"(A;;CCLCSWRPWPDTLOCRRC;;;{installUser.Sid})";
+
+        await RunScAsync(
+            allowNonZero: false,
+            cancellationToken,
+            "sdset",
+            ServiceName,
+            serviceSddl);
     }
 
     private static async Task<ProcessExecutionResult> RunScAsync(

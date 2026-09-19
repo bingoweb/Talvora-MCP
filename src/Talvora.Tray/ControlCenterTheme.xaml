@@ -1,0 +1,136 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ui:ThemesDictionary Theme="Dark" />
+        <ui:ControlsDictionary />
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- Talvora product palette: restrained Fluent dark surfaces with one cool accent. -->
+    <Color x:Key="Talvora.Background.Color">#0F1115</Color>
+    <Color x:Key="Talvora.Surface.Color">#15181E</Color>
+    <Color x:Key="Talvora.SurfaceRaised.Color">#1A1E25</Color>
+    <Color x:Key="Talvora.SurfaceHover.Color">#1F242C</Color>
+    <Color x:Key="Talvora.Border.Color">#282E37</Color>
+    <Color x:Key="Talvora.BorderStrong.Color">#35404C</Color>
+    <Color x:Key="Talvora.TextPrimary.Color">#F4F7FB</Color>
+    <Color x:Key="Talvora.TextSecondary.Color">#A4AFBE</Color>
+    <Color x:Key="Talvora.TextTertiary.Color">#778394</Color>
+    <Color x:Key="Talvora.Accent.Color">#78A6F8</Color>
+    <Color x:Key="Talvora.AccentSoft.Color">#1C2A43</Color>
+    <Color x:Key="Talvora.Ready.Color">#48C78E</Color>
+    <Color x:Key="Talvora.Attention.Color">#F0B85A</Color>
+    <Color x:Key="Talvora.Offline.Color">#EB6877</Color>
+
+    <SolidColorBrush x:Key="Talvora.Background" Color="{StaticResource Talvora.Background.Color}" />
+    <SolidColorBrush x:Key="Talvora.Surface" Color="{StaticResource Talvora.Surface.Color}" />
+    <SolidColorBrush x:Key="Talvora.SurfaceRaised" Color="{StaticResource Talvora.SurfaceRaised.Color}" />
+    <SolidColorBrush x:Key="Talvora.SurfaceHover" Color="{StaticResource Talvora.SurfaceHover.Color}" />
+    <SolidColorBrush x:Key="Talvora.Border" Color="{StaticResource Talvora.Border.Color}" />
+    <SolidColorBrush x:Key="Talvora.BorderStrong" Color="{StaticResource Talvora.BorderStrong.Color}" />
+    <SolidColorBrush x:Key="Talvora.TextPrimary" Color="{StaticResource Talvora.TextPrimary.Color}" />
+    <SolidColorBrush x:Key="Talvora.TextSecondary" Color="{StaticResource Talvora.TextSecondary.Color}" />
+    <SolidColorBrush x:Key="Talvora.TextTertiary" Color="{StaticResource Talvora.TextTertiary.Color}" />
+    <SolidColorBrush x:Key="Talvora.Accent" Color="{StaticResource Talvora.Accent.Color}" />
+    <SolidColorBrush x:Key="Talvora.AccentSoft" Color="{StaticResource Talvora.AccentSoft.Color}" />
+    <SolidColorBrush x:Key="Talvora.Ready" Color="{StaticResource Talvora.Ready.Color}" />
+    <SolidColorBrush x:Key="Talvora.Attention" Color="{StaticResource Talvora.Attention.Color}" />
+    <SolidColorBrush x:Key="Talvora.Offline" Color="{StaticResource Talvora.Offline.Color}" />
+
+    <Style x:Key="TalvoraCardStyle" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="{StaticResource Talvora.Surface}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Talvora.Border}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="18" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <Style x:Key="TalvoraSubtleCardStyle" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="{StaticResource Talvora.SurfaceRaised}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Talvora.Border}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Padding" Value="14" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <Style
+        x:Key="TalvoraSecondaryButtonStyle"
+        TargetType="{x:Type ui:Button}"
+        BasedOn="{StaticResource {x:Type ui:Button}}">
+        <Setter Property="Appearance" Value="Secondary" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="13,6" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style
+        x:Key="TalvoraPrimaryButtonStyle"
+        TargetType="{x:Type ui:Button}"
+        BasedOn="{StaticResource {x:Type ui:Button}}">
+        <Setter Property="Appearance" Value="Primary" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="14,6" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style
+        x:Key="TalvoraGhostButtonStyle"
+        TargetType="{x:Type ui:Button}"
+        BasedOn="{StaticResource {x:Type ui:Button}}">
+        <Setter Property="Appearance" Value="Transparent" />
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Padding" Value="8,5" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style
+        x:Key="TalvoraSearchBoxStyle"
+        TargetType="{x:Type ui:TextBox}"
+        BasedOn="{StaticResource {x:Type ui:TextBox}}">
+        <Setter Property="MinWidth" Value="300" />
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Background" Value="{StaticResource Talvora.SurfaceRaised}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Talvora.BorderStrong}" />
+        <Setter Property="Foreground" Value="{StaticResource Talvora.TextPrimary}" />
+    </Style>
+
+    <Style
+        x:Key="TalvoraFilterComboBoxStyle"
+        TargetType="{x:Type ComboBox}"
+        BasedOn="{StaticResource {x:Type ComboBox}}">
+        <Setter Property="MinWidth" Value="184" />
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Padding" Value="10,5" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Background" Value="{StaticResource Talvora.SurfaceRaised}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Talvora.BorderStrong}" />
+        <Setter Property="Foreground" Value="{StaticResource Talvora.TextPrimary}" />
+    </Style>
+
+    <Style x:Key="TalvoraSectionLabelStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="{StaticResource Talvora.TextSecondary}" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+    </Style>
+</ResourceDictionary>

@@ -2,6 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
     <AssemblyName>Talvora.Tray</AssemblyName>
     <RootNamespace>Talvora.Tray</RootNamespace>
     <ApplicationIcon>..\..\assets\Talvora.ico</ApplicationIcon>
@@ -13,5 +14,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Talvora.Shared\Talvora.Shared.csproj" />
     <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
   </ItemGroup>
 </Project>

@@ -311,9 +311,10 @@ $result = [pscustomobject]@{
         $developerTools -match 'talvora_resolve_command' -and
         $toolManifest -match 'talvora_project_discover'
     )
-    ServiceRejectsStopControl = (
-        $serviceProgram -match 'CanStop\s*=\s*false' -and
-        $serviceProgram -match 'CanPauseAndContinue\s*=\s*false'
+    ServiceSupportsManualStopControl = (
+        $serviceProgram -match 'CanStop\s*=\s*true' -and
+        $serviceProgram -match 'CanPauseAndContinue\s*=\s*false' -and
+        $serviceProgram -match 'CanShutdown\s*=\s*true'
     )
     InstallerCanReplaceNonStoppableService = (
         $installerProgram -match 'queryex' -and
@@ -324,6 +325,12 @@ $result = [pscustomobject]@{
         $installerProgram -match 'restart/1000/restart/3000/restart/10000/restart/30000/restart/60000' -and
         $installerProgram -match '"sidtype"' -and
         $installerProgram -match '"unrestricted"'
+    )
+    InstallerGrantsInteractiveServiceLifecycle = (
+        $installerProgram -match 'ConfigureInteractiveUserServiceAccessAsync' -and
+        $installerProgram -match '"sdset"' -and
+        $installerProgram -match 'CCLCSWRPWPDTLOCRRC' -and
+        $installerProgram -match 'installUser\.Sid'
     )
     SharedApplicationIcon = (
         $serviceProject -match '<ApplicationIcon>..\\..\\assets\\Talvora\.ico</ApplicationIcon>' -and
@@ -357,8 +364,8 @@ $result = [pscustomobject]@{
         $trayProgram -match 'config\.StateRoot'
     )
     TrayAutoReconnectsAfterStartup = (
-        $trayProgram -match '_\s*=\s*MaintainConnectionAsync\(\)' -and
-        $trayProgram -match '_timer\.Tick\s*\+=.*MaintainConnectionAsync' -and
+        $trayProgram -match '_\s*=\s*MaintainTalvoraConnectionAsync\(\)' -and
+        $trayProgram -match '_talvoraTimer\.Tick\s*\+=.*MaintainTalvoraConnectionAsync' -and
         $trayProgram -match 'Automatic reconnect succeeded' -and
         $trayProgram -match 'GetAutomaticReconnectDelay' -and
         $trayProgram -match 'RetryIn='

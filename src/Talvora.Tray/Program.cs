@@ -61,7 +61,19 @@ internal static class Program
             {
                 var config = BusinessTunnelClient.LoadConfig();
                 _ = BusinessTunnelClient.ReadRuntimeCredential();
-                TrayLog.Write($"Self-test succeeded. Alias={config.Alias}");
+                var registry = ManagedMcpRegistryCoordinator
+                    .LoadOrRecoverAsync(CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                ManagedMcpRecoveryState.AssertPolicyContract();
+                ControlCenterEventStore.AssertPolicyContract();
+                ControlCenterRawLogService.AssertBoundedReadContract();
+                DpapiSecretStore.AssertRoundTripContract();
+                ManagedMcpTunnelProvisioningService.AssertPolicyContract();
+                ControlCenterSetupService.AssertPolicyContract();
+                ManagedMcpOperationCoordinator.AssertContract();
+                TrayLog.Write(
+                    $"Self-test succeeded. Alias={config.Alias}; ManagedMcpCount={registry.Mcps.Count}");
                 return 0;
             }
             catch (Exception ex)
@@ -107,6 +119,47 @@ internal static class Program
             }
         }
 
+        if (args.Any(arg =>
+            string.Equals(arg, "--control-center-smoke", StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                return ControlCenterSmoke.Run();
+            }
+            catch (Exception ex)
+            {
+                TrayLog.Write("Control Center smoke command failed", ex);
+                return 1;
+            }
+        }
+
+        if (args.Any(arg =>
+            string.Equals(
+                arg,
+                "--tunnel-provisioning-check",
+                StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                var preflight = ManagedMcpTunnelProvisioningService
+                    .RunReadOnlyPreflightAsync(CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+
+                TrayLog.Write(
+                    $"Tunnel provisioning preflight succeeded. Client={preflight.ClientVersion}; " +
+                    $"OrganizationScopes={preflight.OrganizationScopeCount}; " +
+                    $"WorkspaceScopes={preflight.WorkspaceScopeCount}; " +
+                    $"AdminCredentialPresent={preflight.AdminCredentialPresent}");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                TrayLog.Write("Tunnel provisioning preflight failed", ex);
+                return 1;
+            }
+        }
+
         var replaceExisting = args.Any(arg =>
             string.Equals(arg, "--replace", StringComparison.OrdinalIgnoreCase));
 
@@ -140,13 +193,15 @@ internal static class Program
 
         try
         {
-            TrayLog.Write("Tray mutex acquired; entering message loop.");
+            TrayLog.Write("Tray mutex acquired; entering WPF/WinForms hybrid message loop.");
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            using var applicationContext = new TrayApplicationContext();
-            Application.Run(applicationContext);
-            TrayLog.Write("Tray message loop exited.");
-            return 0;
+            var controlCenterApplication = new ControlCenterApplication();
+            using var trayContext = new TrayApplicationContext(controlCenterApplication);
+
+            var exitCode = controlCenterApplication.Run();
+            TrayLog.Write("Tray/Control Center message loop exited.");
+            return exitCode;
         }
         finally
         {

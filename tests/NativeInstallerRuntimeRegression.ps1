@@ -67,7 +67,7 @@ $result | Format-List
 if ($result.ServiceState -ne 'Running' -or
     $result.ServiceStartMode -ne 'Auto' -or
     $result.ServiceStartName -ne 'LocalSystem' -or
-    $result.ServiceCanStop -or
+    -not $result.ServiceCanStop -or
     $result.ServiceCanPauseAndContinue -or
     -not $result.FailureRestart1000 -or
     -not $result.FailureRestart3000 -or

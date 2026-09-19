@@ -104,7 +104,7 @@ public static async Task<HealthSnapshot> InstallAsync(
             await StopTrayProcessesAsync(cancellationToken);
 
             progress.Report(new InstallProgress(50, "Windows servisi yeni sürüme bağlanıyor..."));
-            await CreateServiceAsync(serviceExecutable, cancellationToken);
+            await CreateServiceAsync(serviceExecutable, installUser, cancellationToken);
             switchedService = true;
 
             progress.Report(new InstallProgress(63, "Talvora servisi başlatılıyor..."));
@@ -162,7 +162,7 @@ public static async Task<HealthSnapshot> InstallAsync(
                     InstallerLog.Write(
                         $"Install failed after service switch; rolling back to {previousServiceExecutable}");
                     await StopAndDeleteServiceAsync(ServiceName, cancellationToken);
-                    await CreateServiceAsync(previousServiceExecutable, cancellationToken);
+                    await CreateServiceAsync(previousServiceExecutable, installUser, cancellationToken);
                     await RunScAsync(
                         allowNonZero: false,
                         cancellationToken,
