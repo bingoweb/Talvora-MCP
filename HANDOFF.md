@@ -214,6 +214,7 @@ Aşağıdaki maddeler tavsiye değil, **kesin proje kurallarıdır**. Yeni oturu
    - `src/`, Talvora.Shared, Talvora service, Tray, installer veya runtime davranışını etkileyen build girdilerinde değişiklik yapıldıysa yalnız kaynak kodu değiştirmek yeterli değildir.
    - Zorunlu sıra:
      `source change -> targeted build/test -> canonical installer build -> live deploy -> talvora_system_info -> service/Tray PID + version root doğrulaması -> ilgili canlı davranış testi`.
+   - Canonical live deploy Talvora MCP üzerinden başlatılıyorsa installer doğrudan Talvora LocalSystem servisinin child process'i olarak çalıştırılmayacak; `scripts\Deploy-Windows-Installer.ps1` ile bağımsız `SYSTEM` Task Scheduler instance'ı kullanılacak. Bu kural self-update sırasında servis process tree'sinin installer yaşam döngüsünü bozmasını engeller.
    - Final doğrulamada gerekiyorsa current source publish edilip kurulu `Talvora.dll`, `Talvora.Shared.dll` ve `Talvora.Tray.exe` ile SHA256 karşılaştırması yapılacak.
    - Eski/stale binary ile geliştirmeye devam edilmeyecek.
    - Çalışan servis/Tray güncellenmeden bir runtime değişikliği “tamamlandı” kabul edilmeyecek.
@@ -293,6 +294,7 @@ Aşağıdaki maddeler tavsiye değil, **kesin proje kurallarıdır**. Yeni oturu
     - GitHub artık birincil remote değildir; yalnız ikincil/yedek remote adı `github` ile tutulur: `https://github.com/bingoweb/Talvora-MCP.git`.
     - Kullanıcı yalnız “commit/push” derse varsayılan hedef kesinlikle `origin/main` yani yerel Gitea'dır.
     - GitHub'a push/sync yalnız kullanıcı açıkça GitHub'ı isterse yapılacak.
+    - **GitHub remote işlemleri için yalnız Talvora'nın `talvora_git_run` GitHub-aware yolu kullanılacak.** `github` remote'una push/fetch/sync sırasında ham `git`/`gh` komutlarını LocalSystem PowerShell/CMD üzerinden çalıştırma; `talvora_git_run` github.com HTTPS işlemlerini logged-on Windows kullanıcı oturumunda GCM/OAuth ile yürütür ve credential yoksa fail-fast eder. Bu kural yeni oturumlarda da varsayılan ve zorunludur.
     - Gereksiz alt dallar bırakılmayacak.
     - Commit/push yalnız kullanıcı açıkça istediğinde yapılacak.
     - Push istenirse önce `git diff --check`, branch/upstream ve working tree kontrol edilecek.
@@ -828,3 +830,13 @@ Playwright kartını yalnız process var diye Ready sayma. Mümkün olan en kuvv
 - Final `git diff --check` GREEN.
 - Git branch: `main`. Remotes: `origin` = local Gitea, `github` = GitHub mirror.
 - Production-hardening commit'i `9fc9bc87c197b367ced6993d782f299575577b2f` (`feat: production harden Playwright MCP management`) oluşturuldu ve hem local Gitea `origin/main` hem GitHub `github/main` üzerine başarıyla push edildi. İki remote bu commit'te senkronlandı; bu final handoff closeout notu ayrıca docs commit olarak iki remote'a gönderilecektir.
+## 2026-09-20 — Production hardening reconciliation + canonical GitHub/deploy rules
+
+- Oturum başlangıcında talvora_system_info canlı MCP bağlantısını doğruladı. Canlı production fingerprint önceki final deploy ile aynı kaldı: 7a24fdc4bb53028d880762db7d8187af153d064b-dirty-d504e2d57553; version-root C:\Program Files\Talvora\Versions\7a24fdc4bb53028d880762db7d8187af153d064b-dirty-d504e2d57553-20260919220307481.
+- Başlangıç repo baseline: main, HEAD aad1db4eb38b07ceff38b9ba8915ff1c6e0a6a05, clean tree; live origin/main ve github/main doğrudan ls-remote ile aynı HEAD olarak doğrulandı.
+- Faz 12 BUG-AUDIT/TODO reconciliation tamamlandı. Production-hardening commitinde uygulanmış fakat audit'te stale OPEN kalan 41 madde kaynak kodu üzerinden tekrar doğrulanarak kapatıldı; Faz 12 stale checkbox'ları güncellendi.
+- Son ayrı madde #34 için scripts\Deploy-Windows-Installer.ps1 eklendi. Canonical installer artık Talvora servis process tree'sinden bağımsız, on-demand hidden SYSTEM Task Scheduler task'ı üzerinden başlatılabilir. Windows PowerShell 5.1 parse GREEN.
+- tests\NativeInstallerSourceRegression.ps1 içine CanonicalDeployUsesIndependentSystemTask contract'ı eklendi ve tek hedefli çalıştırmada GREEN; mevcut diğer source contract'lar da aynı koşuda GREEN kaldı.
+- GitHub kuralı canonical hale getirildi: github remote push/fetch/sync işlemlerinde yalnız Talvora'nın talvora_git_run GitHub-aware logged-on-user/GCM yolu kullanılacak; LocalSystem PowerShell/CMD içinde ham git/gh GitHub işlemi yapılmayacak.
+- Bu oturumda installed runtime/shared/installer/Tray payload kodu değiştirilmedi. Bu nedenle daha önce GREEN olan canonical installer/live deploy/Playwright browser smoke tekrar edilmedi.
+- Kullanıcı açıkça istemediği için commit/push yapılmadı. Çalışma ağacındaki bu reconciliation/deploy-helper değişiklikleri sonraki açık commit isteğine kadar yerelde kalacak.

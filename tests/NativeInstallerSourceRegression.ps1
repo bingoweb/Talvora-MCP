@@ -52,6 +52,7 @@ $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Tal
 $installerProgram = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora.Installer')
 $installerProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'))
 $buildInstallerScript = [IO.File]::ReadAllText((Join-Path $RepoRoot 'scripts\Build-Windows-Installer.ps1'))
+$deployInstallerScript = [IO.File]::ReadAllText((Join-Path $RepoRoot 'scripts\Deploy-Windows-Installer.ps1'))
 $manifest = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\app.manifest'))
 $toolManifest = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Shared\TalvoraToolManifest.cs'))
 $canonicalToolNames = @([regex]::Matches($toolManifest, '"(?:talvora_[a-z0-9_]+|search|fetch)"') | ForEach-Object { $_.Value.Trim('"') })
@@ -62,6 +63,14 @@ $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
 
 $result = [pscustomobject]@{
+    CanonicalDeployUsesIndependentSystemTask = (
+        $deployInstallerScript -match 'Schedule\.Service' -and
+        $deployInstallerScript -match 'RegisterTaskDefinition' -and
+        $deployInstallerScript -match 'taskLogonServiceAccount\s*=\s*5' -and
+        $deployInstallerScript -match "'SYSTEM'" -and
+        $deployInstallerScript -match '\.Run\(\$null\)' -and
+        $deployInstallerScript -notmatch 'Start-Process\s+-FilePath\s+\$installerFullPath'
+    )
     BuildScriptPreventsConcurrentBuilds = (
         $buildInstallerScript -match "Global\\Talvora\.BuildWindowsInstaller" -and
         $buildInstallerScript -match '\$BuildMutex\.WaitOne\(0\)' -and
