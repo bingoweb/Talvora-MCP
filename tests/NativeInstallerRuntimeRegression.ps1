@@ -2,6 +2,10 @@ param()
 
 $ErrorActionPreference = 'Stop'
 
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$toolManifest = [IO.File]::ReadAllText((Join-Path $repoRoot 'src\Talvora.Shared\TalvoraToolManifest.cs'))
+$expectedToolCount = ([regex]::Matches($toolManifest, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count
+
 $service = Get-CimInstance Win32_Service -Filter "Name='Talvora'"
 if ($null -eq $service) { throw 'Talvora service is missing.' }
 $serviceController = Get-Service Talvora
@@ -72,7 +76,7 @@ if ($result.ServiceState -ne 'Running' -or
     -not $result.FailureRestart60000 -or
     -not $result.FailureActionsOnNonCrash -or
     -not $result.ServiceSidUnrestricted -or
-    $result.ToolCount -ne 162 -or
+    $result.ToolCount -ne $expectedToolCount -or
     -not $result.ServiceUsesVersionedPath -or
     -not $result.TrayExecutableExists -or
     -not $result.TrayStartupRegistered -or

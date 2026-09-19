@@ -1,50 +1,72 @@
-Talvora MCP projesine kaldığımız yerden devam et.
+Talvora-MCP projesine kaldığımız yerden devam et.
 
-Önce şu handoff dosyasını oku:
-C:\Users\tayla\Talvora-MCP\HANDOFF-2026-09-18.md
+İLK OLARAK şu canonical handoff dosyasını oku:
+C:\Users\tayla\Talvora-MCP\HANDOFF-2026-09-19.md
 
-Ardından mevcut Talvora local MCP araçlarını kullanarak durumu bizzat doğrula:
-- talvora_system_info
-- Talvora servis durumu
-- C:\Users\tayla\AppData\Local\Talvora\current.json
-- C:\Users\tayla\Talvora-MCP git branch/status/HEAD
-- origin/main
+Repo:
+C:\Users\tayla\Talvora-MCP
 
-Başlangıç referansı:
-- Repo: C:\Users\tayla\Talvora-MCP
-- GitHub: bingoweb/Talvora-MCP
-- main HEAD ve origin/main: 12d29453b4354cc76f81356a88a476c32f096cb1
-- Canlı servis sourceCommit: f907ca13cb4f65dfd8324c226986d1f447fb79d4
-- Canlı ToolCount: 146
-- MCP: http://127.0.0.1:7676/mcp
-- Health: http://127.0.0.1:7676/healthz
+Aktif geliştirme dalı:
+refactor/deep-codebase-cleanup
 
-Repo HEAD ile canlı sourceCommit farkı normal: son commit installer paketleme/build mantığını sertleştiriyor; servis runtime kodu f907ca13 commitinde ve 146 araçlık canlı sürüm GREEN durumda. Sırf hashleri eşitlemek için gereksiz reinstall yapma.
+MCP endpoint:
+http://127.0.0.1:7676/mcp
 
-Sabit kurallar:
-- Windows-native geliştirme.
-- Talvora tam yetenek / full access felsefesiyle devam edecek; proje yeteneğini keyfi allowlist/denylist ile daraltma.
-- Chocolatey kullanılacak; WinGet ekleme.
-- Yeni runtime/toolchain/harici entegrasyon tasarımında Context7 ve resmi dokümanları kullan.
-- Talvora LocalSystem Windows servisi olarak Automatic çalışacak; mevcut servis hardeningini zayıflatma.
-- Transactional installer/update mimarisini koru: stage -> verify -> switch -> health/tray verify -> rollback on failure -> success sonrası cleanup.
-- Common workflows için structured MCP araçları ekleyebilirsin ama unrestricted process/PowerShell/Git/Chocolatey/dotnet/npm/Python/Docker gibi escape hatch'leri kısıtlama.
-- Büyük değişikliklerde feature branch kullan.
-- Build/source/smoke/runtime GREEN olmadan main'e merge etme.
-- GitHub'a ancak ben açıkça istersem push et.
-- Installer servis swap sırasında MCP kısa süreli düşerse yeniden bağlanıp devam et; ilk timeout'u failure sanma.
-- Uzun çalışmalarda her 2-3 anlamlı tool çağrısında kısa ilerleme mesajı ver. Sessiz kalıp donmuş izlenimi yaratma.
-- Rutin onay istemeden ilerle.
+Bu handoff, son derin kod temizliği/refactor çalışmasının tamamını içeriyor. Baştan broad audit yapma ve daha önce geçen testleri tekrar koşturma.
 
-Mevcut tamamlanmış yetenekler arasında developer core, long-running jobs, Git, file watcher, Chocolatey, .NET, Node/npm, interactive user session, Python, Docker, network diagnostics, dotenv/INI/XML, Windows native toolchain/PE inspection ve HTTP mock/webhook listener bulunuyor.
+TEMEL KURALLAR:
+- Windows-native geliştir.
+- TAM YETKİ felsefesi; güvenlik/gizlilik bahanesiyle path/command/host/package/user/session yetenek kısıtı ekleme.
+- Chocolatey kullan; WinGet kullanma.
+- Yazılım geliştirme/library işlerinde Context7 + resmi dokümantasyon kullan.
+- Playwright'ı Talvora'ya ekleme; ayrı ChatGPT entegrasyonu olacak.
+- Aynı broad testleri tekrar tekrar yapma.
+- NEYİ DEĞİŞTİRDİYSEN SADECE ONU TEST ET.
+- Statik kontrol yeterliyse gereksiz runtime testi yapma.
+- Onay beklemeden ilerle.
+- Uzun işlerde kısa ilerleme bilgisi ver.
+- GitHub push yalnız ben istediğimde yap.
 
-Şimdi:
-1. Handoff'u ve gerçek runtime/git durumunu doğrula.
-2. Mevcut 146-tool tabanı bozmadan sıradaki en yüksek getirili uygulama geliştirme yeteneğini seç.
-3. Context7 ile tasarımı doğrula.
-4. Feature branch aç.
-5. Implement et.
-6. Source/build/smoke/runtime testlerini gerçek makinede çalıştır.
-7. Yalnız tam GREEN durumda main'e fast-forward et.
-8. GitHub push yapma; ben ayrıca istersem push edeceğiz.
-9. Durma; kaldığın yerden geliştirmeye başla.
+SON CANONICAL DURUM:
+- TalvoraToolManifest = 159 tool.
+- Legacy alias'lar kaldırıldı:
+  talvora_vs_instances
+  talvora_windows_sdk_list
+  talvora_vsdev_environment
+- Talvora.Shared oluşturuldu.
+- ProcessRunner, CommandResolver, TalvoraHttp, AtomicFile, JsonFileStore, FileLog, TextLines ve WindowsSessionLauncher ortak katmana alındı.
+- SessionTools artık ince MCP adapter.
+- Native installer canonical kurulum motoru.
+- scripts\Install.ps1 yalnız bootstrap + native installer runner.
+- Installer LocalSystem çalışırsa aktif interactive kullanıcı SID/profile/registry/session bağlamını doğru kullanıyor.
+- Installer/Tray/Tool monolitleri domain bazında partial dosyalara bölündü.
+- 3500+ satırlık Smoke Program.cs küçük orchestrator + scenario dosyalarına ayrıldı.
+- Production kodunda Thread.Sleep, .Result, .Wait(), async void ve boş catch{} kalmadı.
+- CI 159-tool manifest ve yeni partial-source mimarisine göre güncellendi.
+- PowerShell script çağrılarında $?; native process çağrılarında $LASTEXITCODE kullanılıyor.
+
+ZATEN DOĞRULANDI — GEREKSİZ YERE TEKRARLAMA:
+- Talvora + Talvora.Shared Release build: 0 warning / 0 error.
+- Smoke project Release build: 0 warning / 0 error.
+- Tray build: 0 warning / 0 error.
+- Installer direct compile: 0 warning / 0 error.
+- Native installer packaging daha önce bu refactor akışında başarıyla Talvora-Setup.exe üretti.
+- NativeInstallerSourceRegression: GREEN, 159-tool contract dahil.
+- Değişen PowerShell script parser kontrolü: GREEN.
+- git diff --check: clean.
+- Geçici Payload.zip ve split helper temizlendi.
+
+ÖNEMLİ:
+- Dosyaları sırf satır sayısını azaltmak için parçalama. Gerçek sorumluluk sınırı varsa ayır.
+- JobTools uzun ömürlü interactive process yönettiği için ProcessRunner'a zorla taşınmayacak.
+- Native installer logic tekrar PowerShell'e kopyalanmayacak.
+- Windows session P/Invoke kodu tekrar SessionTools'a kopyalanmayacak.
+- 159 tool sayısını eski 162'ye çıkarmaya çalışma.
+
+İLK İŞ:
+1. Handoff'u oku.
+2. git status -sb ve git log -1 --oneline ile dalın temiz/upstream durumunu doğrula.
+3. Sonra kullanıcının yeni isteğine doğrudan devam et.
+4. Kullanıcı yeni bir spesifik görev vermediyse, yeniden full audit/test yapmak yerine handoff'taki kalan somut adaylardan veya kullanıcı hedefinden ilerle.
+
+Onay istemeden devam et.

@@ -1,3 +1,4 @@
+using Talvora.Shared;
 using System.ComponentModel;
 using System.Diagnostics;
 using ModelContextProtocol.Server;
@@ -418,81 +419,29 @@ public static class ChocolateyTools
         int timeoutSeconds = 3600,
         CancellationToken cancellationToken = default)
     {
-        if (timeoutSeconds < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(timeoutSeconds));
-        }
-
         var executable = ResolveChocolateyExecutable();
-        var argumentList = arguments.ToArray();
-        var cwd = string.IsNullOrWhiteSpace(workingDirectory)
-            ? Environment.CurrentDirectory
-            : Path.GetFullPath(workingDirectory);
-
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = executable,
-            WorkingDirectory = cwd,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
-
-        foreach (var argument in argumentList)
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
-        foreach (var pair in environment ?? new Dictionary<string, string?>())
-        {
-            startInfo.Environment[pair.Key] = pair.Value;
-        }
-
-        using var process = new Process { StartInfo = startInfo };
-        if (!process.Start())
-        {
-            throw new InvalidOperationException($"Failed to start Chocolatey: {executable}");
-        }
-
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-        if (timeoutSeconds > 0)
-        {
-            timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
-        }
-
-        var timedOut = false;
-        try
-        {
-            await process.WaitForExitAsync(timeout.Token);
-        }
-        catch (OperationCanceledException) when (
-            !cancellationToken.IsCancellationRequested &&
-            timeoutSeconds > 0)
-        {
-            timedOut = true;
-            try { process.Kill(entireProcessTree: true); } catch { }
-            await process.WaitForExitAsync(CancellationToken.None);
-        }
+        var result = await ProcessRunner.RunAsync(
+            executable,
+            workingDirectory,
+            arguments,
+            environment,
+            timeoutSeconds,
+            cancellationToken);
 
         return new TalvoraChocolateyCommandResponse(
-            process.ExitCode,
-            await stdoutTask,
-            await stderrTask,
-            timedOut,
-            process.Id,
-            executable,
-            cwd,
-            argumentList);
+            result.ExitCode,
+            result.StandardOutput,
+            result.StandardError,
+            result.TimedOut,
+            result.ProcessId,
+            result.Executable,
+            result.WorkingDirectory,
+            result.Arguments);
     }
 
     private static string ResolveChocolateyExecutable()
     {
         var candidates = new List<string>();
-
         var chocolateyInstall = Environment.GetEnvironmentVariable("ChocolateyInstall");
         if (!string.IsNullOrWhiteSpace(chocolateyInstall))
         {
@@ -502,30 +451,8 @@ public static class ChocolateyTools
 
         var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
         candidates.Add(Path.Combine(programData, "chocolatey", "bin", "choco.exe"));
-        candidates.Add(Path.Combine(programData, "Chocolatey", "bin", "choco.exe"));
 
-        foreach (var directory in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
-                     .Split(
-                         Path.PathSeparator,
-                         StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            candidates.Add(Path.Combine(directory, "choco.exe"));
-        }
-
-        foreach (var candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            try
-            {
-                if (File.Exists(candidate))
-                {
-                    return Path.GetFullPath(candidate);
-                }
-            }
-            catch
-            {
-            }
-        }
-
-        return "choco.exe";
+        return CommandResolver.Resolve(["choco.exe", "choco"], candidates)
+            ?? "choco.exe";
     }
 }

@@ -5,6 +5,9 @@
     <ApplicationIcon>..\..\assets\Talvora.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Talvora.Shared\Talvora.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.12" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />

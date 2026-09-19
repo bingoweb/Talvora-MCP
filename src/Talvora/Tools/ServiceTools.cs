@@ -105,7 +105,7 @@ public static class ServiceTools
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraServiceActionResponse)),
      Description("Start or continue a local Windows service and wait for Running. Missing services return found=false. No service-name allow-list is applied.")]
-    public static TalvoraServiceActionResponse StartService(
+    public static async Task<TalvoraServiceActionResponse> StartService(
         string serviceName,
         string[]? arguments = null,
         int timeoutSeconds = 30,
@@ -129,24 +129,24 @@ public static class ServiceTools
 
         if (before == ServiceControllerStatus.StopPending)
         {
-            WaitForStatus(service, ServiceControllerStatus.Stopped, Remaining(timeoutSeconds, deadline), cancellationToken);
+            await WaitForStatusAsync(service, ServiceControllerStatus.Stopped, Remaining(timeoutSeconds, deadline), cancellationToken);
         }
         else if (before == ServiceControllerStatus.Paused)
         {
             service.Continue();
-            WaitForStatus(service, ServiceControllerStatus.Running, Remaining(timeoutSeconds, deadline), cancellationToken);
+            await WaitForStatusAsync(service, ServiceControllerStatus.Running, Remaining(timeoutSeconds, deadline), cancellationToken);
             return Action(true, service, before);
         }
         else if (before == ServiceControllerStatus.PausePending)
         {
-            WaitForStatus(service, ServiceControllerStatus.Paused, Remaining(timeoutSeconds, deadline), cancellationToken);
+            await WaitForStatusAsync(service, ServiceControllerStatus.Paused, Remaining(timeoutSeconds, deadline), cancellationToken);
             service.Continue();
-            WaitForStatus(service, ServiceControllerStatus.Running, Remaining(timeoutSeconds, deadline), cancellationToken);
+            await WaitForStatusAsync(service, ServiceControllerStatus.Running, Remaining(timeoutSeconds, deadline), cancellationToken);
             return Action(true, service, before);
         }
         else if (before is ServiceControllerStatus.StartPending or ServiceControllerStatus.ContinuePending)
         {
-            WaitForStatus(service, ServiceControllerStatus.Running, Remaining(timeoutSeconds, deadline), cancellationToken);
+            await WaitForStatusAsync(service, ServiceControllerStatus.Running, Remaining(timeoutSeconds, deadline), cancellationToken);
             return Action(true, service, before);
         }
 
@@ -165,7 +165,7 @@ public static class ServiceTools
             service.Start();
         }
 
-        WaitForStatus(service, ServiceControllerStatus.Running, Remaining(timeoutSeconds, deadline), cancellationToken);
+        await WaitForStatusAsync(service, ServiceControllerStatus.Running, Remaining(timeoutSeconds, deadline), cancellationToken);
         return Action(true, service, before);
     }
 
@@ -177,7 +177,7 @@ public static class ServiceTools
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraServiceActionResponse)),
      Description("Stop a local Windows service and wait for Stopped. Missing services return found=false. No service-name allow-list is applied.")]
-    public static TalvoraServiceActionResponse StopService(
+    public static async Task<TalvoraServiceActionResponse> StopService(
         string serviceName,
         int timeoutSeconds = 30,
         CancellationToken cancellationToken = default)
@@ -200,13 +200,13 @@ public static class ServiceTools
 
         if (before == ServiceControllerStatus.StopPending)
         {
-            WaitForStatus(service, ServiceControllerStatus.Stopped, Remaining(timeoutSeconds, deadline), cancellationToken);
+            await WaitForStatusAsync(service, ServiceControllerStatus.Stopped, Remaining(timeoutSeconds, deadline), cancellationToken);
             return Action(true, service, before);
         }
 
         if (before is ServiceControllerStatus.StartPending or ServiceControllerStatus.ContinuePending or ServiceControllerStatus.PausePending)
         {
-            WaitForStableStatus(service, Remaining(timeoutSeconds, deadline), cancellationToken);
+            await WaitForStableStatusAsync(service, Remaining(timeoutSeconds, deadline), cancellationToken);
             service.Refresh();
             if (service.Status == ServiceControllerStatus.Stopped)
             {
@@ -221,7 +221,7 @@ public static class ServiceTools
         }
 
         service.Stop();
-        WaitForStatus(service, ServiceControllerStatus.Stopped, Remaining(timeoutSeconds, deadline), cancellationToken);
+        await WaitForStatusAsync(service, ServiceControllerStatus.Stopped, Remaining(timeoutSeconds, deadline), cancellationToken);
         return Action(true, service, before);
     }
 
@@ -233,7 +233,7 @@ public static class ServiceTools
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraServiceActionResponse)),
      Description("Restart a local Windows service and wait for Running. A stopped service is started. Missing services return found=false. No service-name allow-list is applied.")]
-    public static TalvoraServiceActionResponse RestartService(
+    public static async Task<TalvoraServiceActionResponse> RestartService(
         string serviceName,
         int timeoutSeconds = 30,
         CancellationToken cancellationToken = default)
@@ -253,13 +253,13 @@ public static class ServiceTools
         {
             if (before == ServiceControllerStatus.StopPending)
             {
-                WaitForStatus(service, ServiceControllerStatus.Stopped, Remaining(timeoutSeconds, timer), cancellationToken);
+                await WaitForStatusAsync(service, ServiceControllerStatus.Stopped, Remaining(timeoutSeconds, timer), cancellationToken);
             }
             else
             {
                 if (before is ServiceControllerStatus.StartPending or ServiceControllerStatus.ContinuePending or ServiceControllerStatus.PausePending)
                 {
-                    WaitForStableStatus(service, Remaining(timeoutSeconds, timer), cancellationToken);
+                    await WaitForStableStatusAsync(service, Remaining(timeoutSeconds, timer), cancellationToken);
                     service.Refresh();
                 }
 
@@ -271,13 +271,13 @@ public static class ServiceTools
                     }
 
                     service.Stop();
-                    WaitForStatus(service, ServiceControllerStatus.Stopped, Remaining(timeoutSeconds, timer), cancellationToken);
+                    await WaitForStatusAsync(service, ServiceControllerStatus.Stopped, Remaining(timeoutSeconds, timer), cancellationToken);
                 }
             }
         }
 
         service.Start();
-        WaitForStatus(service, ServiceControllerStatus.Running, Remaining(timeoutSeconds, timer), cancellationToken);
+        await WaitForStatusAsync(service, ServiceControllerStatus.Running, Remaining(timeoutSeconds, timer), cancellationToken);
         return Action(true, service, before);
     }
 
@@ -317,7 +317,7 @@ public static class ServiceTools
         return matched;
     }
 
-    private static void WaitForStableStatus(
+    private static async Task WaitForStableStatusAsync(
         ServiceController service,
         TimeSpan timeout,
         CancellationToken cancellationToken)
@@ -342,11 +342,11 @@ public static class ServiceTools
                 throw new System.TimeoutException($"Service '{service.ServiceName}' did not reach a stable status within {timeout.TotalSeconds:F1} seconds.");
             }
 
-            Thread.Sleep(100);
+            await Task.Delay(100, cancellationToken);
         }
     }
 
-    private static void WaitForStatus(
+    private static async Task WaitForStatusAsync(
         ServiceController service,
         ServiceControllerStatus desiredStatus,
         TimeSpan timeout,
@@ -368,7 +368,7 @@ public static class ServiceTools
                     $"Service '{service.ServiceName}' did not reach {desiredStatus} within {timeout.TotalSeconds:F1} seconds. Current status: {service.Status}.");
             }
 
-            Thread.Sleep(100);
+            await Task.Delay(100, cancellationToken);
         }
     }
 

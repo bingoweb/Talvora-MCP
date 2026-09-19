@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Talvora.Shared</RootNamespace>
+    <AssemblyName>Talvora.Shared</AssemblyName>
+  </PropertyGroup>
+</Project>

@@ -4,30 +4,45 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Read-ProjectSources {
+    param(
+        [Parameter(Mandatory)][string] $Path,
+        [string] $Filter = '*.cs'
+    )
+
+    return (Get-ChildItem -LiteralPath $Path -Filter $Filter -File |
+        Sort-Object Name |
+        ForEach-Object { [IO.File]::ReadAllText($_.FullName) }) -join [Environment]::NewLine
+}
+
 $serviceProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Program.cs'))
 $serviceProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Talvora.csproj'))
-$developerTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\DeveloperTools.cs'))
-$jobTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\JobTools.cs'))
+$developerTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'DeveloperTools*.cs'
+$jobTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'JobTools*.cs'
 $gitTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\GitTools.cs'))
-$configAssetTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ConfigAssetTools.cs'))
+$configAssetTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'ConfigAssetTools*.cs'
 $watchTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\WatchTools.cs'))
 $chocoTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ChocolateyTools.cs'))
-$buildRunnerTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\BuildRunnerTools.cs'))
+$buildRunnerTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'BuildRunnerTools*.cs'
 $sessionTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\SessionTools.cs'))
-$runtimeTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\RuntimeTools.cs'))
-$networkDiagnosticTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\NetworkDiagnosticTools.cs'))
-$windowsToolchainTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\WindowsToolchainTools.cs'))
-$httpMockTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\HttpMockTools.cs'))
-$configFormatTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ConfigFormatTools.cs'))
+$sharedSession = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora.Shared') 'WindowsSessionLauncher*.cs'
+$sharedConstants = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Shared\TalvoraConstants.cs'))
+$runtimeTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'RuntimeTools*.cs'
+$networkDiagnosticTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'NetworkDiagnosticTools*.cs'
+$windowsToolchainTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'WindowsToolchainTools*.cs'
+$httpMockTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'HttpMockTools*.cs'
+$configFormatTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'ConfigFormatTools*.cs'
 $sqliteTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\SqliteTools.cs'))
-$devServerTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\DevServerTools.cs'))
-$structuredConfigTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\StructuredConfigTools.cs'))
-$trayProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
+$devServerTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'DevServerTools*.cs'
+$structuredConfigTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'StructuredConfigTools*.cs'
+$trayProgram = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora.Tray')
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
-$installerProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Program.cs'))
+$installerProgram = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora.Installer')
 $installerProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'))
 $buildInstallerScript = [IO.File]::ReadAllText((Join-Path $RepoRoot 'scripts\Build-Windows-Installer.ps1'))
 $manifest = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\app.manifest'))
+$toolManifest = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Shared\TalvoraToolManifest.cs'))
+$canonicalToolCount = ([regex]::Matches($toolManifest, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count
 $iconPath = Join-Path $RepoRoot 'assets\Talvora.ico'
 $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
@@ -79,9 +94,6 @@ $result = [pscustomobject]@{
     )
     WindowsToolchainToolContract = (
         $windowsToolchainTools -match 'talvora_windows_toolchain_info' -and
-        $windowsToolchainTools -match 'talvora_vs_instances' -and
-        $windowsToolchainTools -match 'talvora_windows_sdk_list' -and
-        $windowsToolchainTools -match 'talvora_vsdev_environment' -and
         $windowsToolchainTools -match 'talvora_visual_studio_instances' -and
         $windowsToolchainTools -match 'talvora_vs_dev_environment' -and
         $windowsToolchainTools -match 'talvora_msbuild_info' -and
@@ -143,10 +155,11 @@ $result = [pscustomobject]@{
         $sessionTools -match 'talvora_session_list' -and
         $sessionTools -match 'talvora_session_get' -and
         $sessionTools -match 'talvora_user_process_start' -and
-        $sessionTools -match 'WTSQueryUserToken' -and
-        $sessionTools -match 'CreateEnvironmentBlock' -and
-        $sessionTools -match 'CreateProcessAsUserW' -and
-        $sessionTools -match 'winsta0\\default'
+        $sessionTools -match 'WindowsSessionLauncher' -and
+        $sharedSession -match 'WTSQueryUserToken' -and
+        $sharedSession -match 'CreateEnvironmentBlock' -and
+        $sharedSession -match 'CreateProcessAsUserW' -and
+        $sharedSession -match 'winsta0'
     )
     BuildRunnerToolContract = (
         $buildRunnerTools -match 'talvora_dotnet_info' -and
@@ -227,11 +240,11 @@ $result = [pscustomobject]@{
         $sqliteTools -match 'SqliteOpenMode\.ReadOnly' -and
         $sqliteTools -match 'BackupDatabase' -and
         $serviceProject -match 'Microsoft\.Data\.Sqlite" Version="10\.0\.12"' -and
-        $installerProgram -match 'talvora_sqlite_info' -and
-        $installerProgram -match 'talvora_sqlite_query' -and
-        $installerProgram -match 'talvora_sqlite_execute' -and
-        $installerProgram -match 'talvora_sqlite_schema' -and
-        $installerProgram -match 'talvora_sqlite_backup'
+        $toolManifest -match 'talvora_sqlite_info' -and
+        $toolManifest -match 'talvora_sqlite_query' -and
+        $toolManifest -match 'talvora_sqlite_execute' -and
+        $toolManifest -match 'talvora_sqlite_schema' -and
+        $toolManifest -match 'talvora_sqlite_backup'
     )
     DevServerToolContract = (
         $devServerTools -match 'talvora_dev_server_start' -and
@@ -244,8 +257,8 @@ $result = [pscustomobject]@{
         $devServerTools -match 'TcpClient' -and
         $devServerTools -match 'HttpClient' -and
         $devServerTools -match 'DevServers' -and
-        $installerProgram -match 'talvora_dev_server_start' -and
-        $installerProgram -match 'talvora_dev_server_stop'
+        $toolManifest -match 'talvora_dev_server_start' -and
+        $toolManifest -match 'talvora_dev_server_stop'
     )
     StructuredConfigToolContract = (
         $structuredConfigTools -match 'talvora_yaml_get' -and
@@ -259,11 +272,17 @@ $result = [pscustomobject]@{
         $structuredConfigTools -match 'YamlDeserializer' -and
         $serviceProject -match 'YamlDotNet" Version="18\.1\.0"' -and
         $serviceProject -match 'Tomlyn" Version="2\.10\.1"' -and
-        $installerProgram -match 'talvora_yaml_get' -and
-        $installerProgram -match 'talvora_toml_delete'
+        $toolManifest -match 'talvora_yaml_get' -and
+        $toolManifest -match 'talvora_toml_delete'
     )
-    InstallerDeclares162Tools = (
-        ([regex]::Matches($installerProgram, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count -ge 162
+    CanonicalManifestDeclares159Tools = ($canonicalToolCount -eq 159)
+    LegacyToolAliasesRemoved = (
+        $toolManifest -notmatch 'talvora_vs_instances' -and
+        $toolManifest -notmatch 'talvora_windows_sdk_list' -and
+        $toolManifest -notmatch 'talvora_vsdev_environment' -and
+        $windowsToolchainTools -notmatch 'Name = "talvora_vs_instances"' -and
+        $windowsToolchainTools -notmatch 'Name = "talvora_windows_sdk_list"' -and
+        $windowsToolchainTools -notmatch 'Name = "talvora_vsdev_environment"'
     )
     DeveloperCoreToolContract = (
         $developerTools -match 'talvora_path_info' -and
@@ -279,7 +298,7 @@ $result = [pscustomobject]@{
         $developerTools -match 'talvora_wait_tcp' -and
         $developerTools -match 'talvora_project_discover' -and
         $developerTools -match 'talvora_resolve_command' -and
-        $installerProgram -match 'talvora_project_discover'
+        $toolManifest -match 'talvora_project_discover'
     )
     ServiceRejectsStopControl = (
         $serviceProgram -match 'CanStop\s*=\s*false' -and
@@ -323,7 +342,8 @@ $result = [pscustomobject]@{
             $trayProgram.IndexOf('--reconnect', [StringComparison]::Ordinal)
     )
     TrayTunnelClientUsesStateWorkingDirectory = (
-        $trayProgram -match 'WorkingDirectory\s*=\s*config\.StateRoot'
+        $trayProgram -match 'ProcessRunner\.RunAsync' -and
+        $trayProgram -match 'config\.StateRoot'
     )
     TrayAutoReconnectsAfterStartup = (
         $trayProgram -match '_\s*=\s*MaintainConnectionAsync\(\)' -and
@@ -333,13 +353,16 @@ $result = [pscustomobject]@{
         $trayProgram -match 'RetryIn='
     )
     TrayBoundsTunnelLogging = (
-        $trayProgram -match 'Environment\["LOG_LEVEL"\]\s*=\s*"warn"' -and
-        $trayProgram -match 'Environment\["ADMIN_UI_LOG_BUFFER_EVENTS"\]\s*=\s*"500"'
+        $trayProgram -match '\["LOG_LEVEL"\]\s*=\s*"warn"' -and
+        $trayProgram -match '\["ADMIN_UI_LOG_BUFFER_EVENTS"\]\s*=\s*"500"'
     )
     InstallerEmbedsPayload = ($installerProject -match 'EmbeddedResource Include="Payload\.zip"')
     InstallerRequiresAdmin = ($manifest -match 'requestedExecutionLevel level="requireAdministrator"')
     InstallerUsesProgramFiles = ($installerProgram -match 'SpecialFolder\.ProgramFiles')
-    InstallerRegistersTrayStartup = ($installerProgram -match 'TalvoraTray')
+    InstallerRegistersTrayStartup = (
+        $installerProgram -match 'RunValueName' -and
+        $sharedConstants -match 'TalvoraTray'
+    )
     InstallerUsesVersionedPayload = (
         $installerProgram -match 'Versions' -and
         $installerProgram -match 'versionId' -and

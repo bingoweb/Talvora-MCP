@@ -1,3 +1,4 @@
+using Talvora.Shared;
 using System.ComponentModel;
 using System.Diagnostics;
 using ModelContextProtocol.Server;
@@ -17,39 +18,23 @@ public static class ProcessTools
         int timeoutSeconds = 300,
         CancellationToken cancellationToken = default)
     {
-        if (timeoutSeconds <= 0) throw new ArgumentOutOfRangeException(nameof(timeoutSeconds));
-
-        var startInfo = new ProcessStartInfo
+        if (timeoutSeconds <= 0)
         {
-            FileName = executable,
-            WorkingDirectory = string.IsNullOrWhiteSpace(workingDirectory) ? Environment.CurrentDirectory : workingDirectory,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
-
-        foreach (var argument in arguments ?? []) startInfo.ArgumentList.Add(argument);
-
-        using var process = new Process { StartInfo = startInfo };
-        if (!process.Start()) throw new InvalidOperationException($"Failed to start process: {executable}");
-
-        var processId = process.Id;
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-
-        try
-        {
-            await process.WaitForExitAsync(linked.Token);
-            return new TalvoraProcessResult(process.ExitCode, await stdoutTask, await stderrTask, false, processId);
+            throw new ArgumentOutOfRangeException(nameof(timeoutSeconds));
         }
-        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
-        {
-            try { process.Kill(entireProcessTree: true); } catch { }
-            await process.WaitForExitAsync(CancellationToken.None);
-            return new TalvoraProcessResult(process.ExitCode, await stdoutTask, await stderrTask, true, processId);
-        }
+
+        var result = await ProcessRunner.RunAsync(
+            executable,
+            workingDirectory,
+            arguments,
+            timeoutSeconds: timeoutSeconds,
+            cancellationToken: cancellationToken);
+
+        return new TalvoraProcessResult(
+            result.ExitCode,
+            result.StandardOutput,
+            result.StandardError,
+            result.TimedOut,
+            result.ProcessId);
     }
 }

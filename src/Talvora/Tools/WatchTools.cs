@@ -127,7 +127,7 @@ internal sealed class TalvoraWatchRuntime : IDisposable
 
     public void Dispose()
     {
-        try { Watcher.EnableRaisingEvents = false; } catch { }
+        try { Watcher.EnableRaisingEvents = false; } catch (ObjectDisposedException) { }
         Watcher.Dispose();
     }
 }

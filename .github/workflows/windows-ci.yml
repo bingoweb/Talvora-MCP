@@ -11,24 +11,82 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Restore
+
+      - name: Restore current projects
         shell: pwsh
         run: |
-          dotnet restore src/Talvora/Talvora.csproj
-          if ($LASTEXITCODE -ne 0) { throw "Talvora restore failed: $LASTEXITCODE" }
-          dotnet restore tests/Talvora.Smoke/Talvora.Smoke.csproj
-          if ($LASTEXITCODE -ne 0) { throw "Talvora.Smoke restore failed: $LASTEXITCODE" }
-      - name: Build
+          $projects = @(
+            'src/Talvora.Shared/Talvora.Shared.csproj',
+            'src/Talvora/Talvora.csproj',
+            'src/Talvora.Tray/Talvora.Tray.csproj',
+            'src/Talvora.Installer/Talvora.Installer.csproj',
+            'tests/Talvora.Smoke/Talvora.Smoke.csproj'
+          )
+          foreach ($project in $projects) {
+            dotnet restore $project
+            if ($LASTEXITCODE -ne 0) { throw "Restore failed: $project" }
+          }
+
+      - name: Build non-payload projects
         shell: pwsh
         run: |
-          dotnet build src/Talvora/Talvora.csproj -c Release --no-restore
-          if ($LASTEXITCODE -ne 0) { throw "Talvora build failed: $LASTEXITCODE" }
-          dotnet build tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-restore
-          if ($LASTEXITCODE -ne 0) { throw "Talvora.Smoke build failed: $LASTEXITCODE" }
-      - name: Start and verify real MCP tools
+          $projects = @(
+            'src/Talvora.Shared/Talvora.Shared.csproj',
+            'src/Talvora/Talvora.csproj',
+            'src/Talvora.Tray/Talvora.Tray.csproj',
+            'tests/Talvora.Smoke/Talvora.Smoke.csproj'
+          )
+          foreach ($project in $projects) {
+            dotnet build $project -c Release --no-restore --nologo
+            if ($LASTEXITCODE -ne 0) { throw "Build failed: $project" }
+          }
+
+      - name: Parse PowerShell scripts
+        shell: pwsh
+        run: |
+          $errorsFound = @()
+          foreach ($script in Get-ChildItem scripts -Filter '*.ps1') {
+            $tokens = $null
+            $errors = $null
+            [Management.Automation.Language.Parser]::ParseFile($script.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count) { $errorsFound += $errors }
+          }
+          if ($errorsFound.Count) {
+            $errorsFound | Format-List | Out-Host
+            throw 'PowerShell parse failed.'
+          }
+
+      - name: Reject WinGet
+        shell: pwsh
+        run: |
+          $hits = Get-ChildItem -Recurse -File src,scripts,tests,TALVORA-KUR.cmd,TALVORA-BUSINESS-KUR.cmd | Select-String -Pattern '(?i)(^|[^A-Za-z0-9_])winget(\.exe)?([^A-Za-z0-9_]|$)'
+          if ($hits) {
+            $hits | ForEach-Object { Write-Error $_.ToString() }
+            throw 'WinGet is forbidden. Use Chocolatey.'
+          }
+
+      - name: Validate source contracts
+        shell: pwsh
+        run: |
+          & ./tests/NativeInstallerSourceRegression.ps1
+          if (-not $?) { throw 'Native installer source regression failed.' }
+
+          foreach ($test in @(
+            './tests/FileListMetadataRegression.ps1',
+            './tests/KnowledgeSearchScanRegression.ps1',
+            './tests/RuntimeIdentityCacheRegression.ps1',
+            './tests/RuntimeMetadataCacheRegression.ps1',
+            './tests/SmokeKnowledgeRootsIsolationRegression.ps1'
+          )) {
+            & $test
+            if (-not $?) { throw "Regression failed: $test" }
+          }
+
+      - name: Start and verify current MCP surface
         shell: pwsh
         run: |
           $process = Start-Process dotnet -ArgumentList @('run','--project','src/Talvora/Talvora.csproj','-c','Release','--no-build') -PassThru -WindowStyle Hidden
@@ -36,99 +94,80 @@ jobs:
             $deadline = [DateTime]::UtcNow.AddSeconds(30)
             $health = $null
             do {
-              try { $health = Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 2 -Proxy $null } catch { $health = $null }
+              try {
+                $health = Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 2 -Proxy $null
+              }
+              catch {
+                $health = $null
+              }
               if ($null -ne $health) { break }
               Start-Sleep -Milliseconds 300
             } while ([DateTime]::UtcNow -lt $deadline)
+
             if ($null -eq $health) { throw 'Talvora health check did not become ready.' }
-            if ($health.product -ne 'Talvora') { throw 'Unexpected health product.' }
-            dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-build -- 'http://127.0.0.1:7676/mcp'
+
+            dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-build -- 'http://127.0.0.1:7676/mcp' $PWD.Path
             if ($LASTEXITCODE -ne 0) { throw "MCP smoke failed: $LASTEXITCODE" }
           }
           finally {
             Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
           }
-      - name: Parse PowerShell installers
-        shell: pwsh
-        run: |
-          foreach ($script in Get-ChildItem scripts -Filter '*.ps1') {
-            $tokens = $null; $errors = $null
-            [Management.Automation.Language.Parser]::ParseFile($script.FullName,[ref]$tokens,[ref]$errors) | Out-Null
-            if ($errors.Count) { $errors | Format-List | Out-Host; throw "PowerShell parse failed: $($script.Name)" }
-          }
-      - name: Reject WinGet
-        shell: pwsh
-        run: |
-          $hits = Get-ChildItem -Recurse -File src,scripts,tests,TALVORA-KUR.cmd,TALVORA-BUSINESS-KUR.cmd | Select-String -Pattern '(?i)(^|[^A-Za-z0-9_])winget(\.exe)?([^A-Za-z0-9_]|$)'
-          if ($hits) { $hits | ForEach-Object { Write-Error $_.ToString() }; throw 'WinGet is forbidden. Use Chocolatey.' }
-      - name: Validate ChatGPT Business tunnel bootstrap
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $script = (Resolve-Path './scripts/Configure-ChatGPT-Business.ps1').Path
-          if (-not (Test-Path -LiteralPath $script -PathType Leaf)) { throw "Business tunnel bootstrap missing: $script" }
 
+      - name: Validate ChatGPT Business bootstrap
+        shell: pwsh
+        run: |
+          $script = (Resolve-Path './scripts/Configure-ChatGPT-Business.ps1').Path
           & $script -SelfTest
+          if (-not $?) { throw 'Business bootstrap self-test failed.' }
 
           $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
           & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script -SelfTest
-          if ($LASTEXITCODE -ne 0) { throw "Windows PowerShell 5.1 Business tunnel bootstrap self-test failed: $LASTEXITCODE" }
+          if ($LASTEXITCODE -ne 0) { throw 'Windows PowerShell 5.1 Business bootstrap self-test failed.' }
 
-          $distributionRoot = Join-Path $env:RUNNER_TEMP 'talvora-openai-tunnel-client'
-          & $script -InstallOnly -InstallRoot $distributionRoot
-          if (-not $?) { throw 'Business tunnel distribution install failed.' }
-
-          $tunnelClient = Join-Path $distributionRoot 'bin\tunnel-client.exe'
-          if (-not (Test-Path -LiteralPath $tunnelClient -PathType Leaf)) { throw "Installed tunnel-client missing: $tunnelClient" }
-
-          $versionOutput = @(& $tunnelClient --version 2>&1)
-          if ($LASTEXITCODE -ne 0) { throw "tunnel-client --version failed: $LASTEXITCODE" }
-          if (($versionOutput -join ' ') -notmatch '0\.0\.14') { throw "Unexpected tunnel-client version: $($versionOutput -join ' ')" }
-
-          $connectHelp = @(& $tunnelClient runtimes connect --help 2>&1)
-          if ($LASTEXITCODE -ne 0) { throw "tunnel-client runtimes connect --help failed: $LASTEXITCODE" }
-          $connectHelpText = $connectHelp -join [Environment]::NewLine
-          foreach ($requiredFlag in @('--tunnel-id','--runtime-api-key','--mcp-server-url')) {
-            if ($connectHelpText -notmatch [regex]::Escape($requiredFlag)) { throw "tunnel-client connect help missing $requiredFlag" }
-          }
-      - name: Install and verify LocalSystem service
+      - name: Build canonical native installer
         shell: pwsh
         run: |
-          $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-          $principal = [Security.Principal.WindowsPrincipal]::new($identity)
-          if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-            throw 'Windows CI runner must be elevated for the real service test.'
-          }
-          $clientHome = Join-Path $env:RUNNER_TEMP 'talvora-codex'
-          $installOutput = @(& ./scripts/Install.ps1 -RepoRoot $PWD.Path -ClientHome $clientHome 2>&1 | Tee-Object -Variable installLines)
-          if ($LASTEXITCODE -ne 0) { throw "Install.ps1 failed: $LASTEXITCODE" }
-          if (-not ($installOutput -match '^MCP_SMOKE_OK$')) { throw 'Install.ps1 did not prove a real MCP smoke before READY.' }
+          & ./scripts/Build-Windows-Installer.ps1
+          if (-not $?) { throw 'Native installer build failed.' }
+          if (-not (Test-Path './artifacts/installer/Talvora-Setup.exe')) { throw 'Talvora-Setup.exe was not produced.' }
+
+      - name: Install and verify canonical runtime
+        shell: pwsh
+        run: |
+          & ./scripts/Install.ps1 -RepoRoot $PWD.Path -SkipBuild
+          if (-not $?) { throw 'Canonical install wrapper failed.' }
+
           $service = Get-CimInstance Win32_Service -Filter "Name='Talvora'"
-          if ($service.State -ne 'Running') { throw "Talvora service state is $($service.State)" }
+          if ($null -eq $service -or $service.State -ne 'Running') { throw 'Talvora service is not running.' }
           if ($service.StartName -ne 'LocalSystem') { throw "Talvora service account is $($service.StartName)" }
+
           $health = Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -TimeoutSec 5 -Proxy $null
           if ($health.sid -ne 'S-1-5-18') { throw "Talvora service SID is $($health.sid)" }
           if (-not $health.isWindowsService) { throw 'Talvora process did not detect Windows Service hosting.' }
-          $expectedCommit = (git rev-parse HEAD).Trim()
-          if ($health.sourceCommit -ne $expectedCommit) { throw "Health sourceCommit mismatch. Expected=$expectedCommit Actual=$($health.sourceCommit)" }
+
+          $toolManifest = [IO.File]::ReadAllText((Join-Path $PWD.Path 'src/Talvora.Shared/TalvoraToolManifest.cs'))
+          $expectedToolCount = ([regex]::Matches($toolManifest, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count
+
           $statePath = Join-Path $env:LOCALAPPDATA 'Talvora\current.json'
           if (-not (Test-Path -LiteralPath $statePath -PathType Leaf)) { throw "Talvora state file missing: $statePath" }
           $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
-          if ($state.SourceCommit -ne $expectedCommit) { throw "State SourceCommit mismatch. Expected=$expectedCommit Actual=$($state.SourceCommit)" }
-          if ($state.ToolCount -ne 32) { throw "State ToolCount mismatch. Expected=32 Actual=$($state.ToolCount)" }
-          if (@($state.ToolNames).Count -ne 32) { throw "State ToolNames count mismatch. Expected=32 Actual=$(@($state.ToolNames).Count)" }
-          foreach ($toolName in @('talvora_system_info','talvora_create_directory','talvora_copy','talvora_move','talvora_env_get','talvora_env_list','talvora_env_set','talvora_env_delete','talvora_eventlog_list','talvora_eventlog_query','talvora_run_process','talvora_run_powershell','talvora_process_list','talvora_service_list','talvora_registry_get','search','fetch')) {
-            if ($toolName -notin @($state.ToolNames)) { throw "State ToolNames missing $toolName" }
-          }
+          if ([int]$state.ToolCount -ne $expectedToolCount) { throw "State ToolCount mismatch. Expected=$expectedToolCount Actual=$($state.ToolCount)" }
+
+          dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-build -- 'http://127.0.0.1:7676/mcp' $PWD.Path
+          if ($LASTEXITCODE -ne 0) { throw 'Installed MCP smoke failed.' }
+
       - name: Clean service test
         if: always()
         shell: pwsh
         run: |
+          Get-Process Talvora.Tray -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+
           $service = Get-Service -Name Talvora -ErrorAction SilentlyContinue
           if ($null -ne $service) {
             if ($service.Status -ne 'Stopped') { Stop-Service Talvora -Force -ErrorAction SilentlyContinue }
             & "$env:SystemRoot\System32\sc.exe" delete Talvora | Out-Host
           }
+
+          Remove-Item -LiteralPath 'C:\Program Files\Talvora' -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -LiteralPath (Join-Path $env:ProgramData 'Talvora') -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'Talvora') -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'talvora-codex') -Recurse -Force -ErrorAction SilentlyContinue

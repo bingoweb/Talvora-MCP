@@ -1,3 +1,4 @@
+using Talvora.Shared;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
@@ -40,73 +41,33 @@ public static class PowerShellTools
         var resolved = ResolveEngine(engine);
         var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
 
-        var startInfo = new ProcessStartInfo
+        var arguments = new[]
         {
-            FileName = resolved.Executable,
-            WorkingDirectory = string.IsNullOrWhiteSpace(workingDirectory)
-                ? Environment.CurrentDirectory
-                : workingDirectory,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-EncodedCommand",
+            encoded,
         };
 
-        startInfo.ArgumentList.Add("-NoLogo");
-        startInfo.ArgumentList.Add("-NoProfile");
-        startInfo.ArgumentList.Add("-NonInteractive");
-        startInfo.ArgumentList.Add("-ExecutionPolicy");
-        startInfo.ArgumentList.Add("Bypass");
-        startInfo.ArgumentList.Add("-EncodedCommand");
-        startInfo.ArgumentList.Add(encoded);
+        var result = await ProcessRunner.RunAsync(
+            resolved.Executable,
+            workingDirectory,
+            arguments,
+            timeoutSeconds: timeoutSeconds,
+            cancellationToken: cancellationToken);
 
-        using var process = new Process { StartInfo = startInfo };
-        if (!process.Start())
-        {
-            throw new InvalidOperationException($"Failed to start PowerShell engine: {resolved.Executable}");
-        }
-
-        var processId = process.Id;
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-
-        try
-        {
-            await process.WaitForExitAsync(linked.Token);
-            return new TalvoraPowerShellResult(
-                resolved.Name,
-                resolved.Executable,
-                process.ExitCode,
-                await stdoutTask,
-                await stderrTask,
-                false,
-                processId);
-        }
-        catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
-        {
-            try
-            {
-                process.Kill(entireProcessTree: true);
-            }
-            catch
-            {
-                // Best effort. WaitForExit below will surface if the process cannot be stopped.
-            }
-
-            await process.WaitForExitAsync(CancellationToken.None);
-            return new TalvoraPowerShellResult(
-                resolved.Name,
-                resolved.Executable,
-                process.ExitCode,
-                await stdoutTask,
-                await stderrTask,
-                true,
-                processId);
-        }
+        return new TalvoraPowerShellResult(
+            resolved.Name,
+            resolved.Executable,
+            result.ExitCode,
+            result.StandardOutput,
+            result.StandardError,
+            result.TimedOut,
+            result.ProcessId);
     }
-
     private static (string Name, string Executable) ResolveEngine(string engine)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(engine);

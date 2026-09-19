@@ -10,4 +10,7 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Talvora.Shared\Talvora.Shared.csproj" />
+  </ItemGroup>
 </Project>

@@ -151,17 +151,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $RepoRoot 'src\Talvora\Talvora.cspro
     throw "Talvora local repository is incomplete: $RepoRoot"
 }
 
-if (-not (Get-Command choco.exe -ErrorAction SilentlyContinue)) {
-    Set-ExecutionPolicy Bypass -Scope Process -Force
-    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
-    Invoke-Expression ((New-Object Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-}
-$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
-if (-not (Get-Command git.exe -ErrorAction SilentlyContinue)) { choco install git -y --no-progress }
-if (-not (Get-Command dotnet.exe -ErrorAction SilentlyContinue)) { choco install dotnet-10.0-sdk --version=10.0.400 -y --no-progress }
-$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+Write-Host "Installing Talvora from local repository through the canonical native installer: $RepoRoot"
 
-Write-Host "Installing Talvora from local repository: $RepoRoot"
-
-& (Join-Path $RepoRoot 'scripts\Install.ps1') -RepoRoot $RepoRoot -ClientHome $clientHome
-if ($LASTEXITCODE -ne 0) { throw "Talvora installation failed: $LASTEXITCODE" }
+& (Join-Path $RepoRoot 'scripts\Install.ps1') -RepoRoot $RepoRoot
+if (-not $?) { throw "Talvora installation failed." }

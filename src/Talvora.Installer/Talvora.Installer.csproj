@@ -13,6 +13,9 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Talvora.Shared\Talvora.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <EmbeddedResource Include="Payload.zip" LogicalName="Talvora.Payload.zip" />
   </ItemGroup>
 </Project>

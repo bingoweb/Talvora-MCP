@@ -3,6 +3,9 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Talvora.Shared\Talvora.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
   </ItemGroup>
 </Project>

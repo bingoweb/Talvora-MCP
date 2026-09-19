@@ -1,3 +1,4 @@
+using Talvora.Shared;
 using System.ComponentModel;
 using System.Diagnostics;
 using ModelContextProtocol.Server;
@@ -137,7 +138,7 @@ public static class GitTools
             branch,
             branch is null,
             !string.IsNullOrEmpty(status.StandardOutput),
-            SplitLines(remotes.StandardOutput));
+            TextLines.Split(remotes.StandardOutput));
     }
 
     [McpServerTool(
@@ -162,7 +163,7 @@ public static class GitTools
         };
 
         var result = await RunGitCheckedAsync(path, args, cancellationToken: cancellationToken);
-        var lines = SplitLines(result.StandardOutput);
+        var lines = TextLines.Split(result.StandardOutput);
 
         string? branch = null;
         string? head = null;
@@ -350,7 +351,7 @@ public static class GitTools
             cancellationToken: cancellationToken);
 
         var commits = new List<TalvoraGitCommitEntry>();
-        foreach (var line in SplitLines(result.StandardOutput))
+        foreach (var line in TextLines.Split(result.StandardOutput))
         {
             var fields = line.Split(FieldSeparator);
             if (fields.Length < 6)
@@ -420,7 +421,7 @@ public static class GitTools
             cancellationToken: cancellationToken);
 
         var branches = new List<TalvoraGitBranchEntry>();
-        foreach (var line in SplitLines(result.StandardOutput))
+        foreach (var line in TextLines.Split(result.StandardOutput))
         {
             var fields = line.Split(FieldSeparator);
             if (fields.Length < 7)
@@ -532,109 +533,29 @@ public static class GitTools
         int timeoutSeconds = 300,
         CancellationToken cancellationToken = default)
     {
-        if (timeoutSeconds < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(timeoutSeconds));
-        }
-
         var git = ResolveGitExecutable();
-        var argumentList = arguments.ToArray();
-
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = git,
-            WorkingDirectory = workingDirectory,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
-
-        foreach (var argument in argumentList)
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
-        foreach (var pair in environment ?? new Dictionary<string, string?>())
-        {
-            startInfo.Environment[pair.Key] = pair.Value;
-        }
-
-        using var process = new Process { StartInfo = startInfo };
-        if (!process.Start())
-        {
-            throw new InvalidOperationException("Failed to start git.");
-        }
-
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-        if (timeoutSeconds > 0)
-        {
-            timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
-        }
-
-        var timedOut = false;
-        try
-        {
-            await process.WaitForExitAsync(timeout.Token);
-        }
-        catch (OperationCanceledException) when (
-            !cancellationToken.IsCancellationRequested &&
-            timeoutSeconds > 0)
-        {
-            timedOut = true;
-            try { process.Kill(entireProcessTree: true); } catch { }
-            await process.WaitForExitAsync(CancellationToken.None);
-        }
-
-        return new TalvoraGitRunResponse(
-            process.ExitCode,
-            await stdoutTask,
-            await stderrTask,
-            timedOut,
-            process.Id,
+        var result = await ProcessRunner.RunAsync(
             git,
             workingDirectory,
-            argumentList);
+            arguments,
+            environment,
+            timeoutSeconds,
+            cancellationToken);
+
+        return new TalvoraGitRunResponse(
+            result.ExitCode,
+            result.StandardOutput,
+            result.StandardError,
+            result.TimedOut,
+            result.ProcessId,
+            result.Executable,
+            result.WorkingDirectory,
+            result.Arguments);
     }
 
-    private static string ResolveGitExecutable()
-    {
-        var candidates = new List<string>();
-
-        var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-        foreach (var directory in path.Split(
-                     Path.PathSeparator,
-                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            candidates.Add(Path.Combine(directory, "git.exe"));
-            candidates.Add(Path.Combine(directory, "git"));
-        }
-
-        candidates.Add(@"C:\Program Files\Git\cmd\git.exe");
-        candidates.Add(@"C:\Program Files\Git\bin\git.exe");
-
-        foreach (var candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            try
-            {
-                if (File.Exists(candidate))
-                {
-                    return Path.GetFullPath(candidate);
-                }
-            }
-            catch
-            {
-            }
-        }
-
-        return "git";
-    }
-
-    private static string[] SplitLines(string value) =>
-        value.Split(
-            new[] { "\r\n", "\n", "\r" },
-            StringSplitOptions.RemoveEmptyEntries);
+    private static string ResolveGitExecutable() =>
+        CommandResolver.Resolve(
+            ["git.exe", "git"],
+            [@"C:\Program Files\Git\cmd\git.exe", @"C:\Program Files\Git\bin\git.exe"])
+        ?? "git.exe";
 }
