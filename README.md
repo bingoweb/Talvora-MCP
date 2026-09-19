@@ -11,6 +11,7 @@ Talvora is a Windows-local MCP server built for one owner machine with a full-ca
 - Chocolatey is the only package manager used by Talvora setup. WinGet is forbidden.
 - No OpenAI API account, API key, public ingress, or tunnel is required by the local runtime.
 - Old Talvora services, scheduled tasks, runtime folders, and source checkout are intentionally removed by the reset installer.
+- The verified Windows application-development toolchain is documented in [`docs/DEVELOPMENT-ENVIRONMENT.md`](docs/DEVELOPMENT-ENVIRONMENT.md).
 
 ## Full-capability primitive tools
 
