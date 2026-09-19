@@ -325,6 +325,13 @@ $result = [pscustomobject]@{
     TrayTunnelClientUsesStateWorkingDirectory = (
         $trayProgram -match 'WorkingDirectory\s*=\s*config\.StateRoot'
     )
+    TrayAutoReconnectsAfterStartup = (
+        $trayProgram -match '_\s*=\s*MaintainConnectionAsync\(\)' -and
+        $trayProgram -match '_timer\.Tick\s*\+=.*MaintainConnectionAsync' -and
+        $trayProgram -match 'Automatic reconnect succeeded' -and
+        $trayProgram -match 'GetAutomaticReconnectDelay' -and
+        $trayProgram -match 'RetryIn='
+    )
     InstallerEmbedsPayload = ($installerProject -match 'EmbeddedResource Include="Payload\.zip"')
     InstallerRequiresAdmin = ($manifest -match 'requestedExecutionLevel level="requireAdministrator"')
     InstallerUsesProgramFiles = ($installerProgram -match 'SpecialFolder\.ProgramFiles')

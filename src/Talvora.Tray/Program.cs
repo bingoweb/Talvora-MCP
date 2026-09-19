@@ -97,6 +97,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         @"Local\Talvora.Tray.Shutdown");
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private Icon? _statusIcon;
+    private int _automaticReconnectFailures;
+    private DateTime _nextAutomaticReconnectUtc = DateTime.MinValue;
     private TalvoraStatus _lastStatus = new(
         TalvoraConnectionState.LocalOnly,
         "Talvora durumu kontrol ediliyor...",
@@ -148,10 +150,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         _timer = new System.Windows.Forms.Timer
         {
-            Interval = 30_000,
+            Interval = 5_000,
             Enabled = true,
         };
-        _timer.Tick += async (_, _) => await RefreshStatusAsync(showBalloon: false);
+        _timer.Tick += async (_, _) => await MaintainConnectionAsync();
 
         _shutdownTimer = new System.Windows.Forms.Timer
         {
@@ -166,7 +168,134 @@ internal sealed class TrayApplicationContext : ApplicationContext
             }
         };
 
-        _ = RefreshStatusAsync(showBalloon: false);
+        _ = MaintainConnectionAsync();
+    }
+
+    private async Task MaintainConnectionAsync()
+    {
+        if (!await _operationGate.WaitAsync(0))
+        {
+            return;
+        }
+
+        try
+        {
+            var status = await BusinessTunnelClient.GetStatusAsync(CancellationToken.None);
+            if (status.State == TalvoraConnectionState.Ready)
+            {
+                ResetAutomaticReconnectBackoff();
+                SetTrayState(status.State, status.Summary, status.Detail);
+                return;
+            }
+
+            if (status.State == TalvoraConnectionState.Offline)
+            {
+                _timer.Interval = 5_000;
+                _nextAutomaticReconnectUtc = DateTime.UtcNow.AddSeconds(5);
+                SetTrayState(
+                    TalvoraConnectionState.LocalOnly,
+                    "Talvora başlatılıyor...",
+                    "Yerel servis bekleniyor; ChatGPT Business otomatik bağlanacak.");
+                return;
+            }
+
+            SetTrayState(status.State, status.Summary, status.Detail);
+
+            if (DateTime.UtcNow < _nextAutomaticReconnectUtc)
+            {
+                return;
+            }
+
+            _reconnectItem.Enabled = false;
+            _refreshItem.Enabled = false;
+            SetTrayState(
+                TalvoraConnectionState.LocalOnly,
+                "ChatGPT Business otomatik bağlanıyor...",
+                "Tunnel hazır olana kadar Talvora otomatik yeniden deneyecek.");
+
+            try
+            {
+                await BusinessTunnelClient.ReconnectAsync(CancellationToken.None);
+                status = await BusinessTunnelClient.GetStatusAsync(CancellationToken.None);
+                SetTrayState(status.State, status.Summary, status.Detail);
+
+                if (status.State == TalvoraConnectionState.Ready)
+                {
+                    ResetAutomaticReconnectBackoff();
+                    var alias = BusinessTunnelClient.LoadConfig().Alias;
+                    TrayLog.Write($"Automatic reconnect succeeded. Alias={alias}");
+                    return;
+                }
+
+                throw new InvalidOperationException(
+                    "Tunnel connect tamamlandı ancak bağlantı henüz hazır değil.");
+            }
+            catch (Exception ex)
+            {
+                _automaticReconnectFailures++;
+                var delay = GetAutomaticReconnectDelay(_automaticReconnectFailures);
+                _nextAutomaticReconnectUtc = DateTime.UtcNow.Add(delay);
+                _timer.Interval = 5_000;
+
+                TrayLog.Write(
+                    $"Automatic reconnect failed. Attempt={_automaticReconnectFailures}; RetryIn={delay.TotalSeconds:F0}s",
+                    ex);
+
+                var localHealthy = await BusinessTunnelClient.IsLocalMcpHealthyAsync(
+                    CancellationToken.None);
+
+                SetTrayState(
+                    localHealthy ? TalvoraConnectionState.LocalOnly : TalvoraConnectionState.Offline,
+                    localHealthy
+                        ? "Talvora çalışıyor, Business bağlantısı bekleniyor"
+                        : "Talvora servisi bekleniyor",
+                    $"Otomatik yeniden deneme {delay.TotalSeconds:F0} saniye sonra.");
+            }
+            finally
+            {
+                _reconnectItem.Enabled = true;
+                _refreshItem.Enabled = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _automaticReconnectFailures++;
+            var delay = GetAutomaticReconnectDelay(_automaticReconnectFailures);
+            _nextAutomaticReconnectUtc = DateTime.UtcNow.Add(delay);
+            _timer.Interval = 5_000;
+            TrayLog.Write(
+                $"Automatic connection maintenance failed. Attempt={_automaticReconnectFailures}; RetryIn={delay.TotalSeconds:F0}s",
+                ex);
+            SetTrayState(
+                TalvoraConnectionState.LocalOnly,
+                "Talvora bağlantısı hazırlanıyor",
+                $"Otomatik yeniden deneme {delay.TotalSeconds:F0} saniye sonra.");
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
+    }
+
+    private void ResetAutomaticReconnectBackoff()
+    {
+        _automaticReconnectFailures = 0;
+        _nextAutomaticReconnectUtc = DateTime.MinValue;
+        _timer.Interval = 30_000;
+    }
+
+    private static TimeSpan GetAutomaticReconnectDelay(int failureCount)
+    {
+        var seconds = failureCount switch
+        {
+            <= 1 => 5,
+            2 => 10,
+            3 => 20,
+            4 => 30,
+            _ => 60,
+        };
+
+        return TimeSpan.FromSeconds(seconds);
     }
 
     private async Task RefreshStatusAsync(bool showBalloon)
