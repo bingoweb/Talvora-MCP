@@ -332,6 +332,10 @@ $result = [pscustomobject]@{
         $trayProgram -match 'GetAutomaticReconnectDelay' -and
         $trayProgram -match 'RetryIn='
     )
+    TrayBoundsTunnelLogging = (
+        $trayProgram -match 'Environment\["LOG_LEVEL"\]\s*=\s*"warn"' -and
+        $trayProgram -match 'Environment\["ADMIN_UI_LOG_BUFFER_EVENTS"\]\s*=\s*"500"'
+    )
     InstallerEmbedsPayload = ($installerProject -match 'EmbeddedResource Include="Payload\.zip"')
     InstallerRequiresAdmin = ($manifest -match 'requestedExecutionLevel level="requireAdministrator"')
     InstallerUsesProgramFiles = ($installerProgram -match 'SpecialFolder\.ProgramFiles')

@@ -744,6 +744,8 @@ internal static class BusinessTunnelClient
 
         startInfo.Environment["CONTROL_PLANE_API_KEY"] = credential;
         startInfo.Environment["TUNNEL_CLIENT_STATE_DIR"] = config.StateRoot;
+        startInfo.Environment["LOG_LEVEL"] = "warn";
+        startInfo.Environment["ADMIN_UI_LOG_BUFFER_EVENTS"] = "500";
 
         using var process = new Process
         {
