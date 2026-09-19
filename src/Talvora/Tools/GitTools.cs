@@ -481,7 +481,7 @@ public static class GitTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraGitRunResponse)),
-     Description("Run Git with arbitrary arguments in any accessible repository or working directory. No Git subcommand, ref, remote, path, or option denylist/allowlist is applied.")]
+     Description("Run Git with arbitrary arguments in any accessible repository or working directory. HTTPS pushes to github.com automatically run in the logged-on Windows user session so Git Credential Manager can use that user\'s cached OAuth credential; missing credentials fail fast instead of hanging the LocalSystem MCP. No Git subcommand, ref, remote, path, or option denylist/allowlist is applied.")]
     public static Task<TalvoraGitRunResponse> Run(
         string repositoryPath,
         string[] arguments,
@@ -590,13 +590,41 @@ public static class GitTools
         CancellationToken cancellationToken = default)
     {
         var git = ResolveGitExecutable();
-        var result = await ProcessRunner.RunAsync(
-            git,
-            workingDirectory,
-            arguments,
-            environment,
-            timeoutSeconds,
-            cancellationToken);
+        var requestedArguments = arguments.ToArray();
+
+        ProcessExecutionResult result;
+        if (await ShouldUseInteractiveUserForGitHubPushAsync(
+                git,
+                workingDirectory,
+                requestedArguments,
+                cancellationToken).ConfigureAwait(false))
+        {
+            var interactiveEnvironment = environment is null
+                ? new Dictionary<string, string?>()
+                : new Dictionary<string, string?>(environment);
+
+            interactiveEnvironment["GIT_TERMINAL_PROMPT"] = "0";
+            interactiveEnvironment["GCM_INTERACTIVE"] = "0";
+            interactiveEnvironment["GCM_GUI_PROMPT"] = "0";
+
+            result = await InteractiveUserProcessRunner.RunAsync(
+                git,
+                workingDirectory,
+                requestedArguments,
+                interactiveEnvironment,
+                timeoutSeconds,
+                cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            result = await ProcessRunner.RunAsync(
+                git,
+                workingDirectory,
+                requestedArguments,
+                environment,
+                timeoutSeconds,
+                cancellationToken).ConfigureAwait(false);
+        }
 
         return new TalvoraGitRunResponse(
             result.ExitCode,
@@ -608,6 +636,136 @@ public static class GitTools
             result.WorkingDirectory,
             result.Arguments);
     }
+
+    private static async Task<bool> ShouldUseInteractiveUserForGitHubPushAsync(
+        string git,
+        string workingDirectory,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken)
+    {
+        var pushIndex = -1;
+        for (var index = 0; index < arguments.Count; index++)
+        {
+            if (string.Equals(
+                    arguments[index],
+                    "push",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                pushIndex = index;
+                break;
+            }
+        }
+
+        if (pushIndex < 0)
+        {
+            return false;
+        }
+
+        var remote = ExtractPushRemote(arguments, pushIndex);
+        if (string.IsNullOrWhiteSpace(remote))
+        {
+            var branch = await RunGitServiceAsync(
+                git,
+                workingDirectory,
+                ["symbolic-ref", "--quiet", "--short", "HEAD"],
+                cancellationToken).ConfigureAwait(false);
+
+            if (branch.ExitCode == 0)
+            {
+                var branchName = branch.StandardOutput.Trim();
+                if (!string.IsNullOrWhiteSpace(branchName))
+                {
+                    var configured = await RunGitServiceAsync(
+                        git,
+                        workingDirectory,
+                        ["config", "--get", $"branch.{branchName}.remote"],
+                        cancellationToken).ConfigureAwait(false);
+
+                    if (configured.ExitCode == 0)
+                    {
+                        remote = configured.StandardOutput.Trim();
+                    }
+                }
+            }
+
+            remote = string.IsNullOrWhiteSpace(remote)
+                ? "origin"
+                : remote;
+        }
+
+        string remoteUrl;
+        if (Uri.TryCreate(remote, UriKind.Absolute, out var directUri))
+        {
+            remoteUrl = directUri.AbsoluteUri;
+        }
+        else
+        {
+            var resolved = await RunGitServiceAsync(
+                git,
+                workingDirectory,
+                ["remote", "get-url", "--push", remote],
+                cancellationToken).ConfigureAwait(false);
+
+            if (resolved.ExitCode != 0)
+            {
+                return false;
+            }
+
+            remoteUrl = resolved.StandardOutput.Trim();
+        }
+
+        return Uri.TryCreate(remoteUrl, UriKind.Absolute, out var uri) &&
+            (string.Equals(
+                 uri.Scheme,
+                 Uri.UriSchemeHttps,
+                 StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(
+                 uri.Scheme,
+                 Uri.UriSchemeHttp,
+                 StringComparison.OrdinalIgnoreCase)) &&
+            string.Equals(
+                uri.Host,
+                "github.com",
+                StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ExtractPushRemote(
+        IReadOnlyList<string> arguments,
+        int pushIndex)
+    {
+        for (var index = pushIndex + 1; index < arguments.Count; index++)
+        {
+            var value = arguments[index];
+
+            if (value is "--repo" or "--receive-pack" or "--exec" or "--push-option" or "-o")
+            {
+                index++;
+                continue;
+            }
+
+            if (value.StartsWith("-", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            return value;
+        }
+
+        return null;
+    }
+
+    private static Task<ProcessExecutionResult> RunGitServiceAsync(
+        string git,
+        string workingDirectory,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken) =>
+        ProcessRunner.RunAsync(
+            git,
+            workingDirectory,
+            arguments,
+            environment: null,
+            timeoutSeconds: 30,
+            cancellationToken);
 
     private static string ResolveGitExecutable() =>
         CommandResolver.Resolve(
