@@ -14,6 +14,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Talvora.Shared\Talvora.Shared.csproj" />
+    <PackageReference Include="ModelContextProtocol" Version="*" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Payload.zip" LogicalName="Talvora.Payload.zip" />

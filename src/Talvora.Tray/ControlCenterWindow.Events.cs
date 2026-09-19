@@ -454,7 +454,8 @@ internal sealed partial class ControlCenterWindow
             return;
         }
 
-        _rawLogSourceText = ControlCenterRawLogService.ReadTail();
+        _rawLogSourceText = ControlCenterRawLogService.ReadTail(
+            _selectedMcp?.Registration);
         ApplyRawLogFilter();
     }
 

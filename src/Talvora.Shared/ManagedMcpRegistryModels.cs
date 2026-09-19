@@ -24,11 +24,29 @@ public sealed record ManagedMcpRegistration
     public required string Description { get; init; }
     public string OwnershipMarker { get; init; } = ManagedMcpRegistryContract.OwnershipMarker;
     public required string Endpoint { get; init; }
+    public string Transport { get; init; } = "streamable-http";
     public string? HealthEndpoint { get; init; }
     public bool AutoStart { get; init; } = true;
+    public string? PackageName { get; init; }
+    public string? BrowserChannel { get; init; }
+    public string? ProfileMode { get; init; }
+    public string? ProfilePath { get; init; }
+    public ManagedMcpProtocolProbeRegistration? ProtocolProbe { get; init; }
     public ManagedMcpTunnelRegistration? Tunnel { get; init; }
     public List<ManagedMcpComponentRegistration> Components { get; init; } = [];
     public List<ManagedMcpDiscoveryHint> DiscoveryHints { get; init; } = [];
+}
+
+public sealed record ManagedMcpProtocolProbeRegistration
+{
+    public List<string> RequiredTools { get; init; } = [];
+    public bool BrowserSmokeRequired { get; init; }
+    public string? BrowserSmokeUrl { get; init; }
+    public string? BrowserSmokeExpectedText { get; init; }
+    public string? RuntimeGenerationStatePath { get; init; }
+    public string? RuntimeProcessStatePath { get; init; }
+    public string? BackendEndpoint { get; init; }
+    public string? BrowserSmokeStatePath { get; init; }
 }
 
 public sealed record ManagedMcpTunnelRegistration

@@ -13,6 +13,7 @@ $WorkRoot = Join-Path $RepoRoot 'artifacts\installer-work'
 $PayloadRoot = Join-Path $WorkRoot 'payload'
 $ServicePayload = Join-Path $PayloadRoot 'Service'
 $TrayPayload = Join-Path $PayloadRoot 'Tray'
+$PlaywrightPayload = Join-Path $PayloadRoot 'Playwright'
 $InstallerProject = Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'
 $PayloadZip = Join-Path $RepoRoot 'src\Talvora.Installer\Payload.zip'
 
@@ -360,7 +361,7 @@ Remove-Item $PayloadZip -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $ArtifactsRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $ServicePayload -Force | Out-Null
 New-Item -ItemType Directory -Path $TrayPayload -Force | Out-Null
-
+New-Item -ItemType Directory -Path $PlaywrightPayload -Force | Out-Null
 $SourceCommit = (& git -C $RepoRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($SourceCommit)) {
     throw 'Unable to resolve local Talvora source commit.'
@@ -410,6 +411,19 @@ if ($LASTEXITCODE -ne 0) {
 Remove-Item (Join-Path $ServicePayload '*.pdb') -Force -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $TrayPayload '*.pdb') -Force -ErrorAction SilentlyContinue
 
+
+$PlaywrightAssets = Join-Path $RepoRoot 'assets\playwright'
+Copy-Item -LiteralPath (Join-Path $PlaywrightAssets 'Start-PlaywrightMcp.ps1') -Destination $PlaywrightPayload -Force
+Copy-Item -LiteralPath (Join-Path $PlaywrightAssets 'supervisor.mjs') -Destination $PlaywrightPayload -Force
+
+$PlaywrightPayloadManifest = @(
+    Get-PayloadFileManifest -Root $PlaywrightPayload -ArchivePrefix 'Playwright'
+)
+Assert-RequiredPayloadFiles -Files $PlaywrightPayloadManifest -RequiredArchivePaths @(
+    'Playwright/Start-PlaywrightMcp.ps1',
+    'Playwright/supervisor.mjs'
+)
+
 $ServicePayloadManifest = @(
     Get-PayloadFileManifest -Root $ServicePayload -ArchivePrefix 'Service'
 )
@@ -419,6 +433,87 @@ $TrayPayloadManifest = @(
     Get-PayloadFileManifest -Root $TrayPayload -ArchivePrefix 'Tray'
 )
 Assert-RequiredPayloadFiles -Files $TrayPayloadManifest -RequiredArchivePaths @('Tray/Talvora.Tray.exe')
+
+$ResolvedDependenciesFile = Join-Path $PayloadRoot 'resolved-dependencies.json'
+
+function Get-ResolvedPackageManifest {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ProjectPath
+    )
+
+    $projectDir = Split-Path -Parent $ProjectPath
+    $assetsPath = Join-Path $projectDir 'obj\project.assets.json'
+    if (-not (Test-Path -LiteralPath $assetsPath -PathType Leaf)) {
+        throw "NuGet assets manifest is missing: $assetsPath"
+    }
+
+    $assets = Get-Content -LiteralPath $assetsPath -Raw | ConvertFrom-Json
+    $direct = [System.Collections.Generic.HashSet[string]]::new(
+        [StringComparer]::OrdinalIgnoreCase)
+
+    foreach ($framework in $assets.project.frameworks.PSObject.Properties) {
+        foreach ($dependency in $framework.Value.dependencies.PSObject.Properties) {
+            [void]$direct.Add([string]$dependency.Name)
+        }
+    }
+
+    $resolved = foreach ($library in $assets.libraries.PSObject.Properties) {
+        if ([string]$library.Value.type -ne 'package') {
+            continue
+        }
+
+        $identity = [string]$library.Name
+        $separator = $identity.LastIndexOf('/')
+        if ($separator -le 0 -or $separator -ge $identity.Length - 1) {
+            continue
+        }
+
+        $name = $identity.Substring(0, $separator)
+        $version = $identity.Substring($separator + 1)
+
+        [pscustomobject]@{
+            name = $name
+            version = $version
+            direct = $direct.Contains($name)
+        }
+    }
+
+    return @($resolved | Sort-Object name, version)
+}
+
+$dotnetSdkVersion = (& dotnet --version | Select-Object -First 1).Trim()
+if ([string]::IsNullOrWhiteSpace($dotnetSdkVersion)) {
+    throw 'Unable to resolve dotnet SDK version for dependency provenance.'
+}
+
+$dependencyProvenance = [ordered]@{
+    generatedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
+    dotnetSdkVersion = $dotnetSdkVersion
+    projects = @(
+        [ordered]@{
+            name = 'Talvora'
+            project = 'src/Talvora/Talvora.csproj'
+            packages = @(Get-ResolvedPackageManifest -ProjectPath (Join-Path $RepoRoot 'src\Talvora\Talvora.csproj'))
+        },
+        [ordered]@{
+            name = 'Talvora.Tray'
+            project = 'src/Talvora.Tray/Talvora.Tray.csproj'
+            packages = @(Get-ResolvedPackageManifest -ProjectPath (Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
+        }
+    )
+}
+
+[IO.File]::WriteAllText(
+    $ResolvedDependenciesFile,
+    ($dependencyProvenance | ConvertTo-Json -Depth 12),
+    [Text.UTF8Encoding]::new($false))
+
+$ResolvedDependenciesManifest = [pscustomobject]@{
+    FullPath = $ResolvedDependenciesFile
+    ArchivePath = 'resolved-dependencies.json'
+    Length = [long](Get-Item -LiteralPath $ResolvedDependenciesFile).Length
+}
 
 $SourceCommitFile = Join-Path $PayloadRoot 'source-commit.txt'
 [IO.File]::WriteAllText(
@@ -435,6 +530,8 @@ $SourceCommitManifest = [pscustomobject]@{
 $PayloadManifest = @(
     $ServicePayloadManifest
     $TrayPayloadManifest
+    $PlaywrightPayloadManifest
+    $ResolvedDependenciesManifest
     $SourceCommitManifest
 )
 

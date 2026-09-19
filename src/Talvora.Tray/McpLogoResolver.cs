@@ -17,6 +17,12 @@ internal static class McpLogoResolver
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "Gitea",
                 "gitea.exe"),
+            "playwright" => Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "Google",
+                "Chrome",
+                "Application",
+                "chrome.exe"),
             _ => null,
         };
 

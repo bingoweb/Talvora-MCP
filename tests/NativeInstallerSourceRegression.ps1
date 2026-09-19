@@ -36,6 +36,18 @@ $sqliteTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\Sq
 $devServerTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'DevServerTools*.cs'
 $structuredConfigTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'StructuredConfigTools*.cs'
 $trayProgram = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora.Tray')
+$trayProgramFile = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
+$trayApplicationContext = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\TrayApplicationContext.cs'))
+$businessTunnelClient = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\BusinessTunnelClient.cs'))
+$componentHealth = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterComponentHealthService.cs'))
+$protocolProbeService = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpProtocolProbeService.cs'))
+$registryCoordinator = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpRegistryCoordinator.cs'))
+$ownershipManifestStore = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpOwnershipManifestStore.cs'))
+$playwrightLauncher = [IO.File]::ReadAllText((Join-Path $RepoRoot 'assets\playwright\Start-PlaywrightMcp.ps1'))
+$playwrightSupervisor = [IO.File]::ReadAllText((Join-Path $RepoRoot 'assets\playwright\supervisor.mjs'))
+$installerFlow = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.Flow.cs'))
+$installerService = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.Service.cs'))
+$installerPlaywright = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.Playwright.cs'))
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora.Installer')
 $installerProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'))
@@ -69,6 +81,25 @@ $result = [pscustomobject]@{
         $buildInstallerScript -match '\$archive\.CreateEntry' -and
         $buildInstallerScript -match '\$verified\.Entries\.Count -ne \$Files\.Count' -and
         $buildInstallerScript -match 'New-VerifiedPayloadArchive -Files \$PayloadManifest -Destination \$PayloadZip -Attempts 5'
+    )
+    BuildScriptIncludesDependencyProvenance = (
+        $buildInstallerScript -match 'resolved-dependencies\.json' -and
+        $buildInstallerScript -match 'Get-ResolvedPackageManifest' -and
+        $installerFlow -match 'DependencyProvenance'
+    )
+    WindowsPowerShellFallbackContract = (
+        $componentHealth -match 'CommandLine\.IndexOf\(\$marker,\[StringComparison\]::OrdinalIgnoreCase\) -ge 0' -and
+        $componentHealth -notmatch 'CommandLine\.Contains\(\$marker,\[StringComparison\]::OrdinalIgnoreCase\)' -and
+        $playwrightLauncher -match '\.IndexOf\(' -and
+        $playwrightLauncher -notmatch '\.Contains\([^\r\n]*\[StringComparison\]::OrdinalIgnoreCase\)'
+    )
+    RegistryOwnershipManifestContract = (
+        $registryCoordinator -match 'ManagedMcpOwnershipManifestStore\.ReadAllAsync' -and
+        $registryCoordinator -match 'ManagedMcpOwnershipManifestStore\.PersistAsync' -and
+        $registryCoordinator -match 'ManagedMcpOwnershipManifestStore\.NeedsSeed' -and
+        $ownershipManifestStore -match 'managed-mcps\.d' -and
+        $ownershipManifestStore -match 'AtomicFile\.WriteAllTextAsync' -and
+        $ownershipManifestStore -match 'ManagedMcpRegistryStore\.ValidateRegistration'
     )
     BuildScriptFingerprintsDirtyProvenance = (
         $buildInstallerScript -match 'git -C \$RepoRoot status --porcelain=v1 --untracked-files=all' -and
@@ -317,9 +348,51 @@ $result = [pscustomobject]@{
         $serviceProgram -match 'CanShutdown\s*=\s*true'
     )
     InstallerCanReplaceNonStoppableService = (
-        $installerProgram -match 'queryex' -and
-        $installerProgram -match 'deleting registration before terminating PID' -and
-        $installerProgram -match 'Kill\(entireProcessTree:\s*true\)'
+        $installerFlow -match 'serviceSwitchStarted\s*=\s*true' -and
+        $installerFlow -match 'StopServiceForUpgradeAsync\(ServiceName' -and
+        $installerFlow -notmatch 'StopAndDeleteServiceAsync\(ServiceName' -and
+        $installerService -match '"config"' -and
+        $installerService -match '"binPath="' -and
+        $installerService -match 'Kill\(entireProcessTree:\s*true\)'
+    )
+    InstallerPlaywrightTransactionContract = (
+        $installerPlaywright -match 'CapturePlaywrightInstallSnapshotAsync' -and
+        $installerPlaywright -match 'RestorePlaywrightInstallSnapshotAsync' -and
+        $installerPlaywright -match 'TaskWasRunning' -and
+        $installerPlaywright -match 'WaitForPlaywrightMcpReadinessAsync' -and
+        $installerPlaywright -match 'browser_run_code_unsafe' -and
+        $installerPlaywright -match 'PlaywrightEndpoint = "http://127\.0\.0\.1:8932/mcp"' -and
+        $installerFlow.IndexOf('InstallPlaywrightManagedMcpAsync', [StringComparison]::Ordinal) -lt
+            $installerFlow.IndexOf('CleanupObsoleteInstallationsAsync', [StringComparison]::Ordinal)
+    )
+    PlaywrightDashboardSmokeStabilityContract = (
+        $protocolProbeService -match 'HasCurrentGenerationBrowserSmoke' -and
+        $protocolProbeService -match '!runBrowserSmoke\s*\|\|' -and
+        $protocolProbeService -match 'browserPid <= 0' -and
+        $protocolProbeService -match 'browserStartTimeUtcTicks <= 0' -and
+        $protocolProbeService -notmatch 'HasCurrentBrowserSmoke' -and
+        $protocolProbeService.IndexOf('if (!runBrowserSmoke', [StringComparison]::Ordinal) -lt
+            $protocolProbeService.IndexOf('client.CallToolAsync(', [StringComparison]::Ordinal)
+    )
+    PlaywrightProxyReadinessGateContract = (
+        $playwrightSupervisor -match 'waitForBackendMcpReady' -and
+        $playwrightSupervisor -match 'probeBackendMcp' -and
+        $playwrightSupervisor -match 'notifications/initialized' -and
+        $playwrightSupervisor -match 'elapsedMs <= 1500' -and
+        $playwrightSupervisor -match 'res\.flushHeaders\(\)' -and
+        $playwrightSupervisor.IndexOf('waitForBackendMcpReady()', [StringComparison]::Ordinal) -lt
+            $playwrightSupervisor.LastIndexOf('server.listen(', [StringComparison]::Ordinal)
+    )
+    InstallerNodeCurrentLatestContract = (
+        $installerPlaywright -match '"search"' -and
+        $installerPlaywright -match '"nodejs"' -and
+        $installerPlaywright -match 'npm@latest' -and
+        $installerPlaywright -match 'nodejs-lts' -and
+        $installerPlaywright -match 'skip-autouninstaller' -and
+        $installerPlaywright -match 'RunInstallUserProcessAsync' -and
+        $installerPlaywright -match 'InteractiveUserProcessRunner\.RunAsync' -and
+        $installerPlaywright -match 'RoamingAppData' -and
+        $installerPlaywright -match '"prefix", "-g"'
     )
     InstallerConfiguresResilientSystemService = (
         $installerProgram -match 'restart/1000/restart/3000/restart/10000/restart/30000/restart/60000' -and
@@ -350,25 +423,30 @@ $result = [pscustomobject]@{
     TrayIsWinExe = ($trayProject -match '<OutputType>WinExe</OutputType>')
     TrayUsesNotifyIcon = ($trayProgram -match '\bNotifyIcon\b')
     TrayReconnectIsNative = (
-        $trayProgram -match '"runtimes",\s*"connect"' -and
-        $trayProgram -match 'CryptUnprotectData' -and
-        $trayProgram -notmatch 'powershell\.exe'
+        $businessTunnelClient -match '"runtimes",\s*"connect"' -and
+        $businessTunnelClient -match 'ReadRuntimeCredential' -and
+        $businessTunnelClient -notmatch 'powershell\.exe'
     )
     TrayCommandModesBeforeMutex = (
-        $trayProgram.IndexOf('--reconnect', [StringComparison]::Ordinal) -ge 0 -and
-        $trayProgram.IndexOf('new Mutex', [StringComparison]::Ordinal) -gt
-            $trayProgram.IndexOf('--reconnect', [StringComparison]::Ordinal)
+        $trayProgramFile.IndexOf('--reconnect', [StringComparison]::Ordinal) -ge 0 -and
+        $trayProgramFile.IndexOf('new Mutex', [StringComparison]::Ordinal) -gt
+            $trayProgramFile.IndexOf('--reconnect', [StringComparison]::Ordinal)
     )
     TrayTunnelClientUsesStateWorkingDirectory = (
         $trayProgram -match 'ProcessRunner\.RunAsync' -and
         $trayProgram -match 'config\.StateRoot'
     )
     TrayAutoReconnectsAfterStartup = (
-        $trayProgram -match '_\s*=\s*MaintainTalvoraConnectionAsync\(\)' -and
-        $trayProgram -match '_talvoraTimer\.Tick\s*\+=.*MaintainTalvoraConnectionAsync' -and
-        $trayProgram -match 'Automatic reconnect succeeded' -and
-        $trayProgram -match 'GetAutomaticReconnectDelay' -and
-        $trayProgram -match 'RetryIn='
+        $trayApplicationContext -match 'await MaintainTalvoraConnectionAsync\(\)' -and
+        $trayApplicationContext -match '_talvoraTimer\.Tick\s*\+=' -and
+        $trayApplicationContext -match '_talvoraRecoveryState\.RegisterFailure' -and
+        $trayApplicationContext -match '_talvoraRecoveryState\.CanAttempt' -and
+        $trayApplicationContext -match 'RetryIn='
+    )
+    GenericAttentionRemediationAvoidsFullRestart = (
+        $trayApplicationContext -match 'TryRepairGenericWithoutRestartAsync' -and
+        $trayApplicationContext -match 'browser smoke yenilemesi tamamlanamadı; çalışan MCP/browser zinciri korunuyor' -and
+        $trayApplicationContext -match 'tüneli yeniden bağlanamadı; yerel MCP/browser zinciri korunuyor'
     )
     TrayBoundsTunnelLogging = (
         $trayProgram -match '\["LOG_LEVEL"\]\s*=\s*"warn"' -and

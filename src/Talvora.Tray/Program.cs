@@ -72,6 +72,11 @@ internal static class Program
                 ManagedMcpTunnelProvisioningService.AssertPolicyContract();
                 ControlCenterSetupService.AssertPolicyContract();
                 ManagedMcpOperationCoordinator.AssertContract();
+                ManagedMcpSessionState.AssertContract();
+                ManagedMcpRegistryStore.AssertRecoveryContractAsync(
+                    CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
                 TrayLog.Write(
                     $"Self-test succeeded. Alias={config.Alias}; ManagedMcpCount={registry.Mcps.Count}");
                 return 0;
@@ -115,6 +120,57 @@ internal static class Program
             catch (Exception ex)
             {
                 TrayLog.Write("Gitea restart command failed", ex);
+                return 1;
+            }
+        }
+        if (args.Length >= 1 &&
+            string.Equals(
+                args[0],
+                "--managed-mcp-probe",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var managedMcpId =
+                    args.Length > 1 && !string.IsNullOrWhiteSpace(args[1])
+                        ? args[1]
+                        : "playwright";
+
+                var registry = ManagedMcpRegistryCoordinator
+                    .LoadOrRecoverAsync(CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                var registration = registry.Mcps.FirstOrDefault(entry =>
+                    string.Equals(
+                        entry.Id,
+                        managedMcpId,
+                        StringComparison.OrdinalIgnoreCase))
+                    ?? throw new InvalidOperationException(
+                        $"Managed MCP kaydı bulunamadı: {managedMcpId}");
+
+                var probe = ManagedMcpProtocolProbeService
+                    .WaitUntilReadyAsync(
+                        registration,
+                        runBrowserSmoke: true,
+                        timeout: TimeSpan.FromSeconds(90),
+                        CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+
+                var smokeRequired =
+                    registration.ProtocolProbe?.BrowserSmokeRequired == true;
+
+                TrayLog.Write(
+                    $"Managed MCP probe completed. MCP={registration.Id}; Ready={probe.Ready}; BrowserSmokePassed={probe.BrowserSmokePassed}; ToolCount={probe.ToolCount}; Detail={probe.Detail}");
+
+                return probe.Ready &&
+                       (!smokeRequired || probe.BrowserSmokePassed)
+                    ? 0
+                    : 1;
+            }
+            catch (Exception ex)
+            {
+                TrayLog.Write("Managed MCP probe command failed", ex);
                 return 1;
             }
         }

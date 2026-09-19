@@ -77,7 +77,7 @@ internal static class ControlCenterDashboardService
             offline);
     }
 
-    private static async Task<ManagedMcpDashboardState> GetStateAsync(
+    internal static async Task<ManagedMcpDashboardState> GetStateAsync(
         ManagedMcpRegistration registration,
         CancellationToken cancellationToken)
     {
@@ -178,6 +178,81 @@ internal static class ControlCenterDashboardService
         ManagedMcpRegistration registration,
         CancellationToken cancellationToken)
     {
+        if (registration.ProtocolProbe is not null)
+        {
+            var protocol = await ManagedMcpProtocolProbeService.ProbeCachedAsync(
+                registration,
+                cancellationToken);
+
+            if (!protocol.Ready)
+            {
+                return new ManagedMcpDashboardState(
+                    registration,
+                    ControlCenterHealthState.Offline,
+                    "Çalışmıyor",
+                    protocol.Detail);
+            }
+
+            if (registration.ProtocolProbe.BrowserSmokeRequired &&
+                !protocol.BrowserSmokePassed)
+            {
+                return new ManagedMcpDashboardState(
+                    registration,
+                    ControlCenterHealthState.Attention,
+                    "Browser doğrulaması bekleniyor",
+                    "MCP hazır; mevcut çalışma nesli için gerçek browser navigate/snapshot doğrulaması henüz tamamlanmadı.");
+            }
+
+            var tunnelAssessment =
+                ManagedMcpTunnelProvisioningService.Assess(registration);
+            if (tunnelAssessment.Required &&
+                (!tunnelAssessment.HasTunnelId ||
+                 !tunnelAssessment.HasConfig ||
+                 !tunnelAssessment.HasRuntimeCredential))
+            {
+                return new ManagedMcpDashboardState(
+                    registration,
+                    ControlCenterHealthState.Attention,
+                    "Bağlantı hazırlanıyor",
+                    tunnelAssessment.Summary);
+            }
+
+            var components =
+                await ControlCenterComponentHealthService.GetStatesAsync(
+                    registration,
+                    protocol,
+                    cancellationToken);
+            var requiredNotReady = components
+                .Where(state =>
+                    state.Component.Required &&
+                    state.Health != ControlCenterHealthState.Ready)
+                .ToArray();
+
+            if (requiredNotReady.Length > 0)
+            {
+                var hasOffline = requiredNotReady.Any(state =>
+                    state.Health == ControlCenterHealthState.Offline);
+                var detail = string.Join(
+                    "; ",
+                    requiredNotReady.Select(state =>
+                        $"{state.Component.DisplayName}: {state.StatusText}"));
+
+                return new ManagedMcpDashboardState(
+                    registration,
+                    hasOffline
+                        ? ControlCenterHealthState.Offline
+                        : ControlCenterHealthState.Attention,
+                    hasOffline ? "Çalışmıyor" : "Dikkat gerekiyor",
+                    detail);
+            }
+
+            return new ManagedMcpDashboardState(
+                registration,
+                ControlCenterHealthState.Ready,
+                "Hazır",
+                protocol.Detail);
+        }
+
         if (string.IsNullOrWhiteSpace(registration.HealthEndpoint))
         {
             return new ManagedMcpDashboardState(

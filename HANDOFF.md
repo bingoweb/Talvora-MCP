@@ -413,7 +413,7 @@ Aşağıdaki maddeler tavsiye değil, **kesin proje kurallarıdır**. Yeni oturu
 - Use the newest suitable/current stable software versions. Do not retain deprecated CLIs or old technologies merely for compatibility.
 - Project-local wrappers/toolchain pins are fine; compatibility fallbacks to deprecated tooling are not.
 - Use Context7 plus official documentation when adding/changing library/framework/software-development capabilities.
-- Playwright remains a separate ChatGPT integration and is not part of Talvora.
+- Playwright MCP artık sıradaki ana entegrasyon hedefidir. Yeni oturumda resmî Microsoft @playwright/mcp sunucusu dikkatle kurulacak ve Talvora Control Center'ın managed MCP registry/lifecycle/health/recovery/dashboard modeline entegre edilecektir. Kurulum sırasında Context7 + resmî Microsoft Playwright/Playwright MCP belgeleri zorunludur.
 - Do not split code merely to reduce line counts; split only at real responsibility boundaries.
 - Test only changed areas while developing. Run a full MCP smoke only as a final runtime gate after the exact build has been deployed.
 - Every runtime/shared/installer/Tray source change must follow:
@@ -564,7 +564,7 @@ The earlier pending Windows SDK 10.0.28000 install note is obsolete; 10.0.28000.
 
 ## Working-tree notes
 
-Control Center Faz 0-11 batch'i çalışma ağacında kasıtlı olarak uncommitted durumdadır. Kullanıcı açıkça istemeden commit/push yapılmayacak; gerçek durum her zaman `git status --short --branch` ile doğrulanacak.
+Control Center ve GitHub-push auth düzeltmeleri commit/push edildi. Son doğrulanan repo durumu main, HEAD 7a24fdc4bb53028d880762db7d8187af153d064b, origin/main ve github/main aynı commit'te, ahead/behind 0/0, working tree clean. Yeni oturum başında yine git status --short --branch ve iki remote HEAD doğrulanacak. Kullanıcı açıkça istemeden sonraki değişiklikler commit/push edilmeyecek.
 
 Stale dated handoffs and the old transition prompt are deleted in the working tree:
 - `HANDOFF-2026-09-18.md`
@@ -578,9 +578,101 @@ Do not restore the old handoff files or old tool-count assumptions.
 
 ## Next action
 
-Control Center Faz 0-11 tamamlandı ve bilinen runtime blocker yok.
+### Yeni oturum hedefi: Playwright MCP kurulumu + Talvora Control Center entegrasyonu
 
-Kullanıcı açıkça istemedikçe commit/push yapma. Yeni özellik veya runtime değişikliği istenirse mevcut tamamlanmış Control Center tabanından devam et; runtime kodu değişirse zorunlu source -> targeted test -> canonical installer -> live deploy zincirini uygula. Mevcut dirty-89135c8503e5 runtime için final 198-tool smoke zaten bir kez GREEN çalıştırıldı; runtime source değişmeden tekrar etme.
+Yeni oturumda soru sormadan doğrudan bu işe başla. İlk iş HANDOFF.md dosyasını oku, Talvora MCP bağlantısını talvora_system_info ile doğrula ve repo/runtime baseline'ını teyit et. Hedef, Microsoft'un resmî Playwright MCP sunucusunu Windows makineye kalıcı ve bakımı kolay şekilde kurmak ve mevcut Talvora Control Center'a üçüncü bir managed MCP olarak tam entegre etmektir.
+
+#### Başlangıç baseline'ı
+- Repo: C:\Users\tayla\Talvora-MCP
+- Branch: main
+- HEAD: 7a24fdc4bb53028d880762db7d8187af153d064b
+- Yerel Gitea origin/main: aynı commit.
+- GitHub github/main: aynı commit.
+- Working tree: clean.
+- Canlı Talvora SourceCommit: 7a24fdc4bb53028d880762db7d8187af153d064b.
+- Talvora LocalSystem MCP endpoint: http://127.0.0.1:7676/mcp.
+- Canonical manifest: 198 tools.
+- Control Center Faz 0-11 tamamlandı.
+- GitHub HTTPS push problemi kökten düzeltildi: talvora_git_run github.com HTTPS push'larını logged-on Windows kullanıcı oturumunda GCM/OAuth ile çalıştırıyor; credential yoksa fail-fast. MSI\tayla kullanıcısında GCM hesabı bingoweb, credential store wincredman.
+- Canonical installer: artifacts\installer\Talvora-Setup.exe.
+- Clean-commit installer SHA256: BC06AD93D0B2949F19D86A4D5403FDC472FB89B08DE4EC4BF8630547099042FC.
+
+#### Playwright MCP için zorunlu araştırma
+- İlk kod/kurulum değişikliğinden önce Context7 ve resmî Microsoft Playwright MCP belgelerini kullan.
+- Birincil kaynak: microsoft/playwright-mcp.
+- Resmî paket: @playwright/mcp.
+- Resmî minimum: Node.js 20+.
+- Paket/sürüm/CLI bayrakları güncel kaynaktan doğrulanacak; eski blog/config örnekleri kopyalanmayacak.
+- Varsayılan profil davranışı, --user-data-dir, --isolated, --extension, browser/channel seçimi, config dosyası ve transport seçenekleri güncel resmî dokümandan kontrol edilecek.
+- Kullanıcının mevcut login/session'larını kullanmak gerekiyorsa resmî browser-extension modeli özellikle değerlendirilecek; secret/token hiçbir log veya Control Center UI'da gösterilmeyecek.
+
+#### Kurulum ilkeleri
+1. Önce mevcut Node/npm/npx/Chrome/Edge/Playwright durumunu Talvora araçlarıyla tespit et. Gereksiz yeniden kurulum yapma.
+2. En güncel uygun stable Playwright MCP paketini kullan; mümkünse npx @playwright/mcp@latest ile özellik keşfi yap, kalıcı çalışma için sürüm pinleme gerekip gerekmediğini resmî belgeler ve operasyonel güvenilirliğe göre değerlendir.
+3. MCP'yi kullanıcı terminal penceresi açık bırakmayacak şekilde kalıcı çalıştır.
+4. Windows restart sonrası otomatik başlamalı ve crash sonrası recover olmalı.
+5. Playwright browser/profile state'inin hangi kullanıcı SID/profilinde tutulduğu açık ve deterministik olmalı. LocalSystem altında yanlış profile yazma problemi yaratma.
+6. Browser automation kullanıcı oturumu gerektiriyorsa süreç doğru interactive Windows session/token altında çalıştırılmalı; GitHub auth fix'inde kullanılan WindowsSessionLauncher / interactive-user pattern'ini yeniden kullan.
+7. Full capability korunacak. Güvenlik bahanesiyle domain/path/tool kısıtlaması ekleme. Ancak resmî Playwright MCP'nin zorunlu host/origin güvenlik davranışlarını doğru yapılandır; özellik kırpma yapma.
+8. Secret/token gerekiyorsa current-user DPAPI kullan; plaintext config/log/UI yok.
+9. Playwright MCP için localhost endpoint ve transport gerçek çalışma biçimine göre seçilecek. ChatGPT Business tarafına gerekiyorsa Talvora'nın mevcut Secure MCP Tunnel provisioning modeli kullanılacak; tunnel gerekmiyorsa gereksiz tunnel oluşturma.
+10. Bir özellik çalışıyor görünmeden registry/dashboard'a Ready yazma.
+
+#### Talvora Control Center entegrasyonu
+Playwright MCP, mevcut generic managed MCP altyapısına mümkün olduğunca özel-case eklemeden kaydedilecek:
+- managed registry entry; stable id tercihen playwright;
+- Türkçe display name/açıklama;
+- local endpoint / transport metadata;
+- process/service/task component metadata;
+- varsa secure tunnel metadata;
+- AutoStart, health polling, startup recovery, capped backoff ve manual Stop session suppression;
+- Start / Stop / Restart;
+- ciddi incident classification;
+- event store + raw log bağlantısı;
+- first-run/incomplete setup değerlendirmesi.
+
+Dashboard kartında Playwright logosu veya düzgün fallback icon, ortak Hazır/Dikkat/Kapalı status modeli, kısa Türkçe açıklama ve doğru contextual primary action olacak.
+
+Ayrıntı görünümünde en az MCP server health, browser/runtime health, endpoint/transport, paket sürümü, browser/channel/profile mode, process/task state, tunnel varsa tunnel state, profile/state path, son olaylar ve Başlat/Durdur/Yeniden Başlat bulunacak.
+
+#### Sağlık modelinde doğrulanması gerekenler
+Playwright kartını yalnız process var diye Ready sayma. Mümkün olan en kuvvetli zinciri doğrula:
+1. launcher/task/process çalışıyor;
+2. MCP transport endpoint cevap veriyor;
+3. MCP initialize başarılı;
+4. tool list alınabiliyor ve beklenen Playwright browser araçları mevcut;
+5. gerçek browser launch/connect başarılı;
+6. basit bir sayfada navigate + accessibility snapshot veya eşdeğer gerçek browser işlemi başarılı;
+7. extension modu seçildiyse extension bağlantısı gerçekten hazır.
+
+#### Test disiplini
+- Geliştirme sırasında yalnız değişen alanların targeted testlerini çalıştır.
+- Aynı testi tekrar tekrar çalıştırma.
+- Önce source build/test; ardından gerçek Playwright MCP initialize/tool-list/browser smoke.
+- Registry/dashboard için source Control Center smoke.
+- Runtime/shared/installer/Tray değiştiyse zorunlu sıra: source -> targeted test -> canonical installer -> live deploy -> talvora_system_info -> Service/Tray PID + version root -> Playwright live behavior.
+- Final exact-deployed full MCP smoke yalnız runtime/tool yüzeyi gerçekten değiştiyse ve final gate olarak bir kez.
+- Her bug/risk anında BUG-AUDIT.md içine yaz.
+- Handoff'u çalışma boyunca güncel tut.
+- Kullanıcı açıkça istemedikçe commit/push yapma.
+
+#### İlk oturumda yapılacak somut sıra
+1. HANDOFF.md oku.
+2. talvora_system_info, git status, origin/github HEAD, live version root doğrula.
+3. Context7 + resmî Playwright MCP belgelerini doğrula.
+4. Node/npm/npx + Chrome/Edge + mevcut Playwright/Playwright MCP kurulumlarını envanterle.
+5. Bu makinedeki en doğru çalışma modelini seç ve kısa teknik karar kaydını HANDOFF.md / BUG-AUDIT.md içine yaz.
+6. Resmî MCP'yi kur ve dashboard entegrasyonundan bağımsız gerçek MCP initialize + tool list + browser smoke'u GREEN yap.
+7. Kalıcı Windows startup/recovery/lifecycle modelini kur.
+8. Managed registry'ye Playwright kaydını ekle.
+9. Control Center dashboard kartı + detail + health + lifecycle + recovery + events entegrasyonunu tamamla.
+10. Gerekliyse Secure MCP Tunnel provisioning yap ve gerçek health/ready doğrula.
+11. Source targeted smoke.
+12. Canonical installer build/deploy.
+13. Exact-installed Playwright lifecycle/health/browser/Control Center smoke.
+14. Handoff ve BUG-AUDIT'i son durumla güncelle.
+
+Önemli: Yeni oturumda tekrar ürün tasarımı soruları sorma. Control Center UX/mimari kararları zaten sabit. Playwright MCP'yi mevcut tamamlanmış mimariye dikkatle eklemeye doğrudan başla.
 
 ## [TARİHSEL / ARTIK GEÇERSİZ] Gitea bağımsız sistem tepsisi ikonu
 
@@ -632,3 +724,107 @@ Kullanıcı açıkça istemedikçe commit/push yapma. Yeni özellik veya runtime
   - restart sonrası Secure MCP Tunnel -> running/healthy/ready
   - visible user PowerShell window count -> 0.
 - Tray artık `ModelContextProtocol` 2.2.0 client paketini kullanır; doğrulama sırasında NuGet'te görünen en güncel sürüm 2.2.0 idi.
+### 2026-09-19 ek proje kuralı — sürüm pinleme yasak
+- Kullanıcı talimatı: Hiçbir bağımlılık, CLI, SDK, runtime veya araç sürümü pinlenmeyecek.
+- Her kurulum/güncellemede güncel `latest` / current stable sürüm kullanılacak.
+- Lockfile veya exact-version sabitlemesiyle sürüm dondurulmayacak; Playwright MCP entegrasyonu da bu kurala uyacak.
+
+
+### 2026-09-19 Playwright MCP bağımsız doğrulama
+- Resmî `@playwright/mcp@latest` kullanıldı; hiçbir Playwright/MCP sürümü pinlenmedi, runtime package specifier `latest`, npm lockfile yok.
+- Güncel npm latest doğrulaması sırasında `@playwright/mcp` = 0.0.82 idi; bu bilgi envanterdir, pin değildir.
+- Chrome 153.0.8010.53, Playwright Extension `mmlmfjhmonkocbjadbfplnigmagldckm` sürüm 0.4.0, profil `Default`.
+- Seçilen çalışma modeli: `MSI\\tayla` interactive session içinde hidden Playwright MCP process, Chrome Extension modu, deterministik `--profile-dir-name Default`, localhost Streamable HTTP endpoint `http://127.0.0.1:8931/mcp`.
+- Host/DNS-rebinding kontrolü kapatılmadı; allow-list portlu localhost değerleriyle `127.0.0.1:8931,localhost:8931`.
+- Full capability için `--allow-unrestricted-file-access` ve ek `vision,pdf,devtools` caps açık.
+- Bağımsız smoke GREEN: process/listener -> MCP initialize -> 45 tools/list -> extension browser connect -> `https://example.com/` navigate -> `browser_snapshot`; snapshot `Example Domain` içerdi.
+- Dashboard entegrasyonuna geçiş kapısı açıldı.
+
+
+### Playwright MCP runtime kararı — extension production default değil
+- Chrome Default profilinde Playwright Extension 0.4.0 mevcut ve resmi olarak doğrulandı.
+- Ancak `--extension` smoke'u kullanıcı Chrome'unda welcome/connection sayfasını tekrar tekrar öne getirerek ChatGPT kullanımını bozdu.
+- Bu nedenle managed production default: current-user (`MSI\\tayla`) altında ayrı persistent Playwright Chrome profili, localhost HTTP transport ve headless Chrome. LocalSystem browser profili kullanılmayacak.
+- Extension modu silinmedi/kısıtlanmadı; yalnız kullanıcı mevcut oturum/SSO state'ini özellikle kullanmak istediğinde opt-in yol olarak tutulacak.
+
+
+### 2026-09-19 Playwright MCP güncel çalışma durumu — bu bölüm önceki extension notlarının yerine geçer
+- Production default artık extension değildir. Kullanıcı Chrome/ChatGPT sekmesine müdahale etmemek için ayrı current-user persistent headless Chrome profile kullanılır: `C:\Users\tayla\AppData\Local\Talvora\PlaywrightMCP\profile`.
+- Canonical Scheduled Task: `Talvora Playwright MCP`; current interactive user `MSI\tayla`, hidden PowerShell launcher, restart policy açık, terminal penceresi yok.
+- Runtime manifest `@playwright/mcp: latest` + `@modelcontextprotocol/sdk: latest`; package-lock ve node_modules hidden lock metadata yok.
+- Runtime supervisor modeli: backend resmi Playwright MCP `127.0.0.1:8931`; Talvora compatibility/supervisor Streamable HTTP endpoint `127.0.0.1:8932/mcp`. Supervisor parent/child lifecycle ve Host rewrite sağlar; Control Center/tunnel endpoint 8932 olmalıdır.
+- Canlı latest paket şu an 0.0.82; bu envanter bilgisidir, pin değildir.
+- Local smoke 8932 üzerinden GREEN: MCP initialize, 45 tools/list, `browser_navigate`, `browser_snapshot`, dedicated headless Chrome.
+- Current-generation health marker `state\server-start.json` + `state\browser-smoke.json` ile Ready yalnız aynı runtime generation gerçek browser smoke geçtikten sonra verilir.
+- Secure MCP Tunnel alias `playwright-business`; kullanıcı tarafından verilen tunnel ID `tunnel_6aaee5a82aec8191b85840c59530d9a7`; local config/current-user DPAPI runtime credential hazır. Son health `/healthz` 200, `/readyz` 200.
+- Tunnel startup yarışının kök nedeni bulundu: task başlar başlamaz tunnel connect MCP hazır olmadan çalışabiliyordu. Source lifecycle sırası `task -> local MCP ready -> tunnel connect -> browser smoke` olarak düzeltildi.
+- Generic managed-MCP periodic health/recovery, capped backoff, manual-stop suppression, serious incident/event akışı source'ta Playwright dahil generic kayıtlar için mevcut.
+- Control Center Playwright registry/detail metadata: endpoint/transport, package version, Chrome channel, profile mode/path, scheduled task, MCP process/protocol, browser runtime, browser-smoke, tunnel, logs.
+- Source hedefli durum: service build GREEN 0 warning/0 error; Tray build GREEN 0 warning/0 error; smoke build GREEN; current-user Control Center visual smoke GREEN; Playwright 8932 browser smoke GREEN.
+- Runtime/Tray source değiştiği için sıradaki zorunlu adım canonical installer build -> independent SYSTEM deploy -> `talvora_system_info`/PID/version-root -> exact-installed Playwright lifecycle+tunnel+Control Center doğrulaması. Commit/push YOK.
+
+## 2026-09-19 Playwright MCP entegrasyonu — FINAL GREEN
+- Talvora canonical live build: `7a24fdc4bb53028d880762db7d8187af153d064b-dirty-32d1aec61d98`.
+- Live version-root: `C:\Program Files\Talvora\Versions\7a24fdc4bb53028d880762db7d8187af153d064b-dirty-32d1aec61d98-20260919201437452`.
+- Talvora service: Running / LocalSystem / PID 7084; Tray: PID 8168; service ve Tray aynı version-root.
+- Kritik installer bug kökten düzeltildi: Talvora upgrade artık servis kaydını `sc delete` ile silmiyor. Normal stop/force-stop sonrası mevcut kayıt `sc config` ile yeni `binPath`'e çevriliyor; kayıt yoksa yalnız fresh/recovery durumda create ediliyor. Rollback service-switch başlar başlamaz arm edilir ve cancellation'dan bağımsız çalışır.
+- Gerçek incident kanıtı: 22:56 installer logunda `deleting registration before terminating PID=2188` sonrası `Windows service silinemedi: Talvora`; bu eski akış servis kaydını yok bırakmıştı. Yeni akış iki live deploy'da servis kaybı olmadan doğrulandı.
+- Playwright scheduled-task XML native Windows biçimine alındı: UTF-16 declaration + `Encoding.Unicode`; önceki `encoding değiştirilemiyor` hatası kapandı.
+- Playwright canonical task: `Talvora Playwright MCP`; eski duplicate `Playwright MCP Server` silindi.
+- Task owner/session modeli: `tayla`, Interactive logon, Highest run level, hidden launcher, restart count 3. LocalSystem browser profili kullanılmıyor.
+- Playwright runtime sürüm pinlemez: launcher her start'ta `@playwright/mcp@latest` çözer, package-lock bırakmaz. Doğrulanan güncel paket: 0.0.82.
+- Browser modeli: ayrı current-user kalıcı headless Chrome profili: `C:\Users\tayla\AppData\Local\Talvora\PlaywrightMCP\profile`. Chrome Default/extension production default değildir; kullanıcı Chrome/ChatGPT sekmesini bozmaz.
+- Transport: resmi Playwright backend `http://127.0.0.1:8931/mcp`; Talvora compatibility endpoint `http://127.0.0.1:8932/mcp` (registry endpoint). Compatibility proxy yalnız tunnel istemcisinin `/.well-known/oauth-protected-resource` discovery çağrısını lokal backend'den izole eder; MCP trafiği resmi backend'e proxy edilir.
+- Secure MCP Tunnel: `tunnel_6aaee5a82aec8191b85840c59530d9a7`, alias `playwright-business`; runtime credential current-user DPAPI blob, plaintext yok. Final `/healthz=200`, `/readyz=200`.
+- Managed registry Count=3; stable ID `playwright`; AutoStart=true; transport `streamable-http`; browserChannel=chrome; profile metadata kayıtlı.
+- Final same-generation browser health: runtime generation `c0260f556d214f96829907b41c607816`; smoke generation aynı; passedAt `2026-09-19T23:14:53.8507066+03:00`; toolCount=45. Bu startup auto-start lifecycle içindeki gerçek navigate + accessibility snapshot smoke'tur.
+- Exact-installed managed probe daha önce ayrıca GREEN: Ready=True, BrowserSmokePassed=True, ToolCount=45.
+- Control Center final exact-installed visual smoke `2026-09-19 23:15:03` GREEN. Önceki false-negative smoke race `_refreshGate` yarışından kaynaklanıyordu; smoke artık 15 sn bounded wait ile gerçek snapshot'ı bekliyor.
+- Dashboard generic managed-MCP mimarisi Playwright'ı registry/card/detail/lifecycle/health/recovery zincirine alır. Ready yalnız process ile değil MCP initialize + tools/list + browser runtime + same-generation browser smoke + required component/tunnel health tamamlandığında oluşur.
+- Generic recovery timer, capped backoff, manual Stop session suppression, serious incident/events, component health, raw log ve first-run/incomplete setup yolları korunur.
+- Final canonical installer build ve live deploy başarılı; temporary `Talvora Live Deploy OneShot` task temizlendi.
+- Kullanıcı talimatı gereği COMMIT/PUSH YAPILMADI. Working tree dirty kalmalıdır.
+
+
+## 2026-09-19 Deep audit checkpoint — Playwright MCP + latest Control Center/installer changes
+- Deep audit completed against source, live runtime/process tree, installer logs, tray logs, Windows Event Log, Context7 Microsoft Playwright MCP docs, live `@playwright/mcp --help`, NuGet/npm latest status and exact-installed runtime.
+- BUG-AUDIT numbering was normalized; duplicate semantic findings were consolidated. Current new/open audit range for this phase is 63–101 (39 findings total: 1 CRITICAL, 13 HIGH, 2 POLICY, 2 OPTIMIZATION, 3 LOW, 18 standard OPEN). Historical duplicate IDs 36/37 were renumbered to 102/103 without changing their fixed content.
+- Highest priority finding: #79 CRITICAL — browser smoke marker is bound to MCP server generation, not the current Chrome browser instance. Live proof: smoke passed at 23:14:53+03, current dedicated Chrome root PID was launched around 23:24:35+03 under the same MCP generation. A new browser instance can therefore become Ready after only `browser_tabs list`, without its own navigate+snapshot smoke.
+- Other HIGH findings to fix before calling production-hardening complete: #67 lifecycle hard-depends on Talvora 7676 broker; #68 manual-stop suppression dies with Tray process; #70 no per-MCP operation lock for generic/Playwright lifecycle; #71 smoke cleanup can close another shared-context client's current tab; #73 stale tunnel scope cache; #80 supervisor fatal paths can orphan backend/Chrome; #81 malformed Host can crash compatibility proxy; #82 native installer source regression/CI stale; #83 installer success does not prove Playwright readiness; #85 orphan Chrome descendants on stale cleanup/Stop; #88 Playwright installer mutation not rollback-safe; #89 PS5.1 launcher fallback broken; #96 restart hard-depends on npm registry availability.
+- Important standard OPEN gaps: #63 duplicate Playwright payload build blocks; #64 floating dependency provenance; #65 PS5.1 component process-probe fallback; #66 incomplete-setup discovery blind spot; #69 server.log only rotates at task start; #72 smoke generation TOCTOU; #74 DPAPI readiness checks file existence instead of decryptability; #76 profile/state field incomplete; #77 Playwright detail missing recent events; #84 Ready tool contract too weak for enabled caps; #86 tunnel disconnect/restart not fully idempotent; #87 service upgrade failure can leave SCM recovery actions cleared; #92 tunnel health is HTTP-only/not identity-bound; #93 compatibility proxy still produces no-auth discovery/startup-probe warnings; #94 Playwright raw log view omits tunnel log; #97 every Attention state causes full restart; #99 registry backup is written but not consumed on recovery.
+- Performance/diagnostic findings: #100 detail view duplicates expensive protocol/component probes every 8s; #101 repeated version failures can spam tray log.
+- Latest-version policy check: `@playwright/mcp=0.0.82` is npm latest; npm=12.0.2 is latest; PowerShell=7.6.6 current; Chrome=153.0.8010.53 current Windows Stable. Node=24.21.0 is latest LTS but not latest Current; official latest Current is Node 26.9.0, tracked as #90. Installed Playwright MCP declares `engines.node >=18`.
+- NuGet direct wildcard dependencies resolve current direct versions, but `dotnet list package --outdated --include-transitive` reports newer transitive packages; tracked as #95. Do not pin; resolve compatibility before any transitive override.
+- Compiler/static gate: Talvora.Shared, Talvora service and Talvora.Tray Release builds all pass with 0 warnings/0 errors under TreatWarningsAsErrors + AnalysisLevel=latest. Direct Installer project build fails only because canonical Payload.zip is intentionally generated by Build-Windows-Installer.ps1; canonical installer build had already succeeded. Windows Event Log after final live deploy shows no Talvora/Tray/node/chrome crash entries.
+- Live capability surface remains 45 Playwright tools including vision/PDF/devtools representatives. User Chrome remains a separate PID/profile tree; dedicated Talvora Playwright Chrome uses `...\PlaywrightMCP\profile`.
+- No functional fixes from the deep-audit OPEN list were applied in this audit pass; only BUG-AUDIT/HANDOFF bookkeeping was changed. No commit/push performed.
+
+## 2026-09-20 — Playwright dashboard sürekli sarı (#107) kök düzeltme
+- Canlı semptom: Playwright kartı sürekli `Browser doğrulaması bekleniyor` Attention durumuna dönüyordu.
+- Kök neden: non-smoke `ManagedMcpProtocolProbeService` dashboard health sırasında `browser_tabs` çağırıp demand-launch browser instance üretiyor; smoke marker PID/start-time eski instance'a bağlı olduğundan sonraki browser close/relaunch marker'ı kendi kendine geçersiz kılıyordu.
+- Düzeltme: non-smoke health browser tool çağrısı yapmıyor. Successful gerçek browser smoke marker'ı current Playwright runtime generation boyunca geçerli. PID/start-time yalnız smoke execution anında canlı browser kanıtı olarak korunuyor. Generation değişirse marker geçersiz ve recovery gerçek smoke'u yeniden çalıştırıyor.
+- Regression: `PlaywrightDashboardSmokeStabilityContract` eklendi; Tray Release 0 warning/0 error; NativeInstallerSourceRegression GREEN.
+- Canonical deploy: source fingerprint `7a24fdc4bb53028d880762db7d8187af153d064b-dirty-d504e2d57553`.
+- Live acceptance: generation `45ecffa5c5fd4e3c95967722ce10fd15` == smoke marker generation; installer gerçek Playwright smoke GREEN/45 tools; 54+ saniye polling boyunca Chrome health tarafından yeniden açılmadı ve yeni browser-smoke recovery failure oluşmadı.
+
+## 2026-09-20 — Faz 12 final handoff / Playwright MCP production hardening tamamlandı
+- Canonical live source fingerprint: `7a24fdc4bb53028d880762db7d8187af153d064b-dirty-d504e2d57553`.
+- Live version-root: `C:\Program Files\Talvora\Versions\7a24fdc4bb53028d880762db7d8187af153d064b-dirty-d504e2d57553-20260919220307481`.
+- Talvora service Running; Tray aynı version-root altında current interactive user session içinde çalışıyor.
+- Playwright runtime: `@playwright/mcp` latest (live 0.0.82, pin değil), Node Current 26.9.0, npm 12.0.2. Installer Chocolatey `nodejs` latest'i dinamik çözer ve npm latest'i Playwright task ile aynı interactive user prefix'inde doğrular.
+- Playwright endpoints: backend `http://127.0.0.1:8931/mcp`; Talvora compatibility endpoint `http://127.0.0.1:8932/mcp`.
+- Secure MCP Tunnel: alias `playwright-business`; tunnel health `/healthz=live`, `/readyz=200 ready`.
+- #93 FIXED: Node compatibility proxy SSE response header'ları `res.flushHeaders()` ile hemen flush ediliyor. Go MCP SDK v1.7.0 standalone SSE açık olarak canlı 8932'ye ~14.6 ms'de bağlandı; yeni tunnel loglarında `mcp probe timed out after 2s` / `failed to connect to mcp` yok.
+- Proxy ayrıca backend'i gerçek MCP initialize ile warm/readiness preflight'tan geçirip yalnız hızlı initialize bütçesini sağladıktan sonra 8932 listen açıyor.
+- #97 FIXED: Attention remediation reason-aware. Browser smoke/tunnel sorunu healthy MCP/browser zincirini full restart etmiyor. Live fault injection'da smoke marker yeniden üretildi, MCP generation/launcher/supervisor/backend PID'leri korunarak yalnız gerektiği kadar browser doğrulaması yenilendi.
+- #106 FIXED: npm latest doğrulaması SYSTEM prefix'i yerine Playwright scheduled task ile aynı interactive user context'inde yapılır. Canonical deploy `npm=12.0.2` ve `npmPrefix=C:\Users\tayla\AppData\Roaming\npm` GREEN.
+- #107 FIXED: dashboard/detail non-smoke health artık `browser_tabs` çağırıp demand-launch Chrome başlatmıyor. Successful gerçek browser smoke marker'ı current Playwright runtime generation boyunca geçerli; PID/start-time yalnız smoke execution anında canlı browser kanıtı olarak tutuluyor.
+- #107 live acceptance: generation `45ecffa5c5fd4e3c95967722ce10fd15` == smoke marker generation, toolCount=45; 54+ saniye polling boyunca health tarafından Chrome spawn edilmedi ve yeni browser-smoke recovery failure oluşmadı.
+- Generic lifecycle per-MCP operation coordinator, session-scoped manual Stop suppression, ownership manifest registry recovery, reason-aware recovery, tunnel identity health, bounded caches/logs, recent events/raw logs, first-run/incomplete-setup ve rollback-safe installer akışları source'ta mevcut.
+- Dependency policy: pin yok. Direct/transitive .NET package graph source pass sonunda latest-compatible resolved; canonical installer resolved dependency provenance üretir.
+- Regression gates: `NativeInstallerSourceRegression.ps1` GREEN; `PlaywrightDashboardSmokeStabilityContract`, `PlaywrightProxyReadinessGateContract`, installer transaction/latest Node contracts GREEN.
+- Build gates: Talvora.Shared, Talvora service, Talvora.Tray Release 0 warning/0 error; canonical `Build-Windows-Installer.ps1` GREEN.
+- Exact-installed Playwright smoke: initialize + tools/list + expected capability set + gerçek navigate + accessibility snapshot GREEN, 45 tools.
+- Final `git diff --check` GREEN.
+- Git branch: `main`. Remotes: `origin` = local Gitea, `github` = GitHub mirror.
+- Bu handoff yazıldıktan sonra kullanıcı açıkça commit/push istedi; sıradaki işlem tüm Faz 12 değişikliklerini tek production-hardening commit'i olarak oluşturup `origin/main` ve `github/main` üzerine push etmektir.

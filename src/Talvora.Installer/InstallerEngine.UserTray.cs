@@ -30,26 +30,37 @@ private static InstallUserContext ResolveInstallUserContext()
                     "Interactive user profile could not be resolved.");
             var localAppData = interactive.LocalAppData
                 ?? Path.Combine(userProfile, "AppData", "Local");
+            var roamingAppData =
+                interactive.Environment.TryGetValue(
+                    "APPDATA",
+                    out var appData) &&
+                !string.IsNullOrWhiteSpace(appData)
+                    ? appData
+                    : Path.Combine(userProfile, "AppData", "Roaming");
 
             return new InstallUserContext(
                 true,
                 interactive.SessionId,
                 interactive.Sid,
                 userProfile,
-                localAppData);
+                localAppData,
+                roamingAppData);
         }
 
         var currentProfile = Environment.GetFolderPath(
             Environment.SpecialFolder.UserProfile);
         var currentLocalAppData = Environment.GetFolderPath(
             Environment.SpecialFolder.LocalApplicationData);
+        var currentRoamingAppData = Environment.GetFolderPath(
+            Environment.SpecialFolder.ApplicationData);
 
         return new InstallUserContext(
             false,
             null,
             sid,
             currentProfile,
-            currentLocalAppData);
+            currentLocalAppData,
+            currentRoamingAppData);
     }
 
     private static RegistryKey OpenInstallUserRoot(

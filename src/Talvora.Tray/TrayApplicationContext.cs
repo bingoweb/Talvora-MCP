@@ -26,6 +26,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private readonly System.Windows.Forms.Timer _talvoraTimer;
     private readonly System.Windows.Forms.Timer _giteaTimer;
+    private readonly System.Windows.Forms.Timer _genericMcpTimer;
     private readonly System.Windows.Forms.Timer _shutdownTimer;
     private readonly EventWaitHandle _shutdownEvent = new(
         initialState: false,
@@ -34,13 +35,19 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private readonly SemaphoreSlim _talvoraOperationGate = new(1, 1);
     private readonly SemaphoreSlim _giteaOperationGate = new(1, 1);
+    private readonly SemaphoreSlim _genericMcpOperationGate = new(1, 1);
 
     private Icon? _statusIcon;
     private bool _disposed;
     private readonly ManagedMcpRecoveryState _talvoraRecoveryState = new("talvora");
     private readonly ManagedMcpRecoveryState _giteaRecoveryState = new("gitea");
+    private readonly Dictionary<string, ManagedMcpRecoveryState> _genericRecoveryStates =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ManagedMcpDashboardState> _genericDashboardStates =
+        new(StringComparer.OrdinalIgnoreCase);
     private ManagedMcpRegistration? _talvoraRegistration;
     private ManagedMcpRegistration? _giteaRegistration;
+    private IReadOnlyList<ManagedMcpRegistration> _genericRegistrations = [];
 
     private TalvoraStatus _talvoraStatus = new(
         TalvoraConnectionState.LocalOnly,
@@ -145,6 +152,14 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _giteaTimer.Tick += async (_, _) =>
             await MaintainGiteaConnectionAsync();
 
+        _genericMcpTimer = new System.Windows.Forms.Timer
+        {
+            Interval = 15_000,
+            Enabled = false,
+        };
+        _genericMcpTimer.Tick += async (_, _) =>
+            await MaintainGenericManagedMcpsAsync();
+
         _shutdownTimer = new System.Windows.Forms.Timer
         {
             Interval = 250,
@@ -178,6 +193,19 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 string.Equals(entry.Id, "talvora", StringComparison.OrdinalIgnoreCase));
             _giteaRegistration = registry.Mcps.FirstOrDefault(entry =>
                 string.Equals(entry.Id, "gitea", StringComparison.OrdinalIgnoreCase));
+            _genericRegistrations = registry.Mcps
+                .Where(entry =>
+                    !string.Equals(entry.Id, "talvora", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(entry.Id, "gitea", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            foreach (var registration in _genericRegistrations)
+            {
+                if (!_genericRecoveryStates.ContainsKey(registration.Id))
+                {
+                    _genericRecoveryStates[registration.Id] =
+                        new ManagedMcpRecoveryState(registration.Id);
+                }
+            }
 
             TrayLog.Write($"Managed MCP registry ready. Count={registry.Mcps.Count}");
             ControlCenterEventStore.Record(
@@ -258,6 +286,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             {
                 _talvoraTimer.Start();
                 _giteaTimer.Start();
+                _genericMcpTimer.Start();
             }
         }
     }
@@ -811,6 +840,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
     }
 
+
     private async Task RefreshGiteaStatusAsync(bool showBalloon)
     {
         var lockTaken = false;
@@ -821,22 +851,6 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 _lifetimeCts.Token);
             if (!lockTaken)
             {
-                return;
-            }
-
-            if (ManagedMcpSessionState.IsManuallyStopped("gitea"))
-            {
-                var stopped = new GiteaStatus(
-                    GiteaConnectionState.Offline,
-                    "Gitea MCP elle durduruldu",
-                    "Yönetim Merkezi üzerinden Başlat seçilene kadar otomatik kurtarma devre dışı.");
-                SetGiteaStatus(stopped);
-
-                if (showBalloon)
-                {
-                    ShowBalloon(stopped.Summary, stopped.Detail, ToolTipIcon.Info);
-                }
-
                 return;
             }
 
@@ -977,6 +991,337 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
     }
 
+
+
+    private static async Task<ManagedMcpLifecycleResult?>
+        TryRepairGenericWithoutRestartAsync(
+            ManagedMcpRegistration registration,
+            ManagedMcpDashboardState state,
+            CancellationToken cancellationToken)
+    {
+        if (state.Health == ControlCenterHealthState.Offline)
+        {
+            return null;
+        }
+
+        using var lease =
+            ManagedMcpOperationCoordinator.TryAcquire(registration.Id);
+        if (lease is null)
+        {
+            throw new ManagedMcpOperationInProgressException(
+                registration.Id);
+        }
+
+        if (registration.ProtocolProbe is { } probeRegistration)
+        {
+            var protocol =
+                await ManagedMcpProtocolProbeService.ProbeAsync(
+                    registration,
+                    runBrowserSmoke: false,
+                    cancellationToken);
+
+            if (protocol.Ready &&
+                probeRegistration.BrowserSmokeRequired &&
+                !protocol.BrowserSmokePassed)
+            {
+                var smoke =
+                    await ManagedMcpProtocolProbeService.WaitUntilReadyAsync(
+                        registration,
+                        runBrowserSmoke: true,
+                        timeout: TimeSpan.FromSeconds(45),
+                        cancellationToken);
+
+                if (smoke.Ready && smoke.BrowserSmokePassed)
+                {
+                    return new ManagedMcpLifecycleResult(
+                        ManagedMcpLifecycleOperation.Restart,
+                        $"{registration.DisplayName} browser doğrulaması yenilendi",
+                        "Çalışan MCP/browser zinciri kesilmeden current browser instance üzerinde gerçek smoke yeniden doğrulandı.");
+                }
+
+                throw new InvalidOperationException(
+                    $"{registration.DisplayName} browser smoke yenilemesi tamamlanamadı; çalışan MCP/browser zinciri korunuyor: {smoke.Detail}");
+            }
+
+            if (protocol.Ready &&
+                (!probeRegistration.BrowserSmokeRequired ||
+                 protocol.BrowserSmokePassed) &&
+                registration.Tunnel is { Required: true })
+            {
+                var tunnelStatus =
+                    await ManagedMcpTunnelProvisioningService
+                        .GetRuntimeStatusAsync(
+                            registration,
+                            cancellationToken);
+
+                if (!tunnelStatus.Ready)
+                {
+                    await ManagedMcpTunnelProvisioningService
+                        .ConnectExistingAsync(
+                            registration,
+                            cancellationToken);
+
+                    var refreshedTunnel =
+                        await ManagedMcpTunnelProvisioningService
+                            .GetRuntimeStatusAsync(
+                                registration,
+                                cancellationToken);
+
+                    if (refreshedTunnel.Ready)
+                    {
+                        return new ManagedMcpLifecycleResult(
+                            ManagedMcpLifecycleOperation.Restart,
+                            $"{registration.DisplayName} tüneli yeniden bağlandı",
+                            "Yerel MCP/browser zinciri kesilmeden yalnız Secure MCP Tunnel yeniden hazırlandı.");
+                    }
+
+                    throw new InvalidOperationException(
+                        $"{registration.DisplayName} tüneli yeniden bağlanamadı; yerel MCP/browser zinciri korunuyor: {refreshedTunnel.Detail}");
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private async Task MaintainGenericManagedMcpsAsync()
+    {
+        var lockTaken = false;
+        try
+        {
+            lockTaken = await _genericMcpOperationGate.WaitAsync(
+                0,
+                _lifetimeCts.Token);
+            if (!lockTaken)
+            {
+                return;
+            }
+
+            var registry = await ManagedMcpRegistryCoordinator.LoadOrRecoverAsync(
+                _lifetimeCts.Token);
+
+            _genericRegistrations = registry.Mcps
+                .Where(entry =>
+                    !string.Equals(entry.Id, "talvora", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(entry.Id, "gitea", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            foreach (var registration in _genericRegistrations)
+            {
+                if (!_genericRecoveryStates.TryGetValue(
+                        registration.Id,
+                        out var recoveryState))
+                {
+                    recoveryState = new ManagedMcpRecoveryState(registration.Id);
+                    _genericRecoveryStates[registration.Id] = recoveryState;
+                }
+
+                if (ManagedMcpSessionState.IsManuallyStopped(registration.Id))
+                {
+                    recoveryState.ResetForManualAction();
+                    _genericDashboardStates[registration.Id] =
+                        new ManagedMcpDashboardState(
+                            registration,
+                            ControlCenterHealthState.Offline,
+                            "Durduruldu",
+                            "Bu MCP bu Windows oturumu için elle durduruldu.");
+                    continue;
+                }
+                var tunnelAssessment =
+                    ManagedMcpTunnelProvisioningService.Assess(registration);
+                var tunnelSetupComplete =
+                    !tunnelAssessment.Required ||
+                    (tunnelAssessment.HasTunnelId &&
+                     tunnelAssessment.HasConfig &&
+                     tunnelAssessment.HasRuntimeCredential);
+
+                if (!tunnelSetupComplete)
+                {
+                    recoveryState.ResetForManualAction();
+                    _genericDashboardStates[registration.Id] =
+                        new ManagedMcpDashboardState(
+                            registration,
+                            ControlCenterHealthState.Attention,
+                            "Kurulum tamamlanmadı",
+                            tunnelAssessment.Summary);
+                    continue;
+                }
+
+                if (registration.Tunnel is { Required: true })
+                {
+                    try
+                    {
+                        var clientUpdated =
+                            await ManagedMcpTunnelProvisioningService
+                                .EnsureLatestClientAndReconnectIfNeededAsync(
+                                    registration,
+                                    _lifetimeCts.Token);
+                        if (clientUpdated)
+                        {
+                            ManagedMcpTunnelProvisioningService
+                                .InvalidateRuntimeStatusCache(registration.Id);
+                        }
+                    }
+                    catch (OperationCanceledException)
+                        when (_lifetimeCts.IsCancellationRequested)
+                    {
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        TrayLog.Write(
+                            $"Managed tunnel-client latest check failed. MCP={registration.Id}",
+                            ex);
+                        ControlCenterEventStore.Record(
+                            ControlCenterEventSeverity.Warning,
+                            "tunnel",
+                            $"{registration.DisplayName} tunnel-client güncellemesi ertelendi",
+                            "Mevcut çalışan sürüm korunuyor; latest kontrolü daha sonra yeniden denenecek.",
+                            registration.Id,
+                            $"tunnel:{registration.Id}:client-update-deferred");
+                    }
+                }
+
+                var state = await ControlCenterDashboardService.GetStateAsync(
+                    registration,
+                    _lifetimeCts.Token);
+                _genericDashboardStates[registration.Id] = state;
+
+                if (state.Health == ControlCenterHealthState.Ready)
+                {
+                    var recoveredSeriousIncident = recoveryState.ResetHealthy();
+                    if (recoveredSeriousIncident)
+                    {
+                        NotifyRecoveryResolved(
+                            registration.DisplayName,
+                            "MCP zinciri ve gerekli bağlantılar yeniden hazır.",
+                            registration.Id);
+                    }
+
+                    continue;
+                }
+
+                if (!registration.AutoStart)
+                {
+                    recoveryState.ResetForManualAction();
+                    continue;
+                }
+
+                var nowUtc = DateTimeOffset.UtcNow;
+                if (!recoveryState.CanAttempt(nowUtc))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var result =
+                        await TryRepairGenericWithoutRestartAsync(
+                            registration,
+                            state,
+                            _lifetimeCts.Token);
+
+                    if (result is null)
+                    {
+                        result = state.Health ==
+                            ControlCenterHealthState.Offline
+                            ? await ControlCenterLifecycleService.StartAsync(
+                                registration,
+                                _lifetimeCts.Token)
+                            : await ControlCenterLifecycleService.RestartAsync(
+                                registration,
+                                _lifetimeCts.Token);
+                    }
+
+                    ManagedMcpProtocolProbeService.InvalidateCache(registration.Id);
+                    ManagedMcpTunnelProvisioningService.InvalidateRuntimeStatusCache(registration.Id);
+
+                    var refreshed = await ControlCenterDashboardService.GetStateAsync(
+                        registration,
+                        _lifetimeCts.Token);
+                    _genericDashboardStates[registration.Id] = refreshed;
+
+                    if (refreshed.Health != ControlCenterHealthState.Ready)
+                    {
+                        throw new InvalidOperationException(
+                            $"{registration.DisplayName} otomatik kurtarma sonrası hazır olmadı: {refreshed.Detail}");
+                    }
+
+                    var recoveredSeriousIncident = recoveryState.ResetHealthy();
+
+                    TrayLog.Write(
+                        $"Automatic managed MCP recovery succeeded. MCP={registration.Id}");
+                    ControlCenterEventStore.Record(
+                        ControlCenterEventSeverity.Info,
+                        "recovery",
+                        result.Summary,
+                        result.Detail,
+                        registration.Id,
+                        $"recovery:{registration.Id}:success");
+
+                    if (recoveredSeriousIncident)
+                    {
+                        NotifyRecoveryResolved(
+                            registration.DisplayName,
+                            "MCP zinciri otomatik olarak düzeltildi.",
+                            registration.Id);
+                    }
+                }
+                catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (ManagedMcpOperationInProgressException)
+                {
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    var failure = recoveryState.RegisterFailure(nowUtc);
+
+                    TrayLog.Write(
+                        $"Automatic managed MCP recovery failed. MCP={registration.Id}; Attempt={failure.ConsecutiveFailures}; RetryIn={failure.RetryDelay.TotalSeconds:F0}s",
+                        ex);
+                    ControlCenterEventStore.Record(
+                        ControlCenterEventSeverity.Warning,
+                        "recovery",
+                        $"{registration.DisplayName} otomatik kurtarma denemesi başarısız",
+                        $"Deneme {failure.ConsecutiveFailures}; {failure.RetryDelay.TotalSeconds:F0} saniye sonra yeniden denenecek.",
+                        registration.Id,
+                        $"recovery:{registration.Id}:failed");
+
+                    HandleRecoveryFailure(
+                        recoveryState,
+                        registration.DisplayName,
+                        failure,
+                        ex.Message);
+                }
+            }
+
+            UpdateAggregateTrayState();
+        }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            TrayLog.Write("Generic managed MCP maintenance failed", ex);
+            ControlCenterEventStore.Record(
+                ControlCenterEventSeverity.Warning,
+                "recovery",
+                "Yönetilen MCP sağlık bakımı başarısız",
+                "Generic managed-MCP sağlık döngüsü bu turu tamamlayamadı.",
+                dedupKey: "recovery:generic:maintenance-failed");
+        }
+        finally
+        {
+            if (lockTaken)
+            {
+                _genericMcpOperationGate.Release();
+            }
+        }
+    }
+
     private void SetTalvoraStatus(TalvoraStatus status)
     {
         if (_disposed)
@@ -1008,30 +1353,49 @@ internal sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
+        var genericStates = _genericRegistrations
+            .Select(registration =>
+                _genericDashboardStates.TryGetValue(
+                    registration.Id,
+                    out var state)
+                    ? state
+                    : null)
+            .ToArray();
+
+        var genericOffline = genericStates.Any(state =>
+            state?.Health == ControlCenterHealthState.Offline);
+        var genericUnknown = genericStates.Count(state => state is null);
+        var genericNotReady = genericStates.Count(state =>
+            state is null || state.Health != ControlCenterHealthState.Ready);
+
         TalvoraConnectionState aggregateState;
         string summary;
         string detail;
 
         if (_talvoraStatus.State == TalvoraConnectionState.Offline ||
-            _giteaStatus.State == GiteaConnectionState.Offline)
+            _giteaStatus.State == GiteaConnectionState.Offline ||
+            genericOffline)
         {
             aggregateState = TalvoraConnectionState.Offline;
             summary = "Müdahale gerekiyor";
             detail = BuildAggregateDetail();
         }
         else if (_talvoraStatus.State == TalvoraConnectionState.Ready &&
-                 _giteaStatus.State == GiteaConnectionState.Running)
+                 _giteaStatus.State == GiteaConnectionState.Running &&
+                 genericUnknown == 0 &&
+                 genericNotReady == 0)
         {
             aggregateState = TalvoraConnectionState.Ready;
             summary = "Her şey hazır";
-            detail = "Talvora MCP ve Gitea MCP hazır.";
+            detail = BuildAggregateDetail();
         }
         else
         {
             aggregateState = TalvoraConnectionState.LocalOnly;
             var attentionCount =
                 (_talvoraStatus.State == TalvoraConnectionState.Ready ? 0 : 1) +
-                (_giteaStatus.State == GiteaConnectionState.Running ? 0 : 1);
+                (_giteaStatus.State == GiteaConnectionState.Running ? 0 : 1) +
+                genericNotReady;
             summary = $"{attentionCount} MCP dikkat istiyor";
             detail = BuildAggregateDetail();
         }
@@ -1060,8 +1424,26 @@ internal sealed class TrayApplicationContext : ApplicationContext
         previous?.Dispose();
     }
 
-    private string BuildAggregateDetail() =>
-        $"Talvora: {_talvoraStatus.Summary}; Gitea: {_giteaStatus.Summary}";
+    private string BuildAggregateDetail()
+    {
+        var parts = new List<string>
+        {
+            $"Talvora: {_talvoraStatus.Summary}",
+            $"Gitea: {_giteaStatus.Summary}",
+        };
+
+        foreach (var registration in _genericRegistrations)
+        {
+            parts.Add(
+                _genericDashboardStates.TryGetValue(
+                    registration.Id,
+                    out var state)
+                    ? $"{registration.DisplayName}: {state.StatusText}"
+                    : $"{registration.DisplayName}: kontrol ediliyor");
+        }
+
+        return string.Join("; ", parts);
+    }
 
     private void SetTalvoraActionsEnabled(bool enabled)
     {
@@ -1142,7 +1524,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private void NotifyRecoveryResolved(
         string displayName,
-        string detail)
+        string detail,
+        string? mcpId = null)
     {
         TrayLog.Write($"Serious recovery incident resolved. MCP={displayName}");
         ControlCenterEventStore.Record(
@@ -1150,9 +1533,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
             "recovery",
             $"{displayName} yeniden hazır",
             detail,
-            displayName.StartsWith("Gitea", StringComparison.OrdinalIgnoreCase)
+            mcpId ?? (displayName.StartsWith("Gitea", StringComparison.OrdinalIgnoreCase)
                 ? "gitea"
-                : "talvora",
+                : "talvora"),
             $"recovery:{displayName}:serious-resolved");
 
         ShowBalloon(
@@ -1207,6 +1590,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         _talvoraTimer.Stop();
         _giteaTimer.Stop();
+        _genericMcpTimer.Stop();
         _shutdownTimer.Stop();
         _lifetimeCts.Cancel();
         _notifyIcon.Visible = false;
@@ -1221,9 +1605,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
             _lifetimeCts.Cancel();
             _talvoraTimer.Stop();
             _giteaTimer.Stop();
+            _genericMcpTimer.Stop();
             _shutdownTimer.Stop();
             _talvoraTimer.Dispose();
             _giteaTimer.Dispose();
+            _genericMcpTimer.Dispose();
             _shutdownTimer.Dispose();
             _shutdownEvent.Dispose();
             _notifyIcon.Visible = false;

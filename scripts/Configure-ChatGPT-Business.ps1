@@ -2,7 +2,7 @@
 param(
     [string] $TunnelId,
     [string] $Alias = 'talvora-business',
-    [string] $TunnelClientVersion = 'v0.0.14',
+    [string] $TunnelClientVersion = 'latest',
     [string] $InstallRoot = $(if ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA 'Talvora\TunnelClient' } else { Join-Path $HOME '.talvora\TunnelClient' }),
     [switch] $Reconnect,
     [switch] $InstallOnly,
@@ -61,8 +61,13 @@ function Get-TunnelClientReleaseInfo {
         [Parameter(Mandatory = $true)][string] $Architecture
     )
 
+    if ([string]::Equals($Version, 'latest', [StringComparison]::OrdinalIgnoreCase)) {
+        $latest = Invoke-RestMethod -Uri 'https://api.github.com/repos/openai/tunnel-client/releases/latest' -Headers @{ 'User-Agent' = 'Talvora-Business-Tunnel-Bootstrap' }
+        $Version = [string] $latest.tag_name
+    }
+
     if ($Version -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') {
-        throw "Invalid pinned tunnel-client version: $Version"
+        throw "Invalid tunnel-client release tag: $Version"
     }
 
     if ($Architecture -notin @('amd64', 'arm64')) {
@@ -251,7 +256,7 @@ function Install-OpenAITunnelClient {
 
         [pscustomobject]@{
             Product = 'OpenAI Secure MCP Tunnel client'
-            ReleaseTag = $TunnelClientVersion
+            ReleaseTag = $release.Version
             VersionOutput = ($versionOutput | ForEach-Object { [string] $_ }) -join ' '
             Asset = $release.ArchiveName
             Sha256 = $actualHash

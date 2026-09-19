@@ -8,10 +8,12 @@
     <ProjectReference Include="..\Talvora.Shared\Talvora.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.12" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
-    <PackageReference Include="YamlDotNet" Version="18.1.0" />
-    <PackageReference Include="Tomlyn" Version="2.10.1" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="*" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="*" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="*" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="*" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="*" />
+    <PackageReference Include="YamlDotNet" Version="*" />
+    <PackageReference Include="Tomlyn" Version="*" />
   </ItemGroup>
 </Project>

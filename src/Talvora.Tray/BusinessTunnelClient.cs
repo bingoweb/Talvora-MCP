@@ -337,6 +337,7 @@ internal static class BusinessTunnelClient
             ["TUNNEL_CLIENT_STATE_DIR"] = config.StateRoot,
             ["LOG_LEVEL"] = "warn",
             ["ADMIN_UI_LOG_BUFFER_EVENTS"] = "500",
+            ["MCP_STARTUP_WAIT_TIMEOUT"] = "30s",
         };
 
         if (!string.IsNullOrWhiteSpace(credential))

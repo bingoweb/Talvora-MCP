@@ -457,3 +457,66 @@ Yeni oturumda kullanıcıdan bu kararlar tekrar sorulmayacak.
 Önce HANDOFF + bu TODO okunacak, Talvora bağlantısı ve git durumu doğrulanacak; ardından Faz 0 -> Faz 1 sırasıyla doğrudan implementasyona başlanacak.
 
 Kullanıcı açıkça istemeden commit/push yapılmayacak.
+## Faz 12 — Ticari kalite hardening / deep-audit kapatma (2026-09-19)
+
+### A. Kritik health ve browser instance doğrulaması
+- [x] #79 — browser smoke gerçek Chrome PID/start-time ile execution anında doğrulansın ve marker runtime generation'a bağlansın. ✅ 2026-09-20 demand-launch browser lifecycle nedeniyle relaunch sonrası marker invalidate şartı kaldırıldı; #107 ile non-smoke health browser açmadan generation-scoped smoke kanıtını kullanıyor.
+- [x] #107 — dashboard non-smoke health browser launch/churn üretmesin; successful smoke marker current runtime generation boyunca geçerli kalsın, PID/start-time yalnız gerçek smoke execution kanıtı olsun. ✅ 2026-09-20 source regression + canonical live deploy + 54s stability GREEN.
+- [ ] #71 — shared-browser-context smoke cleanup'ında açılan sekmeyi explicit identity/index ile kapat; başka client sekmesini kapatma riskini kaldır.
+- [ ] #72 — smoke generation'ı başlangıçta capture et; bitişte aynı generation olduğunu doğrula ve marker'ı atomik yaz.
+- [ ] #84 — Ready tool contract'ını enabled capability metadata'ya göre stable representative tools ile güçlendir; tüm tool listesini sürüme pinleme.
+- [ ] #78 — production compatibility proxy 8932 için ayrı regression contract ekle.
+
+### B. Lifecycle / recovery / process ownership
+- [ ] #70 — generic lifecycle'a per-MCP operation lease ekle; UI ve auto-recovery aynı coordinator'ı kullansın.
+- [ ] #67 — Playwright current-user task lifecycle'ını Talvora 7676 broker'dan bağımsız çalıştır; yalnız privileged bileşenleri broker'a gönder.
+- [ ] #68 — manual Stop suppression'ı Windows logon session scoped persistent-ephemeral state'e taşı; Tray restart'ta korun, logoff/yeni session'da sıfırla.
+- [ ] #80/#85 — supervisor/backend/Chrome'u tek owned process-tree domain'i olarak yönet; fatal path ve normal Stop/Restart orphan bırakmasın.
+- [ ] #86 — tunnel stop/disconnect 'already absent/not known/not running' durumlarını idempotent başarı kabul et.
+- [x] #97 — Attention reason/component bazlı remediation uygula; smoke/tunnel sorunlarında full restart yapma. ✅ 2026-09-20 canlı smoke-marker fault injection: generation/launcher/supervisor/backend korunarak smoke yenilendi.
+
+### C. Installer transactional correctness
+- [ ] #83 — Node/runtime mevcutsa installer Playwright task run kabulünü değil bounded MCP readiness'i doğrulasın.
+- [ ] #88 — Playwright assets/task mutation transaction + rollback-safe olsun.
+- [ ] #87 — Talvora service upgrade hata yolunda SCM recovery actions her durumda restore/canonical kalsın.
+- [ ] #82 — NativeInstallerSourceRegression yeni service upgrade mimarisine göre güncellensin; CI kırmayan ve servis-delete regression'ını gerçekten yakalayan contract ekle.
+- [ ] #63 — canonical installer Playwright payload hazırlama duplicate bloğunu tekleştir.
+
+### D. Windows / dependency / latest policy
+- [ ] #65/#89 — tüm PS5.1 fallback scriptlerinde StringComparison Contains yerine PS5.1-compatible IndexOf kullan; fallback regression test ekle.
+- [ ] #90/#91 — Chocolatey ile latest Node Current çöz/kur; deterministic node/npm resolution ve preflight version check ekle; LTS pinleme yapma.
+- [ ] #96 — npm latest update başarısızsa mevcut doğrulanmış installed CLI ile degraded-running fallback uygula; sonraki recovery'de update retry.
+- [ ] #64 — canonical build resolved dependency provenance manifest üretip runtime metadata'ya koysun.
+- [ ] #95 — newer transitive dependency graph'ı official constraints/compatibility ile değerlendir; güvenli olanları modernize et, kör override yapma.
+- [ ] #75 — tunnel-client için bounded periodic latest check + atomic update tasarla; pinleme yapma.
+
+### E. Tunnel correctness / secrets / health
+- [ ] #73 — tunnel-scope cache'i ReferenceTunnelId + TTL ile doğrula, stale ise rediscover.
+- [ ] #74 — runtime-key.dpapi readiness'i file-exists değil secret sızdırmadan DPAPI decrypt validation ile belirle.
+- [ ] #92 — tunnel health'i structured runtimes status ile alias+tunnelId+process/profile identity'ye bağla; HTTP probe hızlı sinyal olarak kalsın.
+- [x] #93 — compatibility proxy no-auth discovery/startup probe warning'lerini resmi tunnel-client beklentisine göre temizle. ✅ 2026-09-20 SSE response headers flush + backend readiness gate; Go SDK v1.7.0 8932 connect 14.6 ms, tunnel /readyz 200, yeni startup probe timeout yok.
+
+### F. Registry / first-run durability
+- [ ] #66 — incomplete setup discovery task/tunnel ownership izlerini de hesaba katsın; kart kaybolmasın.
+- [ ] #99 — primary registry bozulursa validated backup restore -> discovery merge sırası uygula.
+- [ ] #98 — generic/non-discoverable registry kayıtları için durability/ownership manifest stratejisi ekle.
+
+### G. UI / diagnostics / logs
+- [ ] #76 — profile path ve runtime/state paths ayrı alanlarda göster.
+- [ ] #77 — selected MCP detail ekranına son olayları ekle.
+- [ ] #94 — Playwright raw log görünümüne Secure MCP Tunnel logunu kaynak etiketiyle ekle.
+- [ ] #69 — server.log runtime boyunca bounded rolling log olsun; yalnız startup rotate'a güvenme.
+- [ ] #100 — dashboard/detail/recovery protocol probes için kısa ömürlü shared health cache kullan; lifecycle sonrası invalidate et.
+- [ ] #101 — tekrar eden version/detail-source exception loglarına dedup/rate-limit/backoff ekle.
+
+### H. Final gates
+- [ ] Değiştirilen her alt sistemi yalnız hedefli test et; aynı testleri tekrarlama.
+- [ ] Yeni bulgu çıkarsa BUG-AUDIT.md + bu TODO'ya anında ekle ve mümkünse aynı fazda kapat.
+- [ ] Shared/Service/Tray Release build 0 warning/0 error.
+- [ ] Canonical installer build.
+- [ ] Live deploy yalnız tüm targeted source gates GREEN olduktan sonra.
+- [ ] Exact-installed Talvora system_info + service/tray version-root doğrulaması.
+- [ ] Exact-installed Playwright initialize/tools/browser instance-bound navigate+snapshot smoke.
+- [ ] Final Control Center visual smoke bir kez.
+- [ ] git diff --check temiz.
+- [ ] Kullanıcı açıkça istemeden commit/push YOK.

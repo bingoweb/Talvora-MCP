@@ -6,6 +6,6 @@
     <ProjectReference Include="..\..\src\Talvora.Shared\Talvora.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
+    <PackageReference Include="ModelContextProtocol" Version="*" />
   </ItemGroup>
 </Project>

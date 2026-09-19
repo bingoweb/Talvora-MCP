@@ -1,5 +1,6 @@
 using System.IO;
 using System.Net.Http;
+using System.Text.Json;
 using Talvora.Shared;
 
 namespace Talvora.Tray;
@@ -19,8 +20,27 @@ internal static class ControlCenterComponentHealthService
         ManagedMcpRegistration registration,
         CancellationToken cancellationToken)
     {
+        ManagedMcpProtocolProbeResult? protocolProbe = null;
+        if (registration.ProtocolProbe is not null)
+        {
+            protocolProbe = await ManagedMcpProtocolProbeService.ProbeCachedAsync(
+                registration,
+                cancellationToken);
+        }
+
+        return await GetStatesAsync(
+            registration,
+            protocolProbe,
+            cancellationToken);
+    }
+
+    internal static async Task<IReadOnlyList<ManagedMcpComponentState>> GetStatesAsync(
+        ManagedMcpRegistration registration,
+        ManagedMcpProtocolProbeResult? protocolProbe,
+        CancellationToken cancellationToken)
+    {
         var tasks = registration.Components.Select(component =>
-            GetStateAsync(registration, component, cancellationToken));
+            GetStateAsync(registration, component, protocolProbe, cancellationToken));
 
         return await Task.WhenAll(tasks);
     }
@@ -28,6 +48,7 @@ internal static class ControlCenterComponentHealthService
     private static Task<ManagedMcpComponentState> GetStateAsync(
         ManagedMcpRegistration registration,
         ManagedMcpComponentRegistration component,
+        ManagedMcpProtocolProbeResult? protocolProbe,
         CancellationToken cancellationToken)
     {
         if (string.Equals(
@@ -37,7 +58,86 @@ internal static class ControlCenterComponentHealthService
             registration.Tunnel is not null)
         {
             return GetTunnelStateAsync(
-                registration.Tunnel,
+                registration,
+                component,
+                cancellationToken);
+        }
+
+        if (string.Equals(
+                component.Kind,
+                "mcp-protocol",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(
+                protocolProbe is { Ready: true }
+                    ? new ManagedMcpComponentState(
+                        component,
+                        ControlCenterHealthState.Ready,
+                        "Hazır",
+                        protocolProbe.Detail)
+                    : new ManagedMcpComponentState(
+                        component,
+                        ControlCenterHealthState.Offline,
+                        "MCP erişilemiyor",
+                        protocolProbe?.Detail ?? "MCP protokol sağlık kontrolü tanımlı değil."));
+        }
+
+        if (string.Equals(
+                component.Kind,
+                "browser-runtime",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(
+                protocolProbe is { BrowserRuntimeReady: true }
+                    ? new ManagedMcpComponentState(
+                        component,
+                        ControlCenterHealthState.Ready,
+                        "Hazır",
+                        "Gerçek browser runtime bağlantısı doğrulandı.")
+                    : new ManagedMcpComponentState(
+                        component,
+                        ControlCenterHealthState.Offline,
+                        "Browser hazır değil",
+                        protocolProbe?.Detail ?? "Browser runtime sağlık kontrolü alınamadı."));
+        }
+
+        if (string.Equals(
+                component.Kind,
+                "browser-smoke",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(
+                protocolProbe is { BrowserSmokePassed: true }
+                    ? new ManagedMcpComponentState(
+                        component,
+                        ControlCenterHealthState.Ready,
+                        "Doğrulandı",
+                        "Mevcut runtime generation için gerçek navigate ve accessibility snapshot smoke başarılı.")
+                    : new ManagedMcpComponentState(
+                        component,
+                        ControlCenterHealthState.Attention,
+                        "Doğrulama bekleniyor",
+                        "Mevcut runtime generation için gerçek browser smoke henüz doğrulanmadı."));
+        }
+
+        if (string.Equals(
+                component.Kind,
+                "process",
+                StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(component.Name))
+        {
+            return ProbeProcessAsync(
+                component,
+                cancellationToken);
+        }
+
+        if (string.Equals(
+                component.Kind,
+                "scheduled-task",
+                StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(component.Name))
+        {
+            return ProbeScheduledTaskAsync(
                 component,
                 cancellationToken);
         }
@@ -73,10 +173,49 @@ internal static class ControlCenterComponentHealthService
     }
 
     private static async Task<ManagedMcpComponentState> GetTunnelStateAsync(
-        ManagedMcpTunnelRegistration tunnel,
+        ManagedMcpRegistration registration,
         ManagedMcpComponentRegistration component,
         CancellationToken cancellationToken)
     {
+        var tunnel = registration.Tunnel
+            ?? throw new InvalidOperationException("Tunnel registration is missing.");
+
+        ManagedMcpTunnelRuntimeStatus runtimeStatus;
+        try
+        {
+            runtimeStatus = await ManagedMcpTunnelProvisioningService.GetRuntimeStatusCachedAsync(
+                registration,
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (
+            ex is IOException or
+            JsonException or
+            InvalidOperationException or
+            UnauthorizedAccessException)
+        {
+            return new ManagedMcpComponentState(
+                component,
+                ControlCenterHealthState.Attention,
+                "Tünel kimliği doğrulanamadı",
+                "Structured tunnel runtime durumu okunamadı.");
+        }
+
+        if (!runtimeStatus.Ready)
+        {
+            return new ManagedMcpComponentState(
+                component,
+                runtimeStatus.ProcessRunning
+                    ? ControlCenterHealthState.Attention
+                    : ControlCenterHealthState.Offline,
+                runtimeStatus.ProcessRunning
+                    ? "Tünel hazır değil"
+                    : "Tünel çalışmıyor",
+                runtimeStatus.Detail);
+        }
         if (string.IsNullOrWhiteSpace(tunnel.StateRoot))
         {
             return new ManagedMcpComponentState(
@@ -177,6 +316,145 @@ internal static class ControlCenterComponentHealthService
                     ? "Tünel sağlık kontrolü zaman aşımına uğradı."
                     : "Tünel sağlık uç noktasına ulaşılamadı.");
         }
+    }
+
+    private static async Task<ManagedMcpComponentState> ProbeProcessAsync(
+        ManagedMcpComponentRegistration component,
+        CancellationToken cancellationToken)
+    {
+        var programFiles = Environment.GetFolderPath(
+            Environment.SpecialFolder.ProgramFiles);
+        var pwsh = Path.Combine(
+            programFiles,
+            "PowerShell",
+            "7",
+            "pwsh.exe");
+
+        if (!File.Exists(pwsh))
+        {
+            pwsh = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.System),
+                "WindowsPowerShell",
+                "v1.0",
+                "powershell.exe");
+        }
+
+        var marker = component.Name!
+            .Replace("'", "''", StringComparison.Ordinal);
+        var script =
+            "$marker='" + marker + "';" +
+            "$p=Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | " +
+            "Where-Object { $_.CommandLine -and $_.CommandLine.IndexOf($marker,[StringComparison]::OrdinalIgnoreCase) -ge 0 } | " +
+            "Select-Object -First 1 ProcessId,Name,SessionId;" +
+            "if($null -eq $p){exit 3};" +
+            "[Console]::Write(($p | ConvertTo-Json -Compress))";
+
+        var result = await ProcessRunner.RunAsync(
+            pwsh,
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            new[]
+            {
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                script,
+            },
+            timeoutSeconds: 10,
+            cancellationToken: cancellationToken);
+
+        if (result.ExitCode != 0)
+        {
+            return new ManagedMcpComponentState(
+                component,
+                ControlCenterHealthState.Offline,
+                "Çalışmıyor",
+                "Playwright MCP process bulunamadı.");
+        }
+
+        return new ManagedMcpComponentState(
+            component,
+            ControlCenterHealthState.Ready,
+            "Çalışıyor",
+            "Playwright MCP process aktif.");
+    }
+
+    private static async Task<ManagedMcpComponentState> ProbeScheduledTaskAsync(
+        ManagedMcpComponentRegistration component,
+        CancellationToken cancellationToken)
+    {
+        var programFiles = Environment.GetFolderPath(
+            Environment.SpecialFolder.ProgramFiles);
+        var pwsh = Path.Combine(
+            programFiles,
+            "PowerShell",
+            "7",
+            "pwsh.exe");
+
+        if (!File.Exists(pwsh))
+        {
+            pwsh = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.System),
+                "WindowsPowerShell",
+                "v1.0",
+                "powershell.exe");
+        }
+
+        var taskName = component.Name!
+            .Replace("'", "''", StringComparison.Ordinal);
+        var script =
+            "$t=Get-ScheduledTask -TaskName '" + taskName +
+            "' -ErrorAction SilentlyContinue;" +
+            "if($null -eq $t){exit 3};" +
+            "[Console]::Write($t.State.ToString())";
+
+        var result = await ProcessRunner.RunAsync(
+            pwsh,
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            new[]
+            {
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                script,
+            },
+            timeoutSeconds: 10,
+            cancellationToken: cancellationToken);
+
+        if (result.ExitCode != 0)
+        {
+            return new ManagedMcpComponentState(
+                component,
+                ControlCenterHealthState.Offline,
+                "Görev bulunamadı",
+                "Yönetilen zamanlanmış görev okunamadı.");
+        }
+
+        var state = result.StandardOutput.Trim();
+        return state switch
+        {
+            "Running" => new ManagedMcpComponentState(
+                component,
+                ControlCenterHealthState.Ready,
+                "Çalışıyor",
+                "Zamanlanmış görev aktif."),
+            "Disabled" => new ManagedMcpComponentState(
+                component,
+                ControlCenterHealthState.Offline,
+                "Devre dışı",
+                "Zamanlanmış görev devre dışı."),
+            "Ready" => new ManagedMcpComponentState(
+                component,
+                ControlCenterHealthState.Attention,
+                "Beklemede",
+                "Zamanlanmış görev kayıtlı ancak şu anda çalışmıyor."),
+            _ => new ManagedMcpComponentState(
+                component,
+                ControlCenterHealthState.Attention,
+                string.IsNullOrWhiteSpace(state) ? "Durum bilinmiyor" : state,
+                "Zamanlanmış görev hazır durumda değil."),
+        };
     }
 
     private static async Task<ManagedMcpComponentState> ProbeHttpAsync(

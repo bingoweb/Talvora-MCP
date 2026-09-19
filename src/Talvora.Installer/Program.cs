@@ -30,7 +30,8 @@ internal sealed record InstallUserContext(
     int? SessionId,
     string Sid,
     string UserProfile,
-    string LocalAppData);
+    string LocalAppData,
+    string RoamingAppData);
 
 internal static class Program
 {

@@ -9,12 +9,44 @@ internal static class ControlCenterRawLogService
     private const int MaxTailBytes = 512 * 1024;
     private const int MaxLines = 1200;
 
-    public static string ReadTail()
+    public static string ReadTail(
+        ManagedMcpRegistration? registration = null)
     {
-        var path = TrayLog.PathName;
+        var paths = new List<string>
+        {
+            TrayLog.PathName,
+        };
+
+        if (registration is not null)
+        {
+            paths.AddRange(
+                registration.DiscoveryHints
+                    .Where(hint => string.Equals(
+                        hint.Kind,
+                        "log-file",
+                        StringComparison.OrdinalIgnoreCase))
+                    .Select(hint => hint.Value)
+                    .Where(value => !string.IsNullOrWhiteSpace(value)));
+        }
+
+        var lines = new Queue<string>();
+
+        foreach (var path in paths
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            AppendTail(path, lines);
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static void AppendTail(
+        string path,
+        Queue<string> lines)
+    {
         if (!File.Exists(path))
         {
-            return string.Empty;
+            return;
         }
 
         try
@@ -42,7 +74,9 @@ internal static class ControlCenterRawLogService
                 _ = reader.ReadLine();
             }
 
-            var lines = new Queue<string>();
+            var sourceLabel = Path.GetFileName(path);
+            lines.Enqueue($"--- {sourceLabel} ---");
+
             while (reader.ReadLine() is { } line)
             {
                 lines.Enqueue(line);
@@ -51,8 +85,6 @@ internal static class ControlCenterRawLogService
                     _ = lines.Dequeue();
                 }
             }
-
-            return string.Join(Environment.NewLine, lines);
         }
         catch (Exception ex) when (
             ex is IOException or
@@ -62,10 +94,9 @@ internal static class ControlCenterRawLogService
         {
             FileLog.Write(
                 TrayLog.PathName,
-                "Raw tray log tail could not be read",
+                $"Raw log tail could not be read: {path}",
                 ex,
                 maxBytes: 3L * 1024 * 1024);
-            return string.Empty;
         }
     }
 

@@ -1,4 +1,9 @@
+using System.Collections.Concurrent;
 using System.IO;
+using System.IO.Compression;
+using System.Net.Http;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -27,9 +32,25 @@ internal sealed record TunnelProvisioningPreflight(
     int WorkspaceScopeCount,
     bool AdminCredentialPresent);
 
+internal sealed record ManagedMcpTunnelRuntimeStatus(
+    bool Ready,
+    bool ProcessRunning,
+    bool Healthy,
+    bool IdentityMatches,
+    string Detail);
+
 internal static partial class ManagedMcpTunnelProvisioningService
 {
     private const int TunnelActivationDelaySeconds = 30;
+    private static readonly TimeSpan RuntimeStatusCacheDuration =
+        TimeSpan.FromSeconds(2);
+    private static readonly ConcurrentDictionary<string, RuntimeStatusCacheEntry> RuntimeStatusCache =
+        new(StringComparer.OrdinalIgnoreCase);
+    private static readonly SemaphoreSlim TunnelClientReleaseGate = new(1, 1);
+    private static readonly HttpClient TunnelClientReleaseHttp = TalvoraHttp.CreateClient(
+        timeout: TimeSpan.FromSeconds(25));
+    private static DateTimeOffset _tunnelClientLatestCheckedAtUtc;
+    private static string? _cachedTunnelClientLatestTag;
     private static readonly Regex TunnelIdPattern = new(
         "^tunnel_[0-9a-f]{32}$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -76,7 +97,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
         var credentialPath = GetRuntimeCredentialPath(configPath);
         var hasTunnelId = IsTunnelId(tunnel.TunnelId);
         var hasConfig = File.Exists(configPath);
-        var hasRuntime = File.Exists(credentialPath);
+        var hasRuntime = IsRuntimeCredentialUsable(credentialPath);
         var hasAdmin = ControlCenterAdminCredentialStore.Exists();
         var hasReusableRuntime = hasRuntime || HasReusableRuntimeSource();
 
@@ -287,11 +308,75 @@ internal static partial class ManagedMcpTunnelProvisioningService
         }
     }
 
+    public static async Task<bool> EnsureLatestClientAndReconnectIfNeededAsync(
+        ManagedMcpRegistration registration,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+
+        if (registration.Tunnel is not { Required: true })
+        {
+            return false;
+        }
+
+        var configPath = ResolveConfigPath(registration);
+        if (!File.Exists(configPath))
+        {
+            return false;
+        }
+
+        using var lease =
+            ManagedMcpOperationCoordinator.TryAcquire(
+                registration.Id);
+        if (lease is null)
+        {
+            return false;
+        }
+
+        var existing = LoadBusinessConfig(configPath);
+        var updated = await EnsureLatestTunnelClientAsync(
+            existing,
+            configPath,
+            cancellationToken).ConfigureAwait(false);
+
+        if (string.Equals(
+                existing.TunnelClientVersion,
+                updated.TunnelClientVersion,
+                StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(
+                existing.TunnelClient,
+                updated.TunnelClient,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        InvalidateRuntimeStatusCache(registration.Id);
+
+        await DisconnectExistingAsync(
+            registration,
+            cancellationToken).ConfigureAwait(false);
+        await ConnectExistingAsync(
+            registration,
+            cancellationToken).ConfigureAwait(false);
+
+        ControlCenterEventStore.Record(
+            ControlCenterEventSeverity.Info,
+            "tunnel",
+            $"{registration.DisplayName} tunnel-client güncellendi",
+            $"OpenAI tunnel-client {updated.TunnelClientVersion} sürümüne atomik olarak geçirildi.",
+            registration.Id,
+            $"tunnel:{registration.Id}:client-updated");
+
+        return true;
+    }
+
     public static async Task ConnectExistingAsync(
         ManagedMcpRegistration registration,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(registration);
+        InvalidateRuntimeStatusCache(registration.Id);
 
         if (registration.Tunnel is null ||
             !registration.Tunnel.Required ||
@@ -303,6 +388,10 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
         var configPath = ResolveConfigPath(registration);
         var config = LoadBusinessConfig(configPath);
+        config = await EnsureLatestTunnelClientAsync(
+            config,
+            configPath,
+            cancellationToken).ConfigureAwait(false);
         var credentialPath = GetRuntimeCredentialPath(configPath);
 
         string? runtimeKey = null;
@@ -352,6 +441,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(registration);
+        InvalidateRuntimeStatusCache(registration.Id);
 
         if (registration.Tunnel is null)
         {
@@ -376,9 +466,119 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
         if (result.ExitCode != 0)
         {
+            var diagnostic = CollapseSafe(
+                result.StandardError,
+                result.StandardOutput);
+
+            if (IsIdempotentRuntimeStopResult(diagnostic))
+            {
+                return;
+            }
+
             throw new InvalidOperationException(
-                $"tunnel-client stop başarısız: {CollapseSafe(result.StandardError, result.StandardOutput)}");
+                $"tunnel-client stop başarısız: {diagnostic}");
         }
+    }
+
+    public static async Task<ManagedMcpTunnelRuntimeStatus> GetRuntimeStatusCachedAsync(
+        ManagedMcpRegistration registration,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+
+        var now = DateTimeOffset.UtcNow;
+        if (RuntimeStatusCache.TryGetValue(
+                registration.Id,
+                out var cached) &&
+            cached.ExpiresAtUtc > now)
+        {
+            return cached.Status;
+        }
+
+        var status = await GetRuntimeStatusAsync(
+            registration,
+            cancellationToken);
+
+        RuntimeStatusCache[registration.Id] =
+            new RuntimeStatusCacheEntry(
+                now.Add(RuntimeStatusCacheDuration),
+                status);
+        return status;
+    }
+
+    public static void InvalidateRuntimeStatusCache(string mcpId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(mcpId);
+        _ = RuntimeStatusCache.TryRemove(mcpId, out _);
+    }
+
+    public static async Task<ManagedMcpTunnelRuntimeStatus> GetRuntimeStatusAsync(
+        ManagedMcpRegistration registration,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+
+        if (registration.Tunnel is null ||
+            !registration.Tunnel.Required ||
+            !IsTunnelId(registration.Tunnel.TunnelId))
+        {
+            return new ManagedMcpTunnelRuntimeStatus(
+                Ready: false,
+                ProcessRunning: false,
+                Healthy: false,
+                IdentityMatches: false,
+                Detail: "Yönetilen tünel kimliği eksik.");
+        }
+
+        var configPath = ResolveConfigPath(registration);
+        if (!File.Exists(configPath))
+        {
+            return new ManagedMcpTunnelRuntimeStatus(
+                Ready: false,
+                ProcessRunning: false,
+                Healthy: false,
+                IdentityMatches: false,
+                Detail: "Tünel yapılandırma dosyası bulunamadı.");
+        }
+
+        var config = LoadBusinessConfig(configPath);
+        var result = await RunClientAsync(
+            config.TunnelClient,
+            config.StateRoot,
+            ["runtimes", "status", config.Alias, "--json"],
+            runtimeKey: null,
+            adminKey: null,
+            timeout: TimeSpan.FromSeconds(12),
+            cancellationToken).ConfigureAwait(false);
+
+        if (result.ExitCode != 0)
+        {
+            return new ManagedMcpTunnelRuntimeStatus(
+                Ready: false,
+                ProcessRunning: false,
+                Healthy: false,
+                IdentityMatches: false,
+                Detail: "Tünel runtime durumu okunamadı: " +
+                    CollapseSafe(
+                        result.StandardError,
+                        result.StandardOutput));
+        }
+
+        var json = ExtractJson(result.StandardOutput);
+        if (json is null)
+        {
+            return new ManagedMcpTunnelRuntimeStatus(
+                Ready: false,
+                ProcessRunning: false,
+                Healthy: false,
+                IdentityMatches: false,
+                Detail: "Tünel runtime durumu geçerli JSON içermiyor.");
+        }
+
+        using var document = JsonDocument.Parse(json);
+        return ParseRuntimeStatus(
+            config,
+            document.RootElement);
     }
 
     public static async Task<TunnelProvisioningPreflight> RunReadOnlyPreflightAsync(
@@ -475,6 +675,10 @@ internal static partial class ManagedMcpTunnelProvisioningService
         }
     }
 
+    private sealed record RuntimeStatusCacheEntry(
+        DateTimeOffset ExpiresAtUtc,
+        ManagedMcpTunnelRuntimeStatus Status);
+
     private sealed record RuntimeSource(
         BusinessConfig Config,
         string ConfigPath,
@@ -499,7 +703,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
             var configPath = ResolveConfigPath(candidate);
             var credentialPath = GetRuntimeCredentialPath(configPath);
-            if (!File.Exists(configPath) || !File.Exists(credentialPath))
+            if (!File.Exists(configPath) || !IsRuntimeCredentialUsable(credentialPath))
             {
                 continue;
             }
@@ -555,6 +759,12 @@ internal static partial class ManagedMcpTunnelProvisioningService
         {
             var cached = TryReadScope();
             if (cached is not null &&
+                string.Equals(
+                    cached.ReferenceTunnelId,
+                    reference.Config.TunnelId,
+                    StringComparison.Ordinal) &&
+                DateTimeOffset.UtcNow - cached.UpdatedAtUtc <=
+                    TimeSpan.FromHours(24) &&
                 (cached.OrganizationIds.Count > 0 ||
                  cached.WorkspaceIds.Count > 0))
             {
@@ -745,10 +955,10 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 if (json is not null)
                 {
                     using var document = JsonDocument.Parse(json);
-                    var root = document.RootElement;
-                    if (FindBoolean(root, "process_running") &&
-                        FindBoolean(root, "healthy") &&
-                        FindBoolean(root, "ready"))
+                    var status = ParseRuntimeStatus(
+                        config,
+                        document.RootElement);
+                    if (status.Ready)
                     {
                         return;
                     }
@@ -786,6 +996,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
             ["TUNNEL_CLIENT_STATE_DIR"] = stateRoot,
             ["LOG_LEVEL"] = "warn",
             ["ADMIN_UI_LOG_BUFFER_EVENTS"] = "500",
+            ["MCP_STARTUP_WAIT_TIMEOUT"] = "30s",
             ["CONTROL_PLANE_API_KEY"] = runtimeKey,
             ["OPENAI_API_KEY"] = null,
             ["OPENAI_ADMIN_KEY"] = adminKey,
@@ -871,6 +1082,441 @@ internal static partial class ManagedMcpTunnelProvisioningService
             "ManagedTunnels",
             safeId,
             "business.json");
+    }
+
+    private static async Task<BusinessConfig> EnsureLatestTunnelClientAsync(
+        BusinessConfig config,
+        string configPath,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var latestTag = await GetLatestTunnelClientTagAsync(
+                cancellationToken).ConfigureAwait(false);
+
+            if (string.Equals(
+                    config.TunnelClientVersion,
+                    latestTag,
+                    StringComparison.OrdinalIgnoreCase) &&
+                File.Exists(config.TunnelClient))
+            {
+                return config;
+            }
+
+            var architecture = RuntimeInformation.OSArchitecture switch
+            {
+                Architecture.X64 => "amd64",
+                Architecture.Arm64 => "arm64",
+                _ => throw new PlatformNotSupportedException(
+                    $"OpenAI tunnel-client Windows architecture desteklenmiyor: {RuntimeInformation.OSArchitecture}"),
+            };
+
+            var archiveName =
+                $"tunnel-client-{latestTag}-windows-{architecture}.zip";
+            var releaseBase =
+                $"https://github.com/openai/tunnel-client/releases/download/{latestTag}";
+            var archiveBytes = await DownloadBytesAsync(
+                $"{releaseBase}/{archiveName}",
+                cancellationToken).ConfigureAwait(false);
+            var checksums = Encoding.UTF8.GetString(
+                await DownloadBytesAsync(
+                    $"{releaseBase}/SHA256SUMS.txt",
+                    cancellationToken).ConfigureAwait(false));
+
+            var expectedHash = ParseExpectedSha256(
+                checksums,
+                archiveName);
+            var actualHash = Convert.ToHexString(
+                    SHA256.HashData(archiveBytes))
+                .ToLowerInvariant();
+
+            if (!string.Equals(
+                    expectedHash,
+                    actualHash,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException(
+                    "Downloaded tunnel-client archive SHA256 does not match the official release checksum.");
+            }
+
+            var versionRoot = Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),
+                "Talvora",
+                "TunnelClient",
+                "versions",
+                latestTag.TrimStart('v'));
+            Directory.CreateDirectory(versionRoot);
+
+            var destination = Path.Combine(
+                versionRoot,
+                "tunnel-client.exe");
+            var tempDestination =
+                destination + "." +
+                Guid.NewGuid().ToString("N") +
+                ".tmp";
+
+            try
+            {
+                using var archiveStream =
+                    new MemoryStream(archiveBytes);
+                using var archive =
+                    new ZipArchive(
+                        archiveStream,
+                        ZipArchiveMode.Read,
+                        leaveOpen: false);
+
+                var entry = archive.Entries.FirstOrDefault(candidate =>
+                    string.Equals(
+                        Path.GetFileName(candidate.FullName),
+                        "tunnel-client.exe",
+                        StringComparison.OrdinalIgnoreCase))
+                    ?? throw new InvalidDataException(
+                        "Official tunnel-client archive does not contain tunnel-client.exe.");
+
+                await using (var source = entry.Open())
+                await using (var target = new FileStream(
+                    tempDestination,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None,
+                    bufferSize: 64 * 1024,
+                    useAsync: true))
+                {
+                    await source.CopyToAsync(
+                        target,
+                        cancellationToken).ConfigureAwait(false);
+                }
+
+                File.Move(
+                    tempDestination,
+                    destination,
+                    overwrite: true);
+            }
+            finally
+            {
+                try
+                {
+                    File.Delete(tempDestination);
+                }
+                catch (Exception ex) when (
+                    ex is IOException or
+                    UnauthorizedAccessException)
+                {
+                }
+            }
+
+            var updated = config with
+            {
+                TunnelClient = destination,
+                TunnelClientVersion = latestTag,
+                UpdatedAtUtc = DateTimeOffset.UtcNow.ToString("O"),
+            };
+
+            WriteBusinessConfig(
+                configPath,
+                updated);
+
+            TrayLog.Write(
+                $"OpenAI tunnel-client latest release staged. Version={latestTag}; Path={destination}");
+
+            return updated;
+        }
+        catch (OperationCanceledException) when (
+            cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (
+            ex is HttpRequestException or
+            IOException or
+            JsonException or
+            InvalidDataException or
+            PlatformNotSupportedException)
+        {
+            if (File.Exists(config.TunnelClient))
+            {
+                TrayLog.Write(
+                    $"OpenAI tunnel-client latest check/update failed; existing verified binary retained. Version={config.TunnelClientVersion}",
+                    ex);
+                return config;
+            }
+
+            throw;
+        }
+    }
+
+    private static async Task<string> GetLatestTunnelClientTagAsync(
+        CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (!string.IsNullOrWhiteSpace(
+                _cachedTunnelClientLatestTag) &&
+            now - _tunnelClientLatestCheckedAtUtc <
+                TimeSpan.FromHours(6))
+        {
+            return _cachedTunnelClientLatestTag;
+        }
+
+        await TunnelClientReleaseGate
+            .WaitAsync(cancellationToken)
+            .ConfigureAwait(false);
+        try
+        {
+            now = DateTimeOffset.UtcNow;
+            if (!string.IsNullOrWhiteSpace(
+                    _cachedTunnelClientLatestTag) &&
+                now - _tunnelClientLatestCheckedAtUtc <
+                    TimeSpan.FromHours(6))
+            {
+                return _cachedTunnelClientLatestTag;
+            }
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                "https://api.github.com/repos/openai/tunnel-client/releases/latest");
+            request.Headers.UserAgent.ParseAdd(
+                "Talvora-ControlCenter/1.0");
+
+            using var response =
+                await TunnelClientReleaseHttp.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+
+            using var document = JsonDocument.Parse(
+                await response.Content.ReadAsStringAsync(
+                    cancellationToken).ConfigureAwait(false));
+            if (!document.RootElement.TryGetProperty(
+                    "tag_name",
+                    out var tagElement) ||
+                tagElement.ValueKind != JsonValueKind.String)
+            {
+                throw new InvalidDataException(
+                    "OpenAI tunnel-client latest release response does not contain tag_name.");
+            }
+
+            var tag = tagElement.GetString();
+            if (string.IsNullOrWhiteSpace(tag) ||
+                !Regex.IsMatch(
+                    tag,
+                    @"^v[0-9]+\.[0-9]+\.[0-9]+$",
+                    RegexOptions.CultureInvariant))
+            {
+                throw new InvalidDataException(
+                    $"OpenAI tunnel-client latest release tag is invalid: {tag}");
+            }
+
+            _cachedTunnelClientLatestTag = tag;
+            _tunnelClientLatestCheckedAtUtc = now;
+            return tag;
+        }
+        finally
+        {
+            TunnelClientReleaseGate.Release();
+        }
+    }
+
+    private static async Task<byte[]> DownloadBytesAsync(
+        string url,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            url);
+        request.Headers.UserAgent.ParseAdd(
+            "Talvora-ControlCenter/1.0");
+
+        using var response =
+            await TunnelClientReleaseHttp.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadAsByteArrayAsync(
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string ParseExpectedSha256(
+        string checksums,
+        string archiveName)
+    {
+        foreach (var line in checksums.Split(
+            new[] { '\r', '\n' },
+            StringSplitOptions.RemoveEmptyEntries))
+        {
+            var match = Regex.Match(
+                line,
+                "^(?<hash>[0-9A-Fa-f]{64})\\s+\\*?(?<name>.+)$",
+                RegexOptions.CultureInvariant);
+            if (!match.Success)
+            {
+                continue;
+            }
+
+            if (string.Equals(
+                    Path.GetFileName(
+                        match.Groups["name"].Value.Trim()),
+                    archiveName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return match.Groups["hash"]
+                    .Value
+                    .ToLowerInvariant();
+            }
+        }
+
+        throw new InvalidDataException(
+            $"Official SHA256SUMS.txt does not contain {archiveName}.");
+    }
+
+    private static ManagedMcpTunnelRuntimeStatus ParseRuntimeStatus(
+        BusinessConfig config,
+        JsonElement root)
+    {
+        var alias = TryGetTopLevelString(root, "alias");
+        var tunnelId = TryGetTopLevelString(root, "tunnel_id");
+        var profilePath = TryGetTopLevelString(root, "profile_path");
+        var processRunning = TryGetTopLevelBoolean(
+            root,
+            "process_running");
+        var healthy = TryGetTopLevelBoolean(
+            root,
+            "healthy");
+        var ready = TryGetTopLevelBoolean(
+            root,
+            "ready");
+
+        var expectedProfilePath = Path.Combine(
+            config.StateRoot,
+            "profiles",
+            config.Alias + ".yaml");
+
+        var identityMatches =
+            string.Equals(
+                alias,
+                config.Alias,
+                StringComparison.Ordinal) &&
+            string.Equals(
+                tunnelId,
+                config.TunnelId,
+                StringComparison.Ordinal) &&
+            !string.IsNullOrWhiteSpace(profilePath) &&
+            string.Equals(
+                Path.GetFullPath(profilePath),
+                Path.GetFullPath(expectedProfilePath),
+                StringComparison.OrdinalIgnoreCase);
+
+        var overallReady =
+            identityMatches &&
+            processRunning &&
+            healthy &&
+            ready;
+
+        var detail = overallReady
+            ? $"Tünel {config.Alias} kimliği, process ve ready zinciri doğrulandı."
+            : $"Tünel runtime doğrulaması eksik. Identity={identityMatches}; Process={processRunning}; Healthy={healthy}; Ready={ready}.";
+
+        return new ManagedMcpTunnelRuntimeStatus(
+            overallReady,
+            processRunning,
+            healthy,
+            identityMatches,
+            detail);
+    }
+
+    private static string? TryGetTopLevelString(
+        JsonElement root,
+        string propertyName)
+    {
+        if (root.ValueKind != JsonValueKind.Object ||
+            !root.TryGetProperty(
+                propertyName,
+                out var value) ||
+            value.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        return value.GetString();
+    }
+
+    private static bool TryGetTopLevelBoolean(
+        JsonElement root,
+        string propertyName)
+    {
+        if (root.ValueKind != JsonValueKind.Object ||
+            !root.TryGetProperty(
+                propertyName,
+                out var value))
+        {
+            return false;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => false,
+        };
+    }
+
+    private static bool IsIdempotentRuntimeStopResult(
+        string diagnostic)
+    {
+        if (string.IsNullOrWhiteSpace(diagnostic))
+        {
+            return false;
+        }
+
+        var knownAbsentMessages = new[]
+        {
+            "is not known",
+            "not known",
+            "not running",
+            "already stopped",
+            "runtime not found",
+            "alias not found",
+        };
+
+        return knownAbsentMessages.Any(message =>
+            diagnostic.Contains(
+                message,
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsRuntimeCredentialUsable(string credentialPath)
+    {
+        if (!File.Exists(credentialPath))
+        {
+            return false;
+        }
+
+        string? secret = null;
+        try
+        {
+            secret = DpapiSecretStore.ReadString(
+                credentialPath,
+                "tunnel Runtime API key");
+            return !string.IsNullOrWhiteSpace(secret);
+        }
+        catch (Exception ex) when (
+            ex is IOException or
+            UnauthorizedAccessException or
+            InvalidOperationException or
+            System.Security.Cryptography.CryptographicException)
+        {
+            TrayLog.Write(
+                $"Tunnel runtime credential validation failed. Path={credentialPath}",
+                ex);
+            return false;
+        }
+        finally
+        {
+            secret = null;
+        }
     }
 
     private static string GetRuntimeCredentialPath(string configPath) =>

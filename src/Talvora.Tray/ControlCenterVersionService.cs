@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -9,6 +10,10 @@ internal static class ControlCenterVersionService
 {
     private static readonly HttpClient Http = TalvoraHttp.CreateClient(
         timeout: TimeSpan.FromSeconds(3));
+    private static readonly ConcurrentDictionary<string, DateTimeOffset> FailureLogTimes =
+        new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan FailureLogInterval =
+        TimeSpan.FromMinutes(5);
 
     public static async Task<string> GetVersionAsync(
         ManagedMcpRegistration registration,
@@ -28,6 +33,58 @@ internal static class ControlCenterVersionService
                 StringComparison.OrdinalIgnoreCase))
         {
             return await GetGiteaVersionAsync(cancellationToken);
+        }
+
+        return await GetPackageVersionAsync(
+            registration,
+            cancellationToken);
+    }
+
+    private static async Task<string> GetPackageVersionAsync(
+        ManagedMcpRegistration registration,
+        CancellationToken cancellationToken)
+    {
+        var packagePath = registration.DiscoveryHints
+            .FirstOrDefault(hint => string.Equals(
+                hint.Kind,
+                "package-file",
+                StringComparison.OrdinalIgnoreCase))
+            ?.Value;
+
+        if (string.IsNullOrWhiteSpace(packagePath) ||
+            !File.Exists(packagePath))
+        {
+            return "Bilinmiyor";
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(
+                await File.ReadAllTextAsync(packagePath, cancellationToken));
+
+            if (document.RootElement.TryGetProperty(
+                    "version",
+                    out var version) &&
+                version.ValueKind == JsonValueKind.String)
+            {
+                var value = version.GetString();
+                return string.IsNullOrWhiteSpace(value)
+                    ? "Bilinmiyor"
+                    : value;
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (
+            ex is IOException or
+            JsonException or
+            UnauthorizedAccessException)
+        {
+            TrayLog.Write(
+                $"Managed MCP package version could not be read. MCP={registration.Id}",
+                ex);
         }
 
         return "Bilinmiyor";
@@ -97,6 +154,7 @@ internal static class ControlCenterVersionService
                     out var version) &&
                 version.ValueKind == JsonValueKind.String)
             {
+                FailureLogTimes.TryRemove("gitea-version", out _);
                 return version.GetString() ?? "Bilinmiyor";
             }
         }
@@ -109,9 +167,27 @@ internal static class ControlCenterVersionService
             JsonException or
             OperationCanceledException)
         {
-            TrayLog.Write("Gitea version could not be read", ex);
+            LogFailureRateLimited(
+                "gitea-version",
+                "Gitea version could not be read",
+                ex);
         }
 
         return "Bilinmiyor";
     }
-}
+
+    private static void LogFailureRateLimited(
+        string key,
+        string message,
+        Exception exception)
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (FailureLogTimes.TryGetValue(key, out var last) &&
+            now - last < FailureLogInterval)
+        {
+            return;
+        }
+
+        FailureLogTimes[key] = now;
+        TrayLog.Write(message, exception);
+    }}

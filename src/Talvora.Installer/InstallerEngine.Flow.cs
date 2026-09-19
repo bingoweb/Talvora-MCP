@@ -31,7 +31,7 @@ public static async Task<HealthSnapshot> InstallAsync(
 
         string? previousServiceExecutable = null;
         string? previousTrayExecutable = null;
-        var switchedService = false;
+        var serviceSwitchStarted = false;
 
         try
         {
@@ -85,10 +85,21 @@ public static async Task<HealthSnapshot> InstallAsync(
             var installedAtUtc = DateTime.UtcNow.ToString(
                 "O",
                 System.Globalization.CultureInfo.InvariantCulture);
+            var dependencyProvenancePath = Path.Combine(
+                tempRoot,
+                "resolved-dependencies.json");
+            using var dependencyProvenanceDocument =
+                JsonDocument.Parse(
+                    await File.ReadAllTextAsync(
+                        dependencyProvenancePath,
+                        cancellationToken));
+
             var runtimeMetadata = new
             {
                 SourceCommit = sourceCommit,
                 InstalledAtUtc = installedAtUtc,
+                DependencyProvenance =
+                    dependencyProvenanceDocument.RootElement.Clone(),
             };
             await File.WriteAllTextAsync(
                 Path.Combine(serviceRoot, "talvora-runtime.json"),
@@ -100,12 +111,12 @@ public static async Task<HealthSnapshot> InstallAsync(
             await RemoveLegacyInstallationAsync(installUser, cancellationToken);
 
             progress.Report(new InstallProgress(34, "Çalışan Talvora kontrollü olarak değiştiriliyor..."));
-            await StopAndDeleteServiceAsync(ServiceName, cancellationToken);
+            serviceSwitchStarted = true;
+            await StopServiceForUpgradeAsync(ServiceName, cancellationToken);
             await StopTrayProcessesAsync(cancellationToken);
 
             progress.Report(new InstallProgress(50, "Windows servisi yeni sürüme bağlanıyor..."));
             await CreateServiceAsync(serviceExecutable, installUser, cancellationToken);
-            switchedService = true;
 
             progress.Report(new InstallProgress(63, "Talvora servisi başlatılıyor..."));
             await RunScAsync(
@@ -127,8 +138,7 @@ public static async Task<HealthSnapshot> InstallAsync(
             await UpsertCodexConfigurationAsync(
                 installUser,
                 cancellationToken);
-
-            progress.Report(new InstallProgress(88, "Talvora tepsi uygulaması başlatılıyor..."));
+            progress.Report(new InstallProgress(82, "Talvora tepsi uygulaması başlatılıyor..."));
             var trayStarted = await TryStartTrayAsync(
                 trayExecutable,
                 installUser,
@@ -139,12 +149,29 @@ public static async Task<HealthSnapshot> InstallAsync(
                     "Tray could not be started immediately. " +
                     "The startup registration is intact, so the core Talvora service remains installed.");
             }
-
-            progress.Report(new InstallProgress(94, "Eski sürüm dosyaları temizleniyor..."));
-            await CleanupObsoleteInstallationsAsync(
-                installRoot,
-                versionRoot,
+            progress.Report(new InstallProgress(90, "Playwright MCP altyapısı doğrulanıyor..."));
+            await InstallPlaywrightManagedMcpAsync(
+                Path.Combine(tempRoot, "Playwright"),
+                installUser,
                 cancellationToken);
+
+            progress.Report(new InstallProgress(97, "Eski sürüm dosyaları temizleniyor..."));
+            try
+            {
+                await CleanupObsoleteInstallationsAsync(
+                    installRoot,
+                    versionRoot,
+                    cancellationToken);
+            }
+            catch (Exception cleanupError) when (
+                cleanupError is IOException or
+                UnauthorizedAccessException or
+                OperationCanceledException)
+            {
+                InstallerLog.Write(
+                    "Post-commit obsolete version cleanup deferred",
+                    cleanupError);
+            }
 
             progress.Report(new InstallProgress(100, "Talvora hazır."));
             InstallerLog.Write(
@@ -153,7 +180,7 @@ public static async Task<HealthSnapshot> InstallAsync(
         }
         catch
         {
-            if (switchedService &&
+            if (serviceSwitchStarted &&
                 !string.IsNullOrWhiteSpace(previousServiceExecutable) &&
                 File.Exists(previousServiceExecutable))
             {
@@ -161,11 +188,12 @@ public static async Task<HealthSnapshot> InstallAsync(
                 {
                     InstallerLog.Write(
                         $"Install failed after service switch; rolling back to {previousServiceExecutable}");
-                    await StopAndDeleteServiceAsync(ServiceName, cancellationToken);
-                    await CreateServiceAsync(previousServiceExecutable, installUser, cancellationToken);
+                    var rollbackToken = CancellationToken.None;
+                    await StopServiceForUpgradeAsync(ServiceName, rollbackToken);
+                    await CreateServiceAsync(previousServiceExecutable, installUser, rollbackToken);
                     await RunScAsync(
                         allowNonZero: false,
-                        cancellationToken,
+                        rollbackToken,
                         "start",
                         ServiceName);
 
@@ -173,7 +201,7 @@ public static async Task<HealthSnapshot> InstallAsync(
                         File.Exists(previousTrayExecutable))
                     {
                         RegisterTrayStartup(previousTrayExecutable, installUser);
-                        await StartTrayAsync(previousTrayExecutable, installUser, cancellationToken);
+                        await StartTrayAsync(previousTrayExecutable, installUser, rollbackToken);
                     }
                 }
                 catch (Exception rollbackError)

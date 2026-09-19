@@ -13,7 +13,11 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Talvora.Shared\Talvora.Shared.csproj" />
-    <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
-    <PackageReference Include="WPF-UI" Version="4.3.0" />
+    <PackageReference Include="ModelContextProtocol" Version="*" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="*" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="*" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="*" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="*" />
+    <PackageReference Include="WPF-UI" Version="*" />
   </ItemGroup>
 </Project>

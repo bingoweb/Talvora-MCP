@@ -54,6 +54,154 @@ private static async Task RemoveLegacyInstallationAsync(
             InstallerLog.Write("Legacy user registry cleanup skipped", ex);
         }
     }
+    private static async Task StopServiceForUpgradeAsync(
+        string serviceName,
+        CancellationToken cancellationToken)
+    {
+        var query = await RunScAsync(
+            allowNonZero: true,
+            cancellationToken,
+            "queryex",
+            serviceName);
+
+        if (query.ExitCode != 0)
+        {
+            return;
+        }
+
+        var processId = ParseServiceProcessId(query.StandardOutput);
+        var stopSucceeded = false;
+        var recoveryPolicyCleared = false;
+
+        try
+        {
+            _ = await RunScAsync(
+                allowNonZero: true,
+                cancellationToken,
+                "failure",
+                serviceName,
+                "reset=",
+                "0",
+                "actions=",
+                "");
+            recoveryPolicyCleared = true;
+
+            _ = await RunScAsync(
+                allowNonZero: true,
+                cancellationToken,
+                "stop",
+                serviceName);
+
+            var stopDeadline = DateTime.UtcNow.AddSeconds(8);
+            while (DateTime.UtcNow < stopDeadline)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var status = await RunScAsync(
+                    allowNonZero: true,
+                    cancellationToken,
+                    "queryex",
+                    serviceName);
+
+                if (status.ExitCode != 0 ||
+                    status.StandardOutput.Contains(
+                        "STOPPED",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    stopSucceeded = true;
+                    return;
+                }
+
+                await Task.Delay(250, cancellationToken);
+            }
+
+            InstallerLog.Write(
+                $"Service did not accept STOP; terminating PID={processId} without deleting registration.");
+
+            if (processId > 0)
+            {
+                try
+                {
+                    using var process = Process.GetProcessById(processId);
+                    process.Kill(entireProcessTree: true);
+                    await process.WaitForExitAsync(cancellationToken);
+                }
+                catch (ArgumentException)
+                {
+                }
+                catch (InvalidOperationException)
+                {
+                }
+            }
+
+            var forcedStopDeadline = DateTime.UtcNow.AddSeconds(10);
+            while (DateTime.UtcNow < forcedStopDeadline)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var status = await RunScAsync(
+                    allowNonZero: true,
+                    cancellationToken,
+                    "queryex",
+                    serviceName);
+
+                if (status.ExitCode != 0 ||
+                    status.StandardOutput.Contains(
+                        "STOPPED",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    stopSucceeded = true;
+                    return;
+                }
+
+                await Task.Delay(250, cancellationToken);
+            }
+
+            throw new TimeoutException(
+                $"Windows service durdurulamadı; kayıt korunarak upgrade iptal edildi: {serviceName}");
+        }
+        finally
+        {
+            if (recoveryPolicyCleared &&
+                !stopSucceeded)
+            {
+                await RestoreCanonicalServiceRecoveryPolicyAsync(
+                    serviceName,
+                    CancellationToken.None);
+            }
+        }
+    }
+
+    private static async Task RestoreCanonicalServiceRecoveryPolicyAsync(
+        string serviceName,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            _ = await RunScAsync(
+                allowNonZero: true,
+                cancellationToken,
+                "failure",
+                serviceName,
+                "reset=",
+                "86400",
+                "actions=",
+                "restart/1000/restart/3000/restart/10000/restart/30000/restart/60000");
+
+            _ = await RunScAsync(
+                allowNonZero: true,
+                cancellationToken,
+                "failureflag",
+                serviceName,
+                "1");
+        }
+        catch (Exception ex)
+        {
+            InstallerLog.Write(
+                $"Service recovery policy restoration failed. Service={serviceName}",
+                ex);
+        }
+    }
 
     private static async Task StopAndDeleteServiceAsync(
         string serviceName,
@@ -192,20 +340,44 @@ private static async Task RemoveLegacyInstallationAsync(
     {
         var quotedExecutable = $"\"{executable}\"";
 
-        await RunScAsync(
-            allowNonZero: false,
+        var existing = await RunScAsync(
+            allowNonZero: true,
             cancellationToken,
-            "create",
-            ServiceName,
-            "binPath=",
-            quotedExecutable,
-            "start=",
-            "auto",
-            "obj=",
-            "LocalSystem",
-            "DisplayName=",
-            "Talvora");
+            "query",
+            ServiceName);
 
+        if (existing.ExitCode == 0)
+        {
+            await RunScAsync(
+                allowNonZero: false,
+                cancellationToken,
+                "config",
+                ServiceName,
+                "binPath=",
+                quotedExecutable,
+                "start=",
+                "auto",
+                "obj=",
+                "LocalSystem",
+                "DisplayName=",
+                "Talvora");
+        }
+        else
+        {
+            await RunScAsync(
+                allowNonZero: false,
+                cancellationToken,
+                "create",
+                ServiceName,
+                "binPath=",
+                quotedExecutable,
+                "start=",
+                "auto",
+                "obj=",
+                "LocalSystem",
+                "DisplayName=",
+                "Talvora");
+        }
         await RunScAsync(
             allowNonZero: false,
             cancellationToken,

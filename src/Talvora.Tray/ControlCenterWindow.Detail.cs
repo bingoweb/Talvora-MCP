@@ -121,13 +121,13 @@ internal sealed partial class ControlCenterWindow
         };
         controlCopy.Children.Add(new TextBlock
         {
-            Text = "Servis kontrolleri",
+            Text = "Yaşam döngüsü",
             FontSize = 13,
             FontWeight = FontWeights.SemiBold,
         });
         controlCopy.Children.Add(new TextBlock
         {
-            Text = "Yerel MCP ve tünel birlikte yönetilir.",
+            Text = "MCP ve gerekli çalışma bileşenleri birlikte yönetilir.",
             Margin = new Thickness(0, 3, 0, 0),
             Foreground = SecondaryTextBrush,
             FontSize = 12,
@@ -244,10 +244,62 @@ internal sealed partial class ControlCenterWindow
         componentsCard.Child = componentsRoot;
         content.Children.Add(componentsCard);
 
+        var recentEventsCard = new Border
+        {
+            Margin = new Thickness(0, 16, 0, 0),
+            Style = FindStyle("TalvoraCardStyle"),
+        };
+        var recentEventsRoot = new StackPanel();
+        recentEventsRoot.Children.Add(new TextBlock
+        {
+            Text = "Son olaylar",
+            Foreground = SecondaryTextBrush,
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+        });
+        recentEventsRoot.Children.Add(new TextBlock
+        {
+            Text = "Bu MCP için en son önemli yaşam döngüsü ve sağlık olayları.",
+            Margin = new Thickness(0, 4, 0, 0),
+            Foreground = TertiaryTextBrush,
+            FontSize = 11,
+        });
+        _detailRecentEventsList = new StackPanel
+        {
+            Margin = new Thickness(0, 12, 0, 0),
+        };
+        recentEventsRoot.Children.Add(_detailRecentEventsList);
+        recentEventsCard.Child = recentEventsRoot;
+        content.Children.Add(recentEventsCard);
+
         var technicalStack = new StackPanel();
         technicalStack.Children.Add(CreateTechnicalField(
             "Uç nokta (Endpoint)",
             out _detailEndpoint));
+        technicalStack.Children.Add(CreateTechnicalField(
+            "Taşıma (Transport)",
+            out _detailTransport,
+            new Thickness(0, 12, 0, 0)));
+        technicalStack.Children.Add(CreateTechnicalField(
+            "Tarayıcı / kanal",
+            out _detailBrowserChannel,
+            new Thickness(0, 12, 0, 0)));
+        technicalStack.Children.Add(CreateTechnicalField(
+            "Profil modu",
+            out _detailProfileMode,
+            new Thickness(0, 12, 0, 0)));
+        technicalStack.Children.Add(CreateTechnicalField(
+            "Profil yolu",
+            out _detailProfilePath,
+            new Thickness(0, 12, 0, 0)));
+        technicalStack.Children.Add(CreateTechnicalField(
+            "Runtime state yolu",
+            out _detailRuntimeStatePath,
+            new Thickness(0, 12, 0, 0)));
+        technicalStack.Children.Add(CreateTechnicalField(
+            "Browser smoke state yolu",
+            out _detailBrowserSmokeStatePath,
+            new Thickness(0, 12, 0, 0)));
         technicalStack.Children.Add(CreateTechnicalField(
             "Tünel (Tunnel)",
             out _detailTunnel,
@@ -363,6 +415,31 @@ internal sealed partial class ControlCenterWindow
         UpdateDetailActionState(state);
 
         _detailEndpoint.Text = state.Registration.Endpoint;
+        _detailTransport.Text = state.Registration.Transport;
+        _detailBrowserChannel.Text = string.IsNullOrWhiteSpace(state.Registration.BrowserChannel)
+            ? "Tanımlı değil"
+            : state.Registration.BrowserChannel!;
+        _detailProfileMode.Text = string.IsNullOrWhiteSpace(state.Registration.ProfileMode)
+            ? "Tanımlı değil"
+            : state.Registration.ProfileMode!;
+        _detailProfilePath.Text = string.IsNullOrWhiteSpace(state.Registration.ProfilePath)
+            ? "Tanımlı değil"
+            : state.Registration.ProfilePath!;
+        _detailRuntimeStatePath.Text = string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                state.Registration.ProtocolProbe?.RuntimeGenerationStatePath,
+                state.Registration.ProtocolProbe?.RuntimeProcessStatePath,
+            }.Where(value => !string.IsNullOrWhiteSpace(value)));
+        if (string.IsNullOrWhiteSpace(_detailRuntimeStatePath.Text))
+        {
+            _detailRuntimeStatePath.Text = "Tanımlı değil";
+        }
+        _detailBrowserSmokeStatePath.Text = string.IsNullOrWhiteSpace(
+                state.Registration.ProtocolProbe?.BrowserSmokeStatePath)
+            ? "Tanımlı değil"
+            : state.Registration.ProtocolProbe!.BrowserSmokeStatePath!;
         _detailTunnel.Text = state.Registration.Tunnel is null
             ? "Bu MCP için tünel tanımlı değil."
             : state.Registration.Tunnel.Alias;
@@ -387,6 +464,8 @@ internal sealed partial class ControlCenterWindow
                         string.IsNullOrWhiteSpace(component.Name)
                             ? $"{component.DisplayName} • {GetComponentKindLabel(component.Kind)}"
                             : $"{component.DisplayName} • {GetComponentKindLabel(component.Kind)} • {component.Name}"));
+
+        RenderDetailRecentEvents(state.Registration.Id);
 
         _technicalDetailsExpander.IsExpanded = false;
         _detailOperationBanner.Visibility = Visibility.Collapsed;
@@ -439,6 +518,7 @@ internal sealed partial class ControlCenterWindow
 
             _detailVersion.Text = versionTask.Result;
             RenderComponentStates(componentTask.Result);
+            RenderDetailRecentEvents(selected.Registration.Id);
             UpdateDetailActionState(_selectedMcp);
         }
         catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
@@ -454,6 +534,94 @@ internal sealed partial class ControlCenterWindow
                 Foreground = OfflineBrush,
                 FontSize = 12,
             });
+        }
+    }
+
+    private void RenderDetailRecentEvents(string mcpId)
+    {
+        _detailRecentEventsList.Children.Clear();
+
+        var events = ControlCenterEventStore
+            .ReadRecent(TimeSpan.FromDays(7), maxRecords: 40)
+            .Where(entry =>
+                string.Equals(
+                    entry.McpId,
+                    mcpId,
+                    StringComparison.OrdinalIgnoreCase))
+            .Take(6)
+            .ToArray();
+
+        if (events.Length == 0)
+        {
+            _detailRecentEventsList.Children.Add(new TextBlock
+            {
+                Text = "Bu MCP için son 7 günde önemli olay yok.",
+                Foreground = SecondaryTextBrush,
+                FontSize = 12,
+            });
+            return;
+        }
+
+        foreach (var entry in events)
+        {
+            var health = entry.Severity switch
+            {
+                ControlCenterEventSeverity.Error =>
+                    ControlCenterHealthState.Offline,
+                ControlCenterEventSeverity.Warning =>
+                    ControlCenterHealthState.Attention,
+                _ => ControlCenterHealthState.Ready,
+            };
+
+            var row = new Grid
+            {
+                Margin = new Thickness(0, 0, 0, 8),
+            };
+            row.ColumnDefinitions.Add(new ColumnDefinition
+            {
+                Width = GridLength.Auto,
+            });
+            row.ColumnDefinitions.Add(new ColumnDefinition
+            {
+                Width = new GridLength(1, GridUnitType.Star),
+            });
+
+            row.Children.Add(new Border
+            {
+                Width = 7,
+                Height = 7,
+                Margin = new Thickness(0, 6, 10, 0),
+                VerticalAlignment = VerticalAlignment.Top,
+                Background = GetHealthBrush(health),
+                CornerRadius = new CornerRadius(4),
+            });
+
+            var stack = new StackPanel();
+            stack.Children.Add(new TextBlock
+            {
+                Text =
+                    $"{entry.LastOccurredAtUtc.ToLocalTime():dd.MM HH:mm} • {entry.Title}" +
+                    (entry.Count > 1 ? $" ×{entry.Count}" : string.Empty),
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                TextWrapping = TextWrapping.Wrap,
+            });
+            if (!string.IsNullOrWhiteSpace(entry.Detail))
+            {
+                stack.Children.Add(new TextBlock
+                {
+                    Text = entry.Detail,
+                    Margin = new Thickness(0, 3, 0, 0),
+                    Foreground = SecondaryTextBrush,
+                    FontSize = 11,
+                    TextWrapping = TextWrapping.Wrap,
+                });
+            }
+
+            Grid.SetColumn(stack, 1);
+            row.Children.Add(stack);
+
+            _detailRecentEventsList.Children.Add(row);
         }
     }
 
@@ -550,8 +718,18 @@ internal sealed partial class ControlCenterWindow
 
     internal async Task RunSmokeScenarioAsync()
     {
-        await RefreshDashboardAsync();
+        var dashboardDeadline = DateTime.UtcNow.AddSeconds(15);
+        while ((_snapshot is null || _snapshot.Mcps.Count == 0) &&
+               DateTime.UtcNow < dashboardDeadline)
+        {
+            await RefreshDashboardAsync();
+            if (_snapshot is not null && _snapshot.Mcps.Count > 0)
+            {
+                break;
+            }
 
+            await Task.Delay(250);
+        }
         if (_snapshot is null || _snapshot.Mcps.Count == 0)
         {
             throw new InvalidOperationException(
@@ -634,6 +812,10 @@ internal sealed partial class ControlCenterWindow
         {
             "windows-service" => "Windows servisi",
             "scheduled-task" => "Zamanlanmış görev",
+            "process" => "İşlem",
+            "mcp-protocol" => "MCP protokolü",
+            "browser-runtime" => "Tarayıcı çalışma zamanı",
+            "browser-smoke" => "Gerçek browser smoke",
             "tunnel" => "Tünel",
             _ => kind,
         };
