@@ -1,423 +1,254 @@
-# Talvora
+<p align="center">
+  <img src="assets/Talvora.png" alt="Talvora" width="128" />
+</p>
 
-Talvora is a Windows-local MCP server built for one owner machine with a full-capability philosophy.
+<h1 align="center">Talvora MCP</h1>
 
-## Canonical architecture
+<p align="center">
+  <strong>A Windows-native, full-capability Model Context Protocol development environment.</strong><br />
+  One local service. 198 structured tools. Real Windows control. No artificial capability walls.
+</p>
 
-- Windows 10/11 runtime and development target.
-- One `Talvora` Windows Service running as `LocalSystem`.
-- MCP binds only to `http://127.0.0.1:7676/mcp`.
-- No artificial command or path allowlist is applied to the full-capability primitive tools.
-- Chocolatey is the only package manager used by Talvora setup. WinGet is forbidden.
-- No OpenAI API account, API key, public ingress, or tunnel is required by the local runtime.
-- Old Talvora services, scheduled tasks, runtime folders, and source checkout are intentionally removed by the reset installer.
-- The verified Windows application-development toolchain is documented in [`docs/DEVELOPMENT-ENVIRONMENT.md`](docs/DEVELOPMENT-ENVIRONMENT.md).
+<p align="center">
+  <a href="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml"><img alt="Windows CI" src="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml/badge.svg?branch=main"></a>
+  <img alt="Windows 10/11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4?logo=windows11&logoColor=white">
+  <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white">
+  <img alt="MCP 2.2.0" src="https://img.shields.io/badge/MCP-2.2.0-111827">
+  <img alt="198 tools" src="https://img.shields.io/badge/tools-198-10B981">
+  <img alt="LocalSystem runtime" src="https://img.shields.io/badge/runtime-LocalSystem-8B5CF6">
+</p>
 
-## Full-capability primitive tools
+<p align="center">
+  <a href="docs/ARCHITECTURE.md"><strong>Architecture</strong></a>
+  ·
+  <a href="docs/DEVELOPMENT-ENVIRONMENT.md"><strong>Development Environment</strong></a>
+  ·
+  <a href="APPLICATION-DEVELOPMENT-ROADMAP.md"><strong>Capability Roadmap</strong></a>
+  ·
+  <a href="BUG-AUDIT.md"><strong>Engineering Audit</strong></a>
+</p>
 
-- `talvora_system_info`
-- `talvora_read_text`
-- `talvora_write_text`
-- `talvora_delete`
-- `talvora_list`
+---
+
+## What is Talvora?
+
+Talvora is a personal Windows development MCP built to let an AI coding client work with the machine as a real development environment instead of a narrow sandbox.
+
+It runs as a single Windows Service under **LocalSystem**, exposes MCP on **loopback only**, and combines machine-readable development tools with unrestricted escape hatches for workflows that do not deserve a special wrapper.
+
+> **Core idea:** model the common workflows cleanly, but never make the modelled surface the capability boundary.
+
+| | |
+| --- | --- |
+| **Windows-native** | Services, processes, registry, Event Log, interactive sessions, Windows SDK, packaging and signing tools. |
+| **198 MCP tools** | Filesystem, Git, builds, jobs, dev servers, networking, data, diagnostics, toolchains and release engineering. |
+| **Full capability** | No Talvora path, command, host, repository, package, process or service allowlist is used as an artificial restriction layer. |
+| **Developer-first** | Structured results, deterministic operations, persistent jobs, readiness probes, test summaries, diagnostics and artifact inventory. |
+| **Modern toolchains** | .NET 10, JVM, Go, Rust, Flutter/Dart, Android, Node/npm/pnpm/Yarn/Bun, Python, Docker and Windows native tooling. |
+| **Local-first** | Core MCP stays on `127.0.0.1`; ChatGPT Business can use the separate Secure MCP Tunnel transport when required. |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Local["Local MCP client"] --> MCP["Talvora MCP<br/>127.0.0.1:7676/mcp"]
+    ChatGPT["ChatGPT Business"] --> Tunnel["Secure MCP Tunnel<br/>optional transport"]
+    Tunnel --> MCP
+
+    MCP --> Service["Talvora Windows Service<br/>LocalSystem"]
+    Service --> Core["198-tool capability surface"]
+
+    Core --> OS["Windows + Filesystem"]
+    Core --> Dev["Build + Dev Servers + Jobs"]
+    Core --> Git["Git + GitHub"]
+    Core --> Net["HTTP + TCP + TLS + WebSocket"]
+    Core --> Data["SQLite + Config + Archives"]
+    Core --> Toolchains[".NET · JVM · Go · Rust<br/>Flutter · Android · JS · Python · Docker"]
+
+    Tray["Talvora Tray"] -. status / control .-> Service
+```
+
+The runtime is intentionally simple: one canonical service, one canonical installer path, one canonical tool manifest, and a separate Tray UI for desktop status/control. See [the architecture document](docs/ARCHITECTURE.md) for the implementation-level view.
+
+## Capability surface
+
+### Windows & machine control
+
+- Files, directories, hashes, byte/text I/O, search, patch, copy and move
+- Processes, process trees, Windows Services and interactive user sessions
+- Registry, environment variables and Windows Event Logs
+- PowerShell and arbitrary executable launch
+- TCP listeners/connections, DNS, ping and readiness waits
+
+### Development orchestration
+
+- Persistent background jobs with incremental stdout/stderr
+- Long-running dev servers with TCP/HTTP readiness probes
+- File-system watchers with queued change events
+- HTTP mock/webhook listeners with capture and manual reply
+- Workspace inspection, inferred commands and executable resolution
+- Normalized diagnostics, coverage summaries and artifact inventory
+
+### Build & language toolchains
+
+| Ecosystem | First-class Talvora support |
+| --- | --- |
+| **.NET / Windows** | dotnet, Visual Studio discovery, MSBuild, Windows SDK, CMake, Ninja |
+| **JVM** | Java, javac, Gradle, Maven |
+| **Native** | Go, Rust, Cargo, rustup |
+| **Mobile** | Flutter, Dart, Android SDK, ADB, emulator |
+| **JavaScript** | Node.js, npm, pnpm, Yarn Modern, Bun |
+| **Python** | Interpreter discovery, venv, pip, arbitrary Python execution |
+| **Containers** | Docker, images, logs, exec and Compose |
+
+Talvora's package-management rule on Windows is **Chocolatey**. WinGet is intentionally not part of the production/bootstrap path.
+
+### Git, repositories & release engineering
+
+Talvora has structured Git inspection plus unrestricted Git execution:
+
+`talvora_git_info` · `talvora_git_status` · `talvora_git_diff` · `talvora_git_log` · `talvora_git_branches` · `talvora_git_run`
+
+It also exposes GitHub CLI discovery/execution, Windows PE/version inspection and the Windows release toolchain including **SignTool, MakeAppx, MakePri, RC and MT**.
+
+### Data, configuration & test assets
+
+- SQLite query / execute / schema / online backup
+- JSON, YAML, TOML, XML, INI and dotenv helpers
+- ZIP archive create / inspect / extract
+- HTTP downloads with resume and SHA-256
+- TRX, JUnit/xUnit-style XML and NUnit test-report summaries
+- Local knowledge `search` / `fetch` tools for ChatGPT company-knowledge style workflows
+
+<details>
+<summary><strong>Why both structured tools and raw execution?</strong></summary>
+
+Structured tools make common operations easier to reason about and return stable machine-readable results. They are conveniences, not gates.
+
+For anything outside the modelled surface, Talvora keeps direct capability available through tools such as:
+
 - `talvora_run_process`
-
-Because the MCP host itself runs as LocalSystem, these tools execute with the service account's Windows privileges. The file and process primitives are not restricted to the knowledge-search corpus.
-
-## Structured filesystem mutation tools
-
-- `talvora_create_directory`
-- `talvora_copy`
-- `talvora_move`
-
-These tools provide structured create/copy/move behavior without replacing or restricting the primitive filesystem surface. `talvora_create_directory` creates missing parent directories and is idempotent when the requested directory already exists.
-
-`talvora_copy` supports files and recursive directory trees. `overwrite=false` rejects an existing destination deterministically. With `overwrite=true`, file destinations are replaced and directory copies merge non-conflicting destination entries while replacing conflicting copied entries. Directory copies with `recursive=false` fail before creating a partial destination. Source reparse points are rejected before copy mutation so junctions/symlinks cannot create accidental traversal loops.
-
-`talvora_move` supports files and directories. `overwrite=false` rejects a destination collision, while `overwrite=true` removes/replaces the destination and then performs the move. No path allowlist is applied to any of these tools.
-
-## Developer core tools
-
-Talvora exposes a first-class application-development toolkit in addition to the unrestricted process and PowerShell primitives:
-
-- `talvora_path_info`
-- `talvora_file_hash`
-- `talvora_find_files`
-- `talvora_search_text`
-- `talvora_read_bytes`
-- `talvora_write_bytes`
-- `talvora_replace_text`
-- `talvora_http_request`
-- `talvora_tcp_connections`
-- `talvora_tcp_listeners`
-- `talvora_wait_tcp`
-- `talvora_project_discover`
-- `talvora_resolve_command`
-
-These tools are designed for day-to-day application development: source discovery, literal/regex search, exact text patching, binary asset access, file hashing, local/remote API testing, port ownership diagnostics, readiness checks, project-manifest discovery, and executable resolution. Filesystem tools operate on any path accessible to the LocalSystem service and do not introduce a path allowlist. Search/result limits are response controls and can be set to `0` for unlimited operation where supported. The HTTP tool accepts arbitrary methods and destinations; the process and PowerShell primitives remain available for anything not modeled by this structured layer.
-
-## Long-running development jobs
-
-Talvora can keep development processes alive without blocking one MCP request:
-
-- `talvora_job_start`
-- `talvora_job_get`
-- `talvora_job_list`
-- `talvora_job_read_output`
-- `talvora_job_write_stdin`
-- `talvora_job_stop`
-- `talvora_job_delete`
-
-A job may launch any executable with arbitrary arguments, working directory, and environment overrides under the LocalSystem service. stdout/stderr are persisted under `%ProgramData%\Talvora\Jobs\<jobId>` and can be tailed incrementally. Job metadata keeps PID/start-time identity so running processes remain discoverable across a Talvora service restart; stdin remains available while the originating service instance owns the redirected pipe. Stopping a job can terminate the complete process tree. `talvora_job_delete` removes persisted metadata/stdout/stderr and can optionally stop a still-running job before cleanup. These tools do not replace or restrict the unrestricted process/Powershell controls.
-
-## Development-server orchestration
-
-Talvora can turn the existing persistent job/process layer into a one-handle development-server workflow:
-
-- `talvora_dev_server_start`
-- `talvora_dev_server_get`
-- `talvora_dev_server_list`
-- `talvora_dev_server_wait`
-- `talvora_dev_server_stop`
-
-`talvora_dev_server_start` launches any executable through the unrestricted `JobTools` path and optionally waits for TCP and/or HTTP readiness. TCP host/port, HTTP URL/method/headers/status expectations, probe timeout, poll interval, TLS-validation bypass, and all-vs-any readiness semantics are caller-controlled. With no readiness probe, a successfully running job is immediately ready.
-
-Definitions are persisted under `%ProgramData%\Talvora\DevServers` while stdout/stderr and process identity remain owned by the existing Jobs subsystem. This means get/list/wait continue to work after a Talvora service restart. Status calls include bounded stdout/stderr tails so a failed readiness probe can be diagnosed without a second log call; `logTailBytes=0` requests the complete currently persisted stream.
-
-`stopOnFailure` can terminate the complete process tree after a readiness timeout, and `talvora_dev_server_stop` can optionally remove both job artifacts and the orchestration definition. These helpers do not replace or restrict `talvora_job_*`, raw process control, PowerShell, TCP, or HTTP tools; they simply collapse the common start → wait → inspect → stop loop into one structured workflow.
-
-## Structured Git tools
-
-Talvora also exposes repository-aware Git operations:
-
-- `talvora_git_info`
-- `talvora_git_status`
-- `talvora_git_diff`
-- `talvora_git_log`
-- `talvora_git_branches`
-- `talvora_git_run`
-
-The read-only tools use Git's machine-oriented output where appropriate and return structured repository, branch, history, status, and diff data. `talvora_git_run` accepts arbitrary Git arguments plus environment overrides in any accessible working directory; no subcommand, ref, remote, path, or option allowlist/denylist is applied. This preserves full Git functionality for add/commit/fetch/push/rebase/worktree/submodule and other workflows without requiring Talvora to pre-model every Git command.
-
-## Config, text, archive, and download tools
-
-Talvora includes structured helpers for common development assets and configuration:
-
-- `talvora_read_text_range`
-- `talvora_tail_text`
-- `talvora_append_text`
-- `talvora_json_get`
-- `talvora_json_set`
-- `talvora_json_delete`
-- `talvora_archive_list`
-- `talvora_archive_create`
-- `talvora_archive_extract`
-- `talvora_http_download`
-
-Text range/tail operations avoid loading large logs or source files into one MCP response, while `lineCount=0` preserves an explicit unbounded mode. JSON tools use RFC 6901 JSON Pointer syntax and can create, update, query, or delete arbitrary configuration nodes. ZIP tools expose complete archive listing, directory creation, and extraction; extraction is destination-contained by default but `allowOutsideDestination=true` preserves full filesystem semantics when intentionally required. `talvora_http_download` streams HTTP response bodies directly to any accessible path, supports custom headers, redirects, TLS override, overwrite, and byte-range resume, and returns a SHA-256 of the downloaded file.
-
-## Windows native build toolchain
-
-Talvora exposes structured Windows-native development tooling:
-
-- `talvora_visual_studio_instances`
-- `talvora_vs_dev_environment`
-- `talvora_msbuild_info`
-- `talvora_msbuild_run`
-- `talvora_windows_sdk_info`
-- `talvora_cmake_info`
-- `talvora_cmake_run`
-- `talvora_ninja_info`
-- `talvora_ninja_run`
-- `talvora_pe_info`
-- `talvora_file_version_info`
-
-Visual Studio discovery uses Microsoft's `vswhere` when available. `talvora_vs_dev_environment` loads the full `VsDevCmd.bat` environment for a selected Visual Studio/Build Tools instance. MSBuild prefers a Visual Studio MSBuild installation and falls back to `dotnet msbuild` when only the .NET SDK is available. `talvora_msbuild_run`, `talvora_cmake_run`, and `talvora_ninja_run` accept unrestricted argument vectors and environment overrides.
-
-Windows SDK discovery reads the installed Windows Kits root and versioned SDK directories and reports common tools such as SignTool, MakeAppx, MT, RC, and MIDL when present. PE/file-version inspection works directly on arbitrary accessible binaries and complements the existing file hash and binary read tools.
-
-## HTTP mock and webhook listeners
-
-Talvora can host in-process HTTP endpoints for application and webhook testing:
-
-- `talvora_http_mock_start`
-- `talvora_http_mock_get`
-- `talvora_http_mock_list`
-- `talvora_http_mock_read`
-- `talvora_http_mock_reply`
-- `talvora_http_mock_stop`
-
-Listeners use .NET `HttpListener` inside the LocalSystem Talvora service and accept caller-selected HTTP/HTTPS prefixes. Auto-reply mode can immediately return a configured status, content type, headers, and text/Base64 body while capturing the request. Manual mode keeps requests pending, exposes a request ID, and lets the caller send a later response with `talvora_http_mock_reply`.
-
-Captured requests include method, URL/raw URL, protocol, headers, query values, endpoints, request body, byte count, truncation state, and pending-response state. Queue and body limits can be set to `0` for unlimited Talvora-side capture. Prefixes, ports, headers, status codes, and payloads are not restricted by a Talvora allowlist.
-
-## Network diagnostics
-
-Talvora exposes structured network-debugging tools for local and remote application development:
-
-- `talvora_network_interfaces`
-- `talvora_dns_lookup`
-- `talvora_ping`
-- `talvora_tcp_exchange`
-- `talvora_tls_inspect`
-- `talvora_websocket_exchange`
-
-These tools complement `talvora_http_request`, `talvora_tcp_connections`, `talvora_tcp_listeners`, and `talvora_wait_tcp`. They provide direct DNS/ICMP/TCP/TLS/WebSocket visibility without forcing every diagnostic through shell text parsing. Targets, ports, headers, subprotocols, and payloads are caller-controlled; no host, network, port, or protocol allowlist is introduced.
-
-`talvora_tcp_exchange` can send raw text or Base64 bytes and return text or Base64 responses. `talvora_tls_inspect` reports negotiated protocol/cipher/ALPN plus certificate and chain details, with optional invalid-certificate continuation for diagnostics. `talvora_websocket_exchange` supports arbitrary ws/wss URLs, headers, subprotocols, text/binary payloads, and bounded or unlimited message capture.
-
-## Filesystem change watchers
-
-Talvora exposes live filesystem monitoring for development workflows:
-
-- `talvora_watch_start`
-- `talvora_watch_list`
-- `talvora_watch_read`
-- `talvora_watch_wait`
-- `talvora_watch_stop`
-
-Watchers use .NET `FileSystemWatcher` directly against any directory accessible to the LocalSystem service. Recursive monitoring, wildcard filters, `NotifyFilters`, internal buffer size, and queued-event limits are caller-controlled. A queue limit of `0` means unlimited Talvora-side event retention. Watchers are intentionally live service-instance resources rather than persistent configuration; a Talvora service restart clears active watchers.
-
-## Chocolatey developer environment tools
-
-Chocolatey remains Talvora's supported Windows package manager. The MCP surface now includes:
-
-- `talvora_choco_info`
-- `talvora_choco_list`
-- `talvora_choco_search`
-- `talvora_choco_install`
-- `talvora_choco_upgrade`
-- `talvora_choco_uninstall`
-- `talvora_choco_run`
-
-List/search use Chocolatey's `--limit-output` format for structured package name/version results. Install/upgrade/uninstall expose common automation options while `talvora_choco_run` accepts an arbitrary Chocolatey argument vector, working directory, and environment overrides. No package, source, subcommand, or Chocolatey-option allowlist/denylist is added. WinGet is still not used by Talvora setup or package-management tooling.
-
-## Filesystem watch tools
-
-Talvora can monitor any accessible directory in real time:
-
-- `talvora_watch_start`
-- `talvora_watch_get`
-- `talvora_watch_list`
-- `talvora_watch_read`
-- `talvora_watch_wait`
-- `talvora_watch_stop`
-
-The watcher layer uses .NET `FileSystemWatcher` with Created/Changed/Deleted/Renamed/Error events, wildcard filters, optional recursive monitoring, selectable `NotifyFilters`, configurable native buffer size, and bounded or unlimited queued events. Watch IDs are in-memory handles owned by the current Talvora service instance. No watched-path allowlist is applied.
-
-## Chocolatey developer tools
-
-Chocolatey remains Talvora's package manager for Windows development tooling:
-
-- `talvora_choco_info`
-- `talvora_choco_list`
-- `talvora_choco_search`
-- `talvora_choco_install`
-- `talvora_choco_upgrade`
-- `talvora_choco_uninstall`
-- `talvora_choco_run`
-
-List/search use Chocolatey's `--limit-output` form so package name/version rows can be returned as structured MCP data. Install/upgrade/uninstall expose package, version, source, package parameters, native install arguments, prerelease/force/noninteractive controls, plus arbitrary extra arguments. `talvora_choco_run` accepts an unrestricted Chocolatey argument vector and environment overrides, preserving the complete Chocolatey CLI surface. No package, source, subcommand, or option allowlist/denylist is applied. Talvora does not use WinGet.
-
-## .NET and Node build runners
-
-Talvora exposes structured build/runtime helpers for common application stacks:
-
-- `talvora_dotnet_info`
-- `talvora_dotnet_restore`
-- `talvora_dotnet_build`
-- `talvora_dotnet_test`
-- `talvora_dotnet_publish`
-- `talvora_dotnet_run`
-- `talvora_node_info`
-- `talvora_npm_install`
-- `talvora_npm_ci`
-- `talvora_npm_run_script`
-- `talvora_npm_run`
-
-The .NET helpers wrap the installed `dotnet` CLI and expose the common restore/build/test/publish controls while keeping `talvora_dotnet_run` as an unrestricted argument-vector surface. The Node helper reports whether Node/npm are installed; npm operations expose install/ci/script ergonomics while `talvora_npm_run` keeps the complete npm CLI surface available. These are convenience APIs, not capability boundaries: unrestricted process/job execution remains available for custom toolchains.
-
-Node.js itself is not installed by Talvora automatically. When needed on Windows, install/upgrade it through the Chocolatey tools rather than WinGet.
-
-## Interactive Windows sessions
-
-Talvora runs as LocalSystem but can intentionally launch application-development processes in a logged-on user's desktop session:
-
-- `talvora_session_list`
-- `talvora_session_get`
-- `talvora_user_process_start`
-
-Session discovery uses Windows Terminal Services APIs and exposes local console/RDP session ID, station, state, user/domain, and client metadata. `talvora_user_process_start` obtains the selected session's user token, builds that user's environment block, and calls `CreateProcessAsUserW` on `winsta0\default`. Callers can choose any session, executable, arguments, working directory, environment overrides, visibility, and console mode; no executable/path/user/session allowlist is added.
-
-This is the preferred bridge for GUI tools, browser/dev-server helpers, user-profile package managers, and anything that must run as the signed-in developer rather than as LocalSystem.
-
-## Python and Docker runtime tools
-
-Talvora exposes Python/venv/pip and Docker/Compose helpers for application development:
-
-- `talvora_python_info`
-- `talvora_python_run`
-- `talvora_python_venv_create`
-- `talvora_pip_install`
-- `talvora_pip_run`
-- `talvora_docker_info`
-- `talvora_docker_ps`
-- `talvora_docker_images`
-- `talvora_docker_logs`
-- `talvora_docker_exec`
-- `talvora_docker_run`
-- `talvora_docker_compose_run`
-
-Python tools resolve the machine interpreter or an explicitly supplied Python/py launcher, report virtual-environment and pip state, create venvs, and preserve the complete Python/pip argument surface through `python_run` and `pip_run`. Docker discovery reports missing CLI/engine/Compose structurally; Docker commands remain available without container/image/path/subcommand allowlists through `docker_run` and `docker_compose_run`.
-
-On Windows, installing Python/Docker prerequisites remains a machine-software task and should use Talvora's Chocolatey layer rather than WinGet.
-
-## SQLite application-development tools
-
-Talvora includes a first-class embedded SQLite workflow powered by `Microsoft.Data.Sqlite`:
-
-- `talvora_sqlite_info`
-- `talvora_sqlite_query`
-- `talvora_sqlite_execute`
-- `talvora_sqlite_schema`
-- `talvora_sqlite_backup`
-
-The provider is bundled with Talvora, so structured SQLite workflows do not depend on a separately installed `sqlite3.exe`. Query/execute accept arbitrary SQL against any accessible database source and support named parameter binding. `talvora_sqlite_query` defaults to SQLite read-only mode and supports `maxRows=0` for an unbounded result; `talvora_sqlite_execute` can wrap writes/DDL in one transaction and can explicitly refuse creation of a missing database.
-
-Schema inspection reads `sqlite_schema` with optional type/name filters. Backup uses SQLite's online backup API, supports overwrite control, and returns the resulting file length plus SHA-256. Connections are non-pooled so one MCP call does not leave a pooled file handle behind.
-
-These convenience tools do not narrow the existing capability surface: `talvora_run_process` and `talvora_run_powershell` remain unrestricted escape hatches for external database CLIs, migration frameworks, or workflows not modeled here. No Talvora database/path/SQL allowlist or denylist is introduced.
-
-## Configuration formats and test reports
-
-Talvora adds first-class structured helpers for common project configuration formats:
-
-- `talvora_dotenv_list`
-- `talvora_dotenv_get`
-- `talvora_dotenv_set`
-- `talvora_dotenv_delete`
-- `talvora_ini_list`
-- `talvora_ini_get`
-- `talvora_ini_set`
-- `talvora_ini_delete`
-- `talvora_xml_query`
-- `talvora_xml_set`
-- `talvora_xml_delete`
-- `talvora_yaml_get`
-- `talvora_yaml_set`
-- `talvora_yaml_delete`
-- `talvora_toml_get`
-- `talvora_toml_set`
-- `talvora_toml_delete`
-- `talvora_test_report_summary`
-
-The dotenv and INI tools preserve unrelated lines/comments while allowing direct key updates on any accessible file. XML tools accept arbitrary XPath expressions and namespace mappings for query/set/delete operations. YAML and TOML tools use the same RFC 6901 JSON Pointer model as Talvora's JSON helpers, with JSON text as the language-neutral value representation for mutations. YAML/TOML rewrites are normalized and do not promise comment or original-format preservation; optional `.bak` creation is available before a mutation. Test-report parsing normalizes TRX, JUnit/xUnit-style XML, and NUnit3 into one summary with failed-test details, which makes build/test diagnosis easier without parsing runner-specific XML manually.
-
-## Environment variable tools
-
-- `talvora_env_get`
-- `talvora_env_list`
-- `talvora_env_set`
-- `talvora_env_delete`
-
-These tools provide structured access to Windows environment variables at the Talvora process, current-user, and local-machine scopes. Process values live only for the Talvora process. User and Machine values use Windows' persistent environment-variable stores; because the installed service runs as LocalSystem, the User scope is the LocalSystem account's user environment.
-
-`talvora_env_list` returns deterministic name-sorted data and can filter by variable name. `talvora_env_set` preserves an explicit empty-string value, while `talvora_env_delete` removes a value and is idempotent when it is already missing.
-
-No environment-variable name allowlist or deny-list is applied. These tools do not replace or restrict `talvora_run_process` or `talvora_run_powershell`.
-
-## Windows Event Log query tools
-
-- `talvora_eventlog_list`
-- `talvora_eventlog_query`
-
-`talvora_eventlog_list` enumerates local Windows Event Log names, supports an optional case-insensitive name filter, and returns deterministic ordering.
-
-`talvora_eventlog_query` accepts any local log name plus an XPath query, an explicit maximum event count, and newest-first/oldest-first direction. It returns structured event metadata including log/provider identity, event ID, record ID, timestamp, level, process/thread IDs, machine/user identity when available, and a best-effort formatted message. Provider message formatting failures do not discard the underlying event record.
-
-No log-name, provider, or event-ID allowlist is applied. The event-count limit bounds one MCP response rather than reducing which Event Logs can be addressed. The unrestricted process and PowerShell primitives remain available for Event Log operations not modeled by this read-only query layer.
-
-## Process inspection and control
-
-- `talvora_process_list`
-- `talvora_process_get`
-- `talvora_process_kill`
-
-These tools provide structured PID/name/session/start-time/working-set/executable metadata when Windows permits each field to be read. Inaccessible metadata on protected processes is returned as unavailable rather than causing the complete process list to fail.
-
-`talvora_process_kill` can terminate a PID with or without its entire process tree, waits for exit with an explicit timeout, and distinguishes whether a kill was issued from whether exit was confirmed. Missing/exited PIDs are handled idempotently. No PID or process-name allowlist is applied.
-
-## PowerShell execution
-
 - `talvora_run_powershell`
+- `talvora_git_run`
+- `talvora_choco_run`
+- `talvora_npm_run`
+- `talvora_python_run`
+- `talvora_docker_run`
+- `talvora_gh_run`
 
-This tool runs arbitrary multiline PowerShell scripts under the same LocalSystem capability boundary. Scripts are encoded as UTF-16LE Base64 and passed with PowerShell's `-EncodedCommand` option, avoiding nested quoting loss. It runs with `-NoProfile -NonInteractive -ExecutionPolicy Bypass`, captures stdout/stderr, preserves the script exit code, supports a working directory and timeout, and kills the process tree on timeout.
+This keeps the MCP ergonomic without silently reducing what the local development machine can do.
 
-The default `engine = "auto"` uses `pwsh.exe` when PowerShell 7 is already available and otherwise falls back to built-in Windows PowerShell. PowerShell 7 is not a Talvora runtime dependency. No command or script deny-list is applied.
+</details>
 
-## Windows registry tools
+## Local Git stack
 
-Talvora exposes dedicated local registry tools so agents do not need to compose fragile `reg.exe` or PowerShell quoting for routine registry work:
+The current reference workstation also uses a local-first Git stack alongside Talvora:
 
-- `talvora_registry_create_key`
-- `talvora_registry_get`
-- `talvora_registry_set`
-- `talvora_registry_list`
-- `talvora_registry_delete_value`
-- `talvora_registry_delete_key`
+```mermaid
+flowchart LR
+    Dev["Talvora / developer"] --> Git["Git"]
+    Git --> Gitea["Gitea"]
+    Browser["Browser"] --> Caddy["Caddy localhost SSO proxy"]
+    Caddy --> Gitea
+    GiteaMCP["Official Gitea MCP"] --> Gitea
+    Tray["Dedicated Gitea tray icon"] -. health / restart .-> Gitea
+    Tray -. health / restart .-> Caddy
+```
 
-The registry tools support HKLM, HKCU, HKCR, HKU, HKCC, and HKPD together with default, 32-bit, and 64-bit registry views. String, ExpandString, MultiString, DWORD, QWORD, Binary, and None values are supported. Reads preserve ExpandString data without environment expansion, listings are deterministic, and missing keys/values are handled idempotently where appropriate.
+The deployed integration currently uses **Gitea 1.27.3**, **Caddy 2.11.4** and the **official Gitea MCP 1.7.0**. Talvora's Tray exposes a separate Gitea status icon with healthy / degraded / stopped states and LocalSystem-backed restart control.
 
-No registry hive or path allowlist is applied. These dedicated tools improve structured MCP ergonomics; they do not replace or reduce the unrestricted `talvora_run_process` capability.
+This companion stack is separate from the core Talvora MCP endpoint and does not turn GitHub into the primary local source-control dependency.
 
-## Windows service tools
+## Quick start
 
-Talvora exposes structured Service Control Manager operations:
+### 1. Install / rebuild Talvora
 
-- `talvora_service_list`
-- `talvora_service_get`
-- `talvora_service_start`
-- `talvora_service_stop`
-- `talvora_service_restart`
+From an Administrator-capable Windows account:
 
-Service listing can be filtered by service/display name and can optionally include driver services. Get returns a structured not-found result instead of relying on localized shell output. Start/stop/restart are state-aware, wait for the requested final state, support explicit timeouts, and preserve idempotent behavior when a service is already running or stopped.
+```bat
+TALVORA-KUR.cmd
+```
 
-No service-name allowlist is applied. Because the MCP host runs as LocalSystem, these controls use the service account's Service Control Manager privileges. Stopping or restarting the Talvora service itself is intentionally not blocked; doing so can terminate the active MCP connection.
+The canonical build/install path produces a self-contained Windows runtime, installs the `Talvora` service and verifies the deployed MCP surface.
 
-## Business knowledge tools
+Local MCP endpoint:
 
-Talvora also exposes two read-only MCP tools that follow the `search` -> `fetch` retrieval pattern used by ChatGPT custom MCP apps and company knowledge workflows:
+```text
+http://127.0.0.1:7676/mcp
+```
 
-- `search(query)` returns structured `{ results: [{ id, title, text, url }] }` data.
-- `fetch(id)` returns structured `{ id, title, text, url, metadata }` data for a selected document.
+### 2. Connect ChatGPT Business when needed
 
-The default search corpus is intentionally optimized for useful local knowledge rather than a blind whole-disk crawl: Public Documents plus each local Windows profile's Documents, Desktop, Downloads, and OneDrive folders, together with `%ProgramData%\Talvora`. Search is time-bounded and can return partial results instead of blocking an MCP request on a very large corpus.
+The core runtime does **not** require a public listener or an OpenAI API key. For ChatGPT Business, configure the separate Secure MCP Tunnel flow:
 
-Set the machine environment variable `TALVORA_KNOWLEDGE_ROOTS` to a semicolon-separated list of directories to replace the default search corpus. This setting changes only the read-only knowledge search surface; it does not restrict `talvora_read_text`, `talvora_write_text`, `talvora_delete`, `talvora_list`, `talvora_create_directory`, `talvora_copy`, `talvora_move`, or `talvora_run_process`.
+```bat
+TALVORA-BUSINESS-KUR.cmd
+```
 
-As of 2026-09-18, ChatGPT Business supports custom MCP apps with full MCP capabilities. The read-only `search`/`fetch` pair remains useful for company-knowledge workflows, but it does not limit the other Talvora tools.
+The tunnel transports ChatGPT traffic to the loopback MCP while Talvora itself remains local-only.
 
-## ChatGPT Business via Secure MCP Tunnel
+## Engineering quality
 
-ChatGPT web cannot connect directly to Talvora's loopback-only `http://127.0.0.1:7676/mcp` endpoint. The supported private/local connection path is OpenAI Secure MCP Tunnel.
+Talvora treats the installed runtime as the truth, not just the source tree.
 
-Talvora keeps that transport separate from the core runtime:
+The Windows CI pipeline:
 
-- The `Talvora` Windows Service remains the only Talvora service and still listens only on loopback.
-- The core local MCP installation does not require an OpenAI Platform account or API key.
-- `scripts/Configure-ChatGPT-Business.ps1` downloads the current official `openai/tunnel-client` Windows release, verifies it against the release `SHA256SUMS.txt`, and manages a long-lived tunnel runtime pointed at Talvora's loopback MCP.
-- A restricted tunnel runtime credential is passed to `tunnel-client` by environment reference rather than as a literal command-line/config value. The stored reconnect copy is protected with the current Windows user's DPAPI.
-- The runtime credential is transport authentication for Secure MCP Tunnel; Talvora does not use it for model inference or Responses API calls.
-- No inbound public firewall rule or public Talvora listener is created.
+1. restores and builds the current projects,
+2. parses PowerShell,
+3. enforces the Chocolatey / no-WinGet production rule,
+4. runs targeted source regressions,
+5. boots the MCP and validates its canonical tool surface,
+6. validates the ChatGPT Business bootstrap,
+7. builds the canonical native installer,
+8. installs the runtime as LocalSystem,
+9. runs the MCP smoke suite against the installed build,
+10. cleans the CI machine.
 
-First install/rebuild Talvora with `TALVORA-KUR.cmd`. Then run `TALVORA-BUSINESS-KUR.cmd` (or `scripts\Configure-ChatGPT-Business.ps1`) and provide the existing OpenAI tunnel ID plus a least-privilege runtime key with Tunnels Read + Use. The script does not report success until `tunnel-client runtimes status --json` reports `process_running=true`, `healthy=true`, and `ready=true`.
+The current canonical manifest exposes **198 tools**. Runtime identity, installer provenance, tool count and deployed binaries are verified as part of the project's release discipline.
 
-After a reboot, `TALVORA-BUSINESS-KUR.cmd reconnect` reuses the saved tunnel metadata and DPAPI-protected runtime credential. Talvora deliberately does not install a hidden second Windows service or scheduled task for tunnel startup.
+## Reference workstation
 
-The final one-time ChatGPT Business workspace step is performed by a Business Admin/Owner: enable Developer mode, create a custom MCP app, choose **Connection: Tunnel**, select/paste the tunnel ID, review the Talvora actions, and publish the app to the workspace.
+The current verified development environment includes:
 
-## Rebuild from zero
+- Windows SDK **10.0.28000.0**
+- Temurin JDK **25.0.4.1 LTS**
+- Flutter **3.47.5 stable**
+- Dart **3.13.4 stable**
+- pnpm **12.4.2**
+- Yarn Modern **4.18.0**
+- Bun **1.4.2**
+- GitHub CLI **2.101.0**
 
-Run `TALVORA-KUR.cmd` from an Administrator-capable Windows account. It launches the reset installer, removes prior Talvora runtime state, recreates the source checkout from `main`, builds a fresh self-contained Windows service, installs it, verifies `S-1-5-18`, runs the real MCP smoke suite, and configures the local `talvora_local` MCP registration.
+See [Development Environment](docs/DEVELOPMENT-ENVIRONMENT.md) for the maintained toolchain notes.
 
-The source of truth is the repository root and `main` is the canonical branch. There is no legacy `v2` product tree. Historical branch names may remain as Git refs for repository compatibility, but they are not independent product lines and are kept aligned with the canonical tree.
+## Project map
+
+| Path | Purpose |
+| --- | --- |
+| `src/Talvora` | MCP service and application-development tools |
+| `src/Talvora.Shared` | Shared runtime contracts and canonical tool manifest |
+| `src/Talvora.Tray` | Windows tray UX, including Talvora and Gitea status surfaces |
+| `src/Talvora.Installer` | Native canonical installer |
+| `tests/Talvora.Smoke` | Exact MCP surface smoke validation |
+| `scripts/Build-Windows-Installer.ps1` | Canonical package/build entry point |
+| `docs/ARCHITECTURE.md` | Runtime and capability architecture |
+| `docs/DEVELOPMENT-ENVIRONMENT.md` | Verified Windows development toolchain |
+| `APPLICATION-DEVELOPMENT-ROADMAP.md` | Capability evolution and implementation status |
+| `BUG-AUDIT.md` | Living engineering audit |
+| `HANDOFF.md` | Single canonical development handoff |
+
+## Design principles
+
+- **Windows is a first-class target.**
+- **Structured tools improve ergonomics; they do not define the capability ceiling.**
+- **Modern supported technology wins over compatibility with deprecated tooling.**
+- **Chocolatey is the Windows package manager for Talvora workflows.**
+- **Runtime changes are not complete until the live installed service is updated and verified.**
+- **One canonical installer, one canonical tool manifest, one canonical handoff.**
+- **Test the changed area during development; reserve broad smoke validation for the exact deployed runtime.**
+
+---
+
+<p align="center">
+  <strong>Talvora turns a Windows workstation into a first-class MCP development environment.</strong>
+</p>

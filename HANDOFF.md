@@ -1,5 +1,104 @@
 # Talvora MCP Handoff — 2026-09-19
 
+## Oturum kapanış snapshot — final doğrulanmış durum
+
+Bu bölüm **mevcut gerçeği** temsil eder ve aşağıdaki tarihsel/pre-commit notlarından daha önceliklidir.
+
+- Repository: `C:\Users\tayla\Talvora-MCP`
+- Branch: `main`
+- Son runtime/source commit (canlı `SourceCommit`): `c758157ce5698c602084650bb3c12c34e431dba4`
+- Son commit: `feat: harden runtime and add Gitea integration`
+- Primary remote: `origin = ssh://git@127.0.0.1:2222/taylan/Talvora-MCP.git`
+- Secondary backup remote: `github = https://github.com/bingoweb/Talvora-MCP.git`
+- `main -> origin/main`: **ahead 0 / behind 0**
+- Runtime/source final batch commit edilip yerel Gitea `origin/main` üzerine push edilmiştir.
+- 2026-09-19 GitHub sunum batch'i yalnız dokümantasyon/README değişikliğidir; runtime/source değişikliği değildir ve yeniden deploy gerektirmez.
+- Kök `README.md`, GitHub ziyaretçisinin Talvora'yı hızlı anlaması için modern hero/badge, Mermaid mimari, capability matrix, quick-start ve proje haritası yapısına dönüştürüldü.
+- Kullanıcı bu batch için GitHub sync'i açıkça istedi; final dokümantasyon commit'i hem `origin/main` hem `github/main` üzerine push edilecek.
+- Final push sonrası gerçek repo HEAD/working-tree durumu her zaman `git status` / `git log -1` ile doğrulanacak.
+
+### Canlı Talvora
+
+- `talvora_system_info.sourceCommit`: `c758157ce5698c602084650bb3c12c34e431dba4`
+- Service PID: **5364**
+- Tray PID: **2580**
+- Service root:
+  `C:\Program Files\Talvora\Versions\c758157ce5698c602084650bb3c12c34e431dba4-20260919144046405\Service`
+- Tray root:
+  `C:\Program Files\Talvora\Versions\c758157ce5698c602084650bb3c12c34e431dba4-20260919144046405\Tray`
+- Service ve Tray aynı clean-commit version root'tan çalışıyor.
+- Canonical tool manifest: **198**
+- Exact deployed full 198-tool MCP smoke: **GREEN**
+- Source -> installed binary doğrulaması daha önce current source ile `Talvora.dll`, `Talvora.Shared.dll`, `Talvora.Tray.exe` için SHA256 GREEN geçti.
+- Runtime değişikliği yapılmadıkça full smoke'u tekrar etme.
+
+### Gitea / Caddy / resmî Gitea MCP
+
+- Gitea: **1.27.3**
+- Browser URL: `http://127.0.0.1:3000/`
+- Backend: `http://127.0.0.1:3001/`
+- Caddy: **2.11.4**, localhost passwordless SSO proxy.
+- Resmî Gitea MCP: **1.7.0**
+- Gitea MCP endpoint: `http://127.0.0.1:8081/mcp`
+- Gitea MCP araç sayısı: **55**, write yetenekleri açık; özellik kırpma yok.
+- Secure MCP Tunnel ID: `tunnel_6aae935c5da0819193da4a5160b81aaa`
+- Runtime alias: `gitea-business`
+- Tunnel target: `http://127.0.0.1:8081/mcp`
+- Final tunnel state: **process_running=true, healthy=true, ready=true**
+- Watchdog task: `Gitea MCP Tunnel` -> **Running**
+- Watchdog PowerShell 7 action'ında `-WindowStyle Hidden` vardır.
+- Kullanıcı oturumunda görünür PowerShell watchdog penceresi: **0**
+- Watchdog runtime prosesini foreground gözetler; runtime beklenmedik kapanırsa task hata ile çıkar ve Task Scheduler 1 dakika aralıkla yeniden dener.
+- Task execution time limit: unlimited.
+
+### Ayrı Gitea tray ikonu
+
+- Talvora ikonundan bağımsız ikinci Gitea `NotifyIcon` vardır.
+- Çift tıklama: Gitea browser UI açılır.
+- Menü:
+  - canlı durum
+  - `Gitea'yı Aç`
+  - `Gitea'yı Yeniden Başlat`
+  - `Durumu Yenile`
+- Health iki katmanlı:
+  - backend `3001/api/healthz`
+  - browser/SSO proxy `3000/api/healthz`
+- Backend sağlıklı fakat Caddy/proxy bozuksa ikon yanlışlıkla yeşil kalmaz; **degraded/sarı** durum gösterir.
+- Restart akışı LocalSystem Talvora MCP üzerinden:
+  Caddy process stop -> SCM Stopped bekle -> Gitea restart/start -> Caddy start -> health doğrulama.
+- Installed Tray üzerinden `--gitea-status` ve `--gitea-restart`: **GREEN**
+- Restart sonrası Gitea backend/proxy/MCP: **HTTP 200**
+- Restart sonrası Secure MCP Tunnel: **running/healthy/ready**
+
+### Son bug/optimizasyon kapanışı
+
+Context7 + resmî doküman doğrulamasıyla son Gitea/Tray denetiminde düzeltilenler:
+- Gitea status yalnız backend'i kontrol ediyordu; proxy failure artık degraded olarak görülüyor.
+- MCP restart yolundaki gereksiz `tools/list` kaldırıldı; doğrudan `McpClient.CallToolAsync` kullanılıyor.
+- Manuel oluşturulan `HttpClientTransport` artık async dispose ediliyor.
+- Tray shutdown sırasında async status/restart ile `SemaphoreSlim.Dispose` yarış riski kaldırıldı; lifetime cancellation ile güvenli unwind yapılıyor.
+- Secure MCP Tunnel task'in connect sonrası bitmesi nedeniyle runtime'ın sonradan durması düzeltildi; watchdog artık runtime prosesini canlı tutuyor.
+- Watchdog terminal penceresinin açık kalması `-WindowStyle Hidden` ile düzeltildi.
+- Tray dependency vulnerability taraması: **0 vulnerable package**.
+- `ModelContextProtocol` kullanılan sürüm: **2.2.0**.
+- Statik TODO/FIXME/HACK/blocking taraması: temiz.
+- Native installer source regression: GREEN.
+- ProcessRunner regression: GREEN.
+- `git diff --check`: GREEN.
+- Final exact deployed 198-tool MCP smoke: GREEN.
+
+### Yeni oturumda ilk yapılacaklar
+
+1. Önce bu `HANDOFF.md` dosyasını oku.
+2. Talvora MCP araçlarını keşfet ve `talvora_system_info` ile bağlantıyı doğrula.
+3. `git status --short --branch` / Talvora git status ile `main`, clean tree ve `origin/main` sync durumunu doğrula.
+4. Gerekmedikçe yukarıdaki full testleri tekrar çalışma.
+5. Kullanıcının yeni geliştirme talebine doğrudan geç.
+6. Runtime kodu değişirse zorunlu canlı-update zinciri uygulanacak:
+   source -> targeted test -> canonical installer -> deploy -> PID/version root -> live behavior -> gerektiğinde SHA256.
+7. Context7 ve modern mimari kuralları her yeni teknoloji/API değişikliğinde zorunludur.
+
+
 ## Zorunlu ve ihlal edilemez proje kuralları
 
 Aşağıdaki maddeler tavsiye değil, **kesin proje kurallarıdır**. Yeni oturumlarda, refactorlarda, hata düzeltmelerinde ve yeni özellik eklerken aynen uygulanacaktır.
@@ -105,18 +204,17 @@ Aşağıdaki maddeler tavsiye değil, **kesin proje kurallarıdır**. Yeni oturu
 - Secondary backup remote/github: `https://github.com/bingoweb/Talvora-MCP.git`
 - Branch: `main`
 - Branch/upstream: `main -> origin/main`.
-- Finalization rule: after the requested commit/push, resolve the exact Git HEAD with `git rev-parse HEAD`; do not rely on a hard-coded historical SHA in this handoff.
-- This audit/development batch is ready for the requested commit/push after final Git gates.
+- Current live runtime/source baseline: `c758157ce5698c602084650bb3c12c34e431dba4`; docs-only commits can advance repository HEAD without a runtime redeploy.
+- Current repo state: clean, ahead/behind `0/0`, final batch committed and pushed to local Gitea `origin/main`.
 - MCP endpoint: `http://127.0.0.1:7676/mcp`
 - Canonical tool manifest: **198 tools**
 - Current ChatGPT session also exposes **198 Talvora tools**.
-- Pre-commit exact deployed audit runtime identity:
-  `c8d8e5f602b6cea26c3cb32d698f59b78553721d-dirty-b02df0355735`.
-- Pre-commit exact deployed version root:
-  `C:\Program Files\Talvora\Versions\c8d8e5f602b6cea26c3cb32d698f59b78553721d-dirty-b02df0355735-20260919143139356`.
-- Pre-commit audit service PID: **10064**.
-- Pre-commit audit Tray PID: **4444**.
-- After the final commit, rebuild/redeploy once so live `SourceCommit` equals the clean final `main` SHA.
+- Current live runtime identity: `c758157ce5698c602084650bb3c12c34e431dba4`.
+- Current live version root:
+  `C:\Program Files\Talvora\Versions\c758157ce5698c602084650bb3c12c34e431dba4-20260919144046405`.
+- Current service PID: **5364**.
+- Current Tray PID: **2580**.
+- Clean commit rebuild/redeploy completed; live `SourceCommit` equals `git rev-parse HEAD`.
 - Service account/SID: LocalSystem / `S-1-5-18`
 - `current.json`: `C:\Users\tayla\AppData\Local\Talvora\current.json`, ToolCount=198.
 
