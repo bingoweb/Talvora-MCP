@@ -8,13 +8,13 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 
 - Repository: `C:\Users\tayla\Talvora-MCP`
 - Branch: `main`
-- Last runtime-affecting fix commit: `234f26ec74d4e5b01710d45b46f4cc373068de72` (`fix: serialize Talvora lifecycle operations`).
+- Last runtime-affecting fix commit: `36b68b24e14a72b5cf44cd0ae2b91356e882733a` (`fix: isolate manual stop state per Windows session`).
 - Gitea `origin/main` ve GitHub `github/main`: her bug closeout commit'inden sonra birlikte güncellenir.
 - Canlı Talvora service: **Running / Automatic**.
-- Exact-installed runtime source commit: `234f26ec74d4e5b01710d45b46f4cc373068de72`.
-- #178 source fix hazır: manual-stop persistence Windows SessionId bazlı dosyaya ayrıldı; legacy same-session migration + targeted regression GREEN; commit/push/live deploy sırada.
+- Exact-installed runtime source commit: `36b68b24e14a72b5cf44cd0ae2b91356e882733a`.
+- #178 tamamlandı: manual-stop persistence Windows SessionId bazlı dosyaya ayrıldı; targeted regression GREEN; fix commit Gitea + GitHub'a push edildi ve canonical live deploy exact-installed olarak doğrulandı.
 
-## #178 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+## #178 — CLOSED / LIVE VERIFIED
 
 Kök neden:
 - Manual-stop state belgesi logon `SessionId`/`AuthenticationId` doğruluyordu ama tüm oturumlar aynı `%LOCALAPPDATA%\Talvora\ControlCenter\session-state.json` dosyasını kullanıyordu.
@@ -25,12 +25,15 @@ Düzeltme ve kanıt:
 - Eski `session-state.json` yalnız current SessionId/UserSid/AuthenticationId ile eşleşirse yeni session dosyasına migrate ediliyor; mismatch legacy state'e dokunmuyor.
 - Runtime `AssertContract` farklı SessionId'lerin farklı dosya yoluna gittiğini doğruluyor.
 - `NativeInstallerSourceRegression.ps1`: `ManualStopStateIsWindowsSessionScoped=True`; suite GREEN. Tray Release build **0 warning / 0 error**.
+- Fix commit: `36b68b24e14a72b5cf44cd0ae2b91356e882733a`; Gitea `origin/main` ve GitHub `github/main` senkron.
+- Canonical installer build GREEN; artifact SHA-256 `3A57702ECD153F71B744B871420D7E1626693B9D62246875E5ADF05B039203B1`.
+- Self-update sırasında MCP bağlantısı servis değişimi nedeniyle kesildi; reconnect sonrası `system_info.sourceCommit=36b68b24e14a72b5cf44cd0ae2b91356e882733a` ve service Running doğrulandı.
 
 ### Aktif devam noktası
 
-1. #178 source/test/docs dosyalarını tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
-2. Canonical installer build + manifest-bound live deploy yap; service/runtime ve active Tray version path doğrula.
-3. #178 live acceptance'ı docs-only closeout commit'iyle kapat; ardından deeper audit'e devam et.
+1. #178 live acceptance docs closeout'unu commit edip Gitea + GitHub'a push et.
+2. Deep bug audit'e #179'dan devam et; yalnız doğrulanmış tek bug üzerinde çalış.
+3. Her yeni bug için targeted test -> docs -> tek bug commit -> iki remote push -> runtime etkiliyorsa canonical live deploy sırasını koru.
 
 ## Sabit çalışma kuralları
 

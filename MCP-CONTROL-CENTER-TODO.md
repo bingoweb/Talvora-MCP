@@ -581,7 +581,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #175 — legacy `talvora_read_text` / `talvora_list` finite response budgets: bounded streaming/entry+character ceilings, explicit paginated-alternative guidance, cancellation, targeted response-bounds regression GREEN; fix commit `949272e` pushed to Gitea+GitHub and canonical exact-installed live gate GREEN.
 - [x] #176 — `talvora_archive_list`: finite 20,000-entry + 8 MiB response ceiling, archive-order offset continuation, total/truncation metadata; response-bounds regression GREEN, Release build 0 warning / 0 error, both remotes pushed, canonical live acceptance GREEN.
 - [x] #177 — Talvora lifecycle concurrency: `ExecuteTalvoraAsync` shared `ManagedMcpOperationCoordinator` lease kullanıyor; Control Center/manual ve automatic recovery start/stop/restart yarışları engellendi; targeted regression GREEN, Tray Release build 0 warning / 0 error, fix `234f26e` iki remote'a push edildi ve exact-installed live gate GREEN.
-- [x] #178 — manual-stop persistence gerçek Windows session scope'a ayrıldı: `session-state.<SessionId>.json`, same-session legacy migration, mismatch legacy preservation, runtime path-isolation contract; targeted source regression GREEN, Tray Release build 0 warning / 0 error; commit/push/live gate pending.
+- [x] #178 — manual-stop persistence gerçek Windows session scope'a ayrıldı: `session-state.<SessionId>.json`, same-session legacy migration, mismatch legacy preservation, runtime path-isolation contract; targeted source regression GREEN, Tray Release build 0 warning / 0 error; fix `36b68b2` Gitea + GitHub'a push edildi ve canonical exact-installed live gate GREEN.
 
 ## Faz 14 — Canonical Source Edit Transaction Engine (2026-09-20)
 

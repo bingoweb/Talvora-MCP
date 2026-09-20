@@ -2,17 +2,18 @@
 
 Last updated: 2026-09-20
 Branch: main
-Current runtime source HEAD: `234f26ec74d4e5b01710d45b46f4cc373068de72`.
-Current exact-installed audit runtime: `234f26ec74d4e5b01710d45b46f4cc373068de72`
+Current runtime source HEAD: `36b68b24e14a72b5cf44cd0ae2b91356e882733a`.
+Current exact-installed audit runtime: `36b68b24e14a72b5cf44cd0ae2b91356e882733a`
 Canonical exact-installed tool count: 204 unique tools
-Status: #121–#178 source remediation is complete with 0 OPEN findings; #178 commit/push/live acceptance is pending.
+Status: #121–#178 remediation is complete with 0 OPEN findings; #178 commit/push/live acceptance is complete.
 
 ## Current remediation status summary — 2026-09-20
 
 - Historical implementation/fix work through #120 includes the completed Control Center, installer/deploy, Playwright CLI migration, Source Edit core, Routing Contract v3, structural adapter and Roslyn semantic adapter work described below.
 - The current deep-audit range #121–#178 contains 58 numbered records: **0 OPEN**, **55 FIXED**, plus **#143 CLOSED FALSE POSITIVE** and **#166/#167 CLOSED DUPLICATE**.
 - Fixed records passed their documented targeted regression or contract gates. Latest combined Source Edit suite remains **63/63 GREEN**; #174 has its own response-bounds regression.
-- #174–#177 are committed, pushed to both remotes and live-verified. #178 source/test gates are GREEN; commit/push/live acceptance remains.
+- #174–#178 are committed, pushed to both remotes and live-verified.
+- #178 live acceptance: fix commit `36b68b24e14a72b5cf44cd0ae2b91356e882733a`; canonical installer SHA-256 `3A57702ECD153F71B744B871420D7E1626693B9D62246875E5ADF05B039203B1`; reconnect sonrası exact-installed `system_info.sourceCommit` aynı commit'i doğruladı.
 - #166 and #167 are not additional defects: their evidence was merged into canonical #147 and #148 respectively.
 - Canonical deploy #109 explicit `--silent` behavior must remain intact during all future installer changes.
 - #129 follow-up: project/solution analyzer ve source-generator binary referansları da semantic graph physical revision snapshot + commit guard kapsamına alındı. Analyzer/generator binary drift artık commit öncesi `SEMANTIC_GRAPH_STALE` ile fail-closed olur. Targeted regression GREEN; full Source Edit 62/62 GREEN; Talvora Release 0 warning / 0 error.
