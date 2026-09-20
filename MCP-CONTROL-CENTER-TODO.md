@@ -540,18 +540,18 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #109 — canonical SYSTEM deploy task `Talvora-Setup.exe --silent` çalıştırsın; Session 0 görünmez GUI hang'ini regression ile engelle.
 
 
-## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 17 OPEN)
+## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 15 OPEN)
 
 - [ ] #124 — semantic durable replay metadata.
 - [x] #127 — structural YAML control-file self-scan. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
 - [ ] #128 — semantic resource bounds before/while load/generation.
 - [ ] #129 — semantic graph concurrency fingerprint/versioning.
 - [ ] #130 — workspace-scoped MSBuild/toolchain fidelity.
-- [ ] #132 — retired Playwright MCP upgrade cleanup migration.
+- [x] #132 — retired Playwright MCP ownership-aware post-commit upgrade cleanup + idempotent migration marker; targeted installer source contracts GREEN, Installer Release compile 0 warning / 0 error.
 - [ ] #133 — canonical deploy fast-task completion observation.
 - [x] #134 — collision-proof managed-MCP persistent ID mapping; shared SHA-256 key + recovery migration fixture GREEN.
 - [x] #135 — ordinary C# source syntax validation. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
-- [ ] #136 — ownership-aware legacy Cloudflared cleanup + rollback boundary.
+- [x] #136 — ownership-aware legacy Cloudflared cleanup + post-commit retirement boundary; exact service executable identity + targeted installer source regression GREEN.
 - [x] #137 — ast-grep private-cache executable hash revalidation. Targeted RED -> GREEN; 2026-09-20 source audit.
 - [x] #138 — ast-grep exact-version provenance snapshot. Targeted RED -> GREEN; 2026-09-20 source audit.
 - [ ] #139 — installer post-health state/config rollback.

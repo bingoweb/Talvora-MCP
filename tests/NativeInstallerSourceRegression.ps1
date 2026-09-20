@@ -76,6 +76,29 @@ $result = [pscustomobject]@{
         $deployInstallerScript -match '\.Run\(\$null\)' -and
         $deployInstallerScript -notmatch 'Start-Process\s+-FilePath\s+\$installerFullPath'
     )
+    LegacyCloudflaredRetirementIsOwnershipAwareAndPostCommit = (
+        $installerService -match 'cloudflaredServiceOwned' -and
+        $installerService -match 'cloudflaredServiceExecutable' -and
+        $installerProgram -match 'GetServiceExecutablePath\("Cloudflared"\)' -and
+        $installerProgram -match 'Path\.GetFullPath\(executable\)' -and
+        $installerService -match 'legacyCloudflaredExecutable' -and
+        $installerService -match 'Generic ProgramData cloudflared data preserved' -and
+        $installerFlow.IndexOf('WriteCurrentStateAsync') -ge 0 -and
+        $installerFlow.IndexOf('RemoveLegacyInstallationAsync') -gt
+            $installerFlow.IndexOf('WriteCurrentStateAsync')
+    )
+    RetiredPlaywrightMcpHasOwnershipAwareUpgradeCleanup = (
+        $installerService -match 'RetireLegacyPlaywrightMcpAsync' -and
+        $installerProgram -match 'LegacyPlaywrightTaskName' -and
+        $installerProgram -match 'Talvora Playwright MCP' -and
+        $installerProgram -match 'Start-PlaywrightMcp\.ps1' -and
+        $installerProgram -match 'IsOwnedLegacyPlaywrightTaskXml' -and
+        $installerProgram -match 'WorkingDirectory' -and
+        $installerProgram -match 'Win32_Process' -and
+        $installerProgram -match 'playwright-mcp-retired-v1\.json' -and
+        $installerProgram -match 'LocalTunnelStateRemoved' -and
+        $installerProgram -notmatch 'LocalPort -in @\(8931, 8932\)'
+    )
     BuildScriptPreventsConcurrentBuilds = (
         $buildInstallerScript -match "Global\\Talvora\.BuildWindowsInstaller" -and
         $buildInstallerScript -match '\$BuildMutex\.WaitOne\(0\)' -and
@@ -459,7 +482,10 @@ $result = [pscustomobject]@{
     )
     PlaywrightMcpRemovedFromTalvora = (
         $installerFlow -notmatch 'InstallPlaywrightManagedMcpAsync' -and
-        $installerProgram -notmatch 'Playwright MCP' -and
+        $installerProgram -notmatch 'InstallPlaywrightManagedMcpAsync' -and
+        $installerProgram -notmatch 'WaitForPlaywrightMcpReadinessAsync' -and
+        $installerProgram -notmatch 'EnsureLatestNodeCurrentAsync' -and
+        $installerProgram -notmatch 'PlaywrightEndpoint' -and
         $installerProject -notmatch 'ModelContextProtocol' -and
         $buildInstallerScript -notmatch 'PlaywrightPayload' -and
         $buildInstallerScript -notmatch 'Start-PlaywrightMcp' -and

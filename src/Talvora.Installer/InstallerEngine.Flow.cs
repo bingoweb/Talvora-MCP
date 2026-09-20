@@ -106,10 +106,6 @@ public static async Task<HealthSnapshot> InstallAsync(
                 JsonSerializer.Serialize(runtimeMetadata, IndentedJsonOptions),
                 new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
                 cancellationToken);
-
-            progress.Report(new InstallProgress(22, "Eski Talvora kalıntıları temizleniyor..."));
-            await RemoveLegacyInstallationAsync(installUser, cancellationToken);
-
             progress.Report(new InstallProgress(34, "Çalışan Talvora kontrollü olarak değiştiriliyor..."));
             serviceSwitchStarted = true;
             await StopServiceForUpgradeAsync(ServiceName, cancellationToken);
@@ -148,6 +144,19 @@ public static async Task<HealthSnapshot> InstallAsync(
                 InstallerLog.Write(
                     "Tray could not be started immediately. " +
                     "The startup registration is intact, so the core Talvora service remains installed.");
+            }
+            progress.Report(new InstallProgress(88, "Eski Talvora bileşenleri güvenli biçimde emekliye ayrılıyor..."));
+            try
+            {
+                await RemoveLegacyInstallationAsync(
+                    installUser,
+                    cancellationToken);
+            }
+            catch (Exception retirementError)
+            {
+                InstallerLog.Write(
+                    "Post-commit legacy retirement deferred",
+                    retirementError);
             }
             progress.Report(new InstallProgress(90, "Eski sürüm dosyaları temizleniyor..."));
             try

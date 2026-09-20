@@ -113,14 +113,21 @@ private static InstallUserContext ResolveInstallUserContext()
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        return Task.FromResult(
+            GetServiceExecutablePath(ServiceName));
+    }
+
+    private static string? GetServiceExecutablePath(
+        string serviceName)
+    {
         using var key = Registry.LocalMachine.OpenSubKey(
-            @"SYSTEM\CurrentControlSet\Services\" + ServiceName,
+            @"SYSTEM\CurrentControlSet\Services\" + serviceName,
             writable: false);
 
         var imagePath = key?.GetValue("ImagePath") as string;
         if (string.IsNullOrWhiteSpace(imagePath))
         {
-            return Task.FromResult<string?>(null);
+            return null;
         }
 
         var expanded = Environment.ExpandEnvironmentVariables(imagePath).Trim();
@@ -128,7 +135,22 @@ private static InstallUserContext ResolveInstallUserContext()
             ? expanded[1..].Split('"', 2)[0]
             : expanded.Split(' ', 2)[0];
 
-        return Task.FromResult<string?>(executable);
+        if (string.IsNullOrWhiteSpace(executable))
+        {
+            return null;
+        }
+
+        try
+        {
+            return Path.GetFullPath(executable);
+        }
+        catch (Exception ex) when (
+            ex is ArgumentException or
+            IOException or
+            NotSupportedException)
+        {
+            return null;
+        }
     }
 
     private static async Task<bool> TryStartTrayAsync(

@@ -18,18 +18,58 @@ private static async Task RemoveLegacyInstallationAsync(
         InstallUserContext installUser,
         CancellationToken cancellationToken)
     {
-        await StopAndDeleteServiceAsync("Cloudflared", cancellationToken);
-
-        await TryDeleteDirectoryAsync(
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "cloudflared"),
+        await RetireLegacyPlaywrightMcpAsync(
+            installUser,
             cancellationToken);
 
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        await TryDeleteDirectoryAsync(
-            Path.Combine(programFiles, "Talvora", "Cloudflare"),
-            cancellationToken);
+        var programFiles = Environment.GetFolderPath(
+            Environment.SpecialFolder.ProgramFiles);
+        var legacyCloudflareRoot = Path.Combine(
+            programFiles,
+            "Talvora",
+            "Cloudflare");
+        var legacyCloudflaredExecutable = Path.Combine(
+            legacyCloudflareRoot,
+            "cloudflared.exe");
+        var cloudflaredServiceExecutable =
+            GetServiceExecutablePath("Cloudflared");
+        var cloudflaredServiceOwned =
+            string.Equals(
+                cloudflaredServiceExecutable,
+                Path.GetFullPath(legacyCloudflaredExecutable),
+                StringComparison.OrdinalIgnoreCase);
+
+        if (cloudflaredServiceOwned)
+        {
+            await StopAndDeleteServiceAsync(
+                "Cloudflared",
+                cancellationToken);
+        }
+        else if (!string.IsNullOrWhiteSpace(
+                     cloudflaredServiceExecutable))
+        {
+            InstallerLog.Write(
+                "Cloudflared service preserved because Talvora ownership could not be proven.");
+        }
+
+        if ((cloudflaredServiceOwned ||
+             File.Exists(legacyCloudflaredExecutable)) &&
+            Directory.Exists(legacyCloudflareRoot))
+        {
+            await TryDeleteDirectoryAsync(
+                legacyCloudflareRoot,
+                cancellationToken);
+        }
+
+        var genericCloudflaredData = Path.Combine(
+            Environment.GetFolderPath(
+                Environment.SpecialFolder.CommonApplicationData),
+            "cloudflared");
+        if (Directory.Exists(genericCloudflaredData))
+        {
+            InstallerLog.Write(
+                "Generic ProgramData cloudflared data preserved because Talvora does not own the directory exclusively.");
+        }
 
         try
         {
