@@ -1857,6 +1857,64 @@ internal static partial class SourceEditRegressionRunner
                 secondArtifactPage.NextResultOffset is null,
                 "Artifact inventory continuation did not terminate cleanly.");
 
+            var failingArtifactRoot =
+                Path.Combine(root, "artifact-error-pages");
+            Directory.CreateDirectory(failingArtifactRoot);
+            foreach (var name in
+                     new[] { "a.dll", "b.dll", "c.dll", "d.dll" })
+            {
+                await File.WriteAllTextAsync(
+                    Path.Combine(failingArtifactRoot, name),
+                    name);
+            }
+            var lockedArtifactPath =
+                Path.Combine(failingArtifactRoot, "b.dll");
+            await using (var lockedArtifact =
+                new FileStream(
+                    lockedArtifactPath,
+                    FileMode.Open,
+                    FileAccess.ReadWrite,
+                    FileShare.None))
+            {
+                var firstErrorArtifactPage =
+                    await QualityTools.ArtifactInventory(
+                        failingArtifactRoot,
+                        maxResults: 1,
+                        includeVersionInfo: false);
+                Assert(
+                    firstErrorArtifactPage.Count == 1 &&
+                    firstErrorArtifactPage.Truncated &&
+                    firstErrorArtifactPage.NextResultOffset == 1,
+                    "Artifact error fixture first page continuation is incorrect.");
+
+                var secondErrorArtifactPage =
+                    await QualityTools.ArtifactInventory(
+                        failingArtifactRoot,
+                        maxResults: 1,
+                        resultOffset:
+                            firstErrorArtifactPage.NextResultOffset!.Value,
+                        includeVersionInfo: false);
+                Assert(
+                    secondErrorArtifactPage.Count == 1 &&
+                    secondErrorArtifactPage.Errors.Count == 1 &&
+                    secondErrorArtifactPage.Truncated &&
+                    secondErrorArtifactPage.NextResultOffset == 3,
+                    "Artifact error page did not advance past a consumed unreadable artifact.");
+
+                var thirdErrorArtifactPage =
+                    await QualityTools.ArtifactInventory(
+                        failingArtifactRoot,
+                        maxResults: 1,
+                        resultOffset:
+                            secondErrorArtifactPage.NextResultOffset!.Value,
+                        includeVersionInfo: false);
+                Assert(
+                    thirdErrorArtifactPage.Count == 1 &&
+                    !thirdErrorArtifactPage.Truncated &&
+                    thirdErrorArtifactPage.NextResultOffset is null,
+                    "Artifact error continuation did not terminate cleanly.");
+            }
+
             var diagnosticText =
                 "a.cs(1,1): error CS0001: first\n" +
                 "b.cs(2,1): warning CS0002: second\n" +
