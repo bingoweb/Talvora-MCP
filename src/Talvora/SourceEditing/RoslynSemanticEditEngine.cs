@@ -103,7 +103,7 @@ internal static class RoslynSemanticEditEngine
                 request.ComputeHash(),
                 validateSyntax,
                 (canonicalRoot, token) =>
-                    GenerateRenameChangesAsync(
+                    GenerateRenameChangesIsolatedAsync(
                         canonicalRoot,
                         request,
                         context,
@@ -129,7 +129,165 @@ internal static class RoslynSemanticEditEngine
             result);
     }
 
-    private static async Task<IReadOnlyList<SourceEditChangeInput>> GenerateRenameChangesAsync(
+    internal static async Task<SemanticWorkerResponse> ExecuteWorkerRequestAsync(
+        SemanticWorkerRequest workerRequest,
+        CancellationToken cancellationToken)
+    {
+        SemanticExecutionContext? context = null;
+        try
+        {
+            var root =
+                SourceWorkspaceClassifier.ResolveExplicitWorkspaceRoot(
+                    workerRequest.WorkspaceRoot);
+            var request =
+                SemanticRenameRequest.Normalize(
+                    root,
+                    workerRequest.SolutionOrProjectPath,
+                    workerRequest.DocumentPath,
+                    workerRequest.Line,
+                    workerRequest.Character,
+                    workerRequest.ExpectedRevision,
+                    workerRequest.NewName,
+                    workerRequest.ProjectPath,
+                    workerRequest.ExpectedSymbolName,
+                    workerRequest.RenameOverloads,
+                    workerRequest.RenameInStrings,
+                    workerRequest.RenameInComments,
+                    workerRequest.MaxProjects,
+                    workerRequest.MaxDocuments,
+                    workerRequest.MaxChangedDocuments,
+                    workerRequest.MaxTotalChangedCharacters,
+                    workerRequest.MaxDiagnostics,
+                    workerRequest.TimeoutSeconds,
+                    workerRequest.ValidateSyntax);
+            context =
+                new SemanticExecutionContext(
+                    request.MaxDiagnostics);
+            var changes =
+                await GenerateRenameChangesInProcessAsync(
+                    root,
+                    request,
+                    context,
+                    cancellationToken);
+            return new SemanticWorkerResponse(
+                true,
+                changes,
+                context.Workspace,
+                context.Symbol,
+                context.Diagnostics.ToArray(),
+                context.ExportGraphTransport(),
+                null);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (SourceEditDomainException ex)
+        {
+            return new SemanticWorkerResponse(
+                false,
+                [],
+                context?.Workspace,
+                context?.Symbol,
+                context?.Diagnostics.ToArray() ??
+                [],
+                context?.TryExportGraphTransport(),
+                new SemanticWorkerError(
+                    ex.Code,
+                    ex.Message,
+                    ex.Path,
+                    ex.Details));
+        }
+        catch (Exception ex)
+        {
+            return new SemanticWorkerResponse(
+                false,
+                [],
+                context?.Workspace,
+                context?.Symbol,
+                context?.Diagnostics.ToArray() ??
+                [],
+                context?.TryExportGraphTransport(),
+                new SemanticWorkerError(
+                    SourceEditCodes.SemanticWorkerFailed,
+                    $"{SourceEditCodes.SemanticWorkerFailed}: isolated semantic analysis failed: {ex.Message}",
+                    null,
+                    null));
+        }
+    }
+
+    private static async Task<IReadOnlyList<SourceEditChangeInput>> GenerateRenameChangesIsolatedAsync(
+        string workspaceRoot,
+        SemanticRenameRequest request,
+        SemanticExecutionContext context,
+        CancellationToken cancellationToken)
+    {
+        var response =
+            await SemanticWorkerClient.ExecuteAsync(
+                new SemanticWorkerRequest(
+                    workspaceRoot,
+                    SourceWorkspaceClassifier.GetRelativePath(
+                        workspaceRoot,
+                        request.SolutionOrProjectFullPath),
+                    SourceWorkspaceClassifier.GetRelativePath(
+                        workspaceRoot,
+                        request.DocumentFullPath),
+                    request.Line,
+                    request.Character,
+                    request.ExpectedRevision,
+                    request.NewName,
+                    request.ProjectFullPath is null
+                        ? null
+                        : SourceWorkspaceClassifier.GetRelativePath(
+                            workspaceRoot,
+                            request.ProjectFullPath),
+                    request.ExpectedSymbolName,
+                    request.RenameOverloads,
+                    request.RenameInStrings,
+                    request.RenameInComments,
+                    request.MaxProjects,
+                    request.MaxDocuments,
+                    request.MaxChangedDocuments,
+                    request.MaxTotalChangedCharacters,
+                    request.MaxDiagnostics,
+                    request.TimeoutSeconds,
+                    request.ValidateSyntax),
+                cancellationToken);
+
+        context.ImportWorkerResponse(
+            response);
+        if (!response.Success)
+        {
+            var error =
+                response.Error ??
+                new SemanticWorkerError(
+                    SourceEditCodes.SemanticWorkerFailed,
+                    $"{SourceEditCodes.SemanticWorkerFailed}: isolated semantic worker rejected the request without an error payload.",
+                    null,
+                    null);
+            throw new SourceEditDomainException(
+                error.Code,
+                error.Message,
+                error.Path,
+                error.Details);
+        }
+
+        if (response.Graph is null)
+        {
+            throw new SourceEditDomainException(
+                SourceEditCodes.SemanticWorkerFailed,
+                $"{SourceEditCodes.SemanticWorkerFailed}: isolated semantic worker returned a successful proposal without graph state.");
+        }
+
+        context.BindGraphMutablePaths(
+            workspaceRoot,
+            response.Changes);
+        await context.VerifyGraphSnapshotAsync(
+            cancellationToken);
+        return response.Changes;
+    }
+
+    private static async Task<IReadOnlyList<SourceEditChangeInput>> GenerateRenameChangesInProcessAsync(
         string workspaceRoot,
         SemanticRenameRequest request,
         SemanticExecutionContext context,
@@ -168,7 +326,10 @@ internal static class RoslynSemanticEditEngine
     {
         cancellationToken.ThrowIfCancellationRequested();
         var registration =
-            RoslynMsBuildBootstrap.EnsureRegistered();
+            RoslynMsBuildBootstrap.EnsureRegistered(
+                Path.GetDirectoryName(
+                    request.SolutionOrProjectFullPath) ??
+                workspaceRoot);
 
         using var workspace =
             CreateWorkspace();
@@ -1776,6 +1937,73 @@ internal static class RoslynSemanticEditEngine
         public string? FirstWorkspaceFailure { get; private set; }
         public IReadOnlyList<SemanticEditDiagnostic> Diagnostics =>
             diagnostics;
+
+        public SemanticGraphSnapshotTransport ExportGraphTransport() =>
+            RequireGraphSnapshot(
+                    "worker response export")
+                .ToTransport();
+
+        public SemanticGraphSnapshotTransport? TryExportGraphTransport() =>
+            graphSnapshot?.ToTransport();
+
+        public void ImportWorkerResponse(
+            SemanticWorkerResponse response)
+        {
+            ArgumentNullException.ThrowIfNull(
+                response);
+            if (response.Diagnostics.Count >
+                maxDiagnostics)
+            {
+                throw new SourceEditDomainException(
+                    SourceEditCodes.SemanticWorkerFailed,
+                    $"{SourceEditCodes.SemanticWorkerFailed}: isolated semantic worker returned {response.Diagnostics.Count} diagnostics, exceeding maxDiagnostics={maxDiagnostics}.");
+            }
+
+            Workspace =
+                response.Workspace;
+            Symbol =
+                response.Symbol;
+            lock (diagnosticGate)
+            {
+                diagnostics.Clear();
+                diagnosticKeys.Clear();
+                diagnostics.AddRange(
+                    response.Diagnostics);
+                foreach (var diagnostic in diagnostics)
+                {
+                    diagnosticKeys.Add(
+                        BuildImportedDiagnosticKey(
+                            diagnostic));
+                }
+
+                diagnosticsTruncated =
+                    diagnostics.Any(
+                        diagnostic =>
+                            string.Equals(
+                                diagnostic.Code,
+                                "SEMANTIC_DIAGNOSTICS_TRUNCATED",
+                                StringComparison.Ordinal));
+            }
+
+            graphSnapshot =
+                response.Graph is null
+                    ? null
+                    : SemanticGraphSnapshot.FromTransport(
+                        response.Graph);
+        }
+
+        private static string BuildImportedDiagnosticKey(
+            SemanticEditDiagnostic diagnostic) =>
+            string.Join(
+                "\u001f",
+                diagnostic.Source,
+                diagnostic.Severity,
+                diagnostic.Code,
+                diagnostic.Message,
+                diagnostic.ProjectPath ??
+                string.Empty,
+                diagnostic.DocumentPath ??
+                string.Empty);
 
         public void SetGraphSnapshot(
             SemanticGraphSnapshot snapshot)

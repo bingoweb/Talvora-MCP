@@ -1,4 +1,24 @@
 if (args.Contains(
+        "--semantic-solution-only",
+        StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunSemanticSolutionRenameAsync();
+    Console.WriteLine(
+        "TALVORA SEMANTIC SOLUTION REGRESSION GREEN");
+    return;
+}
+
+if (args.Contains(
+        "--semantic-toolchain-isolation-only",
+        StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunSemanticToolchainIsolationAsync();
+    Console.WriteLine(
+        "TALVORA SEMANTIC TOOLCHAIN ISOLATION REGRESSION GREEN");
+    return;
+}
+
+if (args.Contains(
         "--semantic-graph-stale-only",
         StringComparer.OrdinalIgnoreCase))
 {

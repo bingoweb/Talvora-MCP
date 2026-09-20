@@ -46,6 +46,7 @@ public static class SourceEditCodes
     public const string SemanticProposalInvalid = "SEMANTIC_PROPOSAL_INVALID";
     public const string SemanticNoChanges = "SEMANTIC_NO_CHANGES";
     public const string SemanticTimeout = "SEMANTIC_TIMEOUT";
+    public const string SemanticWorkerFailed = "SEMANTIC_WORKER_FAILED";
 }
 
 public sealed record TalvoraSourceReadResponse(

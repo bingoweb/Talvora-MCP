@@ -58,6 +58,7 @@ internal static partial class SourceEditRegressionRunner
             ("semantic-workspace-load-diagnostics", SemanticWorkspaceLoadDiagnosticsAsync),
             ("semantic-resource-bounds", SemanticResourceBoundsAsync),
             ("semantic-graph-stale-zero-mutation", SemanticGraphStaleZeroMutationAsync),
+            ("semantic-toolchain-isolation", SemanticToolchainIsolationAsync),
             ("semantic-cancellation-zero-mutation", SemanticCancellationAsync),
             ("non-workspace-legacy-compatibility", NonWorkspaceCompatibilityAsync),
             ("syntax-validation-failure", SyntaxValidationFailureAsync),

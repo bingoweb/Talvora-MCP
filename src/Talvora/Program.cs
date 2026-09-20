@@ -5,6 +5,19 @@ using Microsoft.Extensions.Hosting.WindowsServices;
 using ModelContextProtocol.AspNetCore;
 using ModelContextProtocol.Server;
 
+if (SemanticWorkerHost.IsWorkerCommand(
+        args))
+{
+    var responsePath =
+        SemanticWorkerHost.GetResponsePath(
+            args);
+    await SemanticWorkerHost.RunAsync(
+        Console.OpenStandardInput(),
+        responsePath,
+        CancellationToken.None);
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,

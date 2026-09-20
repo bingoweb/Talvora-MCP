@@ -9,6 +9,68 @@ internal static partial class SourceEditRegressionRunner
     public static Task RunSemanticGraphStaleAsync() =>
         SemanticGraphStaleZeroMutationAsync();
 
+    public static Task RunSemanticToolchainIsolationAsync() =>
+        SemanticToolchainIsolationAsync();
+
+    public static Task RunSemanticSolutionRenameAsync() =>
+        SemanticSolutionRenameReplayAsync();
+
+    private static async Task SemanticToolchainIsolationAsync()
+    {
+        await using var fixture =
+            await TestWorkspace.CreateAsync();
+        await WriteSingleProjectSemanticSolutionAsync(
+            fixture,
+            "public class Widget {}\n");
+
+        var parentRegistration =
+            RoslynMsBuildBootstrap.EnsureRegistered(
+                fixture.Root);
+        Assert(
+            !string.IsNullOrWhiteSpace(
+                parentRegistration.MsBuildPath),
+            "Parent regression process did not register an MSBuild instance.");
+
+        await fixture.WriteUtf8Async(
+            "global.json",
+            "{\"sdk\":{\"version\":\"99.0.100\",\"rollForward\":\"disable\",\"allowPrerelease\":false}}\n");
+        var anchor =
+            fixture.PathInWorkspace(
+                "App/Widget.cs");
+        var original =
+            await File.ReadAllTextAsync(
+                anchor);
+        var read =
+            await SourceEditRuntime.Engine.ReadSourceAsync(
+                anchor,
+                1,
+                0,
+                CancellationToken.None);
+
+        var result =
+            await RenameAsync(
+                fixture,
+                NewTransactionId(),
+                "Demo.slnx",
+                "App/Widget.cs",
+                0,
+                13,
+                read.Revision,
+                "RenamedWidget",
+                projectPath: "App/App.csproj",
+                expectedSymbolName: "Widget");
+
+        Assert(
+            result.Transaction.Error?.Code ==
+            SourceEditCodes.SemanticMsBuildUnavailable,
+            $"Workspace-scoped toolchain failure did not preserve the MSBuild domain error. Code={result.Transaction.Error?.Code ?? "<none>"} Message={result.Transaction.Error?.Message ?? "<none>"}");
+        AssertEqual(
+            original,
+            await File.ReadAllTextAsync(
+                anchor),
+            "Workspace with an unresolved global.json unexpectedly mutated after parent MSBuild registration.");
+    }
+
     private static async Task SemanticSolutionRenameReplayAsync()
     {
         await using var fixture =
@@ -42,8 +104,9 @@ internal static partial class SourceEditRegressionRunner
 
         Assert(
             first.Success,
-            first.Transaction.Error?.Message ??
-            "Solution-aware semantic rename failed.");
+            first.Transaction.Error is { } firstError
+                ? $"{firstError.Message} Path={firstError.Path ?? "<none>"}"
+                : "Solution-aware semantic rename failed.");
         Assert(
             first.Symbol is not null &&
             first.Symbol.Name == "Widget" &&

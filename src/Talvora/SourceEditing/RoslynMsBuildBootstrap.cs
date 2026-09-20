@@ -11,8 +11,15 @@ internal static class RoslynMsBuildBootstrap
     private static readonly object Gate = new();
     private static RoslynMsBuildRegistration? registration;
 
-    public static RoslynMsBuildRegistration EnsureRegistered()
+    public static RoslynMsBuildRegistration EnsureRegistered(
+        string workingDirectory)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            workingDirectory);
+        var canonicalWorkingDirectory =
+            Path.GetFullPath(
+                workingDirectory);
+
         lock (Gate)
         {
             if (registration is not null)
@@ -32,7 +39,16 @@ internal static class RoslynMsBuildBootstrap
             {
                 instances =
                     MSBuildLocator
-                        .QueryVisualStudioInstances()
+                        .QueryVisualStudioInstances(
+                            new VisualStudioInstanceQueryOptions
+                            {
+                                DiscoveryTypes =
+                                    DiscoveryType.DotNetSdk |
+                                    DiscoveryType.VisualStudioSetup |
+                                    DiscoveryType.DeveloperConsole,
+                                WorkingDirectory =
+                                    canonicalWorkingDirectory,
+                            })
                         .OrderByDescending(instance => instance.Version)
                         .ThenBy(
                             instance => instance.MSBuildPath,
@@ -54,7 +70,8 @@ internal static class RoslynMsBuildBootstrap
             {
                 throw new SourceEditDomainException(
                     SourceEditCodes.SemanticMsBuildUnavailable,
-                    $"{SourceEditCodes.SemanticMsBuildUnavailable}: no compatible MSBuild instance was discovered by Microsoft.Build.Locator.");
+                    $"{SourceEditCodes.SemanticMsBuildUnavailable}: no compatible MSBuild instance was discovered for workspace '{canonicalWorkingDirectory}'. Check global.json SDK selection/roll-forward and installed SDK/MSBuild versions.",
+                    canonicalWorkingDirectory);
             }
 
             var selected = instances[0];

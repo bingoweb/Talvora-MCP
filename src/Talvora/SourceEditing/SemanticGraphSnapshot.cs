@@ -2,6 +2,18 @@ using Microsoft.CodeAnalysis;
 
 namespace Talvora.SourceEditing;
 
+internal sealed record SemanticGraphFileTransport(
+    string Path,
+    string? Revision,
+    bool LockDuringCommit,
+    string Kind);
+
+internal sealed record SemanticGraphSnapshotTransport(
+    string WorkspaceRoot,
+    IReadOnlyList<SemanticGraphFileTransport> Files,
+    IReadOnlyList<string> SourceRoots,
+    IReadOnlyList<string> SourceMembership);
+
 internal sealed class SemanticGraphSnapshot
 {
     private const int AbsoluteMaxMembershipPaths = 1000000;
@@ -39,6 +51,76 @@ internal sealed class SemanticGraphSnapshot
         this.files = files;
         this.sourceRoots = sourceRoots;
         this.sourceMembership = sourceMembership;
+    }
+
+    public SemanticGraphSnapshotTransport ToTransport() =>
+        new(
+            workspaceRoot,
+            files.Values
+                .OrderBy(
+                    state => state.Path,
+                    PathComparer)
+                .Select(
+                    state =>
+                        new SemanticGraphFileTransport(
+                            state.Path,
+                            state.Revision,
+                            state.LockDuringCommit,
+                            state.Kind))
+                .ToArray(),
+            sourceRoots.ToArray(),
+            sourceMembership.ToArray());
+
+    public static SemanticGraphSnapshot FromTransport(
+        SemanticGraphSnapshotTransport transport)
+    {
+        ArgumentNullException.ThrowIfNull(
+            transport);
+        var states =
+            new Dictionary<string, SemanticGraphFileState>(
+                PathComparer);
+        foreach (var file in transport.Files)
+        {
+            var fullPath =
+                Path.GetFullPath(
+                    file.Path);
+            if (!states.TryAdd(
+                    fullPath,
+                    new SemanticGraphFileState(
+                        fullPath,
+                        file.Revision,
+                        file.LockDuringCommit,
+                        file.Kind)))
+            {
+                throw new SourceEditDomainException(
+                    SourceEditCodes.SemanticGraphStale,
+                    $"{SourceEditCodes.SemanticGraphStale}: isolated semantic worker returned duplicate graph path '{fullPath}'.",
+                    fullPath);
+            }
+        }
+
+        return new SemanticGraphSnapshot(
+            Path.GetFullPath(
+                transport.WorkspaceRoot),
+            states,
+            transport.SourceRoots
+                .Select(
+                    Path.GetFullPath)
+                .Distinct(
+                    PathComparer)
+                .OrderBy(
+                    path => path,
+                    PathComparer)
+                .ToArray(),
+            transport.SourceMembership
+                .Select(
+                    Path.GetFullPath)
+                .Distinct(
+                    PathComparer)
+                .OrderBy(
+                    path => path,
+                    PathComparer)
+                .ToArray());
     }
 
     public static async Task<SemanticGraphSnapshot> CaptureAsync(
