@@ -548,7 +548,7 @@ internal sealed partial class ControlCenterWindow
 
     private static void OpenGiteaHome()
     {
-        Process.Start(
+        using var launched = Process.Start(
             new ProcessStartInfo("http://127.0.0.1:3000/")
             {
                 UseShellExecute = true,

@@ -619,6 +619,10 @@ $result = [pscustomobject]@{
         $controlCenterWindowChrome -match 'saveVersion != Volatile\.Read\(\s*ref _windowPlacementSaveVersion\)' -and
         $controlCenterWindowChrome -match '_windowPlacementSaveGate\.Release\(\)'
     )
+    GiteaBrowserLaunchDisposesProcessHandles = (
+        $controlCenterActions -match 'using var launched = Process\.Start\(' -and
+        $trayApplicationContext -match 'using var launched = Process\.Start\('
+    )
     TrayAutoReconnectsAfterStartup = (
         $trayApplicationContext -match 'await MaintainTalvoraConnectionAsync\(\)' -and
         $trayApplicationContext -match '_talvoraTimer\.Tick\s*\+=' -and

@@ -1548,7 +1548,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     {
         try
         {
-            Process.Start(
+            using var launched = Process.Start(
                 new ProcessStartInfo(GiteaUrl)
                 {
                     UseShellExecute = true,

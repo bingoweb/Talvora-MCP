@@ -34,9 +34,9 @@ Düzeltme ve kanıt:
 
 ### Aktif devam noktası
 
-1. #181 live acceptance docs closeout'unu commit edip Gitea + GitHub'a push et.
-2. Deep bug audit'e #182'den devam et; Gitea browser-launch Process handle ownership yolunu doğrula.
-3. Her yeni bug için targeted test -> docs -> tek bug commit -> iki remote push -> runtime etkiliyorsa canonical live deploy sırasını koru.
+1. #182 source/test/docs değişikliklerini tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
+2. Temiz #182 HEAD'den canonical installer build + manifest-bound live deploy yap; exact-installed runtime commit'i doğrula.
+3. #182 live acceptance'ını docs-only closeout commit'iyle kapat; ardından deeper audit'e #183'ten devam et.
 
 ## #179 — CLOSED / LIVE VERIFIED
 
@@ -83,6 +83,18 @@ Düzeltme ve kanıt:
 - Fix commit: `86290c49abc14fe3ddfac791ccf6548c6b99c2c6`; Gitea `origin/main` ve GitHub `github/main` senkron.
 - Canonical installer SHA-256 `67ECEC023E2892A0C09E906DA22A6DDC8BDC3BFD7BE0EC4D7AFDD9BE8967A585`.
 - Self-update sonrası reconnect doğrulaması: `system_info.sourceCommit=86290c49abc14fe3ddfac791ccf6548c6b99c2c6`; service exact-installed GREEN.
+
+## #182 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+
+Kök neden:
+- Control Center `OpenGiteaHome()` ve Tray Gitea browser açma yolu shell launch için `Process.Start` çağırıyor ancak dönen nullable `Process` nesnesini sahiplenmeden bırakıyordu.
+- Browser sürecini izlemiyoruz veya kontrol etmiyoruz; bu nedenle process component/handle kaynaklarını açık tutmanın işlevsel bir nedeni yok.
+
+Düzeltme ve kanıt:
+- Her iki launch yolu `using var launched = Process.Start(...)` kullanıyor; shell launch davranışı korunurken dönen disposable nesne scope sonunda serbest bırakılıyor.
+- Güncel .NET disposable ownership rehberiyle doğrulandı.
+- `NativeInstallerSourceRegression.ps1`: `GiteaBrowserLaunchDisposesProcessHandles=True`; suite GREEN.
+- `Talvora.Tray` Release build: **0 warning / 0 error**.
 
 ## Sabit çalışma kuralları
 
