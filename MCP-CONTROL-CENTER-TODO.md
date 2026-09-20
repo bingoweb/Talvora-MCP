@@ -540,7 +540,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #109 — canonical SYSTEM deploy task `Talvora-Setup.exe --silent` çalıştırsın; Session 0 görünmez GUI hang'ini regression ile engelle.
 
 
-## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 9 OPEN)
+## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 8 OPEN)
 
 - [x] #124 — semantic durable replay metadata; adapter receipt persisted in receipt + WAL, forced receipt-loss recovery preserves workspace/symbol/diagnostics, Source Edit 60/60 GREEN.
 - [x] #127 — structural YAML control-file self-scan. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
@@ -555,7 +555,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #137 — ast-grep private-cache executable hash revalidation. Targeted RED -> GREEN; 2026-09-20 source audit.
 - [x] #138 — ast-grep exact-version provenance snapshot. Targeted RED -> GREEN; 2026-09-20 source audit.
 - [x] #139 — installer post-health state/config rollback; exact file/registry snapshot+restore, dedicated rollback regression GREEN, Installer Release 0 warning / 0 error.
-- [ ] #140 — canonical deploy artifact hash/identity pinning.
+- [x] #140 — canonical deploy artifact hash/identity pinning; sidecar build manifest + build mutex + pre-launch SHA-256/size/name gate, mutation regression GREEN.
 - [x] #144 — corrupt WAL per-transaction isolation + workspace-scoped durable quarantine; targeted Source Edit 52/52 GREEN.
 - [x] #145 — managed-MCP recovery redundancy health/self-heal; ownership corruption fixture GREEN.
 - [x] #148 — immutable canonical installer source snapshot / HEAD + index-tree + full runtime input identity; source contract GREEN, real canonical build GREEN.

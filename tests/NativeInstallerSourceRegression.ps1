@@ -84,6 +84,18 @@ $result = [pscustomobject]@{
         $deployInstallerScript -match '\$completionObserved\s*=\s*\$true' -and
         $deployInstallerScript -notmatch 'no running installer instance was observed'
     )
+    CanonicalDeployPinsBuiltArtifactIdentity = (
+        $buildInstallerScript.Contains('Talvora-Setup.manifest.json') -and
+        $buildInstallerScript.Contains('sourceHeadCommit') -and
+        $buildInstallerScript.Contains('sourceIndexTree') -and
+        $buildInstallerScript.Contains('runtimeInputsSha256') -and
+        $deployInstallerScript.Contains('ManifestPath') -and
+        $deployInstallerScript.Contains('Assert-InstallerArtifactIdentity') -and
+        ([regex]::Matches($deployInstallerScript, 'Assert-InstallerArtifactIdentity').Count -ge 3) -and
+        $deployInstallerScript.Contains('Global\Talvora.BuildWindowsInstaller.v2') -and
+        $deployInstallerScript.IndexOf('Assert-InstallerArtifactIdentity', [StringComparison]::Ordinal) -lt
+            $deployInstallerScript.IndexOf('$registered.Run($null)', [StringComparison]::Ordinal)
+    )
     LegacyCloudflaredRetirementIsOwnershipAwareAndPostCommit = (
         $installerService -match 'cloudflaredServiceOwned' -and
         $installerService -match 'cloudflaredServiceExecutable' -and

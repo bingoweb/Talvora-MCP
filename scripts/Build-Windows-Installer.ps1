@@ -914,11 +914,64 @@ if (-not (Test-Path -LiteralPath $InstallerExe -PathType Leaf)) {
 $hash = (Get-FileHash -LiteralPath $InstallerExe -Algorithm SHA256).Hash
 $size = (Get-Item -LiteralPath $InstallerExe).Length
 
+$InstallerManifest = Join-Path $ArtifactsRoot 'Talvora-Setup.manifest.json'
+$InstallerManifestTemp = Join-Path $ArtifactsRoot (
+    '.Talvora-Setup.manifest.' +
+    [Guid]::NewGuid().ToString('N') +
+    '.tmp')
+$InstallerIdentity = [ordered]@{
+    schemaVersion = 1
+    product = 'Talvora Setup'
+    installerFileName = [IO.Path]::GetFileName($InstallerExe)
+    sizeBytes = [long]$size
+    sha256 = $hash.ToLowerInvariant()
+    sourceCommit = $SourceCommit
+    sourceHeadCommit = $SourceBuildSnapshot.HeadCommit
+    sourceIndexTree = $SourceBuildSnapshot.IndexTree
+    runtimeInputsSha256 = $SourceBuildSnapshot.RuntimeInputsSha256
+    runtimeIdentifier = $RuntimeIdentifier
+    createdAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
+}
+
+try {
+    [IO.File]::WriteAllText(
+        $InstallerManifestTemp,
+        ($InstallerIdentity | ConvertTo-Json -Depth 8),
+        [Text.UTF8Encoding]::new($false))
+    $manifestStream = [IO.File]::Open(
+        $InstallerManifestTemp,
+        [IO.FileMode]::Open,
+        [IO.FileAccess]::Write,
+        [IO.FileShare]::Read)
+    try {
+        $manifestStream.Flush($true)
+    }
+    finally {
+        $manifestStream.Dispose()
+    }
+
+    if (Test-Path -LiteralPath $InstallerManifest -PathType Leaf) {
+        [IO.File]::Replace(
+            $InstallerManifestTemp,
+            $InstallerManifest,
+            $null)
+    }
+    else {
+        [IO.File]::Move(
+            $InstallerManifestTemp,
+            $InstallerManifest)
+    }
+}
+finally {
+    Remove-Item -LiteralPath $InstallerManifestTemp -Force -ErrorAction SilentlyContinue
+}
+
 [pscustomobject]@{
     Product = 'Talvora Setup'
     SourceCommit = $SourceCommit
     RuntimeIdentifier = $RuntimeIdentifier
     Installer = $InstallerExe
+    Manifest = $InstallerManifest
     SizeBytes = $size
     Sha256 = $hash
 } | ConvertTo-Json -Compress
