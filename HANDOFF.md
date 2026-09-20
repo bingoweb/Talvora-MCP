@@ -8,11 +8,11 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 
 - Repository: `C:\Users\tayla\Talvora-MCP`
 - Branch: `main`
-- Pre-#176 committed HEAD: `f00df75b2659fdcca39b3c323ea2ad0b4b2be6dd`
-- Gitea `origin/main` ve GitHub `github/main`: aynı HEAD.
+- Current committed HEAD: `270e98923ac78c2fbc495afa7254bf6b7bc261b6` (`fix: paginate archive listings`).
+- Gitea `origin/main` ve GitHub `github/main`: `270e98923ac78c2fbc495afa7254bf6b7bc261b6` ile senkron.
 - Canlı Talvora service: **Running / Automatic**.
 - Exact-installed runtime source commit: `949272eb05d78f956d1b2f34cbb760bacd88d13b`.
-- Working tree #176 source + regression + closeout belgelerini içeriyor; sıradaki adım tek #176 commit/push.
+- Working tree temiz. #176 commit ve iki remote push tamamlandı; sıradaki adım canlı doğrulama.
 
 ## #176 — SOURCE FIXED / LIVE DEPLOY PENDING
 
