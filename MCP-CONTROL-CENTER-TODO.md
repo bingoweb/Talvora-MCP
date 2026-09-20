@@ -584,6 +584,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #178 — manual-stop persistence gerçek Windows session scope'a ayrıldı: `session-state.<SessionId>.json`, same-session legacy migration, mismatch legacy preservation, runtime path-isolation contract; targeted source regression GREEN, Tray Release build 0 warning / 0 error; fix `36b68b2` Gitea + GitHub'a push edildi ve canonical exact-installed live gate GREEN.
 - [x] #179 — Control Center exit window-placement race: shutdown öncesi placement yazımı deterministik tamamlanıyor, async file write UI context'e bağlanmıyor; targeted source regression RED -> GREEN, Tray Release build 0 warning / 0 error; fix `ded6cd5` Gitea + GitHub'a push edildi ve canonical exact-installed live gate GREEN.
 - [x] #180 — Control Center detay Gitea browser-launch exception yolu: beklenen shell hataları artık log/event/UI hata bildirimiyle kontrollü ele alınıyor ve async WPF event zincirinden kaçmıyor; targeted source regression RED -> GREEN, Tray Release build 0 warning / 0 error; commit/push/live gate pending.
+- [x] #181 — Control Center window-placement save ordering: eşzamanlı async save publication semaphore ile serialize, monoton version ile stale queued snapshot skip; targeted source regression GREEN, Tray Release build 0 warning / 0 error; commit/push/live gate pending.
 
 ## Faz 14 — Canonical Source Edit Transaction Engine (2026-09-20)
 

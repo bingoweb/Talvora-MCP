@@ -15,6 +15,8 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 - #178 tamamlandı: manual-stop persistence Windows SessionId bazlı dosyaya ayrıldı; targeted regression GREEN; fix commit Gitea + GitHub'a push edildi ve canonical live deploy exact-installed olarak doğrulandı.
 - #179 tamamlandı: Control Center exit artık window-placement yazımını shutdown öncesi tamamlıyor; regression GREEN, fix iki remote'a push edildi ve canonical exact-installed live deploy doğrulandı.
 - #180 source fix hazır: Control Center detay ekranındaki Gitea browser launch hatası artık beklenen shell exception'larını yakalayıp kullanıcıya bildiriyor; targeted regression GREEN ve Tray Release build 0 warning / 0 error; commit/push/live deploy sırada.
+- #180 source fix commit `d8abbc2` Gitea + GitHub'a push edildi; live acceptance #181 ile birlikte sırada.
+- #181 source fix hazır: eşzamanlı window-placement kayıtları semaphore ile serialize ediliyor ve monoton save-version ile yalnız en yeni bekleyen snapshot yazılıyor; targeted regression GREEN ve Tray Release build 0 warning / 0 error.
 
 ## #178 — CLOSED / LIVE VERIFIED
 
@@ -33,9 +35,9 @@ Düzeltme ve kanıt:
 
 ### Aktif devam noktası
 
-1. #180 source/test/docs değişikliklerini tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
-2. Canonical installer build + manifest-bound live deploy yap; exact-installed runtime commit'i doğrula.
-3. #180 live acceptance'ı docs-only closeout commit'iyle kapat; ardından deeper audit'e #181'den devam et.
+1. #181 source/test/docs değişikliklerini tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
+2. Temiz #181 HEAD'den canonical installer build + manifest-bound live deploy yap; exact-installed runtime commit'i doğrula. Bu runtime #180'i de içerir.
+3. #180 ve #181 live acceptance'larını docs-only closeout commit'iyle kapat; ardından deeper audit'e #182'den devam et.
 
 ## #179 — CLOSED / LIVE VERIFIED
 
@@ -62,6 +64,19 @@ Düzeltme ve kanıt:
 - Detay Gitea açma yolu yalnız beklenen shell-launch exception'larını yakalıyor.
 - Hata loglanıyor, Control Center event store'a operation failure olarak işleniyor ve kullanıcıya `ShowOperationErrorAsync` ile görünür hata veriliyor; beklenmeyen exception'lar gizlenmiyor.
 - `NativeInstallerSourceRegression.ps1` önce RED (`ControlCenterDetailGiteaOpenHandlesShellFailure=False`), fix sonrası GREEN.
+- `Talvora.Tray` Release build: **0 warning / 0 error**.
+
+## #181 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+
+Kök neden:
+- Debounce timer içindeki async `SaveWindowPlacementAsync()` dosya I/O sırasında UI thread'i serbest bırakıyor; bu sırada yeni hareket/resize veya exit save'i başlayabiliyor.
+- Birden fazla kayıt eşzamanlı ilerlediğinde eski snapshot daha geç publish olup daha yeni pencere konumunu geri ezebilirdi.
+
+Düzeltme ve kanıt:
+- `_windowPlacementSaveGate` aynı dosyaya publication'ı serialize ediyor.
+- `_windowPlacementSaveVersion` her snapshot'ta monoton artıyor; gate'i bekleyen eski snapshot, `Volatile.Read` ile artık en yeni değilse yazmadan çıkıyor.
+- Exit save yolu #179'daki deterministik wait davranışını koruyor; gate await'i `ConfigureAwait(false)` ile UI context'e bağlı değil.
+- `NativeInstallerSourceRegression.ps1`: `ControlCenterWindowPlacementSaveLatestWins=True`; suite GREEN.
 - `Talvora.Tray` Release build: **0 warning / 0 error**.
 
 ## Sabit çalışma kuralları

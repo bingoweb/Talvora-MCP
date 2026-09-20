@@ -611,6 +611,14 @@ $result = [pscustomobject]@{
         $controlCenterActions -match 'ex is InvalidOperationException or\s+System\.ComponentModel\.Win32Exception' -and
         $controlCenterActions -match 'await ShowOperationErrorAsync\('
     )
+    ControlCenterWindowPlacementSaveLatestWins = (
+        $controlCenterWindow -match 'SemaphoreSlim _windowPlacementSaveGate = new\(1, 1\)' -and
+        $controlCenterWindow -match 'long _windowPlacementSaveVersion' -and
+        $controlCenterWindowChrome -match 'Interlocked\.Increment\(\s*ref _windowPlacementSaveVersion\)' -and
+        $controlCenterWindowChrome -match '_windowPlacementSaveGate\.WaitAsync\(\)\.ConfigureAwait\(false\)' -and
+        $controlCenterWindowChrome -match 'saveVersion != Volatile\.Read\(\s*ref _windowPlacementSaveVersion\)' -and
+        $controlCenterWindowChrome -match '_windowPlacementSaveGate\.Release\(\)'
+    )
     TrayAutoReconnectsAfterStartup = (
         $trayApplicationContext -match 'await MaintainTalvoraConnectionAsync\(\)' -and
         $trayApplicationContext -match '_talvoraTimer\.Tick\s*\+=' -and

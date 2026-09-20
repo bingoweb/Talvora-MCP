@@ -43,6 +43,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     private readonly DispatcherTimer _refreshTimer;
     private readonly bool _smokeMode;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private readonly SemaphoreSlim _windowPlacementSaveGate = new(1, 1);
     private readonly CancellationTokenSource _lifetimeCts = new();
 
     private TitleBar _windowTitleBar = null!;
@@ -57,6 +58,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     private UiButton _setupActionButton = null!;
     private DispatcherTimer _windowPlacementSaveTimer = null!;
     private bool _restoringWindowPlacement;
+    private long _windowPlacementSaveVersion;
     private TextBlock _healthSummaryText = null!;
     private Border _healthSummaryDot = null!;
     private TextBlock _technicalSummaryText = null!;

@@ -168,12 +168,29 @@ internal sealed partial class ControlCenterWindow
                 bounds.Height,
                 WindowState == WindowState.Maximized);
 
-            await Talvora.Shared.JsonFileStore.WriteAsync(
-                WindowPlacementPath,
-                placement,
-                WindowPlacementJsonOptions,
-                createBackup: false,
-                CancellationToken.None).ConfigureAwait(false);
+            var saveVersion = Interlocked.Increment(
+                ref _windowPlacementSaveVersion);
+
+            await _windowPlacementSaveGate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (saveVersion != Volatile.Read(
+                        ref _windowPlacementSaveVersion))
+                {
+                    return;
+                }
+
+                await Talvora.Shared.JsonFileStore.WriteAsync(
+                    WindowPlacementPath,
+                    placement,
+                    WindowPlacementJsonOptions,
+                    createBackup: false,
+                    CancellationToken.None).ConfigureAwait(false);
+            }
+            finally
+            {
+                _windowPlacementSaveGate.Release();
+            }
         }
         catch (Exception ex) when (
             ex is IOException or
