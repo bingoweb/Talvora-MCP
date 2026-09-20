@@ -488,6 +488,27 @@ internal sealed class SemanticGraphSnapshot
             "semantic-document");
     }
 
+    private static async Task AddAnalyzerReferenceStateAsync(
+        IDictionary<string, SemanticGraphFileState> states,
+        string? path,
+        string kind,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(
+                path))
+        {
+            return;
+        }
+
+        await AddFileStateAsync(
+            states,
+            path,
+            lockDuringCommit: true,
+            requireExists: true,
+            kind,
+            cancellationToken);
+    }
+
     private static async Task AddFileStateAsync(
         IDictionary<string, SemanticGraphFileState> states,
         string path,
