@@ -540,7 +540,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #109 — canonical SYSTEM deploy task `Talvora-Setup.exe --silent` çalıştırsın; Session 0 görünmez GUI hang'ini regression ile engelle.
 
 
-## Faz 14C — Deep Audit Remediation Backlog (CURRENT — #121–#187 LIVE VERIFIED; #188 NEXT)
+## Faz 14C — Deep Audit Remediation Backlog (CURRENT — #188 LIVE ACCEPTANCE PENDING)
 
 - [x] #124 — semantic durable replay metadata; adapter receipt persisted in receipt + WAL, forced receipt-loss recovery preserves workspace/symbol/diagnostics, Source Edit 60/60 GREEN.
 - [x] #127 — structural YAML control-file self-scan. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
@@ -591,6 +591,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #185 — HTTP mock failed/cancelled manual reply retry: başarısız response I/O reply claim'i atomik olarak serbest bırakıyor; cancelled ilk attempt sonrası aynı pending request ikinci reply ile tamamlanabiliyor; loopback integration regression RED -> GREEN; fix `43d2228` iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 - [x] #186 — HTTP mock stop pending-response semantiği: lifetime cancellation gerçek pending timeout'tan ayrıldı; Stop yarışında timeout default yerine 503 korunuyor; 64 concurrent loopback regression RED -> GREEN; fix `60c5e9a` iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 - [x] #187 — HTTP mock request/response encoding ayrımı: `requestEncoding` yalnız incoming body decode için korunuyor, text default response UTF-8 üretiliyor; gerçek loopback regression RED -> GREEN; fix `26c26e5` iki remote'a push edildi, canonical installer SHA-256 `A43F89339155318FE1E40842E044EA7A7301F2B6890895CFFD75C942E0D2A7A2`, exact-installed live gate GREEN.
+- [x] #188 — recovered background-job retention zamanı: stale `Running` metadata refresh sonrası `ExitedUnknown` olduğunda retention eski `StartedAtUtc` yerine güncellenmiş `ExitedAtUtc` üzerinden hesaplanıyor; deterministic job-storage regression RED -> GREEN, Release build 0 warning / 0 error; source/test fix doğrulandı, commit/push/live gate pending.
 
 ## Faz 14 — Canonical Source Edit Transaction Engine (2026-09-20)
 

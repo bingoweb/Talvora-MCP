@@ -32,7 +32,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Güncel audit üst özeti: **#121–#187 remediation complete + live verified; deeper audit #188'den devam edecek.**
+- Güncel audit üst özeti: **#121–#187 remediation complete + live verified; #188 source/test fix RED -> GREEN, commit/push/live acceptance pending.**
 
 ## Son tamamlanan bug-fix zinciri
 
@@ -92,9 +92,16 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Canonical installer SHA-256: `A43F89339155318FE1E40842E044EA7A7301F2B6890895CFFD75C942E0D2A7A2`.
 - Manifest-bound SYSTEM deploy sonrası exact-installed runtime aynı commit'i bildiriyor; #187 live verified.
 
+### #188 — recovered background job retention zamanı
+- Servis yeniden başladıktan sonra diskte hâlâ `Running` görünen fakat gerçekte bitmiş job `ExitedUnknown` olarak yenilenirken cleanup, retention zamanını refresh'ten önce eski `StartedAtUtc` üzerinden cache'liyordu.
+- Uzun süre çalışmış bir job böylece yeni bitmiş olmasına rağmen anında expired sayılıp log/metadata klasörü silinebiliyordu.
+- Retention/sıralama zamanı artık `RefreshStateAsync` sonrasında güncellenmiş `ExitedAtUtc` üzerinden hesaplanıyor.
+- Targeted job-storage regression önce RED, minimal fix sonrası `TALVORA JOB STORAGE REGRESSION GREEN`; Release build 0 warning / 0 error.
+- Source/test fix doğrulandı; commit/push/live acceptance pending. Ayrı SQLite WIP dosyaları bu bug commit'ine dahil edilmeyecek.
+
 ## Doküman tutarlılığı notu
 
-- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#187 tamamlandı ve canlı doğrulandı; sıradaki audit numarası #188.
+- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#187 tamamlandı ve canlı doğrulandı; #188 source/test fix doğrulandı ve live acceptance bekliyor.
 - Aynı dosyanın daha eski gövde satırlarında ve `MCP-CONTROL-CENTER-TODO.md` içinde tarihsel `pending`, eski `OPEN` veya pre-live ifadeler kalmış olabilir. Bunları yeni oturumda gerçek repo/remote/live durumunun önüne koyma.
 - Eski tamamlanmış bug'ları tekrar test edip yeniden açma; yalnız yeni kanıt veya gerçek regresyon varsa dön.
 
@@ -116,7 +123,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 ## NEXT SESSION — kesin devam noktası
 
-**#188 deep bug audit'e başla. #121–#187'yi yeni kanıt olmadan tekrar açma.**
+**#188 source/test fix'i ayrı commit/push/live acceptance ile kapat; ardından korunmuş SQLite WIP'i doğrulayıp sıradaki audit numarasına geç.**
 
 Başlangıç sırası:
 

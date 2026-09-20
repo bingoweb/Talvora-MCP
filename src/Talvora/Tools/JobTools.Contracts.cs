@@ -190,6 +190,46 @@ public static partial class JobTools
                     "Background job age retention contract failed.");
             }
 
+            var recoveredRoot = Path.Combine(
+                root,
+                "recovered-running");
+            Directory.CreateDirectory(recoveredRoot);
+            var recoveredRunning =
+                await CreatePersistedRunningFixtureAsync(
+                    recoveredRoot,
+                    "recently-recovered",
+                    now.AddDays(-10),
+                    cancellationToken).ConfigureAwait(false);
+            await CleanupCompletedJobsAsync(
+                recoveredRoot,
+                maximumCompletedJobs: 10,
+                maximumCompletedBytes:
+                    1024 * 1024,
+                retention: TimeSpan.FromDays(1),
+                cancellationToken).ConfigureAwait(false);
+            if (!Directory.Exists(recoveredRunning))
+            {
+                throw new InvalidOperationException(
+                    "Recovered completed job was expired from its start time instead of its refreshed exit time.");
+            }
+
+            var recoveredMetadata =
+                await ReadMetadataFileAsync(
+                    Path.Combine(
+                        recoveredRunning,
+                        "job.json"),
+                    cancellationToken).ConfigureAwait(false);
+            if (!string.Equals(
+                    recoveredMetadata.State,
+                    "ExitedUnknown",
+                    StringComparison.OrdinalIgnoreCase) ||
+                recoveredMetadata.ExitedAtUtc is null ||
+                recoveredMetadata.ExitedAtUtc < now)
+            {
+                throw new InvalidOperationException(
+                    "Recovered completed job exit metadata contract failed.");
+            }
+
             var quotaRoot = Path.Combine(
                 root,
                 "quota");
@@ -286,6 +326,53 @@ public static partial class JobTools
             StartedAtUtc:
                 exitedAtUtc.AddSeconds(-1),
             ExitedAtUtc: exitedAtUtc,
+            StdoutPath: stdoutPath,
+            StderrPath: stderrPath,
+            MetadataPath: metadataPath);
+        await WriteMetadataAsync(
+            metadata,
+            cancellationToken).ConfigureAwait(false);
+        return directory;
+    }
+
+    private static async Task<string> CreatePersistedRunningFixtureAsync(
+        string root,
+        string jobId,
+        DateTime startedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var directory = Path.Combine(
+            root,
+            jobId);
+        Directory.CreateDirectory(directory);
+        var stdoutPath = Path.Combine(
+            directory,
+            "stdout.log");
+        var stderrPath = Path.Combine(
+            directory,
+            "stderr.log");
+        var metadataPath = Path.Combine(
+            directory,
+            "job.json");
+        await File.WriteAllTextAsync(
+            stdoutPath,
+            "fixture",
+            cancellationToken);
+        await File.WriteAllTextAsync(
+            stderrPath,
+            string.Empty,
+            cancellationToken);
+
+        var metadata = new TalvoraJobMetadata(
+            jobId,
+            ProcessId: int.MaxValue,
+            State: "Running",
+            ExitCode: null,
+            Executable: "fixture.exe",
+            Arguments: [],
+            WorkingDirectory: directory,
+            StartedAtUtc: startedAtUtc,
+            ExitedAtUtc: null,
             StdoutPath: stdoutPath,
             StderrPath: stderrPath,
             MetadataPath: metadataPath);

@@ -285,9 +285,6 @@ private static string GetJobsRoot()
                 var metadata = await ReadMetadataFileAsync(
                     metadataPath,
                     cancellationToken).ConfigureAwait(false);
-                var retentionSortTime =
-                    metadata.ExitedAtUtc ??
-                    metadata.StartedAtUtc;
                 if (LiveJobs.ContainsKey(metadata.JobId))
                 {
                     continue;
@@ -310,6 +307,9 @@ private static string GetJobsRoot()
                     ExitCode = refreshed.ExitCode,
                     ExitedAtUtc = refreshed.ExitedAtUtc,
                 };
+                var retentionSortTime =
+                    metadata.ExitedAtUtc ??
+                    metadata.StartedAtUtc;
 
                 candidates.Add((
                     directory,
