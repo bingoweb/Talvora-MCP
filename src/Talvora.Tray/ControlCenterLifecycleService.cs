@@ -245,6 +245,16 @@ internal static class ControlCenterLifecycleService
                 tunnelAssessment.HasTunnelId &&
                 tunnelAssessment.HasConfig &&
                 tunnelAssessment.HasRuntimeCredential;
+            var hasLocalLifecycleComponents =
+                registration.Components.Any(component =>
+                    string.Equals(
+                        component.Kind,
+                        "windows-service",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        component.Kind,
+                        "scheduled-task",
+                        StringComparison.OrdinalIgnoreCase));
 
             if (tunnelConfigured &&
                 operation is ManagedMcpLifecycleOperation.Stop
@@ -255,7 +265,8 @@ internal static class ControlCenterLifecycleService
                     cancellationToken);
             }
 
-            if (operation == ManagedMcpLifecycleOperation.Restart)
+            if (hasLocalLifecycleComponents &&
+                operation == ManagedMcpLifecycleOperation.Restart)
             {
                 await RunGenericLifecyclePowerShellAsync(
                     registration,
@@ -273,7 +284,7 @@ internal static class ControlCenterLifecycleService
                         ManagedMcpLifecycleOperation.Start),
                     cancellationToken);
             }
-            else
+            else if (hasLocalLifecycleComponents)
             {
                 await RunGenericLifecyclePowerShellAsync(
                     registration,

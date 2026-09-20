@@ -82,7 +82,7 @@ Sabit kurallar:
 - [x] META2-012 — Delete/overwrite/process-kill/registry overwrite/source mutation veri kaybı riski nedeniyle true kalıyor.
 - [x] META2-013 — Reversible lifecycle/control: `http_mock_reply`, `http_mock_stop`, `service_start/stop/restart` explicit non-destructive set'e alındı.
 - [x] META2-014 — Representative destructive semantics live assertions eklendi.
-- [ ] META2-015 — Live wire'da dört annotation ailesi explicit/omitted=0 kalacak.
+- [x] META2-015 — Live full/dev/admin wire'da dört annotation ailesi explicit; omitted=0.
 
 ### Faz C — Focused MCP surfaces
 - [x] META2-016 — `TalvoraMcpToolSurfacePolicy`: Full / Development / Administration kanonik profil policy'si eklendi.
@@ -98,8 +98,8 @@ Sabit kurallar:
 - [x] META2-026 — `/healthz` mcp/mcpDev/mcpAdmin endpointlerini raporlayacak.
 - [x] META2-027 — Source regression her 204 tool'un Full'de ve en az bir focused review kararında olduğunu doğruluyor.
 - [x] META2-028 — Snapshot: Full=204, Development=174, Administration=91.
-- [ ] META2-029 — Full tool schemas ile focused endpoint aynı tool'un schema/description/annotations değerlerini korusun; yalnız visibility fark etsin.
-- [ ] META2-030 — Focused endpoint bypass regression: listede olmayan tool invocation reddedilsin.
+- [x] META2-029 — Live regression ortak tool'larda full/dev/admin description + annotation eşitliğini doğruluyor; yalnız visibility fark ediyor.
+- [x] META2-030 — Development endpoint'ten excluded `talvora_service_list` direct invocation gerçek MCP `Unknown tool` ile reddedildi; bypass gate GREEN.
 
 ### Faz D — Tool-selection eval
 - [x] META2-031 — Deterministik `TalvoraToolSelectionPolicy` eval fixture eklendi; model çağrısı/flaky LLM testi yok.
@@ -123,6 +123,15 @@ Sabit kurallar:
 - [ ] META2-047 — ChatGPT app refresh/reconnect gereksinimini final rapora işle; full ve focused app endpoint kullanım önerisini belgele.
 - [ ] META2-048 — Masaüstü checkpoint/final TXT raporlarını güncelle.
 - [ ] META2-049 — `HANDOFF.md`, `BUG-AUDIT.md`, TODO closeout; docs-only commit'i iki remote'a push et, sırf docs HEAD için redeploy yapma.
+
+### Faz F — Focused ChatGPT tunnel publication
+- [x] META2-050 — Kurulu OpenAI `tunnel-client v0.0.14` exact help doğrulandı: her runtime tek `--mcp-server-url` kabul ediyor; mevcut full tunnel aynı anda Dev/Admin path multiplex yapmıyor.
+- [x] META2-051 — Yeni secret/tunnel mekanizması icat etmek yerine mevcut `ManagedMcpTunnelProvisioningService` + DPAPI runtime credential altyapısının focused registration'lar için yeniden kullanılabileceği doğrulandı.
+- [x] META2-052 — `talvora-dev` ve `talvora-admin` managed recovery registration'ları eklendi; endpointler sırasıyla `/mcp/dev` ve `/mcp/admin`, ayrı alias/config kimlikleri ve representative protocol probe tool'ları var.
+- [x] META2-053 — Focused registration'lar yalnız kendi tunnel component'ini yönetiyor; ana Talvora Windows service component'i eklenmedi. Generic lifecycle tunnel-only registration desteği kazandı.
+- [x] META2-054 — `FocusedMcpSurfaceSourceRegression.ps1` targeted gate: focused constants/endpoints/counts/registrations/tunnel-only ownership/lifecycle contract GREEN; Tray Release 0 warning / 0 error.
+- [ ] META2-055 — Ayrı remote Dev/Admin tunnel yaratımı için OpenAI Admin credential gerekli. Bu makinede `openai-admin-key.dpapi` mevcut değil; gerçek credential uydurulmayacak veya loglanmayacak.
+- [ ] META2-056 — Admin credential sağlandığında mevcut generic provisioning Dev/Admin için ayrı tunnel oluşturup DPAPI runtime credential + config + ready gate ile tamamlayacak; ardından ChatGPT'de ayrı Dev/Admin app bağlantıları oluşturulabilecek.
 
 ## 1. Ürün hedefi
 

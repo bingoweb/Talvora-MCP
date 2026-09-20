@@ -73,6 +73,70 @@ internal sealed class TalvoraManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDi
     }
 }
 
+internal sealed class TalvoraFocusedManagedMcpRecoveryDiscovery(
+    string id,
+    string displayName,
+    string description,
+    string endpoint,
+    string tunnelAlias,
+    string configFileName,
+    IReadOnlyList<string> requiredTools)
+    : IManagedMcpRecoveryDiscovery
+{
+    public string Id => id;
+
+    public ManagedMcpRegistration Discover()
+    {
+        var tunnelPath = Path.Combine(
+            Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData),
+            "Talvora",
+            "TunnelClient",
+            configFileName);
+        var tunnel = ManagedMcpTunnelConfigReader.Read(
+            tunnelPath,
+            tunnelAlias);
+
+        return new ManagedMcpRegistration
+        {
+            Id = Id,
+            DisplayName = displayName,
+            Description = description,
+            Endpoint = endpoint,
+            HealthEndpoint = TalvoraConstants.HealthUrl,
+            AutoStart = true,
+            ProtocolProbe = new ManagedMcpProtocolProbeRegistration
+            {
+                RequiredTools = requiredTools.ToList(),
+            },
+            Tunnel = tunnel,
+            Components =
+            [
+                new ManagedMcpComponentRegistration
+                {
+                    Id = "tunnel",
+                    DisplayName = "Secure MCP Tunnel",
+                    Kind = "tunnel",
+                    Name = tunnel.Alias,
+                },
+            ],
+            DiscoveryHints =
+            [
+                new ManagedMcpDiscoveryHint
+                {
+                    Kind = "config-file",
+                    Value = tunnelPath,
+                },
+                new ManagedMcpDiscoveryHint
+                {
+                    Kind = "tunnel-alias",
+                    Value = tunnel.Alias,
+                },
+            ],
+        };
+    }
+}
+
 internal sealed class GiteaManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDiscovery
 {
     public string Id => "gitea";

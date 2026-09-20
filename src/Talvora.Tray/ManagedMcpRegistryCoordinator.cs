@@ -17,6 +17,22 @@ internal static class ManagedMcpRegistryCoordinator
     private static readonly IManagedMcpRecoveryDiscovery[] RecoveryDiscoveries =
     [
         new TalvoraManagedMcpRecoveryDiscovery(),
+        new TalvoraFocusedManagedMcpRecoveryDiscovery(
+            "talvora-dev",
+            "Talvora Dev MCP",
+            "Talvora'nın yazılım geliştirmeye odaklı MCP yüzeyi.",
+            TalvoraConstants.McpDevUrl,
+            "talvora-dev-business",
+            "dev-business.json",
+            ["talvora_apply_patch", "talvora_dotnet_build"]),
+        new TalvoraFocusedManagedMcpRecoveryDiscovery(
+            "talvora-admin",
+            "Talvora Admin MCP",
+            "Talvora'nın Windows ve sistem yönetimine odaklı MCP yüzeyi.",
+            TalvoraConstants.McpAdminUrl,
+            "talvora-admin-business",
+            "admin-business.json",
+            ["talvora_service_get", "talvora_registry_get"]),
         new GiteaManagedMcpRecoveryDiscovery(),
 
     ];

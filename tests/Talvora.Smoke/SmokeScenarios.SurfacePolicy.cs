@@ -181,12 +181,26 @@ internal static partial class SmokeScenarios
             administration,
             "talvora_system_info");
 
-        var bypassResult =
-            await developmentClient.CallToolAsync(
-                "talvora_service_list",
-                new Dictionary<string, object?>(),
-                cancellationToken: CancellationToken.None);
-        if (bypassResult.IsError is not true)
+        var blocked = false;
+        try
+        {
+            var bypassResult =
+                await developmentClient.CallToolAsync(
+                    "talvora_service_list",
+                    new Dictionary<string, object?>(),
+                    cancellationToken: CancellationToken.None);
+            blocked =
+                bypassResult.IsError is true;
+        }
+        catch (ModelContextProtocol.McpProtocolException ex)
+            when (ex.Message.Contains(
+                "Unknown tool",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            blocked = true;
+        }
+
+        if (!blocked)
         {
             throw new InvalidOperationException(
                 "Development surface allowed direct invocation of an excluded administration tool.");
@@ -257,6 +271,40 @@ internal static partial class SmokeScenarios
         {
             throw new InvalidOperationException(
                 $"Focused surface changed tool description: {name}");
+        }
+
+        if (!string.Equals(
+                first.ProtocolTool.Title,
+                second.ProtocolTool.Title,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Focused surface changed tool title: {name}");
+        }
+
+        if (!string.Equals(
+                first.ProtocolTool.InputSchema.GetRawText(),
+                second.ProtocolTool.InputSchema.GetRawText(),
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Focused surface changed input schema: {name}");
+        }
+
+        var firstOutputSchema =
+            first.ProtocolTool.OutputSchema;
+        var secondOutputSchema =
+            second.ProtocolTool.OutputSchema;
+        if (firstOutputSchema.HasValue !=
+            secondOutputSchema.HasValue ||
+            firstOutputSchema.HasValue &&
+            !string.Equals(
+                firstOutputSchema.Value.GetRawText(),
+                secondOutputSchema!.Value.GetRawText(),
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Focused surface changed output schema: {name}");
         }
 
         var firstAnnotations =
