@@ -346,10 +346,18 @@ internal static partial class ManagedMcpTunnelProvisioningService
             return false;
         }
 
+        var recovery =
+            await RecoverInterruptedClientUpdateAsync(
+                registration,
+                cancellationToken).ConfigureAwait(false);
+        if (recovery.Handled)
+        {
+            return recovery.Updated;
+        }
+
         var existing = LoadBusinessConfig(configPath);
-        var updated = await EnsureLatestTunnelClientAsync(
+        var updated = await StageLatestTunnelClientAsync(
             existing,
-            configPath,
             cancellationToken).ConfigureAwait(false);
 
         if (string.Equals(
@@ -366,20 +374,12 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
         InvalidateRuntimeStatusCache(registration.Id);
 
-        await DisconnectExistingAsync(
+        await ExecuteClientUpdateTransactionAsync(
             registration,
+            configPath,
+            existing,
+            updated,
             cancellationToken).ConfigureAwait(false);
-        await ConnectExistingAsync(
-            registration,
-            cancellationToken).ConfigureAwait(false);
-
-        ControlCenterEventStore.Record(
-            ControlCenterEventSeverity.Info,
-            "tunnel",
-            $"{registration.DisplayName} tunnel-client güncellendi",
-            $"OpenAI tunnel-client {updated.TunnelClientVersion} sürümüne atomik olarak geçirildi.",
-            registration.Id,
-            $"tunnel:{registration.Id}:client-updated");
 
         return true;
     }
@@ -400,11 +400,52 @@ internal static partial class ManagedMcpTunnelProvisioningService
         }
 
         var configPath = ResolveConfigPath(registration);
+        var recovery =
+            await RecoverInterruptedClientUpdateAsync(
+                registration,
+                cancellationToken).ConfigureAwait(false);
+        if (recovery.Handled)
+        {
+            return;
+        }
+
         var config = LoadBusinessConfig(configPath);
-        config = await EnsureLatestTunnelClientAsync(
+        var candidate = await StageLatestTunnelClientAsync(
             config,
-            configPath,
             cancellationToken).ConfigureAwait(false);
+
+        if (!string.Equals(
+                config.TunnelClientVersion,
+                candidate.TunnelClientVersion,
+                StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(
+                config.TunnelClient,
+                candidate.TunnelClient,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            await ExecuteClientUpdateTransactionAsync(
+                registration,
+                configPath,
+                config,
+                candidate,
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        await ConnectExistingWithConfigAsync(
+            registration,
+            configPath,
+            config,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task ConnectExistingWithConfigAsync(
+        ManagedMcpRegistration registration,
+        string configPath,
+        BusinessConfig config,
+        CancellationToken cancellationToken)
+    {
+        InvalidateRuntimeStatusCache(registration.Id);
         var credentialPath = GetRuntimeCredentialPath(configPath);
 
         string? runtimeKey = null;
@@ -1116,9 +1157,8 @@ internal static partial class ManagedMcpTunnelProvisioningService
             "business.json");
     }
 
-    private static async Task<BusinessConfig> EnsureLatestTunnelClientAsync(
+    private static async Task<BusinessConfig> StageLatestTunnelClientAsync(
         BusinessConfig config,
-        string configPath,
         CancellationToken cancellationToken)
     {
         try
@@ -1244,10 +1284,6 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 TunnelClientVersion = latestTag,
                 UpdatedAtUtc = DateTimeOffset.UtcNow.ToString("O"),
             };
-
-            WriteBusinessConfig(
-                configPath,
-                updated);
 
             TrayLog.Write(
                 $"OpenAI tunnel-client latest release staged. Version={latestTag}; Path={destination}");
