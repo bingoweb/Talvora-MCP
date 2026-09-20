@@ -50,6 +50,7 @@ $controlCenterLifecycleService = [IO.File]::ReadAllText((Join-Path $RepoRoot 'sr
 $managedMcpSessionState = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpSessionState.cs'))
 $controlCenterWindow = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterWindow.cs'))
 $controlCenterWindowChrome = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterWindow.Chrome.cs'))
+$controlCenterActions = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterWindow.Actions.cs'))
 
 $registryCoordinator = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpRegistryCoordinator.cs'))
 $ownershipManifestStore = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpOwnershipManifestStore.cs'))
@@ -604,6 +605,11 @@ $result = [pscustomobject]@{
                 [StringComparison]::Ordinal) -and
         $controlCenterWindowChrome.Contains(
             'CancellationToken.None).ConfigureAwait(false);')
+    )
+    ControlCenterDetailGiteaOpenHandlesShellFailure = (
+        $controlCenterActions -match 'Gitea detay sayfasından açılamadı' -and
+        $controlCenterActions -match 'ex is InvalidOperationException or\s+System\.ComponentModel\.Win32Exception' -and
+        $controlCenterActions -match 'await ShowOperationErrorAsync\('
     )
     TrayAutoReconnectsAfterStartup = (
         $trayApplicationContext -match 'await MaintainTalvoraConnectionAsync\(\)' -and

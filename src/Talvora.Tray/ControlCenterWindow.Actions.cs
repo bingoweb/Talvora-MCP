@@ -174,7 +174,24 @@ internal sealed partial class ControlCenterWindow
                 StringComparison.OrdinalIgnoreCase) &&
             state.Health == ControlCenterHealthState.Ready)
         {
-            OpenGiteaHome();
+            try
+            {
+                OpenGiteaHome();
+            }
+            catch (Exception ex) when (
+                ex is InvalidOperationException or
+                System.ComponentModel.Win32Exception)
+            {
+                TrayLog.Write("Gitea detay sayfasından açılamadı", ex);
+                var friendly = GetFriendlyOperationError(ex);
+                RecordOperationFailure(
+                    state.Registration,
+                    "Gitea açılamadı",
+                    friendly);
+                await ShowOperationErrorAsync(
+                    "Gitea açılamadı",
+                    friendly);
+            }
             return;
         }
 

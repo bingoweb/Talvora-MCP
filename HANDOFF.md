@@ -14,6 +14,7 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 - Exact-installed runtime source commit: `ded6cd52f692b3563b0edbfdaf1c6f392b8c77e9`.
 - #178 tamamlandı: manual-stop persistence Windows SessionId bazlı dosyaya ayrıldı; targeted regression GREEN; fix commit Gitea + GitHub'a push edildi ve canonical live deploy exact-installed olarak doğrulandı.
 - #179 tamamlandı: Control Center exit artık window-placement yazımını shutdown öncesi tamamlıyor; regression GREEN, fix iki remote'a push edildi ve canonical exact-installed live deploy doğrulandı.
+- #180 source fix hazır: Control Center detay ekranındaki Gitea browser launch hatası artık beklenen shell exception'larını yakalayıp kullanıcıya bildiriyor; targeted regression GREEN ve Tray Release build 0 warning / 0 error; commit/push/live deploy sırada.
 
 ## #178 — CLOSED / LIVE VERIFIED
 
@@ -32,9 +33,9 @@ Düzeltme ve kanıt:
 
 ### Aktif devam noktası
 
-1. #179 live acceptance docs closeout'unu commit edip Gitea + GitHub'a push et.
-2. Deep bug audit'e #180'den devam et; yalnız doğrulanmış tek bug üzerinde çalış.
-3. Her yeni bug için targeted test -> docs -> tek bug commit -> iki remote push -> runtime etkiliyorsa canonical live deploy sırasını koru.
+1. #180 source/test/docs değişikliklerini tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
+2. Canonical installer build + manifest-bound live deploy yap; exact-installed runtime commit'i doğrula.
+3. #180 live acceptance'ı docs-only closeout commit'iyle kapat; ardından deeper audit'e #181'den devam et.
 
 ## #179 — CLOSED / LIVE VERIFIED
 
@@ -50,6 +51,18 @@ Düzeltme ve kanıt:
 - Fix commit: `ded6cd52f692b3563b0edbfdaf1c6f392b8c77e9`; Gitea `origin/main` ve GitHub `github/main` senkron.
 - Canonical installer build GREEN; artifact SHA-256 `19A18E87697FC75F8CC04B5E52464D8FAA8062FCCFB6059B2D96A1877D19756D`.
 - Self-update sırasında MCP bağlantısı servis değişiminde kesildi; reconnect sonrası `system_info.sourceCommit=ded6cd52f692b3563b0edbfdaf1c6f392b8c77e9` doğrulandı.
+
+## #180 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+
+Kök neden:
+- Control Center detay ekranındaki Gitea birincil eylemi `OpenGiteaHome()` çağrısını doğrudan async WPF click zincirine bırakıyordu.
+- Varsayılan browser/shell başlatma `InvalidOperationException` veya `Win32Exception` üretirse istisna dispatcher'a kadar çıkabiliyor; dispatcher handler yalnız logladığı için tray uygulamasının kapanma riski vardı.
+
+Düzeltme ve kanıt:
+- Detay Gitea açma yolu yalnız beklenen shell-launch exception'larını yakalıyor.
+- Hata loglanıyor, Control Center event store'a operation failure olarak işleniyor ve kullanıcıya `ShowOperationErrorAsync` ile görünür hata veriliyor; beklenmeyen exception'lar gizlenmiyor.
+- `NativeInstallerSourceRegression.ps1` önce RED (`ControlCenterDetailGiteaOpenHandlesShellFailure=False`), fix sonrası GREEN.
+- `Talvora.Tray` Release build: **0 warning / 0 error**.
 
 ## Sabit çalışma kuralları
 
