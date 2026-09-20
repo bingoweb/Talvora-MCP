@@ -142,6 +142,16 @@ $result = [pscustomobject]@{
     BuildScriptIncludesDependencyProvenance = (
         $buildInstallerScript -match 'resolved-dependencies\.json' -and
         $buildInstallerScript -match 'Get-ResolvedPackageManifest' -and
+        $buildInstallerScript -match 'Invoke-CanonicalDependencyRestore' -and
+        $buildInstallerScript -match 'New-DependencyAssetsSnapshot' -and
+        $buildInstallerScript -match 'Assert-DependencyAssetsUnchanged' -and
+        $buildInstallerScript -match '\$DependencyArtifactsRoot' -and
+        $buildInstallerScript -match '--artifacts-path' -and
+        $buildInstallerScript -match '--no-restore' -and
+        $buildInstallerScript -match 'Get-PublishedPackageManifest' -and
+        $buildInstallerScript -match 'Assert-PublishedPackagesMatchResolvedAssets' -and
+        $buildInstallerScript -match 'assetsSha256' -and
+        $buildInstallerScript -match 'publishedDepsSha256' -and
         $installerFlow -match 'DependencyProvenance'
     )
     BuildScriptVendorsAstGrepStructuralToolchain = (

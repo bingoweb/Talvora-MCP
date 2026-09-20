@@ -574,7 +574,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #163 — FileSystemWatcher overflow/resync completeness state; targeted runtime-bounds regression GREEN.
 - [x] #164 — bounded watcher/HTTP-mock queues, inflight and pending work; global backpressure/accounting regression GREEN.
 - [x] #165 — crash-durable AtomicFile staged publication; WriteThrough + Flush(true) + MoveFileExW WriteThrough primary/backup, permanent runtime regression GREEN, Shared build 0 warning / 0 error.
-- [ ] #169 — immutable dependency provenance snapshot tied to publish.
+- [x] #169 — immutable dependency provenance snapshot tied to publish; explicit restore + immutable assets SHA-256 snapshot + --no-restore publish + Service/Tray runtime dependency graph cross-check, dedicated regression/canonical build/live deploy GREEN.
 - [x] #172 — canonical installer npm metadata envelope compatibility; exactly-one object/array normalization + identity/integrity fail-closed, InstallerAstGrepMetadataRegression 5/5 GREEN.
 
 ## Faz 14 — Canonical Source Edit Transaction Engine (2026-09-20)

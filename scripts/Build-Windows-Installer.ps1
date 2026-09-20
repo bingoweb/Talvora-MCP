@@ -14,6 +14,12 @@ $SourceSnapshotRoot = Join-Path $WorkRoot 'source-snapshot'
 $PayloadRoot = Join-Path $WorkRoot 'payload'
 $ServicePayload = Join-Path $PayloadRoot 'Service'
 $TrayPayload = Join-Path $PayloadRoot 'Tray'
+$DependencyArtifactsRoot = Join-Path $WorkRoot 'dependency-build'
+$DependencySnapshotRoot = Join-Path $WorkRoot 'dependency-assets'
+$ServiceProject = Join-Path $SourceSnapshotRoot 'src\Talvora\Talvora.csproj'
+$TrayProject = Join-Path $SourceSnapshotRoot 'src\Talvora.Tray\Talvora.Tray.csproj'
+$ServiceAssetsSnapshotPath = Join-Path $DependencySnapshotRoot 'Talvora.project.assets.json'
+$TrayAssetsSnapshotPath = Join-Path $DependencySnapshotRoot 'Talvora.Tray.project.assets.json'
 $InstallerProject = Join-Path $SourceSnapshotRoot 'src\Talvora.Installer\Talvora.Installer.csproj'
 $PayloadZip = Join-Path $SourceSnapshotRoot 'src\Talvora.Installer\Payload.zip'
 
@@ -528,6 +534,100 @@ function Assert-RuntimeBuildInputsUnchanged {
     }
 }
 
+function Get-ProjectAssetsPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ProjectPath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $ArtifactsPath
+    )
+
+    $projectName = [IO.Path]::GetFileNameWithoutExtension($ProjectPath)
+    return Join-Path $ArtifactsPath ('obj\' + $projectName + '\project.assets.json')
+}
+
+function Invoke-CanonicalDependencyRestore {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ProjectPath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $Rid,
+
+        [Parameter(Mandatory = $true)]
+        [string] $ArtifactsPath
+    )
+
+    $restoreArgs = @(
+        'restore',
+        $ProjectPath,
+        '-r',$Rid,
+        '-p:SelfContained=true',
+        '--artifacts-path',$ArtifactsPath
+    )
+    & dotnet @restoreArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Dependency restore failed for '$ProjectPath': $LASTEXITCODE"
+    }
+}
+
+function New-DependencyAssetsSnapshot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ProjectPath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $DestinationPath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $ArtifactsPath
+    )
+
+    $sourcePath = Get-ProjectAssetsPath -ProjectPath $ProjectPath -ArtifactsPath $ArtifactsPath
+    if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
+        throw "NuGet assets manifest is missing after restore: $sourcePath"
+    }
+
+    New-Item -ItemType Directory -Path (Split-Path -Parent $DestinationPath) -Force | Out-Null
+    Copy-Item -LiteralPath $sourcePath -Destination $DestinationPath -Force
+
+    $sourceHash = (Get-FileHash -LiteralPath $sourcePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $snapshotHash = (Get-FileHash -LiteralPath $DestinationPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if (-not [string]::Equals($sourceHash, $snapshotHash, [StringComparison]::Ordinal)) {
+        throw "NuGet assets snapshot hash mismatch for '$ProjectPath'."
+    }
+
+    return [pscustomobject]@{
+        ProjectPath = $ProjectPath
+        SourcePath = $sourcePath
+        SnapshotPath = $DestinationPath
+        Sha256 = $snapshotHash
+    }
+}
+
+function Assert-DependencyAssetsUnchanged {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object] $Snapshot,
+
+        [Parameter(Mandatory = $true)]
+        [string] $Stage
+    )
+
+    if (-not (Test-Path -LiteralPath $Snapshot.SourcePath -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $Snapshot.SnapshotPath -PathType Leaf)) {
+        throw "Dependency assets disappeared during canonical build at stage '$Stage'."
+    }
+
+    $liveHash = (Get-FileHash -LiteralPath $Snapshot.SourcePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $snapshotHash = (Get-FileHash -LiteralPath $Snapshot.SnapshotPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if (-not [string]::Equals($liveHash, [string]$Snapshot.Sha256, [StringComparison]::Ordinal) -or
+        -not [string]::Equals($snapshotHash, [string]$Snapshot.Sha256, [StringComparison]::Ordinal)) {
+        throw "Dependency assets changed during canonical build at stage '$Stage' for '$($Snapshot.ProjectPath)'. Re-run the build."
+    }
+}
+
 function Install-AstGrepPayload {
     param(
         [Parameter(Mandatory = $true)]
@@ -698,35 +798,50 @@ if (-not [string]::Equals(
     throw 'Canonical source HEAD changed before immutable source snapshot capture completed.'
 }
 
+Write-Host 'Restoring canonical dependency graphs...' -ForegroundColor Cyan
+Invoke-CanonicalDependencyRestore -ProjectPath $ServiceProject -Rid $RuntimeIdentifier -ArtifactsPath $DependencyArtifactsRoot
+Invoke-CanonicalDependencyRestore -ProjectPath $TrayProject -Rid $RuntimeIdentifier -ArtifactsPath $DependencyArtifactsRoot
+$ServiceDependencySnapshot = New-DependencyAssetsSnapshot -ProjectPath $ServiceProject -DestinationPath $ServiceAssetsSnapshotPath -ArtifactsPath $DependencyArtifactsRoot
+$TrayDependencySnapshot = New-DependencyAssetsSnapshot -ProjectPath $TrayProject -DestinationPath $TrayAssetsSnapshotPath -ArtifactsPath $DependencyArtifactsRoot
+Assert-RuntimeBuildInputsUnchanged -Root $RepoRoot -ExpectedFingerprint $WorkingTreeFingerprint -Stage 'dependency-restore'
+
 Write-Host 'Publishing Talvora service...' -ForegroundColor Cyan
 $serviceArgs = @(
     'publish',
-    (Join-Path $SourceSnapshotRoot 'src\Talvora\Talvora.csproj'),
+    $ServiceProject,
     '-c','Release',
     '-r',$RuntimeIdentifier,
     '--self-contained','true',
+    '--artifacts-path',$DependencyArtifactsRoot,
+    '--no-restore',
     '-o',$ServicePayload
 )
 & dotnet @serviceArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Talvora service publish failed: $LASTEXITCODE"
 }
+Assert-DependencyAssetsUnchanged -Snapshot $ServiceDependencySnapshot -Stage 'service-publish'
+Assert-DependencyAssetsUnchanged -Snapshot $TrayDependencySnapshot -Stage 'service-publish'
 Assert-RuntimeBuildInputsUnchanged -Root $RepoRoot -ExpectedFingerprint $WorkingTreeFingerprint -Stage 'service-publish'
 
 
 Write-Host 'Publishing Talvora tray...' -ForegroundColor Cyan
 $trayArgs = @(
     'publish',
-    (Join-Path $SourceSnapshotRoot 'src\Talvora.Tray\Talvora.Tray.csproj'),
+    $TrayProject,
     '-c','Release',
     '-r',$RuntimeIdentifier,
     '--self-contained','true',
+    '--artifacts-path',$DependencyArtifactsRoot,
+    '--no-restore',
     '-o',$TrayPayload
 )
 & dotnet @trayArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Talvora tray publish failed: $LASTEXITCODE"
 }
+Assert-DependencyAssetsUnchanged -Snapshot $ServiceDependencySnapshot -Stage 'tray-publish'
+Assert-DependencyAssetsUnchanged -Snapshot $TrayDependencySnapshot -Stage 'tray-publish'
 Assert-RuntimeBuildInputsUnchanged -Root $RepoRoot -ExpectedFingerprint $WorkingTreeFingerprint -Stage 'tray-publish'
 
 
@@ -760,16 +875,14 @@ $ResolvedDependenciesFile = Join-Path $PayloadRoot 'resolved-dependencies.json'
 function Get-ResolvedPackageManifest {
     param(
         [Parameter(Mandatory = $true)]
-        [string] $ProjectPath
+        [string] $AssetsPath
     )
 
-    $projectDir = Split-Path -Parent $ProjectPath
-    $assetsPath = Join-Path $projectDir 'obj\project.assets.json'
-    if (-not (Test-Path -LiteralPath $assetsPath -PathType Leaf)) {
-        throw "NuGet assets manifest is missing: $assetsPath"
+    if (-not (Test-Path -LiteralPath $AssetsPath -PathType Leaf)) {
+        throw "Immutable NuGet assets snapshot is missing: $AssetsPath"
     }
 
-    $assets = Get-Content -LiteralPath $assetsPath -Raw | ConvertFrom-Json
+    $assets = Get-Content -LiteralPath $AssetsPath -Raw | ConvertFrom-Json
     $direct = [System.Collections.Generic.HashSet[string]]::new(
         [StringComparer]::OrdinalIgnoreCase)
 
@@ -803,6 +916,102 @@ function Get-ResolvedPackageManifest {
     return @($resolved | Sort-Object name, version)
 }
 
+function Get-PublishedPackageManifest {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $DepsPath
+    )
+
+    if (-not (Test-Path -LiteralPath $DepsPath -PathType Leaf)) {
+        throw "Published dependency manifest is missing: $DepsPath"
+    }
+
+    $deps = Get-Content -LiteralPath $DepsPath -Raw | ConvertFrom-Json
+    if ($null -eq $deps.libraries) {
+        throw "Published dependency manifest does not contain libraries: $DepsPath"
+    }
+
+    $resolved = foreach ($library in $deps.libraries.PSObject.Properties) {
+        if ([string]$library.Value.type -ne 'package') {
+            continue
+        }
+
+        $identity = [string]$library.Name
+        $separator = $identity.LastIndexOf('/')
+        if ($separator -le 0 -or $separator -ge $identity.Length - 1) {
+            continue
+        }
+
+        [pscustomobject]@{
+            name = $identity.Substring(0, $separator)
+            version = $identity.Substring($separator + 1)
+        }
+    }
+
+    return @($resolved | Sort-Object name, version)
+}
+
+function Get-SingleFilePublishDepsPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $ProjectPath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $FileName
+    )
+
+    $binRoot = Join-Path (Split-Path -Parent $ProjectPath) 'bin\Release'
+    if (-not (Test-Path -LiteralPath $binRoot -PathType Container)) {
+        throw "Published single-file build output directory is missing: $binRoot"
+    }
+
+    $matches = @(
+        Get-ChildItem -LiteralPath $binRoot -Filter $FileName -File -Recurse -Force
+    )
+    if ($matches.Count -ne 1) {
+        throw "Expected exactly one published dependency manifest '$FileName' beneath '$binRoot', found $($matches.Count)."
+    }
+
+    return [string]$matches[0].FullName
+}
+
+function Assert-PublishedPackagesMatchResolvedAssets {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object[]] $ResolvedPackages,
+
+        [Parameter(Mandatory = $true)]
+        [object[]] $PublishedPackages,
+
+        [Parameter(Mandatory = $true)]
+        [string] $ProjectName
+    )
+
+    $resolvedIdentities = [System.Collections.Generic.HashSet[string]]::new(
+        [StringComparer]::OrdinalIgnoreCase)
+    foreach ($package in $ResolvedPackages) {
+        [void]$resolvedIdentities.Add(([string]$package.name + '/' + [string]$package.version))
+    }
+
+    foreach ($package in $PublishedPackages) {
+        $identity = [string]$package.name + '/' + [string]$package.version
+        if (-not $resolvedIdentities.Contains($identity)) {
+            throw "Published runtime dependency '$identity' for '$ProjectName' is absent from the immutable restore graph."
+        }
+    }
+}
+
+Assert-DependencyAssetsUnchanged -Snapshot $ServiceDependencySnapshot -Stage 'dependency-provenance'
+Assert-DependencyAssetsUnchanged -Snapshot $TrayDependencySnapshot -Stage 'dependency-provenance'
+$ServiceResolvedPackages = @(Get-ResolvedPackageManifest -AssetsPath $ServiceDependencySnapshot.SnapshotPath)
+$TrayResolvedPackages = @(Get-ResolvedPackageManifest -AssetsPath $TrayDependencySnapshot.SnapshotPath)
+$ServicePublishedDepsPath = Join-Path $ServicePayload 'Talvora.deps.json'
+$TrayPublishedDepsPath = Get-SingleFilePublishDepsPath -ProjectPath $TrayProject -FileName 'Talvora.Tray.deps.json'
+$ServicePublishedPackages = @(Get-PublishedPackageManifest -DepsPath $ServicePublishedDepsPath)
+$TrayPublishedPackages = @(Get-PublishedPackageManifest -DepsPath $TrayPublishedDepsPath)
+Assert-PublishedPackagesMatchResolvedAssets -ResolvedPackages $ServiceResolvedPackages -PublishedPackages $ServicePublishedPackages -ProjectName 'Talvora'
+Assert-PublishedPackagesMatchResolvedAssets -ResolvedPackages $TrayResolvedPackages -PublishedPackages $TrayPublishedPackages -ProjectName 'Talvora.Tray'
+
 $dotnetSdkVersion = (& dotnet --version | Select-Object -First 1).Trim()
 if ([string]::IsNullOrWhiteSpace($dotnetSdkVersion)) {
     throw 'Unable to resolve dotnet SDK version for dependency provenance.'
@@ -825,12 +1034,18 @@ $dependencyProvenance = [ordered]@{
         [ordered]@{
             name = 'Talvora'
             project = 'src/Talvora/Talvora.csproj'
-            packages = @(Get-ResolvedPackageManifest -ProjectPath (Join-Path $SourceSnapshotRoot 'src\Talvora\Talvora.csproj'))
+            assetsSha256 = [string]$ServiceDependencySnapshot.Sha256
+            publishedDepsSha256 = (Get-FileHash -LiteralPath $ServicePublishedDepsPath -Algorithm SHA256).Hash.ToLowerInvariant()
+            packages = $ServiceResolvedPackages
+            publishedRuntimePackages = $ServicePublishedPackages
         },
         [ordered]@{
             name = 'Talvora.Tray'
             project = 'src/Talvora.Tray/Talvora.Tray.csproj'
-            packages = @(Get-ResolvedPackageManifest -ProjectPath (Join-Path $SourceSnapshotRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
+            assetsSha256 = [string]$TrayDependencySnapshot.Sha256
+            publishedDepsSha256 = (Get-FileHash -LiteralPath $TrayPublishedDepsPath -Algorithm SHA256).Hash.ToLowerInvariant()
+            packages = $TrayResolvedPackages
+            publishedRuntimePackages = $TrayPublishedPackages
         }
     )
 }

@@ -34,29 +34,12 @@ Son doğrulanan Source Edit regression: **63/63 GREEN**.
 
 ## OPEN BUGS — sıradaki iş
 
-### #169 — Immutable dependency provenance snapshot tied to publish — OPEN MEDIUM
+### Son tamamlanan bug — #169
 
-Kök neden:
-
-`Build-Windows-Installer.ps1`, Service/Tray publish tamamlandıktan sonra mevcut `obj\project.assets.json` dosyalarını okuyarak `resolved-dependencies.json` üretiyor. Publish sonrasında ayrı bir restore aynı transient assets dosyasını değiştirebildiği için provenance, zaten yayımlanmış binary'nin gerçek dependency graph'ından sapabiliyor.
-
-Doğrulanmış fixture:
-
-- publish sırasında `Audit.Dep/1.0.0`
-- sonradan bağımsız restore ile `project.assets.json -> Audit.Dep/2.0.0`
-- mevcut manifest mantığı 2.0.0 raporlarken yayımlanmış `.deps.json` hâlâ 1.0.0
-
-Hedef çözüm:
-
-1. Restore graph'ını canonical build içinde build-local immutable snapshot'a bağla.
-2. Publish adımlarını aynı restore snapshot'ını kullanacak şekilde `--no-restore` ile çalıştır.
-3. Provenance'i aynı immutable assets snapshot/hash üzerinden üret.
-4. Published `.deps.json` ile resolved dependency listesi arasında cross-check ekle.
-5. Concurrent/external restore regression ekle.
-6. Yalnız ilgili regression + build gate çalıştır.
-7. `BUG-AUDIT.md` ve `MCP-CONTROL-CENTER-TODO.md` içinde #169'u FIXED olarak işaretle.
-8. Tek bug commit'i oluştur; `origin/main` ve `github/main` üzerine push et.
-9. Runtime/installer davranışı değiştiği için canonical installer build + live deploy + exact-installed doğrulama yap.
+- **Kök neden:** provenance publish sonrasında mutable `obj\project.assets.json` okuyordu; sonraki restore published binary'den farklı graph raporlatabiliyordu.
+- **Düzeltme:** explicit restore -> immutable assets snapshot + SHA-256 -> `--no-restore` Service/Tray publish -> published runtime dependency graph cross-check. Single-file Tray için pre-bundle `.deps.json` doğrulanıyor.
+- **Test:** `INSTALLER_DEPENDENCY_PROVENANCE_GREEN`; `NATIVE_INSTALLER_SOURCE_GREEN`; canonical build GREEN.
+- **Canlı:** installer 261,777,167 bytes / SHA-256 `D2FB078B0512E6AEB1507986ADA85CA3E3CC5E3AEEC6A82B6AD8E235B4E02985`; Talvora Running/Automatic, PID 2112, live source `17e1948bedc99e2e18a3e0397ff627dc07017826-dirty-8427300c024c`.
 
 ### #159 — Absolute transport/response budgets + continuation semantics — OPEN MEDIUM
 
