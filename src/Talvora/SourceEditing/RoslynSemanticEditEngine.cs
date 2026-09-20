@@ -40,7 +40,8 @@ internal static class RoslynSemanticEditEngine
         int maxDiagnostics,
         int timeoutSeconds,
         bool validateSyntax,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        SourceEditEngine? sourceEditEngine = null)
     {
         string root;
         SemanticRenameRequest request;
@@ -92,8 +93,11 @@ internal static class RoslynSemanticEditEngine
         var context =
             new SemanticExecutionContext(
                 request.MaxDiagnostics);
+        var engine =
+            sourceEditEngine ??
+            SourceEditRuntime.Engine;
         var result =
-            await SourceEditRuntime.Engine.ApplyGeneratedEditsAsync(
+            await engine.ApplyGeneratedEditsAsync(
                 root,
                 transactionId,
                 request.ComputeHash(),
@@ -105,7 +109,8 @@ internal static class RoslynSemanticEditEngine
                         context,
                         token),
                 cancellationToken,
-                context.ToDurableReceiptJson);
+                context.ToDurableReceiptJson,
+                context.CreateGraphCommitGuardAsync);
 
         var durableReceipt =
             SemanticDurableReceipt.Parse(
@@ -298,6 +303,12 @@ internal static class RoslynSemanticEditEngine
                 registration.MsBuildPath,
                 projects.Length,
                 documentCount);
+        context.SetGraphSnapshot(
+            await SemanticGraphSnapshot.CaptureAsync(
+                workspaceRoot,
+                loadScope.Path,
+                solution,
+                cancellationToken));
 
         await EnsureCompilationHealthyAsync(
             solution,
@@ -500,12 +511,19 @@ internal static class RoslynSemanticEditEngine
             "The semantic rename proposal introduces compiler errors. No mutation was attempted.",
             cancellationToken);
 
-        return await BuildStructuredChangesAsync(
+        var changes =
+            await BuildStructuredChangesAsync(
+                workspaceRoot,
+                solution,
+                changedSolution,
+                request,
+                cancellationToken);
+        context.BindGraphMutablePaths(
             workspaceRoot,
-            solution,
-            changedSolution,
-            request,
+            changes);
+        await context.VerifyGraphSnapshotAsync(
             cancellationToken);
+        return changes;
     }
 
     private static MSBuildWorkspace CreateWorkspace() =>
@@ -1738,6 +1756,7 @@ internal static class RoslynSemanticEditEngine
         private readonly int maxDiagnostics;
         private readonly object diagnosticGate =
             new();
+        private SemanticGraphSnapshot? graphSnapshot;
         private readonly List<SemanticEditDiagnostic> diagnostics = [];
         private readonly HashSet<string> diagnosticKeys =
             new(
@@ -1757,6 +1776,54 @@ internal static class RoslynSemanticEditEngine
         public string? FirstWorkspaceFailure { get; private set; }
         public IReadOnlyList<SemanticEditDiagnostic> Diagnostics =>
             diagnostics;
+
+        public void SetGraphSnapshot(
+            SemanticGraphSnapshot snapshot)
+        {
+            graphSnapshot =
+                snapshot ??
+                throw new ArgumentNullException(
+                    nameof(snapshot));
+        }
+
+        public void BindGraphMutablePaths(
+            string workspaceRoot,
+            IReadOnlyList<SourceEditChangeInput> changes)
+        {
+            RequireGraphSnapshot(
+                    "proposal binding")
+                .BindMutablePaths(
+                    changes.Select(
+                        change =>
+                            SourceWorkspaceClassifier.ResolveWorkspacePath(
+                                workspaceRoot,
+                                change.Path)));
+        }
+
+        public async Task VerifyGraphSnapshotAsync(
+            CancellationToken cancellationToken)
+        {
+            await RequireGraphSnapshot(
+                    "proposal verification")
+                .VerifyAsync(
+                    cancellationToken);
+        }
+
+        public async Task<ISourceEditCommitGuard?> CreateGraphCommitGuardAsync(
+            CancellationToken cancellationToken)
+        {
+            return await RequireGraphSnapshot(
+                    "source-edit commit boundary")
+                .AcquireCommitGuardAsync(
+                    cancellationToken);
+        }
+
+        private SemanticGraphSnapshot RequireGraphSnapshot(
+            string phase) =>
+            graphSnapshot ??
+            throw new SourceEditDomainException(
+                SourceEditCodes.SemanticGraphStale,
+                $"{SourceEditCodes.SemanticGraphStale}: semantic graph snapshot is unavailable during {phase}.");
 
         public string ToDurableReceiptJson() =>
             JsonSerializer.Serialize(

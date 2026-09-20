@@ -39,6 +39,7 @@ public static class SourceEditCodes
     public const string SemanticDocumentNotFound = "SEMANTIC_DOCUMENT_NOT_FOUND";
     public const string SemanticDocumentAmbiguous = "SEMANTIC_DOCUMENT_AMBIGUOUS";
     public const string SemanticSnapshotMismatch = "SEMANTIC_SOURCE_SNAPSHOT_MISMATCH";
+    public const string SemanticGraphStale = "SEMANTIC_GRAPH_STALE";
     public const string SemanticSymbolNotFound = "SEMANTIC_SYMBOL_NOT_FOUND";
     public const string SemanticSymbolAmbiguous = "SEMANTIC_SYMBOL_AMBIGUOUS";
     public const string SemanticConflict = "SEMANTIC_CONFLICT";

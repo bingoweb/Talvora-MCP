@@ -5,6 +5,12 @@ internal sealed class SourceEditEngineOptions
     public string? StateRoot { get; init; }
 }
 
+internal interface ISourceEditCommitGuard : IAsyncDisposable
+{
+    ValueTask VerifyAsync(
+        CancellationToken cancellationToken);
+}
+
 internal sealed class SourceEditEngine
 {
     private readonly SourceEditTransactionStore store;
@@ -328,7 +334,8 @@ internal sealed class SourceEditEngine
         bool validateSyntax,
         Func<string, CancellationToken, Task<IReadOnlyList<SourceEditChangeInput>>> generateChanges,
         CancellationToken cancellationToken,
-        Func<string?>? adapterReceiptProvider = null)
+        Func<string?>? adapterReceiptProvider = null,
+        Func<CancellationToken, Task<ISourceEditCommitGuard?>>? commitGuardFactory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(requestHash);
         ArgumentNullException.ThrowIfNull(generateChanges);
@@ -400,7 +407,8 @@ internal sealed class SourceEditEngine
                         requestHash,
                         token);
                 },
-                adapterReceiptProvider);
+                adapterReceiptProvider,
+                commitGuardFactory);
         }
         catch (SourceEditDomainException ex)
         {
@@ -465,7 +473,8 @@ internal sealed class SourceEditEngine
         string requestHash,
         CancellationToken cancellationToken,
         Func<CancellationToken, Task<NormalizedSourceEditChangeSet>> normalize,
-        Func<string?>? adapterReceiptProvider = null)
+        Func<string?>? adapterReceiptProvider = null,
+        Func<CancellationToken, Task<ISourceEditCommitGuard?>>? commitGuardFactory = null)
     {
         var receipt =
             await store.TryReadReceiptAsync(
@@ -608,6 +617,7 @@ internal sealed class SourceEditEngine
         var attemptedIndices = new HashSet<int>();
         var appliedIndices = new HashSet<int>();
         var commitDecisionDurable = false;
+        ISourceEditCommitGuard? commitGuard = null;
 
         try
         {
@@ -653,6 +663,19 @@ internal sealed class SourceEditEngine
                     index,
                     file,
                     cancellationToken);
+                if (index == 0 &&
+                    commitGuardFactory is not null)
+                {
+                    commitGuard =
+                        await commitGuardFactory(
+                            cancellationToken);
+                    if (commitGuard is not null)
+                    {
+                        await commitGuard.VerifyAsync(
+                            cancellationToken);
+                    }
+                }
+
                 pathGuard.VerifyAnchors();
                 await committer.CommitFileAsync(
                     file,
@@ -672,6 +695,12 @@ internal sealed class SourceEditEngine
                         index = file.Index,
                         afterRevision = file.AfterRevision,
                     },
+                    cancellationToken);
+            }
+
+            if (commitGuard is not null)
+            {
+                await commitGuard.VerifyAsync(
                     cancellationToken);
             }
 
@@ -797,6 +826,13 @@ internal sealed class SourceEditEngine
                 attemptedIndices,
                 appliedIndices,
                 CancellationToken.None);
+        }
+        finally
+        {
+            if (commitGuard is not null)
+            {
+                await commitGuard.DisposeAsync();
+            }
         }
     }
 

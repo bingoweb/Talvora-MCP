@@ -1,4 +1,14 @@
 if (args.Contains(
+        "--semantic-graph-stale-only",
+        StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunSemanticGraphStaleAsync();
+    Console.WriteLine(
+        "TALVORA SEMANTIC GRAPH STALE REGRESSION GREEN");
+    return;
+}
+
+if (args.Contains(
         "--semantic-resource-bounds-only",
         StringComparer.OrdinalIgnoreCase))
 {

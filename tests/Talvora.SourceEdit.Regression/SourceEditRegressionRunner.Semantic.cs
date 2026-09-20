@@ -6,6 +6,9 @@ internal static partial class SourceEditRegressionRunner
     public static Task RunSemanticResourceBoundsAsync() =>
         SemanticResourceBoundsAsync();
 
+    public static Task RunSemanticGraphStaleAsync() =>
+        SemanticGraphStaleZeroMutationAsync();
+
     private static async Task SemanticSolutionRenameReplayAsync()
     {
         await using var fixture =
@@ -651,6 +654,96 @@ internal static partial class SourceEditRegressionRunner
             "Semantic resource-limit regressions mutated the dependent document.");
     }
 
+    private static async Task SemanticGraphStaleZeroMutationAsync()
+    {
+        await using var fixture =
+            await TestWorkspace.CreateAsync();
+        await WriteTwoProjectSemanticSolutionAsync(
+            fixture);
+        var anchor =
+            fixture.PathInWorkspace(
+                "Lib/Widget.cs");
+        var dependent =
+            fixture.PathInWorkspace(
+                "App/Use.cs");
+        var lateReference =
+            fixture.PathInWorkspace(
+                "App/LateUse.cs");
+        var read =
+            await SourceEditRuntime.Engine.ReadSourceAsync(
+                anchor,
+                1,
+                0,
+                CancellationToken.None);
+        var originalAnchor =
+            await File.ReadAllTextAsync(
+                anchor);
+        var originalDependent =
+            await File.ReadAllTextAsync(
+                dependent);
+        var injected = false;
+        var engine =
+            fixture.CreateEngine(
+                new DelegateFaultInjector(
+                    before:
+                        (index, _, _) =>
+                        {
+                            if (index != 0 ||
+                                injected)
+                            {
+                                return ValueTask.CompletedTask;
+                            }
+
+                            injected = true;
+                            return new ValueTask(
+                                fixture.WriteUtf8Async(
+                                    "App/LateUse.cs",
+                                    "using Demo;\nclass LateUse { Widget value = new Widget(); }\n"));
+                        }));
+
+        var result =
+            await RenameAsync(
+                fixture,
+                NewTransactionId(),
+                "Demo.slnx",
+                "Lib/Widget.cs",
+                1,
+                13,
+                read.Revision,
+                "RenamedWidget",
+                projectPath: "Lib/Lib.csproj",
+                expectedSymbolName: "Widget",
+                sourceEditEngine: engine);
+
+        Assert(
+            injected,
+            "Semantic graph race fixture did not inject the late source document.");
+        AssertError(
+            result.Transaction,
+            SourceEditCodes.SemanticGraphStale);
+        AssertEqual(
+            originalAnchor,
+            await File.ReadAllTextAsync(
+                anchor),
+            "Stale semantic graph unexpectedly mutated the declaration document.");
+        AssertEqual(
+            originalDependent,
+            await File.ReadAllTextAsync(
+                dependent),
+            "Stale semantic graph unexpectedly mutated the original dependent document.");
+        Assert(
+            File.Exists(
+                lateReference),
+            "External late source document unexpectedly disappeared during semantic rollback.");
+        Assert(
+            (await File.ReadAllTextAsync(
+                lateReference))
+            .Contains(
+                "Widget",
+                StringComparison.Ordinal),
+            "External late source document was unexpectedly rewritten by the stale semantic transaction.");
+    }
+
     private static async Task SemanticCancellationAsync()
     {
         await using var fixture =
@@ -719,7 +812,8 @@ internal static partial class SourceEditRegressionRunner
         int maxChangedDocuments = 64,
         long maxTotalChangedCharacters = 1024 * 1024,
         int maxDiagnostics = 100,
-        int timeoutSeconds = 120) =>
+        int timeoutSeconds = 120,
+        SourceEditEngine? sourceEditEngine = null) =>
         await RoslynSemanticEditEngine.ApplyRenameAsync(
             fixture.Root,
             transactionId,
@@ -741,7 +835,8 @@ internal static partial class SourceEditRegressionRunner
             maxDiagnostics,
             timeoutSeconds,
             validateSyntax: true,
-            cancellationToken);
+            cancellationToken,
+            sourceEditEngine);
 
     private static async Task WriteTwoProjectSemanticSolutionAsync(
         TestWorkspace fixture)
