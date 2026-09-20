@@ -1,3 +1,5 @@
+using Talvora.Shared;
+
 namespace Talvora.Tray;
 
 internal sealed class ManagedMcpOperationInProgressException
@@ -18,17 +20,14 @@ internal static class ManagedMcpOperationCoordinator
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(mcpId);
 
-        var safeId = new string(
-            mcpId
-                .Select(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_'
-                    ? ch
-                    : '_')
-                .ToArray());
+        var operationKey =
+            ManagedMcpIdentityKey.Create(
+                mcpId);
 
         var semaphore = new Semaphore(
             initialCount: 1,
             maximumCount: 1,
-            name: @"Local\Talvora.ManagedMcpOperation." + safeId);
+            name: @"Local\Talvora.ManagedMcpOperation." + operationKey);
 
         try
         {

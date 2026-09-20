@@ -369,14 +369,14 @@ internal static class ControlCenterComponentHealthService
                 component,
                 ControlCenterHealthState.Offline,
                 "Çalışmıyor",
-                "Playwright MCP process bulunamadı.");
+                "İşlem bulunamadı.");
         }
 
         return new ManagedMcpComponentState(
             component,
             ControlCenterHealthState.Ready,
             "Çalışıyor",
-            "Playwright MCP process aktif.");
+            "İşlem aktif.");
     }
 
     private static async Task<ManagedMcpComponentState> ProbeScheduledTaskAsync(

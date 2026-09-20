@@ -1,8 +1,321 @@
-# Talvora MCP Handoff — 2026-09-19
+# Talvora MCP Handoff — 2026-09-20
 
-## Oturum kapanış snapshot — final doğrulanmış durum
+## 2026-09-20 CURRENT — Source audit #127 / #135 / #137 / #138 tamamlandı
 
-Bu bölüm **mevcut gerçeği** temsil eder ve aşağıdaki tarihsel/pre-commit notlarından daha önceliklidir.
+- Bu oturumda dört hata RED -> GREEN ile düzeltildi: #127 YAML yardımcı kural dosyası tarama/isim çakışması; #135 ordinary C#/.csx syntax preflight; #137 online/offline private-cache executable hash + provenance doğrulaması; #138 installer tek metadata snapshot.
+- Son birleşik Source Edit regression **60/60 GREEN** (başka oturumun watcher/HTTP mock testleri dahil). Son ek bozuk/null/array JSON ve eksik cache manifest kontrolleriyle --source-cache-only **2/2 GREEN**; InstallerAstGrepMetadataRegression **3/3 GREEN**; NativeInstallerSourceRegression **GREEN**; Talvora Release **0 warning / 0 error**; git diff --check **exit 0**.
+- Kaynak doğrulamasıdır: bu oturumda tam installer build/live deploy, commit veya push yapılmadı. Kurulu servis için bu dört düzeltme henüz exact-installed doğrulanmış değildir.
+- Eşzamanlı başka çalışma HTTP mock/watcher, Gitea ve yaşayan belgeleri güncelliyordu; o ürün değişiklikleri korundu. Ayrı --artifacts-path C:\Windows\Temp\TalvoraSourceAudit-20260920 ve -p:UseSharedCompilation=false ile build çakışması önlendi.
+- Kalıcı regresyonlar: SourceEditRegressionRunner.Audit.cs, SourceEditRegressionRunner.CacheAudit.cs ve tests/InstallerAstGrepMetadataRegression.ps1. Tümü canonical apply_patch ile eklendi. Plain-text transaction fixture uzantıları .txt yapıldı; gerçek C# semantic testleri korundu.
+- Bu checkpoint anında **17 OPEN**: #124, #128, #129, #130, #132, #133, #136, #139, #140, #148, #151, #153, #155, #156, #159, #165, #169. Güncel tekil durumlar BUG-AUDIT.md içinde; diğer oturum ilerlerse buradaki sayı checkpoint olarak kalır.
+- Araştırma: https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.csharpsyntaxtree.parsetext ; https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.cryptographicoperations.fixedtimeequals ; https://docs.npmjs.com/cli/v11/commands/npm-view/ .
+
+## 2026-09-20 PREVIOUS CHECKPOINT — Düzeltme / kalan remediation durum raporu
+
+### Net durum
+
+- Historical ürün geliştirme ve bug-fix hattı #1–#120 boyunca büyük ölçüde tamamlandı; özellikle Control Center, installer/deploy, Playwright CLI migration, Gitea/tunnel lifecycle, Source Edit core, Routing Contract v3, structural edit ve Roslyn semantic edit exact-installed doğrulamaları GREEN durumuna getirildi.
+- Yeni deep-audit kümesi **#121–#171** arasında **51 kayıt** içeriyor. Bunların **19'u OPEN**: **0 CRITICAL, 7 HIGH, 12 MEDIUM**. Current remediation pass'te **#121/#122/#123/#125/#126/#127/#131/#134/#135/#141/#142/#144/#145/#146/#147/#149/#150/#152/#154/#157/#158/#160/#161/#162/#163/#164/#168/#170/#171 FIXED**; **#143 CLOSED FALSE POSITIVE**, **#166/#167 CLOSED DUPLICATE**.
+- Ürün/source remediation başladı. P0 Source Edit transaction-integrity, semantic correctness #121–#123 ve canonical source-routing #125/#126/#131/#146 targeted regression ile kapatıldı; diğer açık bulgular kendi doğrulama kapıları geçmeden “fixed” sayılmayacak.
+- Kullanıcı açıkça istemediği için Git commit/push yapılmadı. Intentional geniş dirty working tree korunuyor.
+
+### Şu ana kadar tamamlanan ana düzeltme aileleri
+
+- **Process/runtime temeli:** process timeout/termination, batch quoting, transport environment temizliği, background-job startup/observer/PID-reuse sorunları ve çeşitli cleanup/lifetime problemleri önceki auditlerde düzeltildi.
+- **Control Center / Tray:** pencere lifecycle, görünürlük/render, title bar/drag/close, placement, responsive UX, structured events/logs, health/recovery, manual-stop semantics ve cross-process lifecycle koordinasyonu tamamlandı.
+- **Gitea ve managed MCP temeli:** backend/proxy/MCP/tunnel health zinciri, start/stop/restart davranışları, standard-user service lifecycle, registry coordination ve recovery altyapısının önceki ana kusurları düzeltildi.
+- **Installer/deploy:** self-update için bağımsız SYSTEM task deploy yolu, service registration kaybı, rollback temel akışı, Task Scheduler XML encoding ve canonical deploy #109 explicit `--silent` davranışı düzeltildi ve korunuyor.
+- **Playwright yönü:** embedded/managed Playwright MCP mimarisi kaldırılıp resmi Playwright CLI modeline geçildi; Talvora source/installer/Tray payload ownership'ten çıkarıldı.
+- **Source Edit core (#110–#119):** revision handshake, WAL/receipt, replay/idempotency, rollback/recovery, commit barrier, direct legacy text/config guard, transaction-domain errors ve deterministic routing tamamlandı. Ordinary source/config/repo-doc mutation PRIMARY/default `talvora_apply_patch`.
+- **Structural + semantic adapters (#114/#120):** ast-grep proposal-only structural route ve Roslyn symbol-aware semantic rename eklendi; live workspace'e doğrudan yazmadan canonical Source Edit transaction'a bağlandı. Routing Contract v3 exact-installed doğrulandı.
+- **Exact-installed baseline:** audit öncesi Source Edit/Semantic targeted regression 33/33 GREEN, Release 0 warning/0 error, raw MCP `tools/list` 204/204 unique ve canonical deploy live snapshot GREEN idi.
+
+### Kalan remediation — öncelikli kümeler
+
+1. **P0 / transaction integrity:** #147 parent identity, #168 crash-recovery file-step ownership, #170 WAL final-record integrity ve #171 durable idempotency retention **FIXED**. Current Source Edit targeted regression **42/42 GREEN**.
+2. **P1 / semantic correctness:** #121–#123 **FIXED**; kalan semantic kapsam #124/#128/#129/#130 MEDIUM.
+3. **P1 / canonical source routing:** #125/#126/#131/#146 **FIXED**. Copy/move/Git working-tree/archive/download default source intent canonical `talvora_apply_patch`; deliberate administration için `explicitAdmin=true` ve PowerShell/process TAM YETKI korunuyor.
+4. **P1 / file/archive mutation:** #141/#142/#161/#162 **FIXED**. HTTP staged publication; archive full preflight + isolated staging + rollback commit + parent identity guard + high emergency resource ceilings.
+5. **P1 / recovery failure domains:** #144 WAL isolation, #134/#152 collision-proof managed-MCP identity, #145 redundancy health ve #154 primary registry refresh **FIXED**.
+6. **P1 / resource bounds:** #149/#150 background-job log/response bounds, #157 shared process output capture, #158 streaming canonical source read, #160 post-parent pipe drain ve #163/#164 watcher/HTTP-mock completeness/resource ceilings **FIXED**; kalan #159 generic single-response unlimited modes.
+7. **P1/P2 / installer-build provenance:** #148 source snapshot identity, #169 dependency provenance drift, #140 deploy artifact pinning, #139 installer state rollback.
+8. **P1/P2 / tunnel & managed MCP lifecycle:** #151 remote tunnel create durability, #153 client update rollback, #154 registry self-heal, #155 protocol readiness, #156 full-chain stop verification; ayrıca #132 legacy Playwright cleanup ve #136 owned legacy cleanup.
+9. **P2 / correctness/quality:** #127 structural control-file self-scan ve #135 C# syntax validation **FIXED**; kalan #133 deploy completion observation, #137/#138 ast-grep cache/provenance, #165 AtomicFile crash durability ve diğer MEDIUM kayıtlar.
+
+### Kesin bitmemiş işler — 19 OPEN
+
+- **Semantic correctness (4):** #124 semantic replay metadata durability; #128 semantic resource bounds; #129 semantic graph concurrency fingerprint; #130 workspace-scoped MSBuild/toolchain fidelity.
+- **Installer / upgrade / deploy (8):** #132 retired Playwright upgrade cleanup; #133 fast-task completion observation; #136 legacy Cloudflared ownership-aware cleanup; #137 ast-grep private-cache executable revalidation; #138 ast-grep exact-version provenance snapshot; #139 installer post-health state rollback; #140 deploy artifact hash/identity pinning; #169 dependency graph provenance snapshot.
+- **Managed MCP / tunnel / Gitea (4):** #151 remote tunnel create durable reconciliation; #153 tunnel-client update rollback; #155 real MCP protocol readiness; #156 full-chain Gitea stop verification.
+- **Runtime / resource / process bounds (1):** #159 absolute response budgets/continuations across remaining generic read/network/query surfaces.
+- **Core / installer durability (2):** #165 crash-durable AtomicFile publication; #148 immutable installer source snapshot / HEAD identity.
+
+### Remediation başlangıç kuralı
+
+- P0 pass tamamlandı. #147 için directory volume/file-ID anchors + WAL persistence + handle-bound add/delete/move ve transaction-lifetime directory rename/delete sharing pin'i eklendi. Update/edited-move `File.Replace` atomik metadata davranışını korurken parent path identity artık değiştirilemiyor.
+- Semantic correctness pass #121–#123 tamamlandı: project-mode unique containing solution'a otomatik yükseliyor; incomplete/ambiguous scope fail-closed; baseline compiler Error diagnostics görünür ve mutation öncesi gate; rename sonrası compiler Error `SEMANTIC_CONFLICT`. Current Source Edit regression **46/46 GREEN**.
+- Canonical routing pass #125/#126/#131/#146 tamamlandı: nested-project move, generic copy, destination ingress, Git working-tree commands, archive extraction ve HTTP download ordinary development-source intent'i defaultta canonical route'a bağlı; `explicitAdmin=true` generic administrative capability'yi koruyor. Current Source Edit regression **47/47 GREEN**.
+- HTTP download #141 tamamlandı: same-directory stage + body-length verification + `Flush(true)` + final replace/move; truncated/network failure existing destination'ı değiştirmiyor. Current Source Edit regression **48/48 GREEN**.
+- Archive #142/#161/#162 tamamlandı: full preflight, isolated extraction staging, same-directory commit temps, backup/reverse rollback, contained-mode directory identity pinning ve configurable entry/decompressed-byte budgets. Current Source Edit regression **51/51 GREEN**.
+- #144 tamamlandı: WAL enumeration artık transaction-bazlı izolasyon yapıyor; `identity.json` ve `quarantine.json` ile bozuk journal kimliği durable tutuluyor, yalnız ilişkili workspace fail-closed kalıyor, diğer workspace'ler çalışmaya devam ediyor ve startup quarantine diagnostics loglanıyor. Current Source Edit regression **52/52 GREEN**, Talvora Release **0 warning / 0 error**.
+- #134/#152 tamamlandı: bütün managed-MCP persistence/lifecycle fallback kimlikleri `ManagedMcpIdentityKey` SHA-256 key modeline bağlandı; recovery manifests healthy-primary fast-path'te de reseed edilerek eski dosya adları migrate ediliyor. `foo/bar` ve `foo?bar` registry recovery fixture'ı iki kaydı da korudu; tunnel fallback path probe farklı dizinler üretti; Talvora.Shared ve Tray Release **0 warning / 0 error**.
+- #145/#154 tamamlandı: ownership copies artık parse/validation + canonical content eşitliğiyle health-check ediliyor; missing/stale copy reseed ediliyor. Primary registry backup/recovery kaynağından geldiğinde equality fast-path artık primary'yi yeniden publish ediyor. Temp-path contracts missing/invalid primary ve ownership-copy repair akışlarını GREEN doğruladı; Tray Release **0 warning / 0 error**.
+- #157/#160 tamamlandı: shared `ProcessRunner` stdout/stderr capture 4 Mi-character inline budget + head/tail preservation + truncation metadata kullanıyor; output pump aynı overall timeout token'ına bağlı. Parent erken bittiğinde inherited pipe açık kalırsa deadline sonucu `OutputDrainTimedOut=true` ile dönüyor. Interactive-user helper RAM toplamak yerine shared .NET pump ile UTF-8 temp output'a stream ediyor ve parent bounded read yapıyor. `ProcessRunnerRegression` GREEN; real interactive-user echo smoke GREEN; Service + Tray Release **0 warning / 0 error**.
+- #149/#150 tamamlandı: background-job stdout/stderr 32 MiB segment sınırıyla current + previous segment olarak bounded tutuluyor; generation sidecar rotation sonrasında stale offset'i görünür kılıyor. `talvora_job_read_output` tek response'u en fazla 4 MiB ile sınırlandırıyor; `maxBytes=0` bounded maximum chunk anlamına geliyor ve `nextOffset/generation/resetRequired/responseLimited` continuation durumunu taşıyor. Completed-job retention 14 gün / 500 kayıt / 4 GiB toplam kota ile çalışıyor; restart sonrası stale `Running` metadata gerçek process state'iyle reconcile ediliyor ve exit zamanı bilinmeyen eski kayıt retention için original start time ile sıralanıyor. Repo-dışı targeted fixture `JOB_BOUNDS_GREEN current=5424 previous=8192 generation=3 responseChars=1000 remaining=new-exited`; Talvora Release **0 warning / 0 error**.
+- #158 tamamlandı: `talvora_read_source` whole-file revision'ı streaming SHA-256 ile hesaplarken encoding/newline/final-newline taramasını bounded `FileStream + StreamReader` buffer'larıyla yapıyor ve yalnız caller'ın response penceresini materialize ediyor. Default response 1 Mi UTF-16 character, absolute ceiling 4 Mi character; büyük tek satırlar dahil continuation `nextStartLine/nextStartCharacter` ile sürdürülüyor. Full-document mutation snapshot'ı 256 MiB hard materialization ceiling'i aşarsa allocation başlamadan `SOURCE_EDIT_RESOURCE_LIMIT` üretiyor. Yeni `streaming-source-read-bounded` regression + mevcut UTF-16/mixed-newline/semantic testleri dahil Source Edit suite **53/53 GREEN**; targeted Release build **0 warning / 0 error**.
+- #163/#164 tamamlandı: watcher queue `maxQueuedEvents=0` için sonsuz yerine 100,000-event emergency ceiling kullanıyor; watcher error state'i `overflowCount/resyncRequired` ile completeness kaybını görünür kılıyor ve caller rescan sonrasında `acknowledgeResync=true` ile state'i temizleyebiliyor. HTTP mock zero limits yüksek ama finite ceilings'e çözülüyor; per-listener handler semaphore'una ek process-wide 512-slot `GlobalHandlerSlots` backpressure uygulanıyor. Capture queue process genelinde 100,000 request ve yaklaşık 512 MiB retained-memory ceiling ile korunuyor; enqueue/dequeue/stop aynı global muhasebe yolunu kullanıyor. Targeted `--runtime-bounds-only` regression watcher + HTTP-mock bounds için GREEN; Talvora Release **0 warning / 0 error**; NativeInstaller source contract **NATIVE_INSTALLER_SOURCE_GREEN**.
+- Her mevcut source/config/repository-document editinden hemen önce fresh `talvora_read_source` revision alınmalı ve mutation PRIMARY/default `talvora_apply_patch` ile yapılmalı.
+- Aynı broad test suite tekrar tekrar çalıştırılmamalı; yalnız değişen alanın targeted regression/fault-injection testi, ardından gerekiyorsa final build/smoke gate.
+- Working tree reset/revert/checkout ile temizlenmeyecek; concurrent living-doc writer varsayılacak.
+
+## 2026-09-20 CURRENT — Deep Bug Audit checkpoint / next-session handoff
+
+- Bu oturumda ürün/source kodunda düzeltme yapılmadı; amaç son Source Edit + Routing Contract v3 + structural/semantic adapter + installer/deploy + managed MCP/tunnel/Gitea + shared runtime yüzeylerinde **derin bug analizi** idi. Yaşayan kayıt `BUG-AUDIT.md` güncel olarak **#171'e kadar** genişledi. Commit/push yapılmadı.
+- Repo için temel kural değişmedi: ordinary source/config/repo-doc editleri PRIMARY/default `talvora_apply_patch`; repetitive AST/syntax -> `talvora_structural_edit`; gerçek C# symbol identity -> `talvora_semantic_edit`; exact generated zero-based UTF-16 ranges -> `talvora_apply_edits`; read -> `talvora_read_source`; ambiguity -> `talvora_source_edit_guide`. Mutator trial-and-error yasak.
+- Kullanıcı açıkça routing/tool-choice kısıtına izin verdi: yanlış generic aracın ordinary source edit için seçilmesi server-side reddedilebilir/yönlendirilebilir. Ancak Talvora'nın genel TAM YETKI/explicit-admin yetenekleri keyfi biçimde azaltılmayacak; PowerShell/process gibi explicit admin yüzeyleri korunacak.
+- Mevcut exact-installed semantic/source-edit baseline audit başlamadan önce GREEN idi: HEAD `747cbfc560c8f7e9d4c3def699ee986d5c164a71`, installed fingerprint `...-dirty-8726cde50619`, Source Edit/Semantic targeted regression 33/33, Release 0 warning/0 error, raw MCP tools/list 204/204 unique. Bu baseline yeni audit bulgularının doğru olmadığı anlamına gelmez; yeni bulgular stress/live fixture'larla mevcut tasarım sınırlarını ortaya çıkardı.
+
+### Deep audit sırasında doğrulanan başlıca açık bulgular
+
+- **#121–#123 HIGH — semantic correctness/completeness:** project-mode rename reverse dependent projeleri kaçırabiliyor; unresolved reference/compilation diagnostics sessiz kalabiliyor; rename yeni compiler error üretse bile commit edebiliyor.
+- **#124 MEDIUM — durable semantic replay metadata kaybı:** Source Edit receipt replay oluyor fakat semantic workspace/symbol/diagnostic metadata ilk response ile aynı biçimde durable değil.
+- **#125/#126/#131/#146 HIGH — canonical source-routing lifecycle-gap ailesi:** nested project classification, generic copy, generic Git mutators, archive/download ve destination-side move ingress ordinary development source'unu Source Edit WAL/revision/rollback dışında değiştirebiliyor. Kullanıcının routing kısıtı izni bu aile için merkezi `SourceMutationIntent/Policy` tasarımını mümkün kılıyor; explicit admin override path korunmalı.
+- **#127 MEDIUM — ast-grep YAML rule self-scan:** mirror içine yazılan control rule kendisi scan edilip valid rule'u `STRUCTURAL_PROPOSAL_INVALID` ile bozabiliyor.
+- **#128/#129/#130 MEDIUM — semantic resource/concurrency/toolchain:** bounds load/generation sonrasında uygulanıyor; semantic graph tüm girdileriyle concurrency-versioned değil; process-wide MSBuild locator multi-SDK/workspace fidelity için tasarım riski.
+- **#132 HIGH — Playwright MCP retirement upgrade cleanup eksik:** yeni installer source'u retired scheduled task/process/AppData surface'ini eski kurulumdan otomatik temizlemiyor. Current machine daha önce manuel temizlendi; sorun upgrade path.
+- **#133 MEDIUM — deploy WaitForCompletion race:** çok hızlı SYSTEM task ilk poll'dan önce biterse script running instance hiç görmeyip timeout'a gidebilir.
+- **#134 HIGH + #152 HIGH — managed MCP ID/path collision:** lossy safe-id filename/path mapping farklı registry ID'lerini aynı recovery/ownership/tunnel config/credential/state yoluna çarpıştırabilir.
+- **#135 MEDIUM — `validateSyntax=true` ordinary C# için fiilen no-op:** C# syntax gate Roslyn ile preflight edilmemiş.
+- **#136 HIGH — legacy Cloudflared cleanup ownership/rollback:** generic `Cloudflared` service ve ProgramData path'i Talvora ownership kanıtı olmadan temizlenebiliyor; işlem rollback boundary öncesinde.
+- **#137/#138 MEDIUM — ast-grep supply/provenance:** offline cache reuse executable hash'ini tekrar doğrulamıyor; installer ayrı mutable `@latest` metadata sorgularıyla mixed-version provenance üretebilir.
+- **#139/#140 MEDIUM — installer/deploy transaction provenance:** post-health `current.json`/Codex state rollback'ta restore edilmiyor; canonical deploy artifact expected hash/manifest pinlemeden installer'ı launch ediyor.
+- **#141 HIGH — HTTP overwrite atomic değil:** malformed/truncated response existing destination'ı doğrudan truncate edip partial content bırakabiliyor.
+- **#142 HIGH — archive extract transaction değil:** sonraki entry failure olduğunda önceki entry mutation'ları live destination'da kalıyor.
+- **#143 CLOSED FALSE POSITIVE:** RecoveryRequired workspace quarantine aslında her canonical mutation öncesi `RecoverWorkspaceLockedAsync` ile uygulanıyor; önceki kritik bulgu geri çekildi.
+- **#144 HIGH — corrupt WAL global failure domain:** tek bozuk journal enumeration'ı patlatıp ilgisiz healthy workspace canonical editlerini ve diğer recovery'leri engelleyebilir.
+- **#145 MEDIUM — recovery redundancy latent corruption:** primary sağlıklıyken corrupt recovery/ownership copies sürekli health-check/reseed edilmiyor.
+- **#147 CRITICAL — Source Edit reparse/junction TOCTOU:** canonical commit path parent identity değişimini handle-bound biçimde sabitlemiyor; deterministic delete/simple-move/add fixtures doğruladı. **#148 HIGH — canonical build source-snapshot provenance:** clean HEAD değişimi runtime fingerprint kontrolünden geçebiliyor. **#149/#150 — job log/response resource bounds.** **#151–#156 — tunnel/managed-MCP/Gitea lifecycle ve recovery bulguları.**
+- **#157 HIGH — shared process runners unbounded stdout/stderr capture:** verbose child process tek invocation'da service/helper memory'sini sınırsız büyütebilir.
+- **#158 HIGH — `talvora_read_source` küçük slice için bile full file materialize ediyor:** byte[] + full string + split/join allocation nedeniyle büyük file'da canonical read ciddi memory riski.
+- **#159 MEDIUM — multiple tools `0=unlimited` tek-response memory/transport modes:** read/tail/http/tcp/websocket/sqlite/search gibi yüzeylerde absolute response budget/continuation eksik.
+- **#160 HIGH — ProcessRunner timeout pipe-drain'i kapsamıyor:** parent exit 0 sonrası descendant redirected pipe handle'ı açık tutarsa requested timeout aşılabiliyor; live fixture timeout=2s iken ~8.3s döndü.
+- **#161 HIGH — archive junction containment violation:** `allowOutsideDestination=false` yalnız lexical check; live junction fixture ZIP içeriğini destination dışına yazdı.
+- **#162 HIGH — archive decompression/resource expansion budgets yok:** entry-count/per-entry/aggregate decompressed-size hard caps eksik.
+- **#163 MEDIUM — FileSystemWatcher OS buffer overflow completeness state'e yansımıyor:** `DroppedEvents=0` iken gerçek event loss mümkün; `resyncRequired` benzeri state yok.
+- **#164 HIGH — watcher/HTTP mock unbounded queues/inflight/pending:** process-wide emergency ceiling/backpressure yok.
+- **#165 MEDIUM — `AtomicFile` rename atomicity var ama crash durability yok:** temp publish öncesi `Flush(true)`/write-through ve backup durability sözleşmesi eksik.
+- **#166/#167 CLOSED DUPLICATE:** yeni ayrı bug değiller; #166 evidence #147'ye, #167 evidence #148'e birleştirildi.
+- **#168 HIGH — crash recovery file-step ownership kaybı:** durable recovery applied/attempted file index geçmişini yeniden kurmuyor; hiç uygulanmamış add step'i dış writer tarafından aynı-content oluşturulduğunda multi-file rollback bu dosyayı silebiliyor. Deterministic repo-dışı fixture ile doğrulandı.
+- **#169 MEDIUM — dependency provenance restore drift:** service/Tray publish sonrasında mutable `obj/project.assets.json` yeniden restore edilirse `resolved-dependencies.json` published binary'den farklı package versionları raporlayabiliyor. Local NuGet fixture published deps 1.0.0 / assets 2.0.0 ayrışmasını doğruladı.
+- **#170 HIGH — final WAL integrity/torn-tail ayrımı:** complete checksum-invalid terminal record son satır olduğu için ignore edilebiliyor; `RecoveryRequired` geçici olarak önceki state'e düşüyor ve quarantine yeniden kurulmadan önce rollback file-step'i live dosyayı değiştirebiliyor. İki repo-dışı fixture ile doğrulandı.
+- **#171 HIGH — completed-transaction retention idempotency kaybı:** 30 gün/count/size cleanup receipt+journal identity'sini tamamen siliyor; aynı `transactionId + requestHash`, state tekrar precondition'a uyduğunda yeniden `committed/replayed=false` çalışabiliyor. Isolated fixture immediate replay ile eviction-sonrası re-execution farkını doğruladı.
+### Canlı/reasoned audit kanıtlarından önemli örnekler
+
+- Project-scope semantic rename sonrası reverse consumer build'i `CS0246` ile kırıldı (#121).
+- Missing HintPath dependency içeren project'te semantic rename `success=true`, empty diagnostics ve commit döndürdü (#122).
+- `Alpha -> Beta` collision rename commit edildi; build `CS0101` verdi (#123).
+- `talvora_git_run restore`, archive extract, HTTP download, copy ve move fixture'ları canonical source lifecycle dışında kalan mutation sınıfını canlı gösterdi (#125/#126/#131/#146).
+- Truncated HTTP body existing file'ı `BROKENBODY` partial içeriğine düşürdü (#141).
+- ZIP'te ilk source overwrite edildi, sonraki `../escape` entry fail olunca ilk mutation geri alınmadı (#142).
+- Inherited-pipe fixture `timeoutSeconds=2` iken ~8.3 saniye sonra `timedOut=false` döndü (#160).
+- Junction fixture `allowOutsideDestination=false` ile gerçek destination dışına dosya çıkardı (#161).
+
+### Son doğrulanan araştırma sonuçları
+
+- **#147 Source Edit reparse/junction TOCTOU:** ek friend-assembly fault-injection fixture tek-dosya ve multi-file late-step parent identity değişimini deterministik olarak yeniden doğruladı; handle/final-path/file-ID tabanlı identity modeli fix yönüdür.
+- **#148 Build provenance source-snapshot race:** clean commit A -> clean commit B repo-dışı fixture current-HEAD fingerprint'in değişmeden kalabildiğini ve captured SourceCommit'in stale kaldığını deterministik olarak doğruladı.
+- **#168 Crash recovery ownership:** üç-file fixture'da yalnız ilk step uygulanıp crash oldu; ikinci add hiç uygulanmadı, ancak dış writer aynı-content hedef oluşturduktan sonra recovery üçüncü before-state nedeniyle rollback'e girip bu dosyayı kaldırdı. Recovery yalnız proven-applied step'leri mutate etmeli; indeterminate step `RecoveryRequired` olmalı.
+- **#169 Dependency provenance:** local-feed fixture publish outputunda `Audit.Dep/1.0.0` kalırken bağımsız restore `project.assets.json`'ı 2.0.0'a taşıdı ve current manifest reader 2.0.0 raporladı. Aynı build için restore graph immutable snapshot'a bağlanmalı.
+- **#170 WAL tail integrity:** complete checksum-invalid final `RecoveryRequired` record `Prepared` gibi görüldü; recovery sonunda yeniden quarantine olsa da arada bir rollback step `second-after -> second-before` mutation yaptı. Integrity-invalid complete record immediate zero-mutation `RecoveryRequired` olmalı.
+- **#171 Idempotency retention:** first retry `replayed=true`; aged cleanup receipt+journal'ı kaldırdı; file before-state'e getirildikten sonra aynı transaction yeniden `committed/replayed=false` oldu. Ağır WAL retention ayrı tutulsa bile minimal durable transaction identity/tombstone korunmalı veya expiry contract açık ve fail-closed olmalı.
+
+### Sonraki oturum öncelik sırası
+
+1. Önce `HANDOFF.md`, sonra `BUG-AUDIT.md` #121–#171, `SOURCE-EDIT-ENGINE-ARCHITECTURE.md`, Faz 14 ve canonical routing roadmap'i oku; working tree'yi reset/revert/checkout etme.
+2. Deep audit'i kalan yüksek değerli yüzeylerde sürdür; #166/#167 duplicate olarak kapatılmıştır, canonical karşılıkları #147/#148'dir.
+3. Audit tamamlanınca kullanıcı isterse fix fazına geç. İlk remediation grubu: **#121 -> #122/#123 -> source-routing lifecycle-gap ailesi (#125/#126/#131/#146) -> #141/#142/#161/#162 -> #144 -> #157/#160/#158/#159/#164 -> installer/tunnel/recovery bulguları -> lower-risk MEDIUM maddeler**.
+4. Routing remediation'da wrong-tool ordinary source mutation server-side stable policy error ile canonical tool'a yönlendirilebilir; explicit admin intent/override path korunmalı. Capability kırpma yapılmamalı.
+5. Source Edit/recovery değişikliklerinde revisioned read + `talvora_apply_patch`; broad repeated tests yok. Yalnız değişen alanın targeted regression'ı, sonra gerekli build/smoke.
+6. Canonical deploy davranışında #109 explicit `--silent` asla kaybolmamalı.
+7. Commit/push yalnız kullanıcı açıkça isterse yapılacak.
+
+### Geçici audit artıkları
+
+- Repo dışı fixture'lar geçmiş audit'te `%LOCALAPPDATA%\Temp\TalvoraGitAudit` ve `TalvoraGenericMutationAudit` altında oluşturuldu; semantic fixture daha önce temizlendi. Audit bitince kullanılmayan temp fixture/job metadata'sı temizlenebilir; repo source için generic mutator kullanılmamalı.
+
+## 2026-09-20 CURRENT — Routing Contract v3 + Roslyn Semantic Edit exact-installed GREEN
+
+- Repo remains `main` at HEAD `747cbfc560c8f7e9d4c3def699ee986d5c164a71`. The pre-existing intentional dirty Playwright CLI migration, #109, Source Edit, Routing and structural work was preserved; no reset/revert/checkout/overwrite was used.
+- Canonical routing is now complete: ordinary code/config/repo-doc changes including ordinary C# -> PRIMARY/default `talvora_apply_patch`; repetitive AST/syntax transformations -> `talvora_structural_edit`; real C# symbol/semantic identity operations -> `talvora_semantic_edit`; already-generated exact UTF-16 ranges -> `talvora_apply_edits`; reads -> `talvora_read_source`; ambiguity -> `talvora_source_edit_guide`. Mutator trial-and-error remains forbidden.
+- `talvora_semantic_edit` is intentionally narrow. Current capability is solution/project-aware C# symbol rename. Roslyn never writes the live workspace; it returns an in-memory changed Solution which is converted into exact revisioned Source Edit changes and committed through the existing SHA-256/WAL/idempotency/rollback/recovery engine.
+- Current resolved semantic dependencies: `Microsoft.CodeAnalysis.CSharp.Workspaces 5.9.0`, `Microsoft.CodeAnalysis.Workspaces.MSBuild 5.9.0`, `Microsoft.Build.Locator 1.11.2`, and compile-only/private `Microsoft.Build.Framework 17.14.28` with runtime assets excluded.
+- Semantic workspace behavior is deterministic and bounded: Locator registration precedes workspace creation; disposable `MSBuildWorkspace`; current `RegisterWorkspaceFailedHandler`; revisioned Roslyn/disk text equality; linked/multi-project semantic ambiguity rejection; cancellation/timeout/resource limits; no hidden partial success; no automatic Formatter/Simplifier churn.
+- Targeted Source Edit/Semantic regression is **33/33 GREEN**. Talvora Release/targeted build is **0 warning / 0 error**. NativeInstaller source regression is GREEN including `SemanticEditToolContract=True` and #109 canonical deploy `--silent`.
+- `git diff --check` was exit 0 before installer build, with only the existing Windows LF/CRLF warnings.
+- Canonical installer build GREEN: current `Talvora-Setup.exe` SHA-256 `28171A926EA96D78B05724201BCAFA30E3351208DB56EAB517384FFB0AFC991A`.
+- Canonical deploy GREEN. Latest exact-installed live snapshot reports `sourceCommit=747cbfc560c8f7e9d4c3def699ee986d5c164a71-dirty-8726cde50619`, running as LocalSystem.
+- Raw wire-level MCP verification used the server's latest supported handshake protocol `2025-11-25`; `tools/list` reports **204/204 unique tools** and contains `talvora_semantic_edit`. The older handoff phrase `MCP 2026-07-28` was not a valid initialize protocol version and is superseded by this wire-level evidence.
+- Raw routing smoke GREEN: `talvora_source_edit_guide` returns PRIMARY patch / read / exact-range / structural / semantic routes exactly as intended and explicitly keeps ordinary C# on `talvora_apply_patch`.
+- Latest exact-installed live semantic smoke GREEN: a two-project `.slnx` renamed `LiveSmoke.Widget` declaration plus cross-project references to `RenamedWidget`; declaration UTF-16 LE BOM and exact declaration/reference CRLF + deliberate spacing were preserved. Raw `tools/list` remained 204/204 unique and routing metadata remained canonical.
+- Same semantic transaction `semantic-live-96c4169c9c9e4536a2f87a908fbe9f3e` retry returned outer + Source Edit `replayed=true` without reapplying the rename.
+- BUG-AUDIT #120 and Faz 14B are closed. Canonical architecture is `SOURCE-EDIT-ENGINE-ARCHITECTURE.md`; roadmap source-edit routing is Routing Contract v3.
+- This living-doc closeout intentionally follows the exact-installed deploy snapshot above. Do not rebuild merely to embed a docs-only dirty fingerprint back into the same docs; the next code/runtime change should create the next normal canonical build/deploy fingerprint.
+- User has not requested Git commit/push; none was performed.
+
+## [SUPERSEDED — 2026-09-20] Source Edit Engine core + Routing Contract v2 + Structural adapter exact-installed GREEN
+
+- Faz 14 / BUG-AUDIT #110 core implementation is complete. Canonical technical contract remains `SOURCE-EDIT-ENGINE-ARCHITECTURE.md`.
+- Real starting state reverified: branch `main`, HEAD `747cbfc560c8f7e9d4c3def699ee986d5c164a71`, intentional dirty Playwright CLI migration/#109 tree preserved.
+- Live Talvora reverified before coding: `sourceCommit=747cbfc560c8f7e9d4c3def699ee986d5c164a71-dirty-ce803e6e4f95`, service PID 9312.
+- Research decisions: LSP WorkspaceEdit is the ordered/versioned multi-file reference; AHP contributes sequencing/reconciliation but Talvora owns SHA-256 revisions; TxF rejected; durable WAL + same-volume staging + ReplaceFileW/rename/rollback selected.
+- Source-edit routing is now deterministic: `talvora_apply_patch` is PRIMARY/default for ordinary source/config/repository-document work, one file or many; `talvora_apply_edits` is only for exact UTF-16 ranges/revisions already known or generated. `talvora_read_source` remains the revision handshake and new read-only `talvora_source_edit_guide` is the ambiguity resolver.
+- Routing Contract v2 is emitted through MCP `ServerInstructions`, canonical tool Title/Description metadata, server-side policy errors, the guide tool, docs, and regression tests. Agent mutator trial-and-error is explicitly forbidden by the contract.
+- `talvora_read_source` is required for the source revision handshake so stale-read protection is not left to a separate hash call.
+- Patch DSL v1 uses Begin/End Talvora Patch + Add/Update/Delete/Move blocks, mandatory revision for existing files, exact unique hunks, no fuzzy/regex fallback.
+- `talvora_apply_patch` also accepts unified-diff compatibility input through the same normalized transaction/WAL core. Unsupported Git-copy metadata routes back to the same tool's Talvora DSL rather than to another editor.
+- SourceMutationPolicy blocks legacy write_text/replace_text/append_text/text-like write_bytes plus typed JSON/dotenv/INI/XML/YAML/TOML mutators for source/config targets inside recognized development workspaces. It now also guards direct source-file delete and same-workspace source-file move; directory/generated/binary/non-workspace and cross-workspace filesystem capability remains available. Generic PowerShell/process remains unrestricted.
+- ast-grep structural backend is implemented and exact-installed. Canonical installer resolves the latest official Windows platform package, installs with scripts disabled into build staging, vendors only `ast-grep.exe` + provenance into the versioned Service payload, and runtime verifies version + executable SHA-256 before use. Current exact-installed package: `@ast-grep/cli-win32-x64-msvc 0.45.3`, MIT.
+- `talvora_structural_edit` is the specialist route for repetitive AST/syntax-shaped transformations. It supports pattern/kind + rewrite and workspace-relative YAML rule/fix modes, runs ast-grep only as proposal producer against an isolated UTF-8 mirror, cross-checks Unicode-scalar positions + UTF-8 byte offsets + matched text, then commits exact revision/range edits through the same WAL/rollback/idempotency engine. ast-grep never writes the live workspace directly.
+- Audit #110/#111/#112/#113/#114/#115/#116/#117/#118/#119 are fixed and exact-installed. Roslyn 5.9.0 remains the preferred later C# semantic adapter; DiffPlex 1.9.0 remains advisory three-way preview only.
+- Dedicated Source Edit regression is 27/27 GREEN; Talvora Release build 0 warning / 0 error; NativeInstaller source regression GREEN; `git diff --check` clean apart from line-ending warnings.
+- Exact-installed raw MCP gate is GREEN on `sourceCommit=747cbfc560c8f7e9d4c3def699ee986d5c164a71-dirty-b55f88d972ca`: MCP 2026-07-28 `tools/list` reports 203 tools; `talvora_apply_patch` remains PRIMARY/default, `talvora_structural_edit` is the structural specialist, `talvora_apply_edits` remains exact-range specialist, and the read-only guide resolves ambiguity.
+- Exact-installed ast-grep provenance is GREEN: executable SHA-256 `DAFF0F5963FAAB7617045833132A3538C85EEE65F3AFEEDF347F829A7B8D83FB` matches installer provenance. Live pattern/rewrite smoke correctly edited a TypeScript line containing an emoji; live YAML rule/fix smoke updated two matches; same structural transaction retry returned `replayed=true`.
+- Live two-file ordinary change stayed on one `talvora_apply_patch` transaction, committed both files, and same-transaction retry returned `replayed=true`; source delete/same-workspace move routing guards and preserved cross-workspace move capability were also verified through direct MCP calls.
+- Canonical installer/deploy sequence remains unchanged and #109 explicit `--silent` must be preserved.
+- User has not requested commit/push; none will be performed.
+
+## [COMPLETED — 2026-09-20] Roslyn semantic edit implementation plan
+
+- Startup was reverified without mutation. Repo remains `main` at HEAD `747cbfc560c8f7e9d4c3def699ee986d5c164a71`; the intentional dirty Source Edit / Routing / Structural / Playwright CLI migration / #109 tree is preserved. Live Talvora currently reports `sourceCommit=747cbfc560c8f7e9d4c3def699ee986d5c164a71-dirty-c39cc97f5d63`, so the old `...dirty-b55f88d972ca` fingerprint is a historical exact-installed snapshot, not the current runtime identity.
+- Live routing was rechecked: PRIMARY/default remains `talvora_apply_patch`; `talvora_structural_edit` is AST/syntax specialist; `talvora_apply_edits` is exact generated-range specialist; `talvora_source_edit_guide` forbids mutator trial-and-error.
+- Current local toolchain: .NET SDK 10.0.401 / dotnet MSBuild 18.9.11; Visual Studio Build Tools 17.14.37710.0 is installed and complete. Semantic implementation must report the actual Roslyn/MSBuild workspace identity it uses rather than assuming one from this machine inventory.
+- Context7 `/dotnet/roslyn` plus current Microsoft/Roslyn sources were revalidated before coding. Current stable `Microsoft.CodeAnalysis.Workspaces.MSBuild` / C# Workspaces line is 5.9.0. Current rename API is `Renamer.RenameSymbolAsync(Solution, ISymbol, SymbolRenameOptions, string, CancellationToken)` and returns a changed in-memory `Solution`. `Workspace.WorkspaceFailed` is obsolete; use `RegisterWorkspaceFailedHandler`.
+- Microsoft MSBuild guidance requires `MSBuildLocator` registration before MSBuild types are used. The semantic adapter will therefore bootstrap locator once, deterministically record the selected compatible instance, then create a disposable `MSBuildWorkspace` per semantic request.
+- First capability is intentionally narrow: solution/project-aware C# symbol rename. It is not a generic C# editor. Ordinary C# edits continue on PRIMARY `talvora_apply_patch`.
+- External semantic request: workspace root + transactionId + explicit solution/project path + source document path + zero-based UTF-16 line/character anchor + expected SHA-256 anchor revision + new name; optional project selector disambiguates linked/multi-project contexts; Roslyn rename options are explicit and conservative by default.
+- Symbol lookup is semantic, not textual: resolve the anchored document through SemanticModel/SymbolFinder across relevant project contexts. Missing symbol or divergent linked-file identities rejects before mutation. No global search/replace fallback exists.
+- Roslyn only proposes. It never calls `TryApplyChanges` and never writes the live repository. `Solution.GetChanges` / changed documents are reduced to exact UTF-16 text changes with expected old text, then fed to the existing Source Edit transaction engine.
+- The adapter will use `SourceEditEngine.ApplyGeneratedEditsAsync`, with a semantic external request hash. This preserves the existing durable receipt-first replay behavior: a lost-response retry can return `replayed=true` without reloading Roslyn.
+- Before proposal acceptance, Roslyn's old document text must exactly equal the revisioned Talvora source snapshot. Changed target files receive their own SHA-256 expected revisions. The core revalidates targets again at commit barrier; stale/concurrent writer therefore produces zero committed mutation.
+- Encoding/BOM/newline stays owned by the existing Source Edit codec. Rename will not automatically run Formatter/Simplifier; only Roslyn's actual rename text changes are committed, preventing formatting churn.
+- Workspace/project load problems are captured through current workspace-failure registration + diagnostics/progress. Stable semantic domain codes and a structured receipt will expose MSBuild identity, symbol identity, bounded diagnostics and the underlying transaction result. Hidden partial success is forbidden.
+- Resource behavior is bounded and cancellation-aware. Per-call workspace state is disposed; diagnostic/document/change counts and total changed text are bounded through caller-visible limits instead of unbounded service state.
+- Routing Contract v3 in this phase must update MCP ServerInstructions, semantic tool Title/Description, `talvora_source_edit_guide`, tool manifest, regression contracts and canonical docs so the agent chooses semantic only for real symbol identity operations.
+- Targeted test scope: solution-wide cross-document rename; no-symbol/ambiguity; stale anchor/target; invalid load diagnostics; cancellation; linked document consistency; minimal text/no formatter churn; encoding/newline preservation; durable same-transaction replay that does not rerun semantic generation; routing selection.
+- Final gate remains: targeted semantic/source-edit tests -> Talvora Release 0/0 -> only necessary regressions -> `git diff --check` -> canonical Build-Windows-Installer -> canonical Deploy-Windows-Installer preserving #109 explicit `--silent` -> exact-installed system_info -> raw tools/list/routing smoke -> real solution-aware semantic live smoke -> same transaction retry `replayed=true` -> living docs closeout.
+- No commit/push unless explicitly requested.
+
+## [SUPERSEDED — 2026-09-20] NEXT SESSION — Roslyn semantic editing subphase
+
+Continue directly from the exact-installed Source Edit + Routing + Structural state above. Do not redesign or replace the completed core.
+
+### Mandatory startup verification
+
+1. Read this CURRENT section first, then `SOURCE-EDIT-ENGINE-ARCHITECTURE.md`, Faz 14 in `MCP-CONTROL-CENTER-TODO.md`, `BUG-AUDIT.md` #110-#119, and the canonical routing section in `APPLICATION-DEVELOPMENT-ROADMAP.md`.
+2. Reverify real repo state with Talvora Git status/log and reverify live `talvora_system_info`. Preserve the intentionally dirty tree; never reset/revert/overwrite existing Playwright CLI migration, #109, Source Edit, Routing or Structural work.
+3. Reverify current Roslyn/.NET APIs with Context7 + current official Microsoft documentation before dependency/API decisions. Do not rely on the old planning snapshot alone.
+4. Do not commit or push unless the user explicitly asks.
+
+### Non-negotiable routing contract
+
+- `talvora_apply_patch` remains the PRIMARY/default source editor for ordinary development work. Do not weaken, narrow or demote it.
+- `talvora_structural_edit` remains the specialist only for repetitive syntax/AST-shaped transformations.
+- `talvora_apply_edits` remains the specialist only when exact zero-based UTF-16 ranges/revisions already exist or are generated programmatically.
+- The next semantic tool is only for operations that genuinely require C# symbol/semantic identity such as solution-aware rename/refactor. Multi-file scope alone is never a reason to choose it.
+- If tool choice is ambiguous, routing metadata/guide must resolve it before mutation; do not discover the right editor through trial-and-error.
+- PowerShell/process remain unrestricted TAM YETKI explicit-admin surfaces, but are not normal source editors.
+
+### Next engineering target
+
+Design and implement a commercial-quality Roslyn-backed C# semantic proposal adapter that feeds the existing Source Edit transaction core rather than writing the live workspace directly.
+
+Required design goals:
+- Load project/solution/workspace deterministically and report explicit diagnostics when MSBuild/project loading is incomplete.
+- Resolve symbols by stable semantic identity; detect and reject ambiguous/no-symbol cases.
+- First capability should be a genuinely semantic operation such as solution-aware symbol rename, not a duplicate text/structural replacement feature.
+- Generate changed-document proposals in memory, preserve trivia/formatting as far as Roslyn permits, and convert only the actual changed documents into normalized exact Source Edit changes.
+- Re-read/revalidate target files with SHA-256 revisions before commit; stale/concurrent writer => zero mutation.
+- Commit through existing WAL/idempotency/rollback/recovery engine. Roslyn must always enter the transaction core.
+- Stable domain errors, cancellation, bounded resource behavior, deterministic output, structured receipts, and no hidden partial success.
+- Update MCP ServerInstructions, tool Title/Description, `talvora_source_edit_guide`, routing regression and docs so the agent knows exactly when semantic editing is appropriate.
+- Keep the semantic surface narrow enough that it does not compete with PRIMARY `talvora_apply_patch` for normal edits.
+
+### Validation discipline
+
+- Follow the existing rule: test only changed scope first; do not repeatedly rerun unchanged broad suites.
+- Expected targeted gates: Talvora Release 0/0, Source Edit/Semantic targeted regressions, `git diff --check`, then canonical installer build -> canonical deploy -> exact-installed `talvora_system_info` -> raw MCP tools/list/routing/semantic live smoke.
+- Preserve canonical installer behavior including #109 explicit `--silent`.
+- Any new external dependency/provisioning must be current-version researched, provenance-aware and compatible with the existing installer/runtime model.
+
+### Verified starting baseline
+
+- Branch/HEAD: `main` / `747cbfc560c8f7e9d4c3def699ee986d5c164a71`.
+- Exact-installed sourceCommit: `747cbfc560c8f7e9d4c3def699ee986d5c164a71-dirty-b55f88d972ca`.
+- MCP tools/list: 203.
+- Source Edit regression: 27/27 GREEN.
+- Talvora Release build: 0 warning / 0 error.
+- NativeInstaller source regression: GREEN.
+- ast-grep exact-installed: 0.45.3 / MIT; executable SHA-256 `DAFF0F5963FAAB7617045833132A3538C85EEE65F3AFEEDF347F829A7B8D83FB`.
+- Live structural pattern/rewrite + YAML rule/fix + durable replay: GREEN.
+- No commit/push has been requested or performed for this work.
+
+## [SUPERSEDED — 2026-09-20] Source Edit Transaction Engine planning handoff
+
+**Bu bölüm tarihsel planlama handoff'udur. Güncel gerçek için yukarıdaki Source Edit Engine core implemented / live GREEN bölümü esas alınır.**
+
+- Canonical architecture handoff: `C:\Users\tayla\Talvora-MCP\SOURCE-EDIT-ENGINE-ARCHITECTURE.md`.
+- Canonical TODO: `MCP-CONTROL-CENTER-TODO.md` / Faz 14.
+- Canonical audit item: `BUG-AUDIT.md` / #110 OPEN.
+- Application roadmap artık canonical source-edit routing contract'ını içerir.
+- İlk kaba `git apply` wrapper fikri **geçersiz/superseded**. Git unified diff yalnız compatibility backend olarak değerlendirilecek.
+- Araştırma yönü: agent-friendly custom patch DSL + LSP WorkspaceEdit/AHP Changeset ilkelerinden esinlenen ortak transaction core; revision/hash optimistic concurrency; idempotent transactionId/journal; multi-file all-or-nothing; atomic commit/rollback; structured receipts/errors.
+- Structural editing için ast-grep, C# semantic editing için Roslyn, conflict/three-way preview için DiffPlex, polyglot syntax validation için Tree-sitter araştırma adaylarıdır. Yeni oturumda güncel Context7 + resmî kaynaklarla tekrar doğrulanmadan dependency kararı verme.
+- Fuzzy matching yalnız candidate/diagnostic için kullanılacak; fuzzy-only otomatik source mutation yasak.
+- Agent tool selection deneme-yanılmaya bırakılmayacak. `SOURCE-EDIT-ENGINE-ARCHITECTURE.md` içindeki routing contract tool descriptions + server policy + regression tests ile enforce edilecek.
+- Development workspace içindeki legacy `write_text` / `replace_text` / `append_text` / text-like `write_bytes` yolları için `SourceMutationPolicy` planlanacak; canonical edit araçlarına yönlendiren `SOURCE_EDIT_POLICY_VIOLATION` üretilecek.
+- Unrestricted PowerShell/process capability TAM YETKI gereği korunacak; fakat normal source editing fallback'i olarak kullanılmayacak ve tool açıklamalarında bu açıkça belirtilecek.
+- Yeni oturumda önce ayrıntılı implementation plan + exact schemas/data model/journal/atomicity/rollback/workspace classification/test matrix hazırlanıp TODO/HANDOFF'a işlenecek. Ardından soru beklemeden kodlamaya geçilecek.
+- Mevcut dirty working tree korunacak; Playwright MCP -> CLI migration ve #109 değişikliklerini resetleme/ezme.
+- Current repository HEAD: `747cbfc560c8f7e9d4c3def699ee986d5c164a71` (`main`).
+- Current live Talvora sourceCommit: `747cbfc560c8f7e9d4c3def699ee986d5c164a71-dirty-ce803e6e4f95`; service PID 9312.
+- Kullanıcı açıkça istemeden commit/push YOK.
+
+## 2026-09-20 CURRENT — Official Playwright CLI / Playwright MCP removed
+
+**Bu bölüm Playwright ile ilgili aşağıdaki tüm eski MCP kurulum/hardening notlarının yerine geçer.** Eski Playwright MCP bölümleri yalnız tarihsel kayıt olarak okunmalıdır.
+
+- Repository: `C:\Users\tayla\Talvora-MCP`
+- Branch/HEAD baseline: `main` / `747cbfc560c8f7e9d4c3def699ee986d5c164a71`
+- Working tree: Playwright MCP -> CLI migration + deploy-helper #109 düzeltmeleri nedeniyle kasıtlı dirty; kullanıcı açıkça istemeden commit/push yapılmayacak.
+- Canlı Talvora `sourceCommit`: `747cbfc560c8f7e9d4c3def699ee986d5c164a71-dirty-ce803e6e4f95`
+- Canlı version root: `C:\Program Files\Talvora\Versions\747cbfc560c8f7e9d4c3def699ee986d5c164a71-dirty-ce803e6e4f95-20260919225335895`
+- Service PID: **9312**
+- Tray PID: **2264**
+- Canonical deploy task son sonuç: `LastTaskResult=0`; installer process count 0.
+- #109: `scripts\Deploy-Windows-Installer.ps1` bağımsız SYSTEM task action'ında artık explicit `--silent` kullanır. Session 0 görünmez GUI hang'i regression ile engellenmiştir.
+- Official Playwright CLI current-user global kurulum: `playwright-cli 0.1.21`
+- CLI command: `C:\Users\tayla\AppData\Roaming\npm\playwright-cli.cmd`
+- Bağımsız persistent profile: `C:\Users\tayla\AppData\Local\PlaywrightCLI\profile`
+- Playwright CLI **Talvora tarafından kurulmaz/yönetilmez**; roadmap kuralı `Do not add Playwright to Talvora` yeniden sağlandı.
+- Talvora installer, Tray managed-MCP discovery/registry ownership, installer payload, Playwright supervisor/proxy assetleri ve Playwright-specific smoke harness artık Playwright MCP kurmaz/yönetmez.
+- Eski `Talvora Playwright MCP` Scheduled Task: **yok**.
+- Eski `C:\Users\tayla\AppData\Local\Talvora\PlaywrightMCP` root: **yok**.
+- Eski `playwright-business` / `@playwright\mcp` process sayısı: **0**.
+- Port 8931/8932 listener: **0**.
+- Global current-user `@playwright` npm scope: yalnız **cli**; global MCP paketi yok.
+- Control Center managed registry/recovery/ownership seti: yalnız **gitea + talvora**; `playwright` kaydı yok.
+- CLI full representative smoke GREEN: persistent named session, navigate, snapshot/find, run-code, requests/console, tabs, tracing, screenshot, PDF ve close.
+- Eski Talvora Playwright root silindikten sonra bağımsızlık smoke'u tekrar yapıldı: CLI 0.1.21 + migrated profile ile Chrome open -> snapshot -> close **GREEN**.
+- Native installer source regression: **GREEN**; `PlaywrightMcpRemovedFromTalvora=True`.
+- Tray + Talvora.Smoke Release build: **0 warning / 0 error**.
+- Canonical installer build: **GREEN**, artifact SHA256 `693A83454C1771FB91C1FE6BED8ABFADA07DA9B71DBC6F2583AE0847806C43FF`.
+- Canonical exact-installed deploy: **GREEN**; yeni install logunda 82% Tray aşamasından sonra doğrudan 90% cleanup'a geçiliyor, Playwright MCP kurulum aşaması yok.
+- `Deploy-Windows-Installer.ps1` ve kapanış dokümanları runtime payload dışıdır; #109 düzeltmesi source regression + canlı launcher doğrulamasıyla kapatıldı, runtime fingerprint yukarıdaki exact-installed değerdir.
+- GitHub remote işlemleri yalnız Talvora `talvora_git_run` GitHub-aware yolu ile yapılacak; kullanıcı açıkça istemeden commit/push YOK.
+
+## [TARİHSEL — 2026-09-19] Oturum kapanış snapshot — final doğrulanmış durum
+
+Bu bölüm 2026-09-19 tarihli tarihsel snapshot'tır; güncel gerçek için yukarıdaki **2026-09-20 CURRENT** bölümü esas alınacaktır.
 
 - Repository: `C:\Users\tayla\Talvora-MCP`
 - Branch: `main`

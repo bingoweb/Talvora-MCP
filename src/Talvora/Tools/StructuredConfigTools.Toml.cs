@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ModelContextProtocol.Server;
 using Talvora.Shared;
+using Talvora.SourceEditing;
 using Tomlyn;
 using Tomlyn.Model;
 using YamlDotNet.Serialization;
@@ -44,7 +45,7 @@ public static partial class StructuredConfigTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraStructuredConfigMutationResponse)),
-     Description("Set or create a TOML value in any accessible TOML file using RFC 6901 JSON Pointer syntax. valueJson is JSON used as the language-neutral value representation. TOML is normalized when rewritten; comments/formatting are not guaranteed to be preserved.")]
+     Description("Compatibility TOML mutator for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Uses RFC 6901 JSON Pointer; rewrites may normalize TOML formatting/comments.")]
     public static async Task<TalvoraStructuredConfigMutationResponse> TomlSet(
         string path,
         string pointer,
@@ -74,6 +75,7 @@ public static partial class StructuredConfigTools
             originalText,
             updatedText,
             createBackup,
+            "talvora_toml_set/delete",
             cancellationToken);
     }
 
@@ -84,7 +86,7 @@ public static partial class StructuredConfigTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraStructuredConfigMutationResponse)),
-     Description("Delete a TOML value from any accessible TOML file using RFC 6901 JSON Pointer syntax. Missing targets are idempotent. Deleting the root produces an empty TOML table. Rewrites normalize TOML and may not preserve comments/formatting.")]
+     Description("Compatibility TOML delete tool for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Uses RFC 6901 JSON Pointer; rewrites may normalize TOML formatting/comments.")]
     public static async Task<TalvoraStructuredConfigMutationResponse> TomlDelete(
         string path,
         string pointer,
@@ -126,6 +128,7 @@ public static partial class StructuredConfigTools
             originalText,
             updatedText,
             createBackup,
+            "talvora_toml_set/delete",
             cancellationToken);
     }
 

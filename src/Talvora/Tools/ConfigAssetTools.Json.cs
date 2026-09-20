@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ModelContextProtocol.Server;
 using Talvora.Shared;
+using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
 
@@ -57,7 +58,7 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraJsonMutationResponse)),
-     Description("Set or create a JSON value in any accessible JSON file using RFC 6901 JSON Pointer syntax. valueJson must itself be valid JSON. createMissing can create intermediate object/array nodes. No path allow-list is applied.")]
+     Description("Compatibility JSON mutator for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Uses RFC 6901 JSON Pointer; valueJson must be valid JSON and createMissing may create intermediate nodes.")]
     public static async Task<TalvoraJsonMutationResponse> JsonSet(
         string path,
         string pointer,
@@ -68,6 +69,9 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
         CancellationToken cancellationToken = default)
     {
         var fullPath = Path.GetFullPath(path);
+        SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
+            fullPath,
+            "talvora_json_set");
         var originalText = await File.ReadAllTextAsync(fullPath, cancellationToken);
         var root = JsonNode.Parse(originalText);
         var value = JsonNode.Parse(valueJson);
@@ -106,7 +110,7 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraJsonMutationResponse)),
-     Description("Delete a JSON value from any accessible JSON file using RFC 6901 JSON Pointer syntax. An empty pointer replaces the complete document with JSON null. Missing targets are handled idempotently.")]
+     Description("Compatibility JSON delete tool for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Uses RFC 6901 JSON Pointer; missing targets remain idempotent.")]
     public static async Task<TalvoraJsonMutationResponse> JsonDelete(
         string path,
         string pointer,
@@ -115,6 +119,9 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
         CancellationToken cancellationToken = default)
     {
         var fullPath = Path.GetFullPath(path);
+        SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
+            fullPath,
+            "talvora_json_delete");
         var originalText = await File.ReadAllTextAsync(fullPath, cancellationToken);
         var root = JsonNode.Parse(originalText);
         var tokens = ParsePointer(pointer);

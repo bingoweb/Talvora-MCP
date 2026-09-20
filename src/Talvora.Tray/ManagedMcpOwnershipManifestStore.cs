@@ -29,21 +29,145 @@ internal static class ManagedMcpOwnershipManifestStore
 
         foreach (var registration in registrations)
         {
-            var safeId = new string(
-                registration.Id
-                    .Select(ch =>
-                        char.IsLetterOrDigit(ch) ||
-                        ch is '-' or '_'
-                            ? ch
-                            : '_')
-                    .ToArray());
-            if (!File.Exists(Path.Combine(directory, safeId + ".json")))
+            var storageKey =
+                ManagedMcpIdentityKey.Create(
+                    registration.Id);
+            var path =
+                Path.Combine(
+                    directory,
+                    storageKey + ".json");
+            if (!File.Exists(path))
+            {
+                return true;
+            }
+
+            try
+            {
+                var persisted =
+                    JsonSerializer.Deserialize<ManagedMcpRegistration>(
+                        File.ReadAllText(
+                            path,
+                            Utf8NoBom),
+                        ManagedMcpRegistryStore.JsonOptions);
+                if (persisted is null)
+                {
+                    return true;
+                }
+
+                ManagedMcpRegistryStore.ValidateRegistration(
+                    persisted);
+                var expectedJson =
+                    JsonSerializer.Serialize(
+                        registration,
+                        ManagedMcpRegistryStore.JsonOptions);
+                var actualJson =
+                    JsonSerializer.Serialize(
+                        persisted,
+                        ManagedMcpRegistryStore.JsonOptions);
+                if (!string.Equals(
+                        expectedJson,
+                        actualJson,
+                        StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+            catch (Exception ex) when (
+                ex is IOException or
+                    InvalidDataException or
+                    JsonException or
+                    UnauthorizedAccessException)
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    internal static async Task AssertHealthContractAsync(
+        CancellationToken cancellationToken)
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "Talvora-ManagedMcpOwnership-" +
+                Guid.NewGuid().ToString("N"));
+        var registryPath =
+            Path.Combine(
+                root,
+                "managed-mcps.json");
+        var registration =
+            new ManagedMcpRegistration
+            {
+                Id = "health/probe",
+                DisplayName = "Health Probe",
+                Description = "Ownership manifest health contract.",
+                Endpoint = "http://127.0.0.1:65531/mcp",
+                AutoStart = false,
+            };
+
+        try
+        {
+            await PersistAsync(
+                registryPath,
+                [registration],
+                cancellationToken).ConfigureAwait(false);
+            if (NeedsSeed(
+                    registryPath,
+                    [registration]))
+            {
+                throw new InvalidOperationException(
+                    "Fresh ownership manifest was not accepted as healthy.");
+            }
+
+            var path =
+                Path.Combine(
+                    GetDirectory(registryPath),
+                    ManagedMcpIdentityKey.Create(
+                        registration.Id) +
+                    ".json");
+            await File.WriteAllTextAsync(
+                path,
+                "{broken",
+                cancellationToken);
+            if (!NeedsSeed(
+                    registryPath,
+                    [registration]))
+            {
+                throw new InvalidOperationException(
+                    "Corrupt ownership manifest was treated as healthy.");
+            }
+
+            await PersistAsync(
+                registryPath,
+                [registration],
+                cancellationToken).ConfigureAwait(false);
+            if (NeedsSeed(
+                    registryPath,
+                    [registration]))
+            {
+                throw new InvalidOperationException(
+                    "Ownership manifest reseed did not restore health.");
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(
+                        root,
+                        recursive: true);
+                }
+            }
+            catch (Exception ex) when (
+                ex is IOException or
+                    UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     public static async Task<IReadOnlyList<ManagedMcpRegistration>>
@@ -108,23 +232,23 @@ internal static class ManagedMcpOwnershipManifestStore
         var directory = GetDirectory(registryPath);
         Directory.CreateDirectory(directory);
 
+        var expected =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var registration in registrations)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ManagedMcpRegistryStore.ValidateRegistration(
                 registration);
 
-            var safeId = new string(
-                registration.Id
-                    .Select(ch =>
-                        char.IsLetterOrDigit(ch) ||
-                        ch is '-' or '_'
-                            ? ch
-                            : '_')
-                    .ToArray());
+            var storageKey =
+                ManagedMcpIdentityKey.Create(
+                    registration.Id);
             var path = Path.Combine(
                 directory,
-                safeId + ".json");
+                storageKey + ".json");
+
+            expected.Add(Path.GetFullPath(path));
 
             await AtomicFile.WriteAllTextAsync(
                     path,
@@ -135,6 +259,33 @@ internal static class ManagedMcpOwnershipManifestStore
                     createBackup: File.Exists(path),
                     cancellationToken)
                 .ConfigureAwait(false);
+        }
+
+        foreach (var stale in Directory.EnumerateFiles(
+                     directory,
+                     "*.json",
+                     SearchOption.TopDirectoryOnly))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (expected.Contains(Path.GetFullPath(stale)))
+            {
+                continue;
+            }
+
+            try
+            {
+                File.Delete(stale);
+                File.Delete(stale + ".bak");
+            }
+            catch (Exception ex) when (
+                ex is IOException or
+                UnauthorizedAccessException)
+            {
+                TrayLog.Write(
+                    $"Stale managed MCP ownership manifest could not be deleted. Path={stale}",
+                    ex);
+            }
         }
     }
 }

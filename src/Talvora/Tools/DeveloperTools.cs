@@ -63,7 +63,9 @@ public sealed record TalvoraReadBytesResponse(
     long Offset,
     int Count,
     long FileLength,
-    string Base64);
+    string Base64,
+    bool ResponseLimited,
+    long? NextOffset);
 
 public sealed record TalvoraWriteBytesResponse(
     string Path,
@@ -134,6 +136,19 @@ public sealed record TalvoraCommandResolveResponse(
 [McpServerToolType]
 public static partial class DeveloperTools
 {
+    internal const int AbsoluteReadBytesResponseBytes =
+        8 * 1024 * 1024;
+    internal const long AbsoluteHttpResponseBytes =
+        16L * 1024 * 1024;
+    internal const int AbsoluteFileSearchResults = 20_000;
+    internal const int AbsoluteTextSearchMatches = 20_000;
+    internal const int AbsoluteSearchLineCharacters = 32 * 1024;
+    internal const long AbsoluteSearchResponseCharacters =
+        8L * 1024 * 1024;
+    internal const long AbsoluteSearchFileBytes =
+        512L * 1024 * 1024;
+    internal const int AbsoluteSearchErrors = 1_000;
+
     private static readonly StringComparer PathComparer =
         OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 }

@@ -79,6 +79,17 @@ internal static class GiteaTrayClient
                 mcp.Detail);
         }
 
+        var protocol =
+            await ProbeMcpProtocolAsync(
+                cancellationToken);
+        if (!protocol.Success)
+        {
+            return new GiteaStatus(
+                GiteaConnectionState.Degraded,
+                "Gitea MCP health açık, protokol hazır değil",
+                protocol.Detail);
+        }
+
         var tunnel = await ProbeTunnelAsync(cancellationToken);
         if (!tunnel.Success)
         {
@@ -130,8 +141,10 @@ internal static class GiteaTrayClient
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var status = await GetStatusAsync(cancellationToken);
-            if (status.State == GiteaConnectionState.Offline)
+            var stopped =
+                await ProbeStoppedChainAsync(
+                    cancellationToken);
+            if (stopped.Success)
             {
                 return new GiteaStatus(
                     GiteaConnectionState.Offline,
@@ -142,13 +155,18 @@ internal static class GiteaTrayClient
             await Task.Delay(400, cancellationToken);
         }
 
-        var final = await GetStatusAsync(cancellationToken);
-        return final.State == GiteaConnectionState.Offline
+        var final =
+            await ProbeStoppedChainAsync(
+                cancellationToken);
+        return final.Success
             ? new GiteaStatus(
                 GiteaConnectionState.Offline,
                 "Gitea MCP durduruldu",
                 "Gitea MCP zinciri bu Windows oturumu için elle durduruldu.")
-            : final;
+            : new GiteaStatus(
+                GiteaConnectionState.Degraded,
+                "Gitea MCP tam olarak durdurulamadı",
+                final.Detail);
     }
 
     public static async Task<GiteaStatus> RestartAsync(
@@ -214,6 +232,33 @@ internal static class GiteaTrayClient
         }
     }
 
+    private static async Task<(bool Success, string Detail)> ProbeMcpProtocolAsync(
+        CancellationToken cancellationToken)
+    {
+        var registration =
+            new GiteaManagedMcpRecoveryDiscovery()
+                .Discover();
+        if (registration is null)
+        {
+            return (
+                false,
+                "Gitea MCP protokol kaydı bulunamadı.");
+        }
+
+        var result =
+            await ManagedMcpProtocolProbeService
+                .ProbeCachedAsync(
+                    registration,
+                    cancellationToken);
+        return result.Ready
+            ? (
+                true,
+                $"Gitea MCP initialize + tools/list hazır. Araç sayısı: {result.ToolCount}.")
+            : (
+                false,
+                result.Detail);
+    }
+
     private static async Task<(bool Success, string Detail)> ProbeTunnelAsync(
         CancellationToken cancellationToken)
     {
@@ -272,6 +317,52 @@ internal static class GiteaTrayClient
         {
             return (false, "Secure MCP Tunnel erişilemiyor.");
         }
+    }
+
+    private static async Task<(bool Success, string Detail)> ProbeStoppedChainAsync(
+        CancellationToken cancellationToken)
+    {
+        var backend = await ProbeAsync(
+            BackendHealthUrl,
+            "Gitea",
+            cancellationToken);
+        var proxy = await ProbeAsync(
+            ProxyHealthUrl,
+            "Caddy",
+            cancellationToken);
+        var mcp = await ProbeAsync(
+            McpHealthUrl,
+            "Gitea MCP sunucusu",
+            cancellationToken);
+        var tunnel = await ProbeTunnelAsync(
+            cancellationToken);
+
+        var active = new List<string>(4);
+        if (backend.Success)
+        {
+            active.Add("Gitea");
+        }
+        if (proxy.Success)
+        {
+            active.Add("Caddy");
+        }
+        if (mcp.Success)
+        {
+            active.Add("Gitea MCP sunucusu");
+        }
+        if (tunnel.Success)
+        {
+            active.Add("Secure MCP Tunnel");
+        }
+
+        return active.Count == 0
+            ? (
+                true,
+                "Gitea MCP zincirinin tüm health/readiness yüzeyleri kapalı.")
+            : (
+                false,
+                "Durdurma sonrasında hâlâ çalışan bileşenler: " +
+                string.Join(", ", active));
     }
 
     private static async Task RunPrivilegedScriptAsync(
@@ -361,6 +452,18 @@ function Stop-TaskIfRunning {
     if ($null -ne $task -and $task.State -eq 'Running') {
         Stop-ScheduledTask -TaskName $Name -ErrorAction Stop
     }
+
+    $deadline = [DateTime]::UtcNow.AddSeconds(20)
+    do {
+        $task = Get-ScheduledTask -TaskName $Name -ErrorAction SilentlyContinue
+        if ($null -eq $task -or $task.State -ne 'Running') {
+            return
+        }
+
+        Start-Sleep -Milliseconds 200
+    } while ([DateTime]::UtcNow -lt $deadline)
+
+    throw "Scheduled task '$Name' did not leave Running state within 20 seconds."
 }
 
 function Start-TaskIfNeeded {

@@ -1,4 +1,5 @@
 using Talvora;
+using Talvora.SourceEditing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using ModelContextProtocol.AspNetCore;
@@ -14,11 +15,31 @@ builder.Host.UseWindowsService(options => options.ServiceName = "Talvora");
 builder.WebHost.ConfigureKestrel(options => options.ListenLocalhost(7676));
 
 builder.Services
-    .AddMcpServer()
+    .AddMcpServer(options =>
+        options.ServerInstructions =
+            SourceEditRoutingContract.ServerInstructions)
     .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
     .WithToolsFromAssembly();
 
 var app = builder.Build();
+
+try
+{
+    await SourceEditRuntime.Engine.RecoverAllPendingAsync(CancellationToken.None);
+    foreach (var quarantine in SourceEditRuntime.Engine.LastRecoveryQuarantines)
+    {
+        app.Logger.LogError(
+            "Source Edit journal quarantined. TransactionId={TransactionId} WorkspaceRoot={WorkspaceRoot} JournalPath={JournalPath} Reason={Reason}",
+            quarantine.TransactionId ?? "unknown",
+            quarantine.WorkspaceRoot ?? "unknown",
+            quarantine.JournalPath,
+            quarantine.Message);
+    }
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Source Edit recovery encountered unresolved state during startup. Source mutations in affected workspaces will remain blocked until recovery can prove a safe state.");
+}
 
 if (OperatingSystem.IsWindows() &&
     WindowsServiceHelpers.IsWindowsService() &&

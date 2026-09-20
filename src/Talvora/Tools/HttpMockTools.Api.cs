@@ -15,7 +15,7 @@ public static partial class HttpMockTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraHttpMockStartResponse)),
-     Description("Start an in-process HTTP mock/webhook listener on arbitrary HttpListener prefixes. Supports automatic default replies or manual replies, arbitrary response headers/body, bounded or unlimited capture queues, and unrestricted host/port prefixes.")]
+     Description("Start an in-process HTTP mock/webhook listener on arbitrary HttpListener prefixes. Supports automatic default replies or manual replies, arbitrary response headers/body, bounded capture/body/concurrency/pending resources, and unrestricted host/port prefixes. A zero resource limit selects Talvora's high emergency ceiling rather than an unbounded process allocation.")]
     public static TalvoraHttpMockStartResponse Start(
         string[] prefixes,
         bool autoReply = true,
@@ -26,9 +26,11 @@ public static partial class HttpMockTools
         Dictionary<string, string>? defaultHeaders = null,
         string requestBodyMode = "text",
         string requestEncoding = "utf-8",
-        int maxRequestBodyBytes = 2 * 1024 * 1024,
-        int maxQueuedRequests = 1000,
-        int pendingResponseTimeoutSeconds = 30)
+        int maxRequestBodyBytes = DefaultMaxRequestBodyBytes,
+        int maxQueuedRequests = DefaultMaxQueuedRequests,
+        int pendingResponseTimeoutSeconds = DefaultPendingResponseTimeoutSeconds,
+        int maxConcurrentRequests = DefaultMaxConcurrentRequests,
+        int maxPendingRequests = DefaultMaxPendingRequests)
     {
         if (prefixes is null || prefixes.Length == 0)
         {
@@ -42,10 +44,41 @@ public static partial class HttpMockTools
         {
             throw new ArgumentException("Provide either defaultBody or defaultBodyBase64, not both.");
         }
-        if (maxRequestBodyBytes < 0 || maxQueuedRequests < 0 || pendingResponseTimeoutSeconds < 0)
+        if (maxRequestBodyBytes < 0 ||
+            maxRequestBodyBytes > AbsoluteMaxRequestBodyBytes ||
+            maxQueuedRequests < 0 ||
+            maxQueuedRequests > AbsoluteMaxQueuedRequests ||
+            pendingResponseTimeoutSeconds < 0 ||
+            pendingResponseTimeoutSeconds > AbsolutePendingResponseTimeoutSeconds ||
+            maxConcurrentRequests < 0 ||
+            maxConcurrentRequests > AbsoluteMaxConcurrentRequests ||
+            maxPendingRequests < 0 ||
+            maxPendingRequests > AbsoluteMaxPendingRequests)
         {
-            throw new ArgumentOutOfRangeException("Request/queue/timeout limits cannot be negative.");
+            throw new ArgumentOutOfRangeException(
+                "HTTP mock limits must be non-negative and cannot exceed Talvora's process-wide emergency ceilings.");
         }
+
+        var effectiveMaxRequestBodyBytes =
+            maxRequestBodyBytes == 0
+                ? AbsoluteMaxRequestBodyBytes
+                : maxRequestBodyBytes;
+        var effectiveMaxQueuedRequests =
+            maxQueuedRequests == 0
+                ? AbsoluteMaxQueuedRequests
+                : maxQueuedRequests;
+        var effectivePendingResponseTimeoutSeconds =
+            pendingResponseTimeoutSeconds == 0
+                ? AbsolutePendingResponseTimeoutSeconds
+                : pendingResponseTimeoutSeconds;
+        var effectiveMaxConcurrentRequests =
+            maxConcurrentRequests == 0
+                ? AbsoluteMaxConcurrentRequests
+                : maxConcurrentRequests;
+        var effectiveMaxPendingRequests =
+            maxPendingRequests == 0
+                ? AbsoluteMaxPendingRequests
+                : maxPendingRequests;
 
         requestBodyMode = requestBodyMode.Trim().ToLowerInvariant();
         if (requestBodyMode is not ("text" or "base64" or "none"))
@@ -91,13 +124,21 @@ public static partial class HttpMockTools
                     defaultHeaders ?? new Dictionary<string, string>(),
                     StringComparer.OrdinalIgnoreCase),
                 responseBody),
-            MaxQueuedRequests = maxQueuedRequests,
-            MaxRequestBodyBytes = maxRequestBodyBytes,
+            MaxQueuedRequests = effectiveMaxQueuedRequests,
+            MaxRequestBodyBytes = effectiveMaxRequestBodyBytes,
+            MaxConcurrentRequests = effectiveMaxConcurrentRequests,
+            MaxPendingRequests = effectiveMaxPendingRequests,
             RequestBodyMode = requestBodyMode,
             RequestEncoding = encoding,
-            PendingResponseTimeoutSeconds = pendingResponseTimeoutSeconds,
+            PendingResponseTimeoutSeconds = effectivePendingResponseTimeoutSeconds,
             StartedAtUtc = DateTime.UtcNow,
             Cancellation = new CancellationTokenSource(),
+            HandlerSlots = new SemaphoreSlim(
+                effectiveMaxConcurrentRequests,
+                effectiveMaxConcurrentRequests),
+            PendingSlots = new SemaphoreSlim(
+                effectiveMaxPendingRequests,
+                effectiveMaxPendingRequests),
         };
 
         if (!Listeners.TryAdd(listenerId, runtime))
@@ -183,16 +224,12 @@ public static partial class HttpMockTools
             while (runtime.Requests.TryPeek(out var head) &&
                    head.Sequence <= afterSequence)
             {
-                if (runtime.Requests.TryDequeue(out _))
-                {
-                    Interlocked.Decrement(ref runtime.QueuedRequests);
-                }
+                _ = runtime.TryDequeue(out _);
             }
 
             while ((maxRequests == 0 || result.Count < maxRequests) &&
-                   runtime.Requests.TryDequeue(out var request))
+                   runtime.TryDequeue(out var request))
             {
-                Interlocked.Decrement(ref runtime.QueuedRequests);
                 if (request.Sequence > afterSequence)
                 {
                     result.Add(request);
@@ -219,6 +256,7 @@ public static partial class HttpMockTools
             Math.Max(0, Volatile.Read(ref runtime.QueuedRequests)),
             runtime.Pending.Count,
             Math.Max(0, Interlocked.Read(ref runtime.DroppedRequests)),
+            Math.Max(0, Interlocked.Read(ref runtime.RejectedRequests)),
             result);
     }
 

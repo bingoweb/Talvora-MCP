@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 using Talvora.Shared;
+using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
 
@@ -21,7 +22,7 @@ public static partial class DeveloperTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraReplaceTextResponse)),
-     Description("Patch any accessible text file by literal text or .NET regex replacement. Supports first-only or replace-all, expected match counts, case sensitivity, and optional .bak creation. No path allow-list is applied.")]
+     Description("Compatibility literal/regex text replacement for ordinary/non-workspace files. Inside recognized development workspaces, source/text mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Non-workspace compatibility is preserved.")]
     public static async Task<TalvoraReplaceTextResponse> ReplaceText(
         string path,
         string search,
@@ -43,6 +44,9 @@ public static partial class DeveloperTools
         }
 
         var fullPath = Path.GetFullPath(path);
+        SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
+            fullPath,
+            "talvora_replace_text");
         var original = await File.ReadAllTextAsync(fullPath, cancellationToken);
         string updated;
         int matches;

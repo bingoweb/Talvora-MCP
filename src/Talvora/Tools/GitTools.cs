@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using ModelContextProtocol.Server;
+using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
 
@@ -481,11 +482,12 @@ public static class GitTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraGitRunResponse)),
-     Description("Run Git with arbitrary arguments in any accessible repository or working directory. HTTPS pushes to github.com automatically run in the logged-on Windows user session so Git Credential Manager can use that user\'s cached OAuth credential; missing credentials fail fast instead of hanging the LocalSystem MCP. No Git subcommand, ref, remote, path, or option denylist/allowlist is applied.")]
+     Description("Run Git with arbitrary arguments in any accessible repository or working directory. Known working-tree mutation commands in recognized development workspaces route to talvora_apply_patch by default; explicitAdmin=true deliberately preserves the unrestricted Git administration path. Read/status/history/fetch/push workflows remain directly available. HTTPS pushes to github.com automatically run in the logged-on Windows user session so Git Credential Manager can use that user\'s cached OAuth credential.")]
     public static Task<TalvoraGitRunResponse> Run(
         string repositoryPath,
         string[] arguments,
         Dictionary<string, string?>? environment = null,
+        bool explicitAdmin = false,
         int timeoutSeconds = 300,
         CancellationToken cancellationToken = default)
     {
@@ -494,8 +496,16 @@ public static class GitTools
             throw new ArgumentNullException(nameof(arguments));
         }
 
+        var normalizedRepositoryPath =
+            NormalizeRepositoryPath(repositoryPath);
+        SourceMutationPolicy.EnsureGitWorkingTreeMutationAllowed(
+            normalizedRepositoryPath,
+            arguments,
+            "talvora_git_run",
+            explicitAdmin);
+
         return RunGitAsync(
-            NormalizeRepositoryPath(repositoryPath),
+            normalizedRepositoryPath,
             arguments,
             environment,
             timeoutSeconds,

@@ -11,23 +11,37 @@ public sealed record ProcessExecutionResult(
     string Executable,
     string WorkingDirectory,
     IReadOnlyList<string> Arguments,
-    long ElapsedMilliseconds);
+    long ElapsedMilliseconds,
+    bool StandardOutputTruncated = false,
+    bool StandardErrorTruncated = false,
+    bool OutputDrainTimedOut = false,
+    long StandardOutputTotalCharacters = 0,
+    long StandardErrorTotalCharacters = 0);
 
 public static class ProcessRunner
 {
+    public const int DefaultMaximumCapturedCharacters =
+        BoundedTextCapture.DefaultMaximumCharacters;
+    public const int AbsoluteMaximumCapturedCharacters =
+        BoundedTextCapture.AbsoluteMaximumCharacters;
+
     public static async Task<ProcessExecutionResult> RunAsync(
         string executable,
         string? workingDirectory,
         IEnumerable<string>? arguments = null,
         IReadOnlyDictionary<string, string?>? environment = null,
         int timeoutSeconds = 0,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        int maxCapturedCharactersPerStream =
+            DefaultMaximumCapturedCharacters)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
         if (timeoutSeconds < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(timeoutSeconds));
         }
+        ValidateMaximumCapturedCharacters(
+            maxCapturedCharactersPerStream);
 
         var cwd = string.IsNullOrWhiteSpace(workingDirectory)
             ? Environment.CurrentDirectory
@@ -71,8 +85,6 @@ public static class ProcessRunner
             }
 
             var processId = process.Id;
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
-            var stderrTask = process.StandardError.ReadToEndAsync(CancellationToken.None);
 
             using var timeoutCts = new CancellationTokenSource();
             if (timeoutSeconds > 0)
@@ -83,10 +95,21 @@ public static class ProcessRunner
                 cancellationToken,
                 timeoutCts.Token);
 
+            var stdoutTask = BoundedTextCapture.ReadAsync(
+                process.StandardOutput,
+                maxCapturedCharactersPerStream,
+                linkedCts.Token);
+            var stderrTask = BoundedTextCapture.ReadAsync(
+                process.StandardError,
+                maxCapturedCharactersPerStream,
+                linkedCts.Token);
+
             var timedOut = false;
+            var processExitedBeforeDeadline = false;
             try
             {
                 await process.WaitForExitAsync(linkedCts.Token).ConfigureAwait(false);
+                processExitedBeforeDeadline = true;
             }
             catch (OperationCanceledException) when (
                 timeoutSeconds > 0 &&
@@ -111,18 +134,35 @@ public static class ProcessRunner
 
             var stdout = await stdoutTask.ConfigureAwait(false);
             var stderr = await stderrTask.ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var outputDrainTimedOut =
+                processExitedBeforeDeadline &&
+                timeoutSeconds > 0 &&
+                timeoutCts.IsCancellationRequested &&
+                (stdout.Interrupted || stderr.Interrupted);
+            if (outputDrainTimedOut)
+            {
+                timedOut = true;
+            }
+
             stopwatch.Stop();
 
             return new ProcessExecutionResult(
                 process.ExitCode,
-                stdout,
-                stderr,
+                stdout.Text,
+                stderr.Text,
                 timedOut,
                 processId,
                 executable,
                 cwd,
                 requestedArguments,
-                stopwatch.ElapsedMilliseconds);
+                stopwatch.ElapsedMilliseconds,
+                stdout.Truncated,
+                stderr.Truncated,
+                outputDrainTimedOut,
+                stdout.TotalCharacters,
+                stderr.TotalCharacters);
         }
         finally
         {
@@ -136,7 +176,9 @@ public static class ProcessRunner
         IEnumerable<string>? arguments = null,
         IReadOnlyDictionary<string, string?>? environment = null,
         int timeoutSeconds = 0,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        int maxCapturedCharactersPerStream =
+            DefaultMaximumCapturedCharacters)
     {
         var result = await RunAsync(
             executable,
@@ -144,13 +186,15 @@ public static class ProcessRunner
             arguments,
             environment,
             timeoutSeconds,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            maxCapturedCharactersPerStream).ConfigureAwait(false);
 
         if (result.TimedOut || result.ExitCode != 0)
         {
             throw new InvalidOperationException(
                 $"Process failed. Executable={executable}, ExitCode={result.ExitCode}, " +
-                $"TimedOut={result.TimedOut}, stderr={result.StandardError}");
+                $"TimedOut={result.TimedOut}, OutputDrainTimedOut={result.OutputDrainTimedOut}, " +
+                $"StderrTruncated={result.StandardErrorTruncated}, stderr={result.StandardError}");
         }
 
         return result;
@@ -250,6 +294,19 @@ public static class ProcessRunner
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+        }
+    }
+
+    private static void ValidateMaximumCapturedCharacters(
+        int maximumCharacters)
+    {
+        if (maximumCharacters <= 0 ||
+            maximumCharacters > AbsoluteMaximumCapturedCharacters)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumCharacters),
+                maximumCharacters,
+                $"Capture must be between 1 and {AbsoluteMaximumCapturedCharacters} characters per stream.");
         }
     }
 

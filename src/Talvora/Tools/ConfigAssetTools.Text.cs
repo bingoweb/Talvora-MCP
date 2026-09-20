@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ModelContextProtocol.Server;
 using Talvora.Shared;
+using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
 
@@ -23,6 +24,7 @@ public static partial class ConfigAssetTools
         string path,
         int startLine = 1,
         int lineCount = 200,
+        int startCharacter = 0,
         CancellationToken cancellationToken = default)
     {
         if (startLine < 1)
@@ -33,7 +35,17 @@ public static partial class ConfigAssetTools
         {
             throw new ArgumentOutOfRangeException(nameof(lineCount));
         }
+        if (startCharacter < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(startCharacter));
+        }
 
+        var effectiveLineCount =
+            lineCount == 0
+                ? AbsoluteTextResponseLines
+                : Math.Min(
+                    lineCount,
+                    AbsoluteTextResponseLines);
         var fullPath = Path.GetFullPath(path);
         await using var stream = new FileStream(
             fullPath,
@@ -51,11 +63,16 @@ public static partial class ConfigAssetTools
         var currentLine = 0;
         var linesRead = 0;
         var endReached = false;
+        var responseLimited = false;
+        int? nextStartLine = null;
+        int? nextStartCharacter = null;
 
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var line = await reader.ReadLineAsync(cancellationToken);
+            var line =
+                await reader.ReadLineAsync(
+                    cancellationToken);
             if (line is null)
             {
                 endReached = true;
@@ -68,23 +85,87 @@ public static partial class ConfigAssetTools
                 continue;
             }
 
-            if (lineCount > 0 && linesRead >= lineCount)
+            if (linesRead >= effectiveLineCount)
             {
-                endReached = false;
+                responseLimited = true;
+                nextStartLine = currentLine;
+                nextStartCharacter = 0;
                 break;
             }
 
-            if (linesRead > 0)
+            var sourceCharacter =
+                currentLine == startLine
+                    ? startCharacter
+                    : 0;
+            if (sourceCharacter > line.Length)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(startCharacter),
+                    "startCharacter is beyond the requested source line.");
+            }
+
+            var separatorLength =
+                linesRead > 0
+                    ? Environment.NewLine.Length
+                    : 0;
+            var remainingCharacters =
+                AbsoluteTextResponseCharacters -
+                builder.Length;
+            if (remainingCharacters <= separatorLength)
+            {
+                responseLimited = true;
+                nextStartLine = currentLine;
+                nextStartCharacter = sourceCharacter;
+                break;
+            }
+
+            if (separatorLength > 0)
             {
                 builder.AppendLine();
+                remainingCharacters -= separatorLength;
             }
-            builder.Append(line);
+
+            var sourceRemaining =
+                line.Length -
+                sourceCharacter;
+            var charactersToAppend =
+                Math.Min(
+                    sourceRemaining,
+                    remainingCharacters);
+            if (charactersToAppend > 0)
+            {
+                builder.Append(
+                    line,
+                    sourceCharacter,
+                    charactersToAppend);
+            }
             linesRead++;
 
-            if (lineCount > 0 && linesRead >= lineCount)
+            if (charactersToAppend < sourceRemaining)
             {
-                var nextLine = await reader.ReadLineAsync(cancellationToken);
-                endReached = nextLine is null;
+                responseLimited = true;
+                nextStartLine = currentLine;
+                nextStartCharacter =
+                    sourceCharacter +
+                    charactersToAppend;
+                break;
+            }
+
+            if (linesRead >= effectiveLineCount)
+            {
+                var nextLine =
+                    await reader.ReadLineAsync(
+                        cancellationToken);
+                endReached =
+                    nextLine is null;
+                responseLimited =
+                    !endReached;
+                if (responseLimited)
+                {
+                    nextStartLine =
+                        currentLine + 1;
+                    nextStartCharacter = 0;
+                }
                 break;
             }
         }
@@ -92,9 +173,13 @@ public static partial class ConfigAssetTools
         return new TalvoraTextRangeResponse(
             fullPath,
             startLine,
+            startCharacter,
             linesRead,
             endReached,
-            builder.ToString());
+            builder.ToString(),
+            responseLimited,
+            nextStartLine,
+            nextStartCharacter);
     }
 
     [McpServerTool(
@@ -115,49 +200,78 @@ public static partial class ConfigAssetTools
         }
 
         var fullPath = Path.GetFullPath(path);
-
-        if (lineCount == 0)
-        {
-            var all = new List<string>();
-            foreach (var line in File.ReadLines(fullPath))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                all.Add(line);
-            }
-
-            return new TalvoraTextTailResponse(
-                fullPath,
-                all.Count,
-                all.Count == 0 ? 0 : 1,
-                all.Count,
-                string.Join(Environment.NewLine, all));
-        }
-
-        var queue = new Queue<string>(lineCount);
+        var effectiveLineCount =
+            lineCount == 0
+                ? AbsoluteTextResponseLines
+                : Math.Min(
+                    lineCount,
+                    AbsoluteTextResponseLines);
+        var queue =
+            new Queue<string>(
+                effectiveLineCount);
         var totalLines = 0;
+        long queuedLineCharacters = 0;
+        var responseLimited = false;
 
         foreach (var line in File.ReadLines(fullPath))
         {
             cancellationToken.ThrowIfCancellationRequested();
             totalLines++;
 
-            if (queue.Count == lineCount)
+            var retainedLine =
+                line.Length >
+                    AbsoluteTextResponseCharacters
+                    ? line[^AbsoluteTextResponseCharacters..]
+                    : line;
+            if (retainedLine.Length != line.Length)
             {
-                queue.Dequeue();
+                responseLimited = true;
             }
-            queue.Enqueue(line);
+
+            queue.Enqueue(retainedLine);
+            queuedLineCharacters +=
+                retainedLine.Length;
+
+            while (queue.Count >
+                       effectiveLineCount ||
+                   queuedLineCharacters +
+                       Math.Max(
+                           0,
+                           queue.Count - 1) *
+                       Environment.NewLine.Length >
+                       AbsoluteTextResponseCharacters)
+            {
+                var removed =
+                    queue.Dequeue();
+                queuedLineCharacters -=
+                    removed.Length;
+                responseLimited = true;
+            }
         }
 
         var startLine = queue.Count == 0
             ? 0
             : totalLines - queue.Count + 1;
+        if ((lineCount == 0 &&
+             totalLines >
+                 AbsoluteTextResponseLines) ||
+            (lineCount >
+                 AbsoluteTextResponseLines &&
+             totalLines >
+                 AbsoluteTextResponseLines))
+        {
+            responseLimited = true;
+        }
 
         return new TalvoraTextTailResponse(
             fullPath,
             totalLines,
             startLine,
             queue.Count,
-            string.Join(Environment.NewLine, queue));
+            string.Join(
+                Environment.NewLine,
+                queue),
+            responseLimited);
     }
 
     [McpServerTool(
@@ -167,7 +281,7 @@ public static partial class ConfigAssetTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraAppendTextResponse)),
-     Description("Append UTF-8 text to any accessible file, creating parent directories and the file when needed. appendNewLine=true appends the platform newline after the supplied content. No path allow-list is applied.")]
+     Description("Compatibility UTF-8 append for ordinary/non-workspace files. Inside recognized development workspaces, source/text mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Ordinary non-workspace append remains supported.")]
     public static async Task<TalvoraAppendTextResponse> AppendText(
         string path,
         string content,
@@ -175,6 +289,9 @@ public static partial class ConfigAssetTools
         CancellationToken cancellationToken = default)
     {
         var fullPath = Path.GetFullPath(path);
+        SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
+            fullPath,
+            "talvora_append_text");
         var parent = Path.GetDirectoryName(fullPath);
         if (!string.IsNullOrWhiteSpace(parent))
         {

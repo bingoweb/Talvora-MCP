@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ModelContextProtocol.Server;
 using Talvora.Shared;
+using Talvora.SourceEditing;
 using Tomlyn;
 using Tomlyn.Model;
 using YamlDotNet.Serialization;
@@ -54,6 +55,7 @@ private static TalvoraStructuredConfigGetResponse BuildGetResponse(
             string originalText,
             string updatedText,
             bool createBackup,
+            string toolName,
             CancellationToken cancellationToken)
     {
         var changed =
@@ -66,6 +68,9 @@ private static TalvoraStructuredConfigGetResponse BuildGetResponse(
 
         if (changed)
         {
+            SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
+                path,
+                toolName);
             backupPath = await AtomicFile.WriteAllTextAsync(
                 path,
                 updatedText,

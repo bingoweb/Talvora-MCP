@@ -3,6 +3,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.XPath;
 using ModelContextProtocol.Server;
+using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
 
@@ -88,7 +89,7 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraConfigMutationResponse)),
-     Description("Set or append one key in any accessible .env-style file while preserving unrelated lines. replaceAll=true updates every matching definition. exported=null preserves an existing export prefix or defaults to false for new keys.")]
+     Description("Compatibility dotenv mutator for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Preserves unrelated lines and supports replaceAll/export semantics.")]
     public static async Task<TalvoraConfigMutationResponse> DotenvSet(
         string path,
         string key,
@@ -202,6 +203,7 @@ public static partial class ConfigFormatTools
                     lines,
                     document.NewLine),
                 document.Encoding,
+                "talvora_dotenv_set/delete",
                 cancellationToken);
         }
 
@@ -218,7 +220,7 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraConfigMutationResponse)),
-     Description("Delete every matching key definition from any accessible .env-style file while preserving unrelated lines.")]
+     Description("Compatibility dotenv delete tool for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Preserves unrelated lines.")]
     public static async Task<TalvoraConfigMutationResponse> DotenvDelete(
         string path,
         string key,
@@ -269,6 +271,7 @@ public static partial class ConfigFormatTools
                     output,
                     document.NewLine),
                 document.Encoding,
+                "talvora_dotenv_set/delete",
                 cancellationToken);
         }
 

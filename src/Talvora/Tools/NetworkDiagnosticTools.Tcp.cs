@@ -58,6 +58,13 @@ public static partial class NetworkDiagnosticTools
             throw new ArgumentOutOfRangeException(nameof(responseMode), "responseMode must be text or base64.");
         }
 
+        var effectiveMaxResponseBytes =
+            maxResponseBytes == 0
+                ? AbsoluteTcpResponseBytes
+                : Math.Min(
+                    maxResponseBytes,
+                    AbsoluteTcpResponseBytes);
+
         var selectedEncoding = Encoding.GetEncoding(encoding);
         var payload = base64 is not null
             ? Convert.FromBase64String(base64)
@@ -115,13 +122,9 @@ public static partial class NetworkDiagnosticTools
                 break;
             }
 
-            if (maxResponseBytes == 0)
-            {
-                memory.Write(buffer, 0, read);
-                continue;
-            }
-
-            var remaining = maxResponseBytes - memory.Length;
+            var remaining =
+                effectiveMaxResponseBytes -
+                memory.Length;
             if (remaining <= 0)
             {
                 truncated = true;

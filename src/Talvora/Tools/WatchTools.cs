@@ -26,6 +26,8 @@ public sealed record TalvoraWatchInfoResponse(
     DateTime StartedAtUtc,
     int QueuedEvents,
     long DroppedEvents,
+    long OverflowCount,
+    bool ResyncRequired,
     bool Enabled);
 
 public sealed record TalvoraWatchStartResponse(
@@ -47,6 +49,9 @@ public sealed record TalvoraWatchReadResponse(
     int Count,
     int Remaining,
     long DroppedEvents,
+    long OverflowCount,
+    bool ResyncRequired,
+    bool ResyncAcknowledged,
     IReadOnlyList<TalvoraWatchEvent> Events);
 
 public sealed record TalvoraWatchWaitResponse(
@@ -76,6 +81,8 @@ internal sealed class TalvoraWatchRuntime : IDisposable
     public long Sequence;
     public int QueuedEvents;
     public long DroppedEvents;
+    public long OverflowCount;
+    public int ResyncRequired;
 
     public void Enqueue(
         string changeType,
@@ -98,17 +105,28 @@ internal sealed class TalvoraWatchRuntime : IDisposable
         Events.Enqueue(item);
         Interlocked.Increment(ref QueuedEvents);
 
-        if (MaxQueuedEvents <= 0)
-        {
-            return;
-        }
-
         while (Volatile.Read(ref QueuedEvents) > MaxQueuedEvents &&
                Events.TryDequeue(out _))
         {
             Interlocked.Decrement(ref QueuedEvents);
             Interlocked.Increment(ref DroppedEvents);
         }
+    }
+
+    public void RecordWatcherError(
+        string fullPath,
+        Exception? exception)
+    {
+        if (exception is InternalBufferOverflowException)
+        {
+            Interlocked.Increment(ref OverflowCount);
+        }
+        Interlocked.Exchange(ref ResyncRequired, 1);
+        Enqueue(
+            "Error",
+            fullPath,
+            string.Empty,
+            error: WatchTools.FormatException(exception));
     }
 
     public TalvoraWatchInfoResponse ToInfo()
@@ -135,6 +153,8 @@ internal sealed class TalvoraWatchRuntime : IDisposable
             StartedAtUtc,
             Math.Max(0, Volatile.Read(ref QueuedEvents)),
             Math.Max(0, Interlocked.Read(ref DroppedEvents)),
+            Math.Max(0, Interlocked.Read(ref OverflowCount)),
+            Volatile.Read(ref ResyncRequired) != 0,
             enabled);
     }
 
@@ -163,6 +183,9 @@ internal sealed class TalvoraWatchRuntime : IDisposable
 [McpServerToolType]
 public static class WatchTools
 {
+    private const int DefaultMaxQueuedEvents = 10_000;
+    private const int AbsoluteMaxQueuedEvents = 100_000;
+
     private static readonly ConcurrentDictionary<string, TalvoraWatchRuntime> Watches =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -173,16 +196,17 @@ public static class WatchTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraWatchStartResponse)),
-     Description("Start a live FileSystemWatcher for any accessible directory. Supports recursive watching, arbitrary wildcard filters, selectable NotifyFilters, configurable OS buffer size, and bounded or unlimited event queues. No path allowlist is applied.")]
+     Description("Start a live FileSystemWatcher for any accessible directory. Supports recursive watching, arbitrary wildcard filters, selectable NotifyFilters, configurable OS buffer size, and bounded event queues. maxQueuedEvents=0 selects the 100,000-event emergency ceiling. No path allowlist is applied.")]
     public static TalvoraWatchStartResponse Start(
         string path,
         string filter = "*",
         bool includeSubdirectories = true,
         string[]? notifyFilters = null,
         int internalBufferSize = 32768,
-        int maxQueuedEvents = 10000)
+        int maxQueuedEvents = DefaultMaxQueuedEvents)
     {
-        if (maxQueuedEvents < 0)
+        if (maxQueuedEvents < 0 ||
+            maxQueuedEvents > AbsoluteMaxQueuedEvents)
         {
             throw new ArgumentOutOfRangeException(nameof(maxQueuedEvents));
         }
@@ -199,6 +223,10 @@ public static class WatchTools
 
         var effectiveFilter = string.IsNullOrWhiteSpace(filter) ? "*" : filter;
         var parsedNotifyFilters = ParseNotifyFilters(notifyFilters);
+        var effectiveMaxQueuedEvents =
+            maxQueuedEvents == 0
+                ? AbsoluteMaxQueuedEvents
+                : maxQueuedEvents;
 
         var watcher = new FileSystemWatcher(fullPath, effectiveFilter)
         {
@@ -220,7 +248,7 @@ public static class WatchTools
             Filter = effectiveFilter,
             IncludeSubdirectories = includeSubdirectories,
             NotifyFilter = parsedNotifyFilters,
-            MaxQueuedEvents = maxQueuedEvents,
+            MaxQueuedEvents = effectiveMaxQueuedEvents,
             StartedAtUtc = DateTime.UtcNow,
             Watcher = watcher,
         };
@@ -239,11 +267,9 @@ public static class WatchTools
                 e.OldFullPath,
                 e.OldName);
         watcher.Error += (_, e) =>
-            runtime.Enqueue(
-                "Error",
+            runtime.RecordWatcherError(
                 fullPath,
-                string.Empty,
-                error: FormatException(e.GetException()));
+                e.GetException());
 
         if (!Watches.TryAdd(watchId, runtime))
         {
@@ -269,7 +295,7 @@ public static class WatchTools
             includeSubdirectories,
             parsedNotifyFilters.ToString(),
             watcher.InternalBufferSize,
-            maxQueuedEvents,
+            effectiveMaxQueuedEvents,
             runtime.StartedAtUtc);
     }
 
@@ -307,12 +333,13 @@ public static class WatchTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraWatchReadResponse)),
-     Description("Read queued filesystem change events. consume=true removes returned events. maxEvents=0 means all currently queued events. afterSequence filters events by monotonically increasing sequence number.")]
+     Description("Read queued filesystem change events. consume=true removes returned events. maxEvents=0 means all currently queued events inside the watcher queue ceiling. afterSequence filters events by monotonically increasing sequence number. FileSystemWatcher errors set resyncRequired; after a caller completes a directory rescan, acknowledgeResync=true clears that completeness flag.")]
     public static TalvoraWatchReadResponse Read(
         string watchId,
         long afterSequence = 0,
         int maxEvents = 200,
-        bool consume = true)
+        bool consume = true,
+        bool acknowledgeResync = false)
     {
         if (afterSequence < 0 || maxEvents < 0)
         {
@@ -359,11 +386,27 @@ public static class WatchTools
             result = query.ToList();
         }
 
+        var resyncRequired =
+            Volatile.Read(
+                ref runtime.ResyncRequired) != 0;
+        var resyncAcknowledged = false;
+        if (acknowledgeResync &&
+            resyncRequired)
+        {
+            Interlocked.Exchange(
+                ref runtime.ResyncRequired,
+                0);
+            resyncAcknowledged = true;
+        }
+
         return new TalvoraWatchReadResponse(
             watchId,
             result.Count,
             Math.Max(0, Volatile.Read(ref runtime.QueuedEvents)),
             Math.Max(0, Interlocked.Read(ref runtime.DroppedEvents)),
+            Math.Max(0, Interlocked.Read(ref runtime.OverflowCount)),
+            resyncRequired,
+            resyncAcknowledged,
             result);
     }
 
@@ -492,7 +535,7 @@ public static class WatchTools
         return result;
     }
 
-    private static string FormatException(Exception? exception)
+    internal static string FormatException(Exception? exception)
     {
         if (exception is null)
         {

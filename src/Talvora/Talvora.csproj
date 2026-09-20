@@ -12,6 +12,10 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="*" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="*" />
     <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="*" />
+    <PackageReference Include="Microsoft.Build.Locator" Version="*" />
+    <PackageReference Include="Microsoft.Build.Framework" Version="17.*" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="*" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="*" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="*" />
     <PackageReference Include="YamlDotNet" Version="*" />
     <PackageReference Include="Tomlyn" Version="*" />

@@ -74,6 +74,7 @@ $definition.Settings.ExecutionTimeLimit = "PT$($TimeoutSeconds + 120)S"
 
 $action = $definition.Actions.Create(0)
 $action.Path = $installerFullPath
+$action.Arguments = '--silent'
 $action.WorkingDirectory = Split-Path -Parent $installerFullPath
 
 $registered = $folder.RegisterTaskDefinition(

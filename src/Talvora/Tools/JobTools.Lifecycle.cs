@@ -33,8 +33,16 @@ public static partial class JobTools
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        var jobsRoot = GetJobsRoot();
+        await CleanupCompletedJobsAsync(
+            jobsRoot,
+            MaximumCompletedJobs,
+            MaximumCompletedJobBytes,
+            CompletedJobRetention,
+            cancellationToken).ConfigureAwait(false);
+
         var jobId = Guid.NewGuid().ToString("N");
-        var jobDirectory = Path.Combine(GetJobsRoot(), jobId);
+        var jobDirectory = Path.Combine(jobsRoot, jobId);
         Directory.CreateDirectory(jobDirectory);
 
         var stdoutPath = Path.Combine(jobDirectory, "stdout.log");
@@ -43,6 +51,14 @@ public static partial class JobTools
 
         await File.WriteAllBytesAsync(stdoutPath, [], cancellationToken);
         await File.WriteAllBytesAsync(stderrPath, [], cancellationToken);
+        await WriteLogGenerationAsync(
+            stdoutPath,
+            0,
+            cancellationToken).ConfigureAwait(false);
+        await WriteLogGenerationAsync(
+            stderrPath,
+            0,
+            cancellationToken).ConfigureAwait(false);
 
         var cwd = string.IsNullOrWhiteSpace(workingDirectory)
             ? Environment.CurrentDirectory

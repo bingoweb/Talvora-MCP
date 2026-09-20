@@ -77,6 +77,14 @@ internal static class Program
                     CancellationToken.None)
                     .GetAwaiter()
                     .GetResult();
+                ManagedMcpOwnershipManifestStore.AssertHealthContractAsync(
+                    CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                ManagedMcpRegistryCoordinator.AssertPrimaryRefreshContractAsync(
+                    CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
                 TrayLog.Write(
                     $"Self-test succeeded. Alias={config.Alias}; ManagedMcpCount={registry.Mcps.Count}");
                 return 0;
@@ -134,7 +142,7 @@ internal static class Program
                 var managedMcpId =
                     args.Length > 1 && !string.IsNullOrWhiteSpace(args[1])
                         ? args[1]
-                        : "playwright";
+                        : "talvora";
 
                 var registry = ManagedMcpRegistryCoordinator
                     .LoadOrRecoverAsync(CancellationToken.None)

@@ -13,7 +13,6 @@ $WorkRoot = Join-Path $RepoRoot 'artifacts\installer-work'
 $PayloadRoot = Join-Path $WorkRoot 'payload'
 $ServicePayload = Join-Path $PayloadRoot 'Service'
 $TrayPayload = Join-Path $PayloadRoot 'Tray'
-$PlaywrightPayload = Join-Path $PayloadRoot 'Playwright'
 $InstallerProject = Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'
 $PayloadZip = Join-Path $RepoRoot 'src\Talvora.Installer\Payload.zip'
 
@@ -332,6 +331,146 @@ function Get-WorkingTreeFingerprint {
     }
 }
 
+function Assert-RuntimeBuildInputsUnchanged {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Root,
+
+        [AllowNull()]
+        [string] $ExpectedFingerprint,
+
+        [Parameter(Mandatory = $true)]
+        [string] $Stage
+    )
+
+    $currentFingerprint = Get-WorkingTreeFingerprint -Root $Root
+    $expected = if ($null -eq $ExpectedFingerprint) { '' } else { $ExpectedFingerprint }
+    $current = if ($null -eq $currentFingerprint) { '' } else { $currentFingerprint }
+    if (-not [string]::Equals(
+            $expected,
+            $current,
+            [StringComparison]::Ordinal)) {
+        throw "Runtime build inputs changed during canonical installer build at stage '$Stage'. ExpectedFingerprint='$expected' CurrentFingerprint='$current'. Re-run the build from a stable source snapshot."
+    }
+}
+
+function Install-AstGrepPayload {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Rid,
+
+        [Parameter(Mandatory = $true)]
+        [string] $DestinationRoot,
+
+        [Parameter(Mandatory = $true)]
+        [string] $StagingRoot
+    )
+
+    $packageName = switch ($Rid) {
+        'win-x64' { '@ast-grep/cli-win32-x64-msvc' }
+        'win-arm64' { '@ast-grep/cli-win32-arm64-msvc' }
+        'win-x86' { '@ast-grep/cli-win32-ia32-msvc' }
+        default { throw "No official ast-grep Windows package mapping exists for RuntimeIdentifier '$Rid'." }
+    }
+
+    $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+    if ($null -eq $npmCommand) {
+        $npmCommand = Get-Command npm -ErrorAction SilentlyContinue
+    }
+    if ($null -eq $npmCommand) {
+        throw 'npm is required to resolve the current official ast-grep platform package.'
+    }
+    $registry = 'https://registry.npmjs.org/'
+
+    # Resolve all provenance fields from the same registry response.
+    $metadataJson = (& $npmCommand.Source view ($packageName + '@latest') --json "--registry=$registry" | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($metadataJson)) {
+        throw "Unable to resolve ast-grep npm metadata for $packageName."
+    }
+    $metadata = $metadataJson | ConvertFrom-Json
+    if ($null -eq $metadata -or $metadata -is [Array] -or
+        -not [string]::Equals([string]$metadata.name, $packageName, [StringComparison]::Ordinal)) {
+        throw 'Unexpected ast-grep package metadata identity or shape.'
+    }
+    $version = [string]$metadata.version
+    $license = [string]$metadata.license
+    $integrity = [string]$metadata.dist.integrity
+
+    if ([string]::IsNullOrWhiteSpace($version)) {
+        throw 'ast-grep latest version metadata is empty.'
+    }
+    if (-not [string]::Equals($license, 'MIT', [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Unexpected ast-grep license '$license'."
+    }
+    if (-not $integrity.StartsWith('sha512-', [StringComparison]::Ordinal)) {
+        throw 'ast-grep package metadata does not provide SHA-512 SRI integrity.'
+    }
+
+    Remove-Item -LiteralPath $StagingRoot -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path $StagingRoot -Force | Out-Null
+    $stagingPackageJson = Join-Path $StagingRoot 'package.json'
+    [IO.File]::WriteAllText(
+        $stagingPackageJson,
+        '{"name":"talvora-ast-grep-stage","private":true}',
+        [Text.UTF8Encoding]::new($false))
+
+    Push-Location $StagingRoot
+    try {
+        $installOutput = @(& $npmCommand.Source install --ignore-scripts --no-audit --no-fund --save-exact "--registry=$registry" ($packageName + '@' + $version) 2>&1)
+        $installExitCode = $LASTEXITCODE
+        foreach ($line in $installOutput) {
+            Write-Host ([string]$line)
+        }
+        if ($installExitCode -ne 0) {
+            throw "ast-grep platform package install failed: $installExitCode"
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $packageRelative = $packageName -replace '/', [IO.Path]::DirectorySeparatorChar
+    $sourceExecutable = Join-Path $StagingRoot ('node_modules\' + $packageRelative + '\ast-grep.exe')
+    if (-not (Test-Path -LiteralPath $sourceExecutable -PathType Leaf)) {
+        throw "ast-grep platform package did not contain ast-grep.exe: $sourceExecutable"
+    }
+
+    $versionOutput = (& $sourceExecutable --version | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or
+        -not [string]::Equals($versionOutput, ('ast-grep ' + $version), [StringComparison]::Ordinal)) {
+        throw "ast-grep executable version verification failed. Expected='ast-grep $version' Actual='$versionOutput'"
+    }
+
+    Remove-Item -LiteralPath $DestinationRoot -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path $DestinationRoot -Force | Out-Null
+    $destinationExecutable = Join-Path $DestinationRoot 'ast-grep.exe'
+    Copy-Item -LiteralPath $sourceExecutable -Destination $destinationExecutable -Force
+    $executableSha256 = (Get-FileHash -LiteralPath $destinationExecutable -Algorithm SHA256).Hash
+
+    $provenance = [ordered]@{
+        packageName = $packageName
+        version = $version
+        license = $license
+        integrity = $integrity
+        executableSha256 = $executableSha256
+        registry = $registry
+        resolvedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
+    }
+    $provenancePath = Join-Path $DestinationRoot 'provenance.json'
+    [IO.File]::WriteAllText(
+        $provenancePath,
+        ($provenance | ConvertTo-Json -Depth 4),
+        [Text.UTF8Encoding]::new($false))
+
+    return [pscustomobject]@{
+        packageName = $packageName
+        version = $version
+        license = $license
+        integrity = $integrity
+        executableSha256 = $executableSha256
+    }
+}
+
 $BuildMutexName = 'Global\Talvora.BuildWindowsInstaller.v2'
 $BuildMutex = [Threading.Mutex]::new($false, $BuildMutexName)
 $BuildMutexOwned = $false
@@ -361,7 +500,6 @@ Remove-Item $PayloadZip -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $ArtifactsRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $ServicePayload -Force | Out-Null
 New-Item -ItemType Directory -Path $TrayPayload -Force | Out-Null
-New-Item -ItemType Directory -Path $PlaywrightPayload -Force | Out-Null
 $SourceCommit = (& git -C $RepoRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($SourceCommit)) {
     throw 'Unable to resolve local Talvora source commit.'
@@ -371,11 +509,9 @@ $SourceStatus = @(& git -C $RepoRoot status --porcelain=v1 --untracked-files=all
 if ($LASTEXITCODE -ne 0) {
     throw 'Unable to resolve local Talvora working-tree state.'
 }
-if ($SourceStatus.Count -gt 0) {
-    $WorkingTreeFingerprint = Get-WorkingTreeFingerprint -Root $RepoRoot
-    if (-not [string]::IsNullOrWhiteSpace($WorkingTreeFingerprint)) {
-        $SourceCommit += '-dirty-' + $WorkingTreeFingerprint.Substring(0, 12)
-    }
+$WorkingTreeFingerprint = Get-WorkingTreeFingerprint -Root $RepoRoot
+if (-not [string]::IsNullOrWhiteSpace($WorkingTreeFingerprint)) {
+    $SourceCommit += '-dirty-' + $WorkingTreeFingerprint.Substring(0, 12)
 }
 
 Write-Host 'Publishing Talvora service...' -ForegroundColor Cyan
@@ -391,6 +527,7 @@ $serviceArgs = @(
 if ($LASTEXITCODE -ne 0) {
     throw "Talvora service publish failed: $LASTEXITCODE"
 }
+Assert-RuntimeBuildInputsUnchanged -Root $RepoRoot -ExpectedFingerprint $WorkingTreeFingerprint -Stage 'service-publish'
 
 
 Write-Host 'Publishing Talvora tray...' -ForegroundColor Cyan
@@ -406,28 +543,28 @@ $trayArgs = @(
 if ($LASTEXITCODE -ne 0) {
     throw "Talvora tray publish failed: $LASTEXITCODE"
 }
+Assert-RuntimeBuildInputsUnchanged -Root $RepoRoot -ExpectedFingerprint $WorkingTreeFingerprint -Stage 'tray-publish'
 
 
 Remove-Item (Join-Path $ServicePayload '*.pdb') -Force -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $TrayPayload '*.pdb') -Force -ErrorAction SilentlyContinue
 
+Write-Host 'Resolving and vendoring ast-grep structural toolchain...' -ForegroundColor Cyan
+$AstGrepPayloadRoot = Join-Path $ServicePayload 'tools\ast-grep'
+$AstGrepStagingRoot = Join-Path $WorkRoot 'ast-grep-package'
+$AstGrepProvenance = Install-AstGrepPayload -Rid $RuntimeIdentifier -DestinationRoot $AstGrepPayloadRoot -StagingRoot $AstGrepStagingRoot
+Assert-RuntimeBuildInputsUnchanged -Root $RepoRoot -ExpectedFingerprint $WorkingTreeFingerprint -Stage 'external-toolchain-vendor'
 
-$PlaywrightAssets = Join-Path $RepoRoot 'assets\playwright'
-Copy-Item -LiteralPath (Join-Path $PlaywrightAssets 'Start-PlaywrightMcp.ps1') -Destination $PlaywrightPayload -Force
-Copy-Item -LiteralPath (Join-Path $PlaywrightAssets 'supervisor.mjs') -Destination $PlaywrightPayload -Force
-
-$PlaywrightPayloadManifest = @(
-    Get-PayloadFileManifest -Root $PlaywrightPayload -ArchivePrefix 'Playwright'
-)
-Assert-RequiredPayloadFiles -Files $PlaywrightPayloadManifest -RequiredArchivePaths @(
-    'Playwright/Start-PlaywrightMcp.ps1',
-    'Playwright/supervisor.mjs'
-)
 
 $ServicePayloadManifest = @(
     Get-PayloadFileManifest -Root $ServicePayload -ArchivePrefix 'Service'
 )
-Assert-RequiredPayloadFiles -Files $ServicePayloadManifest -RequiredArchivePaths @('Service/Talvora.exe', 'Service/Talvora.dll')
+Assert-RequiredPayloadFiles -Files $ServicePayloadManifest -RequiredArchivePaths @(
+    'Service/Talvora.exe',
+    'Service/Talvora.dll',
+    'Service/tools/ast-grep/ast-grep.exe',
+    'Service/tools/ast-grep/provenance.json'
+)
 
 $TrayPayloadManifest = @(
     Get-PayloadFileManifest -Root $TrayPayload -ArchivePrefix 'Tray'
@@ -490,6 +627,16 @@ if ([string]::IsNullOrWhiteSpace($dotnetSdkVersion)) {
 $dependencyProvenance = [ordered]@{
     generatedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
     dotnetSdkVersion = $dotnetSdkVersion
+    externalToolchains = @(
+        [ordered]@{
+            name = 'ast-grep'
+            packageName = $AstGrepProvenance.packageName
+            version = $AstGrepProvenance.version
+            license = $AstGrepProvenance.license
+            integrity = $AstGrepProvenance.integrity
+            executableSha256 = $AstGrepProvenance.executableSha256
+        }
+    )
     projects = @(
         [ordered]@{
             name = 'Talvora'
@@ -530,7 +677,6 @@ $SourceCommitManifest = [pscustomobject]@{
 $PayloadManifest = @(
     $ServicePayloadManifest
     $TrayPayloadManifest
-    $PlaywrightPayloadManifest
     $ResolvedDependenciesManifest
     $SourceCommitManifest
 )
@@ -552,6 +698,7 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "Talvora installer publish failed: $LASTEXITCODE"
     }
+    Assert-RuntimeBuildInputsUnchanged -Root $RepoRoot -ExpectedFingerprint $WorkingTreeFingerprint -Stage 'installer-publish'
 }
 finally {
     Remove-Item $PayloadZip -Force -ErrorAction SilentlyContinue

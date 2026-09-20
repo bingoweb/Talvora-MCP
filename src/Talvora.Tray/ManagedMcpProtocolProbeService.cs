@@ -206,14 +206,14 @@ internal static class ManagedMcpProtocolProbeService
             if (string.IsNullOrWhiteSpace(capturedGeneration))
             {
                 throw new InvalidOperationException(
-                    "Playwright runtime generation bilgisi bulunamadı.");
+                    "Browser MCP runtime generation bilgisi bulunamadı.");
             }
 
             InvalidateBrowserSmoke(probe);
 
             var smokeUrl = string.IsNullOrWhiteSpace(
                     probe.BrowserSmokeUrl)
-                ? "data:text/html,<h1>Talvora Playwright Health</h1>"
+                ? "data:text/html,<h1>Talvora Browser Health</h1>"
                 : probe.BrowserSmokeUrl;
 
             var jsUrl = JsonSerializer.Serialize(smokeUrl);
@@ -238,7 +238,7 @@ internal static class ManagedMcpProtocolProbeService
             if (smokeResult.IsError is true)
             {
                 throw new InvalidOperationException(
-                    "Playwright izole browser smoke sayfasını çalıştıramadı.");
+                    "Browser MCP izole smoke sayfasını çalıştıramadı.");
             }
 
             var smokeText = string.Join(
@@ -254,7 +254,7 @@ internal static class ManagedMcpProtocolProbeService
                     StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
-                    $"Playwright browser smoke beklenen ARIA içeriğini içermiyor: {expectedText}");
+                    $"Browser smoke beklenen ARIA içeriğini içermiyor: {expectedText}");
             }
 
             var currentGeneration =
@@ -265,7 +265,7 @@ internal static class ManagedMcpProtocolProbeService
                     StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    "Playwright runtime generation smoke sırasında değişti; sonuç geçersiz sayıldı.");
+                    "Browser MCP runtime generation smoke sırasında değişti; sonuç geçersiz sayıldı.");
             }
 
             var currentBrowserIdentity =
@@ -279,7 +279,7 @@ internal static class ManagedMcpProtocolProbeService
                 !WindowsProcessTree.IsSameLiveProcess(browserIdentity))
             {
                 throw new InvalidOperationException(
-                    "Playwright browser instance smoke sırasında değişti; sonuç geçersiz sayıldı.");
+                    "Browser instance smoke sırasında değişti; sonuç geçersiz sayıldı.");
             }
 
             await RecordBrowserSmokeAsync(
@@ -568,14 +568,14 @@ internal static class ManagedMcpProtocolProbeService
                 StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
-                "Playwright runtime generation smoke sonucu yazılmadan önce değişti.");
+                "Browser MCP runtime generation smoke sonucu yazılmadan önce değişti.");
         }
 
         if (!WindowsProcessTree.IsSameLiveProcess(
                 browserIdentity))
         {
             throw new InvalidOperationException(
-                "Playwright browser instance smoke sonucu yazılmadan önce kapandı.");
+                "Browser instance smoke sonucu yazılmadan önce kapandı.");
         }
 
         if (string.IsNullOrWhiteSpace(

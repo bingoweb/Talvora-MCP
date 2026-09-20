@@ -13,7 +13,8 @@ public static class InteractiveUserProcessRunner
         IReadOnlyDictionary<string, string?> Environment,
         string StandardOutputPath,
         string StandardErrorPath,
-        string ResultPath);
+        string ResultPath,
+        string HelperAssemblyPath);
 
     private sealed record Result(
         int ExitCode,
@@ -26,10 +27,19 @@ public static class InteractiveUserProcessRunner
         IEnumerable<string>? arguments = null,
         IReadOnlyDictionary<string, string?>? environment = null,
         int timeoutSeconds = 0,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        int maxCapturedCharactersPerStream =
+            ProcessRunner.DefaultMaximumCapturedCharacters)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
         ArgumentException.ThrowIfNullOrWhiteSpace(workingDirectory);
+        if (maxCapturedCharactersPerStream <= 0 ||
+            maxCapturedCharactersPerStream >
+            ProcessRunner.AbsoluteMaximumCapturedCharacters)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maxCapturedCharactersPerStream));
+        }
 
         var context = WindowsSessionLauncher.GetDefaultInteractiveUser();
         var localAppData = context.Environment.TryGetValue(
@@ -67,7 +77,10 @@ public static class InteractiveUserProcessRunner
                 : new Dictionary<string, string?>(environment),
             stdoutPath,
             stderrPath,
-            resultPath);
+            resultPath,
+            typeof(InteractiveUserProcessRunner)
+                .Assembly
+                .Location);
 
         try
         {
@@ -139,14 +152,18 @@ public static class InteractiveUserProcessRunner
                 throw;
             }
 
-            var stdout = File.Exists(stdoutPath)
-                ? await File.ReadAllTextAsync(stdoutPath, cancellationToken)
-                    .ConfigureAwait(false)
-                : string.Empty;
-            var stderr = File.Exists(stderrPath)
-                ? await File.ReadAllTextAsync(stderrPath, cancellationToken)
-                    .ConfigureAwait(false)
-                : string.Empty;
+            var stdoutCapture =
+                await BoundedTextCapture.ReadFileAsync(
+                    stdoutPath,
+                    maxCapturedCharactersPerStream,
+                    cancellationToken).ConfigureAwait(false);
+            var stderrCapture =
+                await BoundedTextCapture.ReadFileAsync(
+                    stderrPath,
+                    maxCapturedCharactersPerStream,
+                    cancellationToken).ConfigureAwait(false);
+            var stdout = stdoutCapture.Text;
+            var stderr = stderrCapture.Text;
 
             Result? result = null;
             if (File.Exists(resultPath))
@@ -168,7 +185,12 @@ public static class InteractiveUserProcessRunner
                     executable,
                     Path.GetFullPath(workingDirectory),
                     requestedArguments,
-                    timeoutSeconds * 1000L);
+                    timeoutSeconds * 1000L,
+                    stdoutCapture.Truncated,
+                    stderrCapture.Truncated,
+                    false,
+                    stdoutCapture.TotalCharacters,
+                    stderrCapture.TotalCharacters);
             }
 
             if (result is null)
@@ -193,7 +215,12 @@ public static class InteractiveUserProcessRunner
                 executable,
                 Path.GetFullPath(workingDirectory),
                 requestedArguments,
-                result.ElapsedMilliseconds);
+                result.ElapsedMilliseconds,
+                stdoutCapture.Truncated,
+                stderrCapture.Truncated,
+                false,
+                stdoutCapture.TotalCharacters,
+                stderrCapture.TotalCharacters);
         }
         finally
         {
@@ -251,6 +278,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $sw = [Diagnostics.Stopwatch]::StartNew()
 $request = Get-Content -Raw -LiteralPath $RequestPath | ConvertFrom-Json
+[void][Reflection.Assembly]::LoadFrom(
+    [string]$request.HelperAssemblyPath)
 
 try {
     $psi = [Diagnostics.ProcessStartInfo]::new()
@@ -279,21 +308,15 @@ try {
         throw "Failed to start interactive child process."
     }
 
-    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
-    $stderrTask = $process.StandardError.ReadToEndAsync()
+    $stdoutTask = [Talvora.Shared.ProcessOutputPump]::PumpToUtf8FileAsync(
+        $process.StandardOutput,
+        [string]$request.StandardOutputPath)
+    $stderrTask = [Talvora.Shared.ProcessOutputPump]::PumpToUtf8FileAsync(
+        $process.StandardError,
+        [string]$request.StandardErrorPath)
     $process.WaitForExit()
-
-    $stdout = $stdoutTask.GetAwaiter().GetResult()
-    $stderr = $stderrTask.GetAwaiter().GetResult()
-
-    [IO.File]::WriteAllText(
-        [string]$request.StandardOutputPath,
-        $stdout,
-        [Text.UTF8Encoding]::new($false))
-    [IO.File]::WriteAllText(
-        [string]$request.StandardErrorPath,
-        $stderr,
-        [Text.UTF8Encoding]::new($false))
+    $stdoutTask.GetAwaiter().GetResult()
+    $stderrTask.GetAwaiter().GetResult()
 
     $sw.Stop()
     @{

@@ -4,6 +4,7 @@ using System.Xml;
 using System.Xml.XPath;
 using ModelContextProtocol.Server;
 using Talvora.Shared;
+using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
 
@@ -170,8 +171,12 @@ private sealed record TextDocument(
             string path,
             string text,
             Encoding encoding,
+            string toolName,
             CancellationToken cancellationToken)
     {
+        SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
+            path,
+            toolName);
         _ = await AtomicFile.WriteAllTextAsync(
             path,
             text,

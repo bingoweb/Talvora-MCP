@@ -6,6 +6,12 @@ public static class TalvoraToolManifest
     [
         "talvora_system_info",
         "talvora_read_text",
+        "talvora_read_source",
+        "talvora_apply_patch",
+        "talvora_apply_edits",
+        "talvora_source_edit_guide",
+        "talvora_structural_edit",
+        "talvora_semantic_edit",
         "talvora_write_text",
         "talvora_delete",
         "talvora_list",

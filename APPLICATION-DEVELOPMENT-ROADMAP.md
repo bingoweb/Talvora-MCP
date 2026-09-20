@@ -19,13 +19,31 @@ Turn Talvora into a first-class Windows-native software/application development 
 - Reuse Talvora.Shared ProcessRunner and CommandResolver rather than creating new process-launch copies.
 - Do not add Playwright to Talvora.
 - Do not add aliases merely to increase tool count.
-- Add focused typed tools where they materially improve discovery/automation, while retaining an unrestricted *-run escape hatch.
+- Add focused typed tools where they materially improve discovery/automation, while retaining an unrestricted explicit-admin *-run path.
 - Use Context7 plus official vendor documentation before implementing or changing third-party CLI behavior.
 - Install missing required software immediately with Chocolatey, using the newest supported stable release; use the current LTS only where the vendor's non-LTS line is near end-of-support or unsuitable as a machine default.
 - Do not retain deprecated CLIs, legacy SDK layouts, old runtime fallbacks, or compatibility aliases once an official modern replacement exists.
 - Project-local wrappers are toolchain pinning, not legacy compatibility. New or upgraded projects should use current stable wrapper/toolchain versions.
 - Validate only the changed capability. Do not rerun broad smoke/regression suites unless shared infrastructure changes.
 - No Git commit/push until explicitly requested.
+
+## Canonical source-edit routing contract (Faz 14 — CORE + STRUCTURAL + SEMANTIC IMPLEMENTED)
+
+Detailed architecture contract: `SOURCE-EDIT-ENGINE-ARCHITECTURE.md`.
+
+- Inside recognized development workspaces, normal text/source/doc/config mutation will use the canonical Source Edit Engine rather than legacy whole-file/regex/shell write paths.
+- PRIMARY/default for ordinary agent-authored code/doc/config changes -> `talvora_apply_patch`, whether one file or many; add/update/delete/move and unified-diff compatibility all stay on this tool.
+- `talvora_apply_edits` is a specialist only when exact zero-based UTF-16 ranges/revisions are already known or generated programmatically. Multi-file scope alone is not a reason to select it.
+- Existing source files are read with `talvora_read_source` before mutation for the SHA-256 revision handshake.
+- If tool choice is unclear, call read-only `talvora_source_edit_guide`; never discover the editor by mutation-tool trial-and-error.
+- Repetitive syntax-shaped transformations -> `talvora_structural_edit` (ast-grep proposal-only isolated mirror -> exact Source Edit transaction). Supports pattern/kind + rewrite and YAML rule/fix.
+- C# operations that genuinely require solution/project semantic identity -> `talvora_semantic_edit`. Current capability is symbol-aware rename. Ordinary C# edits still use PRIMARY/default `talvora_apply_patch`; semantic or multi-file scope alone never demotes the primary editor.
+- Roslyn loads the requested solution/project in memory, resolves semantic identity, produces a changed `Solution`, then converts only actual changed documents into exact revisioned UTF-16 Source Edit changes. It never calls `Workspace.TryApplyChanges` and never writes live source directly.
+- Git unified diff remains a compatibility input/backend; it is not the canonical agent patch architecture.
+- Fuzzy matching may suggest candidates but must never silently authorize a mutation.
+- Legacy direct text/config mutation plus development-workspace source-file delete and same-workspace source-file move are guarded server-side with `SOURCE_EDIT_POLICY_VIOLATION`; directory/generated/binary/non-workspace and cross-workspace filesystem capability remains available, and general shell/process capability remains unrestricted.
+- MCP server instructions + tool titles/descriptions + read-only routing guide + server policy + regressions encode one centralized Routing Contract v3 decision.
+- Faz 14 core + ast-grep structural adapter + Roslyn semantic adapter are exact-installed live verified at 204/204 unique MCP tools. Canonical deploy/live evidence snapshot is `sourceCommit=747cbfc560c8f7e9d4c3def699ee986d5c164a71-dirty-8726cde50619`; latest two-project semantic rename preserves UTF-16 LE BOM/CRLF/deliberate spacing and same-transaction `replayed=true` is GREEN. Living-doc closeout follows this deploy snapshot without a self-referential docs-only rebuild loop.
 
 ## Phase 1 — JVM build stack (FIRST)
 

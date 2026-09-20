@@ -3,6 +3,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.XPath;
 using ModelContextProtocol.Server;
+using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
 
@@ -100,7 +101,7 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraConfigMutationResponse)),
-     Description("Set the value of every XML node selected by an arbitrary XPath expression. Works with elements, attributes, and text nodes. expectedMatches=-1 disables match-count assertion.")]
+     Description("Compatibility XML mutator for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Supports arbitrary XPath plus expectedMatches.")]
     public static TalvoraConfigMutationResponse XmlSet(
         string path,
         string xpath,
@@ -162,7 +163,8 @@ public static partial class ConfigFormatTools
         {
             SaveXmlDocument(
                 document,
-                fullPath);
+                fullPath,
+                "talvora_xml_set/delete");
         }
 
         return new TalvoraConfigMutationResponse(
@@ -178,7 +180,7 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraConfigMutationResponse)),
-     Description("Delete every XML node selected by an arbitrary XPath expression. expectedMatches=-1 disables match-count assertion.")]
+     Description("Compatibility XML delete tool for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Supports arbitrary XPath plus expectedMatches.")]
     public static TalvoraConfigMutationResponse XmlDelete(
         string path,
         string xpath,
@@ -232,7 +234,8 @@ public static partial class ConfigFormatTools
         {
             SaveXmlDocument(
                 document,
-                fullPath);
+                fullPath,
+                "talvora_xml_set/delete");
         }
 
         return new TalvoraConfigMutationResponse(
@@ -267,8 +270,12 @@ public static partial class ConfigFormatTools
 
     private static void SaveXmlDocument(
         XmlDocument document,
-        string path)
+        string path,
+        string toolName)
     {
+        SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
+            path,
+            toolName);
         using var writer = XmlWriter.Create(
             path,
             new XmlWriterSettings

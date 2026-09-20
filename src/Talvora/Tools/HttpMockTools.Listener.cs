@@ -48,7 +48,54 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
                 break;
             }
 
-            _ = HandleContextAsync(runtime, context);
+            var handlerSlotHeld = false;
+            var globalSlotHeld = false;
+            try
+            {
+                await runtime.HandlerSlots.WaitAsync(
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                handlerSlotHeld = true;
+                await GlobalHandlerSlots.WaitAsync(
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                globalSlotHeld = true;
+            }
+            catch (OperationCanceledException)
+            {
+                if (globalSlotHeld)
+                {
+                    GlobalHandlerSlots.Release();
+                }
+                if (handlerSlotHeld)
+                {
+                    runtime.HandlerSlots.Release();
+                }
+                RejectContext(context, 503);
+                break;
+            }
+
+            _ = HandleContextWithSlotsAsync(
+                runtime,
+                context);
+        }
+    }
+
+    private static async Task HandleContextWithSlotsAsync(
+        TalvoraHttpMockRuntime runtime,
+        HttpListenerContext context)
+    {
+        try
+        {
+            await HandleContextAsync(
+                    runtime,
+                    context)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            GlobalHandlerSlots.Release();
+            runtime.HandlerSlots.Release();
         }
     }
 
@@ -57,9 +104,26 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
         HttpListenerContext context)
     {
         var requestId = Guid.NewGuid().ToString("N");
+        var pendingSlotHeld = false;
 
         try
         {
+            if (!runtime.AutoReply)
+            {
+                pendingSlotHeld =
+                    await runtime.PendingSlots.WaitAsync(
+                            0,
+                            runtime.Cancellation.Token)
+                        .ConfigureAwait(false);
+                if (!pendingSlotHeld)
+                {
+                    Interlocked.Increment(
+                        ref runtime.RejectedRequests);
+                    RejectContext(context, 503);
+                    return;
+                }
+            }
+
             var capture = await CaptureRequestAsync(runtime, requestId, context);
 
             if (runtime.AutoReply)
@@ -89,8 +153,9 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
 
             if (!runtime.Pending.TryAdd(requestId, pendingRequest))
             {
-                context.Response.StatusCode = 500;
-                context.Response.Close();
+                Interlocked.Increment(
+                    ref runtime.RejectedRequests);
+                RejectContext(context, 503);
                 return;
             }
 
@@ -149,6 +214,13 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
             {
             }
         }
+        finally
+        {
+            if (pendingSlotHeld)
+            {
+                runtime.PendingSlots.Release();
+            }
+        }
     }
 
     private static async Task<TalvoraHttpMockRequest> CaptureRequestAsync(
@@ -202,13 +274,8 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
                     break;
                 }
 
-                bodyBytes += read;
-
-                if (runtime.MaxRequestBodyBytes == 0)
-                {
-                    memory.Write(buffer, 0, read);
-                    continue;
-                }
+                bodyBytes =
+                    checked(bodyBytes + read);
 
                 var remaining = runtime.MaxRequestBodyBytes - memory.Length;
                 if (remaining <= 0)
@@ -254,5 +321,23 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
             bodyBytes,
             truncated,
             PendingResponse: false);
+    }
+
+    private static void RejectContext(
+        HttpListenerContext context,
+        int statusCode)
+    {
+        try
+        {
+            context.Response.StatusCode = statusCode;
+            context.Response.ContentLength64 = 0;
+            context.Response.Close();
+        }
+        catch (Exception ex) when (
+            ex is ObjectDisposedException or
+                InvalidOperationException or
+                HttpListenerException)
+        {
+        }
     }
 }

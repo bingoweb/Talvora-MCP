@@ -149,13 +149,7 @@ public static async Task<HealthSnapshot> InstallAsync(
                     "Tray could not be started immediately. " +
                     "The startup registration is intact, so the core Talvora service remains installed.");
             }
-            progress.Report(new InstallProgress(90, "Playwright MCP altyapısı doğrulanıyor..."));
-            await InstallPlaywrightManagedMcpAsync(
-                Path.Combine(tempRoot, "Playwright"),
-                installUser,
-                cancellationToken);
-
-            progress.Report(new InstallProgress(97, "Eski sürüm dosyaları temizleniyor..."));
+            progress.Report(new InstallProgress(90, "Eski sürüm dosyaları temizleniyor..."));
             try
             {
                 await CleanupObsoleteInstallationsAsync(

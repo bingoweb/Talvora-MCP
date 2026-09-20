@@ -39,6 +39,25 @@ public static class ManagedMcpRegistryStore
             GetBackupPath(path),
             cancellationToken).ConfigureAwait(false);
 
+    public static async Task EnsureRecoveryManifestsAsync(
+        string path,
+        IReadOnlyCollection<ManagedMcpRegistration> registrations,
+        CancellationToken cancellationToken = default)
+    {
+        await Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await WriteRecoveryManifestsAsync(
+                path,
+                registrations,
+                cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            Gate.Release();
+        }
+    }
+
     public static async Task<IReadOnlyList<ManagedMcpRegistration>>
         TryReadRecoveryManifestsAsync(
             string path,
@@ -290,6 +309,50 @@ public static class ManagedMcpRegistryStore
                 throw new InvalidOperationException(
                     "Managed MCP per-entry recovery manifest contract failed.");
             }
+
+            var collisionOne = first with
+            {
+                Id = "foo/bar",
+                DisplayName = "Collision One",
+            };
+            var collisionTwo = first with
+            {
+                Id = "foo?bar",
+                DisplayName = "Collision Two",
+            };
+            await WriteAsync(
+                path,
+                new ManagedMcpRegistryDocument
+                {
+                    Mcps = [collisionOne, collisionTwo],
+                },
+                createBackup: false,
+                cancellationToken).ConfigureAwait(false);
+            File.Delete(path);
+            if (File.Exists(GetBackupPath(path)))
+            {
+                File.Delete(GetBackupPath(path));
+            }
+
+            var collisionRecovered =
+                await TryReadRecoveryManifestsAsync(
+                    path,
+                    cancellationToken).ConfigureAwait(false);
+            if (collisionRecovered.Count != 2 ||
+                !collisionRecovered.Any(entry =>
+                    string.Equals(
+                        entry.Id,
+                        collisionOne.Id,
+                        StringComparison.Ordinal)) ||
+                !collisionRecovered.Any(entry =>
+                    string.Equals(
+                        entry.Id,
+                        collisionTwo.Id,
+                        StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException(
+                    "Managed MCP collision-proof recovery manifest identity contract failed.");
+            }
         }
         finally
         {
@@ -407,19 +470,14 @@ public static class ManagedMcpRegistryStore
             cancellationToken.ThrowIfCancellationRequested();
             ValidateRegistration(registration);
 
-            var safeId = new string(
-                registration.Id
-                    .Select(ch =>
-                        char.IsLetterOrDigit(ch) ||
-                        ch is '-' or '_'
-                            ? ch
-                            : '_')
-                    .ToArray());
+            var storageKey =
+                ManagedMcpIdentityKey.Create(
+                    registration.Id);
 
             var manifestPath =
                 Path.Combine(
                     directory,
-                    safeId + ".json");
+                    storageKey + ".json");
 
             expected.Add(
                 Path.GetFullPath(manifestPath));

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Talvora.Shared;
 
 internal static partial class SmokeScenarios
@@ -91,6 +92,116 @@ internal static partial class SmokeScenarios
             {
                 throw new InvalidOperationException(
                     "ProcessRunner timeout did not terminate the process promptly.");
+            }
+
+            const int boundedCaptureCharacters = 64 * 1024;
+            var oversizedCharacterCount =
+                boundedCaptureCharacters * 4;
+            var boundedOutput = await ProcessRunner.RunAsync(
+                powershell,
+                root,
+                [
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-Command",
+                    $"[Console]::Out.Write('HEAD-MARKER' + ('x' * {oversizedCharacterCount}) + 'TAIL-MARKER')",
+                ],
+                timeoutSeconds: 30,
+                maxCapturedCharactersPerStream:
+                    boundedCaptureCharacters);
+            if (boundedOutput.ExitCode != 0 ||
+                !boundedOutput.StandardOutputTruncated ||
+                boundedOutput.StandardOutputTotalCharacters <=
+                    boundedCaptureCharacters ||
+                !boundedOutput.StandardOutput.Contains(
+                    "HEAD-MARKER",
+                    StringComparison.Ordinal) ||
+                !boundedOutput.StandardOutput.Contains(
+                    "TAIL-MARKER",
+                    StringComparison.Ordinal) ||
+                !boundedOutput.StandardOutput.Contains(
+                    "Talvora output truncated",
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "ProcessRunner bounded output capture contract failed.");
+            }
+
+            var descendantPidPath =
+                Path.Combine(root, "drain-child.pid");
+            var escapedPowerShell =
+                powershell.Replace("'", "''", StringComparison.Ordinal);
+            var escapedPidPath =
+                descendantPidPath.Replace(
+                    "'",
+                    "''",
+                    StringComparison.Ordinal);
+            var inheritedHandleCommand =
+                "$psi = [Diagnostics.ProcessStartInfo]::new();" +
+                $"$psi.FileName = '{escapedPowerShell}';" +
+                "$psi.UseShellExecute = $false;" +
+                "$psi.CreateNoWindow = $true;" +
+                "[void]$psi.ArgumentList.Add('-NoLogo');" +
+                "[void]$psi.ArgumentList.Add('-NoProfile');" +
+                "[void]$psi.ArgumentList.Add('-NonInteractive');" +
+                "[void]$psi.ArgumentList.Add('-Command');" +
+                "[void]$psi.ArgumentList.Add('Start-Sleep -Seconds 20');" +
+                "$child = [Diagnostics.Process]::Start($psi);" +
+                $"[IO.File]::WriteAllText('{escapedPidPath}', [string]$child.Id);" +
+                "Write-Output 'parent-exit';";
+
+            Process? descendant = null;
+            try
+            {
+                var drain = await ProcessRunner.RunAsync(
+                    powershell,
+                    root,
+                    [
+                        "-NoLogo",
+                        "-NoProfile",
+                        "-NonInteractive",
+                        "-Command",
+                        inheritedHandleCommand,
+                    ],
+                    timeoutSeconds: 2);
+
+                if (!drain.TimedOut ||
+                    !drain.OutputDrainTimedOut ||
+                    drain.ElapsedMilliseconds >= 6_000 ||
+                    !drain.StandardOutput.Contains(
+                        "parent-exit",
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        "ProcessRunner output-drain deadline contract failed.");
+                }
+            }
+            finally
+            {
+                if (File.Exists(descendantPidPath) &&
+                    int.TryParse(
+                        await File.ReadAllTextAsync(descendantPidPath),
+                        out var descendantPid))
+                {
+                    try
+                    {
+                        descendant =
+                            Process.GetProcessById(descendantPid);
+                        if (!descendant.HasExited)
+                        {
+                            descendant.Kill(entireProcessTree: true);
+                            descendant.WaitForExit(5_000);
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+                    }
+                    finally
+                    {
+                        descendant?.Dispose();
+                    }
+                }
             }
 
             using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(1));

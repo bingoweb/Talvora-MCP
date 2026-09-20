@@ -522,3 +522,142 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] Final Control Center visual smoke bir kez.
 - [x] git diff --check temiz.
 - [x] Kullanıcı açıkça istemeden commit/push YOK.
+
+
+## Faz 13 — Playwright MCP kaldırma / Official Playwright CLI geçişi (2026-09-20)
+
+- [x] #108 — Playwright MCP'yi Talvora kaynak/installer/Tray/registry/build payload'ından tamamen kaldır; roadmap'taki "Do not add Playwright to Talvora" kuralını yeniden sağla.
+- [x] Current-user bağlamında `@playwright/cli@latest` kur ve gerçek `playwright-cli --version/--help` ile doğrula.
+- [x] Eski Playwright MCP scheduled task/process/proxy/tunnel zincirini durdur; browser profile verisini Talvora dışı bağımsız Playwright CLI profile konumuna güvenli taşı.
+- [x] CLI capability smoke: persistent named session + navigate/snapshot/find/tab/screenshot/PDF/run-code/console-or-network/tracing temsilci akışı GREEN.
+- [x] Eski `Talvora Playwright MCP` task, MCP runtime, supervisor, proxy ve Secure MCP Tunnel live artıklarını kaldır; Playwright CLI profilini koru.
+- [x] Native installer regression ve smoke harness'i yeni mimariye göre güncelle; Playwright MCP'ye bağlı eski contract'ları sil.
+- [x] Değişen Installer/Tray/Shared alanlarını hedefli Release build/test ile doğrula; gereksiz eski smoke'ları tekrar etme.
+- [x] Canonical installer build + bağımsız SYSTEM deploy + exact-installed Talvora doğrulaması.
+- [x] BUG-AUDIT/HANDOFF/TODO yeni CLI mimarisiyle güncellensin; git diff --check temiz olsun.
+- [x] Kullanıcı açıkça istemeden commit/push YOK.
+
+- [x] #109 — canonical SYSTEM deploy task `Talvora-Setup.exe --silent` çalıştırsın; Session 0 görünmez GUI hang'ini regression ile engelle.
+
+
+## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 17 OPEN)
+
+- [ ] #124 — semantic durable replay metadata.
+- [x] #127 — structural YAML control-file self-scan. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
+- [ ] #128 — semantic resource bounds before/while load/generation.
+- [ ] #129 — semantic graph concurrency fingerprint/versioning.
+- [ ] #130 — workspace-scoped MSBuild/toolchain fidelity.
+- [ ] #132 — retired Playwright MCP upgrade cleanup migration.
+- [ ] #133 — canonical deploy fast-task completion observation.
+- [x] #134 — collision-proof managed-MCP persistent ID mapping; shared SHA-256 key + recovery migration fixture GREEN.
+- [x] #135 — ordinary C# source syntax validation. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
+- [ ] #136 — ownership-aware legacy Cloudflared cleanup + rollback boundary.
+- [x] #137 — ast-grep private-cache executable hash revalidation. Targeted RED -> GREEN; 2026-09-20 source audit.
+- [x] #138 — ast-grep exact-version provenance snapshot. Targeted RED -> GREEN; 2026-09-20 source audit.
+- [ ] #139 — installer post-health state/config rollback.
+- [ ] #140 — canonical deploy artifact hash/identity pinning.
+- [x] #144 — corrupt WAL per-transaction isolation + workspace-scoped durable quarantine; targeted Source Edit 52/52 GREEN.
+- [x] #145 — managed-MCP recovery redundancy health/self-heal; ownership corruption fixture GREEN.
+- [ ] #148 — immutable canonical installer source snapshot / HEAD identity.
+- [x] #149 — bounded background-job logs + retention/quota; targeted fixture GREEN.
+- [x] #150 — bounded job-read response/pagination; continuation/generation regression GREEN.
+- [ ] #151 — remote tunnel create durable pending/reconciliation.
+- [x] #152 — collision-proof tunnel config/credential/state paths; fallback path probe GREEN.
+- [ ] #153 — tunnel-client update transaction + rollback.
+- [x] #154 — primary managed-MCP registry self-heal after backup recovery; temp-path recovery fixture GREEN.
+- [ ] #155 — Gitea real MCP protocol readiness gate.
+- [ ] #156 — Gitea full-chain stop terminal verification.
+- [x] #157 — bounded shared process stdout/stderr capture; ProcessRunner regression GREEN.
+- [x] #158 — streaming/bounded canonical source read; Source Edit 53/53 GREEN.
+- [ ] #159 — absolute transport/response budgets + continuation semantics.
+- [x] #160 — overall process timeout includes post-parent pipe drain; inherited-pipe regression GREEN.
+- [x] #163 — FileSystemWatcher overflow/resync completeness state; targeted runtime-bounds regression GREEN.
+- [x] #164 — bounded watcher/HTTP-mock queues, inflight and pending work; global backpressure/accounting regression GREEN.
+- [ ] #165 — crash-durable AtomicFile publication.
+- [ ] #169 — immutable dependency provenance snapshot tied to publish.
+
+## Faz 14 — Canonical Source Edit Transaction Engine (2026-09-20)
+
+> Ayrıntılı teknik sözleşme: `SOURCE-EDIT-ENGINE-ARCHITECTURE.md`. Core + Routing Contract v2 + ast-grep structural adapter exact-installed live doğrulandı; yalnız Roslyn semantic adapter ayrı sonraki subphase olarak deferred.
+
+- [x] #110 — Agent-first Source Edit Transaction Engine: normalized changeset modeli, exact-by-default preconditions, revision/hash optimistic concurrency, idempotent transactionId + durable receipt/journal, multi-file all-or-nothing semantics, rollback/recovery.
+- [x] `talvora_apply_patch`: PRIMARY/default source editor; Git'e bağımlı olmayan agent-friendly custom patch DSL; add/update/delete/move + multi-file/multi-hunk; Git unified diff aynı tool üzerinde compatibility input/backend olarak kalır.
+- [x] `talvora_apply_edits`: exact zero-based UTF-16 range/revision koordinatları zaten bilinen/üretilen durumlar için specialist deterministic structured edit yüzeyi. Multi-file olması tek başına bu aracı seçme nedeni değildir.
+- [x] `talvora_source_edit_guide`: tool seçimi belirsizse mutator deneme-yanılmasına girmeden canonical routing contract'ı döndüren read-only MCP tool.
+- [x] Atomic commit altyapısı: same-volume staging, durable flush, replace/move strategy, encoding/BOM/newline preservation, ACL/read-only/reparse-point davranışı ve failure recovery.
+- [x] Stable source-edit error taxonomy ve structured diagnostics/receipts; conflict/parse/context/recovery domain kodları ve MCP-visible policy errors.
+- [x] Fuzzy matching yalnız candidate/diagnostic amaçlı; fuzzy-only otomatik mutation kesinlikle yasak.
+- [x] SourceMutationPolicy: recognized development workspace içindeki legacy text mutations (`write_text`, `replace_text`, `append_text`, text-like `write_bytes`), typed config mutator'ları, source-file delete ve same-workspace source-file move server-side `SOURCE_EDIT_POLICY_VIOLATION` ile canonical source-edit rotasına yönlendirilir. Directory/generated/binary/non-workspace ve cross-workspace capability korunur.
+- [x] Tool-routing contract MCP `ServerInstructions` + tool Title/Description + `talvora_source_edit_guide` + server policy + docs + regressions ile tek kaynaktan sabitlendi.
+- [x] Unrestricted PowerShell/process capability korunuyor; tool açıklamalarında normal source editing için canonical olmadığı açık.
+- [x] Structural backend #114: ast-grep proposal-only adapter implemented; verified latest official Windows platform package is vendored with installer provenance and no live-workspace direct write.
+- [x] Semantic backend kararı: Roslyn preferred C# backend; generic transaction core tamamlandıktan sonraki ayrı subphase.
+- [x] Conflict/rebase preview kararı: DiffPlex 1.9.0 preferred advisory candidate; three-way/fuzzy sonuç otomatik commit edilmez.
+- [x] Polyglot syntax validation kararı: core JSON/XML/YAML/TOML maintained parsers; Tree-sitter yalnız gelecekte gerçek polyglot ihtiyaç olduğunda ayrı adapter.
+- [x] Exact-installed routing/structural tool surface GREEN; raw MCP tools/list = 203, guide/primary/structural/exact-range metadata live doğrulandı.
+- [x] Targeted tests: 27/27 Source Edit regression GREEN.
+- [x] Release build + yalnız ilgili regression/smoke; gereksiz geniş test tekrarı yok.
+- [x] Routing Contract v2 canonical installer build/deploy + exact-installed 202-tool discovery + guide/primary-specialist metadata/lifecycle policy live verification GREEN.
+- [x] BUG-AUDIT/HANDOFF/TODO closeout; git diff --check clean; kullanıcı açıkça istemeden commit/push YOK.
+
+### Faz 14 locked implementation plan — 2026-09-20 research gate
+
+- [x] Context7 + current official research revalidated: LSP WorkspaceEdit, AHP Changesets, ast-grep, Roslyn, DiffPlex, Tree-sitter, Git compatibility, Windows durability/TxF alternatives.
+- [x] Exact source-edit routing surface locked: `talvora_read_source`, PRIMARY `talvora_apply_patch`, specialist `talvora_apply_edits`, read-only `talvora_source_edit_guide`.
+- [x] Talvora Patch DSL v1 grammar locked; existing-file operations require SHA-256 revision; exact unique hunk matching only.
+- [x] Normalized changeset and structured result/error model locked.
+- [x] Durable append-only WAL, receipt retention, idempotency and crash/lost-response recovery semantics locked.
+- [x] Same-volume staging + ReplaceFileW/rename + durable flush + reverse rollback algorithm locked; no TxF.
+- [x] Workspace/source classifier + SourceMutationPolicy behavior locked; required legacy text writers guarded, general shell/process stays unrestricted.
+- [x] Encoding/BOM/newline/read-only/ACL/reparse/large-file semantics locked.
+- [x] Core syntax validation scope locked: JSON/XML/YAML/TOML now; Roslyn/Tree-sitter later where they add real value.
+- [x] Structural decision: ast-grep remains preferred proposal backend but is not a core dependency; Chocolatey currently has no ast-grep package.
+- [x] Semantic decision: Roslyn 5.9.0 is preferred C# backend after core transaction gates.
+- [x] Conflict-preview decision: DiffPlex 1.9.0 preferred future in-process three-way preview; never commit preview directly.
+- [x] Failure-injection matrix and deployment gate sequence locked.
+- [x] Implement core model/parser/codec/classifier.
+- [x] Implement WAL/idempotency/commit/rollback/recovery.
+- [x] Add three core MCP tools and manifest entries.
+- [x] Wire SourceMutationPolicy into legacy write_text/replace_text/append_text/text-like write_bytes and update execution/file-tool descriptions.
+- [x] Add and run dedicated targeted Source Edit regression project.
+- [x] Release build + only affected regressions.
+- [x] Canonical installer build/deploy + exact-installed source-edit discovery/policy smoke.
+- [x] Close #110 with final evidence; no commit/push unless explicitly requested.
+
+
+- [x] #115 — lost-response retry contract: external request hash + receipt/journal-first lookup; dedicated regression ve live replay GREEN.
+
+
+- [x] #116 — attempted/applied ownership + safe rollback; targeted concurrent-writer regression GREEN.
+
+
+- [x] #117: typed config mutators (JSON/dotenv/INI/XML/YAML/TOML set/delete) recognized-workspace SourceMutationPolicy guard + routing descriptions + regression/live smoke GREEN.
+- [x] #118: SourceEditDomainException -> McpException; exact-installed live policy smoke'ta SOURCE_EDIT_POLICY_VIOLATION client'a görünür.
+- [x] #114 structural backend implementation: canonical installer resolves latest official Windows platform ast-grep package, uses `--ignore-scripts`, vendors `ast-grep.exe` + version/license/SRI/executable-SHA provenance; runtime prefers and verifies vendored payload.
+- [x] `talvora_structural_edit`: pattern/kind + rewrite and YAML rule/fix modes; ast-grep `--json=stream` proposal-only isolated mirror -> scalar/UTF-8 byte/text cross-check -> exact revision/range Source Edit transaction.
+- [x] Structural resource/diagnostic contract: bounded output/matches/files/bytes, cancellation/timeout, stable no-match/proposal/toolchain/tool-failed codes, overlap/stale protection inherited by normalized transaction, no direct workspace mutation.
+- [x] Routing contract extended: repetitive AST/syntax-shaped transformation -> structural specialist; ordinary source work remains PRIMARY `talvora_apply_patch`; exact-range-only work remains `talvora_apply_edits`.
+- [x] Structural targeted evidence: generated-edit durable idempotency + Unicode scalar->UTF-16 regression; full Source Edit 27/27 GREEN; NativeInstaller structural payload/provenance contract GREEN.
+- [x] Canonical installer/exact-installed gate: runtime `...-dirty-b55f88d972ca`, raw tools/list 203, ast-grep 0.45.3 provenance/hash verified, live emoji pattern/rewrite + YAML rule/fix + same-transaction `replayed=true` GREEN.
+- [x] #119: Agent Source-Edit Routing Determinism / File Lifecycle Coverage Gap — apply_patch PRIMARY/default, apply_edits exact-range-only, MCP server instructions + guide + centralized descriptions, direct workspace source delete/same-workspace move guard; targeted 25/25 + exact-installed 202-tool live gate GREEN. Live two-file ordinary change tek `talvora_apply_patch` transaction'ında commit oldu ve aynı transaction retry `replayed=true` döndü.
+
+### Faz 14B — Roslyn C# Semantic Edit (2026-09-20)
+
+> Scope is deliberately semantic-only. `talvora_apply_patch` remains PRIMARY/default for ordinary C# source changes; `talvora_structural_edit` remains the repetitive AST/syntax specialist; `talvora_apply_edits` remains the exact generated-range specialist.
+
+- [x] Research gate: Context7 + current Microsoft/Roslyn/MSBuild docs revalidated. Current stable Roslyn workspace line is 5.9.0; `Microsoft.Build.Locator` registration occurs before MSBuild workspace creation; obsolete `WorkspaceFailed` event is not used.
+- [x] Roslyn/MSBuild dependencies integrated with canonical restore provenance: `Microsoft.CodeAnalysis.CSharp.Workspaces 5.9.0`, `Microsoft.CodeAnalysis.Workspaces.MSBuild 5.9.0`, `Microsoft.Build.Locator 1.11.2`; `Microsoft.Build.Framework 17.14.28` is compile-only/private with runtime assets excluded per Locator requirements.
+- [x] Narrow `talvora_semantic_edit` specialist added. Current operation is C# symbol-aware rename only; ordinary C# changes remain on PRIMARY/default `talvora_apply_patch`.
+- [x] Semantic request contract implemented: explicit workspace + solution/project path, transactionId, revisioned C# document, zero-based UTF-16 line/character anchor, new name, optional project/symbol disambiguation, conservative rename options and caller-visible resource/time limits.
+- [x] Deterministic MSBuild bootstrap implemented: one-time Locator selection/registration before workspace creation, per-call disposable `MSBuildWorkspace`, `SkipUnrecognizedProjects=false`, project references loaded as projects, cancellation-aware loading and actual MSBuild identity in receipt.
+- [x] Workspace diagnostics use current `RegisterWorkspaceFailedHandler` plus workspace diagnostics, bounded without hiding failure count; load failures reject before mutation with structured domain diagnostics and no text/regex fallback.
+- [x] Symbol identity resolves every eligible anchored Roslyn document with SemanticModel/SymbolFinder. No-symbol and divergent linked/multi-project identities reject with zero mutation; explicit project selector disambiguates.
+- [x] Rename proposal remains in memory through current `Renamer.RenameSymbolAsync(..., SymbolRenameOptions, ...)`; `RenameFile=false`; no `Workspace.TryApplyChanges`; Roslyn never writes the live workspace.
+- [x] Minimal-change conversion uses changed `Solution` -> changed documents -> exact UTF-16 `TextChange` ranges with `ExpectedText`; linked physical files are deduplicated and contradictory proposals reject.
+- [x] Live-file fidelity is preserved: Roslyn old text must equal the revisioned Talvora disk snapshot. Existing codec remains encoding/BOM/newline authority; semantic rename does not run Formatter/Simplifier automatically and targeted/live evidence shows no unrelated formatting churn.
+- [x] Semantic proposals commit only through `SourceEditEngine.ApplyGeneratedEditsAsync`: durable request-hash replay precedes Roslyn generation, then SHA-256 preconditions, WAL, commit barrier, rollback/recovery and all-or-nothing transaction semantics remain canonical.
+- [x] Stable semantic domain errors, caller cancellation, timeout and bounded project/document/change/diagnostic state implemented; hidden partial success is rejected.
+- [x] Structured semantic receipt includes actual workspace/MSBuild identity, symbol identity/display/kind, bounded diagnostics and the underlying Source Edit transaction receipt without logging source bodies.
+- [x] Routing Contract v3 implemented across ServerInstructions, tool Title/Description, `talvora_source_edit_guide`, manifest, server policy wording and regressions. Agent routing is deterministic before mutation.
+- [x] Targeted Source Edit/Semantic regression 33/33 GREEN: cross-document rename, durable replay, stale anchor, no-symbol, linked-context ambiguity, load failure, cancellation, UTF-16 BOM/newline preservation, no formatting churn and routing contract.
+- [x] Final gates GREEN: Talvora/targeted Release build 0 warning / 0 error; NativeInstaller source regression GREEN including semantic contract and #109 explicit `--silent`; `git diff --check` exit 0; current canonical installer SHA-256 `28171A926EA96D78B05724201BCAFA30E3351208DB56EAB517384FFB0AFC991A`; canonical deploy/live snapshot `sourceCommit=747cbfc560c8f7e9d4c3def699ee986d5c164a71-dirty-8726cde50619`; raw exact-installed `tools/list` 204/204 unique; routing smoke GREEN; real two-project semantic rename GREEN with UTF-16 LE BOM/CRLF/deliberate-spacing preservation; same semantic transaction retry `replayed=true`. Living-doc closeout follows this deploy snapshot without a self-referential docs-only rebuild/fingerprint loop.

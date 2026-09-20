@@ -48,6 +48,20 @@ public static partial class NetworkDiagnosticTools
             throw new ArgumentOutOfRangeException("receiveMessages, maxMessageBytes, and timeoutSeconds cannot be negative.");
         }
 
+        var effectiveReceiveMessages =
+            Math.Min(
+                receiveMessages,
+                AbsoluteWebSocketMessages);
+        var effectiveMaxMessageBytes =
+            maxMessageBytes == 0
+                ? AbsoluteWebSocketMessageBytes
+                : Math.Min(
+                    maxMessageBytes,
+                    AbsoluteWebSocketMessageBytes);
+        var responseTruncated =
+            receiveMessages > effectiveReceiveMessages;
+        long totalCapturedBytes = 0;
+
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         if (timeoutSeconds > 0)
         {
@@ -98,7 +112,7 @@ public static partial class NetworkDiagnosticTools
         var buffer = new byte[64 * 1024];
 
         for (var messageIndex = 0;
-             messageIndex < receiveMessages && socket.State == WebSocketState.Open;
+             messageIndex < effectiveReceiveMessages && socket.State == WebSocketState.Open;
              messageIndex++)
         {
             using var memory = new MemoryStream();
@@ -126,26 +140,38 @@ public static partial class NetworkDiagnosticTools
                     break;
                 }
 
-                if (maxMessageBytes == 0)
+                var messageRemaining =
+                    effectiveMaxMessageBytes -
+                    memory.Length;
+                var responseRemaining =
+                    AbsoluteWebSocketResponseBytes -
+                    totalCapturedBytes -
+                    memory.Length;
+                var remaining =
+                    Math.Min(
+                        messageRemaining,
+                        responseRemaining);
+
+                if (remaining > 0)
                 {
-                    memory.Write(buffer, 0, result.Count);
+                    var toWrite =
+                        (int)Math.Min(
+                            result.Count,
+                            remaining);
+                    memory.Write(
+                        buffer,
+                        0,
+                        toWrite);
+                    if (toWrite < result.Count)
+                    {
+                        truncated = true;
+                        responseTruncated = true;
+                    }
                 }
                 else
                 {
-                    var remaining = maxMessageBytes - memory.Length;
-                    if (remaining > 0)
-                    {
-                        var toWrite = (int)Math.Min(result.Count, remaining);
-                        memory.Write(buffer, 0, toWrite);
-                        if (toWrite < result.Count)
-                        {
-                            truncated = true;
-                        }
-                    }
-                    else
-                    {
-                        truncated = true;
-                    }
+                    truncated = true;
+                    responseTruncated = true;
                 }
             }
             while (!endOfMessage);
@@ -156,6 +182,8 @@ public static partial class NetworkDiagnosticTools
             }
 
             var bytes = memory.ToArray();
+            totalCapturedBytes +=
+                bytes.LongLength;
             messages.Add(new TalvoraWebSocketMessage(
                 messageType.ToString(),
                 endOfMessage,
@@ -164,6 +192,15 @@ public static partial class NetworkDiagnosticTools
                 messageType == WebSocketMessageType.Text
                     ? Encoding.UTF8.GetString(bytes)
                     : Convert.ToBase64String(bytes)));
+
+            if (totalCapturedBytes >=
+                    AbsoluteWebSocketResponseBytes &&
+                messageIndex + 1 <
+                    effectiveReceiveMessages)
+            {
+                responseTruncated = true;
+                break;
+            }
         }
 
         if (closeAfter && socket.State == WebSocketState.Open)
@@ -190,6 +227,7 @@ public static partial class NetworkDiagnosticTools
             bytesSent,
             messages.Count,
             messages,
+            responseTruncated,
             stopwatch.ElapsedMilliseconds);
     }
 }

@@ -627,6 +627,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 "Tunnel ID validation contract failed.");
         }
 
+
         var registration = new ManagedMcpRegistration
         {
             Id = "sample",
@@ -641,6 +642,26 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 StateRoot = @"C:\Temp\sample\state",
             },
         };
+        var collisionOne = registration with
+        {
+            Id = "foo/bar",
+            Tunnel = registration.Tunnel! with
+            {
+                ConfigPath = null,
+            },
+        };
+        var collisionTwo = collisionOne with
+        {
+            Id = "foo?bar",
+        };
+        if (string.Equals(
+                ResolveConfigPath(collisionOne),
+                ResolveConfigPath(collisionTwo),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Managed MCP tunnel fallback path identity collision contract failed.");
+        }
         var config = new BusinessConfig(
             "sample-business",
             "tunnel_0123456789abcdef0123456789abcdef",
@@ -1069,18 +1090,15 @@ internal static partial class ManagedMcpTunnelProvisioningService
             return Path.GetFullPath(registration.Tunnel.ConfigPath);
         }
 
-        var safeId = new string(
-            registration.Id
-                .Select(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_'
-                    ? ch
-                    : '_')
-                .ToArray());
+        var storageKey =
+            ManagedMcpIdentityKey.Create(
+                registration.Id);
 
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Talvora",
             "ManagedTunnels",
-            safeId,
+            storageKey,
             "business.json");
     }
 

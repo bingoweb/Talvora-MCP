@@ -59,6 +59,13 @@ public static partial class DeveloperTools
             throw new ArgumentOutOfRangeException(nameof(responseMode), "responseMode must be text, base64, or none.");
         }
 
+        var effectiveMaxResponseBytes =
+            maxResponseBytes == 0
+                ? AbsoluteHttpResponseBytes
+                : Math.Min(
+                    maxResponseBytes,
+                    AbsoluteHttpResponseBytes);
+
         using var client = TalvoraHttp.CreateClient(
             ignoreTlsErrors,
             allowAutoRedirect);
@@ -125,7 +132,10 @@ public static partial class DeveloperTools
 
         if (responseMode != "none")
         {
-            var read = await ReadResponseBytesAsync(response.Content, maxResponseBytes, timeout.Token);
+            var read = await ReadResponseBytesAsync(
+                response.Content,
+                effectiveMaxResponseBytes,
+                timeout.Token);
             bodyBytes = read.Bytes.LongLength;
             truncated = read.Truncated;
 

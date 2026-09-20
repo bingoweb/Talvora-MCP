@@ -13,16 +13,21 @@ namespace Talvora.Tools;
 public sealed record TalvoraTextRangeResponse(
     string Path,
     int StartLine,
+    int StartCharacter,
     int LinesRead,
     bool EndReached,
-    string Text);
+    string Text,
+    bool ResponseLimited,
+    int? NextStartLine,
+    int? NextStartCharacter);
 
 public sealed record TalvoraTextTailResponse(
     string Path,
     int TotalLines,
     int StartLine,
     int LinesRead,
-    string Text);
+    string Text,
+    bool ResponseLimited);
 
 public sealed record TalvoraAppendTextResponse(
     string Path,
@@ -87,4 +92,8 @@ public sealed record TalvoraHttpDownloadResponse(
 [McpServerToolType]
 public static partial class ConfigAssetTools
 {
+    internal const int AbsoluteTextResponseCharacters =
+        4 * 1024 * 1024;
+    internal const int AbsoluteTextResponseLines =
+        20_000;
 }

@@ -101,9 +101,17 @@ public sealed record TalvoraWebSocketExchangeResponse(
     int BytesSent,
     int MessagesReceived,
     IReadOnlyList<TalvoraWebSocketMessage> Messages,
+    bool ResponseTruncated,
     long ElapsedMilliseconds);
 
 [McpServerToolType]
 public static partial class NetworkDiagnosticTools
 {
+    internal const long AbsoluteTcpResponseBytes =
+        16L * 1024 * 1024;
+    internal const long AbsoluteWebSocketMessageBytes =
+        16L * 1024 * 1024;
+    internal const long AbsoluteWebSocketResponseBytes =
+        32L * 1024 * 1024;
+    internal const int AbsoluteWebSocketMessages = 256;
 }

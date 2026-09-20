@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ModelContextProtocol.Server;
 using Talvora.Shared;
+using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
 
@@ -19,7 +20,7 @@ public static partial class ConfigAssetTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraHttpDownloadResponse)),
-     Description("Download an HTTP/HTTPS response body directly to any accessible file without an MCP response-size limit. Supports arbitrary request headers, redirects, optional TLS certificate bypass, overwrite, and byte-range resume.")]
+     Description("Download an HTTP/HTTPS response body directly to a file. Development-workspace source/text destinations are routed to talvora_apply_patch by default; explicitAdmin=true deliberately preserves unrestricted administrative download-to-file capability. Supports arbitrary request headers, redirects, optional TLS certificate handling override, overwrite, and byte-range resume.")]
     public static async Task<TalvoraHttpDownloadResponse> HttpDownload(
         string url,
         string destinationPath,
@@ -29,6 +30,7 @@ public static partial class ConfigAssetTools
         int timeoutSeconds = 300,
         bool allowAutoRedirect = true,
         bool ignoreTlsErrors = false,
+        bool explicitAdmin = false,
         CancellationToken cancellationToken = default)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
@@ -41,6 +43,10 @@ public static partial class ConfigAssetTools
         }
 
         var destination = Path.GetFullPath(destinationPath);
+        SourceMutationPolicy.EnsureGenericDestinationMutationAllowed(
+            destination,
+            "talvora_http_download",
+            explicitAdmin);
         var parent = Path.GetDirectoryName(destination);
         if (!string.IsNullOrWhiteSpace(parent))
         {
@@ -99,41 +105,114 @@ public static partial class ConfigAssetTools
             existingBytes > 0 &&
             response.StatusCode == HttpStatusCode.PartialContent;
 
-        var mode = actualResume
-            ? FileMode.Append
-            : FileMode.Create;
-
-        await using (var output = new FileStream(
-            destination,
-            mode,
-            FileAccess.Write,
-            FileShare.Read,
-            bufferSize: 128 * 1024,
-            useAsync: true))
-        await using (var input = await response.Content.ReadAsStreamAsync(timeout.Token))
-        {
-            await input.CopyToAsync(output, 128 * 1024, timeout.Token);
-            await output.FlushAsync(timeout.Token);
-        }
-
-        var finalLength = new FileInfo(destination).Length;
-        var bytesWritten = actualResume
-            ? finalLength - existingBytes
-            : finalLength;
-
+        var stageDirectory =
+            parent ??
+            Directory.GetCurrentDirectory();
+        var stage =
+            Path.Combine(
+                stageDirectory,
+                "." +
+                Path.GetFileName(destination) +
+                ".talvora-download-" +
+                Guid.NewGuid().ToString("N") +
+                ".tmp");
+        long bytesWritten;
+        long finalLength;
         string hash;
-        await using (var hashStream = new FileStream(
-            destination,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.ReadWrite | FileShare.Delete,
-            bufferSize: 128 * 1024,
-            useAsync: true))
+        try
         {
-            hash = Convert.ToHexString(
-                await System.Security.Cryptography.SHA256.HashDataAsync(
-                    hashStream,
-                    cancellationToken));
+            if (actualResume)
+            {
+                File.Copy(
+                    destination,
+                    stage,
+                    overwrite: false);
+            }
+
+            await using (var output = new FileStream(
+                stage,
+                actualResume
+                    ? FileMode.Append
+                    : FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 128 * 1024,
+                options:
+                    FileOptions.Asynchronous |
+                    FileOptions.SequentialScan))
+            await using (var input =
+                         await response.Content.ReadAsStreamAsync(
+                             timeout.Token))
+            {
+                var beforeWrite =
+                    output.Position;
+                await input.CopyToAsync(
+                    output,
+                    128 * 1024,
+                    timeout.Token);
+                bytesWritten =
+                    output.Position -
+                    beforeWrite;
+                if (response.Content.Headers.ContentLength is long expectedLength &&
+                    bytesWritten != expectedLength)
+                {
+                    throw new IOException(
+                        $"HTTP response body length did not match Content-Length. Expected={expectedLength} Actual={bytesWritten}.");
+                }
+
+                await output.FlushAsync(
+                    timeout.Token);
+                output.Flush(
+                    flushToDisk: true);
+            }
+
+            finalLength =
+                new FileInfo(stage).Length;
+            await using (var hashStream = new FileStream(
+                stage,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 128 * 1024,
+                options:
+                    FileOptions.Asynchronous |
+                    FileOptions.SequentialScan))
+            {
+                hash = Convert.ToHexString(
+                    await System.Security.Cryptography.SHA256.HashDataAsync(
+                        hashStream,
+                        cancellationToken));
+            }
+
+            if (File.Exists(destination))
+            {
+                File.Replace(
+                    stage,
+                    destination,
+                    destinationBackupFileName: null,
+                    ignoreMetadataErrors: false);
+            }
+            else
+            {
+                File.Move(
+                    stage,
+                    destination);
+            }
+        }
+        finally
+        {
+            if (File.Exists(stage))
+            {
+                try
+                {
+                    File.Delete(stage);
+                }
+                catch (Exception ex) when (
+                    ex is IOException or
+                        UnauthorizedAccessException)
+                {
+                }
+            }
         }
 
         return new TalvoraHttpDownloadResponse(

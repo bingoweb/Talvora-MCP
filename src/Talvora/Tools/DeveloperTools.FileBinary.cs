@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 using Talvora.Shared;
+using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
 
@@ -47,9 +48,15 @@ public static partial class DeveloperTools
         }
 
         stream.Position = offset;
-        var requested = count == 0
-            ? checked((int)Math.Min(int.MaxValue, stream.Length - offset))
-            : checked((int)Math.Min(count, stream.Length - offset));
+        var available = stream.Length - offset;
+        var callerRequested = count == 0
+            ? available
+            : Math.Min((long)count, available);
+        var requested = checked((int)Math.Min(
+            AbsoluteReadBytesResponseBytes,
+            callerRequested));
+        var responseLimited =
+            callerRequested > requested;
 
         var buffer = new byte[requested];
         var read = 0;
@@ -73,7 +80,11 @@ public static partial class DeveloperTools
             offset,
             read,
             stream.Length,
-            Convert.ToBase64String(buffer));
+            Convert.ToBase64String(buffer),
+            responseLimited,
+            responseLimited
+                ? offset + read
+                : null);
     }
 
     [McpServerTool(
@@ -83,7 +94,7 @@ public static partial class DeveloperTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraWriteBytesResponse)),
-     Description("Write base64-decoded raw bytes to any accessible file. By default replaces the file. append=true appends; offset writes in place starting at the requested position. No path allow-list is applied.")]
+     Description("General raw-byte write. Text-like payloads targeting source/text files inside recognized development workspaces are rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Binary and non-workspace compatibility remains supported.")]
     public static async Task<TalvoraWriteBytesResponse> WriteBytes(
         string path,
         string base64,
@@ -102,6 +113,10 @@ public static partial class DeveloperTools
 
         var bytes = Convert.FromBase64String(base64);
         var fullPath = Path.GetFullPath(path);
+        SourceMutationPolicy.EnsureLegacyByteMutationAllowed(
+            fullPath,
+            bytes,
+            "talvora_write_bytes");
         var parent = Path.GetDirectoryName(fullPath);
         if (!string.IsNullOrWhiteSpace(parent))
         {

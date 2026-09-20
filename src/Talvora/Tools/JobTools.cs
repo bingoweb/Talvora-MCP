@@ -45,7 +45,10 @@ public sealed record TalvoraJobOutputResponse(
     long NextOffset,
     long Length,
     bool EndOfStream,
-    string Text);
+    string Text,
+    long Generation,
+    bool ResetRequired,
+    bool ResponseLimited);
 
 public sealed record TalvoraJobStdinResponse(
     string JobId,
@@ -100,6 +103,16 @@ internal sealed class TalvoraJobRuntime : IDisposable
 [McpServerToolType]
 public static partial class JobTools
 {
+    private const long MaximumJobLogFileBytes =
+        32L * 1024 * 1024;
+    private const int MaximumJobReadResponseBytes =
+        4 * 1024 * 1024;
+    private const int MaximumCompletedJobs = 500;
+    private const long MaximumCompletedJobBytes =
+        4L * 1024 * 1024 * 1024;
+    private static readonly TimeSpan CompletedJobRetention =
+        TimeSpan.FromDays(14);
+
     private static readonly ConcurrentDictionary<string, TalvoraJobRuntime> LiveJobs =
         new(StringComparer.OrdinalIgnoreCase);
 

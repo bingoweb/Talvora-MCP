@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
+using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
 
@@ -15,22 +16,28 @@ public static class FileTools
     public static Task<string> ReadText(string path, CancellationToken cancellationToken = default) =>
         File.ReadAllTextAsync(Path.GetFullPath(path), cancellationToken);
 
-    [McpServerTool(Name = "talvora_write_text", Destructive = true, Idempotent = true, OpenWorld = true), Description("Write UTF-8 text to any path accessible to the Talvora service, creating parent directories when needed.")]
+    [McpServerTool(Name = "talvora_write_text", Destructive = true, Idempotent = true, OpenWorld = true), Description("Compatibility whole-file UTF-8 writer for ordinary/non-workspace files. Do not use it for development-workspace source editing: talvora_apply_patch is the PRIMARY/default editor, while talvora_apply_edits is only for already-known exact ranges; workspace source/text writes are rejected with SOURCE_EDIT_POLICY_VIOLATION.")]
     public static async Task<object> WriteText(string path, string content, CancellationToken cancellationToken = default)
     {
         var fullPath = Path.GetFullPath(path);
+        SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
+            fullPath,
+            "talvora_write_text");
         var parent = Path.GetDirectoryName(fullPath);
         if (!string.IsNullOrWhiteSpace(parent)) Directory.CreateDirectory(parent);
         await File.WriteAllTextAsync(fullPath, content, cancellationToken);
         return new { path = fullPath, length = new FileInfo(fullPath).Length };
     }
 
-    [McpServerTool(Name = "talvora_delete", Destructive = true, OpenWorld = true), Description("Delete a file or directory tree from any path accessible to the Talvora service.")]
+    [McpServerTool(Name = "talvora_delete", Destructive = true, OpenWorld = true), Description("General filesystem delete. Development-workspace source/text file deletion must use talvora_apply_patch so revision/WAL/rollback guarantees are preserved; direct source-file deletion is rejected. Directory and non-workspace deletion remain supported.")]
     public static object Delete(string path)
     {
         var fullPath = Path.GetFullPath(path);
         if (File.Exists(fullPath))
         {
+            SourceMutationPolicy.EnsureLegacySourceFileDeleteAllowed(
+                fullPath,
+                "talvora_delete");
             File.Delete(fullPath);
             return new { path = fullPath, deleted = true, kind = "file" };
         }
@@ -89,12 +96,13 @@ public static class FileTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraCopyResponse)),
-     Description("Copy a file or directory to any destination accessible to the Talvora service. Directory copies are recursive by default. overwrite=true replaces conflicting copied entries while merging non-conflicting directory entries. Source reparse points are rejected before mutation to prevent accidental traversal loops. No path allow-list is applied.")]
+     Description("General filesystem copy. Development-workspace source/text destinations are routed to talvora_apply_patch by default so revision/WAL/rollback guarantees are preserved; explicitAdmin=true deliberately keeps the unrestricted administrative copy capability. Directory copies are recursively preflighted before mutation. overwrite=true replaces conflicting copied entries while merging non-conflicting directory entries.")]
     public static TalvoraCopyResponse Copy(
         string source,
         string destination,
         bool overwrite = false,
         bool recursive = true,
+        bool explicitAdmin = false,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -114,6 +122,10 @@ public static class FileTools
 
         if (!isDirectory)
         {
+            SourceMutationPolicy.EnsureGenericDestinationMutationAllowed(
+                destinationPath,
+                "talvora_copy",
+                explicitAdmin);
             CopyFile(sourcePath, destinationPath, overwrite);
             return new TalvoraCopyResponse(sourcePath, destinationPath, "file", true, overwrite, recursive);
         }
@@ -129,6 +141,22 @@ public static class FileTools
         }
 
         var manifest = BuildDirectoryManifest(sourcePath, cancellationToken);
+        foreach (var file in manifest.Files)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var relative =
+                Path.GetRelativePath(
+                    sourcePath,
+                    file);
+            var target =
+                Path.Combine(
+                    destinationPath,
+                    relative);
+            SourceMutationPolicy.EnsureGenericDestinationMutationAllowed(
+                target,
+                "talvora_copy",
+                explicitAdmin);
+        }
 
         if (TryGetAttributes(destinationPath, out var destinationAttributes))
         {
@@ -202,11 +230,12 @@ public static class FileTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraMoveResponse)),
-     Description("Move a file or directory to any destination accessible to the Talvora service. overwrite=false rejects an existing destination; overwrite=true removes/replaces the destination before moving. No path allow-list is applied.")]
+     Description("General filesystem move. Development-workspace source/text file removal or destination ingress is routed to talvora_apply_patch by default so revision/WAL/rollback guarantees are preserved; explicitAdmin=true deliberately keeps the unrestricted administrative move capability. Directory, generated, binary, and ordinary non-workspace moves remain supported.")]
     public static TalvoraMoveResponse Move(
         string source,
         string destination,
         bool overwrite = false,
+        bool explicitAdmin = false,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -227,6 +256,15 @@ public static class FileTools
         if (isDirectory && IsDescendantPath(destinationPath, sourcePath))
         {
             throw new IOException("A directory cannot be moved into itself or one of its descendants.");
+        }
+
+        if (!isDirectory)
+        {
+            SourceMutationPolicy.EnsureGenericFileMoveAllowed(
+                sourcePath,
+                destinationPath,
+                "talvora_move",
+                explicitAdmin);
         }
 
         if (TryGetAttributes(destinationPath, out var destinationAttributes))

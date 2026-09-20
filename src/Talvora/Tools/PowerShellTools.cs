@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using ModelContextProtocol.Server;
+using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
 
@@ -13,7 +14,12 @@ public sealed record TalvoraPowerShellResult(
     string StandardOutput,
     string StandardError,
     bool TimedOut,
-    int ProcessId);
+    int ProcessId,
+    long StandardOutputTotalCharacters,
+    long StandardErrorTotalCharacters,
+    bool StandardOutputTruncated,
+    bool StandardErrorTruncated,
+    bool OutputDrainTimedOut);
 
 [McpServerToolType]
 public static class PowerShellTools
@@ -24,12 +30,14 @@ public static class PowerShellTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraPowerShellResult)),
-     Description("Run an arbitrary multiline PowerShell script as the Talvora LocalSystem service. The script is passed with UTF-16LE Base64 -EncodedCommand to avoid quoting loss. No command or script deny-list is applied.")]
+     Description("Run an arbitrary multiline PowerShell script as the Talvora LocalSystem service. " + SourceEditRoutingContract.EscapeHatchRouting + " The script is passed with UTF-16LE Base64 -EncodedCommand to avoid quoting loss. No command or script deny-list is applied.")]
     public static async Task<TalvoraPowerShellResult> RunPowerShell(
         string script,
         string engine = "auto",
         string? workingDirectory = null,
         int timeoutSeconds = 300,
+        int maxCapturedCharactersPerStream =
+            ProcessRunner.DefaultMaximumCapturedCharacters,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(script);
@@ -57,7 +65,9 @@ public static class PowerShellTools
             workingDirectory,
             arguments,
             timeoutSeconds: timeoutSeconds,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken,
+            maxCapturedCharactersPerStream:
+                maxCapturedCharactersPerStream);
 
         return new TalvoraPowerShellResult(
             resolved.Name,
@@ -66,7 +76,12 @@ public static class PowerShellTools
             result.StandardOutput,
             result.StandardError,
             result.TimedOut,
-            result.ProcessId);
+            result.ProcessId,
+            result.StandardOutputTotalCharacters,
+            result.StandardErrorTotalCharacters,
+            result.StandardOutputTruncated,
+            result.StandardErrorTruncated,
+            result.OutputDrainTimedOut);
     }
     private static (string Name, string Executable) ResolveEngine(string engine)
     {

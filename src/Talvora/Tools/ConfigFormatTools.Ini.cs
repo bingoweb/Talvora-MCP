@@ -3,6 +3,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.XPath;
 using ModelContextProtocol.Server;
+using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
 
@@ -107,7 +108,7 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraConfigMutationResponse)),
-     Description("Set or append an INI key in any section of any accessible file. Missing sections are created. replaceAll=true updates every matching key definition.")]
+     Description("Compatibility INI mutator for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Missing sections may be created and replaceAll is supported.")]
     public static async Task<TalvoraConfigMutationResponse> IniSet(
         string path,
         string section,
@@ -266,6 +267,7 @@ public static partial class ConfigFormatTools
                     lines,
                     document.NewLine),
                 document.Encoding,
+                "talvora_ini_set/delete",
                 cancellationToken);
         }
 
@@ -282,7 +284,7 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraConfigMutationResponse)),
-     Description("Delete every matching INI key in the requested section while preserving unrelated sections, keys, and comments.")]
+     Description("Compatibility INI delete tool for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Preserves unrelated sections, keys, and comments.")]
     public static async Task<TalvoraConfigMutationResponse> IniDelete(
         string path,
         string section,
@@ -349,6 +351,7 @@ public static partial class ConfigFormatTools
                     output,
                     document.NewLine),
                 document.Encoding,
+                "talvora_ini_set/delete",
                 cancellationToken);
         }
 

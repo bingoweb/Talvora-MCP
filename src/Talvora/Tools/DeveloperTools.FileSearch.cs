@@ -36,10 +36,18 @@ public static partial class DeveloperTools
             throw new ArgumentOutOfRangeException(nameof(maxResults));
         }
 
+        var effectiveMaxResults =
+            maxResults == 0
+                ? AbsoluteFileSearchResults
+                : Math.Min(
+                    maxResults,
+                    AbsoluteFileSearchResults);
+
         var fullRoot = Path.GetFullPath(root);
         var errors = new List<string>();
         var entries = new List<TalvoraFileSearchEntry>();
         var effectivePatterns = NormalizePatterns(patterns);
+        long responseCharacters = 0;
 
         if (File.Exists(fullRoot))
         {
@@ -80,12 +88,25 @@ public static partial class DeveloperTools
                 continue;
             }
 
-            entries.Add(ToSearchEntry(info));
-            if (maxResults > 0 && entries.Count >= maxResults)
+            var entry = ToSearchEntry(info);
+            var entryCharacters =
+                (long)entry.Path.Length +
+                entry.Name.Length +
+                entry.Kind.Length +
+                64;
+            if (entries.Count >=
+                    effectiveMaxResults ||
+                responseCharacters +
+                    entryCharacters >
+                AbsoluteSearchResponseCharacters)
             {
                 truncated = true;
                 break;
             }
+
+            entries.Add(entry);
+            responseCharacters +=
+                entryCharacters;
         }
 
         return new TalvoraFileSearchResponse(fullRoot, entries.Count, truncated, entries, errors);
@@ -121,12 +142,79 @@ public static partial class DeveloperTools
             throw new ArgumentOutOfRangeException("Search limits cannot be negative.");
         }
 
+        var effectiveMaxMatches =
+            maxMatches == 0
+                ? AbsoluteTextSearchMatches
+                : Math.Min(
+                    maxMatches,
+                    AbsoluteTextSearchMatches);
+        var effectiveMaxFileBytes =
+            maxFileBytes == 0
+                ? AbsoluteSearchFileBytes
+                : Math.Min(
+                    maxFileBytes,
+                    AbsoluteSearchFileBytes);
+        var effectiveMaxLineChars =
+            maxLineChars == 0
+                ? AbsoluteSearchLineCharacters
+                : Math.Min(
+                    maxLineChars,
+                    AbsoluteSearchLineCharacters);
+
         var fullRoot = Path.GetFullPath(root);
         var errors = new List<string>();
         var matches = new List<TalvoraTextSearchMatch>();
         var filesScanned = 0;
         var truncated = false;
         var includes = NormalizePatterns(includePatterns);
+        long responseCharacters = 0;
+
+        bool TryAddMatch(
+            string path,
+            int lineNumber,
+            int column,
+            string matchText,
+            string sourceLine)
+        {
+            if (matches.Count >= effectiveMaxMatches)
+            {
+                truncated = true;
+                return false;
+            }
+
+            var renderedLine =
+                TrimLine(
+                    sourceLine,
+                    effectiveMaxLineChars);
+            var renderedMatch =
+                TrimLine(
+                    matchText,
+                    effectiveMaxLineChars);
+            var entryCharacters =
+                (long)path.Length +
+                renderedLine.Length +
+                renderedMatch.Length +
+                64;
+
+            if (responseCharacters +
+                    entryCharacters >
+                AbsoluteSearchResponseCharacters)
+            {
+                truncated = true;
+                return false;
+            }
+
+            matches.Add(
+                new TalvoraTextSearchMatch(
+                    path,
+                    lineNumber,
+                    column,
+                    renderedMatch,
+                    renderedLine));
+            responseCharacters +=
+                entryCharacters;
+            return true;
+        }
 
         Regex? expression = null;
         if (regex)
@@ -175,7 +263,7 @@ public static partial class DeveloperTools
             {
                 continue;
             }
-            if (maxFileBytes > 0 && file.Length > maxFileBytes)
+            if (file.Length > effectiveMaxFileBytes)
             {
                 continue;
             }
@@ -203,16 +291,13 @@ public static partial class DeveloperTools
                     {
                         foreach (Match match in expression.Matches(line))
                         {
-                            matches.Add(new TalvoraTextSearchMatch(
-                                file.FullName,
-                                lineNumber,
-                                match.Index + 1,
-                                match.Value,
-                                TrimLine(line, maxLineChars)));
-
-                            if (maxMatches > 0 && matches.Count >= maxMatches)
+                            if (!TryAddMatch(
+                                    file.FullName,
+                                    lineNumber,
+                                    match.Index + 1,
+                                    match.Value,
+                                    line))
                             {
-                                truncated = true;
                                 break;
                             }
                         }
@@ -231,16 +316,13 @@ public static partial class DeveloperTools
                                 break;
                             }
 
-                            matches.Add(new TalvoraTextSearchMatch(
-                                file.FullName,
-                                lineNumber,
-                                index + 1,
-                                query,
-                                TrimLine(line, maxLineChars)));
-
-                            if (maxMatches > 0 && matches.Count >= maxMatches)
+                            if (!TryAddMatch(
+                                    file.FullName,
+                                    lineNumber,
+                                    index + 1,
+                                    query,
+                                    line))
                             {
-                                truncated = true;
                                 break;
                             }
 
@@ -256,7 +338,9 @@ public static partial class DeveloperTools
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DecoderFallbackException)
             {
-                errors.Add($"{file.FullName}: {ex.GetType().Name}: {ex.Message}");
+                AddSearchError(
+                    errors,
+                    $"{file.FullName}: {ex.GetType().Name}: {ex.Message}");
             }
 
             if (truncated)
@@ -305,6 +389,23 @@ public static partial class DeveloperTools
         }
 
         return line[..maxLineChars];
+    }
+
+    private static void AddSearchError(
+        List<string> errors,
+        string message)
+    {
+        if (errors.Count < AbsoluteSearchErrors)
+        {
+            errors.Add(message);
+            return;
+        }
+
+        if (errors.Count == AbsoluteSearchErrors)
+        {
+            errors.Add(
+                "Additional search errors omitted.");
+        }
     }
 
     private static string[] NormalizePatterns(string[]? patterns) =>
@@ -394,7 +495,9 @@ public static partial class DeveloperTools
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                errors.Add($"{directory.FullName}: {ex.GetType().Name}: {ex.Message}");
+                AddSearchError(
+                    errors,
+                    $"{directory.FullName}: {ex.GetType().Name}: {ex.Message}");
                 continue;
             }
 
@@ -425,7 +528,9 @@ public static partial class DeveloperTools
                     }
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                     {
-                        errors.Add($"{next.FullName}: {ex.GetType().Name}: {ex.Message}");
+                        AddSearchError(
+                            errors,
+                            $"{next.FullName}: {ex.GetType().Name}: {ex.Message}");
                         continue;
                     }
                 }

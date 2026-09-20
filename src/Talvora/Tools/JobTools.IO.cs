@@ -16,12 +16,13 @@ public static partial class JobTools
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraJobOutputResponse)),
-     Description("Read stdout or stderr from a Talvora background job using a byte offset for incremental tailing. maxBytes=0 reads all currently available bytes from the offset.")]
+     Description("Read stdout or stderr from a Talvora background job using byte offset + optional rotation generation for incremental tailing. maxBytes=0 selects Talvora's bounded maximum chunk; use nextOffset/generation until endOfStream. resetRequired means rotation or a stale offset required restarting at byte 0.")]
     public static async Task<TalvoraJobOutputResponse> ReadOutput(
         string jobId,
         string stream = "stdout",
         long offset = 0,
         int maxBytes = 256 * 1024,
+        long? generation = null,
         CancellationToken cancellationToken = default)
     {
         if (offset < 0 || maxBytes < 0)
@@ -38,22 +39,60 @@ public static partial class JobTools
             _ => throw new ArgumentOutOfRangeException(nameof(stream), "stream must be stdout or stderr."),
         };
 
-        await using var file = new FileStream(
+        return await ReadOutputFromPathAsync(
+            jobId,
+            normalizedStream,
             path,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.ReadWrite | FileShare.Delete,
-            bufferSize: 64 * 1024,
-            useAsync: true);
+            offset,
+            maxBytes,
+            generation,
+            MaximumJobReadResponseBytes,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<TalvoraJobOutputResponse> ReadOutputFromPathAsync(
+        string jobId,
+        string normalizedStream,
+        string path,
+        long offset,
+        int maxBytes,
+        long? generation,
+        int maximumResponseBytes,
+        CancellationToken cancellationToken)
+    {
+        if (maximumResponseBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumResponseBytes));
+        }
+
+        var opened =
+            await OpenStableJobLogSnapshotAsync(
+                path,
+                cancellationToken).ConfigureAwait(false);
+        await using var file = opened.File;
+        var currentGeneration = opened.Generation;
 
         var length = file.Length;
-        var start = Math.Min(offset, length);
+        var resetRequired =
+            (generation.HasValue &&
+             generation.Value != currentGeneration) ||
+            offset > length;
+        var start = resetRequired ? 0 : offset;
         file.Position = start;
 
         var available = length - start;
-        var requested = maxBytes == 0
-            ? checked((int)Math.Min(int.MaxValue, available))
-            : checked((int)Math.Min(maxBytes, available));
+        var responseBudget = maxBytes == 0
+            ? maximumResponseBytes
+            : Math.Min(
+                maxBytes,
+                maximumResponseBytes);
+        var requested = checked(
+            (int)Math.Min(
+                responseBudget,
+                available));
+        var responseLimited =
+            available > requested;
 
         var buffer = new byte[requested];
         var read = 0;
@@ -79,7 +118,53 @@ public static partial class JobTools
             nextOffset,
             length,
             nextOffset >= length,
-            text);
+            text,
+            currentGeneration,
+            resetRequired,
+            responseLimited);
+    }
+
+    private static async Task<(
+        FileStream File,
+        long Generation)> OpenStableJobLogSnapshotAsync(
+        string path,
+        CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                var before = await ReadLogGenerationAsync(
+                    path,
+                    cancellationToken).ConfigureAwait(false);
+                var file = new FileStream(
+                    path,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete,
+                    bufferSize: 64 * 1024,
+                    useAsync: true);
+                var after = await ReadLogGenerationAsync(
+                    path,
+                    cancellationToken).ConfigureAwait(false);
+                if (before == after)
+                {
+                    return (file, before);
+                }
+
+                await file.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (FileNotFoundException) when (attempt < 4)
+            {
+                await Task.Delay(
+                    TimeSpan.FromMilliseconds(20),
+                    cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        throw new IOException(
+            $"Job output rotated repeatedly while opening a stable snapshot: {path}");
     }
 
     [McpServerTool(

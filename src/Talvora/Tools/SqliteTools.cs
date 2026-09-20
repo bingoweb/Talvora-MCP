@@ -60,6 +60,10 @@ public sealed record TalvoraSqliteBackupResponse(
 [McpServerToolType]
 public static class SqliteTools
 {
+    private const int AbsoluteQueryRows = 10_000;
+    private const long AbsoluteQueryResponseCharacters =
+        8L * 1024 * 1024;
+
     [McpServerTool(
         Name = "talvora_sqlite_info",
         ReadOnly = true,
@@ -122,6 +126,13 @@ public static class SqliteTools
             throw new ArgumentOutOfRangeException(nameof(maxRows));
         }
 
+        var effectiveMaxRows =
+            maxRows == 0
+                ? AbsoluteQueryRows
+                : Math.Min(
+                    maxRows,
+                    AbsoluteQueryRows);
+
         ValidateTimeout(timeoutSeconds);
 
         var database = NormalizeDatabaseSource(databasePath);
@@ -146,10 +157,14 @@ public static class SqliteTools
         var columns = BuildColumnNames(reader);
         var rows = new List<TalvoraSqliteRow>();
         var truncated = false;
+        long responseCharacters =
+            columns.Sum(
+                static column =>
+                    (long)column.Length + 16);
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            if (maxRows > 0 && rows.Count >= maxRows)
+            if (rows.Count >= effectiveMaxRows)
             {
                 truncated = true;
                 break;
@@ -159,14 +174,33 @@ public static class SqliteTools
                 new Dictionary<string, TalvoraSqliteValue>(
                     columns.Count,
                     StringComparer.Ordinal);
+            long rowCharacters = 64;
 
             for (var index = 0; index < columns.Count; index++)
             {
+                var converted =
+                    ConvertDatabaseValue(
+                        reader.GetValue(index));
                 values[columns[index]] =
-                    ConvertDatabaseValue(reader.GetValue(index));
+                    converted;
+                rowCharacters +=
+                    columns[index].Length +
+                    64L +
+                    (converted.Text?.Length ?? 0) +
+                    (converted.Base64?.Length ?? 0);
+            }
+
+            if (responseCharacters +
+                    rowCharacters >
+                AbsoluteQueryResponseCharacters)
+            {
+                truncated = true;
+                break;
             }
 
             rows.Add(new TalvoraSqliteRow(values));
+            responseCharacters +=
+                rowCharacters;
         }
 
         return new TalvoraSqliteQueryResponse(
