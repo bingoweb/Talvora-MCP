@@ -8,16 +8,16 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 
 - Repository: `C:\Users\tayla\Talvora-MCP`
 - Branch: `main`
-- Last runtime-affecting fix commit: `47bd8430aaa71eafa4908b0de6697b88c99e647c` (`fix: dispose Gitea browser process handles`).
+- Last runtime-affecting fix commit: `4ab89d19b29927066464bc5fd6178d224552d51d` (`fix: await source edit worker termination`).
 - Gitea `origin/main` ve GitHub `github/main`: her bug closeout commit'inden sonra birlikte güncellenir.
 - Canlı Talvora service: **Running / Automatic**.
-- Exact-installed runtime source commit: `47bd8430aaa71eafa4908b0de6697b88c99e647c`.
+- Exact-installed runtime source commit: `4ab89d19b29927066464bc5fd6178d224552d51d`.
 - #178 tamamlandı: manual-stop persistence Windows SessionId bazlı dosyaya ayrıldı; targeted regression GREEN; fix commit Gitea + GitHub'a push edildi ve canonical live deploy exact-installed olarak doğrulandı.
 - #179 tamamlandı: Control Center exit artık window-placement yazımını shutdown öncesi tamamlıyor; regression GREEN, fix iki remote'a push edildi ve canonical exact-installed live deploy doğrulandı.
 - #180 tamamlandı: Control Center detay ekranındaki Gitea browser launch hatası artık beklenen shell exception'larını yakalayıp kullanıcıya bildiriyor; targeted regression GREEN, Tray Release build 0 warning / 0 error, fix iki remote'a push edildi ve canonical exact-installed live deploy doğrulandı.
 - #181 tamamlandı: eşzamanlı window-placement kayıtları semaphore ile serialize ediliyor ve monoton save-version ile yalnız en yeni bekleyen snapshot yazılıyor; fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 - #182 tamamlandı: Control Center ve Tray Gitea browser launch yolları dönen `Process` nesnesini sahiplenip dispose ediyor; regression GREEN, fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
-- #183 source fix hazır: isolated ast-grep ve semantic worker timeout/error cleanup yolları `Process.Kill` sonrasında bounded `WaitForExitAsync` ile parent process exit'ini bekliyor; targeted regression GREEN, Talvora Release build 0 warning / 0 error; commit/push/live gate sırada.
+- #183 tamamlandı: isolated ast-grep ve semantic worker timeout/error cleanup yolları `Process.Kill` sonrasında bounded `WaitForExitAsync` ile parent process exit'ini bekliyor; targeted regression GREEN, Talvora Release build 0 warning / 0 error, fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 
 ## #178 — CLOSED / LIVE VERIFIED
 
@@ -36,9 +36,9 @@ Düzeltme ve kanıt:
 
 ### Aktif devam noktası
 
-1. #183 source/test/docs değişikliklerini tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
-2. Temiz #183 HEAD'den canonical installer build + manifest-bound live deploy yap; exact-installed runtime commit'ini doğrula.
-3. #183 live acceptance'ını docs-only closeout ile kapat; ardından deeper audit'e #184'ten devam et.
+1. Deeper audit'e #184'ten devam et; çalışma ağacındaki HTTP mock değişikliklerinin doğrulanmış bir bug'a ait olup olmadığını çağrı zinciri ve testle belirle.
+2. Doğrulanmışsa yalnız o bug'ın source/test/docs dosyalarını tek commit yap; iki remote push + exact-installed live deploy uygula.
+3. Açık doğrulanmış finding kalmadığında final durum doğrulamasından sonra masaüstünde `bitti.txt` oluştur.
 
 ## #179 — CLOSED / LIVE VERIFIED
 
@@ -101,7 +101,7 @@ Düzeltme ve kanıt:
 - Canonical installer SHA-256 `C645B16606E3DD5BA944D7D717B390105B24285FCA755D3C800104D400C22EE3`.
 - Self-update sonrası reconnect: `system_info.sourceCommit=47bd8430aaa71eafa4908b0de6697b88c99e647c`; service exact-installed GREEN.
 
-## #183 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+## #183 — CLOSED / LIVE VERIFIED
 
 Kök neden:
 - Isolated ast-grep ve semantic worker timeout/error yollarında `Process.Kill(entireProcessTree: true)` çağrısından hemen sonra cleanup'a geçiliyordu.
@@ -112,6 +112,9 @@ Düzeltme ve kanıt:
 - Semantic worker response silme işlemi termination wait'ten sonra çalışıyor; ast-grep proposal yolu da termination wait tamamlanmadan outer staging cleanup'a dönmüyor.
 - `NativeInstallerSourceRegression.ps1`: `SourceEditWorkerCleanupWaitsForExit=True`; suite GREEN.
 - `Talvora` Release build: **0 warning / 0 error**.
+- Fix commit: `4ab89d19b29927066464bc5fd6178d224552d51d`; Gitea `origin/main` ve GitHub `github/main` aynı commit'te.
+- Clean detached worktree canonical installer SHA-256: `0DD13BEA0867B36096FF805978FACE4C272275F107BAD31EB6AC306335BDEA64`.
+- Manifest-bound SYSTEM deploy sonrası service **Running / Automatic** ve exact-installed `system_info.sourceCommit=4ab89d19b29927066464bc5fd6178d224552d51d`.
 
 ## Sabit çalışma kuralları
 
