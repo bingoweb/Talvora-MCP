@@ -9,11 +9,11 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 - Repository: `C:\\Users\\tayla\\Talvora-MCP`
 - Branch: `main`
 - Çalışma ağacı handoff resetinden hemen önce: **clean**
-- Son runtime-affecting commit: `60c5e9ac3c8470a883900a595b272e43b4812790` — `fix: return 503 when HTTP mock stops pending requests`
+- Son runtime-affecting commit: `26c26e53b3ca58c3521148d67d3f6233d6cd63fd` — `fix: keep HTTP mock default responses UTF-8`
 - Gitea remote: `origin` -> `ssh://git@127.0.0.1:2222/taylan/Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
 - Handoff resetinden hemen önce docs HEAD `10ab9ad1994e2af8fe5402bf230822687dc51b13` idi; `origin/main` ve `github/main` aynı commit'teydi. Bu docs closeout, runtime-affecting `60c5e9a` fix'inden sonradır.
-- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=60c5e9ac3c8470a883900a595b272e43b4812790` bildiriyor.
+- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=26c26e53b3ca58c3521148d67d3f6233d6cd63fd` bildiriyor.
 - Bu HANDOFF reset commit'i yalnız dokümantasyondur; canlı runtime commit'ini sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
@@ -32,7 +32,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Güncel audit üst özeti: **#121–#186 remediation complete + live verified; #187 source/test fix RED -> GREEN, commit/push/live acceptance pending.**
+- Güncel audit üst özeti: **#121–#187 remediation complete + live verified; deeper audit #188'den devam edecek.**
 
 ## Son tamamlanan bug-fix zinciri
 
@@ -88,11 +88,13 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - `requestEncoding` incoming request body decode için doğruydu ancak text `defaultBody` response byte'larını da aynı encoding ile üretiyordu; varsayılan response content type UTF-8 kaldığı için örn. UTF-16 request encoding seçimi auto-reply gövdesini bozuyordu.
 - Text default response artık `Reply()` ile tutarlı biçimde UTF-8 üretiliyor; request decode davranışı korunuyor, binary/custom byte yolu `defaultBodyBase64` üzerinden değişmeden kalıyor.
 - Gerçek loopback regression önce RED, minimal fix sonrası `PASS http-mock-request-encoding-does-not-change-response`; tüm `--runtime-bounds-only` gate GREEN.
-- Source/test fix doğrulandı; commit/push/live acceptance pending.
+- Fix commit: `26c26e53b3ca58c3521148d67d3f6233d6cd63fd`; Gitea + GitHub `main` aynı commit'te.
+- Canonical installer SHA-256: `F545A85E8927527ADD757D3BCB134FD93EA2CCE4B85F8024B8B7A9BD9D6162EB`.
+- Manifest-bound SYSTEM deploy sonrası exact-installed runtime aynı commit'i bildiriyor; #187 live verified.
 
 ## Doküman tutarlılığı notu
 
-- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#186 tamamlandı ve canlı doğrulandı; #187 source/test fix doğrulandı ve live acceptance bekliyor.
+- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#187 tamamlandı ve canlı doğrulandı; sıradaki audit numarası #188.
 - Aynı dosyanın daha eski gövde satırlarında ve `MCP-CONTROL-CENTER-TODO.md` içinde tarihsel `pending`, eski `OPEN` veya pre-live ifadeler kalmış olabilir. Bunları yeni oturumda gerçek repo/remote/live durumunun önüne koyma.
 - Eski tamamlanmış bug'ları tekrar test edip yeniden açma; yalnız yeni kanıt veya gerçek regresyon varsa dön.
 
@@ -114,20 +116,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 ## NEXT SESSION — kesin devam noktası
 
-**#187 source/test fix'i commit/push/live acceptance ile kapat; ardından #188 deep audit'e geç.**
-
-### #187 doğrulanmış source fix — commit/push/live pending
-
-- Working tree şu anda #187 source/test fix'i nedeniyle bilerek **dirty**; reset/clean/stash/revert yapma.
-- WIP dosyaları:
-  - `src/Talvora/Tools/HttpMockTools.Api.cs`
-  - `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Misc.cs`
-- İncelenen aday kök neden: `requestEncoding` yalnız request body decode ayarı olması gerekirken auto-reply `defaultBody` byte encoding'inde de kullanılıyordu. Örneğin `requestEncoding="utf-16"` seçildiğinde response content-type UTF-8 kalırken body UTF-16 byte'larına dönüşebiliyordu.
-- Mevcut WIP patch default text response body üretimini `Encoding.UTF8.GetBytes(defaultBody ?? string.Empty)` olarak ayırıyor; request body decode için `requestEncoding` davranışını koruyor.
-- Aynı WIP içine gerçek loopback regression `HttpMockRequestEncodingDoesNotChangeDefaultResponseEncodingAsync` eklendi.
-- RED kanıtı alındı: UTF-16 request encoding seçildiğinde UTF-8 ilan edilen default response body bozuldu.
-- Minimal fix sonrası targeted `--runtime-bounds-only` GREEN; önceki #185/#186 HTTP mock regressions da GREEN kaldı.
-- Sıradaki iş: BUG-AUDIT/TODO/HANDOFF ile birlikte yalnız ilgili #187 dosyalarını stage et -> tek bug commit -> Gitea + GitHub push -> canonical installer/deploy -> reconnect -> exact-installed `sourceCommit` doğrulaması.
+**#188 deep bug audit'e başla. #121–#187'yi yeni kanıt olmadan tekrar açma.**
 
 Başlangıç sırası:
 
@@ -135,10 +124,10 @@ Başlangıç sırası:
 2. `git status --short` ile tree'nin temiz olduğunu doğrula.
 3. `HEAD`, `origin/main`, `github/main` durumunu kontrol et.
 4. `talvora_system_info.sourceCommit` ile canlı runtime baseline'ını doğrula.
-5. `BUG-AUDIT.md` üst CURRENT özetini oku; #121–#186'yı tekrar tarama.
-6. #187 için henüz derin incelenmemiş çağrı zincirlerinden devam et. Öncelik: async/await ve cancellation edge'leri, process/service lifecycle, HTTP mock/watch/job cleanup, SQLite transaction/locking, reconnect/retry/backoff, dashboard/backend stale state, Windows path/session/encoding, resource ownership ve restart persistence.
+5. `BUG-AUDIT.md` üst CURRENT özetini oku; #121–#187'yi tekrar tarama.
+6. #188 için henüz derin incelenmemiş çağrı zincirlerinden devam et. Öncelik: async/await ve cancellation edge'leri, process/service lifecycle, HTTP mock/watch/job cleanup, SQLite transaction/locking, reconnect/retry/backoff, dashboard/backend stale state, Windows path/session/encoding, resource ownership ve restart persistence.
 7. Şüpheyi bug diye yazmadan önce gerçek çağrı zinciri veya minimal reproduction ile doğrula.
-8. İlk doğrulanmış #187 bulgusunu hemen kullanıcıya bildir; ardından minimal fix + targeted regression uygula.
+8. İlk doğrulanmış #188 bulgusunu hemen kullanıcıya bildir; ardından minimal fix + targeted regression uygula.
 9. Fix sonrası docs -> commit -> Gitea push -> GitHub push -> gerekiyorsa canonical live deploy sırasını tamamla.
 10. Sonraki bug'a ancak önceki bug tamamen kapandıktan sonra geç.
 
