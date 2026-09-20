@@ -12,9 +12,32 @@ public sealed record TalvoraMoveResponse(string Source, string Destination, stri
 [McpServerToolType]
 public static class FileTools
 {
-    [McpServerTool(Name = "talvora_read_text", ReadOnly = true, OpenWorld = true), Description("Read a UTF-8 text file from any path accessible to the Talvora service.")]
-    public static Task<string> ReadText(string path, CancellationToken cancellationToken = default) =>
-        File.ReadAllTextAsync(Path.GetFullPath(path), cancellationToken);
+    internal const int AbsoluteLegacyListResults =
+        DeveloperTools.AbsoluteFileSearchResults;
+    internal const long AbsoluteLegacyListResponseCharacters =
+        DeveloperTools.AbsoluteSearchResponseCharacters;
+
+    [McpServerTool(Name = "talvora_read_text", ReadOnly = true, OpenWorld = true), Description("Compatibility whole-file text reader with a finite server response budget. Small files are returned as a string exactly as before. If the file exceeds the bounded whole-file window, use talvora_read_text_range and its continuation metadata instead.")]
+    public static async Task<string> ReadText(
+        string path,
+        CancellationToken cancellationToken = default)
+    {
+        var response =
+            await ConfigAssetTools.ReadTextRange(
+                path,
+                startLine: 1,
+                lineCount: 0,
+                startCharacter: 0,
+                cancellationToken);
+        if (response.ResponseLimited)
+        {
+            throw new InvalidOperationException(
+                "talvora_read_text whole-file response exceeds the finite server budget. " +
+                "Use talvora_read_text_range and continue with nextStartLine/nextStartCharacter.");
+        }
+
+        return response.Text;
+    }
 
     [McpServerTool(Name = "talvora_write_text", Destructive = true, Idempotent = true, OpenWorld = true), Description("Compatibility whole-file UTF-8 writer for ordinary/non-workspace files. Do not use it for development-workspace source editing: talvora_apply_patch is the PRIMARY/default editor, while talvora_apply_edits is only for already-known exact ranges; workspace source/text writes are rejected with SOURCE_EDIT_POLICY_VIOLATION.")]
     public static async Task<object> WriteText(string path, string content, CancellationToken cancellationToken = default)
@@ -49,25 +72,81 @@ public static class FileTools
         return new { path = fullPath, deleted = false, kind = "missing" };
     }
 
-    [McpServerTool(Name = "talvora_list", ReadOnly = true, OpenWorld = true), Description("List files and directories at a path accessible to the Talvora service.")]
-    public static IReadOnlyList<TalvoraPathEntry> List(string path, bool recursive = false)
+    [McpServerTool(Name = "talvora_list", ReadOnly = true, OpenWorld = true), Description("Compatibility directory listing with finite server entry/response budgets. If a listing exceeds the compatibility window, use talvora_find_files with resultOffset/nextResultOffset pagination. No path allow-list is applied.")]
+    public static IReadOnlyList<TalvoraPathEntry> List(
+        string path,
+        bool recursive = false,
+        CancellationToken cancellationToken = default) =>
+        ListBounded(
+            path,
+            recursive,
+            AbsoluteLegacyListResults,
+            AbsoluteLegacyListResponseCharacters,
+            cancellationToken);
+
+    internal static IReadOnlyList<TalvoraPathEntry> ListBounded(
+        string path,
+        bool recursive,
+        int maxResults,
+        long maxResponseCharacters,
+        CancellationToken cancellationToken)
     {
+        if (maxResults <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxResults));
+        }
+        if (maxResponseCharacters <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maxResponseCharacters));
+        }
+
         var fullPath = Path.GetFullPath(path);
         var option = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
         var directory = new DirectoryInfo(fullPath);
+        var entries =
+            new List<TalvoraPathEntry>(
+                Math.Min(
+                    maxResults,
+                    1024));
+        long responseCharacters = 0;
 
-        return directory.EnumerateFileSystemInfos("*", option)
-            .Select(info =>
-            {
-                var isDirectory = (info.Attributes & FileAttributes.Directory) != 0;
-                return new TalvoraPathEntry(
+        foreach (var info in
+                 directory.EnumerateFileSystemInfos(
+                     "*",
+                     option))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var isDirectory =
+                (info.Attributes & FileAttributes.Directory) != 0;
+            var entry =
+                new TalvoraPathEntry(
                     info.FullName,
                     info.Name,
                     isDirectory,
-                    isDirectory ? null : ((FileInfo)info).Length,
+                    isDirectory
+                        ? null
+                        : ((FileInfo)info).Length,
                     info.LastWriteTimeUtc);
-            })
-            .ToArray();
+            var entryCharacters =
+                (long)entry.Path.Length +
+                entry.Name.Length +
+                64;
+
+            if (entries.Count >= maxResults ||
+                responseCharacters + entryCharacters >
+                    maxResponseCharacters)
+            {
+                throw new InvalidOperationException(
+                    "talvora_list result exceeds the finite compatibility response budget. " +
+                    "Use talvora_find_files with resultOffset/nextResultOffset pagination.");
+            }
+
+            entries.Add(entry);
+            responseCharacters += entryCharacters;
+        }
+
+        return entries;
     }
 
     [McpServerTool(

@@ -1514,6 +1514,38 @@ internal static partial class SourceEditRegressionRunner
                 !secondRange.ResponseLimited,
                 "Text range continuation did not reach EOF cleanly.");
 
+            var legacyReadPath =
+                Path.Combine(
+                    root,
+                    "legacy-read.txt");
+            const string legacyReadText =
+                "alpha\r\nbeta\r\n";
+            await File.WriteAllTextAsync(
+                legacyReadPath,
+                legacyReadText);
+            AssertEqual(
+                legacyReadText,
+                await FileTools.ReadText(
+                    legacyReadPath),
+                "Legacy whole-file read changed small-file content.");
+
+            var legacyReadRejected = false;
+            try
+            {
+                await FileTools.ReadText(
+                    longLinePath);
+            }
+            catch (InvalidOperationException ex)
+                when (ex.Message.Contains(
+                    "talvora_read_text_range",
+                    StringComparison.Ordinal))
+            {
+                legacyReadRejected = true;
+            }
+            Assert(
+                legacyReadRejected,
+                "Legacy whole-file read did not reject an over-budget response.");
+
             var tailPath =
                 Path.Combine(root, "tail.txt");
             await using (var writer =
@@ -1617,6 +1649,36 @@ internal static partial class SourceEditRegressionRunner
                         name),
                     "needle");
             }
+
+            var legacyList =
+                FileTools.List(
+                    searchRoot);
+            AssertEqual(
+                3,
+                legacyList.Count,
+                "Legacy list changed normal small-directory behavior.");
+
+            var legacyListRejected = false;
+            try
+            {
+                FileTools.ListBounded(
+                    searchRoot,
+                    recursive: false,
+                    maxResults: 2,
+                    maxResponseCharacters:
+                        DeveloperTools.AbsoluteSearchResponseCharacters,
+                    CancellationToken.None);
+            }
+            catch (InvalidOperationException ex)
+                when (ex.Message.Contains(
+                    "talvora_find_files",
+                    StringComparison.Ordinal))
+            {
+                legacyListRejected = true;
+            }
+            Assert(
+                legacyListRejected,
+                "Legacy list did not reject an over-budget compatibility response.");
 
             var firstFilePage =
                 DeveloperTools.FindFiles(
