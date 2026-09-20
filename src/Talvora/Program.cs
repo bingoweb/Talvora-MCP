@@ -31,7 +31,21 @@ builder.Services
     .AddMcpServer(options =>
         options.ServerInstructions =
             SourceEditRoutingContract.ServerInstructions)
-    .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
+    .WithHttpTransport(options =>
+    {
+        options.SessionMode =
+            HttpServerSessionMode.Stateless;
+        options.ConfigureSessionOptions = (
+            httpContext,
+            mcpServerOptions,
+            cancellationToken) =>
+        {
+            McpToolSurfaceWirePolicy.Apply(
+                mcpServerOptions,
+                httpContext.Request.Path.Value);
+            return Task.CompletedTask;
+        };
+    })
     .WithRequestFilters(filters =>
         filters.AddListToolsFilter(next => async (
             request,
@@ -85,6 +99,8 @@ app.MapGet("/healthz", () =>
         sourceCommit = runtime.SourceCommit,
         installedAtUtc = runtime.InstalledAtUtc,
         mcp = "/mcp",
+        mcpDev = "/mcp/dev",
+        mcpAdmin = "/mcp/admin",
         processId = Environment.ProcessId,
         user = Environment.UserName,
         sid = TalvoraRuntimeIdentity.Sid,
@@ -93,4 +109,6 @@ app.MapGet("/healthz", () =>
 });
 
 app.MapMcp("/mcp");
+app.MapMcp("/mcp/dev");
+app.MapMcp("/mcp/admin");
 app.Run();

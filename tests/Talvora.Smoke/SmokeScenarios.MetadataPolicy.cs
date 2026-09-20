@@ -100,6 +100,7 @@ internal static partial class SmokeScenarios
 
         var openWorldCount = 0;
         var readOnlyCount = 0;
+        var destructiveCount = 0;
 
         foreach (var tool in tools)
         {
@@ -157,6 +158,26 @@ internal static partial class SmokeScenarios
                     $"Live description contains legacy implementation-risk language: {tool.Name}");
             }
 
+            if (tool.Description.Contains(
+                    "an caller-supplied",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Live description contains grammar regression: {tool.Name}");
+            }
+
+            if (tool.Description.Length >
+                TalvoraMcpToolMetadataPolicy.PreferredMaxDescriptionCharacters)
+            {
+                throw new InvalidOperationException(
+                    $"Live description exceeds preferred bound: {tool.Name} Length={tool.Description.Length}");
+            }
+
+            if (annotations.DestructiveHint.Value)
+            {
+                destructiveCount++;
+            }
+
             var normalizedAgain =
                 TalvoraMcpToolMetadataPolicy.NormalizeDescription(
                     tool.Name,
@@ -177,6 +198,14 @@ internal static partial class SmokeScenarios
             throw new InvalidOperationException(
                 $"Live open-world tool count mismatch. Actual={openWorldCount} " +
                 $"Expected={TalvoraMcpToolMetadataPolicy.ExpectedOpenWorldToolCount}");
+        }
+
+        if (destructiveCount !=
+            TalvoraMcpToolMetadataPolicy.ExpectedDestructiveToolCount)
+        {
+            throw new InvalidOperationException(
+                $"Live destructive tool count mismatch. Actual={destructiveCount} " +
+                $"Expected={TalvoraMcpToolMetadataPolicy.ExpectedDestructiveToolCount}");
         }
 
         if (readOnlyCount <= 0)
@@ -215,6 +244,36 @@ internal static partial class SmokeScenarios
             readOnly: false,
             destructive: true,
             openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_process_kill",
+            readOnly: false,
+            destructive: true,
+            openWorld: false);
+        AssertLiveTool(
+            tools,
+            "talvora_delete",
+            readOnly: false,
+            destructive: true,
+            openWorld: false);
+        AssertLiveTool(
+            tools,
+            "talvora_http_mock_reply",
+            readOnly: false,
+            destructive: false,
+            openWorld: false);
+        AssertLiveTool(
+            tools,
+            "talvora_http_mock_stop",
+            readOnly: false,
+            destructive: false,
+            openWorld: false);
+        AssertLiveTool(
+            tools,
+            "talvora_service_restart",
+            readOnly: false,
+            destructive: false,
+            openWorld: false);
     }
 
     private static void AssertWorldScope(

@@ -70,6 +70,33 @@ if (args.Length == 1 &&
     return;
 }
 
+if (args.Length == 1 &&
+    string.Equals(
+        args[0],
+        "--surface-policy-source-only",
+        StringComparison.Ordinal))
+{
+    SmokeScenarios.RunSurfacePolicySource();
+    Console.WriteLine("TALVORA MCP SURFACE POLICY SOURCE GREEN");
+    return;
+}
+
+if (args.Length >= 1 &&
+    string.Equals(
+        args[0],
+        "--surface-policy-live",
+        StringComparison.Ordinal))
+{
+    var serverRoot =
+        args.Length > 1
+            ? args[1]
+            : "http://127.0.0.1:7676";
+    await SmokeScenarios.RunSurfacePolicyLiveAsync(
+        serverRoot);
+    Console.WriteLine("TALVORA MCP SURFACE POLICY LIVE GREEN");
+    return;
+}
+
 var devServerOnly =
     args.Length > 0 &&
     string.Equals(

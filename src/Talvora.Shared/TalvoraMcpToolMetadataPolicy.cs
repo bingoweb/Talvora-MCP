@@ -11,6 +11,8 @@ public static class TalvoraMcpToolMetadataPolicy
 {
     public const int ExpectedReviewedToolCount = 204;
     public const int ExpectedOpenWorldToolCount = 56;
+    public const int ExpectedDestructiveToolCount = 94;
+    public const int PreferredMaxDescriptionCharacters = 650;
 
     private static readonly HashSet<string> OpenWorldTools =
         new(StringComparer.Ordinal)
@@ -77,8 +79,13 @@ public static class TalvoraMcpToolMetadataPolicy
         new(StringComparer.Ordinal)
         {
             "talvora_create_directory",
+            "talvora_http_mock_reply",
             "talvora_http_mock_start",
+            "talvora_http_mock_stop",
             "talvora_registry_create_key",
+            "talvora_service_restart",
+            "talvora_service_start",
+            "talvora_service_stop",
             "talvora_watch_start",
             "talvora_watch_stop",
         };
@@ -86,11 +93,24 @@ public static class TalvoraMcpToolMetadataPolicy
     private static readonly IReadOnlyDictionary<string, string> DescriptionOverrides =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            ["talvora_apply_patch"] =
+                "Primary editor for ordinary development-workspace code, config, and repository-document changes across one or many files. " +
+                "Supports add/update/delete/move and unified diffs with revision-checked atomic application. Use talvora_structural_edit for broad AST-shaped transformations, " +
+                "talvora_semantic_edit for C# symbol-aware operations, and talvora_apply_edits for precomputed exact ranges.",
+            ["talvora_read_source"] =
+                "Read a bounded source/config/repository-document window with its SHA-256 revision, encoding, newline policy, and continuation metadata. " +
+                "Use it before ordinary talvora_apply_patch changes and before revision-sensitive specialist edits.",
+            ["talvora_structural_edit"] =
+                "Specialist editor for broad or repetitive syntax-shaped transformations where AST structure matters. " +
+                "Use talvora_apply_patch for ordinary edits. Supports pattern-based rewrites and an advanced workspace-relative rule-file mode, " +
+                "then applies the proposal through Talvora's revision-checked source transaction.",
+            ["talvora_semantic_edit"] =
+                "Specialist C# editor for operations that require solution/project semantic identity, currently symbol-aware rename from a revisioned source position. " +
+                "Use talvora_apply_patch for ordinary C# edits and talvora_structural_edit for broad repetitive syntax rewrites.",
             ["talvora_run_powershell"] =
                 "Execute a multiline PowerShell script under the Talvora Windows service for local development and administration. " +
                 "This is a general administration tool, not the normal source editor. For development-workspace source changes, " +
-                "use talvora_apply_patch; use talvora_apply_edits only when exact ranges are already available. " +
-                "The script is transported with UTF-16LE Base64 encoding to preserve quoting.",
+                "use talvora_apply_patch; use talvora_apply_edits only when exact ranges are already available.",
             ["talvora_run_process"] =
                 "Execute a program available to the Talvora Windows service with caller-supplied arguments for local development and administration. " +
                 "This is not the normal source editor. For development-workspace source changes, use talvora_apply_patch; " +
@@ -98,8 +118,7 @@ public static class TalvoraMcpToolMetadataPolicy
             ["talvora_git_run"] =
                 "Run Git with caller-supplied arguments in an accessible repository or working directory. " +
                 "Known working-tree mutation commands in recognized development workspaces route to talvora_apply_patch by default; " +
-                "explicitAdmin=true selects direct Git administration. Read/status/history/fetch/push workflows remain available. " +
-                "HTTPS pushes to github.com use the logged-on Windows user session so Git Credential Manager can use the signed-in user context.",
+                "explicitAdmin=true selects direct Git administration. Read/status/history/fetch/push workflows remain available.",
             ["talvora_http_request"] =
                 "Send an HTTP request to a requested URI for application development, integration testing, and service diagnostics. " +
                 "Supports caller-supplied method, headers, text or base64 request bodies, redirect control, an optional certificate-validation override " +
@@ -109,12 +128,16 @@ public static class TalvoraMcpToolMetadataPolicy
                 "Supports caller-supplied arguments, working directory, and environment overrides.",
             ["talvora_job_start"] =
                 "Start an executable as a long-running background development job under the Talvora Windows service. " +
-                "Supports caller-supplied arguments, working directory, and environment overrides. stdout/stderr are persisted under ProgramData for incremental reading.",
+                "Supports caller-supplied arguments, working directory, environment overrides, and incremental stdout/stderr reading.",
             ["talvora_http_mock_start"] =
                 "Start an in-process HTTP mock/webhook listener on caller-supplied HttpListener prefixes for integration testing. " +
                 "Supports automatic or manual replies, caller-supplied response headers/body, and bounded capture/concurrency/pending-request resources. " +
                 "A zero resource limit selects Talvora's high emergency ceiling.",
         };
+
+    private static readonly Regex LegacyWorkspaceRoutingBlock = new(
+        @"Inside recognized development workspaces,[^.]*\.(?:\s+For development-workspace source/config/text changes,[^.]*\.)?(?:\s+talvora_structural_edit[^.]*\.)?(?:\s+Do not trial-call this compatibility mutator\.)?",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex NoAllowDenySentence = new(
         @"(?:^|(?<=\s))No [^.]*\b(?:allow-?list|allowlist|deny-?list|denylist)\b[^.]*\.\s*",
@@ -186,6 +209,10 @@ public static class TalvoraMcpToolMetadataPolicy
 
         var normalized = description
             .Replace(
+                "an caller-supplied",
+                "a caller-supplied",
+                StringComparison.OrdinalIgnoreCase)
+            .Replace(
                 "Talvora LocalSystem service",
                 "Talvora Windows service",
                 StringComparison.Ordinal)
@@ -226,6 +253,9 @@ public static class TalvoraMcpToolMetadataPolicy
                 "general-purpose",
                 StringComparison.OrdinalIgnoreCase);
 
+        normalized = LegacyWorkspaceRoutingBlock.Replace(
+            normalized,
+            "Direct development-workspace source/config/text mutation is rejected; use talvora_apply_patch for ordinary edits and the specialist source editors for their documented cases.");
         normalized = WithNoAllowDenyClause.Replace(
             normalized,
             ".");

@@ -53,6 +53,77 @@ Sabit kurallar:
 - [x] META-017 — #191 bulguları `HANDOFF.md` ve `BUG-AUDIT.md` yaşayan kayıtlara işlendi; runtime commits `8b16760` + `6a31805` Gitea ve GitHub `main` üzerine push edildi.
 - [x] META-018 — Windows Masaüstü `Talvora-ChatGPT-Cyber-Risk-Audit-2026-09-20.txt` final live sayıları, commit ve installer kimliğiyle güncellendi.
 
+## 2026-09-20 — MCP Focused Surfaces + Tool Selection Quality TODO
+
+Amaç: #191 sonrası doğru metadata temelini koruyarak Talvora'nın ChatGPT tool-selection kalitesini, açıklama netliğini ve endpoint odaklılığını geliştirmek. Full `/mcp` yüzeyi ve 204-tool capability **aynen korunacak**; yeni `/mcp/dev` ve `/mcp/admin` yüzeyleri full yüzeyin yerine geçmeyecek, yalnız daha odaklı discovery/selection sağlayacak.
+
+Sabit kurallar:
+- `/mcp` geriye uyumlu full endpoint olarak 204/204 tool yayımlamaya devam edecek.
+- PowerShell/process/Git/Docker/HTTP/TCP/WebSocket/ADB/Android/package-manager/registry/service capability kaldırılmayacak veya parametre şemaları daraltılmayacak.
+- Focused surface filtering hem `tools/list` hem tool invocation düzeyinde tutarlı olacak; listede olmayan tool endpoint üzerinden çağrılamayacak.
+- `destructiveHint` sırf daha az confirmation için false yapılmayacak; gerçek geri-döndürülemez/veri kaybı riski veya caller-controlled side-effect varsa true kalacak.
+- Açıklamalar kullanıcı amacını ve tool-selection ayrımını anlatacak; transport/implementation ayrıntıları yalnız seçim için gerçekten gerekli ise kalacak.
+- Yeni tool eklenmesi world-scope, destructive semantics, focused-surface üyeliği ve selection-eval review gerektirecek.
+
+### Faz A — Host-facing description quality
+- [x] META2-001 — 204 canlı description baseline çıkarıldı; 31 `an caller-supplied` grammar örneği ve en uzun/repetitive açıklamalar kaydedildi.
+- [x] META2-002 — 31 adet `an caller-supplied` merkezi host-facing normalizer ile `a caller-supplied` olarak düzeltiliyor.
+- [x] META2-003 — Compatibility mutator'lardaki tekrarlı workspace-policy/Roslyn/WAL blokları tek kısa routing cümlesine normalize ediliyor; underlying rejection davranışı değişmedi.
+- [x] META2-004 — `apply_patch/read_source/structural_edit/semantic_edit` için user-intent + seçim ayrımı odaklı kısa canonical description override'ları eklendi.
+- [x] META2-005 — Generic runner açıklamalarında grammar ve gereksiz transport/credential implementation ayrıntıları azaltıldı.
+- [x] META2-006 — Live regression'a legacy-risk=0, grammar=0 ve preferred max description=650 karakter gate'leri eklendi.
+- [x] META2-007 — Description policy yalnız host-facing metadata'yı değiştiriyor; tool adı/input/output schema/runtime capability değişmedi.
+
+### Faz B — `destructiveHint` deep audit
+- [x] META2-008 — Canlı pre-fix baseline: 99 destructive=true / 105 false.
+- [x] META2-009 — 99 true tool behavior sınıfları gözden geçirildi; caller-controlled runner/build/package/network ve data-loss sınıfları conservative true bırakıldı.
+- [x] META2-010 — Read-only -> destructive=false invariant korunuyor.
+- [x] META2-011 — General shell/process/Git/package/build/network runner'lar caller-controlled geniş side-effect nedeniyle true kalıyor.
+- [x] META2-012 — Delete/overwrite/process-kill/registry overwrite/source mutation veri kaybı riski nedeniyle true kalıyor.
+- [x] META2-013 — Reversible lifecycle/control: `http_mock_reply`, `http_mock_stop`, `service_start/stop/restart` explicit non-destructive set'e alındı.
+- [x] META2-014 — Representative destructive semantics live assertions eklendi.
+- [ ] META2-015 — Live wire'da dört annotation ailesi explicit/omitted=0 kalacak.
+
+### Faz C — Focused MCP surfaces
+- [x] META2-016 — `TalvoraMcpToolSurfacePolicy`: Full / Development / Administration kanonik profil policy'si eklendi.
+- [x] META2-017 — Full profil exact 204 tool invariant.
+- [x] META2-018 — Development profil exact 174 tool: source-edit + tüm ana dil/build/package/container/mobile/network integration geliştirici yüzeyleri korunuyor.
+- [x] META2-019 — Administration profil exact 91 tool: system/service/registry/env/process/session/eventlog/network + generic admin/file/config yüzeyleri.
+- [x] META2-020 — Overlap destekleniyor; PowerShell/process/system-info gibi ortak araçlar Dev+Admin içinde.
+- [x] META2-021 — `/mcp/dev` endpoint mapping eklendi.
+- [x] META2-022 — `/mcp/admin` endpoint mapping eklendi.
+- [x] META2-023 — Legacy/full `/mcp` endpoint mapping aynen korunuyor.
+- [x] META2-024 — Stateless SDK `ConfigureSessionOptions` current HttpContext path'ine göre per-request ToolCollection filtreliyor; global mutable surface state yok.
+- [x] META2-025 — Focused endpoint invocation visibility gerçek ToolCollection seviyesinde uygulanıyor; bypass live regression ayrıca META2-030'da doğrulanacak.
+- [x] META2-026 — `/healthz` mcp/mcpDev/mcpAdmin endpointlerini raporlayacak.
+- [x] META2-027 — Source regression her 204 tool'un Full'de ve en az bir focused review kararında olduğunu doğruluyor.
+- [x] META2-028 — Snapshot: Full=204, Development=174, Administration=91.
+- [ ] META2-029 — Full tool schemas ile focused endpoint aynı tool'un schema/description/annotations değerlerini korusun; yalnız visibility fark etsin.
+- [ ] META2-030 — Focused endpoint bypass regression: listede olmayan tool invocation reddedilsin.
+
+### Faz D — Tool-selection eval
+- [x] META2-031 — Deterministik `TalvoraToolSelectionPolicy` eval fixture eklendi; model çağrısı/flaky LLM testi yok.
+- [x] META2-032 — Ordinary source edit -> `read_source + apply_patch` fixture.
+- [x] META2-033 — Exact generated range -> `apply_edits`.
+- [x] META2-034 — Broad repetitive AST intent -> `structural_edit`.
+- [x] META2-035 — C# symbol-aware rename -> `semantic_edit`.
+- [x] META2-036 — Build/test direct fixtures -> `dotnet_build/dotnet_test`.
+- [x] META2-037 — Git status fixture -> `git_status`.
+- [x] META2-038 — Service/registry fixtures Administration surface zorunluluğunu doğruluyor.
+- [x] META2-039 — Hava/genel bilgi/sohbet negative fixtures Talvora route'u üretmiyor.
+- [x] META2-040 — `--surface-policy-source-only` CI/regression gate içinde selection fixtures doğrulanıyor.
+
+### Faz E — Release / live acceptance
+- [x] META2-041 — Talvora Release + Smoke Release build 0 warning / 0 error; metadata source GREEN + surface/selection source GREEN. Geniş eski suite'ler tekrarlanmadı.
+- [ ] META2-042 — Explicit-file runtime commit; `git add .` kullanma.
+- [ ] META2-043 — Runtime commit'i Gitea `origin/main` + GitHub `github/main` push et.
+- [ ] META2-044 — Clean HEAD'den canonical installer üret ve SHA-256 kaydet.
+- [ ] META2-045 — Bağımsız SYSTEM deploy; reconnect sonrası exact-installed sourceCommit doğrula.
+- [ ] META2-046 — Live `/mcp` = 204/204; Dev/Admin counts + no-bypass + metadata hygiene acceptance.
+- [ ] META2-047 — ChatGPT app refresh/reconnect gereksinimini final rapora işle; full ve focused app endpoint kullanım önerisini belgele.
+- [ ] META2-048 — Masaüstü checkpoint/final TXT raporlarını güncelle.
+- [ ] META2-049 — `HANDOFF.md`, `BUG-AUDIT.md`, TODO closeout; docs-only commit'i iki remote'a push et, sırf docs HEAD için redeploy yapma.
+
 ## 1. Ürün hedefi
 
 Talvora Control Center, bu Windows bilgisayarına bizim kurduğumuz ve yönettiğimiz yerel MCP sunucularını tek, anlaşılır ve tamamen Türkçe bir arayüzden yönetmek için oluşturulacaktır.
