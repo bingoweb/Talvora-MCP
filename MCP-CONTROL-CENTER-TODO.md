@@ -577,7 +577,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #169 — immutable dependency provenance tied to publish; build-local isolated --artifacts-path + immutable assets SHA-256 snapshot + --no-restore publish + Service/Tray runtime dependency graph cross-check; dedicated regression GREEN, final clean live gate continues under #173.
 - [x] #172 — canonical installer npm metadata envelope compatibility; exactly-one object/array normalization + identity/integrity fail-closed, InstallerAstGrepMetadataRegression 5/5 GREEN.
 - [x] #173 — canonical artifacts-path Tray pre-bundle deps lookup; source fix + NativeInstallerSourceRegression GREEN; clean `c54d1d6` canonical build + manifest-bound live deploy + exact-installed source verification GREEN.
-- [x] #174 — residual structured/list tools: finite absolute ceilings + deterministic continuation metadata; expanded response-bounds regression GREEN, Release build 0 warning / 0 error; canonical live deploy follows the fix commit.
+- [x] #174 — residual structured/list tools: finite absolute ceilings + deterministic continuation metadata; response-bounds regression GREEN; fix/test commits pushed to Gitea+GitHub; canonical installer/deploy exact-installed `7ea7024` live GREEN.
 
 ## Faz 14 — Canonical Source Edit Transaction Engine (2026-09-20)
 

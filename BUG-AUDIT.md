@@ -2,17 +2,17 @@
 
 Last updated: 2026-09-20
 Branch: main
-Current source HEAD baseline before #174 commit: `67cd1f162fe3211cfcd61c4e5bcc8c2d6d434441`.
-Current exact-installed audit runtime: `642c2158aebbe91e99e9349e92262c94b9b17e43`
+Current runtime source HEAD: `7ea7024d7da09074d1e84d6e10610d991d2edcc3`.
+Current exact-installed audit runtime: `7ea7024d7da09074d1e84d6e10610d991d2edcc3`
 Canonical exact-installed tool count: 204 unique tools
-Status: source remediation is active. Current #121–#174 statuses and counts are below; source-test completion does not imply deployment to the installed service.
+Status: #121–#174 source remediation and live acceptance are complete; deeper audit continues for newly discoverable defects.
 
 ## Current remediation status summary — 2026-09-20
 
 - Historical implementation/fix work through #120 includes the completed Control Center, installer/deploy, Playwright CLI migration, Source Edit core, Routing Contract v3, structural adapter and Roslyn semantic adapter work described below.
 - The current deep-audit range #121–#174 contains 54 numbered records: **0 OPEN**, **51 FIXED**, plus **#143 CLOSED FALSE POSITIVE** and **#166/#167 CLOSED DUPLICATE**.
 - Fixed records passed their documented targeted regression or contract gates. Latest combined Source Edit suite remains **63/63 GREEN**; #174 has its own response-bounds regression.
-- Remaining release work is commit/push plus canonical live deployment of #174; no numbered source bug remains open in this audit range.
+- No numbered source bug remains open in #121–#174; #174 is committed, pushed to both remotes and live.
 - #166 and #167 are not additional defects: their evidence was merged into canonical #147 and #148 respectively.
 - Canonical deploy #109 explicit `--silent` behavior must remain intact during all future installer changes.
 - #129 follow-up: project/solution analyzer ve source-generator binary referansları da semantic graph physical revision snapshot + commit guard kapsamına alındı. Analyzer/generator binary drift artık commit öncesi `SEMANTIC_GRAPH_STALE` ile fail-closed olur. Targeted regression GREEN; full Source Edit 62/62 GREEN; Talvora Release 0 warning / 0 error.
@@ -560,4 +560,5 @@ source -> targeted test -> canonical installer build -> deploy -> system_info/PI
 
 174. [FIXED 2026-09-20 Residual Structured/List Responses Are Bounded and Pageable] #159 sonrasında kalan structured/list yüzeyleri gerçek `0=unlimited` tek-response davranışı taşıyordu: test-report failure listesi, XML node query, project/workspace discovery ve command inference, dev-server/job listeleri, Git log ve quality artifact/diagnostic listeleri. Düzeltme her yüzeye finite absolute server ceiling ekledi; caller `0` veya aşırı büyük pozitif limit artık bu ceiling'i aşmıyor. Deterministic continuation response şemalarına `resultOffset/nextResultOffset`, `failureOffset/nextFailureOffset`, `projectOffset/nextProjectOffset`, `commandOffset/nextCommandOffset`, Git `skip/nextSkip` ve diagnostic offset metadata'sı ile taşındı. Artifact inventory continuation ayrıca hash/version okunamayan eşleşmeleri de tüketilmiş aday olarak sayacak biçimde `matchingIndex` üzerinden ilerletildi; böylece error bulunan ağaçlarda duplicate/rewind sayfa oluşmuyor. Queue-backed watcher/HTTP-mock reads #164 persistent queue ceiling'leri nedeniyle bu finding dışında kalmaya devam ediyor.
 
-2026-09-20 #174 source evidence: `Talvora.csproj` Release build **0 warning / 0 error**. Genişletilmiş `--response-bounds-only` regression XML, JUnit failures, project discovery, workspace inspect/commands, artifact inventory, diagnostics, three-commit Git log, job/dev-server finite ceiling contracts ve önceki #159 transport/read/SQLite/WebSocket fixtures ile **TALVORA RESPONSE BOUNDS REGRESSION GREEN**. `git diff --check` exit 0; yalnız mevcut LF->CRLF working-copy uyarısı var. Canonical commit/push/live acceptance deployment kaydıyla tamamlanacak.
+2026-09-20 #174 source evidence: `Talvora.csproj` Release build **0 warning / 0 error**. Genişletilmiş `--response-bounds-only` regression XML, JUnit failures, project discovery, workspace inspect/commands, artifact inventory, diagnostics, three-commit Git log, job/dev-server finite ceiling contracts ve önceki #159 transport/read/SQLite/WebSocket fixtures ile **TALVORA RESPONSE BOUNDS REGRESSION GREEN**. `git diff --check` exit 0. Fix commit `750bdb47e40ba9195ffcf5154001906757a021fe`; zero-limit regression takip commit'i `7ea7024d7da09074d1e84d6e10610d991d2edcc3`; ikisi de Gitea ve GitHub'a push edildi.
+2026-09-20 #174 live acceptance: clean `7ea7024d7da09074d1e84d6e10610d991d2edcc3` üzerinden canonical installer build exit 0, artifact **257,296,143 bytes**, SHA-256 `2A3B8B1695DAF302499552713F8CD4E83E11F50A98A844846B7A6B52F960DA69`. Manifest-bound independent SYSTEM deploy sırasında beklenen MCP disconnect oluştu; reconnect sonrasında Talvora service **Running / Automatic**, exact-installed `sourceCommit=7ea7024d7da09074d1e84d6e10610d991d2edcc3`. Canlı `git_log(maxCount=2)` `truncated=true,nextSkip=2`; diagnostics 3 kayıttan 2 kayıt için `truncated=true,nextDiagnosticOffset=2` döndürdü.
