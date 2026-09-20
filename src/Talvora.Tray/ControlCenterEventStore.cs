@@ -67,11 +67,17 @@ internal static class ControlCenterEventStore
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
 
         var now = occurredAtUtc ?? DateTimeOffset.UtcNow;
-        var normalizedTitle = Normalize(title, 180);
-        var normalizedDetail = Normalize(detail, 1200);
+        var normalizedTitle = Normalize(
+            FileLog.RedactSensitiveData(title),
+            180);
+        var normalizedDetail = Normalize(
+            FileLog.RedactSensitiveData(detail),
+            1200);
         var normalizedKey = string.IsNullOrWhiteSpace(dedupKey)
             ? BuildDefaultDedupKey(category, mcpId, normalizedTitle)
-            : Normalize(dedupKey, 240);
+            : Normalize(
+                FileLog.RedactSensitiveData(dedupKey),
+                240);
 
         var gateTaken = false;
         try

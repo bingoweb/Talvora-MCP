@@ -34,6 +34,31 @@ if (args.Length == 1 &&
     return;
 }
 
+if (args.Length == 1 &&
+    string.Equals(
+        args[0],
+        "--privacy-security-only",
+        StringComparison.Ordinal))
+{
+    var root = Path.Combine(
+        Path.GetTempPath(),
+        "Talvora-Privacy-Smoke-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(root);
+    try
+    {
+        await SmokeScenarios.RunPrivacySecurityAsync(root);
+        Console.WriteLine("TALVORA PRIVACY SECURITY GREEN");
+    }
+    finally
+    {
+        if (Directory.Exists(root))
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+    return;
+}
+
 var devServerOnly =
     args.Length > 0 &&
     string.Equals(

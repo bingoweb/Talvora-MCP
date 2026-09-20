@@ -12,6 +12,8 @@ internal static partial class SmokeScenarios
 
         try
         {
+            await RunPrivacySecurityAsync(root);
+
             var batchPath = Path.Combine(root, "args.cmd");
             await File.WriteAllTextAsync(
                 batchPath,

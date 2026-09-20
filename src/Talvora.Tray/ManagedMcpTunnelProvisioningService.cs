@@ -737,7 +737,8 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 "Runtime/Admin key separation in connect arguments failed.");
         }
 
-        const string fakeSecret = "sk-test-secret-never-log";
+        var fakeSecret =
+            string.Concat("sk-", "test-secret-never-log");
         var collapsed = CollapseSafe(
             $"failure {fakeSecret}",
             "details",

@@ -79,7 +79,8 @@ internal static class ControlCenterRawLogService
 
             while (reader.ReadLine() is { } line)
             {
-                lines.Enqueue(line);
+                lines.Enqueue(
+                    FileLog.RedactSensitiveData(line));
                 while (lines.Count > MaxLines)
                 {
                     _ = lines.Dequeue();

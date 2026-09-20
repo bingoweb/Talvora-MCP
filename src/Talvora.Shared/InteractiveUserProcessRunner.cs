@@ -6,6 +6,9 @@ namespace Talvora.Shared;
 
 public static class InteractiveUserProcessRunner
 {
+    private static readonly TimeSpan StaleRunRetention =
+        TimeSpan.FromHours(24);
+
     private sealed record Request(
         string Executable,
         string WorkingDirectory,
@@ -54,13 +57,18 @@ public static class InteractiveUserProcessRunner
                 "Interactive user's LOCALAPPDATA could not be resolved.");
         }
 
-        var runRoot = Path.Combine(
+        var runsRoot = Path.Combine(
             localAppData,
             "Talvora",
-            "InteractiveRuns",
+            "InteractiveRuns");
+        CleanupStaleRunDirectories(runsRoot);
+
+        var runRoot = Path.Combine(
+            runsRoot,
             Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(runRoot);
 
+        var leasePath = Path.Combine(runRoot, "active.lock");
         var requestPath = Path.Combine(runRoot, "request.json");
         var stdoutPath = Path.Combine(runRoot, "stdout.txt");
         var stderrPath = Path.Combine(runRoot, "stderr.txt");
@@ -82,8 +90,15 @@ public static class InteractiveUserProcessRunner
                 .Assembly
                 .Location);
 
+        FileStream? runLease = null;
         try
         {
+            runLease = new FileStream(
+                leasePath,
+                FileMode.CreateNew,
+                FileAccess.ReadWrite,
+                FileShare.Read);
+
             await File.WriteAllTextAsync(
                 requestPath,
                 JsonSerializer.Serialize(request),
@@ -224,6 +239,8 @@ public static class InteractiveUserProcessRunner
         }
         finally
         {
+            runLease?.Dispose();
+
             try
             {
                 Directory.Delete(runRoot, recursive: true);
@@ -232,6 +249,64 @@ public static class InteractiveUserProcessRunner
                 ex is IOException or UnauthorizedAccessException)
             {
             }
+        }
+    }
+
+    private static void CleanupStaleRunDirectories(string runsRoot)
+    {
+        try
+        {
+            if (!Directory.Exists(runsRoot))
+            {
+                return;
+            }
+
+            var cutoffUtc =
+                DateTime.UtcNow - StaleRunRetention;
+
+            foreach (var directory in
+                     Directory.EnumerateDirectories(runsRoot))
+            {
+                try
+                {
+                    var leasePath =
+                        Path.Combine(directory, "active.lock");
+                    if (Directory.GetLastWriteTimeUtc(directory) > cutoffUtc)
+                    {
+                        continue;
+                    }
+
+                    if (File.Exists(leasePath))
+                    {
+                        using (new FileStream(
+                                   leasePath,
+                                   FileMode.Open,
+                                   FileAccess.Read,
+                                   FileShare.None))
+                        {
+                        }
+                    }
+
+                    Directory.Delete(directory, recursive: true);
+                }
+                catch (Exception ex) when (
+                    ex is IOException or
+                    UnauthorizedAccessException or
+                    DirectoryNotFoundException or
+                    FileNotFoundException or
+                    ArgumentException or
+                    NotSupportedException)
+                {
+                }
+            }
+        }
+        catch (Exception ex) when (
+            ex is IOException or
+            UnauthorizedAccessException or
+            DirectoryNotFoundException or
+            ArgumentException or
+            NotSupportedException)
+        {
         }
     }
 
@@ -278,6 +353,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $sw = [Diagnostics.Stopwatch]::StartNew()
 $request = Get-Content -Raw -LiteralPath $RequestPath | ConvertFrom-Json
+Remove-Item -LiteralPath $RequestPath -Force -ErrorAction SilentlyContinue
 [void][Reflection.Assembly]::LoadFrom(
     [string]$request.HelperAssemblyPath)
 

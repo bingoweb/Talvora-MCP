@@ -382,7 +382,8 @@ internal static class BusinessTunnelClient
                 .Where(item => !string.IsNullOrWhiteSpace(item))
                 .Select(item => item.Trim()));
 
-        return value.Length <= 400 ? value : value[..400];
+        var redacted = FileLog.RedactSensitiveData(value);
+        return redacted.Length <= 400 ? redacted : redacted[..400];
     }
 
 }

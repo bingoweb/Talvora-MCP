@@ -7,3 +7,14 @@
 *.log
 artifacts/
 src/Talvora.Installer/Payload.zip
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+*.dpapi
+*.pfx
+*.p12
+*.key
+secrets/
+**/secrets/
