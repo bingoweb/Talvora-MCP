@@ -2,17 +2,17 @@
 
 Last updated: 2026-09-20
 Branch: main
-Current runtime source HEAD: `572025c91b1cd25173342a306e937d5116f6615c`.
-Current exact-installed audit runtime: `572025c91b1cd25173342a306e937d5116f6615c`
+Current runtime source HEAD: `234f26ec74d4e5b01710d45b46f4cc373068de72`.
+Current exact-installed audit runtime: `234f26ec74d4e5b01710d45b46f4cc373068de72`
 Canonical exact-installed tool count: 204 unique tools
-Status: #121–#177 source remediation is complete with 0 OPEN findings; #177 commit/push/live acceptance is pending.
+Status: #121–#177 remediation, commit/push and live acceptance are complete; current numbered audit baseline has 0 OPEN findings.
 
 ## Current remediation status summary — 2026-09-20
 
 - Historical implementation/fix work through #120 includes the completed Control Center, installer/deploy, Playwright CLI migration, Source Edit core, Routing Contract v3, structural adapter and Roslyn semantic adapter work described below.
 - The current deep-audit range #121–#177 contains 57 numbered records: **0 OPEN**, **54 FIXED**, plus **#143 CLOSED FALSE POSITIVE** and **#166/#167 CLOSED DUPLICATE**.
 - Fixed records passed their documented targeted regression or contract gates. Latest combined Source Edit suite remains **63/63 GREEN**; #174 has its own response-bounds regression.
-- #174, #175 and #176 are committed, pushed to both remotes and live-verified. #177 source/test gates are GREEN; commit/push/live acceptance remains.
+- #174, #175, #176 and #177 are committed, pushed to both remotes and live-verified.
 - #166 and #167 are not additional defects: their evidence was merged into canonical #147 and #148 respectively.
 - Canonical deploy #109 explicit `--silent` behavior must remain intact during all future installer changes.
 - #129 follow-up: project/solution analyzer ve source-generator binary referansları da semantic graph physical revision snapshot + commit guard kapsamına alındı. Analyzer/generator binary drift artık commit öncesi `SEMANTIC_GRAPH_STALE` ile fail-closed olur. Targeted regression GREEN; full Source Edit 62/62 GREEN; Talvora Release 0 warning / 0 error.
@@ -570,4 +570,4 @@ source -> targeted test -> canonical installer build -> deploy -> system_info/PI
 176. [FIXED 2026-09-20 Archive List Is Bounded and Pageable] `talvora_archive_list` erişilebilir ZIP'in bütün entry listesini tek response'a materialize ediyordu. Düzeltme finite **20,000 entry** ve **8 MiB response-character** absolute ceiling ekledi; `maxResults=0` finite server maximum anlamına geliyor. Archive entry sırası deterministic olarak korunuyor; `resultOffset/nextResultOffset` continuation eklendi. Response schema artık returned `Count`, `TotalEntries`, `ResultOffset`, `Truncated` ve `NextResultOffset` taşıyor. Caller aşırı büyük pozitif limit verse de server ceiling aşılmıyor.
 2026-09-20 #176 acceptance: targeted fixture first page returned 2 entries with `totalEntries=3`, `truncated=true`, `nextResultOffset=2`; second page returned the final entry with clean termination. `--response-bounds-only`: **TALVORA RESPONSE BOUNDS REGRESSION GREEN**. Talvora Release build **0 warning / 0 error**; canonical installer source commit `572025c91b1cd25173342a306e937d5116f6615c`; live service **Running/Automatic**; exact-installed `sourceCommit=572025c91b1cd25173342a306e937d5116f6615c`.
 
-177. [FIXED 2026-09-20 Talvora Lifecycle Operations Share the Cross-Caller Operation Guard] `ControlCenterLifecycleService.ExecuteTalvoraAsync` Talvora start/stop/restart işlemlerinde ortak `ManagedMcpOperationCoordinator` lease almıyordu. Otomatik recovery `_talvoraOperationGate` ile yalnız kendi döngüsünü serialize ederken Control Center kullanıcı lifecycle çağrıları aynı gate'i paylaşmadığından servis ve tünel state mutation'ları yarışabiliyordu. Düzeltme `TalvoraId` bazlı fail-fast operation lease'i `ExecuteTalvoraAsync` girişine ekledi; Gitea/generic lifecycle modeline hizaladı. Targeted `NativeInstallerSourceRegression.ps1` içinde `TalvoraLifecycleUsesOperationCoordinator=True` ve suite GREEN; `Talvora.Tray` Release build **0 warning / 0 error**. Commit/push/live acceptance pending.
+177. [FIXED 2026-09-20 Talvora Lifecycle Operations Share the Cross-Caller Operation Guard] `ControlCenterLifecycleService.ExecuteTalvoraAsync` Talvora start/stop/restart işlemlerinde ortak `ManagedMcpOperationCoordinator` lease almıyordu. Otomatik recovery `_talvoraOperationGate` ile yalnız kendi döngüsünü serialize ederken Control Center kullanıcı lifecycle çağrıları aynı gate'i paylaşmadığından servis ve tünel state mutation'ları yarışabiliyordu. Düzeltme `TalvoraId` bazlı fail-fast operation lease'i `ExecuteTalvoraAsync` girişine ekledi; Gitea/generic lifecycle modeline hizaladı. Targeted `NativeInstallerSourceRegression.ps1` içinde `TalvoraLifecycleUsesOperationCoordinator=True` ve suite GREEN; `Talvora.Tray` Release build **0 warning / 0 error**. Fix commit `234f26ec74d4e5b01710d45b46f4cc373068de72` Gitea ve GitHub'a push edildi. Canonical installer **257,296,143 bytes**, SHA-256 `D18EADD233DD89483160C1D0809CC92A3D50901099984215FAF8187226E17BDB`; manifest-bound deploy sonrası service **Running/Automatic**, exact-installed `sourceCommit=234f26ec74d4e5b01710d45b46f4cc373068de72`; active Tray aynı commit'in versioned payload'ından çalışıyor.

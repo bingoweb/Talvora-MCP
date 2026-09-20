@@ -8,13 +8,13 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 
 - Repository: `C:\Users\tayla\Talvora-MCP`
 - Branch: `main`
-- Last runtime-affecting fix commit: `270e98923ac78c2fbc495afa7254bf6b7bc261b6` (`fix: paginate archive listings`).
+- Last runtime-affecting fix commit: `234f26ec74d4e5b01710d45b46f4cc373068de72` (`fix: serialize Talvora lifecycle operations`).
 - Gitea `origin/main` ve GitHub `github/main`: her bug closeout commit'inden sonra birlikte güncellenir.
 - Canlı Talvora service: **Running / Automatic**.
-- Exact-installed runtime source commit: `572025c91b1cd25173342a306e937d5116f6615c`.
-- #177 source fix hazır: Talvora lifecycle işlemleri ortak operation coordinator ile serialize ediliyor; targeted regression + Tray Release build GREEN; commit/push/live deploy sırada.
+- Exact-installed runtime source commit: `234f26ec74d4e5b01710d45b46f4cc373068de72`.
+- #177 canlı doğrulandı: service Running/Automatic; active Tray `Versions\234f26e...\Tray` altından çalışıyor.
 
-## #177 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+## #177 — FIXED / LIVE VERIFIED
 
 Kök neden:
 - Talvora `Start/Stop/Restart` yolu, Gitea ve generic MCP lifecycle yollarının aksine `ManagedMcpOperationCoordinator` lease almıyordu.
@@ -27,9 +27,9 @@ Düzeltme ve kanıt:
 
 ### Aktif devam noktası
 
-1. #177 source/test/docs dosyalarını tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
-2. Canonical installer build + manifest-bound live deploy yap; service/runtime identity doğrula.
-3. #177 live acceptance'ı belgelendirip docs-only closeout commit'ini iki remote'a push et; ardından deeper audit'e devam et.
+1. #177 commit/push/live acceptance tamamlandı; 0 OPEN baseline üzerinden deeper audit'e devam et.
+2. Yeni doğrulanan her bug için minimal fix + targeted test + HANDOFF/TODO + ayrı commit + Gitea/GitHub push uygula.
+3. Runtime etkileyen yeni commit olursa canonical installer/deploy ve canlı kimlik doğrulamasını tekrarla.
 
 ## Sabit çalışma kuralları
 
