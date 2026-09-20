@@ -1948,14 +1948,14 @@ internal static partial class SourceEditRegressionRunner
 
             var jobPage =
                 await JobTools.List(
-                    maxResults: int.MaxValue);
+                    maxResults: 0);
             Assert(
                 jobPage.Count <=
                     JobTools.AbsoluteJobListResults,
                 "Job list exceeded its finite server ceiling.");
             var devServerPage =
                 await DevServerTools.List(
-                    maxResults: int.MaxValue);
+                    maxResults: 0);
             Assert(
                 devServerPage.Count <=
                     DevServerTools.AbsoluteDevServerListResults,
