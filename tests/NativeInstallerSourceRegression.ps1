@@ -76,6 +76,14 @@ $result = [pscustomobject]@{
         $deployInstallerScript -match '\.Run\(\$null\)' -and
         $deployInstallerScript -notmatch 'Start-Process\s+-FilePath\s+\$installerFullPath'
     )
+    CanonicalDeployObservesFastTaskCompletion = (
+        $deployInstallerScript -match '\$previousLastRunTime\s*=\s*\[DateTime\]\$registered\.LastRunTime' -and
+        $deployInstallerScript -match '\$taskInstanceGuid\s*=\s*\[string\]\$running\.InstanceGuid' -and
+        $deployInstallerScript -match '\[string\]\$_\.InstanceGuid\s+-eq\s+\$taskInstanceGuid' -and
+        $deployInstallerScript -match '\$lastRunTransitioned\s*=\s*\$currentLastRunTime\s+-ne\s+\$previousLastRunTime' -and
+        $deployInstallerScript -match '\$completionObserved\s*=\s*\$true' -and
+        $deployInstallerScript -notmatch 'no running installer instance was observed'
+    )
     LegacyCloudflaredRetirementIsOwnershipAwareAndPostCommit = (
         $installerService -match 'cloudflaredServiceOwned' -and
         $installerService -match 'cloudflaredServiceExecutable' -and

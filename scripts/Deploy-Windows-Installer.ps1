@@ -86,7 +86,12 @@ $registered = $folder.RegisterTaskDefinition(
     $taskLogonServiceAccount,
     $null)
 
+$previousLastRunTime = [DateTime]$registered.LastRunTime
 $running = $registered.Run($null)
+$taskInstanceGuid = [string]$running.InstanceGuid
+if ([string]::IsNullOrWhiteSpace($taskInstanceGuid)) {
+    throw 'Task Scheduler accepted the deploy request but did not return a task instance identity.'
+}
 $sha256 = (Get-FileHash -LiteralPath $installerFullPath -Algorithm SHA256).Hash
 
 if (-not $WaitForCompletion) {
@@ -96,32 +101,42 @@ if (-not $WaitForCompletion) {
         taskName = $taskName
         installer = $installerFullPath
         sha256 = $sha256
-        taskInstance = [string]$running.InstanceGuid
+        taskInstance = $taskInstanceGuid
         note = 'Installer is running outside the Talvora service process tree. Reconnect and validate system_info/version-root after the service switch.'
     } | ConvertTo-Json -Compress
     return
 }
 
 $deadline = [DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
-$seenRunning = $false
+$instanceObserved = $false
+$completionObserved = $false
 while ([DateTimeOffset]::UtcNow -lt $deadline) {
     $instances = @($registered.GetInstances(0))
-    if ($instances.Count -gt 0) {
-        $seenRunning = $true
+    $matchingInstances = @(
+        $instances | Where-Object {
+            [string]$_.InstanceGuid -eq $taskInstanceGuid
+        }
+    )
+    if ($matchingInstances.Count -gt 0) {
+        $instanceObserved = $true
     }
-    elseif ($seenRunning) {
+
+    $currentLastRunTime = [DateTime]$registered.LastRunTime
+    $lastRunTransitioned = $currentLastRunTime -ne $previousLastRunTime
+    $registeredIsRunning = [int]$registered.State -eq $taskStateRunning
+
+    if ($matchingInstances.Count -eq 0 -and
+        -not $registeredIsRunning -and
+        ($instanceObserved -or $lastRunTransitioned)) {
+        $completionObserved = $true
         break
     }
 
     Start-Sleep -Milliseconds 250
 }
 
-if (-not $seenRunning) {
-    throw 'Task Scheduler accepted the deploy task but no running installer instance was observed.'
-}
-
-if (@($registered.GetInstances(0)).Count -gt 0) {
-    throw "Talvora installer did not finish within $TimeoutSeconds seconds."
+if (-not $completionObserved) {
+    throw "Talvora installer task instance $taskInstanceGuid did not reach an attributable terminal state within $TimeoutSeconds seconds."
 }
 
 $exitCode = [int]$registered.LastTaskResult
@@ -136,6 +151,7 @@ if ($exitCode -ne 0) {
     taskName = $taskName
     installer = $installerFullPath
     sha256 = $sha256
+    taskInstance = $taskInstanceGuid
     lastTaskResult = $exitCode
     lastRunTime = $registered.LastRunTime
 } | ConvertTo-Json -Compress
