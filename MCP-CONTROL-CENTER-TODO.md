@@ -133,6 +133,42 @@ Sabit kurallar:
 - [ ] META2-055 — **BLOCKED — external prerequisite:** ayrı remote Dev/Admin tunnel yaratımı için OpenAI Admin credential gerekli. Bu makinede `openai-admin-key.dpapi` mevcut değil; gerçek credential uydurulmayacak veya loglanmayacak.
 - [ ] META2-056 — **BLOCKED by META2-055:** Admin credential mevcut olduğunda generic provisioning Dev/Admin için ayrı tunnel + DPAPI runtime credential + config + ready gate oluşturacak; ardından ChatGPT'de ayrı Dev/Admin app bağlantıları kurulabilecek.
 
+### Faz G — Existing Focused Tunnel Binding / Admin-Key-Free Publication
+
+Amaç: Kullanıcı OpenAI tarafında Dev/Admin tunnel kayıtlarını zaten oluşturmuşsa, Control Center'ın yeni tunnel yaratmaya zorlamaması; mevcut tunnel ID'lerini güvenli biçimde bağlayıp full Talvora tunnel'ındaki reusable Runtime API key ile focused runtime profillerini yayınlaması. Bu akış Admin API key gerektirmeyecek ve tunnel ID'leri repository/source içine yazılmayacak.
+
+Sabit kurallar:
+- Tunnel ID bir secret gibi loglanmayacak; event/log metninde tam ID tekrar edilmeyecek.
+- Tunnel ID yalnız runtime config/registry state için kullanılacak; Git'e commit edilmeyecek.
+- Mevcut Runtime API key plaintext olarak ekrana/loga/argümana yazılmayacak; mevcut DPAPI store üzerinden yeniden kullanılacak.
+- Admin API key yolu kaldırılmayacak; yalnız yeni tunnel yaratmak isteyenler için alternatif olarak kalacak.
+- Full /mcp tunnel ve 204-tool surface etkilenmeyecek.
+- Dev/Admin local endpoints ve focused surface counts değişmeyecek.
+- Existing-ID binding başarısızsa yarım config/registry publish bırakılmayacak; hata kullanıcıya açıklanacak.
+
+- [ ] META2-057 — Control Center setup state'e eksik tunnel-ID registration listesini ekle; Dev/Admin hangi ID'nin eksik olduğunu deterministik bildirsin.
+- [ ] META2-058 — Setup UI'ya Talvora Dev ve Talvora Admin için mevcut tunnel ID giriş alanları ekle; yalnız ilgili focused tunnel eksikse görünür olsun.
+- [ ] META2-059 — UI validation: tunnel_ + 32 lowercase hex; boş/yanlış ID ile bind çağrısı yapılmasın.
+- [ ] META2-060 — Setup UX: kullanıcı tüm eksik mevcut ID'leri girerse Admin API key zorunlu olmasın; Admin key yeni tunnel oluşturma alternatifi olarak kalabilsin.
+- [ ] META2-061 — ManagedMcpTunnelProvisioningService.BindExistingTunnelAsync ekle: registration + supplied tunnel ID + registry al, reusable runtime source doğrula.
+- [ ] META2-062 — Existing-ID binding yeni remote tunnel create/scope/admin API çağrısı yapmasın; yalnız mevcut tunnel'ı local profile'a bağlasın.
+- [ ] META2-063 — Existing-ID binding runtime credential'ı mevcut DPAPI source'dan okuyup canonical credential store'a güvenli biçimde yazsın/reuse etsin.
+- [ ] META2-064 — Existing-ID binding config'i canonical BusinessConfig ile yazsın: alias, supplied tunnel ID, focused MCP URL, current tunnel-client/version, state root.
+- [ ] META2-065 — Registry upsert sonrası ConnectExistingAsync ile runtime connect + health/ready/identity doğrulaması çalışsın.
+- [ ] META2-066 — Başarılı bind sonrası Control Center event kaydı tunnel ID değerini tekrar etmeden focused tunnel'ın hazır olduğunu bildirsin.
+- [ ] META2-067 — Setup service, supplied existing IDs'i önce bağlasın; kalan eksik tunnel varsa mevcut Admin-key provisioning fallback'ına devam etsin.
+- [ ] META2-068 — Setup UI password ve tunnel-ID textbox değerlerini operation sonrası temizlesin; UI state refresh ile config'ten yalnız mevcut/eksik durumu göstersin.
+- [ ] META2-069 — Friendly errors: invalid tunnel ID, reusable runtime credential yok, remote runtime connect/ready başarısız durumları ayrı kullanıcı mesajlarına çevrilsin.
+- [ ] META2-070 — Source regression: existing tunnel path Admin API create fonksiyonlarını çağırmıyor; DPAPI reuse + config + registry + connect sırası doğrulanıyor.
+- [ ] META2-071 — Setup policy regression: Dev/Admin ID'leri supplied ise NeedsAdminCredential=false yoluyla completion mümkün; eksik supplied ID + no Admin key durumda setup incomplete kalır.
+- [ ] META2-072 — Tray Release build 0 warning / 0 error; yalnız focused tunnel/setup targeted regression'ları çalıştır.
+- [ ] META2-073 — Explicit-file runtime commit; Gitea + GitHub push; git add . kullanılmayacak.
+- [ ] META2-074 — Clean HEAD canonical installer + SYSTEM deploy; exact-installed sourceCommit doğrula.
+- [ ] META2-075 — Canlı Control Center registry'de talvora-dev ve talvora-admin tunnel IDs/config/Runtime credential readiness doğrula; full tunnel'a dokunma.
+- [ ] META2-076 — Canlı tunnel-client status: Dev alias /mcp/dev, Admin alias /mcp/admin, process_running/healthy/ready + tunnel identity GREEN.
+- [ ] META2-077 — ChatGPT tarafında focused connections yeniden bağlandıktan sonra Dev=174, Admin=91 discovery surface canlı doğrula.
+- [ ] META2-078 — Masaüstü checkpoint/final TXT, HANDOFF ve BUG-AUDIT closeout; docs-only commit sonrası runtime redeploy yapma.
+
 ## 1. Ürün hedefi
 
 Talvora Control Center, bu Windows bilgisayarına bizim kurduğumuz ve yönettiğimiz yerel MCP sunucularını tek, anlaşılır ve tamamen Türkçe bir arayüzden yönetmek için oluşturulacaktır.

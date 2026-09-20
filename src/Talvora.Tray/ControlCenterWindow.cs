@@ -54,8 +54,11 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     private Border _setupCard = null!;
     private TextBlock _setupTitleText = null!;
     private TextBlock _setupDetailText = null!;
+    private UiTextBox _setupDevTunnelIdBox = null!;
+    private UiTextBox _setupAdminTunnelIdBox = null!;
     private UiPasswordBox _setupAdminKeyBox = null!;
     private UiButton _setupActionButton = null!;
+    private ControlCenterSetupState? _setupState;
     private DispatcherTimer _windowPlacementSaveTimer = null!;
     private bool _restoringWindowPlacement;
     private long _windowPlacementSaveVersion;

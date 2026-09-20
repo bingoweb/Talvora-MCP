@@ -7,6 +7,7 @@ internal sealed record ControlCenterSetupState(
     bool NeedsAdminCredential,
     bool RuntimeFoundationMissing,
     int PendingTunnelCount,
+    IReadOnlyList<string> MissingTunnelRegistrationIds,
     string Summary,
     string Detail);
 
@@ -111,6 +112,11 @@ internal static class ControlCenterSetupService
         var runtimeFoundationMissing =
             !hasReusableRuntime &&
             pending.Any(item => !item.Assessment.HasRuntimeCredential);
+        var missingTunnelRegistrationIds = pending
+            .Where(item => !item.Assessment.HasTunnelId)
+            .Select(item => item.Registration.Id)
+            .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
         string summary;
         string detail;
@@ -141,12 +147,22 @@ internal static class ControlCenterSetupService
             NeedsAdminCredential: needsAdmin,
             RuntimeFoundationMissing: runtimeFoundationMissing,
             PendingTunnelCount: pending.Length,
+            MissingTunnelRegistrationIds: missingTunnelRegistrationIds,
             Summary: summary,
             Detail: detail);
     }
 
+    public static Task<ControlCenterSetupState> CompleteAsync(
+        string? adminKey,
+        CancellationToken cancellationToken) =>
+        CompleteAsync(
+            adminKey,
+            existingTunnelIds: null,
+            cancellationToken);
+
     public static async Task<ControlCenterSetupState> CompleteAsync(
         string? adminKey,
+        IReadOnlyDictionary<string, string?>? existingTunnelIds,
         CancellationToken cancellationToken)
     {
         var registry = await ManagedMcpRegistryCoordinator.LoadOrRecoverAsync(
@@ -155,6 +171,117 @@ internal static class ControlCenterSetupService
 
         if (before.IsComplete)
         {
+            return before;
+        }
+
+        var suppliedTunnelIds = existingTunnelIds is null
+            ? new Dictionary<string, string?>(
+                StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string?>(
+                existingTunnelIds,
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (var entry in suppliedTunnelIds)
+        {
+            if (string.IsNullOrWhiteSpace(entry.Value))
+            {
+                continue;
+            }
+
+            if (!ManagedMcpTunnelProvisioningService.IsValidTunnelId(
+                    entry.Value.Trim()))
+            {
+                throw new InvalidOperationException(
+                    $"{entry.Key} için tunnel ID biçimi geçersiz.");
+            }
+
+            if (!registry.Mcps.Any(registration =>
+                    string.Equals(
+                        registration.Id,
+                        entry.Key,
+                        StringComparison.OrdinalIgnoreCase) &&
+                    registration.Tunnel?.Required == true))
+            {
+                throw new InvalidOperationException(
+                    $"{entry.Key} için yönetilen tunnel kaydı bulunamadı.");
+            }
+        }
+
+        if (before.NeedsAdminCredential &&
+            string.IsNullOrWhiteSpace(adminKey))
+        {
+            var allMissingTunnelIdsSupplied =
+                before.MissingTunnelRegistrationIds.All(id =>
+                    suppliedTunnelIds.TryGetValue(
+                        id,
+                        out var supplied) &&
+                    !string.IsNullOrWhiteSpace(supplied) &&
+                    ManagedMcpTunnelProvisioningService.IsValidTunnelId(
+                        supplied.Trim()));
+
+            if (!allMissingTunnelIdsSupplied)
+            {
+                throw new InvalidOperationException(
+                    "Eksik tunnel kayıtları için mevcut tunnel ID veya OpenAI Admin API key gerekiyor.");
+            }
+        }
+
+        foreach (var entry in suppliedTunnelIds)
+        {
+            if (string.IsNullOrWhiteSpace(entry.Value))
+            {
+                continue;
+            }
+
+            var registration = registry.Mcps.Single(item =>
+                string.Equals(
+                    item.Id,
+                    entry.Key,
+                    StringComparison.OrdinalIgnoreCase));
+            var assessment =
+                ManagedMcpTunnelProvisioningService.Assess(
+                    registration);
+            if (assessment.HasTunnelId &&
+                assessment.HasConfig &&
+                assessment.HasRuntimeCredential)
+            {
+                continue;
+            }
+
+            var updated =
+                await ManagedMcpTunnelProvisioningService
+                    .BindExistingTunnelAsync(
+                        registration,
+                        registry,
+                        entry.Value.Trim(),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            registry = registry with
+            {
+                UpdatedAtUtc = DateTimeOffset.UtcNow,
+                Mcps = registry.Mcps
+                    .Select(item =>
+                        string.Equals(
+                            item.Id,
+                            updated.Id,
+                            StringComparison.OrdinalIgnoreCase)
+                            ? updated
+                            : item)
+                    .ToList(),
+            };
+        }
+
+        before = Evaluate(registry);
+        if (before.IsComplete)
+        {
+            ControlCenterEventStore.Record(
+                ControlCenterEventSeverity.Info,
+                "setup",
+                "Yönetim Merkezi kurulumu tamamlandı",
+                "Mevcut güvenli MCP tünelleri bağlandı.",
+                dedupKey: "setup:completed");
+
             return before;
         }
 
@@ -204,6 +331,7 @@ internal static class ControlCenterSetupService
             NeedsAdminCredential: false,
             RuntimeFoundationMissing: false,
             PendingTunnelCount: 0,
+            MissingTunnelRegistrationIds: Array.Empty<string>(),
             Summary: "Kurulum tamam",
             Detail: "Yönetilen MCP bağlantıları için gerekli temel yapılandırma hazır.");
 }

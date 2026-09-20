@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Wpf.Ui.Controls;
 using UiButton = Wpf.Ui.Controls.Button;
+using UiTextBox = Wpf.Ui.Controls.TextBox;
 using UiPasswordBox = Wpf.Ui.Controls.PasswordBox;
 using TextBlock = System.Windows.Controls.TextBlock;
 using HAlign = System.Windows.HorizontalAlignment;
@@ -61,6 +62,102 @@ internal sealed partial class ControlCenterWindow
         };
         content.Children.Add(_setupDetailText);
 
+        var existingTunnelHeading = new TextBlock
+        {
+            Text = "Mevcut OpenAI tunnel kayıtları",
+            Margin = new Thickness(0, 14, 0, 5),
+            Foreground = SecondaryTextBrush,
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            Visibility = Visibility.Collapsed,
+        };
+        existingTunnelHeading.SetValue(
+            FrameworkElement.TagProperty,
+            "existing-tunnel-heading");
+        content.Children.Add(existingTunnelHeading);
+
+        var devTunnelLabel = new TextBlock
+        {
+            Text = "Talvora Dev tunnel ID",
+            Margin = new Thickness(0, 6, 0, 5),
+            Foreground = SecondaryTextBrush,
+            FontSize = 11,
+            Visibility = Visibility.Collapsed,
+        };
+        devTunnelLabel.SetValue(
+            FrameworkElement.TagProperty,
+            "dev-tunnel-label");
+        content.Children.Add(devTunnelLabel);
+
+        _setupDevTunnelIdBox = new UiTextBox
+        {
+            MinHeight = 40,
+            MaxWidth = 520,
+            MaxLength = 39,
+            HorizontalAlignment = HAlign.Left,
+            Padding = new Thickness(10, 7, 10, 7),
+            FontFamily = FontFamily,
+            FontSize = 13,
+            Background = RaisedSurfaceBrush,
+            Foreground = PrimaryTextBrush,
+            BorderBrush = StrongBorderBrush,
+            BorderThickness = new Thickness(1),
+            PlaceholderText = "tunnel_...",
+            Visibility = Visibility.Collapsed,
+        };
+        _setupDevTunnelIdBox.TextChanged += (_, _) =>
+            RefreshSetupActionAvailability();
+        content.Children.Add(_setupDevTunnelIdBox);
+
+        var adminTunnelLabel = new TextBlock
+        {
+            Text = "Talvora Admin tunnel ID",
+            Margin = new Thickness(0, 8, 0, 5),
+            Foreground = SecondaryTextBrush,
+            FontSize = 11,
+            Visibility = Visibility.Collapsed,
+        };
+        adminTunnelLabel.SetValue(
+            FrameworkElement.TagProperty,
+            "admin-tunnel-label");
+        content.Children.Add(adminTunnelLabel);
+
+        _setupAdminTunnelIdBox = new UiTextBox
+        {
+            MinHeight = 40,
+            MaxWidth = 520,
+            MaxLength = 39,
+            HorizontalAlignment = HAlign.Left,
+            Padding = new Thickness(10, 7, 10, 7),
+            FontFamily = FontFamily,
+            FontSize = 13,
+            Background = RaisedSurfaceBrush,
+            Foreground = PrimaryTextBrush,
+            BorderBrush = StrongBorderBrush,
+            BorderThickness = new Thickness(1),
+            PlaceholderText = "tunnel_...",
+            Visibility = Visibility.Collapsed,
+        };
+        _setupAdminTunnelIdBox.TextChanged += (_, _) =>
+            RefreshSetupActionAvailability();
+        content.Children.Add(_setupAdminTunnelIdBox);
+
+        var existingTunnelHelp = new TextBlock
+        {
+            Text =
+                "Tunnel OpenAI tarafında zaten oluşturulduysa ID'yi buraya yapıştırın. " +
+                "Talvora mevcut DPAPI-korumalı Runtime API key'i yeniden kullanır; Admin API key gerekmez.",
+            Margin = new Thickness(0, 6, 0, 0),
+            Foreground = TertiaryTextBrush,
+            FontSize = 10,
+            TextWrapping = TextWrapping.Wrap,
+            Visibility = Visibility.Collapsed,
+        };
+        existingTunnelHelp.SetValue(
+            FrameworkElement.TagProperty,
+            "existing-tunnel-help");
+        content.Children.Add(existingTunnelHelp);
+
         var adminKeyLabel = new TextBlock
         {
             Text = "OpenAI Admin API key",
@@ -89,12 +186,7 @@ internal sealed partial class ControlCenterWindow
         };
         _setupAdminKeyBox.PasswordChanged += (_, _) =>
         {
-            if (_setupActionButton is not null &&
-                _setupAdminKeyBox.Visibility == Visibility.Visible)
-            {
-                _setupActionButton.IsEnabled =
-                    !string.IsNullOrWhiteSpace(_setupAdminKeyBox.Password);
-            }
+            RefreshSetupActionAvailability();
         };
         content.Children.Add(_setupAdminKeyBox);
 
@@ -154,8 +246,11 @@ internal sealed partial class ControlCenterWindow
         };
 
         var setup = ControlCenterSetupService.Evaluate(registry);
+        _setupState = setup;
         if (setup.IsComplete)
         {
+            _setupDevTunnelIdBox.Text = string.Empty;
+            _setupAdminTunnelIdBox.Text = string.Empty;
             _setupAdminKeyBox.Password = string.Empty;
             _setupCard.Visibility = Visibility.Collapsed;
             return;
@@ -169,6 +264,77 @@ internal sealed partial class ControlCenterWindow
         var adminLabel = FindTaggedElement<TextBlock>(
             _setupCard,
             "admin-key-label");
+        var existingTunnelHeading = FindTaggedElement<TextBlock>(
+            _setupCard,
+            "existing-tunnel-heading");
+        var existingTunnelHelp = FindTaggedElement<TextBlock>(
+            _setupCard,
+            "existing-tunnel-help");
+        var devTunnelLabel = FindTaggedElement<TextBlock>(
+            _setupCard,
+            "dev-tunnel-label");
+        var adminTunnelLabel = FindTaggedElement<TextBlock>(
+            _setupCard,
+            "admin-tunnel-label");
+
+        var needsDevTunnelId =
+            setup.MissingTunnelRegistrationIds.Contains(
+                "talvora-dev",
+                StringComparer.OrdinalIgnoreCase);
+        var needsAdminTunnelId =
+            setup.MissingTunnelRegistrationIds.Contains(
+                "talvora-admin",
+                StringComparer.OrdinalIgnoreCase);
+        var showExistingTunnelFields =
+            needsDevTunnelId || needsAdminTunnelId;
+
+        if (existingTunnelHeading is not null)
+        {
+            existingTunnelHeading.Visibility =
+                showExistingTunnelFields
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+        }
+
+        if (existingTunnelHelp is not null)
+        {
+            existingTunnelHelp.Visibility =
+                showExistingTunnelFields
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+        }
+
+        if (devTunnelLabel is not null)
+        {
+            devTunnelLabel.Visibility =
+                needsDevTunnelId
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+        }
+        _setupDevTunnelIdBox.Visibility =
+            needsDevTunnelId
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        if (!needsDevTunnelId)
+        {
+            _setupDevTunnelIdBox.Text = string.Empty;
+        }
+
+        if (adminTunnelLabel is not null)
+        {
+            adminTunnelLabel.Visibility =
+                needsAdminTunnelId
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+        }
+        _setupAdminTunnelIdBox.Visibility =
+            needsAdminTunnelId
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        if (!needsAdminTunnelId)
+        {
+            _setupAdminTunnelIdBox.Text = string.Empty;
+        }
 
         if (setup.NeedsAdminCredential)
         {
@@ -178,11 +344,11 @@ internal sealed partial class ControlCenterWindow
             }
 
             _setupAdminKeyBox.Visibility = Visibility.Visible;
-            _setupActionButton.Content = "Kaydet ve kurulumu tamamla";
+            _setupActionButton.Content = showExistingTunnelFields
+                ? "Tünelleri bağla / kurulumu tamamla"
+                : "Kaydet ve kurulumu tamamla";
             _setupActionButton.Icon =
                 new SymbolIcon { Symbol = SymbolRegular.Checkmark20 };
-            _setupActionButton.IsEnabled =
-                !string.IsNullOrWhiteSpace(_setupAdminKeyBox.Password);
         }
         else
         {
@@ -200,8 +366,56 @@ internal sealed partial class ControlCenterWindow
             {
                 Symbol = SymbolRegular.ArrowClockwise20,
             };
-            _setupActionButton.IsEnabled = true;
         }
+
+        RefreshSetupActionAvailability();
+    }
+
+    private void RefreshSetupActionAvailability()
+    {
+        if (_setupActionButton is null ||
+            _setupState is null)
+        {
+            return;
+        }
+
+        if (_setupState.IsComplete)
+        {
+            _setupActionButton.IsEnabled = false;
+            return;
+        }
+
+        if (_setupState.RuntimeFoundationMissing ||
+            !_setupState.NeedsAdminCredential)
+        {
+            _setupActionButton.IsEnabled = true;
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                _setupAdminKeyBox.Password))
+        {
+            _setupActionButton.IsEnabled = true;
+            return;
+        }
+
+        var allExistingTunnelIdsProvided =
+            _setupState.MissingTunnelRegistrationIds.All(id =>
+                id switch
+                {
+                    "talvora-dev" =>
+                        _setupDevTunnelIdBox.Visibility == Visibility.Visible &&
+                        ManagedMcpTunnelProvisioningService.IsValidTunnelId(
+                            _setupDevTunnelIdBox.Text?.Trim()),
+                    "talvora-admin" =>
+                        _setupAdminTunnelIdBox.Visibility == Visibility.Visible &&
+                        ManagedMcpTunnelProvisioningService.IsValidTunnelId(
+                            _setupAdminTunnelIdBox.Text?.Trim()),
+                    _ => false,
+                });
+
+        _setupActionButton.IsEnabled =
+            allExistingTunnelIdsProvided;
     }
 
     private async Task CompleteSetupFromDashboardAsync()
@@ -216,13 +430,33 @@ internal sealed partial class ControlCenterWindow
         var adminKey = _setupAdminKeyBox.Visibility == Visibility.Visible
             ? _setupAdminKeyBox.Password
             : null;
+        var existingTunnelIds =
+            new Dictionary<string, string?>(
+                StringComparer.OrdinalIgnoreCase);
+
+        if (_setupDevTunnelIdBox.Visibility == Visibility.Visible &&
+            !string.IsNullOrWhiteSpace(_setupDevTunnelIdBox.Text))
+        {
+            existingTunnelIds["talvora-dev"] =
+                _setupDevTunnelIdBox.Text.Trim();
+        }
+
+        if (_setupAdminTunnelIdBox.Visibility == Visibility.Visible &&
+            !string.IsNullOrWhiteSpace(_setupAdminTunnelIdBox.Text))
+        {
+            existingTunnelIds["talvora-admin"] =
+                _setupAdminTunnelIdBox.Text.Trim();
+        }
 
         try
         {
             var state = await ControlCenterSetupService.CompleteAsync(
                 adminKey,
+                existingTunnelIds,
                 _lifetimeCts.Token);
 
+            _setupDevTunnelIdBox.Text = string.Empty;
+            _setupAdminTunnelIdBox.Text = string.Empty;
             _setupAdminKeyBox.Password = string.Empty;
 
             if (state.IsComplete)
@@ -255,6 +489,9 @@ internal sealed partial class ControlCenterWindow
         finally
         {
             adminKey = null;
+            existingTunnelIds.Clear();
+            _setupDevTunnelIdBox.Text = string.Empty;
+            _setupAdminTunnelIdBox.Text = string.Empty;
             _setupAdminKeyBox.Password = string.Empty;
             RefreshSetupCard();
         }
@@ -262,6 +499,13 @@ internal sealed partial class ControlCenterWindow
 
     private static string GetFriendlySetupError(Exception exception)
     {
+        if (exception.Message.Contains(
+                "tunnel ID",
+                StringComparison.CurrentCultureIgnoreCase))
+        {
+            return "Mevcut tunnel ID geçersiz veya bu MCP kaydıyla bağlanamadı. OpenAI tunnel kaydını ve ID biçimini kontrol edin.";
+        }
+
         if (exception.Message.Contains(
                 "Admin API key",
                 StringComparison.CurrentCultureIgnoreCase))

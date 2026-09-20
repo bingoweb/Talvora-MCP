@@ -254,34 +254,132 @@ internal static partial class ManagedMcpTunnelProvisioningService
                     "OpenAI tünel oluşturma yanıtında geçerli tunnel_id bulunamadı.");
             }
 
-            var configPath = ResolveConfigPath(registration);
-            var root = Path.GetDirectoryName(configPath)
-                ?? throw new InvalidOperationException(
-                    "Tunnel config dizini çözümlenemedi.");
-            var stateRoot = string.IsNullOrWhiteSpace(registration.Tunnel.StateRoot)
-                ? Path.Combine(root, "state")
-                : Path.GetFullPath(registration.Tunnel.StateRoot);
-            var profileRoot = Path.Combine(stateRoot, "profiles");
-            var runtimeCredentialPath = GetRuntimeCredentialPath(configPath);
+            return await ConfigureAndConnectTunnelAsync(
+                registration,
+                tunnelId!,
+                reference,
+                runtimeKey,
+                rollbackOnFailure: false,
+                cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            runtimeKey = null;
+            adminKey = null;
+        }
+    }
 
+    public static async Task<ManagedMcpRegistration> BindExistingTunnelAsync(
+        ManagedMcpRegistration registration,
+        ManagedMcpRegistryDocument registry,
+        string tunnelId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+        ArgumentNullException.ThrowIfNull(registry);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tunnelId);
+
+        if (registration.Tunnel is null ||
+            !registration.Tunnel.Required)
+        {
+            throw new InvalidOperationException(
+                $"{registration.DisplayName} için güvenli tünel tanımlı değil.");
+        }
+
+        var normalizedTunnelId = tunnelId.Trim();
+        if (!IsTunnelId(normalizedTunnelId))
+        {
+            throw new ArgumentException(
+                "Tunnel ID biçimi geçersiz.",
+                nameof(tunnelId));
+        }
+
+        var reference = FindReusableRuntimeSource(registry)
+            ?? throw new InvalidOperationException(
+                "Yeniden kullanılabilir güvenli MCP tünel Runtime API key kaynağı bulunamadı.");
+
+        string? runtimeKey = null;
+        try
+        {
+            runtimeKey = DpapiSecretStore.ReadString(
+                reference.RuntimeCredentialPath,
+                "tunnel Runtime API key");
+
+            return await ConfigureAndConnectTunnelAsync(
+                registration,
+                normalizedTunnelId,
+                reference,
+                runtimeKey,
+                rollbackOnFailure: true,
+                cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            runtimeKey = null;
+        }
+    }
+
+    internal static bool IsValidTunnelId(string? value) =>
+        IsTunnelId(value);
+
+    private static async Task<ManagedMcpRegistration> ConfigureAndConnectTunnelAsync(
+        ManagedMcpRegistration registration,
+        string tunnelId,
+        RuntimeSource reference,
+        string runtimeKey,
+        bool rollbackOnFailure,
+        CancellationToken cancellationToken)
+    {
+        var tunnel = registration.Tunnel
+            ?? throw new InvalidOperationException(
+                $"{registration.DisplayName} için güvenli tünel tanımlı değil.");
+        var configPath = ResolveConfigPath(registration);
+        var root = Path.GetDirectoryName(configPath)
+            ?? throw new InvalidOperationException(
+                "Tunnel config dizini çözümlenemedi.");
+        var stateRoot = string.IsNullOrWhiteSpace(tunnel.StateRoot)
+            ? Path.Combine(root, "state")
+            : Path.GetFullPath(tunnel.StateRoot);
+        var profileRoot = Path.Combine(stateRoot, "profiles");
+        var runtimeCredentialPath = GetRuntimeCredentialPath(configPath);
+
+        byte[]? previousConfig = null;
+        var configExisted = File.Exists(configPath);
+        var configWritten = false;
+        var registryPublished = false;
+
+        if (rollbackOnFailure && configExisted)
+        {
+            previousConfig = await File.ReadAllBytesAsync(
+                configPath,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        try
+        {
             Directory.CreateDirectory(root);
             Directory.CreateDirectory(stateRoot);
             Directory.CreateDirectory(profileRoot);
 
-            DpapiSecretStore.WriteString(runtimeCredentialPath, runtimeKey);
+            DpapiSecretStore.WriteString(
+                runtimeCredentialPath,
+                runtimeKey);
 
             var config = new BusinessConfig(
-                registration.Tunnel.Alias,
-                tunnelId!,
+                tunnel.Alias,
+                tunnelId,
                 registration.Endpoint,
                 reference.Config.TunnelClient,
                 reference.Config.TunnelClientVersion,
                 stateRoot,
                 DateTimeOffset.UtcNow.ToString("O"));
 
-            WriteBusinessConfig(configPath, config);
+            WriteBusinessConfig(
+                configPath,
+                config);
+            configWritten = true;
 
-            var updatedTunnel = registration.Tunnel with
+            var updatedTunnel = tunnel with
             {
                 TunnelId = tunnelId,
                 ConfigPath = configPath,
@@ -295,14 +393,15 @@ internal static partial class ManagedMcpTunnelProvisioningService
             await ManagedMcpRegistryCoordinator.UpsertAsync(
                 updatedRegistration,
                 cancellationToken).ConfigureAwait(false);
-
-            await DeletePendingProvisionAfterCommitAsync(
-                registration.Id,
-                tunnelId!).ConfigureAwait(false);
+            registryPublished = true;
 
             await ConnectExistingAsync(
                 updatedRegistration,
                 cancellationToken).ConfigureAwait(false);
+
+            await DeletePendingProvisionAfterCommitAsync(
+                registration.Id,
+                tunnelId).ConfigureAwait(false);
 
             ControlCenterEventStore.Record(
                 ControlCenterEventSeverity.Info,
@@ -314,10 +413,61 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
             return updatedRegistration;
         }
+        catch (Exception failure)
+        {
+            Exception? rollbackFailure = null;
+            if (rollbackOnFailure)
+            {
+                try
+                {
+                    if (configWritten)
+                    {
+                        if (configExisted && previousConfig is not null)
+                        {
+                            await File.WriteAllBytesAsync(
+                                configPath,
+                                previousConfig,
+                                CancellationToken.None).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            File.Delete(configPath);
+                        }
+                    }
+
+                    if (registryPublished)
+                    {
+                        await ManagedMcpRegistryCoordinator.UpsertAsync(
+                            registration,
+                            CancellationToken.None).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception rollbackException) when (
+                    rollbackException is IOException or
+                    UnauthorizedAccessException or
+                    InvalidOperationException or
+                    System.Security.Cryptography.CryptographicException)
+                {
+                    rollbackFailure = rollbackException;
+                }
+            }
+
+            if (rollbackFailure is not null)
+            {
+                throw new AggregateException(
+                    "Mevcut tunnel bağlama başarısız oldu ve rollback tamamlanamadı.",
+                    failure,
+                    rollbackFailure);
+            }
+
+            throw;
+        }
         finally
         {
-            runtimeKey = null;
-            adminKey = null;
+            if (previousConfig is not null)
+            {
+                Array.Clear(previousConfig);
+            }
         }
     }
 
