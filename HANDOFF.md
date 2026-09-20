@@ -8,15 +8,14 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 
 - Repository: `C:\Users\tayla\Talvora-MCP`
 - Branch: `main`
-- Last runtime-affecting fix commit: `ded6cd52f692b3563b0edbfdaf1c6f392b8c77e9` (`fix: persist control center placement on exit`).
+- Last runtime-affecting fix commit: `86290c49abc14fe3ddfac791ccf6548c6b99c2c6` (`fix: serialize control center placement saves`).
 - Gitea `origin/main` ve GitHub `github/main`: her bug closeout commit'inden sonra birlikte güncellenir.
 - Canlı Talvora service: **Running / Automatic**.
-- Exact-installed runtime source commit: `ded6cd52f692b3563b0edbfdaf1c6f392b8c77e9`.
+- Exact-installed runtime source commit: `86290c49abc14fe3ddfac791ccf6548c6b99c2c6`.
 - #178 tamamlandı: manual-stop persistence Windows SessionId bazlı dosyaya ayrıldı; targeted regression GREEN; fix commit Gitea + GitHub'a push edildi ve canonical live deploy exact-installed olarak doğrulandı.
 - #179 tamamlandı: Control Center exit artık window-placement yazımını shutdown öncesi tamamlıyor; regression GREEN, fix iki remote'a push edildi ve canonical exact-installed live deploy doğrulandı.
-- #180 source fix hazır: Control Center detay ekranındaki Gitea browser launch hatası artık beklenen shell exception'larını yakalayıp kullanıcıya bildiriyor; targeted regression GREEN ve Tray Release build 0 warning / 0 error; commit/push/live deploy sırada.
-- #180 source fix commit `d8abbc2` Gitea + GitHub'a push edildi; live acceptance #181 ile birlikte sırada.
-- #181 source fix hazır: eşzamanlı window-placement kayıtları semaphore ile serialize ediliyor ve monoton save-version ile yalnız en yeni bekleyen snapshot yazılıyor; targeted regression GREEN ve Tray Release build 0 warning / 0 error.
+- #180 tamamlandı: Control Center detay ekranındaki Gitea browser launch hatası artık beklenen shell exception'larını yakalayıp kullanıcıya bildiriyor; targeted regression GREEN, Tray Release build 0 warning / 0 error, fix iki remote'a push edildi ve canonical exact-installed live deploy doğrulandı.
+- #181 tamamlandı: eşzamanlı window-placement kayıtları semaphore ile serialize ediliyor ve monoton save-version ile yalnız en yeni bekleyen snapshot yazılıyor; fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 
 ## #178 — CLOSED / LIVE VERIFIED
 
@@ -35,9 +34,9 @@ Düzeltme ve kanıt:
 
 ### Aktif devam noktası
 
-1. #181 source/test/docs değişikliklerini tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
-2. Temiz #181 HEAD'den canonical installer build + manifest-bound live deploy yap; exact-installed runtime commit'i doğrula. Bu runtime #180'i de içerir.
-3. #180 ve #181 live acceptance'larını docs-only closeout commit'iyle kapat; ardından deeper audit'e #182'den devam et.
+1. #181 live acceptance docs closeout'unu commit edip Gitea + GitHub'a push et.
+2. Deep bug audit'e #182'den devam et; Gitea browser-launch Process handle ownership yolunu doğrula.
+3. Her yeni bug için targeted test -> docs -> tek bug commit -> iki remote push -> runtime etkiliyorsa canonical live deploy sırasını koru.
 
 ## #179 — CLOSED / LIVE VERIFIED
 
@@ -54,7 +53,7 @@ Düzeltme ve kanıt:
 - Canonical installer build GREEN; artifact SHA-256 `19A18E87697FC75F8CC04B5E52464D8FAA8062FCCFB6059B2D96A1877D19756D`.
 - Self-update sırasında MCP bağlantısı servis değişiminde kesildi; reconnect sonrası `system_info.sourceCommit=ded6cd52f692b3563b0edbfdaf1c6f392b8c77e9` doğrulandı.
 
-## #180 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+## #180 — CLOSED / LIVE VERIFIED
 
 Kök neden:
 - Control Center detay ekranındaki Gitea birincil eylemi `OpenGiteaHome()` çağrısını doğrudan async WPF click zincirine bırakıyordu.
@@ -65,8 +64,11 @@ Düzeltme ve kanıt:
 - Hata loglanıyor, Control Center event store'a operation failure olarak işleniyor ve kullanıcıya `ShowOperationErrorAsync` ile görünür hata veriliyor; beklenmeyen exception'lar gizlenmiyor.
 - `NativeInstallerSourceRegression.ps1` önce RED (`ControlCenterDetailGiteaOpenHandlesShellFailure=False`), fix sonrası GREEN.
 - `Talvora.Tray` Release build: **0 warning / 0 error**.
+- Fix commit: `d8abbc25dc4e784bc12c7d08dcb4a20bf7e39190`; Gitea `origin/main` ve GitHub `github/main` senkron.
+- Clean detached worktree üzerinden canonical installer build GREEN; artifact SHA-256 `D41A51195F8F44ED7D9C80DADAC2E66490CA5026C73EB9CDA5FA640D191713CD`.
+- Manifest-bound independent SYSTEM deploy sonrası Talvora service **Running / Automatic** ve exact-installed `system_info.sourceCommit=d8abbc25dc4e784bc12c7d08dcb4a20bf7e39190`.
 
-## #181 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+## #181 — CLOSED / LIVE VERIFIED
 
 Kök neden:
 - Debounce timer içindeki async `SaveWindowPlacementAsync()` dosya I/O sırasında UI thread'i serbest bırakıyor; bu sırada yeni hareket/resize veya exit save'i başlayabiliyor.
@@ -78,6 +80,9 @@ Düzeltme ve kanıt:
 - Exit save yolu #179'daki deterministik wait davranışını koruyor; gate await'i `ConfigureAwait(false)` ile UI context'e bağlı değil.
 - `NativeInstallerSourceRegression.ps1`: `ControlCenterWindowPlacementSaveLatestWins=True`; suite GREEN.
 - `Talvora.Tray` Release build: **0 warning / 0 error**.
+- Fix commit: `86290c49abc14fe3ddfac791ccf6548c6b99c2c6`; Gitea `origin/main` ve GitHub `github/main` senkron.
+- Canonical installer SHA-256 `67ECEC023E2892A0C09E906DA22A6DDC8BDC3BFD7BE0EC4D7AFDD9BE8967A585`.
+- Self-update sonrası reconnect doğrulaması: `system_info.sourceCommit=86290c49abc14fe3ddfac791ccf6548c6b99c2c6`; service exact-installed GREEN.
 
 ## Sabit çalışma kuralları
 
