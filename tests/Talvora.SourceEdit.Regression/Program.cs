@@ -1,4 +1,14 @@
 if (args.Contains(
+        "--semantic-resource-bounds-only",
+        StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunSemanticResourceBoundsAsync();
+    Console.WriteLine(
+        "TALVORA SEMANTIC RESOURCE BOUNDS REGRESSION GREEN");
+    return;
+}
+
+if (args.Contains(
         "--response-bounds-only",
         StringComparer.OrdinalIgnoreCase))
 {

@@ -3,6 +3,9 @@ using Talvora.SourceEditing;
 
 internal static partial class SourceEditRegressionRunner
 {
+    public static Task RunSemanticResourceBoundsAsync() =>
+        SemanticResourceBoundsAsync();
+
     private static async Task SemanticSolutionRenameReplayAsync()
     {
         await using var fixture =
@@ -527,6 +530,127 @@ internal static partial class SourceEditRegressionRunner
             "Workspace-load semantic rejection unexpectedly mutated.");
     }
 
+    private static async Task SemanticResourceBoundsAsync()
+    {
+        await using var fixture =
+            await TestWorkspace.CreateAsync();
+        await WriteTwoProjectSemanticSolutionAsync(
+            fixture);
+        var anchor =
+            fixture.PathInWorkspace(
+                "Lib/Widget.cs");
+        var dependent =
+            fixture.PathInWorkspace(
+                "App/Use.cs");
+        var anchorRead =
+            await SourceEditRuntime.Engine.ReadSourceAsync(
+                anchor,
+                1,
+                0,
+                CancellationToken.None);
+        var originalAnchor =
+            await File.ReadAllTextAsync(
+                anchor);
+        var originalDependent =
+            await File.ReadAllTextAsync(
+                dependent);
+
+        async Task<SemanticEditTransactionResult> RunBoundedAsync(
+            int maxProjects = 32,
+            int maxDocuments = 256,
+            int maxChangedDocuments = 64,
+            long maxTotalChangedCharacters = 1024 * 1024,
+            int maxDiagnostics = 100) =>
+            await RenameAsync(
+                fixture,
+                NewTransactionId(),
+                "Demo.slnx",
+                "Lib/Widget.cs",
+                1,
+                13,
+                anchorRead.Revision,
+                "RenamedWidget",
+                projectPath: "Lib/Lib.csproj",
+                expectedSymbolName: "Widget",
+                maxProjects: maxProjects,
+                maxDocuments: maxDocuments,
+                maxChangedDocuments: maxChangedDocuments,
+                maxTotalChangedCharacters:
+                    maxTotalChangedCharacters,
+                maxDiagnostics: maxDiagnostics);
+
+        var projectLimit =
+            await RunBoundedAsync(
+                maxProjects: 1);
+        AssertError(
+            projectLimit.Transaction,
+            SourceEditCodes.ResourceLimit);
+        Assert(
+            projectLimit.Transaction.Error!.Message.Contains(
+                "maxProjects=1",
+                StringComparison.Ordinal),
+            "Project resource limit was not raised from semantic workspace loading.");
+
+        var documentLimit =
+            await RunBoundedAsync(
+                maxDocuments: 1);
+        AssertError(
+            documentLimit.Transaction,
+            SourceEditCodes.ResourceLimit);
+        Assert(
+            documentLimit.Transaction.Error!.Message.Contains(
+                "maxDocuments=1",
+                StringComparison.Ordinal),
+            "Document resource limit was not raised from semantic workspace loading.");
+
+        var changedDocumentLimit =
+            await RunBoundedAsync(
+                maxChangedDocuments: 1);
+        AssertError(
+            changedDocumentLimit.Transaction,
+            SourceEditCodes.ResourceLimit);
+        Assert(
+            changedDocumentLimit.Transaction.Error!.Message.Contains(
+                "maxChangedDocuments=1",
+                StringComparison.Ordinal),
+            "Changed-document resource limit was not raised during proposal materialization.");
+
+        var changedCharacterLimit =
+            await RunBoundedAsync(
+                maxTotalChangedCharacters: 1);
+        AssertError(
+            changedCharacterLimit.Transaction,
+            SourceEditCodes.ResourceLimit);
+        Assert(
+            changedCharacterLimit.Transaction.Error!.Message.Contains(
+                "maxTotalChangedCharacters=1",
+                StringComparison.Ordinal),
+            "Changed-character resource limit was not raised during proposal materialization.");
+
+        var emergencyLimit =
+            await RunBoundedAsync(
+                maxDiagnostics: 10001);
+        AssertError(
+            emergencyLimit.Transaction,
+            SourceEditCodes.ResourceLimit);
+        Assert(
+            emergencyLimit.Transaction.Error!.Message.Contains(
+                "emergency per-invocation ceilings",
+                StringComparison.Ordinal),
+            "Server-side semantic emergency ceiling was not enforced.");
+
+        AssertEqual(
+            originalAnchor,
+            await File.ReadAllTextAsync(
+                anchor),
+            "Semantic resource-limit regressions mutated the declaration document.");
+        AssertEqual(
+            originalDependent,
+            await File.ReadAllTextAsync(
+                dependent),
+            "Semantic resource-limit regressions mutated the dependent document.");
+    }
+
     private static async Task SemanticCancellationAsync()
     {
         await using var fixture =
@@ -589,7 +713,13 @@ internal static partial class SourceEditRegressionRunner
         string newName,
         string? projectPath,
         string? expectedSymbolName = null,
-        CancellationToken cancellationToken = default) =>
+        CancellationToken cancellationToken = default,
+        int maxProjects = 32,
+        int maxDocuments = 256,
+        int maxChangedDocuments = 64,
+        long maxTotalChangedCharacters = 1024 * 1024,
+        int maxDiagnostics = 100,
+        int timeoutSeconds = 120) =>
         await RoslynSemanticEditEngine.ApplyRenameAsync(
             fixture.Root,
             transactionId,
@@ -604,12 +734,12 @@ internal static partial class SourceEditRegressionRunner
             renameOverloads: false,
             renameInStrings: false,
             renameInComments: false,
-            maxProjects: 32,
-            maxDocuments: 256,
-            maxChangedDocuments: 64,
-            maxTotalChangedCharacters: 1024 * 1024,
-            maxDiagnostics: 100,
-            timeoutSeconds: 120,
+            maxProjects,
+            maxDocuments,
+            maxChangedDocuments,
+            maxTotalChangedCharacters,
+            maxDiagnostics,
+            timeoutSeconds,
             validateSyntax: true,
             cancellationToken);
 

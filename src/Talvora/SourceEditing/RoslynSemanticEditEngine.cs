@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -14,6 +13,12 @@ namespace Talvora.SourceEditing;
 
 internal static class RoslynSemanticEditEngine
 {
+    private const int AbsoluteMaxProjects = 4096;
+    private const int AbsoluteMaxDocuments = 1000000;
+    private const int AbsoluteMaxChangedDocuments = 100000;
+    private const long AbsoluteMaxTotalChangedCharacters = 2147483648;
+    private const int AbsoluteMaxDiagnostics = 10000;
+
     public static async Task<SemanticEditTransactionResult> ApplyRenameAsync(
         string workspaceRoot,
         string transactionId,
@@ -165,14 +170,6 @@ internal static class RoslynSemanticEditEngine
         workspace.SkipUnrecognizedProjects = false;
         workspace.LoadMetadataForReferencedProjects = false;
 
-        var workspaceDiagnostics =
-            new ConcurrentQueue<WorkspaceDiagnostic>();
-        using var workspaceFailureRegistration =
-            workspace.RegisterWorkspaceFailedHandler(
-                args =>
-                    workspaceDiagnostics.Enqueue(
-                        args.Diagnostic));
-
         SemanticLoadScope loadScope;
         try
         {
@@ -203,38 +200,68 @@ internal static class RoslynSemanticEditEngine
         }
 
         Solution solution;
-        try
+        using (var loadBudget =
+               new SemanticLoadBudget(
+                   request.MaxProjects,
+                   request.MaxDocuments,
+                   cancellationToken))
+        using (var workspaceChangeRegistration =
+               workspace.RegisterWorkspaceChangedImmediateHandler(
+                   args =>
+                       loadBudget.ObserveSolution(
+                           args.NewSolution)))
+        using (var workspaceFailureRegistration =
+               workspace.RegisterWorkspaceFailedHandler(
+                   args =>
+                       context.AddWorkspaceDiagnostic(
+                           args.Diagnostic)))
         {
-            solution =
-                await OpenSolutionOrProjectAsync(
+            try
+            {
+                solution =
+                    await OpenSolutionOrProjectAsync(
+                        workspace,
+                        loadScope.Path,
+                        loadBudget,
+                        loadBudget.Token);
+                if (loadBudget.TryGetFailure(
+                        out var resourceMessage))
+                {
+                    throw ResourceLimit(
+                        resourceMessage);
+                }
+            }
+            catch (OperationCanceledException) when (
+                !cancellationToken.IsCancellationRequested &&
+                loadBudget.TryGetFailure(
+                    out var resourceMessage))
+            {
+                throw ResourceLimit(
+                    resourceMessage);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (
+                ex is InvalidOperationException or
+                    IOException or
+                    UnauthorizedAccessException or
+                    NotSupportedException)
+            {
+                CaptureWorkspaceDiagnostics(
                     workspace,
+                    context);
+                throw LoadFailure(
+                    "Roslyn/MSBuild could not load the requested solution/project.",
                     loadScope.Path,
-                    cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex) when (
-            ex is InvalidOperationException or
-                IOException or
-                UnauthorizedAccessException or
-                NotSupportedException)
-        {
-            DrainWorkspaceDiagnostics(
-                workspace,
-                workspaceDiagnostics,
-                context);
-            throw LoadFailure(
-                "Roslyn/MSBuild could not load the requested solution/project.",
-                loadScope.Path,
-                context,
-                ex);
+                    context,
+                    ex);
+            }
         }
 
-        DrainWorkspaceDiagnostics(
+        CaptureWorkspaceDiagnostics(
             workspace,
-            workspaceDiagnostics,
             context);
         RejectWorkspaceFailures(
             request,
@@ -830,6 +857,7 @@ internal static class RoslynSemanticEditEngine
     private static async Task<Solution> OpenSolutionOrProjectAsync(
         MSBuildWorkspace workspace,
         string inputPath,
+        IProgress<ProjectLoadProgress> progress,
         CancellationToken cancellationToken)
     {
         var extension =
@@ -843,14 +871,14 @@ internal static class RoslynSemanticEditEngine
             var project =
                 await workspace.OpenProjectAsync(
                     inputPath,
-                    progress: null,
+                    progress,
                     cancellationToken);
             return project.Solution;
         }
 
         return await workspace.OpenSolutionAsync(
             inputPath,
-            progress: null,
+            progress,
             cancellationToken);
     }
 
@@ -929,6 +957,10 @@ internal static class RoslynSemanticEditEngine
         var proposals =
             new Dictionary<string, SemanticFileProposal>(
                 StringComparer.OrdinalIgnoreCase);
+        var changedPaths =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+        long totalChangedCharacters = 0;
         foreach (var projectChange in solutionChanges.GetProjectChanges())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -995,6 +1027,15 @@ internal static class RoslynSemanticEditEngine
                     SourceWorkspaceClassifier.GetRelativePath(
                         workspaceRoot,
                         oldFullPath);
+                if (changedPaths.Add(
+                        relative) &&
+                    changedPaths.Count >
+                        request.MaxChangedDocuments)
+                {
+                    throw ResourceLimit(
+                        $"Semantic rename identified more than maxChangedDocuments={request.MaxChangedDocuments} physical documents before proposal text materialization completed.");
+                }
+
                 var snapshot =
                     await SourceTextCodec.ReadSnapshotAsync(
                         oldFullPath,
@@ -1043,16 +1084,14 @@ internal static class RoslynSemanticEditEngine
                     new SemanticFileProposal(
                         relative,
                         snapshot.Revision,
-                        newText.ToString(),
                         edits);
                 if (proposals.TryGetValue(
                         relative,
                         out var existing))
                 {
-                    if (!string.Equals(
-                            existing.ProposedText,
-                            proposal.ProposedText,
-                            StringComparison.Ordinal))
+                    if (!SemanticEditsEqual(
+                            existing.Edits,
+                            proposal.Edits))
                     {
                         throw Domain(
                             SourceEditCodes.SemanticSymbolAmbiguous,
@@ -1063,6 +1102,29 @@ internal static class RoslynSemanticEditEngine
                     continue;
                 }
 
+                long proposalChangedCharacters = 0;
+                foreach (var edit in edits)
+                {
+                    proposalChangedCharacters =
+                        checked(
+                            proposalChangedCharacters +
+                            (edit.ExpectedText?.Length ?? 0) +
+                            edit.NewText.Length);
+                }
+
+                var nextTotalChangedCharacters =
+                    checked(
+                        totalChangedCharacters +
+                        proposalChangedCharacters);
+                if (nextTotalChangedCharacters >
+                    request.MaxTotalChangedCharacters)
+                {
+                    throw ResourceLimit(
+                        $"Semantic rename proposal exceeded maxTotalChangedCharacters={request.MaxTotalChangedCharacters} while materializing changed documents.");
+                }
+
+                totalChangedCharacters =
+                    nextTotalChangedCharacters;
                 proposals[relative] =
                     proposal;
             }
@@ -1073,33 +1135,6 @@ internal static class RoslynSemanticEditEngine
             throw Domain(
                 SourceEditCodes.SemanticNoChanges,
                 "Roslyn resolved the symbol but the requested rename produced no source changes.");
-        }
-
-        if (proposals.Count >
-            request.MaxChangedDocuments)
-        {
-            throw ResourceLimit(
-                $"Semantic rename changed {proposals.Count} physical documents, exceeding maxChangedDocuments={request.MaxChangedDocuments}.");
-        }
-
-        long totalChangedCharacters = 0;
-        foreach (var proposal in proposals.Values)
-        {
-            foreach (var edit in proposal.Edits)
-            {
-                totalChangedCharacters =
-                    checked(
-                        totalChangedCharacters +
-                        (edit.ExpectedText?.Length ?? 0) +
-                        edit.NewText.Length);
-            }
-        }
-
-        if (totalChangedCharacters >
-            request.MaxTotalChangedCharacters)
-        {
-            throw ResourceLimit(
-                $"Semantic rename proposal contains {totalChangedCharacters} changed characters, exceeding maxTotalChangedCharacters={request.MaxTotalChangedCharacters}.");
         }
 
         return proposals
@@ -1120,6 +1155,43 @@ internal static class RoslynSemanticEditEngine
                             proposal.Edits,
                     })
             .ToArray();
+    }
+
+    private static bool SemanticEditsEqual(
+        IReadOnlyList<SourceEditTextRangeInput> left,
+        IReadOnlyList<SourceEditTextRangeInput> right)
+    {
+        if (left.Count != right.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0;
+             index < left.Count;
+             index++)
+        {
+            var leftEdit = left[index];
+            var rightEdit = right[index];
+            if (leftEdit.StartLine != rightEdit.StartLine ||
+                leftEdit.StartCharacter !=
+                    rightEdit.StartCharacter ||
+                leftEdit.EndLine != rightEdit.EndLine ||
+                leftEdit.EndCharacter !=
+                    rightEdit.EndCharacter ||
+                !string.Equals(
+                    leftEdit.ExpectedText,
+                    rightEdit.ExpectedText,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    leftEdit.NewText,
+                    rightEdit.NewText,
+                    StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static SourceEditTextRangeInput ToSourceEditRange(
@@ -1195,17 +1267,10 @@ internal static class RoslynSemanticEditEngine
         }
     }
 
-    private static void DrainWorkspaceDiagnostics(
+    private static void CaptureWorkspaceDiagnostics(
         MSBuildWorkspace workspace,
-        ConcurrentQueue<WorkspaceDiagnostic> queued,
         SemanticExecutionContext context)
     {
-        foreach (var diagnostic in queued)
-        {
-            context.AddWorkspaceDiagnostic(
-                diagnostic);
-        }
-
         foreach (var diagnostic in workspace.Diagnostics)
         {
             context.AddWorkspaceDiagnostic(
@@ -1389,8 +1454,129 @@ internal static class RoslynSemanticEditEngine
     private sealed record SemanticFileProposal(
         string RelativePath,
         string ExpectedRevision,
-        string ProposedText,
         IReadOnlyList<SourceEditTextRangeInput> Edits);
+
+    private sealed class SemanticLoadBudget :
+        IProgress<ProjectLoadProgress>,
+        IDisposable
+    {
+        private readonly int maxProjects;
+        private readonly int maxDocuments;
+        private readonly CancellationTokenSource cancellation;
+        private readonly object gate = new();
+        private readonly HashSet<string> loadingProjects =
+            new(StringComparer.OrdinalIgnoreCase);
+        private string? failureMessage;
+
+        public SemanticLoadBudget(
+            int maxProjects,
+            int maxDocuments,
+            CancellationToken cancellationToken)
+        {
+            this.maxProjects = maxProjects;
+            this.maxDocuments = maxDocuments;
+            cancellation =
+                CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken);
+        }
+
+        public CancellationToken Token =>
+            cancellation.Token;
+
+        public void Report(
+            ProjectLoadProgress value)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    value.FilePath))
+            {
+                return;
+            }
+
+            lock (gate)
+            {
+                if (failureMessage is not null ||
+                    !loadingProjects.Add(
+                        value.FilePath))
+                {
+                    return;
+                }
+
+                if (loadingProjects.Count >
+                    maxProjects)
+                {
+                    FailUnderLock(
+                        $"Semantic workspace loading observed more than maxProjects={maxProjects} unique project files before load completed.");
+                }
+            }
+        }
+
+        public void ObserveSolution(
+            Solution solution)
+        {
+            lock (gate)
+            {
+                if (failureMessage is not null)
+                {
+                    return;
+                }
+
+                var projectCount =
+                    solution.ProjectIds.Count;
+                if (projectCount >
+                    maxProjects)
+                {
+                    FailUnderLock(
+                        $"Semantic workspace loading exceeded maxProjects={maxProjects} before load completed.");
+                    return;
+                }
+
+                long documentCount = 0;
+                foreach (var projectId in
+                         solution.ProjectIds)
+                {
+                    var project =
+                        solution.GetProject(
+                            projectId);
+                    if (project is null)
+                    {
+                        continue;
+                    }
+
+                    documentCount +=
+                        project.DocumentIds.Count;
+                    if (documentCount >
+                        maxDocuments)
+                    {
+                        FailUnderLock(
+                            $"Semantic workspace loading exceeded maxDocuments={maxDocuments} before load completed.");
+                        return;
+                    }
+                }
+            }
+        }
+
+        public bool TryGetFailure(
+            out string message)
+        {
+            lock (gate)
+            {
+                message =
+                    failureMessage ??
+                    string.Empty;
+                return failureMessage is not null;
+            }
+        }
+
+        public void Dispose() =>
+            cancellation.Dispose();
+
+        private void FailUnderLock(
+            string message)
+        {
+            failureMessage = message;
+            cancellation.Cancel();
+        }
+    }
 
     private sealed record SemanticLoadScope(
         string Path,
@@ -1550,6 +1736,8 @@ internal static class RoslynSemanticEditEngine
     private sealed class SemanticExecutionContext
     {
         private readonly int maxDiagnostics;
+        private readonly object diagnosticGate =
+            new();
         private readonly List<SemanticEditDiagnostic> diagnostics = [];
         private readonly HashSet<string> diagnosticKeys =
             new(
@@ -1580,6 +1768,16 @@ internal static class RoslynSemanticEditEngine
                     diagnostics.ToArray()));
 
         public void AddWorkspaceDiagnostic(
+            WorkspaceDiagnostic diagnostic)
+        {
+            lock (diagnosticGate)
+            {
+                AddWorkspaceDiagnosticUnderLock(
+                    diagnostic);
+            }
+        }
+
+        private void AddWorkspaceDiagnosticUnderLock(
             WorkspaceDiagnostic diagnostic)
         {
             if (diagnostics.Count >=
@@ -1876,6 +2074,24 @@ internal static class RoslynSemanticEditEngine
                 throw Domain(
                     SourceEditCodes.SemanticInputInvalid,
                     "Resource limits must be positive and timeoutSeconds must be in the range 1..86400.");
+            }
+
+            if (maxProjects > AbsoluteMaxProjects ||
+                maxDocuments > AbsoluteMaxDocuments ||
+                maxChangedDocuments >
+                    AbsoluteMaxChangedDocuments ||
+                maxTotalChangedCharacters >
+                    AbsoluteMaxTotalChangedCharacters ||
+                maxDiagnostics >
+                    AbsoluteMaxDiagnostics)
+            {
+                throw ResourceLimit(
+                    "Semantic resource request exceeds Talvora's emergency per-invocation ceilings: " +
+                    $"maxProjects<={AbsoluteMaxProjects}, " +
+                    $"maxDocuments<={AbsoluteMaxDocuments}, " +
+                    $"maxChangedDocuments<={AbsoluteMaxChangedDocuments}, " +
+                    $"maxTotalChangedCharacters<={AbsoluteMaxTotalChangedCharacters}, " +
+                    $"maxDiagnostics<={AbsoluteMaxDiagnostics}.");
             }
 
             return new SemanticRenameRequest(

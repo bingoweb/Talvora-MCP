@@ -540,11 +540,11 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #109 — canonical SYSTEM deploy task `Talvora-Setup.exe --silent` çalıştırsın; Session 0 görünmez GUI hang'ini regression ile engelle.
 
 
-## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 6 OPEN)
+## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 4 OPEN)
 
 - [x] #124 — semantic durable replay metadata; adapter receipt persisted in receipt + WAL, forced receipt-loss recovery preserves workspace/symbol/diagnostics, Source Edit 60/60 GREEN.
 - [x] #127 — structural YAML control-file self-scan. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
-- [ ] #128 — semantic resource bounds before/while load/generation.
+- [x] #128 — semantic resource bounds before/while load/generation; progress/workspace cancellation gate + bounded diagnostics + incremental proposal budgets + emergency ceilings, targeted GREEN, Source Edit 61/61 GREEN.
 - [ ] #129 — semantic graph concurrency fingerprint/versioning.
 - [ ] #130 — workspace-scoped MSBuild/toolchain fidelity.
 - [x] #132 — retired Playwright MCP ownership-aware post-commit upgrade cleanup + idempotent migration marker; targeted installer source contracts GREEN, Installer Release compile 0 warning / 0 error.
