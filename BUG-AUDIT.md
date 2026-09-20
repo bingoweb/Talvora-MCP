@@ -2,8 +2,8 @@
 
 Last updated: 2026-09-20
 Branch: main
-Current source HEAD baseline: `e027e18232d7f8c5f4441ea8e29312815851e593` plus intentional dirty #130 development tree; resolve exact final HEAD again before commit.
-Current exact-installed audit runtime: `3becb241a243b93ffcf2113344636421f4121179`
+Current source HEAD baseline: `e1ff681b6023b393b164e676a5c8d2b414bc5606`.
+Current exact-installed audit runtime: `e1ff681b6023b393b164e676a5c8d2b414bc5606`
 Canonical exact-installed tool count: 204 unique tools
 Status: source remediation is active. Current #121–#171 statuses and counts are below; source-test completion does not imply deployment to the installed service.
 
@@ -16,6 +16,7 @@ Status: source remediation is active. Current #121–#171 statuses and counts ar
 - #166 and #167 are not additional defects: their evidence was merged into canonical #147 and #148 respectively.
 - Canonical deploy #109 explicit `--silent` behavior must remain intact during all future installer changes.
 - #129 follow-up: project/solution analyzer ve source-generator binary referansları da semantic graph physical revision snapshot + commit guard kapsamına alındı. Analyzer/generator binary drift artık commit öncesi `SEMANTIC_GRAPH_STALE` ile fail-closed olur. Targeted regression GREEN; full Source Edit 62/62 GREEN; Talvora Release 0 warning / 0 error.
+- #130 live acceptance: canonical installer source commit `e1ff681b6023b393b164e676a5c8d2b414bc5606`, artifact size **257,287,951 bytes**, SHA-256 `98D23CB5069F10833FFF4A8011F649AE9927D4DA3C5028C9E7A00A0387863AEA`. Canonical deploy terminal result 0; sonrasında Talvora service **Running/Automatic** ve exact-installed `sourceCommit=e1ff681b6023b393b164e676a5c8d2b414bc5606`.
 
 ## Fixed findings
 
