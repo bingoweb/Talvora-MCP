@@ -32,6 +32,18 @@ builder.Services
         options.ServerInstructions =
             SourceEditRoutingContract.ServerInstructions)
     .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
+    .WithRequestFilters(filters =>
+        filters.AddListToolsFilter(next => async (
+            request,
+            cancellationToken) =>
+        {
+            var result =
+                await next(
+                    request,
+                    cancellationToken);
+            McpToolMetadataWirePolicy.Apply(result);
+            return result;
+        }))
     .WithToolsFromAssembly();
 
 var app = builder.Build();

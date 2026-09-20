@@ -59,11 +59,28 @@ if (args.Length == 1 &&
     return;
 }
 
+if (args.Length == 1 &&
+    string.Equals(
+        args[0],
+        "--metadata-policy-source-only",
+        StringComparison.Ordinal))
+{
+    SmokeScenarios.RunMetadataPolicySource();
+    Console.WriteLine("TALVORA MCP METADATA POLICY SOURCE GREEN");
+    return;
+}
+
 var devServerOnly =
     args.Length > 0 &&
     string.Equals(
         args[0],
         "--dev-server-only",
+        StringComparison.Ordinal);
+var metadataPolicyOnly =
+    args.Length > 0 &&
+    string.Equals(
+        args[0],
+        "--metadata-policy-only",
         StringComparison.Ordinal);
 var semanticSourceEditOnly =
     args.Length > 0 &&
@@ -72,7 +89,11 @@ var semanticSourceEditOnly =
         "--semantic-source-edit-only",
         StringComparison.Ordinal);
 
-var endpoint = semanticSourceEditOnly
+var endpoint = metadataPolicyOnly
+    ? args.Length > 1
+        ? args[1]
+        : "http://127.0.0.1:7676/mcp"
+    : semanticSourceEditOnly
     ? args.Length > 1
         ? args[1]
         : "http://127.0.0.1:7676/mcp"
@@ -111,6 +132,13 @@ var required = TalvoraToolManifest.Names;
 foreach (var name in required)
 {
     if (!byName.ContainsKey(name)) throw new InvalidOperationException($"Missing MCP tool: {name}");
+}
+
+if (metadataPolicyOnly)
+{
+    SmokeScenarios.RunMetadataPolicyLive(tools);
+    Console.WriteLine("TALVORA MCP METADATA POLICY LIVE GREEN");
+    return;
 }
 
 if (semanticSourceEditOnly)

@@ -22,6 +22,37 @@ Ana ilke: Talvora'nın mevcut tool/capability yüzeyi, unrestricted escape-hatch
 - [x] SEC-013 — Clean `1d388ab` HEAD'den canonical installer üretildi (SHA-256 `6CFA67594FDC8709F2773F214E7077882486B9D03FA4F8FDCF89A19E8A55F9D5`) ve SYSTEM deploy sonrası `talvora_system_info.sourceCommit=1d388ab4055a0db725005d6c5af4af8174e5fdaa` doğrulandı.
 - [x] SEC-014 — Exact-installed `Talvora.Shared.dll` redaction probe secret-benzeri değeri kaldırıp normal diagnostik marker'ı korudu; MCP surface 204/204 unique tool olarak değişmeden kaldı. Handoff/BUG-AUDIT live acceptance ile kapatıldı.
 
+## 2026-09-20 — ChatGPT / MCP Metadata Accuracy TODO
+
+Amaç: Talvora'nın 204-tool yazılım geliştirme ve sistem yönetimi capability yüzeyini **hiç kısıtlamadan**, MCP host'una gönderilen metadata'yı gerçek davranışla eşleştirmek. Bu çalışma güvenlik mekanizmalarını atlatmak için değildir; yanlış `openWorld` / `destructive` sinyallerini, gereksiz implementasyon dili ve yüksek-risk çağrışımlı açıklama kalıplarını kaldırarak host'un doğru confirmation/safety davranışı seçmesini sağlar.
+
+Sabit kurallar:
+- Tool adı, parametre şeması, çıktı şeması veya gerçek execution capability değişmeyecek.
+- PowerShell/process/Git/Docker/HTTP/TCP/ADB/registry/service yüzeyleri kaldırılmayacak ve daraltılmayacak.
+- Gerçekte public internet veya açık kapsamlı haricî hedeflere erişebilen tool'lar `OpenWorld=true` kalacak.
+- Gerçekte destructive olan tool'lar sırf daha az uyarı çıksın diye `Destructive=false` yapılmayacak.
+- Metadata policy, source attribute'ların dağınık varsayılanlarına bırakılmayacak; `tools/list` wire contract'ında tek kanonik katmanda normalize edilecek.
+- Yeni tool eklenmesi metadata review gerektirecek; regression policy dışı tool'u kabul etmeyecek.
+
+- [x] META-001 — Exact-installed `tools/list` baseline kaydedildi: 204 tool; eski `openWorldHint=true` sayısı 170.
+- [x] META-002 — OpenAI güncel tool-annotation tanımları ve C# MCP SDK 2.2.0 default'ları doğrulandı; `OpenWorld` default true olduğu için explicit wire policy gerekli.
+- [x] META-003 — 204 tool world-scope review tamamlandı: 56 gerçek open-world, 148 local/scoped closed-world.
+- [x] META-004 — `TalvoraMcpToolMetadataPolicy` kanonik host-facing policy olarak eklendi; reviewed tool count 204 ile regression tarafından kilitleniyor.
+- [x] META-005 — Wire policy read-only tool'ları explicit `ReadOnly=true`, `Destructive=false`, `Idempotent=true` yayımlıyor; mutating semantics korunuyor.
+- [x] META-006 — Tool description normalizer eklendi; capability korunurken implementation-risk dili kullanıcı amacı odaklı ifadelerle normalize ediliyor.
+- [x] META-007 — PowerShell/process/Git/HTTP/user-session/job/mock gibi yüksek-sinyal açıklamalar için özel host-facing description override'ları eklendi.
+- [x] META-008 — MCP `ServerInstructions` ve source-edit escape-hatch wording'i genel administration diliyle sadeleştirildi; routing/capability değişmedi.
+- [x] META-009 — `tools/list` request filter tüm MCP client'larına kanonik policy uygulayacak şekilde server pipeline'a eklendi.
+- [x] META-010 — `--metadata-policy-source-only` targeted regression eklendi; manifest coverage, 204 reviewed tool, 56 open-world ve description normalization GREEN.
+- [x] META-011 — `--metadata-policy-only` live smoke modu eklendi; exact-installed `tools/list` annotations/descriptions policy ile karşılaştırılacak.
+- [x] META-012 — Local read örnekleri `system_info`, `read_source`, `search_text`, `git_status` closed-world/read-only policy ile kilitlendi.
+- [x] META-013 — External örnekler `http_request`, `git_run`, PowerShell/package/network runners open-world policy ile kilitlendi.
+- [x] META-014 — Tool surface invariant policy/test içinde exact 204 unique tool olarak korunuyor; tool API şemaları değiştirilmedi.
+- [x] META-015 — Talvora Release build 0 warning / 0 error; Smoke Release build 0 warning / 0 error; `TALVORA MCP METADATA POLICY SOURCE GREEN`.
+- [ ] META-016 — Canonical installer/deploy sonrası exact-installed `tools/list` ile live acceptance yap; annotation dağılımını ve description hygiene'ı ölç.
+- [ ] META-017 — Bulguları `HANDOFF.md` ve `BUG-AUDIT.md` yaşayan kayıtlara işle; runtime-affecting commit'i Gitea + GitHub'a push et.
+- [ ] META-018 — Windows Masaüstü raporunu final live sayılarıyla güncelle.
+
 ## 1. Ürün hedefi
 
 Talvora Control Center, bu Windows bilgisayarına bizim kurduğumuz ve yönettiğimiz yerel MCP sunucularını tek, anlaşılır ve tamamen Türkçe bir arayüzden yönetmek için oluşturulacaktır.
