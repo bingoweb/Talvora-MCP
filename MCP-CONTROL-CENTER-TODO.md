@@ -569,7 +569,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #156 — Gitea full-chain stop terminal verification; independent health/readiness shutdown probe + task-action-owned process-tree termination/wait, embedded PowerShell parse regression GREEN, Tray build 0 warning / 0 error.
 - [x] #157 — bounded shared process stdout/stderr capture; ProcessRunner regression GREEN.
 - [x] #158 — streaming/bounded canonical source read; Source Edit 53/53 GREEN.
-- [ ] #159 — absolute transport/response budgets + continuation semantics.
+- [x] #159 — absolute transport/response budgets + continuation semantics; targeted response-bounds regression GREEN, canonical artifact/live deploy + exact-installed HTTP/TCP bounded metadata GREEN.
 - [x] #160 — overall process timeout includes post-parent pipe drain; inherited-pipe regression GREEN.
 - [x] #163 — FileSystemWatcher overflow/resync completeness state; targeted runtime-bounds regression GREEN.
 - [x] #164 — bounded watcher/HTTP-mock queues, inflight and pending work; global backpressure/accounting regression GREEN.

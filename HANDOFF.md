@@ -13,11 +13,11 @@ Bu belge yalnız güncel çalışma durumunu taşır. Eski oturum kronolojisi bu
 - Gitea remote: `origin = ssh://git@127.0.0.1:2222/taylan/Talvora-MCP.git`
 - GitHub remote: `github = https://github.com/bingoweb/Talvora-MCP.git`
 - Başlangıçta `origin/main` ve `github/main` HEAD ile senkrondu.
-- Canlı Talvora service bağlantısı doğrulandı. `talvora_system_info.sourceCommit = c54d1d6e56d3776291db0db04504ff6275525f6d`; service LocalSystem altında Running / Automatic çalışıyor.
+- Canlı Talvora service bağlantısı doğrulandı. `talvora_system_info.sourceCommit = 642c2158aebbe91e99e9349e92262c94b9b17e43`; service LocalSystem altında Running / Automatic çalışıyor.
 
 ### Son tamamlanan düzeltmeler
 
-En güncel bug-audit hattında #121–#173 aralığındaki tüm doğrulanmış maddeler, aşağıdaki tek açık madde hariç kapatıldı.
+En güncel bug-audit hattında #121–#174 aralığındaki tüm doğrulanmış maddeler, aşağıdaki tek açık madde (#174) hariç kapatıldı.
 
 Özellikle son tamamlanan aileler:
 
@@ -51,18 +51,20 @@ Son doğrulanan Source Edit regression: **63/63 GREEN**.
 - **Canonical build:** GREEN; installer **261,777,167 bytes**, SHA-256 `01C6D5107E7C845152C2ACAECEB8DAD5B9097B9966D5B78BFDAE5A031E11BF87`, source commit `c54d1d6e56d3776291db0db04504ff6275525f6d`.
 - **Canlı deploy:** independent SYSTEM deploy servis switch sırasında MCP bağlantısını beklenen şekilde kapattı; reconnect sonrasında Talvora **Running / Automatic**, exact-installed `sourceCommit=c54d1d6e56d3776291db0db04504ff6275525f6d`.
 
-### #159 — Absolute transport/response budgets + continuation semantics — LIVE GATE PENDING
+### Son tamamlanan bug — #159
 
 - **Uygulandı:** read-bytes continuation; bounded streaming text range; bounded suffix + backward pagination tail; deterministic find/search offsets; SQLite row continuation + native 4 MiB value/row ceiling; HTTP/TCP/WebSocket finite capture metadata.
 - **Targeted test:** `TALVORA RESPONSE BOUNDS REGRESSION GREEN`; gerçek giant-line, SQLite oversized BLOB ve loopback WebSocket truncation dahil.
 - **Build:** Talvora Release ve Talvora.Smoke Release **0 warning / 0 error**.
-- **Sıradaki adım:** bu çalışma durumunu commit/push et; clean canonical installer build + live deploy; installed smoke'da HTTP/TCP bounded metadata'yı doğrula; sonra #159'u FIXED işaretle.
+- **Commit / remote:** `642c2158aebbe91e99e9349e92262c94b9b17e43`; `origin/main` ve `github/main` aynı commit'e doğrulandı.
+- **Canonical artifact:** **261,781,263 bytes**, SHA-256 `B44B1371E759BEDB837A203D04BEE1D236A0A0D8241156FE6B150F4E5B232053`, manifest source `642c2158aebbe91e99e9349e92262c94b9b17e43`; gerçek EXE hash manifest ile eşleşti.
+- **Canlı kabul:** Talvora **Running / Automatic**, PID **4816**, exact-installed source `642c2158aebbe91e99e9349e92262c94b9b17e43`. Canlı HTTP ve TCP `maxResponseBytes=0` çağrıları **16 MiB captureLimitBytes** ve `continuationSupported=false` metadata'sını doğruladı.
 
 ### #174 — Residual structured/list 0=unlimited responses — OPEN MEDIUM
 
 - #159 sırasında yapılan geniş audit yeni kapsam doğruladı: test-report/XML query, project/workspace discovery/commands, dev-server/job lists, Git log ve quality list yüzeylerinde `0` halen gerçek unbounded tek-response yolu açabiliyor.
 - Watch/HTTP-mock read bu bug'a dahil değil; persistent queue'ları zaten #164 altında absolute bounded.
-- #159 live gate tamamlanıp ayrı commit/push yapıldıktan sonra #174 her yüzey için finite ceiling + deterministic continuation + targeted regression ile düzeltilecek.
+- Sıradaki aktif iş: #174 her yüzey için finite ceiling + deterministic continuation + targeted regression ile düzeltilecek; ardından ayrı commit/push/live döngüsü tamamlanacak.
 
 ## Çalışma kuralları
 
