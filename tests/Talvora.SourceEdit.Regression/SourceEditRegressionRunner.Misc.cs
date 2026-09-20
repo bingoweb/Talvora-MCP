@@ -1286,6 +1286,8 @@ internal static partial class SourceEditRegressionRunner
         Console.WriteLine("PASS http-mock-resource-bounds");
         await HttpMockReplyCancellationCanRetryAsync();
         Console.WriteLine("PASS http-mock-reply-cancellation-retry");
+        await HttpMockStopClosesPendingWithServiceUnavailableAsync();
+        Console.WriteLine("PASS http-mock-stop-pending-503");
     }
 
     private static Task WatcherBoundsAndResyncStateAsync()
@@ -1515,6 +1517,96 @@ internal static partial class SourceEditRegressionRunner
                 "retry-ok",
                 responseBody,
                 "HTTP mock retry did not deliver the replacement response.");
+        }
+        finally
+        {
+            _ = HttpMockTools.Stop(
+                started.ListenerId);
+        }
+    }
+
+    private static async Task HttpMockStopClosesPendingWithServiceUnavailableAsync()
+    {
+        using var portProbe =
+            new TcpListener(
+                IPAddress.Loopback,
+                0);
+        portProbe.Start();
+        var port =
+            ((IPEndPoint)portProbe.LocalEndpoint).Port;
+        portProbe.Stop();
+
+        var prefix =
+            $"http://127.0.0.1:{port}/";
+        const int requestCount = 64;
+        var started =
+            HttpMockTools.Start(
+                [prefix],
+                autoReply: false,
+                defaultStatusCode: 200,
+                defaultBody: "timeout-default",
+                pendingResponseTimeoutSeconds: 30,
+                maxConcurrentRequests: requestCount,
+                maxPendingRequests: requestCount);
+
+        using var client =
+            new HttpClient();
+        var requests =
+            Enumerable.Range(0, requestCount)
+                .Select(_ => client.GetAsync(prefix))
+                .ToArray();
+
+        try
+        {
+            for (var attempt = 0; attempt < 200; attempt++)
+            {
+                var read =
+                    HttpMockTools.Read(
+                        started.ListenerId,
+                        consume: false,
+                        maxRequests: 0);
+                if (read.PendingRequests == requestCount)
+                {
+                    break;
+                }
+
+                await Task.Delay(20);
+            }
+
+            var beforeStop =
+                HttpMockTools.Get(started.ListenerId);
+            AssertEqual(
+                requestCount,
+                beforeStop.PendingRequests,
+                "HTTP mock stop regression did not reach the requested pending concurrency.");
+
+            var stopped =
+                HttpMockTools.Stop(started.ListenerId);
+            Assert(
+                stopped.Stopped,
+                "HTTP mock stop regression failed to stop the listener.");
+
+            var responses =
+                await Task.WhenAll(
+                    requests.Select(
+                        task => task.WaitAsync(
+                            TimeSpan.FromSeconds(5))));
+            try
+            {
+                Assert(
+                    responses.All(
+                        response =>
+                            response.StatusCode ==
+                            HttpStatusCode.ServiceUnavailable),
+                    "HTTP mock stop allowed a pending request to receive the timeout default instead of 503.");
+            }
+            finally
+            {
+                foreach (var response in responses)
+                {
+                    response.Dispose();
+                }
+            }
         }
         finally
         {

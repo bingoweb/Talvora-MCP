@@ -20,6 +20,7 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 - #183 tamamlandı: isolated ast-grep ve semantic worker timeout/error cleanup yolları `Process.Kill` sonrasında bounded `WaitForExitAsync` ile parent process exit'ini bekliyor; targeted regression GREEN, Talvora Release build 0 warning / 0 error, fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 - #184 tamamlandı: HTTP mock runtime cancellation token'ı CTS dispose edilmeden önce cache'leniyor; in-flight handler'ların stop/dispose ile yarışırken dispose edilmiş `CancellationTokenSource.Token` getter'ına erişmesi engelleniyor; runtime-bounds regression GREEN, Talvora Release build 0 warning / 0 error, fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 - #185 tamamlandı: HTTP mock manual reply gönderimi iptal/hata ile tamamlanmazsa `Replied` claim atomik olarak serbest bırakılıyor; aynı pending isteğe retry mümkün. Targeted integration regression RED -> GREEN, Talvora Release build 0 warning / 0 error; fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
+- #186 source fix hazır: HTTP mock listener lifetime cancellation artık pending-timeout ile aynı yol üzerinden default response göndermiyor; stop/lifetime cancellation pending isteği 503 ile kapatıyor. 64 eşzamanlı pending request regression RED -> GREEN; commit/push/live gate sırada.
 
 ## #178 — CLOSED / LIVE VERIFIED
 
@@ -38,9 +39,9 @@ Düzeltme ve kanıt:
 
 ### Aktif devam noktası
 
-1. Deeper audit'e #186'dan devam et; öncelikle HTTP mock listener/handler ownership, stop/drain ve semaphore lifecycle çağrı zincirini incele.
-2. Sonraki doğrulanmış bug varsa tek bug source/test/docs commit'i, iki remote push ve exact-installed live deploy uygula.
-3. Açık doğrulanmış finding kalmadığında final durum doğrulamasından sonra masaüstünde `bitti.txt` oluştur.
+1. #186 source/test/docs değişikliklerini tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
+2. Temiz #186 HEAD'den canonical installer build + manifest-bound live deploy yap; exact-installed runtime commit'ini doğrula.
+3. #186 live acceptance'ını docs-only closeout ile kapat; ardından deeper audit'e #187'den devam et.
 
 ## #179 — CLOSED / LIVE VERIFIED
 
@@ -148,6 +149,18 @@ Düzeltme ve kanıt:
 - Fix commit: `43d2228738a32836f9a0a80b737be069d89fe59c`; Gitea `origin/main` ve GitHub `github/main` aynı commit'te.
 - Canonical installer SHA-256: `C8371E97D3303F61402D9163896C7B261899072A2CA23D974C03C4EF07DF39CE`.
 - Manifest-bound independent SYSTEM deploy sonrası exact-installed `system_info.sourceCommit=43d2228738a32836f9a0a80b737be069d89fe59c`.
+
+## #186 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+
+Kök neden:
+- Manual pending handler tek bir linked timeout token kullanıyordu; hem listener lifetime cancellation hem de gerçek pending timeout aynı `catch (OperationCanceledException)` bloğuna giriyordu.
+- Bu blok default response'u `CancellationToken.None` ile gönderdiği için `talvora_http_mock_stop` ile başlayan lifetime cancellation yarışını handler kazanırsa Stop sözleşmesindeki 503 yerine default response dönebiliyordu.
+
+Düzeltme ve kanıt:
+- Lifetime cancellation ayrı filtered catch'e ayrıldı; reply claim'i handler kazanırsa `RejectContext(..., 503)` uygulanıyor.
+- Yalnız gerçek pending timeout mevcut default-response davranışını kullanmaya devam ediyor.
+- 64 eşzamanlı gerçek loopback pending request ile regression önce RED: `HTTP mock stop allowed a pending request to receive the timeout default instead of 503.`
+- Fix sonrası `PASS http-mock-stop-pending-503` ve tüm `--runtime-bounds-only` gate GREEN.
 
 ## Sabit çalışma kuralları
 

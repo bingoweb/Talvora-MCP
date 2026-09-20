@@ -174,6 +174,19 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
                 await pendingRequest.Completion.Task.WaitAsync(timeout.Token);
             }
             catch (OperationCanceledException)
+                when (runtime.LifetimeToken.IsCancellationRequested)
+            {
+                if (Interlocked.CompareExchange(
+                        ref pendingRequest.Replied,
+                        1,
+                        0) == 0)
+                {
+                    RejectContext(
+                        context,
+                        503);
+                }
+            }
+            catch (OperationCanceledException)
             {
                 if (Interlocked.CompareExchange(
                         ref pendingRequest.Replied,
