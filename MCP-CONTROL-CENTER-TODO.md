@@ -585,7 +585,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #179 — Control Center exit window-placement race: shutdown öncesi placement yazımı deterministik tamamlanıyor, async file write UI context'e bağlanmıyor; targeted source regression RED -> GREEN, Tray Release build 0 warning / 0 error; fix `ded6cd5` Gitea + GitHub'a push edildi ve canonical exact-installed live gate GREEN.
 - [x] #180 — Control Center detay Gitea browser-launch exception yolu: beklenen shell hataları artık log/event/UI hata bildirimiyle kontrollü ele alınıyor ve async WPF event zincirinden kaçmıyor; targeted source regression RED -> GREEN, Tray Release build 0 warning / 0 error; fix `d8abbc2` Gitea + GitHub'a push edildi ve canonical exact-installed live gate GREEN.
 - [x] #181 — Control Center window-placement save ordering: eşzamanlı async save publication semaphore ile serialize, monoton version ile stale queued snapshot skip; targeted source regression GREEN, Tray Release build 0 warning / 0 error; fix `86290c4` Gitea + GitHub'a push edildi ve canonical exact-installed live gate GREEN.
-- [x] #182 — Gitea browser-launch Process ownership: Control Center ve Tray yolları `Process.Start` dönüşünü `using var` ile dispose ediyor; targeted source regression GREEN, Tray Release build 0 warning / 0 error; commit/push/live gate pending.
+- [x] #182 — Gitea browser-launch Process ownership: Control Center ve Tray yolları `Process.Start` dönüşünü `using var` ile dispose ediyor; targeted source regression GREEN, Tray Release build 0 warning / 0 error; fix `47bd843` Gitea + GitHub'a push edildi ve canonical exact-installed live gate GREEN.
 
 ## Faz 14 — Canonical Source Edit Transaction Engine (2026-09-20)
 

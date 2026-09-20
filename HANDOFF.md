@@ -8,10 +8,10 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 
 - Repository: `C:\Users\tayla\Talvora-MCP`
 - Branch: `main`
-- Last runtime-affecting fix commit: `86290c49abc14fe3ddfac791ccf6548c6b99c2c6` (`fix: serialize control center placement saves`).
+- Last runtime-affecting fix commit: `47bd8430aaa71eafa4908b0de6697b88c99e647c` (`fix: dispose Gitea browser process handles`).
 - Gitea `origin/main` ve GitHub `github/main`: her bug closeout commit'inden sonra birlikte güncellenir.
 - Canlı Talvora service: **Running / Automatic**.
-- Exact-installed runtime source commit: `86290c49abc14fe3ddfac791ccf6548c6b99c2c6`.
+- Exact-installed runtime source commit: `47bd8430aaa71eafa4908b0de6697b88c99e647c`.
 - #178 tamamlandı: manual-stop persistence Windows SessionId bazlı dosyaya ayrıldı; targeted regression GREEN; fix commit Gitea + GitHub'a push edildi ve canonical live deploy exact-installed olarak doğrulandı.
 - #179 tamamlandı: Control Center exit artık window-placement yazımını shutdown öncesi tamamlıyor; regression GREEN, fix iki remote'a push edildi ve canonical exact-installed live deploy doğrulandı.
 - #180 tamamlandı: Control Center detay ekranındaki Gitea browser launch hatası artık beklenen shell exception'larını yakalayıp kullanıcıya bildiriyor; targeted regression GREEN, Tray Release build 0 warning / 0 error, fix iki remote'a push edildi ve canonical exact-installed live deploy doğrulandı.
@@ -34,9 +34,9 @@ Düzeltme ve kanıt:
 
 ### Aktif devam noktası
 
-1. #182 source/test/docs değişikliklerini tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
-2. Temiz #182 HEAD'den canonical installer build + manifest-bound live deploy yap; exact-installed runtime commit'i doğrula.
-3. #182 live acceptance'ını docs-only closeout commit'iyle kapat; ardından deeper audit'e #183'ten devam et.
+1. #182 live acceptance docs closeout'unu commit edip Gitea + GitHub'a push et.
+2. Deep bug audit'e #183'ten devam et; process/resource ownership, cancellation ve UI lifecycle yollarını çağrı zinciriyle doğrula.
+3. Yeni doğrulanmış bug varsa targeted test -> docs -> tek bug commit -> iki remote push -> runtime etkiliyorsa canonical live deploy sırasını koru.
 
 ## #179 — CLOSED / LIVE VERIFIED
 
@@ -84,7 +84,7 @@ Düzeltme ve kanıt:
 - Canonical installer SHA-256 `67ECEC023E2892A0C09E906DA22A6DDC8BDC3BFD7BE0EC4D7AFDD9BE8967A585`.
 - Self-update sonrası reconnect doğrulaması: `system_info.sourceCommit=86290c49abc14fe3ddfac791ccf6548c6b99c2c6`; service exact-installed GREEN.
 
-## #182 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+## #182 — CLOSED / LIVE VERIFIED
 
 Kök neden:
 - Control Center `OpenGiteaHome()` ve Tray Gitea browser açma yolu shell launch için `Process.Start` çağırıyor ancak dönen nullable `Process` nesnesini sahiplenmeden bırakıyordu.
@@ -95,6 +95,9 @@ Düzeltme ve kanıt:
 - Güncel .NET disposable ownership rehberiyle doğrulandı.
 - `NativeInstallerSourceRegression.ps1`: `GiteaBrowserLaunchDisposesProcessHandles=True`; suite GREEN.
 - `Talvora.Tray` Release build: **0 warning / 0 error**.
+- Fix commit: `47bd8430aaa71eafa4908b0de6697b88c99e647c`; Gitea `origin/main` ve GitHub `github/main` senkron.
+- Canonical installer SHA-256 `C645B16606E3DD5BA944D7D717B390105B24285FCA755D3C800104D400C22EE3`.
+- Self-update sonrası reconnect: `system_info.sourceCommit=47bd8430aaa71eafa4908b0de6697b88c99e647c`; service exact-installed GREEN.
 
 ## Sabit çalışma kuralları
 

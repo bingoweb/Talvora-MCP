@@ -2,10 +2,10 @@
 
 Last updated: 2026-09-20
 Branch: main
-Current runtime source HEAD: `86290c49abc14fe3ddfac791ccf6548c6b99c2c6`.
-Current exact-installed audit runtime: `86290c49abc14fe3ddfac791ccf6548c6b99c2c6`
+Current runtime source HEAD: `47bd8430aaa71eafa4908b0de6697b88c99e647c`.
+Current exact-installed audit runtime: `47bd8430aaa71eafa4908b0de6697b88c99e647c`
 Canonical exact-installed tool count: 204 unique tools
-Status: #121–#181 remediation is complete and live verified; #182 source remediation is complete and commit/push/live acceptance is pending.
+Status: #121–#182 remediation is complete and live verified; no open recorded finding.
 
 ## Current remediation status summary — 2026-09-20
 
@@ -17,7 +17,7 @@ Status: #121–#181 remediation is complete and live verified; #182 source remed
 - #179 live acceptance: Control Center exit persistence race removed by completing `SaveWindowPlacementAsync` before WPF shutdown and avoiding UI-context continuation in the underlying file write. Targeted source contract RED -> GREEN; Tray Release 0 warning / 0 error; fix `ded6cd5` pushed to both remotes; canonical installer SHA-256 `19A18E87697FC75F8CC04B5E52464D8FAA8062FCCFB6059B2D96A1877D19756D`; exact-installed runtime reports `ded6cd52f692b3563b0edbfdaf1c6f392b8c77e9`.
 - #180 live acceptance: Control Center detail-page Gitea browser launch catches only expected shell-launch failures, records/logs the failure and shows a user-visible error instead of allowing it to escape the async WPF event path. Targeted source contract RED -> GREEN; Tray Release 0 warning / 0 error; fix `d8abbc2` pushed to Gitea + GitHub; canonical installer SHA-256 `D41A51195F8F44ED7D9C80DADAC2E66490CA5026C73EB9CDA5FA640D191713CD`; exact-installed runtime reports `d8abbc25dc4e784bc12c7d08dcb4a20bf7e39190`.
 - #181 live acceptance: overlapping async window-placement saves are serialized and stale queued snapshots are skipped with a monotonic save-version check. Targeted source contract GREEN; Tray Release 0 warning / 0 error; fix `86290c4` pushed to Gitea + GitHub; canonical installer SHA-256 `67ECEC023E2892A0C09E906DA22A6DDC8BDC3BFD7BE0EC4D7AFDD9BE8967A585`; exact-installed runtime reports the same commit.
-- #182 source fixed: both Gitea browser-launch paths now dispose the nullable `Process` returned by `Process.Start` immediately after shell launch. Current .NET ownership guidance requires disposable resources to be disposed when ownership is not transferred. Targeted source contract `GiteaBrowserLaunchDisposesProcessHandles=True`; Tray Release 0 warning / 0 error; commit/push/live gate pending.
+- #182 live acceptance: both Gitea browser-launch paths dispose the nullable `Process` returned by `Process.Start` immediately after shell launch. Targeted source contract `GiteaBrowserLaunchDisposesProcessHandles=True`; Tray Release 0 warning / 0 error; fix `47bd843` pushed to Gitea + GitHub; canonical installer SHA-256 `C645B16606E3DD5BA944D7D717B390105B24285FCA755D3C800104D400C22EE3`; exact-installed runtime reports the same commit.
 - #166 and #167 are not additional defects: their evidence was merged into canonical #147 and #148 respectively.
 - Canonical deploy #109 explicit `--silent` behavior must remain intact during all future installer changes.
 - #129 follow-up: project/solution analyzer ve source-generator binary referansları da semantic graph physical revision snapshot + commit guard kapsamına alındı. Analyzer/generator binary drift artık commit öncesi `SEMANTIC_GRAPH_STALE` ile fail-closed olur. Targeted regression GREEN; full Source Edit 62/62 GREEN; Talvora Release 0 warning / 0 error.
@@ -40,7 +40,7 @@ Status: #121–#181 remediation is complete and live verified; #182 source remed
 179. [FIXED / LIVE VERIFIED 2026-09-20] Control Center exit could lose the final window placement because persistence was fire-and-forget immediately before window close/WPF shutdown. Exit now completes placement persistence before shutdown; the file-write await does not require the UI synchronization context. Targeted source regression RED -> GREEN; Tray Release 0 warning / 0 error; fix `ded6cd5` pushed to Gitea + GitHub and canonical exact-installed live gate GREEN.
 180. [FIXED / LIVE VERIFIED 2026-09-20] Control Center detail-page Gitea browser launch could propagate expected shell-launch failures out of the async WPF click path. The detail path now catches only InvalidOperationException/Win32Exception, logs and records the failure, and displays a user-visible operation error. Targeted source regression RED -> GREEN; Tray Release 0 warning / 0 error; fix `d8abbc2` pushed to both remotes; canonical installer SHA-256 `D41A51195F8F44ED7D9C80DADAC2E66490CA5026C73EB9CDA5FA640D191713CD`; exact-installed live gate GREEN.
 181. [FIXED / LIVE VERIFIED 2026-09-20] Overlapping async Control Center window-placement saves could complete out of order and let an older snapshot overwrite the newest position. Saves now use a single publication gate plus monotonic version arbitration so stale queued snapshots are skipped. Targeted source regression GREEN; fix `86290c4` pushed to both remotes; canonical exact-installed live gate GREEN.
-182. [SOURCE FIXED 2026-09-20] Gitea browser launches in both Control Center and Tray discarded the disposable `Process` returned by `Process.Start`. The return value is now owned by a local `using var`, releasing process-component/handle resources immediately because no monitoring or lifetime control is required. Targeted source regression GREEN; Tray Release 0 warning / 0 error; commit/push/live gate pending.
+182. [FIXED / LIVE VERIFIED 2026-09-20] Gitea browser launches in both Control Center and Tray discarded the disposable `Process` returned by `Process.Start`. The return value is now owned by a local `using var`, releasing process-component/handle resources immediately because no monitoring or lifetime control is required. Targeted source regression GREEN; fix `47bd843` pushed to both remotes; canonical exact-installed live gate GREEN.
 13. HttpClient handler/client ownership cleanup.
 14. WinForms/Tray lifetime cleanup.
 15. Culture-dependent machine-data parsing in multiple tool paths.
