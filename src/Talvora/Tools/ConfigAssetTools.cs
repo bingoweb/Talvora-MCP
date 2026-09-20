@@ -61,7 +61,11 @@ public sealed record TalvoraArchiveEntry(
 public sealed record TalvoraArchiveListResponse(
     string ArchivePath,
     int Count,
-    IReadOnlyList<TalvoraArchiveEntry> Entries);
+    IReadOnlyList<TalvoraArchiveEntry> Entries,
+    int TotalEntries,
+    long ResultOffset,
+    bool Truncated,
+    long? NextResultOffset);
 
 public sealed record TalvoraArchiveCreateResponse(
     string SourceDirectory,

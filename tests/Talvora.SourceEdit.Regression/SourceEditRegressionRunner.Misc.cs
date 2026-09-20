@@ -1680,6 +1680,51 @@ internal static partial class SourceEditRegressionRunner
                 legacyListRejected,
                 "Legacy list did not reject an over-budget compatibility response.");
 
+            var archiveListPath =
+                Path.Combine(
+                    root,
+                    "archive-list-pages.zip");
+            using (var archive =
+                   ZipFile.Open(
+                       archiveListPath,
+                       ZipArchiveMode.Create))
+            {
+                archive.CreateEntry("a.txt");
+                archive.CreateEntry("b.txt");
+                archive.CreateEntry("c.txt");
+            }
+            var firstArchivePage =
+                ConfigAssetTools.ArchiveList(
+                    archiveListPath,
+                    maxResults: 2);
+            Assert(
+                firstArchivePage.Count == 2 &&
+                firstArchivePage.TotalEntries == 3 &&
+                firstArchivePage.ResultOffset == 0 &&
+                firstArchivePage.Truncated &&
+                firstArchivePage.NextResultOffset == 2 &&
+                firstArchivePage.Entries[0].FullName == "a.txt" &&
+                firstArchivePage.Entries[1].FullName == "b.txt",
+                "Archive list did not expose a deterministic bounded first page.");
+            var secondArchivePage =
+                ConfigAssetTools.ArchiveList(
+                    archiveListPath,
+                    maxResults: 2,
+                    resultOffset:
+                        firstArchivePage.NextResultOffset!.Value);
+            Assert(
+                secondArchivePage.Count == 1 &&
+                secondArchivePage.TotalEntries == 3 &&
+                secondArchivePage.ResultOffset == 2 &&
+                !secondArchivePage.Truncated &&
+                secondArchivePage.NextResultOffset is null &&
+                secondArchivePage.Entries[0].FullName == "c.txt",
+                "Archive list continuation did not terminate cleanly.");
+            Assert(
+                ConfigAssetTools.ArchiveAbsoluteListResults > 0 &&
+                ConfigAssetTools.ArchiveAbsoluteListResponseCharacters > 0,
+                "Archive list server ceilings must remain finite and positive.");
+
             var firstFilePage =
                 DeveloperTools.FindFiles(
                     searchRoot,

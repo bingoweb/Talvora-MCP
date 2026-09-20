@@ -8,50 +8,41 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 
 - Repository: `C:\Users\tayla\Talvora-MCP`
 - Branch: `main`
-- Runtime fix HEAD: `949272eb05d78f956d1b2f34cbb760bacd88d13b`
-- Gitea `origin/main` ve GitHub `github/main`: runtime fix commit `949272e` push edildi; sıradaki işlem bu live-acceptance docs değişikliklerini commit/push etmek.
+- Pre-#176 committed HEAD: `f00df75b2659fdcca39b3c323ea2ad0b4b2be6dd`
+- Gitea `origin/main` ve GitHub `github/main`: aynı HEAD.
 - Canlı Talvora service: **Running / Automatic**.
 - Exact-installed runtime source commit: `949272eb05d78f956d1b2f34cbb760bacd88d13b`.
-- Canonical installer: **257,296,143 bytes**, SHA-256 `C40DEFF26F87B5E19159C50C6B218D452259963C9907797E83ABEA806E930CA5`.
-- Working tree yalnız #175 live-acceptance dokümantasyonunu içeriyor.
+- Working tree #176 source + regression + closeout belgelerini içeriyor; sıradaki adım tek #176 commit/push.
 
-## Son tamamlanan — #175 FIXED / PUSHED / LIVE
+## #176 — SOURCE FIXED / LIVE DEPLOY PENDING
 
 Kök neden:
-- Legacy `talvora_read_text` bütün dosyayı limitsiz `ReadAllTextAsync` ile materialize ediyordu.
-- Legacy `talvora_list(recursive=true)` bütün ağacı limitsiz `ToArray()` ile materialize ediyor ve cancellation kabul etmiyordu.
-- Bu yollar #159/#174 bounded/paginated response sözleşmesini bypass ediyordu.
+- `talvora_archive_list` bütün ZIP entry'lerini `archive.Entries.Select(ToArchiveEntry).ToArray()` ile tek response'a materialize ediyordu.
+- Archive extraction aynı subsystem'de 1,000,000 entry emergency ceiling kabul ediyor; legacy list response'u gerçek yüksek-cardinality risk taşıyordu.
 
 Düzeltme:
-- Legacy dönüş tipleri korundu.
-- `talvora_read_text` canonical bounded `ReadTextRange` streaming yoluna geçirildi; finite whole-file budget aşılırsa `talvora_read_text_range` continuation'a açık hata ile yönlendiriyor.
-- `talvora_list` finite entry + response-character budget altında lazy enumerate ediyor ve cancellation kabul ediyor; bütçe aşılırsa `talvora_find_files resultOffset/nextResultOffset` pagination'a yönlendiriyor.
-- Internal bounded-list helper production ceiling'i değiştirmeden overflow regression'ını küçük fixture ile test ediyor.
+- Absolute list ceiling: **20,000 entry**.
+- Absolute response-character ceiling: **8 MiB**.
+- `maxResults=0` finite server maximum.
+- Archive order korunarak `resultOffset/nextResultOffset` deterministic continuation eklendi.
+- Response schema: `Count`, `TotalEntries`, `ResultOffset`, `Truncated`, `NextResultOffset`.
 
 Kanıt:
-- Fix commit: `949272eb05d78f956d1b2f34cbb760bacd88d13b`; Gitea + GitHub push GREEN.
+- 3-entry ZIP regression: ilk page 2 entry + `totalEntries=3` + `nextResultOffset=2`; ikinci page 1 entry + clean termination.
 - `--response-bounds-only`: **TALVORA RESPONSE BOUNDS REGRESSION GREEN**.
 - Talvora Release build: **0 warning / 0 error**.
-- Canonical clean installer build + manifest-bound independent SYSTEM deploy: GREEN.
-- Reconnect sonrası service Running/Automatic ve exact-installed source commit = `949272e...`.
-- Canlı küçük `talvora_read_text` ve `talvora_list` smoke GREEN.
-- Canlı 4,200,000 karakterlik text: legacy read kontrollü reddedildi; canonical range **4,194,304** karakter + `responseLimited=true`, `nextStartCharacter=4194304` döndürdü.
-- Temporary live fixtures temizlendi.
+- `git diff --check`: exit 0.
+- BUG-AUDIT #176 FIXED; TODO checked.
 
-## ACTIVE — deeper bug audit
+### Sıradaki zorunlu adımlar
 
-#121–#175 aralığında açık doğrulanmış bug yok. Sıradaki iş yeni doğrulanabilir bug aramak.
-
-Öncelikli tarama alanları:
-- diğer generic/legacy list ve whole-response araçlarında finite response budget bypass'ları,
-- async/await cancellation ve race condition'lar,
-- process/service/reconnect lifecycle,
-- SQLite transaction/locking/busy handling,
-- stale state/retry/backoff,
-- resource/file-handle/child-process cleanup,
-- dashboard/backend state senkronizasyonu.
-
-Yeni gerçek bug bulunursa yeni numara ile BUG-AUDIT/TODO'ya yaz ve tek bug patch/test/docs/commit/push/live döngüsünü uygula.
+1. Yalnız #176 source/test/docs dosyalarını stage et ve tek bug commit'i oluştur.
+2. Commit'i Gitea `origin/main` ve GitHub `github/main` üzerine push et.
+3. Canonical clean installer build + manifest-bound SYSTEM deploy.
+4. Reconnect sonrası service Running/Automatic ve exact-installed `sourceCommit` = #176 fix commit.
+5. Canlı 3-entry ZIP üzerinde `maxResults=2` first/second page smoke.
+6. Live acceptance BUG-AUDIT/HANDOFF/TODO docs-only commit + iki remote push.
+7. Deeper bug audit'e devam.
 
 ## Sabit çalışma kuralları
 

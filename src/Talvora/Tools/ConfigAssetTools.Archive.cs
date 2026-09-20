@@ -16,6 +16,9 @@ public static partial class ConfigAssetTools
     private const int ArchiveAbsoluteMaxEntries = 1_000_000;
     private const long ArchiveAbsoluteMaxEntryBytes = 1L << 40;
     private const long ArchiveAbsoluteMaxTotalBytes = 4L << 40;
+    internal const int ArchiveAbsoluteListResults = 20_000;
+    internal const long ArchiveAbsoluteListResponseCharacters =
+        8L * 1024 * 1024;
 
 [McpServerTool(
         Name = "talvora_archive_list",
@@ -23,20 +26,71 @@ public static partial class ConfigAssetTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraArchiveListResponse)),
-     Description("List every entry in any accessible ZIP archive with sizes, timestamp, directory flag, and external attributes.")]
-    public static TalvoraArchiveListResponse ArchiveList(string archivePath)
+     Description("List entries in any accessible ZIP archive with finite response budgets. maxResults=0 requests the finite server maximum page. Archive order is preserved; use resultOffset/nextResultOffset to continue while the archive is unchanged.")]
+    public static TalvoraArchiveListResponse ArchiveList(
+        string archivePath,
+        [Description("Maximum returned entries; 0 requests the finite server maximum response window.")] int maxResults = 1000,
+        [Description("Number of archive entries to skip before returning this page.")] long resultOffset = 0)
     {
+        if (maxResults < 0 || resultOffset < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                "maxResults and resultOffset cannot be negative.");
+        }
+
+        var effectiveMaxResults =
+            maxResults == 0
+                ? ArchiveAbsoluteListResults
+                : Math.Min(
+                    maxResults,
+                    ArchiveAbsoluteListResults);
         var fullPath = Path.GetFullPath(archivePath);
         using var archive = ZipFile.OpenRead(fullPath);
+        var totalEntries = archive.Entries.Count;
+        var startIndex =
+            resultOffset >= totalEntries
+                ? totalEntries
+                : checked((int)resultOffset);
+        var entries =
+            new List<TalvoraArchiveEntry>(
+                Math.Min(
+                    effectiveMaxResults,
+                    totalEntries - startIndex));
+        long responseCharacters = 0;
+        var truncated = false;
+        long? nextResultOffset = null;
 
-        var entries = archive.Entries
-            .Select(ToArchiveEntry)
-            .ToArray();
+        for (var index = startIndex;
+             index < totalEntries;
+             index++)
+        {
+            var entry =
+                ToArchiveEntry(
+                    archive.Entries[index]);
+            var entryCharacters =
+                (long)entry.FullName.Length +
+                128;
+            if (entries.Count >= effectiveMaxResults ||
+                responseCharacters + entryCharacters >
+                    ArchiveAbsoluteListResponseCharacters)
+            {
+                truncated = true;
+                nextResultOffset = index;
+                break;
+            }
+
+            entries.Add(entry);
+            responseCharacters += entryCharacters;
+        }
 
         return new TalvoraArchiveListResponse(
             fullPath,
-            entries.Length,
-            entries);
+            entries.Count,
+            entries,
+            totalEntries,
+            resultOffset,
+            truncated,
+            nextResultOffset);
     }
 
     [McpServerTool(
