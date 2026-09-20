@@ -63,7 +63,9 @@ public sealed record TalvoraXmlQueryResponse(
     string? ScalarValue,
     int Count,
     bool Truncated,
-    IReadOnlyList<TalvoraXmlNodeResult> Nodes);
+    IReadOnlyList<TalvoraXmlNodeResult> Nodes,
+    long ResultOffset = 0,
+    long? NextResultOffset = null);
 
 public sealed record TalvoraTestFailure(
     string Name,
@@ -84,11 +86,16 @@ public sealed record TalvoraTestReportSummary(
     double? DurationSeconds,
     int FailureCount,
     bool FailuresTruncated,
-    IReadOnlyList<TalvoraTestFailure> Failures);
+    IReadOnlyList<TalvoraTestFailure> Failures,
+    long FailureOffset = 0,
+    long? NextFailureOffset = null);
 
 [McpServerToolType]
 public static partial class ConfigFormatTools
 {
+    internal const int AbsoluteXmlQueryResults = 10_000;
+    internal const int AbsoluteTestReportFailures = 10_000;
+
 private sealed record TextDocument(
         string Text,
         Encoding Encoding,

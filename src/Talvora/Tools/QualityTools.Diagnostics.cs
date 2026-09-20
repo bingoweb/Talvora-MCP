@@ -41,17 +41,25 @@ public static partial class QualityTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraDiagnosticsResponse)),
-     Description("Normalize common compiler/linter diagnostics from inline text or a file. Recognizes MSBuild/.NET/TypeScript, GCC/Clang-style, Rust, and ESLint-style output without executing any tool.")]
+     Description("Normalize common compiler/linter diagnostics from inline text or a file. Recognizes MSBuild/.NET/TypeScript, GCC/Clang-style, Rust, and ESLint-style output without executing any tool. maxDiagnostics=0 requests the finite server maximum page; use diagnosticOffset/nextDiagnosticOffset to continue while the input is unchanged.")]
     public static TalvoraDiagnosticsResponse DiagnosticsParse(
         string? text = null,
         string? path = null,
-        int maxDiagnostics = 1000)
+        int maxDiagnostics = 1000,
+        long diagnosticOffset = 0)
     {
-        if (maxDiagnostics < 0)
+        if (maxDiagnostics < 0 || diagnosticOffset < 0)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(maxDiagnostics));
+                "maxDiagnostics and diagnosticOffset cannot be negative.");
         }
+
+        var effectiveMaxDiagnostics =
+            maxDiagnostics == 0
+                ? AbsoluteDiagnosticResults
+                : Math.Min(
+                    maxDiagnostics,
+                    AbsoluteDiagnosticResults);
 
         if (text is null && string.IsNullOrWhiteSpace(path))
         {
@@ -81,18 +89,31 @@ public static partial class QualityTools
 
         var diagnostics = new List<TalvoraDiagnosticEntry>();
         var truncated = false;
+        long seenDiagnostics = 0;
         string? eslintFile = null;
         PendingRustDiagnostic? pendingRust = null;
 
-        foreach (var rawLine in lines)
+        bool TryCapture(TalvoraDiagnosticEntry entry)
         {
-            if (maxDiagnostics > 0 &&
-                diagnostics.Count >= maxDiagnostics)
+            if (seenDiagnostics < diagnosticOffset)
             {
-                truncated = true;
-                break;
+                seenDiagnostics++;
+                return true;
             }
 
+            if (diagnostics.Count >= effectiveMaxDiagnostics)
+            {
+                truncated = true;
+                return false;
+            }
+
+            diagnostics.Add(entry);
+            seenDiagnostics++;
+            return true;
+        }
+
+        foreach (var rawLine in lines)
+        {
             var line = rawLine.TrimEnd();
             if (line.Length == 0)
             {
@@ -104,14 +125,17 @@ public static partial class QualityTools
                 var location = RustLocationRegex.Match(line);
                 if (location.Success)
                 {
-                    diagnostics.Add(new TalvoraDiagnosticEntry(
-                        NormalizeSeverity(pendingRust.Severity),
-                        pendingRust.Code,
-                        pendingRust.Message,
-                        location.Groups["file"].Value,
-                        ParseNullableInt(location.Groups["line"].Value),
-                        ParseNullableInt(location.Groups["column"].Value),
-                        "rustc"));
+                    if (!TryCapture(new TalvoraDiagnosticEntry(
+                            NormalizeSeverity(pendingRust.Severity),
+                            pendingRust.Code,
+                            pendingRust.Message,
+                            location.Groups["file"].Value,
+                            ParseNullableInt(location.Groups["line"].Value),
+                            ParseNullableInt(location.Groups["column"].Value),
+                            "rustc")))
+                    {
+                        break;
+                    }
                     pendingRust = null;
                     continue;
                 }
@@ -120,28 +144,34 @@ public static partial class QualityTools
             var msbuild = MsbuildDiagnosticRegex.Match(line);
             if (msbuild.Success)
             {
-                diagnostics.Add(new TalvoraDiagnosticEntry(
-                    NormalizeSeverity(msbuild.Groups["severity"].Value),
-                    NullIfEmpty(msbuild.Groups["code"].Value),
-                    msbuild.Groups["message"].Value.Trim(),
-                    msbuild.Groups["file"].Value.Trim(),
-                    ParseNullableInt(msbuild.Groups["line"].Value),
-                    ParseNullableInt(msbuild.Groups["column"].Value),
-                    "msbuild"));
+                if (!TryCapture(new TalvoraDiagnosticEntry(
+                        NormalizeSeverity(msbuild.Groups["severity"].Value),
+                        NullIfEmpty(msbuild.Groups["code"].Value),
+                        msbuild.Groups["message"].Value.Trim(),
+                        msbuild.Groups["file"].Value.Trim(),
+                        ParseNullableInt(msbuild.Groups["line"].Value),
+                        ParseNullableInt(msbuild.Groups["column"].Value),
+                        "msbuild")))
+                {
+                    break;
+                }
                 continue;
             }
 
             var unix = UnixDiagnosticRegex.Match(line);
             if (unix.Success)
             {
-                diagnostics.Add(new TalvoraDiagnosticEntry(
-                    NormalizeSeverity(unix.Groups["severity"].Value),
-                    null,
-                    unix.Groups["message"].Value.Trim(),
-                    unix.Groups["file"].Value.Trim(),
-                    ParseNullableInt(unix.Groups["line"].Value),
-                    ParseNullableInt(unix.Groups["column"].Value),
-                    "compiler"));
+                if (!TryCapture(new TalvoraDiagnosticEntry(
+                        NormalizeSeverity(unix.Groups["severity"].Value),
+                        null,
+                        unix.Groups["message"].Value.Trim(),
+                        unix.Groups["file"].Value.Trim(),
+                        ParseNullableInt(unix.Groups["line"].Value),
+                        ParseNullableInt(unix.Groups["column"].Value),
+                        "compiler")))
+                {
+                    break;
+                }
                 continue;
             }
 
@@ -158,14 +188,17 @@ public static partial class QualityTools
             var eslint = EslintDiagnosticRegex.Match(line);
             if (eslint.Success && eslintFile is not null)
             {
-                diagnostics.Add(new TalvoraDiagnosticEntry(
-                    NormalizeSeverity(eslint.Groups["severity"].Value),
-                    NullIfEmpty(eslint.Groups["code"].Value),
-                    eslint.Groups["message"].Value.Trim(),
-                    eslintFile,
-                    ParseNullableInt(eslint.Groups["line"].Value),
-                    ParseNullableInt(eslint.Groups["column"].Value),
-                    "eslint"));
+                if (!TryCapture(new TalvoraDiagnosticEntry(
+                        NormalizeSeverity(eslint.Groups["severity"].Value),
+                        NullIfEmpty(eslint.Groups["code"].Value),
+                        eslint.Groups["message"].Value.Trim(),
+                        eslintFile,
+                        ParseNullableInt(eslint.Groups["line"].Value),
+                        ParseNullableInt(eslint.Groups["column"].Value),
+                        "eslint")))
+                {
+                    break;
+                }
                 continue;
             }
 
@@ -177,11 +210,9 @@ public static partial class QualityTools
         }
 
         if (!truncated &&
-            pendingRust is not null &&
-            (maxDiagnostics == 0 ||
-             diagnostics.Count < maxDiagnostics))
+            pendingRust is not null)
         {
-            diagnostics.Add(new TalvoraDiagnosticEntry(
+            _ = TryCapture(new TalvoraDiagnosticEntry(
                 NormalizeSeverity(pendingRust.Severity),
                 pendingRust.Code,
                 pendingRust.Message,
@@ -201,7 +232,11 @@ public static partial class QualityTools
             diagnostics.Count(item =>
                 item.Severity == "info"),
             truncated,
-            diagnostics);
+            diagnostics,
+            diagnosticOffset,
+            truncated
+                ? checked(diagnosticOffset + diagnostics.Count)
+                : null);
     }
 
     private sealed record PendingRustDiagnostic(

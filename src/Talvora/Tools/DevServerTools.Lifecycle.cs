@@ -142,21 +142,35 @@ public static partial class DevServerTools
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraDevServerListResponse)),
-     Description("List persisted Talvora dev-server definitions with their current job state. includeExited=false returns only jobs whose root process is still running. maxResults=0 means unlimited.")]
+     Description("List persisted Talvora dev-server definitions with their current job state. includeExited=false returns only jobs whose root process is still running. maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while persisted definitions are unchanged.")]
     public static async Task<TalvoraDevServerListResponse> List(
         bool includeExited = true,
         int maxResults = 100,
+        long resultOffset = 0,
         CancellationToken cancellationToken = default)
     {
-        if (maxResults < 0)
+        if (maxResults < 0 || resultOffset < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(maxResults));
+            throw new ArgumentOutOfRangeException(
+                "maxResults and resultOffset cannot be negative.");
         }
+
+        var effectiveMaxResults =
+            maxResults == 0
+                ? AbsoluteDevServerListResults
+                : Math.Min(
+                    maxResults,
+                    AbsoluteDevServerListResults);
 
         var root = GetMetadataRoot();
         if (!Directory.Exists(root))
         {
-            return new TalvoraDevServerListResponse(0, []);
+            return new TalvoraDevServerListResponse(
+                0,
+                [],
+                resultOffset,
+                false,
+                null);
         }
 
         var items = new List<TalvoraDevServerListItem>();
@@ -204,22 +218,40 @@ public static partial class DevServerTools
             }
         }
 
-        IEnumerable<TalvoraDevServerListItem> ordered =
+        var ordered =
             items
                 .OrderByDescending(item => item.StartedAtUtc)
                 .ThenBy(
                     item => item.JobId,
-                    StringComparer.OrdinalIgnoreCase);
+                    StringComparer.OrdinalIgnoreCase)
+                .ToArray();
 
-        if (maxResults > 0)
+        if (resultOffset >= ordered.LongLength)
         {
-            ordered = ordered.Take(maxResults);
+            return new TalvoraDevServerListResponse(
+                0,
+                [],
+                resultOffset,
+                false,
+                null);
         }
 
-        var result = ordered.ToArray();
+        var page = ordered
+            .Skip(checked((int)resultOffset))
+            .Take(effectiveMaxResults + 1)
+            .ToArray();
+        var truncated = page.Length > effectiveMaxResults;
+        var result = truncated
+            ? page[..effectiveMaxResults]
+            : page;
         return new TalvoraDevServerListResponse(
             result.Length,
-            result);
+            result,
+            resultOffset,
+            truncated,
+            truncated
+                ? checked(resultOffset + result.Length)
+                : null);
     }
 
     [McpServerTool(

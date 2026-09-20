@@ -14,17 +14,25 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraTestReportSummary)),
-     Description("Parse TRX, JUnit/xUnit-style XML, or NUnit3 test-result XML into a common summary with failed/error test details. format=auto detects by XML root element. maxFailures=0 means unlimited.")]
+     Description("Parse TRX, JUnit/xUnit-style XML, or NUnit3 test-result XML into a common summary with failed/error test details. maxFailures=0 requests the finite server maximum page; use failureOffset/nextFailureOffset to continue while the report is unchanged.")]
     public static TalvoraTestReportSummary TestReportSummary(
         string path,
         string format = "auto",
-        int maxFailures = 200)
+        int maxFailures = 200,
+        long failureOffset = 0)
     {
-        if (maxFailures < 0)
+        if (maxFailures < 0 || failureOffset < 0)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(maxFailures));
+                "maxFailures and failureOffset cannot be negative.");
         }
+
+        var effectiveMaxFailures =
+            maxFailures == 0
+                ? AbsoluteTestReportFailures
+                : Math.Min(
+                    maxFailures,
+                    AbsoluteTestReportFailures);
 
         var fullPath = Path.GetFullPath(path);
         var document = LoadXmlDocument(fullPath);
@@ -37,15 +45,18 @@ public static partial class ConfigFormatTools
             "trx" => ParseTrx(
                 fullPath,
                 document,
-                maxFailures),
+                effectiveMaxFailures,
+                failureOffset),
             "junit" => ParseJunit(
                 fullPath,
                 document,
-                maxFailures),
+                effectiveMaxFailures,
+                failureOffset),
             "nunit3" => ParseNunit3(
                 fullPath,
                 document,
-                maxFailures),
+                effectiveMaxFailures,
+                failureOffset),
             _ => throw new InvalidOperationException(
                 $"Unsupported test report format: {detected}"),
         };
@@ -91,7 +102,8 @@ public static partial class ConfigFormatTools
         ParseTrx(
             string path,
             XmlDocument document,
-            int maxFailures)
+            int maxFailures,
+            long failureOffset)
     {
         var counters =
             document.SelectSingleNode(
@@ -114,6 +126,7 @@ public static partial class ConfigFormatTools
         var failures =
             new List<TalvoraTestFailure>();
         var truncated = false;
+        long seenFailures = 0;
 
         var nodes =
             document.SelectNodes(
@@ -139,8 +152,13 @@ public static partial class ConfigFormatTools
                     continue;
                 }
 
-                if (maxFailures > 0 &&
-                    failures.Count >= maxFailures)
+                if (seenFailures < failureOffset)
+                {
+                    seenFailures++;
+                    continue;
+                }
+
+                if (failures.Count >= maxFailures)
                 {
                     truncated = true;
                     break;
@@ -161,6 +179,7 @@ public static partial class ConfigFormatTools
                             "./*[local-name()='Message']")?.InnerText,
                         errorInfo?.SelectSingleNode(
                             "./*[local-name()='StackTrace']")?.InnerText));
+                seenFailures++;
             }
         }
 
@@ -185,14 +204,19 @@ public static partial class ConfigFormatTools
             null,
             failures.Count,
             truncated,
-            failures);
+            failures,
+            failureOffset,
+            truncated
+                ? checked(failureOffset + failures.Count)
+                : null);
     }
 
     private static TalvoraTestReportSummary
         ParseJunit(
             string path,
             XmlDocument document,
-            int maxFailures)
+            int maxFailures,
+            long failureOffset)
     {
         var suites =
             document.SelectNodes(
@@ -247,6 +271,7 @@ public static partial class ConfigFormatTools
         var failures =
             new List<TalvoraTestFailure>();
         var truncated = false;
+        long seenFailures = 0;
 
         var cases =
             document.SelectNodes(
@@ -269,8 +294,13 @@ public static partial class ConfigFormatTools
                     continue;
                 }
 
-                if (maxFailures > 0 &&
-                    failures.Count >= maxFailures)
+                if (seenFailures < failureOffset)
+                {
+                    seenFailures++;
+                    continue;
+                }
+
+                if (failures.Count >= maxFailures)
                 {
                     truncated = true;
                     break;
@@ -298,6 +328,7 @@ public static partial class ConfigFormatTools
                         detail.Attributes?["message"]?.Value
                         ?? detail.InnerText,
                         detail.InnerText));
+                seenFailures++;
             }
         }
 
@@ -321,14 +352,19 @@ public static partial class ConfigFormatTools
             duration,
             failures.Count,
             truncated,
-            failures);
+            failures,
+            failureOffset,
+            truncated
+                ? checked(failureOffset + failures.Count)
+                : null);
     }
 
     private static TalvoraTestReportSummary
         ParseNunit3(
             string path,
             XmlDocument document,
-            int maxFailures)
+            int maxFailures,
+            long failureOffset)
     {
         var root =
             document.DocumentElement
@@ -355,6 +391,7 @@ public static partial class ConfigFormatTools
         var failures =
             new List<TalvoraTestFailure>();
         var truncated = false;
+        long seenFailures = 0;
 
         var cases =
             document.SelectNodes(
@@ -364,8 +401,13 @@ public static partial class ConfigFormatTools
         {
             foreach (XmlNode testCase in cases)
             {
-                if (maxFailures > 0 &&
-                    failures.Count >= maxFailures)
+                if (seenFailures < failureOffset)
+                {
+                    seenFailures++;
+                    continue;
+                }
+
+                if (failures.Count >= maxFailures)
                 {
                     truncated = true;
                     break;
@@ -388,6 +430,7 @@ public static partial class ConfigFormatTools
                             "./*[local-name()='message']")?.InnerText,
                         failure?.SelectSingleNode(
                             "./*[local-name()='stack-trace']")?.InnerText));
+                seenFailures++;
             }
         }
 
@@ -403,7 +446,11 @@ public static partial class ConfigFormatTools
             duration,
             failures.Count,
             truncated,
-            failures);
+            failures,
+            failureOffset,
+            truncated
+                ? checked(failureOffset + failures.Count)
+                : null);
     }
 
     private static int ParseIntAttribute(

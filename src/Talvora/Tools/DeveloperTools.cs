@@ -134,7 +134,9 @@ public sealed record TalvoraProjectDiscoverResponse(
     int Count,
     bool Truncated,
     IReadOnlyList<TalvoraProjectEntry> Projects,
-    IReadOnlyList<string> Errors);
+    IReadOnlyList<string> Errors,
+    long ResultOffset = 0,
+    long? NextResultOffset = null);
 
 public sealed record TalvoraCommandResolveResponse(
     string Command,
@@ -150,6 +152,9 @@ public static partial class DeveloperTools
         16L * 1024 * 1024;
     internal const int AbsoluteFileSearchResults = 20_000;
     internal const int AbsoluteTextSearchMatches = 20_000;
+    internal const int AbsoluteProjectDiscoverResults = 20_000;
+    internal const int AbsoluteWorkspaceProjects = 10_000;
+    internal const int AbsoluteWorkspaceCommands = 20_000;
     internal const int AbsoluteSearchLineCharacters = 32 * 1024;
     internal const long AbsoluteSearchResponseCharacters =
         8L * 1024 * 1024;

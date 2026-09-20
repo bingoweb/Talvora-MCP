@@ -20,18 +20,27 @@ public static partial class DeveloperTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraProjectDiscoverResponse)),
-     Description("Discover application-development projects under any accessible root. Recognizes .NET, Node, Python, Rust, Go, Maven, Gradle, CMake, Docker, and Git markers. maxResults=0 means unlimited.")]
+     Description("Discover application-development projects under any accessible root. Recognizes .NET, Node, Python, Rust, Go, Maven, Gradle, CMake, Docker, and Git markers. maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while the tree is unchanged.")]
     public static TalvoraProjectDiscoverResponse ProjectDiscover(
         string root,
         bool recursive = true,
         bool followReparsePoints = false,
         int maxResults = 500,
+        long resultOffset = 0,
         CancellationToken cancellationToken = default)
     {
-        if (maxResults < 0)
+        if (maxResults < 0 || resultOffset < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(maxResults));
+            throw new ArgumentOutOfRangeException(
+                "maxResults and resultOffset cannot be negative.");
         }
+
+        var effectiveMaxResults =
+            maxResults == 0
+                ? AbsoluteProjectDiscoverResults
+                : Math.Min(
+                    maxResults,
+                    AbsoluteProjectDiscoverResults);
 
         var fullRoot = Path.GetFullPath(root);
         if (!Directory.Exists(fullRoot))
@@ -42,6 +51,7 @@ public static partial class DeveloperTools
         var projects = new List<TalvoraProjectEntry>();
         var errors = new List<string>();
         var truncated = false;
+        long matchingIndex = 0;
 
         foreach (var info in EnumerateTree(fullRoot, recursive, followReparsePoints, errors, cancellationToken))
         {
@@ -53,16 +63,23 @@ public static partial class DeveloperTools
                 continue;
             }
 
-            projects.Add(new TalvoraProjectEntry(
-                info.FullName,
-                type,
-                info.Name));
+            if (matchingIndex < resultOffset)
+            {
+                matchingIndex++;
+                continue;
+            }
 
-            if (maxResults > 0 && projects.Count >= maxResults)
+            if (projects.Count >= effectiveMaxResults)
             {
                 truncated = true;
                 break;
             }
+
+            projects.Add(new TalvoraProjectEntry(
+                info.FullName,
+                type,
+                info.Name));
+            matchingIndex++;
         }
 
         return new TalvoraProjectDiscoverResponse(
@@ -70,7 +87,11 @@ public static partial class DeveloperTools
             projects.Count,
             truncated,
             projects,
-            errors);
+            errors,
+            resultOffset,
+            truncated
+                ? checked(resultOffset + projects.Count)
+                : null);
     }
 
     [McpServerTool(

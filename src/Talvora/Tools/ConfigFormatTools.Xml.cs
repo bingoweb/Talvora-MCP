@@ -15,12 +15,13 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraXmlQueryResponse)),
-     Description("Evaluate an arbitrary XPath expression against any accessible XML file. Supports namespace prefix mappings, scalar XPath results, node sets, and optional result limits.")]
+     Description("Evaluate an arbitrary XPath expression against any accessible XML file. Supports namespace prefix mappings and scalar XPath results. For node sets, maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while the XML is unchanged.")]
     public static TalvoraXmlQueryResponse XmlQuery(
         string path,
         string xpath,
         Dictionary<string, string>? namespaces = null,
-        int maxResults = 200)
+        int maxResults = 200,
+        long resultOffset = 0)
     {
         if (string.IsNullOrWhiteSpace(xpath))
         {
@@ -28,11 +29,18 @@ public static partial class ConfigFormatTools
                 "XPath expression is required.",
                 nameof(xpath));
         }
-        if (maxResults < 0)
+        if (maxResults < 0 || resultOffset < 0)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(maxResults));
+                "maxResults and resultOffset cannot be negative.");
         }
+
+        var effectiveMaxResults =
+            maxResults == 0
+                ? AbsoluteXmlQueryResults
+                : Math.Min(
+                    maxResults,
+                    AbsoluteXmlQueryResults);
 
         var fullPath = Path.GetFullPath(path);
         var document = LoadXmlDocument(fullPath);
@@ -52,6 +60,7 @@ public static partial class ConfigFormatTools
             var nodes =
                 new List<TalvoraXmlNodeResult>();
             var truncated = false;
+            long matchingIndex = 0;
 
             while (iterator.MoveNext())
             {
@@ -60,8 +69,13 @@ public static partial class ConfigFormatTools
                     continue;
                 }
 
-                if (maxResults > 0 &&
-                    nodes.Count >= maxResults)
+                if (matchingIndex < resultOffset)
+                {
+                    matchingIndex++;
+                    continue;
+                }
+
+                if (nodes.Count >= effectiveMaxResults)
                 {
                     truncated = true;
                     break;
@@ -70,6 +84,7 @@ public static partial class ConfigFormatTools
                 nodes.Add(
                     ToXmlNodeResult(
                         iterator.Current));
+                matchingIndex++;
             }
 
             return new TalvoraXmlQueryResponse(
@@ -79,7 +94,11 @@ public static partial class ConfigFormatTools
                 null,
                 nodes.Count,
                 truncated,
-                nodes);
+                nodes,
+                resultOffset,
+                truncated
+                    ? checked(resultOffset + nodes.Count)
+                    : null);
         }
 
         return new TalvoraXmlQueryResponse(
@@ -91,7 +110,9 @@ public static partial class ConfigFormatTools
                 System.Globalization.CultureInfo.InvariantCulture),
             0,
             false,
-            []);
+            [],
+            0,
+            null);
     }
 
     [McpServerTool(

@@ -16,7 +16,9 @@ public sealed record TalvoraWorkspaceInspectResponse(
     int Count,
     bool Truncated,
     IReadOnlyList<TalvoraWorkspaceProject> Projects,
-    IReadOnlyList<string> Errors);
+    IReadOnlyList<string> Errors,
+    long ProjectOffset = 0,
+    long? NextProjectOffset = null);
 
 public sealed record TalvoraWorkspaceCommand(
     string WorkingDirectory,
@@ -31,4 +33,8 @@ public sealed record TalvoraWorkspaceCommandsResponse(
     int Count,
     bool Truncated,
     IReadOnlyList<TalvoraWorkspaceCommand> Commands,
-    IReadOnlyList<string> Errors);
+    IReadOnlyList<string> Errors,
+    long ProjectOffset = 0,
+    long? NextProjectOffset = null,
+    long CommandOffset = 0,
+    long? NextCommandOffset = null);

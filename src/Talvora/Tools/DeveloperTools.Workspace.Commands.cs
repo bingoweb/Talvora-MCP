@@ -11,25 +11,36 @@ public static partial class DeveloperTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraWorkspaceCommandsResponse)),
-     Description("Statically infer useful restore/install/build/test/run/analyze commands for discovered projects without executing them. Commands preserve project wrappers and package-manager selections when present.")]
+     Description("Statically infer useful restore/install/build/test/run/analyze commands for discovered projects without executing them. maxProjects=0/maxCommands=0 request finite server maximum pages. Use projectOffset/nextProjectOffset for project pages and commandOffset/nextCommandOffset for command pages while the workspace is unchanged.")]
     public static TalvoraWorkspaceCommandsResponse WorkspaceCommands(
         string root,
         int maxDepth = 6,
         int maxProjects = 500,
         int maxCommands = 1000,
+        long projectOffset = 0,
+        long commandOffset = 0,
         bool includeGenerated = false,
         bool followReparsePoints = false,
         CancellationToken cancellationToken = default)
     {
-        if (maxCommands < 0)
+        if (maxCommands < 0 || projectOffset < 0 || commandOffset < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(maxCommands));
+            throw new ArgumentOutOfRangeException(
+                "maxCommands, projectOffset, and commandOffset cannot be negative.");
         }
+
+        var effectiveMaxCommands =
+            maxCommands == 0
+                ? AbsoluteWorkspaceCommands
+                : Math.Min(
+                    maxCommands,
+                    AbsoluteWorkspaceCommands);
 
         var inspection = WorkspaceInspect(
             root,
             maxDepth,
             maxProjects,
+            projectOffset,
             includeGenerated,
             followReparsePoints,
             cancellationToken);
@@ -39,6 +50,7 @@ public static partial class DeveloperTools
             OperatingSystem.IsWindows()
                 ? StringComparer.OrdinalIgnoreCase
                 : StringComparer.Ordinal);
+        long seenCommands = 0;
 
         foreach (var project in inspection.Projects)
         {
@@ -58,18 +70,28 @@ public static partial class DeveloperTools
                     continue;
                 }
 
-                commands.Add(command);
+                if (seenCommands < commandOffset)
+                {
+                    seenCommands++;
+                    continue;
+                }
 
-                if (maxCommands > 0 &&
-                    commands.Count >= maxCommands)
+                if (commands.Count >= effectiveMaxCommands)
                 {
                     return new TalvoraWorkspaceCommandsResponse(
                         inspection.Root,
                         commands.Count,
                         true,
                         commands,
-                        inspection.Errors);
+                        inspection.Errors,
+                        projectOffset,
+                        null,
+                        commandOffset,
+                        checked(commandOffset + commands.Count));
                 }
+
+                commands.Add(command);
+                seenCommands++;
             }
         }
 
@@ -78,7 +100,11 @@ public static partial class DeveloperTools
             commands.Count,
             inspection.Truncated,
             commands,
-            inspection.Errors);
+            inspection.Errors,
+            projectOffset,
+            inspection.NextProjectOffset,
+            commandOffset,
+            null);
     }
 
     private static IEnumerable<TalvoraWorkspaceCommand>

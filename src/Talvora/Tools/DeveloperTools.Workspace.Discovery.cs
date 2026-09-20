@@ -33,11 +33,12 @@ public static partial class DeveloperTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraWorkspaceInspectResponse)),
-     Description("Statically inspect a software workspace without executing project code. Discovers .NET, Node, Python, Rust, Go, Maven, Gradle/Android, Flutter/Dart, CMake, and Docker project roots plus package-manager/toolchain pins, lockfiles, and package scripts.")]
+     Description("Statically inspect a software workspace without executing project code. Discovers .NET, Node, Python, Rust, Go, Maven, Gradle/Android, Flutter/Dart, CMake, and Docker project roots plus package-manager/toolchain pins, lockfiles, and package scripts. maxProjects=0 requests the finite server maximum page; use projectOffset/nextProjectOffset to continue while the workspace tree is unchanged.")]
     public static TalvoraWorkspaceInspectResponse WorkspaceInspect(
         string root,
         int maxDepth = 6,
         int maxProjects = 500,
+        long projectOffset = 0,
         bool includeGenerated = false,
         bool followReparsePoints = false,
         CancellationToken cancellationToken = default)
@@ -47,10 +48,18 @@ public static partial class DeveloperTools
             throw new ArgumentOutOfRangeException(nameof(maxDepth));
         }
 
-        if (maxProjects < 0)
+        if (maxProjects < 0 || projectOffset < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(maxProjects));
+            throw new ArgumentOutOfRangeException(
+                "maxProjects and projectOffset cannot be negative.");
         }
+
+        var effectiveMaxProjects =
+            maxProjects == 0
+                ? AbsoluteWorkspaceProjects
+                : Math.Min(
+                    maxProjects,
+                    AbsoluteWorkspaceProjects);
 
         var fullRoot = Path.GetFullPath(root);
         if (!Directory.Exists(fullRoot))
@@ -69,6 +78,7 @@ public static partial class DeveloperTools
 
         queue.Enqueue((new DirectoryInfo(fullRoot), 0));
         var truncated = false;
+        long matchingIndex = 0;
 
         while (queue.Count > 0)
         {
@@ -93,30 +103,43 @@ public static partial class DeveloperTools
             catch (Exception ex) when (
                 ex is IOException or UnauthorizedAccessException)
             {
-                errors.Add(
+                AddSearchError(
+                    errors,
                     $"{directory.FullName}: {ex.GetType().Name}: {ex.Message}");
                 continue;
             }
 
+            var discoveredProjects =
+                new List<TalvoraWorkspaceProject>();
             InspectWorkspaceDirectory(
                 fullRoot,
                 directory,
                 files,
                 directories,
-                projects,
+                discoveredProjects,
                 errors,
                 cancellationToken);
 
-            if (maxProjects > 0 && projects.Count >= maxProjects)
+            foreach (var project in discoveredProjects)
             {
-                if (projects.Count > maxProjects)
+                if (matchingIndex < projectOffset)
                 {
-                    projects.RemoveRange(
-                        maxProjects,
-                        projects.Count - maxProjects);
+                    matchingIndex++;
+                    continue;
                 }
 
-                truncated = true;
+                if (projects.Count >= effectiveMaxProjects)
+                {
+                    truncated = true;
+                    break;
+                }
+
+                projects.Add(project);
+                matchingIndex++;
+            }
+
+            if (truncated)
+            {
                 break;
             }
 
@@ -155,7 +178,8 @@ public static partial class DeveloperTools
                     catch (Exception ex) when (
                         ex is IOException or UnauthorizedAccessException)
                     {
-                        errors.Add(
+                        AddSearchError(
+                            errors,
                             $"{child.FullName}: {ex.GetType().Name}: {ex.Message}");
                         continue;
                     }
@@ -177,7 +201,11 @@ public static partial class DeveloperTools
                 .OrderBy(project => project.Directory, PathComparer)
                 .ThenBy(project => project.Ecosystem, StringComparer.Ordinal)
                 .ToArray(),
-            errors);
+            errors,
+            projectOffset,
+            truncated
+                ? checked(projectOffset + projects.Count)
+                : null);
     }
 
     private static void InspectWorkspaceDirectory(
@@ -436,7 +464,8 @@ public static partial class DeveloperTools
         catch (Exception ex) when (
             ex is IOException or UnauthorizedAccessException or JsonException)
         {
-            errors.Add(
+            AddSearchError(
+                errors,
                 $"{packageJsonPath}: {ex.GetType().Name}: {ex.Message}");
         }
 
@@ -528,7 +557,8 @@ public static partial class DeveloperTools
                 catch (Exception ex) when (
                     ex is IOException or UnauthorizedAccessException or JsonException)
                 {
-                    errors.Add(
+                    AddSearchError(
+                        errors,
                         $"{globalJson}: {ex.GetType().Name}: {ex.Message}");
                 }
 
@@ -743,7 +773,8 @@ public static partial class DeveloperTools
         catch (Exception ex) when (
             ex is IOException or UnauthorizedAccessException)
         {
-            errors.Add(
+            AddSearchError(
+                errors,
                 $"{path}: {ex.GetType().Name}: {ex.Message}");
             return string.Empty;
         }
@@ -760,7 +791,8 @@ public static partial class DeveloperTools
         catch (Exception ex) when (
             ex is IOException or UnauthorizedAccessException)
         {
-            errors.Add(
+            AddSearchError(
+                errors,
                 $"{path}: {ex.GetType().Name}: {ex.Message}");
             return [];
         }

@@ -34,23 +34,31 @@ public static partial class QualityTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraArtifactInventoryResponse)),
-     Description("Inventory build/release artifacts under any accessible directory with hashes, sizes, timestamps, and PE file/product versions where available. Custom wildcard patterns may replace the default artifact set.")]
+     Description("Inventory build/release artifacts under any accessible directory with hashes, sizes, timestamps, and PE file/product versions where available. maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while the tree is unchanged. Custom wildcard patterns may replace the default artifact set.")]
     public static async Task<TalvoraArtifactInventoryResponse>
         ArtifactInventory(
             string root,
             string[]? patterns = null,
             bool recursive = true,
             int maxResults = 500,
+            long resultOffset = 0,
             string hashAlgorithm = "SHA256",
             bool includeVersionInfo = true,
             bool followReparsePoints = false,
             CancellationToken cancellationToken = default)
     {
-        if (maxResults < 0)
+        if (maxResults < 0 || resultOffset < 0)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(maxResults));
+                "maxResults and resultOffset cannot be negative.");
         }
+
+        var effectiveMaxResults =
+            maxResults == 0
+                ? AbsoluteArtifactResults
+                : Math.Min(
+                    maxResults,
+                    AbsoluteArtifactResults);
 
         var fullRoot = Path.GetFullPath(root);
         if (!Directory.Exists(fullRoot))
@@ -77,6 +85,7 @@ public static partial class QualityTools
         queue.Enqueue(new DirectoryInfo(fullRoot));
         visited.Add(fullRoot);
         var truncated = false;
+        long matchingIndex = 0;
 
         while (queue.Count > 0)
         {
@@ -102,7 +111,8 @@ public static partial class QualityTools
             catch (Exception ex) when (
                 ex is IOException or UnauthorizedAccessException)
             {
-                errors.Add(
+                AddArtifactError(
+                    errors,
                     $"{directory.FullName}: {ex.GetType().Name}: {ex.Message}");
                 continue;
             }
@@ -121,6 +131,18 @@ public static partial class QualityTools
                         effectivePatterns))
                 {
                     continue;
+                }
+
+                if (matchingIndex < resultOffset)
+                {
+                    matchingIndex++;
+                    continue;
+                }
+
+                if (artifacts.Count >= effectiveMaxResults)
+                {
+                    truncated = true;
+                    break;
                 }
 
                 try
@@ -163,16 +185,12 @@ public static partial class QualityTools
                 catch (Exception ex) when (
                     ex is IOException or UnauthorizedAccessException)
                 {
-                    errors.Add(
+                    AddArtifactError(
+                        errors,
                         $"{file.FullName}: {ex.GetType().Name}: {ex.Message}");
                 }
 
-                if (maxResults > 0 &&
-                    artifacts.Count >= maxResults)
-                {
-                    truncated = true;
-                    break;
-                }
+                matchingIndex++;
             }
 
             if (truncated)
@@ -202,7 +220,8 @@ public static partial class QualityTools
                     catch (Exception ex) when (
                         ex is IOException or UnauthorizedAccessException)
                     {
-                        errors.Add(
+                        AddArtifactError(
+                            errors,
                             $"{child.FullName}: {ex.GetType().Name}: {ex.Message}");
                         continue;
                     }
@@ -221,7 +240,11 @@ public static partial class QualityTools
             artifacts.Count,
             truncated,
             artifacts,
-            errors);
+            errors,
+            resultOffset,
+            truncated
+                ? matchingIndex
+                : null);
     }
 
     private static bool MatchesArtifact(
@@ -248,6 +271,23 @@ public static partial class QualityTools
         }
 
         return false;
+    }
+
+    private static void AddArtifactError(
+        List<string> errors,
+        string message)
+    {
+        if (errors.Count < AbsoluteArtifactErrors)
+        {
+            errors.Add(message);
+            return;
+        }
+
+        if (errors.Count == AbsoluteArtifactErrors)
+        {
+            errors.Add(
+                "Additional artifact errors omitted.");
+        }
     }
 
     private static string? NullIfWhiteSpace(string? value) =>

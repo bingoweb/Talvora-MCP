@@ -259,21 +259,33 @@ public static partial class JobTools
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraJobListResponse)),
-     Description("List Talvora background jobs. includeExited=false returns only jobs that are still running. maxResults=0 means unlimited.")]
+     Description("List Talvora background jobs. includeExited=false returns only jobs that are still running. maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while persisted jobs are unchanged.")]
     public static async Task<TalvoraJobListResponse> List(
         bool includeExited = true,
         int maxResults = 200,
+        long resultOffset = 0,
         CancellationToken cancellationToken = default)
     {
-        if (maxResults < 0)
+        if (maxResults < 0 || resultOffset < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(maxResults));
+            throw new ArgumentOutOfRangeException(
+                "maxResults and resultOffset cannot be negative.");
         }
+
+        var effectiveMaxResults =
+            maxResults == 0
+                ? AbsoluteJobListResults
+                : Math.Min(maxResults, AbsoluteJobListResults);
 
         var root = GetJobsRoot();
         if (!Directory.Exists(root))
         {
-            return new TalvoraJobListResponse(0, []);
+            return new TalvoraJobListResponse(
+                0,
+                [],
+                resultOffset,
+                false,
+                null);
         }
 
         var jobs = new List<TalvoraJobInfoResponse>();
@@ -304,16 +316,36 @@ public static partial class JobTools
             }
         }
 
-        IEnumerable<TalvoraJobInfoResponse> ordered = jobs
+        var ordered = jobs
             .OrderByDescending(job => job.StartedAtUtc)
-            .ThenBy(job => job.JobId, StringComparer.OrdinalIgnoreCase);
+            .ThenBy(job => job.JobId, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
-        if (maxResults > 0)
+        if (resultOffset >= ordered.LongLength)
         {
-            ordered = ordered.Take(maxResults);
+            return new TalvoraJobListResponse(
+                0,
+                [],
+                resultOffset,
+                false,
+                null);
         }
 
-        var result = ordered.ToArray();
-        return new TalvoraJobListResponse(result.Length, result);
+        var page = ordered
+            .Skip(checked((int)resultOffset))
+            .Take(effectiveMaxResults + 1)
+            .ToArray();
+        var truncated = page.Length > effectiveMaxResults;
+        var result = truncated
+            ? page[..effectiveMaxResults]
+            : page;
+        return new TalvoraJobListResponse(
+            result.Length,
+            result,
+            resultOffset,
+            truncated,
+            truncated
+                ? checked(resultOffset + result.Length)
+                : null);
     }
 }

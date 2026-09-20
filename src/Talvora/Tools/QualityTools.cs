@@ -31,7 +31,9 @@ public sealed record TalvoraDiagnosticsResponse(
     int Warnings,
     int Infos,
     bool Truncated,
-    IReadOnlyList<TalvoraDiagnosticEntry> Diagnostics);
+    IReadOnlyList<TalvoraDiagnosticEntry> Diagnostics,
+    long DiagnosticOffset = 0,
+    long? NextDiagnosticOffset = null);
 
 public sealed record TalvoraArtifactEntry(
     string Path,
@@ -49,9 +51,14 @@ public sealed record TalvoraArtifactInventoryResponse(
     int Count,
     bool Truncated,
     IReadOnlyList<TalvoraArtifactEntry> Artifacts,
-    IReadOnlyList<string> Errors);
+    IReadOnlyList<string> Errors,
+    long ResultOffset = 0,
+    long? NextResultOffset = null);
 
 [McpServerToolType]
 public static partial class QualityTools
 {
+    internal const int AbsoluteDiagnosticResults = 20_000;
+    internal const int AbsoluteArtifactResults = 10_000;
+    internal const int AbsoluteArtifactErrors = 1_000;
 }

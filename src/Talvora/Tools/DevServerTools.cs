@@ -46,7 +46,10 @@ public sealed record TalvoraDevServerListItem(
 
 public sealed record TalvoraDevServerListResponse(
     int Count,
-    IReadOnlyList<TalvoraDevServerListItem> Servers);
+    IReadOnlyList<TalvoraDevServerListItem> Servers,
+    long ResultOffset = 0,
+    bool Truncated = false,
+    long? NextResultOffset = null);
 
 public sealed record TalvoraDevServerStopResponse(
     string JobId,
@@ -75,4 +78,5 @@ internal sealed record TalvoraDevServerMetadata(
 [McpServerToolType]
 public static partial class DevServerTools
 {
+    internal const int AbsoluteDevServerListResults = 10_000;
 }

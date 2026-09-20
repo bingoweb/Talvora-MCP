@@ -36,7 +36,10 @@ public sealed record TalvoraJobInfoResponse(
 
 public sealed record TalvoraJobListResponse(
     int Count,
-    IReadOnlyList<TalvoraJobInfoResponse> Jobs);
+    IReadOnlyList<TalvoraJobInfoResponse> Jobs,
+    long ResultOffset = 0,
+    bool Truncated = false,
+    long? NextResultOffset = null);
 
 public sealed record TalvoraJobOutputResponse(
     string JobId,
@@ -103,6 +106,7 @@ internal sealed class TalvoraJobRuntime : IDisposable
 [McpServerToolType]
 public static partial class JobTools
 {
+    internal const int AbsoluteJobListResults = 10_000;
     private const long MaximumJobLogFileBytes =
         32L * 1024 * 1024;
     private const int MaximumJobReadResponseBytes =

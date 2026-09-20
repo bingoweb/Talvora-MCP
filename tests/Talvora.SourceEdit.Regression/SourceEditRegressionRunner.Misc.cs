@@ -1686,6 +1686,281 @@ internal static partial class SourceEditRegressionRunner
                 secondTextPage.NextMatchOffset is null,
                 "Text search continuation did not terminate cleanly.");
 
+            var xmlPath =
+                Path.Combine(root, "paged.xml");
+            await File.WriteAllTextAsync(
+                xmlPath,
+                "<root><item id=\"1\"/><item id=\"2\"/><item id=\"3\"/></root>");
+            var firstXmlPage =
+                ConfigFormatTools.XmlQuery(
+                    xmlPath,
+                    "/root/item",
+                    maxResults: 2);
+            Assert(
+                firstXmlPage.Count == 2 &&
+                firstXmlPage.Truncated &&
+                firstXmlPage.NextResultOffset == 2,
+                "XML query did not expose a bounded first page.");
+            var secondXmlPage =
+                ConfigFormatTools.XmlQuery(
+                    xmlPath,
+                    "/root/item",
+                    maxResults: 2,
+                    resultOffset:
+                        firstXmlPage.NextResultOffset!.Value);
+            Assert(
+                secondXmlPage.Count == 1 &&
+                !secondXmlPage.Truncated &&
+                secondXmlPage.NextResultOffset is null,
+                "XML query continuation did not terminate cleanly.");
+
+            var junitPath =
+                Path.Combine(root, "paged-junit.xml");
+            await File.WriteAllTextAsync(
+                junitPath,
+                "<testsuite tests=\"3\" failures=\"3\">" +
+                "<testcase classname=\"C\" name=\"a\"><failure message=\"a\">a</failure></testcase>" +
+                "<testcase classname=\"C\" name=\"b\"><failure message=\"b\">b</failure></testcase>" +
+                "<testcase classname=\"C\" name=\"c\"><failure message=\"c\">c</failure></testcase>" +
+                "</testsuite>");
+            var firstFailurePage =
+                ConfigFormatTools.TestReportSummary(
+                    junitPath,
+                    format: "junit",
+                    maxFailures: 2);
+            Assert(
+                firstFailurePage.FailureCount == 2 &&
+                firstFailurePage.FailuresTruncated &&
+                firstFailurePage.NextFailureOffset == 2,
+                "Test report did not expose a bounded first failure page.");
+            var secondFailurePage =
+                ConfigFormatTools.TestReportSummary(
+                    junitPath,
+                    format: "junit",
+                    maxFailures: 2,
+                    failureOffset:
+                        firstFailurePage.NextFailureOffset!.Value);
+            Assert(
+                secondFailurePage.FailureCount == 1 &&
+                !secondFailurePage.FailuresTruncated &&
+                secondFailurePage.NextFailureOffset is null,
+                "Test report failure continuation did not terminate cleanly.");
+
+            var projectRoot =
+                Path.Combine(root, "projects");
+            foreach (var name in
+                     new[] { "a", "b", "c" })
+            {
+                var projectDirectory =
+                    Path.Combine(projectRoot, name);
+                Directory.CreateDirectory(projectDirectory);
+                await File.WriteAllTextAsync(
+                    Path.Combine(
+                        projectDirectory,
+                        "package.json"),
+                    "{\"name\":\"" + name + "\",\"scripts\":{\"test\":\"echo test\"}}");
+            }
+
+            var firstProjectPage =
+                DeveloperTools.ProjectDiscover(
+                    projectRoot,
+                    maxResults: 2);
+            Assert(
+                firstProjectPage.Count == 2 &&
+                firstProjectPage.Truncated &&
+                firstProjectPage.NextResultOffset == 2,
+                "Project discovery did not expose a bounded first page.");
+            var secondProjectPage =
+                DeveloperTools.ProjectDiscover(
+                    projectRoot,
+                    maxResults: 2,
+                    resultOffset:
+                        firstProjectPage.NextResultOffset!.Value);
+            Assert(
+                secondProjectPage.Count == 1 &&
+                !secondProjectPage.Truncated &&
+                secondProjectPage.NextResultOffset is null,
+                "Project discovery continuation did not terminate cleanly.");
+
+            var firstWorkspacePage =
+                DeveloperTools.WorkspaceInspect(
+                    projectRoot,
+                    maxProjects: 2);
+            Assert(
+                firstWorkspacePage.Count == 2 &&
+                firstWorkspacePage.Truncated &&
+                firstWorkspacePage.NextProjectOffset == 2,
+                "Workspace inspection did not expose a bounded first page.");
+            var secondWorkspacePage =
+                DeveloperTools.WorkspaceInspect(
+                    projectRoot,
+                    maxProjects: 2,
+                    projectOffset:
+                        firstWorkspacePage.NextProjectOffset!.Value);
+            Assert(
+                secondWorkspacePage.Count == 1 &&
+                !secondWorkspacePage.Truncated &&
+                secondWorkspacePage.NextProjectOffset is null,
+                "Workspace inspection continuation did not terminate cleanly.");
+
+            var firstCommandPage =
+                DeveloperTools.WorkspaceCommands(
+                    projectRoot,
+                    maxProjects: 10,
+                    maxCommands: 2);
+            Assert(
+                firstCommandPage.Count == 2 &&
+                firstCommandPage.Truncated &&
+                firstCommandPage.NextCommandOffset == 2,
+                "Workspace commands did not expose a bounded first command page.");
+            var secondCommandPage =
+                DeveloperTools.WorkspaceCommands(
+                    projectRoot,
+                    maxProjects: 10,
+                    maxCommands: 2,
+                    commandOffset:
+                        firstCommandPage.NextCommandOffset!.Value);
+            Assert(
+                secondCommandPage.Count > 0,
+                "Workspace command continuation returned no remaining commands.");
+
+            var artifactRoot =
+                Path.Combine(root, "artifacts");
+            Directory.CreateDirectory(artifactRoot);
+            foreach (var name in
+                     new[] { "a.dll", "b.dll", "c.dll" })
+            {
+                await File.WriteAllTextAsync(
+                    Path.Combine(artifactRoot, name),
+                    name);
+            }
+            var firstArtifactPage =
+                await QualityTools.ArtifactInventory(
+                    artifactRoot,
+                    maxResults: 2,
+                    includeVersionInfo: false);
+            Assert(
+                firstArtifactPage.Count == 2 &&
+                firstArtifactPage.Truncated &&
+                firstArtifactPage.NextResultOffset == 2,
+                "Artifact inventory did not expose a bounded first page.");
+            var secondArtifactPage =
+                await QualityTools.ArtifactInventory(
+                    artifactRoot,
+                    maxResults: 2,
+                    resultOffset:
+                        firstArtifactPage.NextResultOffset!.Value,
+                    includeVersionInfo: false);
+            Assert(
+                secondArtifactPage.Count == 1 &&
+                !secondArtifactPage.Truncated &&
+                secondArtifactPage.NextResultOffset is null,
+                "Artifact inventory continuation did not terminate cleanly.");
+
+            var diagnosticText =
+                "a.cs(1,1): error CS0001: first\n" +
+                "b.cs(2,1): warning CS0002: second\n" +
+                "c.cs(3,1): error CS0003: third\n";
+            var firstDiagnosticPage =
+                QualityTools.DiagnosticsParse(
+                    text: diagnosticText,
+                    maxDiagnostics: 2);
+            Assert(
+                firstDiagnosticPage.Count == 2 &&
+                firstDiagnosticPage.Truncated &&
+                firstDiagnosticPage.NextDiagnosticOffset == 2,
+                "Diagnostics parser did not expose a bounded first page.");
+            var secondDiagnosticPage =
+                QualityTools.DiagnosticsParse(
+                    text: diagnosticText,
+                    maxDiagnostics: 2,
+                    diagnosticOffset:
+                        firstDiagnosticPage.NextDiagnosticOffset!.Value);
+            Assert(
+                secondDiagnosticPage.Count == 1 &&
+                !secondDiagnosticPage.Truncated &&
+                secondDiagnosticPage.NextDiagnosticOffset is null,
+                "Diagnostics continuation did not terminate cleanly.");
+
+            var gitRoot =
+                Path.Combine(root, "git-pages");
+            Directory.CreateDirectory(gitRoot);
+            AssertEqual(
+                0,
+                (await GitTools.Run(
+                    gitRoot,
+                    ["init"],
+                    explicitAdmin: true)).ExitCode,
+                "Git pagination fixture init failed.");
+            for (var index = 1; index <= 3; index++)
+            {
+                var gitFile =
+                    Path.Combine(
+                        gitRoot,
+                        $"commit-{index}.txt");
+                await File.WriteAllTextAsync(
+                    gitFile,
+                    index.ToString(
+                        System.Globalization.CultureInfo.InvariantCulture));
+                AssertEqual(
+                    0,
+                    (await GitTools.Run(
+                        gitRoot,
+                        ["add", "--", Path.GetFileName(gitFile)],
+                        explicitAdmin: true)).ExitCode,
+                    "Git pagination fixture add failed.");
+                AssertEqual(
+                    0,
+                    (await GitTools.Run(
+                        gitRoot,
+                        [
+                            "-c",
+                            "user.name=Talvora Regression",
+                            "-c",
+                            "user.email=talvora@example.invalid",
+                            "commit",
+                            "-m",
+                            $"commit-{index}",
+                        ],
+                        explicitAdmin: true)).ExitCode,
+                    "Git pagination fixture commit failed.");
+            }
+            var firstGitPage =
+                await GitTools.Log(
+                    gitRoot,
+                    maxCount: 2);
+            Assert(
+                firstGitPage.Count == 2 &&
+                firstGitPage.Truncated &&
+                firstGitPage.NextSkip == 2,
+                "Git log did not expose a bounded first page.");
+            var secondGitPage =
+                await GitTools.Log(
+                    gitRoot,
+                    maxCount: 2,
+                    skip:
+                        firstGitPage.NextSkip!.Value);
+            Assert(
+                secondGitPage.Count == 1 &&
+                !secondGitPage.Truncated &&
+                secondGitPage.NextSkip is null,
+                "Git log continuation did not terminate cleanly.");
+
+            var jobPage =
+                await JobTools.List(
+                    maxResults: int.MaxValue);
+            Assert(
+                jobPage.Count <=
+                    JobTools.AbsoluteJobListResults,
+                "Job list exceeded its finite server ceiling.");
+            var devServerPage =
+                await DevServerTools.List(
+                    maxResults: int.MaxValue);
+            Assert(
+                devServerPage.Count <=
+                    DevServerTools.AbsoluteDevServerListResults,
+                "Dev-server list exceeded its finite server ceiling.");
+
             var sqlite =
                 await SqliteTools.Query(
                     ":memory:",
@@ -1740,6 +2015,15 @@ internal static partial class SourceEditRegressionRunner
                 DeveloperTools.AbsoluteHttpResponseBytes > 0 &&
                 DeveloperTools.AbsoluteFileSearchResults > 0 &&
                 DeveloperTools.AbsoluteTextSearchMatches > 0 &&
+                DeveloperTools.AbsoluteProjectDiscoverResults > 0 &&
+                DeveloperTools.AbsoluteWorkspaceProjects > 0 &&
+                DeveloperTools.AbsoluteWorkspaceCommands > 0 &&
+                ConfigFormatTools.AbsoluteXmlQueryResults > 0 &&
+                ConfigFormatTools.AbsoluteTestReportFailures > 0 &&
+                QualityTools.AbsoluteArtifactResults > 0 &&
+                QualityTools.AbsoluteDiagnosticResults > 0 &&
+                JobTools.AbsoluteJobListResults > 0 &&
+                DevServerTools.AbsoluteDevServerListResults > 0 &&
                 NetworkDiagnosticTools.AbsoluteTcpResponseBytes > 0 &&
                 NetworkDiagnosticTools.AbsoluteWebSocketMessageBytes > 0 &&
                 NetworkDiagnosticTools.AbsoluteWebSocketResponseBytes > 0,

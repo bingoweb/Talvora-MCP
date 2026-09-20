@@ -58,7 +58,10 @@ public sealed record TalvoraGitCommitEntry(
 public sealed record TalvoraGitLogResponse(
     string Root,
     int Count,
-    IReadOnlyList<TalvoraGitCommitEntry> Commits);
+    IReadOnlyList<TalvoraGitCommitEntry> Commits,
+    long Skip = 0,
+    bool Truncated = false,
+    long? NextSkip = null);
 
 public sealed record TalvoraGitBranchEntry(
     string Ref,
@@ -78,6 +81,7 @@ public sealed record TalvoraGitBranchesResponse(
 public static class GitTools
 {
     private const char FieldSeparator = '\u001f';
+    private const int AbsoluteGitLogResults = 10_000;
 
     [McpServerTool(
         Name = "talvora_git_info",
@@ -310,12 +314,12 @@ public static class GitTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraGitLogResponse)),
-     Description("Return structured Git commit history. maxCount=0 means unlimited. revision can be any Git revision or revision range.")]
+     Description("Return structured Git commit history. maxCount=0 requests the finite server maximum page. Use skip/nextSkip to continue the same revision selection while refs are unchanged; revision can be any Git revision or revision range.")]
     public static async Task<TalvoraGitLogResponse> Log(
         string repositoryPath,
         string? revision = null,
         int maxCount = 50,
-        int skip = 0,
+        long skip = 0,
         bool all = false,
         CancellationToken cancellationToken = default)
     {
@@ -333,6 +337,13 @@ public static class GitTools
                 "skip cannot be negative.");
         }
 
+        var effectiveMaxCount =
+            maxCount == 0
+                ? AbsoluteGitLogResults
+                : Math.Min(
+                    maxCount,
+                    AbsoluteGitLogResults);
+
         var path = NormalizeRepositoryPath(repositoryPath);
         var args = new List<string>
         {
@@ -341,10 +352,7 @@ public static class GitTools
             $"--format=%H%x1f%h%x1f%an%x1f%ae%x1f%aI%x1f%s",
         };
 
-        if (maxCount > 0)
-        {
-            args.Add($"--max-count={maxCount}");
-        }
+        args.Add($"--max-count={effectiveMaxCount + 1}");
         if (skip > 0)
         {
             args.Add($"--skip={skip}");
@@ -391,6 +399,14 @@ public static class GitTools
                 fields[5]));
         }
 
+        var truncated = commits.Count > effectiveMaxCount;
+        if (truncated)
+        {
+            commits.RemoveRange(
+                effectiveMaxCount,
+                commits.Count - effectiveMaxCount);
+        }
+
         var root = (
             await ResolveRepositoryIdentityAsync(
                 path,
@@ -399,7 +415,12 @@ public static class GitTools
         return new TalvoraGitLogResponse(
             root,
             commits.Count,
-            commits);
+            commits,
+            skip,
+            truncated,
+            truncated
+                ? checked(skip + commits.Count)
+                : null);
     }
 
     [McpServerTool(
