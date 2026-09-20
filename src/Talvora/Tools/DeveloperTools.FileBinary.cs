@@ -21,7 +21,7 @@ public static partial class DeveloperTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraReadBytesResponse)),
-     Description("Read raw bytes from any accessible file and return them as base64. count=0 reads from offset to end of file.")]
+     Description("Read raw bytes from any accessible file and return them as base64. count=0 requests the finite server maximum window from offset; use nextOffset while responseLimited=true to continue.")]
     public static async Task<TalvoraReadBytesResponse> ReadBytes(
         string path,
         long offset = 0,

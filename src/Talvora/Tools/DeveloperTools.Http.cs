@@ -21,7 +21,7 @@ public static partial class DeveloperTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraHttpResponse)),
-     Description("Send an arbitrary HTTP request to any URI reachable by the Talvora service. Supports any method, headers, text or base64 request bodies, redirect control, optional TLS certificate bypass, and text/base64/none response modes.")]
+     Description("Send an arbitrary HTTP request to any URI reachable by the Talvora service. Supports any method, headers, text or base64 request bodies, redirect control, optional TLS certificate bypass, and text/base64/none response modes. maxResponseBytes=0 requests the finite server capture maximum. A truncated live body cannot be resumed by this invocation; use an application-supported Range/cursor request when available.")]
     public static async Task<TalvoraHttpResponse> HttpRequest(
         string method,
         string url,
@@ -129,6 +129,8 @@ public static partial class DeveloperTools
         string? responseBody = null;
         long bodyBytes = 0;
         var truncated = false;
+        var declaredContentLength =
+            response.Content.Headers.ContentLength;
 
         if (responseMode != "none")
         {
@@ -150,6 +152,13 @@ public static partial class DeveloperTools
             }
         }
 
+        long? omittedBodyBytes =
+            truncated &&
+            declaredContentLength is long declared &&
+            declared >= bodyBytes
+                ? declared - bodyBytes
+                : null;
+
         return new TalvoraHttpResponse(
             request.Method.Method,
             response.RequestMessage?.RequestUri?.ToString() ?? uri.ToString(),
@@ -161,6 +170,10 @@ public static partial class DeveloperTools
             responseBody,
             bodyBytes,
             truncated,
+            effectiveMaxResponseBytes,
+            declaredContentLength,
+            omittedBodyBytes,
+            false,
             stopwatch.ElapsedMilliseconds);
     }
 
@@ -169,6 +182,13 @@ public static partial class DeveloperTools
         long maxBytes,
         CancellationToken cancellationToken)
     {
+        if (maxBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maxBytes),
+                "HTTP response capture requires a positive finite byte budget.");
+        }
+
         await using var stream = await content.ReadAsStreamAsync(cancellationToken);
         using var memory = new MemoryStream();
         var buffer = new byte[64 * 1024];
@@ -178,9 +198,12 @@ public static partial class DeveloperTools
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var remaining = maxBytes == 0
-                ? buffer.Length
-                : (int)Math.Min(buffer.Length, Math.Max(0, maxBytes + 1 - memory.Length));
+            var remaining =
+                (int)Math.Min(
+                    buffer.Length,
+                    Math.Max(
+                        0L,
+                        maxBytes + 1 - memory.Length));
 
             if (remaining == 0)
             {
@@ -196,7 +219,7 @@ public static partial class DeveloperTools
 
             memory.Write(buffer, 0, read);
 
-            if (maxBytes > 0 && memory.Length > maxBytes)
+            if (memory.Length > maxBytes)
             {
                 truncated = true;
                 memory.SetLength(maxBytes);

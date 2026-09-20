@@ -21,7 +21,7 @@ public static partial class NetworkDiagnosticTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraWebSocketExchangeResponse)),
-     Description("Connect to any ws/wss endpoint, apply arbitrary request headers and subprotocols, optionally send one text or binary message, receive caller-selected messages, and return text/base64 payloads. maxMessageBytes=0 means unlimited.")]
+     Description("Connect to any ws/wss endpoint, apply arbitrary request headers and subprotocols, optionally send one text or binary message, receive caller-selected messages, and return text/base64 payloads. maxMessageBytes=0 requests the finite server message maximum; the whole invocation also has a finite aggregate response budget. Truncated messages cannot be resumed because the socket is disposed after the tool call.")]
     public static async Task<TalvoraWebSocketExchangeResponse> WebSocketExchange(
         string url,
         Dictionary<string, string>? headers = null,
@@ -228,6 +228,9 @@ public static partial class NetworkDiagnosticTools
             messages.Count,
             messages,
             responseTruncated,
+            effectiveMaxMessageBytes,
+            AbsoluteWebSocketResponseBytes,
+            false,
             stopwatch.ElapsedMilliseconds);
     }
 }

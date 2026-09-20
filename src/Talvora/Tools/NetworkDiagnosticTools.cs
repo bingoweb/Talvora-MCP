@@ -52,6 +52,8 @@ public sealed record TalvoraTcpExchangeResponse(
     int BytesSent,
     long BytesReceived,
     bool ResponseTruncated,
+    long CaptureLimitBytes,
+    bool ContinuationSupported,
     string ResponseMode,
     string Response,
     long ElapsedMilliseconds);
@@ -102,6 +104,9 @@ public sealed record TalvoraWebSocketExchangeResponse(
     int MessagesReceived,
     IReadOnlyList<TalvoraWebSocketMessage> Messages,
     bool ResponseTruncated,
+    long MessageLimitBytes,
+    long ResponseLimitBytes,
+    bool ContinuationSupported,
     long ElapsedMilliseconds);
 
 [McpServerToolType]

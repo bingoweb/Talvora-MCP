@@ -19,7 +19,7 @@ public static partial class ConfigAssetTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraTextRangeResponse)),
-     Description("Read a line range from any accessible text file without returning the entire file. startLine is 1-based; lineCount=0 reads from startLine to EOF. No path allow-list is applied.")]
+     Description("Read a line range from any accessible text file with bounded streaming. startLine is 1-based; lineCount=0 requests the finite server maximum page. Use nextStartLine/nextStartCharacter when responseLimited=true. No path allow-list is applied.")]
     public static async Task<TalvoraTextRangeResponse> ReadTextRange(
         string path,
         int startLine = 1,
@@ -47,139 +47,28 @@ public static partial class ConfigAssetTools
                     lineCount,
                     AbsoluteTextResponseLines);
         var fullPath = Path.GetFullPath(path);
-        await using var stream = new FileStream(
-            fullPath,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.ReadWrite | FileShare.Delete,
-            bufferSize: 64 * 1024,
-            useAsync: true);
-        using var reader = new StreamReader(
-            stream,
-            encoding: Encoding.UTF8,
-            detectEncodingFromByteOrderMarks: true);
-
-        var builder = new StringBuilder();
-        var currentLine = 0;
-        var linesRead = 0;
-        var endReached = false;
-        var responseLimited = false;
-        int? nextStartLine = null;
-        int? nextStartCharacter = null;
-
-        while (true)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var line =
-                await reader.ReadLineAsync(
-                    cancellationToken);
-            if (line is null)
-            {
-                endReached = true;
-                break;
-            }
-
-            currentLine++;
-            if (currentLine < startLine)
-            {
-                continue;
-            }
-
-            if (linesRead >= effectiveLineCount)
-            {
-                responseLimited = true;
-                nextStartLine = currentLine;
-                nextStartCharacter = 0;
-                break;
-            }
-
-            var sourceCharacter =
-                currentLine == startLine
-                    ? startCharacter
-                    : 0;
-            if (sourceCharacter > line.Length)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(startCharacter),
-                    "startCharacter is beyond the requested source line.");
-            }
-
-            var separatorLength =
-                linesRead > 0
-                    ? Environment.NewLine.Length
-                    : 0;
-            var remainingCharacters =
-                AbsoluteTextResponseCharacters -
-                builder.Length;
-            if (remainingCharacters <= separatorLength)
-            {
-                responseLimited = true;
-                nextStartLine = currentLine;
-                nextStartCharacter = sourceCharacter;
-                break;
-            }
-
-            if (separatorLength > 0)
-            {
-                builder.AppendLine();
-                remainingCharacters -= separatorLength;
-            }
-
-            var sourceRemaining =
-                line.Length -
-                sourceCharacter;
-            var charactersToAppend =
-                Math.Min(
-                    sourceRemaining,
-                    remainingCharacters);
-            if (charactersToAppend > 0)
-            {
-                builder.Append(
-                    line,
-                    sourceCharacter,
-                    charactersToAppend);
-            }
-            linesRead++;
-
-            if (charactersToAppend < sourceRemaining)
-            {
-                responseLimited = true;
-                nextStartLine = currentLine;
-                nextStartCharacter =
-                    sourceCharacter +
-                    charactersToAppend;
-                break;
-            }
-
-            if (linesRead >= effectiveLineCount)
-            {
-                var nextLine =
-                    await reader.ReadLineAsync(
-                        cancellationToken);
-                endReached =
-                    nextLine is null;
-                responseLimited =
-                    !endReached;
-                if (responseLimited)
-                {
-                    nextStartLine =
-                        currentLine + 1;
-                    nextStartCharacter = 0;
-                }
-                break;
-            }
-        }
-
+        var snapshot =
+            await SourceTextStreamingReader.ReadSliceAsync(
+                fullPath,
+                startLine,
+                startCharacter,
+                effectiveLineCount,
+                AbsoluteTextResponseCharacters,
+                cancellationToken);
         return new TalvoraTextRangeResponse(
             fullPath,
             startLine,
             startCharacter,
-            linesRead,
-            endReached,
-            builder.ToString(),
-            responseLimited,
-            nextStartLine,
-            nextStartCharacter);
+            snapshot.LinesRead,
+            snapshot.EndReached,
+            snapshot.Text,
+            snapshot.ResponseLimited,
+            snapshot.ResponseLimited
+                ? snapshot.NextStartLine
+                : null,
+            snapshot.ResponseLimited
+                ? snapshot.NextStartCharacter
+                : null);
     }
 
     [McpServerTool(
@@ -188,15 +77,17 @@ public static partial class ConfigAssetTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraTextTailResponse)),
-     Description("Return the last lines of any accessible text file. lineCount=0 returns the complete file. Useful for logs and build output. No path allow-list is applied.")]
+     Description("Return the last lines of any accessible text file using bounded streaming. lineCount=0 requests the finite server maximum tail window. beforeLine is an exclusive 1-based upper bound; use nextBeforeLine to page backward. Useful for logs and build output. No path allow-list is applied.")]
     public static TalvoraTextTailResponse TailText(
         string path,
         int lineCount = 200,
+        long beforeLine = 0,
         CancellationToken cancellationToken = default)
     {
-        if (lineCount < 0)
+        if (lineCount < 0 || beforeLine < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(lineCount));
+            throw new ArgumentOutOfRangeException(
+                "lineCount and beforeLine cannot be negative.");
         }
 
         var fullPath = Path.GetFullPath(path);
@@ -206,72 +97,14 @@ public static partial class ConfigAssetTools
                 : Math.Min(
                     lineCount,
                     AbsoluteTextResponseLines);
-        var queue =
-            new Queue<string>(
-                effectiveLineCount);
-        var totalLines = 0;
-        long queuedLineCharacters = 0;
-        var responseLimited = false;
-
-        foreach (var line in File.ReadLines(fullPath))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            totalLines++;
-
-            var retainedLine =
-                line.Length >
-                    AbsoluteTextResponseCharacters
-                    ? line[^AbsoluteTextResponseCharacters..]
-                    : line;
-            if (retainedLine.Length != line.Length)
-            {
-                responseLimited = true;
-            }
-
-            queue.Enqueue(retainedLine);
-            queuedLineCharacters +=
-                retainedLine.Length;
-
-            while (queue.Count >
-                       effectiveLineCount ||
-                   queuedLineCharacters +
-                       Math.Max(
-                           0,
-                           queue.Count - 1) *
-                       Environment.NewLine.Length >
-                       AbsoluteTextResponseCharacters)
-            {
-                var removed =
-                    queue.Dequeue();
-                queuedLineCharacters -=
-                    removed.Length;
-                responseLimited = true;
-            }
-        }
-
-        var startLine = queue.Count == 0
-            ? 0
-            : totalLines - queue.Count + 1;
-        if ((lineCount == 0 &&
-             totalLines >
-                 AbsoluteTextResponseLines) ||
-            (lineCount >
-                 AbsoluteTextResponseLines &&
-             totalLines >
-                 AbsoluteTextResponseLines))
-        {
-            responseLimited = true;
-        }
-
-        return new TalvoraTextTailResponse(
+        return BoundedTextTailReader.Read(
             fullPath,
-            totalLines,
-            startLine,
-            queue.Count,
-            string.Join(
-                Environment.NewLine,
-                queue),
-            responseLimited);
+            effectiveLineCount,
+            beforeLine,
+            AbsoluteTextResponseCharacters,
+            lineCount == 0 ||
+            lineCount > AbsoluteTextResponseLines,
+            cancellationToken);
     }
 
     [McpServerTool(

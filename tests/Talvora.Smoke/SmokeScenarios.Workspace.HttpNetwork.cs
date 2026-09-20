@@ -75,6 +75,28 @@ internal static partial class SmokeScenarios
                     {
                         throw new InvalidOperationException("HTTP mock auto reply did not return the configured response.");
                     }
+
+                    var boundedHttpResult = await EnsureSuccess(byName["talvora_http_request"], new()
+                    {
+                        ["method"] = "GET",
+                        ["url"] = httpMockAutoPrefix + "bounded",
+                        ["timeoutSeconds"] = 10,
+                        ["responseMode"] = "text",
+                        ["maxResponseBytes"] = 4L,
+                    });
+                    if (boundedHttpResult.StructuredContent is not { } boundedHttpJson ||
+                        !boundedHttpJson.GetProperty("bodyTruncated").GetBoolean() ||
+                        boundedHttpJson.GetProperty("bodyBytes").GetInt64() != 4 ||
+                        boundedHttpJson.GetProperty("captureLimitBytes").GetInt64() != 4 ||
+                        boundedHttpJson.GetProperty("continuationSupported").GetBoolean() ||
+                        !string.Equals(
+                            boundedHttpJson.GetProperty("body").GetString(),
+                            "talv",
+                            StringComparison.Ordinal) ||
+                        boundedHttpJson.GetProperty("omittedBodyBytes").GetInt64() <= 0)
+                    {
+                        throw new InvalidOperationException("http_request did not expose bounded truncation metadata.");
+                    }
                 
                     var capturedAuto = false;
                     for (var attempt = 0; attempt < 30 && !capturedAuto; attempt++)
@@ -431,6 +453,25 @@ internal static partial class SmokeScenarios
                         .Contains("Talvora", StringComparison.OrdinalIgnoreCase))
                 {
                     throw new InvalidOperationException("tcp_exchange did not return the Talvora health response.");
+                }
+
+                var boundedTcpExchangeResult = await EnsureSuccess(byName["talvora_tcp_exchange"], new()
+                {
+                    ["host"] = "127.0.0.1",
+                    ["port"] = 7676,
+                    ["text"] = "GET /healthz HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+                    ["responseMode"] = "text",
+                    ["maxResponseBytes"] = 8L,
+                    ["timeoutSeconds"] = 10,
+                    ["idleReadTimeoutMilliseconds"] = 2000,
+                });
+                if (boundedTcpExchangeResult.StructuredContent is not { } boundedTcpExchangeJson ||
+                    boundedTcpExchangeJson.GetProperty("bytesReceived").GetInt64() != 8 ||
+                    !boundedTcpExchangeJson.GetProperty("responseTruncated").GetBoolean() ||
+                    boundedTcpExchangeJson.GetProperty("captureLimitBytes").GetInt64() != 8 ||
+                    boundedTcpExchangeJson.GetProperty("continuationSupported").GetBoolean())
+                {
+                    throw new InvalidOperationException("tcp_exchange did not expose bounded truncation metadata.");
                 }
     }
 }

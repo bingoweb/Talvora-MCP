@@ -27,9 +27,12 @@ public sealed record TalvoraSqliteQueryResponse(
     string Database,
     string Sql,
     bool ReadOnly,
+    long RowOffset,
     IReadOnlyList<string> Columns,
     int RowCount,
     bool Truncated,
+    long? NextRowOffset,
+    int ValueLimitBytes,
     IReadOnlyList<TalvoraSqliteRow> Rows);
 
 public sealed record TalvoraSqliteExecuteResponse(
@@ -60,7 +63,9 @@ public sealed record TalvoraSqliteBackupResponse(
 [McpServerToolType]
 public static class SqliteTools
 {
-    private const int AbsoluteQueryRows = 10_000;
+    internal const int AbsoluteQueryRows = 10_000;
+    internal const int AbsoluteQueryValueBytes =
+        4 * 1024 * 1024;
     private const long AbsoluteQueryResponseCharacters =
         8L * 1024 * 1024;
 
@@ -111,19 +116,21 @@ public static class SqliteTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraSqliteQueryResponse)),
-     Description("Execute arbitrary SQLite SQL that returns rows against any accessible database. Named parameters are bound as values; readOnly=true opens the database in SQLite read-only mode. Set maxRows=0 for unlimited returned rows.")]
+     Description("Execute arbitrary SQLite SQL that returns rows against any accessible database. Named parameters are bound as values; readOnly=true opens the database in SQLite read-only mode. maxRows=0 requests the finite server maximum page. Use rowOffset/nextRowOffset to continue a stable query. Returned SQLite values/rows have a finite server byte ceiling; use SQL slicing such as substr() for larger values.")]
     public static async Task<TalvoraSqliteQueryResponse> Query(
         string databasePath,
         string sql,
         Dictionary<string, JsonElement>? parameters = null,
         bool readOnly = true,
         int maxRows = 1000,
+        long rowOffset = 0,
         int timeoutSeconds = 30,
         CancellationToken cancellationToken = default)
     {
-        if (maxRows < 0)
+        if (maxRows < 0 || rowOffset < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(maxRows));
+            throw new ArgumentOutOfRangeException(
+                "maxRows and rowOffset cannot be negative.");
         }
 
         var effectiveMaxRows =
@@ -145,6 +152,10 @@ public static class SqliteTools
         await using var connection =
             CreateConnection(database, mode, timeoutSeconds);
         await connection.OpenAsync(cancellationToken);
+        SQLitePCL.raw.sqlite3_limit(
+            connection.Handle,
+            SQLitePCL.raw.SQLITE_LIMIT_LENGTH,
+            AbsoluteQueryValueBytes);
 
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
@@ -157,6 +168,7 @@ public static class SqliteTools
         var columns = BuildColumnNames(reader);
         var rows = new List<TalvoraSqliteRow>();
         var truncated = false;
+        long skippedRows = 0;
         long responseCharacters =
             columns.Sum(
                 static column =>
@@ -164,6 +176,12 @@ public static class SqliteTools
 
         while (await reader.ReadAsync(cancellationToken))
         {
+            if (skippedRows < rowOffset)
+            {
+                skippedRows++;
+                continue;
+            }
+
             if (rows.Count >= effectiveMaxRows)
             {
                 truncated = true;
@@ -207,9 +225,14 @@ public static class SqliteTools
             database,
             sql,
             readOnly,
+            rowOffset,
             columns,
             rows.Count,
             truncated,
+            truncated
+                ? checked(rowOffset + rows.Count)
+                : null,
+            AbsoluteQueryValueBytes,
             rows);
     }
 

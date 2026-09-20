@@ -21,7 +21,7 @@ public static partial class NetworkDiagnosticTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraTcpExchangeResponse)),
-     Description("Open a raw TCP connection to any host:port, send text or base64 bytes, optionally half-close the send side, and capture the response as text or base64. maxResponseBytes=0 means unlimited.")]
+     Description("Open a raw TCP connection to any host:port, send text or base64 bytes, optionally half-close the send side, and capture the response as text or base64. maxResponseBytes=0 requests the finite server capture maximum. A truncated response cannot be resumed because the exchange connection is disposed after the tool call.")]
     public static async Task<TalvoraTcpExchangeResponse> TcpExchange(
         string host,
         int port,
@@ -155,6 +155,8 @@ public static partial class NetworkDiagnosticTools
             payload.Length,
             bytes.LongLength,
             truncated,
+            effectiveMaxResponseBytes,
+            false,
             responseMode,
             response,
             stopwatch.ElapsedMilliseconds);

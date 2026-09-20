@@ -20,7 +20,7 @@ public static partial class DeveloperTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraFileSearchResponse)),
-     Description("Find files and optionally directories recursively using wildcard patterns. Works on any accessible path. maxResults=0 means unlimited. followReparsePoints=true permits traversal through junctions/symlinks.")]
+     Description("Find files and optionally directories recursively using wildcard patterns. Works on any accessible path. maxResults=0 requests the server maximum response window. Use resultOffset/nextResultOffset to continue while the searched tree is unchanged. followReparsePoints=true permits traversal through junctions/symlinks.")]
     public static TalvoraFileSearchResponse FindFiles(
         [Description("Root file or directory to search.")] string root,
         [Description("Wildcard patterns matched against both name and relative path, for example *.cs or *Tests*.")] string[]? patterns = null,
@@ -28,12 +28,14 @@ public static partial class DeveloperTools
         bool recursive = true,
         bool includeDirectories = false,
         bool followReparsePoints = false,
-        [Description("Maximum returned entries; 0 means unlimited.")] int maxResults = 1000,
+        [Description("Maximum returned entries; 0 requests the server maximum response window.")] int maxResults = 1000,
+        [Description("Number of matching entries to skip before returning this page.")] long resultOffset = 0,
         CancellationToken cancellationToken = default)
     {
-        if (maxResults < 0)
+        if (maxResults < 0 || resultOffset < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(maxResults));
+            throw new ArgumentOutOfRangeException(
+                "maxResults and resultOffset cannot be negative.");
         }
 
         var effectiveMaxResults =
@@ -53,12 +55,20 @@ public static partial class DeveloperTools
         {
             var file = new FileInfo(fullRoot);
             if (MatchesAny(file.FullName, file.Name, file.DirectoryName ?? fullRoot, effectivePatterns) &&
-                !MatchesAny(file.FullName, file.Name, file.DirectoryName ?? fullRoot, excludePatterns, defaultWhenEmpty: false))
+                !MatchesAny(file.FullName, file.Name, file.DirectoryName ?? fullRoot, excludePatterns, defaultWhenEmpty: false) &&
+                resultOffset == 0)
             {
                 entries.Add(ToSearchEntry(file));
             }
 
-            return new TalvoraFileSearchResponse(fullRoot, entries.Count, false, entries, errors);
+            return new TalvoraFileSearchResponse(
+                fullRoot,
+                resultOffset,
+                entries.Count,
+                false,
+                null,
+                entries,
+                errors);
         }
 
         if (!Directory.Exists(fullRoot))
@@ -67,6 +77,8 @@ public static partial class DeveloperTools
         }
 
         var truncated = false;
+        long matchingIndex = 0;
+        long? nextResultOffset = null;
         foreach (var info in EnumerateTree(fullRoot, recursive, followReparsePoints, errors, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -88,6 +100,12 @@ public static partial class DeveloperTools
                 continue;
             }
 
+            if (matchingIndex < resultOffset)
+            {
+                matchingIndex++;
+                continue;
+            }
+
             var entry = ToSearchEntry(info);
             var entryCharacters =
                 (long)entry.Path.Length +
@@ -101,15 +119,24 @@ public static partial class DeveloperTools
                 AbsoluteSearchResponseCharacters)
             {
                 truncated = true;
+                nextResultOffset = matchingIndex;
                 break;
             }
 
             entries.Add(entry);
+            matchingIndex++;
             responseCharacters +=
                 entryCharacters;
         }
 
-        return new TalvoraFileSearchResponse(fullRoot, entries.Count, truncated, entries, errors);
+        return new TalvoraFileSearchResponse(
+            fullRoot,
+            resultOffset,
+            entries.Count,
+            truncated,
+            nextResultOffset,
+            entries,
+            errors);
     }
 
     [McpServerTool(
@@ -118,7 +145,7 @@ public static partial class DeveloperTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraTextSearchResponse)),
-     Description("Search text across any accessible file tree using literal text or .NET regular expressions. Supports include/exclude wildcards. maxMatches=0 and maxFileBytes=0 mean unlimited.")]
+     Description("Search text across any accessible file tree using literal text or .NET regular expressions. Supports include/exclude wildcards. Zero limits request finite server maxima. Use matchOffset/nextMatchOffset to continue while files and search inputs are unchanged.")]
     public static async Task<TalvoraTextSearchResponse> SearchText(
         [Description("Root file or directory to search.")] string root,
         [Description("Literal text or .NET regex pattern.")] string query,
@@ -128,16 +155,17 @@ public static partial class DeveloperTools
         string[]? excludePatterns = null,
         bool recursive = true,
         bool followReparsePoints = false,
-        [Description("Maximum matches returned; 0 means unlimited.")] int maxMatches = 500,
-        [Description("Skip files larger than this many bytes; 0 means unlimited.")] long maxFileBytes = 10 * 1024 * 1024,
-        [Description("Maximum characters returned for a matching source line; 0 means unlimited.")] int maxLineChars = 4000,
+        [Description("Maximum matches returned; 0 requests the server maximum response window.")] int maxMatches = 500,
+        [Description("Skip files larger than this many bytes; 0 uses the server maximum file-size ceiling.")] long maxFileBytes = 10 * 1024 * 1024,
+        [Description("Maximum characters returned for a matching source line; 0 uses the server maximum line ceiling.")] int maxLineChars = 4000,
+        [Description("Number of matching occurrences to skip before returning this page.")] long matchOffset = 0,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(query))
         {
             throw new ArgumentException("Search query cannot be empty.", nameof(query));
         }
-        if (maxMatches < 0 || maxFileBytes < 0 || maxLineChars < 0)
+        if (maxMatches < 0 || maxFileBytes < 0 || maxLineChars < 0 || matchOffset < 0)
         {
             throw new ArgumentOutOfRangeException("Search limits cannot be negative.");
         }
@@ -166,6 +194,8 @@ public static partial class DeveloperTools
         var matches = new List<TalvoraTextSearchMatch>();
         var filesScanned = 0;
         var truncated = false;
+        long seenMatches = 0;
+        long? nextMatchOffset = null;
         var includes = NormalizePatterns(includePatterns);
         long responseCharacters = 0;
 
@@ -176,9 +206,16 @@ public static partial class DeveloperTools
             string matchText,
             string sourceLine)
         {
+            if (seenMatches < matchOffset)
+            {
+                seenMatches++;
+                return true;
+            }
+
             if (matches.Count >= effectiveMaxMatches)
             {
                 truncated = true;
+                nextMatchOffset = seenMatches;
                 return false;
             }
 
@@ -201,6 +238,7 @@ public static partial class DeveloperTools
                 AbsoluteSearchResponseCharacters)
             {
                 truncated = true;
+                nextMatchOffset = seenMatches;
                 return false;
             }
 
@@ -211,6 +249,7 @@ public static partial class DeveloperTools
                     column,
                     renderedMatch,
                     renderedLine));
+            seenMatches++;
             responseCharacters +=
                 entryCharacters;
             return true;
@@ -352,8 +391,10 @@ public static partial class DeveloperTools
         return new TalvoraTextSearchResponse(
             fullRoot,
             filesScanned,
+            matchOffset,
             matches.Count,
             truncated,
+            nextMatchOffset,
             matches,
             errors);
     }
@@ -492,6 +533,12 @@ public static partial class DeveloperTools
             try
             {
                 children = directory.EnumerateFileSystemInfos().ToArray();
+                Array.Sort(
+                    children,
+                    (left, right) =>
+                        PathComparer.Compare(
+                            left.FullName,
+                            right.FullName));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

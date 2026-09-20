@@ -1546,6 +1546,145 @@ internal static partial class SourceEditRegressionRunner
             Assert(
                 tail.ResponseLimited,
                 "Tail response did not expose the server ceiling.");
+            Assert(
+                tail.HasEarlierLines &&
+                tail.NextBeforeLine == 6,
+                "Tail response did not expose backward continuation metadata.");
+
+            var earlierTail =
+                ConfigAssetTools.TailText(
+                    tailPath,
+                    lineCount: 0,
+                    beforeLine:
+                        tail.NextBeforeLine!.Value);
+            AssertEqual(
+                5,
+                earlierTail.LinesRead,
+                "Tail continuation returned the wrong earlier window size.");
+            AssertEqual(
+                1L,
+                earlierTail.StartLine,
+                "Tail continuation did not reach the beginning of the file.");
+            Assert(
+                !earlierTail.HasEarlierLines &&
+                earlierTail.NextBeforeLine is null &&
+                !earlierTail.ResponseLimited,
+                "Tail continuation metadata did not terminate cleanly.");
+
+            var giantTailPath =
+                Path.Combine(
+                    root,
+                    "giant-tail-line.txt");
+            await File.WriteAllTextAsync(
+                giantTailPath,
+                new string(
+                    'q',
+                    ConfigAssetTools.AbsoluteTextResponseCharacters +
+                    17) +
+                "TAIL");
+            var giantTail =
+                ConfigAssetTools.TailText(
+                    giantTailPath,
+                    lineCount: 1);
+            AssertEqual(
+                ConfigAssetTools.AbsoluteTextResponseCharacters,
+                giantTail.Text.Length,
+                "Tail giant-line window exceeded its character budget.");
+            Assert(
+                giantTail.ResponseLimited &&
+                giantTail.Text.EndsWith(
+                    "TAIL",
+                    StringComparison.Ordinal),
+                "Tail giant-line reader did not retain the bounded suffix.");
+
+            var searchRoot =
+                Path.Combine(
+                    root,
+                    "search-pages");
+            Directory.CreateDirectory(
+                searchRoot);
+            foreach (var name in
+                     new[]
+                     {
+                         "c.txt",
+                         "a.txt",
+                         "b.txt",
+                     })
+            {
+                await File.WriteAllTextAsync(
+                    Path.Combine(
+                        searchRoot,
+                        name),
+                    "needle");
+            }
+
+            var firstFilePage =
+                DeveloperTools.FindFiles(
+                    searchRoot,
+                    patterns: ["*.txt"],
+                    maxResults: 2);
+            AssertEqual(
+                2,
+                firstFilePage.Count,
+                "File search first page size is incorrect.");
+            Assert(
+                firstFilePage.Truncated &&
+                firstFilePage.NextResultOffset == 2,
+                "File search did not expose continuation offset.");
+            Assert(
+                firstFilePage.Entries[0].Name == "a.txt" &&
+                firstFilePage.Entries[1].Name == "b.txt",
+                "File search traversal is not deterministic.");
+
+            var secondFilePage =
+                DeveloperTools.FindFiles(
+                    searchRoot,
+                    patterns: ["*.txt"],
+                    maxResults: 2,
+                    resultOffset:
+                        firstFilePage.NextResultOffset!.Value);
+            AssertEqual(
+                1,
+                secondFilePage.Count,
+                "File search continuation page size is incorrect.");
+            Assert(
+                !secondFilePage.Truncated &&
+                secondFilePage.NextResultOffset is null &&
+                secondFilePage.Entries[0].Name == "c.txt",
+                "File search continuation did not terminate cleanly.");
+
+            var firstTextPage =
+                await DeveloperTools.SearchText(
+                    searchRoot,
+                    "needle",
+                    maxMatches: 2,
+                    maxFileBytes: 0,
+                    maxLineChars: 0);
+            AssertEqual(
+                2,
+                firstTextPage.MatchCount,
+                "Text search first page size is incorrect.");
+            Assert(
+                firstTextPage.Truncated &&
+                firstTextPage.NextMatchOffset == 2,
+                "Text search did not expose continuation offset.");
+            var secondTextPage =
+                await DeveloperTools.SearchText(
+                    searchRoot,
+                    "needle",
+                    maxMatches: 2,
+                    maxFileBytes: 0,
+                    maxLineChars: 0,
+                    matchOffset:
+                        firstTextPage.NextMatchOffset!.Value);
+            AssertEqual(
+                1,
+                secondTextPage.MatchCount,
+                "Text search continuation page size is incorrect.");
+            Assert(
+                !secondTextPage.Truncated &&
+                secondTextPage.NextMatchOffset is null,
+                "Text search continuation did not terminate cleanly.");
 
             var sqlite =
                 await SqliteTools.Query(
@@ -1557,8 +1696,45 @@ internal static partial class SourceEditRegressionRunner
                 sqlite.RowCount,
                 "SQLite zero row limit exceeded its server ceiling.");
             Assert(
-                sqlite.Truncated,
-                "SQLite response did not expose truncation at its ceiling.");
+                sqlite.Truncated &&
+                sqlite.NextRowOffset == 10_000 &&
+                sqlite.ValueLimitBytes ==
+                    SqliteTools.AbsoluteQueryValueBytes,
+                "SQLite response did not expose continuation/value-limit metadata.");
+
+            var sqliteContinuation =
+                await SqliteTools.Query(
+                    ":memory:",
+                    "WITH RECURSIVE seq(value) AS (SELECT 1 UNION ALL SELECT value + 1 FROM seq WHERE value < 10001) SELECT value FROM seq;",
+                    maxRows: 0,
+                    rowOffset:
+                        sqlite.NextRowOffset!.Value);
+            AssertEqual(
+                1,
+                sqliteContinuation.RowCount,
+                "SQLite continuation did not return the final row.");
+            Assert(
+                !sqliteContinuation.Truncated &&
+                sqliteContinuation.NextRowOffset is null,
+                "SQLite continuation did not terminate cleanly.");
+
+            var oversizedSqliteValueRejected = false;
+            try
+            {
+                await SqliteTools.Query(
+                    ":memory:",
+                    $"SELECT zeroblob({SqliteTools.AbsoluteQueryValueBytes + 1}) AS value;");
+            }
+            catch (Microsoft.Data.Sqlite.SqliteException ex)
+                when (ex.SqliteErrorCode == 18)
+            {
+                oversizedSqliteValueRejected = true;
+            }
+            Assert(
+                oversizedSqliteValueRejected,
+                "SQLite native value ceiling did not reject an oversized BLOB before materialization.");
+
+            await RunWebSocketResponseBoundAsync();
 
             Assert(
                 DeveloperTools.AbsoluteHttpResponseBytes > 0 &&
@@ -1580,6 +1756,152 @@ internal static partial class SourceEditRegressionRunner
             catch
             {
             }
+        }
+    }
+
+    private static async Task RunWebSocketResponseBoundAsync()
+    {
+        using var listener =
+            new TcpListener(
+                IPAddress.Loopback,
+                0);
+        listener.Start();
+        var port =
+            ((IPEndPoint)listener.LocalEndpoint).Port;
+
+        var serverTask =
+            Task.Run(
+                async () =>
+                {
+                    using var client =
+                        await listener.AcceptTcpClientAsync();
+                    await using var stream =
+                        client.GetStream();
+                    var requestBytes =
+                        new List<byte>();
+                    var buffer =
+                        new byte[1024];
+
+                    while (true)
+                    {
+                        var read =
+                            await stream.ReadAsync(
+                                buffer);
+                        if (read == 0)
+                        {
+                            throw new InvalidOperationException(
+                                "Loopback WebSocket handshake ended early.");
+                        }
+
+                        requestBytes.AddRange(
+                            buffer.AsSpan(
+                                0,
+                                read).ToArray());
+                        var requestText =
+                            Encoding.ASCII.GetString(
+                                requestBytes.ToArray());
+                        if (requestText.Contains(
+                                "\r\n\r\n",
+                                StringComparison.Ordinal))
+                        {
+                            break;
+                        }
+                        if (requestBytes.Count >
+                            32 * 1024)
+                        {
+                            throw new InvalidOperationException(
+                                "Loopback WebSocket handshake exceeded its fixture budget.");
+                        }
+                    }
+
+                    var headers =
+                        Encoding.ASCII
+                            .GetString(
+                                requestBytes.ToArray())
+                            .Split(
+                                "\r\n",
+                                StringSplitOptions.RemoveEmptyEntries);
+                    var keyHeader =
+                        headers.FirstOrDefault(
+                            static line =>
+                                line.StartsWith(
+                                    "Sec-WebSocket-Key:",
+                                    StringComparison.OrdinalIgnoreCase))
+                        ?? throw new InvalidOperationException(
+                            "Loopback WebSocket handshake omitted Sec-WebSocket-Key.");
+                    var key =
+                        keyHeader[
+                            (keyHeader.IndexOf(':') + 1)..]
+                            .Trim();
+                    var accept =
+                        Convert.ToBase64String(
+                            System.Security.Cryptography.SHA1.HashData(
+                                Encoding.ASCII.GetBytes(
+                                    key +
+                                    "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")));
+                    var handshake =
+                        Encoding.ASCII.GetBytes(
+                            "HTTP/1.1 101 Switching Protocols\r\n" +
+                            "Upgrade: websocket\r\n" +
+                            "Connection: Upgrade\r\n" +
+                            $"Sec-WebSocket-Accept: {accept}\r\n\r\n");
+                    await stream.WriteAsync(
+                        handshake);
+
+                    var payload =
+                        Enumerable.Range(
+                                0,
+                                32)
+                            .Select(
+                                static value =>
+                                    (byte)value)
+                            .ToArray();
+                    var frame =
+                        new byte[
+                            payload.Length +
+                            2];
+                    frame[0] = 0x82;
+                    frame[1] =
+                        (byte)payload.Length;
+                    Buffer.BlockCopy(
+                        payload,
+                        0,
+                        frame,
+                        2,
+                        payload.Length);
+                    await stream.WriteAsync(
+                        frame);
+                    await stream.FlushAsync();
+                    await Task.Delay(100);
+                });
+
+        try
+        {
+            var response =
+                await NetworkDiagnosticTools.WebSocketExchange(
+                    $"ws://127.0.0.1:{port}/",
+                    receiveMessages: 1,
+                    maxMessageBytes: 8,
+                    timeoutSeconds: 5,
+                    closeAfter: false);
+            AssertEqual(
+                1,
+                response.MessagesReceived,
+                "WebSocket bounded fixture returned the wrong message count.");
+            Assert(
+                response.ResponseTruncated &&
+                response.Messages[0].Truncated &&
+                response.Messages[0].Bytes == 8 &&
+                response.MessageLimitBytes == 8 &&
+                response.ResponseLimitBytes ==
+                    NetworkDiagnosticTools.AbsoluteWebSocketResponseBytes &&
+                !response.ContinuationSupported,
+                "WebSocket truncation metadata did not describe the bounded capture.");
+            await serverTask;
+        }
+        finally
+        {
+            listener.Stop();
         }
     }
 

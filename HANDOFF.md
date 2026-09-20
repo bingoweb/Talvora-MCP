@@ -51,30 +51,18 @@ Son doğrulanan Source Edit regression: **63/63 GREEN**.
 - **Canonical build:** GREEN; installer **261,777,167 bytes**, SHA-256 `01C6D5107E7C845152C2ACAECEB8DAD5B9097B9966D5B78BFDAE5A031E11BF87`, source commit `c54d1d6e56d3776291db0db04504ff6275525f6d`.
 - **Canlı deploy:** independent SYSTEM deploy servis switch sırasında MCP bağlantısını beklenen şekilde kapattı; reconnect sonrasında Talvora **Running / Automatic**, exact-installed `sourceCommit=c54d1d6e56d3776291db0db04504ff6275525f6d`.
 
-### #159 — Absolute transport/response budgets + continuation semantics — OPEN MEDIUM
+### #159 — Absolute transport/response budgets + continuation semantics — LIVE GATE PENDING
 
-Doğrulanmış kapsam:
+- **Uygulandı:** read-bytes continuation; bounded streaming text range; bounded suffix + backward pagination tail; deterministic find/search offsets; SQLite row continuation + native 4 MiB value/row ceiling; HTTP/TCP/WebSocket finite capture metadata.
+- **Targeted test:** `TALVORA RESPONSE BOUNDS REGRESSION GREEN`; gerçek giant-line, SQLite oversized BLOB ve loopback WebSocket truncation dahil.
+- **Build:** Talvora Release ve Talvora.Smoke Release **0 warning / 0 error**.
+- **Sıradaki adım:** bu çalışma durumunu commit/push et; clean canonical installer build + live deploy; installed smoke'da HTTP/TCP bounded metadata'yı doğrula; sonra #159'u FIXED işaretle.
 
-- `talvora_read_bytes count=0`
-- `talvora_tail_text lineCount=0`
-- generic HTTP response reader `maxBytes=0`
-- `talvora_tcp_exchange maxResponseBytes=0`
-- `talvora_websocket_exchange maxMessageBytes=0`
-- `talvora_sqlite_query maxRows=0`
-- `talvora_find_files/search_text max*=0`
+### #174 — Residual structured/list 0=unlimited responses — OPEN MEDIUM
 
-Sorun: `0=unlimited` tek invocation içinde sınırsız materialization / serialization belleği üretebiliyor.
-
-Hedef çözüm:
-
-1. Capability'yi kaldırmadan yüksek fakat mutlak server response ceiling'leri tanımla.
-2. Uygun yüzeylerde continuation/pagination metadata ekle.
-3. Network/read akışlarında streaming veya bounded buffering kullan.
-4. Structured response yüzeylerinde deterministic truncation + continuation state tasarla.
-5. Her tool için overflow/continuation regressions ekle; aynı kapsamlı suite'i gereksiz tekrar etme.
-6. #159 tamamlanınca audit/TODO belgelerini güncelle.
-7. Tek bug commit'i oluştur; `origin/main` ve `github/main` üzerine push et.
-8. Runtime değişikliklerini canonical build/deploy ile canlıya al ve exact-installed tool behavior'ı doğrula.
+- #159 sırasında yapılan geniş audit yeni kapsam doğruladı: test-report/XML query, project/workspace discovery/commands, dev-server/job lists, Git log ve quality list yüzeylerinde `0` halen gerçek unbounded tek-response yolu açabiliyor.
+- Watch/HTTP-mock read bu bug'a dahil değil; persistent queue'ları zaten #164 altında absolute bounded.
+- #159 live gate tamamlanıp ayrı commit/push yapıldıktan sonra #174 her yüzey için finite ceiling + deterministic continuation + targeted regression ile düzeltilecek.
 
 ## Çalışma kuralları
 

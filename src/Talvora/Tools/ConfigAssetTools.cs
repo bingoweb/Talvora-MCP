@@ -23,11 +23,13 @@ public sealed record TalvoraTextRangeResponse(
 
 public sealed record TalvoraTextTailResponse(
     string Path,
-    int TotalLines,
-    int StartLine,
+    long TotalLines,
+    long StartLine,
     int LinesRead,
     string Text,
-    bool ResponseLimited);
+    bool ResponseLimited,
+    bool HasEarlierLines,
+    long? NextBeforeLine);
 
 public sealed record TalvoraAppendTextResponse(
     string Path,

@@ -32,8 +32,10 @@ public sealed record TalvoraFileSearchEntry(
 
 public sealed record TalvoraFileSearchResponse(
     string Root,
+    long ResultOffset,
     int Count,
     bool Truncated,
+    long? NextResultOffset,
     IReadOnlyList<TalvoraFileSearchEntry> Entries,
     IReadOnlyList<string> Errors);
 
@@ -47,8 +49,10 @@ public sealed record TalvoraTextSearchMatch(
 public sealed record TalvoraTextSearchResponse(
     string Root,
     int FilesScanned,
+    long MatchOffset,
     int MatchCount,
     bool Truncated,
+    long? NextMatchOffset,
     IReadOnlyList<TalvoraTextSearchMatch> Matches,
     IReadOnlyList<string> Errors);
 
@@ -92,6 +96,10 @@ public sealed record TalvoraHttpResponse(
     string? Body,
     long BodyBytes,
     bool BodyTruncated,
+    long CaptureLimitBytes,
+    long? DeclaredContentLength,
+    long? OmittedBodyBytes,
+    bool ContinuationSupported,
     long ElapsedMilliseconds);
 
 public sealed record TalvoraTcpConnectionEntry(
