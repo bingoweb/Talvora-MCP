@@ -1,98 +1,90 @@
 # Talvora MCP — Living Handoff
 
-## CURRENT — 2026-09-20
+## CURRENT — 2026-09-20 16:33 TRT
 
-Bu belge yalnız güncel çalışma durumunu taşır. Eski oturum kronolojisi burada tutulmaz; ayrıntılı bug geçmişi `BUG-AUDIT.md`, görev durumu `MCP-CONTROL-CENTER-TODO.md`, Source Edit mimarisi `SOURCE-EDIT-ENGINE-ARCHITECTURE.md` içindedir.
+Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi burada tutulmaz. Ayrıntılı geçmiş `BUG-AUDIT.md`, görev listesi `MCP-CONTROL-CENTER-TODO.md`, Source Edit sözleşmesi `SOURCE-EDIT-ENGINE-ARCHITECTURE.md` içindedir.
 
-### Repository / live baseline
+### Repo / remote / live durum
 
 - Repository: `C:\Users\tayla\Talvora-MCP`
 - Branch: `main`
-- Başlangıç HEAD: `27d13da1a58f2edeab24dd898972d53467ff841a`
-- Başlangıçta working tree temizdi.
-- Gitea remote: `origin = ssh://git@127.0.0.1:2222/taylan/Talvora-MCP.git`
-- GitHub remote: `github = https://github.com/bingoweb/Talvora-MCP.git`
-- Başlangıçta `origin/main` ve `github/main` HEAD ile senkrondu.
-- Canlı Talvora service bağlantısı doğrulandı. `talvora_system_info.sourceCommit = 642c2158aebbe91e99e9349e92262c94b9b17e43`; service LocalSystem altında Running / Automatic çalışıyor.
+- Son committed HEAD: `07dcf042fc85837eb9ec3a1506674fac88e6a95b`
+- `origin/main` (Gitea) ve `github/main` aynı HEAD'de.
+- Working tree şu anda yalnız #174 üzerinde yarım kalan üç source değişikliği nedeniyle dirty:
+  - `src/Talvora/Tools/ConfigFormatTools.cs`
+  - `src/Talvora/Tools/ConfigFormatTools.Xml.cs`
+  - `src/Talvora/Tools/ConfigFormatTools.TestReports.cs`
+- Canlı Windows service: `Talvora` = Running / Automatic.
+- Exact-installed source commit: `642c2158aebbe91e99e9349e92262c94b9b17e43`.
+- Son canlı kabul: #159 response-bounds düzeltmeleri installed ve doğrulandı.
 
-### Son tamamlanan düzeltmeler
+## Son tamamlanan düzeltme hattı
 
-En güncel bug-audit hattında #121–#174 aralığındaki tüm doğrulanmış maddeler, aşağıdaki tek açık madde (#174) hariç kapatıldı.
+#121–#173 kapsamındaki doğrulanmış buglar kapalı. Son önemli aileler: Source Edit transaction/WAL/idempotency ve recovery; semantic edit toolchain isolation; installer immutable source/dependency provenance; tunnel/Gitea lifecycle; process/job/watch/HTTP resource bounds; AtomicFile durability; #159 response bounds; #173 installer artifacts-path fix.
 
-Özellikle son tamamlanan aileler:
+Tek açık doğrulanmış madde: **#174**.
 
-- Source Edit transaction/WAL/idempotency/parent-identity/crash-recovery düzeltmeleri.
-- Roslyn semantic edit resource bounds, graph fingerprint, analyzer/source-generator identity ve workspace-scoped MSBuild isolation.
-- Installer immutable source snapshot, rollback state, artifact identity pinning ve canonical deploy doğrulamaları.
-- ast-grep executable/provenance doğrulamaları ve npm singleton metadata envelope uyumluluğu.
-- Tunnel create reconciliation ve client update rollback/recovery.
-- Gitea gerçek MCP readiness ve full-chain stop doğrulaması.
-- Shared process/output, job log/read continuation, source streaming read, watcher ve HTTP mock resource bounds.
-- AtomicFile crash-durable publication.
+## ACTIVE — #174 Residual structured/list 0=unlimited responses
 
-Son doğrulanan Source Edit regression: **63/63 GREEN**.
+Durum: **IN PROGRESS / MEDIUM**.
 
-## OPEN BUGS — sıradaki iş
+Kök neden: bazı structured/list tool yüzeylerinde caller limitinin `0` olması hâlâ tek response içinde gerçek limitsiz materialization/list üretimine izin veriyor. #159 bu davranışı transport/read yüzeylerinde kapattı ancak aşağıdaki residual yüzeyler ayrı kaldı.
 
-### Son tamamlanan bug — #169
+Doğrulanan kapsam:
+- `talvora_test_report_summary maxFailures=0`
+- `talvora_xml_query maxResults=0`
+- `talvora_project_discover maxResults=0`
+- `talvora_workspace_inspect maxProjects=0`
+- `talvora_workspace_commands maxCommands=0`
+- `talvora_dev_server_list maxResults=0`
+- `talvora_job_list maxResults=0`
+- `talvora_git_log maxCount=0`
+- quality artifact/diagnostic list yolları
 
-- **Kök neden:** provenance publish sonrasında mutable `obj\project.assets.json` okuyordu; sonraki restore published binary'den farklı graph raporlatabiliyordu.
-- **Düzeltme:** Service ve Tray için explicit restore build-local `--artifacts-path` altında izole edildi; aynı artifacts root publish'e de açıkça aktarılıyor ve publish `--no-restore` kullanıyor. Immutable assets SHA-256 snapshot'ı ile published runtime `.deps.json` graph'ı cross-check ediliyor.
-- **Test:** `INSTALLER_DEPENDENCY_PROVENANCE_GREEN`; `NATIVE_INSTALLER_SOURCE_GREEN`.
-- **Commit:** `ba6494f37fe9f54f07d78bb2d28b048ead8a826e`; `origin/main` ve `github/main` aynı commit'e doğrulandı.
-- **Canlı gate notu:** `ba6494f` clean canonical build Service/Tray publish aşamalarını geçti fakat Tray pre-bundle `.deps.json` lookup eski proje `bin\Release` yolunu varsaydığı için durdu. Önceki dirty-build live kaydı final #169 kabulü sayılmıyor; bu follow-up ayrı #173 olarak açıldı.
+Şu anda yarım kalmış uygulama:
+- XML query için finite absolute ceiling + `resultOffset/nextResultOffset` başlanmış.
+- Test report için finite absolute ceiling + `failureOffset/nextFailureOffset` başlanmış.
+- Bu üç source dosyası henüz commitlenmedi; önce tamamlanıp targeted test ile doğrulanacak.
 
-### Son tamamlanan bug — #173
+#174 kabul kriteri:
+1. Her list/structured yüzeyde `0` = finite server maximum.
+2. Caller büyük pozitif limit verse bile absolute ceiling aşılmıyor.
+3. Deterministic continuation/offset/cursor sağlanıyor veya continuation desteklenmiyorsa response bunu açıkça bildiriyor.
+4. Response schema truncation + next-state bilgisini taşıyor.
+5. Tool description yeni semantiği doğru anlatıyor.
+6. Targeted regression tüm kapsanan yüzeylerde GREEN.
+7. Talvora Release build 0 warning / 0 error.
+8. `BUG-AUDIT.md`, `MCP-CONTROL-CENTER-TODO.md`, bu HANDOFF güncelleniyor.
+9. Tek bug commit'i Gitea + GitHub'a push ediliyor.
+10. Canonical mevcut deploy/update yolu ile canlıya alınıp exact-installed source commit doğrulanıyor.
 
-- **Bulgu / kök neden:** #169 ile publish output/intermediate dizinleri build-local `DependencyArtifactsRoot` altına taşındı; `Get-SingleFilePublishDepsPath` ise hâlâ `src\Talvora.Tray\bin\Release` arıyordu.
-- **Uygulanan düzeltme:** lookup artık `DependencyArtifactsRoot\bin\Talvora.Tray` ağacını kullanıyor ve source contract bu çağrıyı sabitliyor.
-- **Targeted test:** `NATIVE_INSTALLER_SOURCE_GREEN`. Wrapper'ın script sonrası stale `$LASTEXITCODE` kontrolü false-negative üretti; test kendi GREEN marker'ına ulaştı.
-- **Commit / remote:** `c54d1d6e56d3776291db0db04504ff6275525f6d`; `origin/main` ve `github/main` aynı commit'e doğrulandı.
-- **Canonical build:** GREEN; installer **261,777,167 bytes**, SHA-256 `01C6D5107E7C845152C2ACAECEB8DAD5B9097B9966D5B78BFDAE5A031E11BF87`, source commit `c54d1d6e56d3776291db0db04504ff6275525f6d`.
-- **Canlı deploy:** independent SYSTEM deploy servis switch sırasında MCP bağlantısını beklenen şekilde kapattı; reconnect sonrasında Talvora **Running / Automatic**, exact-installed `sourceCommit=c54d1d6e56d3776291db0db04504ff6275525f6d`.
+## Sabit çalışma kuralları
 
-### Son tamamlanan bug — #159
+- Normal source/config/repository-document editörü: **`talvora_apply_patch` PRIMARY/default**.
+- Existing dosya editinden önce `talvora_read_source` revision alınır.
+- Her bug: kanıt -> kök neden -> küçük patch -> targeted test -> docs -> commit -> Gitea push -> GitHub push -> gerekiyorsa live deploy.
+- `git add .` yok; yalnız ilgili dosyalar stage edilir.
+- reset/clean/stash/revert yok.
+- Aynı geniş test paketi gereksiz yere tekrar edilmez.
+- Geniş catch/fallback ile hata gizlenmez; kök neden düzeltilir.
+- Çalışan capability'ler gereksiz yere kaldırılmaz.
+- Güncel API/framework davranışı gerekiyorsa kurulu sürüm + Context7/resmi doküman doğrulanır.
+- Kesintiden sonra bu dosya + `git status --short` + son commitler okunur ve doğrudan ACTIVE maddeden devam edilir.
 
-- **Uygulandı:** read-bytes continuation; bounded streaming text range; bounded suffix + backward pagination tail; deterministic find/search offsets; SQLite row continuation + native 4 MiB value/row ceiling; HTTP/TCP/WebSocket finite capture metadata.
-- **Targeted test:** `TALVORA RESPONSE BOUNDS REGRESSION GREEN`; gerçek giant-line, SQLite oversized BLOB ve loopback WebSocket truncation dahil.
-- **Build:** Talvora Release ve Talvora.Smoke Release **0 warning / 0 error**.
-- **Commit / remote:** `642c2158aebbe91e99e9349e92262c94b9b17e43`; `origin/main` ve `github/main` aynı commit'e doğrulandı.
-- **Canonical artifact:** **261,781,263 bytes**, SHA-256 `B44B1371E759BEDB837A203D04BEE1D236A0A0D8241156FE6B150F4E5B232053`, manifest source `642c2158aebbe91e99e9349e92262c94b9b17e43`; gerçek EXE hash manifest ile eşleşti.
-- **Canlı kabul:** Talvora **Running / Automatic**, PID **4816**, exact-installed source `642c2158aebbe91e99e9349e92262c94b9b17e43`. Canlı HTTP ve TCP `maxResponseBytes=0` çağrıları **16 MiB captureLimitBytes** ve `continuationSupported=false` metadata'sını doğruladı.
-
-### #174 — Residual structured/list 0=unlimited responses — OPEN MEDIUM
-
-- #159 sırasında yapılan geniş audit yeni kapsam doğruladı: test-report/XML query, project/workspace discovery/commands, dev-server/job lists, Git log ve quality list yüzeylerinde `0` halen gerçek unbounded tek-response yolu açabiliyor.
-- Watch/HTTP-mock read bu bug'a dahil değil; persistent queue'ları zaten #164 altında absolute bounded.
-- Sıradaki aktif iş: #174 her yüzey için finite ceiling + deterministic continuation + targeted regression ile düzeltilecek; ardından ayrı commit/push/live döngüsü tamamlanacak.
-
-## Çalışma kuralları
-
-- Normal source/config/repository-document düzenlemesi: **`talvora_apply_patch` PRIMARY/default**.
-- Mevcut dosyayı düzenlemeden önce `talvora_read_source` revision alınır; küçük, deterministic patch uygulanır.
-- Aynı işi farklı mutatorlarla deneme-yanılma yapma.
-- Her bug ayrı ele alınır: **kanıt -> kök neden -> patch -> targeted test -> docs -> commit -> Gitea push -> GitHub push -> gerekiyorsa live deploy**.
-- Aynı kapsamlı test paketi değişiklik gerektirmedikçe tekrar çalıştırılmaz.
-- Güncel framework/API davranışı gerekiyorsa Context7 + resmi dokümanla doğrula; gerçek proje sürümünü esas al.
-- Çalışan capability'leri güvenlik/kolaylık adına kırpma. Resource fix'lerinde TAM YETKI semantiği korunur; yalnız tek-response bellek/transport patlaması bounded hale getirilir.
-- Broad catch/fallback ile semptom gizleme; kök nedeni düzelt.
-- Yeni önemli bulgu çıkarsa önce `BUG-AUDIT.md` ve bu handoff'a ekle.
-
-## Her bug sonrası zorunlu kayıt
-
-Handoff'a şu dört satırlık kısa kayıt eklenir:
+## Her bug sonrası HANDOFF kaydı
 
 - Bulgu / kök neden
-- Uygulanan düzeltme
+- Düzeltme
 - Targeted test sonucu
-- Commit + `origin/main` + `github/main` + live deploy sonucu
+- Commit hash
+- `origin/main` push
+- `github/main` push
+- Live deploy / exact-installed source sonucu
 
-## Bitiş kriteri
+## Bitiş
 
-Tüm açık bug'lar kapanmış, ilgili targeted/regression testleri GREEN, working tree temiz, iki remote senkron ve gereken runtime değişiklikleri canlıya alınmış olmalı.
-
-Bu koşulların tamamı sağlandıktan sonra Windows masaüstünde:
+Tüm açık doğrulanmış buglar kapalı, targeted testler GREEN, working tree temiz, iki remote senkron ve gerekli runtime değişiklikleri canlıya alınmış olduğunda:
 
 `C:\Users\tayla\Desktop\bitti.txt`
 
-oluşturulacak ve içine final HEAD, iki remote senkron durumu, live source commit/fingerprint ve son test özeti yazılacak.
+oluşturulacak. İçerik: tamamlanma zamanı, final HEAD, iki remote durumu, live source commit ve son test özeti.
