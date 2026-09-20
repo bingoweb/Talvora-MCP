@@ -8,12 +8,12 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 
 - Repository: `C:\Users\tayla\Talvora-MCP`
 - Branch: `main`
-- Last runtime-affecting fix commit: `36b68b24e14a72b5cf44cd0ae2b91356e882733a` (`fix: isolate manual stop state per Windows session`).
+- Last runtime-affecting fix commit: `ded6cd52f692b3563b0edbfdaf1c6f392b8c77e9` (`fix: persist control center placement on exit`).
 - Gitea `origin/main` ve GitHub `github/main`: her bug closeout commit'inden sonra birlikte güncellenir.
 - Canlı Talvora service: **Running / Automatic**.
-- Exact-installed runtime source commit: `36b68b24e14a72b5cf44cd0ae2b91356e882733a`.
+- Exact-installed runtime source commit: `ded6cd52f692b3563b0edbfdaf1c6f392b8c77e9`.
 - #178 tamamlandı: manual-stop persistence Windows SessionId bazlı dosyaya ayrıldı; targeted regression GREEN; fix commit Gitea + GitHub'a push edildi ve canonical live deploy exact-installed olarak doğrulandı.
-- #179 source fix hazır: Control Center exit artık window-placement yazımını shutdown öncesi tamamlıyor; yeni regression GREEN ve Tray Release build 0 warning / 0 error; commit/push/live deploy sırada.
+- #179 tamamlandı: Control Center exit artık window-placement yazımını shutdown öncesi tamamlıyor; regression GREEN, fix iki remote'a push edildi ve canonical exact-installed live deploy doğrulandı.
 
 ## #178 — CLOSED / LIVE VERIFIED
 
@@ -32,11 +32,11 @@ Düzeltme ve kanıt:
 
 ### Aktif devam noktası
 
-1. #179 source/test/docs değişikliklerini tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
-2. Canonical installer build + manifest-bound live deploy yap; exact-installed runtime commit'i doğrula.
-3. #179 live acceptance'ı docs-only closeout commit'iyle kapat; ardından deeper audit'e #180'den devam et.
+1. #179 live acceptance docs closeout'unu commit edip Gitea + GitHub'a push et.
+2. Deep bug audit'e #180'den devam et; yalnız doğrulanmış tek bug üzerinde çalış.
+3. Her yeni bug için targeted test -> docs -> tek bug commit -> iki remote push -> runtime etkiliyorsa canonical live deploy sırasını koru.
 
-## #179 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+## #179 — CLOSED / LIVE VERIFIED
 
 Kök neden:
 - `ControlCenterApplication.ExitFromTray()`, `PrepareForApplicationExit()` çağrısından hemen sonra window'u kapatıp WPF `Shutdown()` çağırıyor.
@@ -47,6 +47,9 @@ Düzeltme ve kanıt:
 - Alt I/O await'i `ConfigureAwait(false)` kullanıyor; böylece WPF UI thread üzerinde sync-wait deadlock'u oluşturulmuyor.
 - `NativeInstallerSourceRegression.ps1` önce RED (`ControlCenterExitPersistsWindowPlacementBeforeShutdown=False`), fix sonrası GREEN.
 - `Talvora.Tray` Release build: **0 warning / 0 error**.
+- Fix commit: `ded6cd52f692b3563b0edbfdaf1c6f392b8c77e9`; Gitea `origin/main` ve GitHub `github/main` senkron.
+- Canonical installer build GREEN; artifact SHA-256 `19A18E87697FC75F8CC04B5E52464D8FAA8062FCCFB6059B2D96A1877D19756D`.
+- Self-update sırasında MCP bağlantısı servis değişiminde kesildi; reconnect sonrası `system_info.sourceCommit=ded6cd52f692b3563b0edbfdaf1c6f392b8c77e9` doğrulandı.
 
 ## Sabit çalışma kuralları
 
