@@ -25,6 +25,8 @@
   ·
   <a href="APPLICATION-DEVELOPMENT-ROADMAP.md"><strong>Capability Roadmap</strong></a>
   ·
+  <a href="SECURITY.md"><strong>Security & Privacy</strong></a>
+  ·
   <a href="BUG-AUDIT.md"><strong>Engineering Audit</strong></a>
 </p>
 

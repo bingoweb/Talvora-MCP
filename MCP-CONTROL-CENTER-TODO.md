@@ -3,6 +3,25 @@
 Tarih: 2026-09-19
 Durum: PLANLAMA TAMAMLANDI — implementasyon yeni oturumda başlayacak.
 
+## 2026-09-20 — Privacy & Security Hardening TODO
+
+Ana ilke: Talvora'nın mevcut tool/capability yüzeyi, unrestricted escape-hatch davranışı ve geliştirme yetenekleri korunacak. Güvenlik katmanı yetki budamak yerine secret minimization, güvenli persistence, redaction ve public-repo hygiene üzerinden uygulanacak.
+
+- [x] SEC-001 — `FileLog` kalıcı kayıtlarında authorization/API key/token/password/client-secret/OpenAI/GitHub/JWT biçimlerini merkezi olarak redakte et.
+- [x] SEC-002 — Control Center raw-log görünümünde managed MCP log satırlarını ekranda göstermeden önce aynı redaction katmanından geçir.
+- [x] SEC-003 — Dedicated `--privacy-security-only` regression: redaction gizli değeri kaldırırken normal diagnostik metni koruyor.
+- [x] SEC-004 — Interactive-user process handoff `request.json` dosyasını helper deserialize eder etmez sil; environment/argument capability aynen kalsın.
+- [x] SEC-005 — Eski `InteractiveRuns` crash artıklarını 24 saat retention + active lease kontrolüyle temizle; aktif run klasörünü silme.
+- [x] SEC-006 — Tunnel-client hata/UI diagnostiklerini kalıcı/log redaction katmanıyla aynı secret-safe davranışa getir.
+- [x] SEC-007 — Repo tracked-tree high-confidence secret taraması yap; gerçek değerleri çıktıya yazma. 266 dosyalık son tarama 0 bulgu.
+- [x] SEC-008 — `.gitignore` içine gerçek `.env`, DPAPI blob, PFX/P12/private-key ve secrets klasörü korumaları ekle; `.env.example` istisnasını koru.
+- [x] SEC-009 — `SECURITY.md` ile trust boundary, logging/privacy, DPAPI, interactive secret lifecycle ve non-goal/capability-preservation politikasını belgele.
+- [x] SEC-010 — Public dokümanlarda gereksiz kullanıcı/makine path/identity örneklerini `%USERPROFILE%`, `%APPDATA%`, `%LOCALAPPDATA%` ve `<interactive-user>` biçimlerine genelleştir.
+- [x] SEC-011 — Kaynak targeted gate: `TALVORA PRIVACY SECURITY GREEN` + `TALVORA PRIVACY SECURITY SOURCE REGRESSION GREEN`; Tray Release build 0 warning / 0 error.
+- [x] SEC-012 — Explicit-file security commit `689a7ba` oluşturuldu ve Gitea + GitHub `main` üzerine push edildi.
+- [ ] SEC-013 — Canonical installer/deploy ile exact-installed runtime'a al; MCP reconnect sonrası `talvora_system_info.sourceCommit` ile commit eşleşmesini doğrula.
+- [ ] SEC-014 — Live log/tunnel davranışında secret-free acceptance kontrolü yap ve handoff/BUG-AUDIT'i kapat.
+
 ## 1. Ürün hedefi
 
 Talvora Control Center, bu Windows bilgisayarına bizim kurduğumuz ve yönettiğimiz yerel MCP sunucularını tek, anlaşılır ve tamamen Türkçe bir arayüzden yönetmek için oluşturulacaktır.

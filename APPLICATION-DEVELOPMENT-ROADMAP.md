@@ -4,7 +4,7 @@ Date: 2026-09-19
 Branch: refactor/deep-codebase-cleanup
 Baseline manifest: 159 tools
 Current development manifest: 198 tools
-Repository: C:\Users\tayla\Talvora-MCP
+Repository: %USERPROFILE%\Talvora-MCP
 
 ## Goal
 

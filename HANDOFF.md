@@ -6,14 +6,15 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 ## Repo / remote / canlı durum
 
-- Repository: `C:\\Users\\tayla\\Talvora-MCP`
+- Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Çalışma ağacı: **dirty yalnız korunmuş #189 SQLite source/test WIP nedeniyle**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `08302059d0236349064ab2cfa81e23ce74ff1b97` — `fix: retain recovered jobs from refreshed exit time`
-- Gitea remote: `origin` -> `ssh://git@127.0.0.1:2222/taylan/Talvora-MCP.git`
+- Çalışma ağacı: **dirty yalnız #190 docs closeout / public-metadata hygiene nedeniyle**; security source/test commit'i ayrı kapatıldı. Reset/clean/stash/revert yapma.
+- Son runtime-affecting commit: `689a7ba` — `security: harden secret persistence and logging`; Gitea + GitHub `main` üzerine push edildi.
+- Mevcut exact-installed runtime: `d8f04696a1b1ef9dd8b60dc19796b0ca88ce163b` — security commit henüz canonical deploy edilmedi.
+- Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
 - Handoff resetinden hemen önce docs HEAD `10ab9ad1994e2af8fe5402bf230822687dc51b13` idi; `origin/main` ve `github/main` aynı commit'teydi. Bu docs closeout, runtime-affecting `60c5e9a` fix'inden sonradır.
-- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=08302059d0236349064ab2cfa81e23ce74ff1b97` bildiriyor.
+- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=d8f04696a1b1ef9dd8b60dc19796b0ca88ce163b` bildiriyor.
 - Bu HANDOFF reset commit'i yalnız dokümantasyondur; canlı runtime commit'ini sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
@@ -32,7 +33,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Güncel audit üst özeti: **#121–#188 remediation complete + live verified; #189 SQLite zero-timeout fix local GREEN, commit/push/live acceptance pending.**
+- Güncel audit üst özeti: **#121–#189 remediation complete + live verified; #190 privacy/security hardening commit/push + source gates GREEN, canonical live acceptance pending.**
 
 ## Son tamamlanan bug-fix zinciri
 
@@ -101,16 +102,28 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Canonical clean-worktree installer SHA-256: `ABB9D1D074D2AB22CB36FB279DC647916CE9183D2E72CE437A1837C015AA1AEF`.
 - Manifest-bound SYSTEM deploy sonrası exact-installed runtime aynı commit'i bildiriyor; #188 live verified.
 
-### #189 — SQLite zero-timeout lock wait — local GREEN / live pending
-- `src/Talvora/Tools/SqliteTools.cs` ve `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Misc.cs` içindeki mevcut dirty değişiklikler bilerek korunuyor.
+### #189 — SQLite zero-timeout lock wait — live verified
+- Fix `d8f0469` olarak commit edildi, Gitea + GitHub `main` üzerine push edildi ve exact-installed runtime aynı commit'i bildiriyor.
 - Microsoft.Data.Sqlite 10.0.12'de timeout 0 no-timeout anlamına geliyor. İzole locked-DB fixture timeout 1'de yaklaşık 1.1 s sonra SQLITE_BUSY döndürdü; timeout 0 + 1.5 s cancellation token 6 s dış process bütçesine kadar dönmedi.
-- Minimal WIP guard `ValidateTimeout` için `timeoutSeconds <= 0`; dört SQLite yüzeyini bağlantı açmadan koruyor.
+- `ValidateTimeout` için `timeoutSeconds <= 0`; dört SQLite yüzeyini bağlantı açmadan koruyor.
 - `PASS sqlite-zero-timeout-rejected`; targeted `--runtime-bounds-only` GREEN.
-- Sıradaki iş: bu iki source/test dosyasını #189 belgeleriyle ayrı commit et, iki remote'a push et, canonical build/deploy ve exact-installed live fast-fail doğrulaması yap.
+- #189 kapanmıştır.
+
+### #190 — Privacy & Security Hardening — committed/pushed / live pending
+- Talvora'nın tool/capability yüzeyi kısıtlanmadı.
+- Persistent `FileLog` ve Control Center raw-log görünümü ortak secret redaction kullanıyor.
+- Interactive-user process handoff `request.json` dosyasını deserialize sonrası hemen siliyor; 24 saatlik stale-run cleanup active lease'i koruyor.
+- Tunnel-client hata/UI diagnostikleri secret-safe redaction kullanıyor.
+- `.gitignore` local secret/credential dosyalarını dışlıyor; `SECURITY.md` trust-boundary ve privacy politikasını belgeliyor.
+- Public dokümanlardaki gereksiz kullanıcı/path metadata'sı genelleniyor.
+- Dedicated `--privacy-security-only` smoke ve privacy/security source regression GREEN; Tray Release build 0 warning / 0 error.
+- 266 dosyalık high-confidence tracked-tree secret scan 0 bulgu.
+- Security commit `689a7ba` iki remote'a push edildi.
+- Sıradaki iş: docs closeout commit -> clean canonical installer/deploy -> exact-installed live acceptance.
 
 ## Doküman tutarlılığı notu
 
-- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#188 tamamlandı ve canlı doğrulandı; #189 source/test WIP korunuyor.
+- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#189 tamamlandı ve canlı doğrulandı; #190 source/test commit'i push edildi, yalnız canonical live acceptance ve docs closeout kaldı.
 - Aynı dosyanın daha eski gövde satırlarında ve `MCP-CONTROL-CENTER-TODO.md` içinde tarihsel `pending`, eski `OPEN` veya pre-live ifadeler kalmış olabilir. Bunları yeni oturumda gerçek repo/remote/live durumunun önüne koyma.
 - Eski tamamlanmış bug'ları tekrar test edip yeniden açma; yalnız yeni kanıt veya gerçek regresyon varsa dön.
 
@@ -132,7 +145,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 ## NEXT SESSION — kesin devam noktası
 
-**#189 korunmuş SQLite WIP'i ayrı commit/push/live acceptance ile kapat; ardından #190 deep audit'e geç.**
+**#190 privacy/security hardening'i canonical live acceptance ile kapat; ardından deep audit'e devam et.**
 
 Başlangıç sırası:
 
@@ -141,9 +154,9 @@ Başlangıç sırası:
 3. `HEAD`, `origin/main`, `github/main` durumunu kontrol et.
 4. `talvora_system_info.sourceCommit` ile canlı runtime baseline'ını doğrula.
 5. `BUG-AUDIT.md` üst CURRENT özetini oku; #121–#188'i tekrar tarama.
-6. #189 source/test diff'ini koru; commit/push/live acceptance tamamlandıktan sonra #190 için henüz derin incelenmemiş çağrı zincirlerinden devam et. Öncelik: async/await ve cancellation edge'leri, process/service lifecycle, HTTP mock/watch/job cleanup, SQLite transaction/locking, reconnect/retry/backoff, dashboard/backend stale state, Windows path/session/encoding, resource ownership ve restart persistence.
+6. #190 security commit `689a7ba` iki remote'dadır. Targeted privacy smoke/source regression + Tray build sonucunu gereksiz tekrar etme. Docs closeout sonrası clean HEAD'den canonical installer/deploy yap ve live kabulü tamamla.
 7. Şüpheyi bug diye yazmadan önce gerçek çağrı zinciri veya minimal reproduction ile doğrula.
-8. #189'u live verified yaptıktan sonra ilk doğrulanmış #190 bulgusunu hemen kullanıcıya bildir; ardından minimal fix + targeted regression uygula.
+8. #190 live verified olduktan sonra deep audit'teki ilk yeni doğrulanmış bulguyu kullanıcıya bildir; ardından minimal fix + targeted regression uygula.
 9. Fix sonrası docs -> commit -> Gitea push -> GitHub push -> gerekiyorsa canonical live deploy sırasını tamamla.
 10. Sonraki bug'a ancak önceki bug tamamen kapandıktan sonra geç.
 
@@ -154,4 +167,4 @@ Yeni audit turunda doğrulanmış açık bug kalmadığında:
 - working tree clean,
 - Gitea ve GitHub senkron,
 - son runtime-affecting commit exact-installed live,
-- ardından `C:\\Users\\tayla\\Desktop\\bitti.txt` oluştur ve final HEAD/remote/live/test özetini yaz.
+- ardından `%USERPROFILE%\\Desktop\\bitti.txt` oluştur ve final HEAD/remote/live/test özetini yaz.
