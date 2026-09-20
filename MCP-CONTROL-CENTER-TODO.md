@@ -540,7 +540,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #109 — canonical SYSTEM deploy task `Talvora-Setup.exe --silent` çalıştırsın; Session 0 görünmez GUI hang'ini regression ile engelle.
 
 
-## Faz 14C — Deep Audit Remediation Backlog (CURRENT — #188 LIVE ACCEPTANCE PENDING)
+## Faz 14C — Deep Audit Remediation Backlog (CURRENT — #121–#188 LIVE VERIFIED; #189 WIP)
 
 - [x] #124 — semantic durable replay metadata; adapter receipt persisted in receipt + WAL, forced receipt-loss recovery preserves workspace/symbol/diagnostics, Source Edit 60/60 GREEN.
 - [x] #127 — structural YAML control-file self-scan. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
@@ -591,7 +591,8 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #185 — HTTP mock failed/cancelled manual reply retry: başarısız response I/O reply claim'i atomik olarak serbest bırakıyor; cancelled ilk attempt sonrası aynı pending request ikinci reply ile tamamlanabiliyor; loopback integration regression RED -> GREEN; fix `43d2228` iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 - [x] #186 — HTTP mock stop pending-response semantiği: lifetime cancellation gerçek pending timeout'tan ayrıldı; Stop yarışında timeout default yerine 503 korunuyor; 64 concurrent loopback regression RED -> GREEN; fix `60c5e9a` iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 - [x] #187 — HTTP mock request/response encoding ayrımı: `requestEncoding` yalnız incoming body decode için korunuyor, text default response UTF-8 üretiliyor; gerçek loopback regression RED -> GREEN; fix `26c26e5` iki remote'a push edildi, canonical installer SHA-256 `A43F89339155318FE1E40842E044EA7A7301F2B6890895CFFD75C942E0D2A7A2`, exact-installed live gate GREEN.
-- [x] #188 — recovered background-job retention zamanı: stale `Running` metadata refresh sonrası `ExitedUnknown` olduğunda retention eski `StartedAtUtc` yerine güncellenmiş `ExitedAtUtc` üzerinden hesaplanıyor; deterministic job-storage regression RED -> GREEN, Release build 0 warning / 0 error; source/test fix doğrulandı, commit/push/live gate pending.
+- [x] #188 — recovered background-job retention zamanı: stale `Running` metadata refresh sonrası `ExitedUnknown` olduğunda retention eski `StartedAtUtc` yerine güncellenmiş `ExitedAtUtc` üzerinden hesaplanıyor; deterministic job-storage regression RED -> GREEN, Release build 0 warning / 0 error; fix `0830205` iki remote'a push edildi, canonical installer SHA-256 `ABB9D1D074D2AB22CB36FB279DC647916CE9183D2E72CE437A1837C015AA1AEF`, exact-installed live gate GREEN.
+- [ ] #189 — SQLite zero-timeout lock wait: doğrulanmış source/test WIP korunuyor; `timeoutSeconds=0` provider no-timeout semantiğine düşüyor, local guard + `PASS sqlite-zero-timeout-rejected` GREEN; ayrı commit/push/live acceptance bekliyor.
 
 ## Faz 14 — Canonical Source Edit Transaction Engine (2026-09-20)
 

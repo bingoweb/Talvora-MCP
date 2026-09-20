@@ -8,12 +8,12 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `C:\\Users\\tayla\\Talvora-MCP`
 - Branch: `main`
-- Çalışma ağacı handoff resetinden hemen önce: **clean**
-- Son runtime-affecting commit: `26c26e53b3ca58c3521148d67d3f6233d6cd63fd` — `fix: keep HTTP mock default responses UTF-8`
+- Çalışma ağacı: **dirty yalnız korunmuş #189 SQLite source/test WIP nedeniyle**; reset/clean/stash/revert yapma.
+- Son runtime-affecting commit: `08302059d0236349064ab2cfa81e23ce74ff1b97` — `fix: retain recovered jobs from refreshed exit time`
 - Gitea remote: `origin` -> `ssh://git@127.0.0.1:2222/taylan/Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
 - Handoff resetinden hemen önce docs HEAD `10ab9ad1994e2af8fe5402bf230822687dc51b13` idi; `origin/main` ve `github/main` aynı commit'teydi. Bu docs closeout, runtime-affecting `60c5e9a` fix'inden sonradır.
-- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=26c26e53b3ca58c3521148d67d3f6233d6cd63fd` bildiriyor.
+- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=08302059d0236349064ab2cfa81e23ce74ff1b97` bildiriyor.
 - Bu HANDOFF reset commit'i yalnız dokümantasyondur; canlı runtime commit'ini sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
@@ -32,7 +32,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Güncel audit üst özeti: **#121–#187 remediation complete + live verified; #188 source/test fix RED -> GREEN, commit/push/live acceptance pending.**
+- Güncel audit üst özeti: **#121–#188 remediation complete + live verified; #189 SQLite zero-timeout WIP local GREEN, commit/push/live acceptance pending.**
 
 ## Son tamamlanan bug-fix zinciri
 
@@ -97,11 +97,20 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Uzun süre çalışmış bir job böylece yeni bitmiş olmasına rağmen anında expired sayılıp log/metadata klasörü silinebiliyordu.
 - Retention/sıralama zamanı artık `RefreshStateAsync` sonrasında güncellenmiş `ExitedAtUtc` üzerinden hesaplanıyor.
 - Targeted job-storage regression önce RED, minimal fix sonrası `TALVORA JOB STORAGE REGRESSION GREEN`; Release build 0 warning / 0 error.
-- Source/test fix doğrulandı; commit/push/live acceptance pending. Ayrı SQLite WIP dosyaları bu bug commit'ine dahil edilmeyecek.
+- Fix commit: `08302059d0236349064ab2cfa81e23ce74ff1b97`; Gitea + GitHub `main` aynı commit'te.
+- Canonical clean-worktree installer SHA-256: `ABB9D1D074D2AB22CB36FB279DC647916CE9183D2E72CE437A1837C015AA1AEF`.
+- Manifest-bound SYSTEM deploy sonrası exact-installed runtime aynı commit'i bildiriyor; #188 live verified.
+
+### #189 WIP — SQLite zero-timeout lock wait
+- `src/Talvora/Tools/SqliteTools.cs` ve `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Misc.cs` içindeki mevcut dirty değişiklikler bilerek korunuyor.
+- Microsoft.Data.Sqlite 10.0.12'de timeout 0 no-timeout anlamına geliyor. İzole locked-DB fixture timeout 1'de yaklaşık 1.1 s sonra SQLITE_BUSY döndürdü; timeout 0 + 1.5 s cancellation token 6 s dış process bütçesine kadar dönmedi.
+- Minimal WIP guard `ValidateTimeout` için `timeoutSeconds <= 0`; dört SQLite yüzeyini bağlantı açmadan koruyor.
+- `PASS sqlite-zero-timeout-rejected`; targeted `--runtime-bounds-only` GREEN.
+- Sıradaki iş: #188 docs-only closeout commit/push sonrası bu iki source/test dosyasını #189 belgeleriyle ayrı commit et, iki remote'a push et, canonical build/deploy ve exact-installed live fast-fail doğrulaması yap.
 
 ## Doküman tutarlılığı notu
 
-- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#187 tamamlandı ve canlı doğrulandı; #188 source/test fix doğrulandı ve live acceptance bekliyor.
+- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#188 tamamlandı ve canlı doğrulandı; #189 source/test WIP korunuyor.
 - Aynı dosyanın daha eski gövde satırlarında ve `MCP-CONTROL-CENTER-TODO.md` içinde tarihsel `pending`, eski `OPEN` veya pre-live ifadeler kalmış olabilir. Bunları yeni oturumda gerçek repo/remote/live durumunun önüne koyma.
 - Eski tamamlanmış bug'ları tekrar test edip yeniden açma; yalnız yeni kanıt veya gerçek regresyon varsa dön.
 
@@ -123,7 +132,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 ## NEXT SESSION — kesin devam noktası
 
-**#188 source/test fix'i ayrı commit/push/live acceptance ile kapat; ardından korunmuş SQLite WIP'i doğrulayıp sıradaki audit numarasına geç.**
+**#189 korunmuş SQLite WIP'i ayrı commit/push/live acceptance ile kapat; ardından #190 deep audit'e geç.**
 
 Başlangıç sırası:
 
