@@ -449,6 +449,69 @@ function Stop-TaskIfRunning {
     param([Parameter(Mandatory = $true)][string] $Name)
 
     $task = Get-ScheduledTask -TaskName $Name -ErrorAction SilentlyContinue
+    if ($null -eq $task) {
+        return
+    }
+
+    $owned = [Collections.Generic.HashSet[int]]::new()
+    $actions = @($task.Actions | Where-Object {
+        -not [string]::IsNullOrWhiteSpace([string]$_.Execute)
+    })
+
+    function Add-OwnedTaskProcesses {
+        $all = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
+        if ($all.Count -eq 0) {
+            return
+        }
+
+        $roots = @($all | Where-Object {
+            $process = $_
+            foreach ($action in $actions) {
+                $execute = [Environment]::ExpandEnvironmentVariables(
+                    [string]$action.Execute)
+                if (-not [string]::Equals(
+                        [string]$process.ExecutablePath,
+                        $execute,
+                        [StringComparison]::OrdinalIgnoreCase)) {
+                    continue
+                }
+
+                $arguments = [string]$action.Arguments
+                if ([string]::IsNullOrWhiteSpace($arguments) -or
+                    (-not [string]::IsNullOrWhiteSpace(
+                            [string]$process.CommandLine) -and
+                     ([string]$process.CommandLine).IndexOf(
+                         $arguments,
+                         [StringComparison]::OrdinalIgnoreCase) -ge 0)) {
+                    return $true
+                }
+            }
+
+            return $false
+        })
+
+        $frontier = @()
+        foreach ($root in $roots) {
+            if ($owned.Add([int]$root.ProcessId)) {
+                $frontier += [int]$root.ProcessId
+            }
+        }
+
+        while ($frontier.Count -gt 0) {
+            $parents = @($frontier)
+            $frontier = @()
+            foreach ($child in @($all | Where-Object {
+                $parents -contains [int]$_.ParentProcessId
+            })) {
+                if ($owned.Add([int]$child.ProcessId)) {
+                    $frontier += [int]$child.ProcessId
+                }
+            }
+        }
+    }
+
+    Add-OwnedTaskProcesses
+
     if ($null -ne $task -and $task.State -eq 'Running') {
         Stop-ScheduledTask -TaskName $Name -ErrorAction Stop
     }
@@ -456,14 +519,39 @@ function Stop-TaskIfRunning {
     $deadline = [DateTime]::UtcNow.AddSeconds(20)
     do {
         $task = Get-ScheduledTask -TaskName $Name -ErrorAction SilentlyContinue
-        if ($null -eq $task -or $task.State -ne 'Running') {
+        Add-OwnedTaskProcesses
+
+        foreach ($processId in @($owned)) {
+            if ($processId -eq $PID) {
+                continue
+            }
+
+            Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+        }
+
+        $ownedAlive = @(
+            $owned | Where-Object {
+                $null -ne (
+                    Get-Process -Id $_ -ErrorAction SilentlyContinue)
+            })
+
+        if (($null -eq $task -or $task.State -ne 'Running') -and
+            $ownedAlive.Count -eq 0) {
             return
         }
 
         Start-Sleep -Milliseconds 200
     } while ([DateTime]::UtcNow -lt $deadline)
 
-    throw "Scheduled task '$Name' did not leave Running state within 20 seconds."
+    $remaining = @(
+        $owned | Where-Object {
+            $null -ne (
+                Get-Process -Id $_ -ErrorAction SilentlyContinue)
+        })
+    throw (
+        "Scheduled task '$Name' did not reach terminal stopped state " +
+        "within 20 seconds. TaskState=$($task.State); " +
+        "OwnedProcesses=$($remaining -join ',')")
 }
 
 function Start-TaskIfNeeded {

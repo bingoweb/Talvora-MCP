@@ -540,7 +540,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #109 — canonical SYSTEM deploy task `Talvora-Setup.exe --silent` çalıştırsın; Session 0 görünmez GUI hang'ini regression ile engelle.
 
 
-## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 7 OPEN)
+## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 6 OPEN)
 
 - [x] #124 — semantic durable replay metadata; adapter receipt persisted in receipt + WAL, forced receipt-loss recovery preserves workspace/symbol/diagnostics, Source Edit 60/60 GREEN.
 - [x] #127 — structural YAML control-file self-scan. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
@@ -566,7 +566,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #153 — tunnel-client update transaction + rollback; stage-only candidate, durable recovery journal, exact previous-client compensation, crash recovery, rollback regression GREEN, Tray build 0 warning / 0 error.
 - [x] #154 — primary managed-MCP registry self-heal after backup recovery; temp-path recovery fixture GREEN.
 - [ ] #155 — Gitea real MCP protocol readiness gate.
-- [ ] #156 — Gitea full-chain stop terminal verification.
+- [x] #156 — Gitea full-chain stop terminal verification; independent health/readiness shutdown probe + task-action-owned process-tree termination/wait, embedded PowerShell parse regression GREEN, Tray build 0 warning / 0 error.
 - [x] #157 — bounded shared process stdout/stderr capture; ProcessRunner regression GREEN.
 - [x] #158 — streaming/bounded canonical source read; Source Edit 53/53 GREEN.
 - [ ] #159 — absolute transport/response budgets + continuation semantics.
