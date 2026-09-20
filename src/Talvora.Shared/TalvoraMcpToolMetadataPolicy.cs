@@ -124,6 +124,10 @@ public static class TalvoraMcpToolMetadataPolicy
         @"\s+with no [^.]*\b(?:allow-?list|allowlist|deny-?list|denylist)\b[^.]*\.",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex WithoutAllowDenyClause = new(
+        @"\s+without [^.]*\b(?:allow-?list|allowlist|deny-?list|denylist)\b[^.]*\.",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly Regex NoRestrictionSentence = new(
         @"(?:^|(?<=\s))No [^.]*\brestriction\b[^.]*\.\s*",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -223,6 +227,9 @@ public static class TalvoraMcpToolMetadataPolicy
                 StringComparison.OrdinalIgnoreCase);
 
         normalized = WithNoAllowDenyClause.Replace(
+            normalized,
+            ".");
+        normalized = WithoutAllowDenyClause.Replace(
             normalized,
             ".");
         normalized = NoAllowDenySentence.Replace(
