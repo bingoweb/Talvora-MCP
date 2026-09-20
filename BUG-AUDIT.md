@@ -5,7 +5,7 @@ Branch: main
 Current runtime source HEAD: `36b68b24e14a72b5cf44cd0ae2b91356e882733a`.
 Current exact-installed audit runtime: `36b68b24e14a72b5cf44cd0ae2b91356e882733a`
 Canonical exact-installed tool count: 204 unique tools
-Status: #121–#178 remediation is complete with 0 OPEN findings; #178 commit/push/live acceptance is complete.
+Status: #121–#178 remediation is complete; #179 source remediation is complete and commit/push/live acceptance is pending.
 
 ## Current remediation status summary — 2026-09-20
 
@@ -14,6 +14,7 @@ Status: #121–#178 remediation is complete with 0 OPEN findings; #178 commit/pu
 - Fixed records passed their documented targeted regression or contract gates. Latest combined Source Edit suite remains **63/63 GREEN**; #174 has its own response-bounds regression.
 - #174–#178 are committed, pushed to both remotes and live-verified.
 - #178 live acceptance: fix commit `36b68b24e14a72b5cf44cd0ae2b91356e882733a`; canonical installer SHA-256 `3A57702ECD153F71B744B871420D7E1626693B9D62246875E5ADF05B039203B1`; reconnect sonrası exact-installed `system_info.sourceCommit` aynı commit'i doğruladı.
+- #179 source fixed: Control Center exit persistence race removed by completing `SaveWindowPlacementAsync` before WPF shutdown and avoiding UI-context continuation in the underlying file write. New targeted source contract RED -> GREEN; Tray Release build 0 warning / 0 error; commit/push/live gate pending.
 - #166 and #167 are not additional defects: their evidence was merged into canonical #147 and #148 respectively.
 - Canonical deploy #109 explicit `--silent` behavior must remain intact during all future installer changes.
 - #129 follow-up: project/solution analyzer ve source-generator binary referansları da semantic graph physical revision snapshot + commit guard kapsamına alındı. Analyzer/generator binary drift artık commit öncesi `SEMANTIC_GRAPH_STALE` ile fail-closed olur. Targeted regression GREEN; full Source Edit 62/62 GREEN; Talvora Release 0 warning / 0 error.
@@ -33,6 +34,7 @@ Status: #121–#178 remediation is complete with 0 OPEN findings; #178 commit/pu
 10. Background-job exit observer could hide failures.
 11. HTTP mock background failures were insufficiently observable.
 12. File watcher disposed-state races and redundant sorting.
+179. [SOURCE FIXED 2026-09-20] Control Center exit could lose the final window placement because persistence was fire-and-forget immediately before window close/WPF shutdown. Exit now completes placement persistence before shutdown; the file-write await does not require the UI synchronization context. Targeted source regression RED -> GREEN; Tray Release 0 warning / 0 error; commit/push/live gate pending.
 13. HttpClient handler/client ownership cleanup.
 14. WinForms/Tray lifetime cleanup.
 15. Culture-dependent machine-data parsing in multiple tool paths.

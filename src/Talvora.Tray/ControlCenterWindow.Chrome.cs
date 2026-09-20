@@ -173,7 +173,7 @@ internal sealed partial class ControlCenterWindow
                 placement,
                 WindowPlacementJsonOptions,
                 createBackup: false,
-                CancellationToken.None);
+                CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex) when (
             ex is IOException or

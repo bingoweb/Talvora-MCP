@@ -48,6 +48,8 @@ $businessTunnelClient = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora
 $componentHealth = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterComponentHealthService.cs'))
 $controlCenterLifecycleService = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterLifecycleService.cs'))
 $managedMcpSessionState = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpSessionState.cs'))
+$controlCenterWindow = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterWindow.cs'))
+$controlCenterWindowChrome = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterWindow.Chrome.cs'))
 
 $registryCoordinator = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpRegistryCoordinator.cs'))
 $ownershipManifestStore = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpOwnershipManifestStore.cs'))
@@ -591,6 +593,17 @@ $result = [pscustomobject]@{
     TalvoraLifecycleUsesOperationCoordinator = (
         $controlCenterLifecycleService -match 'ManagedMcpOperationCoordinator\.TryAcquire\(TalvoraId\)' -and
         $controlCenterLifecycleService -match 'ManagedMcpOperationInProgressException\(TalvoraId\)'
+    )
+    ControlCenterExitPersistsWindowPlacementBeforeShutdown = (
+        $controlCenterWindow.Contains('SaveWindowPlacementAsync().GetAwaiter().GetResult();') -and
+        $controlCenterWindow.IndexOf(
+            'SaveWindowPlacementAsync().GetAwaiter().GetResult();',
+            [StringComparison]::Ordinal) -lt
+            $controlCenterWindow.IndexOf(
+                '_applicationExitRequested = true;',
+                [StringComparison]::Ordinal) -and
+        $controlCenterWindowChrome.Contains(
+            'CancellationToken.None).ConfigureAwait(false);')
     )
     TrayAutoReconnectsAfterStartup = (
         $trayApplicationContext -match 'await MaintainTalvoraConnectionAsync\(\)' -and

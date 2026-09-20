@@ -194,7 +194,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     {
         _windowPlacementSaveTimer.Stop();
         _rawLogRefreshTimer?.Stop();
-        _ = SaveWindowPlacementAsync();
+        SaveWindowPlacementAsync().GetAwaiter().GetResult();
         _applicationExitRequested = true;
         _refreshTimer.Stop();
         _lifetimeCts.Cancel();

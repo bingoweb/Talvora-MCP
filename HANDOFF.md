@@ -13,6 +13,7 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 - Canlı Talvora service: **Running / Automatic**.
 - Exact-installed runtime source commit: `36b68b24e14a72b5cf44cd0ae2b91356e882733a`.
 - #178 tamamlandı: manual-stop persistence Windows SessionId bazlı dosyaya ayrıldı; targeted regression GREEN; fix commit Gitea + GitHub'a push edildi ve canonical live deploy exact-installed olarak doğrulandı.
+- #179 source fix hazır: Control Center exit artık window-placement yazımını shutdown öncesi tamamlıyor; yeni regression GREEN ve Tray Release build 0 warning / 0 error; commit/push/live deploy sırada.
 
 ## #178 — CLOSED / LIVE VERIFIED
 
@@ -31,9 +32,21 @@ Düzeltme ve kanıt:
 
 ### Aktif devam noktası
 
-1. #178 live acceptance docs closeout'unu commit edip Gitea + GitHub'a push et.
-2. Deep bug audit'e #179'dan devam et; yalnız doğrulanmış tek bug üzerinde çalış.
-3. Her yeni bug için targeted test -> docs -> tek bug commit -> iki remote push -> runtime etkiliyorsa canonical live deploy sırasını koru.
+1. #179 source/test/docs değişikliklerini tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
+2. Canonical installer build + manifest-bound live deploy yap; exact-installed runtime commit'i doğrula.
+3. #179 live acceptance'ı docs-only closeout commit'iyle kapat; ardından deeper audit'e #180'den devam et.
+
+## #179 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+
+Kök neden:
+- `ControlCenterApplication.ExitFromTray()`, `PrepareForApplicationExit()` çağrısından hemen sonra window'u kapatıp WPF `Shutdown()` çağırıyor.
+- `PrepareForApplicationExit()` içindeki `_ = SaveWindowPlacementAsync()` fire-and-forget olduğu için son `window-placement.json` yazımı process kapanışıyla yarışabiliyor ve son konum/boyut kaybolabiliyordu.
+
+Düzeltme ve kanıt:
+- Exit path artık `SaveWindowPlacementAsync().GetAwaiter().GetResult()` ile persist işlemini shutdown'dan önce tamamlıyor.
+- Alt I/O await'i `ConfigureAwait(false)` kullanıyor; böylece WPF UI thread üzerinde sync-wait deadlock'u oluşturulmuyor.
+- `NativeInstallerSourceRegression.ps1` önce RED (`ControlCenterExitPersistsWindowPlacementBeforeShutdown=False`), fix sonrası GREEN.
+- `Talvora.Tray` Release build: **0 warning / 0 error**.
 
 ## Sabit çalışma kuralları
 
