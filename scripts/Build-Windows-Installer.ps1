@@ -561,8 +561,12 @@ function Install-AstGrepPayload {
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($metadataJson)) {
         throw "Unable to resolve ast-grep npm metadata for $packageName."
     }
-    $metadata = $metadataJson | ConvertFrom-Json
-    if ($null -eq $metadata -or $metadata -is [Array] -or
+    $metadataItems = @($metadataJson | ConvertFrom-Json)
+    if ($metadataItems.Count -ne 1) {
+        throw "Unexpected ast-grep package metadata cardinality: $($metadataItems.Count)."
+    }
+    $metadata = $metadataItems[0]
+    if ($null -eq $metadata -or
         -not [string]::Equals([string]$metadata.name, $packageName, [StringComparison]::Ordinal)) {
         throw 'Unexpected ast-grep package metadata identity or shape.'
     }

@@ -575,6 +575,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #164 — bounded watcher/HTTP-mock queues, inflight and pending work; global backpressure/accounting regression GREEN.
 - [x] #165 — crash-durable AtomicFile staged publication; WriteThrough + Flush(true) + MoveFileExW WriteThrough primary/backup, permanent runtime regression GREEN, Shared build 0 warning / 0 error.
 - [ ] #169 — immutable dependency provenance snapshot tied to publish.
+- [x] #172 — canonical installer npm metadata envelope compatibility; exactly-one object/array normalization + identity/integrity fail-closed, InstallerAstGrepMetadataRegression 5/5 GREEN.
 
 ## Faz 14 — Canonical Source Edit Transaction Engine (2026-09-20)
 

@@ -36,11 +36,20 @@ function Invoke-FakeNpm {
     }
     if ($script:Mode -eq 'missing-integrity') { $value.dist.Remove('integrity') }
     if ($script:Mode -eq 'wrong-package') { $value.name = '@other/package' }
+    if ($script:Mode -eq 'valid-array') {
+        return (,([pscustomobject]$value) | ConvertTo-Json -Depth 4 -Compress)
+    }
+    if ($script:Mode -eq 'multiple-packages') {
+        return (@(
+            [pscustomobject]$value,
+            [pscustomobject]$value
+        ) | ConvertTo-Json -Depth 4 -Compress)
+    }
     return ($value | ConvertTo-Json -Depth 4 -Compress)
 }
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('TalvoraAstMetadata-' + [Guid]::NewGuid().ToString('N'))
 try {
-    foreach ($mode in @('valid', 'missing-integrity', 'wrong-package')) {
+    foreach ($mode in @('valid', 'valid-array', 'missing-integrity', 'wrong-package', 'multiple-packages')) {
         $script:Mode = $mode
         $script:Calls.Clear()
         $caught = $null
@@ -49,7 +58,7 @@ try {
         } catch { $caught = $_.Exception.Message }
         $views = @($script:Calls | Where-Object { $_[0] -eq 'view' })
         $installs = @($script:Calls | Where-Object { $_[0] -eq 'install' })
-        if ($mode -eq 'valid') {
+        if ($mode -in @('valid', 'valid-array')) {
             if ($views.Count -ne 1) { throw "Metadata was read $($views.Count) times; expected a single snapshot." }
             if ($installs.Count -ne 1 -or $caught -ne 'AUDIT_INSTALL_BOUNDARY') { throw "Valid snapshot did not reach install: $caught" }
             if ($installs[0][-1] -ne ($script:ExpectedPackage + '@1.2.3')) { throw 'Install was not bound to the resolved version.' }
