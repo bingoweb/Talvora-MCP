@@ -47,6 +47,7 @@ $trayApplicationContext = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvo
 $businessTunnelClient = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\BusinessTunnelClient.cs'))
 $componentHealth = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterComponentHealthService.cs'))
 $controlCenterLifecycleService = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterLifecycleService.cs'))
+$managedMcpSessionState = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpSessionState.cs'))
 
 $registryCoordinator = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpRegistryCoordinator.cs'))
 $ownershipManifestStore = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpOwnershipManifestStore.cs'))
@@ -581,6 +582,11 @@ $result = [pscustomobject]@{
     TrayTunnelClientUsesStateWorkingDirectory = (
         $trayProgram -match 'ProcessRunner\.RunAsync' -and
         $trayProgram -match 'config\.StateRoot'
+    )
+    ManualStopStateIsWindowsSessionScoped = (
+        $managedMcpSessionState -match 'session-state\.\{sessionId\}\.json' -and
+        $managedMcpSessionState -match 'TryLoadLegacyCurrentScope' -and
+        $managedMcpSessionState -match 'GetStatePath\(Process\.GetCurrentProcess\(\)\.SessionId\)'
     )
     TalvoraLifecycleUsesOperationCoordinator = (
         $controlCenterLifecycleService -match 'ManagedMcpOperationCoordinator\.TryAcquire\(TalvoraId\)' -and

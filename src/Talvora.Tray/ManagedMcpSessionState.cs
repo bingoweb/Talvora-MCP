@@ -17,14 +17,21 @@ internal static class ManagedMcpSessionState
             WriteIndented = true,
         };
 
-    private static string StatePath =>
+    private static string StateDirectory =>
         Path.Combine(
             Environment.GetFolderPath(
                 Environment.SpecialFolder.LocalApplicationData),
             "Talvora",
-            "ControlCenter",
-            "session-state.json");
+            "ControlCenter");
 
+    private static string LegacyStatePath =>
+        Path.Combine(StateDirectory, "session-state.json");
+
+    private static string StatePath =>
+        GetStatePath(Process.GetCurrentProcess().SessionId);
+
+    private static string GetStatePath(int sessionId) =>
+        Path.Combine(StateDirectory, $"session-state.{sessionId}.json");
     public static bool IsManuallyStopped(string mcpId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(mcpId);
@@ -112,6 +119,20 @@ internal static class ManagedMcpSessionState
                 "Manual-stop session scope AuthenticationId çözümlenemedi.");
         }
 
+        var currentStatePath = GetStatePath(scope.SessionId);
+        var otherSessionStatePath = GetStatePath(
+            scope.SessionId == int.MaxValue
+                ? scope.SessionId - 1
+                : scope.SessionId + 1);
+        if (string.Equals(
+                currentStatePath,
+                otherSessionStatePath,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Manual-stop state yolu Windows session kimliğine göre ayrışmıyor.");
+        }
+
         var probeId = "self-test-" + Guid.NewGuid().ToString("N");
         try
         {
@@ -137,16 +158,24 @@ internal static class ManagedMcpSessionState
     private static SessionStateDocument LoadCurrentScope()
     {
         var scope = GetCurrentScope();
+        var statePath = GetStatePath(scope.SessionId);
 
-        if (!File.Exists(StatePath))
+        if (!File.Exists(statePath))
         {
+            var legacy = TryLoadLegacyCurrentScope(scope);
+            if (legacy is not null)
+            {
+                WriteState(legacy);
+                return legacy;
+            }
+
             return CreateEmpty(scope);
         }
 
         try
         {
             var parsed = JsonSerializer.Deserialize<SessionStateDocument>(
-                File.ReadAllText(StatePath),
+                File.ReadAllText(statePath),
                 JsonOptions);
 
             if (parsed is null ||
@@ -182,6 +211,46 @@ internal static class ManagedMcpSessionState
         }
     }
 
+    private static SessionStateDocument? TryLoadLegacyCurrentScope(
+        SessionScope scope)
+    {
+        if (!File.Exists(LegacyStatePath))
+        {
+            return null;
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<SessionStateDocument>(
+                File.ReadAllText(LegacyStatePath),
+                JsonOptions);
+
+            return parsed is not null &&
+                   parsed.SchemaVersion == 1 &&
+                   parsed.SessionId == scope.SessionId &&
+                   string.Equals(
+                       parsed.UserSid,
+                       scope.UserSid,
+                       StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(
+                       parsed.AuthenticationId,
+                       scope.AuthenticationId,
+                       StringComparison.Ordinal)
+                ? parsed
+                : null;
+        }
+        catch (Exception ex) when (
+            ex is IOException or
+            JsonException or
+            UnauthorizedAccessException)
+        {
+            TrayLog.Write(
+                "Legacy manual-stop session state could not be migrated.",
+                ex);
+            return null;
+        }
+    }
+
     private static SessionStateDocument CreateEmpty(
         SessionScope scope) =>
         new(
@@ -195,16 +264,14 @@ internal static class ManagedMcpSessionState
     private static void WriteState(
         SessionStateDocument state)
     {
-        var directory = Path.GetDirectoryName(StatePath)
-            ?? throw new InvalidOperationException(
-                "Manual-stop session-state directory çözümlenemedi.");
-        Directory.CreateDirectory(directory);
+        var statePath = GetStatePath(state.SessionId);
+        Directory.CreateDirectory(StateDirectory);
 
-        var temp = StatePath + ".tmp";
+        var temp = statePath + ".tmp";
         File.WriteAllText(
             temp,
             JsonSerializer.Serialize(state, JsonOptions));
-        File.Move(temp, StatePath, overwrite: true);
+        File.Move(temp, statePath, overwrite: true);
     }
 
     private static SessionScope GetCurrentScope()

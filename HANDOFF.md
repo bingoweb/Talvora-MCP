@@ -12,24 +12,25 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 - Gitea `origin/main` ve GitHub `github/main`: her bug closeout commit'inden sonra birlikte güncellenir.
 - Canlı Talvora service: **Running / Automatic**.
 - Exact-installed runtime source commit: `234f26ec74d4e5b01710d45b46f4cc373068de72`.
-- #177 canlı doğrulandı: service Running/Automatic; active Tray `Versions\234f26e...\Tray` altından çalışıyor.
+- #178 source fix hazır: manual-stop persistence Windows SessionId bazlı dosyaya ayrıldı; legacy same-session migration + targeted regression GREEN; commit/push/live deploy sırada.
 
-## #177 — FIXED / LIVE VERIFIED
+## #178 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
 
 Kök neden:
-- Talvora `Start/Stop/Restart` yolu, Gitea ve generic MCP lifecycle yollarının aksine `ManagedMcpOperationCoordinator` lease almıyordu.
-- Otomatik recovery kendi `_talvoraOperationGate` kilidini kullanırken Control Center kullanıcı işlemleri bu gate'i paylaşmadığı için servis/tünel state mutation'ları yarışabiliyordu.
+- Manual-stop state belgesi logon `SessionId`/`AuthenticationId` doğruluyordu ama tüm oturumlar aynı `%LOCALAPPDATA%\Talvora\ControlCenter\session-state.json` dosyasını kullanıyordu.
+- Named mutex `Local\...` olduğundan farklı Windows session'ları birbirini kilitlemiyor; aynı kullanıcıyla ikinci session/RDP oturumu diğer session'ın state'ini mismatch görüp sıfırlayabiliyordu.
 
 Düzeltme ve kanıt:
-- `ExecuteTalvoraAsync` girişine `TalvoraId` bazlı fail-fast operation lease eklendi; mevcut Gitea/generic koordinasyon modeliyle hizalandı.
-- `NativeInstallerSourceRegression.ps1`: `TalvoraLifecycleUsesOperationCoordinator=True`; suite GREEN.
-- `Talvora.Tray` Release build: **0 warning / 0 error**.
+- State yolu `session-state.<SessionId>.json` oldu; aynı session içindeki process'ler mevcut Local mutex'i paylaşmaya devam ediyor, farklı session'ların dosyaları ayrışıyor.
+- Eski `session-state.json` yalnız current SessionId/UserSid/AuthenticationId ile eşleşirse yeni session dosyasına migrate ediliyor; mismatch legacy state'e dokunmuyor.
+- Runtime `AssertContract` farklı SessionId'lerin farklı dosya yoluna gittiğini doğruluyor.
+- `NativeInstallerSourceRegression.ps1`: `ManualStopStateIsWindowsSessionScoped=True`; suite GREEN. Tray Release build **0 warning / 0 error**.
 
 ### Aktif devam noktası
 
-1. #177 commit/push/live acceptance tamamlandı; 0 OPEN baseline üzerinden deeper audit'e devam et.
-2. Yeni doğrulanan her bug için minimal fix + targeted test + HANDOFF/TODO + ayrı commit + Gitea/GitHub push uygula.
-3. Runtime etkileyen yeni commit olursa canonical installer/deploy ve canlı kimlik doğrulamasını tekrarla.
+1. #178 source/test/docs dosyalarını tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
+2. Canonical installer build + manifest-bound live deploy yap; service/runtime ve active Tray version path doğrula.
+3. #178 live acceptance'ı docs-only closeout commit'iyle kapat; ardından deeper audit'e devam et.
 
 ## Sabit çalışma kuralları
 
