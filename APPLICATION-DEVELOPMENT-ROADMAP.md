@@ -1,25 +1,25 @@
 # Talvora MCP — Application Development Capability Roadmap
 
 Date: 2026-09-19
-Branch: refactor/deep-codebase-cleanup
+Branch: main
 Baseline manifest: 159 tools
-Current development manifest: 198 tools
+Current development manifest: 204 tools
 Repository: %USERPROFILE%\Talvora-MCP
 
 ## Goal
 
-Turn Talvora into a first-class Windows-native software/application development MCP that can build, test, run, inspect, package, and troubleshoot projects across the major ecosystems already used on this machine, without artificial path/command/package/host/user/session restrictions.
+Turn Talvora into a first-class Windows-native software/application development MCP that can build, test, run, inspect, package, and troubleshoot projects across the major ecosystems already used on this machine while preserving its complete caller-directed development and administration workflows.
 
 ## Standing implementation rules
 
 - Windows-native implementation.
-- Full-capability / TAM YETKI surface; arbitrary CLI arguments remain available.
+- Full-capability / TAM YETKI surface; caller-supplied CLI argument vectors remain available.
 - Chocolatey is the machine package manager. Do not use WinGet.
 - Prefer a project's own wrapper when the ecosystem provides one (for example gradlew.bat or mvnw.cmd), then fall back to the machine installation.
 - Reuse Talvora.Shared ProcessRunner and CommandResolver rather than creating new process-launch copies.
 - Do not add Playwright to Talvora.
 - Do not add aliases merely to increase tool count.
-- Add focused typed tools where they materially improve discovery/automation, while retaining an unrestricted explicit-admin *-run path.
+- Add focused typed tools where they materially improve discovery/automation, while retaining the general-purpose explicit-admin *-run path.
 - Use Context7 plus official vendor documentation before implementing or changing third-party CLI behavior.
 - Install missing required software immediately with Chocolatey, using the newest supported stable release; use the current LTS only where the vendor's non-LTS line is near end-of-support or unsuitable as a machine default.
 - Do not retain deprecated CLIs, legacy SDK layouts, old runtime fallbacks, or compatibility aliases once an official modern replacement exists.

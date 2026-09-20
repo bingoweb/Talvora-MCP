@@ -9,14 +9,14 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
 - Çalışma ağacı: bu final docs-only closeout commit'i sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `6a318053f1f416f344c63cbd98637f031f7a6e5b` — `fix: complete MCP metadata wording cleanup`; önceki ana metadata commit'i `8b16760`. İkisi de Gitea + GitHub `main` üzerine push edildi.
-- Exact-installed canonical runtime artifact source commit: `6a318053f1f416f344c63cbd98637f031f7a6e5b`.
-- Canonical installer SHA-256: `C42FFEF7D0720D057CFC4ABED2DACEED2318C0CB841FDA8B730DE70DA1027A4E`; artifact size: 261,808,911 bytes.
+- Son runtime-affecting commit: `508e513061e5c34f31c4840903e25ef10324a388` — `feat: provision focused Talvora tunnel profiles`; focused surface runtime commit'i `24eee60`. İkisi de Gitea + GitHub `main` üzerine push edildi.
+- Exact-installed canonical runtime artifact source commit: `508e513061e5c34f31c4840903e25ef10324a388`.
+- Canonical installer SHA-256: `9205EB952BBC243AC655391C792FFAF36BF3E1353075B08EE5043F3523E4602B`; artifact size: 261,823,759 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=6a318053f1f416f344c63cbd98637f031f7a6e5b` bildiriyor.
-- Talvora service `Running/Automatic`; Service ve Tray aynı `6a31805...` version root'undan çalışıyor.
-- Bu final HANDOFF closeout commit'i yalnız dokümantasyondur ve exact-installed `6a31805` sonrasında gelecektir; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
+- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=508e513061e5c34f31c4840903e25ef10324a388` bildiriyor.
+- Talvora service `Running/Automatic`; Service ve Tray aynı `508e513...` version root'undan çalışıyor.
+- Bu final HANDOFF closeout commit'i yalnız dokümantasyondur ve exact-installed `508e513` sonrasında gelecektir; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
 
@@ -34,7 +34,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Güncel audit üst özeti: **#121–#191 remediation complete + live verified; privacy/security ve MCP host-metadata doğruluğu tam capability korunarak kapatıldı.**
+- Güncel audit üst özeti: **#121–#192 remediation complete + live verified; privacy/security, host-metadata ve focused-surface/tool-selection kalite çalışmaları full 204-tool capability korunarak kapatıldı.**
 
 ## Son tamamlanan bug-fix zinciri
 
@@ -138,9 +138,23 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Tool surface 204/204; PowerShell/process/Git/Docker/HTTP/TCP/ADB/registry/service dahil capability kaybı yok.
 - #191 kapanmıştır.
 
+### #192 — Focused MCP Surfaces + Tool Selection Quality — LIVE VERIFIED
+- Legacy/full `/mcp` exact 204 tool olarak korunuyor.
+- Yeni local focused endpoints: `/mcp/dev` = 174 tool; `/mcp/admin` = 91 tool.
+- Focused surface filtering per-request ToolCollection seviyesinde; listede olmayan tool direct invocation ile bypass edilemiyor.
+- Full ↔ focused ortak tool'larda title, input schema, output schema, description ve annotations birebir korunuyor; yalnız visibility değişiyor.
+- Deterministik selection eval ordinary source edit / exact range / structural / semantic / build-test / Git / service-registry / negative non-Talvora intent fixture'larını doğruluyor.
+- Description quality ikinci turu grammar/implementation noise azaltıyor; full capability ve tool schemas değişmedi.
+- DestructiveHint deep audit sonrası reversible lifecycle/control örnekleri non-destructive; caller-controlled/data-loss sınıfları conservative destructive kalıyor.
+- Control Center live registry `talvora-dev` + `talvora-admin` focused registrations içeriyor; ikisi tunnel-only, ana Talvora Windows service ownership full `talvora` kaydında kalıyor.
+- Targeted gates GREEN: metadata live, surface source/live, focused surface source regression; Tray/Smoke Release 0 warning / 0 error.
+- Runtime commits `24eee60` + `508e513`; final installer SHA-256 `9205EB952BBC243AC655391C792FFAF36BF3E1353075B08EE5043F3523E4602B`; exact-installed `508e513...`.
+- Ayrı remote ChatGPT Dev/Admin tunnel publication yalnız dış prerequisite olarak bekliyor: OpenAI Admin credential bu makinede mevcut değil. Credential uydurulmayacak; local focused endpoints ve full existing tunnel bundan etkilenmiyor.
+- #192 kapanmıştır; external publication prerequisite bug değildir.
+
 ## Doküman tutarlılığı notu
 
-- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#191 tamamlandı ve canlı doğrulandı.
+- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#192 tamamlandı ve canlı doğrulandı.
 - Aynı dosyanın daha eski gövde satırlarında ve `MCP-CONTROL-CENTER-TODO.md` içinde tarihsel `pending`, eski `OPEN` veya pre-live ifadeler kalmış olabilir. Bunları yeni oturumda gerçek repo/remote/live durumunun önüne koyma.
 - Eski tamamlanmış bug'ları tekrar test edip yeniden açma; yalnız yeni kanıt veya gerçek regresyon varsa dön.
 
@@ -162,7 +176,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 ## NEXT SESSION — kesin devam noktası
 
-**Privacy/security ve MCP host-metadata accuracy tamamlandı. Sonraki yeni doğrulanmış bulgudan deep audit'e devam et.**
+**Privacy/security, MCP host-metadata ve focused-surface/tool-selection kalite fazları tamamlandı. Sonraki yeni doğrulanmış bulgudan deep audit'e devam et.**
 
 Başlangıç sırası:
 
@@ -171,7 +185,7 @@ Başlangıç sırası:
 3. `HEAD`, `origin/main`, `github/main` durumunu kontrol et.
 4. `talvora_system_info.sourceCommit` ile canlı runtime baseline'ını doğrula.
 5. `BUG-AUDIT.md` üst CURRENT özetini oku; #121–#188'i tekrar tarama.
-6. #190 privacy/security ve #191 MCP metadata hardening'i tekrar test etme; yeni kanıt veya gerçek regresyon yoksa kapalı kabul et.
+6. #190 privacy/security, #191 MCP metadata ve #192 focused-surface/tool-selection fazlarını tekrar test etme; yeni kanıt veya gerçek regresyon yoksa kapalı kabul et.
 7. Deep audit'te ilk yeni doğrulanmış bulguyu kullanıcıya bildir; şüpheyi bug diye yazmadan önce gerçek çağrı zinciri veya minimal reproduction ile doğrula.
 8. Her yeni bulguda minimal fix + targeted regression uygula.
 9. Fix sonrası docs -> commit -> Gitea push -> GitHub push -> gerekiyorsa canonical live deploy sırasını tamamla.

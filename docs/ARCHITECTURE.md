@@ -4,39 +4,41 @@ Talvora intentionally starts from a clean design.
 
 ## Runtime
 
-`Talvora.exe` is a self-contained ASP.NET Core application installed as the Windows service `Talvora` under `LocalSystem`. It listens only on loopback port 7676 and maps MCP at `/mcp` using the official C# MCP SDK's stateless HTTP transport.
+`Talvora.exe` is a self-contained ASP.NET Core application installed as the Windows service `Talvora` under `LocalSystem`. It listens only on loopback port 7676 and maps MCP through the official C# MCP SDK's stateless HTTP transport. The backwards-compatible full surface is `/mcp` (204 tools); focused surfaces are `/mcp/dev` (174 tools) and `/mcp/admin` (91 tools).
 
 There is no user-session gateway, named-pipe broker, compatibility shim, legacy maintenance layer, or secondary privileged process.
 
+Focused surfaces are per-request views over the same canonical tool implementation. Stateless `ConfigureSessionOptions` selects a request-local `ToolCollection` from the HTTP path, so focused filtering applies to both discovery and invocation. A tool excluded from a focused endpoint is therefore not callable through that endpoint, while the full `/mcp` endpoint preserves the complete 204-tool capability set. Development keeps source editing, build/test, Git/GitHub, package managers, containers, mobile tooling, network integration, PowerShell/process and developer diagnostics. Administration emphasizes Windows service, registry, environment, process, session, event-log, network and general system-management workflows.
+
 ## Capability model
 
-The service account is the capability boundary. Talvora does not implement command deny-lists or filesystem allow-lists for its primitive capability surface. Six primitive tools expose system information, filesystem read/write/delete/list, and arbitrary executable execution. Higher-level Windows capabilities are composed from these primitives until a dedicated tool materially improves reliability or ergonomics.
+The service account is the capability boundary. Talvora does not implement command block lists or filesystem restriction lists for its primitive capability surface. Six primitive tools expose system information, filesystem read/write/delete/list, and caller-supplied executable execution. Higher-level Windows capabilities are composed from these primitives until a dedicated tool materially improves reliability or ergonomics.
 
-The structured filesystem mutation layer adds create-directory, copy, and move operations without reducing the primitive filesystem surface. It applies no path allowlist. Directory copy is recursive by default, rejects non-recursive partial copies, uses deterministic overwrite behavior, and rejects source reparse points before mutation so traversal cannot loop through junctions/symlinks.
+The structured filesystem mutation layer adds create-directory, copy, and move operations without reducing the primitive filesystem surface. It applies no path restriction list. Directory copy is recursive by default, rejects non-recursive partial copies, uses deterministic overwrite behavior, and rejects source reparse points before mutation so traversal cannot loop through junctions/symlinks.
 
-The developer-core layer adds structured source/file discovery, literal or regex text search, raw binary read/write, exact text replacement, hashing, arbitrary HTTP requests, TCP diagnostics/readiness checks, project-manifest discovery, and command resolution. These tools are ergonomic additions for application development; they do not replace or narrow the unrestricted process, PowerShell, filesystem, registry, service, or environment-variable capabilities. Where a response can become large, callers may set the corresponding result/byte limit to `0` for unlimited operation.
+The developer-core layer adds structured source/file discovery, literal or regex text search, raw binary read/write, exact text replacement, hashing, caller-supplied HTTP requests, TCP diagnostics/readiness checks, project-manifest discovery, and command resolution. These tools are ergonomic additions for application development; they do not replace or narrow the general-purpose process, PowerShell, filesystem, registry, service, or environment-variable capabilities. Where a response can become large, callers may set the corresponding result/byte limit to `0` for unlimited operation.
 
-The long-running job layer starts unrestricted child processes with redirected stdin/stdout/stderr, persists logs and metadata under ProgramData, and allows later inspection, incremental log reads, stdin writes, and process-tree termination. It adds developer-server/watch/test ergonomics without narrowing the unrestricted process primitives.
+The long-running job layer starts general-purpose child processes with redirected stdin/stdout/stderr, persists logs and metadata under ProgramData, and allows later inspection, incremental log reads, stdin writes, and process-tree termination. It adds developer-server/watch/test ergonomics without narrowing the general-purpose process primitives.
 
-The Git layer exposes structured repository identity, porcelain status, diffs, logs, and branch refs plus an unrestricted `talvora_git_run` argument surface. No repository, ref, remote, path, Git subcommand, or option allowlist is introduced.
+The Git layer exposes structured repository identity, porcelain status, diffs, logs, and branch refs plus an general-purpose `talvora_git_run` argument surface. No repository, ref, remote, path, Git subcommand, or option restriction list is introduced.
 
-The config/asset layer adds line-ranged and tail text reads, append semantics, mutable JSON Pointer operations, ZIP listing/creation/extraction, and streaming HTTP downloads to disk. These operations retain Talvora's unrestricted path capability; response-oriented line bounds can be disabled explicitly, and archive extraction exposes an opt-in outside-destination mode when exact archive path semantics are required.
+The config/asset layer adds line-ranged and tail text reads, append semantics, mutable JSON Pointer operations, ZIP listing/creation/extraction, and streaming HTTP downloads to disk. These operations retain Talvora's general-purpose path capability; response-oriented line bounds can be disabled explicitly, and archive extraction exposes an opt-in outside-destination mode when exact archive path semantics are required.
 
-The filesystem-watch layer uses `FileSystemWatcher` to expose live Created/Changed/Deleted/Renamed/Error events for any accessible directory. Watch configuration can be recursive, filtered, and bounded or unbounded at the MCP queue layer; it does not impose a watched-path allowlist.
+The filesystem-watch layer uses `FileSystemWatcher` to expose live Created/Changed/Deleted/Renamed/Error events for any accessible directory. Watch configuration can be recursive, filtered, and bounded or unbounded at the MCP queue layer; it does not impose a watched-path restriction list.
 
-The Chocolatey layer exposes structured package discovery and package lifecycle operations while preserving a generic arbitrary-argument Chocolatey runner. It follows the project rule that Chocolatey is the Windows package manager and does not introduce WinGet.
+The Chocolatey layer exposes structured package discovery and package lifecycle operations while preserving a generic caller-supplied-argument Chocolatey runner. It follows the project rule that Chocolatey is the Windows package manager and does not introduce WinGet.
 
-The environment-variable layer exposes structured process/user/machine get/list/set/delete behavior directly through System.Environment. It applies no variable-name allowlist and does not reduce the unrestricted process or PowerShell primitives.
+The environment-variable layer exposes structured process/user/machine get/list/set/delete behavior directly through System.Environment. It applies no variable-name restriction list and does not reduce the general-purpose process or PowerShell primitives.
 
-The Event Log layer exposes structured local-log discovery and XPath queries through Windows Eventing APIs. It applies no log/provider/event-ID allowlist. Per-call event limits bound MCP response size only; unrestricted process and PowerShell primitives remain available for Event Log operations outside this read-only layer.
+The Event Log layer exposes structured local-log discovery and XPath queries through Windows Eventing APIs. It applies no log/provider/event-ID restriction list. Per-call event limits bound MCP response size only; general-purpose process and PowerShell primitives remain available for Event Log operations outside this read-only layer.
 
-The registry layer is the first dedicated Windows capability built on that rule. It exposes structured create/get/set/list/delete operations directly through Microsoft.Win32 instead of requiring an agent to compose shell commands. It does not introduce a registry hive/path allowlist and does not reduce the unrestricted process primitive.
+The registry layer is the first dedicated Windows capability built on that rule. It exposes structured create/get/set/list/delete operations directly through Microsoft.Win32 instead of requiring an agent to compose shell commands. It does not introduce a registry hive/path restriction list and does not reduce the general-purpose process primitive.
 
-The process-control layer exposes structured process discovery and PID-based termination while preserving `talvora_run_process` as the unrestricted process-creation primitive. It does not add a PID/name allowlist.
+The process-control layer exposes structured process discovery and PID-based termination while preserving `talvora_run_process` as the general-purpose process-creation primitive. It does not add a PID/name restriction list.
 
-The PowerShell layer applies the same principle to multiline automation. `talvora_run_powershell` is an ergonomic wrapper around a real PowerShell child process; it does not introduce a command deny-list and does not replace `talvora_run_process`.
+The PowerShell layer applies the same principle to multiline automation. `talvora_run_powershell` is an ergonomic wrapper around a real PowerShell child process; it does not introduce a command block list and does not replace `talvora_run_process`.
 
-The Windows service layer exposes structured Service Control Manager inspection and control without a service-name allowlist. It uses `System.ServiceProcess.ServiceController` for list/get/start/stop/restart while keeping `talvora_run_process` available for service creation, deletion, configuration, custom control codes, and any operation not modeled by the dedicated layer.
+The Windows service layer exposes structured Service Control Manager inspection and control without a service-name restriction list. It uses `System.ServiceProcess.ServiceController` for list/get/start/stop/restart while keeping `talvora_run_process` available for service creation, deletion, configuration, custom control codes, and any operation not modeled by the dedicated layer.
 
 The read-only knowledge layer is separate from that capability boundary. `search` and `fetch` provide structured document discovery/retrieval for ChatGPT knowledge workflows without reducing the privileges or addressable paths of the primitive tools.
 
@@ -50,7 +52,7 @@ The structured filesystem suite exposes `talvora_create_directory`, `talvora_cop
 
 `talvora_move` supports files and directories. Destination collisions fail deterministically unless `overwrite=true`, in which case the destination entry is removed/replaced before the source is moved. Same-path and directory-into-descendant moves are rejected as invalid filesystem operations, not as capability restrictions.
 
-These tools use the same LocalSystem filesystem authority as the primitive read/write/delete/list tools. They do not introduce a path allowlist or deny-list.
+These tools use the same LocalSystem filesystem authority as the primitive read/write/delete/list tools. They do not introduce a path restriction list or block list.
 
 ## Developer core
 
@@ -58,17 +60,17 @@ The developer-core suite exposes `talvora_path_info`, `talvora_file_hash`, `talv
 
 File discovery walks the requested tree directly and can optionally follow reparse points. Text search supports literal or .NET regular-expression matching plus include/exclude wildcards. Binary tools expose byte ranges and writes as Base64 so images, archives, compiled assets, and other non-text files can be handled without shell encoding workarounds. Exact text replacement supports literal or regex patches, expected-match assertions, first/all replacement modes, and optional backup creation.
 
-The HTTP tool is an arbitrary `HttpClient.SendAsync` surface supporting custom methods, headers, text/Base64 bodies, redirect control, optional TLS validation bypass, and text/Base64/no-body response modes. TCP inspection returns `netstat -ano` data as structured local/remote endpoint, connection state, PID, and process-name records; readiness polling uses direct `TcpClient` connections.
+The HTTP tool is a caller-supplied `HttpClient.SendAsync` surface supporting custom methods, headers, text/Base64 bodies, redirect control, optional TLS validation bypass, and text/Base64/no-body response modes. TCP inspection returns `netstat -ano` data as structured local/remote endpoint, connection state, PID, and process-name records; readiness polling uses direct `TcpClient` connections.
 
-Project discovery recognizes common .NET, Node, Python, Rust, Go, Maven, Gradle, CMake, Docker, and Git markers. Command resolution follows the service process PATH/PATHEXT environment. None of these tools add command, path, host, port, project-type, or executable allowlists.
+Project discovery recognizes common .NET, Node, Python, Rust, Go, Maven, Gradle, CMake, Docker, and Git markers. Command resolution follows the service process PATH/PATHEXT environment. None of these tools add command, path, host, port, project-type, or executable restriction lists.
 
 ## Long-running development jobs
 
 The job suite exposes `talvora_job_start`, `talvora_job_get`, `talvora_job_list`, `talvora_job_read_output`, `talvora_job_write_stdin`, `talvora_job_stop`, and `talvora_job_delete`.
 
-Start uses `ProcessStartInfo.ArgumentList` with shell execution disabled and supports arbitrary child environment overrides. It redirects all three standard streams. stdout/stderr are pumped continuously into UTF-8 log files under `%ProgramData%\Talvora\Jobs\<jobId>`; callers tail them by byte offset without waiting for the child to exit. Metadata records the original PID and UTC start time so Talvora can distinguish a restarted process ID from PID reuse after the service itself restarts.
+Start uses `ProcessStartInfo.ArgumentList` with shell execution disabled and supports caller-supplied child environment overrides. It redirects all three standard streams. stdout/stderr are pumped continuously into UTF-8 log files under `%ProgramData%\Talvora\Jobs\<jobId>`; callers tail them by byte offset without waiting for the child to exit. Metadata records the original PID and UTC start time so Talvora can distinguish a restarted process ID from PID reuse after the service itself restarts.
 
-The live service instance owns the redirected stdin pipe, so `talvora_job_write_stdin` works while that same Talvora process remains attached. Job get/list still recover persisted process state after a service restart. Stop defaults to complete process-tree termination. Delete removes the persisted job directory and can stop a running job first when explicitly requested. Arbitrary PID control remains available through `talvora_process_kill`.
+The live service instance owns the redirected stdin pipe, so `talvora_job_write_stdin` works while that same Talvora process remains attached. Job get/list still recover persisted process state after a service restart. Stop defaults to complete process-tree termination. Delete removes the persisted job directory and can stop a running job first when explicitly requested. Caller-supplied PID control remains available through `talvora_process_kill`.
 
 ## Development-server orchestration
 
@@ -80,15 +82,15 @@ TCP readiness uses cancellation-aware `TcpClient.ConnectAsync`. HTTP readiness u
 
 Wait polls the persisted definition while checking the root job state. A process that exits before readiness is reported distinctly from a readiness timeout. Optional timeout cleanup delegates to the existing full process-tree stop behavior. Get performs one probe pass and returns stdout/stderr tails for immediate diagnosis. List intentionally avoids network probes and combines persisted definitions with current job state.
 
-This layer is orchestration only. Executables, arguments, environment overrides, hosts, ports, URLs, and headers are not constrained by a Talvora allowlist; the lower-level job, process, PowerShell, TCP, and HTTP surfaces remain available unchanged.
+This layer is orchestration only. Executables, arguments, environment overrides, hosts, ports, URLs, and headers are not constrained by a Talvora restriction list; the lower-level job, process, PowerShell, TCP, and HTTP surfaces remain available unchanged.
 
 ## Git
 
 The Git suite exposes `talvora_git_info`, `talvora_git_status`, `talvora_git_diff`, `talvora_git_log`, `talvora_git_branches`, and `talvora_git_run`.
 
-Info resolves repository root, Git directory, HEAD, branch/detached state, dirty state, and remotes. Status uses porcelain v2 branch output. Branch enumeration uses `for-each-ref` with field separators. Log uses an explicit field-separated format. Diff supports staging, arbitrary revision ranges, context sizes, and path filters.
+Info resolves repository root, Git directory, HEAD, branch/detached state, dirty state, and remotes. Status uses porcelain v2 branch output. Branch enumeration uses `for-each-ref` with field separators. Log uses an explicit field-separated format. Diff supports staging, caller-supplied revision ranges, context sizes, and path filters.
 
-`talvora_git_run` launches the installed Git executable with exactly the argument vector supplied by the caller, optional environment overrides, and an explicit timeout. It intentionally provides the complete Git command surface rather than a command allowlist. Dedicated read-only tools are convenience APIs, not capability boundaries.
+`talvora_git_run` launches the installed Git executable with exactly the argument vector supplied by the caller, optional environment overrides, and an explicit timeout. It intentionally provides the complete Git command surface rather than a command restriction list. Dedicated read-only tools are convenience APIs, not capability boundaries.
 
 ## Config and asset workflows
 
@@ -96,9 +98,9 @@ The config/asset suite exposes `talvora_read_text_range`, `talvora_tail_text`, `
 
 Range reads use one-based line positions and support `lineCount=0` for the remainder of the file. Tail reads maintain only the requested trailing lines in memory unless `lineCount=0` requests the complete file. Append writes UTF-8 without adding a BOM and can optionally add a platform newline.
 
-JSON operations are based on the mutable `System.Text.Json.Nodes` DOM and RFC 6901 JSON Pointer paths. Set can create missing object/array containers and supports the array `-` append token. Delete is idempotent for missing targets. No JSON property or file-path allowlist is applied.
+JSON operations are based on the mutable `System.Text.Json.Nodes` DOM and RFC 6901 JSON Pointer paths. Set can create missing object/array containers and supports the array `-` append token. Delete is idempotent for missing targets. No JSON property or file-path restriction list is applied.
 
-ZIP creation stages through a temporary archive before replacing the requested destination, so the output path may intentionally reside inside the source directory without recursively archiving itself. Extraction normally resolves entries under the requested destination to prevent accidental traversal; `allowOutsideDestination=true` explicitly enables entries whose normalized path resolves elsewhere, matching Talvora's unrestricted filesystem authority.
+ZIP creation stages through a temporary archive before replacing the requested destination, so the output path may intentionally reside inside the source directory without recursively archiving itself. Extraction normally resolves entries under the requested destination to prevent accidental traversal; `allowOutsideDestination=true` explicitly enables entries whose normalized path resolves elsewhere, matching Talvora's general-purpose filesystem authority.
 
 HTTP download uses response-header streaming rather than buffering an MCP body. Resume requests use a Range header and append only when the server answers with HTTP 206; a normal 200 response restarts the destination file. A final SHA-256 is returned after the stream is persisted.
 
@@ -108,9 +110,9 @@ The Windows-toolchain suite exposes Visual Studio instance discovery, Visual Stu
 
 Visual Studio discovery uses `vswhere.exe` when present. The developer-environment tool executes the selected instance's `VsDevCmd.bat` and parses the resulting environment block so callers can reuse the complete compiler/linker/SDK configuration. MSBuild resolution prefers the Visual Studio component discovered through `vswhere -requires Microsoft.Component.MSBuild`; if unavailable, Talvora falls back to `dotnet msbuild`.
 
-Windows SDK discovery reads `HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots\KitsRoot10`, enumerates versioned SDK bin directories, and surfaces common x64 SDK tools. CMake and Ninja resolution checks standard installations, Chocolatey, and the service PATH. Their run tools preserve arbitrary CLI arguments.
+Windows SDK discovery reads `HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots\KitsRoot10`, enumerates versioned SDK bin directories, and surfaces common x64 SDK tools. CMake and Ninja resolution checks standard installations, Chocolatey, and the service PATH. Their run tools preserve caller-supplied CLI arguments.
 
-PE inspection uses `PEReader` to expose COFF/PE headers, subsystem, image metadata, architecture, .NET metadata presence, and COR flags. File-version inspection uses Windows version resources. None of these tools add project, target, generator, property, SDK-tool, or build-option allowlists.
+PE inspection uses `PEReader` to expose COFF/PE headers, subsystem, image metadata, architecture, .NET metadata presence, and COR flags. File-version inspection uses Windows version resources. None of these tools add project, target, generator, property, SDK-tool, or build-option restriction lists.
 
 ## HTTP mock and webhook listeners
 
@@ -118,7 +120,7 @@ The HTTP-mock suite exposes `talvora_http_mock_start`, `talvora_http_mock_get`, 
 
 Each listener is an in-process `HttpListener` owned by the current Talvora service instance. The caller supplies one or more prefixes and chooses automatic or manual response mode. Automatic mode captures the request and immediately emits the configured default response. Manual mode stores the live `HttpListenerContext` in a pending-request table until a matching reply arrives, the configured timeout expires, or the listener is stopped.
 
-Request capture is sequence-numbered and queue-backed, with caller-controlled body and queue limits. Text, Base64, or no-body capture modes are supported. Manual responses expose arbitrary status code, headers, content type, and text/Base64 body. Stopping a listener closes any still-pending contexts with HTTP 503.
+Request capture is sequence-numbered and queue-backed, with caller-controlled body and queue limits. Text, Base64, or no-body capture modes are supported. Manual responses expose caller-supplied status code, headers, content type, and text/Base64 body. Stopping a listener closes any still-pending contexts with HTTP 503.
 
 Listener state is deliberately service-instance-local rather than persistent machine configuration. The feature adds webhook/API integration ergonomics without narrowing `talvora_http_request`, raw TCP tools, PowerShell, or process execution.
 
@@ -128,9 +130,9 @@ The network-diagnostics suite exposes `talvora_network_interfaces`, `talvora_dns
 
 Network-interface discovery uses `NetworkInterface.GetAllNetworkInterfaces` and returns addresses, gateways, DNS/DHCP servers, operational state, type, and speed. DNS and ICMP use the .NET/Windows networking stack directly.
 
-Raw TCP exchange uses `TcpClient` and permits arbitrary host/port/payload combinations with text or Base64 encoding, caller-controlled timeouts, optional half-close, and bounded or unlimited response capture. TLS inspection layers `SslStream` over a direct TCP connection and reports the negotiated protocol, cipher suite, ALPN, certificate, chain, and policy errors. Diagnostic continuation across invalid certificates is explicit and does not hide the reported validation errors.
+Raw TCP exchange uses `TcpClient` and permits caller-supplied host/port/payload combinations with text or Base64 encoding, caller-controlled timeouts, optional half-close, and bounded or unlimited response capture. TLS inspection layers `SslStream` over a direct TCP connection and reports the negotiated protocol, cipher suite, ALPN, certificate, chain, and policy errors. Diagnostic continuation across invalid certificates is explicit and does not hide the reported validation errors.
 
-WebSocket exchange uses `ClientWebSocket` against arbitrary ws/wss URLs with caller-supplied headers, subprotocols, text/binary messages, and receive limits. These APIs add structured observability and protocol testing; they do not narrow the existing unrestricted process, PowerShell, HTTP, or TCP capabilities.
+WebSocket exchange uses `ClientWebSocket` against caller-supplied ws/wss URLs with caller-supplied headers, subprotocols, text/binary messages, and receive limits. These APIs add structured observability and protocol testing; they do not narrow the existing general-purpose process, PowerShell, HTTP, or TCP capabilities.
 
 ## Filesystem watchers
 
@@ -144,15 +146,15 @@ Watchers do not persist across Talvora service restarts. This is deliberate: the
 
 The Chocolatey suite exposes `talvora_choco_info`, `talvora_choco_list`, `talvora_choco_search`, `talvora_choco_install`, `talvora_choco_upgrade`, `talvora_choco_uninstall`, and `talvora_choco_run`.
 
-Read operations use Chocolatey's machine-oriented `--limit-output` where applicable and parse package name/version rows. Mutating package operations execute as Talvora's LocalSystem account, so package installation and removal have the same machine-level authority as the service itself. `talvora_choco_run` preserves the complete Chocolatey CLI surface by accepting an arbitrary argument vector and environment overrides.
+Read operations use Chocolatey's machine-oriented `--limit-output` where applicable and parse package name/version rows. Mutating package operations execute as Talvora's LocalSystem account, so package installation and removal have the same machine-level authority as the service itself. `talvora_choco_run` preserves the complete Chocolatey CLI surface by accepting a caller-supplied argument vector and environment overrides.
 
-No Chocolatey package/source/subcommand/option allowlist is introduced. Talvora continues to use Chocolatey rather than WinGet for Windows package-management workflows.
+No Chocolatey package/source/subcommand/option restriction list is introduced. Talvora continues to use Chocolatey rather than WinGet for Windows package-management workflows.
 
 ## Build runners
 
 The build-runner suite exposes `talvora_dotnet_info`, `talvora_dotnet_restore`, `talvora_dotnet_build`, `talvora_dotnet_test`, `talvora_dotnet_publish`, `talvora_dotnet_run`, `talvora_node_info`, `talvora_npm_install`, `talvora_npm_ci`, `talvora_npm_run_script`, and `talvora_npm_run`.
 
-All runners use `ProcessStartInfo.ArgumentList` and capture stdout/stderr/exit code/timeout metadata as structured MCP output. The .NET convenience methods model common CLI switches, but `talvora_dotnet_run` forwards an arbitrary argument vector and environment overrides. npm follows the same model: convenience methods for install/ci/package scripts plus unrestricted `talvora_npm_run`.
+All runners use `ProcessStartInfo.ArgumentList` and capture stdout/stderr/exit code/timeout metadata as structured MCP output. The .NET convenience methods model common CLI switches, but `talvora_dotnet_run` forwards a caller-supplied argument vector and environment overrides. npm follows the same model: convenience methods for install/ci/package scripts plus general-purpose `talvora_npm_run`.
 
 Node/npm discovery is non-fatal; `talvora_node_info` reports missing runtimes structurally. npm mutation tools fail with a clear missing-runtime error until Node/npm are installed. On Windows, installation is expected to happen through Talvora's Chocolatey tools.
 
@@ -162,15 +164,15 @@ The session suite exposes `talvora_session_list`, `talvora_session_get`, and `ta
 
 The LocalSystem service enumerates Windows Terminal Services sessions with `WTSEnumerateSessionsW`/`WTSQuerySessionInformationW`. To launch a process as a logged-on user, Talvora obtains the session token with `WTSQueryUserToken`, creates a user environment block with `CreateEnvironmentBlock`, applies caller environment overrides, resolves the executable using the user's PATH/PATHEXT where possible, and calls `CreateProcessAsUserW` on the interactive `winsta0\default` desktop.
 
-The caller can explicitly select a session or let Talvora choose an active logged-on session. Executable, arguments, working directory, environment, visibility, and console behavior are unrestricted. These tools complement LocalSystem process execution; they do not reduce the authority of the existing process/job/PowerShell primitives.
+The caller can explicitly select a session or let Talvora choose an active logged-on session. Executable, arguments, working directory, environment, visibility, and console behavior are general-purpose. These tools complement LocalSystem process execution; they do not reduce the authority of the existing process/job/PowerShell primitives.
 
 ## Python and Docker runtimes
 
 The runtime suite exposes `talvora_python_info`, `talvora_python_run`, `talvora_python_venv_create`, `talvora_pip_install`, `talvora_pip_run`, `talvora_docker_info`, `talvora_docker_ps`, `talvora_docker_images`, `talvora_docker_logs`, `talvora_docker_exec`, `talvora_docker_run`, and `talvora_docker_compose_run`.
 
-Python discovery resolves the service PATH or an explicitly supplied interpreter/Windows `py` launcher, then probes `sys.executable`, version, prefix/base-prefix, virtual-environment state, and `python -m pip --version`. Venv creation uses the standard-library `venv` module. Generic Python and pip runners forward arbitrary argument vectors and environment overrides.
+Python discovery resolves the service PATH or an explicitly supplied interpreter/Windows `py` launcher, then probes `sys.executable`, version, prefix/base-prefix, virtual-environment state, and `python -m pip --version`. Venv creation uses the standard-library `venv` module. Generic Python and pip runners forward caller-supplied argument vectors and environment overrides.
 
-Docker discovery distinguishes CLI presence from engine and Compose availability. Container/image listings use Docker's JSON formatter and are returned as structured rows. Log/exec conveniences sit above unrestricted `docker_run`; Compose similarly preserves arbitrary `docker compose` arguments. Missing Docker is a normal structured state rather than a Talvora startup requirement.
+Docker discovery distinguishes CLI presence from engine and Compose availability. Container/image listings use Docker's JSON formatter and are returned as structured rows. Log/exec conveniences sit above general-purpose `docker_run`; Compose similarly preserves caller-supplied `docker compose` arguments. Missing Docker is a normal structured state rather than a Talvora startup requirement.
 
 ## SQLite application-development layer
 
@@ -180,15 +182,15 @@ Each operation builds a `SqliteConnectionStringBuilder` with pooling disabled. Q
 
 Query results preserve SQLite's dynamic storage classes in a structured cell representation: integer, real, text, blob-as-Base64, or null. Duplicate result-column names are deterministically disambiguated. `maxRows` limits one MCP response and `0` means unlimited.
 
-Schema discovery reads the standard `sqlite_schema` table with bound filters. Online backup uses `SqliteConnection.BackupDatabase`, writes to any accessible destination path, and returns file length plus SHA-256 so callers can verify the artifact. These structured tools add ergonomics without changing the unrestricted process/PowerShell primitives, so external SQLite tools and migration stacks remain fully reachable.
+Schema discovery reads the standard `sqlite_schema` table with bound filters. Online backup uses `SqliteConnection.BackupDatabase`, writes to any accessible destination path, and returns file length plus SHA-256 so callers can verify the artifact. These structured tools add ergonomics without changing the general-purpose process/PowerShell primitives, so external SQLite tools and migration stacks remain fully reachable.
 
 ## Configuration formats and test reports
 
 The configuration-format suite exposes `talvora_dotenv_list`, `talvora_dotenv_get`, `talvora_dotenv_set`, `talvora_dotenv_delete`, `talvora_ini_list`, `talvora_ini_get`, `talvora_ini_set`, `talvora_ini_delete`, `talvora_xml_query`, `talvora_xml_set`, `talvora_xml_delete`, `talvora_yaml_get`, `talvora_yaml_set`, `talvora_yaml_delete`, `talvora_toml_get`, `talvora_toml_set`, `talvora_toml_delete`, and `talvora_test_report_summary`.
 
-Dotenv parsing supports ordinary assignments plus the `export` prefix and quoted values; mutations retain unrelated file content. INI parsing supports global keys, named sections, and both equals/colon separators. XML operations use editable `XmlDocument`/XPath navigators and arbitrary namespace prefix mappings, so elements, attributes, and text nodes can be queried or mutated without a schema allowlist.
+Dotenv parsing supports ordinary assignments plus the `export` prefix and quoted values; mutations retain unrelated file content. INI parsing supports global keys, named sections, and both equals/colon separators. XML operations use editable `XmlDocument`/XPath navigators and caller-supplied namespace prefix mappings, so elements, attributes, and text nodes can be queried or mutated without a schema restriction list.
 
-YAML uses YamlDotNet 18.1.0 and TOML uses Tomlyn 2.10.1. Both formats are projected into a JSON-compatible DOM and reuse the JSON helper's RFC 6901 pointer traversal/mutation logic, so nested object and array paths behave consistently across JSON, YAML, and TOML. Mutations accept JSON text as the value representation, can create missing containers, and can create a backup before writing. Serialization intentionally normalizes the document; comments and original whitespace/quoting are not guaranteed to round-trip. No path, key, or pointer allowlist is introduced.
+YAML uses YamlDotNet 18.1.0 and TOML uses Tomlyn 2.10.1. Both formats are projected into a JSON-compatible DOM and reuse the JSON helper's RFC 6901 pointer traversal/mutation logic, so nested object and array paths behave consistently across JSON, YAML, and TOML. Mutations accept JSON text as the value representation, can create missing containers, and can create a backup before writing. Serialization intentionally normalizes the document; comments and original whitespace/quoting are not guaranteed to round-trip. No path, key, or pointer restriction list is introduced.
 
 The test-report reader detects TRX, JUnit/xUnit-style XML, and NUnit3 roots and maps runner-specific counters and failures to a common summary. It is read-only and accepts any accessible report path.
 
@@ -200,7 +202,7 @@ Targets are explicit and case-insensitive: Process, User, or Machine. Process va
 
 Get returns a structured found/not-found result. List returns deterministic name-sorted entries and supports an optional case-insensitive name query. Set preserves an explicit empty-string value. Delete uses the platform removal semantics and is idempotent for a missing variable.
 
-No environment-variable name allowlist or deny-list is applied. Machine-scope writes therefore use Talvora's LocalSystem authority, and callers can modify any machine environment variable Windows permits that account to change.
+No environment-variable name restriction list or block list is applied. Machine-scope writes therefore use Talvora's LocalSystem authority, and callers can modify any machine environment variable Windows permits that account to change.
 
 ## Windows Event Log queries
 
@@ -210,7 +212,7 @@ List enumerates local log names through the Windows Event Log session, applies a
 
 Query accepts any local log name and XPath expression. `newestFirst=true` uses reverse-direction Event Log reading; `maxEvents` bounds one response so a broad XPath cannot create an unbounded MCP payload. Returned records include the log/provider identity, event ID, record ID, timestamp, level, process/thread IDs, machine/user identity when available, and a best-effort formatted message. If Windows cannot resolve provider message metadata, Talvora keeps the record and returns a null message rather than dropping the event.
 
-No log-name, provider, or event-ID allowlist or deny-list is applied. The dedicated tools are intentionally read-only ergonomics; callers retain the unrestricted process and PowerShell primitives for clearing logs, exporting logs, provider/source management, or other Event Log operations not modeled here.
+No log-name, provider, or event-ID restriction list or block list is applied. The dedicated tools are intentionally read-only ergonomics; callers retain the general-purpose process and PowerShell primitives for clearing logs, exporting logs, provider/source management, or other Event Log operations not modeled here.
 
 ## Windows registry
 
@@ -227,7 +229,7 @@ Supported roots are HKLM, HKCU, HKCR, HKU, HKCC, and HKPD. Callers may explicitl
 
 ExpandString reads use `RegistryValueOptions.DoNotExpandEnvironmentNames`, so the stored representation is returned rather than a service-environment expansion. Subkey/value listings use ordinal sorting for deterministic agent behavior. Missing keys and values return structured not-found/deleted-false results where that makes the operation naturally idempotent.
 
-Because Talvora runs as LocalSystem, HKCU refers to the LocalSystem profile when the installed service executes these tools. Per-user registry work can use HKU with the target user's SID, or the unrestricted process primitive can be used when a different Windows execution context is intentionally required.
+Because Talvora runs as LocalSystem, HKCU refers to the LocalSystem profile when the installed service executes these tools. Per-user registry work can use HKU with the target user's SID, or the general-purpose process primitive can be used when a different Windows execution context is intentionally required.
 
 ## Process inspection and control
 
@@ -237,7 +239,7 @@ List/get use `System.Diagnostics.Process` and return deterministic structured pr
 
 Kill is PID-based, optionally terminates the complete process tree, and waits for exit up to an explicit timeout. The response distinguishes `killed` (a kill request was successfully issued) from `exited` (process termination was observed). A missing/already-exited PID returns an idempotent not-found result.
 
-No PID or process-name allowlist is applied. Therefore the API can target any process accessible to Talvora's LocalSystem service, including processes whose termination may destabilize Windows or Talvora itself.
+No PID or process-name restriction list is applied. Therefore the API can target any process accessible to Talvora's LocalSystem service, including processes whose termination may destabilize Windows or Talvora itself.
 
 ## PowerShell execution
 
@@ -247,7 +249,7 @@ The child process also receives `-NoLogo -NoProfile -NonInteractive -ExecutionPo
 
 Engine selection supports `auto`, `pwsh`, and `windows-powershell`. Auto prefers an existing PowerShell 7 `pwsh.exe` and falls back to the built-in Windows PowerShell executable under the Windows system directory. Talvora does not install PowerShell 7 solely for this tool.
 
-Like `talvora_run_process`, this tool executes as the Talvora LocalSystem service and applies no script or command deny-list.
+Like `talvora_run_process`, this tool executes as the Talvora LocalSystem service and applies no script or command block list.
 
 ## Windows services
 
@@ -255,7 +257,7 @@ The service suite exposes `talvora_service_list`, `talvora_service_get`, `talvor
 
 List/get return structured service name, display name, current status, start type, service type, and control capabilities. Missing services return `found=false` rather than depending on localized shell text. Start/stop/restart are state-aware and wait for the final Running/Stopped state within an explicit timeout.
 
-The dedicated API intentionally applies no service-name allowlist. Therefore it can also target the Talvora service itself; stopping or restarting Talvora can terminate the MCP request that initiated the operation. That is an operational consequence of full capability, not a hidden restriction.
+The dedicated API intentionally applies no service-name restriction list. Therefore it can also target the Talvora service itself; stopping or restarting Talvora can terminate the MCP request that initiated the operation. That is an operational consequence of full capability, not a hidden restriction.
 
 The underlying `ServiceController` package is already supplied by Talvora's Windows service hosting dependency, so this layer adds no new Windows runtime prerequisite.
 

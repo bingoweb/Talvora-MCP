@@ -98,7 +98,7 @@ Sabit kurallar:
 - [x] META2-026 — `/healthz` mcp/mcpDev/mcpAdmin endpointlerini raporlayacak.
 - [x] META2-027 — Source regression her 204 tool'un Full'de ve en az bir focused review kararında olduğunu doğruluyor.
 - [x] META2-028 — Snapshot: Full=204, Development=174, Administration=91.
-- [x] META2-029 — Live regression ortak tool'larda full/dev/admin description + annotation eşitliğini doğruluyor; yalnız visibility fark ediyor.
+- [x] META2-029 — Live regression ortak tool'larda full/dev/admin title + input schema + output schema + description + annotation eşitliğini doğruluyor; yalnız visibility fark ediyor.
 - [x] META2-030 — Development endpoint'ten excluded `talvora_service_list` direct invocation gerçek MCP `Unknown tool` ile reddedildi; bypass gate GREEN.
 
 ### Faz D — Tool-selection eval
@@ -115,14 +115,14 @@ Sabit kurallar:
 
 ### Faz E — Release / live acceptance
 - [x] META2-041 — Talvora Release + Smoke Release build 0 warning / 0 error; metadata source GREEN + surface/selection source GREEN. Geniş eski suite'ler tekrarlanmadı.
-- [ ] META2-042 — Explicit-file runtime commit; `git add .` kullanma.
-- [ ] META2-043 — Runtime commit'i Gitea `origin/main` + GitHub `github/main` push et.
-- [ ] META2-044 — Clean HEAD'den canonical installer üret ve SHA-256 kaydet.
-- [ ] META2-045 — Bağımsız SYSTEM deploy; reconnect sonrası exact-installed sourceCommit doğrula.
-- [ ] META2-046 — Live `/mcp` = 204/204; Dev/Admin counts + no-bypass + metadata hygiene acceptance.
-- [ ] META2-047 — ChatGPT app refresh/reconnect gereksinimini final rapora işle; full ve focused app endpoint kullanım önerisini belgele.
-- [ ] META2-048 — Masaüstü checkpoint/final TXT raporlarını güncelle.
-- [ ] META2-049 — `HANDOFF.md`, `BUG-AUDIT.md`, TODO closeout; docs-only commit'i iki remote'a push et, sırf docs HEAD için redeploy yapma.
+- [x] META2-042 — Explicit-file runtime commits `24eee60` (focused surfaces) + `508e513` (focused tunnel profiles / Control Center integration); `git add .` kullanılmadı.
+- [x] META2-043 — Runtime commits Gitea `origin/main` + GitHub `github/main` üzerine push edildi; iki remote `508e513` ile senkron.
+- [x] META2-044 — Clean `508e513` HEAD canonical installer: 261,823,759 bytes; SHA-256 `9205EB952BBC243AC655391C792FFAF36BF3E1353075B08EE5043F3523E4602B`.
+- [x] META2-045 — Bağımsız SYSTEM deploy tamamlandı; exact-installed `sourceCommit=508e513061e5c34f31c4840903e25ef10324a388`; Service + Tray aynı version root'unda, service Running/Automatic.
+- [x] META2-046 — Live acceptance GREEN: Full=204/204, Development=174, Administration=91; schema/metadata parity + no-bypass + metadata hygiene gates GREEN.
+- [x] META2-047 — ChatGPT refresh/reconnect gereksinimi final rapora işlendi. Full app mevcut tunnel ile korunuyor; focused remote app'ler ayrı tunnel yayınından sonra bağlanacak.
+- [x] META2-048 — Masaüstü `Talvora-META2-Checkpoint-2026-09-20.txt` ve `Talvora-META2-Final-2026-09-20.txt` final live durumla güncellendi.
+- [x] META2-049 — `HANDOFF.md`, `BUG-AUDIT.md`, TODO final closeout tamamlandı; bu üç belge docs-only commit/push ile kapatılacak ve sırf docs HEAD değişti diye runtime redeploy yapılmayacak.
 
 ### Faz F — Focused ChatGPT tunnel publication
 - [x] META2-050 — Kurulu OpenAI `tunnel-client v0.0.14` exact help doğrulandı: her runtime tek `--mcp-server-url` kabul ediyor; mevcut full tunnel aynı anda Dev/Admin path multiplex yapmıyor.
@@ -130,8 +130,8 @@ Sabit kurallar:
 - [x] META2-052 — `talvora-dev` ve `talvora-admin` managed recovery registration'ları eklendi; endpointler sırasıyla `/mcp/dev` ve `/mcp/admin`, ayrı alias/config kimlikleri ve representative protocol probe tool'ları var.
 - [x] META2-053 — Focused registration'lar yalnız kendi tunnel component'ini yönetiyor; ana Talvora Windows service component'i eklenmedi. Generic lifecycle tunnel-only registration desteği kazandı.
 - [x] META2-054 — `FocusedMcpSurfaceSourceRegression.ps1` targeted gate: focused constants/endpoints/counts/registrations/tunnel-only ownership/lifecycle contract GREEN; Tray Release 0 warning / 0 error.
-- [ ] META2-055 — Ayrı remote Dev/Admin tunnel yaratımı için OpenAI Admin credential gerekli. Bu makinede `openai-admin-key.dpapi` mevcut değil; gerçek credential uydurulmayacak veya loglanmayacak.
-- [ ] META2-056 — Admin credential sağlandığında mevcut generic provisioning Dev/Admin için ayrı tunnel oluşturup DPAPI runtime credential + config + ready gate ile tamamlayacak; ardından ChatGPT'de ayrı Dev/Admin app bağlantıları oluşturulabilecek.
+- [ ] META2-055 — **BLOCKED — external prerequisite:** ayrı remote Dev/Admin tunnel yaratımı için OpenAI Admin credential gerekli. Bu makinede `openai-admin-key.dpapi` mevcut değil; gerçek credential uydurulmayacak veya loglanmayacak.
+- [ ] META2-056 — **BLOCKED by META2-055:** Admin credential mevcut olduğunda generic provisioning Dev/Admin için ayrı tunnel + DPAPI runtime credential + config + ready gate oluşturacak; ardından ChatGPT'de ayrı Dev/Admin app bağlantıları kurulabilecek.
 
 ## 1. Ürün hedefi
 

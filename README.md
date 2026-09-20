@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>A Windows-native, full-capability Model Context Protocol development environment.</strong><br />
-  One local service. 198 structured tools. Real Windows control. No artificial capability walls.
+  One local service. 204 structured tools. Full development and administration workflows on Windows.
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
   <img alt="Windows 10/11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4?logo=windows11&logoColor=white">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white">
   <img alt="MCP 2.2.0" src="https://img.shields.io/badge/MCP-2.2.0-111827">
-  <img alt="198 tools" src="https://img.shields.io/badge/tools-198-10B981">
+  <img alt="204 tools" src="https://img.shields.io/badge/tools-204-10B981">
   <img alt="LocalSystem runtime" src="https://img.shields.io/badge/runtime-LocalSystem-8B5CF6">
 </p>
 
@@ -36,15 +36,15 @@
 
 Talvora is a personal Windows development MCP built to let an AI coding client work with the machine as a real development environment instead of a narrow sandbox.
 
-It runs as a single Windows Service under **LocalSystem**, exposes MCP on **loopback only**, and combines machine-readable development tools with unrestricted escape hatches for workflows that do not deserve a special wrapper.
+It runs as a single Windows Service under **LocalSystem**, exposes MCP on **loopback only**, and combines machine-readable development tools with general-purpose execution and administration tools for workflows that do not need a dedicated wrapper.
 
 > **Core idea:** model the common workflows cleanly, but never make the modelled surface the capability boundary.
 
 | | |
 | --- | --- |
 | **Windows-native** | Services, processes, registry, Event Log, interactive sessions, Windows SDK, packaging and signing tools. |
-| **198 MCP tools** | Filesystem, Git, builds, jobs, dev servers, networking, data, diagnostics, toolchains and release engineering. |
-| **Full capability** | No Talvora path, command, host, repository, package, process or service allowlist is used as an artificial restriction layer. |
+| **204 MCP tools** | Filesystem, Git, builds, jobs, dev servers, networking, data, diagnostics, toolchains and release engineering. |
+| **Full capability** | Structured tools do not narrow the underlying service authority; general-purpose execution and administrative workflows remain available. |
 | **Developer-first** | Structured results, deterministic operations, persistent jobs, readiness probes, test summaries, diagnostics and artifact inventory. |
 | **Modern toolchains** | .NET 10, JVM, Go, Rust, Flutter/Dart, Android, Node/npm/pnpm/Yarn/Bun, Python, Docker and Windows native tooling. |
 | **Local-first** | Core MCP stays on `127.0.0.1`; ChatGPT Business can use the separate Secure MCP Tunnel transport when required. |
@@ -58,7 +58,7 @@ flowchart LR
     Tunnel --> MCP
 
     MCP --> Service["Talvora Windows Service<br/>LocalSystem"]
-    Service --> Core["198-tool capability surface"]
+    Service --> Core["204-tool capability surface"]
 
     Core --> OS["Windows + Filesystem"]
     Core --> Dev["Build + Dev Servers + Jobs"]
@@ -79,7 +79,7 @@ The runtime is intentionally simple: one canonical service, one canonical instal
 - Files, directories, hashes, byte/text I/O, search, patch, copy and move
 - Processes, process trees, Windows Services and interactive user sessions
 - Registry, environment variables and Windows Event Logs
-- PowerShell and arbitrary executable launch
+- PowerShell and caller-supplied executable launch
 - TCP listeners/connections, DNS, ping and readiness waits
 
 ### Development orchestration
@@ -100,14 +100,14 @@ The runtime is intentionally simple: one canonical service, one canonical instal
 | **Native** | Go, Rust, Cargo, rustup |
 | **Mobile** | Flutter, Dart, Android SDK, ADB, emulator |
 | **JavaScript** | Node.js, npm, pnpm, Yarn Modern, Bun |
-| **Python** | Interpreter discovery, venv, pip, arbitrary Python execution |
+| **Python** | Interpreter discovery, venv, pip, general-purpose Python execution |
 | **Containers** | Docker, images, logs, exec and Compose |
 
 Talvora's package-management rule on Windows is **Chocolatey**. WinGet is intentionally not part of the production/bootstrap path.
 
 ### Git, repositories & release engineering
 
-Talvora has structured Git inspection plus unrestricted Git execution:
+Talvora has structured Git inspection plus general-purpose Git execution:
 
 `talvora_git_info` · `talvora_git_status` · `talvora_git_diff` · `talvora_git_log` · `talvora_git_branches` · `talvora_git_run`
 
@@ -179,6 +179,15 @@ Local MCP endpoint:
 http://127.0.0.1:7676/mcp
 ```
 
+Focused local MCP endpoints:
+
+```text
+http://127.0.0.1:7676/mcp/dev    # 174-tool development surface
+http://127.0.0.1:7676/mcp/admin  # 91-tool administration surface
+```
+
+The full `/mcp` endpoint remains the backwards-compatible 204-tool surface. Focused endpoints only narrow discovery and invocation for clients that explicitly connect to them; they do not remove capabilities from the full endpoint.
+
 ### 2. Connect ChatGPT Business when needed
 
 The core runtime does **not** require a public listener or an OpenAI API key. For ChatGPT Business, configure the separate Secure MCP Tunnel flow:
@@ -206,7 +215,7 @@ The Windows CI pipeline:
 9. runs the MCP smoke suite against the installed build,
 10. cleans the CI machine.
 
-The current canonical manifest exposes **198 tools**. Runtime identity, installer provenance, tool count and deployed binaries are verified as part of the project's release discipline.
+The current canonical manifest exposes **204 tools**. Runtime identity, installer provenance, full/focused surface counts and deployed binaries are verified as part of the project's release discipline.
 
 ## Reference workstation
 
