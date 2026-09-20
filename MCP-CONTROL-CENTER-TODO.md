@@ -545,7 +545,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #124 — semantic durable replay metadata; adapter receipt persisted in receipt + WAL, forced receipt-loss recovery preserves workspace/symbol/diagnostics, Source Edit 60/60 GREEN.
 - [x] #127 — structural YAML control-file self-scan. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
 - [x] #128 — semantic resource bounds before/while load/generation; progress/workspace cancellation gate + bounded diagnostics + incremental proposal budgets + emergency ceilings, targeted GREEN, Source Edit 61/61 GREEN.
-- [x] #129 — semantic graph concurrency fingerprint/versioning; physical graph revisions + C# membership snapshot + commit guard + SEMANTIC_GRAPH_STALE rollback, targeted GREEN, Source Edit 62/62 GREEN.
+- [x] #129 — semantic graph concurrency fingerprint/versioning; physical graph revisions + analyzer/source-generator binary inputs + C# membership snapshot + commit guard + SEMANTIC_GRAPH_STALE rollback, targeted GREEN, Source Edit 62/62 GREEN.
 - [ ] #130 — workspace-scoped MSBuild/toolchain fidelity.
 - [x] #132 — retired Playwright MCP ownership-aware post-commit upgrade cleanup + idempotent migration marker; targeted installer source contracts GREEN, Installer Release compile 0 warning / 0 error.
 - [x] #133 — canonical deploy fast-task completion observation; launched instance GUID + LastRunTime transition contract, forced-delay live Task Scheduler regression GREEN.

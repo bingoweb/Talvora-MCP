@@ -15,6 +15,7 @@ Status: source remediation is active. Current #121–#171 statuses and counts ar
 - Remaining work covers #159 response budgets; installer/build provenance and rollback; tunnel/Gitea lifecycle; semantic metadata/concurrency/toolchain fidelity; and #165 durable publication.
 - #166 and #167 are not additional defects: their evidence was merged into canonical #147 and #148 respectively.
 - Canonical deploy #109 explicit `--silent` behavior must remain intact during all future installer changes.
+- #129 follow-up: project/solution analyzer ve source-generator binary referansları da semantic graph physical revision snapshot + commit guard kapsamına alındı. Analyzer/generator binary drift artık commit öncesi `SEMANTIC_GRAPH_STALE` ile fail-closed olur. Targeted regression GREEN; full Source Edit 62/62 GREEN; Talvora Release 0 warning / 0 error.
 
 ## Fixed findings
 
