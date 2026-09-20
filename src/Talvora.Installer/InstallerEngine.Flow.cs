@@ -31,6 +31,7 @@ public static async Task<HealthSnapshot> InstallAsync(
 
         string? previousServiceExecutable = null;
         string? previousTrayExecutable = null;
+        InstallerUserStateSnapshot? previousUserState = null;
         var serviceSwitchStarted = false;
 
         try
@@ -123,6 +124,9 @@ public static async Task<HealthSnapshot> InstallAsync(
 
             var health = await WaitForHealthAsync(sourceCommit, cancellationToken);
 
+            previousUserState = await CaptureInstallerUserStateAsync(
+                installUser,
+                cancellationToken);
             progress.Report(new InstallProgress(76, "Sistem tepsisi uygulaması kaydediliyor..."));
             RegisterTrayStartup(trayExecutable, installUser);
             await WriteCurrentStateAsync(
@@ -200,11 +204,39 @@ public static async Task<HealthSnapshot> InstallAsync(
                         "start",
                         ServiceName);
 
+                    if (previousUserState is not null)
+                    {
+                        try
+                        {
+                            await RestoreInstallerUserStateAsync(
+                                previousUserState,
+                                installUser,
+                                rollbackToken);
+                        }
+                        catch (Exception stateRollbackError)
+                        {
+                            InstallerLog.Write(
+                                "User state rollback failed",
+                                stateRollbackError);
+                        }
+                    }
+
                     if (!string.IsNullOrWhiteSpace(previousTrayExecutable) &&
                         File.Exists(previousTrayExecutable))
                     {
-                        RegisterTrayStartup(previousTrayExecutable, installUser);
-                        await StartTrayAsync(previousTrayExecutable, installUser, rollbackToken);
+                        try
+                        {
+                            await StartTrayAsync(
+                                previousTrayExecutable,
+                                installUser,
+                                rollbackToken);
+                        }
+                        catch (Exception trayRollbackError)
+                        {
+                            InstallerLog.Write(
+                                "Tray restart during rollback failed",
+                                trayRollbackError);
+                        }
                     }
                 }
                 catch (Exception rollbackError)

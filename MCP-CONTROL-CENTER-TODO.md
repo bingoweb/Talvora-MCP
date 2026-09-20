@@ -540,7 +540,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #109 — canonical SYSTEM deploy task `Talvora-Setup.exe --silent` çalıştırsın; Session 0 görünmez GUI hang'ini regression ile engelle.
 
 
-## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 14 OPEN)
+## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 13 OPEN)
 
 - [ ] #124 — semantic durable replay metadata.
 - [x] #127 — structural YAML control-file self-scan. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
@@ -554,7 +554,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #136 — ownership-aware legacy Cloudflared cleanup + post-commit retirement boundary; exact service executable identity + targeted installer source regression GREEN.
 - [x] #137 — ast-grep private-cache executable hash revalidation. Targeted RED -> GREEN; 2026-09-20 source audit.
 - [x] #138 — ast-grep exact-version provenance snapshot. Targeted RED -> GREEN; 2026-09-20 source audit.
-- [ ] #139 — installer post-health state/config rollback.
+- [x] #139 — installer post-health state/config rollback; exact file/registry snapshot+restore, dedicated rollback regression GREEN, Installer Release 0 warning / 0 error.
 - [ ] #140 — canonical deploy artifact hash/identity pinning.
 - [x] #144 — corrupt WAL per-transaction isolation + workspace-scoped durable quarantine; targeted Source Edit 52/52 GREEN.
 - [x] #145 — managed-MCP recovery redundancy health/self-heal; ownership corruption fixture GREEN.
