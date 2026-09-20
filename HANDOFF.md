@@ -32,7 +32,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Güncel audit üst özeti: **#121–#186 remediation complete + live verified; deeper audit #187'den devam edecek.**
+- Güncel audit üst özeti: **#121–#186 remediation complete + live verified; #187 source/test fix RED -> GREEN, commit/push/live acceptance pending.**
 
 ## Son tamamlanan bug-fix zinciri
 
@@ -84,9 +84,15 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Canonical installer SHA-256: `F43AB687532B9E5211CD456CB58B484712AE526035F1FB63D8B00A074AB88B35`
 - Gitea + GitHub push GREEN; exact-installed live runtime aynı commit.
 
+### #187 — HTTP mock request/response encoding ayrımı
+- `requestEncoding` incoming request body decode için doğruydu ancak text `defaultBody` response byte'larını da aynı encoding ile üretiyordu; varsayılan response content type UTF-8 kaldığı için örn. UTF-16 request encoding seçimi auto-reply gövdesini bozuyordu.
+- Text default response artık `Reply()` ile tutarlı biçimde UTF-8 üretiliyor; request decode davranışı korunuyor, binary/custom byte yolu `defaultBodyBase64` üzerinden değişmeden kalıyor.
+- Gerçek loopback regression önce RED, minimal fix sonrası `PASS http-mock-request-encoding-does-not-change-response`; tüm `--runtime-bounds-only` gate GREEN.
+- Source/test fix doğrulandı; commit/push/live acceptance pending.
+
 ## Doküman tutarlılığı notu
 
-- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#186 tamamlandı ve canlı doğrulandı; sıradaki audit numarası #187.
+- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#186 tamamlandı ve canlı doğrulandı; #187 source/test fix doğrulandı ve live acceptance bekliyor.
 - Aynı dosyanın daha eski gövde satırlarında ve `MCP-CONTROL-CENTER-TODO.md` içinde tarihsel `pending`, eski `OPEN` veya pre-live ifadeler kalmış olabilir. Bunları yeni oturumda gerçek repo/remote/live durumunun önüne koyma.
 - Eski tamamlanmış bug'ları tekrar test edip yeniden açma; yalnız yeni kanıt veya gerçek regresyon varsa dön.
 
@@ -108,19 +114,20 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 ## NEXT SESSION — kesin devam noktası
 
-**#187 ile yeni deep bug audit turuna başla.**
+**#187 source/test fix'i commit/push/live acceptance ile kapat; ardından #188 deep audit'e geç.**
 
-### Kesinti anındaki #187 WIP — commit etmeden koru
+### #187 doğrulanmış source fix — commit/push/live pending
 
-- Working tree şu anda bilerek **dirty** olabilir; reset/clean/stash/revert yapma.
+- Working tree şu anda #187 source/test fix'i nedeniyle bilerek **dirty**; reset/clean/stash/revert yapma.
 - WIP dosyaları:
   - `src/Talvora/Tools/HttpMockTools.Api.cs`
   - `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Misc.cs`
 - İncelenen aday kök neden: `requestEncoding` yalnız request body decode ayarı olması gerekirken auto-reply `defaultBody` byte encoding'inde de kullanılıyordu. Örneğin `requestEncoding="utf-16"` seçildiğinde response content-type UTF-8 kalırken body UTF-16 byte'larına dönüşebiliyordu.
 - Mevcut WIP patch default text response body üretimini `Encoding.UTF8.GetBytes(defaultBody ?? string.Empty)` olarak ayırıyor; request body decode için `requestEncoding` davranışını koruyor.
 - Aynı WIP içine gerçek loopback regression `HttpMockRequestEncodingDoesNotChangeDefaultResponseEncodingAsync` eklendi.
-- **Henüz bu WIP'i fixed sayma.** Yeni oturumda önce diff'i doğrula, targeted `--runtime-bounds-only` / ilgili HTTP mock regression'ı çalıştır. RED/bug kanıtı ve GREEN sonuç netleşmeden docs/fix commit oluşturma.
-- Test GREEN ise bunu #187 olarak kapat: BUG-AUDIT/TODO/HANDOFF güncelle -> yalnız ilgili source/test/docs dosyalarını stage -> tek bug commit -> Gitea + GitHub push -> runtime-affecting olduğu için canonical installer/deploy -> reconnect -> exact-installed `sourceCommit` doğrulaması.
+- RED kanıtı alındı: UTF-16 request encoding seçildiğinde UTF-8 ilan edilen default response body bozuldu.
+- Minimal fix sonrası targeted `--runtime-bounds-only` GREEN; önceki #185/#186 HTTP mock regressions da GREEN kaldı.
+- Sıradaki iş: BUG-AUDIT/TODO/HANDOFF ile birlikte yalnız ilgili #187 dosyalarını stage et -> tek bug commit -> Gitea + GitHub push -> canonical installer/deploy -> reconnect -> exact-installed `sourceCommit` doğrulaması.
 
 Başlangıç sırası:
 

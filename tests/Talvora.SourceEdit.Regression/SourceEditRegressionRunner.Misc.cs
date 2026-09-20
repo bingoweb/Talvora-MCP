@@ -1288,6 +1288,8 @@ internal static partial class SourceEditRegressionRunner
         Console.WriteLine("PASS http-mock-reply-cancellation-retry");
         await HttpMockStopClosesPendingWithServiceUnavailableAsync();
         Console.WriteLine("PASS http-mock-stop-pending-503");
+        await HttpMockRequestEncodingDoesNotChangeDefaultResponseEncodingAsync();
+        Console.WriteLine("PASS http-mock-request-encoding-does-not-change-response");
     }
 
     private static Task WatcherBoundsAndResyncStateAsync()
@@ -1607,6 +1609,75 @@ internal static partial class SourceEditRegressionRunner
                     response.Dispose();
                 }
             }
+        }
+        finally
+        {
+            _ = HttpMockTools.Stop(
+                started.ListenerId);
+        }
+    }
+
+    private static async Task HttpMockRequestEncodingDoesNotChangeDefaultResponseEncodingAsync()
+    {
+        using var portProbe =
+            new TcpListener(
+                IPAddress.Loopback,
+                0);
+        portProbe.Start();
+        var port =
+            ((IPEndPoint)portProbe.LocalEndpoint).Port;
+        portProbe.Stop();
+
+        var prefix =
+            $"http://127.0.0.1:{port}/";
+        const string requestText = "request-✓";
+        const string responseText = "response-✓";
+        var started =
+            HttpMockTools.Start(
+                [prefix],
+                autoReply: true,
+                defaultBody: responseText,
+                requestEncoding: "utf-16");
+
+        try
+        {
+            using var client =
+                new HttpClient();
+            using var content =
+                new ByteArrayContent(
+                    Encoding.Unicode.GetBytes(requestText));
+            using var response =
+                await client.PostAsync(
+                    prefix,
+                    content);
+            var responseBody =
+                await response.Content.ReadAsStringAsync();
+            AssertEqual(
+                responseText,
+                responseBody,
+                "HTTP mock requestEncoding changed the UTF-8 default response body.");
+
+            TalvoraHttpMockRequest? captured = null;
+            for (var attempt = 0; attempt < 100; attempt++)
+            {
+                captured =
+                    HttpMockTools.Read(
+                        started.ListenerId,
+                        consume: false)
+                    .Requests
+                    .FirstOrDefault();
+                if (captured is not null)
+                {
+                    break;
+                }
+
+                await Task.Delay(20);
+            }
+
+            AssertEqual(
+                requestText,
+                captured?.Body,
+                "HTTP mock requestEncoding no longer decoded the request body.");
         }
         finally
         {

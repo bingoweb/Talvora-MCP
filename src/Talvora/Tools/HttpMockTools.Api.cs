@@ -91,7 +91,7 @@ public static partial class HttpMockTools
         var encoding = Encoding.GetEncoding(requestEncoding);
         var responseBody = defaultBodyBase64 is not null
             ? Convert.FromBase64String(defaultBodyBase64)
-            : encoding.GetBytes(defaultBody ?? string.Empty);
+            : Encoding.UTF8.GetBytes(defaultBody ?? string.Empty);
 
         var listener = new HttpListener();
         var normalizedPrefixes = prefixes
