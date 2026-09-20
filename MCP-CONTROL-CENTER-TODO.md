@@ -587,6 +587,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #181 — Control Center window-placement save ordering: eşzamanlı async save publication semaphore ile serialize, monoton version ile stale queued snapshot skip; targeted source regression GREEN, Tray Release build 0 warning / 0 error; fix `86290c4` Gitea + GitHub'a push edildi ve canonical exact-installed live gate GREEN.
 - [x] #182 — Gitea browser-launch Process ownership: Control Center ve Tray yolları `Process.Start` dönüşünü `using var` ile dispose ediyor; targeted source regression GREEN, Tray Release build 0 warning / 0 error; fix `47bd843` Gitea + GitHub'a push edildi ve canonical exact-installed live gate GREEN.
 - [x] #183 — isolated source-edit worker termination cleanup: ast-grep ve semantic worker timeout/error yolları `Kill` sonrasında bounded `WaitForExitAsync` ile parent process exit'ini bekliyor; staging/response cleanup yarışı kaldırıldı; targeted source regression GREEN, Talvora Release build 0 warning / 0 error; fix `4ab89d1` Gitea + GitHub'a push edildi ve canonical exact-installed live gate GREEN.
+- [x] #184 — HTTP mock CTS dispose race: runtime `LifetimeToken` constructor'da cache'leniyor ve in-flight async yollar dispose edilen CTS'nin `Token` getter'ına geri dönmüyor; targeted runtime-bounds regression GREEN, Talvora Release build 0 warning / 0 error; commit/push/live gate pending.
 
 ## Faz 14 — Canonical Source Edit Transaction Engine (2026-09-20)
 

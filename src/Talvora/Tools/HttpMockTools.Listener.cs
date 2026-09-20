@@ -10,7 +10,7 @@ public static partial class HttpMockTools
 {
 private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
     {
-        var cancellationToken = runtime.Cancellation.Token;
+        var cancellationToken = runtime.LifetimeToken;
 
         while (!cancellationToken.IsCancellationRequested &&
                runtime.Listener.IsListening)
@@ -113,7 +113,7 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
                 pendingSlotHeld =
                     await runtime.PendingSlots.WaitAsync(
                             0,
-                            runtime.Cancellation.Token)
+                            runtime.LifetimeToken)
                         .ConfigureAwait(false);
                 if (!pendingSlotHeld)
                 {
@@ -140,7 +140,7 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
                 _ = await TrySendResponseAsync(
                     pending,
                     runtime.DefaultResponse,
-                    runtime.Cancellation.Token);
+                    runtime.LifetimeToken);
                 return;
             }
 
@@ -162,7 +162,7 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
             runtime.Enqueue(capture with { PendingResponse = true });
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(
-                runtime.Cancellation.Token);
+                runtime.LifetimeToken);
             if (runtime.PendingResponseTimeoutSeconds > 0)
             {
                 timeout.CancelAfter(
@@ -268,7 +268,7 @@ private static async Task ListenLoopAsync(TalvoraHttpMockRuntime runtime)
             {
                 var read = await request.InputStream.ReadAsync(
                     buffer,
-                    runtime.Cancellation.Token);
+                    runtime.LifetimeToken);
                 if (read == 0)
                 {
                     break;

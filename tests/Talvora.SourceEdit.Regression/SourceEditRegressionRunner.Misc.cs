@@ -1364,13 +1364,23 @@ internal static partial class SourceEditRegressionRunner
             RequestEncoding = Encoding.UTF8,
             PendingResponseTimeoutSeconds = 5,
             StartedAtUtc = DateTime.UtcNow,
-            Cancellation = new CancellationTokenSource(),
             HandlerSlots = handlerSlots,
             PendingSlots = pendingSlots,
         };
+        CancellationToken? lifetimeToken = null;
 
         try
         {
+            var lifetimeTokenProperty =
+                typeof(TalvoraHttpMockRuntime).GetProperty(
+                    "LifetimeToken");
+            Assert(
+                lifetimeTokenProperty is not null,
+                "HTTP mock runtime does not expose a cached lifetime token.");
+            lifetimeToken =
+                (CancellationToken)lifetimeTokenProperty!
+                    .GetValue(runtime)!;
+
             runtime.Enqueue(CreateMockRequestForBounds(1));
             runtime.Enqueue(CreateMockRequestForBounds(2));
             runtime.Enqueue(CreateMockRequestForBounds(3));
@@ -1415,6 +1425,9 @@ internal static partial class SourceEditRegressionRunner
             baselineBytes,
             HttpMockTools.GlobalQueuedRetainedBytes,
             "HTTP mock retained-memory accounting leaked after dispose.");
+        Assert(
+            lifetimeToken is { IsCancellationRequested: true },
+            "HTTP mock cached lifetime token was not safely cancelled across runtime disposal.");
         return Task.CompletedTask;
     }
 

@@ -92,6 +92,13 @@ internal sealed class TalvoraPendingHttpMockRequest
 
 internal sealed class TalvoraHttpMockRuntime : IDisposable
 {
+    private readonly CancellationTokenSource _cancellation = new();
+
+    public TalvoraHttpMockRuntime()
+    {
+        LifetimeToken = _cancellation.Token;
+    }
+
     public required string ListenerId { get; init; }
     public required HttpListener Listener { get; init; }
     public required string[] Prefixes { get; init; }
@@ -105,7 +112,7 @@ internal sealed class TalvoraHttpMockRuntime : IDisposable
     public required Encoding RequestEncoding { get; init; }
     public required int PendingResponseTimeoutSeconds { get; init; }
     public required DateTime StartedAtUtc { get; init; }
-    public required CancellationTokenSource Cancellation { get; init; }
+    public CancellationToken LifetimeToken { get; }
     public required SemaphoreSlim HandlerSlots { get; init; }
     public required SemaphoreSlim PendingSlots { get; init; }
 
@@ -168,7 +175,7 @@ internal sealed class TalvoraHttpMockRuntime : IDisposable
             retainedBytes);
         Requests.Enqueue(request);
 
-        while ((Cancellation.IsCancellationRequested ||
+        while ((LifetimeToken.IsCancellationRequested ||
                 Volatile.Read(ref QueuedRequests) > MaxQueuedRequests ||
                 HttpMockTools.GlobalQueuedRequests >
                     HttpMockTools.AbsoluteGlobalQueuedRequests ||
@@ -203,7 +210,7 @@ internal sealed class TalvoraHttpMockRuntime : IDisposable
 
     public void Dispose()
     {
-        try { Cancellation.Cancel(); } catch (ObjectDisposedException) { }
+        try { _cancellation.Cancel(); } catch (ObjectDisposedException) { }
 
         foreach (var pair in Pending.ToArray())
         {
@@ -236,7 +243,7 @@ internal sealed class TalvoraHttpMockRuntime : IDisposable
 
         try { Listener.Stop(); } catch (Exception ex) when (ex is ObjectDisposedException or HttpListenerException) { }
         try { Listener.Close(); } catch (Exception ex) when (ex is ObjectDisposedException or HttpListenerException) { }
-        Cancellation.Dispose();
+        _cancellation.Dispose();
     }
 }
 

@@ -18,6 +18,7 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 - #181 tamamlandı: eşzamanlı window-placement kayıtları semaphore ile serialize ediliyor ve monoton save-version ile yalnız en yeni bekleyen snapshot yazılıyor; fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 - #182 tamamlandı: Control Center ve Tray Gitea browser launch yolları dönen `Process` nesnesini sahiplenip dispose ediyor; regression GREEN, fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 - #183 tamamlandı: isolated ast-grep ve semantic worker timeout/error cleanup yolları `Process.Kill` sonrasında bounded `WaitForExitAsync` ile parent process exit'ini bekliyor; targeted regression GREEN, Talvora Release build 0 warning / 0 error, fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
+- #184 source fix hazır: HTTP mock runtime cancellation token'ı CTS dispose edilmeden önce cache'leniyor; in-flight handler'ların stop/dispose ile yarışırken dispose edilmiş `CancellationTokenSource.Token` getter'ına erişmesi engelleniyor; runtime-bounds regression GREEN, Talvora Release build 0 warning / 0 error; commit/push/live gate sırada.
 
 ## #178 — CLOSED / LIVE VERIFIED
 
@@ -36,9 +37,9 @@ Düzeltme ve kanıt:
 
 ### Aktif devam noktası
 
-1. Deeper audit'e #184'ten devam et; çalışma ağacındaki HTTP mock değişikliklerinin doğrulanmış bir bug'a ait olup olmadığını çağrı zinciri ve testle belirle.
-2. Doğrulanmışsa yalnız o bug'ın source/test/docs dosyalarını tek commit yap; iki remote push + exact-installed live deploy uygula.
-3. Açık doğrulanmış finding kalmadığında final durum doğrulamasından sonra masaüstünde `bitti.txt` oluştur.
+1. #184 source/test/docs değişikliklerini tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
+2. Temiz #184 HEAD'den canonical installer build + manifest-bound live deploy yap; exact-installed runtime commit'ini doğrula.
+3. #184 live acceptance'ını docs-only closeout ile kapat; ardından deeper audit'e #185'ten devam et.
 
 ## #179 — CLOSED / LIVE VERIFIED
 
@@ -115,6 +116,18 @@ Düzeltme ve kanıt:
 - Fix commit: `4ab89d19b29927066464bc5fd6178d224552d51d`; Gitea `origin/main` ve GitHub `github/main` aynı commit'te.
 - Clean detached worktree canonical installer SHA-256: `0DD13BEA0867B36096FF805978FACE4C272275F107BAD31EB6AC306335BDEA64`.
 - Manifest-bound SYSTEM deploy sonrası service **Running / Automatic** ve exact-installed `system_info.sourceCommit=4ab89d19b29927066464bc5fd6178d224552d51d`.
+
+## #184 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+
+Kök neden:
+- `talvora_http_mock_stop`, runtime'ı registry'den çıkarıp `Dispose()` ederken fire-and-forget listener/request handler task'ları hâlâ devam edebiliyor.
+- Eski handler kodu çeşitli await noktalarında yeniden `runtime.Cancellation.Token` okuyordu. CTS dispose edilmişse `Token` getter'ı `ObjectDisposedException` atabildiği için normal stop akışı handler hata yoluna düşebiliyordu.
+
+Düzeltme ve kanıt:
+- Runtime kendi CTS'sini özel alanda sahipleniyor ve `LifetimeToken` değerini constructor'da, dispose öncesi yalnız bir kez cache'liyor.
+- Listener, pending-slot, response, linked-timeout ve request-body I/O yolları CTS getter yerine cache'lenmiş immutable token kopyasını kullanıyor.
+- `--runtime-bounds-only`: watcher + HTTP mock resource-bounds regression GREEN; cached lifetime token dispose sonrasında cancelled olarak güvenle okunuyor.
+- `Talvora` Release build: **0 warning / 0 error**.
 
 ## Sabit çalışma kuralları
 

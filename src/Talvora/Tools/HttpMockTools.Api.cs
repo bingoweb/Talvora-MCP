@@ -132,7 +132,6 @@ public static partial class HttpMockTools
             RequestEncoding = encoding,
             PendingResponseTimeoutSeconds = effectivePendingResponseTimeoutSeconds,
             StartedAtUtc = DateTime.UtcNow,
-            Cancellation = new CancellationTokenSource(),
             HandlerSlots = new SemaphoreSlim(
                 effectiveMaxConcurrentRequests,
                 effectiveMaxConcurrentRequests),
