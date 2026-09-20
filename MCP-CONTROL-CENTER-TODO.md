@@ -540,7 +540,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #109 — canonical SYSTEM deploy task `Talvora-Setup.exe --silent` çalıştırsın; Session 0 görünmez GUI hang'ini regression ile engelle.
 
 
-## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 10 OPEN)
+## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 9 OPEN)
 
 - [x] #124 — semantic durable replay metadata; adapter receipt persisted in receipt + WAL, forced receipt-loss recovery preserves workspace/symbol/diagnostics, Source Edit 60/60 GREEN.
 - [x] #127 — structural YAML control-file self-scan. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
@@ -561,7 +561,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #148 — immutable canonical installer source snapshot / HEAD + index-tree + full runtime input identity; source contract GREEN, real canonical build GREEN.
 - [x] #149 — bounded background-job logs + retention/quota; targeted fixture GREEN.
 - [x] #150 — bounded job-read response/pagination; continuation/generation regression GREEN.
-- [ ] #151 — remote tunnel create durable pending/reconciliation.
+- [x] #151 — remote tunnel create durable pending/reconciliation; request-marker fail-closed retry contract GREEN, Tray Release 0 warning / 0 error.
 - [x] #152 — collision-proof tunnel config/credential/state paths; fallback path probe GREEN.
 - [ ] #153 — tunnel-client update transaction + rollback.
 - [x] #154 — primary managed-MCP registry self-heal after backup recovery; temp-path recovery fixture GREEN.

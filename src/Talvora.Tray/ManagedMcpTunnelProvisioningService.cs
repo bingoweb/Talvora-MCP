@@ -100,16 +100,24 @@ internal static partial class ManagedMcpTunnelProvisioningService
         var hasRuntime = IsRuntimeCredentialUsable(credentialPath);
         var hasAdmin = ControlCenterAdminCredentialStore.Exists();
         var hasReusableRuntime = hasRuntime || HasReusableRuntimeSource();
+        var hasPendingTunnelId =
+            !hasTunnelId &&
+            HasPendingRemoteTunnelId(
+                registration.Id);
 
         var canAutoProvision =
             hasReusableRuntime &&
-            (hasTunnelId || hasAdmin);
+            (hasTunnelId ||
+             hasPendingTunnelId ||
+             hasAdmin);
 
         var summary = hasTunnelId && hasConfig && hasRuntime
             ? "Tünel yapılandırması hazır."
             : !hasReusableRuntime
                 ? "Yeniden kullanılabilir Runtime API key bulunamadı."
-                : !hasTunnelId && !hasAdmin
+                : !hasTunnelId &&
+                  !hasPendingTunnelId &&
+                  !hasAdmin
                     ? "Yeni tünel oluşturmak için OpenAI Admin API key gerekiyor."
                     : "Tünel otomatik olarak hazırlanabilir.";
 
@@ -133,6 +141,8 @@ internal static partial class ManagedMcpTunnelProvisioningService
         foreach (var registration in registry.Mcps)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            TryDeleteCommittedPendingProvision(
+                registration);
 
             var assessment = Assess(registration);
             if (!assessment.Required ||
@@ -206,23 +216,22 @@ internal static partial class ManagedMcpTunnelProvisioningService
             var tunnelId = registration.Tunnel.TunnelId;
             if (!IsTunnelId(tunnelId))
             {
-                if (!ControlCenterAdminCredentialStore.Exists())
+                if (ControlCenterAdminCredentialStore.Exists())
                 {
-                    throw new InvalidOperationException(
-                        "Yeni tünel oluşturmak için OpenAI Admin API key gerekiyor.");
+                    adminKey =
+                        ControlCenterAdminCredentialStore.Read();
                 }
-
-                adminKey = ControlCenterAdminCredentialStore.Read();
 
                 var scope = await GetOrDiscoverScopeAsync(
                     reference,
                     runtimeKey,
                     cancellationToken).ConfigureAwait(false);
 
-                tunnelId = await CreateRemoteTunnelAsync(
+                tunnelId = await ResolveOrCreatePendingRemoteTunnelAsync(
                     reference.Config,
                     registration,
                     scope,
+                    runtimeKey,
                     adminKey,
                     cancellationToken).ConfigureAwait(false);
 
@@ -286,6 +295,10 @@ internal static partial class ManagedMcpTunnelProvisioningService
             await ManagedMcpRegistryCoordinator.UpsertAsync(
                 updatedRegistration,
                 cancellationToken).ConfigureAwait(false);
+
+            await DeletePendingProvisionAfterCommitAsync(
+                registration.Id,
+                tunnelId!).ConfigureAwait(false);
 
             await ConnectExistingAsync(
                 updatedRegistration,
@@ -869,7 +882,8 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
     private static async Task<string> CreateRemoteTunnelAsync(
         BusinessConfig clientConfig,
-        ManagedMcpRegistration registration,
+        string tunnelName,
+        string tunnelDescription,
         TunnelProvisioningScope scope,
         string adminKey,
         CancellationToken cancellationToken)
@@ -881,9 +895,9 @@ internal static partial class ManagedMcpTunnelProvisioningService
             "tunnels",
             "create",
             "--name",
-            $"{registration.DisplayName} Tunnel",
+            tunnelName,
             "--description",
-            $"Routes ChatGPT connector traffic to {registration.DisplayName}.",
+            tunnelDescription,
         };
 
         foreach (var organizationId in scope.OrganizationIds)
