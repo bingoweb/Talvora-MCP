@@ -2,17 +2,17 @@
 
 Last updated: 2026-09-20
 Branch: main
-Current runtime source HEAD: `7ea7024d7da09074d1e84d6e10610d991d2edcc3`.
-Current exact-installed audit runtime: `7ea7024d7da09074d1e84d6e10610d991d2edcc3`
+Current runtime source HEAD: `949272eb05d78f956d1b2f34cbb760bacd88d13b`.
+Current exact-installed audit runtime: `949272eb05d78f956d1b2f34cbb760bacd88d13b`
 Canonical exact-installed tool count: 204 unique tools
-Status: #121–#175 source remediation is complete; #175 commit/push/live acceptance is pending.
+Status: #121–#175 source remediation and live acceptance are complete; deeper audit continues for newly discoverable defects.
 
 ## Current remediation status summary — 2026-09-20
 
 - Historical implementation/fix work through #120 includes the completed Control Center, installer/deploy, Playwright CLI migration, Source Edit core, Routing Contract v3, structural adapter and Roslyn semantic adapter work described below.
 - The current deep-audit range #121–#175 contains 55 numbered records: **0 OPEN**, **52 FIXED**, plus **#143 CLOSED FALSE POSITIVE** and **#166/#167 CLOSED DUPLICATE**.
 - Fixed records passed their documented targeted regression or contract gates. Latest combined Source Edit suite remains **63/63 GREEN**; #174 has its own response-bounds regression.
-- #174 is committed, pushed to both remotes and live. #175 source/test gates are GREEN; remaining release work is its commit/push/live acceptance.
+- #174 and #175 are committed, pushed to both remotes and live. No numbered source bug is currently open.
 - #166 and #167 are not additional defects: their evidence was merged into canonical #147 and #148 respectively.
 - Canonical deploy #109 explicit `--silent` behavior must remain intact during all future installer changes.
 - #129 follow-up: project/solution analyzer ve source-generator binary referansları da semantic graph physical revision snapshot + commit guard kapsamına alındı. Analyzer/generator binary drift artık commit öncesi `SEMANTIC_GRAPH_STALE` ile fail-closed olur. Targeted regression GREEN; full Source Edit 62/62 GREEN; Talvora Release 0 warning / 0 error.
@@ -565,3 +565,4 @@ source -> targeted test -> canonical installer build -> deploy -> system_info/PI
 
 175. [FIXED 2026-09-20 Legacy Generic File Read/List Response Budgets] #159/#174 sonrasında generic compatibility yüzeyleri ayrıca incelendi. `talvora_read_text` doğrudan `File.ReadAllTextAsync` ile bütün dosyayı limitsiz materialize ediyor; `talvora_list(recursive=true)` ise `EnumerateFileSystemInfos(..., AllDirectories).Select(...).ToArray()` ile bütün ağacı limitsiz response'a çeviriyor ve cancellation kabul etmiyordu. Düzeltme legacy dönüş tiplerini koruyor: `read_text` canonical bounded `ReadTextRange` streaming yolunu kullanıyor ve whole-file response finite line/character bütçesine sığmazsa sessiz truncation yerine `talvora_read_text_range` continuation'a yönlendiren açık hata veriyor. `talvora_list` finite entry + response-character budget altında lazy enumerate ediyor, cancellation kabul ediyor ve bütçe aşılırsa `talvora_find_files resultOffset/nextResultOffset` pagination'a açıkça yönlendiriyor. Internal bounded-list helper production ceiling'i değiştirmeden küçük regression fixture ile overflow yolunun test edilmesini sağlıyor.
 2026-09-20 #175 source evidence: genişletilmiş `--response-bounds-only` regression küçük legacy whole-file read'in içeriğini aynen koruduğunu, 4 MiB üzeri text response'un bounded reader tarafından reddedilip `talvora_read_text_range`a yönlendirildiğini, küçük legacy list'in çalıştığını ve düşük test budget'ında over-budget list'in `talvora_find_files`a yönlendirildiğini doğruladı: **TALVORA RESPONSE BOUNDS REGRESSION GREEN**. Talvora Release build **0 warning / 0 error**; `git diff --check` exit 0. Commit/push/live acceptance pending.
+2026-09-20 #175 live acceptance: fix commit `949272eb05d78f956d1b2f34cbb760bacd88d13b` Gitea ve GitHub'a push edildi. Clean HEAD üzerinden canonical installer build exit 0; artifact **257,296,143 bytes**, SHA-256 `C40DEFF26F87B5E19159C50C6B218D452259963C9907797E83ABEA806E930CA5`. Manifest-bound independent SYSTEM deploy sırasında beklenen MCP disconnect oluştu; reconnect sonrasında service **Running / Automatic** ve exact-installed `sourceCommit=949272eb05d78f956d1b2f34cbb760bacd88d13b`. Canlı küçük `talvora_read_text` ve `talvora_list` compatibility smoke GREEN. 4,200,000 karakterlik temporary text üzerinde legacy `talvora_read_text` kontrollü reddedildi; aynı dosyada canonical `talvora_read_text_range` tam **4,194,304** karakter döndürüp `responseLimited=true`, `nextStartLine=1`, `nextStartCharacter=4194304`, `endReached=false` verdi. Temporary fixtures temizlendi.

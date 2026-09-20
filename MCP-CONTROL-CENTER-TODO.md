@@ -578,7 +578,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #172 — canonical installer npm metadata envelope compatibility; exactly-one object/array normalization + identity/integrity fail-closed, InstallerAstGrepMetadataRegression 5/5 GREEN.
 - [x] #173 — canonical artifacts-path Tray pre-bundle deps lookup; source fix + NativeInstallerSourceRegression GREEN; clean `c54d1d6` canonical build + manifest-bound live deploy + exact-installed source verification GREEN.
 - [x] #174 — residual structured/list tools: finite absolute ceilings + deterministic continuation metadata; response-bounds regression GREEN; fix/test commits pushed to Gitea+GitHub; canonical installer/deploy exact-installed `7ea7024` live GREEN.
-- [x] #175 — legacy `talvora_read_text` / `talvora_list` finite response budgets: bounded streaming/entry+character ceilings, explicit paginated-alternative guidance, cancellation, targeted response-bounds regression GREEN and Release build 0 warning / 0 error; commit/push/live gate pending.
+- [x] #175 — legacy `talvora_read_text` / `talvora_list` finite response budgets: bounded streaming/entry+character ceilings, explicit paginated-alternative guidance, cancellation, targeted response-bounds regression GREEN; fix commit `949272e` pushed to Gitea+GitHub and canonical exact-installed live gate GREEN.
 
 ## Faz 14 — Canonical Source Edit Transaction Engine (2026-09-20)
 
