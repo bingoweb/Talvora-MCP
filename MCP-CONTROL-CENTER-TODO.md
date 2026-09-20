@@ -540,7 +540,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #109 — canonical SYSTEM deploy task `Talvora-Setup.exe --silent` çalıştırsın; Session 0 görünmez GUI hang'ini regression ile engelle.
 
 
-## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 13 OPEN)
+## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 12 OPEN)
 
 - [ ] #124 — semantic durable replay metadata.
 - [x] #127 — structural YAML control-file self-scan. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
@@ -558,7 +558,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [ ] #140 — canonical deploy artifact hash/identity pinning.
 - [x] #144 — corrupt WAL per-transaction isolation + workspace-scoped durable quarantine; targeted Source Edit 52/52 GREEN.
 - [x] #145 — managed-MCP recovery redundancy health/self-heal; ownership corruption fixture GREEN.
-- [ ] #148 — immutable canonical installer source snapshot / HEAD identity.
+- [x] #148 — immutable canonical installer source snapshot / HEAD + index-tree + full runtime input identity; source contract GREEN, real canonical build GREEN.
 - [x] #149 — bounded background-job logs + retention/quota; targeted fixture GREEN.
 - [x] #150 — bounded job-read response/pagination; continuation/generation regression GREEN.
 - [ ] #151 — remote tunnel create durable pending/reconciliation.

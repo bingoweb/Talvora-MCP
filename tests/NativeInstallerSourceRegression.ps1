@@ -215,6 +215,15 @@ $result = [pscustomobject]@{
         $buildInstallerScript -match 'if \(-not \[string\]::IsNullOrWhiteSpace\(\$WorkingTreeFingerprint\)\)' -and
         $buildInstallerScript -match '\$SourceCommit \+= ''-dirty-'' \+ \$WorkingTreeFingerprint\.Substring\(0, 12\)'
     )
+    BuildScriptUsesImmutableSourceSnapshot = (
+        $buildInstallerScript.Contains('New-RuntimeBuildSourceSnapshot') -and
+        $buildInstallerScript.Contains('$SourceSnapshotRoot') -and
+        $buildInstallerScript.Contains('Get-GitHeadObjectId') -and
+        $buildInstallerScript.Contains('Get-GitIndexTreeId') -and
+        $buildInstallerScript.Contains('Get-RuntimeBuildInputFingerprint') -and
+        $buildInstallerScript.Contains('runtimeInputsSha256') -and
+        $buildInstallerScript.Contains('source-snapshot.json')
+    )
     HttpMockToolContract = (
         $httpMockTools -match 'talvora_http_mock_start' -and
         $httpMockTools -match 'talvora_http_mock_get' -and

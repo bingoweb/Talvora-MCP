@@ -10,11 +10,12 @@ Add-Type -AssemblyName System.IO.Compression
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $ArtifactsRoot = Join-Path $RepoRoot 'artifacts\installer'
 $WorkRoot = Join-Path $RepoRoot 'artifacts\installer-work'
+$SourceSnapshotRoot = Join-Path $WorkRoot 'source-snapshot'
 $PayloadRoot = Join-Path $WorkRoot 'payload'
 $ServicePayload = Join-Path $PayloadRoot 'Service'
 $TrayPayload = Join-Path $PayloadRoot 'Tray'
-$InstallerProject = Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'
-$PayloadZip = Join-Path $RepoRoot 'src\Talvora.Installer\Payload.zip'
+$InstallerProject = Join-Path $SourceSnapshotRoot 'src\Talvora.Installer\Talvora.Installer.csproj'
+$PayloadZip = Join-Path $SourceSnapshotRoot 'src\Talvora.Installer\Payload.zip'
 
 function Get-PayloadFileManifest {
     param(
@@ -331,6 +332,179 @@ function Get-WorkingTreeFingerprint {
     }
 }
 
+function Get-RuntimeBuildInputPaths {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Root
+    )
+
+    $paths = @(
+        & git -C $Root ls-files --cached --others --exclude-standard --
+    )
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to enumerate canonical runtime build inputs.'
+    }
+
+    return @(
+        $paths |
+            Where-Object {
+                -not [string]::IsNullOrWhiteSpace($_) -and
+                (Test-RuntimeBuildInput -RelativePath $_)
+            } |
+            ForEach-Object { $_.Replace('\', '/') } |
+            Sort-Object -Unique
+    )
+}
+
+function Get-RuntimeBuildInputFingerprint {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Root,
+
+        [Parameter(Mandatory = $true)]
+        [string[]] $RelativePaths
+    )
+
+    $entries = New-Object System.Collections.Generic.List[string]
+    foreach ($relativePath in $RelativePaths) {
+        $nativeRelativePath = $relativePath.Replace(
+            '/',
+            [IO.Path]::DirectorySeparatorChar)
+        $fullPath = Join-Path $Root $nativeRelativePath
+        if (Test-Path -LiteralPath $fullPath -PathType Leaf) {
+            $fileHash = (
+                Get-FileHash -LiteralPath $fullPath -Algorithm SHA256
+            ).Hash.ToLowerInvariant()
+            $entries.Add(
+                [string]::Concat(
+                    $relativePath,
+                    [char]9,
+                    $fileHash))
+        }
+        elseif (Test-Path -LiteralPath $fullPath) {
+            throw "Runtime build input is not a regular file: $relativePath"
+        }
+        else {
+            $entries.Add(
+                [string]::Concat(
+                    $relativePath,
+                    [char]9,
+                    '<deleted>'))
+        }
+    }
+
+    $fingerprintText = [string]::Join(
+        [Environment]::NewLine,
+        $entries)
+    $payload = [Text.UTF8Encoding]::new($false).GetBytes(
+        $fingerprintText)
+    $hasher = [Security.Cryptography.SHA256]::Create()
+    try {
+        return -join (
+            $hasher.ComputeHash($payload) |
+                ForEach-Object { $_.ToString('x2') })
+    }
+    finally {
+        $hasher.Dispose()
+    }
+}
+
+function Get-GitHeadObjectId {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Root
+    )
+
+    $value = (& git -C $Root rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or
+        [string]::IsNullOrWhiteSpace($value)) {
+        throw 'Unable to resolve canonical source HEAD object id.'
+    }
+
+    return $value
+}
+
+function Get-GitIndexTreeId {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Root
+    )
+
+    $value = (& git -C $Root write-tree).Trim()
+    if ($LASTEXITCODE -ne 0 -or
+        [string]::IsNullOrWhiteSpace($value)) {
+        throw 'Unable to resolve canonical source index tree identity.'
+    }
+
+    return $value
+}
+
+function New-RuntimeBuildSourceSnapshot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Root,
+
+        [Parameter(Mandatory = $true)]
+        [string] $Destination
+    )
+
+    $head = Get-GitHeadObjectId -Root $Root
+    $indexTree = Get-GitIndexTreeId -Root $Root
+    $paths = @(Get-RuntimeBuildInputPaths -Root $Root)
+    $fingerprint = Get-RuntimeBuildInputFingerprint -Root $Root -RelativePaths $paths
+
+    Remove-Item -LiteralPath $Destination -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+
+    foreach ($relativePath in $paths) {
+        $nativeRelativePath = $relativePath.Replace(
+            '/',
+            [IO.Path]::DirectorySeparatorChar)
+        $sourcePath = Join-Path $Root $nativeRelativePath
+        if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
+            continue
+        }
+
+        $destinationPath = Join-Path $Destination $nativeRelativePath
+        $destinationDirectory = Split-Path -Parent $destinationPath
+        New-Item -ItemType Directory -Path $destinationDirectory -Force | Out-Null
+        Copy-Item -LiteralPath $sourcePath -Destination $destinationPath -Force
+    }
+
+    $snapshotFingerprint = Get-RuntimeBuildInputFingerprint -Root $Destination -RelativePaths $paths
+    $currentHead = Get-GitHeadObjectId -Root $Root
+    $currentIndexTree = Get-GitIndexTreeId -Root $Root
+    $currentPaths = @(Get-RuntimeBuildInputPaths -Root $Root)
+    $currentFingerprint = Get-RuntimeBuildInputFingerprint -Root $Root -RelativePaths $currentPaths
+
+    if (-not [string]::Equals(
+            $head,
+            $currentHead,
+            [StringComparison]::Ordinal) -or
+        -not [string]::Equals(
+            $indexTree,
+            $currentIndexTree,
+            [StringComparison]::Ordinal) -or
+        -not [string]::Equals(
+            $fingerprint,
+            $currentFingerprint,
+            [StringComparison]::Ordinal) -or
+        -not [string]::Equals(
+            $fingerprint,
+            $snapshotFingerprint,
+            [StringComparison]::Ordinal)) {
+        throw 'Canonical runtime source changed while the immutable build snapshot was being captured. Re-run the build from a stable source state.'
+    }
+
+    return [pscustomobject]@{
+        Root = $Destination
+        HeadCommit = $head
+        IndexTree = $indexTree
+        RuntimeInputsSha256 = $fingerprint
+        FileCount = $paths.Count
+    }
+}
+
 function Assert-RuntimeBuildInputsUnchanged {
     param(
         [Parameter(Mandatory = $true)]
@@ -500,10 +674,8 @@ Remove-Item $PayloadZip -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $ArtifactsRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $ServicePayload -Force | Out-Null
 New-Item -ItemType Directory -Path $TrayPayload -Force | Out-Null
-$SourceCommit = (& git -C $RepoRoot rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($SourceCommit)) {
-    throw 'Unable to resolve local Talvora source commit.'
-}
+$SourceHeadCommit = Get-GitHeadObjectId -Root $RepoRoot
+$SourceCommit = $SourceHeadCommit
 
 $SourceStatus = @(& git -C $RepoRoot status --porcelain=v1 --untracked-files=all)
 if ($LASTEXITCODE -ne 0) {
@@ -514,10 +686,18 @@ if (-not [string]::IsNullOrWhiteSpace($WorkingTreeFingerprint)) {
     $SourceCommit += '-dirty-' + $WorkingTreeFingerprint.Substring(0, 12)
 }
 
+$SourceBuildSnapshot = New-RuntimeBuildSourceSnapshot -Root $RepoRoot -Destination $SourceSnapshotRoot
+if (-not [string]::Equals(
+        $SourceHeadCommit,
+        $SourceBuildSnapshot.HeadCommit,
+        [StringComparison]::Ordinal)) {
+    throw 'Canonical source HEAD changed before immutable source snapshot capture completed.'
+}
+
 Write-Host 'Publishing Talvora service...' -ForegroundColor Cyan
 $serviceArgs = @(
     'publish',
-    (Join-Path $RepoRoot 'src\Talvora\Talvora.csproj'),
+    (Join-Path $SourceSnapshotRoot 'src\Talvora\Talvora.csproj'),
     '-c','Release',
     '-r',$RuntimeIdentifier,
     '--self-contained','true',
@@ -533,7 +713,7 @@ Assert-RuntimeBuildInputsUnchanged -Root $RepoRoot -ExpectedFingerprint $Working
 Write-Host 'Publishing Talvora tray...' -ForegroundColor Cyan
 $trayArgs = @(
     'publish',
-    (Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'),
+    (Join-Path $SourceSnapshotRoot 'src\Talvora.Tray\Talvora.Tray.csproj'),
     '-c','Release',
     '-r',$RuntimeIdentifier,
     '--self-contained','true',
@@ -641,12 +821,12 @@ $dependencyProvenance = [ordered]@{
         [ordered]@{
             name = 'Talvora'
             project = 'src/Talvora/Talvora.csproj'
-            packages = @(Get-ResolvedPackageManifest -ProjectPath (Join-Path $RepoRoot 'src\Talvora\Talvora.csproj'))
+            packages = @(Get-ResolvedPackageManifest -ProjectPath (Join-Path $SourceSnapshotRoot 'src\Talvora\Talvora.csproj'))
         },
         [ordered]@{
             name = 'Talvora.Tray'
             project = 'src/Talvora.Tray/Talvora.Tray.csproj'
-            packages = @(Get-ResolvedPackageManifest -ProjectPath (Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
+            packages = @(Get-ResolvedPackageManifest -ProjectPath (Join-Path $SourceSnapshotRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
         }
     )
 }
@@ -674,11 +854,33 @@ $SourceCommitManifest = [pscustomobject]@{
     Length = [long](Get-Item -LiteralPath $SourceCommitFile).Length
 }
 
+$SourceSnapshotFile = Join-Path $PayloadRoot 'source-snapshot.json'
+$SourceSnapshotProvenance = [ordered]@{
+    schemaVersion = 1
+    capturedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
+    headCommit = $SourceBuildSnapshot.HeadCommit
+    indexTree = $SourceBuildSnapshot.IndexTree
+    runtimeInputsSha256 = $SourceBuildSnapshot.RuntimeInputsSha256
+    runtimeInputFileCount = $SourceBuildSnapshot.FileCount
+    workingTreeFingerprint = $WorkingTreeFingerprint
+}
+[IO.File]::WriteAllText(
+    $SourceSnapshotFile,
+    ($SourceSnapshotProvenance | ConvertTo-Json -Depth 8),
+    [Text.UTF8Encoding]::new($false))
+
+$SourceSnapshotManifest = [pscustomobject]@{
+    FullPath = $SourceSnapshotFile
+    ArchivePath = 'source-snapshot.json'
+    Length = [long](Get-Item -LiteralPath $SourceSnapshotFile).Length
+}
+
 $PayloadManifest = @(
     $ServicePayloadManifest
     $TrayPayloadManifest
     $ResolvedDependenciesManifest
     $SourceCommitManifest
+    $SourceSnapshotManifest
 )
 
 Write-Host 'Creating embedded installer payload...' -ForegroundColor Cyan
