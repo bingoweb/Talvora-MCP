@@ -1290,6 +1290,67 @@ internal static partial class SourceEditRegressionRunner
         Console.WriteLine("PASS http-mock-stop-pending-503");
         await HttpMockRequestEncodingDoesNotChangeDefaultResponseEncodingAsync();
         Console.WriteLine("PASS http-mock-request-encoding-does-not-change-response");
+        await SqliteZeroTimeoutIsRejectedAsync();
+        Console.WriteLine("PASS sqlite-zero-timeout-rejected");
+    }
+
+    private static async Task SqliteZeroTimeoutIsRejectedAsync()
+    {
+        static async Task AssertRejectedAsync(
+            Func<Task> action,
+            string operation)
+        {
+            var rejected = false;
+            try
+            {
+                await action();
+            }
+            catch (ArgumentOutOfRangeException ex)
+                when (ex.ParamName == "timeoutSeconds")
+            {
+                rejected = true;
+            }
+
+            Assert(
+                rejected,
+                $"SQLite {operation} accepted timeoutSeconds=0, which disables the provider lock timeout.");
+        }
+
+        await AssertRejectedAsync(
+            async () =>
+            {
+                _ = await SqliteTools.Query(
+                    ":memory:",
+                    "SELECT 1;",
+                    timeoutSeconds: 0);
+            },
+            "query");
+        await AssertRejectedAsync(
+            async () =>
+            {
+                _ = await SqliteTools.Execute(
+                    ":memory:",
+                    "CREATE TABLE t(value INTEGER);",
+                    timeoutSeconds: 0);
+            },
+            "execute");
+        await AssertRejectedAsync(
+            async () =>
+            {
+                _ = await SqliteTools.Schema(
+                    ":memory:",
+                    timeoutSeconds: 0);
+            },
+            "schema");
+        await AssertRejectedAsync(
+            async () =>
+            {
+                _ = await SqliteTools.Backup(
+                    "source-does-not-matter.sqlite",
+                    "destination-does-not-matter.sqlite",
+                    timeoutSeconds: 0);
+            },
+            "backup");
     }
 
     private static Task WatcherBoundsAndResyncStateAsync()

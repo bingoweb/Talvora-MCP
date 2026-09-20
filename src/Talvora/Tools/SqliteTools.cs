@@ -561,7 +561,7 @@ public static class SqliteTools
     private static void ValidateTimeout(
         int timeoutSeconds)
     {
-        if (timeoutSeconds < 0)
+        if (timeoutSeconds <= 0)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(timeoutSeconds));

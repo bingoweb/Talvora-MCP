@@ -32,7 +32,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Güncel audit üst özeti: **#121–#188 remediation complete + live verified; #189 SQLite zero-timeout WIP local GREEN, commit/push/live acceptance pending.**
+- Güncel audit üst özeti: **#121–#188 remediation complete + live verified; #189 SQLite zero-timeout fix local GREEN, commit/push/live acceptance pending.**
 
 ## Son tamamlanan bug-fix zinciri
 
@@ -101,12 +101,12 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Canonical clean-worktree installer SHA-256: `ABB9D1D074D2AB22CB36FB279DC647916CE9183D2E72CE437A1837C015AA1AEF`.
 - Manifest-bound SYSTEM deploy sonrası exact-installed runtime aynı commit'i bildiriyor; #188 live verified.
 
-### #189 WIP — SQLite zero-timeout lock wait
+### #189 — SQLite zero-timeout lock wait — local GREEN / live pending
 - `src/Talvora/Tools/SqliteTools.cs` ve `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Misc.cs` içindeki mevcut dirty değişiklikler bilerek korunuyor.
 - Microsoft.Data.Sqlite 10.0.12'de timeout 0 no-timeout anlamına geliyor. İzole locked-DB fixture timeout 1'de yaklaşık 1.1 s sonra SQLITE_BUSY döndürdü; timeout 0 + 1.5 s cancellation token 6 s dış process bütçesine kadar dönmedi.
 - Minimal WIP guard `ValidateTimeout` için `timeoutSeconds <= 0`; dört SQLite yüzeyini bağlantı açmadan koruyor.
 - `PASS sqlite-zero-timeout-rejected`; targeted `--runtime-bounds-only` GREEN.
-- Sıradaki iş: #188 docs-only closeout commit/push sonrası bu iki source/test dosyasını #189 belgeleriyle ayrı commit et, iki remote'a push et, canonical build/deploy ve exact-installed live fast-fail doğrulaması yap.
+- Sıradaki iş: bu iki source/test dosyasını #189 belgeleriyle ayrı commit et, iki remote'a push et, canonical build/deploy ve exact-installed live fast-fail doğrulaması yap.
 
 ## Doküman tutarlılığı notu
 
@@ -140,10 +140,10 @@ Başlangıç sırası:
 2. `git status --short` ile tree'nin temiz olduğunu doğrula.
 3. `HEAD`, `origin/main`, `github/main` durumunu kontrol et.
 4. `talvora_system_info.sourceCommit` ile canlı runtime baseline'ını doğrula.
-5. `BUG-AUDIT.md` üst CURRENT özetini oku; #121–#187'yi tekrar tarama.
-6. #188 için henüz derin incelenmemiş çağrı zincirlerinden devam et. Öncelik: async/await ve cancellation edge'leri, process/service lifecycle, HTTP mock/watch/job cleanup, SQLite transaction/locking, reconnect/retry/backoff, dashboard/backend stale state, Windows path/session/encoding, resource ownership ve restart persistence.
+5. `BUG-AUDIT.md` üst CURRENT özetini oku; #121–#188'i tekrar tarama.
+6. #189 source/test diff'ini koru; commit/push/live acceptance tamamlandıktan sonra #190 için henüz derin incelenmemiş çağrı zincirlerinden devam et. Öncelik: async/await ve cancellation edge'leri, process/service lifecycle, HTTP mock/watch/job cleanup, SQLite transaction/locking, reconnect/retry/backoff, dashboard/backend stale state, Windows path/session/encoding, resource ownership ve restart persistence.
 7. Şüpheyi bug diye yazmadan önce gerçek çağrı zinciri veya minimal reproduction ile doğrula.
-8. İlk doğrulanmış #188 bulgusunu hemen kullanıcıya bildir; ardından minimal fix + targeted regression uygula.
+8. #189'u live verified yaptıktan sonra ilk doğrulanmış #190 bulgusunu hemen kullanıcıya bildir; ardından minimal fix + targeted regression uygula.
 9. Fix sonrası docs -> commit -> Gitea push -> GitHub push -> gerekiyorsa canonical live deploy sırasını tamamla.
 10. Sonraki bug'a ancak önceki bug tamamen kapandıktan sonra geç.
 
