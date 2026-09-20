@@ -8,10 +8,10 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 
 - Repository: `C:\Users\tayla\Talvora-MCP`
 - Branch: `main`
-- Last runtime-affecting fix commit: `cb68396a16b22f6829ea16f5d82751366f834e86` (`fix: stabilize HTTP mock cancellation lifetime`).
+- Last runtime-affecting fix commit: `43d2228738a32836f9a0a80b737be069d89fe59c` (`fix: allow HTTP mock reply retry after cancellation`).
 - Gitea `origin/main` ve GitHub `github/main`: her bug closeout commit'inden sonra birlikte güncellenir.
 - Canlı Talvora service: **Running / Automatic**.
-- Exact-installed runtime source commit: `cb68396a16b22f6829ea16f5d82751366f834e86`.
+- Exact-installed runtime source commit: `43d2228738a32836f9a0a80b737be069d89fe59c`.
 - #178 tamamlandı: manual-stop persistence Windows SessionId bazlı dosyaya ayrıldı; targeted regression GREEN; fix commit Gitea + GitHub'a push edildi ve canonical live deploy exact-installed olarak doğrulandı.
 - #179 tamamlandı: Control Center exit artık window-placement yazımını shutdown öncesi tamamlıyor; regression GREEN, fix iki remote'a push edildi ve canonical exact-installed live deploy doğrulandı.
 - #180 tamamlandı: Control Center detay ekranındaki Gitea browser launch hatası artık beklenen shell exception'larını yakalayıp kullanıcıya bildiriyor; targeted regression GREEN, Tray Release build 0 warning / 0 error, fix iki remote'a push edildi ve canonical exact-installed live deploy doğrulandı.
@@ -19,7 +19,7 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 - #182 tamamlandı: Control Center ve Tray Gitea browser launch yolları dönen `Process` nesnesini sahiplenip dispose ediyor; regression GREEN, fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 - #183 tamamlandı: isolated ast-grep ve semantic worker timeout/error cleanup yolları `Process.Kill` sonrasında bounded `WaitForExitAsync` ile parent process exit'ini bekliyor; targeted regression GREEN, Talvora Release build 0 warning / 0 error, fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 - #184 tamamlandı: HTTP mock runtime cancellation token'ı CTS dispose edilmeden önce cache'leniyor; in-flight handler'ların stop/dispose ile yarışırken dispose edilmiş `CancellationTokenSource.Token` getter'ına erişmesi engelleniyor; runtime-bounds regression GREEN, Talvora Release build 0 warning / 0 error, fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
-- #185 source fix hazır: HTTP mock manual reply gönderimi iptal/hata ile tamamlanmazsa `Replied` claim atomik olarak serbest bırakılıyor; aynı pending isteğe retry artık mümkün. Targeted integration regression RED -> GREEN, Talvora Release build 0 warning / 0 error; commit/push/live gate sırada.
+- #185 tamamlandı: HTTP mock manual reply gönderimi iptal/hata ile tamamlanmazsa `Replied` claim atomik olarak serbest bırakılıyor; aynı pending isteğe retry mümkün. Targeted integration regression RED -> GREEN, Talvora Release build 0 warning / 0 error; fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 
 ## #178 — CLOSED / LIVE VERIFIED
 
@@ -38,9 +38,9 @@ Düzeltme ve kanıt:
 
 ### Aktif devam noktası
 
-1. #185 source/test/docs değişikliklerini tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
-2. Temiz #185 HEAD'den canonical installer build + manifest-bound live deploy yap; exact-installed runtime commit'ini doğrula.
-3. #185 live acceptance'ını docs-only closeout ile kapat; ardından deeper audit'e #186'dan devam et.
+1. Deeper audit'e #186'dan devam et; öncelikle HTTP mock listener/handler ownership, stop/drain ve semaphore lifecycle çağrı zincirini incele.
+2. Sonraki doğrulanmış bug varsa tek bug source/test/docs commit'i, iki remote push ve exact-installed live deploy uygula.
+3. Açık doğrulanmış finding kalmadığında final durum doğrulamasından sonra masaüstünde `bitti.txt` oluştur.
 
 ## #179 — CLOSED / LIVE VERIFIED
 
@@ -133,7 +133,7 @@ Düzeltme ve kanıt:
 - Clean detached worktree canonical installer SHA-256: `8216DCC27966C3CA87FDC5C206B7C2B727D87B8325D3F52713CE7F62411CB7FA`.
 - Manifest-bound SYSTEM deploy sonrası service **Running / Automatic** ve exact-installed `system_info.sourceCommit=cb68396a16b22f6829ea16f5d82751366f834e86`.
 
-## #185 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
+## #185 — CLOSED / LIVE VERIFIED
 
 Kök neden:
 - `TrySendResponseAsync`, response I/O başlamadan önce `pending.Replied` için 0 -> 1 claim alıyor.
@@ -145,6 +145,9 @@ Düzeltme ve kanıt:
 - Fix sonrası aynı testte cancelled ilk attempt ardından ikinci reply `retry-ok` yanıtını client'a ulaştırıyor; `--runtime-bounds-only` GREEN.
 - Regression ayrıca normal full-suite listesine `http-mock-reply-cancellation-retry` olarak kaydedildi.
 - `Talvora` Release build: **0 warning / 0 error**.
+- Fix commit: `43d2228738a32836f9a0a80b737be069d89fe59c`; Gitea `origin/main` ve GitHub `github/main` aynı commit'te.
+- Canonical installer SHA-256: `C8371E97D3303F61402D9163896C7B261899072A2CA23D974C03C4EF07DF39CE`.
+- Manifest-bound independent SYSTEM deploy sonrası exact-installed `system_info.sourceCommit=43d2228738a32836f9a0a80b737be069d89fe59c`.
 
 ## Sabit çalışma kuralları
 
