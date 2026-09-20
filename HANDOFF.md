@@ -8,14 +8,15 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Çalışma ağacı: **dirty yalnız #190 docs closeout / public-metadata hygiene nedeniyle**; security source/test commit'i ayrı kapatıldı. Reset/clean/stash/revert yapma.
+- Çalışma ağacı: bu final docs-only closeout commit'i sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
 - Son runtime-affecting commit: `689a7ba` — `security: harden secret persistence and logging`; Gitea + GitHub `main` üzerine push edildi.
-- Mevcut exact-installed runtime: `d8f04696a1b1ef9dd8b60dc19796b0ca88ce163b` — security commit henüz canonical deploy edilmedi.
+- Exact-installed canonical runtime artifact source commit: `1d388ab4055a0db725005d6c5af4af8174e5fdaa`; bu commit security runtime değişikliklerini içerir.
+- Canonical installer SHA-256: `6CFA67594FDC8709F2773F214E7077882486B9D03FA4F8FDCF89A19E8A55F9D5`; artifact size: 261,792,015 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
 - Handoff resetinden hemen önce docs HEAD `10ab9ad1994e2af8fe5402bf230822687dc51b13` idi; `origin/main` ve `github/main` aynı commit'teydi. Bu docs closeout, runtime-affecting `60c5e9a` fix'inden sonradır.
-- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=d8f04696a1b1ef9dd8b60dc19796b0ca88ce163b` bildiriyor.
-- Bu HANDOFF reset commit'i yalnız dokümantasyondur; canlı runtime commit'ini sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
+- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=1d388ab4055a0db725005d6c5af4af8174e5fdaa` bildiriyor.
+- Bu final HANDOFF closeout commit'i yalnız dokümantasyondur ve exact-installed `1d388ab` sonrasında gelecektir; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
 
@@ -33,7 +34,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Güncel audit üst özeti: **#121–#189 remediation complete + live verified; #190 privacy/security hardening commit/push + source gates GREEN, canonical live acceptance pending.**
+- Güncel audit üst özeti: **#121–#190 remediation complete + live verified; privacy/security hardening tam capability korunarak kapatıldı.**
 
 ## Son tamamlanan bug-fix zinciri
 
@@ -109,7 +110,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - `PASS sqlite-zero-timeout-rejected`; targeted `--runtime-bounds-only` GREEN.
 - #189 kapanmıştır.
 
-### #190 — Privacy & Security Hardening — committed/pushed / live pending
+### #190 — Privacy & Security Hardening — LIVE VERIFIED
 - Talvora'nın tool/capability yüzeyi kısıtlanmadı.
 - Persistent `FileLog` ve Control Center raw-log görünümü ortak secret redaction kullanıyor.
 - Interactive-user process handoff `request.json` dosyasını deserialize sonrası hemen siliyor; 24 saatlik stale-run cleanup active lease'i koruyor.
@@ -119,11 +120,13 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Dedicated `--privacy-security-only` smoke ve privacy/security source regression GREEN; Tray Release build 0 warning / 0 error.
 - 266 dosyalık high-confidence tracked-tree secret scan 0 bulgu.
 - Security commit `689a7ba` iki remote'a push edildi.
-- Sıradaki iş: docs closeout commit -> clean canonical installer/deploy -> exact-installed live acceptance.
+- Clean `1d388ab` HEAD canonical installer SHA-256 `6CFA67594FDC8709F2773F214E7077882486B9D03FA4F8FDCF89A19E8A55F9D5`; SYSTEM deploy GREEN ve exact-installed runtime aynı commit'i bildiriyor.
+- Installed `Talvora.Shared.dll` live redaction probe GREEN; MCP surface 204/204 unique tool.
+- #190 kapanmıştır.
 
 ## Doküman tutarlılığı notu
 
-- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#189 tamamlandı ve canlı doğrulandı; #190 source/test commit'i push edildi, yalnız canonical live acceptance ve docs closeout kaldı.
+- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#190 tamamlandı ve canlı doğrulandı.
 - Aynı dosyanın daha eski gövde satırlarında ve `MCP-CONTROL-CENTER-TODO.md` içinde tarihsel `pending`, eski `OPEN` veya pre-live ifadeler kalmış olabilir. Bunları yeni oturumda gerçek repo/remote/live durumunun önüne koyma.
 - Eski tamamlanmış bug'ları tekrar test edip yeniden açma; yalnız yeni kanıt veya gerçek regresyon varsa dön.
 
@@ -145,7 +148,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 ## NEXT SESSION — kesin devam noktası
 
-**#190 privacy/security hardening'i canonical live acceptance ile kapat; ardından deep audit'e devam et.**
+**Privacy/security hardening tamamlandı. Sonraki yeni doğrulanmış bulgudan deep audit'e devam et.**
 
 Başlangıç sırası:
 
@@ -154,9 +157,9 @@ Başlangıç sırası:
 3. `HEAD`, `origin/main`, `github/main` durumunu kontrol et.
 4. `talvora_system_info.sourceCommit` ile canlı runtime baseline'ını doğrula.
 5. `BUG-AUDIT.md` üst CURRENT özetini oku; #121–#188'i tekrar tarama.
-6. #190 security commit `689a7ba` iki remote'dadır. Targeted privacy smoke/source regression + Tray build sonucunu gereksiz tekrar etme. Docs closeout sonrası clean HEAD'den canonical installer/deploy yap ve live kabulü tamamla.
-7. Şüpheyi bug diye yazmadan önce gerçek çağrı zinciri veya minimal reproduction ile doğrula.
-8. #190 live verified olduktan sonra deep audit'teki ilk yeni doğrulanmış bulguyu kullanıcıya bildir; ardından minimal fix + targeted regression uygula.
+6. #190 privacy/security hardening'i tekrar test etme; yeni kanıt veya gerçek regresyon yoksa kapalı kabul et.
+7. Deep audit'te ilk yeni doğrulanmış bulguyu kullanıcıya bildir; şüpheyi bug diye yazmadan önce gerçek çağrı zinciri veya minimal reproduction ile doğrula.
+8. Her yeni bulguda minimal fix + targeted regression uygula.
 9. Fix sonrası docs -> commit -> Gitea push -> GitHub push -> gerekiyorsa canonical live deploy sırasını tamamla.
 10. Sonraki bug'a ancak önceki bug tamamen kapandıktan sonra geç.
 

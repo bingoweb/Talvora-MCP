@@ -19,8 +19,8 @@ Ana ilke: Talvora'nın mevcut tool/capability yüzeyi, unrestricted escape-hatch
 - [x] SEC-010 — Public dokümanlarda gereksiz kullanıcı/makine path/identity örneklerini `%USERPROFILE%`, `%APPDATA%`, `%LOCALAPPDATA%` ve `<interactive-user>` biçimlerine genelleştir.
 - [x] SEC-011 — Kaynak targeted gate: `TALVORA PRIVACY SECURITY GREEN` + `TALVORA PRIVACY SECURITY SOURCE REGRESSION GREEN`; Tray Release build 0 warning / 0 error.
 - [x] SEC-012 — Explicit-file security commit `689a7ba` oluşturuldu ve Gitea + GitHub `main` üzerine push edildi.
-- [ ] SEC-013 — Canonical installer/deploy ile exact-installed runtime'a al; MCP reconnect sonrası `talvora_system_info.sourceCommit` ile commit eşleşmesini doğrula.
-- [ ] SEC-014 — Live log/tunnel davranışında secret-free acceptance kontrolü yap ve handoff/BUG-AUDIT'i kapat.
+- [x] SEC-013 — Clean `1d388ab` HEAD'den canonical installer üretildi (SHA-256 `6CFA67594FDC8709F2773F214E7077882486B9D03FA4F8FDCF89A19E8A55F9D5`) ve SYSTEM deploy sonrası `talvora_system_info.sourceCommit=1d388ab4055a0db725005d6c5af4af8174e5fdaa` doğrulandı.
+- [x] SEC-014 — Exact-installed `Talvora.Shared.dll` redaction probe secret-benzeri değeri kaldırıp normal diagnostik marker'ı korudu; MCP surface 204/204 unique tool olarak değişmeden kaldı. Handoff/BUG-AUDIT live acceptance ile kapatıldı.
 
 ## 1. Ürün hedefi
 
