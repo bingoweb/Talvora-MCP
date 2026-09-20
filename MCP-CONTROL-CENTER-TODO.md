@@ -49,9 +49,9 @@ Sabit kurallar:
 - [x] META-013 — External örnekler `http_request`, `git_run`, PowerShell/package/network runners open-world policy ile kilitlendi.
 - [x] META-014 — Tool surface invariant policy/test içinde exact 204 unique tool olarak korunuyor; tool API şemaları değiştirilmedi.
 - [x] META-015 — Talvora Release build 0 warning / 0 error; Smoke Release build 0 warning / 0 error; `TALVORA MCP METADATA POLICY SOURCE GREEN`.
-- [ ] META-016 — Canonical installer/deploy sonrası exact-installed `tools/list` ile live acceptance yap; annotation dağılımını ve description hygiene'ı ölç.
-- [ ] META-017 — Bulguları `HANDOFF.md` ve `BUG-AUDIT.md` yaşayan kayıtlara işle; runtime-affecting commit'i Gitea + GitHub'a push et.
-- [ ] META-018 — Windows Masaüstü raporunu final live sayılarıyla güncelle.
+- [x] META-016 — Final canonical deploy `6a31805`: 204/204 unique tool; 56 open-world / 148 closed-world; annotation omitted=0; legacy description terimleri 0; `TALVORA MCP METADATA POLICY LIVE GREEN`. Installer SHA-256 `C42FFEF7D0720D057CFC4ABED2DACEED2318C0CB841FDA8B730DE70DA1027A4E`.
+- [x] META-017 — #191 bulguları `HANDOFF.md` ve `BUG-AUDIT.md` yaşayan kayıtlara işlendi; runtime commits `8b16760` + `6a31805` Gitea ve GitHub `main` üzerine push edildi.
+- [x] META-018 — Windows Masaüstü `Talvora-ChatGPT-Cyber-Risk-Audit-2026-09-20.txt` final live sayıları, commit ve installer kimliğiyle güncellendi.
 
 ## 1. Ürün hedefi
 
