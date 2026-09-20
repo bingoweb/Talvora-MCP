@@ -540,7 +540,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #109 — canonical SYSTEM deploy task `Talvora-Setup.exe --silent` çalıştırsın; Session 0 görünmez GUI hang'ini regression ile engelle.
 
 
-## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 11 OPEN)
+## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 10 OPEN)
 
 - [x] #124 — semantic durable replay metadata; adapter receipt persisted in receipt + WAL, forced receipt-loss recovery preserves workspace/symbol/diagnostics, Source Edit 60/60 GREEN.
 - [x] #127 — structural YAML control-file self-scan. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
@@ -573,7 +573,7 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #160 — overall process timeout includes post-parent pipe drain; inherited-pipe regression GREEN.
 - [x] #163 — FileSystemWatcher overflow/resync completeness state; targeted runtime-bounds regression GREEN.
 - [x] #164 — bounded watcher/HTTP-mock queues, inflight and pending work; global backpressure/accounting regression GREEN.
-- [ ] #165 — crash-durable AtomicFile publication.
+- [x] #165 — crash-durable AtomicFile staged publication; WriteThrough + Flush(true) + MoveFileExW WriteThrough primary/backup, permanent runtime regression GREEN, Shared build 0 warning / 0 error.
 - [ ] #169 — immutable dependency provenance snapshot tied to publish.
 
 ## Faz 14 — Canonical Source Edit Transaction Engine (2026-09-20)
