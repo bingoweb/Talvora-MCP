@@ -76,6 +76,18 @@ internal static partial class SourceEditRegressionRunner
                     "App/Use.cs")),
             "Semantic rename changed unrelated formatting/newlines in the reference document.");
 
+        var durableStore =
+            new SourceEditTransactionStore();
+        var durableReceiptPath =
+            durableStore.GetReceiptPath(
+                transactionId);
+        Assert(
+            File.Exists(
+                durableReceiptPath),
+            "Semantic rename did not persist the initial durable source-edit receipt.");
+        File.Delete(
+            durableReceiptPath);
+
         var replay =
             await RenameAsync(
                 fixture,
@@ -94,6 +106,33 @@ internal static partial class SourceEditRegressionRunner
             replay.Transaction.Replayed,
             replay.Transaction.Error?.Message ??
             "Semantic durable replay failed.");
+        Assert(
+            replay.Workspace is not null &&
+            first.Workspace is not null &&
+            replay.Workspace == first.Workspace,
+            "Semantic durable replay lost or changed workspace receipt metadata.");
+        Assert(
+            replay.Symbol is not null &&
+            first.Symbol is not null &&
+            replay.Symbol.Name == first.Symbol.Name &&
+            replay.Symbol.NewName == first.Symbol.NewName &&
+            replay.Symbol.Kind == first.Symbol.Kind &&
+            replay.Symbol.Display == first.Symbol.Display &&
+            replay.Symbol.IdentityHash ==
+                first.Symbol.IdentityHash &&
+            replay.Symbol.ProjectPaths.SequenceEqual(
+                first.Symbol.ProjectPaths) &&
+            replay.Symbol.DeclarationPaths.SequenceEqual(
+                first.Symbol.DeclarationPaths),
+            "Semantic durable replay lost or changed symbol receipt metadata.");
+        Assert(
+            replay.Diagnostics.SequenceEqual(
+                first.Diagnostics),
+            "Semantic durable replay lost or changed diagnostic receipt metadata.");
+        Assert(
+            File.Exists(
+                durableReceiptPath),
+            "Semantic WAL recovery did not reconstruct the durable source-edit receipt.");
     }
 
     private static async Task SemanticProjectScopePromotesContainingSolutionAsync()

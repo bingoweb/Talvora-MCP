@@ -27,7 +27,10 @@ internal sealed record SourceEditJournalPlan(
     bool ValidateSyntax,
     IReadOnlyList<SourceEditJournalFilePlan> Files,
     IReadOnlyList<SourceEditValidationResult> Validation,
-    IReadOnlyList<SourceEditDirectoryIdentity>? DirectoryIdentities);
+    IReadOnlyList<SourceEditDirectoryIdentity>? DirectoryIdentities)
+{
+    public string? AdapterReceiptJson { get; init; }
+}
 
 internal sealed record SourceEditJournalState(
     SourceEditJournalPlan Plan,
@@ -43,6 +46,51 @@ internal sealed record SourceEditTransactionTombstone(
     string WorkspaceRoot,
     string TerminalStatus,
     DateTimeOffset RetiredUtc);
+
+internal sealed record SourceEditPersistedReceipt(
+    bool Success,
+    string TransactionId,
+    string Status,
+    bool Replayed,
+    string? WorkspaceRoot,
+    string? RequestHash,
+    IReadOnlyList<SourceEditFileReceipt> Files,
+    IReadOnlyList<SourceEditValidationResult> Validation,
+    IReadOnlyList<SourceEditWarning> Warnings,
+    SourceEditError? Error,
+    string? AdapterReceiptJson = null)
+{
+    public static SourceEditPersistedReceipt FromResult(
+        SourceEditTransactionResult result) =>
+        new(
+            result.Success,
+            result.TransactionId,
+            result.Status,
+            result.Replayed,
+            result.WorkspaceRoot,
+            result.RequestHash,
+            result.Files,
+            result.Validation,
+            result.Warnings,
+            result.Error,
+            result.AdapterReceiptJson);
+
+    public SourceEditTransactionResult ToResult() =>
+        new(
+            Success,
+            TransactionId,
+            Status,
+            Replayed,
+            WorkspaceRoot,
+            RequestHash,
+            Files,
+            Validation,
+            Warnings,
+            Error)
+        {
+            AdapterReceiptJson = AdapterReceiptJson,
+        };
+}
 
 internal sealed record SourceEditJournalPayload(
     int SchemaVersion,
@@ -117,7 +165,8 @@ internal sealed class SourceEditTransactionStore
 
     public SourceEditJournalPlan CreatePlan(
         SourceEditPreparedTransaction prepared,
-        IReadOnlyList<SourceEditDirectoryIdentity> directoryIdentities)
+        IReadOnlyList<SourceEditDirectoryIdentity> directoryIdentities,
+        string? adapterReceiptJson)
     {
         var files = prepared.Files
             .Select(file =>
@@ -150,7 +199,10 @@ internal sealed class SourceEditTransactionStore
             prepared.ChangeSet.ValidateSyntax,
             files,
             prepared.Validation,
-            directoryIdentities);
+            directoryIdentities)
+        {
+            AdapterReceiptJson = adapterReceiptJson,
+        };
     }
 
     public async Task AppendPreparedAsync(
@@ -370,10 +422,12 @@ internal sealed class SourceEditTransactionStore
                 bufferSize: 64 * 1024,
                 options: FileOptions.Asynchronous |
                          FileOptions.SequentialScan);
-            return await JsonSerializer.DeserializeAsync<SourceEditTransactionResult>(
-                stream,
-                ReceiptJsonOptions,
-                cancellationToken);
+            var persisted =
+                await JsonSerializer.DeserializeAsync<SourceEditPersistedReceipt>(
+                    stream,
+                    ReceiptJsonOptions,
+                    cancellationToken);
+            return persisted?.ToResult();
         }
         catch (Exception ex) when (
             ex is IOException or JsonException)
@@ -434,7 +488,7 @@ internal sealed class SourceEditTransactionStore
         try
         {
             var bytes = JsonSerializer.SerializeToUtf8Bytes(
-                result,
+                SourceEditPersistedReceipt.FromResult(result),
                 ReceiptJsonOptions);
             await using (var stream = new FileStream(
                              tempPath,

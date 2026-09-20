@@ -327,7 +327,8 @@ internal sealed class SourceEditEngine
         string requestHash,
         bool validateSyntax,
         Func<string, CancellationToken, Task<IReadOnlyList<SourceEditChangeInput>>> generateChanges,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<string?>? adapterReceiptProvider = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(requestHash);
         ArgumentNullException.ThrowIfNull(generateChanges);
@@ -398,7 +399,8 @@ internal sealed class SourceEditEngine
                         validateSyntax,
                         requestHash,
                         token);
-                });
+                },
+                adapterReceiptProvider);
         }
         catch (SourceEditDomainException ex)
         {
@@ -462,7 +464,8 @@ internal sealed class SourceEditEngine
         string workspaceRoot,
         string requestHash,
         CancellationToken cancellationToken,
-        Func<CancellationToken, Task<NormalizedSourceEditChangeSet>> normalize)
+        Func<CancellationToken, Task<NormalizedSourceEditChangeSet>> normalize,
+        Func<string?>? adapterReceiptProvider = null)
     {
         var receipt =
             await store.TryReadReceiptAsync(
@@ -530,10 +533,13 @@ internal sealed class SourceEditEngine
         NormalizedSourceEditChangeSet changeSet;
         IReadOnlyList<SourceEditValidationResult> validation;
         SourceEditPreparedTransaction prepared;
+        string? adapterReceiptJson = null;
 
         try
         {
             changeSet = await normalize(cancellationToken);
+            adapterReceiptJson =
+                adapterReceiptProvider?.Invoke();
             validation =
                 SourceEditSyntaxValidator.Validate(changeSet);
             prepared =
@@ -544,12 +550,18 @@ internal sealed class SourceEditEngine
         }
         catch (SourceEditDomainException ex)
         {
+            adapterReceiptJson ??=
+                adapterReceiptProvider?.Invoke();
             var rejected =
                 SourceEditTransactionResult.Rejected(
                     transactionId,
                     workspaceRoot,
                     requestHash,
-                    ex);
+                    ex) with
+                {
+                    AdapterReceiptJson =
+                        adapterReceiptJson,
+                };
             await TryPersistRejectedAsync(
                 rejected,
                 cancellationToken);
@@ -561,6 +573,8 @@ internal sealed class SourceEditEngine
         }
         catch (Exception ex)
         {
+            adapterReceiptJson ??=
+                adapterReceiptProvider?.Invoke();
             var domain =
                 new SourceEditDomainException(
                     SourceEditCodes.IoFailure,
@@ -571,7 +585,11 @@ internal sealed class SourceEditEngine
                     transactionId,
                     workspaceRoot,
                     requestHash,
-                    domain);
+                    domain) with
+                {
+                    AdapterReceiptJson =
+                        adapterReceiptJson,
+                };
             await TryPersistRejectedAsync(
                 rejected,
                 cancellationToken);
@@ -584,7 +602,8 @@ internal sealed class SourceEditEngine
         var plan =
             store.CreatePlan(
                 prepared,
-                pathGuard.DirectoryIdentities);
+                pathGuard.DirectoryIdentities,
+                adapterReceiptJson);
         var journalPrepared = false;
         var attemptedIndices = new HashSet<int>();
         var appliedIndices = new HashSet<int>();
@@ -1425,7 +1444,11 @@ internal sealed class SourceEditEngine
             files,
             plan.Validation,
             [],
-            error);
+            error)
+        {
+            AdapterReceiptJson =
+                plan.AdapterReceiptJson,
+        };
     }
 
     private static SourceEditTransactionResult BuildDomainFailure(

@@ -540,9 +540,9 @@ Kullanıcı açıkça istemeden commit/push yapılmayacak.
 - [x] #109 — canonical SYSTEM deploy task `Talvora-Setup.exe --silent` çalıştırsın; Session 0 görünmez GUI hang'ini regression ile engelle.
 
 
-## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 12 OPEN)
+## Faz 14C — Deep Audit Remediation Backlog (CURRENT — 11 OPEN)
 
-- [ ] #124 — semantic durable replay metadata.
+- [x] #124 — semantic durable replay metadata; adapter receipt persisted in receipt + WAL, forced receipt-loss recovery preserves workspace/symbol/diagnostics, Source Edit 60/60 GREEN.
 - [x] #127 — structural YAML control-file self-scan. Targeted RED -> GREEN; Source Edit 56/56 GREEN.
 - [ ] #128 — semantic resource bounds before/while load/generation.
 - [ ] #129 — semantic graph concurrency fingerprint/versioning.

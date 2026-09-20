@@ -126,6 +126,9 @@ public sealed record SourceEditTransactionResult(
     IReadOnlyList<SourceEditWarning> Warnings,
     SourceEditError? Error)
 {
+    [System.Text.Json.Serialization.JsonIgnore]
+    internal string? AdapterReceiptJson { get; init; }
+
     public static SourceEditTransactionResult Rejected(
         string transactionId,
         string? workspaceRoot,

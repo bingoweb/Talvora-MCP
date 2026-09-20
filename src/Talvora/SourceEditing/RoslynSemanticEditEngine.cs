@@ -99,15 +99,23 @@ internal static class RoslynSemanticEditEngine
                         request,
                         context,
                         token),
-                cancellationToken);
+                cancellationToken,
+                context.ToDurableReceiptJson);
+
+        var durableReceipt =
+            SemanticDurableReceipt.Parse(
+                result.AdapterReceiptJson);
 
         return new SemanticEditTransactionResult(
             result.Success,
             "rename",
             result.Replayed,
-            context.Workspace,
-            context.Symbol,
-            context.Diagnostics,
+            durableReceipt?.Workspace ??
+                context.Workspace,
+            durableReceipt?.Symbol ??
+                context.Symbol,
+            durableReceipt?.Diagnostics ??
+                context.Diagnostics,
             result);
     }
 
@@ -1392,6 +1400,53 @@ internal static class RoslynSemanticEditEngine
         IReadOnlyList<string> ProjectPaths,
         IReadOnlyList<string> SolutionPaths);
 
+    private sealed record SemanticDurableReceipt(
+        int SchemaVersion,
+        string Operation,
+        SemanticWorkspaceReceipt? Workspace,
+        SemanticSymbolReceipt? Symbol,
+        IReadOnlyList<SemanticEditDiagnostic> Diagnostics)
+    {
+        public static SemanticDurableReceipt? Parse(
+            string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return null;
+            }
+
+            SemanticDurableReceipt? receipt;
+            try
+            {
+                receipt =
+                    JsonSerializer.Deserialize<SemanticDurableReceipt>(
+                        json);
+            }
+            catch (JsonException ex)
+            {
+                throw new SourceEditDomainException(
+                    SourceEditCodes.TransactionRecoveryRequired,
+                    "Durable semantic receipt metadata is unreadable.",
+                    innerException: ex);
+            }
+
+            if (receipt is null ||
+                receipt.SchemaVersion != 1 ||
+                !string.Equals(
+                    receipt.Operation,
+                    "rename",
+                    StringComparison.Ordinal) ||
+                receipt.Diagnostics is null)
+            {
+                throw new SourceEditDomainException(
+                    SourceEditCodes.TransactionRecoveryRequired,
+                    "Durable semantic receipt metadata has an unsupported or incomplete schema.");
+            }
+
+            return receipt;
+        }
+    }
+
     private sealed record ResolvedSemanticSymbol(
         ISymbol Symbol,
         string IdentityCanonical,
@@ -1514,6 +1569,15 @@ internal static class RoslynSemanticEditEngine
         public string? FirstWorkspaceFailure { get; private set; }
         public IReadOnlyList<SemanticEditDiagnostic> Diagnostics =>
             diagnostics;
+
+        public string ToDurableReceiptJson() =>
+            JsonSerializer.Serialize(
+                new SemanticDurableReceipt(
+                    1,
+                    "rename",
+                    Workspace,
+                    Symbol,
+                    diagnostics.ToArray()));
 
         public void AddWorkspaceDiagnostic(
             WorkspaceDiagnostic diagnostic)
