@@ -16,6 +16,7 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 - #179 tamamlandı: Control Center exit artık window-placement yazımını shutdown öncesi tamamlıyor; regression GREEN, fix iki remote'a push edildi ve canonical exact-installed live deploy doğrulandı.
 - #180 tamamlandı: Control Center detay ekranındaki Gitea browser launch hatası artık beklenen shell exception'larını yakalayıp kullanıcıya bildiriyor; targeted regression GREEN, Tray Release build 0 warning / 0 error, fix iki remote'a push edildi ve canonical exact-installed live deploy doğrulandı.
 - #181 tamamlandı: eşzamanlı window-placement kayıtları semaphore ile serialize ediliyor ve monoton save-version ile yalnız en yeni bekleyen snapshot yazılıyor; fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
+- #182 tamamlandı: Control Center ve Tray Gitea browser launch yolları dönen `Process` nesnesini sahiplenip dispose ediyor; regression GREEN, fix iki remote'a push edildi ve canonical exact-installed live gate GREEN.
 
 ## #178 — CLOSED / LIVE VERIFIED
 
@@ -34,9 +35,9 @@ Düzeltme ve kanıt:
 
 ### Aktif devam noktası
 
-1. #182 live acceptance docs closeout'unu commit edip Gitea + GitHub'a push et.
-2. Deep bug audit'e #183'ten devam et; process/resource ownership, cancellation ve UI lifecycle yollarını çağrı zinciriyle doğrula.
-3. Yeni doğrulanmış bug varsa targeted test -> docs -> tek bug commit -> iki remote push -> runtime etkiliyorsa canonical live deploy sırasını koru.
+1. #183 process/resource ownership, cancellation ve UI lifecycle audit checkpoint tamamlandı; yeni doğrulanmış bug bulunmadı.
+2. Recorded açık finding yok; targeted regression GREEN, Tray Release build 0 warning / 0 error, working tree clean ve son runtime-affecting commit exact-installed live doğrulandı.
+3. Yeni bir bulgu veya yeni geliştirme talebi gelirse bu checkpoint'ten devam et; eski kapanmış bugları gereksiz yere yeniden test etme.
 
 ## #179 — CLOSED / LIVE VERIFIED
 
