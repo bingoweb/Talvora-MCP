@@ -8,13 +8,13 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 
 - Repository: `C:\Users\tayla\Talvora-MCP`
 - Branch: `main`
-- Current committed HEAD: `270e98923ac78c2fbc495afa7254bf6b7bc261b6` (`fix: paginate archive listings`).
-- Gitea `origin/main` ve GitHub `github/main`: `270e98923ac78c2fbc495afa7254bf6b7bc261b6` ile senkron.
+- Last runtime-affecting fix commit: `270e98923ac78c2fbc495afa7254bf6b7bc261b6` (`fix: paginate archive listings`).
+- Gitea `origin/main` ve GitHub `github/main`: her bug closeout commit'inden sonra birlikte güncellenir.
 - Canlı Talvora service: **Running / Automatic**.
-- Exact-installed runtime source commit: `949272eb05d78f956d1b2f34cbb760bacd88d13b`.
-- Working tree temiz. #176 commit ve iki remote push tamamlandı; sıradaki adım canlı doğrulama.
+- Exact-installed runtime source commit: `572025c91b1cd25173342a306e937d5116f6615c`.
+- #176 canlı doğrulandı: service Running/Automatic; 3-entry ZIP pagination smoke GREEN.
 
-## #176 — SOURCE FIXED / LIVE DEPLOY PENDING
+## #176 — FIXED / LIVE VERIFIED
 
 Kök neden:
 - `talvora_archive_list` bütün ZIP entry'lerini `archive.Entries.Select(ToArchiveEntry).ToArray()` ile tek response'a materialize ediyordu.
@@ -34,15 +34,11 @@ Kanıt:
 - `git diff --check`: exit 0.
 - BUG-AUDIT #176 FIXED; TODO checked.
 
-### Sıradaki zorunlu adımlar
+### Aktif devam noktası
 
-1. Yalnız #176 source/test/docs dosyalarını stage et ve tek bug commit'i oluştur.
-2. Commit'i Gitea `origin/main` ve GitHub `github/main` üzerine push et.
-3. Canonical clean installer build + manifest-bound SYSTEM deploy.
-4. Reconnect sonrası service Running/Automatic ve exact-installed `sourceCommit` = #176 fix commit.
-5. Canlı 3-entry ZIP üzerinde `maxResults=2` first/second page smoke.
-6. Live acceptance BUG-AUDIT/HANDOFF/TODO docs-only commit + iki remote push.
-7. Deeper bug audit'e devam.
+1. #176 live acceptance tamamlandı; daha derin bug audit'e 0 OPEN baseline üzerinden devam et.
+2. Yeni doğrulanan her bug için minimal fix + targeted test + HANDOFF/TODO + ayrı commit + Gitea/GitHub push uygula.
+3. Runtime etkileyen yeni commit olursa canonical installer/deploy ve canlı kimlik doğrulamasını tekrarla.
 
 ## Sabit çalışma kuralları
 
