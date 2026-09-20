@@ -110,6 +110,18 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 **#187 ile yeni deep bug audit turuna başla.**
 
+### Kesinti anındaki #187 WIP — commit etmeden koru
+
+- Working tree şu anda bilerek **dirty** olabilir; reset/clean/stash/revert yapma.
+- WIP dosyaları:
+  - `src/Talvora/Tools/HttpMockTools.Api.cs`
+  - `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Misc.cs`
+- İncelenen aday kök neden: `requestEncoding` yalnız request body decode ayarı olması gerekirken auto-reply `defaultBody` byte encoding'inde de kullanılıyordu. Örneğin `requestEncoding="utf-16"` seçildiğinde response content-type UTF-8 kalırken body UTF-16 byte'larına dönüşebiliyordu.
+- Mevcut WIP patch default text response body üretimini `Encoding.UTF8.GetBytes(defaultBody ?? string.Empty)` olarak ayırıyor; request body decode için `requestEncoding` davranışını koruyor.
+- Aynı WIP içine gerçek loopback regression `HttpMockRequestEncodingDoesNotChangeDefaultResponseEncodingAsync` eklendi.
+- **Henüz bu WIP'i fixed sayma.** Yeni oturumda önce diff'i doğrula, targeted `--runtime-bounds-only` / ilgili HTTP mock regression'ı çalıştır. RED/bug kanıtı ve GREEN sonuç netleşmeden docs/fix commit oluşturma.
+- Test GREEN ise bunu #187 olarak kapat: BUG-AUDIT/TODO/HANDOFF güncelle -> yalnız ilgili source/test/docs dosyalarını stage -> tek bug commit -> Gitea + GitHub push -> runtime-affecting olduğu için canonical installer/deploy -> reconnect -> exact-installed `sourceCommit` doğrulaması.
+
 Başlangıç sırası:
 
 1. Bu HANDOFF'u oku.
