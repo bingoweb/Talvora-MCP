@@ -28,10 +28,18 @@ private static async Task<bool> TrySendResponseAsync(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            _ = Interlocked.CompareExchange(
+                ref pending.Replied,
+                0,
+                1);
             throw;
         }
         catch
         {
+            _ = Interlocked.CompareExchange(
+                ref pending.Replied,
+                0,
+                1);
             return false;
         }
     }

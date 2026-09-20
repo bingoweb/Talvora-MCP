@@ -34,6 +34,7 @@ internal static partial class SourceEditRegressionRunner
             ("streaming-source-read-bounded", StreamingSourceReadBoundedAsync),
             ("watcher-bounds-and-resync-state", WatcherBoundsAndResyncStateAsync),
             ("http-mock-resource-bounds", HttpMockResourceBoundsAsync),
+            ("http-mock-reply-cancellation-retry", HttpMockReplyCancellationCanRetryAsync),
             ("read-only-rejection", ReadOnlyRejectionAsync),
             ("reparse-point-rejection", ReparsePointRejectionAsync),
             ("legacy-source-mutation-policy", LegacyPolicyAsync),

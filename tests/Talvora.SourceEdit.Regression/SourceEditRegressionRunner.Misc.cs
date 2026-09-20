@@ -1284,6 +1284,8 @@ internal static partial class SourceEditRegressionRunner
         Console.WriteLine("PASS watcher-bounds-and-resync-state");
         await HttpMockResourceBoundsAsync();
         Console.WriteLine("PASS http-mock-resource-bounds");
+        await HttpMockReplyCancellationCanRetryAsync();
+        Console.WriteLine("PASS http-mock-reply-cancellation-retry");
     }
 
     private static Task WatcherBoundsAndResyncStateAsync()
@@ -1429,6 +1431,96 @@ internal static partial class SourceEditRegressionRunner
             lifetimeToken is { IsCancellationRequested: true },
             "HTTP mock cached lifetime token was not safely cancelled across runtime disposal.");
         return Task.CompletedTask;
+    }
+
+    private static async Task HttpMockReplyCancellationCanRetryAsync()
+    {
+        using var portProbe =
+            new TcpListener(
+                IPAddress.Loopback,
+                0);
+        portProbe.Start();
+        var port =
+            ((IPEndPoint)portProbe.LocalEndpoint).Port;
+        portProbe.Stop();
+
+        var prefix =
+            $"http://127.0.0.1:{port}/";
+        var started =
+            HttpMockTools.Start(
+                [prefix],
+                autoReply: false,
+                pendingResponseTimeoutSeconds: 10);
+
+        try
+        {
+            using var client =
+                new HttpClient();
+            var requestTask =
+                client.GetAsync(prefix);
+
+            TalvoraHttpMockRequest? captured = null;
+            for (var attempt = 0; attempt < 100; attempt++)
+            {
+                var read =
+                    HttpMockTools.Read(
+                        started.ListenerId,
+                        consume: false);
+                captured =
+                    read.Requests.FirstOrDefault();
+                if (captured is not null)
+                {
+                    break;
+                }
+
+                await Task.Delay(20);
+            }
+
+            Assert(
+                captured is not null,
+                "HTTP mock manual request was not captured.");
+
+            using var cancelled =
+                new CancellationTokenSource();
+            cancelled.Cancel();
+
+            try
+            {
+                _ = await HttpMockTools.Reply(
+                    started.ListenerId,
+                    captured!.RequestId,
+                    body: "cancelled-attempt",
+                    cancellationToken: cancelled.Token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+
+            var retry =
+                await HttpMockTools.Reply(
+                    started.ListenerId,
+                    captured!.RequestId,
+                    body: "retry-ok",
+                    cancellationToken: CancellationToken.None);
+            Assert(
+                retry.Replied,
+                "HTTP mock reply cancellation permanently consumed the reply claim.");
+
+            using var response =
+                await requestTask.WaitAsync(
+                    TimeSpan.FromSeconds(5));
+            var responseBody =
+                await response.Content.ReadAsStringAsync();
+            AssertEqual(
+                "retry-ok",
+                responseBody,
+                "HTTP mock retry did not deliver the replacement response.");
+        }
+        finally
+        {
+            _ = HttpMockTools.Stop(
+                started.ListenerId);
+        }
     }
 
     private static TalvoraHttpMockRequest CreateMockRequestForBounds(
