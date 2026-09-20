@@ -7,6 +7,7 @@ namespace Talvora.SourceEditing;
 
 internal static class AstGrepStructuralEditEngine
 {
+    private const int ProcessExitGraceSeconds = 10;
     private static readonly UTF8Encoding MirrorEncoding =
         new(
             encoderShouldEmitUTF8Identifier: false,
@@ -586,13 +587,17 @@ internal static class AstGrepStructuralEditEngine
             timeoutCts.IsCancellationRequested &&
             !cancellationToken.IsCancellationRequested)
         {
-            TryKill(process);
+            await TerminateProcessAsync(
+                    process)
+                .ConfigureAwait(false);
             throw ToolFailed(
                 $"ast-grep exceeded timeoutSeconds={request.TimeoutSeconds}.");
         }
         catch
         {
-            TryKill(process);
+            await TerminateProcessAsync(
+                    process)
+                .ConfigureAwait(false);
             throw;
         }
 
@@ -1052,7 +1057,7 @@ internal static class AstGrepStructuralEditEngine
         return builder.ToString();
     }
 
-    private static void TryKill(
+    private static async Task TerminateProcessAsync(
         Process process)
     {
         try
@@ -1063,10 +1068,33 @@ internal static class AstGrepStructuralEditEngine
                     entireProcessTree: true);
             }
         }
-        catch (InvalidOperationException)
+        catch (Exception ex) when (
+            ex is InvalidOperationException or
+                System.ComponentModel.Win32Exception or
+                NotSupportedException)
         {
         }
-        catch (System.ComponentModel.Win32Exception)
+
+        try
+        {
+            if (process.HasExited)
+            {
+                return;
+            }
+
+            using var exitBudget =
+                new CancellationTokenSource(
+                    TimeSpan.FromSeconds(
+                        ProcessExitGraceSeconds));
+            await process.WaitForExitAsync(
+                    exitBudget.Token)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (
+            ex is OperationCanceledException or
+                InvalidOperationException or
+                System.ComponentModel.Win32Exception or
+                NotSupportedException)
         {
         }
     }

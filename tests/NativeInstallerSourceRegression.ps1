@@ -41,6 +41,7 @@ $astGrepStructuralEngine = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talv
 $semanticEditTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\SemanticEditTools.cs'))
 $roslynSemanticEngine = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\SourceEditing\RoslynSemanticEditEngine.cs'))
 $roslynMsBuildBootstrap = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\SourceEditing\RoslynMsBuildBootstrap.cs'))
+$semanticWorkerProtocol = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\SourceEditing\SemanticWorkerProtocol.cs'))
 $trayProgram = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora.Tray')
 $trayProgramFile = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Program.cs'))
 $trayApplicationContext = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\TrayApplicationContext.cs'))
@@ -217,6 +218,16 @@ $result = [pscustomobject]@{
         $roslynSemanticEngine -match 'ExpectedRevision' -and
         $roslynSemanticEngine -notmatch 'TryApplyChanges' -and
         $toolManifest -match 'talvora_semantic_edit'
+    )
+    SourceEditWorkerCleanupWaitsForExit = (
+        $astGrepStructuralEngine -match 'private static async Task TerminateProcessAsync' -and
+        $astGrepStructuralEngine -match 'ProcessExitGraceSeconds' -and
+        $astGrepStructuralEngine -match 'await process\.WaitForExitAsync' -and
+        ([regex]::Matches($astGrepStructuralEngine, 'await TerminateProcessAsync').Count -ge 2) -and
+        $semanticWorkerProtocol -match 'private static async Task TerminateProcessAsync' -and
+        $semanticWorkerProtocol -match 'WorkerTerminationGraceSeconds' -and
+        $semanticWorkerProtocol -match 'await process\.WaitForExitAsync' -and
+        $semanticWorkerProtocol -match '(?s)finally\s*\{.*await TerminateProcessAsync.*TryDeleteResponse'
     )
     WindowsPowerShellFallbackContract = (
         $componentHealth -match 'CommandLine\.IndexOf\(\$marker,\[StringComparison\]::OrdinalIgnoreCase\) -ge 0' -and

@@ -179,6 +179,7 @@ internal static class SemanticWorkerHost
 internal static class SemanticWorkerClient
 {
     private const int WorkerExitGraceSeconds = 20;
+    private const int WorkerTerminationGraceSeconds = 10;
     private const int CapturedDiagnosticCharacters = 32768;
     private static readonly JsonSerializerOptions JsonOptions =
         new(JsonSerializerDefaults.Web);
@@ -292,26 +293,19 @@ internal static class SemanticWorkerClient
             !cancellationToken.IsCancellationRequested &&
             workerBudget.IsCancellationRequested)
         {
-            TryKill(
-                process);
             throw new SourceEditDomainException(
                 SourceEditCodes.SemanticTimeout,
                 $"{SourceEditCodes.SemanticTimeout}: isolated semantic worker exceeded the absolute process budget for timeoutSeconds={request.TimeoutSeconds}.");
         }
         catch
         {
-            TryKill(
-                process);
             throw;
         }
         finally
         {
-            if (!process.HasExited)
-            {
-                TryKill(
-                    process);
-            }
-
+            await TerminateProcessAsync(
+                    process)
+                .ConfigureAwait(false);
             TryDeleteResponse(
                 responsePath);
         }
@@ -436,7 +430,7 @@ internal static class SemanticWorkerClient
         }
     }
 
-    private static void TryKill(
+    private static async Task TerminateProcessAsync(
         Process process)
     {
         try
@@ -449,6 +443,29 @@ internal static class SemanticWorkerClient
         }
         catch (Exception ex) when (
             ex is InvalidOperationException or
+                System.ComponentModel.Win32Exception or
+                NotSupportedException)
+        {
+        }
+
+        try
+        {
+            if (process.HasExited)
+            {
+                return;
+            }
+
+            using var exitBudget =
+                new CancellationTokenSource(
+                    TimeSpan.FromSeconds(
+                        WorkerTerminationGraceSeconds));
+            await process.WaitForExitAsync(
+                    exitBudget.Token)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (
+            ex is OperationCanceledException or
+                InvalidOperationException or
                 System.ComponentModel.Win32Exception or
                 NotSupportedException)
         {
