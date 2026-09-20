@@ -149,6 +149,7 @@ $result = [pscustomobject]@{
         $buildInstallerScript -match '--artifacts-path' -and
         $buildInstallerScript -match '--no-restore' -and
         $buildInstallerScript -match 'Get-PublishedPackageManifest' -and
+        $buildInstallerScript -match 'Get-SingleFilePublishDepsPath -ArtifactsPath \$DependencyArtifactsRoot -ProjectName ''Talvora\.Tray''' -and
         $buildInstallerScript -match 'Assert-PublishedPackagesMatchResolvedAssets' -and
         $buildInstallerScript -match 'assetsSha256' -and
         $buildInstallerScript -match 'publishedDepsSha256' -and

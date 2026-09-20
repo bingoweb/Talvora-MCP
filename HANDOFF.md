@@ -17,7 +17,7 @@ Bu belge yalnız güncel çalışma durumunu taşır. Eski oturum kronolojisi bu
 
 ### Son tamamlanan düzeltmeler
 
-En güncel bug-audit hattında #121–#172 aralığındaki tüm doğrulanmış maddeler, aşağıdaki iki açık madde hariç kapatıldı.
+En güncel bug-audit hattında #121–#173 aralığındaki tüm doğrulanmış maddeler, aşağıdaki iki açık madde hariç kapatıldı.
 
 Özellikle son tamamlanan aileler:
 
@@ -37,9 +37,17 @@ Son doğrulanan Source Edit regression: **63/63 GREEN**.
 ### Son tamamlanan bug — #169
 
 - **Kök neden:** provenance publish sonrasında mutable `obj\project.assets.json` okuyordu; sonraki restore published binary'den farklı graph raporlatabiliyordu.
-- **Düzeltme:** explicit restore -> immutable assets snapshot + SHA-256 -> `--no-restore` Service/Tray publish -> published runtime dependency graph cross-check. Single-file Tray için pre-bundle `.deps.json` doğrulanıyor.
-- **Test:** `INSTALLER_DEPENDENCY_PROVENANCE_GREEN`; `NATIVE_INSTALLER_SOURCE_GREEN`; canonical build GREEN.
-- **Canlı:** installer 261,777,167 bytes / SHA-256 `D2FB078B0512E6AEB1507986ADA85CA3E3CC5E3AEEC6A82B6AD8E235B4E02985`; Talvora Running/Automatic, PID 2112, live source `17e1948bedc99e2e18a3e0397ff627dc07017826-dirty-8427300c024c`.
+- **Düzeltme:** Service ve Tray için explicit restore build-local `--artifacts-path` altında izole edildi; aynı artifacts root publish'e de açıkça aktarılıyor ve publish `--no-restore` kullanıyor. Immutable assets SHA-256 snapshot'ı ile published runtime `.deps.json` graph'ı cross-check ediliyor.
+- **Test:** `INSTALLER_DEPENDENCY_PROVENANCE_GREEN`; `NATIVE_INSTALLER_SOURCE_GREEN`.
+- **Commit:** `ba6494f37fe9f54f07d78bb2d28b048ead8a826e`; `origin/main` ve `github/main` aynı commit'e doğrulandı.
+- **Canlı gate notu:** `ba6494f` clean canonical build Service/Tray publish aşamalarını geçti fakat Tray pre-bundle `.deps.json` lookup eski proje `bin\Release` yolunu varsaydığı için durdu. Önceki dirty-build live kaydı final #169 kabulü sayılmıyor; bu follow-up ayrı #173 olarak açıldı.
+
+### #173 — Canonical artifacts-path sonrası Tray pre-bundle deps lookup — OPEN MEDIUM
+
+- **Bulgu / kök neden:** #169 ile publish output/intermediate dizinleri build-local `DependencyArtifactsRoot` altına taşındı; `Get-SingleFilePublishDepsPath` ise hâlâ `src\Talvora.Tray\bin\Release` arıyordu.
+- **Uygulanan düzeltme:** lookup artık `DependencyArtifactsRoot\bin\Talvora.Tray` ağacını kullanıyor ve source contract bu çağrıyı sabitliyor.
+- **Targeted test:** `NATIVE_INSTALLER_SOURCE_GREEN`. Wrapper'ın script sonrası stale `$LASTEXITCODE` kontrolü false-negative üretti; test kendi GREEN marker'ına ulaştı.
+- **Sıradaki gate:** follow-up commit/push -> clean canonical installer build -> independent SYSTEM deploy -> exact-installed `sourceCommit`/service doğrulaması -> #173 kapanışı.
 
 ### #159 — Absolute transport/response budgets + continuation semantics — OPEN MEDIUM
 

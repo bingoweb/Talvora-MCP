@@ -954,13 +954,16 @@ function Get-PublishedPackageManifest {
 function Get-SingleFilePublishDepsPath {
     param(
         [Parameter(Mandatory = $true)]
-        [string] $ProjectPath,
+        [string] $ArtifactsPath,
+
+        [Parameter(Mandatory = $true)]
+        [string] $ProjectName,
 
         [Parameter(Mandatory = $true)]
         [string] $FileName
     )
 
-    $binRoot = Join-Path (Split-Path -Parent $ProjectPath) 'bin\Release'
+    $binRoot = Join-Path $ArtifactsPath ('bin\' + $ProjectName)
     if (-not (Test-Path -LiteralPath $binRoot -PathType Container)) {
         throw "Published single-file build output directory is missing: $binRoot"
     }
@@ -1006,7 +1009,7 @@ Assert-DependencyAssetsUnchanged -Snapshot $TrayDependencySnapshot -Stage 'depen
 $ServiceResolvedPackages = @(Get-ResolvedPackageManifest -AssetsPath $ServiceDependencySnapshot.SnapshotPath)
 $TrayResolvedPackages = @(Get-ResolvedPackageManifest -AssetsPath $TrayDependencySnapshot.SnapshotPath)
 $ServicePublishedDepsPath = Join-Path $ServicePayload 'Talvora.deps.json'
-$TrayPublishedDepsPath = Get-SingleFilePublishDepsPath -ProjectPath $TrayProject -FileName 'Talvora.Tray.deps.json'
+$TrayPublishedDepsPath = Get-SingleFilePublishDepsPath -ArtifactsPath $DependencyArtifactsRoot -ProjectName 'Talvora.Tray' -FileName 'Talvora.Tray.deps.json'
 $ServicePublishedPackages = @(Get-PublishedPackageManifest -DepsPath $ServicePublishedDepsPath)
 $TrayPublishedPackages = @(Get-PublishedPackageManifest -DepsPath $TrayPublishedDepsPath)
 Assert-PublishedPackagesMatchResolvedAssets -ResolvedPackages $ServiceResolvedPackages -PublishedPackages $ServicePublishedPackages -ProjectName 'Talvora'
