@@ -23,6 +23,8 @@ internal static class ManagedMcpProtocolProbeService
         TimeSpan.FromSeconds(3);
     private static readonly TimeSpan NonSmokeCacheDuration =
         TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan NonSmokeProbeTimeout =
+        TimeSpan.FromSeconds(10);
     private static readonly ConcurrentDictionary<string, ProtocolCacheEntry> NonSmokeCache =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -41,13 +43,31 @@ internal static class ManagedMcpProtocolProbeService
             return cached.Result;
         }
 
-        var result = await ProbeAsync(
-            registration,
-            runBrowserSmoke: false,
-            cancellationToken);
+        using var timeoutCts =
+            CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken);
+        timeoutCts.CancelAfter(NonSmokeProbeTimeout);
+
+        ManagedMcpProtocolProbeResult result;
+        try
+        {
+            result = await ProbeAsync(
+                registration,
+                runBrowserSmoke: false,
+                timeoutCts.Token);
+        }
+        catch (OperationCanceledException) when (
+            !cancellationToken.IsCancellationRequested &&
+            timeoutCts.IsCancellationRequested)
+        {
+            result = Failed(
+                $"MCP initialize + tools/list sağlık kontrolü {NonSmokeProbeTimeout.TotalSeconds:0} saniyelik absolute bütçeyi aştı.",
+                browserSmokeRan: false);
+        }
 
         NonSmokeCache[registration.Id] = new ProtocolCacheEntry(
-            now.Add(NonSmokeCacheDuration),
+            DateTimeOffset.UtcNow.Add(
+                NonSmokeCacheDuration),
             result);
         return result;
     }
