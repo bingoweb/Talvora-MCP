@@ -12,33 +12,24 @@ Bu dosya tek kanonik kesinti/devam belgesidir. Eski oturum kronolojisi tutulmaz.
 - Gitea `origin/main` ve GitHub `github/main`: her bug closeout commit'inden sonra birlikte güncellenir.
 - Canlı Talvora service: **Running / Automatic**.
 - Exact-installed runtime source commit: `572025c91b1cd25173342a306e937d5116f6615c`.
-- #176 canlı doğrulandı: service Running/Automatic; 3-entry ZIP pagination smoke GREEN.
+- #177 source fix hazır: Talvora lifecycle işlemleri ortak operation coordinator ile serialize ediliyor; targeted regression + Tray Release build GREEN; commit/push/live deploy sırada.
 
-## #176 — FIXED / LIVE VERIFIED
+## #177 — SOURCE FIXED / COMMIT + LIVE DEPLOY PENDING
 
 Kök neden:
-- `talvora_archive_list` bütün ZIP entry'lerini `archive.Entries.Select(ToArchiveEntry).ToArray()` ile tek response'a materialize ediyordu.
-- Archive extraction aynı subsystem'de 1,000,000 entry emergency ceiling kabul ediyor; legacy list response'u gerçek yüksek-cardinality risk taşıyordu.
+- Talvora `Start/Stop/Restart` yolu, Gitea ve generic MCP lifecycle yollarının aksine `ManagedMcpOperationCoordinator` lease almıyordu.
+- Otomatik recovery kendi `_talvoraOperationGate` kilidini kullanırken Control Center kullanıcı işlemleri bu gate'i paylaşmadığı için servis/tünel state mutation'ları yarışabiliyordu.
 
-Düzeltme:
-- Absolute list ceiling: **20,000 entry**.
-- Absolute response-character ceiling: **8 MiB**.
-- `maxResults=0` finite server maximum.
-- Archive order korunarak `resultOffset/nextResultOffset` deterministic continuation eklendi.
-- Response schema: `Count`, `TotalEntries`, `ResultOffset`, `Truncated`, `NextResultOffset`.
-
-Kanıt:
-- 3-entry ZIP regression: ilk page 2 entry + `totalEntries=3` + `nextResultOffset=2`; ikinci page 1 entry + clean termination.
-- `--response-bounds-only`: **TALVORA RESPONSE BOUNDS REGRESSION GREEN**.
-- Talvora Release build: **0 warning / 0 error**.
-- `git diff --check`: exit 0.
-- BUG-AUDIT #176 FIXED; TODO checked.
+Düzeltme ve kanıt:
+- `ExecuteTalvoraAsync` girişine `TalvoraId` bazlı fail-fast operation lease eklendi; mevcut Gitea/generic koordinasyon modeliyle hizalandı.
+- `NativeInstallerSourceRegression.ps1`: `TalvoraLifecycleUsesOperationCoordinator=True`; suite GREEN.
+- `Talvora.Tray` Release build: **0 warning / 0 error**.
 
 ### Aktif devam noktası
 
-1. #176 live acceptance tamamlandı; daha derin bug audit'e 0 OPEN baseline üzerinden devam et.
-2. Yeni doğrulanan her bug için minimal fix + targeted test + HANDOFF/TODO + ayrı commit + Gitea/GitHub push uygula.
-3. Runtime etkileyen yeni commit olursa canonical installer/deploy ve canlı kimlik doğrulamasını tekrarla.
+1. #177 source/test/docs dosyalarını tek bug commit'i olarak commit et; Gitea ve GitHub `main` üzerine push et.
+2. Canonical installer build + manifest-bound live deploy yap; service/runtime identity doğrula.
+3. #177 live acceptance'ı belgelendirip docs-only closeout commit'ini iki remote'a push et; ardından deeper audit'e devam et.
 
 ## Sabit çalışma kuralları
 

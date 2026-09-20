@@ -87,6 +87,10 @@ internal static class ControlCenterLifecycleService
         ManagedMcpLifecycleOperation operation,
         CancellationToken cancellationToken)
     {
+        using var operationLease =
+            ManagedMcpOperationCoordinator.TryAcquire(TalvoraId)
+            ?? throw new ManagedMcpOperationInProgressException(TalvoraId);
+
         switch (operation)
         {
             case ManagedMcpLifecycleOperation.Start:

@@ -46,6 +46,7 @@ $trayProgramFile = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray
 $trayApplicationContext = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\TrayApplicationContext.cs'))
 $businessTunnelClient = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\BusinessTunnelClient.cs'))
 $componentHealth = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterComponentHealthService.cs'))
+$controlCenterLifecycleService = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterLifecycleService.cs'))
 
 $registryCoordinator = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpRegistryCoordinator.cs'))
 $ownershipManifestStore = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpOwnershipManifestStore.cs'))
@@ -580,6 +581,10 @@ $result = [pscustomobject]@{
     TrayTunnelClientUsesStateWorkingDirectory = (
         $trayProgram -match 'ProcessRunner\.RunAsync' -and
         $trayProgram -match 'config\.StateRoot'
+    )
+    TalvoraLifecycleUsesOperationCoordinator = (
+        $controlCenterLifecycleService -match 'ManagedMcpOperationCoordinator\.TryAcquire\(TalvoraId\)' -and
+        $controlCenterLifecycleService -match 'ManagedMcpOperationInProgressException\(TalvoraId\)'
     )
     TrayAutoReconnectsAfterStartup = (
         $trayApplicationContext -match 'await MaintainTalvoraConnectionAsync\(\)' -and
