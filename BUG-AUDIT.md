@@ -2,17 +2,17 @@
 
 Last updated: 2026-09-20
 Branch: main
-Current source HEAD baseline: `e1ff681b6023b393b164e676a5c8d2b414bc5606`.
-Current exact-installed audit runtime: `e1ff681b6023b393b164e676a5c8d2b414bc5606`
+Current source HEAD baseline: `c54d1d6e56d3776291db0db04504ff6275525f6d`.
+Current exact-installed audit runtime: `c54d1d6e56d3776291db0db04504ff6275525f6d`
 Canonical exact-installed tool count: 204 unique tools
-Status: source remediation is active. Current #121–#171 statuses and counts are below; source-test completion does not imply deployment to the installed service.
+Status: source remediation is active. Current #121–#173 statuses and counts are below; source-test completion does not imply deployment to the installed service.
 
 ## Current remediation status summary — 2026-09-20
 
 - Historical implementation/fix work through #120 includes the completed Control Center, installer/deploy, Playwright CLI migration, Source Edit core, Routing Contract v3, structural adapter and Roslyn semantic adapter work described below.
-- The current deep-audit range #121–#173 contains 53 numbered records: **2 OPEN** (**0 CRITICAL, 0 HIGH, 2 MEDIUM**), **48 FIXED**, plus **#143 CLOSED FALSE POSITIVE** and **#166/#167 CLOSED DUPLICATE**.
+- The current deep-audit range #121–#173 contains 53 numbered records: **1 OPEN** (**0 CRITICAL, 0 HIGH, 1 MEDIUM**), **49 FIXED**, plus **#143 CLOSED FALSE POSITIVE** and **#166/#167 CLOSED DUPLICATE**.
 - Fixed records passed their documented targeted regression or contract gates; remaining OPEN records stay open until their own gates pass. Latest combined Source Edit suite: **63/63 GREEN**.
-- Remaining work is #159 response budgets/continuation and #173 canonical artifacts-path Tray pre-bundle dependency lookup/live acceptance.
+- Remaining work is #159 response budgets/continuation.
 - #166 and #167 are not additional defects: their evidence was merged into canonical #147 and #148 respectively.
 - Canonical deploy #109 explicit `--silent` behavior must remain intact during all future installer changes.
 - #129 follow-up: project/solution analyzer ve source-generator binary referansları da semantic graph physical revision snapshot + commit guard kapsamına alındı. Analyzer/generator binary drift artık commit öncesi `SEMANTIC_GRAPH_STALE` ile fail-closed olur. Targeted regression GREEN; full Source Edit 62/62 GREEN; Talvora Release 0 warning / 0 error.
@@ -554,4 +554,4 @@ source -> targeted test -> canonical installer build -> deploy -> system_info/PI
 
 2026-09-20 #172 live acceptance: clean detached worktree `3becb241a243b93ffcf2113344636421f4121179` üzerinden canonical installer build exit 0 verdi; artifact size **257,276,175 bytes**, SHA-256 `E5890BF619D0C7DF5D6744ED85330A9533CD2FCB407800B19ECEAB0CC46D567B`. Manifest-bound independent SYSTEM deploy task launch başarılı oldu. Deploy sonrasında `Talvora` service **Running/Automatic** ve exact-installed `talvora_system_info` `sourceCommit=3becb241a243b93ffcf2113344636421f4121179` döndürdü.
 
-173. [OPEN 2026-09-20 Canonical Artifacts Path Single-File Dependency Lookup] #169 ile restore/publish intermediate output'ları `DependencyArtifactsRoot` altına taşındıktan sonra `Get-SingleFilePublishDepsPath` hâlâ Tray proje dizinindeki legacy `bin\Release` ağacını arıyordu. Clean `ba6494f` canonical build restore, Service publish ve Tray publish'i başarıyla tamamladı; ast-grep vendoring sonrasında provenance aşamasında `Published single-file build output directory is missing: ...\src\Talvora.Tray\bin\Release` ile durdu. Gerçek pre-bundle `Talvora.Tray.deps.json`, .NET artifacts layout nedeniyle `DependencyArtifactsRoot\bin\Talvora.Tray\release_win-x64\...` altında. Fix source'ta lookup kökü `DependencyArtifactsRoot\bin\Talvora.Tray` olarak değiştirildi ve `NativeInstallerSourceRegression.ps1` contract'ı bu çağrıyı pinliyor. Targeted source regression kendi **NATIVE_INSTALLER_SOURCE_GREEN** marker'ına ulaştı. Kapanış gate'i: follow-up commit/push + clean canonical installer build + independent SYSTEM deploy + exact-installed source/service verification.
+173. [FIXED 2026-09-20 Canonical Artifacts Path Single-File Dependency Lookup] #169 ile restore/publish intermediate output'ları `DependencyArtifactsRoot` altına taşındıktan sonra `Get-SingleFilePublishDepsPath` hâlâ Tray proje dizinindeki legacy `bin\Release` ağacını arıyordu. Clean `ba6494f` canonical build restore, Service publish ve Tray publish'i başarıyla tamamladı; ast-grep vendoring sonrasında provenance aşamasında `Published single-file build output directory is missing: ...\src\Talvora.Tray\bin\Release` ile durdu. Gerçek pre-bundle `Talvora.Tray.deps.json`, .NET artifacts layout nedeniyle `DependencyArtifactsRoot\bin\Talvora.Tray\release_win-x64\...` altında. Lookup kökü `DependencyArtifactsRoot\bin\Talvora.Tray` olarak değiştirildi ve `NativeInstallerSourceRegression.ps1` contract'ı bu çağrıyı pinliyor; targeted regression **NATIVE_INSTALLER_SOURCE_GREEN**. Fix commit `c54d1d6e56d3776291db0db04504ff6275525f6d` iki remote'a push edildi. Aynı clean commit'ten canonical installer build GREEN: **261,777,167 bytes**, SHA-256 `01C6D5107E7C845152C2ACAECEB8DAD5B9097B9966D5B78BFDAE5A031E11BF87`. Manifest-bound independent SYSTEM deploy sırasında beklenen MCP disconnect oluştu; reconnect sonrasında service **Running / Automatic** ve exact-installed `talvora_system_info.sourceCommit=c54d1d6e56d3776291db0db04504ff6275525f6d`.

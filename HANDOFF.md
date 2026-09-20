@@ -13,11 +13,11 @@ Bu belge yalnız güncel çalışma durumunu taşır. Eski oturum kronolojisi bu
 - Gitea remote: `origin = ssh://git@127.0.0.1:2222/taylan/Talvora-MCP.git`
 - GitHub remote: `github = https://github.com/bingoweb/Talvora-MCP.git`
 - Başlangıçta `origin/main` ve `github/main` HEAD ile senkrondu.
-- Canlı Talvora service bağlantısı doğrulandı. `talvora_system_info.sourceCommit = e1ff681b6023b393b164e676a5c8d2b414bc5606`; service LocalSystem altında çalışıyor.
+- Canlı Talvora service bağlantısı doğrulandı. `talvora_system_info.sourceCommit = c54d1d6e56d3776291db0db04504ff6275525f6d`; service LocalSystem altında Running / Automatic çalışıyor.
 
 ### Son tamamlanan düzeltmeler
 
-En güncel bug-audit hattında #121–#173 aralığındaki tüm doğrulanmış maddeler, aşağıdaki iki açık madde hariç kapatıldı.
+En güncel bug-audit hattında #121–#173 aralığındaki tüm doğrulanmış maddeler, aşağıdaki tek açık madde hariç kapatıldı.
 
 Özellikle son tamamlanan aileler:
 
@@ -42,12 +42,14 @@ Son doğrulanan Source Edit regression: **63/63 GREEN**.
 - **Commit:** `ba6494f37fe9f54f07d78bb2d28b048ead8a826e`; `origin/main` ve `github/main` aynı commit'e doğrulandı.
 - **Canlı gate notu:** `ba6494f` clean canonical build Service/Tray publish aşamalarını geçti fakat Tray pre-bundle `.deps.json` lookup eski proje `bin\Release` yolunu varsaydığı için durdu. Önceki dirty-build live kaydı final #169 kabulü sayılmıyor; bu follow-up ayrı #173 olarak açıldı.
 
-### #173 — Canonical artifacts-path sonrası Tray pre-bundle deps lookup — OPEN MEDIUM
+### Son tamamlanan bug — #173
 
 - **Bulgu / kök neden:** #169 ile publish output/intermediate dizinleri build-local `DependencyArtifactsRoot` altına taşındı; `Get-SingleFilePublishDepsPath` ise hâlâ `src\Talvora.Tray\bin\Release` arıyordu.
 - **Uygulanan düzeltme:** lookup artık `DependencyArtifactsRoot\bin\Talvora.Tray` ağacını kullanıyor ve source contract bu çağrıyı sabitliyor.
 - **Targeted test:** `NATIVE_INSTALLER_SOURCE_GREEN`. Wrapper'ın script sonrası stale `$LASTEXITCODE` kontrolü false-negative üretti; test kendi GREEN marker'ına ulaştı.
-- **Sıradaki gate:** follow-up commit/push -> clean canonical installer build -> independent SYSTEM deploy -> exact-installed `sourceCommit`/service doğrulaması -> #173 kapanışı.
+- **Commit / remote:** `c54d1d6e56d3776291db0db04504ff6275525f6d`; `origin/main` ve `github/main` aynı commit'e doğrulandı.
+- **Canonical build:** GREEN; installer **261,777,167 bytes**, SHA-256 `01C6D5107E7C845152C2ACAECEB8DAD5B9097B9966D5B78BFDAE5A031E11BF87`, source commit `c54d1d6e56d3776291db0db04504ff6275525f6d`.
+- **Canlı deploy:** independent SYSTEM deploy servis switch sırasında MCP bağlantısını beklenen şekilde kapattı; reconnect sonrasında Talvora **Running / Automatic**, exact-installed `sourceCommit=c54d1d6e56d3776291db0db04504ff6275525f6d`.
 
 ### #159 — Absolute transport/response budgets + continuation semantics — OPEN MEDIUM
 
