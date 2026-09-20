@@ -89,7 +89,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Text default response artık `Reply()` ile tutarlı biçimde UTF-8 üretiliyor; request decode davranışı korunuyor, binary/custom byte yolu `defaultBodyBase64` üzerinden değişmeden kalıyor.
 - Gerçek loopback regression önce RED, minimal fix sonrası `PASS http-mock-request-encoding-does-not-change-response`; tüm `--runtime-bounds-only` gate GREEN.
 - Fix commit: `26c26e53b3ca58c3521148d67d3f6233d6cd63fd`; Gitea + GitHub `main` aynı commit'te.
-- Canonical installer SHA-256: `F545A85E8927527ADD757D3BCB134FD93EA2CCE4B85F8024B8B7A9BD9D6162EB`.
+- Canonical installer SHA-256: `A43F89339155318FE1E40842E044EA7A7301F2B6890895CFFD75C942E0D2A7A2`.
 - Manifest-bound SYSTEM deploy sonrası exact-installed runtime aynı commit'i bildiriyor; #187 live verified.
 
 ## Doküman tutarlılığı notu
