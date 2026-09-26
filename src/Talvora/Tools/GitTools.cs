@@ -503,7 +503,7 @@ public static class GitTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraGitRunResponse)),
-     Description("Run Git with arbitrary arguments in any accessible repository or working directory. Known working-tree mutation commands in recognized development workspaces route to talvora_apply_patch by default; explicitAdmin=true deliberately preserves the unrestricted Git administration path. Read/status/history/fetch/push workflows remain directly available. HTTPS pushes to github.com automatically run in the logged-on Windows user session so Git Credential Manager can use that user\'s cached OAuth credential.")]
+     Description("Run Git with arbitrary arguments in any accessible repository or working directory. Known working-tree mutation commands in recognized development workspaces route to talvora_apply_patch by default; explicitAdmin=true deliberately preserves the unrestricted Git administration path. Read/status/history/fetch/push workflows remain directly available. SSH fetch/push and GitHub HTTPS fetch/push automatically run in the logged-on Windows user session so user-scoped credentials and host trust remain available.")]
     public static Task<TalvoraGitRunResponse> Run(
         string repositoryPath,
         string[] arguments,
@@ -625,7 +625,7 @@ public static class GitTools
             workingDirectory, arguments);
 
         ProcessExecutionResult result;
-        if (await ShouldUseInteractiveUserForGitHubPushAsync(
+        if (await ShouldUseInteractiveUserForRemoteGitAsync(
                 git,
                 workingDirectory,
                 requestedArguments,
@@ -669,31 +669,40 @@ public static class GitTools
             result.Arguments);
     }
 
-    private static async Task<bool> ShouldUseInteractiveUserForGitHubPushAsync(
+    private static async Task<bool> ShouldUseInteractiveUserForRemoteGitAsync(
         string git,
         string workingDirectory,
         IReadOnlyList<string> arguments,
         CancellationToken cancellationToken)
     {
-        var pushIndex = -1;
+        var remoteCommandIndex = -1;
+        string? remoteCommand = null;
         for (var index = 0; index < arguments.Count; index++)
         {
             if (string.Equals(
                     arguments[index],
                     "push",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    arguments[index],
+                    "fetch",
                     StringComparison.OrdinalIgnoreCase))
             {
-                pushIndex = index;
+                remoteCommandIndex = index;
+                remoteCommand = arguments[index];
                 break;
             }
         }
 
-        if (pushIndex < 0)
+        if (remoteCommandIndex < 0 ||
+            remoteCommand is null)
         {
             return false;
         }
 
-        var remote = ExtractPushRemote(arguments, pushIndex);
+        var remote = ExtractRemoteArgument(
+            arguments,
+            remoteCommandIndex);
         if (string.IsNullOrWhiteSpace(remote))
         {
             var branch = await RunGitServiceAsync(
@@ -732,10 +741,17 @@ public static class GitTools
         }
         else
         {
+            string[] resolveArguments =
+                string.Equals(
+                    remoteCommand,
+                    "push",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? ["remote", "get-url", "--push", remote]
+                    : ["remote", "get-url", remote];
             var resolved = await RunGitServiceAsync(
                 git,
                 workingDirectory,
-                ["remote", "get-url", "--push", remote],
+                resolveArguments,
                 cancellationToken).ConfigureAwait(false);
 
             if (resolved.ExitCode != 0)
@@ -746,30 +762,34 @@ public static class GitTools
             remoteUrl = resolved.StandardOutput.Trim();
         }
 
-        return Uri.TryCreate(remoteUrl, UriKind.Absolute, out var uri) &&
-            (string.Equals(
-                 uri.Scheme,
-                 Uri.UriSchemeHttps,
-                 StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(
-                 uri.Scheme,
-                 Uri.UriSchemeHttp,
-                 StringComparison.OrdinalIgnoreCase)) &&
-            string.Equals(
-                uri.Host,
-                "github.com",
-                StringComparison.OrdinalIgnoreCase);
+        return IsUserCredentialRemote(remoteUrl);
     }
 
-    private static string? ExtractPushRemote(
+    private static string? ExtractRemoteArgument(
         IReadOnlyList<string> arguments,
-        int pushIndex)
+        int commandIndex)
     {
-        for (var index = pushIndex + 1; index < arguments.Count; index++)
+        for (var index = commandIndex + 1; index < arguments.Count; index++)
         {
             var value = arguments[index];
 
-            if (value is "--repo" or "--receive-pack" or "--exec" or "--push-option" or "-o")
+            if (value is
+                "--repo" or
+                "--receive-pack" or
+                "--exec" or
+                "--push-option" or
+                "--upload-pack" or
+                "--depth" or
+                "--deepen" or
+                "--shallow-since" or
+                "--shallow-exclude" or
+                "--negotiation-tip" or
+                "--filter" or
+                "--refmap" or
+                "--server-option" or
+                "--jobs" or
+                "-j" or
+                "-o")
             {
                 index++;
                 continue;
@@ -784,6 +804,70 @@ public static class GitTools
         }
 
         return null;
+    }
+
+    private static bool IsUserCredentialRemote(string remoteUrl)
+    {
+        if (Uri.TryCreate(
+                remoteUrl,
+                UriKind.Absolute,
+                out var uri))
+        {
+            if (string.Equals(
+                    uri.Scheme,
+                    "ssh",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return
+                (string.Equals(
+                     uri.Scheme,
+                     Uri.UriSchemeHttps,
+                     StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(
+                     uri.Scheme,
+                     Uri.UriSchemeHttp,
+                     StringComparison.OrdinalIgnoreCase)) &&
+                string.Equals(
+                    uri.Host,
+                    "github.com",
+                    StringComparison.OrdinalIgnoreCase);
+        }
+
+        return IsScpLikeSshRemote(remoteUrl);
+    }
+
+    private static bool IsScpLikeSshRemote(string remoteUrl)
+    {
+        if (string.IsNullOrWhiteSpace(remoteUrl) ||
+            Path.IsPathRooted(remoteUrl) ||
+            (remoteUrl.Length >= 2 &&
+             char.IsLetter(remoteUrl[0]) &&
+             remoteUrl[1] == ':'))
+        {
+            return false;
+        }
+
+        var colonIndex =
+            remoteUrl.IndexOf(
+                ':',
+                StringComparison.Ordinal);
+        if (colonIndex <= 0 ||
+            colonIndex == remoteUrl.Length - 1)
+        {
+            return false;
+        }
+
+        var hostPart = remoteUrl[..colonIndex];
+        return
+            !hostPart.Contains(
+                '/',
+                StringComparison.Ordinal) &&
+            !hostPart.Contains(
+                '\\',
+                StringComparison.Ordinal);
     }
 
     private static Task<ProcessExecutionResult> RunGitServiceAsync(

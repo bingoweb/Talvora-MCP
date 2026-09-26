@@ -31,6 +31,16 @@ $installerUsesScopedSafeDirectory =
 $installerAvoidsUnsafeDirectRepoGit =
     $buildText -notmatch '& git -C \$Root' -and
     $buildText -notmatch '& git -C \$RepoRoot'
+$routesCredentialedRemoteOperations =
+    $text -match 'ShouldUseInteractiveUserForRemoteGitAsync' -and
+    $text -match '"push"[\s\S]*?"fetch"' -and
+    $text -match 'IsUserCredentialRemote\(remoteUrl\)' -and
+    $text -match 'uri\.Scheme,[\s\S]*?"ssh"' -and
+    $text -match 'IsScpLikeSshRemote' -and
+    $text -match 'InteractiveUserProcessRunner\.RunAsync'
+$preservesGithubHttpsCredentialContext =
+    $text -match 'Uri\.UriSchemeHttps' -and
+    $text -match '"github\.com"'
 
 if (-not $runGitUsesScopedSafeDirectory) {
     throw 'RunGitAsync does not inject repository-scoped safe.directory.'
@@ -53,5 +63,12 @@ if (-not $installerUsesScopedSafeDirectory) {
 if (-not $installerAvoidsUnsafeDirectRepoGit) {
     throw 'Canonical installer build still contains direct repository Git calls without scoped safe.directory.'
 }
+if (-not $routesCredentialedRemoteOperations) {
+    throw 'Git SSH fetch/push does not route through the logged-on user credential context.'
+}
+if (-not $preservesGithubHttpsCredentialContext) {
+    throw 'GitHub HTTPS credential-context routing was lost.'
+}
 
+Write-Output 'GIT_CREDENTIAL_CONTEXT_SOURCE_GREEN'
 Write-Output 'GIT_SAFE_DIRECTORY_SOURCE_GREEN'

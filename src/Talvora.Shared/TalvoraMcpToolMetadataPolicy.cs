@@ -118,7 +118,8 @@ public static class TalvoraMcpToolMetadataPolicy
             ["talvora_git_run"] =
                 "Run Git with caller-supplied arguments in an accessible repository or working directory. " +
                 "Known working-tree mutation commands in recognized development workspaces route to talvora_apply_patch by default; " +
-                "explicitAdmin=true selects direct Git administration. Read/status/history/fetch/push workflows remain available.",
+                "explicitAdmin=true selects direct Git administration. Read/status/history/fetch/push workflows remain available. " +
+                "SSH fetch/push and GitHub HTTPS fetch/push use the logged-on Windows user's credential context.",
             ["talvora_http_request"] =
                 "Send an HTTP request to a requested URI for application development, integration testing, and service diagnostics. " +
                 "Supports caller-supplied method, headers, text or base64 request bodies, redirect control, an optional certificate-validation override " +
