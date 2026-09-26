@@ -60,7 +60,9 @@ public static class RegistryTools
 {
     internal const int AbsoluteRegistryListResults = 5_000;
     internal const long AbsoluteRegistryListResponseCharacters =
-        8L * 1024 * 1024;
+        ConfigAssetTools.AbsoluteStructuredValueResponseCharacters;
+    internal const long AbsoluteRegistryGetResponseCharacters =
+        ConfigAssetTools.AbsoluteStructuredValueResponseCharacters;
 
     [McpServerTool(
         Name = "talvora_registry_create_key",
@@ -105,7 +107,7 @@ public static class RegistryTools
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraRegistryGetResponse)),
-     Description("Read one value from the local Windows registry. Use an empty valueName for the key's default value. ExpandString values are returned without environment expansion.")]
+     Description("Read one value from the local Windows registry with a finite 4 MiB response-character budget. Use an empty valueName for the key's default value. ExpandString values are returned without environment expansion. Oversized values are rejected before MCP serialization; export them to a file and use bounded file readers instead.")]
     public static TalvoraRegistryGetResponse GetValue(
         string hive,
         string path,
@@ -152,12 +154,24 @@ public static class RegistryTools
 
             var kind = key.GetValueKind(actualName);
             var raw = key.GetValue(actualName, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
+            var value =
+                ConvertValue(
+                    actualName,
+                    kind,
+                    raw);
+            if (EstimateValueCharacters(value) >
+                AbsoluteRegistryGetResponseCharacters)
+            {
+                throw new InvalidOperationException(
+                    $"Registry value '{actualName}' exceeds the 4 MiB response-character budget. Export the value to a file and use talvora_read_bytes or talvora_read_text_range.");
+            }
+
             return new TalvoraRegistryGetResponse(
                 true,
                 CanonicalHive(resolvedHive.Value),
                 normalizedPath,
                 CanonicalView(resolvedView.Value),
-                ConvertValue(actualName, kind, raw));
+                value);
         }
         finally
         {
@@ -229,7 +243,7 @@ public static class RegistryTools
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraRegistryListResponse)),
-     Description("List subkeys and values in a local Windows registry key with finite response budgets. Names are returned in deterministic ordinal order and ExpandString values are not expanded. maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while the key is unchanged.")]
+     Description("List subkeys and values in a local Windows registry key with finite entry and 4 MiB response-character budgets. Names are returned in deterministic ordinal order and ExpandString values are not expanded. maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while the key is unchanged. A single oversized value is rejected before MCP serialization.")]
     public static TalvoraRegistryListResponse List(
         string hive,
         string path,
@@ -350,7 +364,7 @@ public static class RegistryTools
                         if (returned == 0)
                         {
                             throw new InvalidOperationException(
-                                $"Registry value '{valueName}' exceeds the list response budget. Use talvora_registry_get for that value.");
+                                $"Registry value '{valueName}' exceeds the 4 MiB list response-character budget. Export the value to a file and use talvora_read_bytes or talvora_read_text_range.");
                         }
                         break;
                     }
