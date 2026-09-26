@@ -12,9 +12,13 @@ Durum: PLANLAMA TAMAMLANDI — implementasyon yeni oturumda başlayacak.
 - [x] PENPOT-005 — `Talvora Penpot MCP` scheduled task kullanıcı logon'unda hidden/persistent supervisor olarak kuruldu; terminal penceresi bırakmıyor.
 - [x] PENPOT-006 — Control Center managed discovery `autoStart=true`, scheduled-task lifecycle component ve process-match cleanup ile genişletildi.
 - [x] PENPOT-007 — Native required-tool contract 5 araca kilitlendi: `execute_code`, `high_level_overview`, `penpot_api_info`, `export_shape`, `import_image`.
-- [x] PENPOT-008 — Dedicated `--penpot-integration-only` smoke eklendi; direct Penpot tool list ile Talvora Dev proxy status/count parity doğrulanıyor.
+- [x] PENPOT-008 — Dedicated `--penpot-integration-only` smoke eklendi; direct local MCP'nin 5-tool contract'ı ve managed authenticated endpoint'in 4-tool contract'ı ayrı doğrulanıyor. Authenticated endpoint'te credential redaction da gate kapsamındadır.
 - [x] PENPOT-009 — Lifecycle stop/start acceptance: 4400/4401/4402 stop'ta kapalı, start'ta tekrar hazır; manifest 200; integration smoke GREEN.
 - [x] PENPOT-010 — Runtime commit `dda4c13` Gitea `origin/main` + GitHub `github/main` üzerine push edildi; canonical installer `B37C2A2585B575DDDC86BD5B96E33D933C9C04E7C02543A287ADD63365233D70` ile deploy edildi ve live `sourceCommit=dda4c13...` doğrulandı.
+- [x] PENPOT-011 — Talvora Windows Service içine `/penpot-ai` asset/health yüzeyi eklendi; manifest v2 ile **Talvora AI** Penpot plugin'i content/library write, downloads ve localstorage izinleriyle repo içinden publish ediliyor.
+- [x] PENPOT-012 — Talvora AI paneli canlı selection izleme, Premium Polish, 390x844 Mobile Copy, Component, Color Tokens, HTML+CSS handoff, Prototype ve deterministic free-text intent routing ile tamamlandı.
+- [x] PENPOT-013 — Gerçek Penpot acceptance GREEN: mobile clone, premium mutation, 15 yeni color token / 27 binding, component creation, selection-continuity fix, doğal dil inspect+handoff ve 13,042 HTML / 13,849 CSS üretimi doğrulandı.
+- [x] PENPOT-014 — Runtime fix commit `345947a` Gitea + GitHub'a push edildi; canonical installer SHA-256 `93CBB68249D9EC26298AE01FFB51345D41C28BFCFB97B9D66516AEF36F4B33E2` ile deploy edildi ve live `sourceCommit=345947a...`; dedicated integration smoke GREEN.
 
 ## 2026-09-20 — Privacy & Security Hardening TODO
 

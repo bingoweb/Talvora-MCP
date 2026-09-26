@@ -8,17 +8,17 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Repo/remote `main`: runtime commit `dda4c13882a121499a67b9dd06ade73510f219d9` iki remote'a push edildi; bu handoff değişikliği docs-only closeout'tur.
+- Repo/remote `main`: runtime commit `345947a338799cfc048b0b390482aa78d4a40856` iki remote'a push edildi; bu handoff değişikliği docs-only closeout'tur.
 - Çalışma ağacı: final docs-only closeout commit'i sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `dda4c13882a121499a67b9dd06ade73510f219d9` — `feat: manage local Penpot MCP`.
-- Exact-installed canonical runtime artifact source commit: `dda4c13882a121499a67b9dd06ade73510f219d9`.
-- Canonical installer SHA-256: `B37C2A2585B575DDDC86BD5B96E33D933C9C04E7C02543A287ADD63365233D70`; artifact size: 261,867,791 bytes.
+- Son runtime-affecting commit: `345947a338799cfc048b0b390482aa78d4a40856` — `fix: stabilize Penpot AI component workflow`.
+- Exact-installed canonical runtime artifact source commit: `345947a338799cfc048b0b390482aa78d4a40856`.
+- Canonical installer SHA-256: `93CBB68249D9EC26298AE01FFB51345D41C28BFCFB97B9D66516AEF36F4B33E2`; artifact size: 257,390,863 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `sourceCommit=dda4c13882a121499a67b9dd06ade73510f219d9` bildiriyor.
+- Exact-installed canlı Talvora runtime `sourceCommit=345947a338799cfc048b0b390482aa78d4a40856` bildiriyor.
 - Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
 - Gitea ve GitHub `fetch --dry-run` + `push --dry-run` Talvora'nın canlı `git_run` aracıyla GREEN; SSH private key user-only kalıyor.
-- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `dda4c13...`.
+- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `345947a...`.
 - Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
@@ -52,17 +52,24 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 ## Penpot / Talvora entegrasyonu — CURRENT
 
-- Resmi Penpot **2.18.0** self-host kurulumu Docker Compose ile `C:\ProgramData\Talvora\Penpot` altında çalışıyor. Frontend `http://127.0.0.1:9001/`; frontend ve mailcatch host publish'leri yalnız loopback'a bağlıdır. Docker içindeki resmi MCP container'ı `--multi-user` modunda Penpot'un kendi ağı için kalır ve artık host `4401/4402` portlarını publish etmez.
+- Resmi Penpot **2.18.0** self-host kurulumu Docker Compose ile `C:\ProgramData\Talvora\Penpot` altında çalışıyor. UI için kanonik adres `http://localhost:9001/`; host bind `127.0.0.1:9001` ile loopback'tır. Docker içindeki resmi MCP container'ı `--multi-user` modunda Penpot'un kendi ağı için kalır ve artık host `4401/4402` portlarını publish etmez.
 - Resmi compose içindeki Penpot secret yerelde rastgele üretildi; secret değeri repo, HANDOFF veya kalıcı log içine alınmadı. `.env` `PENPOT_VERSION=latest` kullanıyor. Docker Desktop kullanıcı ayarında `AutoStart=True`; değişiklik öncesi `settings-store.json.talvora-penpot.bak` yedeği bırakıldı ve Penpot container restart policy `always`.
 - Talvora'nın production design endpoint'i Docker multi-user MCP değildir. Exact Penpot **2.18.0** tag'ı `C:\ProgramData\Talvora\Penpot\penpot-2.18.0` altına sparse checkout edildi; upstream commit `5baffdc213f0deaaeb318e97a41d611ac0656a94`. `mcp` workspace'i `pnpm install --frozen-lockfile` + `pnpm run build` ile yerelde build edildi.
 - Local/single-user Penpot MCP kullanıcı oturumunda `Talvora Penpot MCP` scheduled task'iyle gizli ve kalıcı çalışır: plugin manifest `http://127.0.0.1:4400/manifest.json`, MCP `http://127.0.0.1:4401/mcp`, WebSocket bridge `http://127.0.0.1:4402`. Supervisor `C:\ProgramData\Talvora\Penpot\Start-Talvora-Penpot-Mcp.ps1`; tüm host listener'lar yalnız `127.0.0.1`.
 - NPM `@penpot/mcp` stable/latest canlı kontrolde 2.15.4 kaldığı için npm latest paketi production yolu yapılmadı; local MCP exact 2.18.0 release source'undan build edildi.
 - Canlı local Penpot MCP 5 native araç yayımlıyor: `execute_code`, `high_level_overview`, `penpot_api_info`, `export_shape`, `import_image`. `import_image` acceptance gate'e özellikle eklendi; böylece Talvora yanlışlıkla yeniden Docker multi-user endpoint'ine bağlanırsa regression kırılır.
 - Talvora Dev yüzeyine 4 wrapper eklendi: `talvora_penpot_status`, `talvora_penpot_overview`, `talvora_penpot_read_tool`, `talvora_penpot_call_tool`. Native Penpot text/structured/image result blokları korunur; bilinmeyen veya mutating araçlar full-call yolunda kalır.
+- `e45ef95` sonrasında wrapper resolver, kullanılabilir olduğunda Penpot'un managed authenticated endpoint'ini tercih eder. Bu endpoint canlı durumda 4 araç yayımlıyor: `execute_code`, `high_level_overview`, `penpot_api_info`, `export_shape`. Direct local `127.0.0.1:4401/mcp` fallback'i 5 araçlıdır ve ayrıca `import_image` içerir. Dedicated smoke bu iki sözleşmeyi artık bilinçli biçimde ayrı doğrular; authenticated endpoint için yanlış 5-tool parity varsayımı kaldırıldı.
 - Penpot 2.18 upstream tool metadata'sı read-only annotation yayımlamadığı için güvenli read yolu yalnız bilinen non-mutating `high_level_overview`, `penpot_api_info`, `export_shape` isimlerini fallback olarak kabul eder; `execute_code` generic mutating çağrı yolundadır.
-- Control Center canonical managed-MCP recovery discovery'deki `penpot` kaydı artık `autoStart=true`; `Talvora Penpot MCP` scheduled task bileşenini, exact source-root `process-match` cleanup'ını ve 5 native required-tool probe'unu içeriyor. Canlı kullanıcı registry'si bu sözleşmeyle yenilendi; Tray exact-installed `dda4c13...` version root'undan çalışıyor.
+- Control Center canonical managed-MCP recovery discovery'deki `penpot` kaydı `autoStart=true`; `Talvora Penpot MCP` scheduled task bileşenini, exact source-root `process-match` cleanup'ını ve direct local MCP için 5 native required-tool probe'unu içeriyor. Canlı kullanıcı registry'si bu sözleşmeyle yenilendi; Tray exact-installed `345947a...` version root'undan çalışıyor.
 - Lifecycle acceptance GREEN: Control Center stop semantiği taklit edildiğinde `4400/4401/4402` üçü de kapandı; start sonrası üçü de geri geldi ve plugin manifest HTTP 200 döndürdü. `TALVORA PENPOT INTEGRATION GREEN`, metadata live ve surface live targeted gate'leri deploy sonrasında tekrar GREEN.
 - Penpot'un kendi `high_level_overview` sözleşmesine göre gerçek design mutation için açık bir Penpot dosyasının Penpot MCP Plugin ile MCP sunucusuna bağlanması gerekir; bu bağlantı dosya/proje kullanım bağlamında yapılır ve Talvora entegrasyonundan ayrı bir kullanıcı-proje oturumudur.
+- Custom **Talvora AI** Penpot plugin'i artık Talvora Windows Service tarafından doğrudan servis edilir; ekstra Node servisi/port/startup görevi yoktur. Manifest `http://127.0.0.1:7676/penpot-ai/manifest.json`, health `/penpot-ai/healthz`; `plugin.js`, `index.html` ve `icon.svg` aynı loopback origin'den sunulur.
+- Talvora AI manifest v2 permissions: `content:write`, `library:write`, `allow:downloads`, `allow:localstorage`. Plugin iframe/message modelini Penpot'un resmi API'siyle kullanır; canlı selection/page/theme bilgisini izler.
+- Talvora AI v0.1 yetenekleri: selection inspection, premium radius/stroke/shadow polish, 390x844 mobile board clone, local library component oluşturma, solid fill -> color token extraction/binding, Penpot native `generateMarkup/generateStyle/generateFontFaces` ile HTML/CSS developer handoff ve prototype viewer açma.
+- Serbest metin kutusu v0.1'de haricî LLM çağırmaz; yerel/deterministik intent router ile premium/mobile/component/token/handoff/prototype/inspect niyetlerini bir veya birden çok komuta dönüştürür. Gerçek generative model backend'i ayrı bir sonraki fazdır.
+- Canlı Talvora AI acceptance GREEN: plugin demo profile'a manifest üzerinden kuruldu ve permission grant edildi; panel `Talvora hazir` gösterdi. Gerçek board üzerinde mobile clone, premium polish, 15 yeni color token + 27 token binding, component creation, doğal dil `incele + HTML CSS handoff` zinciri ve prototype viewer doğrulandı. Son handoff örneği component instance board için 13,042 karakter HTML + 13,849 karakter CSS üretti.
+- Plugin ilk runtime commit'i `a0abcc3`; component dönüşümü sonrası selection continuity ve authenticated/direct smoke contract düzeltmesi `345947a`. İki commit Gitea + GitHub'a push edildi. `345947a` canonical installer SHA-256 `93CBB68249D9EC26298AE01FFB51345D41C28BFCFB97B9D66516AEF36F4B33E2` ile SYSTEM deploy edildi; live `sourceCommit=345947a...`. `TALVORA PENPOT INTEGRATION GREEN`.
 
 ## Modal / Qwen entegrasyonu — CURRENT
 
