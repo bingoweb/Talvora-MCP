@@ -22,7 +22,7 @@ public static partial class DeveloperTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraReplaceTextResponse)),
-     Description("Compatibility literal/regex text replacement for ordinary/non-workspace files. Inside recognized development workspaces, source/text mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Non-workspace compatibility is preserved.")]
+     Description("Compatibility literal/regex text replacement for ordinary/non-workspace files. Existing UTF-8/UTF-8 BOM/UTF-16 BOM/UTF-32 BOM encoding and BOM semantics are preserved. Inside recognized development workspaces, source/text mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Non-workspace compatibility is preserved.")]
     public static async Task<TalvoraReplaceTextResponse> ReplaceText(
         string path,
         string search,
@@ -47,7 +47,22 @@ public static partial class DeveloperTools
         SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
             fullPath,
             "talvora_replace_text");
-        var original = await File.ReadAllTextAsync(fullPath, cancellationToken);
+        var snapshot =
+            await SourceTextCodec.ReadSnapshotAsync(
+                fullPath,
+                Path.GetFileName(fullPath),
+                requireText: true,
+                cancellationToken);
+        if (!snapshot.Exists ||
+            snapshot.Document is null)
+        {
+            throw new FileNotFoundException(
+                "Text replacement target was not found.",
+                fullPath);
+        }
+
+        var document = snapshot.Document;
+        var original = document.Text;
         string updated;
         int matches;
 
@@ -106,7 +121,12 @@ public static partial class DeveloperTools
                 File.Copy(fullPath, backupPath, overwrite: true);
             }
 
-            await File.WriteAllTextAsync(fullPath, updated, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), cancellationToken);
+            await File.WriteAllTextAsync(
+                fullPath,
+                updated,
+                CreateReplacementWriterEncoding(
+                    document.Encoding),
+                cancellationToken);
         }
 
         return new TalvoraReplaceTextResponse(
@@ -116,4 +136,41 @@ public static partial class DeveloperTools
             changed,
             backupPath);
     }
+
+    private static Encoding CreateReplacementWriterEncoding(
+        SourceTextEncodingDescriptor descriptor) =>
+        descriptor.Name switch
+        {
+            "utf-8" =>
+                new UTF8Encoding(
+                    encoderShouldEmitUTF8Identifier: false,
+                    throwOnInvalidBytes: true),
+            "utf-8-bom" =>
+                new UTF8Encoding(
+                    encoderShouldEmitUTF8Identifier: true,
+                    throwOnInvalidBytes: true),
+            "utf-16le-bom" =>
+                new UnicodeEncoding(
+                    bigEndian: false,
+                    byteOrderMark: true,
+                    throwOnInvalidBytes: true),
+            "utf-16be-bom" =>
+                new UnicodeEncoding(
+                    bigEndian: true,
+                    byteOrderMark: true,
+                    throwOnInvalidBytes: true),
+            "utf-32le-bom" =>
+                new UTF32Encoding(
+                    bigEndian: false,
+                    byteOrderMark: true,
+                    throwOnInvalidCharacters: true),
+            "utf-32be-bom" =>
+                new UTF32Encoding(
+                    bigEndian: true,
+                    byteOrderMark: true,
+                    throwOnInvalidCharacters: true),
+            _ =>
+                throw new InvalidOperationException(
+                    $"Unsupported replacement text encoding: {descriptor.Name}"),
+        };
 }
