@@ -97,6 +97,28 @@ if (args.Length >= 1 &&
     return;
 }
 
+if (args.Length >= 1 &&
+    string.Equals(
+        args[0],
+        "--penpot-integration-only",
+        StringComparison.Ordinal))
+{
+    var talvoraRoot =
+        args.Length > 1
+            ? args[1]
+            : "http://127.0.0.1:7676";
+    var penpotEndpoint =
+        args.Length > 2
+            ? args[2]
+            : "http://127.0.0.1:4401/mcp";
+
+    await SmokeScenarios.RunPenpotIntegrationAsync(
+        talvoraRoot,
+        penpotEndpoint);
+    Console.WriteLine("TALVORA PENPOT INTEGRATION GREEN");
+    return;
+}
+
 var devServerOnly =
     args.Length > 0 &&
     string.Equals(

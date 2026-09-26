@@ -261,6 +261,12 @@ internal sealed class PenpotManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDis
             "Talvora",
             "Penpot",
             "docker-compose.yaml");
+        var localMcpRoot = Path.Combine(
+            programData,
+            "Talvora",
+            "Penpot",
+            "penpot-2.18.0",
+            "mcp");
 
         if (!File.Exists(composePath))
         {
@@ -274,7 +280,7 @@ internal sealed class PenpotManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDis
             Description = "Yerel Penpot tasarım platformu ve resmi Penpot MCP sunucusu.",
             Endpoint = "http://127.0.0.1:4401/mcp",
             HealthEndpoint = "http://127.0.0.1:9001/",
-            AutoStart = false,
+            AutoStart = true,
             ProtocolProbe = new ManagedMcpProtocolProbeRegistration
             {
                 RequiredTools =
@@ -283,10 +289,18 @@ internal sealed class PenpotManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDis
                     "execute_code",
                     "penpot_api_info",
                     "export_shape",
+                    "import_image",
                 ],
             },
             Components =
             [
+                new ManagedMcpComponentRegistration
+                {
+                    Id = "local-mcp-task",
+                    DisplayName = "Penpot local MCP",
+                    Kind = "scheduled-task",
+                    Name = "Talvora Penpot MCP",
+                },
                 new ManagedMcpComponentRegistration
                 {
                     Id = "mcp",
@@ -308,6 +322,16 @@ internal sealed class PenpotManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDis
                 {
                     Kind = "config-file",
                     Value = composePath,
+                },
+                new ManagedMcpDiscoveryHint
+                {
+                    Kind = "scheduled-task",
+                    Value = "Talvora Penpot MCP",
+                },
+                new ManagedMcpDiscoveryHint
+                {
+                    Kind = "process-match",
+                    Value = localMcpRoot,
                 },
                 new ManagedMcpDiscoveryHint
                 {
