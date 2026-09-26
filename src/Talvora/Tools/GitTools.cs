@@ -621,7 +621,8 @@ public static class GitTools
         CancellationToken cancellationToken = default)
     {
         var git = ResolveGitExecutable();
-        var requestedArguments = arguments.ToArray();
+        var requestedArguments = AddSafeDirectoryArgument(
+            workingDirectory, arguments);
 
         ProcessExecutionResult result;
         if (await ShouldUseInteractiveUserForGitHubPushAsync(
@@ -789,14 +790,75 @@ public static class GitTools
         string git,
         string workingDirectory,
         IReadOnlyList<string> arguments,
-        CancellationToken cancellationToken) =>
-        ProcessRunner.RunAsync(
+        CancellationToken cancellationToken)
+    {
+        var requestedArguments = AddSafeDirectoryArgument(
+            workingDirectory,
+            arguments);
+
+        return ProcessRunner.RunAsync(
             git,
             workingDirectory,
-            arguments,
+            requestedArguments,
             environment: null,
             timeoutSeconds: 30,
             cancellationToken);
+    }
+
+    private static string[] AddSafeDirectoryArgument(
+        string workingDirectory,
+        IEnumerable<string> arguments)
+    {
+        var requestedArguments = arguments.ToArray();
+        var safeDirectory = FindRepositoryDirectory(workingDirectory);
+        if (safeDirectory is null)
+        {
+            return requestedArguments;
+        }
+
+        var normalizedSafeDirectory = safeDirectory
+            .Replace(
+                Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar);
+        return
+        [
+            "-c",
+            $"safe.directory={normalizedSafeDirectory}",
+            .. requestedArguments,
+        ];
+    }
+
+    private static string? FindRepositoryDirectory(string workingDirectory)
+    {
+        var current = new DirectoryInfo(
+            Path.GetFullPath(workingDirectory));
+        var first = true;
+
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, ".git")) ||
+                Directory.Exists(Path.Combine(current.FullName, ".git")))
+            {
+                return current.FullName;
+            }
+
+            if (first && IsBareRepositoryDirectory(current.FullName))
+            {
+                return current.FullName;
+            }
+
+            first = false;
+            current = current.Parent;
+        }
+
+        return null;
+    }
+
+    private static bool IsBareRepositoryDirectory(string path) =>
+        File.Exists(Path.Combine(path, "HEAD")) &&
+        File.Exists(Path.Combine(path, "config")) &&
+        Directory.Exists(Path.Combine(path, "objects")) &&
+        Directory.Exists(Path.Combine(path, "refs"));
 
     private static string ResolveGitExecutable() =>
         CommandResolver.Resolve(
