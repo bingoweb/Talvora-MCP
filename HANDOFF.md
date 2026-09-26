@@ -8,17 +8,17 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Repo/remote `main`: runtime commit `cf8969ce7e981f6e71fe5e4aaf52c704a3177bb7` iki remote'a push edildi; bu handoff değişikliği docs-only closeout'tur.
+- Repo/remote `main`: runtime commit `06f459196a396f5da0a120e4c2247596edd01a90` iki remote'a push edildi; bu handoff değişikliği docs-only closeout'tur.
 - Çalışma ağacı: final docs-only closeout commit'i sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `cf8969ce7e981f6e71fe5e4aaf52c704a3177bb7` — `feat: expand sbox editor bridge`.
-- Exact-installed canonical runtime artifact source commit: `cf8969ce7e981f6e71fe5e4aaf52c704a3177bb7`.
-- Canonical installer SHA-256: `62C22F9531823AF1CFF11B8230293F8D073F994D6C716541A1F8A121B01D6261`; artifact size: 261,858,575 bytes.
+- Son runtime-affecting commit: `06f459196a396f5da0a120e4c2247596edd01a90` — `feat: integrate Modal CLI management`.
+- Exact-installed canonical runtime artifact source commit: `06f459196a396f5da0a120e4c2247596edd01a90`.
+- Canonical installer SHA-256: `0B3E041D234C59B5398BFBC774148B076DEE6D728534922D666BB637792E3EBE`; artifact size: 261,862,671 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `sourceCommit=cf8969ce7e981f6e71fe5e4aaf52c704a3177bb7` bildiriyor.
+- Exact-installed canlı Talvora runtime `sourceCommit=06f459196a396f5da0a120e4c2247596edd01a90` bildiriyor.
 - Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
 - Gitea ve GitHub `fetch --dry-run` + `push --dry-run` Talvora'nın canlı `git_run` aracıyla GREEN; SSH private key user-only kalıyor.
-- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `cf8969c...`.
+- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `06f4591...`.
 - Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
