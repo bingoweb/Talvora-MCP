@@ -8,6 +8,10 @@ internal static partial class SmokeScenarios
         var processEnvironmentName = "TALVORA_SMOKE_PROCESS_" + smokeId.ToUpperInvariant();
         var userEnvironmentName = "TALVORA_SMOKE_USER_" + smokeId.ToUpperInvariant();
         var machineEnvironmentName = "TALVORA_SMOKE_MACHINE_" + smokeId.ToUpperInvariant();
+        var userProbePath = Path.Combine(
+            Environment.GetFolderPath(
+                Environment.SpecialFolder.CommonDocuments),
+            "Talvora-Smoke-User-Env-" + smokeId + ".txt");
         try
         {
             foreach (var item in new[]
@@ -107,6 +111,52 @@ internal static partial class SmokeScenarios
                     throw new InvalidOperationException($"environment get did not return the {item.Target} value.");
                 }
             }
+
+            var powershell = Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.System),
+                "WindowsPowerShell",
+                "v1.0",
+                "powershell.exe");
+            File.Delete(userProbePath);
+            await EnsureSuccess(
+                byName["talvora_user_process_start"],
+                new()
+                {
+                    ["executable"] = powershell,
+                    ["arguments"] = new[]
+                    {
+                        "-NoLogo",
+                        "-NoProfile",
+                        "-NonInteractive",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-Command",
+                        "$v=[Environment]::GetEnvironmentVariable($args[0],[EnvironmentVariableTarget]::User); if($null -eq $v){$v='<null>'}; [IO.File]::WriteAllText($args[1],$v,[Text.UTF8Encoding]::new($false))",
+                        userEnvironmentName,
+                        userProbePath,
+                    },
+                    ["visible"] = false,
+                    ["newConsole"] = false,
+                });
+
+            var probeDeadline =
+                DateTime.UtcNow.AddSeconds(15);
+            while (!File.Exists(userProbePath) &&
+                   DateTime.UtcNow < probeDeadline)
+            {
+                await Task.Delay(100);
+            }
+
+            if (!File.Exists(userProbePath) ||
+                !string.Equals(
+                    await File.ReadAllTextAsync(userProbePath),
+                    "user-" + smokeId,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "target=user did not persist into the logged-on Windows user profile.");
+            }
         
             var firstDelete = await EnsureSuccess(byName["talvora_env_delete"], new()
             {
@@ -146,6 +196,7 @@ internal static partial class SmokeScenarios
         }
         finally
         {
+            File.Delete(userProbePath);
             foreach (var item in new[]
             {
                 (Name: processEnvironmentName, Target: "process"),
