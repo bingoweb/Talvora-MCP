@@ -137,7 +137,7 @@ public static class KnowledgeTools
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraFetchResponse)),
-     Description("Fetch the complete text of a local Windows document by the ID returned from search. The document ID is its absolute Windows path.")]
+     Description("Fetch the complete text of a local Windows document by the ID returned from search. The document ID is its absolute Windows path. Files larger than 4 MiB or decoded text above the 4 MiB response budget are rejected before MCP serialization; use talvora_read_text_range for larger documents.")]
     public static async Task<TalvoraFetchResponse> Fetch(
         string id,
         CancellationToken cancellationToken = default)
@@ -153,8 +153,20 @@ public static class KnowledgeTools
             throw new FileNotFoundException("Document was not found.", fullPath);
         }
 
-        var text = await File.ReadAllTextAsync(fullPath, cancellationToken);
         var info = new FileInfo(fullPath);
+        if (info.Length > MaxSearchFileBytes)
+        {
+            throw new InvalidOperationException(
+                "Knowledge document exceeds the 4 MiB fetch budget. Use talvora_read_text_range for larger documents.");
+        }
+
+        var text = await File.ReadAllTextAsync(fullPath, cancellationToken);
+        if (text.Length >
+            ConfigAssetTools.AbsoluteTextResponseCharacters)
+        {
+            throw new InvalidOperationException(
+                "Decoded knowledge document exceeds the 4 MiB fetch response budget. Use talvora_read_text_range for larger documents.");
+        }
 
         return new TalvoraFetchResponse(
             fullPath,
