@@ -8,17 +8,17 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Repo/remote `main`: runtime commit `06f459196a396f5da0a120e4c2247596edd01a90` iki remote'a push edildi; bu handoff değişikliği docs-only closeout'tur.
+- Repo/remote `main`: runtime commit `4fa914ebb53ee44f621859095779c598a4cf792e` iki remote'a push edildi; bu handoff değişikliği docs-only closeout'tur.
 - Çalışma ağacı: final docs-only closeout commit'i sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `06f459196a396f5da0a120e4c2247596edd01a90` — `feat: integrate Modal CLI management`.
-- Exact-installed canonical runtime artifact source commit: `06f459196a396f5da0a120e4c2247596edd01a90`.
-- Canonical installer SHA-256: `0B3E041D234C59B5398BFBC774148B076DEE6D728534922D666BB637792E3EBE`; artifact size: 261,862,671 bytes.
+- Son runtime-affecting commit: `4fa914ebb53ee44f621859095779c598a4cf792e` — `feat: harden Modal integration`.
+- Exact-installed canonical runtime artifact source commit: `4fa914ebb53ee44f621859095779c598a4cf792e`.
+- Canonical installer SHA-256: `151063B2BA19188BD2F9B9CFC6A8888CA054FA03CB5008C2D61C252AF75F68B3`; artifact size: 261,862,671 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `sourceCommit=06f459196a396f5da0a120e4c2247596edd01a90` bildiriyor.
+- Exact-installed canlı Talvora runtime `sourceCommit=4fa914ebb53ee44f621859095779c598a4cf792e` bildiriyor.
 - Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
 - Gitea ve GitHub `fetch --dry-run` + `push --dry-run` Talvora'nın canlı `git_run` aracıyla GREEN; SSH private key user-only kalıyor.
-- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `06f4591...`.
+- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `4fa914e...`.
 - Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
@@ -37,8 +37,8 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Focused MCP yüzeyleri Modal entegrasyonuyla **Full 216 / Dev 186 / Admin 91**. Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
-- Güncel audit zinciri **#121–#218** kapalı kalır. s&box + Modal genişletmeleri sonrasında source metadata/focused-surface gate'leri GREEN; eski 204-tool full-smoke sonucu tarihsel baseline'dır, 216 araç için full smoke yeniden çalıştırılmadı.
+- Focused MCP yüzeyleri Modal hardening sonrasında **Full 217 / Dev 187 / Admin 91**. Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
+- Güncel audit zinciri **#121–#218** kapalı kalır. s&box + Modal genişletmeleri sonrasında metadata source/live, focused-surface source/live ve privacy-security gate'leri GREEN; eski 204-tool full-smoke sonucu tarihsel baseline'dır, 217 araç için full smoke yeniden çalıştırılmadı.
 
 ## s&box / Talvora entegrasyonu — CURRENT
 
@@ -53,9 +53,9 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 ## Modal / Qwen entegrasyonu — CURRENT
 
 - Resmi Modal Python SDK/CLI **1.5.5** sistem Python 3.14 altına kuruldu; executable `C:\Python314\Scripts\modal.exe`.
-- Modal için ayrı üçüncü taraf MCP yerine Talvora Dev yüzeyine 3 native yönetim aracı eklendi: `talvora_modal_info`, `talvora_modal_endpoint_list`, `talvora_modal_run`.
-- Modal CLI çağrıları credential/profile sahipliği için logged-on Windows user session'ında çalışır; tool response credential/token döndürmez. Generic run, resmi CLI yüzeyini korur.
-- Tool policy sonrası beklenen yüzey **Full 216 / Dev 186 / Admin 91**; metadata source + surface source GREEN, Talvora + Smoke Release build 0 warning / 0 error.
+- Modal için ayrı üçüncü taraf MCP yerine Talvora Dev yüzeyinde 4 native yönetim aracı vardır: `talvora_modal_info`, `talvora_modal_app_list`, `talvora_modal_endpoint_list`, `talvora_modal_run`. `app_list`, yeni Endpoint ürünü öncesi klasik Modal App deployment'larını da keşfeder.
+- Modal CLI çağrıları credential/profile sahipliği için logged-on Windows user session'ında çalışır. `talvora_modal_info` aktif profili ve credential kullanılabilirliğini ayrı raporlar; credential değeri response'a alınmaz. Modal API/proxy/OAuth credential prefix'leri persistent log redaction kapsamındadır. Generic run, resmi CLI yüzeyini korur.
+- Tool policy sonrası canlı yüzey **Full 217 / Dev 187 / Admin 91**; metadata source/live + surface source/live + privacy-security GREEN, Talvora + Smoke Release build 0 warning / 0 error.
 - Modal user profile setup tamamlandı; aktif profile `taylansoylu`. Native `modal endpoint list` boş çünkü bu model yeni Endpoint ürünü değil, custom Modal App olarak deploy edilmiş.
 - Custom app `codepilot-huihui-qwen38` deployed; public OpenAI-compatible base `https://taylansoylu--codepilot-huihui-qwen38-serve.modal.run/v1`.
 - Auth secret adı `codepilot-inference-api`; required env key adı `LLAMA_API_KEY`. Secret değeri okunmadı, loglanmadı veya HANDOFF'a yazılmadı.
