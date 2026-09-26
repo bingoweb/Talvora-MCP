@@ -24,6 +24,8 @@ internal static partial class SmokeScenarios
         string talvoraRoot,
         string penpotEndpoint)
     {
+        await VerifyTalvoraPenpotAiPluginAsync(talvoraRoot);
+
         await using var penpotClient =
             await CreatePenpotSmokeClientAsync(
                 penpotEndpoint);
@@ -113,6 +115,60 @@ internal static partial class SmokeScenarios
         {
             throw new InvalidOperationException(
                 "Talvora Penpot status tool count does not match the native MCP server.");
+        }
+    }
+
+    private static async Task VerifyTalvoraPenpotAiPluginAsync(
+        string talvoraRoot)
+    {
+        using var httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(10),
+        };
+        var root = talvoraRoot.TrimEnd('/');
+
+        using var healthResponse =
+            await httpClient.GetAsync(
+                root + "/penpot-ai/healthz");
+        if (!healthResponse.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException(
+                $"Talvora Penpot AI health failed: {(int)healthResponse.StatusCode}");
+        }
+
+        using var healthJson =
+            System.Text.Json.JsonDocument.Parse(
+                await healthResponse.Content.ReadAsStringAsync());
+        if (!healthJson.RootElement.GetProperty("ready").GetBoolean())
+        {
+            throw new InvalidOperationException(
+                "Talvora Penpot AI health reported ready=false.");
+        }
+
+        using var manifestResponse =
+            await httpClient.GetAsync(
+                root + "/penpot-ai/manifest.json");
+        manifestResponse.EnsureSuccessStatusCode();
+        using var manifestJson =
+            System.Text.Json.JsonDocument.Parse(
+                await manifestResponse.Content.ReadAsStringAsync());
+        if (manifestJson.RootElement.GetProperty("name").GetString() != "Talvora AI" ||
+            manifestJson.RootElement.GetProperty("version").GetInt32() != 2)
+        {
+            throw new InvalidOperationException(
+                "Talvora Penpot AI manifest identity is invalid.");
+        }
+
+        foreach (var asset in new[] { "plugin.js", "index.html", "icon.svg" })
+        {
+            using var response =
+                await httpClient.GetAsync(
+                    root + "/penpot-ai/" + asset);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException(
+                    $"Talvora Penpot AI asset failed: {asset} -> {(int)response.StatusCode}");
+            }
         }
     }
 

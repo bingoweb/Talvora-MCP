@@ -108,6 +108,7 @@ app.MapGet("/healthz", () =>
     });
 });
 
+PenpotAiPluginEndpoints.Map(app);
 app.MapMcp("/mcp");
 app.MapMcp("/mcp/dev");
 app.MapMcp("/mcp/admin");

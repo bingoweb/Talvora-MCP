@@ -1,0 +1,13 @@
+{
+  "name": "Talvora AI",
+  "description": "Talvora ile Penpot icinde tasarim inceleme, hizli duzenleme, component, token ve developer handoff araclari.",
+  "version": 2,
+  "code": "plugin.js",
+  "icon": "icon.svg",
+  "permissions": [
+    "content:write",
+    "library:write",
+    "allow:downloads",
+    "allow:localstorage"
+  ]
+}

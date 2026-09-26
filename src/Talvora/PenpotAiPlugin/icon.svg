@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" role="img" aria-label="Talvora AI">
+  <defs>
+    <linearGradient id="g" x1="8" y1="8" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B7CFF"/>
+      <stop offset="1" stop-color="#20C997"/>
+    </linearGradient>
+  </defs>
+  <rect width="56" height="56" rx="16" fill="#12192B"/>
+  <path d="M16 17h24v7H32v17h-8V24h-8z" fill="url(#g)"/>
+  <circle cx="41" cy="39" r="5" fill="#20C997"/>
+</svg>

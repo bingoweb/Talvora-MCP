@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Talvora AI</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1424;
+      --panel: #171e31;
+      --panel-2: #1d263d;
+      --line: #2d3855;
+      --text: #f7f8fc;
+      --muted: #9ca8c4;
+      --primary: #8b7cff;
+      --accent: #20c997;
+      --danger: #ff6678;
+      --warning: #ffbf4b;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+    }
+
+    body[data-theme="light"] {
+      color-scheme: light;
+      --bg: #f3f5fb;
+      --panel: #ffffff;
+      --panel-2: #f7f8fc;
+      --line: #dfe4ef;
+      --text: #172033;
+      --muted: #68738c;
+      --shadow: 0 18px 45px rgba(28, 39, 64, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 90% 0%, rgba(139,124,255,.18), transparent 34%),
+        radial-gradient(circle at 0% 100%, rgba(32,201,151,.10), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, textarea { font: inherit; }
+
+    .shell { padding: 18px; }
+
+    .hero {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .logo {
+      display: grid;
+      width: 46px;
+      height: 46px;
+      place-items: center;
+      border-radius: 15px;
+      background: linear-gradient(135deg, #8b7cff, #20c997);
+      color: #fff;
+      font-weight: 900;
+      box-shadow: var(--shadow);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -.02em;
+    }
+
+    .subtitle {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .status {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .status::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--warning);
+      box-shadow: 0 0 0 4px rgba(255,191,75,.12);
+    }
+
+    .status.ready::before {
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(32,201,151,.12);
+    }
+
+    .card {
+      margin-top: 12px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--panel) 94%, transparent);
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin-bottom: 8px;
+      color: var(--primary);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .selection-title {
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .selection-meta {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .prompt {
+      width: 100%;
+      min-height: 82px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      outline: none;
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 12px;
+      line-height: 1.45;
+    }
+
+    .prompt:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(139,124,255,.12);
+    }
+
+    .primary {
+      width: 100%;
+      margin-top: 10px;
+      border: 0;
+      border-radius: 13px;
+      padding: 11px 14px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #7565f6, #8b7cff);
+      color: #fff;
+      font-weight: 800;
+    }
+
+    .quick-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .quick {
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      padding: 11px 10px;
+      cursor: pointer;
+      background: var(--panel-2);
+      color: var(--text);
+      text-align: left;
+      transition: transform .12s ease, border-color .12s ease;
+    }
+
+    .quick:hover {
+      transform: translateY(-1px);
+      border-color: var(--primary);
+    }
+
+    .quick strong {
+      display: block;
+      font-size: 12px;
+    }
+
+    .quick span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .log {
+      max-height: 150px;
+      overflow: auto;
+      display: grid;
+      gap: 8px;
+    }
+
+    .message {
+      padding: 10px 11px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel-2);
+    }
+
+    .message strong {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 11px;
+    }
+
+    .message div {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .message.error { border-color: rgba(255,102,120,.5); }
+    .message.success { border-color: rgba(32,201,151,.45); }
+
+    .downloads {
+      display: none;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .downloads.visible { display: flex; }
+
+    .download {
+      flex: 1;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 9px;
+      cursor: pointer;
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .footer {
+      padding: 14px 4px 2px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="logo">T</div>
+      <div>
+        <h1>Talvora AI</h1>
+        <div class="subtitle">Penpot design copilot · local</div>
+      </div>
+      <div id="status" class="status">Talvora</div>
+    </section>
+
+    <section class="card">
+      <div class="eyebrow">Canli Secim</div>
+      <div id="selectionTitle" class="selection-title">Secim bekleniyor</div>
+      <div id="selectionMeta" class="selection-meta">Penpot'ta bir frame veya katman sec.</div>
+    </section>
+
+    <section class="card">
+      <div class="eyebrow">Komut</div>
+      <textarea id="prompt" class="prompt" placeholder="Ornek: Bunu premium yap, mobil kopyasini olustur ve HTML/CSS handoff hazirla."></textarea>
+      <button id="runPrompt" class="primary">Talvora'ya Uygulat</button>
+    </section>
+
+    <section class="card">
+      <div class="eyebrow">Hizli Yetenekler</div>
+      <div class="quick-grid">
+        <button class="quick" data-command="inspect"><strong>Secimi Incele</strong><span>Boyut, tip, renk, component</span></button>
+        <button class="quick" data-command="premium"><strong>Premium Polish</strong><span>Radius, stroke, golge</span></button>
+        <button class="quick" data-command="mobile"><strong>Mobil Kopya</strong><span>390 × 844 board</span></button>
+        <button class="quick" data-command="component"><strong>Component</strong><span>Local library'ye ekle</span></button>
+        <button class="quick" data-command="tokens"><strong>Color Tokens</strong><span>Renkleri token'a bagla</span></button>
+        <button class="quick" data-command="handoff"><strong>HTML + CSS</strong><span>Developer handoff</span></button>
+        <button class="quick" data-command="prototype"><strong>Prototype</strong><span>Viewer'i ac</span></button>
+      </div>
+      <div id="downloads" class="downloads">
+        <button id="downloadHtml" class="download">HTML indir</button>
+        <button id="downloadCss" class="download">CSS indir</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="eyebrow">Talvora Log</div>
+      <div id="log" class="log"></div>
+    </section>
+
+    <div class="footer">Talvora × Penpot · localhost only</div>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const selectionTitle = document.getElementById("selectionTitle");
+    const selectionMeta = document.getElementById("selectionMeta");
+    const promptEl = document.getElementById("prompt");
+    const logEl = document.getElementById("log");
+    const downloads = document.getElementById("downloads");
+    let handoff = null;
+
+    const params = new URLSearchParams(location.search);
+    document.body.dataset.theme = params.get("theme") || "dark";
+
+    const savedPrompt = localStorage.getItem("talvora-ai:last-prompt");
+    if (savedPrompt) promptEl.value = savedPrompt;
+
+    function post(message) {
+      parent.postMessage(message, "*");
+    }
+
+    function addMessage(level, title, detail) {
+      const item = document.createElement("div");
+      item.className = "message " + (level || "info");
+
+      const strong = document.createElement("strong");
+      strong.textContent = title || "Talvora";
+      item.appendChild(strong);
+
+      const text = document.createElement("div");
+      text.textContent = detail || "";
+      item.appendChild(text);
+
+      logEl.prepend(item);
+      while (logEl.children.length > 8) {
+        logEl.lastElementChild.remove();
+      }
+    }
+
+    function downloadText(filename, content, mime) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function probeTalvora() {
+      try {
+        const response = await fetch("./healthz", { cache: "no-store" });
+        const payload = await response.json();
+        if (!response.ok || !payload.ready) throw new Error("not-ready");
+        statusEl.classList.add("ready");
+        statusEl.textContent = "Talvora hazir";
+      } catch {
+        statusEl.classList.remove("ready");
+        statusEl.textContent = "Talvora offline";
+      }
+    }
+
+    document.querySelectorAll("[data-command]").forEach((button) => {
+      button.addEventListener("click", () => {
+        post({ type: "run-command", command: button.dataset.command });
+      });
+    });
+
+    document.getElementById("runPrompt").addEventListener("click", () => {
+      const prompt = promptEl.value.trim();
+      localStorage.setItem("talvora-ai:last-prompt", prompt);
+      post({ type: "run-prompt", prompt });
+    });
+
+    document.getElementById("downloadHtml").addEventListener("click", () => {
+      if (handoff) downloadText("penpot-selection.html", handoff.html, "text/html;charset=utf-8");
+    });
+
+    document.getElementById("downloadCss").addEventListener("click", () => {
+      if (handoff) downloadText("penpot-selection.css", handoff.css, "text/css;charset=utf-8");
+    });
+
+    window.addEventListener("message", (event) => {
+      const message = event.data;
+      if (!message || message.source !== "talvora-ai") return;
+
+      if (message.type === "theme") {
+        document.body.dataset.theme = message.theme || "dark";
+        return;
+      }
+
+      if (message.type === "selection") {
+        if (!message.count) {
+          selectionTitle.textContent = "Secim yok";
+          selectionMeta.textContent = message.page
+            ? message.page + " · Bir katman sec."
+            : "Penpot'ta bir katman sec.";
+          return;
+        }
+
+        const first = message.items?.[0];
+        selectionTitle.textContent =
+          message.count === 1
+            ? first?.name || "1 katman"
+            : message.count + " katman secili";
+        selectionMeta.textContent = first
+          ? first.type + " · " + first.width + " × " + first.height
+          : message.page || "";
+        return;
+      }
+
+      if (message.type === "inspection") {
+        const names = (message.summary?.items || [])
+          .slice(0, 4)
+          .map((item) => item.name)
+          .join(", ");
+        addMessage(
+          "info",
+          "Secim ozeti",
+          names || "Secim bilgisi alindi."
+        );
+        return;
+      }
+
+      if (message.type === "handoff") {
+        handoff = message;
+        downloads.classList.add("visible");
+        return;
+      }
+
+      if (message.type === "result") {
+        addMessage(message.level, message.title, message.detail);
+      }
+    });
+
+    void probeTalvora();
+    setInterval(probeTalvora, 10000);
+    post({ type: "request-state" });
+  </script>
+</body>
+</html>
