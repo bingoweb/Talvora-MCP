@@ -65,7 +65,9 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Mevcut deployed app kaynak kodunu ve public endpoint'i değiştirmemek için Volume'daki runtime dosya adı geriye uyumluluk amacıyla `Huihui-Qwen3.8-27B-abliterated-UD-Q4_K_XL.gguf` olarak bırakıldı; dosya içeriği ve hash'i artık yukarıdaki UD-DW Q4_K_M artefact'ına aittir.
 - `codepilot-huihui-qwen38` recreate rollover sonrası yeni container 17:09 civarında modeli yeniden yükledi. Yetkili post-update `/v1/models` probe 200, `/v1/chat/completions` probe 200, content `UPDATED_OK`; `reasoning_content` alanı da mevcut.
 - Tekrarlanabilir bakım yardımcıları `C:\\Users\\tayla\\Documents\\Modal-CodePilot\\refresh_model.py` ve `probe_endpoint.py` altında tutuluyor; refresh indirme boyutunu + SHA-256'yı doğrulamadan Volume publish etmez ve inference secret'ı response/log içine çıkarmaz.
-- Dyad hedef yolu **Dyad -> Modal /v1**; Talvora yönetim/diagnostic yapacak. Sonraki adım Dyad custom OpenAI-compatible provider'ını bu base URL + model ID ile kurmak ve API key'i secret değerini sohbete çıkarmadan yerel güvenli aktarım ile bağlamak.
+- Dyad hedef yolu **Dyad -> Modal /v1**; Talvora yönetim/diagnostic yapıyor. `custom::modal-qwen` provider'ı base URL `https://taylansoylu--codepilot-huihui-qwen38-serve.modal.run/v1`, model `codepilot-huihui-qwen38-27b`, context 65,536 olarak kurulu ve seçili.
+- 2026-09-26 API credential onarımı: eski inference key nedeniyle Dyad loglarında `401 Invalid API Key` görülüyordu. Yeni rastgele inference key oluşturuldu, Modal `codepilot-inference-api` Secret içindeki `LLAMA_API_KEY` değiştirildi ve app recreate rollover edildi. Yeni key ile `/v1/models` 200 ve chat probe 200 doğrulandı.
+- Dyad'ın `providerSettings["custom::modal-qwen"].apiKey` alanı Electron Safe Storage (`v10`/OSCrypt) formatında yeni key ile yeniden şifrelendi; logged-on user context'inde decrypt round-trip doğrulaması GREEN. Dyad 1.17.0-beta1 yeniden başlatıldı. Plaintext key yalnız kullanıcının istediği `C:\\Users\\tayla\\Desktop\\MODAL-QWEN-API-KEY.txt` dosyasında tutuluyor; repo/HANDOFF/log içine yazılmadı.
 
 ## Son tamamlanan bug-fix zinciri
 
