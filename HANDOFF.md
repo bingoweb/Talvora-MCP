@@ -8,17 +8,17 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Repo/remote `main`: runtime commit `bf916480bd15c12515c6935e6da4d2c0da4c0327` iki remote'a push edildi; bu handoff için final docs-only closeout commit'i bunun üzerinde gelecektir.
+- Repo/remote `main`: runtime commit `cf8969ce7e981f6e71fe5e4aaf52c704a3177bb7` iki remote'a push edildi; bu handoff değişikliği docs-only closeout'tur.
 - Çalışma ağacı: final docs-only closeout commit'i sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `bf916480bd15c12515c6935e6da4d2c0da4c0327` — `fix: publish complete byte writes atomically`.
-- Exact-installed canonical runtime artifact source commit: `bf916480bd15c12515c6935e6da4d2c0da4c0327`.
-- Canonical installer SHA-256: `16380C9A48ED69447EBE30F97D580D2ABCB21BEB7CBDFC1F8E3ED4A69E31F085`; artifact size: 261,849,359 bytes.
+- Son runtime-affecting commit: `cf8969ce7e981f6e71fe5e4aaf52c704a3177bb7` — `feat: expand sbox editor bridge`.
+- Exact-installed canonical runtime artifact source commit: `cf8969ce7e981f6e71fe5e4aaf52c704a3177bb7`.
+- Canonical installer SHA-256: `62C22F9531823AF1CFF11B8230293F8D073F994D6C716541A1F8A121B01D6261`; artifact size: 261,858,575 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=bf916480bd15c12515c6935e6da4d2c0da4c0327` bildiriyor.
+- Exact-installed canlı Talvora runtime `sourceCommit=cf8969ce7e981f6e71fe5e4aaf52c704a3177bb7` bildiriyor.
 - Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
 - Gitea ve GitHub `fetch --dry-run` + `push --dry-run` Talvora'nın canlı `git_run` aracıyla GREEN; SSH private key user-only kalıyor.
-- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `bf91648...`.
+- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `cf8969c...`.
 - Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
@@ -37,8 +37,18 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Focused MCP yüzeyleri: **Dev 174**, **Admin 91**; Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
-- Güncel audit üst özeti: **#121–#218 remediation complete; #199–#212 ve #214–#218 LIVE VERIFIED; #213 TEST VERIFIED; full 204-tool live MCP smoke baseline GREEN; focused surface live + metadata live GREEN ve capability korunuyor.**
+- Focused MCP yüzeyleri: **Full 213 / Dev 183 / Admin 91**. Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
+- Güncel audit zinciri **#121–#218** kapalı kalır. s&box genişletmesi sonrasında metadata live ve focused surface live gate'leri yeniden GREEN; eski 204-tool full-smoke sonucu tarihsel baseline'dır, 213 araç için full smoke yeniden çalıştırılmadı.
+
+## s&box / Talvora entegrasyonu — CURRENT
+
+- Talvora Dev yüzeyinde 9 s&box aracı vardır: status, editor status, toolset list/describe, search, single/batch call, console ve generic invoke.
+- Talvora proxy'si yerel s&box editor MCP'sine `http://127.0.0.1:7269/mcp` üzerinden bağlanır ve inline image/screenshot content'ini korur.
+- Oyun deposu: `C:\Users\tayla\Documents\s&box projects\Talvora-Sbox-Lab`; private Gitea: `taylan/Talvora-Sbox-Lab`.
+- Rich editor bridge üçüncü taraf yerel bağımlılıktır; `Libraries/claudebridge` Git dışında tutulur. Statik envanter: 28 toolset / 273 benzersiz native MCP tool / 29 MCP wrapper dosyası.
+- Resmi `sbox-public` checkout commit `1da73be3fc461645265db6840df8d4dcd36d4346`. Production `Sbox-Dev.csproj` Release build 0 warning / 0 error.
+- 2026-09-26 public-source native artifact ile generated managed interop arasında runtime hash uyumsuzluğu görüldü (`managed 15364`, `native 38969`); source runtime shader kabulü bu yüzden güvenli biçimde durduruldu. Engine kaynakları bu uyumsuzluğu gizlemek için yamalanmadı.
+- Facepunch oyun geliştirme için Steam kurulumunu öneriyor; Steam Chocolatey ile kuruldu fakat bu makinede henüz Steam login yok. Steam s&box kurulduğunda kalan acceptance: port 7269 live -> bridge toolset live -> screenshot -> reversible scene edit.
 
 ## Son tamamlanan bug-fix zinciri
 
