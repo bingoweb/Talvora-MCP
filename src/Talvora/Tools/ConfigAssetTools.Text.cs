@@ -114,7 +114,7 @@ public static partial class ConfigAssetTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraAppendTextResponse)),
-     Description("Compatibility text append for ordinary/non-workspace files. New or empty files use BOM-less UTF-8; existing supported UTF-8/BOM, UTF-16 BOM, and UTF-32 BOM files preserve their text encoding without inserting another BOM. Inside recognized development workspaces, source/text mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Ordinary non-workspace append remains supported.")]
+     Description("Compatibility text append for ordinary/non-workspace files. New or empty files use BOM-less UTF-8; existing supported UTF-8/BOM, UTF-16 BOM, and UTF-32 BOM files preserve their text encoding without inserting another BOM. appendNewLine=true preserves the first detected CRLF/LF/CR style in an existing file and uses the platform newline when no style exists. Inside recognized development workspaces, source/text mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Ordinary non-workspace append remains supported.")]
     public static async Task<TalvoraAppendTextResponse> AppendText(
         string path,
         string content,
@@ -131,15 +131,28 @@ public static partial class ConfigAssetTools
             Directory.CreateDirectory(parent);
         }
 
+        var existingLength =
+            File.Exists(fullPath)
+                ? new FileInfo(fullPath).Length
+                : 0;
+        var existingEncoding =
+            existingLength > 0
+                ? SourceTextCodec.ReadEncodingDescriptor(fullPath)
+                : null;
         var appendEncoding =
-            File.Exists(fullPath) &&
-            new FileInfo(fullPath).Length > 0
-                ? SourceTextCodec
-                    .ReadEncodingDescriptor(fullPath)
-                    .Encoding
-                : new UTF8Encoding(
+            existingEncoding?.Encoding
+                ?? new UTF8Encoding(
                     encoderShouldEmitUTF8Identifier: false,
                     throwOnInvalidBytes: true);
+        var newline =
+            appendNewLine &&
+            existingEncoding is not null
+                ? await DetectAppendNewlineAsync(
+                        fullPath,
+                        existingEncoding,
+                        cancellationToken)
+                    .ConfigureAwait(false)
+                : Environment.NewLine;
 
         await using var stream = new FileStream(
             fullPath,
@@ -157,7 +170,7 @@ public static partial class ConfigAssetTools
         await writer.WriteAsync(content.AsMemory(), cancellationToken);
         if (appendNewLine)
         {
-            await writer.WriteAsync(Environment.NewLine.AsMemory(), cancellationToken);
+            await writer.WriteAsync(newline.AsMemory(), cancellationToken);
         }
         await writer.FlushAsync(cancellationToken);
         await stream.FlushAsync(cancellationToken);
@@ -167,5 +180,79 @@ public static partial class ConfigAssetTools
             content.Length,
             stream.Length,
             appendNewLine);
+    }
+
+    private static async Task<string> DetectAppendNewlineAsync(
+        string fullPath,
+        SourceTextEncodingDescriptor descriptor,
+        CancellationToken cancellationToken)
+    {
+        const int probeCharacters = 64 * 1024;
+        var buffer = new char[4096];
+        var charactersRead = 0;
+        var pendingCarriageReturn = false;
+
+        await using var stream = new FileStream(
+            fullPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete,
+            bufferSize: 16 * 1024,
+            options:
+                FileOptions.Asynchronous |
+                FileOptions.SequentialScan);
+        stream.Position =
+            Math.Min(
+                descriptor.Preamble.Length,
+                stream.Length);
+        using var reader = new StreamReader(
+            stream,
+            descriptor.Encoding,
+            detectEncodingFromByteOrderMarks: false,
+            bufferSize: 16 * 1024,
+            leaveOpen: true);
+
+        while (charactersRead < probeCharacters)
+        {
+            var requested =
+                Math.Min(
+                    buffer.Length,
+                    probeCharacters - charactersRead);
+            var read =
+                await reader.ReadAsync(
+                        buffer.AsMemory(0, requested),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            if (read == 0)
+            {
+                break;
+            }
+
+            for (var index = 0; index < read; index++)
+            {
+                var character = buffer[index];
+                if (pendingCarriageReturn)
+                {
+                    return character == '\n'
+                        ? "\r\n"
+                        : "\r";
+                }
+
+                if (character == '\r')
+                {
+                    pendingCarriageReturn = true;
+                }
+                else if (character == '\n')
+                {
+                    return "\n";
+                }
+            }
+
+            charactersRead += read;
+        }
+
+        return pendingCarriageReturn
+            ? "\r"
+            : Environment.NewLine;
     }
 }
