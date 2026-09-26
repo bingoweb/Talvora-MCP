@@ -208,5 +208,8 @@ public static class TalvoraToolManifest
         "talvora_toml_get",
         "talvora_toml_set",
         "talvora_toml_delete",
+        "talvora_sbox_status",
+        "talvora_sbox_search_tools",
+        "talvora_sbox_invoke",
     ];
 }

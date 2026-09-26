@@ -9,9 +9,9 @@ namespace Talvora.Shared;
 /// </summary>
 public static class TalvoraMcpToolMetadataPolicy
 {
-    public const int ExpectedReviewedToolCount = 204;
-    public const int ExpectedOpenWorldToolCount = 56;
-    public const int ExpectedDestructiveToolCount = 94;
+    public const int ExpectedReviewedToolCount = 207;
+    public const int ExpectedOpenWorldToolCount = 59;
+    public const int ExpectedDestructiveToolCount = 95;
     public const int PreferredMaxDescriptionCharacters = 650;
 
     private static readonly HashSet<string> OpenWorldTools =
@@ -66,6 +66,9 @@ public static class TalvoraMcpToolMetadataPolicy
             "talvora_run_process",
             "talvora_rustc_run",
             "talvora_rustup_run",
+            "talvora_sbox_invoke",
+            "talvora_sbox_search_tools",
+            "talvora_sbox_status",
             "talvora_signtool_run",
             "talvora_tcp_exchange",
             "talvora_tls_inspect",

@@ -88,6 +88,18 @@ internal static partial class SmokeScenarios
             "talvora_json_set",
             development: false,
             administration: true);
+        AssertSurface(
+            "talvora_sbox_status",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_sbox_search_tools",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_sbox_invoke",
+            development: true,
+            administration: false);
 
         foreach (var evalCase in TalvoraToolSelectionPolicy.Cases)
         {

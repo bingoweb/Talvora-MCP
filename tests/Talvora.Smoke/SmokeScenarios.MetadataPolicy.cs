@@ -48,6 +48,9 @@ internal static partial class SmokeScenarios
         AssertWorldScope("talvora_run_powershell", true);
         AssertWorldScope("talvora_npm_install", true);
         AssertWorldScope("talvora_tcp_exchange", true);
+        AssertWorldScope("talvora_sbox_status", true);
+        AssertWorldScope("talvora_sbox_search_tools", true);
+        AssertWorldScope("talvora_sbox_invoke", true);
 
         const string legacyDescription =
             "Run an arbitrary command with unrestricted administration access. No command allowlist or deny-list is applied.";
@@ -274,6 +277,18 @@ internal static partial class SmokeScenarios
             readOnly: false,
             destructive: false,
             openWorld: false);
+        AssertLiveTool(
+            tools,
+            "talvora_sbox_status",
+            readOnly: true,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_sbox_invoke",
+            readOnly: false,
+            destructive: true,
+            openWorld: true);
     }
 
     private static void AssertWorldScope(
