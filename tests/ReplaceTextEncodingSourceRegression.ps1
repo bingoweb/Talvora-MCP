@@ -3,14 +3,17 @@ Set-StrictMode -Version Latest
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $path = Join-Path $repoRoot 'src\Talvora\Tools\DeveloperTools.FileMutation.cs'
+$codecPath = Join-Path $repoRoot 'src\Talvora\SourceEditing\SourceTextCodec.cs'
 $text = Get-Content -LiteralPath $path -Raw
+$codecText = Get-Content -LiteralPath $codecPath -Raw
 
 if ($text -notmatch 'SourceTextCodec\.ReadSnapshotAsync\(' -or
     $text -notmatch 'var document = snapshot\.Document') {
     throw 'talvora_replace_text does not read through the canonical encoding-aware source text codec.'
 }
 
-if ($text -notmatch 'CreateReplacementWriterEncoding\(') {
+if ($text -notmatch 'CreateReplacementWriterEncoding\(' -or
+    $text -notmatch 'SourceTextCodec\.CreateWriterEncoding\(') {
     throw 'talvora_replace_text does not select a writer encoding from the detected source encoding.'
 }
 
@@ -22,8 +25,8 @@ foreach ($encodingName in @(
     'utf-32le-bom',
     'utf-32be-bom'
 )) {
-    if ($text -notmatch [regex]::Escape('"' + $encodingName + '"')) {
-        throw "talvora_replace_text is missing preservation mapping for $encodingName."
+    if ($codecText -notmatch [regex]::Escape('"' + $encodingName + '"')) {
+        throw "SourceTextCodec is missing preservation mapping for $encodingName."
     }
 }
 
