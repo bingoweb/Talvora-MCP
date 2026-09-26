@@ -114,7 +114,7 @@ public static partial class ConfigAssetTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraAppendTextResponse)),
-     Description("Compatibility UTF-8 append for ordinary/non-workspace files. Inside recognized development workspaces, source/text mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Ordinary non-workspace append remains supported.")]
+     Description("Compatibility text append for ordinary/non-workspace files. New or empty files use BOM-less UTF-8; existing supported UTF-8/BOM, UTF-16 BOM, and UTF-32 BOM files preserve their text encoding without inserting another BOM. Inside recognized development workspaces, source/text mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Ordinary non-workspace append remains supported.")]
     public static async Task<TalvoraAppendTextResponse> AppendText(
         string path,
         string content,
@@ -131,6 +131,16 @@ public static partial class ConfigAssetTools
             Directory.CreateDirectory(parent);
         }
 
+        var appendEncoding =
+            File.Exists(fullPath) &&
+            new FileInfo(fullPath).Length > 0
+                ? SourceTextCodec
+                    .ReadEncodingDescriptor(fullPath)
+                    .Encoding
+                : new UTF8Encoding(
+                    encoderShouldEmitUTF8Identifier: false,
+                    throwOnInvalidBytes: true);
+
         await using var stream = new FileStream(
             fullPath,
             FileMode.Append,
@@ -140,7 +150,7 @@ public static partial class ConfigAssetTools
             useAsync: true);
         await using var writer = new StreamWriter(
             stream,
-            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+            appendEncoding,
             bufferSize: 64 * 1024,
             leaveOpen: true);
 
