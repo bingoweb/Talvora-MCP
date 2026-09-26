@@ -41,11 +41,20 @@ internal static partial class SmokeScenarios
             if (!eventItem.TryGetProperty("logName", out var eventItemLogName) ||
                 !string.Equals(eventItemLogName.GetString(), "System", StringComparison.OrdinalIgnoreCase) ||
                 !eventItem.TryGetProperty("id", out _) ||
-                !eventItem.TryGetProperty("recordId", out _))
+                !eventItem.TryGetProperty("recordId", out _) ||
+                !eventItem.TryGetProperty("messageTruncated", out _))
             {
                 throw new InvalidOperationException("event log query returned an incomplete structured event.");
             }
         }
+
+        await EnsureError(byName["talvora_eventlog_query"], new()
+        {
+            ["logName"] = "System",
+            ["xpath"] = "*[System[(EventID=99999999)]]",
+            ["maxEvents"] = 501,
+            ["newestFirst"] = true,
+        });
         
         var serviceListResult = await EnsureSuccess(byName["talvora_service_list"], new()
         {

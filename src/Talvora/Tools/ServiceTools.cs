@@ -34,6 +34,9 @@ public sealed record TalvoraServiceActionResponse(
 [McpServerToolType]
 public static class ServiceTools
 {
+    private const string TalvoraServiceName = "Talvora";
+    private const int SelfLifecycleDelayMilliseconds = 2_000;
+
     [McpServerTool(
         Name = "talvora_service_list",
         ReadOnly = true,
@@ -176,7 +179,7 @@ public static class ServiceTools
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraServiceActionResponse)),
-     Description("Stop a local Windows service and wait for Stopped. Missing services return found=false. No service-name allow-list is applied.")]
+     Description("Stop a local Windows service and wait for Stopped. When targeting Talvora itself, the stop is handed to a detached LocalSystem helper and the tool returns afterStatus=StopScheduled before the MCP host exits. Missing services return found=false. No service-name allow-list is applied.")]
     public static async Task<TalvoraServiceActionResponse> StopService(
         string serviceName,
         int timeoutSeconds = 30,
@@ -194,6 +197,19 @@ public static class ServiceTools
         if (before == ServiceControllerStatus.Stopped)
         {
             return Action(false, service, before);
+        }
+
+        if (IsTalvoraSelf(service))
+        {
+            ScheduleSelfLifecycle(
+                restart: false,
+                timeoutSeconds);
+            return new TalvoraServiceActionResponse(
+                true,
+                true,
+                service.ServiceName,
+                before.ToString(),
+                "StopScheduled");
         }
 
         var deadline = Stopwatch.StartNew();
@@ -232,7 +248,7 @@ public static class ServiceTools
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraServiceActionResponse)),
-     Description("Restart a local Windows service and wait for Running. A stopped service is started. Missing services return found=false. No service-name allow-list is applied.")]
+     Description("Restart a local Windows service and wait for Running. When targeting Talvora itself, the restart is handed to a detached LocalSystem helper and the tool returns afterStatus=RestartScheduled before the MCP host exits. A stopped service is started. Missing services return found=false. No service-name allow-list is applied.")]
     public static async Task<TalvoraServiceActionResponse> RestartService(
         string serviceName,
         int timeoutSeconds = 30,
@@ -248,6 +264,19 @@ public static class ServiceTools
         service.Refresh();
         var before = service.Status;
         var timer = Stopwatch.StartNew();
+
+        if (IsTalvoraSelf(service))
+        {
+            ScheduleSelfLifecycle(
+                restart: true,
+                timeoutSeconds);
+            return new TalvoraServiceActionResponse(
+                true,
+                true,
+                service.ServiceName,
+                before.ToString(),
+                "RestartScheduled");
+        }
 
         if (before != ServiceControllerStatus.Stopped)
         {
@@ -388,6 +417,70 @@ public static class ServiceTools
 
     private static TalvoraServiceActionResponse MissingAction(string serviceName) =>
         new(false, false, serviceName, "Missing", "Missing");
+
+    private static bool IsTalvoraSelf(ServiceController service) =>
+        string.Equals(
+            service.ServiceName,
+            TalvoraServiceName,
+            StringComparison.OrdinalIgnoreCase);
+
+    private static void ScheduleSelfLifecycle(
+        bool restart,
+        int timeoutSeconds)
+    {
+        var systemDirectory =
+            Environment.GetFolderPath(Environment.SpecialFolder.System);
+        var powershell =
+            Path.Combine(
+                systemDirectory,
+                "WindowsPowerShell",
+                "v1.0",
+                "powershell.exe");
+        if (!File.Exists(powershell))
+        {
+            throw new FileNotFoundException(
+                "Windows PowerShell could not be located for Talvora self-lifecycle handoff.",
+                powershell);
+        }
+
+        var effectiveTimeout =
+            Math.Max(
+                5,
+                timeoutSeconds);
+        var script =
+            "$ErrorActionPreference='Stop';" +
+            $"Start-Sleep -Milliseconds {SelfLifecycleDelayMilliseconds};" +
+            $"$s=Get-Service -Name '{TalvoraServiceName}' -ErrorAction Stop;" +
+            "if($s.Status -ne 'Stopped'){" +
+            $"Stop-Service -Name '{TalvoraServiceName}' -Force -ErrorAction Stop;" +
+            $"$s.WaitForStatus('Stopped',[TimeSpan]::FromSeconds({effectiveTimeout}));" +
+            "}" +
+            (restart
+                ? $"Start-Service -Name '{TalvoraServiceName}' -ErrorAction Stop;" +
+                  $"(Get-Service -Name '{TalvoraServiceName}' -ErrorAction Stop).WaitForStatus('Running',[TimeSpan]::FromSeconds({effectiveTimeout}));"
+                : string.Empty);
+
+        var startInfo =
+            new ProcessStartInfo
+            {
+                FileName = powershell,
+                WorkingDirectory = systemDirectory,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+        startInfo.ArgumentList.Add("-NoLogo");
+        startInfo.ArgumentList.Add("-NoProfile");
+        startInfo.ArgumentList.Add("-NonInteractive");
+        startInfo.ArgumentList.Add("-ExecutionPolicy");
+        startInfo.ArgumentList.Add("Bypass");
+        startInfo.ArgumentList.Add("-Command");
+        startInfo.ArgumentList.Add(script);
+
+        using var helper =
+            Process.Start(startInfo)
+            ?? throw new InvalidOperationException(
+                "Talvora self-lifecycle helper could not be started.");
+    }
 
     private static void ValidateTimeout(int timeoutSeconds)
     {

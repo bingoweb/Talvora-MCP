@@ -22,7 +22,8 @@ public sealed record TalvoraEventLogRecordData(
     int? ThreadId,
     string? MachineName,
     string? UserId,
-    string? Message);
+    string? Message,
+    bool MessageTruncated);
 
 public sealed record TalvoraEventLogQueryResponse(
     string LogName,
@@ -35,6 +36,9 @@ public sealed record TalvoraEventLogQueryResponse(
 [McpServerToolType]
 public static class EventLogTools
 {
+    private const int MaximumEventsPerQuery = 500;
+    private const int MaximumMessageCharacters = 16 * 1024;
+
     [McpServerTool(
         Name = "talvora_eventlog_list",
         ReadOnly = true,
@@ -71,7 +75,7 @@ public static class EventLogTools
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraEventLogQueryResponse)),
-     Description("Query any local Windows Event Log with an XPath expression and return structured records. newestFirst=true reads newest-to-oldest. No log/provider/event-id allowlist is applied.")]
+     Description("Query any local Windows Event Log with an XPath expression and return structured records. newestFirst=true reads newest-to-oldest. maxEvents must be between 1 and 500. Formatted event messages are capped at 16 KiB and report messageTruncated=true when shortened. No log/provider/event-id allowlist is applied.")]
     public static TalvoraEventLogQueryResponse Query(
         string logName,
         string xpath = "*",
@@ -81,9 +85,12 @@ public static class EventLogTools
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(logName);
         ArgumentException.ThrowIfNullOrWhiteSpace(xpath);
-        if (maxEvents <= 0)
+        if (maxEvents <= 0 ||
+            maxEvents > MaximumEventsPerQuery)
         {
-            throw new ArgumentOutOfRangeException(nameof(maxEvents), "maxEvents must be greater than zero.");
+            throw new ArgumentOutOfRangeException(
+                nameof(maxEvents),
+                $"maxEvents must be between 1 and {MaximumEventsPerQuery}.");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -107,6 +114,9 @@ public static class EventLogTools
                 break;
             }
 
+            var (message, messageTruncated) =
+                TryFormatDescription(record);
+
             events.Add(new TalvoraEventLogRecordData(
                 record.LogName,
                 record.ProviderName,
@@ -118,7 +128,8 @@ public static class EventLogTools
                 record.ThreadId,
                 record.MachineName,
                 record.UserId?.Value,
-                TryFormatDescription(record)));
+                message,
+                messageTruncated));
         }
 
         return new TalvoraEventLogQueryResponse(
@@ -129,19 +140,30 @@ public static class EventLogTools
             events);
     }
 
-    private static string? TryFormatDescription(EventRecord record)
+    private static (string? Message, bool Truncated) TryFormatDescription(
+        EventRecord record)
     {
         try
         {
-            return record.FormatDescription();
+            var message =
+                record.FormatDescription();
+            if (message is null ||
+                message.Length <= MaximumMessageCharacters)
+            {
+                return (message, false);
+            }
+
+            return (
+                message[..MaximumMessageCharacters],
+                true);
         }
         catch (EventLogException)
         {
-            return null;
+            return (null, false);
         }
         catch (InvalidOperationException)
         {
-            return null;
+            return (null, false);
         }
     }
 }
