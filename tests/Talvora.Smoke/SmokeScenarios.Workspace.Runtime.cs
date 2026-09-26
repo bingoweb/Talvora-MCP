@@ -84,13 +84,13 @@ internal static partial class SmokeScenarios
                 });
                 await EnsureSuccess(byName["talvora_write_text"], new()
                 {
-                    ["path"] = dotnetProjectFile,
-                    ["content"] = "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>",
+                    ["path"] = dotnetProgramFile,
+                    ["content"] = "Console.WriteLine(\"TALVORA_DOTNET_SMOKE\");",
                 });
                 await EnsureSuccess(byName["talvora_write_text"], new()
                 {
-                    ["path"] = dotnetProgramFile,
-                    ["content"] = "Console.WriteLine(\"TALVORA_DOTNET_SMOKE\");",
+                    ["path"] = dotnetProjectFile,
+                    ["content"] = "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>",
                 });
                 
                 var dotnetRestoreResult = await EnsureSuccess(byName["talvora_dotnet_restore"], new()
