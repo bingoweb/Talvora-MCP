@@ -18,6 +18,16 @@ internal static partial class SmokeScenarios
                 "gh",
                 "p_",
                 "0123456789abcdefghijklmnopqrstuv");
+        var modalCredentials =
+            new[]
+            {
+                string.Concat("ak-", "TalvoraModalTokenId0123456789"),
+                string.Concat("as-", "TalvoraModalTokenSecret0123456789"),
+                string.Concat("wk-", "TalvoraModalProxyKey0123456789"),
+                string.Concat("ws-", "TalvoraModalProxySecret0123456789"),
+                string.Concat("oc-", "TalvoraModalOauthClient0123456789"),
+                string.Concat("ov-", "TalvoraModalOauthSecret0123456789"),
+            };
         var jwt =
             string.Join(
                 ".",
@@ -28,7 +38,8 @@ internal static partial class SmokeScenarios
         var diagnosticText =
             $"Authorization: Bearer {bearerToken}; " +
             $"api_key={apiKey}; password=\"{password}\"; " +
-            $"{githubToken}; {jwt}; ExitCode=17";
+            $"{githubToken}; {string.Join("; ", modalCredentials)}; " +
+            $"{jwt}; ExitCode=17";
         var redactedDiagnostic =
             FileLog.RedactSensitiveData(diagnosticText);
 
@@ -44,6 +55,10 @@ internal static partial class SmokeScenarios
             redactedDiagnostic.Contains(
                 githubToken,
                 StringComparison.Ordinal) ||
+            modalCredentials.Any(credential =>
+                redactedDiagnostic.Contains(
+                    credential,
+                    StringComparison.Ordinal)) ||
             redactedDiagnostic.Contains(
                 jwt,
                 StringComparison.Ordinal) ||

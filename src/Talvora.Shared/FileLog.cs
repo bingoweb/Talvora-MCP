@@ -27,6 +27,10 @@ public static class FileLog
         @"\bgh[pousr]_[A-Za-z0-9]{20,}\b",
         RegexOptions.Compiled |
         RegexOptions.CultureInvariant);
+    private static readonly Regex ModalCredentialRegex = new(
+        @"\b(?:ak|as|wk|ws|oc|ov)-[A-Za-z0-9._~-]{8,}\b",
+        RegexOptions.Compiled |
+        RegexOptions.CultureInvariant);
     private static readonly Regex JwtRegex = new(
         @"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b",
         RegexOptions.Compiled |
@@ -92,6 +96,9 @@ public static class FileLog
             redacted,
             "[REDACTED]");
         redacted = GitHubTokenRegex.Replace(
+            redacted,
+            "[REDACTED]");
+        redacted = ModalCredentialRegex.Replace(
             redacted,
             "[REDACTED]");
         return JwtRegex.Replace(

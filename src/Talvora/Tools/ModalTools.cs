@@ -9,8 +9,10 @@ public sealed record TalvoraModalInfoResponse(
     string? Executable,
     string? Version,
     bool ProfileConfigured,
+    bool Authenticated,
     string? ActiveProfile,
     int? ProfileExitCode,
+    int? AuthenticationExitCode,
     string? ProfileStatus);
 
 [McpServerToolType]
@@ -24,7 +26,7 @@ public static class ModalTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraModalInfoResponse)),
-     Description("Resolve the installed Modal CLI, report its version, and check whether the logged-on Windows user has an active Modal profile. Profile credentials are never returned.")]
+     Description("Resolve the installed Modal CLI, report its version, active profile, and whether that profile has usable Modal credentials in the logged-on Windows user session. Credential values are never returned.")]
     public static async Task<TalvoraModalInfoResponse> Info(
         CancellationToken cancellationToken = default)
     {
@@ -36,6 +38,8 @@ public static class ModalTools
                 null,
                 null,
                 false,
+                false,
+                null,
                 null,
                 null,
                 "Modal CLI was not found.");
@@ -72,16 +76,43 @@ public static class ModalTools
                     profileResult.StandardError)
                 : null;
 
+            if (!configured)
+            {
+                return new TalvoraModalInfoResponse(
+                    true,
+                    executable,
+                    version,
+                    false,
+                    false,
+                    profile,
+                    profileResult.ExitCode,
+                    null,
+                    "Modal profile is not configured for the logged-on Windows user.");
+            }
+
+            var authenticationResult =
+                await InteractiveUserProcessRunner.RunAsync(
+                    executable,
+                    workingDirectory,
+                    ["token", "info"],
+                    timeoutSeconds: 30,
+                    cancellationToken: cancellationToken);
+            var authenticated =
+                authenticationResult.ExitCode == 0 &&
+                !authenticationResult.TimedOut;
+
             return new TalvoraModalInfoResponse(
                 true,
                 executable,
                 version,
-                configured,
+                true,
+                authenticated,
                 profile,
                 profileResult.ExitCode,
-                configured
+                authenticationResult.ExitCode,
+                authenticated
                     ? null
-                    : "Modal profile is not configured for the logged-on Windows user.");
+                    : "The active Modal profile exists but does not have usable credentials for the logged-on Windows user.");
         }
         catch (InvalidOperationException ex)
         {
@@ -90,10 +121,54 @@ public static class ModalTools
                 executable,
                 version,
                 false,
+                false,
+                null,
                 null,
                 null,
                 ex.Message);
         }
+    }
+
+    [McpServerTool(
+        Name = "talvora_modal_app_list",
+        ReadOnly = true,
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = true,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraCliCommandResponse)),
+     Description("List deployed, running, and recently stopped Modal Apps as JSON under the logged-on Windows user's Modal profile. Use this to find existing custom model deployments that predate Modal's dedicated LLM Endpoint product.")]
+    public static Task<TalvoraCliCommandResponse> AppList(
+        [Description("Optional Modal environment name.")] string? modalEnvironment = null,
+        [Description("Optional Modal profile name.")] string? profile = null,
+        CancellationToken cancellationToken = default)
+    {
+        var arguments = new List<string>
+        {
+            "app",
+            "list",
+            "--json",
+        };
+
+        if (!string.IsNullOrWhiteSpace(modalEnvironment))
+        {
+            arguments.Add("-e");
+            arguments.Add(modalEnvironment);
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile))
+        {
+            arguments.Add("--profile");
+            arguments.Add(profile);
+        }
+
+        return RunModalAsync(
+            arguments,
+            workingDirectory: null,
+            environment: null,
+            modalExecutable: null,
+            timeoutSeconds: 120,
+            cancellationToken);
     }
 
     [McpServerTool(

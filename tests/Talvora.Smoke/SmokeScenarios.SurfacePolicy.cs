@@ -93,6 +93,10 @@ internal static partial class SmokeScenarios
             development: true,
             administration: false);
         AssertSurface(
+            "talvora_modal_app_list",
+            development: true,
+            administration: false);
+        AssertSurface(
             "talvora_modal_endpoint_list",
             development: true,
             administration: false);

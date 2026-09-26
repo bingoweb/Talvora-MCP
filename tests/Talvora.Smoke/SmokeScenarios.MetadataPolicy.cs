@@ -49,6 +49,7 @@ internal static partial class SmokeScenarios
         AssertWorldScope("talvora_npm_install", true);
         AssertWorldScope("talvora_tcp_exchange", true);
         AssertWorldScope("talvora_modal_info", true);
+        AssertWorldScope("talvora_modal_app_list", true);
         AssertWorldScope("talvora_modal_endpoint_list", true);
         AssertWorldScope("talvora_modal_run", true);
         AssertWorldScope("talvora_sbox_status", true);
@@ -289,6 +290,12 @@ internal static partial class SmokeScenarios
         AssertLiveTool(
             tools,
             "talvora_modal_info",
+            readOnly: true,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_modal_app_list",
             readOnly: true,
             destructive: false,
             openWorld: true);

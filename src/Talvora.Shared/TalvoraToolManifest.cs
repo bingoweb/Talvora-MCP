@@ -209,6 +209,7 @@ public static class TalvoraToolManifest
         "talvora_toml_set",
         "talvora_toml_delete",
         "talvora_modal_info",
+        "talvora_modal_app_list",
         "talvora_modal_endpoint_list",
         "talvora_modal_run",
         "talvora_sbox_status",
