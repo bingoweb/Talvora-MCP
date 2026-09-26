@@ -1,5 +1,7 @@
 using System.ComponentModel;
+using System.Text;
 using ModelContextProtocol.Server;
+using Talvora.Shared;
 using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
@@ -48,7 +50,13 @@ public static class FileTools
             "talvora_write_text");
         var parent = Path.GetDirectoryName(fullPath);
         if (!string.IsNullOrWhiteSpace(parent)) Directory.CreateDirectory(parent);
-        await File.WriteAllTextAsync(fullPath, content, cancellationToken);
+        _ = await AtomicFile.WriteAllTextAsync(
+            fullPath,
+            content,
+            new UTF8Encoding(
+                encoderShouldEmitUTF8Identifier: false),
+            createBackup: false,
+            cancellationToken);
         return new { path = fullPath, length = new FileInfo(fullPath).Length };
     }
 
