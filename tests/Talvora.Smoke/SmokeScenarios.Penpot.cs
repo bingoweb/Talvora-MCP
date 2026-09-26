@@ -209,6 +209,36 @@ internal static partial class SmokeScenarios
                 throw new InvalidOperationException(
                     $"Talvora Penpot AI asset failed: {asset} -> {(int)response.StatusCode}");
             }
+
+            if (asset == "plugin.js")
+            {
+                var pluginScript =
+                    await response.Content.ReadAsStringAsync();
+                foreach (var marker in new[]
+                         {
+                             "normalizeIntentText",
+                             "INTENT_RULES",
+                             "detectPromptCommands",
+                             "duzelt",
+                             "responsive",
+                             "koda cevir",
+                         })
+                {
+                    if (!pluginScript.Contains(marker, StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Talvora Penpot AI natural-language intent marker is missing: {marker}");
+                    }
+                }
+
+                if (pluginScript.Contains(
+                        "Komutu anladim ama otomasyon eslesmedi",
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        "Talvora Penpot AI still exposes the obsolete unmatched-automation fallback.");
+                }
+            }
         }
     }
 

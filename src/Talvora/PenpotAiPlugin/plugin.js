@@ -315,38 +315,24 @@ async function runPrompt(prompt) {
     throw new Error("Bir komut veya tasarim istegi yaz.");
   }
 
-  const text = value.toLocaleLowerCase("tr-TR");
-  const commands = [];
-
-  if (/premium|profesyonel|golge|radius|cilala|parlat/.test(text)) {
-    commands.push("premium");
-  }
-  if (/mobil|mobile|telefon|390/.test(text)) {
-    commands.push("mobile");
-  }
-  if (/component|komponent|bilesen/.test(text)) {
-    commands.push("component");
-  }
-  if (/token|renk sistemi|design system/.test(text)) {
-    commands.push("tokens");
-  }
-  if (/html|css|kod|handoff|developer/.test(text)) {
-    commands.push("handoff");
-  }
-  if (/prototype|prototip|viewer|onizle/.test(text)) {
-    commands.push("prototype");
-  }
-  if (/incele|inspect|analiz|selection|secim/.test(text)) {
-    commands.push("inspect");
-  }
-
-  const unique = [...new Set(commands)];
+  const unique = detectPromptCommands(value);
   if (!unique.length) {
+    if (selectedShapes().length) {
+      await inspectSelection();
+      send("result", {
+        level: "info",
+        title: "Talep inceleme modunda ele alindi",
+        detail:
+          "Serbest metinde dogrudan bir donusturme niyeti bulunmadi; secim guvenli inceleme modunda analiz edildi.",
+      });
+      return;
+    }
+
     send("result", {
       level: "info",
-      title: "Komutu anladim ama otomasyon eslesmedi",
+      title: "Talebi analiz ettim",
       detail:
-        "Simdilik premium, mobil, component, token, handoff, prototype ve inceleme niyetlerini yerelde uygulayabiliyorum.",
+        "Uygulanacak katman bulunamadi. Penpot'ta bir board veya katman secip istegini dogal cumleyle tekrar yazabilirsin.",
     });
     return;
   }
@@ -354,6 +340,86 @@ async function runPrompt(prompt) {
   for (const command of unique) {
     await runCommand(command);
   }
+}
+
+function normalizeIntentText(value) {
+  return String(value ?? "")
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ı/g, "i")
+    .replace(/[^a-z0-9+#%]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const INTENT_RULES = [
+  {
+    command: "premium",
+    terms: [
+      "premium", "profesyonel", "modern", "sik", "estetik", "kaliteli",
+      "guzellestir", "iyilestir", "gelistir", "duzelt", "toparla",
+      "yenile", "modernlestir", "cilala", "parlat", "polish", "golge",
+      "shadow", "radius", "yuvarla", "daha iyi", "daha guzel",
+    ],
+  },
+  {
+    command: "mobile",
+    terms: [
+      "mobil", "mobile", "telefon", "phone", "responsive", "kucuk ekran",
+      "dikey ekran", "android", "ios", "390", "mobil uyumlu",
+    ],
+  },
+  {
+    command: "component",
+    terms: [
+      "component", "komponent", "bilesen", "componentlestir",
+      "komponentlestir", "bilesenlestir", "reusable",
+      "tekrar kullanilabilir", "parcalara ayir", "parcala",
+    ],
+  },
+  {
+    command: "tokens",
+    terms: [
+      "token", "design system", "tasarim sistemi", "renk sistemi", "tema",
+      "theme", "palet", "palette", "tipografi", "typography", "spacing",
+      "renkleri sistemlestir",
+    ],
+  },
+  {
+    command: "handoff",
+    terms: [
+      "handoff", "developer", "gelistirici", "html", "css", "frontend",
+      "react", "koda cevir", "kodunu cikar", "kod uret", "export code",
+    ],
+  },
+  {
+    command: "prototype",
+    terms: [
+      "prototype", "prototip", "prototiple", "viewer", "onizle",
+      "etkilesim", "akis", "flow", "tikla", "gecis", "demo",
+    ],
+  },
+  {
+    command: "inspect",
+    terms: [
+      "incele", "inspect", "analiz", "selection", "secim", "degerlendir",
+      "audit", "kontrol", "sorun", "hata", "bak",
+    ],
+  },
+];
+
+function detectPromptCommands(prompt) {
+  const text = normalizeIntentText(prompt);
+  const commands = [];
+
+  for (const rule of INTENT_RULES) {
+    if (rule.terms.some((term) => text.includes(term))) {
+      commands.push(rule.command);
+    }
+  }
+
+  return [...new Set(commands)];
 }
 
 async function handleMessage(message) {
