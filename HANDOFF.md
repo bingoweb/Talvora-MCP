@@ -53,13 +53,13 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 ## Penpot / Talvora entegrasyonu — CURRENT
 
 - Resmi Penpot **2.18.0** self-host kurulumu Docker Compose ile `C:\ProgramData\Talvora\Penpot` altında çalışıyor. Frontend `http://127.0.0.1:9001/`, resmi MCP `http://127.0.0.1:4401/mcp`, plugin WebSocket bridge `ws://127.0.0.1:4402`; web/MCP/mailcatch host publish'leri yalnız loopback'a bağlıdır.
-- Resmi compose içindeki Penpot secret yerelde rastgele üretildi; secret değeri repo, HANDOFF veya kalıcı log içine alınmadı. `.env` `PENPOT_VERSION=latest` kullanıyor.
+- Resmi compose içindeki Penpot secret yerelde rastgele üretildi; secret değeri repo, HANDOFF veya kalıcı log içine alınmadı. `.env` `PENPOT_VERSION=latest` kullanıyor. Docker Desktop kullanıcı ayarında `AutoStart=True`; değişiklik öncesi `settings-store.json.talvora-penpot.bak` yedeği bırakıldı ve Penpot container restart policy `always`.
 - NPM `@penpot/mcp` stable/latest canlı kontrolde 2.15.4 kaldığı için eski npm paketi production yolu yapılmadı; Penpot 2.18 ile aynı resmi Docker MCP image'ı kullanılıyor.
 - Canlı Penpot 2.18 MCP sözleşmesi 4 araç yayımlıyor: `execute_code`, `high_level_overview`, `penpot_api_info`, `export_shape`. Raw MCP `initialize`, `tools/list`, `notifications/initialized` ve `high_level_overview` 200/202 akışı GREEN.
 - Talvora Dev yüzeyine 4 wrapper eklendi: `talvora_penpot_status`, `talvora_penpot_overview`, `talvora_penpot_read_tool`, `talvora_penpot_call_tool`. Native Penpot text/structured/image result blokları korunur; bilinmeyen veya mutating araçlar full-call yolunda kalır.
 - Penpot 2.18 upstream tool metadata'sı read-only annotation yayımlamadığı için güvenli read yolu yalnız bilinen non-mutating `high_level_overview`, `penpot_api_info`, `export_shape` isimlerini fallback olarak kabul eder; `execute_code` generic mutating çağrı yolundadır.
 - Control Center canonical managed-MCP recovery discovery'ye `penpot` kaydı eklendi. Kullanıcı registry'sinde endpoint, `mcp-protocol` ve web health bileşenleri canlı olarak oluştu; Tray exact-installed `86e4b08...` version root'undan çalışıyor.
-- Talvora/Tray/Smoke Release build'leri 0 warning / 0 error. Metadata source/live, surface source/live ve shared-infrastructure targeted gate'leri GREEN.
+- Talvora/Tray/Smoke Release build'leri 0 warning / 0 error. Metadata source/live, surface source/live ve shared-infrastructure targeted gate'leri GREEN. Canlı Talvora Dev MCP üzerinden doğrudan `talvora_penpot_status` acceptance çağrısı `ready=true`, `toolCount=4` döndürdü; Talvora -> Penpot proxy zinciri uçtan uca GREEN.
 - Penpot'un kendi `high_level_overview` sözleşmesine göre gerçek design mutation için açık bir Penpot dosyasının Penpot MCP Plugin ile MCP sunucusuna bağlanması gerekir; bu bağlantı dosya/proje kullanım bağlamında yapılır ve Talvora entegrasyonundan ayrı bir kullanıcı-proje oturumudur.
 
 ## Modal / Qwen entegrasyonu — CURRENT
