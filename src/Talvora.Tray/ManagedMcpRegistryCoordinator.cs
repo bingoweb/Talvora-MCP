@@ -34,6 +34,7 @@ internal static class ManagedMcpRegistryCoordinator
             "admin-business.json",
             ["talvora_service_get", "talvora_registry_get"]),
         new GiteaManagedMcpRecoveryDiscovery(),
+        new PenpotManagedMcpRecoveryDiscovery(),
 
     ];
 

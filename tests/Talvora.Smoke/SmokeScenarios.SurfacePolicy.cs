@@ -140,6 +140,22 @@ internal static partial class SmokeScenarios
             "talvora_sbox_invoke",
             development: true,
             administration: false);
+        AssertSurface(
+            "talvora_penpot_status",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_penpot_overview",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_penpot_read_tool",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_penpot_call_tool",
+            development: true,
+            administration: false);
 
         foreach (var evalCase in TalvoraToolSelectionPolicy.Cases)
         {

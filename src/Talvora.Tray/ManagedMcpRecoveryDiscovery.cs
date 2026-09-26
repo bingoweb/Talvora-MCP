@@ -248,6 +248,82 @@ internal sealed class GiteaManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDisc
     }
 }
 
+internal sealed class PenpotManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDiscovery
+{
+    public string Id => "penpot";
+
+    public ManagedMcpRegistration? Discover()
+    {
+        var programData = Environment.GetFolderPath(
+            Environment.SpecialFolder.CommonApplicationData);
+        var composePath = Path.Combine(
+            programData,
+            "Talvora",
+            "Penpot",
+            "docker-compose.yaml");
+
+        if (!File.Exists(composePath))
+        {
+            return null;
+        }
+
+        return new ManagedMcpRegistration
+        {
+            Id = Id,
+            DisplayName = "Penpot",
+            Description = "Yerel Penpot tasarım platformu ve resmi Penpot MCP sunucusu.",
+            Endpoint = "http://127.0.0.1:4401/mcp",
+            HealthEndpoint = "http://127.0.0.1:9001/",
+            AutoStart = false,
+            ProtocolProbe = new ManagedMcpProtocolProbeRegistration
+            {
+                RequiredTools =
+                [
+                    "high_level_overview",
+                    "execute_code",
+                    "penpot_api_info",
+                    "export_shape",
+                ],
+            },
+            Components =
+            [
+                new ManagedMcpComponentRegistration
+                {
+                    Id = "mcp",
+                    DisplayName = "Penpot MCP",
+                    Kind = "mcp-protocol",
+                    HealthEndpoint = "http://127.0.0.1:4401/mcp",
+                },
+                new ManagedMcpComponentRegistration
+                {
+                    Id = "web",
+                    DisplayName = "Penpot arayüzü",
+                    Kind = "http",
+                    HealthEndpoint = "http://127.0.0.1:9001/",
+                },
+            ],
+            DiscoveryHints =
+            [
+                new ManagedMcpDiscoveryHint
+                {
+                    Kind = "config-file",
+                    Value = composePath,
+                },
+                new ManagedMcpDiscoveryHint
+                {
+                    Kind = "tcp-endpoint",
+                    Value = "127.0.0.1:4401",
+                },
+                new ManagedMcpDiscoveryHint
+                {
+                    Kind = "web-endpoint",
+                    Value = "http://127.0.0.1:9001/",
+                },
+            ],
+        };
+    }
+}
+
 internal static class ManagedMcpTunnelConfigReader
 {
     public static ManagedMcpTunnelRegistration Read(

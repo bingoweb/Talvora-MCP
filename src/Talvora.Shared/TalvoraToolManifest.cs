@@ -221,5 +221,9 @@ public static class TalvoraToolManifest
         "talvora_sbox_call_tools",
         "talvora_sbox_read_console",
         "talvora_sbox_invoke",
+        "talvora_penpot_status",
+        "talvora_penpot_overview",
+        "talvora_penpot_read_tool",
+        "talvora_penpot_call_tool",
     ];
 }

@@ -71,6 +71,16 @@ public static class TalvoraToolSelectionPolicy
                 "talvora_sbox_read_console",
             ]),
         new(
+            "penpot-design-development",
+            "Penpot'ta mevcut tasarımı incele, tasarım sistemini anla ve gerekli arayüz değişikliğini uygula.",
+            true,
+            TalvoraMcpToolSurface.Development,
+            [
+                "talvora_penpot_status",
+                "talvora_penpot_overview",
+                "talvora_penpot_call_tool",
+            ]),
+        new(
             "service-restart",
             "Yerel Windows servisini yeniden başlat.",
             true,

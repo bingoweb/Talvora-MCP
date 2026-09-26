@@ -61,6 +61,10 @@ internal static partial class SmokeScenarios
         AssertWorldScope("talvora_sbox_call_tools", true);
         AssertWorldScope("talvora_sbox_read_console", true);
         AssertWorldScope("talvora_sbox_invoke", true);
+        AssertWorldScope("talvora_penpot_status", true);
+        AssertWorldScope("talvora_penpot_overview", true);
+        AssertWorldScope("talvora_penpot_read_tool", true);
+        AssertWorldScope("talvora_penpot_call_tool", true);
 
         const string legacyDescription =
             "Run an arbitrary command with unrestricted administration access. No command allowlist or deny-list is applied.";
@@ -344,6 +348,30 @@ internal static partial class SmokeScenarios
         AssertLiveTool(
             tools,
             "talvora_sbox_invoke",
+            readOnly: false,
+            destructive: true,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_penpot_status",
+            readOnly: true,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_penpot_overview",
+            readOnly: true,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_penpot_read_tool",
+            readOnly: true,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_penpot_call_tool",
             readOnly: false,
             destructive: true,
             openWorld: true);
