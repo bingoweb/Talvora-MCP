@@ -10,9 +10,9 @@ internal static partial class SmokeScenarios
             "Talvora-Smoke-StructuredConfig-" + smokeId);
         Directory.CreateDirectory(structuredConfigDirectory);
         
-        var yamlPath = Path.Combine(structuredConfigDirectory, "compose.yaml");
+        var yamlPath = Path.Combine(structuredConfigDirectory, "config.yaml");
         var yamlBackupPath = yamlPath + ".bak";
-        var tomlPath = Path.Combine(structuredConfigDirectory, "pyproject.toml");
+        var tomlPath = Path.Combine(structuredConfigDirectory, "config.toml");
         
         try
         {
