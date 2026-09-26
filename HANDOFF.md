@@ -8,17 +8,17 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Repo/remote `main`: runtime commit `c69d7f8d8c846cdd4d10d1cd4bba41614c1a2a90` iki remote'a push edildi; bu handoff için docs-only closeout commit'i bunun üzerinde gelecektir.
+- Repo/remote `main`: runtime commit `73e13b7f97c6d849bc347bd07114213a64cbb0f9` iki remote'a push edildi; bu handoff için docs-only closeout commit'i bunun üzerinde gelecektir.
 - Çalışma ağacı: final docs-only closeout commit'i sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `c69d7f8d8c846cdd4d10d1cd4bba41614c1a2a90` — `fix: preserve config mutation encoding`.
-- Exact-installed canonical runtime artifact source commit: `c69d7f8d8c846cdd4d10d1cd4bba41614c1a2a90`.
-- Canonical installer SHA-256: `48E7EB33A0F0B113749254374C542AEEF4821AE7A436E079A334A7C26B54269A`; artifact size: 261,848,335 bytes.
+- Son runtime-affecting commit: `73e13b7f97c6d849bc347bd07114213a64cbb0f9` — `fix: bound knowledge fetch responses`.
+- Exact-installed canonical runtime artifact source commit: `73e13b7f97c6d849bc347bd07114213a64cbb0f9`.
+- Canonical installer SHA-256: `7D8AD53D87E1F7C3BEEDBAC6BA1C3F0794C5B51275D1BF5FE17002592EC9D794`; artifact size: 261,848,335 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=c69d7f8d8c846cdd4d10d1cd4bba41614c1a2a90` bildiriyor.
+- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=73e13b7f97c6d849bc347bd07114213a64cbb0f9` bildiriyor.
 - Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
 - Gitea ve GitHub `fetch --dry-run` + `push --dry-run` Talvora'nın canlı `git_run` aracıyla GREEN; SSH private key user-only kalıyor.
-- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `c69d7f8...`.
+- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `73e13b7...`.
 - Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
@@ -38,7 +38,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
 - Focused MCP yüzeyleri: **Dev 174**, **Admin 91**; Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
-- Güncel audit üst özeti: **#121–#210 remediation complete; #199–#210 LIVE VERIFIED; full 204-tool live MCP smoke baseline GREEN; focused surface live + metadata live GREEN ve capability korunuyor.**
+- Güncel audit üst özeti: **#121–#211 remediation complete; #199–#211 LIVE VERIFIED; full 204-tool live MCP smoke baseline GREEN; focused surface live + metadata live GREEN ve capability korunuyor.**
 
 ## Son tamamlanan bug-fix zinciri
 
@@ -262,9 +262,15 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Fix `c69d7f8`; installer SHA-256 `48E7EB33A0F0B113749254374C542AEEF4821AE7A436E079A334A7C26B54269A`; exact-installed runtime aynı commit.
 - Live UTF-16LE JSON/YAML/TOML/XML set fixture'larının tümü `FF FE` BOM'u ve yeni değeri korudu; metadata + focused surface live GREEN.
 
+### #211 — Knowledge fetch transport bounds — LIVE VERIFIED
+- Shared Admin/Dev `fetch`, `search` tarafından uygulanan 4 MiB knowledge-file budget'ını direct/stale document ID yolunda tekrar uygulamıyordu.
+- Runtime file size ve decoded response text'i mevcut 4 MiB knowledge budget'ına göre serialization öncesinde doğruluyor; büyük dosyalarda `talvora_read_text_range` yönlendirmesi veriyor.
+- Fix `73e13b7`; installer SHA-256 `7D8AD53D87E1F7C3BEEDBAC6BA1C3F0794C5B51275D1BF5FE17002592EC9D794`; exact-installed runtime aynı commit.
+- Live Admin 4.0M-character fetch GREEN; 5.5M-character fetch controlled INVALID_ARGUMENT; fixture temizlendi.
+
 ## Doküman tutarlılığı notu
 
-- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#210 tamamlandı; #199–#210 canlı doğrulandı.
+- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#211 tamamlandı; #199–#211 canlı doğrulandı.
 - Aynı dosyanın daha eski gövde satırlarında ve `MCP-CONTROL-CENTER-TODO.md` içinde tarihsel `pending`, eski `OPEN` veya pre-live ifadeler kalmış olabilir. Bunları yeni oturumda gerçek repo/remote/live durumunun önüne koyma.
 - Eski tamamlanmış bug'ları tekrar test edip yeniden açma; yalnız yeni kanıt veya gerçek regresyon varsa dön.
 
@@ -286,7 +292,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 ## NEXT SESSION — kesin devam noktası
 
-**#193–#210 kapanmıştır; Dev 174 / Admin 91 focused surface policy GREEN, full 204-tool smoke baseline GREEN ve #199–#210 Admin live gates GREEN. Sonraki yeni doğrulanmış bulgudan deep audit'e devam et.**
+**#193–#211 kapanmıştır; Dev 174 / Admin 91 focused surface policy GREEN, full 204-tool smoke baseline GREEN ve #199–#211 Admin/live gates GREEN. Sonraki yeni doğrulanmış bulgudan deep audit'e devam et.**
 
 Başlangıç sırası:
 
@@ -295,7 +301,7 @@ Başlangıç sırası:
 3. `HEAD`, `origin/main`, `github/main` durumunu kontrol et.
 4. `talvora_system_info.sourceCommit` ile canlı runtime baseline'ını doğrula.
 5. `BUG-AUDIT.md` üst CURRENT özetini oku; #121–#188'i tekrar tarama.
-6. #190 privacy/security, #191 MCP metadata, #192 focused-surface/tool-selection, #193 Git ownership ve #194–#210 son smoke/runtime/Admin düzeltmelerini yeni kanıt veya gerçek regresyon yoksa kapalı kabul et.
+6. #190 privacy/security, #191 MCP metadata, #192 focused-surface/tool-selection, #193 Git ownership ve #194–#211 son smoke/runtime/Admin düzeltmelerini yeni kanıt veya gerçek regresyon yoksa kapalı kabul et.
 7. Deep audit'te ilk yeni doğrulanmış bulguyu kullanıcıya bildir; şüpheyi bug diye yazmadan önce gerçek çağrı zinciri veya minimal reproduction ile doğrula.
 8. Her yeni bulguda minimal fix + targeted regression uygula.
 9. Fix sonrası docs -> commit -> Gitea push -> GitHub push -> gerekiyorsa canonical live deploy sırasını tamamla.
