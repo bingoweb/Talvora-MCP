@@ -61,7 +61,7 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraJsonMutationResponse)),
-     Description("Compatibility JSON mutator for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Uses RFC 6901 JSON Pointer; valueJson must be valid JSON and createMissing may create intermediate nodes.")]
+     Description("Compatibility JSON mutator for ordinary/non-workspace files. Existing supported text encoding/BOM semantics are preserved. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Uses RFC 6901 JSON Pointer; valueJson must be valid JSON and createMissing may create intermediate nodes.")]
     public static async Task<TalvoraJsonMutationResponse> JsonSet(
         string path,
         string pointer,
@@ -75,6 +75,9 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
         SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
             fullPath,
             "talvora_json_set");
+        var originalEncoding =
+            SourceTextCodec.ReadEncodingDescriptor(
+                fullPath);
         var originalText = await File.ReadAllTextAsync(fullPath, cancellationToken);
         var root = JsonNode.Parse(originalText);
         var value = JsonNode.Parse(valueJson);
@@ -94,7 +97,8 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
             backupPath = await AtomicFile.WriteAllTextAsync(
                 fullPath,
                 updatedText,
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                SourceTextCodec.CreateWriterEncoding(
+                    originalEncoding),
                 createBackup,
                 cancellationToken);
         }
@@ -113,7 +117,7 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraJsonMutationResponse)),
-     Description("Compatibility JSON delete tool for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Uses RFC 6901 JSON Pointer; missing targets remain idempotent.")]
+     Description("Compatibility JSON delete tool for ordinary/non-workspace files. Existing supported text encoding/BOM semantics are preserved. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Uses RFC 6901 JSON Pointer; missing targets remain idempotent.")]
     public static async Task<TalvoraJsonMutationResponse> JsonDelete(
         string path,
         string pointer,
@@ -125,6 +129,9 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
         SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
             fullPath,
             "talvora_json_delete");
+        var originalEncoding =
+            SourceTextCodec.ReadEncodingDescriptor(
+                fullPath);
         var originalText = await File.ReadAllTextAsync(fullPath, cancellationToken);
         var root = JsonNode.Parse(originalText);
         var tokens = ParsePointer(pointer);
@@ -136,7 +143,8 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
             backupPath = await AtomicFile.WriteAllTextAsync(
                 fullPath,
                 ToJson(root, indented),
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                SourceTextCodec.CreateWriterEncoding(
+                    originalEncoding),
                 createBackup,
                 cancellationToken);
         }

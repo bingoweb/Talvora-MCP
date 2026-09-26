@@ -152,7 +152,7 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraConfigMutationResponse)),
-     Description("Compatibility XML mutator for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Supports arbitrary XPath plus expectedMatches.")]
+     Description("Compatibility XML mutator for ordinary/non-workspace files. Existing supported text encoding/BOM semantics are preserved. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Supports arbitrary XPath plus expectedMatches.")]
     public static TalvoraConfigMutationResponse XmlSet(
         string path,
         string xpath,
@@ -167,6 +167,9 @@ public static partial class ConfigFormatTools
         }
 
         var fullPath = Path.GetFullPath(path);
+        var originalEncoding =
+            SourceTextCodec.ReadEncodingDescriptor(
+                fullPath);
         var document = LoadXmlDocument(fullPath);
         var navigator = document.CreateNavigator()
             ?? throw new InvalidOperationException(
@@ -215,7 +218,8 @@ public static partial class ConfigFormatTools
             SaveXmlDocument(
                 document,
                 fullPath,
-                "talvora_xml_set/delete");
+                "talvora_xml_set/delete",
+                originalEncoding);
         }
 
         return new TalvoraConfigMutationResponse(
@@ -231,7 +235,7 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraConfigMutationResponse)),
-     Description("Compatibility XML delete tool for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Supports arbitrary XPath plus expectedMatches.")]
+     Description("Compatibility XML delete tool for ordinary/non-workspace files. Existing supported text encoding/BOM semantics are preserved. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Supports arbitrary XPath plus expectedMatches.")]
     public static TalvoraConfigMutationResponse XmlDelete(
         string path,
         string xpath,
@@ -245,6 +249,9 @@ public static partial class ConfigFormatTools
         }
 
         var fullPath = Path.GetFullPath(path);
+        var originalEncoding =
+            SourceTextCodec.ReadEncodingDescriptor(
+                fullPath);
         var document = LoadXmlDocument(fullPath);
         var navigator = document.CreateNavigator()
             ?? throw new InvalidOperationException(
@@ -286,7 +293,8 @@ public static partial class ConfigFormatTools
             SaveXmlDocument(
                 document,
                 fullPath,
-                "talvora_xml_set/delete");
+                "talvora_xml_set/delete",
+                originalEncoding);
         }
 
         return new TalvoraConfigMutationResponse(
@@ -322,7 +330,8 @@ public static partial class ConfigFormatTools
     private static void SaveXmlDocument(
         XmlDocument document,
         string path,
-        string toolName)
+        string toolName,
+        SourceTextEncodingDescriptor originalEncoding)
     {
         SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
             path,
@@ -331,7 +340,9 @@ public static partial class ConfigFormatTools
             path,
             new XmlWriterSettings
             {
-                Encoding = new UTF8Encoding(false),
+                Encoding =
+                    SourceTextCodec.CreateWriterEncoding(
+                        originalEncoding),
                 Indent = false,
                 NewLineHandling = NewLineHandling.None,
             });

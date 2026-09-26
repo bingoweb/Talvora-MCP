@@ -193,6 +193,78 @@ internal static class SourceTextCodec
         };
     }
 
+    internal static SourceTextEncodingDescriptor ReadEncodingDescriptor(
+        string fullPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fullPath);
+
+        Span<byte> sample =
+            stackalloc byte[8192];
+        var totalRead = 0;
+
+        using var stream = new FileStream(
+            fullPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete);
+
+        while (totalRead < sample.Length)
+        {
+            var read =
+                stream.Read(
+                    sample[totalRead..]);
+            if (read == 0)
+            {
+                break;
+            }
+
+            totalRead += read;
+        }
+
+        return DetectEncodingForStreamingRead(
+            sample[..totalRead],
+            fullPath,
+            out _);
+    }
+
+    internal static Encoding CreateWriterEncoding(
+        SourceTextEncodingDescriptor descriptor) =>
+        descriptor.Name switch
+        {
+            "utf-8" =>
+                new UTF8Encoding(
+                    encoderShouldEmitUTF8Identifier: false,
+                    throwOnInvalidBytes: true),
+            "utf-8-bom" =>
+                new UTF8Encoding(
+                    encoderShouldEmitUTF8Identifier: true,
+                    throwOnInvalidBytes: true),
+            "utf-16le-bom" =>
+                new UnicodeEncoding(
+                    bigEndian: false,
+                    byteOrderMark: true,
+                    throwOnInvalidBytes: true),
+            "utf-16be-bom" =>
+                new UnicodeEncoding(
+                    bigEndian: true,
+                    byteOrderMark: true,
+                    throwOnInvalidBytes: true),
+            "utf-32le-bom" =>
+                new UTF32Encoding(
+                    bigEndian: false,
+                    byteOrderMark: true,
+                    throwOnInvalidCharacters: true),
+            "utf-32be-bom" =>
+                new UTF32Encoding(
+                    bigEndian: true,
+                    byteOrderMark: true,
+                    throwOnInvalidCharacters: true),
+            _ =>
+                throw new SourceEditDomainException(
+                    SourceEditCodes.UnsupportedEncoding,
+                    $"Unsupported source encoding '{descriptor.Name}'."),
+        };
+
     public static bool IsLikelyTextPayload(ReadOnlySpan<byte> bytes)
     {
         if (bytes.Length == 0)

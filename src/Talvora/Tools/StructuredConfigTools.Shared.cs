@@ -57,6 +57,7 @@ private static TalvoraStructuredConfigGetResponse BuildGetResponse(
             string pointer,
             string originalText,
             string updatedText,
+            SourceTextEncodingDescriptor originalEncoding,
             bool createBackup,
             string toolName,
             CancellationToken cancellationToken)
@@ -77,7 +78,8 @@ private static TalvoraStructuredConfigGetResponse BuildGetResponse(
             backupPath = await AtomicFile.WriteAllTextAsync(
                 path,
                 updatedText,
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                SourceTextCodec.CreateWriterEncoding(
+                    originalEncoding),
                 createBackup,
                 cancellationToken);
         }

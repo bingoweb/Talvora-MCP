@@ -45,7 +45,7 @@ public static partial class StructuredConfigTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraStructuredConfigMutationResponse)),
-     Description("Compatibility YAML mutator for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Uses RFC 6901 JSON Pointer; rewrites may normalize YAML formatting/comments.")]
+     Description("Compatibility YAML mutator for ordinary/non-workspace files. Existing supported text encoding/BOM semantics are preserved; rewrites may normalize YAML formatting/comments. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Uses RFC 6901 JSON Pointer.")]
     public static async Task<TalvoraStructuredConfigMutationResponse> YamlSet(
         string path,
         string pointer,
@@ -55,6 +55,9 @@ public static partial class StructuredConfigTools
         CancellationToken cancellationToken = default)
     {
         var fullPath = Path.GetFullPath(path);
+        var originalEncoding =
+            SourceTextCodec.ReadEncodingDescriptor(
+                fullPath);
         var originalText =
             await File.ReadAllTextAsync(fullPath, cancellationToken);
         var root = ParseYaml(originalText);
@@ -74,6 +77,7 @@ public static partial class StructuredConfigTools
             pointer,
             originalText,
             updatedText,
+            originalEncoding,
             createBackup,
             "talvora_yaml_set/delete",
             cancellationToken);
@@ -86,7 +90,7 @@ public static partial class StructuredConfigTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraStructuredConfigMutationResponse)),
-     Description("Compatibility YAML delete tool for ordinary/non-workspace files. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Uses RFC 6901 JSON Pointer; rewrites may normalize YAML formatting/comments.")]
+     Description("Compatibility YAML delete tool for ordinary/non-workspace files. Existing supported text encoding/BOM semantics are preserved; rewrites may normalize YAML formatting/comments. Inside recognized development workspaces, source/config mutation is rejected with SOURCE_EDIT_POLICY_VIOLATION. " + SourceEditRoutingContract.LegacyMutationRouting + " Uses RFC 6901 JSON Pointer.")]
     public static async Task<TalvoraStructuredConfigMutationResponse> YamlDelete(
         string path,
         string pointer,
@@ -94,6 +98,9 @@ public static partial class StructuredConfigTools
         CancellationToken cancellationToken = default)
     {
         var fullPath = Path.GetFullPath(path);
+        var originalEncoding =
+            SourceTextCodec.ReadEncodingDescriptor(
+                fullPath);
         var originalText =
             await File.ReadAllTextAsync(fullPath, cancellationToken);
         var root = ParseYaml(originalText);
@@ -120,6 +127,7 @@ public static partial class StructuredConfigTools
             pointer,
             originalText,
             updatedText,
+            originalEncoding,
             createBackup,
             "talvora_yaml_set/delete",
             cancellationToken);
