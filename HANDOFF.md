@@ -8,17 +8,17 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Repo/remote `main`: runtime commit `4fa914ebb53ee44f621859095779c598a4cf792e` iki remote'a push edildi; bu handoff değişikliği docs-only closeout'tur.
+- Repo/remote `main`: runtime commit `86e4b0883e8e7e4b2a264bfdf67dc9ad27671148` iki remote'a push edildi; bu handoff değişikliği docs-only closeout'tur.
 - Çalışma ağacı: final docs-only closeout commit'i sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `4fa914ebb53ee44f621859095779c598a4cf792e` — `feat: harden Modal integration`.
-- Exact-installed canonical runtime artifact source commit: `4fa914ebb53ee44f621859095779c598a4cf792e`.
-- Canonical installer SHA-256: `151063B2BA19188BD2F9B9CFC6A8888CA054FA03CB5008C2D61C252AF75F68B3`; artifact size: 261,862,671 bytes.
+- Son runtime-affecting commit: `86e4b0883e8e7e4b2a264bfdf67dc9ad27671148` — `feat: integrate Penpot MCP`.
+- Exact-installed canonical runtime artifact source commit: `86e4b0883e8e7e4b2a264bfdf67dc9ad27671148`.
+- Canonical installer SHA-256: `5EA5CCE5A2744754137E76A26A2B89B76B8496A38031BE11383E828892B37A25`; artifact size: 261,867,791 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `sourceCommit=4fa914ebb53ee44f621859095779c598a4cf792e` bildiriyor.
+- Exact-installed canlı Talvora runtime `sourceCommit=86e4b0883e8e7e4b2a264bfdf67dc9ad27671148` bildiriyor.
 - Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
 - Gitea ve GitHub `fetch --dry-run` + `push --dry-run` Talvora'nın canlı `git_run` aracıyla GREEN; SSH private key user-only kalıyor.
-- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `4fa914e...`.
+- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `86e4b08...`.
 - Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
@@ -37,8 +37,8 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Focused MCP yüzeyleri Modal hardening sonrasında **Full 217 / Dev 187 / Admin 91**. Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
-- Güncel audit zinciri **#121–#218** kapalı kalır. s&box + Modal genişletmeleri sonrasında metadata source/live, focused-surface source/live ve privacy-security gate'leri GREEN; eski 204-tool full-smoke sonucu tarihsel baseline'dır, 217 araç için full smoke yeniden çalıştırılmadı.
+- Focused MCP yüzeyleri Penpot entegrasyonu sonrasında **Full 221 / Dev 191 / Admin 91**. Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
+- Güncel audit zinciri **#121–#218** kapalı kalır. s&box + Modal + Penpot genişletmeleri sonrasında metadata source/live ve focused-surface source/live GREEN; shared-infrastructure hedefli regresyonu Docker image çekimi sırasındaki tek timing kırmızısı sonrası sakin ortamda GREEN tekrar doğrulandı. Eski 204-tool full-smoke sonucu tarihsel baseline'dır; 221 araç için full smoke yeniden çalıştırılmadı.
 
 ## s&box / Talvora entegrasyonu — CURRENT
 
@@ -50,12 +50,24 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - 2026-09-26 public-source native artifact ile generated managed interop arasında runtime hash uyumsuzluğu görüldü (`managed 15364`, `native 38969`); source runtime shader kabulü bu yüzden güvenli biçimde durduruldu. Engine kaynakları bu uyumsuzluğu gizlemek için yamalanmadı.
 - Steam s&box artık kurulu ve `sbox-dev.exe` çalıştırıldı. Son gözlemde native MCP `127.0.0.1:7269` cevap vermiyordu ve UI tarafında `bootstrap init error` görüldü; kalan acceptance: bootstrap/MCP ayağa kaldır -> bridge toolset live -> screenshot -> reversible scene edit.
 
+## Penpot / Talvora entegrasyonu — CURRENT
+
+- Resmi Penpot **2.18.0** self-host kurulumu Docker Compose ile `C:\ProgramData\Talvora\Penpot` altında çalışıyor. Frontend `http://127.0.0.1:9001/`, resmi MCP `http://127.0.0.1:4401/mcp`, plugin WebSocket bridge `ws://127.0.0.1:4402`; web/MCP/mailcatch host publish'leri yalnız loopback'a bağlıdır.
+- Resmi compose içindeki Penpot secret yerelde rastgele üretildi; secret değeri repo, HANDOFF veya kalıcı log içine alınmadı. `.env` `PENPOT_VERSION=latest` kullanıyor.
+- NPM `@penpot/mcp` stable/latest canlı kontrolde 2.15.4 kaldığı için eski npm paketi production yolu yapılmadı; Penpot 2.18 ile aynı resmi Docker MCP image'ı kullanılıyor.
+- Canlı Penpot 2.18 MCP sözleşmesi 4 araç yayımlıyor: `execute_code`, `high_level_overview`, `penpot_api_info`, `export_shape`. Raw MCP `initialize`, `tools/list`, `notifications/initialized` ve `high_level_overview` 200/202 akışı GREEN.
+- Talvora Dev yüzeyine 4 wrapper eklendi: `talvora_penpot_status`, `talvora_penpot_overview`, `talvora_penpot_read_tool`, `talvora_penpot_call_tool`. Native Penpot text/structured/image result blokları korunur; bilinmeyen veya mutating araçlar full-call yolunda kalır.
+- Penpot 2.18 upstream tool metadata'sı read-only annotation yayımlamadığı için güvenli read yolu yalnız bilinen non-mutating `high_level_overview`, `penpot_api_info`, `export_shape` isimlerini fallback olarak kabul eder; `execute_code` generic mutating çağrı yolundadır.
+- Control Center canonical managed-MCP recovery discovery'ye `penpot` kaydı eklendi. Kullanıcı registry'sinde endpoint, `mcp-protocol` ve web health bileşenleri canlı olarak oluştu; Tray exact-installed `86e4b08...` version root'undan çalışıyor.
+- Talvora/Tray/Smoke Release build'leri 0 warning / 0 error. Metadata source/live, surface source/live ve shared-infrastructure targeted gate'leri GREEN.
+- Penpot'un kendi `high_level_overview` sözleşmesine göre gerçek design mutation için açık bir Penpot dosyasının Penpot MCP Plugin ile MCP sunucusuna bağlanması gerekir; bu bağlantı dosya/proje kullanım bağlamında yapılır ve Talvora entegrasyonundan ayrı bir kullanıcı-proje oturumudur.
+
 ## Modal / Qwen entegrasyonu — CURRENT
 
 - Resmi Modal Python SDK/CLI **1.5.5** sistem Python 3.14 altına kuruldu; executable `C:\Python314\Scripts\modal.exe`.
 - Modal için ayrı üçüncü taraf MCP yerine Talvora Dev yüzeyinde 4 native yönetim aracı vardır: `talvora_modal_info`, `talvora_modal_app_list`, `talvora_modal_endpoint_list`, `talvora_modal_run`. `app_list`, yeni Endpoint ürünü öncesi klasik Modal App deployment'larını da keşfeder.
 - Modal CLI çağrıları credential/profile sahipliği için logged-on Windows user session'ında çalışır. `talvora_modal_info` aktif profili ve credential kullanılabilirliğini ayrı raporlar; credential değeri response'a alınmaz. Modal API/proxy/OAuth credential prefix'leri persistent log redaction kapsamındadır. Generic run, resmi CLI yüzeyini korur.
-- Tool policy sonrası canlı yüzey **Full 217 / Dev 187 / Admin 91**; metadata source/live + surface source/live + privacy-security GREEN, Talvora + Smoke Release build 0 warning / 0 error.
+- Modal hardening aşamasındaki yüzey **Full 217 / Dev 187 / Admin 91** idi; Penpot entegrasyonu sonrasında güncel global yüzey **Full 221 / Dev 191 / Admin 91**. Metadata source/live + surface source/live GREEN, Talvora + Smoke Release build 0 warning / 0 error.
 - Modal user profile setup tamamlandı; aktif profile `taylansoylu`. Native `modal endpoint list` boş çünkü bu model yeni Endpoint ürünü değil, custom Modal App olarak deploy edilmiş.
 - Custom app `codepilot-huihui-qwen38` deployed; public OpenAI-compatible base `https://taylansoylu--codepilot-huihui-qwen38-serve.modal.run/v1`.
 - Auth secret adı `codepilot-inference-api`; required env key adı `LLAMA_API_KEY`. Secret değeri okunmadı, loglanmadı veya HANDOFF'a yazılmadı.
