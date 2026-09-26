@@ -246,7 +246,10 @@ $result = [pscustomobject]@{
         $ownershipManifestStore -match 'File\.Delete\(stale\)'
     )
     BuildScriptFingerprintsDirtyProvenance = (
-        $buildInstallerScript -match 'git -C \$RepoRoot status --porcelain=v1 --untracked-files=all' -and
+        $buildInstallerScript -match '\$SourceStatus\s*=\s*@\(\s*Invoke-RepositoryGit -Root \$RepoRoot -Arguments @\(\s*''status''' -and
+        $buildInstallerScript -match 'function Invoke-RepositoryGit' -and
+        $buildInstallerScript -match 'safe\.directory=\{0\}' -and
+        $buildInstallerScript -notmatch 'safe\.directory=\*' -and
         $buildInstallerScript -match 'Test-RuntimeBuildInput' -and
         $buildInstallerScript -match 'Get-WorkingTreeFingerprint' -and
         $buildInstallerScript -match 'Assert-RuntimeBuildInputsUnchanged' -and

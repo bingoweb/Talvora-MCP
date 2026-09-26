@@ -287,18 +287,44 @@ function Test-RuntimeBuildInput {
     )
 }
 
+function Invoke-RepositoryGit {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Root,
+
+        [Parameter(Mandatory = $true)]
+        [string[]] $Arguments
+    )
+
+    $safeDirectory = [IO.Path]::GetFullPath($Root).Replace('\', '/')
+    & git -c ("safe.directory={0}" -f $safeDirectory) -C $Root @Arguments
+}
+
 function Get-WorkingTreeFingerprint {
     param(
         [Parameter(Mandatory = $true)]
         [string] $Root
     )
 
-    $changed = @(& git -C $Root diff --name-only HEAD --)
+    $changed = @(
+        Invoke-RepositoryGit -Root $Root -Arguments @(
+            'diff',
+            '--name-only',
+            'HEAD',
+            '--'
+        )
+    )
     if ($LASTEXITCODE -ne 0) {
         throw 'Unable to enumerate tracked Talvora working-tree changes.'
     }
 
-    $untracked = @(& git -C $Root ls-files --others --exclude-standard)
+    $untracked = @(
+        Invoke-RepositoryGit -Root $Root -Arguments @(
+            'ls-files',
+            '--others',
+            '--exclude-standard'
+        )
+    )
     if ($LASTEXITCODE -ne 0) {
         throw 'Unable to enumerate untracked Talvora working-tree files.'
     }
@@ -312,7 +338,13 @@ function Get-WorkingTreeFingerprint {
 
         $fullPath = Join-Path $Root $relativePath
         if (Test-Path -LiteralPath $fullPath -PathType Leaf) {
-            $blobHash = (& git -C $Root hash-object -- $relativePath).Trim()
+            $blobHash = (
+                Invoke-RepositoryGit -Root $Root -Arguments @(
+                    'hash-object',
+                    '--',
+                    $relativePath
+                )
+            ).Trim()
             if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($blobHash)) {
                 throw "Unable to hash dirty working-tree file: $relativePath"
             }
@@ -345,7 +377,13 @@ function Get-RuntimeBuildInputPaths {
     )
 
     $paths = @(
-        & git -C $Root ls-files --cached --others --exclude-standard --
+        Invoke-RepositoryGit -Root $Root -Arguments @(
+            'ls-files',
+            '--cached',
+            '--others',
+            '--exclude-standard',
+            '--'
+        )
     )
     if ($LASTEXITCODE -ne 0) {
         throw 'Unable to enumerate canonical runtime build inputs.'
@@ -421,7 +459,12 @@ function Get-GitHeadObjectId {
         [string] $Root
     )
 
-    $value = (& git -C $Root rev-parse HEAD).Trim()
+    $value = (
+        Invoke-RepositoryGit -Root $Root -Arguments @(
+            'rev-parse',
+            'HEAD'
+        )
+    ).Trim()
     if ($LASTEXITCODE -ne 0 -or
         [string]::IsNullOrWhiteSpace($value)) {
         throw 'Unable to resolve canonical source HEAD object id.'
@@ -436,7 +479,11 @@ function Get-GitIndexTreeId {
         [string] $Root
     )
 
-    $value = (& git -C $Root write-tree).Trim()
+    $value = (
+        Invoke-RepositoryGit -Root $Root -Arguments @(
+            'write-tree'
+        )
+    ).Trim()
     if ($LASTEXITCODE -ne 0 -or
         [string]::IsNullOrWhiteSpace($value)) {
         throw 'Unable to resolve canonical source index tree identity.'
@@ -781,7 +828,13 @@ New-Item -ItemType Directory -Path $TrayPayload -Force | Out-Null
 $SourceHeadCommit = Get-GitHeadObjectId -Root $RepoRoot
 $SourceCommit = $SourceHeadCommit
 
-$SourceStatus = @(& git -C $RepoRoot status --porcelain=v1 --untracked-files=all)
+$SourceStatus = @(
+    Invoke-RepositoryGit -Root $RepoRoot -Arguments @(
+        'status',
+        '--porcelain=v1',
+        '--untracked-files=all'
+    )
+)
 if ($LASTEXITCODE -ne 0) {
     throw 'Unable to resolve local Talvora working-tree state.'
 }
