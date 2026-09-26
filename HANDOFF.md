@@ -37,8 +37,8 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Focused MCP yüzeyleri: **Full 213 / Dev 183 / Admin 91**. Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
-- Güncel audit zinciri **#121–#218** kapalı kalır. s&box genişletmesi sonrasında metadata live ve focused surface live gate'leri yeniden GREEN; eski 204-tool full-smoke sonucu tarihsel baseline'dır, 213 araç için full smoke yeniden çalıştırılmadı.
+- Focused MCP yüzeyleri Modal entegrasyonuyla **Full 216 / Dev 186 / Admin 91**. Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
+- Güncel audit zinciri **#121–#218** kapalı kalır. s&box + Modal genişletmeleri sonrasında source metadata/focused-surface gate'leri GREEN; eski 204-tool full-smoke sonucu tarihsel baseline'dır, 216 araç için full smoke yeniden çalıştırılmadı.
 
 ## s&box / Talvora entegrasyonu — CURRENT
 
@@ -48,7 +48,17 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Rich editor bridge üçüncü taraf yerel bağımlılıktır; `Libraries/claudebridge` Git dışında tutulur. Statik envanter: 28 toolset / 273 benzersiz native MCP tool / 29 MCP wrapper dosyası.
 - Resmi `sbox-public` checkout commit `1da73be3fc461645265db6840df8d4dcd36d4346`. Production `Sbox-Dev.csproj` Release build 0 warning / 0 error.
 - 2026-09-26 public-source native artifact ile generated managed interop arasında runtime hash uyumsuzluğu görüldü (`managed 15364`, `native 38969`); source runtime shader kabulü bu yüzden güvenli biçimde durduruldu. Engine kaynakları bu uyumsuzluğu gizlemek için yamalanmadı.
-- Facepunch oyun geliştirme için Steam kurulumunu öneriyor; Steam Chocolatey ile kuruldu fakat bu makinede henüz Steam login yok. Steam s&box kurulduğunda kalan acceptance: port 7269 live -> bridge toolset live -> screenshot -> reversible scene edit.
+- Steam s&box artık kurulu ve `sbox-dev.exe` çalıştırıldı. Son gözlemde native MCP `127.0.0.1:7269` cevap vermiyordu ve UI tarafında `bootstrap init error` görüldü; kalan acceptance: bootstrap/MCP ayağa kaldır -> bridge toolset live -> screenshot -> reversible scene edit.
+
+## Modal / Qwen entegrasyonu — CURRENT
+
+- Resmi Modal Python SDK/CLI **1.5.5** sistem Python 3.14 altına kuruldu; executable `C:\Python314\Scripts\modal.exe`.
+- Modal için ayrı üçüncü taraf MCP yerine Talvora Dev yüzeyine 3 native yönetim aracı eklendi: `talvora_modal_info`, `talvora_modal_endpoint_list`, `talvora_modal_run`.
+- Modal CLI çağrıları credential/profile sahipliği için logged-on Windows user session'ında çalışır; tool response credential/token döndürmez. Generic run, resmi CLI yüzeyini korur.
+- Tool policy sonrası beklenen yüzey **Full 216 / Dev 186 / Admin 91**; metadata source + surface source GREEN, Talvora + Smoke Release build 0 warning / 0 error.
+- Eski CodePilot endpoint'i hâlâ mevcut: `https://taylansoylu--codepilot-huihui-qwen38-serve.modal.run/v1`; son iki probe `503 Loading model` döndürdü, yani route canlı fakat model warm-up/availability henüz tamamlanmadı.
+- Eski model kimliği: `codepilot-huihui-qwen38-27b`; önceki context ayarı 65,536. Dyad OpenAI-compatible custom provider desteklediği için inference yolu **Dyad -> Modal /v1** olacak; Talvora yalnız yönetim/diagnostic yapacak.
+- Sonraki Modal acceptance: canonical deploy -> live `talvora_modal_info` -> gerekirse logged-on user `modal setup` -> `talvora_modal_endpoint_list` -> `/v1/models` ve küçük chat completion probe -> Dyad custom provider bağlantısı.
 
 ## Son tamamlanan bug-fix zinciri
 

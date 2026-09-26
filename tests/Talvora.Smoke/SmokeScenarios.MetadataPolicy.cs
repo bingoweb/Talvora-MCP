@@ -48,6 +48,9 @@ internal static partial class SmokeScenarios
         AssertWorldScope("talvora_run_powershell", true);
         AssertWorldScope("talvora_npm_install", true);
         AssertWorldScope("talvora_tcp_exchange", true);
+        AssertWorldScope("talvora_modal_info", true);
+        AssertWorldScope("talvora_modal_endpoint_list", true);
+        AssertWorldScope("talvora_modal_run", true);
         AssertWorldScope("talvora_sbox_status", true);
         AssertWorldScope("talvora_sbox_editor_status", true);
         AssertWorldScope("talvora_sbox_list_toolsets", true);
@@ -283,6 +286,24 @@ internal static partial class SmokeScenarios
             readOnly: false,
             destructive: false,
             openWorld: false);
+        AssertLiveTool(
+            tools,
+            "talvora_modal_info",
+            readOnly: true,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_modal_endpoint_list",
+            readOnly: true,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_modal_run",
+            readOnly: false,
+            destructive: true,
+            openWorld: true);
         AssertLiveTool(
             tools,
             "talvora_sbox_status",
