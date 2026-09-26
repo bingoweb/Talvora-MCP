@@ -8,16 +8,18 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Çalışma ağacı: bu final docs-only closeout commit'i sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `ab313ec0e8e33923228b48275a029fe5b973e0b5` — `fix: make installer Git ownership-safe`; önceki GitTools fix commit'i `ba655ec`. İkisi de Gitea + GitHub `main` üzerine push edildi.
-- Exact-installed canonical runtime artifact source commit: `ab313ec0e8e33923228b48275a029fe5b973e0b5`.
-- Canonical installer SHA-256: `1F9BDD3557C514511E479B84827C091F9B047E6D344420659B1A671C284E5639`; artifact size: 261,831,951 bytes.
+- Repo/remote HEAD: `061eba5abc858659ac2587517e2f5990da6ab58a` — `test: keep structured config smoke outside workspaces`; `origin/main` ve `github/main` aynı commit'te.
+- Çalışma ağacı: bu docs-only handoff closeout commit'i sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
+- Son runtime-affecting commit: `2ea6a3bb04fca79eb035494682f634759c638af8` — `test: lock text range newline contract`; önceki runtime fix `2f3620d` job metadata publication race'ini, `ab313ec` ise installer Git ownership zincirini kapatır.
+- Exact-installed canonical runtime artifact source commit: `2ea6a3bb04fca79eb035494682f634759c638af8`.
+- Canonical installer SHA-256: `AEC593991FC028CE011EF090623D984A15C5689BEA490624ACD6F454A4F3DFEB`; artifact size: 261,836,047 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=ab313ec0e8e33923228b48275a029fe5b973e0b5` bildiriyor.
+- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=2ea6a3bb04fca79eb035494682f634759c638af8` bildiriyor.
 - Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
-- Talvora service `Running/Automatic`; Service ve Tray aynı `ab313ec...` version root'undan çalışıyor.
-- Bu HANDOFF closeout commit'i yalnız dokümantasyondur ve exact-installed `ab313ec` sonrasında gelecektir; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
+- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `2ea6a3b...`.
+- `a291d7f` ve `061eba5` runtime binary'sini değiştirmeyen smoke/audit fixture commit'leridir; sırf repo HEAD live runtime'ın önüne geçti diye yeniden deploy etme.
+- Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
 
@@ -35,7 +37,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Güncel audit üst özeti: **#121–#193 remediation complete + live verified; full 204-tool capability korunuyor.**
+- Güncel audit üst özeti: **#121–#197 remediation complete/test-verified; #194 ve #196 live verified; full 204-tool live MCP smoke GREEN ve capability korunuyor.**
 
 ## Son tamamlanan bug-fix zinciri
 
@@ -162,9 +164,30 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Canonical installer SHA-256 `1F9BDD3557C514511E479B84827C091F9B047E6D344420659B1A671C284E5639`; exact-installed runtime `ab313ec...`.
 - Live structured Git family ana kullanıcı reposunda GREEN; #193 kapanmıştır.
 
+### #194 — background job terminal metadata publication race — LIVE VERIFIED
+- Interaktif `cmd.exe` job'ında stdin/stdout sonrası `talvora_job_stop`, terminal metadata publication sırasında `AtomicFile.MoveDurable` Win32 error 5 ile hata döndürebiliyordu.
+- Job metadata read/write erişimi `MetadataAccessGate` altında serialize edildi; observer ile Stop stale terminal metadata'yı birbirinin üstüne yazmıyor.
+- Dedicated 32/32 stop-race regression + job-storage regression + Release build GREEN.
+- Fix `2f3620d`; canonical installer SHA-256 `A2D03A8E55CE0BE56CD500B5621F9FBFC15AB27A9DBC7AAB57802AFF96AFAD05`; live verified.
+
+### #195 — .NET smoke / Source Edit policy drift — TEST VERIFIED
+- Full smoke önce `.csproj` yazarak fixture'ı development workspace'e dönüştürüyor, sonra `talvora_write_text` ile `Program.cs` yazıp doğru Source Edit policy'ye takılıyordu.
+- Runtime policy değiştirilmedi; fixture `Program.cs` marker'dan önce, `.csproj` sonra yazılacak şekilde düzeltildi.
+- Full smoke bu aşamayı geçmiştir.
+
+### #196 — read_text_range newline contract — LIVE VERIFIED
+- `talvora_read_text_range` exact slice semantiği EOF olmayan seçili son logical line'ın line terminator'ını korur.
+- Smoke artık `line-two\\r\\nline-three\\r\\n` + `endReached=false` bekliyor; host-facing description bu kontratı açıkça söylüyor.
+- Fix `2ea6a3b`; canonical installer SHA-256 `AEC593991FC028CE011EF090623D984A15C5689BEA490624ACD6F454A4F3DFEB`; exact-installed live runtime aynı commit.
+
+### #197 — StructuredConfig smoke workspace-marker drift — TEST VERIFIED
+- StructuredConfig smoke, `compose.yaml` ve `pyproject.toml` güçlü workspace marker adlarıyla compatibility YAML/TOML mutation testini kendi kendine development workspace'e dönüştürüyordu.
+- Fixture adları `config.yaml` / `config.toml` yapıldı; runtime source-mutation policy değiştirilmedi.
+- Full 204-tool live MCP smoke GREEN.
+
 ## Doküman tutarlılığı notu
 
-- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#193 tamamlandı ve canlı doğrulandı.
+- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#197 tamamlandı/test-verified; live-required #194 ve #196 canlı doğrulandı.
 - Aynı dosyanın daha eski gövde satırlarında ve `MCP-CONTROL-CENTER-TODO.md` içinde tarihsel `pending`, eski `OPEN` veya pre-live ifadeler kalmış olabilir. Bunları yeni oturumda gerçek repo/remote/live durumunun önüne koyma.
 - Eski tamamlanmış bug'ları tekrar test edip yeniden açma; yalnız yeni kanıt veya gerçek regresyon varsa dön.
 
@@ -186,7 +209,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 ## NEXT SESSION — kesin devam noktası
 
-**#193 LocalSystem Git ownership/canonical build düzeltmesi live verified. Sonraki yeni doğrulanmış bulgudan deep audit'e devam et.**
+**#193–#197 kapanmıştır; full 204-tool smoke GREEN. Sonraki yeni doğrulanmış bulgudan deep audit'e devam et.**
 
 Başlangıç sırası:
 
@@ -195,7 +218,7 @@ Başlangıç sırası:
 3. `HEAD`, `origin/main`, `github/main` durumunu kontrol et.
 4. `talvora_system_info.sourceCommit` ile canlı runtime baseline'ını doğrula.
 5. `BUG-AUDIT.md` üst CURRENT özetini oku; #121–#188'i tekrar tarama.
-6. #190 privacy/security, #191 MCP metadata, #192 focused-surface/tool-selection ve #193 LocalSystem Git ownership fazlarını tekrar test etme; yeni kanıt veya gerçek regresyon yoksa kapalı kabul et.
+6. #190 privacy/security, #191 MCP metadata, #192 focused-surface/tool-selection, #193 Git ownership ve #194–#197 son smoke/runtime düzeltmelerini yeni kanıt veya gerçek regresyon yoksa kapalı kabul et.
 7. Deep audit'te ilk yeni doğrulanmış bulguyu kullanıcıya bildir; şüpheyi bug diye yazmadan önce gerçek çağrı zinciri veya minimal reproduction ile doğrula.
 8. Her yeni bulguda minimal fix + targeted regression uygula.
 9. Fix sonrası docs -> commit -> Gitea push -> GitHub push -> gerekiyorsa canonical live deploy sırasını tamamla.
