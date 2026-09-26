@@ -99,7 +99,8 @@ public static partial class ConfigFormatTools
 private sealed record TextDocument(
         string Text,
         Encoding Encoding,
-        string NewLine);
+        string NewLine,
+        bool HasFinalNewLine);
 
     private static async Task<TextDocument>
         ReadTextDocumentAsync(
@@ -128,7 +129,8 @@ private sealed record TextDocument(
             return new TextDocument(
                 string.Empty,
                 new UTF8Encoding(false),
-                Environment.NewLine);
+                Environment.NewLine,
+                true);
         }
 
         return await ReadTextDocumentCoreAsync(
@@ -165,12 +167,21 @@ private sealed record TextDocument(
             ? "\r\n"
             : text.Contains('\n')
                 ? "\n"
-                : Environment.NewLine;
+                : text.Contains('\r')
+                    ? "\r"
+                    : Environment.NewLine;
+        var hasFinalNewLine =
+            text.EndsWith(
+                "\r\n",
+                StringComparison.Ordinal) ||
+            text.EndsWith('\n') ||
+            text.EndsWith('\r');
 
         return new TextDocument(
             text,
             reader.CurrentEncoding,
-            newLine);
+            newLine,
+            hasFinalNewLine);
     }
 
     private static async Task
@@ -223,16 +234,20 @@ private sealed record TextDocument(
 
     private static string JoinLines(
         IReadOnlyList<string> lines,
-        string newLine)
+        string newLine,
+        bool hasFinalNewLine)
     {
         if (lines.Count == 0)
         {
             return string.Empty;
         }
 
-        return string.Join(
-                   newLine,
-                   lines) +
-               newLine;
+        var text =
+            string.Join(
+                newLine,
+                lines);
+        return hasFinalNewLine
+            ? text + newLine
+            : text;
     }
 }

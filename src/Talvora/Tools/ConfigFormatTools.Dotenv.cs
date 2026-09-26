@@ -201,7 +201,8 @@ public static partial class ConfigFormatTools
                 fullPath,
                 JoinLines(
                     lines,
-                    document.NewLine),
+                    document.NewLine,
+                    document.HasFinalNewLine),
                 document.Encoding,
                 "talvora_dotenv_set/delete",
                 cancellationToken);
@@ -269,7 +270,8 @@ public static partial class ConfigFormatTools
                 fullPath,
                 JoinLines(
                     output,
-                    document.NewLine),
+                    document.NewLine,
+                    document.HasFinalNewLine),
                 document.Encoding,
                 "talvora_dotenv_set/delete",
                 cancellationToken);

@@ -17,6 +17,10 @@ internal static partial class SmokeScenarios
         var developerArchiveZip = context.DeveloperArchiveZip;
         var developerArchiveExtract = context.DeveloperArchiveExtract;
         var developerDownloadFile = context.DeveloperDownloadFile;
+        var noFinalDotenvFile =
+            Path.Combine(root, "no-final.env");
+        var noFinalIniFile =
+            Path.Combine(root, "no-final.ini");
         await EnsureSuccess(byName["talvora_write_text"], new()
                 {
                     ["path"] = developerRangeFile,
@@ -191,6 +195,55 @@ internal static partial class SmokeScenarios
                     iniDeleteJson.GetProperty("matches").GetInt32() != 1)
                 {
                     throw new InvalidOperationException("ini_delete did not remove app.mode.");
+                }
+
+                await File.WriteAllTextAsync(
+                    noFinalDotenvFile,
+                    "A=1\r\nB=2",
+                    new System.Text.UTF8Encoding(false));
+                await EnsureSuccess(
+                    byName["talvora_dotenv_set"],
+                    new()
+                    {
+                        ["path"] = noFinalDotenvFile,
+                        ["key"] = "B",
+                        ["value"] = "3",
+                    });
+                var noFinalDotenvText =
+                    await File.ReadAllTextAsync(
+                        noFinalDotenvFile);
+                if (!string.Equals(
+                        noFinalDotenvText,
+                        "A=1\r\nB=3",
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        "dotenv_set changed the original EOF newline state.");
+                }
+
+                await File.WriteAllTextAsync(
+                    noFinalIniFile,
+                    "[main]\r\nA=1\r\nB=2",
+                    new System.Text.UTF8Encoding(false));
+                await EnsureSuccess(
+                    byName["talvora_ini_set"],
+                    new()
+                    {
+                        ["path"] = noFinalIniFile,
+                        ["section"] = "main",
+                        ["key"] = "B",
+                        ["value"] = "3",
+                    });
+                var noFinalIniText =
+                    await File.ReadAllTextAsync(
+                        noFinalIniFile);
+                if (!string.Equals(
+                        noFinalIniText,
+                        "[main]\r\nA=1\r\nB=3",
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        "ini_set changed the original EOF newline state.");
                 }
                 
                 await EnsureSuccess(byName["talvora_write_text"], new()
