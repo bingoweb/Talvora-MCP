@@ -26,15 +26,10 @@ public static class AtomicFile
 
         Directory.CreateDirectory(directory);
 
-        string? backupPath = null;
-        if (createBackup && File.Exists(fullPath))
-        {
-            backupPath = fullPath + ".bak";
-            await CopyDurableAsync(
-                fullPath,
-                backupPath,
-                cancellationToken).ConfigureAwait(false);
-        }
+        var requestedBackupPath =
+            createBackup
+                ? fullPath + ".bak"
+                : null;
 
         var tempPath = Path.Combine(
             directory,
@@ -50,11 +45,10 @@ public static class AtomicFile
                 cancellationToken).ConfigureAwait(false);
 
             cancellationToken.ThrowIfCancellationRequested();
-            MoveDurable(
+            return PublishDurable(
                 tempPath,
                 fullPath,
-                replaceExisting: true);
-            return backupPath;
+                requestedBackupPath);
         }
         finally
         {
@@ -109,59 +103,26 @@ public static class AtomicFile
         stream.Flush(flushToDisk: true);
     }
 
-    private static async Task CopyDurableAsync(
+    private static string? PublishDurable(
         string sourcePath,
         string destinationPath,
-        CancellationToken cancellationToken)
+        string? backupPath)
     {
-        var directory = Path.GetDirectoryName(destinationPath)
-            ?? throw new InvalidOperationException(
-                $"Backup directory could not be resolved: {destinationPath}");
-        var tempPath = Path.Combine(
-            directory,
-            "." + Path.GetFileName(destinationPath) + "." +
-            Guid.NewGuid().ToString("N") + ".tmp");
-
-        try
+        if (File.Exists(destinationPath))
         {
-            await using (var source = new FileStream(
+            File.Replace(
                 sourcePath,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.Read,
-                DurableBufferSize,
-                FileOptions.Asynchronous |
-                FileOptions.SequentialScan))
-            await using (var target = new FileStream(
-                tempPath,
-                new FileStreamOptions
-                {
-                    Mode = FileMode.CreateNew,
-                    Access = FileAccess.Write,
-                    Share = FileShare.None,
-                    BufferSize = DurableBufferSize,
-                    Options =
-                        FileOptions.Asynchronous |
-                        FileOptions.WriteThrough,
-                }))
-            {
-                await source.CopyToAsync(
-                    target,
-                    DurableBufferSize,
-                    cancellationToken).ConfigureAwait(false);
-                target.Flush(flushToDisk: true);
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-            MoveDurable(
-                tempPath,
                 destinationPath,
-                replaceExisting: true);
+                backupPath,
+                ignoreMetadataErrors: false);
+            return backupPath;
         }
-        finally
-        {
-            TryDeleteTemp(tempPath);
-        }
+
+        MoveDurable(
+            sourcePath,
+            destinationPath,
+            replaceExisting: false);
+        return null;
     }
 
     private static void MoveDurable(

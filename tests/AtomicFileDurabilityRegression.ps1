@@ -26,8 +26,11 @@ try {
     $source = Get-Content -LiteralPath $atomicFileSource -Raw
     Assert-True ($source.Contains('FileOptions.WriteThrough')) 'AtomicFile must use write-through staged writes.'
     Assert-True ($source.Contains('Flush(flushToDisk: true)')) 'AtomicFile must flush staged file data through intermediate buffers.'
-    Assert-True ($source.Contains('MoveFileExW(')) 'AtomicFile must use the Win32 durable move primitive.'
-    Assert-True ($source.Contains('MoveFileFlags.WriteThrough')) 'AtomicFile durable publication must request MOVEFILE_WRITE_THROUGH.'
+    Assert-True ($source.Contains('File.Replace(')) 'AtomicFile must use metadata-preserving replacement for existing destinations.'
+    Assert-True ($source.Contains('ignoreMetadataErrors: false')) 'AtomicFile must fail closed instead of silently dropping destination metadata.'
+    Assert-True ($source.Contains('MoveFileExW(')) 'AtomicFile must keep the durable move primitive for new destinations.'
+    Assert-True ($source.Contains('MoveFileFlags.WriteThrough')) 'AtomicFile new-file publication must request MOVEFILE_WRITE_THROUGH.'
+    Assert-True (-not $source.Contains('CopyDurableAsync(')) 'AtomicFile backup creation must be part of the metadata-preserving replace operation.'
     Assert-True (-not $source.Contains('FlushPublishedFile(')) 'AtomicFile must not reopen an already-published destination for a second write-handle flush.'
 
     New-Item -ItemType Directory -Path $fixtureProject -Force | Out-Null
@@ -75,6 +78,23 @@ await AtomicFile.WriteAllTextAsync(
     "before",
     encoding);
 
+var preservedCreationTime =
+    new DateTime(
+        2020,
+        1,
+        2,
+        3,
+        4,
+        5,
+        DateTimeKind.Utc);
+File.SetCreationTimeUtc(
+    path,
+    preservedCreationTime);
+File.SetAttributes(
+    path,
+    File.GetAttributes(path) |
+    FileAttributes.Hidden);
+
 var backupPath = await AtomicFile.WriteAllTextAsync(
     path,
     "after",
@@ -84,6 +104,15 @@ var backupPath = await AtomicFile.WriteAllTextAsync(
 Require(File.ReadAllText(path, encoding) == "after", "Primary publication did not contain the new content.");
 Require(backupPath is not null, "Backup path was not returned.");
 Require(File.ReadAllText(backupPath!, encoding) == "before", "Backup publication did not preserve the prior content.");
+Require(
+    Math.Abs(
+        (File.GetCreationTimeUtc(path) -
+         preservedCreationTime).TotalSeconds) < 1,
+    "Metadata-preserving replacement changed the destination creation time.");
+Require(
+    (File.GetAttributes(path) &
+     FileAttributes.Hidden) != 0,
+    "Metadata-preserving replacement lost the destination file attributes.");
 
 using var cancelled = new CancellationTokenSource();
 cancelled.Cancel();
@@ -105,7 +134,7 @@ Require(File.ReadAllText(path, encoding) == "after", "Pre-cancelled publication 
 Require(File.ReadAllText(path + ".bak", encoding) == "before", "Pre-cancelled publication mutated the existing backup.");
 Require(!Directory.EnumerateFiles(root, "*.tmp", SearchOption.TopDirectoryOnly).Any(), "AtomicFile left temporary files behind.");
 
-Console.WriteLine("ATOMIC_FILE_DURABLE_REGRESSION_GREEN");
+Console.WriteLine("ATOMIC_FILE_DURABLE_METADATA_REGRESSION_GREEN");
 '@
     [IO.File]::WriteAllText(
         (Join-Path $fixtureProject 'Program.cs'),
