@@ -316,17 +316,14 @@ public static class EnvironmentTools
             Environment.GetFolderPath(
                 Environment.SpecialFolder.System);
         var powershell =
-            Path.Combine(
-                systemDirectory,
-                "WindowsPowerShell",
-                "v1.0",
-                "powershell.exe");
-        if (!File.Exists(powershell))
-        {
-            throw new FileNotFoundException(
-                "Windows PowerShell could not be located for interactive-user environment access.",
-                powershell);
-        }
+            CommandResolver.Resolve(
+                ["pwsh.exe", "pwsh"],
+                [@"C:\Program Files\PowerShell\7\pwsh.exe"])
+            ?? throw new FileNotFoundException(
+                "PowerShell 7 is required for interactive-user environment access.");
+        var powershellWorkingDirectory =
+            Path.GetDirectoryName(powershell)
+            ?? systemDirectory;
 
         var request =
             new InteractiveEnvironmentRequest(
@@ -341,7 +338,7 @@ public static class EnvironmentTools
         var result =
             await InteractiveUserProcessRunner.RunAsync(
                 powershell,
-                systemDirectory,
+                powershellWorkingDirectory,
                 [
                     "-NoLogo",
                     "-NoProfile",

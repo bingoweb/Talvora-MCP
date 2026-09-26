@@ -1,4 +1,5 @@
 using ModelContextProtocol.Client;
+using Talvora.Shared;
 using static SmokeSupport;
 
 internal static partial class SmokeScenarios
@@ -112,12 +113,12 @@ internal static partial class SmokeScenarios
                 }
             }
 
-            var powershell = Path.Combine(
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder.System),
-                "WindowsPowerShell",
-                "v1.0",
-                "powershell.exe");
+            var powershell =
+                CommandResolver.Resolve(
+                    ["pwsh.exe", "pwsh"],
+                    [@"C:\Program Files\PowerShell\7\pwsh.exe"])
+                ?? throw new InvalidOperationException(
+                    "PowerShell 7 is required for user environment smoke.");
             File.Delete(userProbePath);
             await EnsureSuccess(
                 byName["talvora_user_process_start"],
@@ -156,6 +157,28 @@ internal static partial class SmokeScenarios
             {
                 throw new InvalidOperationException(
                     "target=user did not persist into the logged-on Windows user profile.");
+            }
+
+            await EnsureSuccess(byName["talvora_env_set"], new()
+            {
+                ["name"] = userEnvironmentName,
+                ["value"] = "",
+                ["target"] = "user",
+            });
+            var emptyUserEnvironmentGet =
+                await EnsureSuccess(byName["talvora_env_get"], new()
+                {
+                    ["name"] = userEnvironmentName,
+                    ["target"] = "user",
+                });
+            if (emptyUserEnvironmentGet.StructuredContent is not { } emptyUserJson ||
+                !emptyUserJson.TryGetProperty("found", out var emptyUserFound) ||
+                !emptyUserFound.GetBoolean() ||
+                !emptyUserJson.TryGetProperty("value", out var emptyUserValue) ||
+                emptyUserValue.GetString() != string.Empty)
+            {
+                throw new InvalidOperationException(
+                    "target=user must preserve an explicit empty-string value.");
             }
         
             var firstDelete = await EnsureSuccess(byName["talvora_env_delete"], new()
