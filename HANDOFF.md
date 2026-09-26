@@ -38,7 +38,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
 - Focused MCP yüzeyleri: **Dev 174**, **Admin 91**; Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
-- Güncel audit üst özeti: **#121–#217 remediation complete; #199–#212 ve #214–#217 LIVE VERIFIED; #213 TEST VERIFIED; full 204-tool live MCP smoke baseline GREEN; focused surface live + metadata live GREEN ve capability korunuyor.**
+- Güncel audit üst özeti: **#121–#217 remediation complete; #199–#212 ve #214–#217 LIVE VERIFIED; #213 TEST VERIFIED; #218 FIXED LOCALLY / LIVE PENDING; full 204-tool live MCP smoke baseline GREEN; focused surface live + metadata live GREEN ve capability korunuyor.**
 
 ## Son tamamlanan bug-fix zinciri
 
@@ -303,9 +303,15 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - `ATOMIC_FILE_DURABLE_METADATA_REGRESSION_GREEN` + Job Storage + Native Installer source regression + Release 0/0 GREEN.
 - Fix `668f77c`; installer SHA-256 `9729695F3D1CC48DF00AD673DFEF56FD91BCD2660459EFCA02D222C9F112D0CA`; exact-installed aynı commit. Live target ve backup exact SDDL/creation/Hidden+Archive/content preserved; temp file yok; fixture temizlendi.
 
+### #218 — write_bytes complete replacement durability — FIXED LOCALLY / LIVE PENDING
+- Full replacement pre-fix `FileMode.Create` ile hedefi publish tamamlanmadan truncate ediyordu; kesinti existing binary target'ı bozabilirdi.
+- Shared `AtomicFile.WriteAllBytesAsync` staged write-through + flush-to-disk + metadata-preserving publication ekliyor.
+- Yalnız `append=false, offset=null` complete replacement bu yola taşındı; append ve offset write davranışı değişmedi.
+- `ATOMIC_FILE_DURABLE_METADATA_REGRESSION_GREEN` ve Talvora Release 0/0; commit/deploy/live binary fixture pending.
+
 ## Doküman tutarlılığı notu
 
-- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#217 tamamlandı; #199–#212 ve #214–#217 canlı, #213 test doğrulandı.
+- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#217 tamamlandı; #199–#212 ve #214–#217 canlı, #213 test doğrulandı; #218 local fix/live pending.
 - Aynı dosyanın daha eski gövde satırlarında ve `MCP-CONTROL-CENTER-TODO.md` içinde tarihsel `pending`, eski `OPEN` veya pre-live ifadeler kalmış olabilir. Bunları yeni oturumda gerçek repo/remote/live durumunun önüne koyma.
 - Eski tamamlanmış bug'ları tekrar test edip yeniden açma; yalnız yeni kanıt veya gerçek regresyon varsa dön.
 
@@ -327,7 +333,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 ## NEXT SESSION — kesin devam noktası
 
-**#193–#217 kapanmıştır; Dev 174 / Admin 91 focused surface policy GREEN, full 204-tool smoke baseline GREEN ve #199–#217 Admin/live/test gates GREEN. Sonraki yeni doğrulanmış bulgudan deep audit'e devam et.**
+**#193–#217 kapanmıştır; #218 local fix/live pending. Dev 174 / Admin 91 focused surface policy GREEN ve full 204-tool smoke baseline GREEN. Önce #218 commit/deploy/live acceptance'i kapat, sonra yeni doğrulanmış bulgudan deep audit'e devam et.**
 
 Başlangıç sırası:
 

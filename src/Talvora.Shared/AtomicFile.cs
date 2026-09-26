@@ -68,6 +68,50 @@ public static class AtomicFile
         }
     }
 
+    public static async Task<string?> WriteAllBytesAsync(
+        string path,
+        ReadOnlyMemory<byte> content,
+        bool createBackup = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var fullPath = Path.GetFullPath(path);
+        var directory = Path.GetDirectoryName(fullPath)
+            ?? throw new InvalidOperationException(
+                $"File directory could not be resolved: {fullPath}");
+
+        Directory.CreateDirectory(directory);
+
+        var requestedBackupPath =
+            createBackup
+                ? fullPath + ".bak"
+                : null;
+
+        var tempPath = Path.Combine(
+            directory,
+            "." + Path.GetFileName(fullPath) + "." +
+            Guid.NewGuid().ToString("N") + ".tmp");
+
+        try
+        {
+            await WriteDurableBytesAsync(
+                tempPath,
+                content,
+                cancellationToken).ConfigureAwait(false);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            return PublishDurable(
+                tempPath,
+                fullPath,
+                requestedBackupPath);
+        }
+        finally
+        {
+            TryDeleteTemp(tempPath);
+        }
+    }
+
     private static async Task WriteDurableTextAsync(
         string tempPath,
         string content,
@@ -100,6 +144,32 @@ public static class AtomicFile
                 cancellationToken).ConfigureAwait(false);
         }
 
+        stream.Flush(flushToDisk: true);
+    }
+
+    private static async Task WriteDurableBytesAsync(
+        string tempPath,
+        ReadOnlyMemory<byte> content,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = new FileStream(
+            tempPath,
+            new FileStreamOptions
+            {
+                Mode = FileMode.CreateNew,
+                Access = FileAccess.Write,
+                Share = FileShare.None,
+                BufferSize = DurableBufferSize,
+                Options =
+                    FileOptions.Asynchronous |
+                    FileOptions.WriteThrough,
+            });
+
+        await stream.WriteAsync(
+            content,
+            cancellationToken).ConfigureAwait(false);
+        await stream.FlushAsync(
+            cancellationToken).ConfigureAwait(false);
         stream.Flush(flushToDisk: true);
     }
 

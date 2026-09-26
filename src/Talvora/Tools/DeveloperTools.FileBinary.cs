@@ -123,19 +123,32 @@ public static partial class DeveloperTools
             Directory.CreateDirectory(parent);
         }
 
+        if (!append &&
+            offset is null)
+        {
+            _ = await AtomicFile.WriteAllBytesAsync(
+                fullPath,
+                bytes,
+                createBackup: false,
+                cancellationToken);
+
+            return new TalvoraWriteBytesResponse(
+                fullPath,
+                bytes.Length,
+                bytes.Length,
+                false,
+                null);
+        }
+
         FileMode mode;
-        FileAccess access = FileAccess.Write;
+        const FileAccess access = FileAccess.Write;
         if (append)
         {
             mode = FileMode.Append;
         }
-        else if (offset is not null)
-        {
-            mode = FileMode.OpenOrCreate;
-        }
         else
         {
-            mode = FileMode.Create;
+            mode = FileMode.OpenOrCreate;
         }
 
         await using var stream = new FileStream(
