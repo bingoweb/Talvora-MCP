@@ -189,9 +189,13 @@ async function createComponent() {
     throw new Error("Secimde zaten component instance'i var. Once normal katmanlari sec.");
   }
 
-  const component = penpot.library.local.createComponent(selection);
   const baseName = selection[0]?.name || "Selection";
+  const component = penpot.library.local.createComponent(selection);
   component.name = `Talvora / ${baseName}`;
+  const mainInstance = component.mainInstance();
+  if (mainInstance) {
+    penpot.selection = [mainInstance];
+  }
 
   send("result", {
     level: "success",

@@ -12,6 +12,14 @@ internal static partial class SmokeScenarios
         "import_image",
     ];
 
+    private static readonly string[] RequiredAuthenticatedPenpotTools =
+    [
+        "execute_code",
+        "high_level_overview",
+        "penpot_api_info",
+        "export_shape",
+    ];
+
     private static readonly string[] RequiredTalvoraPenpotTools =
     [
         "talvora_penpot_status",
@@ -101,20 +109,52 @@ internal static partial class SmokeScenarios
                 .Cast<string>()
                 .ToHashSet(StringComparer.Ordinal);
 
-        foreach (var required in RequiredPenpotNativeTools)
+        var configurationSource =
+            statusJson.GetProperty("configurationSource").GetString();
+        var authenticated =
+            statusJson.GetProperty("authenticated").GetBoolean();
+        var isManagedAuthenticated =
+            string.Equals(
+                configurationSource,
+                "managed-authenticated-endpoint",
+                StringComparison.Ordinal);
+        var requiredStatusTools =
+            isManagedAuthenticated
+                ? RequiredAuthenticatedPenpotTools
+                : RequiredPenpotNativeTools;
+
+        if (isManagedAuthenticated && !authenticated)
+        {
+            throw new InvalidOperationException(
+                "Talvora Penpot managed endpoint is not authenticated.");
+        }
+
+        foreach (var required in requiredStatusTools)
         {
             if (!entrypoints.Contains(required))
             {
                 throw new InvalidOperationException(
-                    $"Talvora Penpot status did not report native tool: {required}");
+                    $"Talvora Penpot status did not report required tool: {required}");
             }
         }
 
-        if (statusJson.GetProperty("toolCount").GetInt32() !=
-            nativeTools.Count)
+        if (!isManagedAuthenticated &&
+            statusJson.GetProperty("toolCount").GetInt32() !=
+                nativeTools.Count)
         {
             throw new InvalidOperationException(
                 "Talvora Penpot status tool count does not match the native MCP server.");
+        }
+
+        var describedEndpoint =
+            statusJson.GetProperty("endpoint").GetString() ?? string.Empty;
+        if (isManagedAuthenticated &&
+            !describedEndpoint.Contains(
+                "credentials=<redacted>",
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Talvora Penpot managed endpoint did not redact its credentials.");
         }
     }
 
