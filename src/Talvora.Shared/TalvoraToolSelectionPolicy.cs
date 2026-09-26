@@ -63,7 +63,13 @@ public static class TalvoraToolSelectionPolicy
             "s&box editöründe sahneyi incele, uygun aracı keşfet, gameplay değişikliğini uygula ve viewport sonucunu kontrol et.",
             true,
             TalvoraMcpToolSurface.Development,
-            ["talvora_sbox_status", "talvora_sbox_search_tools", "talvora_sbox_invoke"]),
+            [
+                "talvora_sbox_status",
+                "talvora_sbox_editor_status",
+                "talvora_sbox_search_tools",
+                "talvora_sbox_call_tool",
+                "talvora_sbox_read_console",
+            ]),
         new(
             "service-restart",
             "Yerel Windows servisini yeniden başlat.",

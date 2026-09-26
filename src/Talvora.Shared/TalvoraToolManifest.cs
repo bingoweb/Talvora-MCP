@@ -209,7 +209,13 @@ public static class TalvoraToolManifest
         "talvora_toml_set",
         "talvora_toml_delete",
         "talvora_sbox_status",
+        "talvora_sbox_editor_status",
+        "talvora_sbox_list_toolsets",
+        "talvora_sbox_describe_toolset",
         "talvora_sbox_search_tools",
+        "talvora_sbox_call_tool",
+        "talvora_sbox_call_tools",
+        "talvora_sbox_read_console",
         "talvora_sbox_invoke",
     ];
 }

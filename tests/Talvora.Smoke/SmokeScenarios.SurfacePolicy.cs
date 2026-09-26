@@ -93,7 +93,31 @@ internal static partial class SmokeScenarios
             development: true,
             administration: false);
         AssertSurface(
+            "talvora_sbox_editor_status",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_sbox_list_toolsets",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_sbox_describe_toolset",
+            development: true,
+            administration: false);
+        AssertSurface(
             "talvora_sbox_search_tools",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_sbox_call_tool",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_sbox_call_tools",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_sbox_read_console",
             development: true,
             administration: false);
         AssertSurface(
