@@ -115,13 +115,28 @@ public static partial class JobTools
             }
             else
             {
-                var updated = metadata with
+                var currentMetadata = await ReadMetadataAsync(
+                    jobId,
+                    cancellationToken);
+                if (!string.Equals(
+                        currentMetadata.State,
+                        "Running",
+                        StringComparison.OrdinalIgnoreCase))
                 {
-                    State = exited ? "Stopped" : "Stopping",
-                    ExitedAtUtc = exited ? DateTime.UtcNow : null,
-                };
-                await WriteMetadataAsync(updated, cancellationToken);
-                refreshed = ToResponse(updated);
+                    refreshed = ToResponse(currentMetadata);
+                }
+                else
+                {
+                    var updated = currentMetadata with
+                    {
+                        State = exited ? "Stopped" : "Stopping",
+                        ExitedAtUtc = exited ? DateTime.UtcNow : null,
+                    };
+                    await WriteMetadataAsync(
+                        updated,
+                        cancellationToken);
+                    refreshed = ToResponse(updated);
+                }
             }
 
             return new TalvoraJobStopResponse(

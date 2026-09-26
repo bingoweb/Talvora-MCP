@@ -12,8 +12,21 @@ public static partial class JobTools
 {
 private static string GetJobsRoot()
     {
-        var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-        var root = Path.Combine(programData, "Talvora", "Jobs");
+        var root = JobStorageRootOverrideForTests;
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            var programData = Environment.GetFolderPath(
+                Environment.SpecialFolder.CommonApplicationData);
+            root = Path.Combine(
+                programData,
+                "Talvora",
+                "Jobs");
+        }
+        else
+        {
+            root = Path.GetFullPath(root);
+        }
+
         Directory.CreateDirectory(root);
         return root;
     }
@@ -418,22 +431,48 @@ private static string GetJobsRoot()
         return await ReadMetadataFileAsync(path, cancellationToken);
     }
 
-    private static Task<TalvoraJobMetadata> ReadMetadataFileAsync(
+    private static async Task<TalvoraJobMetadata> ReadMetadataFileAsync(
         string path,
-        CancellationToken cancellationToken) =>
-        JsonFileStore.ReadAsync<TalvoraJobMetadata>(
-            path,
-            JsonOptions,
-            cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        await MetadataAccessGate.WaitAsync(
+                cancellationToken)
+            .ConfigureAwait(false);
+        try
+        {
+            return await JsonFileStore.ReadAsync<TalvoraJobMetadata>(
+                    path,
+                    JsonOptions,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            MetadataAccessGate.Release();
+        }
+    }
 
-    private static Task WriteMetadataAsync(
+    private static async Task WriteMetadataAsync(
         TalvoraJobMetadata metadata,
-        CancellationToken cancellationToken) =>
-        JsonFileStore.WriteAsync(
-            metadata.MetadataPath,
-            metadata,
-            JsonOptions,
-            cancellationToken: cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        await MetadataAccessGate.WaitAsync(
+                cancellationToken)
+            .ConfigureAwait(false);
+        try
+        {
+            await JsonFileStore.WriteAsync(
+                    metadata.MetadataPath,
+                    metadata,
+                    JsonOptions,
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            MetadataAccessGate.Release();
+        }
+    }
 
     private static async Task<TalvoraJobInfoResponse> RefreshStateAsync(
         TalvoraJobMetadata metadata,

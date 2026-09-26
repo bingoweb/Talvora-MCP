@@ -83,5 +83,16 @@ if (args.Contains(
     return;
 }
 
+if (args.Contains(
+        "--job-stop-race-only",
+        StringComparer.OrdinalIgnoreCase))
+{
+    await Talvora.Tools.JobTools.AssertStopMetadataPublicationContractAsync(
+        CancellationToken.None);
+    Console.WriteLine(
+        "TALVORA JOB STOP METADATA REGRESSION GREEN");
+    return;
+}
+
 await SourceEditRegressionRunner.RunAllAsync();
 Console.WriteLine("TALVORA SOURCE EDIT REGRESSION GREEN");

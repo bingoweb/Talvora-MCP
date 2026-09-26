@@ -284,6 +284,138 @@ public static partial class JobTools
         }
     }
 
+    internal static async Task AssertStopMetadataPublicationContractAsync(
+        CancellationToken cancellationToken)
+    {
+        var previousRoot = JobStorageRootOverrideForTests;
+        var isolatedRoot = Path.Combine(
+            Path.GetTempPath(),
+            "Talvora-JobStop-" +
+            Guid.NewGuid().ToString("N"));
+        JobStorageRootOverrideForTests = isolatedRoot;
+
+        try
+        {
+        var cmd = Path.Combine(
+            Environment.GetFolderPath(
+                Environment.SpecialFolder.System),
+            "cmd.exe");
+
+        for (var iteration = 1;
+             iteration <= 32;
+             iteration++)
+        {
+            TalvoraJobStartResponse? started = null;
+            try
+            {
+                started = await Start(
+                        cmd,
+                        ["/d", "/q"],
+                        Path.GetTempPath(),
+                        cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+
+                var token =
+                    $"TALVORA_JOB_STOP_{iteration}_{Guid.NewGuid():N}";
+                await WriteStdin(
+                        started.JobId,
+                        "echo " + token,
+                        appendNewLine: true,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                var observed = false;
+                for (var attempt = 0;
+                     attempt < 50 && !observed;
+                     attempt++)
+                {
+                    await Task.Delay(
+                            10,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    var output = await ReadOutput(
+                            started.JobId,
+                            "stdout",
+                            offset: 0,
+                            maxBytes: 0,
+                            cancellationToken: cancellationToken)
+                        .ConfigureAwait(false);
+                    observed = output.Text.Contains(
+                        token,
+                        StringComparison.Ordinal);
+                }
+
+                if (!observed)
+                {
+                    throw new InvalidOperationException(
+                        $"Background job stop regression did not observe stdout at iteration {iteration}.");
+                }
+
+                var stopped = await Stop(
+                        started.JobId,
+                        entireProcessTree: true,
+                        timeoutSeconds: 15,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                if (!stopped.Exited ||
+                    !string.Equals(
+                        stopped.State,
+                        "Exited",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Background job stop regression returned an unexpected terminal state at iteration {iteration}: State={stopped.State}; Exited={stopped.Exited}.");
+                }
+
+                var persisted = await ReadMetadataAsync(
+                        started.JobId,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                if (!string.Equals(
+                        persisted.State,
+                        "Exited",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    persisted.ExitCode != stopped.ExitCode ||
+                    persisted.ExitedAtUtc is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Background job stop regression persisted stale terminal metadata at iteration {iteration}.");
+                }
+            }
+            finally
+            {
+                if (started is not null)
+                {
+                    await Delete(
+                            started.JobId,
+                            stopIfRunning: true,
+                            stopTimeoutSeconds: 15,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                }
+            }
+        }
+        }
+        finally
+        {
+            JobStorageRootOverrideForTests = previousRoot;
+            try
+            {
+                if (Directory.Exists(isolatedRoot))
+                {
+                    Directory.Delete(
+                        isolatedRoot,
+                        recursive: true);
+                }
+            }
+            catch (Exception ex) when (
+                ex is IOException or
+                UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
     private static async Task<string> CreateCompletedFixtureAsync(
         string root,
         string jobId,

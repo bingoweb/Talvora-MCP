@@ -119,6 +119,9 @@ public static partial class JobTools
 
     private static readonly ConcurrentDictionary<string, TalvoraJobRuntime> LiveJobs =
         new(StringComparer.OrdinalIgnoreCase);
+    private static readonly SemaphoreSlim MetadataAccessGate =
+        new(1, 1);
+    internal static string? JobStorageRootOverrideForTests { get; set; }
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
