@@ -59,18 +59,6 @@ public static class TalvoraToolSelectionPolicy
             TalvoraMcpToolSurface.Development,
             ["talvora_git_status"]),
         new(
-            "sbox-game-development",
-            "s&box editöründe sahneyi incele, uygun aracı keşfet, gameplay değişikliğini uygula ve viewport sonucunu kontrol et.",
-            true,
-            TalvoraMcpToolSurface.Development,
-            [
-                "talvora_sbox_status",
-                "talvora_sbox_editor_status",
-                "talvora_sbox_search_tools",
-                "talvora_sbox_call_tool",
-                "talvora_sbox_read_console",
-            ]),
-        new(
             "penpot-design-development",
             "Penpot'ta mevcut tasarımı incele, tasarım sistemini anla ve gerekli arayüz değişikliğini uygula.",
             true,

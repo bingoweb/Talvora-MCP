@@ -37,18 +37,8 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Focused MCP yüzeyleri Penpot entegrasyonu sonrasında **Full 221 / Dev 191 / Admin 91**. Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
-- Güncel audit zinciri **#121–#218** kapalı kalır. s&box + Modal + Penpot genişletmeleri sonrasında metadata source/live ve focused-surface source/live GREEN; shared-infrastructure hedefli regresyonu Docker image çekimi sırasındaki tek timing kırmızısı sonrası sakin ortamda GREEN tekrar doğrulandı. Eski 204-tool full-smoke sonucu tarihsel baseline'dır; 221 araç için full smoke yeniden çalıştırılmadı.
-
-## s&box / Talvora entegrasyonu — CURRENT
-
-- Talvora Dev yüzeyinde 9 s&box aracı vardır: status, editor status, toolset list/describe, search, single/batch call, console ve generic invoke.
-- Talvora proxy'si yerel s&box editor MCP'sine `http://127.0.0.1:7269/mcp` üzerinden bağlanır ve inline image/screenshot content'ini korur.
-- Oyun deposu: `C:\Users\tayla\Documents\s&box projects\Talvora-Sbox-Lab`; private Gitea: `taylan/Talvora-Sbox-Lab`.
-- Rich editor bridge üçüncü taraf yerel bağımlılıktır; `Libraries/claudebridge` Git dışında tutulur. Statik envanter: 28 toolset / 273 benzersiz native MCP tool / 29 MCP wrapper dosyası.
-- Resmi `sbox-public` checkout commit `1da73be3fc461645265db6840df8d4dcd36d4346`. Production `Sbox-Dev.csproj` Release build 0 warning / 0 error.
-- 2026-09-26 public-source native artifact ile generated managed interop arasında runtime hash uyumsuzluğu görüldü (`managed 15364`, `native 38969`); source runtime shader kabulü bu yüzden güvenli biçimde durduruldu. Engine kaynakları bu uyumsuzluğu gizlemek için yamalanmadı.
-- Steam s&box artık kurulu ve `sbox-dev.exe` çalıştırıldı. Son gözlemde native MCP `127.0.0.1:7269` cevap vermiyordu ve UI tarafında `bootstrap init error` görüldü; kalan acceptance: bootstrap/MCP ayağa kaldır -> bridge toolset live -> screenshot -> reversible scene edit.
+- Focused MCP yüzeyleri güncel durumda **Full 212 / Dev 182 / Admin 91**. Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
+- Güncel audit zinciri **#121–#218** kapalı kalır. Modal + Penpot genişletmeleri sonrasında metadata source/live ve focused-surface source/live GREEN; shared-infrastructure hedefli regresyonu Docker image çekimi sırasındaki tek timing kırmızısı sonrası sakin ortamda GREEN tekrar doğrulandı. Eski 204-tool full-smoke sonucu tarihsel baseline'dır; güncel 212 araç için full smoke yeniden çalıştırılmadı.
 
 ## Penpot / Talvora entegrasyonu — CURRENT
 
@@ -76,7 +66,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Resmi Modal Python SDK/CLI **1.5.5** sistem Python 3.14 altına kuruldu; executable `C:\Python314\Scripts\modal.exe`.
 - Modal için ayrı üçüncü taraf MCP yerine Talvora Dev yüzeyinde 4 native yönetim aracı vardır: `talvora_modal_info`, `talvora_modal_app_list`, `talvora_modal_endpoint_list`, `talvora_modal_run`. `app_list`, yeni Endpoint ürünü öncesi klasik Modal App deployment'larını da keşfeder.
 - Modal CLI çağrıları credential/profile sahipliği için logged-on Windows user session'ında çalışır. `talvora_modal_info` aktif profili ve credential kullanılabilirliğini ayrı raporlar; credential değeri response'a alınmaz. Modal API/proxy/OAuth credential prefix'leri persistent log redaction kapsamındadır. Generic run, resmi CLI yüzeyini korur.
-- Modal hardening aşamasındaki yüzey **Full 217 / Dev 187 / Admin 91** idi; Penpot entegrasyonu sonrasında güncel global yüzey **Full 221 / Dev 191 / Admin 91**. Metadata source/live + surface source/live GREEN, Talvora + Smoke Release build 0 warning / 0 error.
+- Modal hardening aşamasındaki yüzey **Full 217 / Dev 187 / Admin 91** idi; Penpot entegrasyonu sonrasında yüzey bir aşamada **Full 221 / Dev 191 / Admin 91** oldu. Güncel global yüzey **Full 212 / Dev 182 / Admin 91**. Metadata source/live + surface source/live GREEN, Talvora + Smoke Release build 0 warning / 0 error.
 - Modal user profile setup tamamlandı; aktif profile `taylansoylu`. Native `modal endpoint list` boş çünkü bu model yeni Endpoint ürünü değil, custom Modal App olarak deploy edilmiş.
 - Custom app `codepilot-huihui-qwen38` deployed; public OpenAI-compatible base `https://taylansoylu--codepilot-huihui-qwen38-serve.modal.run/v1`.
 - Auth secret adı `codepilot-inference-api`; required env key adı `LLAMA_API_KEY`. Secret değeri okunmadı, loglanmadı veya HANDOFF'a yazılmadı.

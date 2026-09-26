@@ -52,15 +52,6 @@ internal static partial class SmokeScenarios
         AssertWorldScope("talvora_modal_app_list", true);
         AssertWorldScope("talvora_modal_endpoint_list", true);
         AssertWorldScope("talvora_modal_run", true);
-        AssertWorldScope("talvora_sbox_status", true);
-        AssertWorldScope("talvora_sbox_editor_status", true);
-        AssertWorldScope("talvora_sbox_list_toolsets", true);
-        AssertWorldScope("talvora_sbox_describe_toolset", true);
-        AssertWorldScope("talvora_sbox_search_tools", true);
-        AssertWorldScope("talvora_sbox_call_tool", true);
-        AssertWorldScope("talvora_sbox_call_tools", true);
-        AssertWorldScope("talvora_sbox_read_console", true);
-        AssertWorldScope("talvora_sbox_invoke", true);
         AssertWorldScope("talvora_penpot_status", true);
         AssertWorldScope("talvora_penpot_overview", true);
         AssertWorldScope("talvora_penpot_read_tool", true);
@@ -312,42 +303,6 @@ internal static partial class SmokeScenarios
         AssertLiveTool(
             tools,
             "talvora_modal_run",
-            readOnly: false,
-            destructive: true,
-            openWorld: true);
-        AssertLiveTool(
-            tools,
-            "talvora_sbox_status",
-            readOnly: true,
-            destructive: false,
-            openWorld: true);
-        AssertLiveTool(
-            tools,
-            "talvora_sbox_editor_status",
-            readOnly: true,
-            destructive: false,
-            openWorld: true);
-        AssertLiveTool(
-            tools,
-            "talvora_sbox_read_console",
-            readOnly: true,
-            destructive: false,
-            openWorld: true);
-        AssertLiveTool(
-            tools,
-            "talvora_sbox_call_tool",
-            readOnly: false,
-            destructive: true,
-            openWorld: true);
-        AssertLiveTool(
-            tools,
-            "talvora_sbox_call_tools",
-            readOnly: false,
-            destructive: true,
-            openWorld: true);
-        AssertLiveTool(
-            tools,
-            "talvora_sbox_invoke",
             readOnly: false,
             destructive: true,
             openWorld: true);
