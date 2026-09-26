@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -19,6 +20,8 @@ public sealed record PenpotMcpEntrypoint(
 public sealed record PenpotMcpStatusResponse(
     bool Ready,
     string Endpoint,
+    bool Authenticated,
+    string ConfigurationSource,
     int ToolCount,
     IReadOnlyList<PenpotMcpEntrypoint> Entrypoints,
     string? Error);
@@ -29,6 +32,9 @@ public static class PenpotMcpTools
     private const int DefaultPort = 4401;
     private const int MaxArgumentsJsonCharacters = 4 * 1024 * 1024;
     private static readonly TimeSpan ConnectionTimeout = TimeSpan.FromSeconds(10);
+    private static readonly Regex UserTokenPattern = new(
+        @"(?i)(userToken=)[^&\s""']+",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     [McpServerTool(
         Name = "talvora_penpot_status",
@@ -38,15 +44,16 @@ public static class PenpotMcpTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(PenpotMcpStatusResponse)),
-     Description("Probe the local official Penpot MCP server and return its live tools, input schemas, and annotations. The local server normally listens on 127.0.0.1:4401. Use this first for Penpot design work to verify the MCP server and discover the current Penpot tool contract.")]
+     Description("Probe the local official Penpot MCP server and return its live tools, input schemas, and annotations. Talvora automatically prefers the protected authenticated Penpot MCP URL stored in ProgramData and falls back to 127.0.0.1:4401 when no managed URL exists. Credentials are always redacted from the response.")]
     public static async Task<PenpotMcpStatusResponse> Status(
-        [Description("Local Penpot MCP port. Defaults to 4401.")] int port = DefaultPort,
+        [Description("Fallback local Penpot MCP port used only when no managed authenticated endpoint is configured. Defaults to 4401.")] int port = DefaultPort,
         CancellationToken cancellationToken = default)
     {
-        var endpoint = BuildEndpoint(port);
+        Uri? endpoint = null;
 
         try
         {
+            endpoint = ResolveEndpoint(port);
             await using var transport = CreateTransport(endpoint);
             await using var client = await McpClient.CreateAsync(
                 transport,
@@ -56,7 +63,9 @@ public static class PenpotMcpTools
 
             return new PenpotMcpStatusResponse(
                 true,
-                endpoint.ToString(),
+                DescribeEndpoint(endpoint),
+                IsAuthenticatedEndpoint(endpoint),
+                GetConfigurationSource(),
                 tools.Count,
                 tools.Select(tool => new PenpotMcpEntrypoint(
                         tool.Name,
@@ -78,14 +87,21 @@ public static class PenpotMcpTools
             ex is HttpRequestException or
             TimeoutException or
             McpException or
-            InvalidOperationException)
+            InvalidOperationException or
+            IOException or
+            UnauthorizedAccessException)
         {
             return new PenpotMcpStatusResponse(
                 false,
-                endpoint.ToString(),
+                endpoint is null
+                    ? DescribeFallbackEndpoint(port)
+                    : DescribeEndpoint(endpoint),
+                endpoint is not null &&
+                IsAuthenticatedEndpoint(endpoint),
+                GetConfigurationSource(),
                 0,
                 [],
-                ex.Message);
+                RedactSensitiveText(ex.Message));
         }
     }
 
@@ -97,7 +113,7 @@ public static class PenpotMcpTools
         OpenWorld = true),
      Description("Read the current Penpot file's high-level structure through the official Penpot MCP high_level_overview tool. Use it after talvora_penpot_status to inspect pages, components, styles, tokens, and the active design context before making design changes.")]
     public static Task<CallToolResult> Overview(
-        [Description("Local Penpot MCP port. Defaults to 4401.")] int port = DefaultPort,
+        [Description("Fallback local Penpot MCP port used only when no managed authenticated endpoint is configured. Defaults to 4401.")] int port = DefaultPort,
         CancellationToken cancellationToken = default) =>
         InvokeCoreAsync(
             "high_level_overview",
@@ -115,12 +131,12 @@ public static class PenpotMcpTools
     public static async Task<CallToolResult> ReadTool(
         [Description("Penpot tool name discovered from talvora_penpot_status.")] string name,
         [Description("JSON object matching the Penpot tool's input schema. Defaults to {}.")] string argumentsJson = "{}",
-        [Description("Local Penpot MCP port. Defaults to 4401.")] int port = DefaultPort,
+        [Description("Fallback local Penpot MCP port used only when no managed authenticated endpoint is configured. Defaults to 4401.")] int port = DefaultPort,
         CancellationToken cancellationToken = default)
     {
         ValidateName(name);
         var arguments = ParseArguments(argumentsJson);
-        var endpoint = BuildEndpoint(port);
+        var endpoint = ResolveEndpoint(port);
 
         await using var transport = CreateTransport(endpoint);
         await using var client = await McpClient.CreateAsync(
@@ -165,7 +181,7 @@ public static class PenpotMcpTools
     public static Task<CallToolResult> CallTool(
         [Description("Penpot tool name discovered from talvora_penpot_status.")] string name,
         [Description("JSON object matching the Penpot tool's input schema. Defaults to {}.")] string argumentsJson = "{}",
-        [Description("Local Penpot MCP port. Defaults to 4401.")] int port = DefaultPort,
+        [Description("Fallback local Penpot MCP port used only when no managed authenticated endpoint is configured. Defaults to 4401.")] int port = DefaultPort,
         CancellationToken cancellationToken = default)
     {
         ValidateName(name);
@@ -183,7 +199,7 @@ public static class PenpotMcpTools
         int port,
         CancellationToken cancellationToken)
     {
-        var endpoint = BuildEndpoint(port);
+        var endpoint = ResolveEndpoint(port);
         await using var transport = CreateTransport(endpoint);
         await using var client = await McpClient.CreateAsync(
             transport,
@@ -249,7 +265,7 @@ public static class PenpotMcpTools
         }
     }
 
-    private static Uri BuildEndpoint(int port)
+    private static Uri ResolveEndpoint(int port)
     {
         if (port is < 1 or > 65535)
         {
@@ -258,8 +274,58 @@ public static class PenpotMcpTools
                 McpErrorCode.InvalidParams);
         }
 
-        return new Uri($"http://127.0.0.1:{port}/mcp");
+        var managedPath = GetManagedEndpointPath();
+        if (!File.Exists(managedPath))
+        {
+            return new Uri($"http://127.0.0.1:{port}/mcp");
+        }
+
+        var raw = File.ReadAllText(managedPath).Trim();
+        if (!Uri.TryCreate(raw, UriKind.Absolute, out var endpoint) ||
+            endpoint.Scheme is not ("http" or "https") ||
+            !endpoint.IsLoopback ||
+            !endpoint.AbsolutePath.StartsWith(
+                "/mcp",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "The managed Penpot MCP endpoint is invalid or is not a loopback MCP URL.");
+        }
+
+        return endpoint;
     }
+
+    private static string GetManagedEndpointPath() =>
+        Path.Combine(
+            Environment.GetFolderPath(
+                Environment.SpecialFolder.CommonApplicationData),
+            "Talvora",
+            "Penpot",
+            "mcp-client-url.txt");
+
+    private static string GetConfigurationSource() =>
+        File.Exists(GetManagedEndpointPath())
+            ? "managed-authenticated-endpoint"
+            : "direct-port-fallback";
+
+    private static bool IsAuthenticatedEndpoint(Uri endpoint) =>
+        endpoint.Query.Contains(
+            "userToken=",
+            StringComparison.OrdinalIgnoreCase);
+
+    private static string DescribeEndpoint(Uri endpoint) =>
+        endpoint.GetLeftPart(UriPartial.Path) +
+        (string.IsNullOrWhiteSpace(endpoint.Query)
+            ? string.Empty
+            : "?credentials=<redacted>");
+
+    private static string DescribeFallbackEndpoint(int port) =>
+        port is >= 1 and <= 65535
+            ? $"http://127.0.0.1:{port}/mcp"
+            : "invalid-fallback-endpoint";
+
+    private static string RedactSensitiveText(string value) =>
+        UserTokenPattern.Replace(value, "$1<redacted>");
 
     private static HttpClientTransport CreateTransport(Uri endpoint) =>
         new(
