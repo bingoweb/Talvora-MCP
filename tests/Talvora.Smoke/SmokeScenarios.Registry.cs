@@ -77,7 +77,13 @@ internal static partial class SmokeScenarios
             });
             if (listResult.StructuredContent is not { } listJson ||
                 !listJson.TryGetProperty("subKeys", out var subKeys) ||
-                subKeys.ValueKind != System.Text.Json.JsonValueKind.Array)
+                subKeys.ValueKind != System.Text.Json.JsonValueKind.Array ||
+                !listJson.TryGetProperty("count", out var listCount) ||
+                listCount.GetInt32() != 6 ||
+                !listJson.TryGetProperty("totalEntries", out var totalEntries) ||
+                totalEntries.GetInt32() != 6 ||
+                !listJson.TryGetProperty("truncated", out var listTruncated) ||
+                listTruncated.GetBoolean())
             {
                 throw new InvalidOperationException("registry list did not return subKeys.");
             }
@@ -85,6 +91,41 @@ internal static partial class SmokeScenarios
             if (!subKeyNames.SequenceEqual(new[] { "Beta", "Zulu", "alpha" }, StringComparer.Ordinal))
             {
                 throw new InvalidOperationException("registry subkeys were not returned in deterministic ordinal order.");
+            }
+
+            var firstRegistryPage = await EnsureSuccess(byName["talvora_registry_list"], new()
+            {
+                ["hive"] = "HKCU",
+                ["path"] = registryPath,
+                ["view"] = "default",
+                ["maxResults"] = 2,
+                ["resultOffset"] = 0,
+            });
+            if (firstRegistryPage.StructuredContent is not { } firstRegistryPageJson ||
+                firstRegistryPageJson.GetProperty("count").GetInt32() != 2 ||
+                !firstRegistryPageJson.GetProperty("truncated").GetBoolean() ||
+                firstRegistryPageJson.GetProperty("nextResultOffset").GetInt32() != 2 ||
+                firstRegistryPageJson.GetProperty("subKeys").GetArrayLength() != 2)
+            {
+                throw new InvalidOperationException("registry list first page was not bounded correctly.");
+            }
+
+            var secondRegistryPage = await EnsureSuccess(byName["talvora_registry_list"], new()
+            {
+                ["hive"] = "HKCU",
+                ["path"] = registryPath,
+                ["view"] = "default",
+                ["maxResults"] = 2,
+                ["resultOffset"] = 2,
+            });
+            if (secondRegistryPage.StructuredContent is not { } secondRegistryPageJson ||
+                secondRegistryPageJson.GetProperty("count").GetInt32() != 2 ||
+                !secondRegistryPageJson.GetProperty("truncated").GetBoolean() ||
+                secondRegistryPageJson.GetProperty("nextResultOffset").GetInt32() != 4 ||
+                secondRegistryPageJson.GetProperty("subKeys").GetArrayLength() != 1 ||
+                secondRegistryPageJson.GetProperty("values").GetArrayLength() != 1)
+            {
+                throw new InvalidOperationException("registry list continuation page was not deterministic.");
             }
         
             await EnsureSuccess(byName["talvora_registry_delete_value"], new()

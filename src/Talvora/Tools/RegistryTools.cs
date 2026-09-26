@@ -27,7 +27,12 @@ public sealed record TalvoraRegistryListResponse(
     string Path,
     string View,
     IReadOnlyList<string> SubKeys,
-    IReadOnlyList<TalvoraRegistryValueData> Values);
+    IReadOnlyList<TalvoraRegistryValueData> Values,
+    int Count,
+    int TotalEntries,
+    int ResultOffset,
+    bool Truncated,
+    int? NextResultOffset);
 
 public sealed record TalvoraRegistryCreateResponse(
     bool Created,
@@ -53,6 +58,10 @@ public sealed record TalvoraRegistryDeleteResponse(
 [McpServerToolType]
 public static class RegistryTools
 {
+    internal const int AbsoluteRegistryListResults = 5_000;
+    internal const long AbsoluteRegistryListResponseCharacters =
+        8L * 1024 * 1024;
+
     [McpServerTool(
         Name = "talvora_registry_create_key",
         Destructive = true,
@@ -220,17 +229,32 @@ public static class RegistryTools
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraRegistryListResponse)),
-     Description("List subkeys and values in a local Windows registry key. Names are returned in deterministic ordinal order and ExpandString values are not expanded.")]
+     Description("List subkeys and values in a local Windows registry key with finite response budgets. Names are returned in deterministic ordinal order and ExpandString values are not expanded. maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while the key is unchanged.")]
     public static TalvoraRegistryListResponse List(
         string hive,
         string path,
         string view = "default",
+        [Description("Maximum combined subkey/value entries returned; 0 requests the finite server maximum page.")] int maxResults = 500,
+        [Description("Number of combined deterministic subkey/value entries to skip before returning this page.")] int resultOffset = 0,
         CancellationToken cancellationToken = default)
     {
+        if (maxResults < 0 ||
+            resultOffset < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                "maxResults and resultOffset cannot be negative.");
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         var resolvedHive = ResolveHive(hive);
         var resolvedView = ResolveView(view);
         var normalizedPath = NormalizePath(path);
+        var effectiveMaxResults =
+            maxResults == 0
+                ? AbsoluteRegistryListResults
+                : Math.Min(
+                    maxResults,
+                    AbsoluteRegistryListResults);
 
         using var baseKey = RegistryKey.OpenBaseKey(resolvedHive.Value, resolvedView.Value);
         RegistryKey? opened = null;
@@ -246,27 +270,102 @@ public static class RegistryTools
                     normalizedPath,
                     CanonicalView(resolvedView.Value),
                     [],
-                    []);
+                    [],
+                    0,
+                    0,
+                    resultOffset,
+                    false,
+                    null);
             }
             key = opened;
         }
 
         try
         {
-            var subKeys = key.GetSubKeyNames()
+            var allSubKeys = key.GetSubKeyNames()
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray();
 
-            var values = key.GetValueNames()
+            var allValueNames = key.GetValueNames()
                 .OrderBy(name => name, StringComparer.Ordinal)
-                .Select(name =>
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var kind = key.GetValueKind(name);
-                    var raw = key.GetValue(name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
-                    return ConvertValue(name, kind, raw);
-                })
                 .ToArray();
+            var totalEntries =
+                checked(
+                    allSubKeys.Length +
+                    allValueNames.Length);
+
+            var subKeys = new List<string>();
+            var values = new List<TalvoraRegistryValueData>();
+            long responseCharacters = 0;
+            var index =
+                Math.Min(
+                    resultOffset,
+                    totalEntries);
+            var returned = 0;
+
+            while (index < totalEntries &&
+                   returned < effectiveMaxResults)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (index < allSubKeys.Length)
+                {
+                    var subKey =
+                        allSubKeys[index];
+                    var entryCharacters =
+                        64L + subKey.Length;
+                    if (responseCharacters + entryCharacters >
+                        AbsoluteRegistryListResponseCharacters)
+                    {
+                        break;
+                    }
+
+                    subKeys.Add(subKey);
+                    responseCharacters +=
+                        entryCharacters;
+                }
+                else
+                {
+                    var valueName =
+                        allValueNames[
+                            index -
+                            allSubKeys.Length];
+                    var kind =
+                        key.GetValueKind(valueName);
+                    var raw =
+                        key.GetValue(
+                            valueName,
+                            null,
+                            RegistryValueOptions.DoNotExpandEnvironmentNames);
+                    var value =
+                        ConvertValue(
+                            valueName,
+                            kind,
+                            raw);
+                    var entryCharacters =
+                        EstimateValueCharacters(value);
+                    if (responseCharacters + entryCharacters >
+                        AbsoluteRegistryListResponseCharacters)
+                    {
+                        if (returned == 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"Registry value '{valueName}' exceeds the list response budget. Use talvora_registry_get for that value.");
+                        }
+                        break;
+                    }
+
+                    values.Add(value);
+                    responseCharacters +=
+                        entryCharacters;
+                }
+
+                index++;
+                returned++;
+            }
+
+            var truncated =
+                index < totalEntries;
 
             return new TalvoraRegistryListResponse(
                 true,
@@ -274,7 +373,14 @@ public static class RegistryTools
                 normalizedPath,
                 CanonicalView(resolvedView.Value),
                 subKeys,
-                values);
+                values,
+                returned,
+                totalEntries,
+                resultOffset,
+                truncated,
+                truncated
+                    ? index
+                    : null);
         }
         finally
         {
@@ -383,6 +489,30 @@ public static class RegistryTools
         RegistryView view,
         string? valueName) =>
         new(deleted, CanonicalHive(hive), path, CanonicalView(view), valueName);
+
+    private static long EstimateValueCharacters(
+        TalvoraRegistryValueData value)
+    {
+        long total =
+            128L +
+            value.Name.Length +
+            value.Kind.Length +
+            (value.Text?.Length ?? 0) +
+            (value.UnsignedNumber?.Length ?? 0) +
+            (value.Base64?.Length ?? 0);
+
+        if (value.Strings is not null)
+        {
+            foreach (var item in value.Strings)
+            {
+                total +=
+                    8L +
+                    item.Length;
+            }
+        }
+
+        return total;
+    }
 
     private static bool KeyExists(RegistryKey baseKey, string path)
     {
