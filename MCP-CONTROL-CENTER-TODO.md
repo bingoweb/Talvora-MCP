@@ -3,6 +3,19 @@
 Tarih: 2026-09-19
 Durum: PLANLAMA TAMAMLANDI — implementasyon yeni oturumda başlayacak.
 
+## 2026-09-26 — Penpot / Talvora MCP Integration
+
+- [x] PENPOT-001 — Penpot 2.18.0 self-host Docker stack `C:\ProgramData\Talvora\Penpot` altında kuruldu; frontend yalnız `127.0.0.1:9001` üzerinde publish ediliyor.
+- [x] PENPOT-002 — İlk Docker MCP yaklaşımının `--multi-user` olduğu doğrulandı; Talvora production endpoint'i token/session bağımlı Docker MCP'den ayrıldı.
+- [x] PENPOT-003 — Exact Penpot 2.18.0 release source commit `5baffdc213f0deaaeb318e97a41d611ac0656a94` sparse checkout edildi; MCP workspace frozen lockfile ile kuruldu ve build GREEN.
+- [x] PENPOT-004 — Local/single-user MCP `127.0.0.1:4401`, WebSocket `127.0.0.1:4402`, plugin manifest `127.0.0.1:4400` üzerinde çalışıyor; manifest HTTP 200.
+- [x] PENPOT-005 — `Talvora Penpot MCP` scheduled task kullanıcı logon'unda hidden/persistent supervisor olarak kuruldu; terminal penceresi bırakmıyor.
+- [x] PENPOT-006 — Control Center managed discovery `autoStart=true`, scheduled-task lifecycle component ve process-match cleanup ile genişletildi.
+- [x] PENPOT-007 — Native required-tool contract 5 araca kilitlendi: `execute_code`, `high_level_overview`, `penpot_api_info`, `export_shape`, `import_image`.
+- [x] PENPOT-008 — Dedicated `--penpot-integration-only` smoke eklendi; direct Penpot tool list ile Talvora Dev proxy status/count parity doğrulanıyor.
+- [x] PENPOT-009 — Lifecycle stop/start acceptance: 4400/4401/4402 stop'ta kapalı, start'ta tekrar hazır; manifest 200; integration smoke GREEN.
+- [x] PENPOT-010 — Runtime commit `dda4c13` Gitea `origin/main` + GitHub `github/main` üzerine push edildi; canonical installer `B37C2A2585B575DDDC86BD5B96E33D933C9C04E7C02543A287ADD63365233D70` ile deploy edildi ve live `sourceCommit=dda4c13...` doğrulandı.
+
 ## 2026-09-20 — Privacy & Security Hardening TODO
 
 Ana ilke: Talvora'nın mevcut tool/capability yüzeyi, unrestricted escape-hatch davranışı ve geliştirme yetenekleri korunacak. Güvenlik katmanı yetki budamak yerine secret minimization, güvenli persistence, redaction ve public-repo hygiene üzerinden uygulanacak.
