@@ -1,6 +1,6 @@
 # Talvora MCP — Canonical Handoff
 
-## CURRENT — 2026-09-20
+## CURRENT — 2026-09-26
 
 Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Eski kronoloji burada tutulmaz. Ayrıntılı bulgular `BUG-AUDIT.md`, görev geçmişi `MCP-CONTROL-CENTER-TODO.md`, Source Edit sözleşmesi `SOURCE-EDIT-ENGINE-ARCHITECTURE.md` içindedir.
 
@@ -9,14 +9,15 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
 - Çalışma ağacı: bu final docs-only closeout commit'i sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `508e513061e5c34f31c4840903e25ef10324a388` — `feat: provision focused Talvora tunnel profiles`; focused surface runtime commit'i `24eee60`. İkisi de Gitea + GitHub `main` üzerine push edildi.
-- Exact-installed canonical runtime artifact source commit: `508e513061e5c34f31c4840903e25ef10324a388`.
-- Canonical installer SHA-256: `9205EB952BBC243AC655391C792FFAF36BF3E1353075B08EE5043F3523E4602B`; artifact size: 261,823,759 bytes.
+- Son runtime-affecting commit: `ab313ec0e8e33923228b48275a029fe5b973e0b5` — `fix: make installer Git ownership-safe`; önceki GitTools fix commit'i `ba655ec`. İkisi de Gitea + GitHub `main` üzerine push edildi.
+- Exact-installed canonical runtime artifact source commit: `ab313ec0e8e33923228b48275a029fe5b973e0b5`.
+- Canonical installer SHA-256: `1F9BDD3557C514511E479B84827C091F9B047E6D344420659B1A671C284E5639`; artifact size: 261,831,951 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=508e513061e5c34f31c4840903e25ef10324a388` bildiriyor.
-- Talvora service `Running/Automatic`; Service ve Tray aynı `508e513...` version root'undan çalışıyor.
-- Bu final HANDOFF closeout commit'i yalnız dokümantasyondur ve exact-installed `508e513` sonrasında gelecektir; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
+- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=ab313ec0e8e33923228b48275a029fe5b973e0b5` bildiriyor.
+- Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
+- Talvora service `Running/Automatic`; Service ve Tray aynı `ab313ec...` version root'undan çalışıyor.
+- Bu HANDOFF closeout commit'i yalnız dokümantasyondur ve exact-installed `ab313ec` sonrasında gelecektir; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
 
@@ -34,7 +35,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Güncel audit üst özeti: **#121–#192 remediation complete + live verified; privacy/security, host-metadata ve focused-surface/tool-selection kalite çalışmaları full 204-tool capability korunarak kapatıldı.**
+- Güncel audit üst özeti: **#121–#193 remediation complete + live verified; full 204-tool capability korunuyor.**
 
 ## Son tamamlanan bug-fix zinciri
 
@@ -152,9 +153,18 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Ayrı remote ChatGPT Dev/Admin tunnel publication yalnız dış prerequisite olarak bekliyor: OpenAI Admin credential bu makinede mevcut değil. Credential uydurulmayacak; local focused endpoints ve full existing tunnel bundan etkilenmiyor.
 - #192 kapanmıştır; external publication prerequisite bug değildir.
 
+### #193 — LocalSystem Git ownership / canonical build — LIVE VERIFIED
+- Kullanıcıya ait repolar LocalSystem altında Git 2.55 `dubious ownership` korumasına takılıyor; structured Git family ve canonical installer build etkileniyordu.
+- `GitTools` gerçek repo kökünü filesystem ile bulup yalnız process-local `-c safe.directory=<root>` ekliyor; `safe.directory=*` veya kalıcı global gevşetme yok.
+- `Build-Windows-Installer.ps1` tüm repo Git çağrılarını aynı scoped `Invoke-RepositoryGit` helper'ından geçiriyor.
+- Targeted gates: `GIT_SAFE_DIRECTORY_SOURCE_GREEN`, `NATIVE_INSTALLER_SOURCE_GREEN`, Talvora Release 0 warning / 0 error.
+- Runtime commits `ba655ec` + `ab313ec`; iki remote'a push edildi.
+- Canonical installer SHA-256 `1F9BDD3557C514511E479B84827C091F9B047E6D344420659B1A671C284E5639`; exact-installed runtime `ab313ec...`.
+- Live structured Git family ana kullanıcı reposunda GREEN; #193 kapanmıştır.
+
 ## Doküman tutarlılığı notu
 
-- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#192 tamamlandı ve canlı doğrulandı.
+- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#193 tamamlandı ve canlı doğrulandı.
 - Aynı dosyanın daha eski gövde satırlarında ve `MCP-CONTROL-CENTER-TODO.md` içinde tarihsel `pending`, eski `OPEN` veya pre-live ifadeler kalmış olabilir. Bunları yeni oturumda gerçek repo/remote/live durumunun önüne koyma.
 - Eski tamamlanmış bug'ları tekrar test edip yeniden açma; yalnız yeni kanıt veya gerçek regresyon varsa dön.
 
@@ -176,7 +186,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 ## NEXT SESSION — kesin devam noktası
 
-**Privacy/security, MCP host-metadata ve focused-surface/tool-selection kalite fazları tamamlandı. Sonraki yeni doğrulanmış bulgudan deep audit'e devam et.**
+**#193 LocalSystem Git ownership/canonical build düzeltmesi live verified. Sonraki yeni doğrulanmış bulgudan deep audit'e devam et.**
 
 Başlangıç sırası:
 
@@ -185,7 +195,7 @@ Başlangıç sırası:
 3. `HEAD`, `origin/main`, `github/main` durumunu kontrol et.
 4. `talvora_system_info.sourceCommit` ile canlı runtime baseline'ını doğrula.
 5. `BUG-AUDIT.md` üst CURRENT özetini oku; #121–#188'i tekrar tarama.
-6. #190 privacy/security, #191 MCP metadata ve #192 focused-surface/tool-selection fazlarını tekrar test etme; yeni kanıt veya gerçek regresyon yoksa kapalı kabul et.
+6. #190 privacy/security, #191 MCP metadata, #192 focused-surface/tool-selection ve #193 LocalSystem Git ownership fazlarını tekrar test etme; yeni kanıt veya gerçek regresyon yoksa kapalı kabul et.
 7. Deep audit'te ilk yeni doğrulanmış bulguyu kullanıcıya bildir; şüpheyi bug diye yazmadan önce gerçek çağrı zinciri veya minimal reproduction ile doğrula.
 8. Her yeni bulguda minimal fix + targeted regression uygula.
 9. Fix sonrası docs -> commit -> Gitea push -> GitHub push -> gerekiyorsa canonical live deploy sırasını tamamla.
