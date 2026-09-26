@@ -115,17 +115,12 @@ public static partial class DeveloperTools
 
         if (changed)
         {
-            if (createBackup)
-            {
-                backupPath = fullPath + ".bak";
-                File.Copy(fullPath, backupPath, overwrite: true);
-            }
-
-            await File.WriteAllTextAsync(
+            backupPath = await AtomicFile.WriteAllTextAsync(
                 fullPath,
                 updated,
                 CreateReplacementWriterEncoding(
                     document.Encoding),
+                createBackup,
                 cancellationToken);
         }
 
