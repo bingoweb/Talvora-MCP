@@ -56,9 +56,12 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Modal için ayrı üçüncü taraf MCP yerine Talvora Dev yüzeyine 3 native yönetim aracı eklendi: `talvora_modal_info`, `talvora_modal_endpoint_list`, `talvora_modal_run`.
 - Modal CLI çağrıları credential/profile sahipliği için logged-on Windows user session'ında çalışır; tool response credential/token döndürmez. Generic run, resmi CLI yüzeyini korur.
 - Tool policy sonrası beklenen yüzey **Full 216 / Dev 186 / Admin 91**; metadata source + surface source GREEN, Talvora + Smoke Release build 0 warning / 0 error.
-- Eski CodePilot endpoint'i hâlâ mevcut: `https://taylansoylu--codepilot-huihui-qwen38-serve.modal.run/v1`; son iki probe `503 Loading model` döndürdü, yani route canlı fakat model warm-up/availability henüz tamamlanmadı.
-- Eski model kimliği: `codepilot-huihui-qwen38-27b`; önceki context ayarı 65,536. Dyad OpenAI-compatible custom provider desteklediği için inference yolu **Dyad -> Modal /v1** olacak; Talvora yalnız yönetim/diagnostic yapacak.
-- Sonraki Modal acceptance: canonical deploy -> live `talvora_modal_info` -> gerekirse logged-on user `modal setup` -> `talvora_modal_endpoint_list` -> `/v1/models` ve küçük chat completion probe -> Dyad custom provider bağlantısı.
+- Modal user profile setup tamamlandı; aktif profile `taylansoylu`. Native `modal endpoint list` boş çünkü bu model yeni Endpoint ürünü değil, custom Modal App olarak deploy edilmiş.
+- Custom app `codepilot-huihui-qwen38` deployed; public OpenAI-compatible base `https://taylansoylu--codepilot-huihui-qwen38-serve.modal.run/v1`.
+- Auth secret adı `codepilot-inference-api`; required env key adı `LLAMA_API_KEY`. Secret değeri okunmadı, loglanmadı veya HANDOFF'a yazılmadı.
+- Cold start davranışı doğrulandı: ilk istek `503 Loading model`; loglarda GGUF yaklaşık 12 saniyede yüklenip `llama_server: model loaded` ve `0.0.0.0:8000` listen durumuna geçiyor. Auth header olmadan sıcak endpoint `401 Invalid API Key` döndürüyor.
+- Model kimliği `codepilot-huihui-qwen38-27b`; live `/v1/models` probe 200, `n_ctx=65536`, train context 262144, 27.32B parametre, GGUF Q4_K. Live `/v1/chat/completions` probe 200 ve normal `content` alanında `MODAL_OK` üretti; `reasoning_content` ayrı alan olarak da mevcut.
+- Dyad hedef yolu **Dyad -> Modal /v1**; Talvora yönetim/diagnostic yapacak. Sonraki adım Dyad custom OpenAI-compatible provider'ını bu base URL + model ID ile kurmak ve API key'i secret değerini sohbete çıkarmadan yerel güvenli aktarım ile bağlamak.
 
 ## Son tamamlanan bug-fix zinciri
 
