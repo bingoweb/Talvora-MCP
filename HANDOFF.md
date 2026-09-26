@@ -8,17 +8,17 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Repo/remote `main`: runtime commit `a304b0afe65ec7b06baba8ee9cfa9b5ecb7a0652` iki remote'a push edildi; bu handoff için final docs-only closeout commit'i bunun üzerinde gelecektir.
+- Repo/remote `main`: runtime commit `668f77c09e05e23bb1e00fdb761e8fb2a76419f5` iki remote'a push edildi; bu handoff için final docs-only closeout commit'i bunun üzerinde gelecektir.
 - Çalışma ağacı: final docs-only closeout commit'i sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `a304b0afe65ec7b06baba8ee9cfa9b5ecb7a0652` — `fix: preserve append newline style`.
-- Exact-installed canonical runtime artifact source commit: `a304b0afe65ec7b06baba8ee9cfa9b5ecb7a0652`.
-- Canonical installer SHA-256: `AE65AF7C91617915EA55B9B5E7690AF75E44181AC5D4672C5FCF7B2D1C929455`; artifact size: 261,848,335 bytes.
+- Son runtime-affecting commit: `668f77c09e05e23bb1e00fdb761e8fb2a76419f5` — `fix: preserve atomic file metadata`.
+- Exact-installed canonical runtime artifact source commit: `668f77c09e05e23bb1e00fdb761e8fb2a76419f5`.
+- Canonical installer SHA-256: `9729695F3D1CC48DF00AD673DFEF56FD91BCD2660459EFCA02D222C9F112D0CA`; artifact size: 261,846,799 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=a304b0afe65ec7b06baba8ee9cfa9b5ecb7a0652` bildiriyor.
+- Exact-installed canlı Talvora runtime `talvora_system_info.sourceCommit=668f77c09e05e23bb1e00fdb761e8fb2a76419f5` bildiriyor.
 - Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
 - Gitea ve GitHub `fetch --dry-run` + `push --dry-run` Talvora'nın canlı `git_run` aracıyla GREEN; SSH private key user-only kalıyor.
-- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `a304b0a...`.
+- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `668f77c...`.
 - Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
@@ -38,7 +38,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
 - Focused MCP yüzeyleri: **Dev 174**, **Admin 91**; Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
-- Güncel audit üst özeti: **#121–#216 remediation complete; #199–#212 ve #214–#216 LIVE VERIFIED; #213 TEST VERIFIED; full 204-tool live MCP smoke baseline GREEN; focused surface live + metadata live GREEN ve capability korunuyor.**
+- Güncel audit üst özeti: **#121–#217 remediation complete; #199–#212 ve #214–#217 LIVE VERIFIED; #213 TEST VERIFIED; full 204-tool live MCP smoke baseline GREEN; focused surface live + metadata live GREEN ve capability korunuyor.**
 
 ## Son tamamlanan bug-fix zinciri
 
@@ -297,9 +297,15 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - `APPEND_TEXT_NEWLINE_SOURCE_GREEN` + Release 0/0 + metadata source/live + focused-surface live GREEN.
 - Installer SHA-256 `AE65AF7C91617915EA55B9B5E7690AF75E44181AC5D4672C5FCF7B2D1C929455`; exact-installed aynı commit. Live LF/CRLF/CR fixtures exact stilini korudu; fixture temizlendi.
 
+### #217 — AtomicFile destination metadata preservation — LIVE VERIFIED
+- Pre-fix existing-file publication `MoveFileEx(REPLACE_EXISTING)` ile temp file metadata'sını hedefe taşıyor ve custom DACL'i kaybediyordu.
+- Microsoft'in documented metadata-preserving replacement primitive'i kullanılarak existing destination `File.Replace(..., ignoreMetadataErrors:false)` ile publish ediliyor; new destination write-through move yolunu koruyor.
+- `ATOMIC_FILE_DURABLE_METADATA_REGRESSION_GREEN` + Job Storage + Native Installer source regression + Release 0/0 GREEN.
+- Fix `668f77c`; installer SHA-256 `9729695F3D1CC48DF00AD673DFEF56FD91BCD2660459EFCA02D222C9F112D0CA`; exact-installed aynı commit. Live target ve backup exact SDDL/creation/Hidden+Archive/content preserved; temp file yok; fixture temizlendi.
+
 ## Doküman tutarlılığı notu
 
-- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#216 tamamlandı; #199–#212 ve #214–#216 canlı, #213 test doğrulandı.
+- `BUG-AUDIT.md` dosyasının en üstteki CURRENT/current remediation summary bölümü otoritatiftir: #121–#217 tamamlandı; #199–#212 ve #214–#217 canlı, #213 test doğrulandı.
 - Aynı dosyanın daha eski gövde satırlarında ve `MCP-CONTROL-CENTER-TODO.md` içinde tarihsel `pending`, eski `OPEN` veya pre-live ifadeler kalmış olabilir. Bunları yeni oturumda gerçek repo/remote/live durumunun önüne koyma.
 - Eski tamamlanmış bug'ları tekrar test edip yeniden açma; yalnız yeni kanıt veya gerçek regresyon varsa dön.
 
@@ -321,7 +327,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 
 ## NEXT SESSION — kesin devam noktası
 
-**#193–#216 kapanmıştır; Dev 174 / Admin 91 focused surface policy GREEN, full 204-tool smoke baseline GREEN ve #199–#216 Admin/live/test gates GREEN. Sonraki yeni doğrulanmış bulgudan deep audit'e devam et.**
+**#193–#217 kapanmıştır; Dev 174 / Admin 91 focused surface policy GREEN, full 204-tool smoke baseline GREEN ve #199–#217 Admin/live/test gates GREEN. Sonraki yeni doğrulanmış bulgudan deep audit'e devam et.**
 
 Başlangıç sırası:
 
@@ -330,7 +336,7 @@ Başlangıç sırası:
 3. `HEAD`, `origin/main`, `github/main` durumunu kontrol et.
 4. `talvora_system_info.sourceCommit` ile canlı runtime baseline'ını doğrula.
 5. `BUG-AUDIT.md` üst CURRENT özetini oku; #121–#188'i tekrar tarama.
-6. #190 privacy/security, #191 MCP metadata, #192 focused-surface/tool-selection, #193 Git ownership ve #194–#216 son smoke/runtime/Admin düzeltmelerini yeni kanıt veya gerçek regresyon yoksa kapalı kabul et.
+6. #190 privacy/security, #191 MCP metadata, #192 focused-surface/tool-selection, #193 Git ownership ve #194–#217 son smoke/runtime/Admin düzeltmelerini yeni kanıt veya gerçek regresyon yoksa kapalı kabul et.
 7. Deep audit'te ilk yeni doğrulanmış bulguyu kullanıcıya bildir; şüpheyi bug diye yazmadan önce gerçek çağrı zinciri veya minimal reproduction ile doğrula.
 8. Her yeni bulguda minimal fix + targeted regression uygula.
 9. Fix sonrası docs -> commit -> Gitea push -> GitHub push -> gerekiyorsa canonical live deploy sırasını tamamla.
