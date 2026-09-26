@@ -25,6 +25,8 @@ internal static partial class SmokeScenarios
             Path.Combine(root, "many.env");
         var manyIniFile =
             Path.Combine(root, "many.ini");
+        var largeXmlFile =
+            Path.Combine(root, "large-query.xml");
         await EnsureSuccess(byName["talvora_write_text"], new()
                 {
                     ["path"] = developerRangeFile,
@@ -322,6 +324,32 @@ internal static partial class SmokeScenarios
                 {
                     throw new InvalidOperationException("xml_query did not return the port element.");
                 }
+
+                var largeXmlValue =
+                    new string('x', 4_300_000);
+                await File.WriteAllTextAsync(
+                    largeXmlFile,
+                    "<root><item>" +
+                    largeXmlValue +
+                    "</item></root>",
+                    new System.Text.UTF8Encoding(false));
+                await EnsureError(
+                    byName["talvora_xml_query"],
+                    new()
+                    {
+                        ["path"] = largeXmlFile,
+                        ["xpath"] = "/root/item",
+                        ["maxResults"] = 1,
+                    });
+                await EnsureError(
+                    byName["talvora_xml_query"],
+                    new()
+                    {
+                        ["path"] = largeXmlFile,
+                        ["xpath"] =
+                            "concat(string(/root/item), string(/root/item))",
+                        ["maxResults"] = 1,
+                    });
                 
                 var xmlSetResult = await EnsureSuccess(byName["talvora_xml_set"], new()
                 {

@@ -15,7 +15,7 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraXmlQueryResponse)),
-     Description("Evaluate an arbitrary XPath expression against any accessible XML file. Supports namespace prefix mappings and scalar XPath results. For node sets, maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while the XML is unchanged.")]
+     Description("Evaluate an arbitrary XPath expression against any accessible XML file with a finite 8 MiB response-character budget. Supports namespace prefix mappings and scalar XPath results. For node sets, maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while the XML is unchanged. Oversized single nodes or scalar results are rejected instead of returning an unbounded MCP payload.")]
     public static TalvoraXmlQueryResponse XmlQuery(
         string path,
         string xpath,
@@ -61,6 +61,7 @@ public static partial class ConfigFormatTools
                 new List<TalvoraXmlNodeResult>();
             var truncated = false;
             long matchingIndex = 0;
+            long responseCharacters = 0;
 
             while (iterator.MoveNext())
             {
@@ -81,9 +82,28 @@ public static partial class ConfigFormatTools
                     break;
                 }
 
-                nodes.Add(
+                var node =
                     ToXmlNodeResult(
-                        iterator.Current));
+                        iterator.Current);
+                var nodeCharacters =
+                    EstimateXmlNodeResponseCharacters(
+                        node);
+                if (responseCharacters + nodeCharacters >
+                    AbsoluteXmlQueryResponseCharacters)
+                {
+                    if (nodes.Count == 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"XML result at offset {matchingIndex} exceeds the 8 MiB response-character budget. Use a narrower XPath expression or talvora_read_text_range.");
+                    }
+
+                    truncated = true;
+                    break;
+                }
+
+                nodes.Add(node);
+                responseCharacters +=
+                    nodeCharacters;
                 matchingIndex++;
             }
 
@@ -101,13 +121,23 @@ public static partial class ConfigFormatTools
                     : null);
         }
 
+        var scalarValue =
+            Convert.ToString(
+                result,
+                System.Globalization.CultureInfo.InvariantCulture);
+        if (scalarValue is not null &&
+            scalarValue.Length >
+                AbsoluteXmlQueryResponseCharacters)
+        {
+            throw new InvalidOperationException(
+                "XML scalar result exceeds the 8 MiB response-character budget. Use a narrower XPath expression or talvora_read_text_range.");
+        }
+
         return new TalvoraXmlQueryResponse(
             fullPath,
             xpath,
             result?.GetType().Name ?? "null",
-            Convert.ToString(
-                result,
-                System.Globalization.CultureInfo.InvariantCulture),
+            scalarValue,
             0,
             false,
             [],
@@ -360,6 +390,27 @@ public static partial class ConfigFormatTools
             navigator.Value,
             navigator.OuterXml,
             attributes);
+    }
+
+    private static long EstimateXmlNodeResponseCharacters(
+        TalvoraXmlNodeResult node)
+    {
+        long characters =
+            128L +
+            node.NodeType.Length +
+            node.Name.Length +
+            node.Value.Length +
+            node.OuterXml.Length;
+
+        foreach (var pair in node.Attributes)
+        {
+            characters +=
+                32L +
+                pair.Key.Length +
+                pair.Value.Length;
+        }
+
+        return characters;
     }
 
     private static int GetNavigatorDepth(
