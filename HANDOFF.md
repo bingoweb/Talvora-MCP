@@ -60,7 +60,11 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Custom app `codepilot-huihui-qwen38` deployed; public OpenAI-compatible base `https://taylansoylu--codepilot-huihui-qwen38-serve.modal.run/v1`.
 - Auth secret adı `codepilot-inference-api`; required env key adı `LLAMA_API_KEY`. Secret değeri okunmadı, loglanmadı veya HANDOFF'a yazılmadı.
 - Cold start davranışı doğrulandı: ilk istek `503 Loading model`; loglarda GGUF yaklaşık 12 saniyede yüklenip `llama_server: model loaded` ve `0.0.0.0:8000` listen durumuna geçiyor. Auth header olmadan sıcak endpoint `401 Invalid API Key` döndürüyor.
-- Model kimliği `codepilot-huihui-qwen38-27b`; live `/v1/models` probe 200, `n_ctx=65536`, train context 262144, 27.32B parametre, GGUF Q4_K. Live `/v1/chat/completions` probe 200 ve normal `content` alanında `MODAL_OK` üretti; `reasoning_content` ayrı alan olarak da mevcut.
+- Model kimliği `codepilot-huihui-qwen38-27b`; context `n_ctx=65536`, train context 262144, 27.32B parametre.
+- **2026-09-26 model refresh:** eski Huihui `UD-Q4_K_XL` içeriği, güncel stok-`llama.cpp` uyumlu `Huihui-Qwen3.8-27B-abliterated-UD-DW-Q4_K_M.gguf` ile değiştirildi. Yeni dosya 16,551,316,384 bayt; SHA-256 `0c7cfe3060493485bb9a6a51195897b0c1d347a49929206adb9a52170183ea03` olarak Volume içinde tekrar hash edilip doğrulandı.
+- Mevcut deployed app kaynak kodunu ve public endpoint'i değiştirmemek için Volume'daki runtime dosya adı geriye uyumluluk amacıyla `Huihui-Qwen3.8-27B-abliterated-UD-Q4_K_XL.gguf` olarak bırakıldı; dosya içeriği ve hash'i artık yukarıdaki UD-DW Q4_K_M artefact'ına aittir.
+- `codepilot-huihui-qwen38` recreate rollover sonrası yeni container 17:09 civarında modeli yeniden yükledi. Yetkili post-update `/v1/models` probe 200, `/v1/chat/completions` probe 200, content `UPDATED_OK`; `reasoning_content` alanı da mevcut.
+- Tekrarlanabilir bakım yardımcıları `C:\\Users\\tayla\\Documents\\Modal-CodePilot\\refresh_model.py` ve `probe_endpoint.py` altında tutuluyor; refresh indirme boyutunu + SHA-256'yı doğrulamadan Volume publish etmez ve inference secret'ı response/log içine çıkarmaz.
 - Dyad hedef yolu **Dyad -> Modal /v1**; Talvora yönetim/diagnostic yapacak. Sonraki adım Dyad custom OpenAI-compatible provider'ını bu base URL + model ID ile kurmak ve API key'i secret değerini sohbete çıkarmadan yerel güvenli aktarım ile bağlamak.
 
 ## Son tamamlanan bug-fix zinciri
