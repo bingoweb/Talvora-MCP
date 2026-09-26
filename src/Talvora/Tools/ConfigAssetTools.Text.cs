@@ -19,7 +19,7 @@ public static partial class ConfigAssetTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraTextRangeResponse)),
-     Description("Read a line range from any accessible text file with bounded streaming. startLine is 1-based; lineCount=0 requests the finite server maximum page. Use nextStartLine/nextStartCharacter when responseLimited=true. No path allow-list is applied.")]
+     Description("Read a line range from any accessible text file with bounded streaming. Original line terminators in the selected slice are preserved, including the terminator after the last selected logical line when that line is not EOF. startLine is 1-based; lineCount=0 requests the finite server maximum page. Use nextStartLine/nextStartCharacter when responseLimited=true. No path allow-list is applied.")]
     public static async Task<TalvoraTextRangeResponse> ReadTextRange(
         string path,
         int startLine = 1,

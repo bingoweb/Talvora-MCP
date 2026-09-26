@@ -42,9 +42,11 @@ internal static partial class SmokeScenarios
                 });
                 if (rangeResult.StructuredContent is not { } rangeJson ||
                     rangeJson.GetProperty("linesRead").GetInt32() != 2 ||
+                    rangeJson.GetProperty("endReached").GetBoolean() ||
                     !string.Equals(
                         rangeJson.GetProperty("text").GetString(),
-                        "line-two" + Environment.NewLine + "line-three",
+                        "line-two" + Environment.NewLine +
+                        "line-three" + Environment.NewLine,
                         StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException("read_text_range returned unexpected lines.");
