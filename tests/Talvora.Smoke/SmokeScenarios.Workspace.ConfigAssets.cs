@@ -21,6 +21,10 @@ internal static partial class SmokeScenarios
             Path.Combine(root, "no-final.env");
         var noFinalIniFile =
             Path.Combine(root, "no-final.ini");
+        var manyDotenvFile =
+            Path.Combine(root, "many.env");
+        var manyIniFile =
+            Path.Combine(root, "many.ini");
         await EnsureSuccess(byName["talvora_write_text"], new()
                 {
                     ["path"] = developerRangeFile,
@@ -85,6 +89,30 @@ internal static partial class SmokeScenarios
                     dotenvListJson.GetProperty("count").GetInt32() != 2)
                 {
                     throw new InvalidOperationException("dotenv_list did not parse two entries.");
+                }
+
+                await File.WriteAllLinesAsync(
+                    manyDotenvFile,
+                    Enumerable.Range(0, 1200)
+                        .Select(index =>
+                            $"K{index:D4}=value-{index:D4}"));
+                var dotenvPage1 =
+                    await EnsureSuccess(
+                        byName["talvora_dotenv_list"],
+                        new()
+                        {
+                            ["path"] = manyDotenvFile,
+                            ["maxResults"] = 500,
+                            ["resultOffset"] = 0,
+                        });
+                if (dotenvPage1.StructuredContent is not { } dotenvPage1Json ||
+                    dotenvPage1Json.GetProperty("count").GetInt32() != 500 ||
+                    dotenvPage1Json.GetProperty("totalEntries").GetInt32() != 1200 ||
+                    !dotenvPage1Json.GetProperty("truncated").GetBoolean() ||
+                    dotenvPage1Json.GetProperty("nextResultOffset").GetInt32() != 500)
+                {
+                    throw new InvalidOperationException(
+                        "dotenv_list did not enforce deterministic response pagination.");
                 }
                 
                 var dotenvGetResult = await EnsureSuccess(byName["talvora_dotenv_get"], new()
@@ -182,6 +210,34 @@ internal static partial class SmokeScenarios
                         string.Equals(entry.GetProperty("value").GetString(), "7676", StringComparison.Ordinal)))
                 {
                     throw new InvalidOperationException("ini_list did not show the updated app.port.");
+                }
+
+                await File.WriteAllLinesAsync(
+                    manyIniFile,
+                    new[] { "[main]" }
+                        .Concat(
+                            Enumerable.Range(0, 1200)
+                                .Select(index =>
+                                    $"K{index:D4}=value-{index:D4}")));
+                var iniLastPage =
+                    await EnsureSuccess(
+                        byName["talvora_ini_list"],
+                        new()
+                        {
+                            ["path"] = manyIniFile,
+                            ["section"] = "main",
+                            ["maxResults"] = 500,
+                            ["resultOffset"] = 1000,
+                        });
+                if (iniLastPage.StructuredContent is not { } iniLastPageJson ||
+                    iniLastPageJson.GetProperty("count").GetInt32() != 200 ||
+                    iniLastPageJson.GetProperty("totalEntries").GetInt32() != 1200 ||
+                    iniLastPageJson.GetProperty("truncated").GetBoolean() ||
+                    iniLastPageJson.GetProperty("nextResultOffset").ValueKind !=
+                        System.Text.Json.JsonValueKind.Null)
+                {
+                    throw new InvalidOperationException(
+                        "ini_list continuation did not terminate deterministically.");
                 }
                 
                 var iniDeleteResult = await EnsureSuccess(byName["talvora_ini_delete"], new()

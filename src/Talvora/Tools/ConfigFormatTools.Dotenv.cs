@@ -15,12 +15,17 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraDotenvListResponse)),
-     Description("Parse any accessible .env-style text file into key/value/exported entries. Comments and blank lines are ignored; no path/key allowlist is applied.")]
+     Description("Parse any accessible .env-style text file into key/value/exported entries with finite response budgets. Comments and blank lines are ignored. maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while the file is unchanged. No path/key allowlist is applied.")]
     public static async Task<TalvoraDotenvListResponse> DotenvList(
         string path,
         string? query = null,
+        [Description("Maximum returned entries; 0 requests the finite server maximum page.")] int maxResults = 500,
+        [Description("Number of matching entries to skip before returning this page.")] int resultOffset = 0,
         CancellationToken cancellationToken = default)
     {
+        ValidateListWindow(
+            maxResults,
+            resultOffset);
         var fullPath = Path.GetFullPath(path);
         var document = await ReadTextDocumentAsync(
             fullPath,
@@ -37,11 +42,73 @@ public static partial class ConfigFormatTools
                     StringComparison.OrdinalIgnoreCase));
         }
 
-        var result = entries.ToArray();
+        var effectiveMaxResults =
+            ResolveConfigListMaxResults(
+                maxResults);
+        var result =
+            new List<TalvoraDotenvEntry>(
+                Math.Min(
+                    effectiveMaxResults,
+                    512));
+        var totalEntries = 0;
+        long responseCharacters = 0;
+        var pageClosed = false;
+
+        foreach (var entry in entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var entryIndex =
+                totalEntries++;
+            if (entryIndex < resultOffset ||
+                pageClosed)
+            {
+                continue;
+            }
+
+            if (result.Count >= effectiveMaxResults)
+            {
+                pageClosed = true;
+                continue;
+            }
+
+            var entryCharacters =
+                96L +
+                entry.Key.Length +
+                entry.Value.Length;
+            if (responseCharacters + entryCharacters >
+                AbsoluteConfigListResponseCharacters)
+            {
+                if (result.Count == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Dotenv entry '{entry.Key}' exceeds the list response budget. Use talvora_dotenv_get or talvora_read_text_range for that value.");
+                }
+
+                pageClosed = true;
+                continue;
+            }
+
+            result.Add(entry);
+            responseCharacters +=
+                entryCharacters;
+        }
+
+        var nextOffset =
+            Math.Min(
+                resultOffset + result.Count,
+                totalEntries);
+        var truncated =
+            nextOffset < totalEntries;
         return new TalvoraDotenvListResponse(
             fullPath,
-            result.Length,
-            result);
+            result.Count,
+            result,
+            totalEntries,
+            resultOffset,
+            truncated,
+            truncated
+                ? nextOffset
+                : null);
     }
 
     [McpServerTool(

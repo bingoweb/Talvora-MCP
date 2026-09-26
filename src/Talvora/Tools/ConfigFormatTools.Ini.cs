@@ -15,13 +15,18 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraIniListResponse)),
-     Description("Parse any accessible INI-style file into section/key/value entries. Supports global keys before any section and both '=' and ':' separators.")]
+     Description("Parse any accessible INI-style file into section/key/value entries with finite response budgets. Supports global keys before any section and both '=' and ':' separators. maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while the file is unchanged.")]
     public static async Task<TalvoraIniListResponse> IniList(
         string path,
         string? section = null,
         string? query = null,
+        [Description("Maximum returned entries; 0 requests the finite server maximum page.")] int maxResults = 500,
+        [Description("Number of matching entries to skip before returning this page.")] int resultOffset = 0,
         CancellationToken cancellationToken = default)
     {
+        ValidateListWindow(
+            maxResults,
+            resultOffset);
         var fullPath = Path.GetFullPath(path);
         var document = await ReadTextDocumentAsync(
             fullPath,
@@ -50,11 +55,74 @@ public static partial class ConfigFormatTools
                     StringComparison.OrdinalIgnoreCase));
         }
 
-        var result = entries.ToArray();
+        var effectiveMaxResults =
+            ResolveConfigListMaxResults(
+                maxResults);
+        var result =
+            new List<TalvoraIniEntry>(
+                Math.Min(
+                    effectiveMaxResults,
+                    512));
+        var totalEntries = 0;
+        long responseCharacters = 0;
+        var pageClosed = false;
+
+        foreach (var entry in entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var entryIndex =
+                totalEntries++;
+            if (entryIndex < resultOffset ||
+                pageClosed)
+            {
+                continue;
+            }
+
+            if (result.Count >= effectiveMaxResults)
+            {
+                pageClosed = true;
+                continue;
+            }
+
+            var entryCharacters =
+                112L +
+                entry.Section.Length +
+                entry.Key.Length +
+                entry.Value.Length;
+            if (responseCharacters + entryCharacters >
+                AbsoluteConfigListResponseCharacters)
+            {
+                if (result.Count == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"INI entry '{entry.Section}/{entry.Key}' exceeds the list response budget. Use talvora_ini_get or talvora_read_text_range for that value.");
+                }
+
+                pageClosed = true;
+                continue;
+            }
+
+            result.Add(entry);
+            responseCharacters +=
+                entryCharacters;
+        }
+
+        var nextOffset =
+            Math.Min(
+                resultOffset + result.Count,
+                totalEntries);
+        var truncated =
+            nextOffset < totalEntries;
         return new TalvoraIniListResponse(
             fullPath,
-            result.Length,
-            result);
+            result.Count,
+            result,
+            totalEntries,
+            resultOffset,
+            truncated,
+            truncated
+                ? nextOffset
+                : null);
     }
 
     [McpServerTool(

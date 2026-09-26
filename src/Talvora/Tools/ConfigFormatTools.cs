@@ -17,7 +17,11 @@ public sealed record TalvoraDotenvEntry(
 public sealed record TalvoraDotenvListResponse(
     string Path,
     int Count,
-    IReadOnlyList<TalvoraDotenvEntry> Entries);
+    IReadOnlyList<TalvoraDotenvEntry> Entries,
+    int TotalEntries,
+    int ResultOffset,
+    bool Truncated,
+    int? NextResultOffset);
 
 public sealed record TalvoraDotenvGetResponse(
     string Path,
@@ -40,7 +44,11 @@ public sealed record TalvoraIniEntry(
 public sealed record TalvoraIniListResponse(
     string Path,
     int Count,
-    IReadOnlyList<TalvoraIniEntry> Entries);
+    IReadOnlyList<TalvoraIniEntry> Entries,
+    int TotalEntries,
+    int ResultOffset,
+    bool Truncated,
+    int? NextResultOffset);
 
 public sealed record TalvoraIniGetResponse(
     string Path,
@@ -93,6 +101,9 @@ public sealed record TalvoraTestReportSummary(
 [McpServerToolType]
 public static partial class ConfigFormatTools
 {
+    internal const int AbsoluteConfigListResults = 10_000;
+    internal const long AbsoluteConfigListResponseCharacters =
+        8L * 1024 * 1024;
     internal const int AbsoluteXmlQueryResults = 10_000;
     internal const int AbsoluteTestReportFailures = 10_000;
 
@@ -231,6 +242,26 @@ private sealed record TextDocument(
 
         return lines;
     }
+
+    private static void ValidateListWindow(
+        int maxResults,
+        int resultOffset)
+    {
+        if (maxResults < 0 ||
+            resultOffset < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                "maxResults and resultOffset cannot be negative.");
+        }
+    }
+
+    private static int ResolveConfigListMaxResults(
+        int maxResults) =>
+        maxResults == 0
+            ? AbsoluteConfigListResults
+            : Math.Min(
+                maxResults,
+                AbsoluteConfigListResults);
 
     private static string JoinLines(
         IReadOnlyList<string> lines,
