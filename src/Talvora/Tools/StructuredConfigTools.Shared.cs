@@ -44,7 +44,10 @@ private static TalvoraStructuredConfigGetResponse BuildGetResponse(
             pointer,
             true,
             ConfigAssetTools.GetJsonKind(node),
-            ConfigAssetTools.ToJson(node, indented));
+            ConfigAssetTools.ToBoundedJson(
+                node,
+                indented,
+                $"talvora_{format}_get"));
     }
 
     private static async Task<TalvoraStructuredConfigMutationResponse>

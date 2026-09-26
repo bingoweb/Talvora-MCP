@@ -15,7 +15,7 @@ public static partial class ConfigFormatTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraXmlQueryResponse)),
-     Description("Evaluate an arbitrary XPath expression against any accessible XML file with a finite 8 MiB response-character budget. Supports namespace prefix mappings and scalar XPath results. For node sets, maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while the XML is unchanged. Oversized single nodes or scalar results are rejected instead of returning an unbounded MCP payload.")]
+     Description("Evaluate an arbitrary XPath expression against any accessible XML file with a finite 4 MiB response-character budget. Supports namespace prefix mappings and scalar XPath results. For node sets, maxResults=0 requests the finite server maximum page; use resultOffset/nextResultOffset to continue while the XML is unchanged. Oversized single nodes or scalar results are rejected instead of returning an unbounded MCP payload.")]
     public static TalvoraXmlQueryResponse XmlQuery(
         string path,
         string xpath,
@@ -94,7 +94,7 @@ public static partial class ConfigFormatTools
                     if (nodes.Count == 0)
                     {
                         throw new InvalidOperationException(
-                            $"XML result at offset {matchingIndex} exceeds the 8 MiB response-character budget. Use a narrower XPath expression or talvora_read_text_range.");
+                            $"XML result at offset {matchingIndex} exceeds the 4 MiB response-character budget. Use a narrower XPath expression or talvora_read_text_range.");
                     }
 
                     truncated = true;
@@ -130,7 +130,7 @@ public static partial class ConfigFormatTools
                 AbsoluteXmlQueryResponseCharacters)
         {
             throw new InvalidOperationException(
-                "XML scalar result exceeds the 8 MiB response-character budget. Use a narrower XPath expression or talvora_read_text_range.");
+                "XML scalar result exceeds the 4 MiB response-character budget. Use a narrower XPath expression or talvora_read_text_range.");
         }
 
         return new TalvoraXmlQueryResponse(

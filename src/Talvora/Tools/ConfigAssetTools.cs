@@ -100,6 +100,8 @@ public static partial class ConfigAssetTools
 {
     internal const int AbsoluteTextResponseCharacters =
         4 * 1024 * 1024;
+    internal const int AbsoluteStructuredValueResponseCharacters =
+        AbsoluteTextResponseCharacters;
     internal const int AbsoluteTextResponseLines =
         20_000;
 }

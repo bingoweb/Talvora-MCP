@@ -22,7 +22,7 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraJsonGetResponse)),
-     Description("Read a JSON value from any accessible JSON file using RFC 6901 JSON Pointer syntax. An empty pointer returns the complete document.")]
+     Description("Read a JSON value from any accessible JSON file using RFC 6901 JSON Pointer syntax. An empty pointer returns the complete document. Returned valueJson is capped at 4 MiB; use a narrower pointer or talvora_read_text_range for larger payloads.")]
     public static async Task<TalvoraJsonGetResponse> JsonGet(
         string path,
         string pointer = "",
@@ -48,7 +48,10 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
             pointer,
             true,
             GetJsonKind(node),
-            ToJson(node, indented));
+            ToBoundedJson(
+                node,
+                indented,
+                "talvora_json_get"));
     }
 
     [McpServerTool(
@@ -453,4 +456,23 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
         node?.ToJsonString(
             indented ? IndentedJsonOptions : JsonSerializerOptions.Default)
         ?? "null";
+
+    internal static string ToBoundedJson(
+        JsonNode? node,
+        bool indented,
+        string toolName)
+    {
+        var json =
+            ToJson(
+                node,
+                indented);
+        if (json.Length >
+            AbsoluteStructuredValueResponseCharacters)
+        {
+            throw new InvalidOperationException(
+                $"{toolName} result exceeds the 4 MiB structured-value response budget. Use a narrower pointer or talvora_read_text_range.");
+        }
+
+        return json;
+    }
 }

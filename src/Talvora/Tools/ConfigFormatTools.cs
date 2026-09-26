@@ -106,7 +106,7 @@ public static partial class ConfigFormatTools
         8L * 1024 * 1024;
     internal const int AbsoluteXmlQueryResults = 10_000;
     internal const long AbsoluteXmlQueryResponseCharacters =
-        8L * 1024 * 1024;
+        ConfigAssetTools.AbsoluteStructuredValueResponseCharacters;
     internal const int AbsoluteTestReportFailures = 10_000;
 
 private sealed record TextDocument(
