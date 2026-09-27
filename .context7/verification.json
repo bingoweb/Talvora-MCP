@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-27T15:03:00Z",
-  "scope": "Talvora 2026-Q3 deep modernization: .NET 10, MCP SDK, NuGet reproducibility, GitHub Actions, development quality gates, and polished tray-owned Windows desktop progress reporting.",
+  "verifiedAtUtc": "2026-09-27T17:35:00Z",
+  "scope": "Talvora 2026-Q3 deep modernization: .NET 10, MCP SDK, NuGet reproducibility, GitHub Actions, development quality gates, and plain-language tray-owned Windows desktop worklog reporting.",
   "libraries": [
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "Current ASP.NET Core MCP server registration and HTTP transport patterns; AddCallToolFilter wraps every CallTool request and exposes request.Params.Name while preserving downstream cancellation/exception semantics."
+      "verified": "Current ASP.NET Core MCP filter contract: AddCallToolFilter can wrap every CallTool request without changing the downstream result; ordinary tool exceptions may be represented as CallToolResult with IsError=true, while cancellation and protocol exceptions retain their documented semantics. Talvora therefore inspects both thrown failures and returned CallToolResult/structured failure signals before choosing success vs plain-language failure worklog state."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us",

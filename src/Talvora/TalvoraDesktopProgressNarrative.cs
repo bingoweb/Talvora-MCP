@@ -14,7 +14,6 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         IDictionary<string, JsonElement>? arguments)
     {
         var normalized = NormalizeToolName(toolName);
-        var fallback = GetFriendlyToolName(toolName);
 
         if (normalized == "run_powershell")
         {
@@ -89,6 +88,29 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             "İstediğin geliştirme üzerinde çalışmaya devam ediyorum.",
             "Talvora'yı daha düzgün ve kullanışlı hale getirmek için.");
     }
+
+    private static string BuildPlainCompletion(OperationNarrative narrative) =>
+        narrative.Subject switch
+        {
+            "Yaptığım değişiklikleri kullanıma hazırlıyorum" =>
+                "Yaptığım son düzenlemeler kullanıma hazır.",
+            "Yeni hali bilgisayarında etkinleştiriyorum" =>
+                "Yeni hali bilgisayarında etkinleştirdim.",
+            "Son yaptığım değişikliği kontrol ediyorum" =>
+                "Son yaptığım değişikliği kontrol ettim; bu adım tamamlandı.",
+            "Bilgisayarında gerekli kontrolü yapıyorum" =>
+                "Gerekli kontrolü tamamladım.",
+            "Yaptığım değişikliği kontrol ediyorum" =>
+                "Yaptığım değişikliğin bu kontrolünü tamamladım.",
+            "İstediğin değişikliği uyguluyorum" =>
+                "İstediğin değişikliği uyguladım.",
+            "Yaptığım çalışmayı güvene alıyorum" =>
+                "Yaptığım çalışmanın güvenli kopyasını kaydettim.",
+            "Yaptığım değişiklikleri toparlıyorum" =>
+                "Yaptığım değişiklikleri toparladım.",
+            _ =>
+                "Bu adımı tamamladım.",
+        };
 
     private static string SummarizeScript(string script)
     {

@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
+using ModelContextProtocol.Protocol;
 using Talvora.Shared;
 
 namespace Talvora;
@@ -82,13 +83,26 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         {
             var result = await operation(cancellationToken);
 
-            Enqueue(
-                operationId,
-                displayName,
-                "Bitti",
-                $"Bu işi tamamladım. {narrative.Action}\n\nŞimdi sıradaki adıma geçiyorum.",
-                DesktopProgressKind.Completed,
-                stopwatch.Elapsed);
+            if (TryDescribeFailure(result, toolName, out var failureMessage))
+            {
+                Enqueue(
+                    operationId,
+                    displayName,
+                    "Bir hata buldum",
+                    failureMessage,
+                    DesktopProgressKind.Failed,
+                    stopwatch.Elapsed);
+            }
+            else
+            {
+                Enqueue(
+                    operationId,
+                    displayName,
+                    "Bitti",
+                    $"{BuildPlainCompletion(narrative)}\n\nŞimdi sıradaki adıma geçiyorum.",
+                    DesktopProgressKind.Completed,
+                    stopwatch.Elapsed);
+            }
 
             return result;
         }
@@ -109,7 +123,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 operationId,
                 displayName,
                 "Burada bir sorun çıktı",
-                $"Şunu yapmaya çalışıyordum: {narrative.Action}\n\nSorunu kontrol edip düzelteceğim.",
+                BuildFriendlyExceptionMessage(toolName, narrative.Action),
                 DesktopProgressKind.Failed,
                 stopwatch.Elapsed);
             throw;
@@ -289,9 +303,143 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             "http_request" => "Programın çalışıp çalışmadığını kontrol ediyorum",
             "process_list" or "process_get" => "Arka planda çalışanları kontrol ediyorum",
             "system_info" => "Bilgisayarındaki durumu kontrol ediyorum",
-            _ => HumanizeToolName(normalized),
+            _ => "Sıradaki işi yapıyorum",
         };
     }
+
+    private static bool TryDescribeFailure<T>(
+        T result,
+        string? toolName,
+        out string message)
+    {
+        if (result is CallToolResult callToolResult)
+        {
+            if (callToolResult.IsError is true)
+            {
+                message = BuildFriendlyResultFailureMessage(toolName);
+                return true;
+            }
+
+            if (callToolResult.StructuredContent is JsonElement structured &&
+                TryDescribeStructuredFailure(
+                    structured,
+                    toolName,
+                    out message))
+            {
+                return true;
+            }
+        }
+
+        try
+        {
+            var json = JsonSerializer.SerializeToElement(result);
+            if (TryDescribeStructuredFailure(
+                    json,
+                    toolName,
+                    out message))
+            {
+                return true;
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        message = string.Empty;
+        return false;
+    }
+
+    private static bool TryDescribeStructuredFailure(
+        JsonElement json,
+        string? toolName,
+        out string message)
+    {
+        if (json.ValueKind != JsonValueKind.Object)
+        {
+            message = string.Empty;
+            return false;
+        }
+
+        if (TryGetPropertyIgnoreCase(json, "timedOut", out var timedOut) &&
+            timedOut.ValueKind == JsonValueKind.True)
+        {
+            message =
+                "Bu iş beklediğimden uzun sürdü ve tamamlanamadı. " +
+                "Takıldığı yeri kontrol edip daha güvenli bir şekilde yeniden deneyeceğim.";
+            return true;
+        }
+
+        if (TryGetPropertyIgnoreCase(json, "success", out var success) &&
+            success.ValueKind == JsonValueKind.False)
+        {
+            message = BuildFriendlyResultFailureMessage(toolName);
+            return true;
+        }
+
+        if (TryGetPropertyIgnoreCase(json, "exitCode", out var exitCode) &&
+            exitCode.ValueKind == JsonValueKind.Number &&
+            exitCode.TryGetInt32(out var code) &&
+            code != 0)
+        {
+            message = BuildFriendlyResultFailureMessage(toolName);
+            return true;
+        }
+
+        message = string.Empty;
+        return false;
+    }
+
+    private static bool TryGetPropertyIgnoreCase(
+        JsonElement json,
+        string name,
+        out JsonElement value)
+    {
+        foreach (var property in json.EnumerateObject())
+        {
+            if (string.Equals(
+                    property.Name,
+                    name,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
+    }
+
+    private static string BuildFriendlyResultFailureMessage(string? toolName)
+    {
+        var normalized = NormalizeToolName(toolName);
+        return normalized switch
+        {
+            "dotnet_build" =>
+                "Kontrol sırasında bir hata buldum. Yaptığım değişiklik henüz hazır değil. " +
+                "Şimdi hatanın nedenini bulup düzelteceğim ve yeniden kontrol edeceğim.",
+            "dotnet_test" =>
+                "Deneme sırasında bir hata buldum. Yaptığım değişiklik beklediğim gibi çalışmadı. " +
+                "Şimdi hatayı düzelteceğim ve aynı denemeyi yeniden yapacağım.",
+            "apply_patch" or "apply_edits" or "structural_edit" or "semantic_edit" =>
+                "Yapmak istediğim değişiklik bu denemede uygulanmadı. Mevcut dosyaları korudum. " +
+                "Şimdi neden uygulanmadığını kontrol edip güvenli biçimde yeniden deneyeceğim.",
+            "run_powershell" =>
+                "Bilgisayarında yaptığım bu adım tamamlanmadı. " +
+                "Şimdi hangi noktada kaldığını kontrol edip düzeltmeye devam edeceğim.",
+            "git_run" =>
+                "Yaptığım çalışmayı güvene alma adımı tamamlanmadı. Çalışmanın kendisi kaybolmadı. " +
+                "Sorunu kontrol edip yeniden deneyeceğim.",
+            _ =>
+                "Bu adım beklediğim gibi tamamlanmadı. " +
+                "Nedenini kontrol edip düzelttikten sonra yeniden deneyeceğim.",
+        };
+    }
+
+    private static string BuildFriendlyExceptionMessage(
+        string? toolName,
+        string action) =>
+        $"{action}\n\n{BuildFriendlyResultFailureMessage(toolName)}";
 
     private static bool ShouldNotifyToolCall(string? toolName)
     {
@@ -332,20 +480,6 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         }
 
         return normalized;
-    }
-
-    private static string HumanizeToolName(string toolName)
-    {
-        const int maxLength = 96;
-        var friendly = toolName.Replace('_', ' ').Trim();
-        if (friendly.Length > maxLength)
-        {
-            friendly = friendly[..maxLength];
-        }
-
-        return string.IsNullOrWhiteSpace(friendly)
-            ? "Talvora çalışması"
-            : $"Talvora işlemi: {friendly}";
     }
 
     private static string FormatElapsed(TimeSpan elapsed)
