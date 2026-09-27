@@ -133,9 +133,14 @@ internal static partial class SmokeScenarios
                         "-ExecutionPolicy",
                         "Bypass",
                         "-Command",
-                        "$v=[Environment]::GetEnvironmentVariable($args[0],[EnvironmentVariableTarget]::User); if($null -eq $v){$v='<null>'}; [IO.File]::WriteAllText($args[1],$v,[Text.UTF8Encoding]::new($false))",
-                        userEnvironmentName,
-                        userProbePath,
+                        "$name=[Environment]::GetEnvironmentVariable('TALVORA_SMOKE_ENV_NAME',[EnvironmentVariableTarget]::Process); $path=[Environment]::GetEnvironmentVariable('TALVORA_SMOKE_ENV_PATH',[EnvironmentVariableTarget]::Process); $v=[Environment]::GetEnvironmentVariable($name,[EnvironmentVariableTarget]::User); if($null -eq $v){$v='<null>'}; [IO.File]::WriteAllText($path,$v,[Text.UTF8Encoding]::new($false))",
+                    },
+                    ["environment"] = new Dictionary<string, string?>
+                    {
+                        ["TALVORA_SMOKE_ENV_NAME"] =
+                            userEnvironmentName,
+                        ["TALVORA_SMOKE_ENV_PATH"] =
+                            userProbePath,
                     },
                     ["visible"] = false,
                     ["newConsole"] = false,
@@ -143,16 +148,37 @@ internal static partial class SmokeScenarios
 
             var probeDeadline =
                 DateTime.UtcNow.AddSeconds(15);
-            while (!File.Exists(userProbePath) &&
-                   DateTime.UtcNow < probeDeadline)
+            var expectedUserValue =
+                "user-" + smokeId;
+            string? observedUserValue = null;
+            while (DateTime.UtcNow < probeDeadline)
             {
+                if (File.Exists(userProbePath))
+                {
+                    try
+                    {
+                        observedUserValue =
+                            await File.ReadAllTextAsync(
+                                userProbePath);
+                        if (string.Equals(
+                                observedUserValue,
+                                expectedUserValue,
+                                StringComparison.Ordinal))
+                        {
+                            break;
+                        }
+                    }
+                    catch (IOException)
+                    {
+                    }
+                }
+
                 await Task.Delay(100);
             }
 
-            if (!File.Exists(userProbePath) ||
-                !string.Equals(
-                    await File.ReadAllTextAsync(userProbePath),
-                    "user-" + smokeId,
+            if (!string.Equals(
+                    observedUserValue,
+                    expectedUserValue,
                     StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(

@@ -235,8 +235,11 @@ internal static partial class SmokeScenarios
                     iniLastPageJson.GetProperty("count").GetInt32() != 200 ||
                     iniLastPageJson.GetProperty("totalEntries").GetInt32() != 1200 ||
                     iniLastPageJson.GetProperty("truncated").GetBoolean() ||
-                    iniLastPageJson.GetProperty("nextResultOffset").ValueKind !=
-                        System.Text.Json.JsonValueKind.Null)
+                    (iniLastPageJson.TryGetProperty(
+                         "nextResultOffset",
+                         out var iniNextOffset) &&
+                     iniNextOffset.ValueKind !=
+                         System.Text.Json.JsonValueKind.Null))
                 {
                     throw new InvalidOperationException(
                         "ini_list continuation did not terminate deterministically.");

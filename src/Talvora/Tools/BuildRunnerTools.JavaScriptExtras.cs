@@ -165,12 +165,41 @@ public static partial class BuildRunnerTools
                 null);
         }
 
-        var result = await RunCliCheckedAsync(
-            executable,
-            Environment.CurrentDirectory,
-            ["--version"],
-            timeoutSeconds: 60,
-            cancellationToken: cancellationToken);
+        TalvoraCliCommandResponse result;
+        try
+        {
+            result = await RunCliAsync(
+                executable,
+                Environment.CurrentDirectory,
+                ["--version"],
+                environment: new Dictionary<string, string?>
+                {
+                    ["COREPACK_ENABLE_DOWNLOAD_PROMPT"] = "0",
+                },
+                timeoutSeconds: 10,
+                cancellationToken: cancellationToken);
+        }
+        catch (Exception ex) when (
+            ex is FileNotFoundException or
+            DirectoryNotFoundException or
+            System.ComponentModel.Win32Exception)
+        {
+            return new TalvoraJavascriptToolInfoResponse(
+                tool,
+                false,
+                null,
+                null);
+        }
+
+        if (result.TimedOut ||
+            result.ExitCode != 0)
+        {
+            return new TalvoraJavascriptToolInfoResponse(
+                tool,
+                false,
+                null,
+                null);
+        }
 
         return new TalvoraJavascriptToolInfoResponse(
             tool,
