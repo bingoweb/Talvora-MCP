@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/wpf",
-      "verified": "Current WPF implementation guidance confirms DoubleAnimation on UIElement.Opacity and TranslateTransform.Y with FillBehavior.Stop as an established popup-motion pattern; Talvora uses short fade/slide motion without changing focus or operation semantics."
+      "verified": "Current WPF guidance confirms Window.DragMove is the native borderless-window drag mechanism while the left mouse button is pressed; Topmost and borderless transparent windows remain supported. Talvora uses DragMove for direct card repositioning, persists the user's pinned anchor, and restores it against the current monitor work area."
     }
   ],
   "vendorSources": [
@@ -33,6 +33,8 @@
     "Microsoft Win32 Interactive Services guidance checked 2026-09-27: LocalSystem services should interact indirectly through a separate GUI app; named pipes are an explicit IPC option and multi-user endpoints should be session-specific",
     "Microsoft named-pipe security guidance checked 2026-09-27: use an explicit ACL for IPC; default pipe ACLs include LocalSystem but also broader read access, so Talvora restricts the tray endpoint to the tray user and LocalSystem",
     "Microsoft WPF window guidance checked 2026-09-27: ShowActivated=false prevents a notification window from stealing focus; wrapped/scrollable WPF content is used for full-text visibility",
+    "Microsoft WPF Window.DragMove documentation checked 2026-09-27 for Windows Desktop 10: borderless WPF windows can be moved from client-area mouse handling while the left button is down",
+    "Microsoft multi-monitor positioning guidance checked 2026-09-27: saved custom window positions must be validated against the target monitor work area and must not assume a virtual-desktop origin of 0,0",
     "Microsoft .NET native interop best practices checked 2026-09-27; new one-off Win32 calls use LibraryImport generated interop",
     "Microsoft NuGet Central Package Management transitive-pinning guidance checked 2026-09-27; centrally pinned versions are equal to or higher than dependency-requested versions",
     "Microsoft.Build.Framework 18.10.1 was evaluated and intentionally not adopted on net10.0-windows: its Microsoft.NET.StringTools 18.10.1 dependency reports net11+ support and Microsoft.Build.Locator rejects the promoted runtime asset graph (MSBL001); 17.14.28 remains the compatible pin"

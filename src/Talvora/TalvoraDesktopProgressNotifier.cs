@@ -11,7 +11,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     IAsyncDisposable
 {
     internal static readonly TimeSpan HeartbeatInterval =
-        TimeSpan.FromSeconds(20);
+        TimeSpan.FromSeconds(8);
     internal static readonly TimeSpan PipeConnectTimeout =
         TimeSpan.FromMilliseconds(350);
 
@@ -48,14 +48,14 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     {
         ArgumentNullException.ThrowIfNull(operation);
 
-        var displayName = NormalizeToolName(toolName);
+        var displayName = GetFriendlyToolName(toolName);
         var operationId = Guid.NewGuid().ToString("N");
         var stopwatch = Stopwatch.StartNew();
         Enqueue(
             operationId,
             displayName,
-            "Talvora çalışıyor",
-            $"{displayName} çağrısı başladı. İşlem sürerken önemli adımlar ve düzenli ilerleme durumu bu kartta güncellenecek.",
+            "Talvora işe başladı",
+            $"İş: {displayName}. Başladı. Uzun süren işlemlerde ilerleme bilgisi bu kartta yaklaşık her {HeartbeatInterval.TotalSeconds:0} saniyede bir güncellenecek.",
             DesktopProgressKind.Started,
             stopwatch.Elapsed);
 
@@ -75,8 +75,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             Enqueue(
                 operationId,
                 displayName,
-                "Talvora tamamladı",
-                $"{displayName} çağrısı başarıyla tamamlandı. Toplam süre: {FormatElapsed(stopwatch.Elapsed)}.",
+                "Talvora işi tamamladı",
+                $"İş: {displayName}. Başarıyla tamamlandı. Toplam süre: {FormatElapsed(stopwatch.Elapsed)}.",
                 DesktopProgressKind.Completed,
                 stopwatch.Elapsed);
 
@@ -88,7 +88,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 operationId,
                 displayName,
                 "Talvora durduruldu",
-                $"{displayName} çağrısı iptal edildi. Geçen süre: {FormatElapsed(stopwatch.Elapsed)}.",
+                $"İş: {displayName}. İptal edildi. Geçen süre: {FormatElapsed(stopwatch.Elapsed)}.",
                 DesktopProgressKind.Cancelled,
                 stopwatch.Elapsed);
             throw;
@@ -99,7 +99,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 operationId,
                 displayName,
                 "Talvora hata bildirdi",
-                $"{displayName} çağrısı başarısız oldu. Ayrıntılar çağrı sonucunda ve Talvora günlüklerinde korunuyor.",
+                $"İş: {displayName}. Başarısız oldu. Ayrıntılar çağrı sonucunda ve Talvora günlüklerinde korunuyor.",
                 DesktopProgressKind.Failed,
                 stopwatch.Elapsed);
             throw;
@@ -131,7 +131,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 operationId,
                 displayName,
                 "Talvora çalışmaya devam ediyor",
-                $"{displayName} hâlâ çalışıyor. Geçen süre: {FormatElapsed(stopwatch.Elapsed)}. İşlem devam ediyor; yeni bir dönüm noktası olduğunda bu kart güncellenecek.",
+                $"İş: {displayName}. Devam ediyor. Geçen süre: {FormatElapsed(stopwatch.Elapsed)}. Yeni ilerleme bilgisi geldikçe bu kart güncellenecek.",
                 DesktopProgressKind.Running,
                 stopwatch.Elapsed);
         }
@@ -233,18 +233,62 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         }
     }
 
-    private static string NormalizeToolName(string? toolName)
+    private static string GetFriendlyToolName(string? toolName)
     {
         if (string.IsNullOrWhiteSpace(toolName))
         {
             return "MCP çalışması";
         }
 
-        const int maxLength = 120;
         var normalized = toolName.Trim();
-        return normalized.Length <= maxLength
-            ? normalized
-            : normalized[..maxLength];
+        if (normalized.StartsWith("talvora_", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized["talvora_".Length..];
+        }
+
+        return normalized switch
+        {
+            "read_source" or
+            "read_text_range" or
+            "read_bytes" or
+            "tail_text" or
+            "search_text" or
+            "find_files" or
+            "list" => "Kaynak ve dosya inceleme",
+
+            "apply_patch" or
+            "apply_edits" or
+            "structural_edit" or
+            "semantic_edit" => "Kod ve dosya düzenleme",
+
+            "dotnet_build" => ".NET derleme",
+            "dotnet_test" => ".NET testleri",
+            "dotnet_restore" => ".NET bağımlılık hazırlığı",
+
+            "git_diff" => "Git değişikliklerini inceleme",
+            "git_run" => "Git işlemi",
+            "git_branches" => "Git dal kontrolü",
+
+            "run_powershell" => "PowerShell işlemi",
+            "http_request" => "HTTP servis kontrolü",
+            "process_list" or "process_get" => "Çalışan süreçleri kontrol etme",
+            "system_info" => "Sistem bilgilerini kontrol etme",
+            _ => HumanizeToolName(normalized),
+        };
+    }
+
+    private static string HumanizeToolName(string toolName)
+    {
+        const int maxLength = 96;
+        var friendly = toolName.Replace('_', ' ').Trim();
+        if (friendly.Length > maxLength)
+        {
+            friendly = friendly[..maxLength];
+        }
+
+        return string.IsNullOrWhiteSpace(friendly)
+            ? "Talvora çalışması"
+            : $"Talvora işlemi: {friendly}";
     }
 
     private static string FormatElapsed(TimeSpan elapsed)

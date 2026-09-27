@@ -3,6 +3,7 @@
     <OutputType>WinExe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
     <UseWPF>true</UseWPF>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Talvora.Tray</AssemblyName>
     <RootNamespace>Talvora.Tray</RootNamespace>
     <ApplicationIcon>..\..\assets\Talvora.ico</ApplicationIcon>

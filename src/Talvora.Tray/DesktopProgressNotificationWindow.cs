@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -8,33 +9,40 @@ using System.Windows.Threading;
 using Talvora.Shared;
 using WpfBrushes = System.Windows.Media.Brushes;
 using WpfButton = System.Windows.Controls.Button;
+using WpfButtonBase = System.Windows.Controls.Primitives.ButtonBase;
 using WpfColor = System.Windows.Media.Color;
 using WpfCursors = System.Windows.Input.Cursors;
+using WpfOrientation = System.Windows.Controls.Orientation;
+using WpfScrollBar = System.Windows.Controls.Primitives.ScrollBar;
 
 namespace Talvora.Tray;
 
 internal sealed class DesktopProgressNotificationWindow : Window
 {
     private static readonly TimeSpan ActiveLifetime =
-        TimeSpan.FromSeconds(14);
-    private static readonly TimeSpan CompletedLifetime =
-        TimeSpan.FromSeconds(12);
-    private static readonly TimeSpan FailureLifetime =
         TimeSpan.FromSeconds(18);
+    private static readonly TimeSpan CompletedLifetime =
+        TimeSpan.FromSeconds(18);
+    private static readonly TimeSpan FailureLifetime =
+        TimeSpan.FromSeconds(24);
 
     private readonly Border _accent;
     private readonly TextBlock _title;
     private readonly TextBlock _message;
     private readonly TextBlock _status;
+    private readonly WpfButton _pinButton;
     private readonly DispatcherTimer _dismissTimer;
     private readonly TranslateTransform _translateTransform = new();
     private TimeSpan _dismissAfter = ActiveLifetime;
+    private bool _isPointerOver;
+    private bool _isPinned;
     private bool _isClosing;
+    private bool _manualClose;
 
     public DesktopProgressNotificationWindow()
     {
-        Width = 470;
-        MaxHeight = 340;
+        Width = 490;
+        MaxHeight = 390;
         SizeToContent = SizeToContent.Height;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
@@ -55,6 +63,9 @@ internal sealed class DesktopProgressNotificationWindow : Window
                 new SolidColorBrush(WpfColor.FromArgb(72, 255, 255, 255)),
             BorderThickness = new Thickness(1),
             Padding = new Thickness(16),
+            Cursor = WpfCursors.SizeAll,
+            ToolTip =
+                "Boş bir alandan sürükleyerek taşı. Sabitle düğmesi konumu korur; kart yine otomatik kapanır.",
             Effect = new DropShadowEffect
             {
                 BlurRadius = 24,
@@ -99,6 +110,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
             FontWeight = FontWeights.SemiBold,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 0, 0, 7),
+            Cursor = WpfCursors.SizeAll,
         };
         content.Children.Add(_title);
 
@@ -109,15 +121,17 @@ internal sealed class DesktopProgressNotificationWindow : Window
             FontSize = 13,
             LineHeight = 19,
             TextWrapping = TextWrapping.Wrap,
+            Cursor = WpfCursors.Arrow,
         };
 
         var scroll = new ScrollViewer
         {
             Content = _message,
-            MaxHeight = 190,
+            MaxHeight = 230,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Focusable = false,
+            Cursor = WpfCursors.Arrow,
         };
         Grid.SetRow(scroll, 1);
         content.Children.Add(scroll);
@@ -128,11 +142,45 @@ internal sealed class DesktopProgressNotificationWindow : Window
                 new SolidColorBrush(WpfColor.FromRgb(147, 156, 171)),
             FontSize = 11,
             Margin = new Thickness(0, 9, 0, 0),
+            Cursor = WpfCursors.SizeAll,
         };
         Grid.SetRow(_status, 2);
         content.Children.Add(_status);
 
         grid.Children.Add(content);
+
+        var actions = new StackPanel
+        {
+            Orientation = WpfOrientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(12, -5, -5, 0),
+        };
+
+        _pinButton = new WpfButton
+        {
+            Content = "Sabitle",
+            MinWidth = 54,
+            Height = 28,
+            Padding = new Thickness(8, 0, 8, 0),
+            Background = WpfBrushes.Transparent,
+            BorderBrush =
+                new SolidColorBrush(WpfColor.FromArgb(52, 255, 255, 255)),
+            BorderThickness = new Thickness(1),
+            Foreground =
+                new SolidColorBrush(WpfColor.FromRgb(171, 178, 190)),
+            FontSize = 11,
+            Cursor = WpfCursors.Hand,
+            Focusable = false,
+            ToolTip = "Kartın mevcut konumunu sabitle",
+        };
+        _pinButton.Click += (_, _) =>
+        {
+            if (!_isClosing)
+            {
+                PinStateChangeRequested?.Invoke(!_isPinned);
+            }
+        };
+        actions.Children.Add(_pinButton);
 
         var closeButton = new WpfButton
         {
@@ -140,8 +188,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
             Width = 28,
             Height = 28,
             Padding = new Thickness(0),
-            Margin = new Thickness(12, -5, -5, 0),
-            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(5, 0, 0, 0),
             Background = WpfBrushes.Transparent,
             BorderBrush = WpfBrushes.Transparent,
             Foreground =
@@ -149,10 +196,14 @@ internal sealed class DesktopProgressNotificationWindow : Window
             FontSize = 18,
             Cursor = WpfCursors.Hand,
             Focusable = false,
+            ToolTip = "Bildirimi kapat",
         };
-        closeButton.Click += (_, _) => BeginClose();
-        Grid.SetColumn(closeButton, 3);
-        grid.Children.Add(closeButton);
+        closeButton.Click += (_, _) =>
+            BeginClose(userInitiated: true);
+        actions.Children.Add(closeButton);
+
+        Grid.SetColumn(actions, 3);
+        grid.Children.Add(actions);
 
         root.Child = grid;
         Content = root;
@@ -167,10 +218,23 @@ internal sealed class DesktopProgressNotificationWindow : Window
             BeginClose();
         };
 
-        MouseEnter += (_, _) => _dismissTimer.Stop();
-        MouseLeave += (_, _) => RestartDismissTimer();
+        MouseEnter += (_, _) =>
+        {
+            _isPointerOver = true;
+            _dismissTimer.Stop();
+        };
+        MouseLeave += (_, _) =>
+        {
+            _isPointerOver = false;
+            RestartDismissTimer();
+        };
+        root.PreviewMouseLeftButtonDown += OnCardMouseLeftButtonDown;
         Loaded += (_, _) => AnimateIn();
     }
+
+    public event EventHandler? UserMoveCompleted;
+
+    public event Action<bool>? PinStateChangeRequested;
 
     public string OperationId { get; private set; } = string.Empty;
 
@@ -178,6 +242,8 @@ internal sealed class DesktopProgressNotificationWindow : Window
 
     public void Update(DesktopProgressMessage message)
     {
+        CancelPendingAutomaticClose();
+
         OperationId = message.OperationId;
         LastUpdatedUtc = DateTimeOffset.UtcNow;
         _title.Text = message.Title;
@@ -230,6 +296,82 @@ internal sealed class DesktopProgressNotificationWindow : Window
         RestartDismissTimer();
     }
 
+    public void SetPinned(bool pinned)
+    {
+        _isPinned = pinned;
+        _pinButton.Content = pinned
+            ? "Sabit"
+            : "Sabitle";
+        _pinButton.ToolTip = pinned
+            ? "Otomatik ekran konumuna dön"
+            : "Kartın mevcut konumunu sabitle";
+        _pinButton.Foreground =
+            new SolidColorBrush(
+                pinned
+                    ? WpfColor.FromRgb(129, 184, 255)
+                    : WpfColor.FromRgb(171, 178, 190));
+        _pinButton.Background =
+            new SolidColorBrush(
+                pinned
+                    ? WpfColor.FromArgb(34, 72, 151, 255)
+                    : WpfColor.FromArgb(0, 0, 0, 0));
+        _pinButton.BorderBrush =
+            new SolidColorBrush(
+                pinned
+                    ? WpfColor.FromArgb(112, 72, 151, 255)
+                    : WpfColor.FromArgb(52, 255, 255, 255));
+    }
+
+    public void MarkInteracted()
+    {
+        LastUpdatedUtc = DateTimeOffset.UtcNow;
+    }
+
+    private void OnCardMouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (_isClosing ||
+            e.ChangedButton != MouseButton.Left ||
+            e.LeftButton != MouseButtonState.Pressed ||
+            IsInteractiveElement(e.OriginalSource as DependencyObject))
+        {
+            return;
+        }
+
+        try
+        {
+            DragMove();
+            MarkInteracted();
+            UserMoveCompleted?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
+        catch (InvalidOperationException ex)
+        {
+            TrayLog.Write(
+                "Desktop progress card drag could not start.",
+                ex);
+        }
+    }
+
+    private static bool IsInteractiveElement(
+        DependencyObject? source)
+    {
+        var current = source;
+        while (current is not null)
+        {
+            if (current is WpfButtonBase or WpfScrollBar)
+            {
+                return true;
+            }
+
+            current =
+                VisualTreeHelper.GetParent(current);
+        }
+
+        return false;
+    }
+
     private void AnimateIn()
     {
         Opacity = 1;
@@ -265,7 +407,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
             });
     }
 
-    private void BeginClose()
+    private void BeginClose(bool userInitiated = false)
     {
         if (_isClosing)
         {
@@ -273,6 +415,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
         }
 
         _isClosing = true;
+        _manualClose = userInitiated;
         _dismissTimer.Stop();
         var animation = new DoubleAnimation(
             fromValue: Opacity,
@@ -285,13 +428,36 @@ internal sealed class DesktopProgressNotificationWindow : Window
                     EasingMode = EasingMode.EaseIn,
                 },
         };
-        animation.Completed += (_, _) => Close();
+        animation.Completed += (_, _) =>
+        {
+            if (_isClosing)
+            {
+                Close();
+            }
+        };
         BeginAnimation(OpacityProperty, animation);
+    }
+
+    private void CancelPendingAutomaticClose()
+    {
+        if (!_isClosing || _manualClose)
+        {
+            return;
+        }
+
+        BeginAnimation(OpacityProperty, null);
+        Opacity = 1;
+        _isClosing = false;
     }
 
     private void RestartDismissTimer()
     {
         _dismissTimer.Stop();
+        if (_isPointerOver || _isClosing)
+        {
+            return;
+        }
+
         _dismissTimer.Interval = _dismissAfter;
         _dismissTimer.Start();
     }
