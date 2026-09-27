@@ -30,6 +30,10 @@ internal sealed class DesktopProgressNotificationWindow : Window
         TimeSpan.FromMinutes(3);
     private static readonly TimeSpan FailureLifetime =
         TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan ActiveStaleThreshold =
+        TimeSpan.FromSeconds(75);
+    private static readonly TimeSpan StaleCheckInterval =
+        TimeSpan.FromSeconds(10);
 
     private readonly Border _accent;
     private readonly TextBlock _title;
@@ -41,12 +45,14 @@ internal sealed class DesktopProgressNotificationWindow : Window
     private readonly WpfTextBox _codePreview;
     private readonly WpfButton _pinButton;
     private readonly DispatcherTimer _dismissTimer;
+    private readonly DispatcherTimer _staleTimer;
     private readonly TranslateTransform _translateTransform = new();
     private TimeSpan _dismissAfter = StartedLifetime;
     private bool _isPointerOver;
     private bool _isPinned;
     private bool _isClosing;
     private bool _manualClose;
+    private bool _isStale;
 
     public DesktopProgressNotificationWindow()
     {
@@ -329,6 +335,14 @@ internal sealed class DesktopProgressNotificationWindow : Window
             BeginClose();
         };
 
+        _staleTimer = new DispatcherTimer
+        {
+            Interval = StaleCheckInterval,
+        };
+        _staleTimer.Tick += (_, _) =>
+            CheckForStaleWork();
+        _staleTimer.Start();
+
         MouseEnter += (_, _) =>
         {
             _isPointerOver = true;
@@ -341,6 +355,11 @@ internal sealed class DesktopProgressNotificationWindow : Window
         };
         root.PreviewMouseLeftButtonDown += OnCardMouseLeftButtonDown;
         Loaded += (_, _) => AnimateIn();
+        Closed += (_, _) =>
+        {
+            _dismissTimer.Stop();
+            _staleTimer.Stop();
+        };
     }
 
     public event EventHandler? UserMoveCompleted;
@@ -368,6 +387,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
         OperationId = message.OperationId;
         LastUpdatedUtc = DateTimeOffset.UtcNow;
         LastKind = message.Kind;
+        _isStale = false;
         _title.Text = message.Title;
         _message.Text = message.Message;
         UpdateEvidence(message);
@@ -425,6 +445,36 @@ internal sealed class DesktopProgressNotificationWindow : Window
                 _ => StartedLifetime,
             };
         RestartDismissTimer();
+    }
+
+    private void CheckForStaleWork()
+    {
+        if (_isClosing ||
+            IsTerminal ||
+            LastUpdatedUtc == default)
+        {
+            return;
+        }
+
+        var staleFor =
+            DateTimeOffset.UtcNow - LastUpdatedUtc;
+        if (staleFor < ActiveStaleThreshold ||
+            _isStale)
+        {
+            return;
+        }
+
+        _isStale = true;
+        _title.Text = "Yeni durum bekliyorum";
+        _message.Text =
+            $"Bu işten {FormatElapsed(staleFor.TotalSeconds)} süredir yeni bilgi gelmedi.\n\n" +
+            $"Son gerçek güncelleme: {LastUpdatedUtc.ToLocalTime():HH:mm:ss}. " +
+            "Yeni veri gelir gelmez bu kart otomatik olarak devam edecek.";
+        _status.Text =
+            $"◌ BEKLİYOR  //  SON VERİ {LastUpdatedUtc.ToLocalTime():HH:mm:ss}";
+        _accent.Background =
+            new SolidColorBrush(
+                WpfColor.FromRgb(244, 177, 72));
     }
 
     public void SetPinned(bool pinned)
@@ -613,14 +663,14 @@ internal sealed class DesktopProgressNotificationWindow : Window
         if (evidence is null)
         {
             _evidenceExpander.Visibility = Visibility.Collapsed;
-            _evidenceSummary.Text = string.Empty;
-            _evidenceFiles.Text = string.Empty;
-            _codePreview.Text = string.Empty;
+            SetTextIfChanged(_evidenceSummary, string.Empty);
+            SetTextIfChanged(_evidenceFiles, string.Empty);
+            SetTextIfChanged(_codePreview, string.Empty);
             return;
         }
 
         _evidenceExpander.Visibility = Visibility.Visible;
-        _evidenceSummary.Text =
+        var evidenceSummary =
             string.Join(
                 "  //  ",
                 new[]
@@ -630,24 +680,60 @@ internal sealed class DesktopProgressNotificationWindow : Window
                 }
                 .Where(static value =>
                     !string.IsNullOrWhiteSpace(value)));
+        SetTextIfChanged(
+            _evidenceSummary,
+            evidenceSummary);
 
-        _evidenceFiles.Text =
+        var evidenceFiles =
             evidence.Files is { Count: > 0 }
                 ? string.Join(
                     Environment.NewLine,
                     evidence.Files.Select(
                         static path => $"› {path}"))
                 : string.Empty;
+        SetTextIfChanged(
+            _evidenceFiles,
+            evidenceFiles);
 
-        _codePreview.Text =
+        var codePreview =
             evidence.CodePreview ?? string.Empty;
+        SetTextIfChanged(
+            _codePreview,
+            codePreview);
         _codePreview.Visibility =
-            string.IsNullOrWhiteSpace(evidence.CodePreview)
+            string.IsNullOrWhiteSpace(codePreview)
                 ? Visibility.Collapsed
                 : Visibility.Visible;
 
-        _evidenceExpander.IsExpanded =
-            message.Kind == DesktopProgressKind.Failed ||
-            !string.IsNullOrWhiteSpace(evidence.CodePreview);
+        if (message.Kind == DesktopProgressKind.Failed)
+        {
+            _evidenceExpander.IsExpanded = true;
+        }
+    }
+
+    private static void SetTextIfChanged(
+        TextBlock target,
+        string value)
+    {
+        if (!string.Equals(
+                target.Text,
+                value,
+                StringComparison.Ordinal))
+        {
+            target.Text = value;
+        }
+    }
+
+    private static void SetTextIfChanged(
+        WpfTextBox target,
+        string value)
+    {
+        if (!string.Equals(
+                target.Text,
+                value,
+                StringComparison.Ordinal))
+        {
+            target.Text = value;
+        }
     }
 }
