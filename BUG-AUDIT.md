@@ -2,14 +2,14 @@
 
 Last updated: 2026-09-27
 Branch: main
-Current repository runtime-affecting committed HEAD: `bfbeea1` — self-update installer process-tree fix.
-Current exact-installed audit runtime: `ceeaa4ad1416cac7a997d52d78f4aee58959240e`
+Current repository runtime-affecting committed HEAD: `3d1ea279923757d0fab1d94f49ed8c125579133b` — professional desktop progress sequence.
+Current exact-installed audit runtime: `3d1ea279923757d0fab1d94f49ed8c125579133b`
 Canonical exact-installed tool count: 212 unique tools
-Status: #121–#218 remediation complete; #219 is TEST VERIFIED and pending canonical deploy. Admin focused surface = 91 unique tools; Development = 182; Full = 212. Focused-surface source regression and modernization policy are GREEN.
+Status: #121–#219 remediation complete and live verified. Admin focused surface = 91 unique tools; Development = 182; Full = 212. Focused-surface source regression, existing-tunnel binding regression and modernization policy are GREEN.
 
 ## Current remediation status summary — 2026-09-27
 
-- #219 test acceptance: legacy full-tunnel talvora registration was still autoStart=true with required talvora-business / business.json even though production remote publication is now split into talvora-dev and talvora-admin. This caused repeated false recovery failures, serious-incident notifications and incomplete-setup UI while Dev/Admin tunnels were healthy. The canonical talvora registration now represents only the local Windows service; Dev/Admin remain tunnel-only managed registrations. Talvora start/stop/restart and manual reconnect coordinate the two focused tunnels through the generic lifecycle path. Logged-on-user --self-test GREEN; TALVORA FOCUSED MCP SURFACE SOURCE REGRESSION GREEN; MODERNIZATION_POLICY_GREEN; Tray Release build 0 warning / 0 error; git diff --check clean.
+- #219 live acceptance: legacy full-tunnel Talvora registration artık yalnız yerel Windows servisini temsil ediyor; Dev/Admin ayrı tunnel-only managed registration olarak yönetiliyor. Kullanıcı registry'si mevcut Dev/Admin config'lerinden tunnel kimliklerini geri kazandı, ortak `runtime-key.dpapi` mevcut, reconnect tamamlandı ve tunnel-client status her iki alias için `process_running=true`, `healthy=true`, `ready=true` döndürdü. ChatGPT focused discovery canlı Dev=182 / Admin=91. Penpot on-demand `autoStart=false`. Installer self-update process-tree fix gerçek Talvora-içinden deploy ile GREEN. Desktop progress akışı `started -> long-running status -> completed` ticari semantiğine geçirildi.
 
 - Historical implementation/fix work through #120 includes the completed Control Center, installer/deploy, Playwright CLI migration, Source Edit core, Routing Contract v3, structural adapter and Roslyn semantic adapter work described below.
 - The current deep-audit range #121–#178 contains 58 numbered records: **0 OPEN**, **55 FIXED**, plus **#143 CLOSED FALSE POSITIVE** and **#166/#167 CLOSED DUPLICATE**.
