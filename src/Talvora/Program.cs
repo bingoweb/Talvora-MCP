@@ -62,6 +62,7 @@ builder.Services
 
             return await notifier.RunToolCallAsync(
                 request.Params.Name,
+                request.Params.Arguments,
                 token => next(request, token),
                 cancellationToken);
         });
