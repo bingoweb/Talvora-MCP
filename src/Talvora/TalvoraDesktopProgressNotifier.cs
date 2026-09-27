@@ -10,8 +10,10 @@ namespace Talvora;
 internal sealed partial class TalvoraDesktopProgressNotifier :
     IAsyncDisposable
 {
-    internal static readonly TimeSpan HeartbeatInterval =
-        TimeSpan.FromSeconds(45);
+    internal static readonly TimeSpan FirstProgressDelay =
+        TimeSpan.FromSeconds(30);
+    internal static readonly TimeSpan ProgressInterval =
+        TimeSpan.FromSeconds(60);
     internal static readonly TimeSpan PipeConnectTimeout =
         TimeSpan.FromMilliseconds(350);
 
@@ -59,8 +61,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         Enqueue(
             operationId,
             displayName,
-            "Talvora işe başladı",
-            $"İş: {displayName}. Başladı. Uzun süren işlemlerde ilerleme bilgisi bu kartta yaklaşık her {HeartbeatInterval.TotalSeconds:0} saniyede bir güncellenecek.",
+            "İş başladı",
+            displayName,
             DesktopProgressKind.Started,
             stopwatch.Elapsed);
 
@@ -80,8 +82,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             Enqueue(
                 operationId,
                 displayName,
-                "Talvora işi tamamladı",
-                $"İş: {displayName}. Başarıyla tamamlandı. Toplam süre: {FormatElapsed(stopwatch.Elapsed)}.",
+                "İş tamamlandı",
+                $"{displayName} başarıyla tamamlandı.",
                 DesktopProgressKind.Completed,
                 stopwatch.Elapsed);
 
@@ -92,8 +94,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             Enqueue(
                 operationId,
                 displayName,
-                "Talvora durduruldu",
-                $"İş: {displayName}. İptal edildi. Geçen süre: {FormatElapsed(stopwatch.Elapsed)}.",
+                "İş durduruldu",
+                $"{displayName} iptal edildi.",
                 DesktopProgressKind.Cancelled,
                 stopwatch.Elapsed);
             throw;
@@ -103,8 +105,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             Enqueue(
                 operationId,
                 displayName,
-                "Talvora hata bildirdi",
-                $"İş: {displayName}. Başarısız oldu. Ayrıntılar çağrı sonucunda ve Talvora günlüklerinde korunuyor.",
+                "İş tamamlanamadı",
+                $"{displayName} başarısız oldu. Ayrıntılar Talvora günlüklerinde korunuyor.",
                 DesktopProgressKind.Failed,
                 stopwatch.Elapsed);
             throw;
@@ -129,14 +131,24 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         Stopwatch stopwatch,
         CancellationToken cancellationToken)
     {
-        using var timer = new PeriodicTimer(HeartbeatInterval);
+        await Task.Delay(FirstProgressDelay, cancellationToken);
+
+        Enqueue(
+            operationId,
+            displayName,
+            "İş devam ediyor",
+            $"{displayName} sürüyor.",
+            DesktopProgressKind.Running,
+            stopwatch.Elapsed);
+
+        using var timer = new PeriodicTimer(ProgressInterval);
         while (await timer.WaitForNextTickAsync(cancellationToken))
         {
             Enqueue(
                 operationId,
                 displayName,
-                "Talvora çalışmaya devam ediyor",
-                $"İş: {displayName}. Devam ediyor. Geçen süre: {FormatElapsed(stopwatch.Elapsed)}. Yeni ilerleme bilgisi geldikçe bu kart güncellenecek.",
+                "İş devam ediyor",
+                $"{displayName} sürüyor.",
                 DesktopProgressKind.Running,
                 stopwatch.Elapsed);
         }
