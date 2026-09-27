@@ -105,8 +105,12 @@ if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
 }
 
 Write-Host 'Running canonical Talvora native installer...' -ForegroundColor Cyan
-& $installer --silent
-$installerExitCode = $LASTEXITCODE
+$installerProcess = Start-Process `
+    -FilePath $installer `
+    -ArgumentList @('--silent') `
+    -Wait `
+    -PassThru
+$installerExitCode = $installerProcess.ExitCode
 
 if ($installerExitCode -ne 0) {
     throw "Talvora native installer failed: $installerExitCode"
