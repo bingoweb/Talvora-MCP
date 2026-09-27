@@ -17,6 +17,9 @@ $coordinator = [IO.File]::ReadAllText(
 $lifecycle = [IO.File]::ReadAllText(
     (Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterLifecycleService.cs'))
 
+$localStart = $recovery.IndexOf(
+    'internal sealed class TalvoraManagedMcpRecoveryDiscovery',
+    [StringComparison]::Ordinal)
 $focusedStart = $recovery.IndexOf(
     'internal sealed class TalvoraFocusedManagedMcpRecoveryDiscovery',
     [StringComparison]::Ordinal)
@@ -30,6 +33,17 @@ $focusedBlock = if (
     $recovery.Substring(
         $focusedStart,
         $focusedEnd - $focusedStart)
+}
+else {
+    ''
+}
+$localBlock = if (
+    $localStart -ge 0 -and
+    $focusedStart -gt $localStart
+) {
+    $recovery.Substring(
+        $localStart,
+        $focusedStart - $localStart)
 }
 else {
     ''
@@ -49,8 +63,8 @@ $checks = [ordered]@{
         $program.Contains('ConfigureSessionOptions')
     )
     SurfaceCountsArePinned = (
-        $surfacePolicy.Contains('ExpectedFullToolCount = 204') -and
-        $surfacePolicy.Contains('ExpectedDevelopmentToolCount = 174') -and
+        $surfacePolicy.Contains('ExpectedFullToolCount = 212') -and
+        $surfacePolicy.Contains('ExpectedDevelopmentToolCount = 182') -and
         $surfacePolicy.Contains('ExpectedAdministrationToolCount = 91')
     )
     FocusedRecoveryRegistrationsExist = (
@@ -66,6 +80,12 @@ $checks = [ordered]@{
         -not $focusedBlock.Contains('Kind = "windows-service"') -and
         -not $focusedBlock.Contains('Kind = "scheduled-task"')
     )
+    LocalTalvoraRegistrationIsServiceOnly = (
+        $localBlock.Contains('Kind = "windows-service"') -and
+        -not $localBlock.Contains('Kind = "tunnel"') -and
+        -not $localBlock.Contains('business.json') -and
+        -not $localBlock.Contains('Tunnel =')
+    )
     FocusedRegistrationsHaveProtocolProbes = (
         $coordinator.Contains('"talvora_apply_patch", "talvora_dotnet_build"') -and
         $coordinator.Contains('"talvora_service_get", "talvora_registry_get"')
@@ -74,6 +94,13 @@ $checks = [ordered]@{
         $lifecycle.Contains('var hasLocalLifecycleComponents =') -and
         $lifecycle.Contains('if (hasLocalLifecycleComponents &&') -and
         $lifecycle.Contains('else if (hasLocalLifecycleComponents)')
+    )
+    TalvoraReconnectCoordinatesFocusedTunnels = (
+        $lifecycle.Contains('ReconnectTalvoraConnectionsAsync') -and
+        $lifecycle.Contains('TalvoraDevId = "talvora-dev"') -and
+        $lifecycle.Contains('TalvoraAdminId = "talvora-admin"') -and
+        $lifecycle.Contains('ReconnectTalvoraFocusedAsync') -and
+        $lifecycle.Contains('DisconnectTalvoraFocusedAsync')
     )
 }
 
