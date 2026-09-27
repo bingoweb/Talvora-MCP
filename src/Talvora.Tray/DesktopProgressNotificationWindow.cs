@@ -20,13 +20,13 @@ namespace Talvora.Tray;
 internal sealed class DesktopProgressNotificationWindow : Window
 {
     private static readonly TimeSpan StartedLifetime =
-        TimeSpan.FromSeconds(12);
+        TimeSpan.FromSeconds(75);
     private static readonly TimeSpan RunningLifetime =
-        TimeSpan.FromSeconds(15);
+        TimeSpan.FromSeconds(75);
     private static readonly TimeSpan CompletedLifetime =
-        TimeSpan.FromSeconds(14);
+        TimeSpan.FromSeconds(75);
     private static readonly TimeSpan FailureLifetime =
-        TimeSpan.FromSeconds(24);
+        TimeSpan.FromSeconds(90);
 
     private readonly Border _accent;
     private readonly TextBlock _title;
@@ -242,12 +242,23 @@ internal sealed class DesktopProgressNotificationWindow : Window
 
     public DateTimeOffset LastUpdatedUtc { get; private set; }
 
+    public DesktopProgressKind LastKind { get; private set; }
+
+    public bool IsTerminal =>
+        LastKind is
+            DesktopProgressKind.Completed or
+            DesktopProgressKind.Failed or
+            DesktopProgressKind.Cancelled or
+            DesktopProgressKind.Info or
+            DesktopProgressKind.Warning;
+
     public void Update(DesktopProgressMessage message)
     {
         CancelPendingAutomaticClose();
 
         OperationId = message.OperationId;
         LastUpdatedUtc = DateTimeOffset.UtcNow;
+        LastKind = message.Kind;
         _title.Text = message.Title;
         _message.Text = message.Message;
         _status.Text =

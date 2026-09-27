@@ -12,7 +12,7 @@ namespace Talvora.Tray;
 
 internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
 {
-    private const int MaximumVisibleCards = 4;
+    private const int MaximumVisibleCards = 2;
     private const int ScreenMarginPixels = 18;
     private const int CardGapPixels = 10;
     private const int PlacementDocumentVersion = 1;
@@ -107,7 +107,8 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         {
             var oldest =
                 _windows.Values
-                    .OrderBy(static window => window.LastUpdatedUtc)
+                    .OrderByDescending(static window => window.IsTerminal)
+                    .ThenBy(static window => window.LastUpdatedUtc)
                     .First();
             oldest.Close();
         }
