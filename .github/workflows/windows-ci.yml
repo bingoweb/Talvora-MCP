@@ -8,7 +8,9 @@ on:
 
 jobs:
   build-and-smoke:
-    runs-on: windows-latest
+    # windows-latest currently resolves to Server 2025, where the
+    # interactive-session smoke is not compatible with the hosted runner.
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
 
