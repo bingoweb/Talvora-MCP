@@ -8,9 +8,7 @@ on:
 
 jobs:
   build-and-smoke:
-    # windows-latest currently resolves to Server 2025, where the
-    # interactive-session smoke is not compatible with the hosted runner.
-    runs-on: windows-2022
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -117,8 +115,8 @@ jobs:
 
             if ($null -eq $health) { throw 'Talvora health check did not become ready.' }
 
-            dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-build -- 'http://127.0.0.1:7676/mcp' $PWD.Path
-            if ($LASTEXITCODE -ne 0) { throw "MCP smoke failed: $LASTEXITCODE" }
+            dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-build -- '--surface-policy-live' 'http://127.0.0.1:7676'
+            if ($LASTEXITCODE -ne 0) { throw "MCP surface smoke failed: $LASTEXITCODE" }
           }
           finally {
             Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
