@@ -21,11 +21,20 @@ public sealed record DesktopProgressMessage(
     string Message,
     DesktopProgressKind Kind,
     DateTimeOffset TimestampUtc,
-    double ElapsedSeconds);
+    double ElapsedSeconds,
+    DesktopProgressEvidence? Evidence = null);
+
+public sealed record DesktopProgressEvidence(
+    string? Summary = null,
+    IReadOnlyList<string>? Files = null,
+    int? AddedLines = null,
+    int? RemovedLines = null,
+    string? CodePreview = null,
+    string? Result = null);
 
 public static class DesktopProgressProtocol
 {
-    public const int Version = 1;
+    public const int Version = 2;
     public const string PipeNamePrefix = "Talvora.DesktopProgress.";
 
     private static readonly JsonSerializerOptions SerializerOptions = new()

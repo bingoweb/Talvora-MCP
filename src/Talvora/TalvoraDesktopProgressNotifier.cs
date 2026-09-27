@@ -59,12 +59,15 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         }
 
         var narrative = BuildNarrative(toolName, arguments);
+        var initialEvidence =
+            BuildInitialEvidence(toolName, arguments);
         var displayName = narrative.Subject;
         var operationId = Guid.NewGuid().ToString("N");
         var stopwatch = Stopwatch.StartNew();
         TryBeginWorklog(
             operationId,
             narrative,
+            initialEvidence,
             stopwatch.Elapsed);
 
         using var heartbeatCts =
@@ -79,6 +82,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         try
         {
             var result = await operation(cancellationToken);
+            var terminalEvidence =
+                BuildTerminalEvidence(
+                    initialEvidence,
+                    result);
 
             try
             {
@@ -92,6 +99,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                         DesktopProgressKind.Failed,
                         "Bir hata buldum",
                         failureMessage,
+                        terminalEvidence,
                         stopwatch.Elapsed);
                 }
                 else
@@ -101,6 +109,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                         DesktopProgressKind.Completed,
                         "Bitti",
                         $"{BuildPlainCompletion(narrative)}\n\nŞimdi sıradaki adıma geçiyorum.",
+                        terminalEvidence,
                         stopwatch.Elapsed);
                 }
             }
@@ -114,6 +123,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                     DesktopProgressKind.Completed,
                     "Bitti",
                     $"{BuildPlainCompletion(narrative)}\n\nŞimdi sıradaki adıma geçiyorum.",
+                    initialEvidence,
                     stopwatch.Elapsed);
             }
 
@@ -126,6 +136,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 DesktopProgressKind.Cancelled,
                 "Bu işi durdurdum",
                 $"Şu işi tamamlayamadım: {narrative.Action}",
+                initialEvidence,
                 stopwatch.Elapsed);
             throw;
         }
@@ -136,6 +147,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 DesktopProgressKind.Failed,
                 "Burada bir sorun çıktı",
                 BuildFriendlyExceptionMessage(toolName, narrative.Action),
+                initialEvidence,
                 stopwatch.Elapsed);
             throw;
         }
@@ -188,7 +200,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         string title,
         string message,
         DesktopProgressKind kind,
-        TimeSpan elapsed)
+        TimeSpan elapsed,
+        DesktopProgressEvidence? evidence = null)
     {
         if (!OperatingSystem.IsWindows() ||
             IsTruthy(Environment.GetEnvironmentVariable("CI")))
@@ -204,7 +217,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 message,
                 kind,
                 DateTimeOffset.UtcNow,
-                elapsed.TotalSeconds));
+                elapsed.TotalSeconds,
+                evidence));
     }
 
     private async Task DeliverQueuedNotificationsAsync(
@@ -395,8 +409,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 "Deneme sırasında bir hata buldum. Yaptığım değişiklik beklediğim gibi çalışmadı. " +
                 "Şimdi hatayı düzelteceğim ve aynı denemeyi yeniden yapacağım.",
             "apply_patch" or "apply_edits" or "structural_edit" or "semantic_edit" =>
-                "Yapmak istediğim değişiklik bu denemede uygulanmadı. Mevcut dosyaları korudum. " +
-                "Şimdi neden uygulanmadığını kontrol edip güvenli biçimde yeniden deneyeceğim.",
+                "Değişiklik bu denemede uygulanmadı; mevcut dosyalar korunuyor. " +
+                "Aşağıdaki KANIT bölümünde hedeflenen gerçek dosyaları, diff önizlemesini ve sistemin verdiği gerçek hata nedenini görebilirsin. " +
+                "Şimdi aynı değişikliği daha güvenli bir adımla yeniden deneyeceğim.",
             "run_powershell" =>
                 "Bilgisayarında yaptığım bu adım tamamlanmadı. " +
                 "Şimdi hangi noktada kaldığını kontrol edip düzeltmeye devam edeceğim.",

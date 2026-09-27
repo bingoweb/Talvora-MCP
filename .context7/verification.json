@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-27T18:38:00Z",
-  "scope": "Talvora Control Center responsiveness quality pass: move bounded event-history mutex/file work and live raw-log file IO off the WPF dispatcher, parallelize detail metadata collection, suppress overlapping timer reads, and discard stale async UI results.",
+  "verifiedAtUtc": "2026-09-27T18:52:00Z",
+  "scope": "Talvora Control Center responsiveness quality pass plus desktop worklog evidence modernization: protocol v2 structured evidence, real runtime timestamps/durations/files/diff/result data, WPF expandable read-only code evidence, and canonical sensitive-data redaction.",
   "libraries": [
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
@@ -13,7 +13,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET disposal guidance: objects that own unmanaged resources/handles must be deterministically disposed; Process objects are disposable and even temporary Process allocation has handle/lifetime cost. Talvora therefore disposes every Process returned by GetProcesses/GetProcessesByName probes, avoids invariant per-request process/service detection, and retains current NuGet Central Package Management, lock/locked restore, audit, and SDK pinning contracts."
+      "verified": "Current .NET disposal guidance remains enforced for Process/resource ownership. Current WPF guidance also supports standard composition with expandable content and read-only selectable TextBox evidence. Talvora's worklog keeps the primary copy nontechnical while an Expander exposes bounded real technical evidence; the evidence surface is populated only from real tool/runtime data and passes canonical FileLog sensitive-data redaction."
     },
     {
       "libraryId": "/lepoco/wpfui",

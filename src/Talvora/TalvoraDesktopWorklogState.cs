@@ -9,22 +9,32 @@ internal sealed partial class TalvoraDesktopProgressNotifier
 
     private sealed record ActiveWorklogItem(
         OperationNarrative Narrative,
+        DesktopProgressEvidence? Evidence,
         long Sequence);
+
+    private sealed record PendingFailure(
+        string Message,
+        DesktopProgressEvidence? Evidence);
 
     private readonly object _worklogGate = new();
     private readonly Dictionary<string, ActiveWorklogItem> _activeWorklog =
         new(StringComparer.Ordinal);
     private long _worklogSequence;
-    private string? _pendingFailureMessage;
+    private PendingFailure? _pendingFailure;
 
     private void TryBeginWorklog(
         string operationId,
         OperationNarrative narrative,
+        DesktopProgressEvidence? evidence,
         TimeSpan elapsed)
     {
         try
         {
-            BeginWorklog(operationId, narrative, elapsed);
+            BeginWorklog(
+                operationId,
+                narrative,
+                evidence,
+                elapsed);
         }
         catch (Exception ex)
         {
@@ -59,6 +69,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         DesktopProgressKind kind,
         string title,
         string message,
+        DesktopProgressEvidence? evidence,
         TimeSpan elapsed)
     {
         try
@@ -68,6 +79,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 kind,
                 title,
                 message,
+                evidence,
                 elapsed);
         }
         catch (Exception ex)
@@ -81,6 +93,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     private void BeginWorklog(
         string operationId,
         OperationNarrative narrative,
+        DesktopProgressEvidence? evidence,
         TimeSpan elapsed)
     {
         lock (_worklogGate)
@@ -88,6 +101,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             _activeWorklog[operationId] =
                 new ActiveWorklogItem(
                     narrative,
+                    evidence,
                     ++_worklogSequence);
 
             Enqueue(
@@ -96,7 +110,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 "Şimdi bunu yapıyorum",
                 $"{narrative.Action}\n\nNeden: {narrative.Reason}",
                 DesktopProgressKind.Started,
-                elapsed);
+                elapsed,
+                evidence);
         }
     }
 
@@ -129,7 +144,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 "Hâlâ bununla uğraşıyorum",
                 $"{displayName}.\n\nYaklaşık {FormatElapsed(elapsed)} oldu. Bitince sonucu burada göstereceğim.",
                 DesktopProgressKind.Running,
-                elapsed);
+                elapsed,
+                current.Evidence);
         }
     }
 
@@ -138,6 +154,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         DesktopProgressKind kind,
         string title,
         string message,
+        DesktopProgressEvidence? evidence,
         TimeSpan elapsed)
     {
         lock (_worklogGate)
@@ -146,7 +163,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
 
             if (kind == DesktopProgressKind.Failed)
             {
-                _pendingFailureMessage = message;
+                _pendingFailure =
+                    new PendingFailure(
+                        message,
+                        evidence);
             }
 
             if (_activeWorklog.Count > 0)
@@ -159,7 +179,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                         title,
                         message,
                         kind,
-                        elapsed);
+                        elapsed,
+                        evidence);
                     return;
                 }
 
@@ -174,23 +195,25 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                         "Hâlâ çalışıyorum",
                         $"{latest.Narrative.Action}\n\nDiğer adımlar da tamamlanmayı bekliyor.",
                         DesktopProgressKind.Running,
-                        elapsed);
+                        elapsed,
+                        latest.Evidence);
                 }
 
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(_pendingFailureMessage))
+            if (_pendingFailure is not null)
             {
-                var pendingFailure = _pendingFailureMessage;
-                _pendingFailureMessage = null;
+                var pendingFailure = _pendingFailure;
+                _pendingFailure = null;
                 Enqueue(
                     SharedWorklogOperationId,
                     "Kontrol gerekiyor",
                     "Bir hata buldum",
-                    pendingFailure,
+                    pendingFailure.Message,
                     DesktopProgressKind.Failed,
-                    elapsed);
+                    elapsed,
+                    pendingFailure.Evidence);
                 return;
             }
 
@@ -200,7 +223,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 title,
                 message,
                 kind,
-                elapsed);
+                elapsed,
+                evidence);
         }
     }
 }

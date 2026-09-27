@@ -12,8 +12,11 @@ using WpfButton = System.Windows.Controls.Button;
 using WpfButtonBase = System.Windows.Controls.Primitives.ButtonBase;
 using WpfColor = System.Windows.Media.Color;
 using WpfCursors = System.Windows.Input.Cursors;
+using FontFamily = System.Windows.Media.FontFamily;
 using WpfOrientation = System.Windows.Controls.Orientation;
 using WpfScrollBar = System.Windows.Controls.Primitives.ScrollBar;
+using WpfTextBox = System.Windows.Controls.TextBox;
+using WpfTextBoxBase = System.Windows.Controls.Primitives.TextBoxBase;
 
 namespace Talvora.Tray;
 
@@ -32,6 +35,10 @@ internal sealed class DesktopProgressNotificationWindow : Window
     private readonly TextBlock _title;
     private readonly TextBlock _message;
     private readonly TextBlock _status;
+    private readonly Expander _evidenceExpander;
+    private readonly TextBlock _evidenceSummary;
+    private readonly TextBlock _evidenceFiles;
+    private readonly WpfTextBox _codePreview;
     private readonly WpfButton _pinButton;
     private readonly DispatcherTimer _dismissTimer;
     private readonly TranslateTransform _translateTransform = new();
@@ -43,8 +50,8 @@ internal sealed class DesktopProgressNotificationWindow : Window
 
     public DesktopProgressNotificationWindow()
     {
-        Width = 490;
-        MaxHeight = 390;
+        Width = 620;
+        MaxHeight = 610;
         SizeToContent = SizeToContent.Height;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
@@ -58,22 +65,22 @@ internal sealed class DesktopProgressNotificationWindow : Window
 
         var root = new Border
         {
-            CornerRadius = new CornerRadius(16),
+            CornerRadius = new CornerRadius(10),
             Background =
-                new SolidColorBrush(WpfColor.FromArgb(248, 24, 27, 35)),
+                new SolidColorBrush(WpfColor.FromArgb(252, 3, 8, 6)),
             BorderBrush =
-                new SolidColorBrush(WpfColor.FromArgb(72, 255, 255, 255)),
+                new SolidColorBrush(WpfColor.FromArgb(168, 36, 255, 111)),
             BorderThickness = new Thickness(1),
-            Padding = new Thickness(16),
+            Padding = new Thickness(14),
             Cursor = WpfCursors.SizeAll,
             ToolTip =
-                "Boş bir alandan sürükleyerek taşı. Sabitle düğmesi konumu korur; kart yine otomatik kapanır.",
+                "Canlı Talvora çalışma günlüğü. Teknik kanıt yalnız gerçek çalışma verisinden üretilir.",
             Effect = new DropShadowEffect
             {
-                BlurRadius = 24,
-                ShadowDepth = 4,
-                Opacity = 0.42,
-                Color = Colors.Black,
+                BlurRadius = 28,
+                ShadowDepth = 2,
+                Opacity = 0.56,
+                Color = WpfColor.FromRgb(20, 255, 96),
             },
         };
 
@@ -89,9 +96,9 @@ internal sealed class DesktopProgressNotificationWindow : Window
 
         _accent = new Border
         {
-            CornerRadius = new CornerRadius(3),
+            CornerRadius = new CornerRadius(2),
             Background =
-                new SolidColorBrush(WpfColor.FromRgb(72, 151, 255)),
+                new SolidColorBrush(WpfColor.FromRgb(38, 255, 112)),
         };
         Grid.SetColumn(_accent, 0);
         grid.Children.Add(_accent);
@@ -103,25 +110,45 @@ internal sealed class DesktopProgressNotificationWindow : Window
             new RowDefinition { Height = GridLength.Auto });
         content.RowDefinitions.Add(
             new RowDefinition { Height = GridLength.Auto });
+        content.RowDefinitions.Add(
+            new RowDefinition { Height = GridLength.Auto });
+        content.RowDefinitions.Add(
+            new RowDefinition { Height = GridLength.Auto });
         Grid.SetColumn(content, 2);
+
+        var traceLabel = new TextBlock
+        {
+            Text = "TALVORA // LIVE TRACE",
+            Foreground =
+                new SolidColorBrush(WpfColor.FromRgb(68, 255, 132)),
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 10,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 8),
+            Cursor = WpfCursors.SizeAll,
+        };
+        Grid.SetRow(traceLabel, 0);
+        content.Children.Add(traceLabel);
 
         _title = new TextBlock
         {
-            Foreground = WpfBrushes.White,
-            FontSize = 15,
+            Foreground =
+                new SolidColorBrush(WpfColor.FromRgb(232, 255, 239)),
+            FontSize = 16,
             FontWeight = FontWeights.SemiBold,
             TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 0, 0, 7),
+            Margin = new Thickness(0, 0, 0, 8),
             Cursor = WpfCursors.SizeAll,
         };
+        Grid.SetRow(_title, 1);
         content.Children.Add(_title);
 
         _message = new TextBlock
         {
             Foreground =
-                new SolidColorBrush(WpfColor.FromRgb(222, 226, 234)),
+                new SolidColorBrush(WpfColor.FromRgb(201, 230, 208)),
             FontSize = 13,
-            LineHeight = 19,
+            LineHeight = 20,
             TextWrapping = TextWrapping.Wrap,
             Cursor = WpfCursors.Arrow,
         };
@@ -129,24 +156,104 @@ internal sealed class DesktopProgressNotificationWindow : Window
         var scroll = new ScrollViewer
         {
             Content = _message,
-            MaxHeight = 230,
+            MaxHeight = 175,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Focusable = false,
             Cursor = WpfCursors.Arrow,
         };
-        Grid.SetRow(scroll, 1);
+        Grid.SetRow(scroll, 2);
         content.Children.Add(scroll);
+
+        _evidenceSummary = new TextBlock
+        {
+            Foreground =
+                new SolidColorBrush(WpfColor.FromRgb(86, 255, 144)),
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            TextWrapping = TextWrapping.Wrap,
+        };
+
+        _evidenceFiles = new TextBlock
+        {
+            Foreground =
+                new SolidColorBrush(WpfColor.FromRgb(151, 206, 166)),
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 10.5,
+            Margin = new Thickness(0, 7, 0, 0),
+            TextWrapping = TextWrapping.Wrap,
+        };
+
+        _codePreview = new WpfTextBox
+        {
+            IsReadOnly = true,
+            IsReadOnlyCaretVisible = false,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.NoWrap,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            MaxHeight = 170,
+            Margin = new Thickness(0, 9, 0, 0),
+            Padding = new Thickness(9),
+            Background =
+                new SolidColorBrush(WpfColor.FromRgb(1, 12, 7)),
+            BorderBrush =
+                new SolidColorBrush(WpfColor.FromArgb(112, 43, 255, 118)),
+            BorderThickness = new Thickness(1),
+            Foreground =
+                new SolidColorBrush(WpfColor.FromRgb(108, 255, 154)),
+            SelectionBrush =
+                new SolidColorBrush(WpfColor.FromArgb(96, 58, 255, 127)),
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 10.5,
+            Cursor = WpfCursors.IBeam,
+        };
+
+        var evidenceStack = new StackPanel();
+        evidenceStack.Children.Add(_evidenceSummary);
+        evidenceStack.Children.Add(_evidenceFiles);
+        evidenceStack.Children.Add(_codePreview);
+
+        var evidenceBorder = new Border
+        {
+            Background =
+                new SolidColorBrush(WpfColor.FromArgb(190, 1, 16, 9)),
+            BorderBrush =
+                new SolidColorBrush(WpfColor.FromArgb(72, 43, 255, 118)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(5),
+            Padding = new Thickness(10),
+            Margin = new Thickness(0, 5, 0, 0),
+            Child = evidenceStack,
+        };
+
+        _evidenceExpander = new Expander
+        {
+            Header = "KANIT // GERÇEK VERİ",
+            Foreground =
+                new SolidColorBrush(WpfColor.FromRgb(74, 255, 135)),
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 10.5,
+            FontWeight = FontWeights.SemiBold,
+            Content = evidenceBorder,
+            Visibility = Visibility.Collapsed,
+            Margin = new Thickness(0, 10, 0, 0),
+            Cursor = WpfCursors.Arrow,
+        };
+        Grid.SetRow(_evidenceExpander, 3);
+        content.Children.Add(_evidenceExpander);
 
         _status = new TextBlock
         {
             Foreground =
-                new SolidColorBrush(WpfColor.FromRgb(147, 156, 171)),
-            FontSize = 11,
-            Margin = new Thickness(0, 9, 0, 0),
+                new SolidColorBrush(WpfColor.FromRgb(80, 201, 113)),
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 10.5,
+            Margin = new Thickness(0, 10, 0, 0),
             Cursor = WpfCursors.SizeAll,
         };
-        Grid.SetRow(_status, 2);
+        Grid.SetRow(_status, 4);
         content.Children.Add(_status);
 
         grid.Children.Add(content);
@@ -261,20 +368,25 @@ internal sealed class DesktopProgressNotificationWindow : Window
         LastKind = message.Kind;
         _title.Text = message.Title;
         _message.Text = message.Message;
+        UpdateEvidence(message);
+        var localTime = message.TimestampUtc.ToLocalTime();
         _status.Text =
             message.Kind switch
             {
-                DesktopProgressKind.Started => "Başlatıldı",
+                DesktopProgressKind.Started =>
+                    $"● LIVE  //  {localTime:HH:mm:ss}",
                 DesktopProgressKind.Running =>
-                    $"Çalışıyor · {FormatElapsed(message.ElapsedSeconds)}",
+                    $"● LIVE  //  {FormatElapsed(message.ElapsedSeconds)}  //  {localTime:HH:mm:ss}",
                 DesktopProgressKind.Completed =>
-                    $"Tamamlandı · {FormatElapsed(message.ElapsedSeconds)}",
+                    $"✓ TAMAM  //  {FormatElapsed(message.ElapsedSeconds)}  //  {localTime:HH:mm:ss}",
                 DesktopProgressKind.Failed =>
-                    $"Başarısız · {FormatElapsed(message.ElapsedSeconds)}",
+                    $"✕ HATA  //  {FormatElapsed(message.ElapsedSeconds)}  //  {localTime:HH:mm:ss}",
                 DesktopProgressKind.Cancelled =>
-                    $"İptal edildi · {FormatElapsed(message.ElapsedSeconds)}",
-                DesktopProgressKind.Warning => "Uyarı",
-                DesktopProgressKind.Info => "Bilgi",
+                    $"■ DURDU  //  {FormatElapsed(message.ElapsedSeconds)}  //  {localTime:HH:mm:ss}",
+                DesktopProgressKind.Warning =>
+                    $"! UYARI  //  {localTime:HH:mm:ss}",
+                DesktopProgressKind.Info =>
+                    $"i BİLGİ  //  {localTime:HH:mm:ss}",
                 _ => "Talvora",
             };
 
@@ -283,19 +395,19 @@ internal sealed class DesktopProgressNotificationWindow : Window
                 message.Kind switch
                 {
                     DesktopProgressKind.Completed =>
-                        WpfColor.FromRgb(59, 201, 123),
+                        WpfColor.FromRgb(38, 255, 112),
                     DesktopProgressKind.Running =>
-                        WpfColor.FromRgb(82, 177, 255),
+                        WpfColor.FromRgb(38, 255, 112),
                     DesktopProgressKind.Failed =>
-                        WpfColor.FromRgb(244, 92, 92),
+                        WpfColor.FromRgb(255, 67, 88),
                     DesktopProgressKind.Cancelled =>
                         WpfColor.FromRgb(244, 177, 72),
                     DesktopProgressKind.Warning =>
                         WpfColor.FromRgb(244, 177, 72),
                     DesktopProgressKind.Info =>
-                        WpfColor.FromRgb(72, 151, 255),
+                        WpfColor.FromRgb(55, 225, 124),
                     _ =>
-                        WpfColor.FromRgb(72, 151, 255),
+                        WpfColor.FromRgb(38, 255, 112),
                 });
 
         _dismissAfter =
@@ -325,18 +437,18 @@ internal sealed class DesktopProgressNotificationWindow : Window
         _pinButton.Foreground =
             new SolidColorBrush(
                 pinned
-                    ? WpfColor.FromRgb(129, 184, 255)
-                    : WpfColor.FromRgb(171, 178, 190));
+                    ? WpfColor.FromRgb(83, 255, 139)
+                    : WpfColor.FromRgb(114, 221, 143));
         _pinButton.Background =
             new SolidColorBrush(
                 pinned
-                    ? WpfColor.FromArgb(34, 72, 151, 255)
+                    ? WpfColor.FromArgb(34, 43, 255, 118)
                     : WpfColor.FromArgb(0, 0, 0, 0));
         _pinButton.BorderBrush =
             new SolidColorBrush(
                 pinned
-                    ? WpfColor.FromArgb(112, 72, 151, 255)
-                    : WpfColor.FromArgb(52, 255, 255, 255));
+                    ? WpfColor.FromArgb(112, 43, 255, 118)
+                    : WpfColor.FromArgb(82, 43, 255, 118));
     }
 
     public void MarkInteracted()
@@ -377,7 +489,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
         var current = source;
         while (current is not null)
         {
-            if (current is WpfButtonBase or WpfScrollBar)
+            if (current is WpfButtonBase or WpfScrollBar or WpfTextBoxBase)
             {
                 return true;
             }
@@ -491,5 +603,49 @@ internal sealed class DesktopProgressNotificationWindow : Window
         }
 
         return $"{Math.Max(1, (int)elapsed.TotalSeconds)} sn";
+    }
+
+    private void UpdateEvidence(DesktopProgressMessage message)
+    {
+        var evidence = message.Evidence;
+        if (evidence is null)
+        {
+            _evidenceExpander.Visibility = Visibility.Collapsed;
+            _evidenceSummary.Text = string.Empty;
+            _evidenceFiles.Text = string.Empty;
+            _codePreview.Text = string.Empty;
+            return;
+        }
+
+        _evidenceExpander.Visibility = Visibility.Visible;
+        _evidenceSummary.Text =
+            string.Join(
+                "  //  ",
+                new[]
+                {
+                    evidence.Summary,
+                    evidence.Result,
+                }
+                .Where(static value =>
+                    !string.IsNullOrWhiteSpace(value)));
+
+        _evidenceFiles.Text =
+            evidence.Files is { Count: > 0 }
+                ? string.Join(
+                    Environment.NewLine,
+                    evidence.Files.Select(
+                        static path => $"› {path}"))
+                : string.Empty;
+
+        _codePreview.Text =
+            evidence.CodePreview ?? string.Empty;
+        _codePreview.Visibility =
+            string.IsNullOrWhiteSpace(evidence.CodePreview)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        _evidenceExpander.IsExpanded =
+            message.Kind == DesktopProgressKind.Failed ||
+            !string.IsNullOrWhiteSpace(evidence.CodePreview);
     }
 }
