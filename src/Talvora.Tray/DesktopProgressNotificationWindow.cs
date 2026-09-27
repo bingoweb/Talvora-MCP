@@ -19,10 +19,12 @@ namespace Talvora.Tray;
 
 internal sealed class DesktopProgressNotificationWindow : Window
 {
-    private static readonly TimeSpan ActiveLifetime =
-        TimeSpan.FromSeconds(18);
+    private static readonly TimeSpan StartedLifetime =
+        TimeSpan.FromSeconds(12);
+    private static readonly TimeSpan RunningLifetime =
+        TimeSpan.FromSeconds(15);
     private static readonly TimeSpan CompletedLifetime =
-        TimeSpan.FromSeconds(18);
+        TimeSpan.FromSeconds(14);
     private static readonly TimeSpan FailureLifetime =
         TimeSpan.FromSeconds(24);
 
@@ -33,7 +35,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
     private readonly WpfButton _pinButton;
     private readonly DispatcherTimer _dismissTimer;
     private readonly TranslateTransform _translateTransform = new();
-    private TimeSpan _dismissAfter = ActiveLifetime;
+    private TimeSpan _dismissAfter = StartedLifetime;
     private bool _isPointerOver;
     private bool _isPinned;
     private bool _isClosing;
@@ -271,6 +273,8 @@ internal sealed class DesktopProgressNotificationWindow : Window
                 {
                     DesktopProgressKind.Completed =>
                         WpfColor.FromRgb(59, 201, 123),
+                    DesktopProgressKind.Running =>
+                        WpfColor.FromRgb(82, 177, 255),
                     DesktopProgressKind.Failed =>
                         WpfColor.FromRgb(244, 92, 92),
                     DesktopProgressKind.Cancelled =>
@@ -286,12 +290,14 @@ internal sealed class DesktopProgressNotificationWindow : Window
         _dismissAfter =
             message.Kind switch
             {
+                DesktopProgressKind.Started => StartedLifetime,
+                DesktopProgressKind.Running => RunningLifetime,
                 DesktopProgressKind.Completed => CompletedLifetime,
                 DesktopProgressKind.Failed => FailureLifetime,
                 DesktopProgressKind.Cancelled => FailureLifetime,
                 DesktopProgressKind.Warning => FailureLifetime,
                 DesktopProgressKind.Info => CompletedLifetime,
-                _ => ActiveLifetime,
+                _ => StartedLifetime,
             };
         RestartDismissTimer();
     }

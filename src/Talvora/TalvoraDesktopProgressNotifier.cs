@@ -64,8 +64,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         Enqueue(
             operationId,
             displayName,
-            $"Başladı — {narrative.Subject}",
-            $"Ne yapılıyor: {narrative.Action}\nNeden: {narrative.Reason}",
+            "İş başladı",
+            narrative.Subject,
             DesktopProgressKind.Started,
             stopwatch.Elapsed);
 
@@ -85,8 +85,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             Enqueue(
                 operationId,
                 displayName,
-                $"Tamamlandı — {narrative.Subject}",
-                BuildCompletionMessage(narrative, result, stopwatch.Elapsed),
+                "İş tamamlandı",
+                $"{narrative.Subject} başarıyla tamamlandı · {FormatElapsed(stopwatch.Elapsed)}",
                 DesktopProgressKind.Completed,
                 stopwatch.Elapsed);
 
@@ -97,8 +97,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             Enqueue(
                 operationId,
                 displayName,
-                $"Durduruldu — {narrative.Subject}",
-                $"İşlem iptal edildi.\nAmaç: {narrative.Reason}",
+                "İş durduruldu",
+                $"{narrative.Subject} iptal edildi.",
                 DesktopProgressKind.Cancelled,
                 stopwatch.Elapsed);
             throw;
@@ -108,8 +108,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             Enqueue(
                 operationId,
                 displayName,
-                $"Başarısız — {narrative.Subject}",
-                $"Yapılmak istenen: {narrative.Action}\nNeden: {narrative.Reason}\nSonuç: İşlem tamamlanamadı; ayrıntılar Talvora günlüklerinde korunuyor.",
+                "İş tamamlanamadı",
+                $"{narrative.Subject} tamamlanamadı. Ayrıntılar Talvora günlüklerinde korunuyor.",
                 DesktopProgressKind.Failed,
                 stopwatch.Elapsed);
             throw;
@@ -139,8 +139,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         Enqueue(
             operationId,
             displayName,
-            $"Devam ediyor — {displayName}",
-            $"Ne yapılıyor: {displayName}\nDurum: İşlem {FormatElapsed(stopwatch.Elapsed)} süredir devam ediyor.",
+            "İş devam ediyor",
+            $"{displayName} · {FormatElapsed(stopwatch.Elapsed)}",
             DesktopProgressKind.Running,
             stopwatch.Elapsed);
 
@@ -150,8 +150,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             Enqueue(
                 operationId,
                 displayName,
-                $"Devam ediyor — {displayName}",
-                $"Ne yapılıyor: {displayName}\nDurum: İşlem {FormatElapsed(stopwatch.Elapsed)} süredir devam ediyor.",
+                "İş devam ediyor",
+                $"{displayName} · {FormatElapsed(stopwatch.Elapsed)}",
                 DesktopProgressKind.Running,
                 stopwatch.Elapsed);
         }
