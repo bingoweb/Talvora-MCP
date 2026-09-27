@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-27T17:55:00Z",
-  "scope": "Talvora repository-wide bug and maintainability audit: Windows process-handle ownership, health-path invariant caching, regression drift repair, shared text helper deduplication, analyzers, dependency health, and targeted runtime/source regressions.",
+  "verifiedAtUtc": "2026-09-27T18:27:00Z",
+  "scope": "Talvora Control Center and desktop progress reliability quality pass: notification-side-effect isolation, redacted bounded exception diagnostics, WPF dispatcher resilience, and operational log quality.",
   "libraries": [
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/wpf",
-      "verified": "Current WPF guidance confirms Window.DragMove is the native borderless-window drag mechanism while the left mouse button is pressed; Topmost and borderless transparent windows remain supported. Talvora uses DragMove for direct card repositioning, persists the user's pinned anchor, and restores it against the current monitor work area."
+      "verified": "Current WPF dispatcher guidance confirms UI callbacks execute through Dispatcher operations and DispatcherTimer participates in the same UI lifetime. Talvora keeps known-valid positive timer intervals, preserves direct DragMove/pinned positioning, and isolates desktop-progress presentation failures inside the notification presenter so a non-critical observability surface cannot terminate the Tray/Control Center process."
     }
   ],
   "vendorSources": [
@@ -34,6 +34,7 @@
     "Microsoft named-pipe security guidance checked 2026-09-27: use an explicit ACL for IPC; default pipe ACLs include LocalSystem but also broader read access, so Talvora restricts the tray endpoint to the tray user and LocalSystem",
     "Microsoft WPF window guidance checked 2026-09-27: ShowActivated=false prevents a notification window from stealing focus; wrapped/scrollable WPF content is used for full-text visibility",
     "Microsoft WPF Window.DragMove documentation checked 2026-09-27 for Windows Desktop 10: borderless WPF windows can be moved from client-area mouse handling while the left button is down",
+    "Microsoft WPF Dispatcher guidance checked 2026-09-27: UI work is dispatched through Dispatcher operations; non-critical notification work should fail inside its own presentation boundary instead of escaping into the application dispatcher",
     "Microsoft multi-monitor positioning guidance checked 2026-09-27: saved custom window positions must be validated against the target monitor work area and must not assume a virtual-desktop origin of 0,0",
     "Microsoft .NET native interop best practices checked 2026-09-27; new one-off Win32 calls use LibraryImport generated interop",
     "Microsoft .NET IDisposable and Process analyzer guidance checked 2026-09-27: disposable objects that own OS resources should be deterministically disposed; avoid unnecessary Process allocation for invariant/current-process information",

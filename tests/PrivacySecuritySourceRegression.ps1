@@ -32,6 +32,7 @@ $securityPolicy = Read-RepoText 'SECURITY.md'
 
 Assert-Contains $fileLog 'RedactSensitiveData(message)' 'persistent messages are redacted'
 Assert-Contains $fileLog 'RedactSensitiveData(exception.Message)' 'persistent exception messages are redacted'
+Assert-Contains $fileLog 'FormatExceptionDetails(exception.StackTrace)' 'persistent exception details are redacted and bounded before logging'
 Assert-Contains $fileLog 'AuthorizationSchemeRegex' 'authorization schemes are recognized'
 Assert-Contains $businessTunnel 'FileLog.RedactSensitiveData(value)' 'tunnel-client diagnostic output is redacted before display'
 Assert-Contains $rawLog 'FileLog.RedactSensitiveData(line)' 'raw-log viewer redacts managed log lines'

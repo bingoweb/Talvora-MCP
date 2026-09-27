@@ -19,5 +19,10 @@ internal static class TrayLog
             "tray.log");
 
     public static void Write(string message, Exception? exception = null) =>
-        FileLog.Write(PathName, message, exception, maxBytes: 3L * 1024 * 1024);
+        FileLog.Write(
+            PathName,
+            message,
+            exception,
+            maxBytes: 3L * 1024 * 1024,
+            includeExceptionDetails: true);
 }

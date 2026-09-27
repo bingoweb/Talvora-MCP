@@ -72,6 +72,33 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             return;
         }
 
+        try
+        {
+            PublishCore(message);
+        }
+        catch (Exception ex)
+        {
+            TrayLog.Write(
+                $"Desktop progress notification publish failed. Operation={message.OperationId}",
+                ex);
+
+            if (_windows.Remove(
+                    message.OperationId,
+                    out var failedWindow))
+            {
+                try
+                {
+                    failedWindow.Close();
+                }
+                catch
+                {
+                }
+            }
+        }
+    }
+
+    private void PublishCore(DesktopProgressMessage message)
+    {
         if (!_windows.TryGetValue(
                 message.OperationId,
                 out var window))
