@@ -45,7 +45,10 @@ internal static class Program
         {
             try
             {
-                BusinessTunnelClient.ReconnectAsync(CancellationToken.None).GetAwaiter().GetResult();
+                ControlCenterLifecycleService
+                    .ReconnectTalvoraConnectionsAsync(CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
                 return 0;
             }
             catch (Exception ex)
@@ -59,12 +62,24 @@ internal static class Program
         {
             try
             {
-                var config = BusinessTunnelClient.LoadConfig();
-                _ = BusinessTunnelClient.ReadRuntimeCredential();
                 var registry = ManagedMcpRegistryCoordinator
                     .LoadOrRecoverAsync(CancellationToken.None)
                     .GetAwaiter()
                     .GetResult();
+                var focusedTalvoraCount = registry.Mcps.Count(entry =>
+                    string.Equals(
+                        entry.Id,
+                        "talvora-dev",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        entry.Id,
+                        "talvora-admin",
+                        StringComparison.OrdinalIgnoreCase));
+                if (focusedTalvoraCount != 2)
+                {
+                    throw new InvalidOperationException(
+                        "Talvora Dev/Admin yönetim kayıtları eksik.");
+                }
                 ManagedMcpRecoveryState.AssertPolicyContract();
                 ControlCenterEventStore.AssertPolicyContract();
                 ControlCenterRawLogService.AssertBoundedReadContract();
@@ -86,7 +101,7 @@ internal static class Program
                     .GetAwaiter()
                     .GetResult();
                 TrayLog.Write(
-                    $"Self-test succeeded. Alias={config.Alias}; ManagedMcpCount={registry.Mcps.Count}");
+                    $"Self-test succeeded. ManagedMcpCount={registry.Mcps.Count}; FocusedTalvoraCount={focusedTalvoraCount}");
                 return 0;
             }
             catch (Exception ex)
