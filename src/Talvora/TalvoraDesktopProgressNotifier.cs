@@ -62,12 +62,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         var displayName = narrative.Subject;
         var operationId = Guid.NewGuid().ToString("N");
         var stopwatch = Stopwatch.StartNew();
-        Enqueue(
+        TryBeginWorklog(
             operationId,
-            displayName,
-            "Şimdi bunu yapıyorum",
-            $"{narrative.Action}\n\nNeden: {narrative.Reason}",
-            DesktopProgressKind.Started,
+            narrative,
             stopwatch.Elapsed);
 
         using var heartbeatCts =
@@ -83,24 +80,40 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         {
             var result = await operation(cancellationToken);
 
-            if (TryDescribeFailure(result, toolName, out var failureMessage))
+            try
             {
-                Enqueue(
-                    operationId,
-                    displayName,
-                    "Bir hata buldum",
-                    failureMessage,
-                    DesktopProgressKind.Failed,
-                    stopwatch.Elapsed);
+                if (TryDescribeFailure(
+                        result,
+                        toolName,
+                        out var failureMessage))
+                {
+                    TryEndWorklog(
+                        operationId,
+                        DesktopProgressKind.Failed,
+                        "Bir hata buldum",
+                        failureMessage,
+                        stopwatch.Elapsed);
+                }
+                else
+                {
+                    TryEndWorklog(
+                        operationId,
+                        DesktopProgressKind.Completed,
+                        "Bitti",
+                        $"{BuildPlainCompletion(narrative)}\n\nŞimdi sıradaki adıma geçiyorum.",
+                        stopwatch.Elapsed);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Enqueue(
+                _logger.LogDebug(
+                    ex,
+                    "Desktop worklog result classification failed without affecting the tool result.");
+                TryEndWorklog(
                     operationId,
-                    displayName,
+                    DesktopProgressKind.Completed,
                     "Bitti",
                     $"{BuildPlainCompletion(narrative)}\n\nŞimdi sıradaki adıma geçiyorum.",
-                    DesktopProgressKind.Completed,
                     stopwatch.Elapsed);
             }
 
@@ -108,23 +121,21 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            Enqueue(
+            TryEndWorklog(
                 operationId,
-                displayName,
+                DesktopProgressKind.Cancelled,
                 "Bu işi durdurdum",
                 $"Şu işi tamamlayamadım: {narrative.Action}",
-                DesktopProgressKind.Cancelled,
                 stopwatch.Elapsed);
             throw;
         }
         catch (Exception)
         {
-            Enqueue(
+            TryEndWorklog(
                 operationId,
-                displayName,
+                DesktopProgressKind.Failed,
                 "Burada bir sorun çıktı",
                 BuildFriendlyExceptionMessage(toolName, narrative.Action),
-                DesktopProgressKind.Failed,
                 stopwatch.Elapsed);
             throw;
         }
@@ -139,6 +150,12 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             {
                 // Expected when the tool call completes before the next heartbeat.
             }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(
+                    ex,
+                    "Desktop worklog heartbeat failed without affecting the tool result.");
+            }
         }
     }
 
@@ -150,23 +167,17 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     {
         await Task.Delay(FirstProgressDelay, cancellationToken);
 
-        Enqueue(
+        TryUpdateWorklogProgress(
             operationId,
             displayName,
-            "Hâlâ bununla uğraşıyorum",
-            $"{displayName}.\n\nYaklaşık {FormatElapsed(stopwatch.Elapsed)} oldu. Bitince sonucu burada göstereceğim.",
-            DesktopProgressKind.Running,
             stopwatch.Elapsed);
 
         using var timer = new PeriodicTimer(ProgressInterval);
         while (await timer.WaitForNextTickAsync(cancellationToken))
         {
-            Enqueue(
+            TryUpdateWorklogProgress(
                 operationId,
                 displayName,
-                "Hâlâ bununla uğraşıyorum",
-                $"{displayName}.\n\nYaklaşık {FormatElapsed(stopwatch.Elapsed)} oldu. Bitince sonucu burada göstereceğim.",
-                DesktopProgressKind.Running,
                 stopwatch.Elapsed);
         }
     }
@@ -267,46 +278,6 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         }
     }
 
-    private static string GetFriendlyToolName(string? toolName)
-    {
-        if (string.IsNullOrWhiteSpace(toolName))
-        {
-            return "MCP çalışması";
-        }
-
-        var normalized = NormalizeToolName(toolName);
-
-        return normalized switch
-        {
-            "read_source" or
-            "read_text_range" or
-            "read_bytes" or
-            "tail_text" or
-            "search_text" or
-            "find_files" or
-            "list" => "Bilgileri kontrol ediyorum",
-
-            "apply_patch" or
-            "apply_edits" or
-            "structural_edit" or
-            "semantic_edit" => "İstediğin değişikliği uyguluyorum",
-
-            "dotnet_build" => "Yaptığım değişikliği kontrol ediyorum",
-            "dotnet_test" => "Yaptığım değişikliği deniyorum",
-            "dotnet_restore" => "Gerekli hazırlıkları tamamlıyorum",
-
-            "git_diff" => "Yaptığım değişiklikleri gözden geçiriyorum",
-            "git_run" => "Yaptığım değişiklikleri toparlıyorum",
-            "git_branches" => "Çalışmanın son durumunu kontrol ediyorum",
-
-            "run_powershell" => "Bilgisayarında gerekli işlemi yapıyorum",
-            "http_request" => "Programın çalışıp çalışmadığını kontrol ediyorum",
-            "process_list" or "process_get" => "Arka planda çalışanları kontrol ediyorum",
-            "system_info" => "Bilgisayarındaki durumu kontrol ediyorum",
-            _ => "Sıradaki işi yapıyorum",
-        };
-    }
-
     private static bool TryDescribeFailure<T>(
         T result,
         string? toolName,
@@ -341,8 +312,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 return true;
             }
         }
-        catch (JsonException)
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"Desktop worklog failure inspection skipped: {ex.GetType().Name}");
         }
 
         message = string.Empty;

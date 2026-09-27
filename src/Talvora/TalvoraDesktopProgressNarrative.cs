@@ -112,27 +112,6 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 "Bu adımı tamamladım.",
         };
 
-    private static string SummarizeScript(string script)
-    {
-        if (string.IsNullOrWhiteSpace(script))
-        {
-            return "Yerel sistem görevi çalıştırılıyor.";
-        }
-
-        var first = script
-            .Split(new[] { '\r', '\n', ';' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(static line => line.Trim())
-            .FirstOrDefault(static line => line.Length > 0)
-            ?? "Yerel sistem görevi çalıştırılıyor.";
-
-        return first.Length <= 180
-            ? first
-            : first[..177] + "...";
-    }
-
-    private static string HumanizeIdentifier(string value) =>
-        value.Replace('-', ' ').Replace('_', ' ').Trim();
-
     private static string GetArgumentText(
         IDictionary<string, JsonElement>? arguments,
         string key)

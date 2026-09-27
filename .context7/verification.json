@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-27T17:35:00Z",
-  "scope": "Talvora 2026-Q3 deep modernization: .NET 10, MCP SDK, NuGet reproducibility, GitHub Actions, development quality gates, and plain-language tray-owned Windows desktop worklog reporting.",
+  "verifiedAtUtc": "2026-09-27T17:46:00Z",
+  "scope": "Talvora desktop worklog hardening: plain-language failures, non-throwing MCP error detection, one shared live worklog card, concurrent-operation coordination, full notification-side-effect isolation, and dead-code cleanup.",
   "libraries": [
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "Current ASP.NET Core MCP filter contract: AddCallToolFilter can wrap every CallTool request without changing the downstream result; ordinary tool exceptions may be represented as CallToolResult with IsError=true, while cancellation and protocol exceptions retain their documented semantics. Talvora therefore inspects both thrown failures and returned CallToolResult/structured failure signals before choosing success vs plain-language failure worklog state."
+      "verified": "Current ASP.NET Core MCP filter contract: AddCallToolFilter can wrap every CallTool request while preserving the downstream tool result. Ordinary tool failures may be returned as CallToolResult with IsError=true rather than thrown; cancellation/protocol exceptions retain their documented semantics. Talvora therefore detects thrown and returned failures, aggregates concurrent meaningful calls into one user-facing worklog card, and wraps start/progress/terminal notification side effects so observability can never alter, mask, cancel, or replace the underlying tool result."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us",
