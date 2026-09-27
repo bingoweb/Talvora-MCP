@@ -108,8 +108,8 @@ Write-Host 'Running canonical Talvora native installer...' -ForegroundColor Cyan
 $installerProcess = Start-Process `
     -FilePath $installer `
     -ArgumentList @('--silent') `
-    -Wait `
     -PassThru
+$installerProcess.WaitForExit()
 $installerExitCode = $installerProcess.ExitCode
 
 if ($installerExitCode -ne 0) {
