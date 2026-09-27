@@ -104,13 +104,30 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 }
                 else
                 {
-                    TryEndWorklog(
-                        operationId,
-                        DesktopProgressKind.Completed,
-                        "Bitti",
-                        $"{BuildPlainCompletion(narrative)}\n\nŞimdi sıradaki adıma geçiyorum.",
-                        terminalEvidence,
-                        stopwatch.Elapsed);
+                    if (TryBuildDeferredCompletion(
+                            narrative,
+                            result,
+                            out var deferredTitle,
+                            out var deferredMessage))
+                    {
+                        TryEndWorklog(
+                            operationId,
+                            DesktopProgressKind.Completed,
+                            deferredTitle,
+                            deferredMessage,
+                            terminalEvidence,
+                            stopwatch.Elapsed);
+                    }
+                    else
+                    {
+                        TryEndWorklog(
+                            operationId,
+                            DesktopProgressKind.Completed,
+                            "Bitti",
+                            $"{BuildPlainCompletion(narrative)}\n\nŞimdi sıradaki adıma geçiyorum.",
+                            terminalEvidence,
+                            stopwatch.Elapsed);
+                    }
                 }
             }
             catch (Exception ex)

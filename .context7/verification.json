@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "verifiedAtUtc": "2026-09-27T20:31:00Z",
-  "scope": "Talvora runtime error cleanup: service-hosted self-update uses a detached delayed bootstrap so SCM STOP can complete gracefully, and smoke failures return controlled nonzero exits instead of unhandled process crashes.",
+  "scope": "Talvora runtime error cleanup: service-hosted self-update uses a detached delayed bootstrap so SCM STOP can complete gracefully, smoke failures return controlled nonzero exits, and detached update worklog completion remains truthful until the restarted runtime is separately verified.",
   "libraries": [
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",

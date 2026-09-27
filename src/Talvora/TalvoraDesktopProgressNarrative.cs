@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ModelContextProtocol.Protocol;
 
 namespace Talvora;
 
@@ -111,6 +112,64 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             _ =>
                 "Bu adımı tamamladım.",
         };
+
+    private static bool TryBuildDeferredCompletion<T>(
+        OperationNarrative narrative,
+        T result,
+        out string title,
+        out string message)
+    {
+        if (!string.Equals(
+                narrative.Subject,
+                "Yeni hali bilgisayarında etkinleştiriyorum",
+                StringComparison.Ordinal) ||
+            !ResultContainsText(result, "TALVORA_UPDATE_DETACHED"))
+        {
+            title = string.Empty;
+            message = string.Empty;
+            return false;
+        }
+
+        title = "Kurucuya devrettim";
+        message =
+            "Güncellemeyi bağımsız kurucuya aktardım. " +
+            "Talvora servisi güvenli biçimde yeniden başlatılıyor.\n\n" +
+            "Bu mesaj yeni sürümün hazır olduğu anlamına gelmiyor; " +
+            "bir sonraki kontrolde gerçekten açıldığını doğrulayacağım.";
+        return true;
+    }
+
+    private static bool ResultContainsText<T>(
+        T result,
+        string expected)
+    {
+        try
+        {
+            JsonElement json;
+            if (result is CallToolResult callToolResult &&
+                callToolResult.StructuredContent is JsonElement structured)
+            {
+                json = structured;
+            }
+            else
+            {
+                json = JsonSerializer.SerializeToElement(result);
+            }
+
+            return TryGetPropertyIgnoreCase(
+                       json,
+                       "standardOutput",
+                       out var output) &&
+                   output.ValueKind == JsonValueKind.String &&
+                   (output.GetString() ?? string.Empty).Contains(
+                       expected,
+                       StringComparison.Ordinal);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     private static string GetArgumentText(
         IDictionary<string, JsonElement>? arguments,
