@@ -22,83 +22,72 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (script.Contains("Build-Windows-Installer.ps1", StringComparison.OrdinalIgnoreCase))
             {
                 return new(
-                    "Talvora kurulum paketi hazırlanıyor",
-                    "Güncel kaynak koddan Windows installer paketi üretiliyor.",
-                    "Tamamlanan geliştirmeleri güvenli biçimde canlı Talvora sürümüne taşımak için.");
+                    "Yaptığım değişiklikleri kullanıma hazırlıyorum",
+                    "Yaptığım son düzenlemeleri bilgisayarında kullanılabilecek hale getiriyorum.",
+                    "Birazdan yeni halini doğrudan deneyebilmen için.");
             }
 
             if (script.Contains("Install.ps1", StringComparison.OrdinalIgnoreCase))
             {
                 return new(
-                    "Talvora yeni sürüme geçiriliyor",
-                    "Hazırlanan installer çalıştırılıyor; servis ve tray yeni sürüme geçiriliyor.",
-                    "Kod değişikliklerinin çalışan Talvora ortamında etkinleşmesi için.");
+                    "Yeni hali bilgisayarında etkinleştiriyorum",
+                    "Az önce hazırladığım değişiklikleri çalışan Talvora'ya uyguluyorum.",
+                    "Yaptığım düzeltmeleri hemen kullanabilmen için.");
             }
 
             if (script.Contains("Get-Content", StringComparison.OrdinalIgnoreCase) &&
                 script.Contains("log", StringComparison.OrdinalIgnoreCase))
             {
                 return new(
-                    "Talvora günlükleri inceleniyor",
-                    "Son çalışma ve hata kayıtları okunarak canlı durum doğrulanıyor.",
-                    "Sessiz hata, gereksiz tekrar veya başarısız kurtarma döngüsü olmadığını kontrol etmek için.");
+                    "Son yaptığım değişikliği kontrol ediyorum",
+                    "Programın az önceki değişiklikten sonra düzgün çalışıp çalışmadığına bakıyorum.",
+                    "Sana tamamlandı demeden önce gerçekten sorunsuz olduğundan emin olmak için.");
             }
 
             return new(
-                "Talvora sistem görevi yürütüyor",
-                SummarizeScript(script),
-                "Geliştirme veya sistem yönetimi adımını tamamlamak için.");
+                "Bilgisayarında gerekli kontrolü yapıyorum",
+                "Şu an yaptığım işin doğru ilerlediğini kontrol ediyorum.",
+                "Bir sonraki adıma güvenle geçebilmek için.");
         }
 
         if (normalized is "dotnet_build" or "dotnet_test" or "dotnet_restore")
         {
-            var target = GetArgumentText(arguments, "target");
             return new(
-                normalized == "dotnet_test"
-                    ? "Talvora testleri çalıştırıyor"
-                    : "Talvora derleme doğrulaması yapıyor",
-                string.IsNullOrWhiteSpace(target)
-                    ? "Güncel .NET kaynakları derleniyor ve teknik doğrulama yapılıyor."
-                    : $"{target} hedefi derleniyor ve doğrulanıyor.",
-                "Yapılan değişikliklerin derleme hatası veya regresyon üretmediğini doğrulamak için.");
+                "Yaptığım değişikliği kontrol ediyorum",
+                "Az önce yaptığım düzenlemenin programı bozmadığını kontrol ediyorum.",
+                "Sorun varsa sana ulaşmadan önce yakalayıp düzeltmek için.");
         }
 
         if (normalized == "apply_patch")
         {
-            var transaction = GetArgumentText(arguments, "transactionId");
             return new(
-                "Talvora kaynak kodu güncelliyor",
-                string.IsNullOrWhiteSpace(transaction)
-                    ? "Planlanan kod ve yapılandırma değişiklikleri uygulanıyor."
-                    : $"{HumanizeIdentifier(transaction)} değişikliği kaynak dosyalara uygulanıyor.",
-                "Modernizasyon kapsamında belirlenen davranışı kalıcı ve sürüm kontrollü hale getirmek için.");
+                "İstediğin değişikliği uyguluyorum",
+                "Şu an istediğin davranışı programın içine yerleştiriyorum.",
+                "İstediğin şey sadece anlatılmış değil gerçekten çalışıyor olsun diye.");
         }
 
         if (normalized == "git_run")
         {
             var gitArgs = GetArgumentArray(arguments, "arguments");
-            var joined = string.Join(' ', gitArgs);
             if (gitArgs.Count > 0 &&
                 string.Equals(gitArgs[0], "push", StringComparison.OrdinalIgnoreCase))
             {
                 return new(
-                    "Talvora değişiklikleri uzak depoya gönderiyor",
-                    $"Git {joined} çalıştırılarak doğrulanmış commitler yayınlanıyor.",
-                    "Gitea/GitHub ana dalını yerel doğrulanmış durumla senkron tutmak için.");
+                    "Yaptığım çalışmayı güvene alıyorum",
+                    "Tamamladığım değişikliklerin güvenli bir kopyasını kaydediyorum.",
+                    "Bir sorun olursa yapılan işi kaybetmemek için.");
             }
 
             return new(
-                "Talvora Git işlemi yürütüyor",
-                string.IsNullOrWhiteSpace(joined)
-                    ? "Git çalışma alanı güncelleniyor."
-                    : $"Git {joined} çalıştırılıyor.",
-                "Kaynak kod geçmişini ve sürüm durumunu yönetmek için.");
+                "Yaptığım değişiklikleri toparlıyorum",
+                "Bu çalışma sırasında yaptığım düzenlemeleri kontrol edip toparlıyorum.",
+                "Bir sonraki adıma temiz ve güvenli şekilde geçmek için.");
         }
 
         return new(
-            fallback,
-            $"{fallback} yürütülüyor.",
-            "Talvora modernizasyon çalışmasının mevcut adımını tamamlamak için.");
+            "Şu an sıradaki işi yapıyorum",
+            "İstediğin geliştirme üzerinde çalışmaya devam ediyorum.",
+            "Talvora'yı daha düzgün ve kullanışlı hale getirmek için.");
     }
 
     private static string SummarizeScript(string script)
