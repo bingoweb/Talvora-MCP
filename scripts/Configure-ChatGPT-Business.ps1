@@ -339,7 +339,10 @@ function Invoke-SelfTest {
     $architecture = Get-TunnelClientArchitecture
     Assert-True -Condition ($architecture -in @('amd64', 'arm64')) -Message 'Windows architecture mapping failed.'
 
-    Assert-True -Condition ($TunnelClientVersion -match '^v[0-9]+\.[0-9]+\.[0-9]+$') -Message 'Pinned tunnel-client version is invalid.'
+    Assert-True -Condition (
+        [string]::Equals($TunnelClientVersion, 'latest', [StringComparison]::OrdinalIgnoreCase) -or
+        $TunnelClientVersion -match '^v[0-9]+\.[0-9]+\.[0-9]+$'
+    ) -Message 'Tunnel-client version selector is invalid.'
 
     Assert-True -Condition (Test-TalvoraTunnelId -Value 'tunnel_0123456789abcdef0123456789abcdef') -Message 'Valid tunnel ID was rejected.'
     Assert-True -Condition (-not (Test-TalvoraTunnelId -Value 'not-a-tunnel')) -Message 'Invalid tunnel ID was accepted.'
