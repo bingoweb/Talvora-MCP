@@ -6,9 +6,17 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-smoke:
     runs-on: windows-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -162,8 +170,9 @@ jobs:
           $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
           if ([int]$state.ToolCount -ne $expectedToolCount) { throw "State ToolCount mismatch. Expected=$expectedToolCount Actual=$($state.ToolCount)" }
 
-          dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-build -- 'http://127.0.0.1:7676/mcp' $PWD.Path
-          if ($LASTEXITCODE -ne 0) { throw 'Installed MCP smoke failed.' }
+          # Hosted runners do not provide the durable interactive-user session required by the full smoke.
+          dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-build -- '--surface-policy-live' 'http://127.0.0.1:7676'
+          if ($LASTEXITCODE -ne 0) { throw 'Installed MCP surface smoke failed.' }
 
       - name: Clean service test
         if: always()

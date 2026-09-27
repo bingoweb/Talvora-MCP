@@ -61,6 +61,8 @@ $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Tal
 $installerProgram = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora.Installer')
 $installerProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'))
 $buildInstallerScript = [IO.File]::ReadAllText((Join-Path $RepoRoot 'scripts\Build-Windows-Installer.ps1'))
+$installScript = [IO.File]::ReadAllText((Join-Path $RepoRoot 'scripts\Install.ps1'))
+$windowsCiWorkflow = [IO.File]::ReadAllText((Join-Path $RepoRoot '.github\workflows\windows-ci.yml'))
 $smokeProgram = [IO.File]::ReadAllText((Join-Path $RepoRoot 'tests\Talvora.Smoke\Program.cs'))
 $deployInstallerScript = [IO.File]::ReadAllText((Join-Path $RepoRoot 'scripts\Deploy-Windows-Installer.ps1'))
 $manifest = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\app.manifest'))
@@ -664,6 +666,16 @@ $result = [pscustomobject]@{
         $installerProgram -match 'TryStartTrayAsync' -and
         $installerProgram -match 'Tray could not be started immediately' -and
         $installerProgram -match 'startup registration is intact'
+    )
+    InstallScriptWaitsOnlyForInstallerProcess = (
+        $installScript -match '\$installerProcess\.WaitForExit\(\)' -and
+        $installScript -match '\$installerExitCode\s*=\s*\$installerProcess\.ExitCode' -and
+        $installScript -match '(?s)\$installerProcess\s*=\s*Start-Process.*?-ArgumentList\s+@\(''--silent''\).*?-PassThru\s*\r?\n\$installerProcess\.WaitForExit\(\)' -and
+        $installScript -notmatch '(?s)\$installerProcess\s*=\s*Start-Process.*?-ArgumentList\s+@\(''--silent''\).*?-Wait.*?\$installerProcess\.ExitCode'
+    )
+    HostedWindowsCiAvoidsInteractiveUserSmoke = (
+        $windowsCiWorkflow -match '(?s)- name: Install and verify canonical runtime.*?--surface-policy-live.*?Installed MCP surface smoke failed' -and
+        $windowsCiWorkflow -notmatch 'Talvora\.Smoke/Talvora\.Smoke\.csproj -c Release --no-build -- ''http://127\.0\.0\.1:7676/mcp'' \$PWD\.Path'
     )
     InstallerUsesVersionedPayload = (
         $installerProgram -match 'Versions' -and
