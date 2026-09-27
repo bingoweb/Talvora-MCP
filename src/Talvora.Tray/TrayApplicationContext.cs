@@ -92,7 +92,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _reconnectItem.Click += async (_, _) => await ReconnectTalvoraAsync();
         _refreshTalvoraItem = new ToolStripMenuItem("Durumu yenile");
         _refreshTalvoraItem.Click += async (_, _) =>
-            await RefreshTalvoraStatusAsync(showBalloon: true);
+            await RefreshTalvoraStatusAsync(showNotification: true);
 
         var talvoraMenu = new ToolStripMenuItem("Talvora MCP");
         talvoraMenu.DropDownItems.Add(_talvoraStatusItem);
@@ -110,7 +110,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _restartGiteaItem.Click += async (_, _) => await RestartGiteaAsync();
         _refreshGiteaItem = new ToolStripMenuItem("Durumu yenile");
         _refreshGiteaItem.Click += async (_, _) =>
-            await RefreshGiteaStatusAsync(showBalloon: true);
+            await RefreshGiteaStatusAsync(showNotification: true);
 
         var giteaMenu = new ToolStripMenuItem("Gitea MCP");
         giteaMenu.DropDownItems.Add(_giteaStatusItem);
@@ -509,7 +509,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
     }
 
-    private async Task RefreshTalvoraStatusAsync(bool showBalloon)
+    private async Task RefreshTalvoraStatusAsync(bool showNotification)
     {
         var lockTaken = false;
         try
@@ -530,9 +530,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
                     "Yönetim Merkezi üzerinden Başlat seçilene kadar otomatik kurtarma devre dışı.");
                 SetTalvoraStatus(stopped);
 
-                if (showBalloon)
+                if (showNotification)
                 {
-                    ShowBalloon(stopped.Summary, stopped.Detail, ToolTipIcon.Info);
+                    ShowNotification(stopped.Summary, stopped.Detail, ToolTipIcon.Info);
                 }
 
                 return;
@@ -542,9 +542,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 _lifetimeCts.Token);
             SetTalvoraStatus(status);
 
-            if (showBalloon)
+            if (showNotification)
             {
-                ShowBalloon(status.Summary, status.Detail);
+                ShowNotification(status.Summary, status.Detail);
             }
         }
         catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
@@ -558,9 +558,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 "Talvora durumu alınamadı",
                 ex.Message));
 
-            if (showBalloon)
+            if (showNotification)
             {
-                ShowBalloon("Talvora", ex.Message, ToolTipIcon.Error);
+                ShowNotification("Talvora", ex.Message, ToolTipIcon.Error);
             }
         }
         finally
@@ -609,7 +609,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 "talvora",
                 "connection:talvora:tray-reconnect-success");
 
-            ShowBalloon(
+            ShowNotification(
                 "Talvora bağlantısı hazır",
                 "Dev ve Admin güvenli MCP tünelleri yeniden bağlandı.",
                 ToolTipIcon.Info);
@@ -640,7 +640,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                     : "Talvora erişilemiyor",
                 ex.Message));
 
-            ShowBalloon(
+            ShowNotification(
                 "Talvora yeniden bağlanamadı",
                 ex.Message,
                 ToolTipIcon.Error);
@@ -855,7 +855,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
     }
 
 
-    private async Task RefreshGiteaStatusAsync(bool showBalloon)
+    private async Task RefreshGiteaStatusAsync(bool showNotification)
     {
         var lockTaken = false;
         try
@@ -876,9 +876,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
                     "Yönetim Merkezi üzerinden Başlat seçilene kadar otomatik kurtarma devre dışı.");
                 SetGiteaStatus(stopped);
 
-                if (showBalloon)
+                if (showNotification)
                 {
-                    ShowBalloon(stopped.Summary, stopped.Detail, ToolTipIcon.Info);
+                    ShowNotification(stopped.Summary, stopped.Detail, ToolTipIcon.Info);
                 }
 
                 return;
@@ -888,9 +888,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 _lifetimeCts.Token);
             SetGiteaStatus(status);
 
-            if (showBalloon)
+            if (showNotification)
             {
-                ShowBalloon(
+                ShowNotification(
                     status.Summary,
                     status.Detail,
                     status.State == GiteaConnectionState.Running
@@ -909,9 +909,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 "Gitea durumu alınamadı",
                 ex.Message));
 
-            if (showBalloon)
+            if (showNotification)
             {
-                ShowBalloon("Gitea", ex.Message, ToolTipIcon.Error);
+                ShowNotification("Gitea", ex.Message, ToolTipIcon.Error);
             }
         }
         finally
@@ -948,7 +948,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
             if (status.State == GiteaConnectionState.Running)
             {
-                ShowBalloon(
+                ShowNotification(
                     "Gitea yeniden başlatıldı",
                     "Gitea MCP zinciri sağlıklı ve kullanıma hazır.",
                     ToolTipIcon.Info);
@@ -970,7 +970,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                     status.Detail,
                     "gitea",
                     "operation:gitea:tray-restart-degraded");
-                ShowBalloon(
+                ShowNotification(
                     "Gitea yeniden başladı ancak hazır değil",
                     status.Detail,
                     ToolTipIcon.Warning);
@@ -993,7 +993,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 GiteaConnectionState.Offline,
                 "Gitea yeniden başlatılamadı",
                 ex.Message));
-            ShowBalloon("Gitea", ex.Message, ToolTipIcon.Error);
+            ShowNotification("Gitea", ex.Message, ToolTipIcon.Error);
         }
         finally
         {
@@ -1528,7 +1528,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             recoveryState.McpId,
             $"recovery:{recoveryState.McpId}:serious");
 
-        ShowBalloon(
+        ShowNotification(
             $"{displayName}: müdahale gerekiyor",
             "Otomatik kurtarma birkaç kez başarısız oldu. Yönetim Merkezi ayrıntıları gösterecek.",
             ToolTipIcon.Warning);
@@ -1552,7 +1552,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 : "talvora"),
             $"recovery:{displayName}:serious-resolved");
 
-        ShowBalloon(
+        ShowNotification(
             $"{displayName} yeniden hazır",
             detail,
             ToolTipIcon.Info);
@@ -1573,11 +1573,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
             System.ComponentModel.Win32Exception)
         {
             TrayLog.Write("Opening Gitea in browser failed", ex);
-            ShowBalloon("Gitea açılamadı", ex.Message, ToolTipIcon.Error);
+            ShowNotification("Gitea açılamadı", ex.Message, ToolTipIcon.Error);
         }
     }
 
-    private void ShowBalloon(
+    private void ShowNotification(
         string title,
         string text,
         ToolTipIcon icon = ToolTipIcon.Info)

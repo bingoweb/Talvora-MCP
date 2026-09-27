@@ -20,13 +20,13 @@ namespace Talvora.Tray;
 internal sealed class DesktopProgressNotificationWindow : Window
 {
     private static readonly TimeSpan StartedLifetime =
-        TimeSpan.FromSeconds(75);
+        TimeSpan.FromSeconds(12);
     private static readonly TimeSpan RunningLifetime =
-        TimeSpan.FromSeconds(75);
+        TimeSpan.FromSeconds(15);
     private static readonly TimeSpan CompletedLifetime =
-        TimeSpan.FromSeconds(75);
+        TimeSpan.FromSeconds(14);
     private static readonly TimeSpan FailureLifetime =
-        TimeSpan.FromSeconds(90);
+        TimeSpan.FromSeconds(24);
 
     private readonly Border _accent;
     private readonly TextBlock _title;
