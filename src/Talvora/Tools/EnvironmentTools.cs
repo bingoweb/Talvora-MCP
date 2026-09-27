@@ -1,7 +1,6 @@
 using System.Collections;
 using System.ComponentModel;
-using System.Text;
-using System.Text.Json;
+using Microsoft.Win32;
 using ModelContextProtocol.Server;
 using Talvora.Shared;
 
@@ -45,20 +44,11 @@ public static class EnvironmentTools
         Machine,
     }
 
-    private sealed record InteractiveEnvironmentRequest(
-        string Operation,
-        string? Name,
-        string? Value);
-
     private sealed record InteractiveEnvironmentResult(
         bool? Found,
         string? Value,
         string? PreviousValue,
         IReadOnlyList<TalvoraEnvironmentVariable>? Variables);
-
-    private const int InteractiveUserTimeoutSeconds = 30;
-    private const string InteractiveEnvironmentPayloadName =
-        "TALVORA_INTERACTIVE_ENV_PAYLOAD";
 
     [McpServerTool(
         Name = "talvora_env_get",
@@ -312,167 +302,103 @@ public static class EnvironmentTools
             string? value,
             CancellationToken cancellationToken)
     {
-        var systemDirectory =
-            Environment.GetFolderPath(
-                Environment.SpecialFolder.System);
-        var powershell =
-            CommandResolver.Resolve(
-                ["pwsh.exe", "pwsh"],
-                [@"C:\Program Files\PowerShell\7\pwsh.exe"])
-            ?? throw new FileNotFoundException(
-                "PowerShell 7 is required for interactive-user environment access.");
-        var powershellWorkingDirectory =
-            Path.GetDirectoryName(powershell)
-            ?? systemDirectory;
+        cancellationToken.ThrowIfCancellationRequested();
+        var context =
+            WindowsSessionLauncher.GetDefaultInteractiveUser();
+        var environmentPath =
+            $"{context.Sid}\\Environment";
+        using var environmentKey =
+            Registry.Users.OpenSubKey(
+                environmentPath,
+                writable: operation is "set" or "delete")
+            ?? throw new InvalidOperationException(
+                "The active Windows user profile is not loaded.");
 
-        var request =
-            new InteractiveEnvironmentRequest(
-                operation,
-                name,
-                value);
-        var payload =
-            Convert.ToBase64String(
-                Encoding.UTF8.GetBytes(
-                    JsonSerializer.Serialize(request)));
-
-        var result =
-            await InteractiveUserProcessRunner.RunAsync(
-                powershell,
-                powershellWorkingDirectory,
-                [
-                    "-NoLogo",
-                    "-NoProfile",
-                    "-NonInteractive",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-Command",
-                    InteractiveUserEnvironmentScript,
-                ],
-                new Dictionary<string, string?>
+        switch (operation)
+        {
+            case "get":
+            {
+                ArgumentException.ThrowIfNullOrWhiteSpace(name);
+                var current = ReadRegistryString(environmentKey, name);
+                return await Task.FromResult(
+                    new InteractiveEnvironmentResult(
+                        current is not null,
+                        current,
+                        PreviousValue: null,
+                        Variables: null));
+            }
+            case "list":
+            {
+                var variables =
+                    environmentKey
+                        .GetValueNames()
+                        .Select(variableName =>
+                            new TalvoraEnvironmentVariable(
+                                variableName,
+                                ReadRegistryString(
+                                    environmentKey,
+                                    variableName) ?? string.Empty))
+                        .ToArray();
+                return await Task.FromResult(
+                    new InteractiveEnvironmentResult(
+                        Found: null,
+                        Value: null,
+                        PreviousValue: null,
+                        variables));
+            }
+            case "set":
+            {
+                ArgumentException.ThrowIfNullOrWhiteSpace(name);
+                var previous =
+                    ReadRegistryString(environmentKey, name);
+                environmentKey.SetValue(
+                    name,
+                    value ?? string.Empty,
+                    RegistryValueKind.String);
+                environmentKey.Flush();
+                return await Task.FromResult(
+                    new InteractiveEnvironmentResult(
+                        Found: null,
+                        Value: null,
+                        previous,
+                        Variables: null));
+            }
+            case "delete":
+            {
+                ArgumentException.ThrowIfNullOrWhiteSpace(name);
+                var previous =
+                    ReadRegistryString(environmentKey, name);
+                if (previous is not null)
                 {
-                    [InteractiveEnvironmentPayloadName] =
-                        payload,
-                },
-                timeoutSeconds:
-                    InteractiveUserTimeoutSeconds,
-                cancellationToken:
-                    cancellationToken).ConfigureAwait(false);
+                    environmentKey.DeleteValue(
+                        name,
+                        throwOnMissingValue: false);
+                    environmentKey.Flush();
+                }
 
-        if (result.TimedOut)
-        {
-            throw new TimeoutException(
-                "Interactive-user environment operation timed out.");
+                return await Task.FromResult(
+                    new InteractiveEnvironmentResult(
+                        Found: null,
+                        Value: null,
+                        previous,
+                        Variables: null));
+            }
+            default:
+                throw new ArgumentException(
+                    $"Unsupported interactive environment operation: {operation}",
+                    nameof(operation));
         }
-
-        if (result.ExitCode != 0)
-        {
-            var detail =
-                string.IsNullOrWhiteSpace(result.StandardError)
-                    ? "No error detail was returned."
-                    : result.StandardError.Trim();
-            throw new InvalidOperationException(
-                $"Interactive-user environment operation failed: {detail}");
-        }
-
-        var json =
-            result.StandardOutput.Trim();
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            throw new InvalidOperationException(
-                "Interactive-user environment operation returned no result.");
-        }
-
-        return JsonSerializer.Deserialize<
-                   InteractiveEnvironmentResult>(
-                   json,
-                   new JsonSerializerOptions
-                   {
-                       PropertyNameCaseInsensitive =
-                           true,
-                   })
-               ?? throw new InvalidOperationException(
-                   "Interactive-user environment operation returned invalid JSON.");
     }
 
-    private const string InteractiveUserEnvironmentScript =
-        """
-$ErrorActionPreference = 'Stop'
-[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
-$payloadRaw = [Environment]::GetEnvironmentVariable(
-    'TALVORA_INTERACTIVE_ENV_PAYLOAD',
-    [EnvironmentVariableTarget]::Process)
-if([string]::IsNullOrWhiteSpace($payloadRaw)) {
-    throw 'Interactive environment payload is missing.'
-}
-$payloadJson = [Text.Encoding]::UTF8.GetString(
-    [Convert]::FromBase64String($payloadRaw))
-$payload = $payloadJson | ConvertFrom-Json
-$target = [EnvironmentVariableTarget]::User
-
-switch ([string]$payload.Operation) {
-    'get' {
-        $value = [Environment]::GetEnvironmentVariable(
-            [string]$payload.Name,
-            $target)
-        [pscustomobject]@{
-            Found = $null -ne $value
-            Value = $value
-            PreviousValue = $null
-            Variables = $null
-        } | ConvertTo-Json -Compress -Depth 4
+    private static string? ReadRegistryString(
+        RegistryKey key,
+        string name)
+    {
+        var value =
+            key.GetValue(
+                name,
+                defaultValue: null,
+                RegistryValueOptions.DoNotExpandEnvironmentNames);
+        return value?.ToString();
     }
-    'list' {
-        $items = @(
-            [Environment]::GetEnvironmentVariables($target).
-                GetEnumerator() |
-                ForEach-Object {
-                    [pscustomobject]@{
-                        Name = [string]$_.Key
-                        Value = [string]$_.Value
-                    }
-                })
-        [pscustomobject]@{
-            Found = $null
-            Value = $null
-            PreviousValue = $null
-            Variables = $items
-        } | ConvertTo-Json -Compress -Depth 4
-    }
-    'set' {
-        $previous = [Environment]::GetEnvironmentVariable(
-            [string]$payload.Name,
-            $target)
-        [Environment]::SetEnvironmentVariable(
-            [string]$payload.Name,
-            [string]$payload.Value,
-            $target)
-        [pscustomobject]@{
-            Found = $null
-            Value = $null
-            PreviousValue = $previous
-            Variables = $null
-        } | ConvertTo-Json -Compress -Depth 4
-    }
-    'delete' {
-        $previous = [Environment]::GetEnvironmentVariable(
-            [string]$payload.Name,
-            $target)
-        if($null -ne $previous) {
-            [Environment]::SetEnvironmentVariable(
-                [string]$payload.Name,
-                $null,
-                $target)
-        }
-        [pscustomobject]@{
-            Found = $null
-            Value = $null
-            PreviousValue = $previous
-            Variables = $null
-        } | ConvertTo-Json -Compress -Depth 4
-    }
-    default {
-        throw "Unsupported interactive environment operation: $($payload.Operation)"
-    }
-}
-""";
 }
