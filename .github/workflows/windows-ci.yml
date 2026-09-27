@@ -84,6 +84,9 @@ jobs:
           & ./tests/ModernizationPolicyRegression.ps1
           if (-not $?) { throw 'Modernization policy regression failed.' }
 
+          & ./tests/ControlCenterUiResponsivenessSourceRegression.ps1
+          if (-not $?) { throw 'Control Center UI responsiveness regression failed.' }
+
           & ./tests/NativeInstallerSourceRegression.ps1
           if (-not $?) { throw 'Native installer source regression failed.' }
 
