@@ -2,6 +2,8 @@ using ModelContextProtocol.Client;
 using Talvora.Shared;
 using static SmokeSupport;
 
+try
+{
 if (args.Length >= 3 &&
     string.Equals(
         args[0],
@@ -235,3 +237,10 @@ await SmokeScenarios.RunApplicationDevelopmentAsync(
 Console.WriteLine("TALVORA MCP SMOKE GREEN");
 Console.WriteLine($"endpoint={endpoint}");
 Console.WriteLine($"tools={string.Join(',', required)}");
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine("TALVORA MCP SMOKE RED");
+    Console.Error.WriteLine(ex);
+    Environment.ExitCode = 1;
+}

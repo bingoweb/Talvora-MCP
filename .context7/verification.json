@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-27T19:58:00Z",
-  "scope": "Talvora final quality closeout: 212-tool full smoke, deterministic interactive-user environment persistence, smoke wire-contract drift repairs, bounded JavaScript/Corepack toolchain probes, and closure of superseded focused-tunnel TODOs.",
+  "verifiedAtUtc": "2026-09-27T20:31:00Z",
+  "scope": "Talvora runtime error cleanup: service-hosted self-update uses a detached delayed bootstrap so SCM STOP can complete gracefully, and smoke failures return controlled nonzero exits instead of unhandled process crashes.",
   "libraries": [
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
@@ -37,6 +37,7 @@
     "Microsoft WPF Dispatcher guidance checked 2026-09-27: UI work is dispatched through Dispatcher operations; non-critical notification work should fail inside its own presentation boundary instead of escaping into the application dispatcher",
     "Microsoft WPF responsiveness guidance checked 2026-09-27: potentially blocking IO/work should execute away from the UI dispatcher and return only UI updates to the dispatcher; Talvora preserves Mutex ownership on one worker thread while doing so",
     "Microsoft ScheduledTasks guidance checked 2026-09-27: scheduled tasks can be explicitly started and lifecycle state can be controlled independently; Talvora uses explicit enable/start and stop/disable semantics for opt-in Penpot instead of a persistent logon-triggered resident runtime",
+    "Microsoft Windows Service stop guidance checked 2026-09-27: services transition through STOP_PENDING and should respond to SCM stop commands; Talvora self-update now releases the originating MCP request before the delayed installer requests service stop, avoiding the previous circular wait and forced process termination",
     "Docker Compose official CLI guidance checked 2026-09-27: docker compose up --detach starts the stack in the background; docker compose down removes service containers and networks but does not remove named volumes unless --volumes is explicitly supplied. Talvora Penpot lifecycle uses up -d / down --remove-orphans and deliberately never passes --volumes.",
     "Microsoft multi-monitor positioning guidance checked 2026-09-27: saved custom window positions must be validated against the target monitor work area and must not assume a virtual-desktop origin of 0,0",
     "Microsoft .NET native interop best practices checked 2026-09-27; new one-off Win32 calls use LibraryImport generated interop",
