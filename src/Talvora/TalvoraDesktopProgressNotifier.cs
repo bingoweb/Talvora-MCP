@@ -11,7 +11,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     IAsyncDisposable
 {
     internal static readonly TimeSpan HeartbeatInterval =
-        TimeSpan.FromSeconds(8);
+        TimeSpan.FromSeconds(45);
     internal static readonly TimeSpan PipeConnectTimeout =
         TimeSpan.FromMilliseconds(350);
 
@@ -47,6 +47,11 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(operation);
+
+        if (!ShouldNotifyToolCall(toolName))
+        {
+            return await operation(cancellationToken);
+        }
 
         var displayName = GetFriendlyToolName(toolName);
         var operationId = Guid.NewGuid().ToString("N");
@@ -240,11 +245,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             return "MCP çalışması";
         }
 
-        var normalized = toolName.Trim();
-        if (normalized.StartsWith("talvora_", StringComparison.OrdinalIgnoreCase))
-        {
-            normalized = normalized["talvora_".Length..];
-        }
+        var normalized = NormalizeToolName(toolName);
 
         return normalized switch
         {
@@ -275,6 +276,47 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             "system_info" => "Sistem bilgilerini kontrol etme",
             _ => HumanizeToolName(normalized),
         };
+    }
+
+    private static bool ShouldNotifyToolCall(string? toolName)
+    {
+        var normalized = NormalizeToolName(toolName);
+        return normalized switch
+        {
+            "read_source" or
+            "read_text_range" or
+            "read_bytes" or
+            "tail_text" or
+            "search_text" or
+            "find_files" or
+            "list" or
+            "path_info" or
+            "file_hash" or
+            "process_list" or
+            "process_get" or
+            "system_info" or
+            "http_request" or
+            "tcp_listeners" or
+            "git_diff" or
+            "git_branches" => false,
+            _ => true,
+        };
+    }
+
+    private static string NormalizeToolName(string? toolName)
+    {
+        if (string.IsNullOrWhiteSpace(toolName))
+        {
+            return string.Empty;
+        }
+
+        var normalized = toolName.Trim();
+        if (normalized.StartsWith("talvora_", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized["talvora_".Length..];
+        }
+
+        return normalized;
     }
 
     private static string HumanizeToolName(string toolName)
