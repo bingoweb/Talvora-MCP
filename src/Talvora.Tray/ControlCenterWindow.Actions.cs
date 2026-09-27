@@ -105,12 +105,13 @@ internal sealed partial class ControlCenterWindow
                          StringComparison.OrdinalIgnoreCase))
             {
                 ManagedMcpSessionState.ClearManualStop(state.Registration.Id);
-                await BusinessTunnelClient.ReconnectAsync(_lifetimeCts.Token);
+                await ControlCenterLifecycleService
+                    .ReconnectTalvoraConnectionsAsync(_lifetimeCts.Token);
                 ControlCenterEventStore.Record(
                     ControlCenterEventSeverity.Info,
                     "connection",
                     "Talvora bağlantısı yenilendi",
-                    "ChatGPT Business güvenli MCP tüneli yeniden bağlandı.",
+                    "Talvora Dev ve Admin güvenli MCP tünelleri yeniden bağlandı.",
                     state.Registration.Id,
                     "connection:talvora:manual-reconnect-success");
             }
@@ -222,7 +223,8 @@ internal sealed partial class ControlCenterWindow
         try
         {
             ManagedMcpSessionState.ClearManualStop(_selectedMcp.Registration.Id);
-            await BusinessTunnelClient.ReconnectAsync(_lifetimeCts.Token);
+            await ControlCenterLifecycleService
+                .ReconnectTalvoraConnectionsAsync(_lifetimeCts.Token);
             SetDetailOperationBanner(
                 "Bağlantı yenilendi. Talvora MCP hazır.",
                 success: true);
@@ -230,7 +232,7 @@ internal sealed partial class ControlCenterWindow
                 ControlCenterEventSeverity.Info,
                 "connection",
                 "Talvora bağlantısı yenilendi",
-                "ChatGPT Business güvenli MCP tüneli yeniden bağlandı.",
+                "Talvora Dev ve Admin güvenli MCP tünelleri yeniden bağlandı.",
                 _selectedMcp.Registration.Id,
                 "connection:talvora:manual-reconnect-success");
             await RefreshDashboardAsync();

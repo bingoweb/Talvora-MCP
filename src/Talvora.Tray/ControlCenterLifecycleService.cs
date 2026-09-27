@@ -23,6 +23,8 @@ internal sealed record ManagedMcpLifecycleResult(
 internal static class ControlCenterLifecycleService
 {
     private const string TalvoraId = "talvora";
+    private const string TalvoraDevId = "talvora-dev";
+    private const string TalvoraAdminId = "talvora-admin";
     private const string GiteaId = "gitea";
     private const string TalvoraServiceName = "Talvora";
     private const string TalvoraMcpUrl = "http://127.0.0.1:7676/mcp";
@@ -94,7 +96,7 @@ internal static class ControlCenterLifecycleService
         switch (operation)
         {
             case ManagedMcpLifecycleOperation.Start:
-                ManagedMcpSessionState.ClearManualStop(TalvoraId);
+                ClearTalvoraManualStopState();
                 await RunTalvoraServiceCommandAsync(
                     "start",
                     allowAlreadyInRequestedState: true,
@@ -103,17 +105,17 @@ internal static class ControlCenterLifecycleService
                     expectedHealthy: true,
                     TimeSpan.FromSeconds(45),
                     cancellationToken);
-                await BusinessTunnelClient.ReconnectAsync(cancellationToken);
+                await ReconnectTalvoraFocusedAsync(cancellationToken);
                 return new ManagedMcpLifecycleResult(
                     operation,
                     "Talvora MCP başlatıldı",
-                    "Yerel servis ve güvenli MCP tüneli hazır.");
+                    "Yerel servis ile Dev ve Admin güvenli tünelleri hazır.");
 
             case ManagedMcpLifecycleOperation.Stop:
                 ManagedMcpSessionState.MarkManuallyStopped(TalvoraId);
                 try
                 {
-                    await BusinessTunnelClient.DisconnectAsync(cancellationToken);
+                    await DisconnectTalvoraFocusedAsync(cancellationToken);
                     await RunTalvoraServiceCommandAsync(
                         "stop",
                         allowAlreadyInRequestedState: true,
@@ -126,17 +128,17 @@ internal static class ControlCenterLifecycleService
                     return new ManagedMcpLifecycleResult(
                         operation,
                         "Talvora MCP durduruldu",
-                        "Yerel servis ve güvenli MCP tüneli bu Windows oturumu için durduruldu.");
+                        "Yerel servis ile Dev ve Admin güvenli tünelleri bu Windows oturumu için durduruldu.");
                 }
                 catch
                 {
-                    ManagedMcpSessionState.ClearManualStop(TalvoraId);
+                    ClearTalvoraManualStopState();
                     throw;
                 }
 
             case ManagedMcpLifecycleOperation.Restart:
-                ManagedMcpSessionState.ClearManualStop(TalvoraId);
-                await BusinessTunnelClient.DisconnectAsync(cancellationToken);
+                ClearTalvoraManualStopState();
+                await DisconnectTalvoraFocusedAsync(cancellationToken);
                 await RunTalvoraServiceCommandAsync(
                     "stop",
                     allowAlreadyInRequestedState: true,
@@ -153,16 +155,96 @@ internal static class ControlCenterLifecycleService
                     expectedHealthy: true,
                     TimeSpan.FromSeconds(45),
                     cancellationToken);
-                await BusinessTunnelClient.ReconnectAsync(cancellationToken);
+                await ReconnectTalvoraFocusedAsync(cancellationToken);
 
                 return new ManagedMcpLifecycleResult(
                     operation,
                     "Talvora MCP yeniden başlatıldı",
-                    "Yerel servis ve güvenli MCP tüneli yeniden hazırlandı.");
+                    "Yerel servis ile Dev ve Admin güvenli tünelleri yeniden hazırlandı.");
 
             default:
                 throw new ArgumentOutOfRangeException(nameof(operation));
         }
+    }
+
+    public static async Task ReconnectTalvoraConnectionsAsync(
+        CancellationToken cancellationToken)
+    {
+        if (!await BusinessTunnelClient.IsLocalMcpHealthyAsync(cancellationToken))
+        {
+            throw new InvalidOperationException(
+                "Yerel Talvora MCP servisi çalışmıyor. Önce Talvora servisini başlatın.");
+        }
+
+        ClearTalvoraManualStopState();
+        await ReconnectTalvoraFocusedAsync(cancellationToken);
+    }
+
+    private static async Task ReconnectTalvoraFocusedAsync(
+        CancellationToken cancellationToken)
+    {
+        var registrations =
+            await GetTalvoraFocusedRegistrationsAsync(cancellationToken);
+
+        foreach (var registration in registrations)
+        {
+            ManagedMcpSessionState.ClearManualStop(registration.Id);
+            await ExecuteGenericAsync(
+                registration,
+                ManagedMcpLifecycleOperation.Restart,
+                cancellationToken);
+        }
+    }
+
+    private static async Task DisconnectTalvoraFocusedAsync(
+        CancellationToken cancellationToken)
+    {
+        var registrations =
+            await GetTalvoraFocusedRegistrationsAsync(cancellationToken);
+
+        foreach (var registration in registrations)
+        {
+            await ExecuteGenericAsync(
+                registration,
+                ManagedMcpLifecycleOperation.Stop,
+                cancellationToken);
+        }
+    }
+
+    private static async Task<IReadOnlyList<ManagedMcpRegistration>>
+        GetTalvoraFocusedRegistrationsAsync(
+            CancellationToken cancellationToken)
+    {
+        var registry = await ManagedMcpRegistryCoordinator.LoadOrRecoverAsync(
+            cancellationToken);
+
+        var registrations = registry.Mcps
+            .Where(entry =>
+                string.Equals(
+                    entry.Id,
+                    TalvoraDevId,
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    entry.Id,
+                    TalvoraAdminId,
+                    StringComparison.OrdinalIgnoreCase))
+            .OrderBy(entry => entry.Id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (registrations.Length != 2)
+        {
+            throw new InvalidOperationException(
+                "Talvora Dev/Admin yönetim kayıtları eksik.");
+        }
+
+        return registrations;
+    }
+
+    private static void ClearTalvoraManualStopState()
+    {
+        ManagedMcpSessionState.ClearManualStop(TalvoraId);
+        ManagedMcpSessionState.ClearManualStop(TalvoraDevId);
+        ManagedMcpSessionState.ClearManualStop(TalvoraAdminId);
     }
 
     private static async Task<ManagedMcpLifecycleResult> ExecuteGiteaAsync(

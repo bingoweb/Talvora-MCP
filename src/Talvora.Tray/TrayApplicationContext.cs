@@ -385,11 +385,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 {
                     SetTalvoraStatus(new TalvoraStatus(
                         TalvoraConnectionState.LocalOnly,
-                        "ChatGPT Business otomatik bağlanıyor...",
-                        "Güvenli MCP tüneli yeniden hazırlanıyor."));
+                        "Talvora bağlantıları otomatik onarılıyor...",
+                        "Dev ve Admin güvenli MCP tünelleri yeniden hazırlanıyor."));
 
-                    await BusinessTunnelClient.ReconnectAsync(
-                        _lifetimeCts.Token);
+                    await ControlCenterLifecycleService
+                        .ReconnectTalvoraConnectionsAsync(
+                            _lifetimeCts.Token);
                 }
 
                 status = await BusinessTunnelClient.GetStatusAsync(
@@ -407,14 +408,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 SetTalvoraStatus(status);
                 _talvoraTimer.Interval = 30_000;
 
-                var alias = BusinessTunnelClient.LoadConfig().Alias;
-                TrayLog.Write(
-                    $"Automatic Talvora recovery succeeded. Alias={alias}");
+                TrayLog.Write("Automatic Talvora recovery succeeded.");
                 ControlCenterEventStore.Record(
                     ControlCenterEventSeverity.Info,
                     "recovery",
                     "Talvora MCP otomatik olarak düzeltildi",
-                    "Yerel servis ve güvenli MCP tüneli yeniden hazır.",
+                    "Yerel servis ile Dev ve Admin güvenli MCP tünelleri yeniden hazır.",
                     "talvora",
                     "recovery:talvora:success");
 
@@ -422,7 +421,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 {
                     NotifyRecoveryResolved(
                         "Talvora MCP",
-                        "Servis ve güvenli MCP tüneli otomatik olarak düzeltildi.");
+                        "Servis ile Dev ve Admin güvenli MCP tünelleri otomatik olarak düzeltildi.");
                 }
             }
             catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
@@ -450,12 +449,14 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
                 SetTalvoraStatus(new TalvoraStatus(
                     localHealthy
-                        ? TalvoraConnectionState.LocalOnly
+                        ? TalvoraConnectionState.Ready
                         : TalvoraConnectionState.Offline,
                     localHealthy
-                        ? "Talvora çalışıyor, Business bağlantısı bekleniyor"
+                        ? "Talvora hazır"
                         : "Talvora servisi otomatik kurtarma bekliyor",
-                    $"Otomatik yeniden deneme {failure.RetryDelay.TotalSeconds:F0} saniye sonra."));
+                    localHealthy
+                        ? "Yerel MCP servisi hazır. Dev ve Admin bağlantıları ayrı izleniyor."
+                        : $"Otomatik yeniden deneme {failure.RetryDelay.TotalSeconds:F0} saniye sonra."));
 
                 HandleRecoveryFailure(
                     _talvoraRecoveryState,
@@ -590,10 +591,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
             SetTalvoraActionsEnabled(false);
             SetTalvoraStatus(new TalvoraStatus(
                 TalvoraConnectionState.LocalOnly,
-                "ChatGPT Business yeniden bağlanıyor...",
-                "Tunnel hazırlanıyor."));
+                "Talvora bağlantıları yenileniyor...",
+                "Dev ve Admin güvenli MCP tünelleri hazırlanıyor."));
 
-            await BusinessTunnelClient.ReconnectAsync(_lifetimeCts.Token);
+            await ControlCenterLifecycleService
+                .ReconnectTalvoraConnectionsAsync(_lifetimeCts.Token);
 
             var status = await BusinessTunnelClient.GetStatusAsync(
                 _lifetimeCts.Token);
@@ -603,13 +605,13 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 ControlCenterEventSeverity.Info,
                 "connection",
                 "Talvora bağlantısı yenilendi",
-                "ChatGPT Business güvenli MCP tüneli yeniden bağlandı.",
+                "Talvora Dev ve Admin güvenli MCP tünelleri yeniden bağlandı.",
                 "talvora",
                 "connection:talvora:tray-reconnect-success");
 
             ShowBalloon(
                 "Talvora bağlantısı hazır",
-                "ChatGPT Business tunnel yeniden bağlandı.",
+                "Dev ve Admin güvenli MCP tünelleri yeniden bağlandı.",
                 ToolTipIcon.Info);
         }
         catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
@@ -631,10 +633,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
             SetTalvoraStatus(new TalvoraStatus(
                 localHealthy
-                    ? TalvoraConnectionState.LocalOnly
+                    ? TalvoraConnectionState.Ready
                     : TalvoraConnectionState.Offline,
                 localHealthy
-                    ? "Talvora çalışıyor, tunnel bağlı değil"
+                    ? "Talvora hazır"
                     : "Talvora erişilemiyor",
                 ex.Message));
 

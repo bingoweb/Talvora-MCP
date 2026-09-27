@@ -16,24 +16,14 @@ internal sealed class TalvoraManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDi
 
     public ManagedMcpRegistration Discover()
     {
-        var tunnelPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Talvora",
-            "TunnelClient",
-            "business.json");
-        var tunnel = ManagedMcpTunnelConfigReader.Read(
-            tunnelPath,
-            "talvora-business");
-
         return new ManagedMcpRegistration
         {
             Id = Id,
             DisplayName = "Talvora MCP",
-            Description = "Talvora yerel geliştirme MCP servisi ve güvenli OpenAI tüneli.",
+            Description = "Talvora yerel MCP Windows servisi. Dev ve Admin güvenli tünelleri ayrı yönetilir.",
             Endpoint = TalvoraConstants.McpUrl,
             HealthEndpoint = TalvoraConstants.HealthUrl,
             AutoStart = true,
-            Tunnel = tunnel,
             Components =
             [
                 new ManagedMcpComponentRegistration
@@ -43,13 +33,6 @@ internal sealed class TalvoraManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDi
                     Kind = "windows-service",
                     Name = TalvoraConstants.ServiceName,
                 },
-                new ManagedMcpComponentRegistration
-                {
-                    Id = "tunnel",
-                    DisplayName = "Secure MCP Tunnel",
-                    Kind = "tunnel",
-                    Name = tunnel.Alias,
-                },
             ],
             DiscoveryHints =
             [
@@ -57,16 +40,6 @@ internal sealed class TalvoraManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDi
                 {
                     Kind = "windows-service",
                     Value = TalvoraConstants.ServiceName,
-                },
-                new ManagedMcpDiscoveryHint
-                {
-                    Kind = "config-file",
-                    Value = tunnelPath,
-                },
-                new ManagedMcpDiscoveryHint
-                {
-                    Kind = "tunnel-alias",
-                    Value = tunnel.Alias,
                 },
             ],
         };

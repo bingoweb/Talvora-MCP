@@ -67,61 +67,10 @@ internal static class BusinessTunnelClient
                 "Yerel MCP servisi çalışmıyor.");
         }
 
-        BusinessConfig config;
-        try
-        {
-            config = LoadConfig();
-        }
-        catch (Exception ex)
-        {
-            return new TalvoraStatus(
-                TalvoraConnectionState.LocalOnly,
-                "Talvora çalışıyor",
-                ex.Message);
-        }
-
-        if (!File.Exists(config.TunnelClient))
-        {
-            return new TalvoraStatus(
-                TalvoraConnectionState.LocalOnly,
-                "Talvora çalışıyor, tunnel istemcisi yok",
-                config.TunnelClient);
-        }
-
-        string? credential = null;
-        try
-        {
-            credential = ReadRuntimeCredential();
-            var status = await ReadTunnelStatusAsync(config, credential, cancellationToken);
-            if (status is { ProcessRunning: true, Healthy: true, Ready: true })
-            {
-                return new TalvoraStatus(
-                    TalvoraConnectionState.Ready,
-                    "Talvora bağlı",
-                    "ChatGPT Business tunnel hazır.");
-            }
-
-            return new TalvoraStatus(
-                TalvoraConnectionState.LocalOnly,
-                "Talvora çalışıyor, tunnel hazır değil",
-                "İkona çift tıklayın veya menüden yeniden bağlanın.");
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            TrayLog.Write("Tunnel status check failed", ex);
-            return new TalvoraStatus(
-                TalvoraConnectionState.LocalOnly,
-                "Talvora çalışıyor, tunnel bağlı değil",
-                "İkona çift tıklayın veya menüden yeniden bağlanın.");
-        }
-        finally
-        {
-            credential = null;
-        }
+        return new TalvoraStatus(
+            TalvoraConnectionState.Ready,
+            "Talvora hazır",
+            "Yerel MCP servisi hazır. Dev ve Admin güvenli tünelleri ayrı izleniyor.");
     }
 
     public static async Task<bool> IsLocalMcpHealthyAsync(CancellationToken cancellationToken)
