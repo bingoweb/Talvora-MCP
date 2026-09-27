@@ -10,7 +10,7 @@ Talvora is maintained as a modern-by-default Windows/.NET MCP system.
 4. **Quality gate** — Release builds have zero warnings/errors. NuGet audit covers direct and transitive dependencies at high severity and above.
 5. **Runtime gate** — Runtime/shared/dependency/installer changes must pass the canonical Windows installer and installed MCP surface verification. Hosted CI intentionally does not emulate durable interactive-user behavior.
 6. **Tracking gate** — Each modernization phase is a Gitea issue under the active modernization milestone. Context7 evidence, tests, commit and deployment evidence are written there before closure.
-7. **Desktop progress gate** — Every MCP tool execution is wrapped by Talvora's Windows desktop progress notifier. Long-running work emits a two-minute heartbeat plus milestone notifications. Delivery is deduplicated/throttled, targets the active interactive Windows session, is skipped safely in CI/headless execution, and can never fail the underlying operation.
+7. **Desktop progress gate** — Every MCP tool execution is wrapped by Talvora's Windows desktop progress notifier. The LocalSystem service publishes session-aware events through ACL-protected local IPC to Talvora.Tray, which owns a polished nonmodal WPF progress card. Full text is never arbitrarily truncated, long content remains viewable, active work refreshes in tens of seconds, terminal states auto-dismiss after a readable interval, hover pauses dismissal, visible-card count is bounded, CI/headless execution is safe, and notification delivery can never fail or delay the underlying operation.
 
 ## 2026-Q3 modernization execution phases
 
@@ -80,11 +80,11 @@ Talvora is maintained as a modern-by-default Windows/.NET MCP system.
 
 ### MOD-09 — Mandatory Windows desktop progress notification contract
 
-**Goal:** make frequent desktop progress reporting an enforced runtime behavior instead of relying on an agent prompt or operator habit.
+**Goal:** make frequent, readable, professional desktop progress reporting an enforced runtime behavior instead of relying on an agent prompt or operator habit.
 
-**Implementation:** wrap every MCP CallTool request with the official C# SDK `AddCallToolFilter`; send concise non-waiting Windows session messages through `WTSSendMessageW` to the session returned by `WTSGetActiveConsoleSessionId`; emit start plus two-minute heartbeat and long-operation completion/failure/cancellation milestones; deduplicate and throttle delivery; suppress notification failures so tool semantics are unchanged; skip safely when CI/headless or no active console session is present.
+**Implementation:** wrap every MCP CallTool request with the official C# SDK `AddCallToolFilter`; use `WTSGetActiveConsoleSessionId` only to select the active session; publish start/running/completed/failed/cancelled events to a session-specific named pipe protected for the tray user and LocalSystem; let Talvora.Tray render/update a full-text WPF card without stealing focus; use a 25-second heartbeat, coalesced per-operation updates, bounded visible-card count, readable auto-dismiss timing and hover pause; suppress IPC/UI failures so tool semantics are unchanged; skip safely when CI/headless or no active console session is present. `WTSSendMessageW` and 240-character/4-second NotifyIcon balloons are not the primary MCP progress UX.
 
-**Exit criteria:** source/build regressions prove the wrapper cannot be bypassed by ordinary MCP tool calls, Windows interop uses the active session and non-waiting delivery, CI remains noninteractive, and a local installed-service tool call visibly reports progress on the signed-in desktop.
+**Exit criteria:** source/build regressions prove the wrapper cannot be bypassed by ordinary MCP tool calls, IPC is session-specific and ACL-protected, the tray card preserves full readable text without arbitrary truncation, CI remains noninteractive, and a local installed-service tool call visibly reports start/heartbeat/terminal progress on the signed-in desktop without stealing focus.
 
 ## Update cadence
 

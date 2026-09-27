@@ -10,6 +10,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private const string GiteaUrl = "http://127.0.0.1:3000/";
 
     private readonly ControlCenterApplication _controlCenterApplication;
+    private readonly DesktopProgressNotificationPresenter _desktopProgressPresenter;
+    private readonly DesktopProgressPipeListener _desktopProgressListener;
     private readonly CancellationTokenSource _lifetimeCts = new();
     private readonly NotifyIcon _notifyIcon;
     private readonly ContextMenuStrip _menu;
@@ -62,6 +64,16 @@ internal sealed class TrayApplicationContext : ApplicationContext
     public TrayApplicationContext(ControlCenterApplication controlCenterApplication)
     {
         _controlCenterApplication = controlCenterApplication;
+        _desktopProgressPresenter =
+            new DesktopProgressNotificationPresenter(
+                _controlCenterApplication);
+        _desktopProgressListener =
+            new DesktopProgressPipeListener(
+                Environment.ProcessId == 0
+                    ? 0
+                    : Process.GetCurrentProcess().SessionId,
+                _desktopProgressPresenter.Publish);
+        _desktopProgressListener.Start();
 
         _statusItem = new ToolStripMenuItem("Yönetilen MCP durumları kontrol ediliyor...")
         {
@@ -1612,6 +1624,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
             _genericMcpTimer.Dispose();
             _shutdownTimer.Dispose();
             _shutdownEvent.Dispose();
+            _desktopProgressListener.Dispose();
+            _desktopProgressPresenter.Dispose();
             _notifyIcon.Visible = false;
             _notifyIcon.ContextMenuStrip = null;
             _notifyIcon.Dispose();

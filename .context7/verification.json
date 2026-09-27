@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-27T14:10:40Z",
-  "scope": "Talvora 2026-Q3 deep modernization: .NET 10, MCP SDK, NuGet reproducibility, GitHub Actions, development quality gates, and mandatory Windows desktop progress reporting.",
+  "verifiedAtUtc": "2026-09-27T14:54:00Z",
+  "scope": "Talvora 2026-Q3 deep modernization: .NET 10, MCP SDK, NuGet reproducibility, GitHub Actions, development quality gates, and polished tray-owned Windows desktop progress reporting.",
   "libraries": [
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
@@ -13,7 +13,11 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current NuGet Central Package Management, package lock/locked restore, NuGet audit and global.json SDK pinning guidance; transitive pinning may promote higher centrally managed versions and rejects downgrades; LibraryImport source-generated P/Invoke is the modern interop path and its generated code may require AllowUnsafeBlocks."
+      "verified": "Current NuGet Central Package Management, package lock/locked restore, NuGet audit and global.json SDK pinning guidance; NamedPipeServerStream/NamedPipeClientStream are the current .NET IPC primitives and support async/cancellation; bounded Channel<T> provides nonblocking producer/consumer delivery patterns."
+    },
+    {
+      "libraryId": "/lepoco/wpfui",
+      "verified": "Current WPF-UI Snackbar guidance confirms presenter-owned nonmodal notification UX with explicit timeout; Talvora keeps the existing WPF-UI design language while using a tray-owned WPF progress card so full text, coalescing, hover pause and lifecycle remain under Talvora control."
     }
   ],
   "vendorSources": [
@@ -22,6 +26,9 @@
     "GitHub actions/setup-dotnet v6.0.0 release checked 2026-09-27",
     ".NET 10 servicing and SDK 10.0.401 release information checked 2026-09-27",
     "Microsoft Win32 Interactive Services, WTSGetActiveConsoleSessionId, and WTSSendMessageW documentation checked 2026-09-27",
+    "Microsoft Win32 Interactive Services guidance checked 2026-09-27: LocalSystem services should interact indirectly through a separate GUI app; named pipes are an explicit IPC option and multi-user endpoints should be session-specific",
+    "Microsoft named-pipe security guidance checked 2026-09-27: use an explicit ACL for IPC; default pipe ACLs include LocalSystem but also broader read access, so Talvora restricts the tray endpoint to the tray user and LocalSystem",
+    "Microsoft WPF window guidance checked 2026-09-27: ShowActivated=false prevents a notification window from stealing focus; wrapped/scrollable WPF content is used for full-text visibility",
     "Microsoft .NET native interop best practices checked 2026-09-27; new one-off Win32 calls use LibraryImport generated interop",
     "Microsoft NuGet Central Package Management transitive-pinning guidance checked 2026-09-27; centrally pinned versions are equal to or higher than dependency-requested versions",
     "Microsoft.Build.Framework 18.10.1 was evaluated and intentionally not adopted on net10.0-windows: its Microsoft.NET.StringTools 18.10.1 dependency reports net11+ support and Microsoft.Build.Locator rejects the promoted runtime asset graph (MSBL001); 17.14.28 remains the compatible pin"

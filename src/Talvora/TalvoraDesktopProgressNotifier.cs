@@ -1,23 +1,45 @@
 using System.Diagnostics;
+using System.IO.Pipes;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Channels;
+using Talvora.Shared;
 
 namespace Talvora;
 
-internal sealed partial class TalvoraDesktopProgressNotifier(
-    ILogger<TalvoraDesktopProgressNotifier> logger)
+internal sealed partial class TalvoraDesktopProgressNotifier :
+    IAsyncDisposable
 {
-    internal static readonly TimeSpan HeartbeatInterval = TimeSpan.FromMinutes(2);
-    internal static readonly TimeSpan MinimumDeliveryInterval = TimeSpan.FromSeconds(8);
-    internal static readonly TimeSpan DuplicateWindow = TimeSpan.FromSeconds(30);
-    internal static readonly TimeSpan CompletionNotificationThreshold = TimeSpan.FromSeconds(20);
+    internal static readonly TimeSpan HeartbeatInterval =
+        TimeSpan.FromSeconds(20);
+    internal static readonly TimeSpan PipeConnectTimeout =
+        TimeSpan.FromMilliseconds(350);
 
     private const uint NoActiveConsoleSession = 0xFFFFFFFF;
-    private const uint MessageBoxInformation = 0x00000040;
-    private const uint MessageTimeoutSeconds = 8;
 
-    private readonly object _gate = new();
-    private DateTimeOffset _lastDeliveryUtc = DateTimeOffset.MinValue;
-    private string? _lastDeliveredMessage;
+    private readonly ILogger<TalvoraDesktopProgressNotifier> _logger;
+    private readonly CancellationTokenSource _lifetimeCts = new();
+    private readonly Channel<DesktopProgressMessage> _deliveryQueue;
+    private readonly Task _deliveryTask;
+
+    public TalvoraDesktopProgressNotifier(
+        ILogger<TalvoraDesktopProgressNotifier> logger)
+    {
+        _logger = logger;
+        _deliveryQueue =
+            Channel.CreateBounded<DesktopProgressMessage>(
+                new BoundedChannelOptions(64)
+                {
+                    SingleReader = true,
+                    SingleWriter = false,
+                    AllowSynchronousContinuations = false,
+                    FullMode = BoundedChannelFullMode.DropOldest,
+                });
+        _deliveryTask =
+            Task.Run(
+                () => DeliverQueuedNotificationsAsync(
+                    _lifetimeCts.Token));
+    }
 
     public async ValueTask<T> RunToolCallAsync<T>(
         string toolName,
@@ -27,16 +49,21 @@ internal sealed partial class TalvoraDesktopProgressNotifier(
         ArgumentNullException.ThrowIfNull(operation);
 
         var displayName = NormalizeToolName(toolName);
+        var operationId = Guid.NewGuid().ToString("N");
         var stopwatch = Stopwatch.StartNew();
-        TryNotify(
+        Enqueue(
+            operationId,
+            displayName,
             "Talvora çalışıyor",
-            $"Başladı: {displayName}",
-            force: false);
+            $"{displayName} çağrısı başladı. İşlem sürerken önemli adımlar ve düzenli ilerleme durumu bu kartta güncellenecek.",
+            DesktopProgressKind.Started,
+            stopwatch.Elapsed);
 
         using var heartbeatCts =
             CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var heartbeatTask =
             RunHeartbeatAsync(
+                operationId,
                 displayName,
                 stopwatch,
                 heartbeatCts.Token);
@@ -45,30 +72,36 @@ internal sealed partial class TalvoraDesktopProgressNotifier(
         {
             var result = await operation(cancellationToken);
 
-            if (stopwatch.Elapsed >= CompletionNotificationThreshold)
-            {
-                TryNotify(
-                    "Talvora tamamladı",
-                    $"Tamamlandı: {displayName} ({FormatElapsed(stopwatch.Elapsed)})",
-                    force: true);
-            }
+            Enqueue(
+                operationId,
+                displayName,
+                "Talvora tamamladı",
+                $"{displayName} çağrısı başarıyla tamamlandı. Toplam süre: {FormatElapsed(stopwatch.Elapsed)}.",
+                DesktopProgressKind.Completed,
+                stopwatch.Elapsed);
 
             return result;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            TryNotify(
+            Enqueue(
+                operationId,
+                displayName,
                 "Talvora durduruldu",
-                $"İptal edildi: {displayName}",
-                force: true);
+                $"{displayName} çağrısı iptal edildi. Geçen süre: {FormatElapsed(stopwatch.Elapsed)}.",
+                DesktopProgressKind.Cancelled,
+                stopwatch.Elapsed);
             throw;
         }
         catch (Exception)
         {
-            TryNotify(
+            Enqueue(
+                operationId,
+                displayName,
                 "Talvora hata bildirdi",
-                $"Başarısız: {displayName}",
-                force: true);
+                $"{displayName} çağrısı başarısız oldu. Ayrıntılar çağrı sonucunda ve Talvora günlüklerinde korunuyor.",
+                DesktopProgressKind.Failed,
+                stopwatch.Elapsed);
             throw;
         }
         finally
@@ -86,6 +119,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier(
     }
 
     private async Task RunHeartbeatAsync(
+        string operationId,
         string displayName,
         Stopwatch stopwatch,
         CancellationToken cancellationToken)
@@ -93,83 +127,109 @@ internal sealed partial class TalvoraDesktopProgressNotifier(
         using var timer = new PeriodicTimer(HeartbeatInterval);
         while (await timer.WaitForNextTickAsync(cancellationToken))
         {
-            TryNotify(
+            Enqueue(
+                operationId,
+                displayName,
                 "Talvora çalışmaya devam ediyor",
-                $"{displayName} sürüyor ({FormatElapsed(stopwatch.Elapsed)})",
-                force: true);
+                $"{displayName} hâlâ çalışıyor. Geçen süre: {FormatElapsed(stopwatch.Elapsed)}. İşlem devam ediyor; yeni bir dönüm noktası olduğunda bu kart güncellenecek.",
+                DesktopProgressKind.Running,
+                stopwatch.Elapsed);
         }
     }
 
-    private bool TryNotify(
+    private void Enqueue(
+        string operationId,
+        string toolName,
         string title,
         string message,
-        bool force)
+        DesktopProgressKind kind,
+        TimeSpan elapsed)
+    {
+        if (!OperatingSystem.IsWindows() ||
+            IsTruthy(Environment.GetEnvironmentVariable("CI")))
+        {
+            return;
+        }
+
+        _deliveryQueue.Writer.TryWrite(
+            new DesktopProgressMessage(
+                operationId,
+                toolName,
+                title,
+                message,
+                kind,
+                DateTimeOffset.UtcNow,
+                elapsed.TotalSeconds));
+    }
+
+    private async Task DeliverQueuedNotificationsAsync(
+        CancellationToken cancellationToken)
     {
         try
         {
-            if (!OperatingSystem.IsWindows() ||
-                IsTruthy(Environment.GetEnvironmentVariable("CI")))
+            await foreach (
+                var message in
+                _deliveryQueue.Reader.ReadAllAsync(cancellationToken))
             {
-                return false;
-            }
-
-            var now = DateTimeOffset.UtcNow;
-            lock (_gate)
-            {
-                if (!force &&
-                    now - _lastDeliveryUtc < MinimumDeliveryInterval)
-                {
-                    return false;
-                }
-
-                if (string.Equals(
-                        _lastDeliveredMessage,
-                        message,
-                        StringComparison.Ordinal) &&
-                    now - _lastDeliveryUtc < DuplicateWindow)
-                {
-                    return false;
-                }
-
-                var sessionId = WTSGetActiveConsoleSessionId();
-                if (sessionId == NoActiveConsoleSession)
-                {
-                    return false;
-                }
-
-                var response = 0u;
-                var delivered = WTSSendMessageW(
-                    IntPtr.Zero,
-                    sessionId,
-                    title,
-                    checked((uint)(title.Length * sizeof(char))),
+                await TryDeliverAsync(
                     message,
-                    checked((uint)(message.Length * sizeof(char))),
-                    MessageBoxInformation,
-                    MessageTimeoutSeconds,
-                    out response,
-                    false);
-
-                if (!delivered)
-                {
-                    logger.LogDebug(
-                        "Desktop progress notification was not delivered. Win32Error={Win32Error} SessionId={SessionId}",
-                        Marshal.GetLastWin32Error(),
-                        sessionId);
-                    return false;
-                }
-
-                _lastDeliveryUtc = now;
-                _lastDeliveredMessage = message;
-                return true;
+                    cancellationToken);
             }
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task TryDeliverAsync(
+        DesktopProgressMessage message,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var sessionId = WTSGetActiveConsoleSessionId();
+            if (sessionId == NoActiveConsoleSession)
+            {
+                return;
+            }
+
+            await using var pipe = new NamedPipeClientStream(
+                ".",
+                DesktopProgressProtocol.GetPipeName(
+                    checked((int)sessionId)),
+                PipeDirection.Out,
+                PipeOptions.Asynchronous);
+
+            using var connectCts =
+                CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken);
+            connectCts.CancelAfter(PipeConnectTimeout);
+            await pipe.ConnectAsync(connectCts.Token);
+
+            await using var writer = new StreamWriter(
+                pipe,
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                bufferSize: 4096,
+                leaveOpen: true)
+            {
+                AutoFlush = true,
+            };
+            await writer.WriteLineAsync(
+                DesktopProgressProtocol.Serialize(message));
+        }
+        catch (OperationCanceledException)
+            when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogDebug(
+                "Desktop progress tray IPC was unavailable within {TimeoutMs} ms.",
+                PipeConnectTimeout.TotalMilliseconds);
         }
         catch (Exception ex)
         {
-            logger.LogDebug(
+            _logger.LogDebug(
                 ex,
                 "Desktop progress notification failed without affecting the tool operation.");
-            return false;
         }
     }
 
@@ -202,24 +262,21 @@ internal sealed partial class TalvoraDesktopProgressNotifier(
         string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
 
+    public async ValueTask DisposeAsync()
+    {
+        _deliveryQueue.Writer.TryComplete();
+        _lifetimeCts.Cancel();
+        try
+        {
+            await _deliveryTask;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+
+        _lifetimeCts.Dispose();
+    }
+
     [LibraryImport("kernel32.dll")]
     private static partial uint WTSGetActiveConsoleSessionId();
-
-    [LibraryImport(
-        "wtsapi32.dll",
-        EntryPoint = "WTSSendMessageW",
-        StringMarshalling = StringMarshalling.Utf16,
-        SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool WTSSendMessageW(
-        IntPtr hServer,
-        uint sessionId,
-        string title,
-        uint titleLength,
-        string message,
-        uint messageLength,
-        uint style,
-        uint timeout,
-        out uint response,
-        [MarshalAs(UnmanagedType.Bool)] bool wait);
 }
