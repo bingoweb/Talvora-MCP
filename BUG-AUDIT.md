@@ -2,10 +2,10 @@
 
 Last updated: 2026-09-27
 Branch: main
-Current repository runtime-affecting committed HEAD: `6301180f416683ef522efea7832faf2ef9924027` — final full-smoke compatibility and bounded JavaScript toolchain probes.
-Current exact-installed audit runtime: `6301180f416683ef522efea7832faf2ef9924027`
+Current repository runtime-affecting committed HEAD: `d9f85ea792244867a606e50cf525ef0dfdca556e` — graceful self-update and truthful deferred desktop progress.
+Current exact-installed audit runtime: `d9f85ea792244867a606e50cf525ef0dfdca556e`
 Canonical exact-installed tool count: 212 unique tools
-Status: #121–#226 remediation complete or test-verified as applicable. Admin focused surface = 91 unique tools; Development = 182; Full = 212. Final 212-tool full smoke, live metadata/surface policy, focused Source Edit regressions, modernization policy and Context7 gate are GREEN.
+Status: #121–#229 remediation complete or test-verified as applicable. Admin focused surface = 91 unique tools; Development = 182; Full = 212. Final 212-tool full smoke, live metadata/surface policy, focused Source Edit regressions, modernization policy and Context7 gate are GREEN.
 
 ## Current remediation status summary — 2026-09-27
 
@@ -16,8 +16,11 @@ Status: #121–#226 remediation complete or test-verified as applicable. Admin f
 - #224 **FIXED / LIVE VERIFIED** — `target=user` environment mutation artık helper-process/HKCU varsayımına bağlı değil; aktif interactive kullanıcının gerçek `HKU\<SID>\Environment` hive'ını doğrudan ve flush ederek kullanıyor. Gerçek logged-on user process probe aynı değeri okudu.
 - #225 **FIXED / TEST VERIFIED** — full smoke'ta iki harness drift'i kapatıldı: PowerShell `-Command` sonrası `$args[]` varsayımı environment override ile deterministik hale getirildi; nullable `nextResultOffset` wire JSON'da omitted olduğunda terminal continuation doğru kabul ediliyor.
 - #226 **FIXED / LIVE VERIFIED** — `talvora_yarn_info` Corepack shim'i üzerinden bilgi okurken ağ/indirme beklemesine girebiliyordu. JavaScript info probe'ları bounded 10 saniye, download-prompt kapalı ve nonzero/timeout durumunda yapısal `found=false` olacak şekilde harden edildi. Final 212-tool full smoke GREEN.
+- #227 **FIXED / LIVE VERIFIED** — servis-içinden self-update önce `sc stop` beklerken aynı MCP isteği hâlâ açık olduğu için circular wait oluşuyor, ardından PID kill fallback'i tetiklenip Windows SCM 7034 yazıyordu. `Install.ps1` artık Talvora service ancestor'ını algılayıp installer'ı `--defer-ms 2500` ile detached başlatıyor. Gerçek self-update acceptance'ta forced termination satırı ve yeni SCM 7034 oluşmadı.
+- #228 **FIXED / TEST VERIFIED** — `Talvora.Smoke` başarısız senaryoda top-level exception ile process crash ederek Windows Application Error/.NET Runtime kayıtları üretiyordu. Top-level catch kontrollü `exit=1` + stderr sağlıyor; kasıtlı bağlantı failure testinde yeni crash event oluşmadı. Güncel 212-tool full smoke yeniden GREEN.
+- #229 **FIXED / LIVE/SOURCE VERIFIED** — detached installer handoff başarılı döndüğünde masaüstü worklog yanlışlıkla yeni sürüm etkinleşmiş gibi tamamlanabiliyordu. Runtime gerçek `TALVORA_UPDATE_DETACHED` marker'ını okuyup `Kurucuya devrettim` mesajı verir ve yeni runtime doğrulanmadan tamamlandı iddiasında bulunmaz. Modernization regression GREEN.
 - Repository-wide audit kapsamı: yaklaşık **220 C# dosyası / 69k satır**; Release solution build **0 warning / 0 error**; `dotnet format analyzers --verify-no-changes` GREEN; NuGet vulnerable/deprecated scan **0 bulgu**; metadata/surface/privacy/shared-infrastructure smoke GREEN; Source Edit semantic/resource/response/runtime/cache/source/job focused regressions GREEN. Bu taramada bunların dışında doğrulanmış yeni açık ürün bug'ı kalmadı.
-- Canonical installer: source `6301180f416683ef522efea7832faf2ef9924027`, SHA-256 `529A2C0CF8318FECA63DFB9125CEC9C8E6A6E74A4D1CA97597209E6DA095F142`; exact-installed runtime aynı source commit'i bildiriyor.
+- Canonical installer: source `d9f85ea792244867a606e50cf525ef0dfdca556e`, SHA-256 `720CFF8BCAA4167AA42FCC85B1803BE2C362D0CEEDB4412132471CEC39842C15`; exact-installed runtime aynı source commit'i bildiriyor.
 
 - #219 live acceptance: legacy full-tunnel Talvora registration artık yalnız yerel Windows servisini temsil ediyor; Dev/Admin ayrı tunnel-only managed registration olarak yönetiliyor. Kullanıcı registry'si mevcut Dev/Admin config'lerinden tunnel kimliklerini geri kazandı, ortak `runtime-key.dpapi` mevcut, reconnect tamamlandı ve tunnel-client status her iki alias için `process_running=true`, `healthy=true`, `ready=true` döndürdü. ChatGPT focused discovery canlı Dev=182 / Admin=91. Penpot on-demand `autoStart=false`. Installer self-update process-tree fix gerçek Talvora-içinden deploy ile GREEN. Desktop progress akışı `started -> long-running status -> completed` ticari semantiğine geçirildi.
 
