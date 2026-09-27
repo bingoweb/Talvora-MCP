@@ -108,10 +108,29 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     {
         return
             $"Sonuç: {SummarizeResult(result)}\n" +
-            $"Ne değişti: {narrative.Action}\n" +
+            $"Ne değişti: {DescribeChange(narrative)}\n" +
             $"Neden: {narrative.Reason}\n" +
             $"Süre: {FormatElapsed(elapsed)}";
     }
+
+    private static string DescribeChange(OperationNarrative narrative) =>
+        narrative.Subject switch
+        {
+            "Talvora kurulum paketi hazırlanıyor" =>
+                "Yeni installer paketi ve manifest üretildi; çalışan servis henüz değiştirilmedi.",
+            "Talvora yeni sürüme geçiriliyor" =>
+                "Talvora Windows servisi ve tray hazırlanan yeni sürüme geçirildi.",
+            "Talvora günlükleri inceleniyor" =>
+                "Sistemde değişiklik yapılmadı; yalnız günlükler okunup durum doğrulandı.",
+            "Talvora derleme doğrulaması yapıyor" or
+            "Talvora testleri çalıştırıyor" =>
+                "Kaynak dosyalarda değişiklik yapılmadı; derleme/test sonucu doğrulandı.",
+            "Talvora kaynak kodu güncelliyor" =>
+                "Planlanan kaynak dosyaları sürüm kontrollü patch ile güncellendi.",
+            "Talvora değişiklikleri uzak depoya gönderiyor" =>
+                "Uzak Git deposu doğrulanmış yerel commitlerle güncellendi.",
+            _ => narrative.Action,
+        };
 
     private static string SummarizeResult<T>(T result)
     {
