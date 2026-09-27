@@ -31,7 +31,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
     private static readonly TimeSpan FailureLifetime =
         TimeSpan.FromMinutes(15);
     private static readonly TimeSpan ActiveStaleThreshold =
-        TimeSpan.FromSeconds(25);
+        TimeSpan.FromSeconds(15);
     private static readonly TimeSpan StaleCheckInterval =
         TimeSpan.FromSeconds(10);
 

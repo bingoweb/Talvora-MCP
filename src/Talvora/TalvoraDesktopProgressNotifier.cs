@@ -13,9 +13,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     IAsyncDisposable
 {
     internal static readonly TimeSpan FirstProgressDelay =
-        TimeSpan.FromSeconds(5);
+        TimeSpan.FromSeconds(2);
     internal static readonly TimeSpan ProgressInterval =
-        TimeSpan.FromSeconds(10);
+        TimeSpan.FromSeconds(5);
     internal static readonly TimeSpan PipeConnectTimeout =
         TimeSpan.FromSeconds(2);
 
