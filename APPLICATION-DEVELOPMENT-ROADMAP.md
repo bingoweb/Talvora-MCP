@@ -20,12 +20,14 @@ Turn Talvora into a first-class Windows-native software/application development 
 - Do not add Playwright to Talvora.
 - Do not add aliases merely to increase tool count.
 - Add focused typed tools where they materially improve discovery/automation, while retaining the general-purpose explicit-admin *-run path.
-- Use Context7 plus official vendor documentation before implementing or changing third-party CLI behavior.
+- Context7 is a mandatory quality gate for every meaningful development change involving a third-party framework, SDK, library, protocol SDK, CLI, or package manager. Query current Context7 documentation before implementation, record the library ID and verified guidance in the active Gitea issue/PR, then confirm release/support/breaking-change details with official vendor documentation.
+- Keep Talvora modern by default: centrally pin supported stable dependencies, commit reproducible lock files, remove deprecated paths when a supported replacement exists, and review affected dependencies/toolchains at the start of substantial development.
+- Windows desktop progress reporting is mandatory software behavior. Every MCP tool call must pass through the progress-notification wrapper; long-running work must emit bounded periodic updates to the active interactive session, with dedupe/throttle and failure isolation so notification problems never fail the underlying operation.
 - Install missing required software immediately with Chocolatey, using the newest supported stable release; use the current LTS only where the vendor's non-LTS line is near end-of-support or unsuitable as a machine default.
 - Do not retain deprecated CLIs, legacy SDK layouts, old runtime fallbacks, or compatibility aliases once an official modern replacement exists.
 - Project-local wrappers are toolchain pinning, not legacy compatibility. New or upgraded projects should use current stable wrapper/toolchain versions.
 - Validate only the changed capability. Do not rerun broad smoke/regression suites unless shared infrastructure changes.
-- No Git commit/push until explicitly requested.
+- Git commit/push may proceed phase-by-phase without repeated approval when the active task explicitly authorizes autonomous implementation; otherwise require an explicit request.
 
 ## Canonical source-edit routing contract (Faz 14 — CORE + STRUCTURAL + SEMANTIC IMPLEMENTED)
 

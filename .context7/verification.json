@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-09-27T14:10:40Z",
+  "scope": "Talvora 2026-Q3 deep modernization: .NET 10, MCP SDK, NuGet reproducibility, GitHub Actions, development quality gates, and mandatory Windows desktop progress reporting.",
+  "libraries": [
+    {
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "Current ASP.NET Core MCP server registration and HTTP transport patterns; AddCallToolFilter wraps every CallTool request and exposes request.Params.Name while preserving downstream cancellation/exception semantics."
+    },
+    {
+      "libraryId": "/websites/learn_microsoft_en-us",
+      "verified": "Current Microsoft.Extensions.AI and Microsoft.Extensions package alignment guidance for .NET 10."
+    },
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "Current NuGet Central Package Management, package lock/locked restore, NuGet audit and global.json SDK pinning guidance; transitive pinning may promote higher centrally managed versions and rejects downgrades; LibraryImport source-generated P/Invoke is the modern interop path and its generated code may require AllowUnsafeBlocks."
+    }
+  ],
+  "vendorSources": [
+    "NuGet Gallery current stable package metadata checked 2026-09-27",
+    "GitHub actions/checkout v7.0.1 release checked 2026-09-27",
+    "GitHub actions/setup-dotnet v6.0.0 release checked 2026-09-27",
+    ".NET 10 servicing and SDK 10.0.401 release information checked 2026-09-27",
+    "Microsoft Win32 Interactive Services, WTSGetActiveConsoleSessionId, and WTSSendMessageW documentation checked 2026-09-27",
+    "Microsoft .NET native interop best practices checked 2026-09-27; new one-off Win32 calls use LibraryImport generated interop",
+    "Microsoft NuGet Central Package Management transitive-pinning guidance checked 2026-09-27; centrally pinned versions are equal to or higher than dependency-requested versions",
+    "Microsoft.Build.Framework 18.10.1 was evaluated and intentionally not adopted on net10.0-windows: its Microsoft.NET.StringTools 18.10.1 dependency reports net11+ support and Microsoft.Build.Locator rejects the promoted runtime asset graph (MSBL001); 17.14.28 remains the compatible pin"
+  ]
+}

@@ -3,22 +3,23 @@
     <AssemblyName>Talvora</AssemblyName>
     <RootNamespace>Talvora</RootNamespace>
     <ApplicationIcon>..\..\assets\Talvora.ico</ApplicationIcon>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Talvora.Shared\Talvora.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="*" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="*" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="*" />
-    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="*" />
-    <PackageReference Include="Microsoft.Build.Locator" Version="*" />
-    <PackageReference Include="Microsoft.Build.Framework" Version="17.*" ExcludeAssets="runtime" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="*" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="*" />
-    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="*" />
-    <PackageReference Include="YamlDotNet" Version="*" />
-    <PackageReference Include="Tomlyn" Version="*" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
+    <PackageReference Include="Microsoft.Build.Locator" />
+    <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="Tomlyn" />
   </ItemGroup>
   <ItemGroup>
     <None Update="PenpotAiPlugin\**\*"

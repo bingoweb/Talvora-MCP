@@ -26,6 +26,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 
 builder.Host.UseWindowsService(options => options.ServiceName = "Talvora");
 builder.WebHost.ConfigureKestrel(options => options.ListenLocalhost(7676));
+builder.Services.AddSingleton<TalvoraDesktopProgressNotifier>();
 
 builder.Services
     .AddMcpServer(options =>
@@ -47,6 +48,24 @@ builder.Services
         };
     })
     .WithRequestFilters(filters =>
+    {
+        filters.AddCallToolFilter(next => async (
+            request,
+            cancellationToken) =>
+        {
+            var notifier =
+                request.Services?.GetService<TalvoraDesktopProgressNotifier>();
+            if (notifier is null)
+            {
+                return await next(request, cancellationToken);
+            }
+
+            return await notifier.RunToolCallAsync(
+                request.Params.Name,
+                token => next(request, token),
+                cancellationToken);
+        });
+
         filters.AddListToolsFilter(next => async (
             request,
             cancellationToken) =>
@@ -57,7 +76,8 @@ builder.Services
                     cancellationToken);
             McpToolMetadataWirePolicy.Apply(result);
             return result;
-        }))
+        });
+    })
     .WithToolsFromAssembly();
 
 var app = builder.Build();

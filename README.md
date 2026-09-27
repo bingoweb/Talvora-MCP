@@ -202,6 +202,8 @@ The tunnel transports ChatGPT traffic to the loopback MCP while Talvora itself r
 
 Talvora treats the installed runtime as the truth, not just the source tree.
 
+Development is also **modern-by-default**: NuGet versions are centrally managed, restores are lock-file reproducible, high-severity direct/transitive NuGet advisories are audited, and meaningful third-party API/framework/CLI changes must pass the Context7 + official-vendor documentation gate. The durable policy is in [docs/MODERNIZATION-POLICY.md](docs/MODERNIZATION-POLICY.md).
+
 The Windows CI pipeline:
 
 1. restores and builds the current projects,

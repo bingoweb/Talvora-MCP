@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Talvora.Shared/Talvora.Shared.csproj" />
+  <Project Path="src/Talvora/Talvora.csproj" />
+  <Project Path="src/Talvora.Tray/Talvora.Tray.csproj" />
+  <Project Path="tests/Talvora.Smoke/Talvora.Smoke.csproj" />
+  <Project Path="tests/Talvora.SourceEdit.Regression/Talvora.SourceEdit.Regression.csproj" />
+</Solution>

@@ -1033,7 +1033,7 @@ internal static partial class SourceEditRegressionRunner
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.Static)
                 ?? throw new InvalidOperationException(
-                    $"Missing escape-hatch method {item.Type.Name}.{item.Method}.");
+                    $"Missing general-administration method {item.Type.Name}.{item.Method}.");
             var description =
                 Attribute.GetCustomAttribute(
                     method,
@@ -1041,9 +1041,9 @@ internal static partial class SourceEditRegressionRunner
                 as System.ComponentModel.DescriptionAttribute;
             Assert(
                 description?.Description.Contains(
-                    "unrestricted administration/escape-hatch",
+                    "general administration capability",
                     StringComparison.OrdinalIgnoreCase) == true,
-                $"Escape-hatch routing description regressed: {item.Type.Name}.{item.Method}");
+                $"General-administration routing description regressed: {item.Type.Name}.{item.Method}");
         }
 
         foreach (var item in new[]
