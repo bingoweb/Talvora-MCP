@@ -132,4 +132,15 @@ PenpotAiPluginEndpoints.Map(app);
 app.MapMcp("/mcp");
 app.MapMcp("/mcp/dev");
 app.MapMcp("/mcp/admin");
-app.Run();
+try
+{
+    app.Run();
+}
+catch (OperationCanceledException)
+    when (OperatingSystem.IsWindows() &&
+          WindowsServiceHelpers.IsWindowsService())
+{
+    // Windows service shutdown may cancel the host stop token while SCM is
+    // waiting for a clean STOPPED transition. Treat that cancellation as the
+    // expected service-stop path instead of crashing the process.
+}

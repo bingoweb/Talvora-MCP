@@ -185,8 +185,12 @@ public static async Task<HealthSnapshot> InstallAsync(
                 $"Install succeeded. Commit={sourceCommit} PID={health.ProcessId}");
             return health;
         }
-        catch
+        catch (Exception installError)
         {
+            InstallerLog.Write(
+                "Install failed before rollback.",
+                installError);
+
             if (serviceSwitchStarted &&
                 !string.IsNullOrWhiteSpace(previousServiceExecutable) &&
                 File.Exists(previousServiceExecutable))

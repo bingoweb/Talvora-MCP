@@ -197,8 +197,18 @@ private static async Task RemoveLegacyInstallationAsync(
                 await Task.Delay(250, cancellationToken);
             }
 
-            throw new TimeoutException(
-                $"Windows service durdurulamadı; kayıt korunarak upgrade iptal edildi: {serviceName}");
+            InstallerLog.Write(
+                $"Service remained registered after forced termination; deleting stale registration before upgrade. Service={serviceName}");
+
+            _ = await RunScAsync(
+                allowNonZero: true,
+                cancellationToken,
+                "delete",
+                serviceName);
+            await WaitForServiceDeletionAsync(
+                serviceName,
+                cancellationToken);
+            stopSucceeded = true;
         }
         finally
         {
