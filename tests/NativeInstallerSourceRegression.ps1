@@ -539,7 +539,8 @@ $result = [pscustomobject]@{
         $installerFlow -notmatch 'StopAndDeleteServiceAsync\(ServiceName' -and
         $installerService -match '"config"' -and
         $installerService -match '"binPath="' -and
-        $installerService -match 'Kill\(entireProcessTree:\s*true\)'
+        $installerService -match 'Kill\(entireProcessTree:\s*false\)' -and
+        $installerService -notmatch 'process\.Kill\(entireProcessTree:\s*true\)'
     )
     PlaywrightMcpRemovedFromTalvora = (
         $installerFlow -notmatch 'InstallPlaywrightManagedMcpAsync' -and

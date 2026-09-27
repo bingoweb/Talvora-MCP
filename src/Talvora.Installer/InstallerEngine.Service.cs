@@ -163,7 +163,12 @@ private static async Task RemoveLegacyInstallationAsync(
                 try
                 {
                     using var process = Process.GetProcessById(processId);
-                    process.Kill(entireProcessTree: true);
+                    // The installer can itself be launched through a Talvora MCP
+                    // tool call, which makes it a descendant of the service
+                    // process. Killing the complete service process tree would
+                    // therefore terminate the updater before it can recreate
+                    // the Windows service.
+                    process.Kill(entireProcessTree: false);
                     await process.WaitForExitAsync(cancellationToken);
                 }
                 catch (ArgumentException)
@@ -319,7 +324,9 @@ private static async Task RemoveLegacyInstallationAsync(
             try
             {
                 using var process = Process.GetProcessById(processId);
-                process.Kill(entireProcessTree: true);
+                // Keep the updater alive when service maintenance was initiated
+                // from a Talvora MCP child process.
+                process.Kill(entireProcessTree: false);
                 await process.WaitForExitAsync(cancellationToken);
             }
             catch (ArgumentException)
