@@ -107,10 +107,81 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         TimeSpan elapsed)
     {
         return
-            $"Sonuç: {SummarizeResult(result)}\n" +
-            $"Ne değişti: {DescribeChange(narrative)}\n" +
-            $"Neden: {narrative.Reason}\n" +
+            $"Bitti. {DescribeChange(narrative)}\n" +
+            $"{SummarizeResult(result)}\n" +
             $"Süre: {FormatElapsed(elapsed)}";
+    }
+
+    private static string BuildStartedMessage(OperationNarrative narrative) =>
+        $"Şimdi {ToFirstPersonAction(narrative)}\n" +
+        $"Bunu {ToPlainReason(narrative.Reason)}";
+
+    private static string BuildRunningMessage(
+        string displayName,
+        TimeSpan elapsed) =>
+        $"Hâlâ {ToRunningPhrase(displayName)}\n" +
+        $"{FormatElapsed(elapsed)} oldu; iş bitince sonucu burada yazacağım.";
+
+    private static string ToFirstPersonAction(OperationNarrative narrative) =>
+        narrative.Subject switch
+        {
+            "Talvora kurulum paketi hazırlanıyor" =>
+                "yeni Talvora sürümünün kurulum paketini hazırlıyorum.",
+            "Talvora yeni sürüme geçiriliyor" =>
+                "hazırladığım yeni Talvora sürümünü çalışan sisteme kuruyorum.",
+            "Talvora günlükleri inceleniyor" =>
+                "yaptığım değişikliğin canlıda sorunsuz çalışıp çalışmadığını kontrol ediyorum.",
+            "Talvora derleme doğrulaması yapıyor" =>
+                "yaptığım değişikliklerin hatasız derlendiğini kontrol ediyorum.",
+            "Talvora testleri çalıştırıyor" =>
+                "yaptığım değişiklikleri test ediyorum.",
+            "Talvora kaynak kodu güncelliyor" =>
+                "üzerinde çalıştığım özelliğin kod değişikliklerini uyguluyorum.",
+            "Talvora değişiklikleri uzak depoya gönderiyor" =>
+                "doğruladığım değişiklikleri Gitea ve GitHub'a gönderiyorum.",
+            "Talvora Git işlemi yürütüyor" =>
+                "kaynak kod geçmişini düzenliyorum ve doğruluyorum.",
+            "Talvora sistem görevi yürütüyor" =>
+                "Windows üzerinde gereken sistem kontrolünü yapıyorum.",
+            _ =>
+                $"{narrative.Subject.ToLowerInvariant()}."
+        };
+
+    private static string ToRunningPhrase(string displayName) =>
+        displayName switch
+        {
+            "Talvora kurulum paketi hazırlanıyor" =>
+                "kurulum paketini hazırlıyorum.",
+            "Talvora yeni sürüme geçiriliyor" =>
+                "yeni sürümü sisteme kuruyorum.",
+            "Talvora günlükleri inceleniyor" =>
+                "canlı çalışma durumunu kontrol ediyorum.",
+            "Talvora derleme doğrulaması yapıyor" =>
+                "derleme kontrolü yapıyorum.",
+            "Talvora testleri çalıştırıyor" =>
+                "testleri çalıştırıyorum.",
+            "Talvora kaynak kodu güncelliyor" =>
+                "kod değişikliklerini uyguluyorum.",
+            "Talvora değişiklikleri uzak depoya gönderiyor" =>
+                "değişiklikleri uzak depolara gönderiyorum.",
+            _ =>
+                "bu iş üzerinde çalışıyorum."
+        };
+
+    private static string ToPlainReason(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return "bu adımı tamamlamak için yapıyorum.";
+        }
+
+        var plain = reason.Trim();
+        if (plain.EndsWith(".", StringComparison.Ordinal))
+        {
+            plain = plain[..^1];
+        }
+
+        return plain.ToLowerInvariant() + ".";
     }
 
     private static string DescribeChange(OperationNarrative narrative) =>

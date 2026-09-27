@@ -12,7 +12,7 @@ namespace Talvora.Tray;
 
 internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
 {
-    private const int MaximumVisibleCards = 2;
+    private const int MaximumVisibleCards = 1;
     private const int ScreenMarginPixels = 18;
     private const int CardGapPixels = 10;
     private const int PlacementDocumentVersion = 1;
