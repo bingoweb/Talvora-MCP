@@ -14,4 +14,20 @@ public static class TextLines
         value.EndsWith(Environment.NewLine, StringComparison.Ordinal)
             ? value
             : NormalizeTrailingNewline(value) + Environment.NewLine;
+
+    public static string? FirstNonEmpty(params string[] values)
+    {
+        foreach (var value in values)
+        {
+            var line = Split(value)
+                .FirstOrDefault(item =>
+                    !string.IsNullOrWhiteSpace(item));
+            if (!string.IsNullOrWhiteSpace(line))
+            {
+                return line.Trim();
+            }
+        }
+
+        return null;
+    }
 }

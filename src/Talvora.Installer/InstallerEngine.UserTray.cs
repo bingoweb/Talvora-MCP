@@ -307,7 +307,7 @@ private static InstallUserContext ResolveInstallUserContext()
         while (DateTime.UtcNow < gracefulDeadline)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (Process.GetProcessesByName("Talvora.Tray").Length == 0)
+            if (!HasRunningTrayProcess())
             {
                 return;
             }
@@ -336,7 +336,7 @@ private static InstallUserContext ResolveInstallUserContext()
         while (DateTime.UtcNow < forcedDeadline)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (Process.GetProcessesByName("Talvora.Tray").Length == 0)
+            if (!HasRunningTrayProcess())
             {
                 return;
             }
@@ -345,5 +345,21 @@ private static InstallUserContext ResolveInstallUserContext()
         }
 
         throw new IOException("Talvora Tray kapatılamadı; güncelleme güvenle devam edemiyor.");
+    }
+
+    private static bool HasRunningTrayProcess()
+    {
+        var processes = Process.GetProcessesByName("Talvora.Tray");
+        try
+        {
+            return processes.Length > 0;
+        }
+        finally
+        {
+            foreach (var process in processes)
+            {
+                process.Dispose();
+            }
+        }
     }
 }

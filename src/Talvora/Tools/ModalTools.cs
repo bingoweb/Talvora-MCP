@@ -52,7 +52,7 @@ public static class ModalTools
             timeoutSeconds: 30,
             cancellationToken: cancellationToken);
 
-        var version = FirstNonEmptyLine(
+        var version = TextLines.FirstNonEmpty(
             versionResult.StandardOutput,
             versionResult.StandardError);
 
@@ -71,7 +71,7 @@ public static class ModalTools
                 profileResult.ExitCode == 0 &&
                 !profileResult.TimedOut;
             var profile = configured
-                ? FirstNonEmptyLine(
+                ? TextLines.FirstNonEmpty(
                     profileResult.StandardOutput,
                     profileResult.StandardError)
                 : null;
@@ -343,21 +343,4 @@ public static class ModalTools
         return full;
     }
 
-    private static string? FirstNonEmptyLine(
-        params string[] values)
-    {
-        foreach (var value in values)
-        {
-            var line =
-                TextLines.Split(value)
-                    .FirstOrDefault(item =>
-                        !string.IsNullOrWhiteSpace(item));
-            if (!string.IsNullOrWhiteSpace(line))
-            {
-                return line.Trim();
-            }
-        }
-
-        return null;
-    }
 }

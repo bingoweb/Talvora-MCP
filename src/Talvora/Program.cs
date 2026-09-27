@@ -82,6 +82,9 @@ builder.Services
     .WithToolsFromAssembly();
 
 var app = builder.Build();
+var isWindowsService =
+    OperatingSystem.IsWindows() &&
+    WindowsServiceHelpers.IsWindowsService();
 
 try
 {
@@ -101,8 +104,7 @@ catch (Exception ex)
     app.Logger.LogError(ex, "Source Edit recovery encountered unresolved state during startup. Source mutations in affected workspaces will remain blocked until recovery can prove a safe state.");
 }
 
-if (OperatingSystem.IsWindows() &&
-    WindowsServiceHelpers.IsWindowsService() &&
+if (isWindowsService &&
     app.Services.GetService<IHostLifetime>() is WindowsServiceLifetime serviceLifetime)
 {
     serviceLifetime.CanStop = true;
@@ -125,7 +127,7 @@ app.MapGet("/healthz", () =>
         processId = Environment.ProcessId,
         user = Environment.UserName,
         sid = TalvoraRuntimeIdentity.Sid,
-        isWindowsService = OperatingSystem.IsWindows() && WindowsServiceHelpers.IsWindowsService(),
+        isWindowsService,
     });
 });
 
@@ -138,8 +140,7 @@ try
     app.Run();
 }
 catch (OperationCanceledException)
-    when (OperatingSystem.IsWindows() &&
-          WindowsServiceHelpers.IsWindowsService())
+    when (isWindowsService)
 {
     // Windows service shutdown may cancel the host stop token while SCM is
     // waiting for a clean STOPPED transition. Treat that cancellation as the

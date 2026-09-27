@@ -5,7 +5,8 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $path = Join-Path $repoRoot 'src\Talvora\Tools\ConfigAssetTools.Text.cs'
 $text = Get-Content -LiteralPath $path -Raw
 
-if ($text -notmatch 'SourceTextCodec\s*\.ReadEncodingDescriptor\(fullPath\)\s*\.Encoding') {
+if ($text -notmatch 'SourceTextCodec\.ReadEncodingDescriptor\(fullPath\)' -or
+    $text -notmatch 'existingEncoding\?\.Encoding') {
     throw 'talvora_append_text does not reuse the detected encoding for existing text files.'
 }
 

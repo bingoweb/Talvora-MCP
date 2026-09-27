@@ -30,7 +30,7 @@ public static partial class MobileTools
                 ["--version"],
                 120,
                 cancellationToken);
-            flutterVersion = FirstNonEmptyLine(
+            flutterVersion = TextLines.FirstNonEmpty(
                 result.StandardOutput,
                 result.StandardError);
         }
@@ -43,7 +43,7 @@ public static partial class MobileTools
                 ["--version"],
                 60,
                 cancellationToken);
-            dartVersion = FirstNonEmptyLine(
+            dartVersion = TextLines.FirstNonEmpty(
                 result.StandardOutput,
                 result.StandardError);
         }

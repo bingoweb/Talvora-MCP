@@ -60,7 +60,7 @@ public static class GitHubCliTools
         return new TalvoraGitHubCliInfoResponse(
             true,
             executable,
-            FirstNonEmptyLine(
+            TextLines.FirstNonEmpty(
                 version.StandardOutput,
                 version.StandardError),
             auth.ExitCode == 0 && !auth.TimedOut,
@@ -159,25 +159,6 @@ public static class GitHubCliTools
         }
 
         return full;
-    }
-
-    private static string? FirstNonEmptyLine(
-        params string[] values)
-    {
-        foreach (var value in values)
-        {
-            var line = TextLines
-                .Split(value)
-                .FirstOrDefault(item =>
-                    !string.IsNullOrWhiteSpace(item));
-
-            if (!string.IsNullOrWhiteSpace(line))
-            {
-                return line.Trim();
-            }
-        }
-
-        return null;
     }
 
     private static string? JoinOutput(

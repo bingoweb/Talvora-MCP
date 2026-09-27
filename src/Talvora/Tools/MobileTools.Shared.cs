@@ -103,21 +103,4 @@ public static partial class MobileTools
                 $"{displayName} executable was not found.");
     }
 
-    private static string? FirstNonEmptyLine(
-        params string[] values)
-    {
-        foreach (var value in values)
-        {
-            var line = Talvora.Shared.TextLines
-                .Split(value)
-                .FirstOrDefault(item => !string.IsNullOrWhiteSpace(item));
-
-            if (!string.IsNullOrWhiteSpace(line))
-            {
-                return line.Trim();
-            }
-        }
-
-        return null;
-    }
 }

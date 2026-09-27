@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using ModelContextProtocol.Server;
+using Talvora.Shared;
 
 namespace Talvora.Tools;
 
@@ -32,7 +33,7 @@ public static partial class MobileTools
                 ["version"],
                 60,
                 cancellationToken);
-            adbVersion = FirstNonEmptyLine(
+            adbVersion = TextLines.FirstNonEmpty(
                 result.StandardOutput,
                 result.StandardError);
         }
@@ -45,7 +46,7 @@ public static partial class MobileTools
                 ["-version"],
                 60,
                 cancellationToken);
-            emulatorVersion = FirstNonEmptyLine(
+            emulatorVersion = TextLines.FirstNonEmpty(
                 result.StandardOutput,
                 result.StandardError);
         }

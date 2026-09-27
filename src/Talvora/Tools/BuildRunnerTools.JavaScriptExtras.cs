@@ -176,7 +176,7 @@ public static partial class BuildRunnerTools
             tool,
             true,
             executable,
-            FirstNonEmptyLine(
+            TextLines.FirstNonEmpty(
                 result.StandardOutput,
                 result.StandardError));
     }

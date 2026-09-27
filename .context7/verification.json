@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-27T17:46:00Z",
-  "scope": "Talvora desktop worklog hardening: plain-language failures, non-throwing MCP error detection, one shared live worklog card, concurrent-operation coordination, full notification-side-effect isolation, and dead-code cleanup.",
+  "verifiedAtUtc": "2026-09-27T17:55:00Z",
+  "scope": "Talvora repository-wide bug and maintainability audit: Windows process-handle ownership, health-path invariant caching, regression drift repair, shared text helper deduplication, analyzers, dependency health, and targeted runtime/source regressions.",
   "libraries": [
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
@@ -13,7 +13,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current NuGet Central Package Management, package lock/locked restore, NuGet audit and global.json SDK pinning guidance; NamedPipeServerStream/NamedPipeClientStream are the current .NET IPC primitives and support async/cancellation; bounded Channel<T> provides nonblocking producer/consumer delivery patterns."
+      "verified": "Current .NET disposal guidance: objects that own unmanaged resources/handles must be deterministically disposed; Process objects are disposable and even temporary Process allocation has handle/lifetime cost. Talvora therefore disposes every Process returned by GetProcesses/GetProcessesByName probes, avoids invariant per-request process/service detection, and retains current NuGet Central Package Management, lock/locked restore, audit, and SDK pinning contracts."
     },
     {
       "libraryId": "/lepoco/wpfui",
@@ -36,6 +36,7 @@
     "Microsoft WPF Window.DragMove documentation checked 2026-09-27 for Windows Desktop 10: borderless WPF windows can be moved from client-area mouse handling while the left button is down",
     "Microsoft multi-monitor positioning guidance checked 2026-09-27: saved custom window positions must be validated against the target monitor work area and must not assume a virtual-desktop origin of 0,0",
     "Microsoft .NET native interop best practices checked 2026-09-27; new one-off Win32 calls use LibraryImport generated interop",
+    "Microsoft .NET IDisposable and Process analyzer guidance checked 2026-09-27: disposable objects that own OS resources should be deterministically disposed; avoid unnecessary Process allocation for invariant/current-process information",
     "Microsoft NuGet Central Package Management transitive-pinning guidance checked 2026-09-27; centrally pinned versions are equal to or higher than dependency-requested versions",
     "Microsoft.Build.Framework 18.10.1 was evaluated and intentionally not adopted on net10.0-windows: its Microsoft.NET.StringTools 18.10.1 dependency reports net11+ support and Microsoft.Build.Locator rejects the promoted runtime asset graph (MSBL001); 17.14.28 remains the compatible pin"
   ]

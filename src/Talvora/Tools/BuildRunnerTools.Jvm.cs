@@ -31,7 +31,7 @@ public static partial class BuildRunnerTools
                 ["--version"],
                 timeoutSeconds: 30,
                 cancellationToken: cancellationToken);
-            javaVersion = FirstNonEmptyLine(
+            javaVersion = TextLines.FirstNonEmpty(
                 result.StandardOutput,
                 result.StandardError);
         }
@@ -44,7 +44,7 @@ public static partial class BuildRunnerTools
                 ["--version"],
                 timeoutSeconds: 30,
                 cancellationToken: cancellationToken);
-            javacVersion = FirstNonEmptyLine(
+            javacVersion = TextLines.FirstNonEmpty(
                 result.StandardOutput,
                 result.StandardError);
         }
@@ -548,24 +548,6 @@ public static partial class BuildRunnerTools
         return EnumerateModernJavaHomes().FirstOrDefault();
     }
 
-    private static string? FirstNonEmptyLine(params string[] values)
-    {
-        foreach (var value in values)
-        {
-            var line = TextLines
-                .Split(value)
-                .FirstOrDefault(
-                    item => !string.IsNullOrWhiteSpace(item));
-
-            if (!string.IsNullOrWhiteSpace(line))
-            {
-                return line.Trim();
-            }
-        }
-
-        return null;
-    }
-
     private static string? ParseLineValue(
         string output,
         string prefix)
@@ -578,7 +560,7 @@ public static partial class BuildRunnerTools
                     StringComparison.OrdinalIgnoreCase));
 
         return line is null
-            ? FirstNonEmptyLine(output)
+            ? TextLines.FirstNonEmpty(output)
             : line[prefix.Length..].Trim();
     }
 
