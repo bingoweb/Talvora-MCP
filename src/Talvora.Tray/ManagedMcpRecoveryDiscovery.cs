@@ -250,10 +250,10 @@ internal sealed class PenpotManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDis
         {
             Id = Id,
             DisplayName = "Penpot",
-            Description = "Yerel Penpot tasarım platformu ve resmi Penpot MCP sunucusu.",
+            Description = "İsteğe bağlı yerel Penpot tasarım platformu ve resmi Penpot MCP sunucusu.",
             Endpoint = "http://127.0.0.1:4401/mcp",
             HealthEndpoint = "http://127.0.0.1:9001/",
-            AutoStart = true,
+            AutoStart = false,
             ProtocolProbe = new ManagedMcpProtocolProbeRegistration
             {
                 RequiredTools =
