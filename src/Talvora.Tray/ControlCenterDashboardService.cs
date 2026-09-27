@@ -53,7 +53,11 @@ internal static class ControlCenterDashboardService
             state.Health is ControlCenterHealthState.Attention
                 or ControlCenterHealthState.Checking);
         var offline = ordered.Count(state =>
-            state.Health == ControlCenterHealthState.Offline);
+            state.Health == ControlCenterHealthState.Offline &&
+            state.Registration.AutoStart);
+        var onDemandStopped = ordered.Count(state =>
+            state.Health == ControlCenterHealthState.Offline &&
+            !state.Registration.AutoStart);
         var tunnelCount = ordered.Count(state =>
             state.Registration.Tunnel is not null);
 
@@ -66,7 +70,11 @@ internal static class ControlCenterDashboardService
         };
 
         var technical =
-            $"{ordered.Count} MCP • {ready} hazır • {attention + offline} sorunlu • {tunnelCount} tünel";
+            $"{ordered.Count} MCP • {ready} hazır • {attention + offline} sorunlu" +
+            (onDemandStopped > 0
+                ? $" • {onDemandStopped} isteğe bağlı kapalı"
+                : string.Empty) +
+            $" • {tunnelCount} tünel";
 
         return new ControlCenterDashboardSnapshot(
             ordered,
@@ -189,8 +197,12 @@ internal static class ControlCenterDashboardService
                 return new ManagedMcpDashboardState(
                     registration,
                     ControlCenterHealthState.Offline,
-                    "Çalışmıyor",
-                    protocol.Detail);
+                    registration.AutoStart
+                        ? "Çalışmıyor"
+                        : "İsteğe bağlı • kapalı",
+                    registration.AutoStart
+                        ? protocol.Detail
+                        : "Bu MCP isteğe bağlıdır; kaynak tüketmemesi için kapalı tutuluyor. Gerektiğinde Başlat ile açabilirsiniz.");
             }
 
             if (registration.ProtocolProbe.BrowserSmokeRequired &&

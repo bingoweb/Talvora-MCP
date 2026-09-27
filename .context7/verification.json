@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-27T18:58:00Z",
-  "scope": "Talvora Control Center user-facing error and terminology quality pass: central plain-language exception translation, technical-detail retention in logs, truthful next-step guidance, and Turkish primary dashboard/component copy.",
+  "verifiedAtUtc": "2026-09-27T19:05:00Z",
+  "scope": "Talvora on-demand Penpot resource-quality pass: keep canonical Penpot autoStart=false, normalize its scheduled-task/process/Compose chain to stopped at Tray startup, disable the task while idle, launch Docker Desktop only for explicit Start, preserve named volumes on Stop, and present the expected stopped state without degrading global Control Center health.",
   "libraries": [
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
@@ -9,7 +9,7 @@
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us",
-      "verified": "Current Microsoft.Extensions.AI and Microsoft.Extensions package alignment guidance for .NET 10."
+      "verified": "Current Microsoft Windows/PowerShell task guidance supports manual task execution and explicit enable/disable control. Talvora uses that lifecycle for the opt-in Penpot task: disabled while idle, explicitly enabled before Start-ScheduledTask, and stopped/disabled again when the on-demand MCP is not in use."
     },
     {
       "libraryId": "/dotnet/docs",
@@ -36,6 +36,8 @@
     "Microsoft WPF Window.DragMove documentation checked 2026-09-27 for Windows Desktop 10: borderless WPF windows can be moved from client-area mouse handling while the left button is down",
     "Microsoft WPF Dispatcher guidance checked 2026-09-27: UI work is dispatched through Dispatcher operations; non-critical notification work should fail inside its own presentation boundary instead of escaping into the application dispatcher",
     "Microsoft WPF responsiveness guidance checked 2026-09-27: potentially blocking IO/work should execute away from the UI dispatcher and return only UI updates to the dispatcher; Talvora preserves Mutex ownership on one worker thread while doing so",
+    "Microsoft ScheduledTasks guidance checked 2026-09-27: scheduled tasks can be explicitly started and lifecycle state can be controlled independently; Talvora uses explicit enable/start and stop/disable semantics for opt-in Penpot instead of a persistent logon-triggered resident runtime",
+    "Docker Compose official CLI guidance checked 2026-09-27: docker compose up --detach starts the stack in the background; docker compose down removes service containers and networks but does not remove named volumes unless --volumes is explicitly supplied. Talvora Penpot lifecycle uses up -d / down --remove-orphans and deliberately never passes --volumes.",
     "Microsoft multi-monitor positioning guidance checked 2026-09-27: saved custom window positions must be validated against the target monitor work area and must not assume a virtual-desktop origin of 0,0",
     "Microsoft .NET native interop best practices checked 2026-09-27; new one-off Win32 calls use LibraryImport generated interop",
     "Microsoft .NET IDisposable and Process analyzer guidance checked 2026-09-27: disposable objects that own OS resources should be deterministically disposed; avoid unnecessary Process allocation for invariant/current-process information",

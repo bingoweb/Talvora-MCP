@@ -20,12 +20,13 @@ internal sealed record ManagedMcpLifecycleResult(
     string Summary,
     string Detail);
 
-internal static class ControlCenterLifecycleService
+internal static partial class ControlCenterLifecycleService
 {
     private const string TalvoraId = "talvora";
     private const string TalvoraDevId = "talvora-dev";
     private const string TalvoraAdminId = "talvora-admin";
     private const string GiteaId = "gitea";
+    private const string PenpotId = "penpot";
     private const string TalvoraServiceName = "Talvora";
     private const string TalvoraMcpUrl = "http://127.0.0.1:7676/mcp";
 
@@ -47,6 +48,36 @@ internal static class ControlCenterLifecycleService
             registration,
             ManagedMcpLifecycleOperation.Stop,
             cancellationToken);
+
+    public static async Task EnsureOnDemandStoppedAsync(
+        ManagedMcpRegistration registration,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+        if (registration.AutoStart)
+        {
+            return;
+        }
+
+        if (string.Equals(
+                registration.Id,
+                PenpotId,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            await ExecutePenpotAsync(
+                registration,
+                ManagedMcpLifecycleOperation.Stop,
+                cancellationToken);
+        }
+        else
+        {
+            await ExecuteGenericAsync(
+                registration,
+                ManagedMcpLifecycleOperation.Stop,
+                cancellationToken);
+        }
+        ManagedMcpSessionState.ClearManualStop(registration.Id);
+    }
 
     public static Task<ManagedMcpLifecycleResult> RestartAsync(
         ManagedMcpRegistration registration,
@@ -77,6 +108,17 @@ internal static class ControlCenterLifecycleService
                 StringComparison.OrdinalIgnoreCase))
         {
             return await ExecuteGiteaAsync(operation, cancellationToken);
+        }
+
+        if (string.Equals(
+                registration.Id,
+                PenpotId,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return await ExecutePenpotAsync(
+                registration,
+                operation,
+                cancellationToken);
         }
 
         return await ExecuteGenericAsync(
@@ -883,12 +925,20 @@ internal static class ControlCenterLifecycleService
         var op = operation
             .ToString()
             .ToLowerInvariant();
+        var disableTasksWhenStopped =
+            string.Equals(
+                registration.Id,
+                PenpotId,
+                StringComparison.OrdinalIgnoreCase);
 
         var script = new System.Text.StringBuilder();
         script.AppendLine("$ErrorActionPreference = 'Stop'");
         script.AppendLine($"$operation = '{op}'");
         script.AppendLine($"$services = {PsArray(services)}");
         script.AppendLine($"$tasks = {PsArray(tasks)}");
+        script.AppendLine(
+            "$disableTasksWhenStopped = " +
+            (disableTasksWhenStopped ? "$true" : "$false"));
         script.AppendLine(
             $"$processMarkers = {PsArray(processMarkers)}");
         script.AppendLine();
@@ -936,6 +986,17 @@ internal static class ControlCenterLifecycleService
         script.AppendLine("    }");
         script.AppendLine("    Start-Sleep -Milliseconds 350");
         script.AppendLine("    Stop-OwnedProcesses");
+        script.AppendLine("    if ($disableTasksWhenStopped) {");
+        script.AppendLine("        foreach ($taskName in [array]$tasks) {");
+        script.AppendLine(
+            "            $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue");
+        script.AppendLine(
+            "            if ($null -ne $task -and $task.State -ne 'Disabled') {");
+        script.AppendLine(
+            "                Disable-ScheduledTask -TaskName $taskName -ErrorAction Stop | Out-Null");
+        script.AppendLine("            }");
+        script.AppendLine("        }");
+        script.AppendLine("    }");
         script.AppendLine("}");
         script.AppendLine();
         script.AppendLine("function Start-Chain {");
@@ -954,6 +1015,13 @@ internal static class ControlCenterLifecycleService
         script.AppendLine("    foreach ($taskName in [array]$tasks) {");
         script.AppendLine(
             "        $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop");
+        script.AppendLine(
+            "        if ($disableTasksWhenStopped -and $task.State -eq 'Disabled') {");
+        script.AppendLine(
+            "            Enable-ScheduledTask -TaskName $taskName -ErrorAction Stop | Out-Null");
+        script.AppendLine(
+            "            $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop");
+        script.AppendLine("        }");
         script.AppendLine(
             "        if ($task.State -ne 'Running') {");
         script.AppendLine(

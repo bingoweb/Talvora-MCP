@@ -219,6 +219,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 }
             }
 
+            await EnsureOnDemandManagedMcpsStoppedAsync(
+                registry,
+                _lifetimeCts.Token);
+
             TrayLog.Write($"Managed MCP registry ready. Count={registry.Mcps.Count}");
             ControlCenterEventStore.Record(
                 ControlCenterEventSeverity.Info,
@@ -299,6 +303,39 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 _talvoraTimer.Start();
                 _giteaTimer.Start();
                 _genericMcpTimer.Start();
+            }
+        }
+    }
+
+    private static async Task EnsureOnDemandManagedMcpsStoppedAsync(
+        ManagedMcpRegistryDocument registry,
+        CancellationToken cancellationToken)
+    {
+        foreach (var registration in registry.Mcps.Where(entry =>
+                     !entry.AutoStart &&
+                     string.Equals(
+                         entry.Id,
+                         "penpot",
+                         StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                await ControlCenterLifecycleService.EnsureOnDemandStoppedAsync(
+                    registration,
+                    cancellationToken);
+                TrayLog.Write(
+                    $"On-demand managed MCP kept stopped at tray startup. MCP={registration.Id}");
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                TrayLog.Write(
+                    $"On-demand managed MCP startup normalization failed. MCP={registration.Id}",
+                    ex);
             }
         }
     }
