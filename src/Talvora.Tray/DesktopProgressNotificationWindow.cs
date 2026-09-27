@@ -23,15 +23,15 @@ namespace Talvora.Tray;
 internal sealed class DesktopProgressNotificationWindow : Window
 {
     private static readonly TimeSpan StartedLifetime =
-        TimeSpan.FromMinutes(3);
+        TimeSpan.FromMinutes(15);
     private static readonly TimeSpan RunningLifetime =
-        TimeSpan.FromMinutes(3);
+        TimeSpan.FromMinutes(15);
     private static readonly TimeSpan CompletedLifetime =
-        TimeSpan.FromMinutes(3);
+        TimeSpan.FromMinutes(10);
     private static readonly TimeSpan FailureLifetime =
-        TimeSpan.FromMinutes(5);
+        TimeSpan.FromMinutes(15);
     private static readonly TimeSpan ActiveStaleThreshold =
-        TimeSpan.FromSeconds(75);
+        TimeSpan.FromSeconds(25);
     private static readonly TimeSpan StaleCheckInterval =
         TimeSpan.FromSeconds(10);
 
@@ -57,7 +57,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
     public DesktopProgressNotificationWindow()
     {
         Width = 620;
-        MaxHeight = 610;
+        MaxHeight = 760;
         SizeToContent = SizeToContent.Height;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
@@ -162,7 +162,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
         var scroll = new ScrollViewer
         {
             Content = _message,
-            MaxHeight = 175,
+            MaxHeight = 300,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Focusable = false,
@@ -199,7 +199,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
             TextWrapping = TextWrapping.NoWrap,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            MaxHeight = 170,
+            MaxHeight = 220,
             Margin = new Thickness(0, 9, 0, 0),
             Padding = new Thickness(9),
             Background =
@@ -705,7 +705,9 @@ internal sealed class DesktopProgressNotificationWindow : Window
                 ? Visibility.Collapsed
                 : Visibility.Visible;
 
-        if (message.Kind == DesktopProgressKind.Failed)
+        if (message.Kind == DesktopProgressKind.Failed ||
+            (message.Kind == DesktopProgressKind.Completed &&
+             !string.IsNullOrWhiteSpace(codePreview)))
         {
             _evidenceExpander.IsExpanded = true;
         }

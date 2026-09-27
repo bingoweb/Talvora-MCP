@@ -71,7 +71,7 @@ internal sealed class DesktopProgressPipeListener : IDisposable
                 try
                 {
                     await Task.Delay(
-                        TimeSpan.FromSeconds(1),
+                        TimeSpan.FromMilliseconds(150),
                         cancellationToken);
                 }
                 catch (OperationCanceledException)

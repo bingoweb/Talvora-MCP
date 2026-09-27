@@ -13,11 +13,11 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     IAsyncDisposable
 {
     internal static readonly TimeSpan FirstProgressDelay =
-        TimeSpan.FromSeconds(30);
+        TimeSpan.FromSeconds(5);
     internal static readonly TimeSpan ProgressInterval =
-        TimeSpan.FromSeconds(60);
+        TimeSpan.FromSeconds(10);
     internal static readonly TimeSpan PipeConnectTimeout =
-        TimeSpan.FromMilliseconds(350);
+        TimeSpan.FromSeconds(2);
 
     private const uint NoActiveConsoleSession = 0xFFFFFFFF;
 
@@ -262,50 +262,70 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         DesktopProgressMessage message,
         CancellationToken cancellationToken)
     {
-        try
+        var sessionId = WTSGetActiveConsoleSessionId();
+        if (sessionId == NoActiveConsoleSession)
         {
-            var sessionId = WTSGetActiveConsoleSessionId();
-            if (sessionId == NoActiveConsoleSession)
+            return;
+        }
+
+        Exception? lastError = null;
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            try
             {
+                await using var pipe = new NamedPipeClientStream(
+                    ".",
+                    DesktopProgressProtocol.GetPipeName(
+                        checked((int)sessionId)),
+                    PipeDirection.Out,
+                    PipeOptions.Asynchronous);
+
+                using var connectCts =
+                    CancellationTokenSource.CreateLinkedTokenSource(
+                        cancellationToken);
+                connectCts.CancelAfter(PipeConnectTimeout);
+                await pipe.ConnectAsync(connectCts.Token);
+
+                await using var writer = new StreamWriter(
+                    pipe,
+                    new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                    bufferSize: 4096,
+                    leaveOpen: true)
+                {
+                    AutoFlush = true,
+                };
+                await writer.WriteLineAsync(
+                    DesktopProgressProtocol.Serialize(message));
                 return;
             }
-
-            await using var pipe = new NamedPipeClientStream(
-                ".",
-                DesktopProgressProtocol.GetPipeName(
-                    checked((int)sessionId)),
-                PipeDirection.Out,
-                PipeOptions.Asynchronous);
-
-            using var connectCts =
-                CancellationTokenSource.CreateLinkedTokenSource(
-                    cancellationToken);
-            connectCts.CancelAfter(PipeConnectTimeout);
-            await pipe.ConnectAsync(connectCts.Token);
-
-            await using var writer = new StreamWriter(
-                pipe,
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
-                bufferSize: 4096,
-                leaveOpen: true)
+            catch (OperationCanceledException)
+                when (!cancellationToken.IsCancellationRequested)
             {
-                AutoFlush = true,
-            };
-            await writer.WriteLineAsync(
-                DesktopProgressProtocol.Serialize(message));
+                lastError = null;
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+            }
+
+            if (attempt < 3)
+            {
+                await Task.Delay(
+                    TimeSpan.FromMilliseconds(120 * attempt),
+                    cancellationToken);
+            }
         }
-        catch (OperationCanceledException)
-            when (!cancellationToken.IsCancellationRequested)
+
+        if (lastError is null)
         {
             _logger.LogDebug(
-                "Desktop progress tray IPC was unavailable within {TimeoutMs} ms.",
-                PipeConnectTimeout.TotalMilliseconds);
+                "Desktop progress tray IPC stayed unavailable after retrying.");
         }
-        catch (Exception ex)
+        else
         {
             _logger.LogDebug(
-                ex,
-                "Desktop progress notification failed without affecting the tool operation.");
+                lastError,
+                "Desktop progress notification failed after retrying without affecting the tool operation.");
         }
     }
 

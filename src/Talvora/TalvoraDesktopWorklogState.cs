@@ -19,6 +19,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     private readonly object _worklogGate = new();
     private readonly Dictionary<string, ActiveWorklogItem> _activeWorklog =
         new(StringComparer.Ordinal);
+    private readonly Queue<string> _recentWorklogUpdates = new();
     private long _worklogSequence;
     private PendingFailure? _pendingFailure;
 
@@ -104,11 +105,16 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                     evidence,
                     ++_worklogSequence);
 
+            AddWorklogHistory(
+                $"Şimdi: {narrative.Action}");
+
             Enqueue(
                 SharedWorklogOperationId,
                 narrative.Subject,
                 "Şimdi bunu yapıyorum",
-                $"{narrative.Action}\n\nNeden: {narrative.Reason}",
+                ComposeWorklogMessage(
+                    $"{narrative.Action}\n\nNeden: {narrative.Reason}",
+                    evidence),
                 DesktopProgressKind.Started,
                 elapsed,
                 evidence);
@@ -142,7 +148,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 SharedWorklogOperationId,
                 displayName,
                 "Hâlâ bununla uğraşıyorum",
-                $"{displayName}.\n\nYaklaşık {FormatElapsed(elapsed)} oldu. Bitince sonucu burada göstereceğim.",
+                ComposeWorklogMessage(
+                    $"{displayName}.\n\nYaklaşık {FormatElapsed(elapsed)} oldu. İşlem hâlâ devam ediyor; yeni gerçek veri geldikçe bu kartı güncelliyorum.",
+                    current.Evidence),
                 DesktopProgressKind.Running,
                 elapsed,
                 current.Evidence);
@@ -163,6 +171,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
 
             if (kind == DesktopProgressKind.Failed)
             {
+                AddWorklogHistory(
+                    $"Sorun çıktı: {message}");
                 _pendingFailure =
                     new PendingFailure(
                         message,
@@ -177,7 +187,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                         SharedWorklogOperationId,
                         "Çalışmaya devam ediyorum",
                         title,
-                        message,
+                        ComposeWorklogMessage(
+                            message,
+                            evidence),
                         kind,
                         elapsed,
                         evidence);
@@ -189,11 +201,15 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                         .MaxBy(static item => item.Sequence);
                 if (latest is not null)
                 {
+                    AddWorklogHistory(
+                        "Bir adımı tamamladım; sıradaki iş devam ediyor.");
                     Enqueue(
                         SharedWorklogOperationId,
                         latest.Narrative.Subject,
                         "Hâlâ çalışıyorum",
-                        $"{latest.Narrative.Action}\n\nDiğer adımlar da tamamlanmayı bekliyor.",
+                        ComposeWorklogMessage(
+                            $"{latest.Narrative.Action}\n\nBir önceki adımı tamamladım; sıradaki iş üzerinde çalışmaya devam ediyorum.",
+                            latest.Evidence),
                         DesktopProgressKind.Running,
                         elapsed,
                         latest.Evidence);
@@ -210,21 +226,124 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                     SharedWorklogOperationId,
                     "Kontrol gerekiyor",
                     "Bir hata buldum",
-                    pendingFailure.Message,
+                    ComposeWorklogMessage(
+                        pendingFailure.Message,
+                        pendingFailure.Evidence),
                     DesktopProgressKind.Failed,
                     elapsed,
                     pendingFailure.Evidence);
                 return;
             }
 
+            AddWorklogHistory(
+                $"Tamamlandı: {message.Replace(Environment.NewLine, " ").Trim()}");
             Enqueue(
                 SharedWorklogOperationId,
                 "Çalışma tamamlandı",
                 title,
-                message,
+                ComposeWorklogMessage(
+                    message,
+                    evidence),
                 kind,
                 elapsed,
                 evidence);
         }
+    }
+
+    private void AddWorklogHistory(string update)
+    {
+        var cleaned =
+            string.Join(
+                " ",
+                update.Split(
+                    ['\r', '\n'],
+                    StringSplitOptions.RemoveEmptyEntries |
+                    StringSplitOptions.TrimEntries));
+        if (string.IsNullOrWhiteSpace(cleaned))
+        {
+            return;
+        }
+
+        _recentWorklogUpdates.Enqueue(cleaned);
+        while (_recentWorklogUpdates.Count > 6)
+        {
+            _recentWorklogUpdates.Dequeue();
+        }
+    }
+
+    private string ComposeWorklogMessage(
+        string current,
+        DesktopProgressEvidence? evidence)
+    {
+        var sections = new List<string>
+        {
+            current.Trim(),
+        };
+
+        var evidenceText =
+            DescribeEvidenceForUser(evidence);
+        if (!string.IsNullOrWhiteSpace(evidenceText))
+        {
+            sections.Add(evidenceText);
+        }
+
+        if (_recentWorklogUpdates.Count > 0)
+        {
+            sections.Add(
+                "Son yaptıklarım:\n" +
+                string.Join(
+                    Environment.NewLine,
+                    _recentWorklogUpdates.Select(
+                        static item => $"• {item}")));
+        }
+
+        return string.Join(
+            Environment.NewLine + Environment.NewLine,
+            sections);
+    }
+
+    private static string? DescribeEvidenceForUser(
+        DesktopProgressEvidence? evidence)
+    {
+        if (evidence is null)
+        {
+            return null;
+        }
+
+        var details = new List<string>();
+        if (evidence.Files is { Count: > 0 })
+        {
+            var names =
+                evidence.Files
+                    .Take(4)
+                    .Select(Path.GetFileName)
+                    .Where(static name =>
+                        !string.IsNullOrWhiteSpace(name))
+                    .ToArray();
+            if (names.Length > 0)
+            {
+                details.Add(
+                    $"{evidence.Files.Count} dosyada çalışıyorum: {string.Join(", ", names)}" +
+                    (evidence.Files.Count > names.Length
+                        ? " ve diğerleri"
+                        : string.Empty));
+            }
+        }
+
+        if (evidence.AddedLines is > 0 ||
+            evidence.RemovedLines is > 0)
+        {
+            details.Add(
+                $"Gerçek kod değişikliği: +{evidence.AddedLines ?? 0} / -{evidence.RemovedLines ?? 0} satır.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(evidence.Result))
+        {
+            details.Add(evidence.Result);
+        }
+
+        return details.Count == 0
+            ? null
+            : string.Join(Environment.NewLine, details);
     }
 }
