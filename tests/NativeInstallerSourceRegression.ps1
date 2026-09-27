@@ -674,6 +674,14 @@ $result = [pscustomobject]@{
         $installScript -match '(?s)\$installerProcess\s*=\s*Start-Process.*?-ArgumentList\s+@\(''--silent''\).*?-PassThru\s*\r?\n\$installerProcess\.WaitForExit\(\)' -and
         $installScript -notmatch '(?s)\$installerProcess\s*=\s*Start-Process.*?-ArgumentList\s+@\(''--silent''\).*?-Wait.*?\$installerProcess\.ExitCode'
     )
+    ServiceHostedInstallUsesDetachedGracefulBootstrap = (
+        $installScript -match 'Test-TalvoraServiceAncestor' -and
+        $installScript -match 'TALVORA_UPDATE_DETACHED' -and
+        $installScript -match "'--defer-ms', '2500'" -and
+        $installerProgram -match 'ReadBoundedIntegerArgument' -and
+        $installerProgram -match '"--defer-ms"' -and
+        $installerProgram -match 'Thread\.Sleep\(deferMilliseconds\)'
+    )
     HostedWindowsCiAvoidsInteractiveUserSmoke = (
         $windowsCiWorkflow -match '(?s)- name: Install and verify canonical runtime.*?--surface-policy-live.*?Installed MCP surface smoke failed' -and
         $windowsCiWorkflow -notmatch 'Talvora\.Smoke/Talvora\.Smoke\.csproj -c Release --no-build -- ''http://127\.0\.0\.1:7676/mcp'' \$PWD\.Path'

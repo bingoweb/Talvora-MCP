@@ -15,6 +15,29 @@ function Test-Administrator {
         [Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+function Test-TalvoraServiceAncestor {
+    $currentProcessId = $PID
+    for ($depth = 0; $depth -lt 8; $depth++) {
+        $current = Get-CimInstance Win32_Process -Filter "ProcessId=$currentProcessId" -ErrorAction SilentlyContinue
+        if ($null -eq $current -or [int]$current.ParentProcessId -le 0) {
+            return $false
+        }
+
+        $parent = Get-CimInstance Win32_Process -Filter "ProcessId=$([int]$current.ParentProcessId)" -ErrorAction SilentlyContinue
+        if ($null -eq $parent) {
+            return $false
+        }
+
+        if ([string]::Equals([string]$parent.Name, 'Talvora.exe', [StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+
+        $currentProcessId = [int]$parent.ProcessId
+    }
+
+    return $false
+}
+
 function Refresh-ProcessPath {
     $machine = [Environment]::GetEnvironmentVariable('Path', 'Machine')
     $user = [Environment]::GetEnvironmentVariable('Path', 'User')
@@ -102,6 +125,13 @@ if (-not $SkipBuild) {
 
 if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
     throw "Native Talvora installer was not produced: $installer"
+}
+
+if (Test-TalvoraServiceAncestor) {
+    Write-Host 'Handing self-update to detached installer bootstrap...' -ForegroundColor Cyan
+    $detachedInstaller = Start-Process -FilePath $installer -ArgumentList @('--silent', '--defer-ms', '2500') -PassThru
+    Write-Host "TALVORA_UPDATE_DETACHED PID=$($detachedInstaller.Id)" -ForegroundColor Green
+    return
 }
 
 Write-Host 'Running canonical Talvora native installer...' -ForegroundColor Cyan
