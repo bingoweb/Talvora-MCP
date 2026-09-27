@@ -13,20 +13,43 @@ if ($null -eq $service -or $service.State -ne 'Running') {
     throw "Service '$ServiceName' is not running."
 }
 
-1..$WarmupRequests | ForEach-Object {
-    Invoke-RestMethod -Uri $HealthUrl -TimeoutSec 5 -Proxy $null | Out-Null
+$handler = [System.Net.Http.SocketsHttpHandler]::new()
+$client = [System.Net.Http.HttpClient]::new($handler, $true)
+$client.Timeout = [TimeSpan]::FromSeconds(5)
+
+function Invoke-HealthRequest {
+    $response = $client.GetAsync($HealthUrl).GetAwaiter().GetResult()
+    try {
+        $response.EnsureSuccessStatusCode() | Out-Null
+        $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult() | Out-Null
+    }
+    finally {
+        $response.Dispose()
+    }
 }
 
-$process = Get-Process -Id $service.ProcessId
-$before = $process.HandleCount
+try {
+    1..$WarmupRequests | ForEach-Object {
+        Invoke-HealthRequest
+    }
 
-1..$MeasuredRequests | ForEach-Object {
-    Invoke-RestMethod -Uri $HealthUrl -TimeoutSec 5 -Proxy $null | Out-Null
+    $before = [int](
+        Get-CimInstance Win32_Process -Filter "ProcessId=$($service.ProcessId)"
+    ).HandleCount
+
+    1..$MeasuredRequests | ForEach-Object {
+        Invoke-HealthRequest
+    }
+
+    Start-Sleep -Milliseconds 500
+    $after = [int](
+        Get-CimInstance Win32_Process -Filter "ProcessId=$($service.ProcessId)"
+    ).HandleCount
+}
+finally {
+    $client.Dispose()
 }
 
-Start-Sleep -Milliseconds 250
-$process.Refresh()
-$after = $process.HandleCount
 $delta = $after - $before
 
 [pscustomobject]@{

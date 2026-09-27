@@ -2,12 +2,19 @@
 
 Last updated: 2026-09-27
 Branch: main
-Current repository runtime-affecting committed HEAD: `3d1ea279923757d0fab1d94f49ed8c125579133b` — professional desktop progress sequence.
-Current exact-installed audit runtime: `3d1ea279923757d0fab1d94f49ed8c125579133b`
+Current repository runtime-affecting committed HEAD: `a0d7b55ead163ab6dfedbc7314767b74d0690a11` — repository-wide bug/maintainability audit fixes.
+Current exact-installed audit runtime: `a0d7b55ead163ab6dfedbc7314767b74d0690a11`
 Canonical exact-installed tool count: 212 unique tools
-Status: #121–#219 remediation complete and live verified. Admin focused surface = 91 unique tools; Development = 182; Full = 212. Focused-surface source regression, existing-tunnel binding regression and modernization policy are GREEN.
+Status: #121–#223 remediation complete or test-verified as applicable. Admin focused surface = 91 unique tools; Development = 182; Full = 212. Live metadata/surface policy, focused Source Edit regressions, modernization policy and Context7 gate are GREEN.
 
 ## Current remediation status summary — 2026-09-27
+
+- #220 **FIXED / TEST VERIFIED** — `AppendTextEncodingSourceRegression.ps1` implementation biçimine aşırı bağlıydı ve doğru çalışan descriptor-temelli encoding korumasını yanlış kırmızı gösteriyordu. Test kanonik davranışı (`ReadEncodingDescriptor` + `existingEncoding?.Encoding`) doğrulayacak şekilde güncellendi; `APPEND_TEXT_ENCODING_SOURCE_GREEN`.
+- #221 **FIXED / LIVE VERIFIED** — health handle testi her istekte yeni PowerShell web istemcisi oluşturarak gerçek health-polling modelini temsil etmiyor ve yalancı handle-leak kırmızısı üretiyordu. Health yolu süreç boyunca değişmeyen Windows-service bilgisini başlangıçta bir kez cache'liyor. Kalıcı tek `HttpClient` ile canlı **200 health isteği handle delta=0**; 100 health isteği delta=0, kontrol 404 yolu delta=1. Regression kalıcı istemciyi yeniden kullanacak şekilde düzeltildi.
+- #222 **FIXED / SOURCE VERIFIED** — installer Tray kapanış polling'i iki yerde `Process.GetProcessesByName("Talvora.Tray").Length` kullanıp dönen disposable `Process` nesnelerini bırakıyordu. Ortak `HasRunningTrayProcess()` helper'ı tüm probe nesnelerini deterministik dispose ediyor. Native installer source regression ve çözüm build'i GREEN.
+- #223 **CLEANUP / VERIFIED** — aynı `FirstNonEmptyLine` implementasyonu BuildRunner/GitHub/Mobile/Modal alanlarında dört kez kopyalanmıştı. Davranış `Talvora.Shared.TextLines.FirstNonEmpty` altında tekleştirildi; semantiği farklı `NormalizeWorkingDirectory` ve `PathsEqual` yardımcıları bilinçli olarak birleştirilmedi.
+- Repository-wide audit kapsamı: yaklaşık **220 C# dosyası / 69k satır**; Release solution build **0 warning / 0 error**; `dotnet format analyzers --verify-no-changes` GREEN; NuGet vulnerable/deprecated scan **0 bulgu**; metadata/surface/privacy/shared-infrastructure smoke GREEN; Source Edit semantic/resource/response/runtime/cache/source/job focused regressions GREEN. Bu taramada bunların dışında doğrulanmış yeni açık ürün bug'ı kalmadı.
+- Canonical installer: source `a0d7b55ead163ab6dfedbc7314767b74d0690a11`, SHA-256 `B01896BB7032D56F2A9D2D04E6D83D299320B6D1E9397682D2C5191F104427A5`; exact-installed runtime aynı source commit'i bildiriyor.
 
 - #219 live acceptance: legacy full-tunnel Talvora registration artık yalnız yerel Windows servisini temsil ediyor; Dev/Admin ayrı tunnel-only managed registration olarak yönetiliyor. Kullanıcı registry'si mevcut Dev/Admin config'lerinden tunnel kimliklerini geri kazandı, ortak `runtime-key.dpapi` mevcut, reconnect tamamlandı ve tunnel-client status her iki alias için `process_running=true`, `healthy=true`, `ready=true` döndürdü. ChatGPT focused discovery canlı Dev=182 / Admin=91. Penpot on-demand `autoStart=false`. Installer self-update process-tree fix gerçek Talvora-içinden deploy ile GREEN. Desktop progress akışı `started -> long-running status -> completed` ticari semantiğine geçirildi.
 

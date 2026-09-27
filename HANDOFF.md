@@ -8,17 +8,17 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Repo/remote `main`: exact-installed runtime commit `3d1ea279923757d0fab1d94f49ed8c125579133b` iki remote'a push edildi; bu handoff değişikliği docs-only closeout'tur.
+- Repo/remote `main`: runtime-affecting commit `a0d7b55ead163ab6dfedbc7314767b74d0690a11` Gitea + GitHub'a push edildi; bu handoff/test closeout değişikliği runtime dışıdır.
 - Çalışma ağacı: final docs-only closeout commit'i sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `3d1ea279923757d0fab1d94f49ed8c125579133b` — profesyonel masaüstü ilerleme sırası.
-- Exact-installed canonical runtime artifact source commit: `3d1ea279923757d0fab1d94f49ed8c125579133b`.
-- Canonical installer SHA-256: `AA09D8B0FB533F867EEF0F82313CB00EC9CB479AB0DF2D532F30879D094F3DE9`; artifact size: 262,140,687 bytes.
+- Son runtime-affecting commit: `a0d7b55ead163ab6dfedbc7314767b74d0690a11` — repository-wide bug/maintainability audit düzeltmeleri.
+- Exact-installed canonical runtime artifact source commit: `a0d7b55ead163ab6dfedbc7314767b74d0690a11`.
+- Canonical installer SHA-256: `B01896BB7032D56F2A9D2D04E6D83D299320B6D1E9397682D2C5191F104427A5`; artifact size: 262,145,295 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `sourceCommit=3d1ea279923757d0fab1d94f49ed8c125579133b` bildiriyor.
+- Exact-installed canlı Talvora runtime `sourceCommit=a0d7b55ead163ab6dfedbc7314767b74d0690a11` bildiriyor.
 - Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
 - Gitea ve GitHub `fetch --dry-run` + `push --dry-run` Talvora'nın canlı `git_run` aracıyla GREEN; SSH private key user-only kalıyor.
-- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `3d1ea27...`.
+- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `a0d7b55...`.
 - Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
@@ -38,6 +38,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
 - Focused MCP yüzeyleri güncel durumda **Full 212 / Dev 182 / Admin 91**. Admin'in 61 aracı Dev ile ortak, 30'u Admin-only. Admin 91/91 isim benzersiz; exact duplicate description yok; Admin-only 30/30 test kaynaklarında temsil ediliyor.
+- 2026-09-27 repository-wide audit: çözüm build/analyzer temiz; vulnerable/deprecated NuGet bulgusu yok; Source Edit focused alt-regresyonları, metadata/surface/privacy/shared-infrastructure smoke ve live metadata/surface policy GREEN. Installer Tray process polling handle sahipliği düzeltildi; health handle regression kalıcı istemci modeline düzeltildi ve canlı 200 istekte **delta=0**; dört kopya `FirstNonEmptyLine` ortak `TextLines.FirstNonEmpty` helper'ına indirildi; stale append encoding regression düzeltildi.
 - Masaüstü çalışma günlüğü zorunlu runtime sözleşmesidir: her MCP çağrısı sarmaldan geçer, düşük değerli read/search/health çağrıları sessizdir. Anlamlı iş tek kartta **Şimdi bunu yapıyorum** -> 30 saniyeyi aşarsa **Hâlâ bununla uğraşıyorum** -> **Bitti / Bir hata buldum** akışını kullanır. Aktif kart iş bitmeden kaybolmaz; başarı yaklaşık 3 dakika, hata yaklaşık 5 dakika okunabilir kalır. Hata sonucu exception olmak zorunda değildir: MCP `IsError`, structured `success=false`, nonzero sonuç ve timeout da sade kullanıcı diliyle failure kartına dönüşür. Teknik tool/komut/stack trace/exit-code metni kullanıcı kartına sızdırılmaz.
 - Talvora self-update artık servis process tree'siyle installer'ı yanlışlıkla öldürmez; Talvora içinden yapılan gerçek self-update acceptance GREEN.
 - Focused Dev/Admin tunnel registry + config + DPAPI runtime credential recovery canlı doğrulandı; tunnel-client Dev/Admin için `process_running/healthy/ready=true`; ChatGPT discovery Dev=182 / Admin=91.
