@@ -273,10 +273,11 @@ internal sealed class DesktopProgressNotificationWindow : Window
             Padding = new Thickness(8, 0, 8, 0),
             Background = WpfBrushes.Transparent,
             BorderBrush =
-                new SolidColorBrush(WpfColor.FromArgb(52, 255, 255, 255)),
+                new SolidColorBrush(WpfColor.FromArgb(82, 43, 255, 118)),
             BorderThickness = new Thickness(1),
             Foreground =
-                new SolidColorBrush(WpfColor.FromRgb(171, 178, 190)),
+                new SolidColorBrush(WpfColor.FromRgb(114, 221, 143)),
+            FontFamily = new FontFamily("Consolas"),
             FontSize = 11,
             Cursor = WpfCursors.Hand,
             Focusable = false,
@@ -301,7 +302,8 @@ internal sealed class DesktopProgressNotificationWindow : Window
             Background = WpfBrushes.Transparent,
             BorderBrush = WpfBrushes.Transparent,
             Foreground =
-                new SolidColorBrush(WpfColor.FromRgb(171, 178, 190)),
+                new SolidColorBrush(WpfColor.FromRgb(114, 221, 143)),
+            FontFamily = new FontFamily("Consolas"),
             FontSize = 18,
             Cursor = WpfCursors.Hand,
             Focusable = false,
