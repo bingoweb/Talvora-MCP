@@ -73,6 +73,9 @@ jobs:
             $hits | ForEach-Object { Write-Error $_ }
             throw 'WinGet is forbidden. Use Chocolatey.'
           }
+          # git grep returns 1 when there are no matches; do not let the
+          # GitHub pwsh wrapper treat that expected result as step failure.
+          exit 0
 
       - name: Validate source contracts
         shell: pwsh
