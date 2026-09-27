@@ -6,6 +6,11 @@ function Assert-Contains([string]$Path, [string]$Pattern, [string]$Message) {
     if ($text -notmatch $Pattern) { throw $Message }
 }
 
+function Assert-NotContains([string]$Path, [string]$Pattern, [string]$Message) {
+    $text = [IO.File]::ReadAllText((Join-Path $root $Path))
+    if ($text -match $Pattern) { throw $Message }
+}
+
 Assert-Contains 'global.json' '"version"\s*:\s*"10\.0\.4\d{2}"' 'global.json must pin the current .NET 10.0.4xx feature band.'
 Assert-Contains 'global.json' '"rollForward"\s*:\s*"latestFeature"' 'global.json must permit current servicing SDKs in the pinned feature band.'
 Assert-Contains 'Directory.Packages.props' '<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>' 'Central Package Management must remain enabled.'
@@ -15,7 +20,7 @@ Assert-Contains 'AGENTS.md' 'Context7 is mandatory' 'Context7 must remain an exp
 Assert-Contains 'docs/MODERNIZATION-POLICY.md' 'Gitea issue' 'Modernization phases must remain tracked in Gitea.'
 Assert-Contains 'AGENTS.md' 'Mandatory Windows desktop progress reporting' 'Desktop progress reporting must remain a durable engineering rule.'
 Assert-Contains 'src/Talvora/Program.cs' 'AddCallToolFilter' 'Every MCP tool call must remain wrapped by the desktop progress contract.'
-Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'HeartbeatInterval\s*=\s*\r?\n?\s*TimeSpan\.FromSeconds\(25\)' 'Long-running tool calls must retain a short 25-second desktop heartbeat.'
+Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'HeartbeatInterval\s*=\s*\r?\n?\s*TimeSpan\.FromSeconds\(20\)' 'Long-running tool calls must retain a short 20-second desktop heartbeat.'
 Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'WTSGetActiveConsoleSessionId' 'Desktop progress must target the active console session.'
 Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'NamedPipeClientStream' 'The service must hand desktop progress to the interactive tray over local IPC.'
 Assert-Contains 'src/Talvora.Tray/DesktopProgressPipeListener.cs' 'NamedPipeServerStreamAcl\.Create' 'The tray progress IPC endpoint must use an explicit named-pipe ACL.'
@@ -23,7 +28,11 @@ Assert-Contains 'src/Talvora.Tray/DesktopProgressPipeListener.cs' 'WellKnownSidT
 Assert-Contains 'src/Talvora.Tray/DesktopProgressNotificationWindow.cs' 'TextWrapping\s*=\s*TextWrapping\.Wrap' 'Desktop progress text must wrap instead of being arbitrarily truncated.'
 Assert-Contains 'src/Talvora.Tray/DesktopProgressNotificationWindow.cs' 'VerticalScrollBarVisibility\s*=\s*ScrollBarVisibility\.Auto' 'Long desktop progress text must remain fully viewable.'
 Assert-Contains 'src/Talvora.Tray/DesktopProgressNotificationWindow.cs' 'ShowActivated\s*=\s*false' 'Desktop progress must not steal keyboard focus.'
+Assert-Contains 'src/Talvora.Tray/DesktopProgressNotificationWindow.cs' 'ActiveLifetime\s*=\s*\r?\n?\s*TimeSpan\.FromSeconds\(14\)' 'Active progress cards must auto-dismiss instead of remaining permanently visible.'
+Assert-Contains 'src/Talvora.Tray/DesktopProgressNotificationWindow.cs' 'DoubleAnimation' 'Desktop progress cards must retain polished enter/exit motion.'
 Assert-Contains 'src/Talvora.Tray/DesktopProgressNotificationPresenter.cs' 'MaximumVisibleCards\s*=\s*4' 'Desktop progress must keep notification density bounded.'
+Assert-Contains 'src/Talvora.Tray/TrayApplicationContext.cs' '_desktopProgressPresenter\.Publish' 'Legacy tray status notifications must use the full-text progress-card surface.'
+Assert-NotContains 'src/Talvora.Tray/TrayApplicationContext.cs' 'BalloonTipText\s*=\s*text\.Length\s*<=\s*240' 'Arbitrary 240-character tray notification truncation is forbidden.'
 Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'IsTruthy\(Environment\.GetEnvironmentVariable\("CI"\)\)' 'Desktop progress must stay noninteractive in CI.'
 Assert-Contains '.github/workflows/windows-ci.yml' '--locked-mode' 'CI restore must use locked mode.'
 Assert-Contains '.github/workflows/windows-ci.yml' 'ModernizationPolicyRegression\.ps1' 'CI must enforce the modernization policy regression.'

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-27T14:54:00Z",
+  "verifiedAtUtc": "2026-09-27T15:03:00Z",
   "scope": "Talvora 2026-Q3 deep modernization: .NET 10, MCP SDK, NuGet reproducibility, GitHub Actions, development quality gates, and polished tray-owned Windows desktop progress reporting.",
   "libraries": [
     {
@@ -18,6 +18,10 @@
     {
       "libraryId": "/lepoco/wpfui",
       "verified": "Current WPF-UI Snackbar guidance confirms presenter-owned nonmodal notification UX with explicit timeout; Talvora keeps the existing WPF-UI design language while using a tray-owned WPF progress card so full text, coalescing, hover pause and lifecycle remain under Talvora control."
+    },
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "Current WPF implementation guidance confirms DoubleAnimation on UIElement.Opacity and TranslateTransform.Y with FillBehavior.Stop as an established popup-motion pattern; Talvora uses short fade/slide motion without changing focus or operation semantics."
     }
   ],
   "vendorSources": [

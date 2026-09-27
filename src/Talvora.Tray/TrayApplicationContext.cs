@@ -1585,12 +1585,21 @@ internal sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
-        _notifyIcon.BalloonTipTitle = title;
-        _notifyIcon.BalloonTipText = text.Length <= 240
-            ? text
-            : text[..240];
-        _notifyIcon.BalloonTipIcon = icon;
-        _notifyIcon.ShowBalloonTip(4000);
+        var kind = icon switch
+        {
+            ToolTipIcon.Error => DesktopProgressKind.Failed,
+            ToolTipIcon.Warning => DesktopProgressKind.Warning,
+            _ => DesktopProgressKind.Info,
+        };
+        _desktopProgressPresenter.Publish(
+            new DesktopProgressMessage(
+                $"tray-{Guid.NewGuid():N}",
+                "Talvora.Tray",
+                title,
+                text,
+                kind,
+                DateTimeOffset.UtcNow,
+                ElapsedSeconds: 0));
     }
 
     private void ExitTray()

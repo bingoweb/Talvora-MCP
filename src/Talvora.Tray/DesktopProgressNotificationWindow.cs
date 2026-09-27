@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Threading;
 using Talvora.Shared;
@@ -15,9 +16,9 @@ namespace Talvora.Tray;
 internal sealed class DesktopProgressNotificationWindow : Window
 {
     private static readonly TimeSpan ActiveLifetime =
-        TimeSpan.FromSeconds(28);
+        TimeSpan.FromSeconds(14);
     private static readonly TimeSpan CompletedLifetime =
-        TimeSpan.FromSeconds(11);
+        TimeSpan.FromSeconds(12);
     private static readonly TimeSpan FailureLifetime =
         TimeSpan.FromSeconds(18);
 
@@ -26,7 +27,9 @@ internal sealed class DesktopProgressNotificationWindow : Window
     private readonly TextBlock _message;
     private readonly TextBlock _status;
     private readonly DispatcherTimer _dismissTimer;
+    private readonly TranslateTransform _translateTransform = new();
     private TimeSpan _dismissAfter = ActiveLifetime;
+    private bool _isClosing;
 
     public DesktopProgressNotificationWindow()
     {
@@ -40,6 +43,8 @@ internal sealed class DesktopProgressNotificationWindow : Window
         Topmost = true;
         AllowsTransparency = true;
         Background = WpfBrushes.Transparent;
+        Opacity = 0;
+        RenderTransform = _translateTransform;
 
         var root = new Border
         {
@@ -145,7 +150,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
             Cursor = WpfCursors.Hand,
             Focusable = false,
         };
-        closeButton.Click += (_, _) => Close();
+        closeButton.Click += (_, _) => BeginClose();
         Grid.SetColumn(closeButton, 3);
         grid.Children.Add(closeButton);
 
@@ -159,11 +164,12 @@ internal sealed class DesktopProgressNotificationWindow : Window
         _dismissTimer.Tick += (_, _) =>
         {
             _dismissTimer.Stop();
-            Close();
+            BeginClose();
         };
 
         MouseEnter += (_, _) => _dismissTimer.Stop();
         MouseLeave += (_, _) => RestartDismissTimer();
+        Loaded += (_, _) => AnimateIn();
     }
 
     public string OperationId { get; private set; } = string.Empty;
@@ -188,6 +194,8 @@ internal sealed class DesktopProgressNotificationWindow : Window
                     $"Başarısız · {FormatElapsed(message.ElapsedSeconds)}",
                 DesktopProgressKind.Cancelled =>
                     $"İptal edildi · {FormatElapsed(message.ElapsedSeconds)}",
+                DesktopProgressKind.Warning => "Uyarı",
+                DesktopProgressKind.Info => "Bilgi",
                 _ => "Talvora",
             };
 
@@ -201,6 +209,10 @@ internal sealed class DesktopProgressNotificationWindow : Window
                         WpfColor.FromRgb(244, 92, 92),
                     DesktopProgressKind.Cancelled =>
                         WpfColor.FromRgb(244, 177, 72),
+                    DesktopProgressKind.Warning =>
+                        WpfColor.FromRgb(244, 177, 72),
+                    DesktopProgressKind.Info =>
+                        WpfColor.FromRgb(72, 151, 255),
                     _ =>
                         WpfColor.FromRgb(72, 151, 255),
                 });
@@ -211,9 +223,70 @@ internal sealed class DesktopProgressNotificationWindow : Window
                 DesktopProgressKind.Completed => CompletedLifetime,
                 DesktopProgressKind.Failed => FailureLifetime,
                 DesktopProgressKind.Cancelled => FailureLifetime,
+                DesktopProgressKind.Warning => FailureLifetime,
+                DesktopProgressKind.Info => CompletedLifetime,
                 _ => ActiveLifetime,
             };
         RestartDismissTimer();
+    }
+
+    private void AnimateIn()
+    {
+        Opacity = 1;
+        BeginAnimation(
+            OpacityProperty,
+            new DoubleAnimation(
+                fromValue: 0,
+                toValue: 1,
+                duration: TimeSpan.FromMilliseconds(180))
+            {
+                EasingFunction =
+                    new QuadraticEase
+                    {
+                        EasingMode = EasingMode.EaseOut,
+                    },
+                FillBehavior = FillBehavior.Stop,
+            });
+
+        _translateTransform.Y = 0;
+        _translateTransform.BeginAnimation(
+            TranslateTransform.YProperty,
+            new DoubleAnimation(
+                fromValue: 14,
+                toValue: 0,
+                duration: TimeSpan.FromMilliseconds(220))
+            {
+                EasingFunction =
+                    new QuadraticEase
+                    {
+                        EasingMode = EasingMode.EaseOut,
+                    },
+                FillBehavior = FillBehavior.Stop,
+            });
+    }
+
+    private void BeginClose()
+    {
+        if (_isClosing)
+        {
+            return;
+        }
+
+        _isClosing = true;
+        _dismissTimer.Stop();
+        var animation = new DoubleAnimation(
+            fromValue: Opacity,
+            toValue: 0,
+            duration: TimeSpan.FromMilliseconds(160))
+        {
+            EasingFunction =
+                new QuadraticEase
+                {
+                    EasingMode = EasingMode.EaseIn,
+                },
+        };
+        animation.Completed += (_, _) => Close();
+        BeginAnimation(OpacityProperty, animation);
     }
 
     private void RestartDismissTimer()

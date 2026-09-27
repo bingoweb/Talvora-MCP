@@ -21,7 +21,7 @@
 - Every MCP tool execution passes through the desktop-progress wrapper. Long-running calls emit a heartbeat in tens of seconds, not minutes; completion, cancellation, and failure update the same operation status where practical.
 - The LocalSystem service never owns the normal interactive UI. It publishes session-aware progress to Talvora.Tray through local IPC; the signed-in tray process owns the notification window.
 - Progress notifications are polished, nonmodal, full-text WPF cards. Arbitrary text truncation is forbidden. Long content must wrap and remain fully viewable through the card's scrollable content area.
-- Active cards remain visible long enough to read and are refreshed before the next heartbeat; terminal cards auto-dismiss after a readable interval. Hover pauses dismissal. Notifications must not become permanent.
+- Active cards remain visible long enough to read, then auto-dismiss; long-running work resurfaces on the next tens-of-seconds heartbeat or milestone instead of pinning a permanent card. Terminal cards also auto-dismiss after a readable interval. Hover pauses dismissal.
 - Notifications must be deduplicated/coalesced so they stay useful, and the number of simultaneously visible cards must be bounded, but the progress wrapper itself may not be bypassed for ordinary tool execution.
 - Notification delivery is best-effort and must never fail, cancel, delay, or change the result of the underlying operation. Headless, CI, and no-active-session execution must remain safe.
 - Windows service code must target the active interactive session through supported Windows APIs rather than assuming a fixed session ID. Cross-session IPC must use an explicit ACL and a session-specific endpoint.
