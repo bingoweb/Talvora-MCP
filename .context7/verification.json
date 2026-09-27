@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-27T18:27:00Z",
-  "scope": "Talvora Control Center and desktop progress reliability quality pass: notification-side-effect isolation, redacted bounded exception diagnostics, WPF dispatcher resilience, and operational log quality.",
+  "verifiedAtUtc": "2026-09-27T18:38:00Z",
+  "scope": "Talvora Control Center responsiveness quality pass: move bounded event-history mutex/file work and live raw-log file IO off the WPF dispatcher, parallelize detail metadata collection, suppress overlapping timer reads, and discard stale async UI results.",
   "libraries": [
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/wpf",
-      "verified": "Current WPF dispatcher guidance confirms UI callbacks execute through Dispatcher operations and DispatcherTimer participates in the same UI lifetime. Talvora keeps known-valid positive timer intervals, preserves direct DragMove/pinned positioning, and isolates desktop-progress presentation failures inside the notification presenter so a non-critical observability surface cannot terminate the Tray/Control Center process."
+      "verified": "Current WPF dispatcher guidance confirms UI callbacks execute through Dispatcher operations and recommends moving blocking work away from the dispatcher before marshaling results back to UI state. Talvora keeps the cross-process Mutex acquire/release wholly on one worker thread, performs bounded event-history and raw-log file reads through async worker boundaries, parallelizes independent detail health/version/event work, and uses a nonblocking gate plus selected-MCP identity check to prevent overlapping or stale live-log refreshes."
     }
   ],
   "vendorSources": [
@@ -35,6 +35,7 @@
     "Microsoft WPF window guidance checked 2026-09-27: ShowActivated=false prevents a notification window from stealing focus; wrapped/scrollable WPF content is used for full-text visibility",
     "Microsoft WPF Window.DragMove documentation checked 2026-09-27 for Windows Desktop 10: borderless WPF windows can be moved from client-area mouse handling while the left button is down",
     "Microsoft WPF Dispatcher guidance checked 2026-09-27: UI work is dispatched through Dispatcher operations; non-critical notification work should fail inside its own presentation boundary instead of escaping into the application dispatcher",
+    "Microsoft WPF responsiveness guidance checked 2026-09-27: potentially blocking IO/work should execute away from the UI dispatcher and return only UI updates to the dispatcher; Talvora preserves Mutex ownership on one worker thread while doing so",
     "Microsoft multi-monitor positioning guidance checked 2026-09-27: saved custom window positions must be validated against the target monitor work area and must not assume a virtual-desktop origin of 0,0",
     "Microsoft .NET native interop best practices checked 2026-09-27; new one-off Win32 calls use LibraryImport generated interop",
     "Microsoft .NET IDisposable and Process analyzer guidance checked 2026-09-27: disposable objects that own OS resources should be deterministically disposed; avoid unnecessary Process allocation for invariant/current-process information",

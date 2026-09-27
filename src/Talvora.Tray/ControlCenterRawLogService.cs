@@ -40,6 +40,17 @@ internal static class ControlCenterRawLogService
         return string.Join(Environment.NewLine, lines);
     }
 
+    public static Task<string> ReadTailAsync(
+        ManagedMcpRegistration? registration = null,
+        CancellationToken cancellationToken = default) =>
+        Task.Run(
+            () =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return ReadTail(registration);
+            },
+            cancellationToken);
+
     private static void AppendTail(
         string path,
         Queue<string> lines)

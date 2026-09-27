@@ -214,6 +214,22 @@ internal static class ControlCenterEventStore
         }
     }
 
+    public static Task<IReadOnlyList<ControlCenterEventRecord>> ReadRecentAsync(
+        TimeSpan window,
+        int maxRecords = 12,
+        ControlCenterEventSeverity? minimumSeverity = null,
+        CancellationToken cancellationToken = default) =>
+        Task.Run(
+            () =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return ReadRecent(
+                    window,
+                    maxRecords,
+                    minimumSeverity);
+            },
+            cancellationToken);
+
     internal static void AssertPolicyContract()
     {
         var now = new DateTimeOffset(

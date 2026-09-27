@@ -465,7 +465,13 @@ internal sealed partial class ControlCenterWindow
                             ? $"{component.DisplayName} • {GetComponentKindLabel(component.Kind)}"
                             : $"{component.DisplayName} • {GetComponentKindLabel(component.Kind)} • {component.Name}"));
 
-        RenderDetailRecentEvents(state.Registration.Id);
+        _detailRecentEventsList.Children.Clear();
+        _detailRecentEventsList.Children.Add(new TextBlock
+        {
+            Text = "Son olaylar yükleniyor...",
+            Foreground = SecondaryTextBrush,
+            FontSize = 12,
+        });
 
         _technicalDetailsExpander.IsExpanded = false;
         _detailOperationBanner.Visibility = Visibility.Collapsed;
@@ -504,8 +510,13 @@ internal sealed partial class ControlCenterWindow
                 ControlCenterVersionService.GetVersionAsync(
                     selected.Registration,
                     _lifetimeCts.Token);
+            var eventTask =
+                ControlCenterEventStore.ReadRecentAsync(
+                    TimeSpan.FromDays(7),
+                    maxRecords: 40,
+                    cancellationToken: _lifetimeCts.Token);
 
-            await Task.WhenAll(componentTask, versionTask);
+            await Task.WhenAll(componentTask, versionTask, eventTask);
 
             if (_selectedMcp is null ||
                 !string.Equals(
@@ -518,7 +529,9 @@ internal sealed partial class ControlCenterWindow
 
             _detailVersion.Text = versionTask.Result;
             RenderComponentStates(componentTask.Result);
-            RenderDetailRecentEvents(selected.Registration.Id);
+            RenderDetailRecentEvents(
+                selected.Registration.Id,
+                eventTask.Result);
             UpdateDetailActionState(_selectedMcp);
         }
         catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
@@ -537,12 +550,13 @@ internal sealed partial class ControlCenterWindow
         }
     }
 
-    private void RenderDetailRecentEvents(string mcpId)
+    private void RenderDetailRecentEvents(
+        string mcpId,
+        IReadOnlyList<ControlCenterEventRecord> recentEvents)
     {
         _detailRecentEventsList.Children.Clear();
 
-        var events = ControlCenterEventStore
-            .ReadRecent(TimeSpan.FromDays(7), maxRecords: 40)
+        var events = recentEvents
             .Where(entry =>
                 string.Equals(
                     entry.McpId,
@@ -778,7 +792,7 @@ internal sealed partial class ControlCenterWindow
         }
 
         _eventsExpander.IsExpanded = true;
-        RefreshEventsPanel();
+        await RefreshEventsPanelAsync();
         if (string.IsNullOrWhiteSpace(_eventsSummaryText.Text) ||
             _eventsList.Children.Count == 0)
         {
@@ -787,7 +801,7 @@ internal sealed partial class ControlCenterWindow
         }
 
         _rawLogExpander.IsExpanded = true;
-        RefreshRawLogView();
+        await RefreshRawLogViewAsync();
         if (!_rawLogTextBox.IsReadOnly ||
             string.IsNullOrWhiteSpace(_rawLogMetaText.Text))
         {

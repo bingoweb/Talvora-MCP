@@ -27,6 +27,7 @@ internal sealed partial class ControlCenterWindow
     private TextBlock _rawLogMetaText = null!;
     private UiButton _rawLogCopyButton = null!;
     private DispatcherTimer _rawLogRefreshTimer = null!;
+    private readonly SemaphoreSlim _rawLogRefreshGate = new(1, 1);
     private IReadOnlyList<ControlCenterEventRecord> _recentEvents =
         Array.Empty<ControlCenterEventRecord>();
     private string _rawLogSourceText = string.Empty;
@@ -148,9 +149,9 @@ internal sealed partial class ControlCenterWindow
             Content = body,
         };
 
-        _eventsExpander.Expanded += (_, _) =>
+        _eventsExpander.Expanded += async (_, _) =>
         {
-            RefreshEventsPanel();
+            await RefreshEventsPanelAsync();
             UpdateRawLogTimerState();
         };
         _eventsExpander.Collapsed += (_, _) =>
@@ -161,7 +162,7 @@ internal sealed partial class ControlCenterWindow
         _rawLogRefreshTimer = new DispatcherTimer(
             TimeSpan.FromSeconds(2),
             DispatcherPriority.Background,
-            (_, _) => RefreshRawLogView(),
+            async (_, _) => await RefreshRawLogViewAsync(),
             Dispatcher)
         {
             IsEnabled = false,
@@ -277,9 +278,9 @@ internal sealed partial class ControlCenterWindow
             Content = body,
         };
 
-        expander.Expanded += (_, _) =>
+        expander.Expanded += async (_, _) =>
         {
-            RefreshRawLogView();
+            await RefreshRawLogViewAsync();
             UpdateRawLogTimerState();
         };
         expander.Collapsed += (_, _) =>
@@ -290,16 +291,17 @@ internal sealed partial class ControlCenterWindow
         return expander;
     }
 
-    private void RefreshEventsPanel()
+    private async Task RefreshEventsPanelAsync()
     {
         if (_eventsSummaryText is null)
         {
             return;
         }
 
-        _recentEvents = ControlCenterEventStore.ReadRecent(
+        _recentEvents = await ControlCenterEventStore.ReadRecentAsync(
             TimeSpan.FromHours(24),
-            maxRecords: 100);
+            maxRecords: 100,
+            cancellationToken: _lifetimeCts.Token);
 
         var warningGroups = _recentEvents.Count(entry =>
             entry.Severity == ControlCenterEventSeverity.Warning);
@@ -445,7 +447,7 @@ internal sealed partial class ControlCenterWindow
         };
     }
 
-    private void RefreshRawLogView()
+    private async Task RefreshRawLogViewAsync()
     {
         if (_rawLogTextBox is null ||
             _rawLogExpander?.IsExpanded != true ||
@@ -454,9 +456,41 @@ internal sealed partial class ControlCenterWindow
             return;
         }
 
-        _rawLogSourceText = ControlCenterRawLogService.ReadTail(
-            _selectedMcp?.Registration);
-        ApplyRawLogFilter();
+        if (!await _rawLogRefreshGate.WaitAsync(0))
+        {
+            return;
+        }
+
+        var registration = _selectedMcp?.Registration;
+        var registrationId = registration?.Id;
+        try
+        {
+            var sourceText = await ControlCenterRawLogService.ReadTailAsync(
+                registration,
+                _lifetimeCts.Token);
+
+            if (_lifetimeCts.IsCancellationRequested ||
+                _rawLogExpander?.IsExpanded != true ||
+                !IsVisible ||
+                !string.Equals(
+                    registrationId,
+                    _selectedMcp?.Registration.Id,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _rawLogSourceText = sourceText;
+            ApplyRawLogFilter();
+        }
+        catch (OperationCanceledException)
+            when (_lifetimeCts.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            _rawLogRefreshGate.Release();
+        }
     }
 
     private void ApplyRawLogFilter()

@@ -591,7 +591,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
             ApplyDashboardFilter();
             RefreshSetupCard();
-            RefreshEventsPanel();
+            await RefreshEventsPanelAsync();
 
             if (_selectedMcp is not null)
             {
