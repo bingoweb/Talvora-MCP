@@ -199,8 +199,8 @@ internal static class ControlCenterDashboardService
                 return new ManagedMcpDashboardState(
                     registration,
                     ControlCenterHealthState.Attention,
-                    "Browser doğrulaması bekleniyor",
-                    "MCP hazır; mevcut çalışma nesli için gerçek browser navigate/snapshot doğrulaması henüz tamamlanmadı.");
+                    "Tarayıcı doğrulaması bekleniyor",
+                    "MCP hazır; mevcut çalışma için gerçek tarayıcı açma ve sayfa görüntüsü doğrulaması henüz tamamlanmadı.");
             }
 
             var tunnelAssessment =

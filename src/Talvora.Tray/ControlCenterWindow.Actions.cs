@@ -530,23 +530,7 @@ internal sealed partial class ControlCenterWindow
     }
 
     private static string GetFriendlyOperationError(Exception exception)
-    {
-        if (exception is UnauthorizedAccessException)
-        {
-            return "Bu işlem için gerekli Windows servis izni bulunamadı. " +
-                   "Talvora'nın güncel kurulumunu yeniden çalıştırmak gerekebilir.";
-        }
-
-        if (exception is TimeoutException)
-        {
-            return "İşlem başladı ancak bileşenler beklenen sürede hazır duruma gelmedi.";
-        }
-
-        var message = exception.Message.Trim();
-        return string.IsNullOrWhiteSpace(message)
-            ? "İşlem tamamlanamadı. Ayrıntılar Talvora günlüğüne kaydedildi."
-            : message;
-    }
+        => ControlCenterUserMessage.ForOperation(exception);
 
     private static void OpenGiteaHome()
     {

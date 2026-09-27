@@ -553,14 +553,21 @@ internal sealed class TrayApplicationContext : ApplicationContext
         catch (Exception ex)
         {
             TrayLog.Write("Talvora status refresh failed", ex);
+            var friendly =
+                ControlCenterUserMessage.ForOperation(
+                    ex,
+                    "Talvora durum kontrolü");
             SetTalvoraStatus(new TalvoraStatus(
                 TalvoraConnectionState.Offline,
                 "Talvora durumu alınamadı",
-                ex.Message));
+                friendly));
 
             if (showNotification)
             {
-                ShowNotification("Talvora", ex.Message, ToolTipIcon.Error);
+                ShowNotification(
+                    "Talvora durumu alınamadı",
+                    friendly,
+                    ToolTipIcon.Error);
             }
         }
         finally
@@ -620,6 +627,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
         catch (Exception ex)
         {
             TrayLog.Write("Reconnect failed", ex);
+            var friendly =
+                ControlCenterUserMessage.ForOperation(
+                    ex,
+                    "Talvora bağlantısını yenileme");
             ControlCenterEventStore.Record(
                 ControlCenterEventSeverity.Error,
                 "connection",
@@ -638,11 +649,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 localHealthy
                     ? "Talvora hazır"
                     : "Talvora erişilemiyor",
-                ex.Message));
+                friendly));
 
             ShowNotification(
                 "Talvora yeniden bağlanamadı",
-                ex.Message,
+                friendly,
                 ToolTipIcon.Error);
         }
         finally
@@ -904,14 +915,21 @@ internal sealed class TrayApplicationContext : ApplicationContext
         catch (Exception ex)
         {
             TrayLog.Write("Gitea status refresh failed", ex);
+            var friendly =
+                ControlCenterUserMessage.ForOperation(
+                    ex,
+                    "Gitea durum kontrolü");
             SetGiteaStatus(new GiteaStatus(
                 GiteaConnectionState.Offline,
                 "Gitea durumu alınamadı",
-                ex.Message));
+                friendly));
 
             if (showNotification)
             {
-                ShowNotification("Gitea", ex.Message, ToolTipIcon.Error);
+                ShowNotification(
+                    "Gitea durumu alınamadı",
+                    friendly,
+                    ToolTipIcon.Error);
             }
         }
         finally
@@ -982,6 +1000,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
         catch (Exception ex)
         {
             TrayLog.Write("Gitea service restart failed", ex);
+            var friendly =
+                ControlCenterUserMessage.ForOperation(
+                    ex,
+                    "Gitea'yı yeniden başlatma");
             ControlCenterEventStore.Record(
                 ControlCenterEventSeverity.Error,
                 "operation",
@@ -992,8 +1014,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
             SetGiteaStatus(new GiteaStatus(
                 GiteaConnectionState.Offline,
                 "Gitea yeniden başlatılamadı",
-                ex.Message));
-            ShowNotification("Gitea", ex.Message, ToolTipIcon.Error);
+                friendly));
+            ShowNotification(
+                "Gitea yeniden başlatılamadı",
+                friendly,
+                ToolTipIcon.Error);
         }
         finally
         {
@@ -1573,7 +1598,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
             System.ComponentModel.Win32Exception)
         {
             TrayLog.Write("Opening Gitea in browser failed", ex);
-            ShowNotification("Gitea açılamadı", ex.Message, ToolTipIcon.Error);
+            ShowNotification(
+                "Gitea açılamadı",
+                ControlCenterUserMessage.ForOperation(
+                    ex,
+                    "Gitea'yı açma"),
+                ToolTipIcon.Error);
         }
     }
 

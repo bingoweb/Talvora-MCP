@@ -293,11 +293,11 @@ internal sealed partial class ControlCenterWindow
             out _detailProfilePath,
             new Thickness(0, 12, 0, 0)));
         technicalStack.Children.Add(CreateTechnicalField(
-            "Runtime state yolu",
+            "Çalışma durumu yolu",
             out _detailRuntimeStatePath,
             new Thickness(0, 12, 0, 0)));
         technicalStack.Children.Add(CreateTechnicalField(
-            "Browser smoke state yolu",
+            "Tarayıcı doğrulama durumu yolu",
             out _detailBrowserSmokeStatePath,
             new Thickness(0, 12, 0, 0)));
         technicalStack.Children.Add(CreateTechnicalField(
@@ -829,7 +829,7 @@ internal sealed partial class ControlCenterWindow
             "process" => "İşlem",
             "mcp-protocol" => "MCP protokolü",
             "browser-runtime" => "Tarayıcı çalışma zamanı",
-            "browser-smoke" => "Gerçek browser smoke",
+            "browser-smoke" => "Gerçek tarayıcı doğrulaması",
             "tunnel" => "Tünel",
             _ => kind,
         };

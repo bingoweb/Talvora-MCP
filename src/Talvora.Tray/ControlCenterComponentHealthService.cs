@@ -93,12 +93,12 @@ internal static class ControlCenterComponentHealthService
                         component,
                         ControlCenterHealthState.Ready,
                         "Hazır",
-                        "Gerçek browser runtime bağlantısı doğrulandı.")
+                        "Gerçek tarayıcı çalışma bağlantısı doğrulandı.")
                     : new ManagedMcpComponentState(
                         component,
                         ControlCenterHealthState.Offline,
-                        "Browser hazır değil",
-                        protocolProbe?.Detail ?? "Browser runtime sağlık kontrolü alınamadı."));
+                        "Tarayıcı hazır değil",
+                        protocolProbe?.Detail ?? "Tarayıcı çalışma durumu alınamadı."));
         }
 
         if (string.Equals(
@@ -112,12 +112,12 @@ internal static class ControlCenterComponentHealthService
                         component,
                         ControlCenterHealthState.Ready,
                         "Doğrulandı",
-                        "Mevcut runtime generation için gerçek navigate ve accessibility snapshot smoke başarılı.")
+                        "Gerçek tarayıcı açma ve sayfa görüntüsü doğrulaması başarılı.")
                     : new ManagedMcpComponentState(
                         component,
                         ControlCenterHealthState.Attention,
                         "Doğrulama bekleniyor",
-                        "Mevcut runtime generation için gerçek browser smoke henüz doğrulanmadı."));
+                        "Gerçek tarayıcı doğrulaması henüz tamamlanmadı."));
         }
 
         if (string.Equals(
@@ -258,7 +258,9 @@ internal static class ControlCenterComponentHealthService
                 component,
                 ControlCenterHealthState.Offline,
                 "Tünel durumu okunamadı",
-                ex.Message);
+                ControlCenterUserMessage.ForOperation(
+                    ex,
+                    "Tünel durumu"));
         }
 
         if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
