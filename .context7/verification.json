@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-27T19:05:00Z",
-  "scope": "Talvora on-demand Penpot resource-quality pass: keep canonical Penpot autoStart=false, normalize its scheduled-task/process/Compose chain to stopped at Tray startup, disable the task while idle, launch Docker Desktop only for explicit Start, preserve named volumes on Stop, and present the expected stopped state without degrading global Control Center health.",
+  "verifiedAtUtc": "2026-09-27T19:58:00Z",
+  "scope": "Talvora final quality closeout: 212-tool full smoke, deterministic interactive-user environment persistence, smoke wire-contract drift repairs, bounded JavaScript/Corepack toolchain probes, and closure of superseded focused-tunnel TODOs.",
   "libraries": [
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",

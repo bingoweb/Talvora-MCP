@@ -147,8 +147,8 @@ Sabit kurallar:
 - [x] META2-052 — `talvora-dev` ve `talvora-admin` managed recovery registration'ları eklendi; endpointler sırasıyla `/mcp/dev` ve `/mcp/admin`, ayrı alias/config kimlikleri ve representative protocol probe tool'ları var.
 - [x] META2-053 — Focused registration'lar yalnız kendi tunnel component'ini yönetiyor; ana Talvora Windows service component'i eklenmedi. Generic lifecycle tunnel-only registration desteği kazandı.
 - [x] META2-054 — `FocusedMcpSurfaceSourceRegression.ps1` targeted gate: focused constants/endpoints/counts/registrations/tunnel-only ownership/lifecycle contract GREEN; Tray Release 0 warning / 0 error.
-- [ ] META2-055 — **BLOCKED — external prerequisite:** ayrı remote Dev/Admin tunnel yaratımı için OpenAI Admin credential gerekli. Bu makinede `openai-admin-key.dpapi` mevcut değil; gerçek credential uydurulmayacak veya loglanmayacak.
-- [ ] META2-056 — **BLOCKED by META2-055:** Admin credential mevcut olduğunda generic provisioning Dev/Admin için ayrı tunnel + DPAPI runtime credential + config + ready gate oluşturacak; ardından ChatGPT'de ayrı Dev/Admin app bağlantıları kurulabilecek.
+- [x] META2-055 — **SUPERSEDED / NOT REQUIRED:** mevcut Dev/Admin tunnel kimlikleri Faz G'deki existing-ID binding ile Admin credential olmadan bağlandı; canlı focused Dev/Admin yayınları hazır. Yeni tunnel oluşturma yolu yalnız gelecekte isteğe bağlı provisioning alternatifi olarak kalır.
+- [x] META2-056 — **SUPERSEDED / COMPLETE:** Dev/Admin focused runtime profilleri mevcut tunnel ID + reusable DPAPI runtime credential ile config/registry/ready gate zincirinden başarıyla yayınlandı; ürün için bekleyen dış önkoşul kalmadı.
 
 ### Faz G — Existing Focused Tunnel Binding / Admin-Key-Free Publication
 
