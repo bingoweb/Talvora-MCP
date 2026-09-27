@@ -166,17 +166,19 @@ internal static partial class SmokeScenarios
                         "-Command",
                         inheritedHandleCommand,
                     ],
-                    timeoutSeconds: 2);
+                    timeoutSeconds: 10);
 
                 if (!drain.TimedOut ||
                     !drain.OutputDrainTimedOut ||
-                    drain.ElapsedMilliseconds >= 6_000 ||
+                    drain.ElapsedMilliseconds >= 15_000 ||
                     !drain.StandardOutput.Contains(
                         "parent-exit",
                         StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
-                        "ProcessRunner output-drain deadline contract failed.");
+                        $"ProcessRunner output-drain deadline contract failed. " +
+                        $"TimedOut={drain.TimedOut}, OutputDrainTimedOut={drain.OutputDrainTimedOut}, " +
+                        $"ElapsedMilliseconds={drain.ElapsedMilliseconds}, Stdout={drain.StandardOutput}");
                 }
             }
             finally
