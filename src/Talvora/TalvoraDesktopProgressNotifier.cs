@@ -270,25 +270,25 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             "tail_text" or
             "search_text" or
             "find_files" or
-            "list" => "Kaynak ve dosya inceleme",
+            "list" => "Bilgileri kontrol ediyorum",
 
             "apply_patch" or
             "apply_edits" or
             "structural_edit" or
-            "semantic_edit" => "Kod ve dosya düzenleme",
+            "semantic_edit" => "İstediğin değişikliği uyguluyorum",
 
-            "dotnet_build" => ".NET derleme",
-            "dotnet_test" => ".NET testleri",
-            "dotnet_restore" => ".NET bağımlılık hazırlığı",
+            "dotnet_build" => "Yaptığım değişikliği kontrol ediyorum",
+            "dotnet_test" => "Yaptığım değişikliği deniyorum",
+            "dotnet_restore" => "Gerekli hazırlıkları tamamlıyorum",
 
-            "git_diff" => "Git değişikliklerini inceleme",
-            "git_run" => "Git işlemi",
-            "git_branches" => "Git dal kontrolü",
+            "git_diff" => "Yaptığım değişiklikleri gözden geçiriyorum",
+            "git_run" => "Yaptığım değişiklikleri toparlıyorum",
+            "git_branches" => "Çalışmanın son durumunu kontrol ediyorum",
 
-            "run_powershell" => "PowerShell işlemi",
-            "http_request" => "HTTP servis kontrolü",
-            "process_list" or "process_get" => "Çalışan süreçleri kontrol etme",
-            "system_info" => "Sistem bilgilerini kontrol etme",
+            "run_powershell" => "Bilgisayarında gerekli işlemi yapıyorum",
+            "http_request" => "Programın çalışıp çalışmadığını kontrol ediyorum",
+            "process_list" or "process_get" => "Arka planda çalışanları kontrol ediyorum",
+            "system_info" => "Bilgisayarındaki durumu kontrol ediyorum",
             _ => HumanizeToolName(normalized),
         };
     }
