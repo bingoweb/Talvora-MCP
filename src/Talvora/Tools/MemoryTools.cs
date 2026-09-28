@@ -131,4 +131,53 @@ public static class MemoryTools
         TalvoraMemoryRuntime.Store.ContextAsync(
             query, scope, project, session, category,
             maxItems, maxCharacters, cancellationToken);
+
+    [McpServerTool(
+        Name = "talvora_memory_supersede",
+        Destructive = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemorySupersedeResult)),
+     Description("Mark one stale memory as superseded by another existing memory in the same scope/project/session boundary. The stale row remains auditable but normal retrieval excludes it.")]
+    public static Task<TalvoraMemorySupersedeResult> Supersede(
+        string staleId,
+        string replacementId,
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.SupersedeAsync(
+            staleId,
+            replacementId,
+            cancellationToken);
+
+    [McpServerTool(
+        Name = "talvora_memory_consolidate",
+        Destructive = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemoryConsolidateResult)),
+     Description("Consolidate exact normalized duplicate active memories inside optional scope/project/session/category filters. The best-authority record wins; duplicates remain as auditable superseded rows.")]
+    public static Task<TalvoraMemoryConsolidateResult> Consolidate(
+        string? scope = null,
+        string? project = null,
+        string? session = null,
+        string? category = null,
+        int maxScan = 5000,
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.ConsolidateAsync(
+            scope,
+            project,
+            session,
+            category,
+            maxScan,
+            cancellationToken);
+
+    [McpServerTool(
+        Name = "talvora_memory_diagnostics",
+        ReadOnly = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemoryDiagnosticsResult)),
+     Description("Report Talvora memory database integrity, size, active/expired/superseded counts, and exact normalized duplicate-group count.")]
+    public static Task<TalvoraMemoryDiagnosticsResult> Diagnostics(
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.DiagnosticsAsync(cancellationToken);
 }

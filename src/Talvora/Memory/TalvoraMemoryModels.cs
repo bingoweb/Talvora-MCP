@@ -17,7 +17,10 @@ public sealed record TalvoraMemoryItem(
     DateTimeOffset? ExpiresAtUtc,
     string? SupersededBy);
 
-public sealed record TalvoraMemorySearchHit(TalvoraMemoryItem Item, double Rank);
+public sealed record TalvoraMemorySearchHit(
+    TalvoraMemoryItem Item,
+    double Rank,
+    double SourceAuthority);
 
 public sealed record TalvoraMemorySearchResult(
     string Query,
@@ -37,4 +40,29 @@ public sealed record TalvoraMemoryMutationResult(
     TalvoraMemoryItem? Item);
 
 public sealed record TalvoraMemoryForgetResult(bool Found, bool Deleted, string Id);
+
+public sealed record TalvoraMemorySupersedeResult(
+    bool Success,
+    TalvoraMemoryItem? Stale,
+    TalvoraMemoryItem? Replacement);
+
+public sealed record TalvoraMemoryConsolidationGroup(
+    string WinnerId,
+    IReadOnlyList<string> SupersededIds);
+
+public sealed record TalvoraMemoryConsolidateResult(
+    int Scanned,
+    int DuplicateGroups,
+    int SupersededCount,
+    IReadOnlyList<TalvoraMemoryConsolidationGroup> Groups);
+
+public sealed record TalvoraMemoryDiagnosticsResult(
+    string DatabasePath,
+    long DatabaseBytes,
+    string Integrity,
+    int TotalCount,
+    int ActiveCount,
+    int ExpiredCount,
+    int SupersededCount,
+    int DuplicateGroups);
 

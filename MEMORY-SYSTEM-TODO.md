@@ -46,15 +46,15 @@ Talvora should retain useful durable context across chats and development sessio
 
 ## Phase 2 — Memory quality
 
-- [ ] Add contradiction/supersession workflow.
-- [ ] Add duplicate detection and consolidation.
-- [ ] Add source authority ordering.
+- [x] Add contradiction/supersession workflow.
+- [x] Add duplicate detection and consolidation.
+- [x] Add source authority ordering.
 - [ ] Add retention classes and automatic expiry policies.
 - [ ] Add stale-memory suppression when repository/runtime evidence disagrees.
 - [ ] Add project identity normalization.
 - [ ] Add session close summary -> candidate-memory pipeline.
 - [ ] Add promotion rules so transient session facts do not become durable by default.
-- [ ] Add memory health/integrity diagnostics.
+- [x] Add memory health/integrity diagnostics.
 
 ## Phase 3 — Automatic learning
 

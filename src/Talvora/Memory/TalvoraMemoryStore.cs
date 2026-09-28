@@ -136,7 +136,25 @@ public sealed class TalvoraMemoryStore
             SELECT m.id, m.scope, m.project, m.session, m.category, m.title, m.content,
                    m.importance, m.confidence, m.source, m.source_ref,
                    m.created_utc, m.updated_utc, m.expires_utc, m.superseded_by,
-                   bm25(memory_items_fts, 2.0, 1.0, 0.4, 0.4, 0.2) AS lexical_rank
+                   bm25(memory_items_fts, 2.0, 1.0, 0.4, 0.4, 0.2) AS lexical_rank,
+                   CASE
+                       WHEN lower(COALESCE(m.source, '')) IN
+                           ('runtime', 'repository', 'repo', 'git', 'health', 'filesystem')
+                           THEN 1.0
+                       WHEN lower(COALESCE(m.source, '')) IN
+                           ('user', 'explicit-user', 'user-instruction')
+                           THEN 0.95
+                       WHEN lower(COALESCE(m.source, '')) IN
+                           ('handoff', 'project-doc', 'project-document')
+                           THEN 0.90
+                       WHEN lower(COALESCE(m.source, '')) IN
+                           ('tool', 'verified', 'test', 'smoke')
+                           THEN 0.75
+                       WHEN lower(COALESCE(m.source, '')) IN
+                           ('inferred', 'auto', 'model')
+                           THEN 0.40
+                       ELSE 0.50
+                   END AS source_authority
             FROM memory_items_fts
             JOIN memory_items AS m ON m.row_id = memory_items_fts.rowid
             WHERE memory_items_fts MATCH $query
@@ -146,7 +164,11 @@ public sealed class TalvoraMemoryStore
               AND ($category IS NULL OR m.category = $category)
               AND (m.expires_utc IS NULL OR m.expires_utc > $now)
               AND m.superseded_by IS NULL
-            ORDER BY lexical_rank ASC, m.importance DESC, m.updated_utc DESC
+            ORDER BY lexical_rank ASC,
+                     source_authority DESC,
+                     m.confidence DESC,
+                     m.importance DESC,
+                     m.updated_utc DESC
             LIMIT $limit;
             """;
         Add(command, "$query", BuildFtsQuery(query));
@@ -160,7 +182,11 @@ public sealed class TalvoraMemoryStore
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            hits.Add(new TalvoraMemorySearchHit(ReadItem(reader), reader.GetDouble(15)));
+            hits.Add(
+                new TalvoraMemorySearchHit(
+                    ReadItem(reader),
+                    reader.GetDouble(15),
+                    reader.GetDouble(16)));
         }
         return new TalvoraMemorySearchResult(query.Trim(), hits.Count, hits);
     }
@@ -259,6 +285,223 @@ public sealed class TalvoraMemoryStore
         command.CommandText = "DELETE FROM memory_items WHERE id = $id;";
         Add(command, "$id", id);
         return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
+    }
+
+    public async Task<TalvoraMemorySupersedeResult> SupersedeAsync(
+        string staleId,
+        string replacementId,
+        CancellationToken cancellationToken)
+    {
+        ValidateId(staleId);
+        ValidateId(replacementId);
+        if (string.Equals(staleId, replacementId, StringComparison.Ordinal))
+        {
+            throw new ArgumentException(
+                "A memory cannot supersede itself.",
+                nameof(replacementId));
+        }
+
+        await EnsureInitializedAsync(cancellationToken);
+        var stale = await GetAsync(staleId, cancellationToken);
+        var replacement = await GetAsync(replacementId, cancellationToken);
+        if (stale is null || replacement is null)
+        {
+            return new TalvoraMemorySupersedeResult(false, stale, replacement);
+        }
+
+        if (!SameBoundary(stale, replacement))
+        {
+            throw new InvalidOperationException(
+                "Supersession requires the same memory scope/project/session boundary.");
+        }
+
+        if (replacement.SupersededBy is not null)
+        {
+            throw new InvalidOperationException(
+                "The replacement memory is already superseded.");
+        }
+
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            UPDATE memory_items
+            SET superseded_by = $replacementId,
+                updated_utc = $updatedUtc
+            WHERE id = $staleId;
+            """;
+        Add(command, "$replacementId", replacementId);
+        Add(command, "$updatedUtc", Format(DateTimeOffset.UtcNow));
+        Add(command, "$staleId", staleId);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+
+        return new TalvoraMemorySupersedeResult(
+            true,
+            await GetAsync(staleId, cancellationToken),
+            replacement);
+    }
+
+    public async Task<TalvoraMemoryConsolidateResult> ConsolidateAsync(
+        string? scope,
+        string? project,
+        string? session,
+        string? category,
+        int maxScan,
+        CancellationToken cancellationToken)
+    {
+        if (scope is not null) ValidateScope(scope);
+        if (category is not null) ValidateCategory(category);
+        if (maxScan is < 1 or > 10_000)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maxScan),
+                "Memory consolidation maxScan must be between 1 and 10000.");
+        }
+
+        await EnsureInitializedAsync(cancellationToken);
+        var items = new List<TalvoraMemoryItem>();
+        await using (var connection = await OpenConnectionAsync(cancellationToken))
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText =
+                """
+                SELECT id, scope, project, session, category, title, content,
+                       importance, confidence, source, source_ref,
+                       created_utc, updated_utc, expires_utc, superseded_by
+                FROM memory_items
+                WHERE superseded_by IS NULL
+                  AND (expires_utc IS NULL OR expires_utc > $now)
+                  AND ($scope IS NULL OR scope = $scope)
+                  AND ($project IS NULL OR project = $project)
+                  AND ($session IS NULL OR session = $session)
+                  AND ($category IS NULL OR category = $category)
+                ORDER BY updated_utc DESC
+                LIMIT $limit;
+                """;
+            Add(command, "$now", Format(DateTimeOffset.UtcNow));
+            Add(command, "$scope", NormalizeOptional(scope));
+            Add(command, "$project", NormalizeOptional(project));
+            Add(command, "$session", NormalizeOptional(session));
+            Add(command, "$category", NormalizeOptional(category));
+            Add(command, "$limit", maxScan);
+            await using var reader =
+                await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                items.Add(ReadItem(reader));
+            }
+        }
+
+        var duplicateSets = items
+            .GroupBy(BuildDuplicateKey, StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .ToArray();
+        var groups = new List<TalvoraMemoryConsolidationGroup>();
+
+        await using var writeConnection =
+            await OpenConnectionAsync(cancellationToken);
+        await using var transaction =
+            await writeConnection.BeginTransactionAsync(cancellationToken);
+        foreach (var duplicateSet in duplicateSets)
+        {
+            var ordered = duplicateSet
+                .OrderByDescending(item => GetSourceAuthority(item.Source))
+                .ThenByDescending(item => item.Confidence)
+                .ThenByDescending(item => item.Importance)
+                .ThenByDescending(item => item.UpdatedAtUtc)
+                .ThenBy(item => item.Id, StringComparer.Ordinal)
+                .ToArray();
+            var winner = ordered[0];
+            var losers = ordered.Skip(1).ToArray();
+
+            foreach (var loser in losers)
+            {
+                await using var update = writeConnection.CreateCommand();
+                update.Transaction = (SqliteTransaction)transaction;
+                update.CommandText =
+                    """
+                    UPDATE memory_items
+                    SET superseded_by = $winnerId,
+                        updated_utc = $updatedUtc
+                    WHERE id = $loserId
+                      AND superseded_by IS NULL;
+                    """;
+                Add(update, "$winnerId", winner.Id);
+                Add(update, "$updatedUtc", Format(DateTimeOffset.UtcNow));
+                Add(update, "$loserId", loser.Id);
+                await update.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            groups.Add(
+                new TalvoraMemoryConsolidationGroup(
+                    winner.Id,
+                    losers.Select(item => item.Id).ToArray()));
+        }
+        await transaction.CommitAsync(cancellationToken);
+
+        return new TalvoraMemoryConsolidateResult(
+            items.Count,
+            groups.Count,
+            groups.Sum(group => group.SupersededIds.Count),
+            groups);
+    }
+
+    public async Task<TalvoraMemoryDiagnosticsResult> DiagnosticsAsync(
+        CancellationToken cancellationToken)
+    {
+        await EnsureInitializedAsync(cancellationToken);
+        string integrity;
+        var all = new List<TalvoraMemoryItem>();
+        await using (var connection = await OpenConnectionAsync(cancellationToken))
+        {
+            await using (var quickCheck = connection.CreateCommand())
+            {
+                quickCheck.CommandText = "PRAGMA quick_check;";
+                integrity =
+                    Convert.ToString(
+                        await quickCheck.ExecuteScalarAsync(cancellationToken),
+                        CultureInfo.InvariantCulture)
+                    ?? "unknown";
+            }
+
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                """
+                SELECT id, scope, project, session, category, title, content,
+                       importance, confidence, source, source_ref,
+                       created_utc, updated_utc, expires_utc, superseded_by
+                FROM memory_items;
+                """;
+            await using var reader =
+                await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                all.Add(ReadItem(reader));
+            }
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var active = all
+            .Where(item =>
+                item.SupersededBy is null &&
+                (item.ExpiresAtUtc is null || item.ExpiresAtUtc > now))
+            .ToArray();
+        var duplicateGroups = active
+            .GroupBy(BuildDuplicateKey, StringComparer.Ordinal)
+            .Count(group => group.Count() > 1);
+        var file = new FileInfo(DatabasePath);
+
+        return new TalvoraMemoryDiagnosticsResult(
+            DatabasePath,
+            file.Exists ? file.Length : 0,
+            integrity,
+            all.Count,
+            active.Length,
+            all.Count(item =>
+                item.ExpiresAtUtc is not null &&
+                item.ExpiresAtUtc <= now),
+            all.Count(item => item.SupersededBy is not null),
+            duplicateGroups);
     }
 
     public async Task<TalvoraMemoryContextResult> ContextAsync(
@@ -450,6 +693,44 @@ public sealed class TalvoraMemoryStore
 
     private static void Add(SqliteCommand command, string name, object? value) =>
         command.Parameters.AddWithValue(name, value ?? DBNull.Value);
+
+    public static double GetSourceAuthority(string? source) =>
+        source?.Trim().ToLowerInvariant() switch
+        {
+            "runtime" or "repository" or "repo" or "git" or
+                "health" or "filesystem" => 1.0,
+            "user" or "explicit-user" or "user-instruction" => 0.95,
+            "handoff" or "project-doc" or "project-document" => 0.90,
+            "tool" or "verified" or "test" or "smoke" => 0.75,
+            "inferred" or "auto" or "model" => 0.40,
+            _ => 0.50,
+        };
+
+    private static bool SameBoundary(
+        TalvoraMemoryItem left,
+        TalvoraMemoryItem right) =>
+        string.Equals(left.Scope, right.Scope, StringComparison.Ordinal) &&
+        string.Equals(left.Project, right.Project, StringComparison.Ordinal) &&
+        string.Equals(left.Session, right.Session, StringComparison.Ordinal);
+
+    private static string BuildDuplicateKey(TalvoraMemoryItem item) =>
+        string.Join(
+            "\u001F",
+            item.Scope,
+            item.Project ?? string.Empty,
+            item.Session ?? string.Empty,
+            item.Category,
+            NormalizeDuplicateText(item.Title),
+            NormalizeDuplicateText(item.Content));
+
+    private static string NormalizeDuplicateText(string value) =>
+        string.Join(
+                ' ',
+                value.Split(
+                    (char[]?)null,
+                    StringSplitOptions.RemoveEmptyEntries |
+                    StringSplitOptions.TrimEntries))
+            .ToUpperInvariant();
 
     private static string BuildFtsQuery(string query)
     {

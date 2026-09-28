@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "verifiedAtUtc": "2026-09-28T16:17:00Z",
-  "scope": "Talvora Memory V1: local durable scoped memory uses SQLite WAL, transactional writes and FTS5 external-content indexing with synchronization triggers. Retrieval is bounded and filtered by memory scope/project/session/category.",
+  "scope": "Talvora Memory Phase 2A: retrieval adds deterministic provenance authority ordering; explicit supersession and exact duplicate consolidation retain audit history; diagnostics uses SQLite integrity checks and bounded local inspection.",
   "libraries": [
     {
       "libraryId": "/websites/sqlite_docs",
-      "verified": "Current SQLite guidance supports FTS5 external-content tables linked to a canonical content table through content/content_rowid plus INSERT/DELETE/UPDATE synchronization triggers; the rebuild command restores index consistency. WAL mode supports concurrent readers with a writer while SQLite still permits only one pending writer. Talvora Memory V1 uses this model with a bounded busy timeout and parameterized Microsoft.Data.Sqlite commands."
+      "verified": "Current SQLite guidance supports FTS5 external-content tables linked to a canonical content table through content/content_rowid plus synchronization triggers, PRAGMA quick_check for bounded integrity inspection, expression/partial indexes where needed, and transactional batches for multi-row quality operations. Talvora Memory Phase 2A keeps canonical rows auditable, marks duplicates/stale rows through supersession, and performs consolidation updates transactionally."
     },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
@@ -29,6 +29,8 @@
     }
   ],
   "vendorSources": [
+    "SQLite official PRAGMA documentation checked 2026-09-28: quick_check is suitable for lightweight integrity diagnostics; schema/index inspection remains available through PRAGMA.",
+    "SQLite official language/index documentation checked 2026-09-28: expression and partial indexes are supported for selective/query-derived optimization when later memory migrations need them.",
     "SQLite official FTS5 documentation checked 2026-09-28: external-content tables require synchronization with the content table and can rebuild the index from canonical content.",
     "Microsoft.Data.Sqlite transaction documentation checked 2026-09-28: transactions are atomic and SQLite permits one transaction with pending changes at a time, so bounded busy timeout/conservative write transactions remain appropriate for Talvora Memory V1.",
     "NuGet Gallery current stable package metadata checked 2026-09-27",
