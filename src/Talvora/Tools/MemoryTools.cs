@@ -243,6 +243,49 @@ public static class MemoryTools
             cancellationToken);
 
     [McpServerTool(
+        Name = "talvora_memory_backup",
+        Destructive = true,
+        Idempotent = true,
+        OpenWorld = true,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemoryBackupResult)),
+     Description("Create a validated online SQLite backup of Talvora durable memory. The live WAL database remains online. Existing destinations require overwrite=true.")]
+    public static Task<TalvoraMemoryBackupResult> Backup(
+        string destinationPath,
+        bool overwrite = false,
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.BackupAsync(
+            destinationPath,
+            overwrite,
+            cancellationToken);
+
+    [McpServerTool(
+        Name = "talvora_memory_restore_stage",
+        Destructive = true,
+        OpenWorld = true,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemoryRestoreStageResult)),
+     Description("Validate a Talvora memory backup, copy it through SQLite Backup API into a canonical pending-restore file, and stage it for atomic application on the next Talvora service start. The live database is never overwritten by this call.")]
+    public static Task<TalvoraMemoryRestoreStageResult> RestoreStage(
+        string sourcePath,
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.StageRestoreAsync(
+            sourcePath,
+            cancellationToken);
+
+    [McpServerTool(
+        Name = "talvora_memory_restore_status",
+        ReadOnly = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemoryRestoreStatusResult)),
+     Description("Report whether a validated Talvora memory restore is staged and waiting for the next Talvora service start.")]
+    public static Task<TalvoraMemoryRestoreStatusResult> RestoreStatus(
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.RestoreStatusAsync(
+            cancellationToken);
+
+    [McpServerTool(
         Name = "talvora_memory_session_close",
         Destructive = true,
         OpenWorld = false,

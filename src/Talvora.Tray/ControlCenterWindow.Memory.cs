@@ -22,6 +22,8 @@ internal sealed partial class ControlCenterWindow
     private WpfComboBox _memoryDateBox = null!;
     private UiButton _memoryRefreshButton = null!;
     private UiButton _memoryReembedButton = null!;
+    private UiButton _memoryBackupButton = null!;
+    private UiButton _memoryRestoreButton = null!;
     private TextBlock _memoryDbHealthText = null!;
     private TextBlock _memoryEmbeddingText = null!;
     private TextBlock _memoryCountsText = null!;
@@ -81,17 +83,47 @@ internal sealed partial class ControlCenterWindow
         });
         hero.Children.Add(titleStack);
 
+        var maintenanceActions = new WrapPanel
+        {
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+        };
+
         _memoryReembedButton = new UiButton
         {
             Content = "Embeddingleri tamamla",
             Icon = new SymbolIcon { Symbol = SymbolRegular.ArrowSync20 },
             MinWidth = 168,
-            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 8),
             Style = FindStyle("TalvoraSecondaryButtonStyle"),
         };
         _memoryReembedButton.Click += async (_, _) => await ReembedVisibleProjectAsync();
-        Grid.SetColumn(_memoryReembedButton, 1);
-        hero.Children.Add(_memoryReembedButton);
+        maintenanceActions.Children.Add(_memoryReembedButton);
+
+        _memoryBackupButton = new UiButton
+        {
+            Content = "Yedek al",
+            Icon = new SymbolIcon { Symbol = SymbolRegular.DocumentText20 },
+            MinWidth = 112,
+            Margin = new Thickness(0, 0, 8, 8),
+            Style = FindStyle("TalvoraSecondaryButtonStyle"),
+        };
+        _memoryBackupButton.Click += async (_, _) => await BackupMemoryAsync();
+        maintenanceActions.Children.Add(_memoryBackupButton);
+
+        _memoryRestoreButton = new UiButton
+        {
+            Content = "Geri yükleme hazırla",
+            Icon = new SymbolIcon { Symbol = SymbolRegular.History20 },
+            MinWidth = 164,
+            Margin = new Thickness(0, 0, 0, 8),
+            Style = FindStyle("TalvoraSecondaryButtonStyle"),
+        };
+        _memoryRestoreButton.Click += async (_, _) => await StageMemoryRestoreAsync();
+        maintenanceActions.Children.Add(_memoryRestoreButton);
+
+        Grid.SetColumn(maintenanceActions, 1);
+        hero.Children.Add(maintenanceActions);
         content.Children.Add(hero);
 
         var healthPanel = new WrapPanel
@@ -412,6 +444,9 @@ internal sealed partial class ControlCenterWindow
                 ControlCenterMemoryService.EmbeddingStatusAsync(
                     project,
                     _lifetimeCts.Token);
+            var restoreStatusTask =
+                ControlCenterMemoryService.RestoreStatusAsync(
+                    _lifetimeCts.Token);
 
             IReadOnlyList<ControlCenterMemorySearchHit> searchHits = [];
             IReadOnlyList<ControlCenterMemoryItem> items;
@@ -425,7 +460,11 @@ internal sealed partial class ControlCenterWindow
                     null,
                     150,
                     _lifetimeCts.Token);
-                await Task.WhenAll(diagnosticsTask, embeddingTask, listTask);
+                await Task.WhenAll(
+                    diagnosticsTask,
+                    embeddingTask,
+                    restoreStatusTask,
+                    listTask);
                 items = listTask.Result.Items;
             }
             else
@@ -437,7 +476,11 @@ internal sealed partial class ControlCenterWindow
                     category,
                     100,
                     _lifetimeCts.Token);
-                await Task.WhenAll(diagnosticsTask, embeddingTask, searchTask);
+                await Task.WhenAll(
+                    diagnosticsTask,
+                    embeddingTask,
+                    restoreStatusTask,
+                    searchTask);
                 searchHits = searchTask.Result.Items;
                 items = searchHits
                     .Select(hit => hit.Item)
@@ -454,7 +497,8 @@ internal sealed partial class ControlCenterWindow
 
             UpdateMemoryHealth(
                 diagnosticsTask.Result,
-                embeddingTask.Result);
+                embeddingTask.Result,
+                restoreStatusTask.Result);
             RenderMemoryResults(items, searchHits);
             _memoryResultMetaText.Text =
                 $"{items.Count} kayıt • {DateTime.Now:HH:mm:ss}";
@@ -503,12 +547,18 @@ internal sealed partial class ControlCenterWindow
 
     private void UpdateMemoryHealth(
         ControlCenterMemoryDiagnosticsResult diagnostics,
-        ControlCenterMemoryEmbeddingStatusResult embedding)
+        ControlCenterMemoryEmbeddingStatusResult embedding,
+        ControlCenterMemoryRestoreStatusResult? restoreStatus = null)
     {
         _memoryDbHealthText.Text =
-            $"{FormatBytes(diagnostics.DatabaseBytes)} • {diagnostics.Integrity}";
+            $"{FormatBytes(diagnostics.DatabaseBytes)} • {diagnostics.Integrity}" +
+            (restoreStatus?.Pending == true
+                ? " • geri yükleme bekliyor"
+                : string.Empty);
         _memoryDbHealthText.Foreground =
-            string.Equals(
+            restoreStatus?.Pending == true
+                ? AttentionBrush
+                : string.Equals(
                 diagnostics.Integrity,
                 "ok",
                 StringComparison.OrdinalIgnoreCase)

@@ -3,6 +3,8 @@ using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using Wpf.Ui.Controls;
+using WpfOpenFileDialog = Microsoft.Win32.OpenFileDialog;
+using WpfSaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using TextBlock = System.Windows.Controls.TextBlock;
 using UiButton = Wpf.Ui.Controls.Button;
 using UiTextBox = Wpf.Ui.Controls.TextBox;
@@ -14,6 +16,154 @@ namespace Talvora.Tray;
 internal sealed partial class ControlCenterWindow
 {
     private readonly SemaphoreSlim _memoryMutationGate = new(1, 1);
+
+    private async Task BackupMemoryAsync()
+    {
+        var dialog = new WpfSaveFileDialog
+        {
+            Title = "Talvora hafıza yedeğini kaydet",
+            Filter = "Talvora hafıza yedeği (*.db)|*.db|Tüm dosyalar (*.*)|*.*",
+            DefaultExt = ".db",
+            AddExtension = true,
+            OverwritePrompt = true,
+            FileName = $"Talvora-Memory-{DateTime.Now:yyyyMMdd-HHmmss}.db",
+        };
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        if (!await _memoryMutationGate.WaitAsync(0))
+        {
+            SetMemoryStatus(
+                "Başka bir hafıza işlemi sürüyor; tamamlandığında yeniden deneyin.",
+                AttentionBrush);
+            return;
+        }
+
+        _memoryBackupButton.IsEnabled = false;
+        _memoryRestoreButton.IsEnabled = false;
+        try
+        {
+            SetMemoryStatus(
+                "Hafıza online SQLite backup ile yedekleniyor...",
+                CheckingBrush);
+            var result = await ControlCenterMemoryService.BackupAsync(
+                dialog.FileName,
+                overwrite: true,
+                _lifetimeCts.Token);
+            SetMemoryStatus(
+                $"Yedek hazır • {FormatBytes(result.Length)} • SHA-256 {result.Sha256[..12]}…",
+                ReadyBrush);
+        }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex) when (IsExpectedMemoryUiFailure(ex))
+        {
+            TrayLog.Write("Control Center memory backup failed", ex);
+            SetMemoryStatus(
+                ControlCenterUserMessage.ForOperation(ex, "Hafıza yedekleme"),
+                OfflineBrush);
+        }
+        finally
+        {
+            _memoryBackupButton.IsEnabled = true;
+            _memoryRestoreButton.IsEnabled = true;
+            _memoryMutationGate.Release();
+        }
+    }
+
+    private async Task StageMemoryRestoreAsync()
+    {
+        var open = new WpfOpenFileDialog
+        {
+            Title = "Talvora hafıza yedeğini seç",
+            Filter = "Talvora hafıza yedeği (*.db)|*.db|Tüm dosyalar (*.*)|*.*",
+            Multiselect = false,
+            CheckFileExists = true,
+        };
+        if (open.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        var confirm = new Wpf.Ui.Controls.MessageBox
+        {
+            Owner = this,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Title = "Geri yükleme bir sonraki Talvora başlangıcında uygulansın mı?",
+            Content =
+                "Seçilen dosya önce SQLite bütünlük ve Talvora şema kontrollerinden geçecek. " +
+                "Canlı hafıza şimdi değiştirilmeyecek; doğrulanmış kopya staging alanına alınacak. " +
+                "Talvora servisi yeniden başladığında mevcut veritabanı otomatik yedeklenip staging atomik olarak uygulanacak.",
+            PrimaryButtonText = "Doğrula ve hazırla",
+            PrimaryButtonAppearance = ControlAppearance.Primary,
+            CloseButtonText = "Vazgeç",
+            CloseButtonAppearance = ControlAppearance.Secondary,
+        };
+        if (await confirm.ShowDialogAsync(
+                true,
+                _lifetimeCts.Token) != Wpf.Ui.Controls.MessageBoxResult.Primary)
+        {
+            return;
+        }
+
+        if (!await _memoryMutationGate.WaitAsync(0))
+        {
+            SetMemoryStatus(
+                "Başka bir hafıza işlemi sürüyor; tamamlandığında yeniden deneyin.",
+                AttentionBrush);
+            return;
+        }
+
+        _memoryBackupButton.IsEnabled = false;
+        _memoryRestoreButton.IsEnabled = false;
+        try
+        {
+            SetMemoryStatus(
+                "Yedek doğrulanıyor ve güvenli geri yükleme staging alanına hazırlanıyor...",
+                CheckingBrush);
+            var result = await ControlCenterMemoryService.RestoreStageAsync(
+                open.FileName,
+                _lifetimeCts.Token);
+            SetMemoryStatus(
+                $"Geri yükleme hazır • {FormatBytes(result.Length)} • Talvora servis restart'ında uygulanacak.",
+                AttentionBrush);
+
+            var ready = new Wpf.Ui.Controls.MessageBox
+            {
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Title = "Geri yükleme hazır",
+                Content =
+                    "Doğrulanmış hafıza yedeği staging alanına alındı. " +
+                    "Mevcut hafıza henüz değiştirilmedi. Talvora servisi yeniden başladığında önce mevcut DB'nin pre-restore yedeği alınacak, ardından staging uygulanacak.",
+                PrimaryButtonText = "Tamam",
+                PrimaryButtonAppearance = ControlAppearance.Primary,
+            };
+            _ = await ready.ShowDialogAsync(
+                true,
+                _lifetimeCts.Token);
+            await RefreshMemoryAsync();
+        }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex) when (IsExpectedMemoryUiFailure(ex))
+        {
+            TrayLog.Write("Control Center memory restore staging failed", ex);
+            SetMemoryStatus(
+                ControlCenterUserMessage.ForOperation(ex, "Hafıza geri yükleme hazırlığı"),
+                OfflineBrush);
+        }
+        finally
+        {
+            _memoryBackupButton.IsEnabled = true;
+            _memoryRestoreButton.IsEnabled = true;
+            _memoryMutationGate.Release();
+        }
+    }
 
     private UIElement BuildMemoryActionBar(ControlCenterMemoryItem item)
     {

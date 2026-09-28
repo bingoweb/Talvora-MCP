@@ -6,6 +6,17 @@ public static class TalvoraMemoryRuntime
         TalvoraMemoryOnnxEmbeddingProvider.CreateDefault();
 
     public static TalvoraMemoryStore Store { get; } =
-        new(embeddingProvider: Embeddings);
+        CreateStore();
+
+    private static TalvoraMemoryStore CreateStore()
+    {
+        var databasePath =
+            TalvoraMemoryStore.ResolveDefaultDatabasePath();
+        TalvoraMemoryStore.ApplyPendingRestoreIfPresent(
+            databasePath);
+        return new TalvoraMemoryStore(
+            databasePath,
+            Embeddings);
+    }
 }
 

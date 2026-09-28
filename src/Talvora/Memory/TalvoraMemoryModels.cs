@@ -55,6 +55,25 @@ public sealed record TalvoraMemoryListResult(
     int Count,
     IReadOnlyList<TalvoraMemoryItem> Items);
 
+public sealed record TalvoraMemoryBackupResult(
+    string DestinationPath,
+    long Length,
+    string Sha256,
+    DateTimeOffset CreatedAtUtc);
+
+public sealed record TalvoraMemoryRestoreStageResult(
+    string SourcePath,
+    string PendingPath,
+    long Length,
+    string Sha256,
+    bool RequiresRestart);
+
+public sealed record TalvoraMemoryRestoreStatusResult(
+    bool Pending,
+    string? PendingPath,
+    long? Length,
+    string? Sha256);
+
 public sealed record TalvoraMemoryContextResult(
     string Query,
     int Count,

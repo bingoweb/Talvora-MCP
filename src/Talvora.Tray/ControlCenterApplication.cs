@@ -37,7 +37,7 @@ internal sealed class ControlCenterApplication : WpfApplication
     {
         if (!Dispatcher.CheckAccess())
         {
-            Dispatcher.Invoke(ShowControlCenter);
+            _ = Dispatcher.BeginInvoke(ShowControlCenter);
             return;
         }
 

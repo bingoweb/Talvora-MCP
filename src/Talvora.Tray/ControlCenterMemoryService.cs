@@ -70,6 +70,25 @@ internal sealed record ControlCenterMemoryReembedResult(
     int Failed,
     int Remaining);
 
+internal sealed record ControlCenterMemoryBackupResult(
+    string DestinationPath,
+    long Length,
+    string Sha256,
+    DateTimeOffset CreatedAtUtc);
+
+internal sealed record ControlCenterMemoryRestoreStageResult(
+    string SourcePath,
+    string PendingPath,
+    long Length,
+    string Sha256,
+    bool RequiresRestart);
+
+internal sealed record ControlCenterMemoryRestoreStatusResult(
+    bool Pending,
+    string? PendingPath,
+    long? Length,
+    string? Sha256);
+
 internal sealed record ControlCenterMemoryMutationResult(
     bool Success,
     string Id,
@@ -183,6 +202,40 @@ internal static class ControlCenterMemoryService
                 ["force"] = false,
             },
             MaintenanceTimeout,
+            cancellationToken);
+
+    public static Task<ControlCenterMemoryBackupResult> BackupAsync(
+        string destinationPath,
+        bool overwrite,
+        CancellationToken cancellationToken) =>
+        CallAsync<ControlCenterMemoryBackupResult>(
+            "talvora_memory_backup",
+            new Dictionary<string, object?>
+            {
+                ["destinationPath"] = destinationPath,
+                ["overwrite"] = overwrite,
+            },
+            MaintenanceTimeout,
+            cancellationToken);
+
+    public static Task<ControlCenterMemoryRestoreStageResult> RestoreStageAsync(
+        string sourcePath,
+        CancellationToken cancellationToken) =>
+        CallAsync<ControlCenterMemoryRestoreStageResult>(
+            "talvora_memory_restore_stage",
+            new Dictionary<string, object?>
+            {
+                ["sourcePath"] = sourcePath,
+            },
+            MaintenanceTimeout,
+            cancellationToken);
+
+    public static Task<ControlCenterMemoryRestoreStatusResult> RestoreStatusAsync(
+        CancellationToken cancellationToken) =>
+        CallAsync<ControlCenterMemoryRestoreStatusResult>(
+            "talvora_memory_restore_status",
+            new Dictionary<string, object?>(),
+            DefaultTimeout,
             cancellationToken);
 
     public static Task<ControlCenterMemoryMutationResult> UpdateAsync(

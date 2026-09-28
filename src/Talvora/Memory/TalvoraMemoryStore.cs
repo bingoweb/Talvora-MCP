@@ -25,7 +25,7 @@ public sealed partial class TalvoraMemoryStore
         ITalvoraMemoryEmbeddingProvider? embeddingProvider = null)
     {
         DatabasePath = string.IsNullOrWhiteSpace(databasePath)
-            ? GetDefaultDatabasePath()
+            ? ResolveDefaultDatabasePath()
             : Path.GetFullPath(databasePath);
         this.embeddingProvider =
             embeddingProvider ?? TalvoraNullMemoryEmbeddingProvider.Instance;
@@ -873,21 +873,5 @@ public sealed partial class TalvoraMemoryStore
             CultureInfo.InvariantCulture,
             DateTimeStyles.RoundtripKind);
 
-    private static string GetDefaultDatabasePath()
-    {
-        var overridePath =
-            Environment.GetEnvironmentVariable("TALVORA_MEMORY_DB");
-        if (!string.IsNullOrWhiteSpace(overridePath))
-        {
-            return Path.GetFullPath(overridePath);
-        }
-
-        return Path.Combine(
-            Environment.GetFolderPath(
-                Environment.SpecialFolder.CommonApplicationData),
-            "Talvora",
-            "memory",
-            "talvora-memory.db");
-    }
 }
 
