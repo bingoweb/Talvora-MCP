@@ -613,15 +613,12 @@ $result = [pscustomobject]@{
         $controlCenterLifecycleService -match 'ManagedMcpOperationInProgressException\(TalvoraId\)'
     )
     ControlCenterExitPersistsWindowPlacementBeforeShutdown = (
-        $controlCenterWindow.Contains('SaveWindowPlacementAsync().GetAwaiter().GetResult();') -and
-        $controlCenterWindow.IndexOf(
-            'SaveWindowPlacementAsync().GetAwaiter().GetResult();',
-            [StringComparison]::Ordinal) -lt
-            $controlCenterWindow.IndexOf(
-                '_applicationExitRequested = true;',
-                [StringComparison]::Ordinal) -and
-        $controlCenterWindowChrome.Contains(
-            'CancellationToken.None).ConfigureAwait(false);')
+        $controlCenterWindow -match 'public async Task PrepareForApplicationExitAsync\(\)' -and
+        $controlCenterWindow -match '_applicationExitRequested\s*=\s*true;' -and
+        $controlCenterWindow -match 'await SaveWindowPlacementAsync\(\)\.WaitAsync\(TimeSpan\.FromSeconds\(2\)\);' -and
+        $controlCenterWindow -match 'DetachControlCenterTimers\(\);' -and
+        $controlCenterWindow -match '_lifetimeCts\.Cancel\(\);' -and
+        $controlCenterWindow -notmatch 'SaveWindowPlacementAsync\(\)\.GetAwaiter\(\)\.GetResult\(\)'
     )
     ControlCenterDetailGiteaOpenHandlesShellFailure = (
         $controlCenterActions -match 'Gitea detay sayfasından açılamadı' -and

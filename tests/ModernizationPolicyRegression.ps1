@@ -1,14 +1,28 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
+$regexOptions =
+    [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor
+    [Text.RegularExpressions.RegexOptions]::CultureInvariant
 
 function Assert-Contains([string]$Path, [string]$Pattern, [string]$Message) {
     $text = [IO.File]::ReadAllText((Join-Path $root $Path))
-    if ($text -notmatch $Pattern) { throw $Message }
+    if (-not [Text.RegularExpressions.Regex]::IsMatch($text, $Pattern, $regexOptions)) {
+        throw $Message
+    }
 }
 
 function Assert-NotContains([string]$Path, [string]$Pattern, [string]$Message) {
     $text = [IO.File]::ReadAllText((Join-Path $root $Path))
-    if ($text -match $Pattern) { throw $Message }
+    if ([Text.RegularExpressions.Regex]::IsMatch($text, $Pattern, $regexOptions)) {
+        throw $Message
+    }
+}
+
+if (-not [Text.RegularExpressions.Regex]::IsMatch(
+        'Installer',
+        'installer',
+        $regexOptions)) {
+    throw 'Modernization policy regex checks must be culture-invariant across local and GitHub runners.'
 }
 
 Assert-Contains 'global.json' '"version"\s*:\s*"10\.0\.4\d{2}"' 'global.json must pin the current .NET 10.0.4xx feature band.'

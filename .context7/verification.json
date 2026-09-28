@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-28T18:08:00Z",
-  "scope": "Talvora Memory Phase 4: local CPU-first hybrid retrieval keeps FTS5 as deterministic fallback and adds a benchmark-selected multilingual ONNX embedding provider, revisioned float32 vectors in SQLite, bounded managed cosine search, stale-vector exclusion, and resumable re-embedding.",
+  "verifiedAtUtc": "2026-09-28T20:28:00Z",
+  "scope": "GitHub windows-ci parity fix: make ModernizationPolicyRegression culture-invariant across tr-TR developer machines and GitHub-hosted Windows runners while keeping internal technical classifier literals outside the user-facing narrative surface.",
   "libraries": [
+    {
+      "libraryId": "/websites/github_en_actions",
+      "verified": "Current GitHub Actions workflow guidance confirms pwsh steps run fail-fast with ErrorActionPreference=Stop and workflow success is determined by process exit status. The failing run therefore correctly stopped at the source-contract regression; the fix belongs in the deterministic regression/source contract rather than in CI error suppression or continue-on-error behavior."
+    },
     {
       "libraryId": "/websites/sqlite_docs",
       "verified": "Current SQLite guidance supports additive durable metadata tables, foreign-key cascade cleanup, CHECK constraints, BLOB storage, and bounded indexed queries. Talvora Memory Phase 4 stores normalized float32 embeddings as length-constrained BLOBs with model id/revision, content hash, and canonical item update timestamp while retaining FTS5 as the authoritative deterministic fallback."
@@ -29,6 +33,9 @@
     }
   ],
   "vendorSources": [
+    "GitHub Actions run 36477651154 inspected 2026-09-28: checkout, locked restore and Release build all passed; Validate source contracts failed specifically in ModernizationPolicyRegression.ps1 with 'User-facing desktop worklog language must not expose developer jargon.'",
+    "GitHub Actions runner-images checked 2026-09-28: windows-latest is currently Windows Server 2025; the observed image was windows-2025-vs2026 20260922.246.2. No runner-image failure preceded the policy regression.",
+    "Microsoft .NET regular-expression guidance checked 2026-09-28: case-insensitive regex matching uses current-culture casing unless RegexOptions.CultureInvariant is supplied; the documented Turkish tr-TR FILE/file example reproduces the same dotted/dotless-I class of mismatch that made local 'Installer' checks differ from the GitHub runner.",
     "Hugging Face model metadata checked 2026-09-28: paraphrase-multilingual-MiniLM-L12-v2 is Apache-2.0, multilingual and 384-dimensional; multilingual-e5-small was benchmarked as an alternative.",
     "Talvora local benchmark 2026-09-28: MiniLM q8 Top-1=0.8333 / MRR=0.9028 versus multilingual-e5-small q8 Top-1=0.4167 / MRR=0.6417 on 12 Turkish/English/cross-lingual memory queries; MiniLM selected.",
     "Talvora C# parity benchmark 2026-09-28: Microsoft.ML.Tokenizers 2.0.0 + Microsoft.ML.OnnxRuntime 1.30.0 reproduced MiniLM Top-1=0.8333 / MRR=0.8958 with ~7.17 ms average query embedding on the local 12-logical-CPU machine.",

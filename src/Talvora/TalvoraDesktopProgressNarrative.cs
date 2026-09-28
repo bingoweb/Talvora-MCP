@@ -19,7 +19,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         if (normalized == "run_powershell")
         {
             var script = GetArgumentText(arguments, "script");
-            if (script.Contains("Build-Windows-Installer.ps1", StringComparison.OrdinalIgnoreCase))
+            if (IsCanonicalPackageBuildScript(script))
             {
                 return new(
                     "Yaptığım değişiklikleri kullanıma hazırlıyorum",
