@@ -206,6 +206,8 @@ public static class TalvoraToolManifest
         "talvora_memory_supersede",
         "talvora_memory_consolidate",
         "talvora_memory_diagnostics",
+        "talvora_memory_embedding_status",
+        "talvora_memory_reembed",
         "talvora_memory_session_close",
         "talvora_memory_candidate_list",
         "talvora_memory_candidate_promote",

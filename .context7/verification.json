@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-28T17:22:00Z",
-  "scope": "Talvora Memory Phase 3: automatic learning uses the MCP CallTool filter as a non-authoritative observation boundary, persists only allowlisted project identity plus tool/outcome/timing metadata, detects verified recovery sequences, coalesces repeated patterns, applies thresholded promotion, supports suppression, and keeps explicit decision capture separate from model inference.",
+  "verifiedAtUtc": "2026-09-28T18:08:00Z",
+  "scope": "Talvora Memory Phase 4: local CPU-first hybrid retrieval keeps FTS5 as deterministic fallback and adds a benchmark-selected multilingual ONNX embedding provider, revisioned float32 vectors in SQLite, bounded managed cosine search, stale-vector exclusion, and resumable re-embedding.",
   "libraries": [
     {
       "libraryId": "/websites/sqlite_docs",
-      "verified": "Current SQLite guidance supports atomic transactions, CHECK-constrained workflow state, partial/selective indexes, additive CREATE TABLE IF NOT EXISTS migrations, and bounded local durable metadata. Talvora Memory Phase 3 uses separate observation/pattern/suppression tables, recovery_linked idempotency for failure observations, project/status indexes, and coalesced pattern fingerprints without storing raw tool arguments or result payloads."
+      "verified": "Current SQLite guidance supports additive durable metadata tables, foreign-key cascade cleanup, CHECK constraints, BLOB storage, and bounded indexed queries. Talvora Memory Phase 4 stores normalized float32 embeddings as length-constrained BLOBs with model id/revision, content hash, and canonical item update timestamp while retaining FTS5 as the authoritative deterministic fallback."
     },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
@@ -17,7 +17,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET exception-handling guidance supports catching specific exception types at boundaries where the application can log, translate, or recover. Talvora now keeps exact exception detail in its technical logging path while Control Center and Tray translate known exception classes into plain Turkish user messages with truthful next-step guidance; unknown exceptions use a generic user-safe message instead of exposing raw exception text."
+      "verified": "Current Microsoft.ML.Tokenizers guidance confirms SentencePieceTokenizer/Create and EncodeToIds support. Talvora Phase 4 validated Microsoft SentencePiece tokenization against the Hugging Face XLM-R tokenizer using the explicit XLM-R id remap, then reproduced the benchmark ranking with Microsoft.ML.Tokenizers 2.0.0 plus Microsoft.ML.OnnxRuntime 1.30.0."
     },
     {
       "libraryId": "/lepoco/wpfui",
@@ -29,6 +29,10 @@
     }
   ],
   "vendorSources": [
+    "Hugging Face model metadata checked 2026-09-28: paraphrase-multilingual-MiniLM-L12-v2 is Apache-2.0, multilingual and 384-dimensional; multilingual-e5-small was benchmarked as an alternative.",
+    "Talvora local benchmark 2026-09-28: MiniLM q8 Top-1=0.8333 / MRR=0.9028 versus multilingual-e5-small q8 Top-1=0.4167 / MRR=0.6417 on 12 Turkish/English/cross-lingual memory queries; MiniLM selected.",
+    "Talvora C# parity benchmark 2026-09-28: Microsoft.ML.Tokenizers 2.0.0 + Microsoft.ML.OnnxRuntime 1.30.0 reproduced MiniLM Top-1=0.8333 / MRR=0.8958 with ~7.17 ms average query embedding on the local 12-logical-CPU machine.",
+    "NuGet vulnerability/deprecation audit checked 2026-09-28: Talvora with Microsoft.ML.OnnxRuntime 1.30.0 and Microsoft.ML.Tokenizers 2.0.0 reports no vulnerable or deprecated packages.",
     "Model Context Protocol C# SDK filter documentation checked 2026-09-28: ordinary AddCallToolFilter filters wrap tools exactly once and are appropriate for logging/telemetry-style cross-cutting concerns when downstream results are preserved.",
     "SQLite official partial-index/WAL/transaction documentation checked 2026-09-28: selective indexes and short local transactions are suitable for bounded observation and pattern metadata.",
     "SQLite official partial-index and transaction guidance checked 2026-09-28: selective pending-row indexes and transaction-backed batch inserts are appropriate for durable workflow queues.",

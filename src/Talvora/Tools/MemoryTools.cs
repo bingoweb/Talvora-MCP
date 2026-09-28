@@ -187,6 +187,38 @@ public static class MemoryTools
         TalvoraMemoryRuntime.Store.DiagnosticsAsync(cancellationToken);
 
     [McpServerTool(
+        Name = "talvora_memory_embedding_status",
+        ReadOnly = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemoryEmbeddingStatusResult)),
+     Description("Report the local semantic embedding provider/model plus active, current, and missing-or-stale embedding counts. Search remains FTS5-only when the provider is unavailable.")]
+    public static Task<TalvoraMemoryEmbeddingStatusResult> EmbeddingStatus(
+        string? project = null,
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.EmbeddingStatusAsync(
+            project,
+            cancellationToken);
+
+    [McpServerTool(
+        Name = "talvora_memory_reembed",
+        Destructive = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemoryReembedResult)),
+     Description("Re-embed one bounded batch of active memories using the canonical local model. The workflow is idempotent and resumable; repeated calls process remaining missing/model-stale vectors. force=true recomputes the selected batch.")]
+    public static Task<TalvoraMemoryReembedResult> Reembed(
+        string? project = null,
+        int batchSize = 100,
+        bool force = false,
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.ReembedAsync(
+            project,
+            batchSize,
+            force,
+            cancellationToken);
+
+    [McpServerTool(
         Name = "talvora_memory_session_close",
         Destructive = true,
         OpenWorld = false,

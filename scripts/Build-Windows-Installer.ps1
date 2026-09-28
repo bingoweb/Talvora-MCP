@@ -796,6 +796,159 @@ function Install-AstGrepPayload {
     }
 }
 
+function Copy-VerifiedMemoryModelFile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Uri,
+        [Parameter(Mandatory = $true)]
+        [string] $CachePath,
+        [Parameter(Mandatory = $true)]
+        [string] $DestinationPath,
+        [Parameter(Mandatory = $true)]
+        [string] $ExpectedSha256
+    )
+
+    $expected = $ExpectedSha256.ToUpperInvariant()
+    $cacheValid = $false
+    if (Test-Path -LiteralPath $CachePath -PathType Leaf) {
+        $cacheHash = (Get-FileHash -LiteralPath $CachePath -Algorithm SHA256).Hash.ToUpperInvariant()
+        $cacheValid = [string]::Equals(
+            $cacheHash,
+            $expected,
+            [StringComparison]::Ordinal)
+    }
+
+    if (-not $cacheValid) {
+        Remove-Item -LiteralPath $CachePath -Force -ErrorAction SilentlyContinue
+        New-Item -ItemType Directory -Path (Split-Path -Parent $CachePath) -Force | Out-Null
+        $temporary = $CachePath + '.download-' + [Guid]::NewGuid().ToString('N')
+        try {
+            $handler = [Net.Http.HttpClientHandler]::new()
+            $handler.AllowAutoRedirect = $true
+            $client = [Net.Http.HttpClient]::new($handler)
+            $client.Timeout = [TimeSpan]::FromMinutes(15)
+            try {
+                $response = $client.GetAsync(
+                    $Uri,
+                    [Net.Http.HttpCompletionOption]::ResponseHeadersRead
+                ).GetAwaiter().GetResult()
+                try {
+                    $response.EnsureSuccessStatusCode() | Out-Null
+                    $source = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+                    try {
+                        $target = [IO.File]::Open(
+                            $temporary,
+                            [IO.FileMode]::CreateNew,
+                            [IO.FileAccess]::Write,
+                            [IO.FileShare]::None)
+                        try {
+                            $source.CopyTo($target)
+                            $target.Flush($true)
+                        }
+                        finally {
+                            $target.Dispose()
+                        }
+                    }
+                    finally {
+                        $source.Dispose()
+                    }
+                }
+                finally {
+                    $response.Dispose()
+                }
+            }
+            finally {
+                $client.Dispose()
+                $handler.Dispose()
+            }
+
+            $downloadHash = (Get-FileHash -LiteralPath $temporary -Algorithm SHA256).Hash.ToUpperInvariant()
+            if (-not [string]::Equals(
+                    $downloadHash,
+                    $expected,
+                    [StringComparison]::Ordinal)) {
+                throw "Memory embedding asset hash mismatch. Expected=$expected Actual=$downloadHash Uri=$Uri"
+            }
+            Move-Item -LiteralPath $temporary -Destination $CachePath -Force
+        }
+        finally {
+            Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    New-Item -ItemType Directory -Path (Split-Path -Parent $DestinationPath) -Force | Out-Null
+    Copy-Item -LiteralPath $CachePath -Destination $DestinationPath -Force
+    $destinationHash = (Get-FileHash -LiteralPath $DestinationPath -Algorithm SHA256).Hash.ToUpperInvariant()
+    if (-not [string]::Equals(
+            $destinationHash,
+            $expected,
+            [StringComparison]::Ordinal)) {
+        throw "Vendored memory embedding asset hash mismatch. Expected=$expected Actual=$destinationHash Path=$DestinationPath"
+    }
+
+    return [pscustomobject]@{
+        sha256 = $destinationHash
+        length = (Get-Item -LiteralPath $DestinationPath).Length
+    }
+}
+
+function Install-MemoryEmbeddingPayload {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $DestinationRoot
+    )
+
+    $modelId = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
+    $modelRevision = 'q8-sha256-66fc00f5f29afcaf'
+    $dimensions = 384
+    $modelUri = 'https://huggingface.co/Xenova/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/onnx/model_quantized.onnx?download=true'
+    $tokenizerUri = 'https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/sentencepiece.bpe.model?download=true'
+    $modelSha256 = '66FC00F5F29AFCAFF34092E1BDD20008CA3918265A82FB9695A551E510CC4EBC'
+    $tokenizerSha256 = 'CFC8146ABE2A0488E9E2A0C56DE7952F7C11AB059ECA145A0A727AFCE0DB2865'
+    $cacheRoot = Join-Path $env:ProgramData 'Talvora\build-cache\memory-embedding'
+
+    Remove-Item -LiteralPath $DestinationRoot -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path $DestinationRoot -Force | Out-Null
+
+    $model = Copy-VerifiedMemoryModelFile `
+        -Uri $modelUri `
+        -CachePath (Join-Path $cacheRoot 'model.onnx') `
+        -DestinationPath (Join-Path $DestinationRoot 'model.onnx') `
+        -ExpectedSha256 $modelSha256
+    $tokenizer = Copy-VerifiedMemoryModelFile `
+        -Uri $tokenizerUri `
+        -CachePath (Join-Path $cacheRoot 'sentencepiece.bpe.model') `
+        -DestinationPath (Join-Path $DestinationRoot 'sentencepiece.bpe.model') `
+        -ExpectedSha256 $tokenizerSha256
+
+    $provenance = [ordered]@{
+        modelId = $modelId
+        modelRevision = $modelRevision
+        dimensions = $dimensions
+        quantization = 'q8'
+        license = 'Apache-2.0'
+        modelSha256 = $model.sha256
+        modelBytes = $model.length
+        tokenizerSha256 = $tokenizer.sha256
+        tokenizerBytes = $tokenizer.length
+        modelSource = $modelUri
+        tokenizerSource = $tokenizerUri
+        verifiedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
+    }
+    [IO.File]::WriteAllText(
+        (Join-Path $DestinationRoot 'provenance.json'),
+        ($provenance | ConvertTo-Json -Depth 4),
+        [Text.UTF8Encoding]::new($false))
+
+    return [pscustomobject]@{
+        modelId = $modelId
+        modelRevision = $modelRevision
+        dimensions = $dimensions
+        modelSha256 = $model.sha256
+        tokenizerSha256 = $tokenizer.sha256
+    }
+}
+
 $BuildMutexName = 'Global\Talvora.BuildWindowsInstaller.v2'
 $BuildMutex = [Threading.Mutex]::new($false, $BuildMutexName)
 $BuildMutexOwned = $false
@@ -907,6 +1060,10 @@ $AstGrepStagingRoot = Join-Path $WorkRoot 'ast-grep-package'
 $AstGrepProvenance = Install-AstGrepPayload -Rid $RuntimeIdentifier -DestinationRoot $AstGrepPayloadRoot -StagingRoot $AstGrepStagingRoot
 Assert-RuntimeBuildInputsUnchanged -Root $RepoRoot -ExpectedFingerprint $WorkingTreeFingerprint -Stage 'external-toolchain-vendor'
 
+Write-Host 'Resolving and vendoring memory embedding model...' -ForegroundColor Cyan
+$MemoryEmbeddingPayloadRoot = Join-Path $ServicePayload 'models\memory'
+$MemoryEmbeddingProvenance = Install-MemoryEmbeddingPayload -DestinationRoot $MemoryEmbeddingPayloadRoot
+Assert-RuntimeBuildInputsUnchanged -Root $RepoRoot -ExpectedFingerprint $WorkingTreeFingerprint -Stage 'memory-embedding-vendor'
 
 $ServicePayloadManifest = @(
     Get-PayloadFileManifest -Root $ServicePayload -ArchivePrefix 'Service'
@@ -915,7 +1072,10 @@ Assert-RequiredPayloadFiles -Files $ServicePayloadManifest -RequiredArchivePaths
     'Service/Talvora.exe',
     'Service/Talvora.dll',
     'Service/tools/ast-grep/ast-grep.exe',
-    'Service/tools/ast-grep/provenance.json'
+    'Service/tools/ast-grep/provenance.json',
+    'Service/models/memory/model.onnx',
+    'Service/models/memory/sentencepiece.bpe.model',
+    'Service/models/memory/provenance.json'
 )
 
 $TrayPayloadManifest = @(

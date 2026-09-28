@@ -22,7 +22,29 @@ public sealed record TalvoraMemoryItem(
 public sealed record TalvoraMemorySearchHit(
     TalvoraMemoryItem Item,
     double Rank,
-    double SourceAuthority);
+    double SourceAuthority,
+    double? SemanticScore = null,
+    double? HybridScore = null);
+
+public sealed record TalvoraMemoryEmbeddingStatusResult(
+    bool Available,
+    string ModelId,
+    string ModelRevision,
+    int Dimensions,
+    string? UnavailableReason,
+    int ActiveMemories,
+    int CurrentEmbeddings,
+    int MissingOrStaleEmbeddings);
+
+public sealed record TalvoraMemoryReembedResult(
+    string ModelId,
+    string ModelRevision,
+    int Dimensions,
+    int Scanned,
+    int Embedded,
+    int Skipped,
+    int Failed,
+    int Remaining);
 
 public sealed record TalvoraMemorySearchResult(
     string Query,

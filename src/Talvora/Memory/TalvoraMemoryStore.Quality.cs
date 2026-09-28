@@ -243,6 +243,24 @@ public sealed partial class TalvoraMemoryStore
                 reason TEXT NULL,
                 created_utc TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS memory_embeddings(
+                memory_id TEXT PRIMARY KEY,
+                model_id TEXT NOT NULL,
+                model_revision TEXT NOT NULL,
+                dimensions INTEGER NOT NULL,
+                content_hash TEXT NOT NULL,
+                item_updated_utc TEXT NOT NULL,
+                vector BLOB NOT NULL,
+                updated_utc TEXT NOT NULL,
+                FOREIGN KEY(memory_id) REFERENCES memory_items(id)
+                    ON DELETE CASCADE,
+                CHECK(dimensions > 0),
+                CHECK(length(vector) = dimensions * 4)
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_memory_embeddings_model
+                ON memory_embeddings(model_id, model_revision);
             """;
         await indexes.ExecuteNonQueryAsync(cancellationToken);
     }

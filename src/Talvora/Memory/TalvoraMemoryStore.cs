@@ -17,13 +17,18 @@ public sealed partial class TalvoraMemoryStore
         };
 
     private readonly SemaphoreSlim initializationGate = new(1, 1);
+    private readonly ITalvoraMemoryEmbeddingProvider embeddingProvider;
     private volatile bool initialized;
 
-    public TalvoraMemoryStore(string? databasePath = null)
+    public TalvoraMemoryStore(
+        string? databasePath = null,
+        ITalvoraMemoryEmbeddingProvider? embeddingProvider = null)
     {
         DatabasePath = string.IsNullOrWhiteSpace(databasePath)
             ? GetDefaultDatabasePath()
             : Path.GetFullPath(databasePath);
+        this.embeddingProvider =
+            embeddingProvider ?? TalvoraNullMemoryEmbeddingProvider.Instance;
     }
 
     public string DatabasePath { get; }
@@ -95,6 +100,7 @@ public sealed partial class TalvoraMemoryStore
 
         var item = (await GetAsync(id, cancellationToken))!;
         await SuppressStaleClaimsAsync(item, cancellationToken);
+        await TryRefreshEmbeddingAsync(item, cancellationToken);
         return item;
     }
 
@@ -120,7 +126,7 @@ public sealed partial class TalvoraMemoryStore
         return await reader.ReadAsync(cancellationToken) ? ReadItem(reader) : null;
     }
 
-    public async Task<TalvoraMemorySearchResult> SearchAsync(
+    private async Task<TalvoraMemorySearchResult> SearchLexicalAsync(
         string query,
         string? scope,
         string? project,
@@ -315,6 +321,7 @@ public sealed partial class TalvoraMemoryStore
         if (updated is not null)
         {
             await SuppressStaleClaimsAsync(updated, cancellationToken);
+            await TryRefreshEmbeddingAsync(updated, cancellationToken);
         }
         return updated;
     }
