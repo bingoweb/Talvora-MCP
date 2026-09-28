@@ -126,3 +126,51 @@ public sealed record TalvoraMemorySessionForgetResult(
     int CandidateCount,
     int DeletedPromotedMemories);
 
+public sealed record TalvoraLearningPattern(
+    string Fingerprint,
+    string? Project,
+    string PatternKind,
+    string Title,
+    string Content,
+    string SourceTools,
+    int OccurrenceCount,
+    double Confidence,
+    double Importance,
+    string Status,
+    string? PromotedMemoryId,
+    DateTimeOffset FirstSeenAtUtc,
+    DateTimeOffset LastSeenAtUtc);
+
+public sealed record TalvoraLearningPatternListResult(
+    int Count,
+    IReadOnlyList<TalvoraLearningPattern> Items);
+
+public sealed record TalvoraLearningStatusResult(
+    string? Project,
+    int ObservationCount7Days,
+    int PendingPatterns,
+    int PromotedPatterns,
+    int SuppressedPatterns,
+    int ActiveSuppressions);
+
+public sealed record TalvoraLearningSuppressionResult(
+    bool Suppressed,
+    string? Project,
+    string? ToolName,
+    string? Reason);
+
+public sealed record TalvoraLearningPatternResolutionResult(
+    bool Success,
+    bool Replayed,
+    TalvoraLearningPattern? Pattern,
+    TalvoraMemoryItem? Memory);
+
+public sealed record TalvoraLearningDecisionResult(
+    TalvoraMemoryCandidate Candidate,
+    TalvoraMemoryItem? Memory);
+
+public sealed record TalvoraLearningPatternForgetResult(
+    bool Found,
+    string Fingerprint,
+    bool DeletedPromotedMemory);
+

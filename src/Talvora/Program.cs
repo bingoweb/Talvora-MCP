@@ -3,6 +3,7 @@ using Talvora.SourceEditing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using ModelContextProtocol.AspNetCore;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 if (SemanticWorkerHost.IsWorkerCommand(
@@ -27,6 +28,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 builder.Host.UseWindowsService(options => options.ServiceName = "Talvora");
 builder.WebHost.ConfigureKestrel(options => options.ListenLocalhost(7676));
 builder.Services.AddSingleton<TalvoraDesktopProgressNotifier>();
+builder.Services.AddSingleton<TalvoraAutomaticLearningObserver>();
 
 builder.Services
     .AddMcpServer(options =>
@@ -55,16 +57,28 @@ builder.Services
         {
             var notifier =
                 request.Services?.GetService<TalvoraDesktopProgressNotifier>();
-            if (notifier is null)
+            var learner =
+                request.Services?.GetService<TalvoraAutomaticLearningObserver>();
+
+            Func<CancellationToken, ValueTask<CallToolResult>> operation =
+                token => next(request, token);
+            if (notifier is not null)
             {
-                return await next(request, cancellationToken);
+                var inner = operation;
+                operation = token => notifier.RunToolCallAsync(
+                    request.Params.Name,
+                    request.Params.Arguments,
+                    inner,
+                    token);
             }
 
-            return await notifier.RunToolCallAsync(
-                request.Params.Name,
-                request.Params.Arguments,
-                token => next(request, token),
-                cancellationToken);
+            return learner is null
+                ? await operation(cancellationToken)
+                : await learner.RunToolCallAsync(
+                    request.Params.Name,
+                    request.Params.Arguments,
+                    operation,
+                    cancellationToken);
         });
 
         filters.AddListToolsFilter(next => async (

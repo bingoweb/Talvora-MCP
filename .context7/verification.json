@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-28T16:17:00Z",
-  "scope": "Talvora Memory Phase 2C: idempotent session-close records store short summaries plus structured candidates, candidate state is pending/promoted/rejected, promotion policy is deterministic and conservative by default, and partial indexes support pending-candidate workflows without persisting raw chat.",
+  "verifiedAtUtc": "2026-09-28T17:22:00Z",
+  "scope": "Talvora Memory Phase 3: automatic learning uses the MCP CallTool filter as a non-authoritative observation boundary, persists only allowlisted project identity plus tool/outcome/timing metadata, detects verified recovery sequences, coalesces repeated patterns, applies thresholded promotion, supports suppression, and keeps explicit decision capture separate from model inference.",
   "libraries": [
     {
       "libraryId": "/websites/sqlite_docs",
-      "verified": "Current SQLite guidance supports atomic batch transactions, CHECK constraints for explicit workflow state, partial indexes for selective pending-row queries, foreign-key references, and additive CREATE TABLE IF NOT EXISTS migrations. Talvora Memory Phase 2C uses unique session_id for idempotent close, candidate status CHECK(pending/promoted/rejected), a partial pending index, and explicit promote/reject transitions while storing only short summaries and structured candidate content."
+      "verified": "Current SQLite guidance supports atomic transactions, CHECK-constrained workflow state, partial/selective indexes, additive CREATE TABLE IF NOT EXISTS migrations, and bounded local durable metadata. Talvora Memory Phase 3 uses separate observation/pattern/suppression tables, recovery_linked idempotency for failure observations, project/status indexes, and coalesced pattern fingerprints without storing raw tool arguments or result payloads."
     },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "Current ASP.NET Core MCP filter contract: AddCallToolFilter can wrap every CallTool request while preserving the downstream tool result. Ordinary tool failures may be returned as CallToolResult with IsError=true rather than thrown; cancellation/protocol exceptions retain their documented semantics. Talvora therefore detects thrown and returned failures, aggregates concurrent meaningful calls into one user-facing worklog card, and wraps start/progress/terminal notification side effects so observability can never alter, mask, cancel, or replace the underlying tool result."
+      "verified": "Current ASP.NET Core MCP filter contract: ordinary AddCallToolFilter filters wrap CallTool exactly once around the downstream handler, can resolve services from request.Services, and must preserve returned CallToolResult/exception semantics. Returned failures may use IsError=true or structured result state rather than exceptions. Talvora Phase 3 therefore classifies success/failure after the downstream call, records only safe metadata, and catches all learning-side failures so observation can never alter, mask, cancel, or replace the underlying tool result."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us",
@@ -29,6 +29,8 @@
     }
   ],
   "vendorSources": [
+    "Model Context Protocol C# SDK filter documentation checked 2026-09-28: ordinary AddCallToolFilter filters wrap tools exactly once and are appropriate for logging/telemetry-style cross-cutting concerns when downstream results are preserved.",
+    "SQLite official partial-index/WAL/transaction documentation checked 2026-09-28: selective indexes and short local transactions are suitable for bounded observation and pattern metadata.",
     "SQLite official partial-index and transaction guidance checked 2026-09-28: selective pending-row indexes and transaction-backed batch inserts are appropriate for durable workflow queues.",
     "SQLite official ALTER TABLE and PRAGMA table_info guidance checked 2026-09-28: additive columns can be introduced to existing tables after schema inspection without rebuilding the canonical table.",
     "SQLite official PRAGMA documentation checked 2026-09-28: quick_check is suitable for lightweight integrity diagnostics; schema/index inspection remains available through PRAGMA.",

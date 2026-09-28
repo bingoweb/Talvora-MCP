@@ -22,6 +22,18 @@ function Assert-Contains {
     }
 }
 
+function Assert-NotContains {
+    param(
+        [Parameter(Mandatory = $true)][string] $Text,
+        [Parameter(Mandatory = $true)][string] $Unexpected,
+        [Parameter(Mandatory = $true)][string] $Contract
+    )
+
+    if ($Text.Contains($Unexpected, [StringComparison]::Ordinal)) {
+        throw "Privacy/security contract failed: $Contract"
+    }
+}
+
 $fileLog = Read-RepoText 'src\Talvora.Shared\FileLog.cs'
 $businessTunnel = Read-RepoText 'src\Talvora.Tray\BusinessTunnelClient.cs'
 $rawLog = Read-RepoText 'src\Talvora.Tray\ControlCenterRawLogService.cs'
@@ -29,6 +41,9 @@ $eventStore = Read-RepoText 'src\Talvora.Tray\ControlCenterEventStore.cs'
 $interactive = Read-RepoText 'src\Talvora.Shared\InteractiveUserProcessRunner.cs'
 $gitIgnore = Read-RepoText '.gitignore'
 $securityPolicy = Read-RepoText 'SECURITY.md'
+$learningObserver = Read-RepoText 'src\Talvora\TalvoraAutomaticLearningObserver.cs'
+$learningStore = Read-RepoText 'src\Talvora\Memory\TalvoraMemoryStore.Learning.cs'
+$memoryQuality = Read-RepoText 'src\Talvora\Memory\TalvoraMemoryStore.Quality.cs'
 
 Assert-Contains $fileLog 'RedactSensitiveData(message)' 'persistent messages are redacted'
 Assert-Contains $fileLog 'RedactSensitiveData(exception.Message)' 'persistent exception messages are redacted'
@@ -47,5 +62,17 @@ Assert-Contains $gitIgnore '*.pfx' 'PFX bundles are ignored'
 Assert-Contains $gitIgnore '*.key' 'private-key files are ignored'
 Assert-Contains $gitIgnore '.env' 'local environment files are ignored'
 Assert-Contains $securityPolicy 'must preserve its legitimate development and administration capabilities' 'hardening preserves Talvora capability'
+Assert-Contains $learningObserver '"workspaceRoot"' 'automatic learning only extracts allowlisted workspace identity fields'
+Assert-Contains $learningObserver '"repositoryPath"' 'automatic learning recognizes repository identity without storing command payloads'
+Assert-Contains $learningObserver '"workingDirectory"' 'automatic learning recognizes build working directory'
+Assert-Contains $learningObserver '"project"' 'automatic learning recognizes explicit project identity'
+Assert-Contains $learningObserver 'TalvoraMemoryStore.IsAutomaticLearningTool(toolName)' 'automatic learning is allowlist-gated before observation'
+Assert-Contains $learningStore 'toolName.StartsWith(' 'memory tool recursion is explicitly rejected'
+Assert-Contains $learningStore 'LooksLikeSecret(title)' 'explicit decision learning rejects secret-like titles'
+Assert-Contains $learningStore 'LooksLikeSecret(content)' 'explicit decision learning rejects secret-like content'
+Assert-Contains $learningStore 'LooksLikeSecret(claimKey)' 'explicit decision learning rejects secret-like claim keys'
+Assert-NotContains $memoryQuality 'raw_arguments' 'automatic-learning schema never persists raw arguments'
+Assert-NotContains $memoryQuality 'raw_result' 'automatic-learning schema never persists raw tool results'
+Assert-NotContains $memoryQuality 'request_body' 'automatic-learning schema never persists request bodies'
 
 Write-Output 'TALVORA PRIVACY SECURITY SOURCE REGRESSION GREEN'

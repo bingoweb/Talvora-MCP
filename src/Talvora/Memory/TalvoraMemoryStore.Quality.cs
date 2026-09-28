@@ -189,6 +189,60 @@ public sealed partial class TalvoraMemoryStore
                 WHERE status = 'pending';
             CREATE INDEX IF NOT EXISTS ix_memory_candidates_project_status
                 ON memory_candidates(project, status, created_utc DESC);
+
+            CREATE TABLE IF NOT EXISTS memory_learning_observations(
+                id TEXT PRIMARY KEY,
+                project TEXT NOT NULL,
+                tool_name TEXT NOT NULL,
+                tool_role TEXT NOT NULL,
+                outcome TEXT NOT NULL,
+                failure_kind TEXT NULL,
+                elapsed_ms INTEGER NOT NULL,
+                recovery_linked INTEGER NOT NULL DEFAULT 0,
+                created_utc TEXT NOT NULL,
+                CHECK(tool_role IN ('editor', 'verifier')),
+                CHECK(outcome IN ('success', 'failure', 'cancelled')),
+                CHECK(recovery_linked IN (0, 1))
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_learning_observations_recovery
+                ON memory_learning_observations(
+                    project, tool_name, outcome,
+                    recovery_linked, created_utc DESC);
+
+            CREATE INDEX IF NOT EXISTS ix_learning_observations_edit_window
+                ON memory_learning_observations(
+                    project, tool_role, outcome, created_utc);
+
+            CREATE TABLE IF NOT EXISTS memory_learning_patterns(
+                fingerprint TEXT PRIMARY KEY,
+                project TEXT NULL,
+                pattern_kind TEXT NOT NULL,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                source_tools TEXT NOT NULL,
+                occurrence_count INTEGER NOT NULL,
+                confidence REAL NOT NULL,
+                importance REAL NOT NULL,
+                status TEXT NOT NULL,
+                promoted_memory_id TEXT NULL,
+                first_seen_utc TEXT NOT NULL,
+                last_seen_utc TEXT NOT NULL,
+                FOREIGN KEY(promoted_memory_id) REFERENCES memory_items(id)
+                    ON DELETE SET NULL,
+                CHECK(status IN ('pending', 'promoted', 'suppressed'))
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_learning_patterns_project_status
+                ON memory_learning_patterns(project, status, last_seen_utc DESC);
+
+            CREATE TABLE IF NOT EXISTS memory_learning_suppressions(
+                suppression_key TEXT PRIMARY KEY,
+                project TEXT NULL,
+                tool_name TEXT NULL,
+                reason TEXT NULL,
+                created_utc TEXT NOT NULL
+            );
             """;
         await indexes.ExecuteNonQueryAsync(cancellationToken);
     }
