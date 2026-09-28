@@ -94,14 +94,22 @@ public static partial class MemoryHandoffTools
 
         var (gitBranch, gitHead) = ReadGitHead(projectRoot);
         var currentWindow = GetCurrentWindow(handoffText);
+        var runtimeSourceCommit = await TryReadTalvoraRuntimeSourceCommitAsync(
+            projectRoot,
+            cancellationToken);
+        var handoffHasRuntime =
+            ContainsCommit(currentWindow, runtimeSourceCommit);
+        var handoffHasGit =
+            ContainsCommit(currentWindow, gitHead);
+
+        // For Talvora itself, runtime sourceCommit is the canonical deployed
+        // fingerprint. A later docs-only Git commit must not force a
+        // self-referential HANDOFF rewrite loop. Repositories without a
+        // runtime fingerprint still use Git HEAD as their stale boundary.
         if (gitHead is not null &&
             currentWindow.Length > 0 &&
-            !currentWindow.Contains(
-                gitHead,
-                StringComparison.OrdinalIgnoreCase) &&
-            !currentWindow.Contains(
-                gitHead[..Math.Min(7, gitHead.Length)],
-                StringComparison.OrdinalIgnoreCase))
+            !handoffHasGit &&
+            (runtimeSourceCommit is null || !handoffHasRuntime))
         {
             issues.Add(
                 new TalvoraMemoryHandoffReviewIssue(
@@ -110,18 +118,10 @@ public static partial class MemoryHandoffTools
                     $"HANDOFF current bölümü canlı Git HEAD'i içermiyor. branch={gitBranch ?? "unknown"}, head={gitHead}."));
         }
 
-        var runtimeSourceCommit = await TryReadTalvoraRuntimeSourceCommitAsync(
-            projectRoot,
-            cancellationToken);
         if (runtimeSourceCommit is not null)
         {
             if (currentWindow.Length > 0 &&
-                !currentWindow.Contains(
-                    runtimeSourceCommit,
-                    StringComparison.OrdinalIgnoreCase) &&
-                !currentWindow.Contains(
-                    runtimeSourceCommit[..Math.Min(7, runtimeSourceCommit.Length)],
-                    StringComparison.OrdinalIgnoreCase))
+                !handoffHasRuntime)
             {
                 issues.Add(
                     new TalvoraMemoryHandoffReviewIssue(
@@ -131,6 +131,7 @@ public static partial class MemoryHandoffTools
             }
 
             if (gitHead is not null &&
+                !handoffHasRuntime &&
                 !string.Equals(
                     gitHead,
                     runtimeSourceCommit,
@@ -170,6 +171,24 @@ public static partial class MemoryHandoffTools
             issues.Count,
             issues,
             candidates.SuggestedMarkdown);
+    }
+
+    private static bool ContainsCommit(
+        string text,
+        string? commit)
+    {
+        if (string.IsNullOrWhiteSpace(text) ||
+            string.IsNullOrWhiteSpace(commit))
+        {
+            return false;
+        }
+
+        return text.Contains(
+                   commit,
+                   StringComparison.OrdinalIgnoreCase) ||
+               text.Contains(
+                   commit[..Math.Min(7, commit.Length)],
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ResolveHandoffPath(

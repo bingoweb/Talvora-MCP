@@ -43,6 +43,8 @@ Assert-NotContains $tools 'File.WriteAllText' 'handoff tools never write reposit
 Assert-NotContains $tools 'File.WriteAllTextAsync' 'handoff tools never write repository files asynchronously'
 Assert-Contains $tools 'ReadGitHead(projectRoot)' 'review checks live repository HEAD'
 Assert-Contains $tools 'TryReadTalvoraRuntimeSourceCommitAsync' 'Talvora review checks live runtime sourceCommit'
+Assert-Contains $tools 'runtime sourceCommit is the canonical deployed' 'Talvora review treats runtime as the deployed fingerprint'
+Assert-Contains $tools '(runtimeSourceCommit is null || !handoffHasRuntime)' 'docs-only Git HEAD drift does not force a self-referential handoff rewrite'
 Assert-Contains $tools 'ResolveHandoffPath' 'handoff path is constrained to the requested project'
 Assert-Contains $store 'importance >= $minImportance' 'candidate selection has an importance threshold'
 Assert-Contains $store 'confidence >= $minConfidence' 'candidate selection has a confidence threshold'

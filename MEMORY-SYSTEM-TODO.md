@@ -131,10 +131,10 @@ Talvora should retain useful durable context across chats and development sessio
 
 ## Phase 6 — Handoff integration
 
-- [ ] Generate handoff candidates from high-value project memories.
-- [ ] Never silently rewrite HANDOFF.md.
-- [ ] Detect stale handoff facts against live repository/runtime state.
-- [ ] Explicit handoff refresh during project closeout workflows.
+- [x] Generate handoff candidates from high-value project memories.
+- [x] Never silently rewrite HANDOFF.md.
+- [x] Detect stale handoff facts against live repository/runtime state.
+- [x] Explicit handoff refresh during project closeout workflows.
 
 ## Acceptance criteria for V1
 
