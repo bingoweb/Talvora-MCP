@@ -199,6 +199,7 @@ public static class TalvoraToolManifest
         "talvora_sqlite_backup",
         "talvora_memory_remember",
         "talvora_memory_search",
+        "talvora_memory_list",
         "talvora_memory_get",
         "talvora_memory_update",
         "talvora_memory_forget",

@@ -51,6 +51,10 @@ public sealed record TalvoraMemorySearchResult(
     int Count,
     IReadOnlyList<TalvoraMemorySearchHit> Items);
 
+public sealed record TalvoraMemoryListResult(
+    int Count,
+    IReadOnlyList<TalvoraMemoryItem> Items);
+
 public sealed record TalvoraMemoryContextResult(
     string Query,
     int Count,

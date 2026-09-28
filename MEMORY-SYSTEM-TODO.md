@@ -78,13 +78,56 @@ Talvora should retain useful durable context across chats and development sessio
 
 ## Phase 5 — Control Center
 
-- [ ] Memory inspector page.
-- [ ] Search/filter by project, scope, category and date.
-- [ ] View source/provenance/confidence.
-- [ ] Edit/expire/forget/supersede actions.
-- [ ] Memory DB size/index health.
-- [ ] Backup/export/import.
-- [ ] Privacy-safe diagnostic view.
+### Phase 5A — Memory client/service
+
+- [ ] Use the official MCP C# client against Talvora's local focused MCP endpoint.
+- [ ] Keep the Control Center decoupled from the SQLite schema.
+- [ ] Add typed models for search, item, diagnostics, embedding status and re-embed results.
+- [ ] Add bounded timeout/cancellation for every memory operation.
+- [ ] Validate structured MCP results and translate malformed/error responses into user-safe messages.
+
+### Phase 5B — Memory Inspector UX
+
+- [ ] Add a clear Memory entry point from the dashboard.
+- [ ] Add an in-window Memory Inspector view without introducing deep navigation.
+- [ ] Search memory text with bounded results.
+- [ ] Filter by project, scope, category and date/expiry state.
+- [ ] Show source/provenance, confidence, importance, retention and timestamps.
+- [ ] Keep semantic/hybrid scores in technical details rather than the primary reading surface.
+- [ ] Add loading, empty and recoverable-error states.
+- [ ] Preserve readable responsive layout down to the existing 720 px minimum width.
+
+### Phase 5C — Memory mutations
+
+- [ ] Edit title/content/category/importance/confidence/expiry/retention.
+- [ ] Add explicit expire action.
+- [ ] Add explicit forget confirmation.
+- [ ] Add supersede workflow.
+- [ ] Guard mutations against stale selection/results.
+- [ ] Refresh the visible result set after a successful mutation.
+- [ ] Show clear success/failure feedback without raw exception or JSON leakage.
+
+### Phase 5D — Health and maintenance
+
+- [ ] Show DB size/integrity and active/expired/superseded/duplicate counts.
+- [ ] Show embedding provider/model/revision/current/stale counts.
+- [ ] Add bounded re-embed maintenance action and progress/result summary.
+- [ ] Add backup/export/import with explicit identity and overwrite safety.
+- [ ] Add a privacy-safe diagnostic view.
+
+### Phase 5E — Control Center commercial-quality hardening
+
+- [ ] Prevent ordinary DispatcherUnhandledException failures from terminating the entire Tray/Control Center process.
+- [ ] Remove dispatcher-blocking synchronous waits from the application-exit path.
+- [ ] Stop/detach DispatcherTimer handlers on final window/application shutdown.
+- [ ] Audit dashboard/detail/raw-log refresh overlap and stale result publication.
+- [ ] Keep hidden-window background work minimal.
+- [ ] Verify cancellation and timeout behavior for MCP/IO operations.
+- [ ] Audit search/filter render churn and avoid unnecessary full visual-tree rebuilds where practical.
+- [ ] Audit event-handler/window lifecycle retention.
+- [ ] Expand visual smoke and responsiveness source regressions.
+- [ ] Release build must remain 0 warnings / 0 errors.
+- [ ] Install canonical runtime and run live Memory Inspector acceptance.
 
 ## Phase 6 — Handoff integration
 

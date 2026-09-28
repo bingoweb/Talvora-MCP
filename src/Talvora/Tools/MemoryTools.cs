@@ -56,6 +56,30 @@ public static class MemoryTools
             query, scope, project, session, category, limit, cancellationToken);
 
     [McpServerTool(
+        Name = "talvora_memory_list",
+        ReadOnly = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemoryListResult)),
+     Description("List active durable Talvora memories with optional project, scope, category and updated-time filters. Results are bounded and ordered by most recently updated.")]
+    public static Task<TalvoraMemoryListResult> List(
+        string? scope = null,
+        string? project = null,
+        string? category = null,
+        DateTimeOffset? updatedAfterUtc = null,
+        DateTimeOffset? updatedBeforeUtc = null,
+        int limit = 100,
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.ListAsync(
+            scope,
+            project,
+            category,
+            updatedAfterUtc,
+            updatedBeforeUtc,
+            limit,
+            cancellationToken);
+
+    [McpServerTool(
         Name = "talvora_memory_get",
         ReadOnly = true,
         OpenWorld = false,

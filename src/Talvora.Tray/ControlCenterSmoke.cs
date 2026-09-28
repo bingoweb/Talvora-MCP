@@ -44,6 +44,9 @@ internal static class ControlCenterSmoke
                 AssertRenderedSurfaceIsNotBlank(window);
 
                 await window.RunSmokeScenarioAsync();
+                await window.RunMemoryInspectorVisualSmokeScenarioAsync();
+                AssertRenderedSurfaceIsNotBlank(window);
+                window.EndMemoryInspectorVisualSmokeScenario();
 
                 window.Close();
                 if (window.IsVisible)

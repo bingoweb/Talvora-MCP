@@ -63,8 +63,8 @@ $checks = [ordered]@{
         $program.Contains('ConfigureSessionOptions')
     )
     SurfaceCountsArePinned = (
-        $surfacePolicy.Contains('ExpectedFullToolCount = 234') -and
-        $surfacePolicy.Contains('ExpectedDevelopmentToolCount = 204') -and
+        $surfacePolicy.Contains('ExpectedFullToolCount = 235') -and
+        $surfacePolicy.Contains('ExpectedDevelopmentToolCount = 205') -and
         $surfacePolicy.Contains('ExpectedAdministrationToolCount = 91')
     )
     FocusedRecoveryRegistrationsExist = (

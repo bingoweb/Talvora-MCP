@@ -817,8 +817,14 @@ internal sealed partial class ControlCenterWindow
     {
         _selectedMcp = null;
         _detailScroller.Visibility = Visibility.Collapsed;
+        _memoryScroller.Visibility = Visibility.Collapsed;
         _dashboardScroller.Visibility = Visibility.Visible;
         _dashboardScroller.ScrollToTop();
+        if (IsVisible && !_applicationExitRequested)
+        {
+            _refreshTimer.Start();
+        }
+        UpdateRawLogTimerState();
     }
 
     private static string GetComponentKindLabel(string kind) =>

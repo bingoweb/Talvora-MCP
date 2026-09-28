@@ -43,11 +43,13 @@ internal sealed partial class ControlCenterWindow
             IsEnabled = false,
         };
 
-        _windowPlacementSaveTimer.Tick += async (_, _) =>
-        {
-            _windowPlacementSaveTimer.Stop();
-            await SaveWindowPlacementAsync();
-        };
+        _windowPlacementSaveTimer.Tick += OnWindowPlacementSaveTimerTick;
+    }
+
+    private async void OnWindowPlacementSaveTimerTick(object? sender, EventArgs e)
+    {
+        _windowPlacementSaveTimer.Stop();
+        await SaveWindowPlacementAsync();
     }
 
     private void RestoreWindowPlacement()
@@ -298,6 +300,15 @@ internal sealed partial class ControlCenterWindow
         if ((e.Key == Key.Escape ||
              (e.Key == Key.Left && Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))) &&
             _detailScroller.Visibility == Visibility.Visible)
+        {
+            e.Handled = true;
+            ShowDashboard();
+            return;
+        }
+
+        if ((e.Key == Key.Escape ||
+             (e.Key == Key.Left && Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))) &&
+            _memoryScroller.Visibility == Visibility.Visible)
         {
             e.Handled = true;
             ShowDashboard();

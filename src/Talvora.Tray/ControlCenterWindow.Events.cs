@@ -160,15 +160,20 @@ internal sealed partial class ControlCenterWindow
         };
 
         _rawLogRefreshTimer = new DispatcherTimer(
-            TimeSpan.FromSeconds(2),
             DispatcherPriority.Background,
-            async (_, _) => await RefreshRawLogViewAsync(),
             Dispatcher)
         {
+            Interval = TimeSpan.FromSeconds(2),
             IsEnabled = false,
         };
+        _rawLogRefreshTimer.Tick += OnRawLogRefreshTimerTick;
 
         return _eventsExpander;
+    }
+
+    private async void OnRawLogRefreshTimerTick(object? sender, EventArgs e)
+    {
+        await RefreshRawLogViewAsync();
     }
 
     private CardExpander BuildRawLogExpander()
@@ -568,6 +573,7 @@ internal sealed partial class ControlCenterWindow
 
         var shouldRun =
             IsVisible &&
+            _dashboardScroller.Visibility == Visibility.Visible &&
             _eventsExpander?.IsExpanded == true &&
             _rawLogExpander?.IsExpanded == true;
 

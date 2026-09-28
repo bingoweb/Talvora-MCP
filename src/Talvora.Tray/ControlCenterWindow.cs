@@ -68,6 +68,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     private TextBlock _lastRefreshText = null!;
     private UiTextBox _searchBox = null!;
     private ComboBox _filterBox = null!;
+    private DispatcherTimer _dashboardFilterDebounceTimer = null!;
     private UiButton _refreshButton = null!;
     private WrapPanel _cardsPanel = null!;
     private Border _loadingState = null!;
@@ -165,13 +166,22 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         };
 
         _refreshTimer = new DispatcherTimer(
-            TimeSpan.FromSeconds(8),
             DispatcherPriority.Background,
-            async (_, _) => await RefreshDashboardAsync(),
             Dispatcher)
         {
+            Interval = TimeSpan.FromSeconds(8),
             IsEnabled = false,
         };
+        _refreshTimer.Tick += OnRefreshTimerTick;
+
+        _dashboardFilterDebounceTimer = new DispatcherTimer(
+            DispatcherPriority.Background,
+            Dispatcher)
+        {
+            Interval = TimeSpan.FromMilliseconds(180),
+            IsEnabled = false,
+        };
+        _dashboardFilterDebounceTimer.Tick += OnDashboardFilterDebounceTick;
 
     }
 
@@ -192,17 +202,70 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         Topmost = false;
         Focus();
 
-        _ = RefreshDashboardAsync();
+        if (_memoryScroller.Visibility == Visibility.Visible)
+        {
+            _ = RefreshMemoryAsync();
+        }
+        else
+        {
+            _ = RefreshDashboardAsync();
+        }
     }
 
-    public void PrepareForApplicationExit()
+    public async Task PrepareForApplicationExitAsync()
     {
-        _windowPlacementSaveTimer.Stop();
-        _rawLogRefreshTimer?.Stop();
-        SaveWindowPlacementAsync().GetAwaiter().GetResult();
         _applicationExitRequested = true;
         _refreshTimer.Stop();
+        _windowPlacementSaveTimer.Stop();
+        _rawLogRefreshTimer?.Stop();
+        _memorySearchDebounceTimer?.Stop();
+        _dashboardFilterDebounceTimer.Stop();
+
+        try
+        {
+            await SaveWindowPlacementAsync().WaitAsync(TimeSpan.FromSeconds(2));
+        }
+        catch (TimeoutException ex)
+        {
+            TrayLog.Write("Control Center window placement save timed out during shutdown", ex);
+        }
+
+        DetachControlCenterTimers();
         _lifetimeCts.Cancel();
+    }
+
+    internal void ReportRecoverableUiFailure()
+    {
+        if (_healthSummaryText is null)
+        {
+            return;
+        }
+
+        _healthSummaryText.Text = "Arayüz hatası kurtarıldı";
+        _healthSummaryText.Foreground = AttentionBrush;
+        _healthSummaryDot.Background = AttentionBrush;
+        _technicalSummaryText.Text =
+            "Control Center çalışmaya devam ediyor. Durum otomatik olarak yenilenecek.";
+    }
+
+    private async void OnRefreshTimerTick(object? sender, EventArgs e)
+    {
+        await RefreshDashboardAsync();
+    }
+
+    private void DetachControlCenterTimers()
+    {
+        _refreshTimer.Tick -= OnRefreshTimerTick;
+        _dashboardFilterDebounceTimer.Tick -= OnDashboardFilterDebounceTick;
+        _windowPlacementSaveTimer.Tick -= OnWindowPlacementSaveTimerTick;
+        if (_rawLogRefreshTimer is not null)
+        {
+            _rawLogRefreshTimer.Tick -= OnRawLogRefreshTimerTick;
+        }
+        if (_memorySearchDebounceTimer is not null)
+        {
+            _memorySearchDebounceTimer.Tick -= OnMemorySearchDebounceTick;
+        }
     }
 
     private UIElement BuildContent()
@@ -238,6 +301,15 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             Content = BuildDetailView(),
         };
         bodyHost.Children.Add(_detailScroller);
+
+        _memoryScroller = new ScrollViewer
+        {
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Visibility = Visibility.Collapsed,
+            Content = BuildMemoryView(),
+        };
+        bodyHost.Children.Add(_memoryScroller);
 
         Grid.SetRow(bodyHost, 2);
         root.Children.Add(bodyHost);
@@ -473,6 +545,10 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         {
             Width = GridLength.Auto,
         });
+        controlsGrid.ColumnDefinitions.Add(new ColumnDefinition
+        {
+            Width = GridLength.Auto,
+        });
 
         var searchStack = new StackPanel();
 
@@ -485,7 +561,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             Icon = new SymbolIcon { Symbol = SymbolRegular.Search20 },
             ToolTip = "Ad veya açıklamaya göre MCP ara",
         };
-        _searchBox.TextChanged += (_, _) => ApplyDashboardFilter();
+        _searchBox.TextChanged += (_, _) => ScheduleDashboardFilter();
         searchStack.Children.Add(_searchBox);
         controlsGrid.Children.Add(searchStack);
 
@@ -517,6 +593,20 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         _refreshButton.Click += async (_, _) => await RefreshDashboardAsync();
         Grid.SetColumn(_refreshButton, 2);
         controlsGrid.Children.Add(_refreshButton);
+
+        var memoryButton = new UiButton
+        {
+            Content = "Hafıza",
+            Icon = new SymbolIcon { Symbol = SymbolRegular.BrainCircuit20 },
+            MinWidth = 112,
+            Margin = new Thickness(12, 0, 0, 0),
+            Style = FindStyle("TalvoraPrimaryButtonStyle"),
+            Cursor = WpfCursors.Hand,
+            ToolTip = "Talvora'nın kalıcı hafızasını incele ve yönet",
+        };
+        memoryButton.Click += async (_, _) => await ShowMemoryInspectorAsync();
+        Grid.SetColumn(memoryButton, 3);
+        controlsGrid.Children.Add(memoryButton);
 
         content.Children.Add(controlsGrid);
 
@@ -557,6 +647,11 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     private async Task RefreshDashboardAsync()
     {
         if (_lifetimeCts.IsCancellationRequested)
+        {
+            return;
+        }
+
+        if (_memoryScroller.Visibility == Visibility.Visible)
         {
             return;
         }
@@ -674,6 +769,18 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             : Visibility.Collapsed;
 
         UpdateCardWidths();
+    }
+
+    private void ScheduleDashboardFilter()
+    {
+        _dashboardFilterDebounceTimer.Stop();
+        _dashboardFilterDebounceTimer.Start();
+    }
+
+    private void OnDashboardFilterDebounceTick(object? sender, EventArgs e)
+    {
+        _dashboardFilterDebounceTimer.Stop();
+        ApplyDashboardFilter();
     }
 
     private Border CreateMcpCard(ManagedMcpDashboardState state)
@@ -1018,9 +1125,17 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         if (IsVisible)
         {
-            _refreshTimer.Start();
+            if (_memoryScroller.Visibility == Visibility.Visible)
+            {
+                _refreshTimer.Stop();
+                _ = RefreshMemoryAsync();
+            }
+            else
+            {
+                _refreshTimer.Start();
+                _ = RefreshDashboardAsync();
+            }
             UpdateRawLogTimerState();
-            _ = RefreshDashboardAsync();
         }
         else
         {

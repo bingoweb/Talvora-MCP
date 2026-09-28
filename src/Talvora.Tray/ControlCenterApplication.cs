@@ -61,7 +61,7 @@ internal sealed class ControlCenterApplication : WpfApplication
     {
         if (!Dispatcher.CheckAccess())
         {
-            Dispatcher.Invoke(ExitFromTray);
+            _ = Dispatcher.BeginInvoke(ExitFromTray);
             return;
         }
 
@@ -71,21 +71,46 @@ internal sealed class ControlCenterApplication : WpfApplication
         }
 
         _exitRequested = true;
-
-        if (_window is not null)
-        {
-            _window.PrepareForApplicationExit();
-            _window.Close();
-            _window = null;
-        }
-
-        Shutdown();
+        _ = ExitFromTrayCoreAsync();
     }
 
-    private static void OnDispatcherUnhandledException(
+    private async Task ExitFromTrayCoreAsync()
+    {
+        try
+        {
+            if (_window is not null)
+            {
+                await _window.PrepareForApplicationExitAsync();
+                _window.Close();
+                _window = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            TrayLog.Write("Control Center graceful shutdown failed", ex);
+        }
+        finally
+        {
+            Shutdown();
+        }
+    }
+
+    private void OnDispatcherUnhandledException(
         object sender,
         DispatcherUnhandledExceptionEventArgs e)
     {
         TrayLog.Write("Control Center dispatcher failure", e.Exception);
+        if (IsFatalUiException(e.Exception))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        _window?.ReportRecoverableUiFailure();
     }
+
+    private static bool IsFatalUiException(Exception exception) =>
+        exception is OutOfMemoryException
+            or StackOverflowException
+            or AccessViolationException;
 }

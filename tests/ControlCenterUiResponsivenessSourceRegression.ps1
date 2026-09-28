@@ -51,5 +51,8 @@ Assert-Contains $eventsWindow '_rawLogRefreshGate\.WaitAsync\(0\)' 'live raw-log
 Assert-Contains $eventsWindow 'await ControlCenterRawLogService\.ReadTailAsync' 'live raw-log IO runs outside the dispatcher'
 Assert-NotContains $eventsWindow 'ControlCenterRawLogService\.ReadTail\(' 'Control Center does not directly perform raw-log file IO on the dispatcher'
 Assert-Contains $eventsWindow 'registrationId' 'stale raw-log results are associated with the selected MCP identity'
+Assert-Contains $mainWindow 'ScheduleDashboardFilter' 'dashboard search avoids rebuilding the full card tree on every key event'
+Assert-Contains $mainWindow '_dashboardFilterDebounceTimer' 'dashboard filter debounce has a dedicated dispatcher timer'
+Assert-Contains $eventsWindow '_dashboardScroller.Visibility == Visibility.Visible' 'raw-log polling is paused outside the dashboard view'
 
 Write-Output 'CONTROL_CENTER_UI_RESPONSIVENESS_SOURCE_GREEN'
