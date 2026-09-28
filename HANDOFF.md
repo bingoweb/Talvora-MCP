@@ -8,17 +8,17 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Repo/remote `main`: runtime-affecting commit `94569a397f79df1d04c526ead1fc94d2fbdde392`; Gitea ve GitHub'a push edildi.
-- Çalışma ağacı: Memory Phase 3 closeout dokümantasyonu sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `94569a397f79df1d04c526ead1fc94d2fbdde392` — automatic memory learning core.
-- Exact-installed canonical runtime artifact source commit: `94569a397f79df1d04c526ead1fc94d2fbdde392`.
-- Canonical installer SHA-256: `B2178B12AE291EEC5F6A48387886A47C0B6C5B9BB1672F537BF4DCEBBAD47FA2`; artifact size: 262,211,343 bytes.
+- Repo/remote `main`: runtime-affecting commit `696c5d9e6c199904860e128667d80371d33bbfa8`; Gitea ve GitHub'a push edildi.
+- Çalışma ağacı: Memory Phase 4 closeout dokümantasyonu sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
+- Son runtime-affecting commit: `696c5d9e6c199904860e128667d80371d33bbfa8` — hybrid semantic memory retrieval + semantic noise floor.
+- Exact-installed canonical runtime artifact source commit: `696c5d9e6c199904860e128667d80371d33bbfa8`.
+- Canonical installer SHA-256: `76DFD7DD87C098502D2A98FBC69D7A7D8D70AD67126AC656E118E8748B9EF188`; artifact size: 342,440,207 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `sourceCommit=94569a397f79df1d04c526ead1fc94d2fbdde392` bildiriyor; kurulum zamanı 2026-09-28T17:29:26Z.
+- Exact-installed canlı Talvora runtime `sourceCommit=696c5d9e6c199904860e128667d80371d33bbfa8` bildiriyor; kurulum zamanı 2026-09-28T18:43:59Z.
 - Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
 - Gitea ve GitHub `fetch --dry-run` + `push --dry-run` Talvora'nın canlı `git_run` aracıyla GREEN; SSH private key user-only kalıyor.
-- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `94569a3...`.
+- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `696c5d9...`.
 - Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
@@ -37,17 +37,22 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Focused MCP yüzeyleri canlı discovery ile **Full 232 / Dev 202 / Admin 91** doğrulandı. Memory ve automatic-learning araçları Full+Dev yüzeylerinde var, Admin yüzeyinde yok.
+- Focused MCP yüzeyleri canlı discovery ile **Full 234 / Dev 204 / Admin 91** doğrulandı. Memory/semantic/automatic-learning araçları Full+Dev yüzeylerinde var, Admin yüzeyinde yok.
 - Talvora Memory Phase 3 automatic learning canlıdır. MCP CallTool filter yalnız sabit allowlist'teki `talvora_apply_patch/apply_edits/structural_edit/semantic_edit` editörleri ve `talvora_dotnet_build/dotnet_test/msbuild_run` verifier'larını gözlemler. Ham arguments/results saklanmaz; yalnız canonical project, tool adı, outcome/failure sınıfı, elapsed metadata tutulur. Verified recovery deseni `verifier fail -> source edit(s) -> aynı verifier success` olarak fingerprint'lenir; ilk occurrence pending kalır, tekrar eden eşdeğer pattern coalesce edilir ve occurrence>=2 + confidence>=0.90 + importance>=0.75 eşiğinde tek durable `lesson` memory'ye promote olur. Canlı acceptance'ta occurrence 1 pending, occurrence 2 promoted, confidence=0.95, importance=0.8 ve tek promoted memory doğrulandı.
 - Automatic-learning suppression global/project/tool/project+tool seviyesinde çalışır. Canlı suppression acceptance'ta üçüncü gerçek build-fail -> patch -> build-success döngüsü yapılmasına rağmen occurrenceCount 2'de kaldı. Explicit decision yolu yalnız açık user/project kararları içindir; normal karar pending candidate oldu, `promote=true` durable decision oluşturdu, `api_key=...` secret-like içerik `isError=true` ile reddedildi. Acceptance sonrası tüm smoke pattern/candidate/memory/observation/suppression kayıtları ve geçici repo silindi; residue=0.
+- Talvora Memory Phase 4 hybrid semantic retrieval canlıdır. Benchmark sonucunda `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` q8 / 384d seçildi: yerel 12-sorguluk Türkçe+İngilizce+cross-lingual benchmark'ta MiniLM Top-1=0.8333 / MRR=0.9028; `multilingual-e5-small` Top-1=0.4167 / MRR=0.6417. Production-parity C# testinde `Microsoft.ML.Tokenizers 2.0.0` + `Microsoft.ML.OnnxRuntime 1.30.0` MiniLM Top-1=0.8333 / MRR=0.8958 ve ~7.17 ms ortalama query embedding üretti.
+- Embedding modeli installer payload'ına hash-pinned vendor edilir; kurulu canlı model SHA-256 `66FC00F5F29AFCAFF34092E1BDD20008CA3918265A82FB9695A551E510CC4EBC`, tokenizer SHA-256 `CFC8146ABE2A0488E9E2A0C56DE7952F7C11AB059ECA145A0A727AFCE0DB2865`, provenance license `Apache-2.0`. Runtime `embedding_status.available=true`, model revision `q8-sha256-66fc00f5f29afcaf`, dimensions=384.
+- Hybrid search FTS5 lexical + semantic cosine + source authority + confidence + importance + recency kullanır; project/scope/session/category semantic tarafta da sert filtrelerdir. Minimum semantic cosine `0.25`; alakasız üç canlı sorgu 0 sonuç verdi. Canlı acceptance'ta 6/6 TR/EN/cross-lingual sorgu doğru Top-1; exact lexical match güçlü kaldı; other-project kayıt sızmadı; expired ve superseded ID'ler sonuçta görünmedi.
+- `memory_embeddings` model id/revision, dimensions, content hash ve canonical `item_updated_utc` ile stale-vector koruması taşır. Resumable re-embed canlı testinde 7 eksik embedding `batchSize=3` ile 3+3+1 olarak işlendi, failed=0, remaining=0. Servis restart sonrası 7/7 embedding kalıcı ve cross-lingual retrieval GREEN. Null-provider production-store acceptance'ta `available=false` iken FTS5-only exact retrieval doğru Top-1 verdi.
+- Phase 4 smoke/benchmark geçici memory/embedding ve repo-dışı benchmark klasörleri temizlendi; test projesi final residue memory=0 / embedding=0. Production build cache ve exact-installed model korunuyor.
 - 2026-09-27 repository-wide audit: çözüm build/analyzer temiz; vulnerable/deprecated NuGet bulgusu yok; Source Edit focused alt-regresyonları, metadata/surface/privacy/shared-infrastructure smoke ve live metadata/surface policy GREEN. Installer Tray process polling handle sahipliği düzeltildi; health handle regression kalıcı istemci modeline düzeltildi ve canlı 200 istekte **delta=0**; dört kopya `FirstNonEmptyLine` ortak `TextLines.FirstNonEmpty` helper'ına indirildi; stale append encoding regression düzeltildi.
 - Final 212-tool full smoke **GREEN**. Kapanış sırasında `target=user` environment persistence aktif kullanıcının gerçek `HKU\<SID>\Environment` hive'ına deterministik hale getirildi; smoke user-process probe argüman yarışı giderildi; nullable continuation alanının JSON'da omitted olabilmesi teste işlendi; Yarn/Corepack info probe'u 10 saniyelik bounded/non-download probe'a dönüştürüldü.
 - Masaüstü çalışma günlüğü zorunlu runtime sözleşmesidir: her MCP çağrısı sarmaldan geçer, düşük değerli read/search/health çağrıları sessizdir. Anlamlı iş tek kartta **Şimdi bunu yapıyorum** -> 30 saniyeyi aşarsa **Hâlâ bununla uğraşıyorum** -> **Bitti / Bir hata buldum** akışını kullanır. Aktif kart iş bitmeden kaybolmaz; başarı yaklaşık 3 dakika, hata yaklaşık 5 dakika okunabilir kalır. Hata sonucu exception olmak zorunda değildir: MCP `IsError`, structured `success=false`, nonzero sonuç ve timeout da sade kullanıcı diliyle failure kartına dönüşür. Teknik tool/komut/stack trace/exit-code metni kullanıcı kartına sızdırılmaz.
 - Talvora self-update servis-içinden çağrıldığında 2.5 sn gecikmeli detached installer bootstrap kullanır; MCP isteği önce kapanır, SCM STOP normal tamamlanır ve forced process-kill fallback'e girilmez. Canlı acceptance sonrası yeni SCM 7034 veya Application/.NET Runtime hatası oluşmadı.
 - Smoke test failure sınırı artık top-level exception'ı kontrollü nonzero exit + stderr'e çevirir; kasıtlı failure acceptance'ta yeni Windows Application Error/.NET Runtime crash kaydı oluşmadı. Önceki 212-tool full-smoke baseline GREEN; Memory V1 için hedefli canlı smoke ayrıca GREEN.
 - Detached self-update masaüstü kartı `TALVORA_UPDATE_DETACHED` gerçek marker'ını okuyup `Kurucuya devrettim` mesajı gösterir; yeni runtime doğrulanmadan `etkinleştirdim` iddiasında bulunmaz.
-- Focused Dev/Admin tunnel registry + config + DPAPI runtime credential recovery canlı doğrulandı; tunnel-client Dev/Admin için `process_running/healthy/ready=true`; güncel canlı MCP discovery Dev=202 / Admin=91.
-- Önceki 212-tool full-smoke baseline GREEN. Güncel Memory Phase 3 değişikliğinde Release build 0 warning/0 error, focused-surface source regression, modernization policy, genişletilmiş privacy/security source regression ve canlı pattern-coalescing/threshold-promotion/suppression/explicit-decision/secret-rejection/cleanup acceptance GREEN.
+- Focused Dev/Admin tunnel registry + config + DPAPI runtime credential recovery canlı doğrulandı; tunnel-client Dev/Admin için `process_running/healthy/ready=true`; güncel canlı MCP discovery Dev=204 / Admin=91.
+- Önceki 212-tool full-smoke baseline GREEN. Güncel Memory Phase 4 değişikliğinde Release build 0 warning/0 error; focused-surface, modernization, privacy/security ve MemorySemantic source regression GREEN; NuGet vulnerable/deprecated audit temiz; canlı benchmark/hybrid/noise-floor/re-embed/fallback/restart-persistence/cleanup acceptance GREEN.
 
 ## Penpot / Talvora entegrasyonu — CURRENT
 

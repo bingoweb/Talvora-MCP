@@ -68,13 +68,13 @@ Talvora should retain useful durable context across chats and development sessio
 
 ## Phase 4 — Hybrid semantic retrieval
 
-- [ ] Select embedding strategy after benchmark.
-- [ ] Add embedding schema/version metadata.
-- [ ] Add vector index or compact vector store.
-- [ ] Hybrid rank: lexical + semantic + importance + recency + scope.
-- [ ] Re-embedding/migration workflow.
-- [ ] Benchmark Turkish + English retrieval.
-- [ ] Keep FTS5 as deterministic fallback.
+- [x] Select embedding strategy after benchmark.
+- [x] Add embedding schema/version metadata.
+- [x] Add vector index or compact vector store.
+- [x] Hybrid rank: lexical + semantic + importance + recency + scope.
+- [x] Re-embedding/migration workflow.
+- [x] Benchmark Turkish + English retrieval.
+- [x] Keep FTS5 as deterministic fallback.
 
 ## Phase 5 — Control Center
 
