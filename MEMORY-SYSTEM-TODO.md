@@ -37,12 +37,12 @@ Talvora should retain useful durable context across chats and development sessio
 - [x] Add smoke coverage for CRUD, scope isolation, FTS, update, forget and expiry.
 - [x] Add source regression for surface counts/manifest.
 - [x] Release build 0 warnings / 0 errors.
-- [ ] Run targeted smoke/regressions.
+- [x] Run targeted smoke/regressions.
 - [x] Update architecture docs.
-- [ ] Update HANDOFF checkpoint after installed-runtime verification.
-- [ ] Commit and push Gitea + GitHub.
-- [ ] Deploy canonical installer because runtime/tool surface changes.
-- [ ] Verify installed service health + live MCP discovery.
+- [x] Update HANDOFF checkpoint after installed-runtime verification.
+- [x] Commit and push Gitea + GitHub.
+- [x] Deploy canonical installer because runtime/tool surface changes.
+- [x] Verify installed service health + live MCP discovery.
 
 ## Phase 2 — Memory quality
 
