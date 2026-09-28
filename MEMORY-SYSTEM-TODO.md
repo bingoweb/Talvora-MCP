@@ -58,13 +58,13 @@ Talvora should retain useful durable context across chats and development sessio
 
 ## Phase 3 — Automatic learning
 
-- [ ] Observe completed tool operations and extract candidate lessons.
-- [ ] Require confidence/importance thresholds before durable persistence.
-- [ ] Coalesce repeated equivalent lessons.
-- [ ] Record provenance without storing secrets/raw credentials.
-- [ ] Add automatic error -> solution memory after verified successful recovery.
-- [ ] Add decision memory from explicit user/project decisions.
-- [ ] Add opt-out/suppression scopes.
+- [x] Observe completed tool operations and extract candidate lessons.
+- [x] Require confidence/importance thresholds before durable persistence.
+- [x] Coalesce repeated equivalent lessons.
+- [x] Record provenance without storing secrets/raw credentials.
+- [x] Add automatic error -> solution memory after verified successful recovery.
+- [x] Add decision memory from explicit user/project decisions.
+- [x] Add opt-out/suppression scopes.
 
 ## Phase 4 — Hybrid semantic retrieval
 
