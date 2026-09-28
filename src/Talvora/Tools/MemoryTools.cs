@@ -185,4 +185,94 @@ public static class MemoryTools
     public static Task<TalvoraMemoryDiagnosticsResult> Diagnostics(
         CancellationToken cancellationToken = default) =>
         TalvoraMemoryRuntime.Store.DiagnosticsAsync(cancellationToken);
+
+    [McpServerTool(
+        Name = "talvora_memory_session_close",
+        Destructive = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemorySessionCloseResult)),
+     Description("Close one logical session using a short summary plus structured memory candidates. Raw chat is not stored. Session id is idempotent. Candidates remain pending by default; policy auto-promotion happens only when autoPromote=true and strict thresholds pass.")]
+    public static Task<TalvoraMemorySessionCloseResult> SessionClose(
+        string sessionId,
+        string summary,
+        IReadOnlyList<TalvoraMemoryCandidateInput>? candidates = null,
+        string? project = null,
+        bool autoPromote = false,
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.CloseSessionAsync(
+            sessionId,
+            summary,
+            project,
+            candidates,
+            autoPromote,
+            cancellationToken);
+
+    [McpServerTool(
+        Name = "talvora_memory_candidate_list",
+        ReadOnly = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemoryCandidateListResult)),
+     Description("List pending, promoted, or rejected memory candidates with optional session/project/status filters.")]
+    public static Task<TalvoraMemoryCandidateListResult> CandidateList(
+        string? sessionId = null,
+        string? project = null,
+        string? status = null,
+        int limit = 100,
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.ListCandidatesAsync(
+            sessionId,
+            project,
+            status,
+            limit,
+            cancellationToken);
+
+    [McpServerTool(
+        Name = "talvora_memory_candidate_promote",
+        Destructive = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemoryCandidateResolutionResult)),
+     Description("Promote one pending candidate to durable memory. The transition is idempotent; a second call returns the existing promoted memory instead of creating a duplicate.")]
+    public static Task<TalvoraMemoryCandidateResolutionResult> CandidatePromote(
+        string candidateId,
+        string? reason = null,
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.PromoteCandidateAsync(
+            candidateId,
+            reason,
+            cancellationToken);
+
+    [McpServerTool(
+        Name = "talvora_memory_candidate_reject",
+        Destructive = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemoryCandidateResolutionResult)),
+     Description("Reject one pending memory candidate without deleting its audit record. The transition is idempotent.")]
+    public static Task<TalvoraMemoryCandidateResolutionResult> CandidateReject(
+        string candidateId,
+        string? reason = null,
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.RejectCandidateAsync(
+            candidateId,
+            reason,
+            cancellationToken);
+
+    [McpServerTool(
+        Name = "talvora_memory_session_forget",
+        Destructive = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraMemorySessionForgetResult)),
+     Description("Permanently delete one stored session summary and all candidate audit rows. Optionally also delete durable memories that were promoted from those candidates.")]
+    public static Task<TalvoraMemorySessionForgetResult> SessionForget(
+        string sessionId,
+        bool deletePromotedMemories = false,
+        CancellationToken cancellationToken = default) =>
+        TalvoraMemoryRuntime.Store.ForgetSessionAsync(
+            sessionId,
+            deletePromotedMemories,
+            cancellationToken);
 }

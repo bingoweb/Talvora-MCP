@@ -489,6 +489,184 @@ internal static partial class SmokeScenarios
                     "stale claim remained in normal retrieval.");
             }
 
+            var sessionId = $"session-{token}";
+            var sessionClose = await EnsureSuccess(
+                byName["talvora_memory_session_close"],
+                new()
+                {
+                    ["sessionId"] = sessionId,
+                    ["summary"] = "Smoke session summary without raw chat.",
+                    ["project"] = project,
+                    ["autoPromote"] = false,
+                    ["candidates"] = new object[]
+                    {
+                        new Dictionary<string, object?>
+                        {
+                            ["category"] = "decision",
+                            ["title"] = "Candidate decision",
+                            ["content"] = $"{token} candidate-decision",
+                            ["importance"] = 0.9,
+                            ["confidence"] = 1.0,
+                            ["source"] = "user",
+                            ["claimKey"] = $"{token} candidate-decision-key",
+                            ["retentionClass"] = "durable",
+                        },
+                        new Dictionary<string, object?>
+                        {
+                            ["category"] = "todo",
+                            ["title"] = "Candidate transient todo",
+                            ["content"] = $"{token} candidate-todo",
+                            ["importance"] = 1.0,
+                            ["confidence"] = 1.0,
+                            ["source"] = "user",
+                        },
+                    },
+                });
+            if (sessionClose.StructuredContent is not { } sessionJson ||
+                sessionJson.GetProperty("replayed").GetBoolean() ||
+                sessionJson.GetProperty("candidateCount").GetInt32() != 2)
+            {
+                throw new InvalidOperationException(
+                    "memory session-close candidate pipeline failed.");
+            }
+
+            var decisionCandidate = sessionJson.GetProperty("candidates")
+                .EnumerateArray()
+                .First(item => string.Equals(
+                    item.GetProperty("category").GetString(),
+                    "decision",
+                    StringComparison.Ordinal));
+            var todoCandidate = sessionJson.GetProperty("candidates")
+                .EnumerateArray()
+                .First(item => string.Equals(
+                    item.GetProperty("category").GetString(),
+                    "todo",
+                    StringComparison.Ordinal));
+            var decisionCandidateId =
+                decisionCandidate.GetProperty("id").GetString()
+                ?? throw new InvalidOperationException(
+                    "decision candidate returned no id.");
+            var todoCandidateId =
+                todoCandidate.GetProperty("id").GetString()
+                ?? throw new InvalidOperationException(
+                    "todo candidate returned no id.");
+            if (!string.Equals(
+                    decisionCandidate.GetProperty("recommendation").GetString(),
+                    "auto-promote",
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    decisionCandidate.GetProperty("status").GetString(),
+                    "pending",
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    todoCandidate.GetProperty("recommendation").GetString(),
+                    "review",
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "memory candidate promotion policy failed.");
+            }
+
+            var promote = await EnsureSuccess(
+                byName["talvora_memory_candidate_promote"],
+                new()
+                {
+                    ["candidateId"] = decisionCandidateId,
+                    ["reason"] = "smoke explicit promotion",
+                });
+            var promotedMemoryId =
+                promote.StructuredContent
+                    ?.GetProperty("memory")
+                    .GetProperty("id")
+                    .GetString()
+                ?? throw new InvalidOperationException(
+                    "candidate promotion returned no memory.");
+            if (promote.StructuredContent is not { } promoteJson ||
+                promoteJson.GetProperty("replayed").GetBoolean() ||
+                !string.Equals(
+                    promoteJson.GetProperty("candidate")
+                        .GetProperty("status")
+                        .GetString(),
+                    "promoted",
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "memory candidate promotion failed.");
+            }
+
+            var promoteReplay = await EnsureSuccess(
+                byName["talvora_memory_candidate_promote"],
+                new() { ["candidateId"] = decisionCandidateId });
+            if (promoteReplay.StructuredContent is not { } promoteReplayJson ||
+                !promoteReplayJson.GetProperty("replayed").GetBoolean() ||
+                !string.Equals(
+                    promoteReplayJson.GetProperty("memory")
+                        .GetProperty("id")
+                        .GetString(),
+                    promotedMemoryId,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "candidate promotion idempotency failed.");
+            }
+
+            var reject = await EnsureSuccess(
+                byName["talvora_memory_candidate_reject"],
+                new()
+                {
+                    ["candidateId"] = todoCandidateId,
+                    ["reason"] = "smoke transient rejection",
+                });
+            if (reject.StructuredContent is not { } rejectJson ||
+                rejectJson.GetProperty("replayed").GetBoolean() ||
+                !string.Equals(
+                    rejectJson.GetProperty("candidate")
+                        .GetProperty("status")
+                        .GetString(),
+                    "rejected",
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "memory candidate rejection failed.");
+            }
+
+            var closeReplay = await EnsureSuccess(
+                byName["talvora_memory_session_close"],
+                new()
+                {
+                    ["sessionId"] = sessionId,
+                    ["summary"] = "This second close must not overwrite.",
+                    ["project"] = project,
+                    ["candidates"] = Array.Empty<object>(),
+                });
+            if (closeReplay.StructuredContent is not { } closeReplayJson ||
+                !closeReplayJson.GetProperty("replayed").GetBoolean() ||
+                closeReplayJson.GetProperty("candidateCount").GetInt32() != 2 ||
+                !string.Equals(
+                    closeReplayJson.GetProperty("summary").GetString(),
+                    "Smoke session summary without raw chat.",
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "memory session-close idempotency failed.");
+            }
+
+            var sessionForget = await EnsureSuccess(
+                byName["talvora_memory_session_forget"],
+                new()
+                {
+                    ["sessionId"] = sessionId,
+                    ["deletePromotedMemories"] = true,
+                });
+            if (sessionForget.StructuredContent is not { } forgetSessionJson ||
+                !forgetSessionJson.GetProperty("found").GetBoolean() ||
+                forgetSessionJson.GetProperty("candidateCount").GetInt32() != 2 ||
+                forgetSessionJson.GetProperty("deletedPromotedMemories").GetInt32() != 1)
+            {
+                throw new InvalidOperationException(
+                    "memory session-forget cleanup failed.");
+            }
+
             var forget = await EnsureSuccess(
                 byName["talvora_memory_forget"],
                 new() { ["id"] = firstId });

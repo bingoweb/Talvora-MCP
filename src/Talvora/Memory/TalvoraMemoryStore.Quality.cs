@@ -148,6 +148,47 @@ public sealed partial class TalvoraMemoryStore
                 WHERE claim_key IS NOT NULL;
             CREATE INDEX IF NOT EXISTS ix_memory_items_retention
                 ON memory_items(retention_class, expires_utc);
+
+            CREATE TABLE IF NOT EXISTS memory_sessions(
+                session_id TEXT PRIMARY KEY,
+                project TEXT NULL,
+                summary TEXT NOT NULL,
+                created_utc TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS memory_candidates(
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                project TEXT NULL,
+                target_scope TEXT NOT NULL,
+                category TEXT NOT NULL,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                importance REAL NOT NULL,
+                confidence REAL NOT NULL,
+                source TEXT NULL,
+                source_ref TEXT NULL,
+                claim_key TEXT NULL,
+                retention_class TEXT NOT NULL,
+                promotion_score REAL NOT NULL,
+                recommendation TEXT NOT NULL,
+                status TEXT NOT NULL,
+                promoted_memory_id TEXT NULL,
+                resolution_reason TEXT NULL,
+                created_utc TEXT NOT NULL,
+                resolved_utc TEXT NULL,
+                FOREIGN KEY(session_id) REFERENCES memory_sessions(session_id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY(promoted_memory_id) REFERENCES memory_items(id)
+                    ON DELETE SET NULL,
+                CHECK(status IN ('pending', 'promoted', 'rejected'))
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_memory_candidates_pending
+                ON memory_candidates(session_id, created_utc DESC)
+                WHERE status = 'pending';
+            CREATE INDEX IF NOT EXISTS ix_memory_candidates_project_status
+                ON memory_candidates(project, status, created_utc DESC);
             """;
         await indexes.ExecuteNonQueryAsync(cancellationToken);
     }

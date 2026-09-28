@@ -52,8 +52,8 @@ Talvora should retain useful durable context across chats and development sessio
 - [x] Add retention classes and automatic expiry policies.
 - [x] Add stale-memory suppression when repository/runtime evidence disagrees.
 - [x] Add project identity normalization.
-- [ ] Add session close summary -> candidate-memory pipeline.
-- [ ] Add promotion rules so transient session facts do not become durable by default.
+- [x] Add session close summary -> candidate-memory pipeline.
+- [x] Add promotion rules so transient session facts do not become durable by default.
 - [x] Add memory health/integrity diagnostics.
 
 ## Phase 3 — Automatic learning

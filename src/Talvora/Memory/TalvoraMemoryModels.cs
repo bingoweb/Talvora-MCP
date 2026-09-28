@@ -68,3 +68,61 @@ public sealed record TalvoraMemoryDiagnosticsResult(
     int SupersededCount,
     int DuplicateGroups);
 
+public sealed record TalvoraMemoryCandidateInput(
+    string Category,
+    string Title,
+    string Content,
+    double Importance = 0.5,
+    double Confidence = 1.0,
+    string? Source = null,
+    string? SourceReference = null,
+    string? ClaimKey = null,
+    string? RetentionClass = null,
+    string? TargetScope = null);
+
+public sealed record TalvoraMemoryCandidate(
+    string Id,
+    string SessionId,
+    string? Project,
+    string TargetScope,
+    string Category,
+    string Title,
+    string Content,
+    double Importance,
+    double Confidence,
+    string? Source,
+    string? SourceReference,
+    string? ClaimKey,
+    string RetentionClass,
+    double PromotionScore,
+    string Recommendation,
+    string Status,
+    string? PromotedMemoryId,
+    string? ResolutionReason,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? ResolvedAtUtc);
+
+public sealed record TalvoraMemorySessionCloseResult(
+    string SessionId,
+    string? Project,
+    string Summary,
+    bool Replayed,
+    int CandidateCount,
+    IReadOnlyList<TalvoraMemoryCandidate> Candidates);
+
+public sealed record TalvoraMemoryCandidateListResult(
+    int Count,
+    IReadOnlyList<TalvoraMemoryCandidate> Items);
+
+public sealed record TalvoraMemoryCandidateResolutionResult(
+    bool Success,
+    bool Replayed,
+    TalvoraMemoryCandidate? Candidate,
+    TalvoraMemoryItem? Memory);
+
+public sealed record TalvoraMemorySessionForgetResult(
+    bool Found,
+    string SessionId,
+    int CandidateCount,
+    int DeletedPromotedMemories);
+
