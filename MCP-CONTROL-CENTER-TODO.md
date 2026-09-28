@@ -47,19 +47,19 @@ Sabit kurallar:
 
 ### Faz E — Regression ve quality gates
 - [x] SURFACE3-022 — `FocusedMcpSurfaceSourceRegression.ps1` yeni 240/203/84/47 sayıları ve Shared contract için güncelle.
-- [ ] SURFACE3-023 — Smoke surface policy'de exact intersection equality, union coverage, focused no-bypass ve metadata parity doğrula.
+- [x] SURFACE3-023 — Smoke surface policy'de exact intersection equality, union coverage, focused no-bypass ve metadata parity doğrula.
 - [x] SURFACE3-024 — Talvora Shared + Service + Smoke Release build 0 warning / 0 error.
 - [x] SURFACE3-025 — Context7 quality gate + modernization/source policy gates GREEN.
-- [ ] SURFACE3-026 — Live local MCP discovery: Full=240, Dev=203, Admin=84; Dev/Admin intersection=47.
-- [ ] SURFACE3-027 — Negative invocation acceptance: Dev'de package mutation/process-kill unknown-tool; Admin'de job tools unknown-tool.
+- [x] SURFACE3-026 — Live local MCP discovery: Full=240, Dev=203, Admin=84; Dev/Admin intersection=47.
+- [x] SURFACE3-027 — Negative invocation acceptance: Dev'de package mutation/process-kill unknown-tool; Admin'de job tools unknown-tool.
 
 ### Faz F — Dokümantasyon, yayın ve canlı kabul
 - [x] SURFACE3-028 — README + `docs/ARCHITECTURE.md` focused surface rol ve sayıları güncelle; “privilege boundary değildir” gerçeğini açık yaz.
 - [x] SURFACE3-029 — Control Center protocol probe representative tool'larını yeni yüzey sözleşmesine göre doğrula.
-- [ ] SURFACE3-030 — Explicit-file commit; Gitea origin/main + GitHub github/main eşitle.
-- [ ] SURFACE3-031 — Canonical installer build + SYSTEM deploy; exact-installed sourceCommit doğrula.
-- [ ] SURFACE3-032 — Installed live surface smoke + Dev/Admin Business tunnel readiness GREEN.
-- [ ] SURFACE3-033 — HANDOFF/BUG-AUDIT closeout; yalnız gerçek devre sonunda yaşayan belge güncelle.
+- [x] SURFACE3-030 — Explicit-file commit; Gitea origin/main + GitHub github/main eşitle.
+- [x] SURFACE3-031 — Canonical installer build + SYSTEM deploy; exact-installed sourceCommit doğrula.
+- [x] SURFACE3-032 — Installed live surface smoke + Dev/Admin Business tunnel readiness GREEN.
+- [x] SURFACE3-033 — HANDOFF/BUG-AUDIT closeout; yalnız gerçek devre sonunda yaşayan belge güncelle.
 
 ## 2026-09-26 — Penpot / Talvora MCP Integration
 

@@ -1,6 +1,6 @@
 # Talvora MCP — Canonical Handoff
 
-## CURRENT — 2026-09-28
+## CURRENT — 2026-09-29
 
 Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Eski kronoloji burada tutulmaz. Ayrıntılı bulgular `BUG-AUDIT.md`, görev geçmişi `MCP-CONTROL-CENTER-TODO.md`, Source Edit sözleşmesi `SOURCE-EDIT-ENGINE-ARCHITECTURE.md` içindedir.
 
@@ -8,17 +8,17 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Repo/remote `main`: son runtime-affecting commit `49471630f037ce4c0a20e7fc6e4bc1c449741f93`; Gitea ve GitHub'a push edildi. Bu closeout dokümantasyon commit'i self-fingerprint edilmez; gerektiğinde canlı Git ile doğrula.
-- Çalışma ağacı: Memory Phase 6 closeout dokümantasyonu sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `49471630f037ce4c0a20e7fc6e4bc1c449741f93` — docs-only Git HEAD drift için false-positive üretmeyen Memory Handoff review hardening.
-- Exact-installed canonical runtime artifact source commit: `49471630f037ce4c0a20e7fc6e4bc1c449741f93`.
-- Canonical installer SHA-256: `669DFECF25291CCDD37B586412535994B0FFDB10D50B36BB730E439E409EA845`; artifact size: 342,509,839 bytes.
+- Son runtime-affecting commit: `ac467027b410ed4b23f761f0e5ad0dcf775fec18` — Dev/Admin focused surface role separation + explicit Shared overlap contract. Gitea ve GitHub'a push edildi.
+- Çalışma ağacı: SURFACE3 closeout dokümantasyonu sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
+- Docs-only closeout commit'i runtime fingerprint değildir; repo HEAD sonradan ilerlese bile exact-installed runtime source commit `ac467027b410ed4b23f761f0e5ad0dcf775fec18` olarak kalır.
+- Exact-installed canonical runtime artifact source commit: `ac467027b410ed4b23f761f0e5ad0dcf775fec18`.
+- Canonical installer SHA-256: `7079E702AB9153DB57044F37DD8BD54C4842777D65A243C04EF16E9EF68DA007`; artifact size: 342,512,911 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `sourceCommit=49471630f037ce4c0a20e7fc6e4bc1c449741f93` bildiriyor; kurulum zamanı 2026-09-28T20:11:58Z.
+- Exact-installed canlı Talvora runtime `sourceCommit=ac467027b410ed4b23f761f0e5ad0dcf775fec18` bildiriyor; kurulum zamanı 2026-09-28T21:34:36Z.
 - Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
 - Gitea ve GitHub `fetch --dry-run` + `push --dry-run` Talvora'nın canlı `git_run` aracıyla GREEN; SSH private key user-only kalıyor.
-- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `4947163...`.
+- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `ac46702...`.
 - Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
@@ -37,7 +37,8 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - `talvora_semantic_edit` Roslyn C# symbol-aware specialist
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
-- Focused MCP yüzeyleri canlı discovery ile **Full 240 / Dev 210 / Admin 91** doğrulandı. Memory/semantic/automatic-learning/handoff araçları Full+Dev yüzeylerinde var, Admin yüzeyinde yok.
+- Focused MCP yüzeyleri canlı discovery ile **Full 240 / Dev 203 / Admin 84 / Shared 47** doğrulandı. Dev/Admin overlap artık explicit `SharedTools` allowlist'tir; `IsFocusedSurfaceReviewComplete` gerçek Dev∩Admin kesişiminin Shared ile exact eşitliğini doğrular. Package mutation + persistent env mutation + arbitrary PID kill Admin-only; long-running job ailesi Dev-only oldu. Full `/mcp` 240-tool capability aynen korunur; focused ayrım privilege sandbox değil discovery/tool-selection boundary'sidir.
+- Installed live surface smoke GREEN: Dev'de excluded service/package/process-kill ve Admin'de excluded job direct invocation `Unknown tool` sınırından geçemiyor. Managed Business probe canlı **Dev Ready=True / BrowserSmokePassed=True / ToolCount=203**, **Admin Ready=True / BrowserSmokePassed=True / ToolCount=84**.
 - Talvora Memory Phase 5 Control Center canlıdır: ayrı Memory Inspector görünümü, bounded list/search/filter, provenance/confidence/importance/retention ayrıntıları, stale-result korumalı edit/expire/forget/supersede, semantic health/re-embed, online SQLite backup ve restart-at-staging restore akışı vardır. Control Center doğrudan SQLite şemasına bağlanmaz; resmi MCP C# client ile yerel `/mcp/dev` contract'ını kullanır. Dispatcher crash recovery, async bounded shutdown, timer detach, hidden-view polling suppression ve dashboard debounce kalıcı regression ile korunur. Release build 0 warning/0 error, kaynak regressions ve source/installed WPF visual smoke GREEN.
 - Memory backup/restore canlı acceptance GREEN: online backup SHA-256 ile doğrulandı; restore önce quick-check + Talvora schema + SHA manifest ile pending staging'e alındı; restart sırasında eski canlı DB için WAL-dahil SQLite Backup API pre-restore yedeği oluşturuldu, staging atomik uygulandı, restart sonrası `pending=false`; test backup/pending/pre-restore fixture'ları temizlendi.
 - Talvora Memory Phase 6 Handoff integration canlıdır: `talvora_memory_handoff_candidates` yüksek değerli aktif proje hafızalarından bounded patch-ready markdown üretir; `talvora_memory_handoff_review` HANDOFF.md'yi **read-only** inceler, canlı Git branch/HEAD ve Talvora repo için `/healthz sourceCommit` ile stale/current farklarını raporlar. Handoff araçları hiçbir repository dosyasını yazmaz; gerçek HANDOFF güncellemesi yalnız açık closeout source-edit adımıdır. İzole acceptance'ta stale Git HEAD ve iki eksik yüksek-değerli hafıza maddesi yakalandı, düşük öncelikli hafıza elendi, review öncesi/sonrası HANDOFF SHA-256 birebir aynı kaldı ve test residue=0.
@@ -54,7 +55,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Talvora self-update servis-içinden çağrıldığında 2.5 sn gecikmeli detached installer bootstrap kullanır; MCP isteği önce kapanır, SCM STOP normal tamamlanır ve forced process-kill fallback'e girilmez. Canlı acceptance sonrası yeni SCM 7034 veya Application/.NET Runtime hatası oluşmadı.
 - Smoke test failure sınırı artık top-level exception'ı kontrollü nonzero exit + stderr'e çevirir; kasıtlı failure acceptance'ta yeni Windows Application Error/.NET Runtime crash kaydı oluşmadı. Önceki 212-tool full-smoke baseline GREEN; Memory V1 için hedefli canlı smoke ayrıca GREEN.
 - Detached self-update masaüstü kartı `TALVORA_UPDATE_DETACHED` gerçek marker'ını okuyup `Kurucuya devrettim` mesajı gösterir; yeni runtime doğrulanmadan `etkinleştirdim` iddiasında bulunmaz.
-- Focused Dev/Admin tunnel registry + config + DPAPI runtime credential recovery canlı doğrulandı; tunnel-client Dev/Admin için `process_running/healthy/ready=true`; güncel canlı MCP discovery Dev=204 / Admin=91.
+- Focused Dev/Admin tunnel registry + config + DPAPI runtime credential recovery canlı doğrulandı; tunnel-client Dev/Admin için `process_running/healthy/ready=true`; güncel canlı MCP discovery Dev=203 / Admin=84 ve iki managed probe için `BrowserSmokePassed=true`.
 - Önceki 212-tool full-smoke baseline GREEN. Güncel Memory Phase 4 değişikliğinde Release build 0 warning/0 error; focused-surface, modernization, privacy/security ve MemorySemantic source regression GREEN; NuGet vulnerable/deprecated audit temiz; canlı benchmark/hybrid/noise-floor/re-embed/fallback/restart-persistence/cleanup acceptance GREEN.
 
 ## Penpot / Talvora entegrasyonu — CURRENT

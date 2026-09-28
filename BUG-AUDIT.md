@@ -1,13 +1,15 @@
 # Talvora Deep Bug Audit
 
-Last updated: 2026-09-27
+Last updated: 2026-09-29
 Branch: main
-Current repository runtime-affecting committed HEAD: `d9f85ea792244867a606e50cf525ef0dfdca556e` — graceful self-update and truthful deferred desktop progress.
-Current exact-installed audit runtime: `d9f85ea792244867a606e50cf525ef0dfdca556e`
-Canonical exact-installed tool count: 212 unique tools
-Status: #121–#229 remediation complete or test-verified as applicable. Admin focused surface = 91 unique tools; Development = 182; Full = 212. Final 212-tool full smoke, live metadata/surface policy, focused Source Edit regressions, modernization policy and Context7 gate are GREEN.
+Current repository runtime-affecting committed HEAD: `ac467027b410ed4b23f761f0e5ad0dcf775fec18` — focused surface role separation and explicit Shared overlap contract.
+Current exact-installed audit runtime: `ac467027b410ed4b23f761f0e5ad0dcf775fec18`
+Canonical exact-installed tool count: 240 unique tools
+Status: historical #121–#229 remediation remains closed/test-verified. Current focused surface contract is Full=240, Development=203, Administration=84, Shared=47. Release builds, Context7/modernization gates, source focused regression and installed live surface smoke are GREEN.
 
-## Current remediation status summary — 2026-09-27
+## Current remediation status summary — 2026-09-29
+
+- **SURFACE3 LIVE VERIFIED 2026-09-29** — Dev/Admin overlap baseline 61'den explicit reviewed Shared=47 sözleşmesine indirildi. `TalvoraMcpToolSurfacePolicy` artık Shared allowlist + exact intersection invariant taşıyor. Chocolatey mutation, persistent env mutation ve arbitrary PID kill Admin-only; long-running job family Dev-only. Runtime commit `ac46702`, canonical installer SHA-256 `7079E702AB9153DB57044F37DD8BD54C4842777D65A243C04EF16E9EF68DA007`, size 342,512,911 bytes. Installed live surface smoke GREEN; Dev managed probe Ready=True/BrowserSmokePassed=True/ToolCount=203, Admin Ready=True/BrowserSmokePassed=True/ToolCount=84. Full 240-tool capability korunuyor.
 
 - #220 **FIXED / TEST VERIFIED** — `AppendTextEncodingSourceRegression.ps1` implementation biçimine aşırı bağlıydı ve doğru çalışan descriptor-temelli encoding korumasını yanlış kırmızı gösteriyordu. Test kanonik davranışı (`ReadEncodingDescriptor` + `existingEncoding?.Encoding`) doğrulayacak şekilde güncellendi; `APPEND_TEXT_ENCODING_SOURCE_GREEN`.
 - #221 **FIXED / LIVE VERIFIED** — health handle testi her istekte yeni PowerShell web istemcisi oluşturarak gerçek health-polling modelini temsil etmiyor ve yalancı handle-leak kırmızısı üretiyordu. Health yolu süreç boyunca değişmeyen Windows-service bilgisini başlangıçta bir kez cache'liyor. Kalıcı tek `HttpClient` ile canlı **200 health isteği handle delta=0**; 100 health isteği delta=0, kontrol 404 yolu delta=1. Regression kalıcı istemciyi yeniden kullanacak şekilde düzeltildi.
