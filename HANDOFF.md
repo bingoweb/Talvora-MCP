@@ -8,17 +8,17 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Repo/remote `main`: son runtime-affecting commit `1b794b19114e00ea6268c47980e5f778f7b39dfb`; Gitea ve GitHub'a push edildi. Bu closeout dokümantasyon commit'i self-fingerprint edilmez; gerektiğinde canlı Git ile doğrula.
+- Repo/remote `main`: son runtime-affecting commit `49471630f037ce4c0a20e7fc6e4bc1c449741f93`; Gitea ve GitHub'a push edildi. Bu closeout dokümantasyon commit'i self-fingerprint edilmez; gerektiğinde canlı Git ile doğrula.
 - Çalışma ağacı: Memory Phase 6 closeout dokümantasyonu sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `1b794b19114e00ea6268c47980e5f778f7b39dfb` — Memory Handoff candidate/review workflow.
-- Exact-installed canonical runtime artifact source commit: `1b794b19114e00ea6268c47980e5f778f7b39dfb`.
-- Canonical installer SHA-256: `BBD360AD8781F5B7C78BE4A79369F9ED8284B5EC75AD8FA3848B94B35D03B3A8`; artifact size: 342,509,839 bytes.
+- Son runtime-affecting commit: `49471630f037ce4c0a20e7fc6e4bc1c449741f93` — docs-only Git HEAD drift için false-positive üretmeyen Memory Handoff review hardening.
+- Exact-installed canonical runtime artifact source commit: `49471630f037ce4c0a20e7fc6e4bc1c449741f93`.
+- Canonical installer SHA-256: `669DFECF25291CCDD37B586412535994B0FFDB10D50B36BB730E439E409EA845`; artifact size: 342,509,839 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `sourceCommit=1b794b19114e00ea6268c47980e5f778f7b39dfb` bildiriyor; kurulum zamanı 2026-09-28T20:01:30Z.
+- Exact-installed canlı Talvora runtime `sourceCommit=49471630f037ce4c0a20e7fc6e4bc1c449741f93` bildiriyor; kurulum zamanı 2026-09-28T20:11:58Z.
 - Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
 - Gitea ve GitHub `fetch --dry-run` + `push --dry-run` Talvora'nın canlı `git_run` aracıyla GREEN; SSH private key user-only kalıyor.
-- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `1b794b1...`.
+- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `4947163...`.
 - Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
