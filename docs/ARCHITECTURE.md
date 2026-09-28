@@ -4,11 +4,11 @@ Talvora intentionally starts from a clean design.
 
 ## Runtime
 
-`Talvora.exe` is a self-contained ASP.NET Core application installed as the Windows service `Talvora` under `LocalSystem`. It listens only on loopback port 7676 and maps MCP through the official C# MCP SDK's stateless HTTP transport. The backwards-compatible full surface is `/mcp` (204 tools); focused surfaces are `/mcp/dev` (174 tools) and `/mcp/admin` (91 tools).
+`Talvora.exe` is a self-contained ASP.NET Core application installed as the Windows service `Talvora` under `LocalSystem`. It listens only on loopback port 7676 and maps MCP through the official C# MCP SDK's stateless HTTP transport. The backwards-compatible full surface is `/mcp` (221 tools); focused surfaces are `/mcp/dev` (191 tools) and `/mcp/admin` (91 tools).
 
 There is no user-session gateway, named-pipe broker, compatibility shim, legacy maintenance layer, or secondary privileged process.
 
-Focused surfaces are per-request views over the same canonical tool implementation. Stateless `ConfigureSessionOptions` selects a request-local `ToolCollection` from the HTTP path, so focused filtering applies to both discovery and invocation. A tool excluded from a focused endpoint is therefore not callable through that endpoint, while the full `/mcp` endpoint preserves the complete 204-tool capability set. Development keeps source editing, build/test, Git/GitHub, package managers, containers, mobile tooling, network integration, PowerShell/process and developer diagnostics. Administration emphasizes Windows service, registry, environment, process, session, event-log, network and general system-management workflows.
+Focused surfaces are per-request views over the same canonical tool implementation. Stateless `ConfigureSessionOptions` selects a request-local `ToolCollection` from the HTTP path, so focused filtering applies to both discovery and invocation. A tool excluded from a focused endpoint is therefore not callable through that endpoint, while the full `/mcp` endpoint preserves the complete 221-tool capability set. Development keeps source editing, build/test, Git/GitHub, package managers, containers, mobile tooling, network integration, PowerShell/process and developer diagnostics. Administration emphasizes Windows service, registry, environment, process, session, event-log, network and general system-management workflows.
 
 ## Capability model
 
@@ -186,13 +186,15 @@ Schema discovery reads the standard `sqlite_schema` table with bound filters. On
 
 ## Durable agent memory
 
-Talvora Memory V1 exposes `talvora_memory_remember`, `talvora_memory_search`, `talvora_memory_get`, `talvora_memory_update`, `talvora_memory_forget`, and `talvora_memory_context`. The canonical local store is `%ProgramData%\\Talvora\\memory\\talvora-memory.db`; `TALVORA_MEMORY_DB` can override that path for isolated tests or specialist deployments.
+Talvora Memory exposes `talvora_memory_remember`, `talvora_memory_search`, `talvora_memory_get`, `talvora_memory_update`, `talvora_memory_forget`, `talvora_memory_context`, `talvora_memory_supersede`, `talvora_memory_consolidate`, and `talvora_memory_diagnostics`. The canonical local store is `%ProgramData%\\Talvora\\memory\\talvora-memory.db`; `TALVORA_MEMORY_DB` can override that path for isolated tests or specialist deployments.
 
 The canonical `memory_items` table keeps durable records separate from the search index. Records are explicitly scoped as `global`, `user`, `project`, or `session` and categorized as decision, preference, lesson, error, solution, architecture, workflow, todo, or fact. Importance, confidence, provenance, creation/update timestamps, optional expiry, and optional supersession metadata are stored with each item. V1 deliberately does not copy raw chat history into the database automatically.
 
 Retrieval uses an FTS5 external-content table over title, content, category, project, and source. INSERT/DELETE/UPDATE triggers keep the FTS index synchronized with the canonical row, and initialization can rebuild the index from canonical content. The database enables WAL, foreign keys, a bounded busy timeout, and a WAL autocheckpoint. Normal search excludes expired and superseded rows and can apply strict scope/project/session/category filters.
 
-`talvora_memory_context` turns only the highest-ranked matching records into a bounded prompt-ready block. Both item count and character count have finite ceilings so durable memory cannot silently become an unbounded MCP payload. Semantic embeddings and hybrid lexical/vector ranking are intentionally deferred until deterministic FTS retrieval has production evidence.
+`talvora_memory_context` turns only the highest-ranked matching records into a bounded prompt-ready block. Both item count and character count have finite ceilings so durable memory cannot silently become an unbounded MCP payload. Phase 2A adds deterministic provenance authority: runtime/repository evidence outranks explicit user evidence, then project documents, verified tool/test evidence, and inferred/model-generated evidence. Semantic embeddings and hybrid lexical/vector ranking remain deferred until deterministic retrieval has production evidence.
+
+`talvora_memory_supersede` retires stale information in favor of another record inside the same scope/project/session boundary. `talvora_memory_consolidate` detects exact duplicates after whitespace/case normalization, chooses a winner by source authority, confidence, importance and recency, and marks losers as superseded instead of deleting them. `talvora_memory_diagnostics` runs SQLite `PRAGMA quick_check`, reports database size plus active/expired/superseded counts, and identifies remaining normalized duplicate groups.
 
 Memory complements rather than replaces `HANDOFF.md`. The handoff remains the short human-readable canonical project checkpoint; live repository/runtime evidence also outranks stale stored memory. Later phases may use memory to propose handoff updates, contradiction resolution, consolidation, retention and automatic learning, but those behaviors are not implicit V1 write paths.
 
