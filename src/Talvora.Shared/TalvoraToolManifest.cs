@@ -212,6 +212,8 @@ public static class TalvoraToolManifest
         "talvora_memory_backup",
         "talvora_memory_restore_stage",
         "talvora_memory_restore_status",
+        "talvora_memory_handoff_candidates",
+        "talvora_memory_handoff_review",
         "talvora_memory_session_close",
         "talvora_memory_candidate_list",
         "talvora_memory_candidate_promote",
