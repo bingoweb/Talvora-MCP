@@ -14,6 +14,8 @@ internal static partial class SmokeScenarios
         var administration =
             TalvoraMcpToolSurfacePolicy.GetToolNames(
                 TalvoraMcpToolSurface.Administration);
+        var shared =
+            TalvoraMcpToolSurfacePolicy.GetSharedToolNames();
 
         if (full.Count !=
             TalvoraMcpToolSurfacePolicy.ExpectedFullToolCount)
@@ -34,6 +36,25 @@ internal static partial class SmokeScenarios
         {
             throw new InvalidOperationException(
                 $"Administration surface count mismatch. Actual={administration.Count} Expected={TalvoraMcpToolSurfacePolicy.ExpectedAdministrationToolCount}");
+        }
+
+        if (shared.Count !=
+            TalvoraMcpToolSurfacePolicy.ExpectedSharedToolCount)
+        {
+            throw new InvalidOperationException(
+                $"Shared surface count mismatch. Actual={shared.Count} Expected={TalvoraMcpToolSurfacePolicy.ExpectedSharedToolCount}");
+        }
+
+        var actualOverlap = development
+            .Intersect(administration, StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        if (!actualOverlap.SequenceEqual(
+                shared,
+                StringComparer.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Dev/Admin overlap does not match the explicit Shared tool contract.");
         }
 
         if (!TalvoraMcpToolSurfacePolicy.IsFocusedSurfaceReviewComplete())
@@ -76,6 +97,42 @@ internal static partial class SmokeScenarios
             "talvora_run_powershell",
             development: true,
             administration: true);
+        AssertSurface(
+            "talvora_process_list",
+            development: true,
+            administration: true);
+        AssertSurface(
+            "talvora_read_text",
+            development: true,
+            administration: true);
+        AssertSurface(
+            "talvora_tcp_listeners",
+            development: true,
+            administration: true);
+        AssertSurface(
+            "talvora_choco_install",
+            development: false,
+            administration: true);
+        AssertSurface(
+            "talvora_env_set",
+            development: false,
+            administration: true);
+        AssertSurface(
+            "talvora_process_kill",
+            development: false,
+            administration: true);
+        AssertSurface(
+            "talvora_job_start",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_job_read_output",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_job_stop",
+            development: true,
+            administration: false);
         AssertSurface(
             "talvora_service_restart",
             development: false,
@@ -213,30 +270,22 @@ internal static partial class SmokeScenarios
             administration,
             "talvora_system_info");
 
-        var blocked = false;
-        try
-        {
-            var bypassResult =
-                await developmentClient.CallToolAsync(
-                    "talvora_service_list",
-                    new Dictionary<string, object?>(),
-                    cancellationToken: CancellationToken.None);
-            blocked =
-                bypassResult.IsError is true;
-        }
-        catch (ModelContextProtocol.McpProtocolException ex)
-            when (ex.Message.Contains(
-                "Unknown tool",
-                StringComparison.OrdinalIgnoreCase))
-        {
-            blocked = true;
-        }
-
-        if (!blocked)
-        {
-            throw new InvalidOperationException(
-                "Development surface allowed direct invocation of an excluded administration tool.");
-        }
+        await AssertToolUnavailableAsync(
+            developmentClient,
+            "talvora_service_list",
+            "Development");
+        await AssertToolUnavailableAsync(
+            developmentClient,
+            "talvora_choco_install",
+            "Development");
+        await AssertToolUnavailableAsync(
+            developmentClient,
+            "talvora_process_kill",
+            "Development");
+        await AssertToolUnavailableAsync(
+            administrationClient,
+            "talvora_job_start",
+            "Administration");
     }
 
     private static async Task<McpClient> CreateClientAsync(
@@ -255,6 +304,36 @@ internal static partial class SmokeScenarios
                 });
         return await McpClient.CreateAsync(
             transport);
+    }
+
+    private static async Task AssertToolUnavailableAsync(
+        McpClient client,
+        string toolName,
+        string surfaceName)
+    {
+        var blocked = false;
+        try
+        {
+            var result =
+                await client.CallToolAsync(
+                    toolName,
+                    new Dictionary<string, object?>(),
+                    cancellationToken: CancellationToken.None);
+            blocked = result.IsError is true;
+        }
+        catch (ModelContextProtocol.McpProtocolException ex)
+            when (ex.Message.Contains(
+                "Unknown tool",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            blocked = true;
+        }
+
+        if (!blocked)
+        {
+            throw new InvalidOperationException(
+                $"{surfaceName} surface allowed direct invocation of excluded tool: {toolName}");
+        }
     }
 
     private static void AssertLiveSurface(

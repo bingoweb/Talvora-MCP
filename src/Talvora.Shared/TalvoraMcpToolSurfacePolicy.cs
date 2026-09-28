@@ -15,8 +15,9 @@ public enum TalvoraMcpToolSurface
 public static class TalvoraMcpToolSurfacePolicy
 {
     public const int ExpectedFullToolCount = 240;
-    public const int ExpectedDevelopmentToolCount = 210;
-    public const int ExpectedAdministrationToolCount = 91;
+    public const int ExpectedDevelopmentToolCount = 203;
+    public const int ExpectedAdministrationToolCount = 84;
+    public const int ExpectedSharedToolCount = 47;
 
     private static readonly HashSet<string> DevelopmentExcludedTools =
         new(StringComparer.Ordinal)
@@ -51,6 +52,13 @@ public static class TalvoraMcpToolSurfacePolicy
             "talvora_xml_set",
             "talvora_yaml_delete",
             "talvora_yaml_set",
+            "talvora_choco_install",
+            "talvora_choco_upgrade",
+            "talvora_choco_uninstall",
+            "talvora_choco_run",
+            "talvora_env_set",
+            "talvora_env_delete",
+            "talvora_process_kill",
         };
 
     private static readonly HashSet<string> AdministrationTools =
@@ -99,13 +107,6 @@ public static class TalvoraMcpToolSurfacePolicy
             "talvora_choco_uninstall",
             "talvora_choco_upgrade",
             "talvora_choco_run",
-            "talvora_job_get",
-            "talvora_job_list",
-            "talvora_job_start",
-            "talvora_job_stop",
-            "talvora_job_delete",
-            "talvora_job_read_output",
-            "talvora_job_write_stdin",
             "talvora_path_info",
             "talvora_list",
             "talvora_find_files",
@@ -149,6 +150,58 @@ public static class TalvoraMcpToolSurfacePolicy
             "talvora_dotenv_delete",
         };
 
+    private static readonly HashSet<string> SharedTools =
+        new(StringComparer.Ordinal)
+        {
+            "search",
+            "fetch",
+            "talvora_run_powershell",
+            "talvora_run_process",
+            "talvora_process_get",
+            "talvora_process_list",
+            "talvora_env_get",
+            "talvora_env_list",
+            "talvora_system_info",
+            "talvora_network_interfaces",
+            "talvora_tcp_connections",
+            "talvora_tcp_listeners",
+            "talvora_dns_lookup",
+            "talvora_ping",
+            "talvora_tls_inspect",
+            "talvora_wait_tcp",
+            "talvora_tcp_exchange",
+            "talvora_user_process_start",
+            "talvora_choco_info",
+            "talvora_choco_list",
+            "talvora_choco_search",
+            "talvora_path_info",
+            "talvora_list",
+            "talvora_find_files",
+            "talvora_search_text",
+            "talvora_read_text",
+            "talvora_read_text_range",
+            "talvora_tail_text",
+            "talvora_read_bytes",
+            "talvora_file_hash",
+            "talvora_file_version_info",
+            "talvora_write_bytes",
+            "talvora_create_directory",
+            "talvora_copy",
+            "talvora_move",
+            "talvora_delete",
+            "talvora_archive_list",
+            "talvora_archive_create",
+            "talvora_archive_extract",
+            "talvora_json_get",
+            "talvora_yaml_get",
+            "talvora_toml_get",
+            "talvora_ini_get",
+            "talvora_ini_list",
+            "talvora_xml_query",
+            "talvora_dotenv_get",
+            "talvora_dotenv_list",
+        };
+
     public static TalvoraMcpToolSurface ResolvePath(string? path) =>
         path?.TrimEnd('/').ToLowerInvariant() switch
         {
@@ -186,10 +239,47 @@ public static class TalvoraMcpToolSurfacePolicy
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
 
+    public static bool IsShared(string toolName) =>
+        TalvoraToolManifest.Names.Contains(
+            toolName,
+            StringComparer.Ordinal) &&
+        SharedTools.Contains(toolName);
+
+    public static IReadOnlyList<string> GetSharedToolNames() =>
+        TalvoraToolManifest.Names
+            .Where(IsShared)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
     public static bool IsFocusedSurfaceReviewComplete()
     {
         if (TalvoraToolManifest.Names.Count !=
             ExpectedFullToolCount)
+        {
+            return false;
+        }
+
+        var development =
+            GetToolNames(TalvoraMcpToolSurface.Development);
+        var administration =
+            GetToolNames(TalvoraMcpToolSurface.Administration);
+        var shared = GetSharedToolNames();
+
+        if (development.Count != ExpectedDevelopmentToolCount ||
+            administration.Count != ExpectedAdministrationToolCount ||
+            shared.Count != ExpectedSharedToolCount)
+        {
+            return false;
+        }
+
+        var actualOverlap = development
+            .Intersect(administration, StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        if (!actualOverlap.SequenceEqual(
+                shared,
+                StringComparer.Ordinal))
         {
             return false;
         }

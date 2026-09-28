@@ -182,11 +182,11 @@ http://127.0.0.1:7676/mcp
 Focused local MCP endpoints:
 
 ```text
-http://127.0.0.1:7676/mcp/dev    # 174-tool development surface
-http://127.0.0.1:7676/mcp/admin  # 91-tool administration surface
+http://127.0.0.1:7676/mcp/dev    # 203-tool development surface
+http://127.0.0.1:7676/mcp/admin  # 84-tool administration surface
 ```
 
-The full `/mcp` endpoint remains the backwards-compatible 204-tool surface. Focused endpoints only narrow discovery and invocation for clients that explicitly connect to them; they do not remove capabilities from the full endpoint.
+The full `/mcp` endpoint remains the backwards-compatible 240-tool surface. Dev and Admin deliberately share 47 reviewed diagnostics/fallback tools; every other focused tool has one primary role. Focused endpoints narrow discovery and invocation for clients that explicitly connect to them; they are product-role views, not separate privilege boundaries, and they do not remove capabilities from the full endpoint.
 
 ### 2. Connect ChatGPT Business when needed
 
@@ -217,7 +217,7 @@ The Windows CI pipeline:
 9. runs the MCP smoke suite against the installed build,
 10. cleans the CI machine.
 
-The current canonical manifest exposes **204 tools**. Runtime identity, installer provenance, full/focused surface counts and deployed binaries are verified as part of the project's release discipline.
+The current canonical manifest exposes **240 tools**. Runtime identity, installer provenance, full/focused/shared surface counts and deployed binaries are verified as part of the project's release discipline.
 
 ## Reference workstation
 

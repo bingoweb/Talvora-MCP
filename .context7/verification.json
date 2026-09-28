@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-28T21:12:00Z",
-  "scope": "Control Center information architecture: present Talvora Core Service as the shared Windows runtime and Talvora Dev/Admin as ChatGPT connections, grouped responsively without changing service, tunnel, or MCP lifecycle behavior.",
+  "verifiedAtUtc": "2026-09-28T21:28:00Z",
+  "scope": "Focused MCP surface role separation: make Dev/Admin overlap explicit through a reviewed Shared tool contract, reduce accidental cross-role discovery, and preserve the unrestricted full Talvora capability surface.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -13,7 +13,7 @@
     },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "Current ASP.NET Core MCP filter contract: ordinary AddCallToolFilter filters wrap CallTool exactly once around the downstream handler, can resolve services from request.Services, and must preserve returned CallToolResult/exception semantics. Returned failures may use IsError=true or structured result state rather than exceptions. Talvora Phase 3 therefore classifies success/failure after the downstream call, records only safe metadata, and catches all learning-side failures so observation can never alter, mask, cancel, or replace the underlying tool result."
+      "verified": "Current official C# SDK stateless HTTP guidance confirms ConfigureSessionOptions runs per request and can replace the request-local ToolCollection using current HttpContext data such as route/path. Talvora keeps one canonical implementation set and uses /mcp/dev and /mcp/admin only as request-local discovery/invocation views; the new explicit Shared contract changes membership policy, not transport or runtime privilege."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us",
@@ -41,6 +41,7 @@
     "Talvora C# parity benchmark 2026-09-28: Microsoft.ML.Tokenizers 2.0.0 + Microsoft.ML.OnnxRuntime 1.30.0 reproduced MiniLM Top-1=0.8333 / MRR=0.8958 with ~7.17 ms average query embedding on the local 12-logical-CPU machine.",
     "NuGet vulnerability/deprecation audit checked 2026-09-28: Talvora with Microsoft.ML.OnnxRuntime 1.30.0 and Microsoft.ML.Tokenizers 2.0.0 reports no vulnerable or deprecated packages.",
     "Model Context Protocol C# SDK filter documentation checked 2026-09-28: ordinary AddCallToolFilter filters wrap tools exactly once and are appropriate for logging/telemetry-style cross-cutting concerns when downstream results are preserved.",
+    "Model Context Protocol C# SDK stateless transport documentation checked 2026-09-29: ConfigureSessionOptions executes for each HTTP request and supports request-specific ToolCollection customization; Talvora's route-based Full/Dev/Admin filtering remains aligned with the official SDK model.",
     "SQLite official partial-index/WAL/transaction documentation checked 2026-09-28: selective indexes and short local transactions are suitable for bounded observation and pattern metadata.",
     "SQLite official partial-index and transaction guidance checked 2026-09-28: selective pending-row indexes and transaction-backed batch inserts are appropriate for durable workflow queues.",
     "SQLite official ALTER TABLE and PRAGMA table_info guidance checked 2026-09-28: additive columns can be introduced to existing tables after schema inspection without rebuilding the canonical table.",

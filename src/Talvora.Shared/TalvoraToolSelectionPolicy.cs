@@ -81,6 +81,58 @@ public static class TalvoraToolSelectionPolicy
             TalvoraMcpToolSurface.Administration,
             ["talvora_registry_set"]),
         new(
+            "package-install",
+            "Chocolatey ile makineye bir paket kur.",
+            true,
+            TalvoraMcpToolSurface.Administration,
+            ["talvora_choco_install"]),
+        new(
+            "package-upgrade",
+            "Chocolatey ile makinedeki paketi güncelle.",
+            true,
+            TalvoraMcpToolSurface.Administration,
+            ["talvora_choco_upgrade"]),
+        new(
+            "package-uninstall",
+            "Chocolatey ile makinedeki paketi kaldır.",
+            true,
+            TalvoraMcpToolSurface.Administration,
+            ["talvora_choco_uninstall"]),
+        new(
+            "environment-mutation",
+            "Windows kullanıcı environment variable değerini kalıcı olarak güncelle.",
+            true,
+            TalvoraMcpToolSurface.Administration,
+            ["talvora_env_set"]),
+        new(
+            "arbitrary-process-kill",
+            "Belirli PID'deki yerel Windows prosesini sonlandır.",
+            true,
+            TalvoraMcpToolSurface.Administration,
+            ["talvora_process_kill"]),
+        new(
+            "long-running-development-job",
+            "Geliştirme sunucusunu uzun süreli job olarak başlat, çıktısını oku ve gerektiğinde durdur.",
+            true,
+            TalvoraMcpToolSurface.Development,
+            [
+                "talvora_job_start",
+                "talvora_job_read_output",
+                "talvora_job_stop",
+            ]),
+        new(
+            "shared-powershell-fallback",
+            "Typed Talvora aracı yeterli değil; geliştirme klasöründeki PowerShell otomasyonunu çalıştır.",
+            true,
+            TalvoraMcpToolSurface.Development,
+            ["talvora_run_powershell"]),
+        new(
+            "shared-process-fallback",
+            "Typed sistem aracı yeterli değil; gerekli yerel executable'ı doğrudan çalıştır.",
+            true,
+            TalvoraMcpToolSurface.Administration,
+            ["talvora_run_process"]),
+        new(
             "negative-weather",
             "Bugün hava nasıl?",
             false,

@@ -64,8 +64,16 @@ $checks = [ordered]@{
     )
     SurfaceCountsArePinned = (
         $surfacePolicy.Contains('ExpectedFullToolCount = 240') -and
-        $surfacePolicy.Contains('ExpectedDevelopmentToolCount = 210') -and
-        $surfacePolicy.Contains('ExpectedAdministrationToolCount = 91')
+        $surfacePolicy.Contains('ExpectedDevelopmentToolCount = 203') -and
+        $surfacePolicy.Contains('ExpectedAdministrationToolCount = 84') -and
+        $surfacePolicy.Contains('ExpectedSharedToolCount = 47')
+    )
+    SharedSurfaceContractIsExplicit = (
+        $surfacePolicy.Contains('private static readonly HashSet<string> SharedTools') -and
+        $surfacePolicy.Contains('public static bool IsShared(string toolName)') -and
+        $surfacePolicy.Contains('public static IReadOnlyList<string> GetSharedToolNames()') -and
+        $surfacePolicy.Contains('.Intersect(administration, StringComparer.Ordinal)') -and
+        $surfacePolicy.Contains('actualOverlap.SequenceEqual(')
     )
     FocusedRecoveryRegistrationsExist = (
         $coordinator.Contains('"talvora-dev"') -and

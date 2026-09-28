@@ -3,6 +3,64 @@
 Tarih: 2026-09-19
 Durum: PLANLAMA TAMAMLANDI — implementasyon yeni oturumda başlayacak.
 
+## 2026-09-29 — Dev/Admin Focused Surface Role Separation
+
+Amaç: Talvora Dev ve Talvora Admin'in aynı Core üzerinde çalışan focused discovery yüzeyleri olma mimarisini korurken, iki yüzey arasındaki gereksiz araç tekrarını azaltmak; kalan ortak araçları tesadüfi overlap yerine açıkça review edilmiş **Shared** sözleşmesine dönüştürmek. Full `/mcp` capability hiçbir şekilde daraltılmayacak.
+
+Sabit kurallar:
+- Full `/mcp` tüm 240 reviewed tool'u yayımlamaya devam edecek; hiçbir capability kaldırılmayacak.
+- Bu çalışma bir sandbox/izin kısıtlaması değildir. LocalSystem çalışma modeli ve unrestricted general-purpose escape hatch capability korunur.
+- Dev/Admin ayrımı privilege boundary değil, **tool discovery / seçim kalitesi / ürün rolü** boundary'sidir.
+- `talvora_run_process` ve `talvora_run_powershell` geliştirme ve sistem operasyonlarında gerçek fallback gerektiği için Shared kalacak; specialized tool'lar seçimde her zaman önceliklidir.
+- Kaynak düzenleme Dev'de `read_source + apply_patch` kanonik yolunu koruyacak; Admin compatibility mutator'ları Dev'e geri açılmayacak.
+- Focused surface filtering hem `tools/list` hem invocation düzeyinde aynı policy'den türeyecek; bypass kabul edilmeyecek.
+- Yeni tool eklendiğinde Dev-only / Admin-only / Shared sınıflandırması açık review gerektirecek; accidental overlap CI'da fail edecek.
+
+### Faz A — Baseline ve overlap envanteri
+- [x] SURFACE3-001 — Canlı ChatGPT baseline çıkarıldı: Full=240, Dev=210, Admin=91.
+- [x] SURFACE3-002 — Dev/Admin exact-name overlap ölçüldü: 61 ortak tool.
+- [x] SURFACE3-003 — 61 overlap işlev ailelerine ayrıldı: filesystem/config, process/job, network, package, knowledge/diagnostic.
+- [x] SURFACE3-004 — Mevcut mimari doğrulandı: Development = Full eksi denylist; Administration = explicit allowlist; overlap şu anda ayrı review edilen bir first-class policy değil.
+- [x] SURFACE3-005 — Official MCP C# SDK güncel `ConfigureSessionOptions` guidance doğrulandı: stateless request başına ToolCollection özelleştirmesi supported; mevcut route-based focused filtering yönü korunacak.
+
+### Faz B — First-class Shared policy
+- [x] SURFACE3-006 — `TalvoraMcpToolSurfacePolicy` içine explicit `SharedTools` allowlist ekle.
+- [x] SURFACE3-007 — `ExpectedSharedToolCount` invariant ekle; ilk hedef exact Shared=47.
+- [x] SURFACE3-008 — `IsShared` / `GetSharedToolNames` API'lerini ekle; testler reflection/text parsing yerine canonical API üzerinden doğrulayabilsin.
+- [x] SURFACE3-009 — `IsFocusedSurfaceReviewComplete` yalnız union coverage değil, Dev∩Admin == Shared exact equality ve duplicate-free invariant doğrulasın.
+- [x] SURFACE3-010 — Full surface 240/240 korunurken focused target count'ları Development=203, Administration=84 olarak pinle.
+
+### Faz C — İlk güvenli yeniden sınıflandırma
+- [x] SURFACE3-011 — Admin-only yap: `talvora_choco_install`, `talvora_choco_upgrade`, `talvora_choco_uninstall`, `talvora_choco_run`.
+- [x] SURFACE3-012 — Admin-only yap: `talvora_env_set`, `talvora_env_delete`.
+- [x] SURFACE3-013 — Admin-only yap: `talvora_process_kill`; Dev process observation `process_list/get`, managed stop ise job/dev-server lifecycle ile devam etsin.
+- [x] SURFACE3-014 — Dev-only yap: `talvora_job_start/get/list/read_output/write_stdin/stop/delete`; Admin generic process/service primitivesini kullanmaya devam etsin.
+- [x] SURFACE3-015 — Shared olarak bilinçli koru: read/inspect/hash/search, process observation, network diagnostics, config getters, archive/filesystem primitives ve general-purpose process/PowerShell fallback'leri.
+- [x] SURFACE3-016 — İlk dilim sonunda overlap 61 -> 47; Dev 210 -> 203; Admin 91 -> 84 exact doğrula.
+
+### Faz D — Selection policy ve metadata kalitesi
+- [x] SURFACE3-017 — `TalvoraToolSelectionPolicy` içine package install/upgrade/uninstall -> Administration fixture'ları ekle.
+- [x] SURFACE3-018 — Environment mutation ve arbitrary PID kill -> Administration fixture'ları ekle.
+- [x] SURFACE3-019 — Long-running development job -> Development fixture ekle.
+- [x] SURFACE3-020 — Shared diagnostic fixture'ları ekle: process list, TCP listener, file read; her iki focused surface'de bulunma invariant'ını test et.
+- [x] SURFACE3-021 — Generic PowerShell/process runner'ların Shared olmasının “escape hatch, specialized tool preferred” metadata/selection sözleşmesini regression ile kilitle.
+
+### Faz E — Regression ve quality gates
+- [x] SURFACE3-022 — `FocusedMcpSurfaceSourceRegression.ps1` yeni 240/203/84/47 sayıları ve Shared contract için güncelle.
+- [ ] SURFACE3-023 — Smoke surface policy'de exact intersection equality, union coverage, focused no-bypass ve metadata parity doğrula.
+- [x] SURFACE3-024 — Talvora Shared + Service + Smoke Release build 0 warning / 0 error.
+- [x] SURFACE3-025 — Context7 quality gate + modernization/source policy gates GREEN.
+- [ ] SURFACE3-026 — Live local MCP discovery: Full=240, Dev=203, Admin=84; Dev/Admin intersection=47.
+- [ ] SURFACE3-027 — Negative invocation acceptance: Dev'de package mutation/process-kill unknown-tool; Admin'de job tools unknown-tool.
+
+### Faz F — Dokümantasyon, yayın ve canlı kabul
+- [x] SURFACE3-028 — README + `docs/ARCHITECTURE.md` focused surface rol ve sayıları güncelle; “privilege boundary değildir” gerçeğini açık yaz.
+- [x] SURFACE3-029 — Control Center protocol probe representative tool'larını yeni yüzey sözleşmesine göre doğrula.
+- [ ] SURFACE3-030 — Explicit-file commit; Gitea origin/main + GitHub github/main eşitle.
+- [ ] SURFACE3-031 — Canonical installer build + SYSTEM deploy; exact-installed sourceCommit doğrula.
+- [ ] SURFACE3-032 — Installed live surface smoke + Dev/Admin Business tunnel readiness GREEN.
+- [ ] SURFACE3-033 — HANDOFF/BUG-AUDIT closeout; yalnız gerçek devre sonunda yaşayan belge güncelle.
+
 ## 2026-09-26 — Penpot / Talvora MCP Integration
 
 - [x] PENPOT-001 — Penpot 2.18.0 self-host Docker stack `C:\ProgramData\Talvora\Penpot` altında kuruldu; frontend yalnız `127.0.0.1:9001` üzerinde publish ediliyor.
