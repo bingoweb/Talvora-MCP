@@ -57,6 +57,7 @@ Assert-Contains $store 'AND ($session IS NULL OR m.session = $session)' 'semanti
 Assert-Contains $store 'AND ($category IS NULL OR m.category = $category)' 'semantic retrieval enforces category boundary'
 Assert-Contains $store 'AND e.item_updated_utc = m.updated_utc' 'stale vectors are excluded from search'
 Assert-Contains $store 'SemanticScanLimit = 5000' 'semantic scan has a finite bound'
+Assert-Contains $store 'MinimumSemanticSimilarity = 0.25d' 'semantic noise floor is explicit'
 Assert-Contains $store '(0.35d * lexicalScore)' 'hybrid lexical weight is explicit'
 Assert-Contains $store '(0.45d * semanticScore)' 'hybrid semantic weight is explicit'
 Assert-Contains $store 'batchSize is < 1 or > 500' 're-embedding batch is bounded'

@@ -7,6 +7,7 @@ namespace Talvora.Memory;
 public sealed partial class TalvoraMemoryStore
 {
     private const int SemanticScanLimit = 5000;
+    private const double MinimumSemanticSimilarity = 0.25d;
 
     public async Task<TalvoraMemorySearchResult> SearchAsync(
         string query,
@@ -107,7 +108,9 @@ public sealed partial class TalvoraMemoryStore
                     candidate.SemanticScore is null
                         ? 0d
                         : Math.Clamp(
-                            (candidate.SemanticScore.Value + 1d) / 2d,
+                            (candidate.SemanticScore.Value -
+                             MinimumSemanticSimilarity) /
+                            (1d - MinimumSemanticSimilarity),
                             0d,
                             1d);
                 var ageDays = Math.Max(
@@ -363,6 +366,11 @@ public sealed partial class TalvoraMemoryStore
             var vector = DeserializeVector(
                 (byte[])reader.GetValue(17),
                 embeddingProvider.Dimensions);
+            var similarity = Dot(queryVector, vector);
+            if (similarity < MinimumSemanticSimilarity)
+            {
+                continue;
+            }
             hits.Add(
                 new SemanticCandidate(
                     ReadItem(reader),
@@ -370,7 +378,7 @@ public sealed partial class TalvoraMemoryStore
                         reader.IsDBNull(9)
                             ? null
                             : reader.GetString(9)),
-                    Dot(queryVector, vector)));
+                    similarity));
         }
         return hits
             .OrderByDescending(hit => hit.SemanticScore)
