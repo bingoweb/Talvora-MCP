@@ -63,14 +63,14 @@ internal static class ControlCenterDashboardService
 
         var summary = ordered.Count switch
         {
-            0 => "Henüz yönetilen MCP yok",
+            0 => "Henüz yönetilen bileşen yok",
             _ when offline > 0 => "Müdahale gerekiyor",
-            _ when attention > 0 => $"{attention} MCP dikkat istiyor",
+            _ when attention > 0 => $"{attention} bileşen dikkat istiyor",
             _ => "Her şey hazır",
         };
 
         var technical =
-            $"{ordered.Count} MCP • {ready} hazır • {attention + offline} sorunlu" +
+            $"{ordered.Count} bileşen • {ready} hazır • {attention + offline} sorunlu" +
             (onDemandStopped > 0
                 ? $" • {onDemandStopped} isteğe bağlı kapalı"
                 : string.Empty) +

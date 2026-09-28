@@ -19,8 +19,8 @@ internal sealed class TalvoraManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDi
         return new ManagedMcpRegistration
         {
             Id = Id,
-            DisplayName = "Talvora MCP",
-            Description = "Talvora yerel MCP Windows servisi. Dev ve Admin güvenli tünelleri ayrı yönetilir.",
+            DisplayName = "Talvora Core Service",
+            Description = "Ana Talvora motoru. Dev ve Admin ChatGPT bağlantıları bu Windows servisini kullanır.",
             Endpoint = TalvoraConstants.McpUrl,
             HealthEndpoint = TalvoraConstants.HealthUrl,
             AutoStart = true,

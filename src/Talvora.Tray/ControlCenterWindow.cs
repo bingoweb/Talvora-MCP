@@ -70,7 +70,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     private ComboBox _filterBox = null!;
     private DispatcherTimer _dashboardFilterDebounceTimer = null!;
     private UiButton _refreshButton = null!;
-    private WrapPanel _cardsPanel = null!;
+    private StackPanel _cardsPanel = null!;
     private Border _loadingState = null!;
     private TextBlock _emptyState = null!;
     private ScrollViewer _dashboardScroller = null!;
@@ -505,13 +505,13 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         var sectionTitleStack = new StackPanel();
         sectionTitleStack.Children.Add(new TextBlock
         {
-            Text = "Yönetilen MCP'ler",
+            Text = "Yönetilen bileşenler",
             FontSize = 18,
             FontWeight = FontWeights.SemiBold,
         });
         sectionTitleStack.Children.Add(new TextBlock
         {
-            Text = "Servis, MCP sunucusu ve tünel zincirlerini tek yerden yönetin.",
+            Text = "Talvora Core, ChatGPT bağlantıları ve diğer MCP bileşenlerini tek yerden yönetin.",
             Margin = new Thickness(0, 4, 0, 0),
             Foreground = SecondaryTextBrush,
             FontSize = 12,
@@ -556,10 +556,10 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         {
             MinWidth = 300,
             Style = FindStyle("TalvoraSearchBoxStyle"),
-            PlaceholderText = "MCP ara",
+            PlaceholderText = "Bileşen ara",
             ClearButtonEnabled = true,
             Icon = new SymbolIcon { Symbol = SymbolRegular.Search20 },
-            ToolTip = "Ad veya açıklamaya göre MCP ara",
+            ToolTip = "Ad veya açıklamaya göre bileşen ara",
         };
         _searchBox.TextChanged += (_, _) => ScheduleDashboardFilter();
         searchStack.Children.Add(_searchBox);
@@ -615,7 +615,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             Style = FindStyle("TalvoraSubtleCardStyle"),
             Child = new TextBlock
             {
-                Text = "MCP durumları kontrol ediliyor...",
+                Text = "Bileşen durumları kontrol ediliyor...",
                 Foreground = SecondaryTextBrush,
                 FontSize = 14,
             },
@@ -633,10 +633,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         };
         content.Children.Add(_emptyState);
 
-        _cardsPanel = new WrapPanel
-        {
-            Orientation = Orientation.Horizontal,
-        };
+        _cardsPanel = new StackPanel();
         content.Children.Add(_cardsPanel);
 
         content.Children.Add(BuildEventsPanel());
@@ -678,7 +675,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             _healthSummaryDot.Background = GetSummaryBrush(snapshot);
             _technicalSummaryText.Text = snapshot.TechnicalSummary;
             _dashboardSectionMeta.Text =
-                $"{snapshot.Mcps.Count} MCP • {snapshot.ReadyCount} hazır";
+                $"{snapshot.Mcps.Count} bileşen • {snapshot.ReadyCount} hazır";
             _lastRefreshText.Text = $"Son kontrol {DateTime.Now:HH:mm:ss}";
             _filterBox.Visibility = snapshot.Mcps.Count >= 4
                 ? Visibility.Visible
@@ -756,14 +753,31 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             .ToList();
 
         _cardsPanel.Children.Clear();
-        foreach (var state in visible)
+        var talvoraFamily = visible
+            .Where(state => IsTalvoraFamily(state.Registration.Id))
+            .OrderBy(state => GetTalvoraRoleOrder(state.Registration.Id))
+            .ToList();
+        var otherMcps = visible
+            .Where(state => !IsTalvoraFamily(state.Registration.Id))
+            .ToList();
+        if (talvoraFamily.Count > 0)
         {
-            _cardsPanel.Children.Add(CreateMcpCard(state));
+            _cardsPanel.Children.Add(CreateDashboardSection(
+                "Talvora",
+                "Bir çekirdek servis ve onu kullanan Dev/Admin ChatGPT bağlantıları.",
+                talvoraFamily));
+        }
+        if (otherMcps.Count > 0)
+        {
+            _cardsPanel.Children.Add(CreateDashboardSection(
+                "Diğer MCP'ler",
+                "Talvora'dan bağımsız yönetilen yerel MCP ve entegrasyonlar.",
+                otherMcps));
         }
 
         _emptyState.Text = _snapshot.Mcps.Count == 0
-            ? "Henüz yönetilen bir MCP bulunamadı."
-            : "Aramanızla eşleşen MCP yok.";
+            ? "Henüz yönetilen bir bileşen bulunamadı."
+            : "Aramanızla eşleşen bileşen yok.";
         _emptyState.Visibility = visible.Count == 0
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -771,6 +785,56 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         UpdateCardWidths();
     }
 
+    private StackPanel CreateDashboardSection(
+        string title,
+        string description,
+        IReadOnlyList<ManagedMcpDashboardState> states)
+    {
+        var section = new StackPanel
+        {
+            Margin = new Thickness(0, 0, 0, 8),
+        };
+        var header = new StackPanel
+        {
+            Margin = new Thickness(0, 0, 0, 10),
+        };
+        header.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 14,
+            FontWeight = FontWeights.SemiBold,
+        });
+        header.Children.Add(new TextBlock
+        {
+            Text = description,
+            Margin = new Thickness(0, 3, 0, 0),
+            Foreground = TertiaryTextBrush,
+            FontSize = 11,
+        });
+        section.Children.Add(header);
+        var cards = new WrapPanel
+        {
+            Orientation = Orientation.Horizontal,
+        };
+        foreach (var state in states)
+        {
+            cards.Children.Add(CreateMcpCard(state));
+        }
+        section.Children.Add(cards);
+        return section;
+    }
+    private static bool IsTalvoraFamily(string id) =>
+        string.Equals(id, "talvora", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(id, "talvora-dev", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(id, "talvora-admin", StringComparison.OrdinalIgnoreCase);
+    private static int GetTalvoraRoleOrder(string id) =>
+        id.ToLowerInvariant() switch
+        {
+            "talvora" => 0,
+            "talvora-dev" => 1,
+            "talvora-admin" => 2,
+            _ => 3,
+        };
     private void ScheduleDashboardFilter()
     {
         _dashboardFilterDebounceTimer.Stop();
@@ -808,6 +872,18 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             Margin = new Thickness(14, 0, 12, 0),
             VerticalAlignment = VAlign.Center,
         };
+        var roleLabel = GetMcpRoleLabel(state.Registration.Id);
+        if (roleLabel is not null)
+        {
+            titleStack.Children.Add(new TextBlock
+            {
+                Text = roleLabel,
+                Margin = new Thickness(0, 0, 0, 2),
+                Foreground = AccentBrush,
+                FontSize = 10,
+                FontWeight = FontWeights.SemiBold,
+            });
+        }
         titleStack.Children.Add(new TextBlock
         {
             Text = state.Registration.DisplayName,
@@ -919,6 +995,13 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         return card;
     }
 
+    private static string? GetMcpRoleLabel(string id) =>
+        id.ToLowerInvariant() switch
+        {
+            "talvora" => "ÇEKİRDEK SERVİS",
+            "talvora-dev" or "talvora-admin" => "CHATGPT BAĞLANTISI",
+            _ => null,
+        };
     private UIElement CreateLogo(Talvora.Shared.ManagedMcpRegistration registration)
     {
         var source = McpLogoResolver.TryResolve(registration.Id);
@@ -972,21 +1055,31 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             return;
         }
 
-        var available = Math.Max(320, _cardsPanel.ActualWidth);
-        var columns = available >= 1040
-            ? 3
-            : available >= 680
-                ? 2
-                : 1;
-        var gaps = 16 * (columns - 1);
-        var cardWidth = Math.Max(
-            300,
-            Math.Floor((available - gaps) / columns) -
-            (columns == 1 ? 0 : 1));
 
-        foreach (var child in _cardsPanel.Children.OfType<Border>())
+        foreach (var section in _cardsPanel.Children.OfType<StackPanel>())
         {
-            child.Width = cardWidth;
+            foreach (var panel in section.Children.OfType<WrapPanel>())
+            {
+                var available = Math.Max(
+                    320,
+                    panel.ActualWidth > 0
+                        ? panel.ActualWidth
+                        : _cardsPanel.ActualWidth);
+                var columns = available >= 1040
+                    ? 3
+                    : available >= 680
+                        ? 2
+                        : 1;
+                var gaps = 16 * (columns - 1);
+                var cardWidth = Math.Max(
+                    300,
+                    Math.Floor((available - gaps) / columns) -
+                    (columns == 1 ? 0 : 1));
+                foreach (var child in panel.Children.OfType<Border>())
+                {
+                    child.Width = cardWidth;
+                }
+            }
         }
     }
 
