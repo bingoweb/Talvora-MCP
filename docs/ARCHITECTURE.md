@@ -184,6 +184,18 @@ Query results preserve SQLite's dynamic storage classes in a structured cell rep
 
 Schema discovery reads the standard `sqlite_schema` table with bound filters. Online backup uses `SqliteConnection.BackupDatabase`, writes to any accessible destination path, and returns file length plus SHA-256 so callers can verify the artifact. These structured tools add ergonomics without changing the general-purpose process/PowerShell primitives, so external SQLite tools and migration stacks remain fully reachable.
 
+## Durable agent memory
+
+Talvora Memory V1 exposes `talvora_memory_remember`, `talvora_memory_search`, `talvora_memory_get`, `talvora_memory_update`, `talvora_memory_forget`, and `talvora_memory_context`. The canonical local store is `%ProgramData%\\Talvora\\memory\\talvora-memory.db`; `TALVORA_MEMORY_DB` can override that path for isolated tests or specialist deployments.
+
+The canonical `memory_items` table keeps durable records separate from the search index. Records are explicitly scoped as `global`, `user`, `project`, or `session` and categorized as decision, preference, lesson, error, solution, architecture, workflow, todo, or fact. Importance, confidence, provenance, creation/update timestamps, optional expiry, and optional supersession metadata are stored with each item. V1 deliberately does not copy raw chat history into the database automatically.
+
+Retrieval uses an FTS5 external-content table over title, content, category, project, and source. INSERT/DELETE/UPDATE triggers keep the FTS index synchronized with the canonical row, and initialization can rebuild the index from canonical content. The database enables WAL, foreign keys, a bounded busy timeout, and a WAL autocheckpoint. Normal search excludes expired and superseded rows and can apply strict scope/project/session/category filters.
+
+`talvora_memory_context` turns only the highest-ranked matching records into a bounded prompt-ready block. Both item count and character count have finite ceilings so durable memory cannot silently become an unbounded MCP payload. Semantic embeddings and hybrid lexical/vector ranking are intentionally deferred until deterministic FTS retrieval has production evidence.
+
+Memory complements rather than replaces `HANDOFF.md`. The handoff remains the short human-readable canonical project checkpoint; live repository/runtime evidence also outranks stale stored memory. Later phases may use memory to propose handoff updates, contradiction resolution, consolidation, retention and automatic learning, but those behaviors are not implicit V1 write paths.
+
 ## Configuration formats and test reports
 
 The configuration-format suite exposes `talvora_dotenv_list`, `talvora_dotenv_get`, `talvora_dotenv_set`, `talvora_dotenv_delete`, `talvora_ini_list`, `talvora_ini_get`, `talvora_ini_set`, `talvora_ini_delete`, `talvora_xml_query`, `talvora_xml_set`, `talvora_xml_delete`, `talvora_yaml_get`, `talvora_yaml_set`, `talvora_yaml_delete`, `talvora_toml_get`, `talvora_toml_set`, `talvora_toml_delete`, and `talvora_test_report_summary`.

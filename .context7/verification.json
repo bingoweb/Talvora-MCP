@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-27T20:31:00Z",
-  "scope": "Talvora runtime error cleanup: service-hosted self-update uses a detached delayed bootstrap so SCM STOP can complete gracefully, smoke failures return controlled nonzero exits, and detached update worklog completion remains truthful until the restarted runtime is separately verified.",
+  "verifiedAtUtc": "2026-09-28T16:17:00Z",
+  "scope": "Talvora Memory V1: local durable scoped memory uses SQLite WAL, transactional writes and FTS5 external-content indexing with synchronization triggers. Retrieval is bounded and filtered by memory scope/project/session/category.",
   "libraries": [
+    {
+      "libraryId": "/websites/sqlite_docs",
+      "verified": "Current SQLite guidance supports FTS5 external-content tables linked to a canonical content table through content/content_rowid plus INSERT/DELETE/UPDATE synchronization triggers; the rebuild command restores index consistency. WAL mode supports concurrent readers with a writer while SQLite still permits only one pending writer. Talvora Memory V1 uses this model with a bounded busy timeout and parameterized Microsoft.Data.Sqlite commands."
+    },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
       "verified": "Current ASP.NET Core MCP filter contract: AddCallToolFilter can wrap every CallTool request while preserving the downstream tool result. Ordinary tool failures may be returned as CallToolResult with IsError=true rather than thrown; cancellation/protocol exceptions retain their documented semantics. Talvora therefore detects thrown and returned failures, aggregates concurrent meaningful calls into one user-facing worklog card, and wraps start/progress/terminal notification side effects so observability can never alter, mask, cancel, or replace the underlying tool result."
@@ -25,6 +29,8 @@
     }
   ],
   "vendorSources": [
+    "SQLite official FTS5 documentation checked 2026-09-28: external-content tables require synchronization with the content table and can rebuild the index from canonical content.",
+    "Microsoft.Data.Sqlite transaction documentation checked 2026-09-28: transactions are atomic and SQLite permits one transaction with pending changes at a time, so bounded busy timeout/conservative write transactions remain appropriate for Talvora Memory V1.",
     "NuGet Gallery current stable package metadata checked 2026-09-27",
     "GitHub actions/checkout v7.0.1 release checked 2026-09-27",
     "GitHub actions/setup-dotnet v6.0.0 release checked 2026-09-27",

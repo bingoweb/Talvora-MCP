@@ -225,6 +225,8 @@ await SmokeScenarios.RunRegistryAsync(byName, smokeId);
 
 await SmokeScenarios.RunSqliteAsync(byName, smokeId);
 
+await SmokeScenarios.RunMemoryAsync(byName, smokeId);
+
 await SmokeScenarios.RunStructuredConfigAsync(byName, smokeId);
 
 await SmokeScenarios.RunDevServerAsync(byName, smokeId, repositoryPath);
