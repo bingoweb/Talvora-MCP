@@ -8,17 +8,17 @@ Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Esk
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Repo/remote `main`: runtime-affecting commit `73921d7d0d3f7c4f04d3a4886ccc2beddc1f7ad2`; Gitea ve GitHub'a push edildi.
-- Çalışma ağacı: Memory Phase 2A closeout dokümantasyonu sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Son runtime-affecting commit: `73921d7d0d3f7c4f04d3a4886ccc2beddc1f7ad2` — Talvora Memory quality controls.
-- Exact-installed canonical runtime artifact source commit: `73921d7d0d3f7c4f04d3a4886ccc2beddc1f7ad2`.
-- Canonical installer SHA-256: `09C99855FDBD24B792179A8D8A47ADABDB4E0B3A2B1C32F2BD80E617756A4C6D`; artifact size: 262,165,775 bytes.
+- Repo/remote `main`: runtime-affecting commit `526a937967b6fb827cce38b9fa97d484c97206d1`; Gitea ve GitHub'a push edildi.
+- Çalışma ağacı: Memory Phase 2B closeout dokümantasyonu sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
+- Son runtime-affecting commit: `526a937967b6fb827cce38b9fa97d484c97206d1` — retention + stale evidence + project identity.
+- Exact-installed canonical runtime artifact source commit: `526a937967b6fb827cce38b9fa97d484c97206d1`.
+- Canonical installer SHA-256: `986DBE47D8DE24959CAD1C86FAADF8ECE52C656A1D5FB3C1DEBC55C689CE0C39`; artifact size: 262,169,871 bytes.
 - Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
 - GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `sourceCommit=73921d7d0d3f7c4f04d3a4886ccc2beddc1f7ad2` bildiriyor; kurulum zamanı 2026-09-28T16:49:31Z.
+- Exact-installed canlı Talvora runtime `sourceCommit=526a937967b6fb827cce38b9fa97d484c97206d1` bildiriyor; kurulum zamanı 2026-09-28T17:04:29Z.
 - Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
 - Gitea ve GitHub `fetch --dry-run` + `push --dry-run` Talvora'nın canlı `git_run` aracıyla GREEN; SSH private key user-only kalıyor.
-- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `73921d7...`.
+- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `526a937...`.
 - Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
 
 ## Mevcut ürün/mimari baseline
@@ -38,7 +38,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
   - SHA-256 optimistic concurrency, durable WAL/receipt, rollback/recovery, idempotency/tombstone, source mutation policy
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
 - Focused MCP yüzeyleri canlı discovery ile **Full 221 / Dev 191 / Admin 91** doğrulandı. Dokuz Memory aracı Full+Dev yüzeylerinde var, Admin yüzeyinde yok.
-- Talvora Memory V1 + Phase 2A canlıdır: `talvora_memory_remember/search/get/update/forget/context/supersede/consolidate/diagnostics`. Kanonik DB `%ProgramData%\Talvora\memory\talvora-memory.db`; SQLite WAL + FTS5 external-content index kullanır. Retrieval kaynak otoritesini runtime/repository > explicit user > project doc > verified tool > inferred şeklinde sıralar. Exact duplicate consolidation düşük otoriteli kayıtları silmez; kazanan kayda supersede ederek audit geçmişini korur. Diagnostics canlıda `PRAGMA quick_check=ok`. Ham sohbet geçmişi otomatik kaydedilmez.
+- Talvora Memory V1 + Phase 2A + Phase 2B canlıdır. Phase 2B, additive migration ile `retention_class` + `claim_key` ekler; retention sınıfları otomatik expiry üretir; project identity path/URL varyasyonlarını canonical kimliğe normalize eder; aynı claim için daha yüksek otoriteli runtime/repository kanıtı düşük otoriteli eski memory'yi otomatik supersede eder. Audit kaydı silinmez. Canlı acceptance: ephemeral retention yaklaşık 24 saat, canonical project `c:/users/tayla/repos/talvora-mcp`, stale suppression GREEN, diagnostics `quick_check=ok`.
 - 2026-09-27 repository-wide audit: çözüm build/analyzer temiz; vulnerable/deprecated NuGet bulgusu yok; Source Edit focused alt-regresyonları, metadata/surface/privacy/shared-infrastructure smoke ve live metadata/surface policy GREEN. Installer Tray process polling handle sahipliği düzeltildi; health handle regression kalıcı istemci modeline düzeltildi ve canlı 200 istekte **delta=0**; dört kopya `FirstNonEmptyLine` ortak `TextLines.FirstNonEmpty` helper'ına indirildi; stale append encoding regression düzeltildi.
 - Final 212-tool full smoke **GREEN**. Kapanış sırasında `target=user` environment persistence aktif kullanıcının gerçek `HKU\<SID>\Environment` hive'ına deterministik hale getirildi; smoke user-process probe argüman yarışı giderildi; nullable continuation alanının JSON'da omitted olabilmesi teste işlendi; Yarn/Corepack info probe'u 10 saniyelik bounded/non-download probe'a dönüştürüldü.
 - Masaüstü çalışma günlüğü zorunlu runtime sözleşmesidir: her MCP çağrısı sarmaldan geçer, düşük değerli read/search/health çağrıları sessizdir. Anlamlı iş tek kartta **Şimdi bunu yapıyorum** -> 30 saniyeyi aşarsa **Hâlâ bununla uğraşıyorum** -> **Bitti / Bir hata buldum** akışını kullanır. Aktif kart iş bitmeden kaybolmaz; başarı yaklaşık 3 dakika, hata yaklaşık 5 dakika okunabilir kalır. Hata sonucu exception olmak zorunda değildir: MCP `IsError`, structured `success=false`, nonzero sonuç ve timeout da sade kullanıcı diliyle failure kartına dönüşür. Teknik tool/komut/stack trace/exit-code metni kullanıcı kartına sızdırılmaz.
@@ -46,7 +46,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Smoke test failure sınırı artık top-level exception'ı kontrollü nonzero exit + stderr'e çevirir; kasıtlı failure acceptance'ta yeni Windows Application Error/.NET Runtime crash kaydı oluşmadı. Önceki 212-tool full-smoke baseline GREEN; Memory V1 için hedefli canlı smoke ayrıca GREEN.
 - Detached self-update masaüstü kartı `TALVORA_UPDATE_DETACHED` gerçek marker'ını okuyup `Kurucuya devrettim` mesajı gösterir; yeni runtime doğrulanmadan `etkinleştirdim` iddiasında bulunmaz.
 - Focused Dev/Admin tunnel registry + config + DPAPI runtime credential recovery canlı doğrulandı; tunnel-client Dev/Admin için `process_running/healthy/ready=true`; güncel canlı MCP discovery Dev=191 / Admin=91.
-- Önceki 212-tool full-smoke baseline GREEN. Güncel Memory Phase 2A değişikliğinde Release build 0 warning/0 error, focused-surface source regression, modernization policy, privacy/security source regression ve canlı source-authority/consolidation/supersession/diagnostics smoke GREEN.
+- Önceki 212-tool full-smoke baseline GREEN. Güncel Memory Phase 2B değişikliğinde Release build 0 warning/0 error, focused-surface source regression, modernization policy, privacy/security source regression ve canlı retention/project-normalization/stale-claim suppression smoke GREEN.
 
 ## Penpot / Talvora entegrasyonu — CURRENT
 
