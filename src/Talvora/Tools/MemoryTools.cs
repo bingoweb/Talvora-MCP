@@ -26,12 +26,14 @@ public static class MemoryTools
         string? source = null,
         string? sourceReference = null,
         DateTimeOffset? expiresAtUtc = null,
+        string? retentionClass = null,
+        string? claimKey = null,
         CancellationToken cancellationToken = default)
     {
         var item = await TalvoraMemoryRuntime.Store.RememberAsync(
             scope, category, title, content, project, session,
             importance, confidence, source, sourceReference,
-            expiresAtUtc, cancellationToken);
+            expiresAtUtc, retentionClass, claimKey, cancellationToken);
         return new TalvoraMemoryMutationResult(true, item.Id, item);
     }
 
@@ -86,12 +88,15 @@ public static class MemoryTools
         string? source = null,
         string? sourceReference = null,
         DateTimeOffset? expiresAtUtc = null,
+        string? retentionClass = null,
+        string? claimKey = null,
         string? supersededBy = null,
         CancellationToken cancellationToken = default)
     {
         var item = await TalvoraMemoryRuntime.Store.UpdateAsync(
             id, category, title, content, importance, confidence,
-            source, sourceReference, expiresAtUtc, supersededBy,
+            source, sourceReference, expiresAtUtc,
+            retentionClass, claimKey, supersededBy,
             cancellationToken);
         return new TalvoraMemoryMutationResult(item is not null, id, item);
     }

@@ -369,6 +369,126 @@ internal static partial class SmokeScenarios
                     "superseded memory remained in normal retrieval.");
             }
 
+            var retention = await EnsureSuccess(
+                byName["talvora_memory_remember"],
+                new()
+                {
+                    ["scope"] = "project",
+                    ["project"] = project,
+                    ["category"] = "fact",
+                    ["title"] = "Retention smoke",
+                    ["content"] = $"{token} retention-ephemeral",
+                    ["retentionClass"] = "ephemeral",
+                    ["source"] = "smoke",
+                });
+            var retentionJson =
+                retention.StructuredContent?.GetProperty("item")
+                ?? throw new InvalidOperationException(
+                    "retention memory returned no item.");
+            var retentionId =
+                retentionJson.GetProperty("id").GetString()
+                ?? throw new InvalidOperationException(
+                    "retention memory returned no id.");
+            createdIds.Add(retentionId);
+            var retentionExpiry =
+                retentionJson.GetProperty("expiresAtUtc").GetDateTimeOffset();
+            var retentionRemaining =
+                retentionExpiry - DateTimeOffset.UtcNow;
+            if (!string.Equals(
+                    retentionJson.GetProperty("retentionClass").GetString(),
+                    "ephemeral",
+                    StringComparison.Ordinal) ||
+                retentionRemaining < TimeSpan.FromHours(23) ||
+                retentionRemaining > TimeSpan.FromHours(25))
+            {
+                throw new InvalidOperationException(
+                    "memory retention policy did not derive one-day expiry.");
+            }
+
+            var projectVariantA =
+                $@"C:\Users\TAYLA\Repos\{token}\";
+            var projectVariantB =
+                $"c:/users/tayla/repos/{token}";
+            var claimKey = $"{token} active-runtime-state";
+            var lowClaim = await EnsureSuccess(
+                byName["talvora_memory_remember"],
+                new()
+                {
+                    ["scope"] = "project",
+                    ["project"] = projectVariantA,
+                    ["category"] = "fact",
+                    ["title"] = "Old inferred state",
+                    ["content"] = $"{token} claim-old",
+                    ["claimKey"] = claimKey,
+                    ["source"] = "inferred",
+                });
+            var lowClaimItem =
+                lowClaim.StructuredContent?.GetProperty("item")
+                ?? throw new InvalidOperationException(
+                    "low-authority claim returned no item.");
+            var lowClaimId =
+                lowClaimItem.GetProperty("id").GetString()
+                ?? throw new InvalidOperationException(
+                    "low-authority claim returned no id.");
+            createdIds.Add(lowClaimId);
+            if (!string.Equals(
+                    lowClaimItem.GetProperty("project").GetString(),
+                    projectVariantB,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "memory project identity normalization failed.");
+            }
+
+            var highClaim = await EnsureSuccess(
+                byName["talvora_memory_remember"],
+                new()
+                {
+                    ["scope"] = "project",
+                    ["project"] = projectVariantB,
+                    ["category"] = "fact",
+                    ["title"] = "Runtime verified state",
+                    ["content"] = $"{token} claim-new",
+                    ["claimKey"] = claimKey,
+                    ["source"] = "runtime",
+                });
+            var highClaimId =
+                highClaim.StructuredContent
+                    ?.GetProperty("id")
+                    .GetString()
+                ?? throw new InvalidOperationException(
+                    "high-authority claim returned no id.");
+            createdIds.Add(highClaimId);
+
+            var lowClaimGet = await EnsureSuccess(
+                byName["talvora_memory_get"],
+                new() { ["id"] = lowClaimId });
+            if (lowClaimGet.StructuredContent is not { } lowClaimGetJson ||
+                !string.Equals(
+                    lowClaimGetJson.GetProperty("item")
+                        .GetProperty("supersededBy")
+                        .GetString(),
+                    highClaimId,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "higher-authority claim did not suppress stale memory.");
+            }
+
+            var lowClaimSearch = await EnsureSuccess(
+                byName["talvora_memory_search"],
+                new()
+                {
+                    ["query"] = "claim-old",
+                    ["project"] = projectVariantA,
+                });
+            if (lowClaimSearch.StructuredContent is not { } lowClaimSearchJson ||
+                lowClaimSearchJson.GetProperty("count").GetInt32() != 0)
+            {
+                throw new InvalidOperationException(
+                    "stale claim remained in normal retrieval.");
+            }
+
             var forget = await EnsureSuccess(
                 byName["talvora_memory_forget"],
                 new() { ["id"] = firstId });

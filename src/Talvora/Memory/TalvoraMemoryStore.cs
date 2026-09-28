@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 
 namespace Talvora.Memory;
 
-public sealed class TalvoraMemoryStore
+public sealed partial class TalvoraMemoryStore
 {
     private const int BusyTimeoutMilliseconds = 5000;
     private static readonly HashSet<string> ValidScopes =
@@ -40,6 +40,8 @@ public sealed class TalvoraMemoryStore
         string? source,
         string? sourceReference,
         DateTimeOffset? expiresAtUtc,
+        string? retentionClass,
+        string? claimKey,
         CancellationToken cancellationToken)
     {
         ValidateScope(scope);
@@ -51,6 +53,12 @@ public sealed class TalvoraMemoryStore
         await EnsureInitializedAsync(cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
+        var normalizedProject = NormalizeProjectIdentity(project);
+        var normalizedClaimKey = NormalizeClaimKey(claimKey);
+        var resolvedRetention =
+            ResolveRetentionClass(scope, category, retentionClass);
+        var resolvedExpiry =
+            ResolveExpiry(now, resolvedRetention, expiresAtUtc);
         var id = Guid.NewGuid().ToString("N");
         await using var connection = await OpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
@@ -59,15 +67,17 @@ public sealed class TalvoraMemoryStore
             INSERT INTO memory_items(
                 id, scope, project, session, category, title, content,
                 importance, confidence, source, source_ref,
-                created_utc, updated_utc, expires_utc)
+                created_utc, updated_utc, expires_utc,
+                retention_class, claim_key)
             VALUES(
                 $id, $scope, $project, $session, $category, $title, $content,
                 $importance, $confidence, $source, $sourceRef,
-                $createdUtc, $updatedUtc, $expiresUtc);
+                $createdUtc, $updatedUtc, $expiresUtc,
+                $retentionClass, $claimKey);
             """;
         Add(command, "$id", id);
         Add(command, "$scope", scope);
-        Add(command, "$project", NormalizeOptional(project));
+        Add(command, "$project", normalizedProject);
         Add(command, "$session", NormalizeOptional(session));
         Add(command, "$category", category);
         Add(command, "$title", title.Trim());
@@ -78,10 +88,14 @@ public sealed class TalvoraMemoryStore
         Add(command, "$sourceRef", NormalizeOptional(sourceReference));
         Add(command, "$createdUtc", Format(now));
         Add(command, "$updatedUtc", Format(now));
-        Add(command, "$expiresUtc", expiresAtUtc is null ? null : Format(expiresAtUtc.Value));
+        Add(command, "$expiresUtc", resolvedExpiry is null ? null : Format(resolvedExpiry.Value));
+        Add(command, "$retentionClass", resolvedRetention);
+        Add(command, "$claimKey", normalizedClaimKey);
         await command.ExecuteNonQueryAsync(cancellationToken);
 
-        return (await GetAsync(id, cancellationToken))!;
+        var item = (await GetAsync(id, cancellationToken))!;
+        await SuppressStaleClaimsAsync(item, cancellationToken);
+        return item;
     }
 
     public async Task<TalvoraMemoryItem?> GetAsync(
@@ -96,7 +110,8 @@ public sealed class TalvoraMemoryStore
             """
             SELECT id, scope, project, session, category, title, content,
                    importance, confidence, source, source_ref,
-                   created_utc, updated_utc, expires_utc, superseded_by
+                   created_utc, updated_utc, expires_utc, superseded_by,
+                   retention_class, claim_key
             FROM memory_items
             WHERE id = $id;
             """;
@@ -136,6 +151,7 @@ public sealed class TalvoraMemoryStore
             SELECT m.id, m.scope, m.project, m.session, m.category, m.title, m.content,
                    m.importance, m.confidence, m.source, m.source_ref,
                    m.created_utc, m.updated_utc, m.expires_utc, m.superseded_by,
+                   m.retention_class, m.claim_key,
                    bm25(memory_items_fts, 2.0, 1.0, 0.4, 0.4, 0.2) AS lexical_rank,
                    CASE
                        WHEN lower(COALESCE(m.source, '')) IN
@@ -173,7 +189,7 @@ public sealed class TalvoraMemoryStore
             """;
         Add(command, "$query", BuildFtsQuery(query));
         Add(command, "$scope", NormalizeOptional(scope));
-        Add(command, "$project", NormalizeOptional(project));
+        Add(command, "$project", NormalizeProjectIdentity(project));
         Add(command, "$session", NormalizeOptional(session));
         Add(command, "$category", NormalizeOptional(category));
         Add(command, "$now", Format(DateTimeOffset.UtcNow));
@@ -185,8 +201,8 @@ public sealed class TalvoraMemoryStore
             hits.Add(
                 new TalvoraMemorySearchHit(
                     ReadItem(reader),
-                    reader.GetDouble(15),
-                    reader.GetDouble(16)));
+                    reader.GetDouble(17),
+                    reader.GetDouble(18)));
         }
         return new TalvoraMemorySearchResult(query.Trim(), hits.Count, hits);
     }
@@ -201,6 +217,8 @@ public sealed class TalvoraMemoryStore
         string? source,
         string? sourceReference,
         DateTimeOffset? expiresAtUtc,
+        string? retentionClass,
+        string? claimKey,
         string? supersededBy,
         CancellationToken cancellationToken)
     {
@@ -220,7 +238,25 @@ public sealed class TalvoraMemoryStore
         }
 
         await EnsureInitializedAsync(cancellationToken);
-        if (await GetAsync(id, cancellationToken) is null) return null;
+        var current = await GetAsync(id, cancellationToken);
+        if (current is null) return null;
+        var effectiveCategory = category ?? current.Category;
+        var effectiveRetention = retentionClass is null
+            ? current.RetentionClass
+            : ResolveRetentionClass(
+                current.Scope,
+                effectiveCategory,
+                retentionClass);
+        var effectiveExpiry = expiresAtUtc ??
+            (retentionClass is null
+                ? current.ExpiresAtUtc
+                : ResolveExpiry(
+                    DateTimeOffset.UtcNow,
+                    effectiveRetention,
+                    null));
+        var effectiveClaimKey = claimKey is null
+            ? current.ClaimKey
+            : NormalizeClaimKey(claimKey);
 
         await using var connection = await OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
@@ -253,7 +289,9 @@ public sealed class TalvoraMemoryStore
                 confidence = COALESCE($confidence, confidence),
                 source = COALESCE($source, source),
                 source_ref = COALESCE($sourceRef, source_ref),
-                expires_utc = COALESCE($expiresUtc, expires_utc),
+                expires_utc = $expiresUtc,
+                retention_class = $retentionClass,
+                claim_key = $claimKey,
                 superseded_by = COALESCE($supersededBy, superseded_by),
                 updated_utc = $updatedUtc
             WHERE id = $id;
@@ -265,13 +303,20 @@ public sealed class TalvoraMemoryStore
         Add(command, "$confidence", confidence);
         Add(command, "$source", NormalizeOptional(source));
         Add(command, "$sourceRef", NormalizeOptional(sourceReference));
-        Add(command, "$expiresUtc", expiresAtUtc is null ? null : Format(expiresAtUtc.Value));
+        Add(command, "$expiresUtc", effectiveExpiry is null ? null : Format(effectiveExpiry.Value));
+        Add(command, "$retentionClass", effectiveRetention);
+        Add(command, "$claimKey", effectiveClaimKey);
         Add(command, "$supersededBy", NormalizeOptional(supersededBy));
         Add(command, "$updatedUtc", Format(DateTimeOffset.UtcNow));
         Add(command, "$id", id);
         await command.ExecuteNonQueryAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return await GetAsync(id, cancellationToken);
+        var updated = await GetAsync(id, cancellationToken);
+        if (updated is not null)
+        {
+            await SuppressStaleClaimsAsync(updated, cancellationToken);
+        }
+        return updated;
     }
 
     public async Task<bool> ForgetAsync(
@@ -367,7 +412,8 @@ public sealed class TalvoraMemoryStore
                 """
                 SELECT id, scope, project, session, category, title, content,
                        importance, confidence, source, source_ref,
-                       created_utc, updated_utc, expires_utc, superseded_by
+                       created_utc, updated_utc, expires_utc, superseded_by,
+                       retention_class, claim_key
                 FROM memory_items
                 WHERE superseded_by IS NULL
                   AND (expires_utc IS NULL OR expires_utc > $now)
@@ -380,7 +426,7 @@ public sealed class TalvoraMemoryStore
                 """;
             Add(command, "$now", Format(DateTimeOffset.UtcNow));
             Add(command, "$scope", NormalizeOptional(scope));
-            Add(command, "$project", NormalizeOptional(project));
+            Add(command, "$project", NormalizeProjectIdentity(project));
             Add(command, "$session", NormalizeOptional(session));
             Add(command, "$category", NormalizeOptional(category));
             Add(command, "$limit", maxScan);
@@ -469,7 +515,8 @@ public sealed class TalvoraMemoryStore
                 """
                 SELECT id, scope, project, session, category, title, content,
                        importance, confidence, source, source_ref,
-                       created_utc, updated_utc, expires_utc, superseded_by
+                       created_utc, updated_utc, expires_utc, superseded_by,
+                       retention_class, claim_key
                 FROM memory_items;
                 """;
             await using var reader =
@@ -583,6 +630,8 @@ public sealed class TalvoraMemoryStore
                     updated_utc TEXT NOT NULL,
                     expires_utc TEXT NULL,
                     superseded_by TEXT NULL,
+                    retention_class TEXT NOT NULL DEFAULT 'durable',
+                    claim_key TEXT NULL,
                     FOREIGN KEY(superseded_by) REFERENCES memory_items(id)
                         ON DELETE SET NULL
                 );
@@ -639,6 +688,8 @@ public sealed class TalvoraMemoryStore
                 END;
                 """;
             await command.ExecuteNonQueryAsync(cancellationToken);
+            await EnsureQualityColumnsAsync(connection, cancellationToken);
+            await NormalizeExistingProjectsAsync(connection, cancellationToken);
 
             await using var rebuild = connection.CreateCommand();
             rebuild.CommandText =
@@ -689,7 +740,9 @@ public sealed class TalvoraMemoryStore
             Parse(reader.GetString(11)),
             Parse(reader.GetString(12)),
             reader.IsDBNull(13) ? null : Parse(reader.GetString(13)),
-            reader.IsDBNull(14) ? null : reader.GetString(14));
+            reader.IsDBNull(14) ? null : reader.GetString(14),
+            reader.GetString(15),
+            reader.IsDBNull(16) ? null : reader.GetString(16));
 
     private static void Add(SqliteCommand command, string name, object? value) =>
         command.Parameters.AddWithValue(name, value ?? DBNull.Value);

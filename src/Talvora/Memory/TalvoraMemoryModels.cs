@@ -15,7 +15,9 @@ public sealed record TalvoraMemoryItem(
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc,
     DateTimeOffset? ExpiresAtUtc,
-    string? SupersededBy);
+    string? SupersededBy,
+    string RetentionClass,
+    string? ClaimKey);
 
 public sealed record TalvoraMemorySearchHit(
     TalvoraMemoryItem Item,

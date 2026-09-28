@@ -49,9 +49,9 @@ Talvora should retain useful durable context across chats and development sessio
 - [x] Add contradiction/supersession workflow.
 - [x] Add duplicate detection and consolidation.
 - [x] Add source authority ordering.
-- [ ] Add retention classes and automatic expiry policies.
-- [ ] Add stale-memory suppression when repository/runtime evidence disagrees.
-- [ ] Add project identity normalization.
+- [x] Add retention classes and automatic expiry policies.
+- [x] Add stale-memory suppression when repository/runtime evidence disagrees.
+- [x] Add project identity normalization.
 - [ ] Add session close summary -> candidate-memory pipeline.
 - [ ] Add promotion rules so transient session facts do not become durable by default.
 - [x] Add memory health/integrity diagnostics.

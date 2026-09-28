@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "verifiedAtUtc": "2026-09-28T16:17:00Z",
-  "scope": "Talvora Memory Phase 2A: retrieval adds deterministic provenance authority ordering; explicit supersession and exact duplicate consolidation retain audit history; diagnostics uses SQLite integrity checks and bounded local inspection.",
+  "scope": "Talvora Memory Phase 2B: additive live-schema migration adds retention_class and claim_key, project identifiers are normalized, retention classes derive automatic expiry, and higher-authority evidence can supersede lower-authority stale claims while preserving audit history.",
   "libraries": [
     {
       "libraryId": "/websites/sqlite_docs",
-      "verified": "Current SQLite guidance supports FTS5 external-content tables linked to a canonical content table through content/content_rowid plus synchronization triggers, PRAGMA quick_check for bounded integrity inspection, expression/partial indexes where needed, and transactional batches for multi-row quality operations. Talvora Memory Phase 2A keeps canonical rows auditable, marks duplicates/stale rows through supersession, and performs consolidation updates transactionally."
+      "verified": "Current SQLite guidance supports PRAGMA table_info for schema inspection, ALTER TABLE ADD COLUMN for additive migration, transactional bulk updates, indexes over new nullable columns, and FTS5 external-content synchronization triggers. Talvora Memory Phase 2B uses runtime schema inspection before adding retention_class/claim_key, preserves the canonical table/FTS trigger model, normalizes existing project identities transactionally, and retains stale claims through supersession instead of deletion."
     },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
@@ -29,6 +29,7 @@
     }
   ],
   "vendorSources": [
+    "SQLite official ALTER TABLE and PRAGMA table_info guidance checked 2026-09-28: additive columns can be introduced to existing tables after schema inspection without rebuilding the canonical table.",
     "SQLite official PRAGMA documentation checked 2026-09-28: quick_check is suitable for lightweight integrity diagnostics; schema/index inspection remains available through PRAGMA.",
     "SQLite official language/index documentation checked 2026-09-28: expression and partial indexes are supported for selective/query-derived optimization when later memory migrations need them.",
     "SQLite official FTS5 documentation checked 2026-09-28: external-content tables require synchronization with the content table and can rebuild the index from canonical content.",
