@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using Talvora.Shared;
 
 namespace Talvora;
@@ -20,6 +22,11 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
     private static readonly TimeSpan TestArtifactRetention =
         TimeSpan.FromDays(2);
 
+    private static readonly SecurityIdentifier LocalSystemSid =
+        new(
+            WellKnownSidType.LocalSystemSid,
+            domainSid: null);
+
     protected override async Task ExecuteAsync(
         CancellationToken stoppingToken)
     {
@@ -37,7 +44,7 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
 
         try
         {
-            await RunMaintenanceAsync(
+            await RunMaintenancePassSafelyAsync(
                 stoppingToken);
 
             using var timer =
@@ -46,13 +53,37 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
             while (await timer.WaitForNextTickAsync(
                        stoppingToken))
             {
-                await RunMaintenanceAsync(
+                await RunMaintenancePassSafelyAsync(
                     stoppingToken);
             }
         }
         catch (OperationCanceledException)
             when (stoppingToken.IsCancellationRequested)
         {
+        }
+    }
+
+    private async Task RunMaintenancePassSafelyAsync(
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await RunMaintenanceAsync(
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Storage retention is best-effort housekeeping. A malformed
+            // diagnostic file, transient ACL failure, or Penpot maintenance
+            // error must never stop the core Talvora Windows service.
+            logger.LogWarning(
+                ex,
+                "Talvora system storage maintenance pass was deferred.");
         }
     }
 
@@ -80,7 +111,8 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
                                 TestArtifactRetention,
                                 TalvoraOwnedTempCleanup.TestPrefixes,
                                 Array.Empty<string>(),
-                                cancellationToken);
+                                cancellationToken,
+                                IsSystemOwnedCleanupCandidate);
                         deleted += testResult.DeletedEntries;
                         reclaimedBytes += testResult.ReclaimedBytes;
 
@@ -90,9 +122,26 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
                                 cutoffUtc,
                                 TalvoraOwnedTempCleanup.DefaultPrefixes,
                                 TalvoraOwnedTempCleanup.DefaultExactNames,
-                                cancellationToken);
+                                cancellationToken,
+                                IsSystemOwnedCleanupCandidate);
                         deleted += result.DeletedEntries;
                         reclaimedBytes += result.ReclaimedBytes;
+
+                        if (testResult.ScanLimitReached ||
+                            result.ScanLimitReached)
+                        {
+                            logger.LogWarning(
+                                "Talvora system storage maintenance reached its bounded scan limit for root {Root}; remaining entries are deferred.",
+                                root);
+                        }
+
+                        var nestedResult =
+                            CleanupSystemOwnedNestedTalvoraTemp(
+                                root,
+                                DateTimeOffset.UtcNow,
+                                cancellationToken);
+                        deleted += nestedResult.DeletedEntries;
+                        reclaimedBytes += nestedResult.ReclaimedBytes;
                     }
                     catch (Exception ex) when (
                         ex is IOException or
@@ -119,6 +168,11 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
                         cancellationToken);
                 deleted += penpotCleanup.DeletedEntries;
                 reclaimedBytes += penpotCleanup.ReclaimedBytes;
+                if (penpotCleanup.ScanLimitReached)
+                {
+                    logger.LogWarning(
+                        "Talvora Penpot legacy-log maintenance reached its scan limit; remaining entries are deferred.");
+                }
 
                 if (deleted > 0)
                 {
@@ -129,6 +183,30 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
                 }
             },
             cancellationToken);
+
+    private static TalvoraOwnedTempCleanupResult
+        CleanupSystemOwnedNestedTalvoraTemp(
+            string tempRoot,
+            DateTimeOffset nowUtc,
+            CancellationToken cancellationToken)
+    {
+        var talvoraTempRoot =
+            Path.Combine(
+                tempRoot,
+                "Talvora");
+        if (!Directory.Exists(talvoraTempRoot))
+        {
+            return new TalvoraOwnedTempCleanupResult(0, 0);
+        }
+
+        return TalvoraOwnedTempCleanup.CleanupTopLevel(
+            talvoraTempRoot,
+            nowUtc - Retention,
+            Array.Empty<string>(),
+            ["Structural", "semantic-worker"],
+            cancellationToken,
+            IsSystemOwnedCleanupCandidate);
+    }
 
     private static TalvoraOwnedTempCleanupResult
         CleanupSystemOwnedTestArtifacts(
@@ -179,7 +257,8 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
                     parent,
                     candidate,
                     cutoffUtc,
-                    out var bytes))
+                    out var bytes,
+                    cancellationToken))
             {
                 deleted++;
                 reclaimedBytes += bytes;
@@ -189,6 +268,43 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
         return new TalvoraOwnedTempCleanupResult(
             deleted,
             reclaimedBytes);
+    }
+
+    private static bool IsSystemOwnedCleanupCandidate(
+        string path)
+    {
+        try
+        {
+            var attributes = File.GetAttributes(path);
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                // Ownership queries can resolve through a reparse point.
+                // Never use a target ACL as evidence that the link itself is
+                // a Talvora/SYSTEM-owned cleanup candidate.
+                return false;
+            }
+
+            FileSystemSecurity security =
+                (attributes & FileAttributes.Directory) != 0
+                    ? FileSystemAclExtensions.GetAccessControl(
+                        new DirectoryInfo(path),
+                        AccessControlSections.Owner)
+                    : FileSystemAclExtensions.GetAccessControl(
+                        new FileInfo(path),
+                        AccessControlSections.Owner);
+
+            return security.GetOwner(
+                    typeof(SecurityIdentifier)) is SecurityIdentifier owner &&
+                owner.Equals(LocalSystemSid);
+        }
+        catch (Exception ex) when (
+            ex is IOException or
+            UnauthorizedAccessException or
+            System.Security.SecurityException or
+            SystemException)
+        {
+            return false;
+        }
     }
 
     private static IReadOnlyList<string> GetSystemTempRoots()

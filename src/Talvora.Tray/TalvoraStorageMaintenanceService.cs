@@ -13,6 +13,8 @@ internal sealed record TalvoraStorageMaintenanceResult(
 
 internal static class TalvoraStorageMaintenanceService
 {
+    private const int MaximumVersionEntriesPerRun = 10_000;
+
     internal const long TunnelLogRotationBytes =
         32L * 1024 * 1024;
 
@@ -24,6 +26,12 @@ internal static class TalvoraStorageMaintenanceService
 
     internal static readonly TimeSpan TestArtifactRetention =
         TimeSpan.FromDays(2);
+
+    private static readonly TimeSpan TunnelRotationStabilityDelay =
+        TimeSpan.FromSeconds(2);
+
+    private const string InPlaceRotationVerifiedRuntimeVersion =
+        "0.0.15";
 
     private static readonly JsonSerializerOptions StorageJsonOptions = new()
     {
@@ -60,8 +68,34 @@ internal static class TalvoraStorageMaintenanceService
             Live: true,
             Ready: true,
             RuntimeVersion: "0.0.15",
-            RuntimeLifecycle: "ready",
-            Components: [],
+            RuntimeLifecycle: "running",
+            Components:
+            [
+                new ManagedMcpTunnelHealthComponentSnapshot(
+                    "queue",
+                    "ok",
+                    "idle",
+                    null,
+                    false,
+                    string.Empty,
+                    false),
+                new ManagedMcpTunnelHealthComponentSnapshot(
+                    "dispatcher",
+                    "ok",
+                    "idle",
+                    null,
+                    false,
+                    string.Empty,
+                    false),
+                new ManagedMcpTunnelHealthComponentSnapshot(
+                    "response-delivery",
+                    "ok",
+                    "idle",
+                    null,
+                    false,
+                    string.Empty,
+                    false),
+            ],
             QueueDepth: 0,
             DispatcherActive: 0,
             ResponseInProgress: 0,
@@ -137,6 +171,12 @@ internal static class TalvoraStorageMaintenanceService
             {
                 throw;
             }
+            catch (OperationCanceledException ex)
+            {
+                TrayLog.Write(
+                    $"Storage maintenance tunnel health/rotation timed out and was deferred. MCP={registration.Id}",
+                    ex);
+            }
             catch (Exception ex) when (
                 ex is IOException or
                 UnauthorizedAccessException or
@@ -198,6 +238,21 @@ internal static class TalvoraStorageMaintenanceService
                     cancellationToken);
             deleted += result.DeletedEntries;
             reclaimedBytes += result.ReclaimedBytes;
+
+            if (testResult.ScanLimitReached ||
+                result.ScanLimitReached)
+            {
+                TrayLog.Write(
+                    $"Storage maintenance reached its bounded temp scan limit. Root={tempRoot}");
+            }
+
+            var nestedCleanup =
+                CleanupNestedTalvoraTempRoots(
+                    tempRoot,
+                    nowUtc,
+                    cancellationToken);
+            deleted += nestedCleanup.DeletedEntries;
+            reclaimedBytes += nestedCleanup.ReclaimedBytes;
         }
 
         var localAppData = Environment.GetFolderPath(
@@ -212,10 +267,34 @@ internal static class TalvoraStorageMaintenanceService
 
             if (Directory.Exists(versionsRoot))
             {
-                foreach (var staging in Directory.EnumerateDirectories(
-                             versionsRoot,
-                             "*.stage.*",
-                             SearchOption.TopDirectoryOnly))
+                using var versionPruneLeases =
+                    TryAcquireVersionPruneLeases(
+                        registrations);
+                if (versionPruneLeases is null)
+                {
+                    TrayLog.Write(
+                        "Tunnel-client version maintenance deferred because a lifecycle/update operation is active.");
+                    return new CleanupResult(
+                        deleted,
+                        reclaimedBytes);
+                }
+
+                var stagingDirectories = Directory
+                    .EnumerateDirectories(
+                        versionsRoot,
+                        "*.stage.*",
+                        SearchOption.TopDirectoryOnly)
+                    .Take(MaximumVersionEntriesPerRun + 1)
+                    .ToArray();
+                if (stagingDirectories.Length >
+                    MaximumVersionEntriesPerRun)
+                {
+                    TrayLog.Write(
+                        $"Tunnel-client staging cleanup reached its bounded scan limit. Root={versionsRoot}; Limit={MaximumVersionEntriesPerRun}");
+                }
+
+                foreach (var staging in stagingDirectories
+                             .Take(MaximumVersionEntriesPerRun))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -223,7 +302,8 @@ internal static class TalvoraStorageMaintenanceService
                             versionsRoot,
                             staging,
                             nowUtc - TimeSpan.FromDays(1),
-                            out var bytes))
+                            out var bytes,
+                            cancellationToken))
                     {
                         deleted++;
                         reclaimedBytes += bytes;
@@ -246,6 +326,38 @@ internal static class TalvoraStorageMaintenanceService
             reclaimedBytes);
     }
 
+    private static CleanupResult CleanupNestedTalvoraTempRoots(
+        string tempRoot,
+        DateTimeOffset nowUtc,
+        CancellationToken cancellationToken)
+    {
+        var talvoraTempRoot =
+            Path.Combine(
+                tempRoot,
+                "Talvora");
+        if (!Directory.Exists(talvoraTempRoot))
+        {
+            return new CleanupResult(0, 0);
+        }
+
+        var result =
+            TalvoraOwnedTempCleanup.CleanupTopLevel(
+                talvoraTempRoot,
+                nowUtc - TemporaryArtifactRetention,
+                Array.Empty<string>(),
+                ["Structural", "semantic-worker"],
+                cancellationToken);
+        if (result.ScanLimitReached)
+        {
+            TrayLog.Write(
+                $"Storage maintenance reached its nested Talvora temp scan limit. Root={talvoraTempRoot}");
+        }
+
+        return new CleanupResult(
+            result.DeletedEntries,
+            result.ReclaimedBytes);
+    }
+
     private static CleanupResult PruneObsoleteTunnelClientVersions(
         string versionsRoot,
         IReadOnlyList<ManagedMcpRegistration> registrations,
@@ -254,58 +366,116 @@ internal static class TalvoraStorageMaintenanceService
     {
         var retainedDirectories = new HashSet<string>(
             StringComparer.OrdinalIgnoreCase);
+        var clientRoot = Path.GetFullPath(
+            Path.GetDirectoryName(versionsRoot)
+            ?? throw new InvalidOperationException(
+                "Tunnel-client versions root has no parent directory."));
 
         foreach (var registration in registrations)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var configPath = registration.Tunnel?.ConfigPath;
-            if (string.IsNullOrWhiteSpace(configPath) ||
-                !File.Exists(configPath))
+            if (string.IsNullOrWhiteSpace(configPath))
             {
                 continue;
+            }
+
+            string fullConfigPath;
+            try
+            {
+                fullConfigPath = Path.GetFullPath(configPath);
+            }
+            catch (Exception ex) when (
+                ex is ArgumentException or
+                NotSupportedException)
+            {
+                TrayLog.Write(
+                    $"Tunnel-client version pruning deferred because an active config path is invalid. MCP={registration.Id}",
+                    ex);
+                return new CleanupResult(0, 0);
+            }
+
+            if (!TalvoraOwnedTempCleanup.IsPathUnderRoot(
+                    fullConfigPath,
+                    clientRoot))
+            {
+                continue;
+            }
+
+            if (!File.Exists(fullConfigPath))
+            {
+                TrayLog.Write(
+                    $"Tunnel-client version pruning deferred because an owned active config is missing. MCP={registration.Id}; Config={fullConfigPath}");
+                return new CleanupResult(0, 0);
             }
 
             try
             {
                 var config = JsonSerializer.Deserialize<BusinessConfig>(
-                    File.ReadAllText(configPath),
+                    File.ReadAllText(fullConfigPath),
                     StorageJsonOptions);
                 var executable = config?.TunnelClient;
                 if (string.IsNullOrWhiteSpace(executable))
                 {
-                    continue;
+                    TrayLog.Write(
+                        $"Tunnel-client version pruning deferred because an owned active config has no client path. MCP={registration.Id}; Config={fullConfigPath}");
+                    return new CleanupResult(0, 0);
                 }
 
-                var directory = Path.GetDirectoryName(
-                    Path.GetFullPath(executable));
-                if (!string.IsNullOrWhiteSpace(directory) &&
-                    TalvoraOwnedTempCleanup.IsPathUnderRoot(
-                        directory,
-                        versionsRoot))
+                var versionDirectory =
+                    ResolveReferencedVersionDirectory(
+                        executable,
+                        versionsRoot);
+                if (!string.IsNullOrWhiteSpace(versionDirectory))
                 {
                     retainedDirectories.Add(
-                        Path.GetFullPath(directory));
+                        versionDirectory);
+                }
+
+                foreach (var protectedDirectory in
+                         ManagedMcpTunnelProvisioningService
+                             .GetClientUpdateProtectedVersionDirectories(
+                                 fullConfigPath,
+                                 versionsRoot))
+                {
+                    retainedDirectories.Add(
+                        protectedDirectory);
                 }
             }
             catch (Exception ex) when (
                 ex is IOException or
                 UnauthorizedAccessException or
                 JsonException or
+                InvalidDataException or
                 ArgumentException or
                 NotSupportedException)
             {
                 TrayLog.Write(
-                    $"Tunnel-client version retention skipped unreadable config. MCP={registration.Id}",
+                    $"Tunnel-client version pruning deferred because an owned active config is unreadable. MCP={registration.Id}",
                     ex);
+                return new CleanupResult(0, 0);
             }
         }
 
-        var versionDirectories = Directory
+        var enumeratedVersionEntries = Directory
             .EnumerateDirectories(
                 versionsRoot,
                 "*",
                 SearchOption.TopDirectoryOnly)
+            .Take(MaximumVersionEntriesPerRun + 1)
+            .ToArray();
+
+        if (enumeratedVersionEntries.Length >
+            MaximumVersionEntriesPerRun)
+        {
+            TrayLog.Write(
+                $"Tunnel-client version pruning reached its bounded scan limit and was deferred. Root={versionsRoot}; Limit={MaximumVersionEntriesPerRun}");
+            return new CleanupResult(0, 0);
+        }
+
+        var versionDirectories =
+            enumeratedVersionEntries
             .Where(path =>
                 !Path.GetFileName(path).Contains(
                     ".stage.",
@@ -314,7 +484,15 @@ internal static class TalvoraStorageMaintenanceService
             .OrderByDescending(info => info.LastWriteTimeUtc)
             .ToArray();
 
-        foreach (var recent in versionDirectories.Take(2))
+        var rollbackCandidates =
+            versionDirectories
+                .Where(directory =>
+                    !retainedDirectories.Contains(
+                        Path.GetFullPath(
+                            directory.FullName)))
+                .Take(2)
+                .ToArray();
+        foreach (var recent in rollbackCandidates)
         {
             retainedDirectories.Add(
                 Path.GetFullPath(recent.FullName));
@@ -337,7 +515,8 @@ internal static class TalvoraStorageMaintenanceService
                     versionsRoot,
                     fullPath,
                     nowUtc - TimeSpan.FromDays(1),
-                    out var bytes))
+                    out var bytes,
+                    cancellationToken))
             {
                 deleted++;
                 reclaimedBytes += bytes;
@@ -347,6 +526,44 @@ internal static class TalvoraStorageMaintenanceService
         return new CleanupResult(
             deleted,
             reclaimedBytes);
+    }
+
+    private static string? ResolveReferencedVersionDirectory(
+        string executable,
+        string versionsRoot)
+    {
+        var fullExecutable = Path.GetFullPath(executable);
+        var fullVersionsRoot = Path.GetFullPath(versionsRoot);
+        if (!TalvoraOwnedTempCleanup.IsPathUnderRoot(
+                fullExecutable,
+                fullVersionsRoot))
+        {
+            return null;
+        }
+
+        var relative = Path.GetRelativePath(
+            fullVersionsRoot,
+            fullExecutable);
+        var segments = relative.Split(
+            [
+                Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar,
+            ],
+            StringSplitOptions.RemoveEmptyEntries);
+
+        if (segments.Length < 2 ||
+            string.Equals(
+                segments[0],
+                "..",
+                StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return Path.GetFullPath(
+            Path.Combine(
+                fullVersionsRoot,
+                segments[0]));
     }
 
     private static async Task<bool> TryRotateTunnelLogAsync(
@@ -432,58 +649,278 @@ internal static class TalvoraStorageMaintenanceService
             return false;
         }
 
-        var reconnectRequired = false;
-        try
+        if (!await TryRotateTunnelLogWithoutStoppingRuntimeAsync(
+                registration,
+                logPath,
+                health,
+                cancellationToken).ConfigureAwait(false))
         {
-            reconnectRequired = true;
-            await ManagedMcpTunnelProvisioningService
-                .DisconnectExistingAsync(
-                    registration,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-            if (File.Exists(logPath))
-            {
-                var archivePath = logPath + ".1";
-                File.Move(
-                    logPath,
-                    archivePath,
-                    overwrite: true);
-            }
-        }
-        finally
-        {
-            if (reconnectRequired)
-            {
-                await ManagedMcpTunnelProvisioningService
-                    .ConnectExistingAsync(
-                        registration,
-                        CancellationToken.None)
-                    .ConfigureAwait(false);
-            }
-        }
-
-        ManagedMcpTunnelProvisioningService
-            .InvalidateRuntimeStatusCache(
-                registration.Id);
-        var restored =
-            await ManagedMcpTunnelProvisioningService
-                .GetRuntimeStatusAsync(
-                    registration,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-        if (!restored.Ready ||
-            !restored.ProcessRunning)
-        {
-            throw new InvalidOperationException(
-                $"{registration.DisplayName} log rotation sonrası hazır duruma dönemedi.");
+            return false;
         }
 
         TrayLog.Write(
-            $"Tunnel log rotated after idle threshold. MCP={registration.Id}; LimitBytes={TunnelLogRotationBytes}");
+            $"Tunnel log rotated in-place after stable idle threshold. MCP={registration.Id}; LimitBytes={TunnelLogRotationBytes}");
 
         return true;
+    }
+
+    private static async Task<bool>
+        TryRotateTunnelLogWithoutStoppingRuntimeAsync(
+            ManagedMcpRegistration registration,
+            string logPath,
+            ManagedMcpTunnelHealthSnapshot initialHealth,
+            CancellationToken cancellationToken)
+    {
+        if (!string.Equals(
+                initialHealth.RuntimeVersion.TrimStart('v', 'V'),
+                InPlaceRotationVerifiedRuntimeVersion,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var activityMarker =
+            initialHealth.LastActivityUtc;
+
+        await Task.Delay(
+                TunnelRotationStabilityDelay,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var stableHealth =
+            await ManagedMcpTunnelHealthService
+                .GetSnapshotAsync(
+                    registration,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        if (!IsStableQuietSnapshot(
+                initialHealth,
+                stableHealth,
+                activityMarker))
+        {
+            return false;
+        }
+
+        var archivePath = logPath + ".1";
+        var temporaryArchivePath =
+            archivePath + ".tmp";
+
+        try
+        {
+            await using var source = new FileStream(
+                logPath,
+                FileMode.Open,
+                FileAccess.ReadWrite,
+                FileShare.ReadWrite,
+                bufferSize: 64 * 1024,
+                FileOptions.Asynchronous |
+                FileOptions.SequentialScan);
+
+            var snapshotLength = source.Length;
+            if (snapshotLength <=
+                TunnelLogRotationBytes)
+            {
+                return false;
+            }
+
+            await using (var archive = new FileStream(
+                             temporaryArchivePath,
+                             FileMode.Create,
+                             FileAccess.Write,
+                             FileShare.None,
+                             bufferSize: 64 * 1024,
+                             FileOptions.Asynchronous |
+                             FileOptions.SequentialScan))
+            {
+                source.Position = 0;
+                var remaining = snapshotLength;
+                var buffer = new byte[64 * 1024];
+
+                while (remaining > 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var read = await source.ReadAsync(
+                            buffer.AsMemory(
+                                0,
+                                (int)Math.Min(
+                                    buffer.Length,
+                                    remaining)),
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    if (read == 0)
+                    {
+                        return false;
+                    }
+
+                    await archive.WriteAsync(
+                            buffer.AsMemory(0, read),
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    remaining -= read;
+                }
+
+                await archive.FlushAsync(
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            if (source.Length != snapshotLength)
+            {
+                return false;
+            }
+
+            var finalHealth =
+                await ManagedMcpTunnelHealthService
+                    .GetSnapshotAsync(
+                        registration,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            if (!IsStableQuietSnapshot(
+                    stableHealth!,
+                    finalHealth,
+                    activityMarker) ||
+                source.Length != snapshotLength)
+            {
+                return false;
+            }
+
+            File.Move(
+                temporaryArchivePath,
+                archivePath,
+                overwrite: true);
+
+            // The v0.0.15 Windows runtime keeps this log open with append
+            // semantics and read/write sharing. Truncating the same file
+            // preserves the live writer handle and therefore never needs the
+            // hard process termination performed by "runtimes stop".
+            if (source.Length != snapshotLength)
+            {
+                return false;
+            }
+
+            source.SetLength(0);
+            source.Flush(
+                flushToDisk: true);
+            return true;
+        }
+        finally
+        {
+            if (File.Exists(
+                    temporaryArchivePath))
+            {
+                try
+                {
+                    File.Delete(
+                        temporaryArchivePath);
+                }
+                catch (Exception ex) when (
+                    ex is IOException or
+                    UnauthorizedAccessException)
+                {
+                    TrayLog.Write(
+                        $"Tunnel log rotation temporary archive cleanup deferred. MCP={registration.Id}",
+                        ex);
+                }
+            }
+        }
+    }
+
+    private static bool IsStableQuietSnapshot(
+        ManagedMcpTunnelHealthSnapshot previous,
+        ManagedMcpTunnelHealthSnapshot? current,
+        DateTimeOffset? activityMarker)
+    {
+        if (current is null ||
+            !current.Live ||
+            !current.Ready ||
+            current.HasCriticalDegradation ||
+            !current.IsQuietForMaintenance(
+                DateTimeOffset.UtcNow,
+                TunnelQuietPeriod))
+        {
+            return false;
+        }
+
+        return previous.QueueDepth ==
+                   current.QueueDepth &&
+               previous.DispatcherActive ==
+                   current.DispatcherActive &&
+               previous.ResponseInProgress ==
+                   current.ResponseInProgress &&
+               previous.LastActivityUtc ==
+                   current.LastActivityUtc &&
+               current.LastActivityUtc ==
+                   activityMarker;
+    }
+
+    private static IDisposable? TryAcquireVersionPruneLeases(
+        IReadOnlyList<ManagedMcpRegistration> registrations)
+    {
+        var leases = new List<IDisposable>();
+        try
+        {
+            foreach (var registrationId in registrations
+                         .Where(registration =>
+                             registration.Tunnel is { Required: true })
+                         .Select(registration => registration.Id)
+                         .Distinct(StringComparer.OrdinalIgnoreCase)
+                         .OrderBy(
+                             id => id,
+                             StringComparer.OrdinalIgnoreCase))
+            {
+                var lease =
+                    ManagedMcpOperationCoordinator.TryAcquire(
+                        registrationId);
+                if (lease is null)
+                {
+                    foreach (var acquired in leases)
+                    {
+                        acquired.Dispose();
+                    }
+
+                    return null;
+                }
+
+                leases.Add(lease);
+            }
+
+            return new CompositeLease(leases);
+        }
+        catch
+        {
+            foreach (var acquired in leases)
+            {
+                acquired.Dispose();
+            }
+
+            throw;
+        }
+    }
+
+    private sealed class CompositeLease(
+        IReadOnlyList<IDisposable> leases)
+        : IDisposable
+    {
+        private IReadOnlyList<IDisposable>? _leases =
+            leases;
+
+        public void Dispose()
+        {
+            var owned = Interlocked.Exchange(
+                ref _leases,
+                null);
+            if (owned is null)
+            {
+                return;
+            }
+
+            for (var index = owned.Count - 1;
+                 index >= 0;
+                 index--)
+            {
+                owned[index].Dispose();
+            }
+        }
     }
 
     private sealed record CleanupResult(

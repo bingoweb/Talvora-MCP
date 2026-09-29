@@ -1,5 +1,3 @@
-using System.IO;
-using System.Net.Http;
 using Talvora.Shared;
 
 namespace Talvora.Tray;
@@ -117,13 +115,17 @@ internal sealed partial class TrayApplicationContext
             when (_lifetimeCts.IsCancellationRequested)
         {
         }
-        catch (Exception ex) when (
-            ex is IOException or
-            UnauthorizedAccessException or
-            InvalidOperationException or
-            System.Text.Json.JsonException or
-            HttpRequestException)
+        catch (OperationCanceledException ex)
         {
+            TrayLog.Write(
+                $"Storage maintenance timed out and was deferred. Trigger={trigger}",
+                ex);
+        }
+        catch (Exception ex)
+        {
+            // This method is invoked by a WinForms Timer async event. No
+            // maintenance-only fault is allowed to escape the async-void
+            // event boundary and terminate the tray process.
             TrayLog.Write(
                 $"Storage maintenance failed. Trigger={trigger}",
                 ex);

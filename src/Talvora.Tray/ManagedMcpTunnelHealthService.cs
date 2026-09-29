@@ -38,12 +38,48 @@ internal sealed record ManagedMcpTunnelHealthSnapshot(
 
     public bool IsQuietForMaintenance(
         DateTimeOffset nowUtc,
-        TimeSpan quietPeriod) =>
-        QueueDepth == 0 &&
-        DispatcherActive == 0 &&
-        ResponseInProgress == 0 &&
-        LastActivityUtc is { } lastActivityUtc &&
-        nowUtc - lastActivityUtc >= quietPeriod;
+        TimeSpan quietPeriod)
+    {
+        if (SchemaVersion != 1 ||
+            !Live ||
+            !Ready ||
+            !string.Equals(
+                RuntimeLifecycle,
+                "running",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        foreach (var componentId in new[]
+                 {
+                     "queue",
+                     "dispatcher",
+                     "response-delivery",
+                 })
+        {
+            var component = Components.FirstOrDefault(candidate =>
+                string.Equals(
+                    candidate.Id,
+                    componentId,
+                    StringComparison.OrdinalIgnoreCase));
+            if (component is null ||
+                component.Limited ||
+                !string.Equals(
+                    component.Status,
+                    "ok",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return QueueDepth == 0 &&
+               DispatcherActive == 0 &&
+               ResponseInProgress == 0 &&
+               LastActivityUtc is { } lastActivityUtc &&
+               nowUtc - lastActivityUtc >= quietPeriod;
+    }
 }
 
 internal static class ManagedMcpTunnelHealthService

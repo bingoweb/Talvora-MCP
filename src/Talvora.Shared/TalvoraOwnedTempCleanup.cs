@@ -4,16 +4,25 @@ namespace Talvora.Shared;
 
 public sealed record TalvoraOwnedTempCleanupResult(
     int DeletedEntries,
-    long ReclaimedBytes);
+    long ReclaimedBytes,
+    bool ScanLimitReached = false);
 
 public static class TalvoraOwnedTempCleanup
 {
-    private const int MaximumScannedEntriesPerCandidate = 50_000;
+    private const int MaximumScannedEntriesPerCandidate = 100_000;
     private const int MaximumCleanupCandidatesPerRun = 512;
 
     public static IReadOnlyList<string> DefaultPrefixes { get; } =
     [
         "Talvora-Deploy-",
+        "Talvora-Setup-",
+        "Talvora-ManagedMcpRegistry-",
+        "Talvora-ManagedMcpOwnership-",
+        "Talvora-ManagedMcpPrimary-",
+        "Talvora-Archive-",
+        "Talvora-Archive-Stage-",
+        "Talvora-JobStorage-",
+        "Talvora-JobStop-",
         "TalvoraDeploy-",
         "Talvora-159-live-",
         "Talvora-MCP-live-",
@@ -50,6 +59,8 @@ public static class TalvoraOwnedTempCleanup
         "talvora-processrunner",
         "talvora-onearg",
         "talvora-git-apply-probe",
+        "talvora-run-",
+        "talvora-vsdev-",
     ];
 
     public static IReadOnlyList<string> DefaultExactNames { get; } =
@@ -60,6 +71,11 @@ public static class TalvoraOwnedTempCleanup
 
     public static IReadOnlyList<string> TestPrefixes { get; } =
     [
+        "Talvora-ManagedMcpRegistry-",
+        "Talvora-ManagedMcpOwnership-",
+        "Talvora-ManagedMcpPrimary-",
+        "Talvora-JobStorage-",
+        "Talvora-JobStop-",
         "TalvoraReparse",
         "TalvoraGiteaLifecycle",
         "TalvoraBuildFingerprintAudit",
@@ -102,7 +118,8 @@ public static class TalvoraOwnedTempCleanup
         DateTimeOffset cutoffUtc,
         IReadOnlyList<string> prefixes,
         IReadOnlyList<string> exactNames,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<string, bool>? candidateFilter = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
         ArgumentNullException.ThrowIfNull(prefixes);
@@ -116,30 +133,34 @@ public static class TalvoraOwnedTempCleanup
 
         var deleted = 0;
         long reclaimedBytes = 0;
-        var inspected = 0;
+        var inspectedCandidates = 0;
+        var scanLimitReached = false;
 
-        foreach (var entry in Directory.EnumerateFileSystemEntries(
+        foreach (var entry in EnumerateMatchingTopLevelCandidates(
                      fullRoot,
-                     "*",
-                     SearchOption.TopDirectoryOnly))
+                     prefixes,
+                     exactNames,
+                     cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var name = Path.GetFileName(entry);
-            if (!MatchesOwnedName(name, prefixes, exactNames))
+            if (++inspectedCandidates > MaximumCleanupCandidatesPerRun)
             {
-                continue;
+                scanLimitReached = true;
+                break;
             }
 
-            if (++inspected > MaximumCleanupCandidatesPerRun)
+            if (candidateFilter is not null &&
+                !candidateFilter(entry))
             {
-                break;
+                continue;
             }
 
             if (TryDeleteStaleEntry(
                     fullRoot,
                     entry,
                     cutoffUtc,
-                    out var bytes))
+                    out var bytes,
+                    cancellationToken))
             {
                 deleted++;
                 reclaimedBytes += bytes;
@@ -148,14 +169,16 @@ public static class TalvoraOwnedTempCleanup
 
         return new TalvoraOwnedTempCleanupResult(
             deleted,
-            reclaimedBytes);
+            reclaimedBytes,
+            scanLimitReached);
     }
 
     public static bool TryDeleteStaleEntry(
         string allowedRoot,
         string path,
         DateTimeOffset cutoffUtc,
-        out long reclaimedBytes)
+        out long reclaimedBytes,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(allowedRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -174,13 +197,19 @@ public static class TalvoraOwnedTempCleanup
                 return false;
             }
 
-            var scan = InspectTreeWithoutFollowingReparsePoints(path);
+            var scan = InspectTreeWithoutFollowingReparsePoints(
+                path,
+                cancellationToken);
             if (!scan.Complete ||
                 scan.NewestWriteUtc >= cutoffUtc)
             {
                 return false;
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
+            // Once deletion begins, finish the already-proven stale owned tree
+            // instead of leaving a partially deleted tree whose directory
+            // timestamps would postpone the remaining cleanup.
             DeleteTreeWithoutFollowingReparsePoints(path);
             reclaimedBytes = scan.Bytes;
             return true;
@@ -234,9 +263,66 @@ public static class TalvoraOwnedTempCleanup
                 StringComparison.OrdinalIgnoreCase));
     }
 
-    private static TreeScanResult InspectTreeWithoutFollowingReparsePoints(
-        string path)
+    private static IEnumerable<string> EnumerateMatchingTopLevelCandidates(
+        string root,
+        IReadOnlyList<string> prefixes,
+        IReadOnlyList<string> exactNames,
+        CancellationToken cancellationToken)
     {
+        var seen = new HashSet<string>(
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var exactName in exactNames)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(exactName))
+            {
+                continue;
+            }
+
+            var path = Path.Combine(
+                root,
+                exactName);
+            if ((File.Exists(path) ||
+                 Directory.Exists(path)) &&
+                seen.Add(Path.GetFullPath(path)))
+            {
+                yield return path;
+            }
+        }
+
+        foreach (var prefix in prefixes)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(prefix))
+            {
+                continue;
+            }
+
+            foreach (var path in Directory.EnumerateFileSystemEntries(
+                         root,
+                         prefix + "*",
+                         SearchOption.TopDirectoryOnly))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var fullPath = Path.GetFullPath(path);
+                if (seen.Add(fullPath) &&
+                    MatchesOwnedName(
+                        Path.GetFileName(fullPath),
+                        prefixes,
+                        exactNames))
+                {
+                    yield return fullPath;
+                }
+            }
+        }
+    }
+
+    private static TreeScanResult InspectTreeWithoutFollowingReparsePoints(
+        string path,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         if (File.Exists(path))
         {
             var file = new FileInfo(path);
@@ -277,9 +363,11 @@ public static class TalvoraOwnedTempCleanup
 
         while (stack.Count > 0)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var directory = stack.Pop();
             foreach (var entry in directory.EnumerateFileSystemInfos())
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (++scanned > MaximumScannedEntriesPerCandidate)
                 {
                     return new TreeScanResult(

@@ -1,5 +1,21 @@
 # Talvora Deep Bug Audit
 
+## CURRENT — 2026-09-29 — Storage maintenance deep commercial-quality audit
+
+Status: Faz A-D remediation source/test verified; Faz E local quality gates GREEN. Canonical commit/deploy/live acceptance follows in this closeout.
+
+- #230 **FIXED / BEHAVIOR VERIFIED** — TEMP discovery now uses exact-name/prefix-scoped enumeration and covers current crash leftovers plus nested `Talvora\Structural` / `semantic-worker` residue. A 100,000-unrelated-entry fixture removed only the stale owned candidate in 17 ms; a 100,001-entry owned tree hit the traversal ceiling and was fail-closed in 91 ms.
+- #231 **FIXED / SOURCE VERIFIED** — SYSTEM TEMP maintenance now requires the matching top-level candidate itself to be LocalSystem-owned and rejects reparse roots before owner inspection, so a matching interactive-user name is not sufficient for deletion.
+- #232 **FIXED / TEST VERIFIED** — tunnel-client version pruning now holds lifecycle leases, fails closed on unreadable active config/update journal, protects pending-update previous/candidate versions, retains two additional rollback slots, and bounds staging/version enumeration.
+- #233 **FIXED / CONTEXT7 VERIFIED** — SYSTEM housekeeping faults are contained by `RunMaintenancePassSafelyAsync`; current .NET guidance confirms unhandled `BackgroundService` exceptions default to `StopHost`, so best-effort maintenance can no longer terminate the core service.
+- #234 **FIXED / TEST VERIFIED** — Tray storage maintenance contains timeout cancellation and maintenance-only faults at the async WinForms timer boundary instead of allowing an auxiliary callback to terminate the Tray.
+- #235 **FIXED / TEST VERIFIED** — tunnel idle proof now fails closed unless schema v1 is live/ready, lifecycle is `running`, queue/dispatcher/response-delivery observations are present/healthy/not-limited, all work counters are zero, and the five-minute activity window is satisfied.
+- #236 **FIXED / VENDOR+LIVE-SHARE VERIFIED** — tunnel log maintenance no longer disconnects/reconnects the runtime. The pinned v0.0.15 append writer is gated explicitly; stable idle is rechecked, a snapshot is archived and the same live file is truncated. The live Dev log accepted the same `ReadWrite + FileShare.ReadWrite` sharing contract.
+- #237 **FIXED / TEST VERIFIED** — Penpot now rotates active stable logs, uses the intended 3→6→12…≤60 backoff, disposes child process handles, sweeps owned process trees before first launch and after each cycle, and bounds legacy log enumeration per family with observable deferral.
+- #238 **FIXED / RED→GREEN** — the runtime self-test fixture still used `lifecycle=ready` with no required health components. Real current-user Release self-test failed at 21:10:32; after aligning the fixture to `running` plus healthy queue/dispatcher/response-delivery observations, the same test succeeded at 21:11:28 and 21:18:55.
+
+Closed false positives: the SYSTEM `PeriodicTimer` loop is sequential/single-consumer, so there is no six-hour overlap defect; recursive cleanup already refuses reparse traversal. Non-disruptive diagnostic copy/truncate is intentionally preferred over stopping an otherwise healthy idle tunnel; the append-writer assumption is verified against the pinned v0.0.15 source.
+
 Last updated: 2026-09-29
 Branch: main
 Current repository runtime-affecting committed HEAD: `ac467027b410ed4b23f761f0e5ad0dcf775fec18` — focused surface role separation and explicit Shared overlap contract.

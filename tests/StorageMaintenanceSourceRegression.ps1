@@ -35,10 +35,15 @@ $program = Read-RepoText 'src\Talvora.Tray\Program.cs'
 Assert-Contains $maintenance '32L * 1024 * 1024' 'tunnel logs have a bounded 32 MiB rotation threshold'
 Assert-Contains $maintenance 'TimeSpan.FromMinutes(5)' 'tunnel log rotation requires an idle quiet window'
 Assert-Contains $maintenance 'TimeSpan.FromDays(7)' 'general Talvora temporary artifacts have age retention'
+Assert-Contains $maintenance 'RuntimeLifecycle: "running"' 'maintenance self-test fixture uses the current runtime lifecycle contract'
+Assert-Contains $maintenance '"response-delivery",' 'maintenance self-test fixture includes the required idle component set'
 
-Assert-Contains $sharedCleanup 'MaximumScannedEntriesPerCandidate = 50_000' 'shared cleanup traversal is bounded'
+Assert-Contains $sharedCleanup 'EnumerateMatchingTopLevelCandidates' 'shared cleanup enumerates only allowlisted top-level names instead of materializing an unrelated 100k-entry root'
+Assert-Contains $sharedCleanup 'prefix + "*"' 'shared cleanup uses prefix-scoped lazy filesystem enumeration'
+Assert-Contains $sharedCleanup 'MaximumScannedEntriesPerCandidate = 100_000' 'shared cleanup can inspect a 100k-entry owned tree while remaining bounded'
 Assert-Contains $sharedCleanup 'MaximumCleanupCandidatesPerRun = 512' 'shared cleanup work per run is bounded'
 Assert-Contains $sharedCleanup '"Talvora-Deploy-"' 'canonical deploy leftovers are explicitly allowlisted'
+Assert-Contains $sharedCleanup '"Talvora-Setup-"' 'crash-left native installer setup roots are explicitly allowlisted'
 Assert-Contains $sharedCleanup '"TalvoraReparse"' 'known source-edit regression leftovers are explicitly allowlisted'
 Assert-Contains $sharedCleanup 'IsOwnedTempName' 'Tray and SYSTEM maintenance share one allowlist policy'
 Assert-Contains $sharedCleanup 'TestPrefixes' 'test-only temporary artifacts have a dedicated retention class'
@@ -49,18 +54,19 @@ Assert-Contains $maintenance 'TalvoraOwnedTempCleanup.CleanupTopLevel' 'interact
 Assert-Contains $maintenance 'TestArtifactRetention' 'interactive-user test artifacts have a two-day retention path'
 Assert-Contains $maintenance 'TalvoraOwnedTempCleanup.TestPrefixes' 'interactive-user cleanup applies the shared test classification'
 
-$matchIndex = $sharedCleanup.IndexOf(
-    'if (!MatchesOwnedName(name, prefixes, exactNames))',
+$matchingEnumeratorIndex = $sharedCleanup.IndexOf(
+    'foreach (var entry in EnumerateMatchingTopLevelCandidates(',
     [StringComparison]::Ordinal)
 $candidateBoundIndex = $sharedCleanup.IndexOf(
-    'if (++inspected > MaximumCleanupCandidatesPerRun)',
+    'if (++inspectedCandidates > MaximumCleanupCandidatesPerRun)',
     [StringComparison]::Ordinal)
-if ($matchIndex -lt 0 -or $candidateBoundIndex -le $matchIndex) {
+if ($matchingEnumeratorIndex -lt 0 -or $candidateBoundIndex -le $matchingEnumeratorIndex) {
     throw 'Storage maintenance contract failed: candidate bound must count matched Talvora entries, not unrelated root entries'
 }
 
 Assert-Contains $systemMaintenance 'TimeSpan.FromDays(2)' 'system-owned test artifacts use a shorter retention window'
 Assert-Contains $systemMaintenance 'TalvoraOwnedTempCleanup.TestPrefixes' 'SYSTEM temp cleanup applies the shared test classification'
+Assert-Contains $systemMaintenance 'IsSystemOwnedCleanupCandidate' 'SYSTEM cleanup refuses to delete matching names owned by an interactive user'
 Assert-Contains $systemMaintenance '"PenpotSmoke"' 'SYSTEM maintenance recognizes Penpot smoke data'
 Assert-Contains $systemMaintenance '"TestBrowserVisible"' 'SYSTEM maintenance recognizes Penpot browser smoke profiles'
 Assert-Contains $systemMaintenance 'TalvoraOwnedTempCleanup.TryDeleteStaleEntry' 'SYSTEM cleanup uses the shared reparse-safe deletion engine'
@@ -73,27 +79,50 @@ Assert-Contains $penpotSupervisor "'plugin.out.log'" 'Penpot plugin uses a stabl
 Assert-Contains $penpotSupervisor 'MaxBytes = 8388608' 'Penpot child logs have an 8 MiB restart rotation threshold'
 Assert-Contains $penpotSupervisor 'MaxBytes 1048576' 'Penpot supervisor error log has a 1 MiB rotation threshold'
 Assert-Contains $penpotSupervisor '[Math]::Min(60' 'Penpot crash loops use bounded exponential backoff'
+Assert-Contains $penpotSupervisor '$delaySeconds = $backoffSeconds' 'Penpot crash-loop delay starts at the documented three seconds before growth'
+Assert-Contains $penpotSupervisor '$server.Dispose()' 'Penpot server Process handles are deterministically released each cycle'
+Assert-Contains $penpotSupervisor '$plugin.Dispose()' 'Penpot plugin Process handles are deterministically released each cycle'
+Assert-Contains $penpotSupervisor 'Stop-OrphanedPenpotProcesses' 'Penpot crash recovery sweeps marker-owned orphan child processes'
+Assert-Contains $penpotSupervisor '/T /F' 'Penpot orphan cleanup terminates the complete owned child process tree'
+if ($penpotSupervisor -notmatch 'function Stop-OrphanedPenpotProcesses[\s\S]*?taskkill\.exe[\s\S]*?/T /F[\s\S]*?function Rotate-Log') {
+    throw 'Storage maintenance contract failed: Penpot orphan function must terminate the owned process tree'
+}
+Assert-Contains $penpotSupervisor '$backoffSeconds = 3' 'Penpot supervisor normalizes old owned processes before its first launch cycle'
+$backoffIndex = $penpotSupervisor.IndexOf('$backoffSeconds = 3', [StringComparison]::Ordinal)
+$initialSweepIndex = $penpotSupervisor.IndexOf('Stop-OrphanedPenpotProcesses', $backoffIndex + 1, [StringComparison]::Ordinal)
+$mainLoopIndex = $penpotSupervisor.IndexOf('while ($true) {', $backoffIndex + 1, [StringComparison]::Ordinal)
+if ($backoffIndex -lt 0 -or $initialSweepIndex -le $backoffIndex -or $mainLoopIndex -le $initialSweepIndex) {
+    throw 'Storage maintenance contract failed: Penpot prelaunch orphan normalization ordering'
+}
 Assert-Contains $penpotSupervisor 'RetainedLegacyLogs = 16' 'only a small diagnostic tail of legacy timestamp logs is retained'
 Assert-Contains $penpotSupervisor 'TimeSpan.FromDays(1)' 'legacy Penpot logs expire after one day'
-Assert-Contains $penpotSupervisor 'MaximumLegacyLogCandidates = 20_000' 'legacy Penpot log pruning is bounded'
+Assert-Contains $penpotSupervisor 'MaximumLegacyLogEntriesPerPattern = 10_000' 'each legacy Penpot log family has a hard enumeration budget'
+Assert-Contains $penpotSupervisor 'scanLimitReached' 'Penpot legacy-log scan-limit deferral is propagated to SYSTEM observability'
 Assert-Contains $penpotSupervisor 'AtomicFile.WriteAllTextAsync' 'the SYSTEM-owned supervisor script is published atomically'
 Assert-Contains $penpotSupervisor 'IsLegacyTimestampLogName' 'only the known legacy timestamp-log format is pruned'
 
 Assert-Contains $maintenance 'PruneObsoleteTunnelClientVersions' 'old tunnel-client versions have a retention policy'
 Assert-Contains $maintenance 'JsonSerializer.Deserialize<BusinessConfig>' 'active tunnel configs protect their referenced client version'
-Assert-Contains $maintenance 'versionDirectories.Take(2)' 'at least two newest tunnel-client versions are retained for rollback'
+Assert-Contains $maintenance 'rollbackCandidates' 'two rollback slots are selected after active/journal-protected versions are excluded'
+Assert-Contains $maintenance '.Take(2)' 'at least two non-active tunnel-client versions are retained for rollback'
+Assert-Contains $maintenance 'GetClientUpdateProtectedVersionDirectories' 'interrupted update journals protect both previous and candidate client versions'
+Assert-Contains $maintenance 'TryAcquireVersionPruneLeases' 'version pruning coordinates with every managed tunnel lifecycle/update operation'
+Assert-Contains $maintenance 'Tunnel-client version pruning deferred' 'unreadable active tunnel configuration fails version pruning closed'
+Assert-Contains $maintenance 'MaximumVersionEntriesPerRun = 10_000' 'tunnel-client staging/version enumeration has a hard work bound'
 
 Assert-Contains $maintenance 'ManagedMcpOperationCoordinator.TryAcquire' 'log maintenance coordinates with MCP lifecycle operations'
 Assert-Contains $maintenance 'health.IsQuietForMaintenance' 'log rotation requires live idle telemetry'
-Assert-Contains $maintenance 'DisconnectExistingAsync' 'the writer is stopped before rotating its log'
-Assert-Contains $maintenance 'reconnectRequired = true' 'a rotation attempt always enters reconnect protection'
-Assert-Contains $maintenance 'ConnectExistingAsync' 'the tunnel is restored after rotation'
-Assert-Contains $maintenance 'CancellationToken.None' 'reconnect is not abandoned by shutdown/caller cancellation after maintenance started'
+Assert-Contains $maintenance 'TryRotateTunnelLogWithoutStoppingRuntimeAsync' 'log maintenance never hard-stops the Windows tunnel runtime merely to rotate diagnostics'
+Assert-Contains $maintenance 'FileStream' 'live tunnel log rotation uses a bounded in-place file operation instead of a runtime hard kill'
 Assert-Contains $maintenance 'logPath + ".1"' 'only one bounded tunnel-log archive is retained'
 
 Assert-Contains $health 'QueueDepth == 0' 'maintenance idle state requires an empty queue'
 Assert-Contains $health 'DispatcherActive == 0' 'maintenance idle state requires no active dispatcher work'
 Assert-Contains $health 'ResponseInProgress == 0' 'maintenance idle state requires no in-flight response delivery'
+Assert-Contains $health 'SchemaVersion != 1' 'maintenance refuses unknown future health schemas until their semantics are reviewed'
+Assert-Contains $health '"running"' 'maintenance refuses starting/draining tunnel runtimes'
+Assert-Contains $health 'component.Limited' 'maintenance refuses limited idle evidence'
+Assert-Contains $health 'component.Status' 'maintenance requires healthy queue/dispatcher/response-delivery observations'
 Assert-Contains $health '"last_enqueue"' 'queue activity timestamp participates in the quiet window'
 Assert-Contains $health '"last_completion"' 'dispatcher completion timestamp participates in the quiet window'
 Assert-Contains $health '"last_completed"' 'response completion timestamp participates in the quiet window'
@@ -105,6 +134,10 @@ Assert-Contains $tray 'StopStorageMaintenanceTimer();' 'tray shutdown stops peri
 Assert-Contains $tray 'DisposeStorageMaintenanceTimer();' 'tray disposal releases the maintenance timer'
 Assert-Contains $trayMaintenance '6 * 60 * 60 * 1000' 'periodic maintenance cadence is six hours'
 Assert-Contains $trayMaintenance 'ControlCenterEventStore.Record' 'meaningful cleanup is visible in Control Center history'
+Assert-Contains $trayMaintenance 'catch (OperationCanceledException ex)' 'non-lifetime HTTP timeout cancellation is contained at the async timer boundary'
+
+Assert-Contains $systemMaintenance 'RunMaintenancePassSafelyAsync' 'recoverable SYSTEM maintenance failures are isolated from the BackgroundService host lifetime'
+Assert-Contains $systemMaintenance 'logger.LogWarning' 'recoverable SYSTEM maintenance failure is observable'
 
 Assert-Contains $program 'TalvoraStorageMaintenanceService.AssertPolicyContract();' 'runtime self-test protects the maintenance policy'
 Assert-Contains $program '"--storage-maintenance"' 'operators have a deterministic maintenance command for acceptance'

@@ -326,6 +326,101 @@ internal static partial class ManagedMcpTunnelProvisioningService
         }
     }
 
+    internal static IReadOnlyList<string>
+        GetClientUpdateProtectedVersionDirectories(
+            string configPath,
+            string versionsRoot)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(configPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(versionsRoot);
+
+        var journalPath =
+            GetClientUpdateJournalPath(configPath);
+        if (!File.Exists(journalPath))
+        {
+            return [];
+        }
+
+        TunnelClientUpdateJournal journal;
+        try
+        {
+            journal =
+                JsonSerializer.Deserialize<TunnelClientUpdateJournal>(
+                    File.ReadAllText(journalPath),
+                    ConfigJsonOptions)
+                ?? throw new InvalidDataException(
+                    $"Tunnel-client update recovery journal is empty: {journalPath}");
+        }
+        catch (Exception ex) when (
+            ex is IOException or
+            UnauthorizedAccessException or
+            JsonException)
+        {
+            throw new InvalidDataException(
+                $"Tunnel-client update recovery journal could not be inspected for version retention: {journalPath}",
+                ex);
+        }
+
+        if (journal.SchemaVersion !=
+                ClientUpdateJournalSchemaVersion ||
+            !string.Equals(
+                Path.GetFullPath(journal.ConfigPath),
+                Path.GetFullPath(configPath),
+                StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(
+                journal.PreviousConfig.TunnelClient) ||
+            string.IsNullOrWhiteSpace(
+                journal.CandidateConfig.TunnelClient))
+        {
+            throw new InvalidDataException(
+                $"Invalid tunnel-client update recovery journal: {journalPath}");
+        }
+
+        var protectedDirectories =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+        Protect(
+            journal.PreviousConfig.TunnelClient);
+        Protect(
+            journal.CandidateConfig.TunnelClient);
+        return protectedDirectories.ToArray();
+
+        void Protect(string executable)
+        {
+            var fullExecutable =
+                Path.GetFullPath(executable);
+            var fullVersionsRoot =
+                Path.GetFullPath(versionsRoot);
+            if (!TalvoraOwnedTempCleanup.IsPathUnderRoot(
+                    fullExecutable,
+                    fullVersionsRoot))
+            {
+                return;
+            }
+
+            var relative =
+                Path.GetRelativePath(
+                    fullVersionsRoot,
+                    fullExecutable);
+            var firstSeparator =
+                relative.IndexOfAny(
+                    [
+                        Path.DirectorySeparatorChar,
+                        Path.AltDirectorySeparatorChar,
+                    ]);
+            if (firstSeparator <= 0)
+            {
+                return;
+            }
+
+            protectedDirectories.Add(
+                Path.GetFullPath(
+                    Path.Combine(
+                        fullVersionsRoot,
+                        relative[..firstSeparator])));
+        }
+    }
+
     private static Task WriteClientUpdateJournalAsync(
         TunnelClientUpdateJournal journal,
         CancellationToken cancellationToken) =>

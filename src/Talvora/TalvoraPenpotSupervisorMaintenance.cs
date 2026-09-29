@@ -7,7 +7,7 @@ namespace Talvora;
 
 internal static class TalvoraPenpotSupervisorMaintenance
 {
-    private const int MaximumLegacyLogCandidates = 20_000;
+    private const int MaximumLegacyLogEntriesPerPattern = 10_000;
     private const int RetainedLegacyLogs = 16;
     private static readonly TimeSpan LegacyLogRetention =
         TimeSpan.FromDays(1);
@@ -38,11 +38,34 @@ internal static class TalvoraPenpotSupervisorMaintenance
             & "$env:SystemRoot\System32\taskkill.exe" /PID $Process.Id /T /F 2>$null | Out-Null
         }
 
+        function Stop-OrphanedPenpotProcesses {
+            $markers = @($serverScript, $viteScript)
+            Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+                Where-Object {
+                    $commandLine = [string]$_.CommandLine
+                    $_.ProcessId -ne $PID -and
+                    -not [string]::IsNullOrWhiteSpace($commandLine) -and
+                    ($markers | Where-Object { $commandLine.IndexOf($_, [StringComparison]::OrdinalIgnoreCase) -ge 0 })
+                } |
+                ForEach-Object {
+                    & "$env:SystemRoot\System32\taskkill.exe" /PID ([int]$_.ProcessId) /T /F 2>$null | Out-Null
+                }
+        }
+
         function Rotate-Log([string]$Path, [long]$MaxBytes = 8388608) {
             if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return }
             $item = Get-Item -LiteralPath $Path -Force
             if ($item.Length -lt $MaxBytes) { return }
             Move-Item -LiteralPath $Path -Destination ($Path + '.1') -Force
+        }
+
+        function Test-ChildLogLimitReached([string[]]$Paths, [long]$MaxBytes = 8388608) {
+            foreach ($path in $Paths) {
+                if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+                $item = Get-Item -LiteralPath $path -Force
+                if ($item.Length -ge $MaxBytes) { return $true }
+            }
+            return $false
         }
 
         function Write-SupervisorError([string]$Message) {
@@ -56,6 +79,7 @@ internal static class TalvoraPenpotSupervisorMaintenance
         $pluginOut = Join-Path $logDir 'plugin.out.log'
         $pluginErr = Join-Path $logDir 'plugin.err.log'
         $backoffSeconds = 3
+        Stop-OrphanedPenpotProcesses
 
         while ($true) {
             foreach ($path in @($serverOut, $serverErr, $pluginOut, $pluginErr)) {
@@ -65,6 +89,7 @@ internal static class TalvoraPenpotSupervisorMaintenance
             $startedAt = Get-Date
             $server = $null
             $plugin = $null
+            $restartForLogRotation = $false
             try {
                 $server = Start-Process -FilePath $node -ArgumentList @($serverScript) -WorkingDirectory (Split-Path $serverScript -Parent) -WindowStyle Hidden -PassThru -RedirectStandardOutput $serverOut -RedirectStandardError $serverErr
                 $plugin = Start-Process -FilePath $node -ArgumentList @($viteScript, 'preview', '--config', $viteConfig, '--host', '127.0.0.1', '--port', '4400') -WorkingDirectory $pluginRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput $pluginOut -RedirectStandardError $pluginErr
@@ -73,6 +98,10 @@ internal static class TalvoraPenpotSupervisorMaintenance
                     Start-Sleep -Seconds 2
                     $server.Refresh()
                     $plugin.Refresh()
+                    if (Test-ChildLogLimitReached -Paths @($serverOut, $serverErr, $pluginOut, $pluginErr)) {
+                        $restartForLogRotation = $true
+                        break
+                    }
                 }
             }
             catch {
@@ -81,17 +110,28 @@ internal static class TalvoraPenpotSupervisorMaintenance
             finally {
                 Stop-Tree $server
                 Stop-Tree $plugin
+                Stop-OrphanedPenpotProcesses
+                if ($null -ne $server) { $server.Dispose() }
+                if ($null -ne $plugin) { $plugin.Dispose() }
+            }
+
+            if ($restartForLogRotation) {
+                $backoffSeconds = 3
+                Start-Sleep -Seconds 1
+                continue
             }
 
             $runtimeSeconds = ((Get-Date) - $startedAt).TotalSeconds
+            $delaySeconds = $backoffSeconds
             if ($runtimeSeconds -ge 120) {
                 $backoffSeconds = 3
+                $delaySeconds = 3
             }
             else {
                 $backoffSeconds = [Math]::Min(60, [Math]::Max(3, $backoffSeconds * 2))
             }
 
-            Start-Sleep -Seconds $backoffSeconds
+            Start-Sleep -Seconds $delaySeconds
         }
         """;
 
@@ -176,24 +216,39 @@ internal static class TalvoraPenpotSupervisorMaintenance
 
         var cutoffUtc = nowUtc - LegacyLogRetention;
         var candidates = new List<FileInfo>();
-        var inspected = 0;
+        var scanLimitReached = false;
+        var seen = new HashSet<string>(
+            StringComparer.OrdinalIgnoreCase);
 
-        foreach (var path in Directory.EnumerateFiles(
-                     logRoot,
-                     "*.log",
-                     SearchOption.TopDirectoryOnly))
+        foreach (var pattern in new[]
+                 {
+                     "local-mcp-*.log",
+                     "plugin-*.log",
+                 })
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (++inspected > MaximumLegacyLogCandidates)
+            var inspectedEntries = 0;
+            foreach (var path in Directory.EnumerateFiles(
+                         logRoot,
+                         pattern,
+                         SearchOption.TopDirectoryOnly))
             {
-                break;
-            }
+                cancellationToken.ThrowIfCancellationRequested();
+                if (++inspectedEntries >
+                    MaximumLegacyLogEntriesPerPattern)
+                {
+                    scanLimitReached = true;
+                    break;
+                }
+                var fullPath = Path.GetFullPath(path);
+                if (!seen.Add(fullPath) ||
+                    !IsLegacyTimestampLogName(
+                        Path.GetFileName(fullPath)))
+                {
+                    continue;
+                }
 
-            var name = Path.GetFileName(path);
-            if (IsLegacyTimestampLogName(name))
-            {
                 candidates.Add(
-                    new FileInfo(path));
+                    new FileInfo(fullPath));
             }
         }
 
@@ -242,7 +297,8 @@ internal static class TalvoraPenpotSupervisorMaintenance
 
         return new TalvoraOwnedTempCleanupResult(
             deleted,
-            reclaimedBytes);
+            reclaimedBytes,
+            scanLimitReached);
     }
 
     private static bool IsLegacyTimestampLogName(

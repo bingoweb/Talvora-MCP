@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T16:31:56Z",
-  "scope": "Talvora bounded storage maintenance and disk-growth hardening: run cancellation-aware periodic cleanup in the LocalSystem Windows Service and interactive Tray, classify test artifacts separately from general deployment artifacts, bound cleanup traversal, avoid following reparse points, preserve active tunnel-client rollback versions, rotate tunnel logs only when live health telemetry proves the tunnel is idle, replace Penpot timestamp-log churn with bounded stable logs and exponential crash-loop backoff, and enforce the maintenance contract in Windows CI.",
+  "verifiedAtUtc": "2026-09-29T18:25:00Z",
+  "scope": "Talvora storage-maintenance deep commercial-quality audit: fail closed across user/SYSTEM ownership boundaries, bound top-level and owned-tree traversal at large directory scale, isolate BackgroundService and Tray timer failures from host lifetime, preserve active and pending-update tunnel-client versions under lifecycle leases, rotate v0.0.15 append-mode diagnostics without stopping an idle runtime, and harden Penpot child-process, log, backoff, orphan and legacy-retention lifecycle behavior.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET worker-service guidance confirms BackgroundService.ExecuteAsync(CancellationToken) is the standard lifetime surface for long-running periodic work and that the stopping token should drive graceful shutdown. The documented worker pattern loops with an awaited delay using that token. Microsoft PeriodicTimer guidance further requires a single consumer for WaitForNextTickAsync and allows cancellation/disposal to interrupt the wait. Talvora therefore runs one SYSTEM storage-maintenance loop, passes the host stopping token through startup delay, maintenance work and PeriodicTimer waits, and treats cancellation during service shutdown as the normal terminal path."
+      "verified": "Current .NET worker-service guidance confirms BackgroundService.ExecuteAsync(CancellationToken) is the standard lifetime surface for long-running periodic work and that the stopping token should drive graceful shutdown. Current Windows Service guidance also documents that BackgroundServiceExceptionBehavior defaults to StopHost in .NET 6+, so an unhandled housekeeping failure can stop the host. Talvora therefore keeps one cancellation-aware SYSTEM maintenance loop but contains non-shutdown maintenance faults inside RunMaintenancePassSafelyAsync and records them instead of allowing best-effort storage work to terminate the core service."
     },
     {
       "libraryId": "/microsoftdocs/windows-powershell-docs",
