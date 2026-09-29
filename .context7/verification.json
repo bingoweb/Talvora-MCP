@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T04:38:27Z",
-  "scope": "Control Center commercial-quality audit: separate Core service health/actions from Dev/Admin ChatGPT connections, preserve last-known-good state during transient refresh failures, modernize responsive dashboard layout, reduce hidden-view UI work, and improve keyboard/UI Automation accessibility.",
+  "verifiedAtUtc": "2026-09-29T05:06:06Z",
+  "scope": "Control Center repair/recovery hardening: diagnose the failed layer, prefer minimal service/task/tunnel repair, verify readiness after every repair, escalate only when targeted recovery fails, preserve manual-stop intent, and make automatic retry/backoff state truthful.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,11 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current Microsoft.ML.Tokenizers guidance confirms SentencePieceTokenizer/Create and EncodeToIds support. Talvora Phase 4 validated Microsoft SentencePiece tokenization against the Hugging Face XLM-R tokenizer using the explicit XLM-R id remap, then reproduced the benchmark ranking with Microsoft.ML.Tokenizers 2.0.0 plus Microsoft.ML.OnnxRuntime 1.30.0."
+      "verified": "Current .NET Windows Service guidance documents explicit sc.exe start/stop lifecycle control and service recovery actions. Talvora's repair engine keeps service operations bounded, verifies post-operation health/readiness, and escalates from targeted recovery only when the narrower repair does not restore readiness. Existing MiniLM tokenizer/ONNX verification remains covered by the pinned implementation and benchmark artifacts."
+    },
+    {
+      "libraryId": "/microsoftdocs/windows-powershell-docs",
+      "verified": "Current Microsoft ScheduledTasks guidance documents Get-ScheduledTask plus explicit Start-ScheduledTask and Stop-ScheduledTask lifecycle operations. Talvora uses those primitives for component-specific Gitea MCP/tunnel recovery, then performs end-to-end readiness verification before reporting repair success."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop_wpf",
@@ -37,6 +41,10 @@
     }
   ],
   "vendorSources": [
+    "Talvora live repair acceptance 2026-09-29: with the normal tray recovery loop intentionally paused, talvora-admin-business was stopped until tunnel-client reported process_running=false and ready=false; the source repair command restored it with Strategy=Yalnız güvenli tüneli yeniden bağla, Escalated=False and FinalHealth=Ready while the Talvora Core service and Dev connector remained available.",
+    "Gitea live repair acceptance 2026-09-29: with automatic tray recovery intentionally paused, gitea-business was stopped until tunnel-client reported process_running=false and ready=false; the source repair command restored only the secure tunnel with Escalated=False and FinalHealth=Ready while the Gitea service PID remained 3560 and the Caddy service PID remained 6352.",
+    "Microsoft .NET Windows Service recovery guidance checked 2026-09-29: sc.exe start/stop and configured service recovery actions are supported operational primitives; Talvora adds its own bounded readiness verification before declaring a repair successful.",
+    "Microsoft Windows ScheduledTasks PowerShell guidance checked 2026-09-29: registered tasks can be queried and explicitly started/stopped; Talvora uses targeted task operations for Gitea MCP server/tunnel repair before considering a full chain restart.",
     "GitHub Actions run 36477651154 inspected 2026-09-28: checkout, locked restore and Release build all passed; Validate source contracts failed specifically in ModernizationPolicyRegression.ps1 with 'User-facing desktop worklog language must not expose developer jargon.'",
     "GitHub Actions runner-images checked 2026-09-28: windows-latest is currently Windows Server 2025; the observed image was windows-2025-vs2026 20260922.246.2. No runner-image failure preceded the policy regression.",
     "Microsoft .NET regular-expression guidance checked 2026-09-28: case-insensitive regex matching uses current-culture casing unless RegexOptions.CultureInvariant is supplied; the documented Turkish tr-TR FILE/file example reproduces the same dotted/dotless-I class of mismatch that made local 'Installer' checks differ from the GitHub runner.",

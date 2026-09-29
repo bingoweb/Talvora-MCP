@@ -149,6 +149,52 @@ internal static class Program
         if (args.Length >= 1 &&
             string.Equals(
                 args[0],
+                "--managed-mcp-repair",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var managedMcpId =
+                    args.Length > 1 && !string.IsNullOrWhiteSpace(args[1])
+                        ? args[1]
+                        : "talvora";
+
+                var registry = ManagedMcpRegistryCoordinator
+                    .LoadOrRecoverAsync(CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                var registration = registry.Mcps.FirstOrDefault(entry =>
+                    string.Equals(
+                        entry.Id,
+                        managedMcpId,
+                        StringComparison.OrdinalIgnoreCase))
+                    ?? throw new InvalidOperationException(
+                        $"Managed MCP kaydı bulunamadı: {managedMcpId}");
+
+                var repair = ControlCenterRepairService
+                    .RepairAsync(
+                        registration,
+                        CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+
+                TrayLog.Write(
+                    $"Managed MCP repair completed. MCP={registration.Id}; Strategy={repair.Strategy}; Escalated={repair.Escalated}; FinalHealth={repair.FinalState.Health}; Detail={repair.Detail}");
+                return repair.FinalState.Health ==
+                       ControlCenterHealthState.Ready
+                    ? 0
+                    : 1;
+            }
+            catch (Exception ex)
+            {
+                TrayLog.Write("Managed MCP repair command failed", ex);
+                return 1;
+            }
+        }
+
+        if (args.Length >= 1 &&
+            string.Equals(
+                args[0],
                 "--managed-mcp-probe",
                 StringComparison.OrdinalIgnoreCase))
         {

@@ -757,14 +757,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 return;
             }
 
-            ManagedMcpSessionState.ClearManualStop("gitea");
-            _giteaRecoveryState.ResetForManualAction();
-
             SetGiteaActionsEnabled(false);
             SetGiteaStatus(new GiteaStatus(
                 GiteaConnectionState.Restarting,
                 "Gitea MCP otomatik onarılıyor...",
-                "Gitea, Caddy, MCP sunucusu ve güvenli tünel yeniden hazırlanıyor."));
+                "Sorunlu katman tanılanıyor; mümkünse yalnız ilgili bileşen yeniden hazırlanacak."));
 
             try
             {
@@ -777,15 +774,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
                         "Gitea MCP yönetim kaydı bulunamadı.");
                 }
 
-                var repaired = status.State == GiteaConnectionState.Offline
-                    ? await ControlCenterLifecycleService.StartAsync(
-                        registration,
-                        _lifetimeCts.Token)
-                    : await ControlCenterLifecycleService.RestartAsync(
-                        registration,
-                        _lifetimeCts.Token);
-
-                _ = repaired;
+                var repair = await ControlCenterRepairService.RepairAsync(
+                    registration,
+                    _lifetimeCts.Token);
 
                 status = await GiteaTrayClient.GetStatusAsync(
                     _lifetimeCts.Token);
@@ -805,8 +796,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 ControlCenterEventStore.Record(
                     ControlCenterEventSeverity.Info,
                     "recovery",
-                    "Gitea MCP otomatik olarak düzeltildi",
-                    "Gitea, Caddy, MCP sunucusu ve güvenli tünel yeniden hazır.",
+                    repair.Summary,
+                    repair.Detail,
                     "gitea",
                     "recovery:gitea:success");
 
@@ -1069,97 +1060,6 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
 
 
-    private static async Task<ManagedMcpLifecycleResult?>
-        TryRepairGenericWithoutRestartAsync(
-            ManagedMcpRegistration registration,
-            ManagedMcpDashboardState state,
-            CancellationToken cancellationToken)
-    {
-        if (state.Health == ControlCenterHealthState.Offline)
-        {
-            return null;
-        }
-
-        using var lease =
-            ManagedMcpOperationCoordinator.TryAcquire(registration.Id);
-        if (lease is null)
-        {
-            throw new ManagedMcpOperationInProgressException(
-                registration.Id);
-        }
-
-        if (registration.ProtocolProbe is { } probeRegistration)
-        {
-            var protocol =
-                await ManagedMcpProtocolProbeService.ProbeAsync(
-                    registration,
-                    runBrowserSmoke: false,
-                    cancellationToken);
-
-            if (protocol.Ready &&
-                probeRegistration.BrowserSmokeRequired &&
-                !protocol.BrowserSmokePassed)
-            {
-                var smoke =
-                    await ManagedMcpProtocolProbeService.WaitUntilReadyAsync(
-                        registration,
-                        runBrowserSmoke: true,
-                        timeout: TimeSpan.FromSeconds(45),
-                        cancellationToken);
-
-                if (smoke.Ready && smoke.BrowserSmokePassed)
-                {
-                    return new ManagedMcpLifecycleResult(
-                        ManagedMcpLifecycleOperation.Restart,
-                        $"{registration.DisplayName} browser doğrulaması yenilendi",
-                        "Çalışan MCP/browser zinciri kesilmeden current browser instance üzerinde gerçek smoke yeniden doğrulandı.");
-                }
-
-                throw new InvalidOperationException(
-                    $"{registration.DisplayName} browser smoke yenilemesi tamamlanamadı; çalışan MCP/browser zinciri korunuyor: {smoke.Detail}");
-            }
-
-            if (protocol.Ready &&
-                (!probeRegistration.BrowserSmokeRequired ||
-                 protocol.BrowserSmokePassed) &&
-                registration.Tunnel is { Required: true })
-            {
-                var tunnelStatus =
-                    await ManagedMcpTunnelProvisioningService
-                        .GetRuntimeStatusAsync(
-                            registration,
-                            cancellationToken);
-
-                if (!tunnelStatus.Ready)
-                {
-                    await ManagedMcpTunnelProvisioningService
-                        .ConnectExistingAsync(
-                            registration,
-                            cancellationToken);
-
-                    var refreshedTunnel =
-                        await ManagedMcpTunnelProvisioningService
-                            .GetRuntimeStatusAsync(
-                                registration,
-                                cancellationToken);
-
-                    if (refreshedTunnel.Ready)
-                    {
-                        return new ManagedMcpLifecycleResult(
-                            ManagedMcpLifecycleOperation.Restart,
-                            $"{registration.DisplayName} tüneli yeniden bağlandı",
-                            "Yerel MCP/browser zinciri kesilmeden yalnız Secure MCP Tunnel yeniden hazırlandı.");
-                    }
-
-                    throw new InvalidOperationException(
-                        $"{registration.DisplayName} tüneli yeniden bağlanamadı; yerel MCP/browser zinciri korunuyor: {refreshedTunnel.Detail}");
-                }
-            }
-        }
-
-        return null;
-    }
-
     private async Task MaintainGenericManagedMcpsAsync()
     {
         var lockTaken = false;
@@ -1291,37 +1191,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
                 try
                 {
-                    var result =
-                        await TryRepairGenericWithoutRestartAsync(
-                            registration,
-                            state,
-                            _lifetimeCts.Token);
-
-                    if (result is null)
-                    {
-                        result = state.Health ==
-                            ControlCenterHealthState.Offline
-                            ? await ControlCenterLifecycleService.StartAsync(
-                                registration,
-                                _lifetimeCts.Token)
-                            : await ControlCenterLifecycleService.RestartAsync(
-                                registration,
-                                _lifetimeCts.Token);
-                    }
-
-                    ManagedMcpProtocolProbeService.InvalidateCache(registration.Id);
-                    ManagedMcpTunnelProvisioningService.InvalidateRuntimeStatusCache(registration.Id);
-
-                    var refreshed = await ControlCenterDashboardService.GetStateAsync(
+                    var repair = await ControlCenterRepairService.RepairAsync(
                         registration,
+                        state,
                         _lifetimeCts.Token);
+                    var refreshed = repair.FinalState;
                     _genericDashboardStates[registration.Id] = refreshed;
-
-                    if (refreshed.Health != ControlCenterHealthState.Ready)
-                    {
-                        throw new InvalidOperationException(
-                            $"{registration.DisplayName} otomatik kurtarma sonrası hazır olmadı: {refreshed.Detail}");
-                    }
 
                     var recoveredSeriousIncident = recoveryState.ResetHealthy();
 
@@ -1330,8 +1205,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
                     ControlCenterEventStore.Record(
                         ControlCenterEventSeverity.Info,
                         "recovery",
-                        result.Summary,
-                        result.Detail,
+                        repair.Summary,
+                        repair.Detail,
                         registration.Id,
                         $"recovery:{registration.Id}:success");
 

@@ -93,10 +93,11 @@ internal sealed partial class ControlCenterWindow
             }
             else
             {
-                var result = await ControlCenterLifecycleService.RestartAsync(
+                var repair = await ControlCenterRepairService.RepairAsync(
                     state.Registration,
+                    state,
                     _lifetimeCts.Token);
-                RecordLifecycleSuccess(state.Registration, result);
+                RecordRepairSuccess(state.Registration, repair);
             }
 
             await RefreshDashboardAsync();
@@ -182,8 +183,63 @@ internal sealed partial class ControlCenterWindow
             return;
         }
 
+        if (state.Health == ControlCenterHealthState.Attention)
+        {
+            await ExecuteDetailRepairAsync();
+            return;
+        }
+
         await ExecuteDetailLifecycleOperationAsync(
             ManagedMcpLifecycleOperation.Restart);
+    }
+
+    private async Task ExecuteDetailRepairAsync()
+    {
+        var state = _selectedMcp;
+        if (state is null || _detailOperationInProgress)
+        {
+            return;
+        }
+
+        SetDetailOperationBusy(
+            true,
+            "Sorun tanılanıyor; en az kesintiyle onarım uygulanıyor...");
+
+        try
+        {
+            var repair = await ControlCenterRepairService.RepairAsync(
+                state.Registration,
+                state,
+                _lifetimeCts.Token);
+
+            SetDetailOperationBanner(
+                $"{repair.Summary}  {repair.Detail}",
+                success: true);
+            RecordRepairSuccess(state.Registration, repair);
+            await RefreshDashboardAsync();
+        }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            TrayLog.Write(
+                $"Control Center repair failed. MCP={state.Registration.Id}",
+                ex);
+            var message = GetFriendlyOperationError(ex);
+            RecordOperationFailure(
+                state.Registration,
+                "Onarım başarısız",
+                message);
+            SetDetailOperationBanner(message, success: false);
+            await ShowOperationErrorAsync(
+                $"{state.Registration.DisplayName} onarılamadı",
+                message);
+        }
+        finally
+        {
+            SetDetailOperationBusy(false);
+        }
     }
 
     private async Task ExecuteTalvoraReconnectFromDetailAsync()
@@ -326,6 +382,19 @@ internal sealed partial class ControlCenterWindow
             result.Detail,
             registration.Id,
             $"operation:{registration.Id}:{result.Operation}:success");
+    }
+
+    private static void RecordRepairSuccess(
+        ManagedMcpRegistration registration,
+        ManagedMcpRepairResult repair)
+    {
+        ControlCenterEventStore.Record(
+            ControlCenterEventSeverity.Info,
+            "recovery",
+            repair.Summary,
+            $"{repair.Detail} Strateji: {repair.Strategy}.",
+            registration.Id,
+            $"recovery:{registration.Id}:manual-success");
     }
 
     private static void RecordOperationFailure(

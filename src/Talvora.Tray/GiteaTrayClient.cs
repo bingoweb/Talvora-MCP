@@ -17,6 +17,12 @@ internal sealed record GiteaStatus(
     string Summary,
     string Detail);
 
+internal sealed record GiteaRepairOutcome(
+    GiteaStatus Status,
+    string Strategy,
+    string Detail,
+    bool Escalated);
+
 internal static class GiteaTrayClient
 {
     private const string BackendHealthUrl = "http://127.0.0.1:3001/api/healthz";
@@ -184,6 +190,135 @@ internal static class GiteaTrayClient
             cancellationToken);
 
         return await WaitForReadyAsync(cancellationToken);
+    }
+
+    public static async Task<GiteaRepairOutcome> RepairAsync(
+        CancellationToken cancellationToken)
+    {
+        using var operationLease =
+            ManagedMcpOperationCoordinator.TryAcquire("gitea");
+        if (operationLease is null)
+        {
+            throw new ManagedMcpOperationInProgressException("gitea");
+        }
+
+        var diagnosis = await DiagnoseRepairAsync(cancellationToken);
+        if (diagnosis.Operation is null)
+        {
+            var ready = await GetStatusAsync(cancellationToken);
+            return new GiteaRepairOutcome(
+                ready,
+                "Doğrulama",
+                "Gitea zinciri zaten hazır; onarım uygulanmadı.",
+                Escalated: false);
+        }
+
+        Exception? targetedFailure = null;
+        try
+        {
+            await RunPrivilegedScriptAsync(
+                BuildLifecycleScript(diagnosis.Operation),
+                cancellationToken);
+
+            var targeted = await WaitForReadyAsync(cancellationToken);
+            if (targeted.State == GiteaConnectionState.Running)
+            {
+                return new GiteaRepairOutcome(
+                    targeted,
+                    diagnosis.Strategy,
+                    $"{diagnosis.Strategy} uygulandı; Gitea zinciri tam readiness doğrulamasını geçti.",
+                    Escalated: false);
+            }
+
+            targetedFailure = new InvalidOperationException(
+                $"Hedefli Gitea onarımı readiness sağlamadı: {targeted.Detail}");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            targetedFailure = ex;
+        }
+
+        TrayLog.Write(
+            $"Targeted Gitea repair did not restore readiness. Strategy={diagnosis.Strategy}; escalating to full chain restart.",
+            targetedFailure);
+
+        await RunPrivilegedScriptAsync(
+            BuildLifecycleScript("restart"),
+            cancellationToken);
+
+        var restarted = await WaitForReadyAsync(cancellationToken);
+        if (restarted.State != GiteaConnectionState.Running)
+        {
+            throw new InvalidOperationException(
+                $"Gitea hedefli onarım ve kontrollü tam yeniden başlatma sonrasında hazır olmadı: {restarted.Detail}",
+                targetedFailure);
+        }
+
+        return new GiteaRepairOutcome(
+            restarted,
+            diagnosis.Strategy + " → tam zincir yeniden başlatma",
+            "Hedefli onarım readiness sağlamadı; kontrollü tam zincir yeniden başlatma ile Gitea yeniden hazırlandı.",
+            Escalated: true);
+    }
+
+    private static async Task<(string? Operation, string Strategy)>
+        DiagnoseRepairAsync(
+            CancellationToken cancellationToken)
+    {
+        var backend = await ProbeAsync(
+            BackendHealthUrl,
+            "Gitea",
+            cancellationToken);
+        if (!backend.Success)
+        {
+            return (
+                "repair-backend",
+                "Yalnız Gitea servisini yeniden başlat");
+        }
+
+        var proxy = await ProbeAsync(
+            ProxyHealthUrl,
+            "Caddy",
+            cancellationToken);
+        if (!proxy.Success)
+        {
+            return (
+                "repair-proxy",
+                "Yalnız Caddy servisini yeniden başlat");
+        }
+
+        var mcp = await ProbeAsync(
+            McpHealthUrl,
+            "Gitea MCP sunucusu",
+            cancellationToken);
+        if (!mcp.Success)
+        {
+            return (
+                "repair-mcp",
+                "Gitea MCP sunucusu ve tünelini yenile");
+        }
+
+        var protocol = await ProbeMcpProtocolAsync(cancellationToken);
+        if (!protocol.Success)
+        {
+            return (
+                "repair-mcp",
+                "Gitea MCP protokol zincirini yenile");
+        }
+
+        var tunnel = await ProbeTunnelAsync(cancellationToken);
+        if (!tunnel.Success)
+        {
+            return (
+                "repair-tunnel",
+                "Yalnız Gitea güvenli tünelini yeniden bağla");
+        }
+
+        return (null, "Doğrulama");
     }
 
     private static async Task<GiteaStatus> WaitForReadyAsync(
@@ -633,6 +768,25 @@ switch ($operation) {
         Stop-Chain
         Start-Sleep -Milliseconds 500
         Start-Chain
+    }
+    'repair-backend' {
+        Stop-ServiceIfRunning -Name 'gitea'
+        Start-ServiceIfNeeded -Name 'gitea'
+    }
+    'repair-proxy' {
+        Stop-ServiceIfRunning -Name 'caddy'
+        Start-ServiceIfNeeded -Name 'caddy'
+    }
+    'repair-mcp' {
+        Stop-TaskIfRunning -Name 'Gitea MCP Tunnel'
+        Stop-TaskIfRunning -Name 'Gitea MCP Server'
+        Start-TaskIfNeeded -Name 'Gitea MCP Server'
+        Start-Sleep -Milliseconds 700
+        Start-TaskIfNeeded -Name 'Gitea MCP Tunnel'
+    }
+    'repair-tunnel' {
+        Stop-TaskIfRunning -Name 'Gitea MCP Tunnel'
+        Start-TaskIfNeeded -Name 'Gitea MCP Tunnel'
     }
     default {
         throw "Unsupported Gitea lifecycle operation: $operation"

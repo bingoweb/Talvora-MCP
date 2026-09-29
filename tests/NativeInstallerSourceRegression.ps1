@@ -645,9 +645,9 @@ $result = [pscustomobject]@{
         $trayApplicationContext -match 'RetryIn='
     )
     GenericAttentionRemediationAvoidsFullRestart = (
-        $trayApplicationContext -match 'TryRepairGenericWithoutRestartAsync' -and
-        $trayApplicationContext -match 'browser smoke yenilemesi .*MCP/browser zinciri korunuyor' -and
-        $trayApplicationContext -match 't.neli yeniden ba.lanamad.; yerel MCP/browser zinciri korunuyor'
+        $trayProgram -match 'TryRepairWithoutRestartAsync' -and
+        $trayProgram -match 'ConnectExistingAsync' -and
+        $trayProgram -match 'Escalated: true'
     )
     TrayBoundsTunnelLogging = (
         $trayProgram -match '\["LOG_LEVEL"\]\s*=\s*"warn"' -and
