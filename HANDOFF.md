@@ -1,6 +1,52 @@
 # Talvora MCP — Canonical Handoff
 
-## CURRENT — 2026-09-29 19:10+03:00 — Storage maintenance closeout / next-session checkpoint
+## CURRENT — 2026-09-29 23:26+03:00 — Storage/tunnel/Penpot deep re-audit FINAL closeout
+
+Bu bölüm kanoniktir ve aşağıdaki önceki checkpoint'in yerini alır. Kullanıcının isteğiyle ilk devir promptu yeniden okunarak audit Faz A→E sıfırdan tekrar yürütüldü; önceki GREEN sonuçlar varsayılmadı.
+
+### Repo / remote / exact-installed runtime
+
+- Runtime-affecting commit: `551f3b4ae03c8b8b5e6f1fc74d664b39c52d2931` — `fix: make maintenance log handling non-disruptive`.
+- Runtime deploy öncesi `HEAD = origin/main = github/main = 551f3b4...`; çalışma ağacı clean.
+- Canonical installer: **342,587,663 bytes**; SHA-256 `DF65680251E727D25E634239C0548DA39E870C16E30E600DEE5EC20D16A12DF0`; manifest source tam `551f3b4...`.
+- Exact-installed canlı runtime `sourceCommit=551f3b4...`, `LocalSystem`, PID 37396.
+- Talvora, Gitea ve Caddy servisleri `Running / Automatic`.
+- Dev/Admin tunnel health: schema 1, `live=true`, `ready=true`, lifecycle `running`, runtime `0.0.15+a390c168ff1b2d14e73a95991c186c6aba3ff5a0`.
+- Installed live surface policy smoke: `TALVORA MCP SURFACE POLICY LIVE GREEN`.
+- Installed managed probes: Dev `Ready=True / BrowserSmokePassed=True / ToolCount=203`; Admin `Ready=True / BrowserSmokePassed=True / ToolCount=84`; ikisinde tunnel live/ready ve critical degradation false.
+- Installed Tray `--self-test`: GREEN (`ManagedMcpCount=5; FocusedTalvoraCount=2`).
+- Installed canonical Penpot supervisor dosyası, kurulu `Talvora.dll` içindeki `CanonicalSupervisorScript` ile byte-for-byte eşit; SHA-256 `AA92D1A1DA6A86DAA407E83A63BBB3E681709734BA97B8984F9F5BB91655D0D9`.
+- Installed Windows PowerShell 5.1 Penpot rolling self-test: `PENPOT_SUPERVISOR_ROLLING_SELFTEST_GREEN`; `Talvora Penpot MCP` görevi idle durumda Disabled.
+
+### Fresh re-audit sonucu — #239–#249
+
+- #239 ProgramData smoke cleanup yanlış kullanıcı ownership riski; #242 descendant ownership/TOCTOU koruması ile birlikte fail-closed düzeltildi.
+- #240 nested Structural/semantic-worker stale child retention per-child GUID semantiğine taşındı; #241 nested enumeration failure observability düzeltildi.
+- #243 canlı `0.0.15+build` runtime version nedeniyle erişilemeyen tunnel log rotation gate düzeltildi.
+- #244 büyük stale-tree deletion shutdown cancellation'ı artık recursive delete sırasında da izliyor; eski 50k fixture 13.533 s boyunca cancellation'ı yok sayıyordu.
+- #245 tunnel provisioning/bind maintenance/lifecycle lease ile serialize edildi.
+- #246 SYSTEM owner probe broad `SystemException` swallow daraltıldı.
+- #247 user-writable Penpot supervisor drift dosyası bounded/same-handle karşılaştırılıyor.
+- #248 Penpot log rotation artık sırf 8 MiB housekeeping için canlı MCP/plugin child'larını restart etmiyor; stdout/stderr `CopyToAsync` ile `TalvoraRollingLogStream` akışlarına sürekli drain edilir, tek `.1` archive tutulur.
+- #249 bozuk/oversized detailed tunnel health `InvalidDataException` artık yalnız ilgili registration bakımını erteler; tüm bakım turunu kesmez.
+- Bu tekrar taramada bunların dışında doğrulanmış açık storage/tunnel/Penpot maintenance bug'ı kalmadı. PeriodicTimer overlap ve Penpot legacy-log user ownership adayları kanıtla false-positive olarak kapatıldı.
+
+### Final kalite / storage acceptance
+
+- Context7 gate, modernization, third-party, tunnel v0.0.15, storage source + behavior, UI responsiveness, Penpot on-demand, native installer, tunnel rollback/pending ve ProcessRunner regressions: GREEN.
+- Full solution Release build: **0 warning / 0 error**.
+- `dotnet format ... analyzers --verify-no-changes`: exit 0.
+- Embedded canonical Penpot supervisor PowerShell parser: GREEN; Windows PowerShell 5.1 real rolling + child stdout/stderr self-test: GREEN.
+- Installed `--storage-maintenance`: `DeletedEntries=0; ReclaimedBytes=0; RotatedTunnelLogs=0`.
+- `C:\Windows\Temp` Talvora candidate=0; SYSTEM profile temp candidate=0; user tempte repo ownership'i kanıtlanmamış `talvora-gh-auth-status.txt` bilinçli olarak dokunulmadan bırakıldı.
+- TunnelClient versions: yalnız `0.0.15`; Dev/Admin logları yaklaşık 1 MiB ve 32 MiB threshold altında.
+- Penpot logs: 16 legacy dosya / ~1.22 MiB; bounded retention sözleşmesi korunuyor.
+
+### Sonraki oturum
+
+Bu audit kapalıdır. #230–#249'u yeni kanıt veya gerçek regresyon olmadan yeniden açma. Bu bölümden sonra oluşturulacak docs-only closeout commit runtime fingerprint değildir; sırf HANDOFF/BUG-AUDIT HEAD ilerledi diye `551f3b4...` runtime'ı yeniden deploy etme.
+
+## PREVIOUS — 2026-09-29 19:10+03:00 — Storage maintenance closeout / next-session checkpoint
 
 Bu dosya kesinti ve yeni oturum devamı için kanonik handoff'tur. Yeni oturumda önce bu bölüm esas alınmalıdır. Ayrıntılı tarihsel bulgular `BUG-AUDIT.md`, görev geçmişi `MCP-CONTROL-CENTER-TODO.md`, Source Edit sözleşmesi `SOURCE-EDIT-ENGINE-ARCHITECTURE.md` içindedir.
 

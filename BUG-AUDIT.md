@@ -2,7 +2,7 @@
 
 ## CURRENT — 2026-09-29 — Storage maintenance deep commercial-quality audit
 
-Status: Faz A-D remediation source/test verified; Faz E local quality gates GREEN. Canonical commit/deploy/live acceptance follows in this closeout.
+Status: FINAL LIVE VERIFIED. Fresh Faz A-E re-audit tamamlandı; #230-#249 kapalı ve doğrulanmış açık storage/tunnel/Penpot maintenance bug'ı kalmadı. Runtime commit `551f3b4...` iki remote'a push edildi, canonical installer ile SYSTEM deploy edildi ve installed live acceptance GREEN.
 
 - #230 **FIXED / BEHAVIOR VERIFIED** — TEMP discovery now uses exact-name/prefix-scoped enumeration and covers current crash leftovers plus nested `Talvora\Structural` / `semantic-worker` residue. A 100,000-unrelated-entry fixture removed only the stale owned candidate in 17 ms; a 100,001-entry owned tree hit the traversal ceiling and was fail-closed in 91 ms.
 - #231 **FIXED / SOURCE VERIFIED** — SYSTEM TEMP maintenance now requires the matching top-level candidate itself to be LocalSystem-owned and rejects reparse roots before owner inspection, so a matching interactive-user name is not sufficient for deletion.
@@ -27,10 +27,12 @@ Status: Faz A-D remediation source/test verified; Faz E local quality gates GREE
 
 Closed false positives: the SYSTEM `PeriodicTimer` loop is sequential/single-consumer, so there is no six-hour overlap defect; recursive cleanup already refuses reparse traversal. Non-disruptive diagnostic copy/truncate is intentionally preferred over stopping an otherwise healthy idle tunnel; the append-writer assumption is verified against the pinned v0.0.15 source.
 
+Final live acceptance for #248/#249: canonical installer SHA-256 `DF65680251E727D25E634239C0548DA39E870C16E30E600DEE5EC20D16A12DF0`; exact-installed runtime `551f3b4...`; installed Windows PowerShell 5.1 rolling self-test GREEN; installed supervisor byte-for-byte canonical; surface policy live GREEN; Dev 203/Admin 84 managed probes Ready + BrowserSmokePassed; installed Tray self-test GREEN; storage command 0/0/0.
+
 Last updated: 2026-09-29
 Branch: main
-Current repository runtime-affecting committed HEAD: `ac467027b410ed4b23f761f0e5ad0dcf775fec18` — focused surface role separation and explicit Shared overlap contract.
-Current exact-installed audit runtime: `ac467027b410ed4b23f761f0e5ad0dcf775fec18`
+Current repository runtime-affecting committed HEAD: `551f3b4ae03c8b8b5e6f1fc74d664b39c52d2931` — final storage/tunnel/Penpot re-audit runtime.
+Current exact-installed audit runtime: `551f3b4ae03c8b8b5e6f1fc74d664b39c52d2931`
 Canonical exact-installed tool count: 240 unique tools
 Status: historical #121–#229 remediation remains closed/test-verified. Current focused surface contract is Full=240, Development=203, Administration=84, Shared=47. Release builds, Context7/modernization gates, source focused regression and installed live surface smoke are GREEN.
 
