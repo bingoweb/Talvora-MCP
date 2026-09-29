@@ -26,6 +26,8 @@
   ·
   <a href="SECURITY.md">Security & privacy</a>
   ·
+  <a href="THIRD-PARTY-NOTICES.md">Third-party notices</a>
+  ·
   <a href="BUG-AUDIT.md">Engineering audit</a>
 </p>
 
@@ -342,6 +344,29 @@ Talvora is intentionally powerful.
 
 If you are evaluating or redistributing Talvora, read [SECURITY.md](SECURITY.md) first.
 
+## Third-party software & license attribution
+
+Talvora is built on open-source software and also integrates with separately owned tools. Those projects keep their own copyright, license, and trademark rights; Talvora does not relicense them or present them as Talvora-owned work.
+
+| Component family | Upstream / attribution | License | Relationship |
+| --- | --- | --- | --- |
+| **.NET 10, Roslyn, Microsoft.Extensions, ONNX Runtime** | Microsoft | MIT | bundled / self-contained runtime |
+| **Model Context Protocol C# SDK** | Model Context Protocol contributors | Apache-2.0 | bundled |
+| **WPF UI** | Leszek Pomianowski and WPF UI Contributors | MIT | bundled Control Center UI |
+| **SQLite / SQLitePCLRaw** | SQLite project / Eric Sink | Public Domain / Apache-2.0 | bundled |
+| **YamlDotNet / Tomlyn** | Antoine Aubry / Alexandre Mutel | MIT / BSD-2-Clause | bundled |
+| **Google.Protobuf / Humanizer.Core** | Google Inc. / Humanizer contributors | BSD-3-Clause / MIT | transitive bundled dependencies |
+| **Multilingual MiniLM embedding model** | Sentence Transformers contributors; ONNX conversion hosted by Xenova | Apache-2.0 | hash-pinned bundled model |
+| **Gitea / official Gitea MCP / Caddy** | Gitea Authors / Caddy Authors | MIT / MIT / Apache-2.0 | optional managed local stack |
+| **Penpot / Penpot MCP** | KALEIDOS SUBSIDIARY SL and Penpot contributors | MPL-2.0 | optional design integration |
+| **OpenAI Secure MCP Tunnel / Modal SDK** | OpenAI / Modal Labs | Apache-2.0 / Apache-2.0 | optional external integrations |
+
+The complete, versioned inventory covers the **48 locked NuGet runtime packages**, self-contained .NET runtime packs, bundled Memory model, and managed companion components:
+
+**[Read THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)**
+
+Upstream license and notice files remain authoritative. Product and company names are used only for attribution and interoperability; their trademarks belong to their respective owners.
+
 ## Repository map
 
 | Path | Purpose |
@@ -354,6 +379,7 @@ If you are evaluating or redistributing Talvora, read [SECURITY.md](SECURITY.md)
 | <code>tests/Talvora.SourceEdit.Regression</code> | transactional source-edit regression suite |
 | <code>scripts</code> | installer, bootstrap, verification and operational scripts |
 | <code>docs</code> | architecture, development environment and engineering policy |
+| <code>THIRD-PARTY-NOTICES.md</code> | versioned third-party ownership, license, and integration inventory |
 | <code>HANDOFF.md</code> | canonical project handoff |
 | <code>BUG-AUDIT.md</code> | living engineering audit |
 
@@ -375,6 +401,7 @@ A few project choices are deliberate and unlikely to change casually:
 - [Development environment](docs/DEVELOPMENT-ENVIRONMENT.md)
 - [Modernization policy](docs/MODERNIZATION-POLICY.md)
 - [Security & privacy](SECURITY.md)
+- [Third-party software notices](THIRD-PARTY-NOTICES.md)
 - [Application-development roadmap](APPLICATION-DEVELOPMENT-ROADMAP.md)
 - [Source Edit architecture](SOURCE-EDIT-ENGINE-ARCHITECTURE.md)
 - [Engineering audit](BUG-AUDIT.md)

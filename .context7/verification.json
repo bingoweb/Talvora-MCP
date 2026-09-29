@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T12:18:28Z",
-  "scope": "Control Center commercial visual polish only: unify dark palette, spacing, typography, card radii, state pills, header hierarchy, WPF-UI primary-action accent states and responsive visual rhythm without changing lifecycle, repair, service or MCP behavior.",
+  "verifiedAtUtc": "2026-09-29T13:29:58Z",
+  "scope": "Repository third-party attribution hardening: add a commercial-quality README license summary, a versioned THIRD-PARTY-NOTICES inventory for bundled and optional components, and a CI regression that requires every locked Talvora/Tray runtime NuGet package to remain represented.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -41,6 +41,11 @@
     }
   ],
   "vendorSources": [
+    "Talvora runtime NuGet metadata checked 2026-09-29 from the locally restored .nuspec files for src/Talvora and src/Talvora.Tray lock graphs: 48 resolved packages are attributed by package ID/version/authors/license; Microsoft package families are MIT, ModelContextProtocol 2.2.0 is Apache-2.0, WPF-UI 4.3.0 is MIT, YamlDotNet 18.1.0 is MIT, Tomlyn 2.10.1 is BSD-2-Clause, Google.Protobuf 3.30.2 is BSD-3-Clause, Humanizer.Core 3.0.10 is MIT, SQLitePCLRaw 3.0.5 is Apache-2.0, and the SQLite 3.53.4 package identifies SQLite as Public Domain.",
+    "Local official Gitea MCP 1.7.0 installation checked 2026-09-29: the installed Gitea MCP LICENSE file is MIT and states Copyright (c) 2025 The Gitea Authors; the installed README points to https://gitea.com/gitea/gitea-mcp.",
+    "OpenAI tunnel-client release artifacts checked 2026-09-29: Talvora Dev/Admin currently reference v0.0.15, whose Windows amd64 ZIP contains tunnel-client.exe, cloudflared.exe, LICENSE, NOTICE, a generated dependency-license report and an SPDX SBOM; the current Gitea companion v0.0.14 installation separately retains its generated dependency-license report.",
+    "Penpot 2.18.0 local source LICENSE checked 2026-09-29 and official upstream repository verified as MPL-2.0 with copyright attribution to KALEIDOS SUBSIDIARY SL.",
+    "Official upstream license metadata checked 2026-09-29: OpenAI tunnel-client is Apache-2.0; Caddy is Apache-2.0 and attributes Matthew Holt and The Caddy Authors; Gitea is MIT; Modal SDK is Apache-2.0; sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 is Apache-2.0; ONNX Runtime is MIT; WPF UI is MIT.",
     "Talvora Control Center rendered-surface review 2026-09-29: real WPF RenderTargetBitmap captures of the populated dashboard and Memory view were visually inspected. The pass corrected an over-stretched state badge, unified navy-dark surfaces/radii/spacing, and verified the final Primary Hafıza action renders with the Talvora blue accent.",
     "WPF UI 4.3.0 Button.xaml checked 2026-09-29: Appearance=Primary binds background and interaction states to AccentButtonBackground, AccentButtonBackgroundPointerOver and AccentButtonBackgroundPressed, with AccentButtonForeground resources for text/icon color; Talvora now overrides those exact keys in its local theme dictionary.",
     "Talvora live repair acceptance 2026-09-29: with the normal tray recovery loop intentionally paused, talvora-admin-business was stopped until tunnel-client reported process_running=false and ready=false; the source repair command restored it with Strategy=Yalnız güvenli tüneli yeniden bağla, Escalated=False and FinalHealth=Ready while the Talvora Core service and Dev connector remained available.",
