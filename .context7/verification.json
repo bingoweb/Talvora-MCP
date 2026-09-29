@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T19:44:34Z",
-  "scope": "Talvora storage-maintenance deep commercial-quality re-audit: ownership/version/cancellation/provisioning serialization fixes remain intact, and SYSTEM ACL owner probing now catches only expected filesystem/security/path exceptions. Unexpected runtime/programming failures are allowed to reach the maintenance warning boundary instead of being silently converted into a false owner result before final Penpot/installer/CI acceptance review.",
+  "verifiedAtUtc": "2026-09-29T19:50:40Z",
+  "scope": "Talvora storage-maintenance deep commercial-quality re-audit: ownership/version/cancellation/provisioning/observability fixes remain intact, and Penpot supervisor drift repair no longer performs an unbounded path reopen/read from user-writable ProgramData. Canonical byte length is checked on the same read-only handle used for bounded content comparison before final full CI/live acceptance.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",

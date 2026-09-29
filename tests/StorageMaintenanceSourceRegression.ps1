@@ -154,6 +154,15 @@ Assert-Contains $penpotSupervisor 'TimeSpan.FromDays(1)' 'legacy Penpot logs exp
 Assert-Contains $penpotSupervisor 'MaximumLegacyLogEntriesPerPattern = 10_000' 'each legacy Penpot log family has a hard enumeration budget'
 Assert-Contains $penpotSupervisor 'scanLimitReached' 'Penpot legacy-log scan-limit deferral is propagated to SYSTEM observability'
 Assert-Contains $penpotSupervisor 'AtomicFile.WriteAllTextAsync' 'the SYSTEM-owned supervisor script is published atomically'
+Assert-Contains $penpotSupervisor 'Utf8NoBom.GetByteCount(expected)' 'Penpot supervisor drift check computes the canonical byte length before reading existing content'
+$penpotDriftStart = $penpotSupervisor.IndexOf('private static void EnsureCanonicalSupervisorScript(', [StringComparison]::Ordinal)
+$penpotCleanupStart = $penpotSupervisor.IndexOf('private static TalvoraOwnedTempCleanupResult CleanupLegacyLogs(', [StringComparison]::Ordinal)
+if ($penpotDriftStart -lt 0 -or $penpotCleanupStart -le $penpotDriftStart) { throw 'Storage maintenance contract failed: Penpot drift-check boundaries are missing' }
+$penpotDriftSection = $penpotSupervisor.Substring($penpotDriftStart, $penpotCleanupStart - $penpotDriftStart)
+Assert-Contains $penpotDriftSection 'new FileStream(' 'Penpot supervisor drift check uses one bounded file handle'
+Assert-Contains $penpotDriftSection 'existingStream.Length == expectedByteLength' 'Penpot supervisor validates canonical size on the same opened handle'
+Assert-Contains $penpotDriftSection 'new StreamReader(' 'Penpot supervisor reads content only from the size-validated handle'
+if ($penpotDriftSection.Contains('File.ReadAllText(', [StringComparison]::Ordinal)) { throw 'Storage maintenance contract failed: Penpot drift check must not reopen an unbounded path after the size check' }
 Assert-Contains $penpotSupervisor 'IsLegacyTimestampLogName' 'only the known legacy timestamp-log format is pruned'
 
 Assert-Contains $maintenance 'PruneObsoleteTunnelClientVersions' 'old tunnel-client versions have a retention policy'

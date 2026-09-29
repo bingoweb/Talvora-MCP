@@ -179,18 +179,34 @@ internal static class TalvoraPenpotSupervisorMaintenance
             penpotRoot,
             "Start-Talvora-Penpot-Mcp.ps1");
         var expected = CanonicalSupervisorScript;
+        var expectedByteLength =
+            Utf8NoBom.GetByteCount(expected);
 
         if (File.Exists(path))
         {
-            var existing = File.ReadAllText(
+            using var existingStream = new FileStream(
                 path,
-                Encoding.UTF8);
-            if (string.Equals(
-                    existing,
-                    expected,
-                    StringComparison.Ordinal))
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 4096,
+                FileOptions.SequentialScan);
+            if (existingStream.Length == expectedByteLength)
             {
-                return;
+                using var reader = new StreamReader(
+                    existingStream,
+                    Encoding.UTF8,
+                    detectEncodingFromByteOrderMarks: true,
+                    bufferSize: 4096,
+                    leaveOpen: false);
+                var existing = reader.ReadToEnd();
+                if (string.Equals(
+                        existing,
+                        expected,
+                        StringComparison.Ordinal))
+                {
+                    return;
+                }
             }
         }
 
