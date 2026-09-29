@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T18:25:00Z",
-  "scope": "Talvora storage-maintenance deep commercial-quality audit: fail closed across user/SYSTEM ownership boundaries, bound top-level and owned-tree traversal at large directory scale, isolate BackgroundService and Tray timer failures from host lifetime, preserve active and pending-update tunnel-client versions under lifecycle leases, rotate v0.0.15 append-mode diagnostics without stopping an idle runtime, and harden Penpot child-process, log, backoff, orphan and legacy-retention lifecycle behavior.",
+  "verifiedAtUtc": "2026-09-29T18:47:39Z",
+  "scope": "Talvora storage-maintenance deep commercial-quality re-audit from exact-installed 479fa21: re-verify fail-closed user/SYSTEM ownership boundaries, including ProgramData smoke artifacts writable by interactive users; re-check bounded traversal, lifecycle isolation, tunnel-client retention/log maintenance and Penpot process/log behavior before new canonical live acceptance.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",

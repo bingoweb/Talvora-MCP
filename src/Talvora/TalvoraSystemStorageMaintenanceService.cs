@@ -247,6 +247,11 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (!IsSystemOwnedCleanupCandidate(candidate))
+            {
+                continue;
+            }
+
             var parent = Path.GetDirectoryName(candidate);
             if (string.IsNullOrWhiteSpace(parent))
             {

@@ -69,6 +69,13 @@ Assert-Contains $systemMaintenance 'TalvoraOwnedTempCleanup.TestPrefixes' 'SYSTE
 Assert-Contains $systemMaintenance 'IsSystemOwnedCleanupCandidate' 'SYSTEM cleanup refuses to delete matching names owned by an interactive user'
 Assert-Contains $systemMaintenance '"PenpotSmoke"' 'SYSTEM maintenance recognizes Penpot smoke data'
 Assert-Contains $systemMaintenance '"TestBrowserVisible"' 'SYSTEM maintenance recognizes Penpot browser smoke profiles'
+$programDataCleanupStart = $systemMaintenance.IndexOf('CleanupSystemOwnedTestArtifacts(', [StringComparison]::Ordinal)
+$ownerFilterStart = $systemMaintenance.IndexOf('private static bool IsSystemOwnedCleanupCandidate', [StringComparison]::Ordinal)
+if ($programDataCleanupStart -lt 0 -or $ownerFilterStart -le $programDataCleanupStart) {
+    throw 'Storage maintenance contract failed: ProgramData test-artifact cleanup boundaries are missing'
+}
+$programDataCleanup = $systemMaintenance.Substring($programDataCleanupStart, $ownerFilterStart - $programDataCleanupStart)
+Assert-Contains $programDataCleanup 'IsSystemOwnedCleanupCandidate(candidate)' 'SYSTEM ProgramData test cleanup requires LocalSystem ownership before deletion'
 Assert-Contains $systemMaintenance 'TalvoraOwnedTempCleanup.TryDeleteStaleEntry' 'SYSTEM cleanup uses the shared reparse-safe deletion engine'
 Assert-Contains $systemMaintenance 'TimeSpan.FromHours(6)' 'SYSTEM maintenance runs periodically'
 Assert-Contains $systemMaintenance 'TalvoraPenpotSupervisorMaintenance.Maintain' 'SYSTEM maintenance repairs Penpot supervisor drift and old logs'
