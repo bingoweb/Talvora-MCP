@@ -22,24 +22,25 @@ namespace Talvora.Tray;
 
 internal sealed partial class ControlCenterWindow : FluentWindow
 {
-    private static readonly SolidColorBrush BackgroundBrush = CreateBrush(16, 18, 22);
-    private static readonly SolidColorBrush SurfaceBrush = CreateBrush(22, 25, 31);
-    private static readonly SolidColorBrush RaisedSurfaceBrush = CreateBrush(27, 31, 39);
-    private static readonly SolidColorBrush HoverSurfaceBrush = CreateBrush(32, 37, 46);
-    private static readonly SolidColorBrush CardBorderBrush = CreateBrush(41, 47, 57);
-    private static readonly SolidColorBrush StrongBorderBrush = CreateBrush(52, 60, 72);
-    private static readonly SolidColorBrush PrimaryTextBrush = CreateBrush(245, 247, 250);
-    private static readonly SolidColorBrush SecondaryTextBrush = CreateBrush(162, 173, 189);
-    private static readonly SolidColorBrush TertiaryTextBrush = CreateBrush(117, 128, 145);
-    private static readonly SolidColorBrush AccentBrush = CreateBrush(117, 167, 255);
-    private static readonly SolidColorBrush ReadyBrush = CreateBrush(72, 199, 142);
-    private static readonly SolidColorBrush AttentionBrush = CreateBrush(240, 184, 90);
-    private static readonly SolidColorBrush OfflineBrush = CreateBrush(235, 104, 119);
-    private static readonly SolidColorBrush CheckingBrush = CreateBrush(117, 167, 255);
-    private static readonly SolidColorBrush ReadySoftBrush = CreateBrush(34, 72, 199, 142);
-    private static readonly SolidColorBrush AttentionSoftBrush = CreateBrush(36, 240, 184, 90);
-    private static readonly SolidColorBrush OfflineSoftBrush = CreateBrush(36, 235, 104, 119);
-    private static readonly SolidColorBrush CheckingSoftBrush = CreateBrush(34, 117, 167, 255);
+    private static readonly SolidColorBrush BackgroundBrush = CreateBrush(13, 17, 24);
+    private static readonly SolidColorBrush SurfaceBrush = CreateBrush(19, 26, 36);
+    private static readonly SolidColorBrush RaisedSurfaceBrush = CreateBrush(24, 33, 45);
+    private static readonly SolidColorBrush HoverSurfaceBrush = CreateBrush(32, 43, 57);
+    private static readonly SolidColorBrush CardBorderBrush = CreateBrush(40, 52, 67);
+    private static readonly SolidColorBrush StrongBorderBrush = CreateBrush(58, 76, 98);
+    private static readonly SolidColorBrush PrimaryTextBrush = CreateBrush(246, 248, 251);
+    private static readonly SolidColorBrush SecondaryTextBrush = CreateBrush(170, 182, 199);
+    private static readonly SolidColorBrush TertiaryTextBrush = CreateBrush(117, 131, 153);
+    private static readonly SolidColorBrush AccentBrush = CreateBrush(116, 168, 255);
+    private static readonly SolidColorBrush AccentSoftBrush = CreateBrush(24, 42, 70);
+    private static readonly SolidColorBrush ReadyBrush = CreateBrush(79, 211, 156);
+    private static readonly SolidColorBrush AttentionBrush = CreateBrush(242, 187, 92);
+    private static readonly SolidColorBrush OfflineBrush = CreateBrush(238, 108, 123);
+    private static readonly SolidColorBrush CheckingBrush = CreateBrush(116, 168, 255);
+    private static readonly SolidColorBrush ReadySoftBrush = CreateBrush(34, 79, 211, 156);
+    private static readonly SolidColorBrush AttentionSoftBrush = CreateBrush(36, 242, 187, 92);
+    private static readonly SolidColorBrush OfflineSoftBrush = CreateBrush(36, 238, 108, 123);
+    private static readonly SolidColorBrush CheckingSoftBrush = CreateBrush(34, 116, 168, 255);
 
     private readonly DispatcherTimer _refreshTimer;
     private readonly bool _smokeMode;
@@ -116,8 +117,8 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     {
         _smokeMode = smokeMode;
         Title = "Talvora Yönetim Merkezi";
-        Width = 1180;
-        Height = 760;
+        Width = 1220;
+        Height = 790;
         MinWidth = 720;
         MinHeight = 520;
         WindowStartupLocation = smokeMode
@@ -322,14 +323,15 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         var footer = new Border
         {
-            Padding = new Thickness(28, 12, 28, 12),
+            Padding = new Thickness(32, 12, 32, 12),
+            Background = SurfaceBrush,
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(0, 1, 0, 0),
             Child = new TextBlock
             {
                 Text = "Talvora  •  Yerel yönetim ve ChatGPT bağlantıları",
                 Foreground = TertiaryTextBrush,
-                FontSize = 11,
+                FontSize = 10.5,
             },
         };
         Grid.SetRow(footer, 3);
@@ -343,12 +345,12 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         var titleBar = new TitleBar
         {
             Title = "Talvora Yönetim Merkezi",
-            Height = 44,
-            Padding = new Thickness(14, 0, 0, 0),
+            Height = 48,
+            Padding = new Thickness(18, 0, 0, 0),
             Background = BackgroundBrush,
             Foreground = SecondaryTextBrush,
             ButtonsForeground = PrimaryTextBrush,
-            ButtonsBackground = HoverSurfaceBrush,
+            ButtonsBackground = BackgroundBrush,
             ShowMinimize = true,
             ShowMaximize = true,
             ShowClose = true,
@@ -389,22 +391,22 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         {
             Text = "TALVORA",
             Foreground = AccentBrush,
-            FontSize = 11,
+            FontSize = 10.5,
             FontWeight = FontWeights.SemiBold,
         });
         titleStack.Children.Add(new TextBlock
         {
             Text = "Yönetim Merkezi",
-            Margin = new Thickness(0, 6, 0, 0),
-            FontSize = 28,
+            Margin = new Thickness(0, 7, 0, 0),
+            FontSize = 30,
             FontWeight = FontWeights.SemiBold,
         });
         titleStack.Children.Add(new TextBlock
         {
             Text = "Talvora Core, ChatGPT bağlantıları ve yerel entegrasyonlar tek görünümde.",
-            Margin = new Thickness(0, 7, 0, 0),
+            Margin = new Thickness(0, 8, 0, 0),
             Foreground = SecondaryTextBrush,
-            FontSize = 14,
+            FontSize = 13.5,
             TextWrapping = TextWrapping.Wrap,
         });
         _headerGrid.Children.Add(titleStack);
@@ -466,11 +468,11 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         _headerStatusCard = new Border
         {
-            Padding = new Thickness(14, 11, 14, 11),
+            Padding = new Thickness(16, 13, 16, 13),
             Background = RaisedSurfaceBrush,
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
+            CornerRadius = new CornerRadius(13),
             Child = statusGrid,
         };
 
@@ -479,7 +481,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         return new Border
         {
-            Padding = new Thickness(28, 22, 28, 18),
+            Padding = new Thickness(32, 26, 32, 22),
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(0, 0, 0, 1),
             Child = _headerGrid,
@@ -490,7 +492,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     {
         var content = new StackPanel
         {
-            Margin = new Thickness(28, 24, 28, 28),
+            Margin = new Thickness(32, 26, 32, 34),
         };
 
         _setupCard = BuildSetupCard();
@@ -498,7 +500,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         var sectionHeader = new Grid
         {
-            Margin = new Thickness(0, 0, 0, 14),
+            Margin = new Thickness(0, 0, 0, 16),
         };
         sectionHeader.ColumnDefinitions.Add(new ColumnDefinition
         {
@@ -513,15 +515,15 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         sectionTitleStack.Children.Add(new TextBlock
         {
             Text = "Yönetilen bileşenler",
-            FontSize = 18,
+            FontSize = 19,
             FontWeight = FontWeights.SemiBold,
         });
         sectionTitleStack.Children.Add(new TextBlock
         {
             Text = "Talvora Core, ChatGPT bağlantıları ve diğer MCP bileşenlerini tek yerden yönetin.",
-            Margin = new Thickness(0, 4, 0, 0),
+            Margin = new Thickness(0, 5, 0, 0),
             Foreground = SecondaryTextBrush,
-            FontSize = 12,
+            FontSize = 12.5,
         });
         sectionHeader.Children.Add(sectionTitleStack);
 
@@ -538,7 +540,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         _dashboardControlsGrid = new Grid
         {
-            Margin = new Thickness(0, 0, 0, 18),
+            Margin = new Thickness(0, 0, 0, 20),
         };
         _dashboardControlsGrid.RowDefinitions.Add(new RowDefinition
         {
@@ -704,6 +706,8 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             _healthSummaryText.Text = snapshot.HealthSummary;
             _healthSummaryText.Foreground = GetSummaryBrush(snapshot);
             _healthSummaryDot.Background = GetSummaryBrush(snapshot);
+            _headerStatusCard.Background = GetSummarySoftBrush(snapshot);
+            _headerStatusCard.BorderBrush = GetSummaryBrush(snapshot);
             _technicalSummaryText.Text = snapshot.TechnicalSummary;
             _dashboardSectionMeta.Text =
                 $"{snapshot.Mcps.Count} bileşen • {snapshot.ReadyCount} hazır";
@@ -752,6 +756,8 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             _healthSummaryText.Text = "Canlı durum alınamadı";
             _healthSummaryText.Foreground = OfflineBrush;
             _healthSummaryDot.Background = OfflineBrush;
+            _headerStatusCard.Background = OfflineSoftBrush;
+            _headerStatusCard.BorderBrush = OfflineBrush;
             _technicalSummaryText.Text = hasLastKnownSnapshot
                 ? "Son bilinen durum gösteriliyor • otomatik yeniden denenecek."
                 : "Bileşen bilgileri şu anda alınamıyor • otomatik yeniden denenecek.";
@@ -861,24 +867,24 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     {
         var section = new StackPanel
         {
-            Margin = new Thickness(0, 0, 0, 8),
+            Margin = new Thickness(0, 0, 0, 14),
         };
         var header = new StackPanel
         {
-            Margin = new Thickness(0, 0, 0, 10),
+            Margin = new Thickness(0, 0, 0, 12),
         };
         header.Children.Add(new TextBlock
         {
             Text = title,
-            FontSize = 14,
+            FontSize = 15,
             FontWeight = FontWeights.SemiBold,
         });
         header.Children.Add(new TextBlock
         {
             Text = description,
-            Margin = new Thickness(0, 3, 0, 0),
+            Margin = new Thickness(0, 4, 0, 0),
             Foreground = TertiaryTextBrush,
-            FontSize = 11,
+            FontSize = 11.5,
         });
         section.Children.Add(header);
         var cards = new WrapPanel
@@ -938,7 +944,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         var titleStack = new StackPanel
         {
-            Margin = new Thickness(14, 0, 12, 0),
+            Margin = new Thickness(15, 0, 14, 0),
             VerticalAlignment = VAlign.Center,
         };
         var roleLabel = GetMcpRoleLabel(state.Registration.Id);
@@ -947,23 +953,23 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             titleStack.Children.Add(new TextBlock
             {
                 Text = roleLabel,
-                Margin = new Thickness(0, 0, 0, 2),
+                Margin = new Thickness(0, 0, 0, 3),
                 Foreground = AccentBrush,
-                FontSize = 10,
+                FontSize = 9.5,
                 FontWeight = FontWeights.SemiBold,
             });
         }
         titleStack.Children.Add(new TextBlock
         {
             Text = state.Registration.DisplayName,
-            FontSize = 17,
+            FontSize = 17.5,
             FontWeight = FontWeights.SemiBold,
             TextTrimming = TextTrimming.CharacterEllipsis,
         });
         titleStack.Children.Add(new TextBlock
         {
             Text = state.Registration.Description,
-            Margin = new Thickness(0, 4, 0, 0),
+            Margin = new Thickness(0, 5, 0, 0),
             Foreground = SecondaryTextBrush,
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap,
@@ -981,7 +987,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         var detail = new TextBlock
         {
             Text = state.Detail,
-            Margin = new Thickness(0, 16, 0, 0),
+            Margin = new Thickness(0, 18, 0, 0),
             Foreground = SecondaryTextBrush,
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap,
@@ -992,7 +998,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         var actionRow = new Grid
         {
-            Margin = new Thickness(0, 14, 0, 0),
+            Margin = new Thickness(0, 16, 0, 0),
         };
         actionRow.ColumnDefinitions.Add(new ColumnDefinition
         {
@@ -1034,9 +1040,12 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         var card = new Border
         {
-            Margin = new Thickness(0, 0, 16, 16),
-            MinHeight = 176,
+            Margin = new Thickness(0, 0, 18, 18),
+            MinHeight = 184,
             Style = FindStyle("TalvoraCardStyle"),
+            BorderBrush = state.Health == ControlCenterHealthState.Ready
+                ? CardBorderBrush
+                : GetHealthSoftBrush(state.Health),
             Child = root,
             Tag = state.Registration.Id,
             Cursor = WpfCursors.Hand,
@@ -1059,7 +1068,9 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             card.Background = SurfaceBrush;
             if (!card.IsKeyboardFocusWithin)
             {
-                card.BorderBrush = CardBorderBrush;
+                card.BorderBrush = state.Health == ControlCenterHealthState.Ready
+                    ? CardBorderBrush
+                    : GetHealthSoftBrush(state.Health);
             }
         };
         card.GotKeyboardFocus += (_, _) =>
@@ -1070,7 +1081,9 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         {
             if (!card.IsMouseOver)
             {
-                card.BorderBrush = CardBorderBrush;
+                card.BorderBrush = state.Health == ControlCenterHealthState.Ready
+                    ? CardBorderBrush
+                    : GetHealthSoftBrush(state.Health);
             }
         };
         card.KeyDown += async (_, e) =>
@@ -1111,11 +1124,17 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         {
             return new Border
             {
-                Width = 44,
-                Height = 44,
-                Padding = new Thickness(6),
-                Background = RaisedSurfaceBrush,
-                CornerRadius = new CornerRadius(10),
+                Width = 46,
+                Height = 46,
+                Padding = new Thickness(7),
+                Background = IsTalvoraFamily(registration.Id)
+                    ? AccentSoftBrush
+                    : RaisedSurfaceBrush,
+                BorderBrush = IsTalvoraFamily(registration.Id)
+                    ? AccentSoftBrush
+                    : CardBorderBrush,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(12),
                 Child = new Image
                 {
                     Source = source,
@@ -1132,19 +1151,21 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         return new Border
         {
-            Width = 44,
-            Height = 44,
-            Background = RaisedSurfaceBrush,
+            Width = 46,
+            Height = 46,
+            Background = IsTalvoraFamily(registration.Id)
+                ? AccentSoftBrush
+                : RaisedSurfaceBrush,
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
+            CornerRadius = new CornerRadius(12),
             Child = new TextBlock
             {
                 Text = string.IsNullOrWhiteSpace(fallbackText) ? "M" : fallbackText,
                 HorizontalAlignment = HAlign.Center,
                 VerticalAlignment = VAlign.Center,
                 Foreground = AccentBrush,
-                FontSize = 18,
+                FontSize = 18.5,
                 FontWeight = FontWeights.SemiBold,
             },
         };
@@ -1172,7 +1193,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
                     : available >= 680
                         ? 2
                         : 1;
-                var gaps = 16 * (columns - 1);
+                var gaps = 18 * (columns - 1);
                 var cardWidth = Math.Max(
                     300,
                     Math.Floor((available - gaps) / columns) -
@@ -1215,6 +1236,22 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         }
 
         return ReadyBrush;
+    }
+
+    private static SolidColorBrush GetSummarySoftBrush(
+        ControlCenterDashboardSnapshot snapshot)
+    {
+        if (snapshot.OfflineCount > 0)
+        {
+            return OfflineSoftBrush;
+        }
+
+        if (snapshot.AttentionCount > 0)
+        {
+            return AttentionSoftBrush;
+        }
+
+        return ReadySoftBrush;
     }
 
     private static SolidColorBrush GetHealthBrush(
@@ -1265,9 +1302,11 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         return new Border
         {
-            Padding = new Thickness(9, 5, 9, 5),
+            Padding = new Thickness(10, 6, 10, 6),
             Background = GetHealthSoftBrush(health),
-            CornerRadius = new CornerRadius(9),
+            CornerRadius = new CornerRadius(11),
+            HorizontalAlignment = HAlign.Right,
+            VerticalAlignment = VAlign.Top,
             Child = panel,
         };
     }

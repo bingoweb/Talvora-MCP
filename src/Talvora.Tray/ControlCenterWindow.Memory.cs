@@ -40,7 +40,7 @@ internal sealed partial class ControlCenterWindow
     {
         var content = new StackPanel
         {
-            Margin = new Thickness(28, 24, 28, 32),
+            Margin = new Thickness(32, 26, 32, 36),
         };
 
         var backButton = new UiButton
@@ -56,7 +56,7 @@ internal sealed partial class ControlCenterWindow
 
         var hero = new Grid
         {
-            Margin = new Thickness(0, 18, 0, 18),
+            Margin = new Thickness(0, 20, 0, 20),
         };
         hero.ColumnDefinitions.Add(new ColumnDefinition
         {
@@ -71,15 +71,15 @@ internal sealed partial class ControlCenterWindow
         titleStack.Children.Add(new TextBlock
         {
             Text = "Talvora Hafıza",
-            FontSize = 28,
+            FontSize = 30,
             FontWeight = FontWeights.SemiBold,
         });
         titleStack.Children.Add(new TextBlock
         {
             Text = "Kalıcı kararları, tercihleri, öğrenilen çözümleri ve proje bağlamını inceleyin.",
-            Margin = new Thickness(0, 7, 24, 0),
+            Margin = new Thickness(0, 8, 24, 0),
             Foreground = SecondaryTextBrush,
-            FontSize = 14,
+            FontSize = 13.5,
             TextWrapping = TextWrapping.Wrap,
         });
         hero.Children.Add(titleStack);
@@ -129,7 +129,7 @@ internal sealed partial class ControlCenterWindow
 
         var healthPanel = new WrapPanel
         {
-            Margin = new Thickness(0, 0, 0, 20),
+            Margin = new Thickness(0, 0, 0, 22),
         };
         healthPanel.Children.Add(
             BuildMemoryHealthCard(
@@ -151,7 +151,7 @@ internal sealed partial class ControlCenterWindow
         var filterCard = new Border
         {
             Style = FindStyle("TalvoraCardStyle"),
-            Margin = new Thickness(0, 0, 0, 18),
+            Margin = new Thickness(0, 0, 0, 20),
         };
         var filterBody = new StackPanel();
 
@@ -716,14 +716,14 @@ internal sealed partial class ControlCenterWindow
 
         return new CardExpander
         {
-            Margin = new Thickness(0, 0, 0, 10),
+            Margin = new Thickness(0, 0, 0, 12),
             Header = header,
             IsExpanded = false,
             Background = SurfaceBrush,
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            ContentPadding = new Thickness(18, 8, 18, 18),
+            CornerRadius = new CornerRadius(14),
+            ContentPadding = new Thickness(20, 10, 20, 20),
             Content = body,
         };
     }

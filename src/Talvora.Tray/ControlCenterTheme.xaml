@@ -7,21 +7,21 @@
         <ui:ControlsDictionary />
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- Talvora product palette: restrained Fluent dark surfaces with one cool accent. -->
-    <Color x:Key="Talvora.Background.Color">#0F1115</Color>
-    <Color x:Key="Talvora.Surface.Color">#15181E</Color>
-    <Color x:Key="Talvora.SurfaceRaised.Color">#1A1E25</Color>
-    <Color x:Key="Talvora.SurfaceHover.Color">#1F242C</Color>
-    <Color x:Key="Talvora.Border.Color">#282E37</Color>
-    <Color x:Key="Talvora.BorderStrong.Color">#35404C</Color>
-    <Color x:Key="Talvora.TextPrimary.Color">#F4F7FB</Color>
-    <Color x:Key="Talvora.TextSecondary.Color">#A4AFBE</Color>
-    <Color x:Key="Talvora.TextTertiary.Color">#778394</Color>
-    <Color x:Key="Talvora.Accent.Color">#78A6F8</Color>
-    <Color x:Key="Talvora.AccentSoft.Color">#1C2A43</Color>
-    <Color x:Key="Talvora.Ready.Color">#48C78E</Color>
-    <Color x:Key="Talvora.Attention.Color">#F0B85A</Color>
-    <Color x:Key="Talvora.Offline.Color">#EB6877</Color>
+    <!-- Talvora product palette: deep neutral-navy surfaces, quiet borders, one cool accent. -->
+    <Color x:Key="Talvora.Background.Color">#0D1118</Color>
+    <Color x:Key="Talvora.Surface.Color">#131A24</Color>
+    <Color x:Key="Talvora.SurfaceRaised.Color">#18212D</Color>
+    <Color x:Key="Talvora.SurfaceHover.Color">#202B39</Color>
+    <Color x:Key="Talvora.Border.Color">#283443</Color>
+    <Color x:Key="Talvora.BorderStrong.Color">#3A4C62</Color>
+    <Color x:Key="Talvora.TextPrimary.Color">#F6F8FB</Color>
+    <Color x:Key="Talvora.TextSecondary.Color">#AAB6C7</Color>
+    <Color x:Key="Talvora.TextTertiary.Color">#758399</Color>
+    <Color x:Key="Talvora.Accent.Color">#74A8FF</Color>
+    <Color x:Key="Talvora.AccentSoft.Color">#182A46</Color>
+    <Color x:Key="Talvora.Ready.Color">#4FD39C</Color>
+    <Color x:Key="Talvora.Attention.Color">#F2BB5C</Color>
+    <Color x:Key="Talvora.Offline.Color">#EE6C7B</Color>
 
     <SolidColorBrush x:Key="Talvora.Background" Color="{StaticResource Talvora.Background.Color}" />
     <SolidColorBrush x:Key="Talvora.Surface" Color="{StaticResource Talvora.Surface.Color}" />
@@ -38,12 +38,22 @@
     <SolidColorBrush x:Key="Talvora.Attention" Color="{StaticResource Talvora.Attention.Color}" />
     <SolidColorBrush x:Key="Talvora.Offline" Color="{StaticResource Talvora.Offline.Color}" />
 
+    <!-- WPF-UI 4.3.0 Primary buttons resolve these DynamicResource keys
+         from the control template. Override that exact surface so Talvora
+         owns normal, hover, pressed and foreground states consistently. -->
+    <SolidColorBrush x:Key="AccentButtonBackground" Color="#74A8FF" />
+    <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#82B2FF" />
+    <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#6398EE" />
+    <SolidColorBrush x:Key="AccentButtonForeground" Color="#0D1118" />
+    <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#0D1118" />
+    <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#18212D" />
+
     <Style x:Key="TalvoraCardStyle" TargetType="{x:Type Border}">
         <Setter Property="Background" Value="{StaticResource Talvora.Surface}" />
         <Setter Property="BorderBrush" Value="{StaticResource Talvora.Border}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="10" />
-        <Setter Property="Padding" Value="18" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="Padding" Value="20" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
     </Style>
 
@@ -51,8 +61,8 @@
         <Setter Property="Background" Value="{StaticResource Talvora.SurfaceRaised}" />
         <Setter Property="BorderBrush" Value="{StaticResource Talvora.Border}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="7" />
-        <Setter Property="Padding" Value="14" />
+        <Setter Property="CornerRadius" Value="11" />
+        <Setter Property="Padding" Value="16" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
     </Style>
 
@@ -61,9 +71,9 @@
         TargetType="{x:Type ui:Button}"
         BasedOn="{StaticResource {x:Type ui:Button}}">
         <Setter Property="Appearance" Value="Secondary" />
-        <Setter Property="MinHeight" Value="36" />
-        <Setter Property="Padding" Value="13,6" />
-        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="Padding" Value="14,7" />
+        <Setter Property="CornerRadius" Value="9" />
         <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="FontWeight" Value="SemiBold" />
@@ -75,9 +85,12 @@
         TargetType="{x:Type ui:Button}"
         BasedOn="{StaticResource {x:Type ui:Button}}">
         <Setter Property="Appearance" Value="Primary" />
-        <Setter Property="MinHeight" Value="36" />
-        <Setter Property="Padding" Value="14,6" />
-        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Background" Value="{StaticResource Talvora.Accent}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Talvora.Accent}" />
+        <Setter Property="Foreground" Value="{StaticResource Talvora.Background}" />
+        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="Padding" Value="15,7" />
+        <Setter Property="CornerRadius" Value="9" />
         <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="FontWeight" Value="SemiBold" />
@@ -89,9 +102,9 @@
         TargetType="{x:Type ui:Button}"
         BasedOn="{StaticResource {x:Type ui:Button}}">
         <Setter Property="Appearance" Value="Transparent" />
-        <Setter Property="MinHeight" Value="34" />
-        <Setter Property="Padding" Value="8,5" />
-        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="CornerRadius" Value="9" />
         <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="FontWeight" Value="SemiBold" />
@@ -103,8 +116,8 @@
         TargetType="{x:Type ui:TextBox}"
         BasedOn="{StaticResource {x:Type ui:TextBox}}">
         <Setter Property="MinWidth" Value="300" />
-        <Setter Property="MinHeight" Value="40" />
-        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="MinHeight" Value="42" />
+        <Setter Property="Padding" Value="12,7" />
         <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="Background" Value="{StaticResource Talvora.SurfaceRaised}" />
@@ -117,8 +130,8 @@
         TargetType="{x:Type ComboBox}"
         BasedOn="{StaticResource {x:Type ComboBox}}">
         <Setter Property="MinWidth" Value="184" />
-        <Setter Property="MinHeight" Value="40" />
-        <Setter Property="Padding" Value="10,5" />
+        <Setter Property="MinHeight" Value="42" />
+        <Setter Property="Padding" Value="12,6" />
         <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="Background" Value="{StaticResource Talvora.SurfaceRaised}" />

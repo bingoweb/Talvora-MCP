@@ -13,7 +13,7 @@ internal sealed partial class ControlCenterWindow
     {
         var content = new StackPanel
         {
-            Margin = new Thickness(28, 24, 28, 28),
+            Margin = new Thickness(32, 26, 32, 34),
         };
 
         var backButton = new UiButton
@@ -30,7 +30,7 @@ internal sealed partial class ControlCenterWindow
 
         var heroGrid = new Grid
         {
-            Margin = new Thickness(0, 18, 0, 0),
+            Margin = new Thickness(0, 20, 0, 0),
         };
         heroGrid.ColumnDefinitions.Add(new ColumnDefinition
         {
@@ -48,16 +48,16 @@ internal sealed partial class ControlCenterWindow
 
         _detailTitle = new TextBlock
         {
-            FontSize = 28,
+            FontSize = 30,
             FontWeight = FontWeights.SemiBold,
         };
         titleStack.Children.Add(_detailTitle);
 
         _detailDescription = new TextBlock
         {
-            Margin = new Thickness(0, 7, 24, 0),
+            Margin = new Thickness(0, 8, 24, 0),
             Foreground = SecondaryTextBrush,
-            FontSize = 14,
+            FontSize = 13.5,
             TextWrapping = TextWrapping.Wrap,
         };
         titleStack.Children.Add(_detailDescription);
@@ -88,12 +88,12 @@ internal sealed partial class ControlCenterWindow
         };
         _detailOperationBanner = new Border
         {
-            Margin = new Thickness(0, 16, 0, 0),
-            Padding = new Thickness(13, 10, 13, 10),
+            Margin = new Thickness(0, 18, 0, 0),
+            Padding = new Thickness(15, 12, 15, 12),
             Background = RaisedSurfaceBrush,
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = new CornerRadius(11),
             Visibility = Visibility.Collapsed,
             Child = _detailOperationText,
         };
@@ -101,7 +101,7 @@ internal sealed partial class ControlCenterWindow
 
         var controlsCard = new Border
         {
-            Margin = new Thickness(0, 16, 0, 0),
+            Margin = new Thickness(0, 18, 0, 0),
             Style = FindStyle("TalvoraSubtleCardStyle"),
         };
 
@@ -191,7 +191,7 @@ internal sealed partial class ControlCenterWindow
 
         var summaryGrid = new Grid
         {
-            Margin = new Thickness(0, 16, 0, 0),
+            Margin = new Thickness(0, 18, 0, 0),
         };
         summaryGrid.ColumnDefinitions.Add(new ColumnDefinition
         {
@@ -217,7 +217,7 @@ internal sealed partial class ControlCenterWindow
 
         var componentsCard = new Border
         {
-            Margin = new Thickness(0, 16, 0, 0),
+            Margin = new Thickness(0, 18, 0, 0),
             Style = FindStyle("TalvoraCardStyle"),
         };
 
@@ -247,7 +247,7 @@ internal sealed partial class ControlCenterWindow
 
         var recentEventsCard = new Border
         {
-            Margin = new Thickness(0, 16, 0, 0),
+            Margin = new Thickness(0, 18, 0, 0),
             Style = FindStyle("TalvoraCardStyle"),
         };
         var recentEventsRoot = new StackPanel();
@@ -324,15 +324,15 @@ internal sealed partial class ControlCenterWindow
 
         _technicalDetailsExpander = new CardExpander
         {
-            Margin = new Thickness(0, 16, 0, 0),
+            Margin = new Thickness(0, 18, 0, 0),
             Header = "Teknik ayrıntılar",
             Icon = new SymbolIcon { Symbol = SymbolRegular.Info20 },
             IsExpanded = false,
             Background = SurfaceBrush,
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(12),
-            ContentPadding = new Thickness(20, 8, 20, 20),
+            CornerRadius = new CornerRadius(14),
+            ContentPadding = new Thickness(22, 10, 22, 22),
             Content = technicalStack,
         };
         content.Children.Add(_technicalDetailsExpander);

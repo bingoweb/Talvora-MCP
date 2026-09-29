@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T05:06:06Z",
-  "scope": "Control Center repair/recovery hardening: diagnose the failed layer, prefer minimal service/task/tunnel repair, verify readiness after every repair, escalate only when targeted recovery fails, preserve manual-stop intent, and make automatic retry/backoff state truthful.",
+  "verifiedAtUtc": "2026-09-29T12:18:28Z",
+  "scope": "Control Center commercial visual polish only: unify dark palette, spacing, typography, card radii, state pills, header hierarchy, WPF-UI primary-action accent states and responsive visual rhythm without changing lifecycle, repair, service or MCP behavior.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -29,11 +29,11 @@
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop_wpf",
-      "verified": "Current Microsoft WPF guidance confirms AutomationProperties.Name and HelpText are the supported UI Automation metadata surface, and keyboard focus/tab navigation should be explicit for interactive custom surfaces. Talvora Control Center now exposes automation names on key search/filter/action controls and makes dashboard cards keyboard-focusable with Enter/Space activation."
+      "verified": "Current Microsoft WPF guidance confirms styles, margins, padding and alignment are the standard surfaces for consistent control and container presentation. The Control Center cosmetic pass keeps the existing visual tree and interactions while normalizing spacing, container radii, typography hierarchy and dark-surface contrast."
     },
     {
       "libraryId": "/lepoco/wpfui",
-      "verified": "Current WPF UI sources confirm FluentWindow, TitleBar, CardExpander, Button and TextBox remain the supported modern control surface. Talvora keeps its restrained dark WPF-UI design language while improving responsive layout and accessibility without replacing the established Control Center component system."
+      "verified": "WPF UI 4.3.0 sources confirm FluentWindow, TitleBar, CardExpander, Button and TextBox remain the established control surface. Its Primary Button template resolves AccentButtonBackground, AccentButtonBackgroundPointerOver, AccentButtonBackgroundPressed and matching foreground DynamicResources; Talvora overrides those exact resources instead of forking the template, preserving native hover/pressed behavior while applying the product accent."
     },
     {
       "libraryId": "/dotnet/wpf",
@@ -41,6 +41,8 @@
     }
   ],
   "vendorSources": [
+    "Talvora Control Center rendered-surface review 2026-09-29: real WPF RenderTargetBitmap captures of the populated dashboard and Memory view were visually inspected. The pass corrected an over-stretched state badge, unified navy-dark surfaces/radii/spacing, and verified the final Primary Hafıza action renders with the Talvora blue accent.",
+    "WPF UI 4.3.0 Button.xaml checked 2026-09-29: Appearance=Primary binds background and interaction states to AccentButtonBackground, AccentButtonBackgroundPointerOver and AccentButtonBackgroundPressed, with AccentButtonForeground resources for text/icon color; Talvora now overrides those exact keys in its local theme dictionary.",
     "Talvora live repair acceptance 2026-09-29: with the normal tray recovery loop intentionally paused, talvora-admin-business was stopped until tunnel-client reported process_running=false and ready=false; the source repair command restored it with Strategy=Yalnız güvenli tüneli yeniden bağla, Escalated=False and FinalHealth=Ready while the Talvora Core service and Dev connector remained available.",
     "Gitea live repair acceptance 2026-09-29: with automatic tray recovery intentionally paused, gitea-business was stopped until tunnel-client reported process_running=false and ready=false; the source repair command restored only the secure tunnel with Escalated=False and FinalHealth=Ready while the Gitea service PID remained 3560 and the Caddy service PID remained 6352.",
     "Microsoft .NET Windows Service recovery guidance checked 2026-09-29: sc.exe start/stop and configured service recovery actions are supported operational primitives; Talvora adds its own bounded readiness verification before declaring a repair successful.",

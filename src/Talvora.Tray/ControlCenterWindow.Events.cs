@@ -138,14 +138,14 @@ internal sealed partial class ControlCenterWindow
 
         _eventsExpander = new CardExpander
         {
-            Margin = new Thickness(0, 8, 0, 0),
+            Margin = new Thickness(0, 12, 0, 0),
             Header = headerGrid,
             IsExpanded = false,
             Background = SurfaceBrush,
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            ContentPadding = new Thickness(18, 10, 18, 18),
+            CornerRadius = new CornerRadius(14),
+            ContentPadding = new Thickness(20, 12, 20, 20),
             Content = body,
         };
 
@@ -278,8 +278,8 @@ internal sealed partial class ControlCenterWindow
             Background = RaisedSurfaceBrush,
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            ContentPadding = new Thickness(14, 10, 14, 14),
+            CornerRadius = new CornerRadius(12),
+            ContentPadding = new Thickness(16, 12, 16, 16),
             Content = body,
         };
 
@@ -447,7 +447,7 @@ internal sealed partial class ControlCenterWindow
             Background = RaisedSurfaceBrush,
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = new CornerRadius(10),
             Child = grid,
         };
     }
