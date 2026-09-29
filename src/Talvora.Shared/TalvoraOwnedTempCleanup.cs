@@ -120,7 +120,8 @@ public static class TalvoraOwnedTempCleanup
         IReadOnlyList<string> prefixes,
         IReadOnlyList<string> exactNames,
         CancellationToken cancellationToken,
-        Func<string, bool>? candidateFilter = null)
+        Func<string, bool>? candidateFilter = null,
+        Func<string, bool>? treeEntryFilter = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
         ArgumentNullException.ThrowIfNull(prefixes);
@@ -161,7 +162,8 @@ public static class TalvoraOwnedTempCleanup
                     entry,
                     cutoffUtc,
                     out var bytes,
-                    cancellationToken))
+                    cancellationToken,
+                    treeEntryFilter))
             {
                 deleted++;
                 reclaimedBytes += bytes;
@@ -178,7 +180,8 @@ public static class TalvoraOwnedTempCleanup
         string root,
         DateTimeOffset cutoffUtc,
         CancellationToken cancellationToken,
-        Func<string, bool>? candidateFilter = null) =>
+        Func<string, bool>? candidateFilter = null,
+        Func<string, bool>? treeEntryFilter = null) =>
         CleanupDirectChildren(
             root,
             "*",
@@ -189,13 +192,15 @@ public static class TalvoraOwnedTempCleanup
                 out _),
             cutoffUtc,
             cancellationToken,
-            candidateFilter);
+            candidateFilter,
+            treeEntryFilter);
 
     public static TalvoraOwnedTempCleanupResult CleanupGuidJsonFiles(
         string root,
         DateTimeOffset cutoffUtc,
         CancellationToken cancellationToken,
-        Func<string, bool>? candidateFilter = null) =>
+        Func<string, bool>? candidateFilter = null,
+        Func<string, bool>? treeEntryFilter = null) =>
         CleanupDirectChildren(
             root,
             "*.json",
@@ -210,7 +215,8 @@ public static class TalvoraOwnedTempCleanup
                     out _),
             cutoffUtc,
             cancellationToken,
-            candidateFilter);
+            candidateFilter,
+            treeEntryFilter);
 
     private static TalvoraOwnedTempCleanupResult CleanupDirectChildren(
         string root,
@@ -219,7 +225,8 @@ public static class TalvoraOwnedTempCleanup
         Func<string, bool> managedNameFilter,
         DateTimeOffset cutoffUtc,
         CancellationToken cancellationToken,
-        Func<string, bool>? candidateFilter)
+        Func<string, bool>? candidateFilter,
+        Func<string, bool>? treeEntryFilter)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
         ArgumentException.ThrowIfNullOrWhiteSpace(searchPattern);
@@ -279,7 +286,8 @@ public static class TalvoraOwnedTempCleanup
                         entry,
                         cutoffUtc,
                         out var bytes,
-                        cancellationToken))
+                        cancellationToken,
+                        treeEntryFilter))
                 {
                     deleted++;
                     reclaimedBytes += bytes;
@@ -297,7 +305,8 @@ public static class TalvoraOwnedTempCleanup
         string path,
         DateTimeOffset cutoffUtc,
         out long reclaimedBytes,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<string, bool>? treeEntryFilter = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(allowedRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -316,9 +325,16 @@ public static class TalvoraOwnedTempCleanup
                 return false;
             }
 
+            if (treeEntryFilter is not null &&
+                !treeEntryFilter(path))
+            {
+                return false;
+            }
+
             var scan = InspectTreeWithoutFollowingReparsePoints(
                 path,
-                cancellationToken);
+                cancellationToken,
+                treeEntryFilter);
             if (!scan.Complete ||
                 scan.NewestWriteUtc >= cutoffUtc)
             {
@@ -329,7 +345,9 @@ public static class TalvoraOwnedTempCleanup
             // Once deletion begins, finish the already-proven stale owned tree
             // instead of leaving a partially deleted tree whose directory
             // timestamps would postpone the remaining cleanup.
-            DeleteTreeWithoutFollowingReparsePoints(path);
+            DeleteTreeWithoutFollowingReparsePoints(
+                path,
+                treeEntryFilter);
             reclaimedBytes = scan.Bytes;
             return true;
         }
@@ -439,7 +457,8 @@ public static class TalvoraOwnedTempCleanup
 
     private static TreeScanResult InspectTreeWithoutFollowingReparsePoints(
         string path,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<string, bool>? treeEntryFilter)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (File.Exists(path))
@@ -487,6 +506,15 @@ public static class TalvoraOwnedTempCleanup
             foreach (var entry in directory.EnumerateFileSystemInfos())
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (treeEntryFilter is not null &&
+                    !treeEntryFilter(entry.FullName))
+                {
+                    return new TreeScanResult(
+                        false,
+                        bytes,
+                        newest);
+                }
+
                 if (++scanned > MaximumScannedEntriesPerCandidate)
                 {
                     return new TreeScanResult(
@@ -526,8 +554,13 @@ public static class TalvoraOwnedTempCleanup
     }
 
     private static void DeleteTreeWithoutFollowingReparsePoints(
-        string path)
+        string path,
+        Func<string, bool>? treeEntryFilter)
     {
+        EnsureDeletionEntryAllowed(
+            path,
+            treeEntryFilter);
+
         if (File.Exists(path))
         {
             File.SetAttributes(path, FileAttributes.Normal);
@@ -549,6 +582,10 @@ public static class TalvoraOwnedTempCleanup
 
         foreach (var entry in directory.EnumerateFileSystemInfos())
         {
+            EnsureDeletionEntryAllowed(
+                entry.FullName,
+                treeEntryFilter);
+
             if ((entry.Attributes & FileAttributes.ReparsePoint) != 0)
             {
                 if (entry is DirectoryInfo reparseDirectory)
@@ -567,7 +604,8 @@ public static class TalvoraOwnedTempCleanup
             if (entry is DirectoryInfo childDirectory)
             {
                 DeleteTreeWithoutFollowingReparsePoints(
-                    childDirectory.FullName);
+                    childDirectory.FullName,
+                    treeEntryFilter);
             }
             else
             {
@@ -577,6 +615,18 @@ public static class TalvoraOwnedTempCleanup
         }
 
         directory.Delete();
+    }
+
+    private static void EnsureDeletionEntryAllowed(
+        string path,
+        Func<string, bool>? treeEntryFilter)
+    {
+        if (treeEntryFilter is not null &&
+            !treeEntryFilter(path))
+        {
+            throw new IOException(
+                "Cleanup safety filter rejected an entry during deletion.");
+        }
     }
 
     private sealed record TreeScanResult(

@@ -112,6 +112,7 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
                                 TalvoraOwnedTempCleanup.TestPrefixes,
                                 Array.Empty<string>(),
                                 cancellationToken,
+                                IsSystemOwnedCleanupCandidate,
                                 IsSystemOwnedCleanupCandidate);
                         deleted += testResult.DeletedEntries;
                         reclaimedBytes += testResult.ReclaimedBytes;
@@ -123,6 +124,7 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
                                 TalvoraOwnedTempCleanup.DefaultPrefixes,
                                 TalvoraOwnedTempCleanup.DefaultExactNames,
                                 cancellationToken,
+                                IsSystemOwnedCleanupCandidate,
                                 IsSystemOwnedCleanupCandidate);
                         deleted += result.DeletedEntries;
                         reclaimedBytes += result.ReclaimedBytes;
@@ -219,6 +221,7 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
                     structuralRoot,
                     cutoffUtc,
                     cancellationToken,
+                    IsSystemOwnedCleanupCandidate,
                     IsSystemOwnedCleanupCandidate)
                 : new TalvoraOwnedTempCleanupResult(0, 0);
         var semanticWorker =
@@ -227,6 +230,7 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
                     semanticWorkerRoot,
                     cutoffUtc,
                     cancellationToken,
+                    IsSystemOwnedCleanupCandidate,
                     IsSystemOwnedCleanupCandidate)
                 : new TalvoraOwnedTempCleanupResult(0, 0);
 
@@ -294,7 +298,8 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
                     candidate,
                     cutoffUtc,
                     out var bytes,
-                    cancellationToken))
+                    cancellationToken,
+                    IsSystemOwnedCleanupCandidate))
             {
                 deleted++;
                 reclaimedBytes += bytes;

@@ -62,6 +62,9 @@ Assert-Contains $sharedCleanup 'TestPrefixes' 'test-only temporary artifacts hav
 Assert-Contains $sharedCleanup '"talvora-pipe-test"' 'pipe regression leftovers are classified as test-only artifacts'
 Assert-Contains $sharedCleanup 'root.Attributes & FileAttributes.ReparsePoint' 'a candidate root reparse point is never traversed'
 Assert-Contains $sharedCleanup 'DeleteTreeWithoutFollowingReparsePoints' 'cleanup never recursively follows reparse points'
+Assert-Contains $sharedCleanup 'treeEntryFilter' 'shared cleanup can fail closed on unsafe descendant entries'
+Assert-Contains $sharedCleanup 'EnsureDeletionEntryAllowed' 'deletion revalidates descendant safety after the stale-tree scan'
+Assert-Contains $sharedCleanup '!treeEntryFilter(entry.FullName)' 'tree scan rejects a descendant that fails the safety filter'
 Assert-Contains $maintenance 'TalvoraOwnedTempCleanup.CleanupTopLevel' 'interactive-user cleanup delegates to the shared engine'
 Assert-Contains $maintenance 'TestArtifactRetention' 'interactive-user test artifacts have a two-day retention path'
 Assert-Contains $maintenance 'TalvoraOwnedTempCleanup.TestPrefixes' 'interactive-user cleanup applies the shared test classification'
@@ -97,6 +100,10 @@ if ($programDataCleanupStart -lt 0 -or $ownerFilterStart -le $programDataCleanup
 }
 $programDataCleanup = $systemMaintenance.Substring($programDataCleanupStart, $ownerFilterStart - $programDataCleanupStart)
 Assert-Contains $programDataCleanup 'IsSystemOwnedCleanupCandidate(candidate)' 'SYSTEM ProgramData test cleanup requires LocalSystem ownership before deletion'
+Assert-Contains $programDataCleanup 'IsSystemOwnedCleanupCandidate))' 'SYSTEM ProgramData deletion revalidates descendant LocalSystem ownership'
+if (($systemMaintenance.Split('IsSystemOwnedCleanupCandidate,').Count - 1) -lt 4) {
+    throw 'Storage maintenance contract failed: SYSTEM temp cleanup must pass ownership as both candidate and descendant filter'
+}
 Assert-Contains $systemMaintenance 'TalvoraOwnedTempCleanup.TryDeleteStaleEntry' 'SYSTEM cleanup uses the shared reparse-safe deletion engine'
 Assert-Contains $systemMaintenance 'TimeSpan.FromHours(6)' 'SYSTEM maintenance runs periodically'
 Assert-Contains $systemMaintenance 'TalvoraPenpotSupervisorMaintenance.Maintain' 'SYSTEM maintenance repairs Penpot supervisor drift and old logs'

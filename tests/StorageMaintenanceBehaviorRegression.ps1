@@ -58,6 +58,64 @@ try {
         throw 'Semantic-worker child-level retention contract failed.'
     }
 
+    $ownershipRoot = Join-Path $fixtureRoot 'Ownership'
+    $ownedCandidate = Join-Path $ownershipRoot 'Owned-candidate'
+    New-Item -ItemType Directory -Path $ownedCandidate -Force | Out-Null
+    $systemFile = Join-Path $ownedCandidate 'system.txt'
+    $foreignFile = Join-Path $ownedCandidate 'foreign.txt'
+    [IO.File]::WriteAllText($systemFile, 'system')
+    [IO.File]::WriteAllText($foreignFile, 'foreign')
+    foreach ($path in @($systemFile, $foreignFile)) { [IO.File]::SetLastWriteTimeUtc($path, $old) }
+    [IO.Directory]::SetLastWriteTimeUtc($ownedCandidate, $old)
+    $allowCandidate = [Func[string,bool]] { param($path) $true }
+    $allowTreeEntry = [Func[string,bool]] {
+        param($path)
+        return -not [IO.Path]::GetFileName($path).Equals('foreign.txt', [StringComparison]::OrdinalIgnoreCase)
+    }
+    $ownershipResult = [Talvora.Shared.TalvoraOwnedTempCleanup]::CleanupTopLevel(
+        $ownershipRoot,
+        $cutoff,
+        [string[]]@('Owned-'),
+        [string[]]@(),
+        [Threading.CancellationToken]::None,
+        $allowCandidate,
+        $allowTreeEntry)
+    if ($ownershipResult.DeletedEntries -ne 0 -or
+        -not (Test-Path -LiteralPath $ownedCandidate) -or
+        -not (Test-Path -LiteralPath $foreignFile)) {
+        throw 'Descendant ownership fail-closed contract failed.'
+    }
+
+    $raceRoot = Join-Path $fixtureRoot 'OwnershipRace'
+    $raceCandidate = Join-Path $raceRoot 'Owned-race'
+    New-Item -ItemType Directory -Path $raceCandidate -Force | Out-Null
+    $raceForeign = Join-Path $raceCandidate 'race-foreign.txt'
+    [IO.File]::WriteAllText($raceForeign, 'foreign')
+    [IO.File]::SetLastWriteTimeUtc($raceForeign, $old)
+    [IO.Directory]::SetLastWriteTimeUtc($raceCandidate, $old)
+    $raceState = [pscustomobject]@{ ForeignCalls = 0 }
+    $flipTreeEntry = [Func[string,bool]] {
+        param($path)
+        if ([IO.Path]::GetFileName($path).Equals('race-foreign.txt', [StringComparison]::OrdinalIgnoreCase)) {
+            $raceState.ForeignCalls++
+            return $raceState.ForeignCalls -eq 1
+        }
+        return $true
+    }
+    $raceResult = [Talvora.Shared.TalvoraOwnedTempCleanup]::CleanupTopLevel(
+        $raceRoot,
+        $cutoff,
+        [string[]]@('Owned-'),
+        [string[]]@(),
+        [Threading.CancellationToken]::None,
+        $allowCandidate,
+        $flipTreeEntry)
+    if ($raceResult.DeletedEntries -ne 0 -or
+        $raceState.ForeignCalls -lt 2 -or
+        -not (Test-Path -LiteralPath $raceForeign)) {
+        throw 'Deletion-time descendant safety revalidation contract failed.'
+    }
+
     Write-Output 'STORAGE_MAINTENANCE_BEHAVIOR_GREEN'
 }
 finally {

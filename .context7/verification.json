@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T19:02:07Z",
-  "scope": "Talvora storage-maintenance deep commercial-quality re-audit: preserve fail-closed ownership and producer-shaped child retention while ensuring nested enumeration/ACL failures propagate into existing Tray and SYSTEM maintenance observability instead of being silently converted to an empty cleanup result; continue lifecycle/tunnel/Penpot review before canonical live acceptance.",
+  "verifiedAtUtc": "2026-09-29T19:11:47Z",
+  "scope": "Talvora storage-maintenance deep commercial-quality re-audit: enforce SYSTEM ownership not only on cleanup roots but on every descendant during both scan and deletion, including scan-to-delete ownership changes; preserve bounded child retention and observable maintenance failures while continuing lifecycle/tunnel/Penpot review before canonical live acceptance.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
