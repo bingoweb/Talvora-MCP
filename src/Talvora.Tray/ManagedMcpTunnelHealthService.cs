@@ -22,7 +22,11 @@ internal sealed record ManagedMcpTunnelHealthSnapshot(
     bool Ready,
     string RuntimeVersion,
     string RuntimeLifecycle,
-    IReadOnlyList<ManagedMcpTunnelHealthComponentSnapshot> Components)
+    IReadOnlyList<ManagedMcpTunnelHealthComponentSnapshot> Components,
+    int? QueueDepth,
+    int? DispatcherActive,
+    int? ResponseInProgress,
+    DateTimeOffset? LastActivityUtc)
 {
     public bool HasCriticalDegradation =>
         Components.Any(component =>
@@ -31,6 +35,15 @@ internal sealed record ManagedMcpTunnelHealthSnapshot(
                 component.Status,
                 "degraded",
                 StringComparison.OrdinalIgnoreCase));
+
+    public bool IsQuietForMaintenance(
+        DateTimeOffset nowUtc,
+        TimeSpan quietPeriod) =>
+        QueueDepth == 0 &&
+        DispatcherActive == 0 &&
+        ResponseInProgress == 0 &&
+        LastActivityUtc is { } lastActivityUtc &&
+        nowUtc - lastActivityUtc >= quietPeriod;
 }
 
 internal static class ManagedMcpTunnelHealthService
@@ -129,6 +142,10 @@ internal static class ManagedMcpTunnelHealthService
         var ready = TryGetBoolean(root, "ready");
         var runtimeVersion = string.Empty;
         var runtimeLifecycle = string.Empty;
+        int? queueDepth = null;
+        int? dispatcherActive = null;
+        int? responseInProgress = null;
+        DateTimeOffset? lastActivityUtc = null;
         if (TryGetObject(root, "runtime", out var runtime))
         {
             runtimeVersion = TryGetString(runtime, "version") ?? string.Empty;
@@ -151,6 +168,13 @@ internal static class ManagedMcpTunnelHealthService
                     TryGetString(property.Value, "state") ?? "unknown";
                 var reasonCode = TryGetString(property.Value, "reason_code");
                 var limited = TryGetBoolean(property.Value, "limited");
+                CaptureMaintenanceSignals(
+                    property.Name,
+                    property.Value,
+                    ref queueDepth,
+                    ref dispatcherActive,
+                    ref responseInProgress,
+                    ref lastActivityUtc);
                 var detail = BuildComponentDetail(
                     property.Name,
                     property.Value,
@@ -177,7 +201,11 @@ internal static class ManagedMcpTunnelHealthService
             ready,
             runtimeVersion,
             runtimeLifecycle,
-            components);
+            components,
+            queueDepth,
+            dispatcherActive,
+            responseInProgress,
+            lastActivityUtc);
     }
 
     public static void Invalidate(string mcpId)
@@ -260,6 +288,102 @@ internal static class ManagedMcpTunnelHealthService
             id,
             "response-delivery",
             StringComparison.OrdinalIgnoreCase);
+
+    private static void CaptureMaintenanceSignals(
+        string componentId,
+        JsonElement component,
+        ref int? queueDepth,
+        ref int? dispatcherActive,
+        ref int? responseInProgress,
+        ref DateTimeOffset? lastActivityUtc)
+    {
+        if (!TryGetObject(component, "details", out var details))
+        {
+            return;
+        }
+
+        if (string.Equals(
+                componentId,
+                "queue",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            queueDepth = TryGetNullableInt32(
+                details,
+                "depth");
+            UpdateLatestTimestamp(
+                details,
+                "last_enqueue",
+                ref lastActivityUtc);
+            UpdateLatestTimestamp(
+                details,
+                "last_dequeue",
+                ref lastActivityUtc);
+            return;
+        }
+
+        if (string.Equals(
+                componentId,
+                "dispatcher",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            dispatcherActive = TryGetNullableInt32(
+                details,
+                "active");
+            UpdateLatestTimestamp(
+                details,
+                "last_start",
+                ref lastActivityUtc);
+            UpdateLatestTimestamp(
+                details,
+                "last_completion",
+                ref lastActivityUtc);
+            return;
+        }
+
+        if (string.Equals(
+                componentId,
+                "response-delivery",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            responseInProgress = TryGetNullableInt32(
+                details,
+                "in_progress");
+            UpdateLatestTimestamp(
+                details,
+                "last_accepted",
+                ref lastActivityUtc);
+            UpdateLatestTimestamp(
+                details,
+                "last_completed",
+                ref lastActivityUtc);
+        }
+    }
+
+    private static void UpdateLatestTimestamp(
+        JsonElement source,
+        string propertyName,
+        ref DateTimeOffset? latestUtc)
+    {
+        var value = TryGetString(
+            source,
+            propertyName);
+        if (string.IsNullOrWhiteSpace(value) ||
+            !DateTimeOffset.TryParse(
+                value,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal |
+                DateTimeStyles.AdjustToUniversal,
+                out var parsed))
+        {
+            return;
+        }
+
+        if (latestUtc is null ||
+            parsed > latestUtc.Value)
+        {
+            latestUtc = parsed;
+        }
+    }
 
     private static string BuildComponentDetail(
         string id,
@@ -491,6 +615,20 @@ internal static class ManagedMcpTunnelHealthService
         }
 
         return 0;
+    }
+
+    private static int? TryGetNullableInt32(
+        JsonElement source,
+        string propertyName)
+    {
+        if (source.ValueKind == JsonValueKind.Object &&
+            source.TryGetProperty(propertyName, out var value) &&
+            value.TryGetInt32(out var number))
+        {
+            return number;
+        }
+
+        return null;
     }
 
     private sealed record CacheEntry(

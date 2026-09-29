@@ -5,7 +5,7 @@ using Talvora.Shared;
 
 namespace Talvora.Tray;
 
-internal sealed class TrayApplicationContext : ApplicationContext
+internal sealed partial class TrayApplicationContext : ApplicationContext
 {
     private const string GiteaUrl = "http://127.0.0.1:3000/";
 
@@ -172,6 +172,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _genericMcpTimer.Tick += async (_, _) =>
             await MaintainGenericManagedMcpsAsync();
 
+        InitializeStorageMaintenanceTimer();
+
         _shutdownTimer = new System.Windows.Forms.Timer
         {
             Interval = 250,
@@ -282,6 +284,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
                         $"startup:{registration.Id}:failed");
                 }
             }
+
+            await RunStorageMaintenanceAsync(
+                registry.Mcps,
+                "startup");
         }
         catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
         {
@@ -303,6 +309,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 _talvoraTimer.Start();
                 _giteaTimer.Start();
                 _genericMcpTimer.Start();
+                StartStorageMaintenanceTimer();
             }
         }
     }
@@ -1556,6 +1563,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _talvoraTimer.Stop();
         _giteaTimer.Stop();
         _genericMcpTimer.Stop();
+        StopStorageMaintenanceTimer();
         _shutdownTimer.Stop();
         _lifetimeCts.Cancel();
         _notifyIcon.Visible = false;
@@ -1571,10 +1579,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
             _talvoraTimer.Stop();
             _giteaTimer.Stop();
             _genericMcpTimer.Stop();
+            StopStorageMaintenanceTimer();
             _shutdownTimer.Stop();
             _talvoraTimer.Dispose();
             _giteaTimer.Dispose();
             _genericMcpTimer.Dispose();
+            DisposeStorageMaintenanceTimer();
             _shutdownTimer.Dispose();
             _shutdownEvent.Dispose();
             _desktopProgressListener.Dispose();

@@ -29,6 +29,7 @@ builder.Host.UseWindowsService(options => options.ServiceName = "Talvora");
 builder.WebHost.ConfigureKestrel(options => options.ListenLocalhost(7676));
 builder.Services.AddSingleton<TalvoraDesktopProgressNotifier>();
 builder.Services.AddSingleton<TalvoraAutomaticLearningObserver>();
+builder.Services.AddHostedService<TalvoraSystemStorageMaintenanceService>();
 
 builder.Services
     .AddMcpServer(options =>

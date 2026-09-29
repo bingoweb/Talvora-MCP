@@ -85,6 +85,7 @@ internal static class Program
                 ControlCenterRawLogService.AssertBoundedReadContract();
                 DpapiSecretStore.AssertRoundTripContract();
                 ManagedMcpTunnelProvisioningService.AssertPolicyContract();
+                TalvoraStorageMaintenanceService.AssertPolicyContract();
                 ControlCenterSetupService.AssertPolicyContract();
                 ManagedMcpOperationCoordinator.AssertContract();
                 ManagedMcpSessionState.AssertContract();
@@ -107,6 +108,38 @@ internal static class Program
             catch (Exception ex)
             {
                 TrayLog.Write("Self-test failed", ex);
+                return 1;
+            }
+        }
+
+        if (args.Any(arg =>
+            string.Equals(
+                arg,
+                "--storage-maintenance",
+                StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                var registry = ManagedMcpRegistryCoordinator
+                    .LoadOrRecoverAsync(CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                var result = TalvoraStorageMaintenanceService
+                    .RunAsync(
+                        registry.Mcps,
+                        CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+
+                TrayLog.Write(
+                    $"Storage maintenance command completed. DeletedEntries={result.DeletedEntries}; ReclaimedBytes={result.ReclaimedBytes}; RotatedTunnelLogs={result.RotatedTunnelLogs}");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                TrayLog.Write(
+                    "Storage maintenance command failed",
+                    ex);
                 return 1;
             }
         }
