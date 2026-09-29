@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T14:54:55Z",
-  "scope": "OpenAI tunnel-client v0.0.15 product integration and commercial hardening: consume loopback-only component health schema v1 in Control Center, surface actionable tunnel diagnostics, use critical component degradation for tunnel-only repair, keep supplemental diagnostics timeouts non-fatal to the dashboard, stream-read health payloads under a strict byte ceiling, strengthen managed probes, and retain the complete checksum-verified Windows release package including cloudflared and compliance sidecars.",
+  "verifiedAtUtc": "2026-09-29T16:31:56Z",
+  "scope": "Talvora bounded storage maintenance and disk-growth hardening: run cancellation-aware periodic cleanup in the LocalSystem Windows Service and interactive Tray, classify test artifacts separately from general deployment artifacts, bound cleanup traversal, avoid following reparse points, preserve active tunnel-client rollback versions, rotate tunnel logs only when live health telemetry proves the tunnel is idle, replace Penpot timestamp-log churn with bounded stable logs and exponential crash-loop backoff, and enforce the maintenance contract in Windows CI.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET Windows Service guidance documents explicit sc.exe start/stop lifecycle control and service recovery actions. Talvora's repair engine keeps service operations bounded, verifies post-operation health/readiness, and escalates from targeted recovery only when the narrower repair does not restore readiness. Existing MiniLM tokenizer/ONNX verification remains covered by the pinned implementation and benchmark artifacts."
+      "verified": "Current .NET worker-service guidance confirms BackgroundService.ExecuteAsync(CancellationToken) is the standard lifetime surface for long-running periodic work and that the stopping token should drive graceful shutdown. The documented worker pattern loops with an awaited delay using that token. Microsoft PeriodicTimer guidance further requires a single consumer for WaitForNextTickAsync and allows cancellation/disposal to interrupt the wait. Talvora therefore runs one SYSTEM storage-maintenance loop, passes the host stopping token through startup delay, maintenance work and PeriodicTimer waits, and treats cancellation during service shutdown as the normal terminal path."
     },
     {
       "libraryId": "/microsoftdocs/windows-powershell-docs",
@@ -41,6 +41,9 @@
     }
   ],
   "vendorSources": [
+    "Microsoft Learn .NET 10 BackgroundService/Windows Service guidance checked 2026-09-29: ExecuteAsync(CancellationToken) represents the lifetime of the long-running operation, the stopping token is signaled during graceful shutdown, and periodic workers should await cancellation-aware delays rather than block service startup. Talvora's LocalSystem storage-maintenance service follows this lifecycle and catches shutdown cancellation as an expected stop path.",
+    "Microsoft Learn System.Threading.PeriodicTimer guidance checked 2026-09-29: only one WaitForNextTickAsync consumer may be active at a time and Dispose/cancellation can interrupt the wait. Talvora owns one PeriodicTimer inside one BackgroundService loop at a six-hour cadence and disposes it when the loop ends.",
+    "GitHub Actions run 36597660132 inspected 2026-09-29: locked restore and Release build completed with 0 warnings/0 errors; Validate source contracts failed only because scripts/Validate-Context7Gate.ps1 detected development-scope changes without a same-change refresh of .context7/verification.json. The fix refreshes evidence instead of weakening or bypassing the quality gate.",
     "Microsoft .NET HttpClient guidance checked 2026-09-29: ResponseHeadersRead avoids default body buffering, ReadAsStreamAsync supports streamed consumption, and OperationCanceledException is the documented cancellation/timeout surface. Talvora therefore enforces its 256 KiB detailed-health ceiling while streaming and treats an internal diagnostics timeout as supplemental rather than failing the full Control Center refresh.",
     "OpenAI tunnel-client v0.0.15 health documentation checked 2026-09-29: /health, /health?details=true, /health/mcp and /health/{component} expose schema-versioned component observations; detailed health is local-only, GET-only and additive to the existing /healthz and /readyz probes. Talvora consumes only the loopback health_details_url emitted by runtimes status and bounds the payload before JSON parsing.",
     "OpenAI tunnel-client v0.0.15 component-health model checked 2026-09-29: control-plane, response-delivery, queue, dispatcher, mcp, oauth, harpoon, cloudflared and proxy are explicit components. Talvora exposes the actionable subset in Control Center and treats only degraded control-plane/response-delivery observations as critical dashboard signals; unknown tunnel-side MCP evidence on HTTP transport remains informational because Talvora independently verifies its local MCP protocol.",
