@@ -342,7 +342,8 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
             ex is IOException or
             UnauthorizedAccessException or
             System.Security.SecurityException or
-            SystemException)
+            ArgumentException or
+            NotSupportedException)
         {
             return false;
         }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T19:40:35Z",
-  "scope": "Talvora storage-maintenance deep commercial-quality re-audit: ownership/version/cancellation fixes remain intact while manual and automatic tunnel provisioning are serialized with the same per-registration operation coordinator used by lifecycle, repair and storage maintenance. This prevents Control Center setup from overlapping log rotation/version pruning before final Penpot/installer/CI acceptance review.",
+  "verifiedAtUtc": "2026-09-29T19:44:34Z",
+  "scope": "Talvora storage-maintenance deep commercial-quality re-audit: ownership/version/cancellation/provisioning serialization fixes remain intact, and SYSTEM ACL owner probing now catches only expected filesystem/security/path exceptions. Unexpected runtime/programming failures are allowed to reach the maintenance warning boundary instead of being silently converted into a false owner result before final Penpot/installer/CI acceptance review.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",

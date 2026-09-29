@@ -104,6 +104,13 @@ Assert-Contains $systemMaintenance 'CleanupGuidJsonFiles' 'SYSTEM semantic-worke
 Assert-Contains $systemMaintenance 'IsSystemOwnedCleanupCandidate(structuralRoot)' 'SYSTEM nested cleanup requires an owned Structural parent root'
 Assert-Contains $systemMaintenance 'IsSystemOwnedCleanupCandidate(semanticWorkerRoot)' 'SYSTEM nested cleanup requires an owned semantic-worker parent root'
 Assert-Contains $systemMaintenance 'IsSystemOwnedCleanupCandidate' 'SYSTEM cleanup refuses to delete matching names owned by an interactive user'
+$ownerProbeStart = $systemMaintenance.IndexOf('private static bool IsSystemOwnedCleanupCandidate', [StringComparison]::Ordinal)
+$ownerProbeEnd = $systemMaintenance.IndexOf('private static IReadOnlyList<string> GetSystemTempRoots()', [StringComparison]::Ordinal)
+if ($ownerProbeStart -lt 0 -or $ownerProbeEnd -le $ownerProbeStart) { throw 'Storage maintenance contract failed: SYSTEM owner-probe boundaries are missing' }
+$ownerProbeSection = $systemMaintenance.Substring($ownerProbeStart, $ownerProbeEnd - $ownerProbeStart)
+if ($ownerProbeSection.Contains('SystemException', [StringComparison]::Ordinal)) {
+    throw 'Storage maintenance contract failed: SYSTEM owner probe must not swallow the full SystemException family'
+}
 Assert-Contains $systemMaintenance '"PenpotSmoke"' 'SYSTEM maintenance recognizes Penpot smoke data'
 Assert-Contains $systemMaintenance '"TestBrowserVisible"' 'SYSTEM maintenance recognizes Penpot browser smoke profiles'
 $programDataCleanupStart = $systemMaintenance.IndexOf('CleanupSystemOwnedTestArtifacts(', [StringComparison]::Ordinal)
