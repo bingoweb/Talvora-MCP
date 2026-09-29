@@ -36,6 +36,8 @@ Assert-Contains $maintenance '32L * 1024 * 1024' 'tunnel logs have a bounded 32 
 Assert-Contains $maintenance 'TimeSpan.FromMinutes(5)' 'tunnel log rotation requires an idle quiet window'
 Assert-Contains $maintenance 'TimeSpan.FromDays(7)' 'general Talvora temporary artifacts have age retention'
 Assert-Contains $maintenance 'RuntimeLifecycle: "running"' 'maintenance self-test fixture uses the current runtime lifecycle contract'
+Assert-Contains $maintenance 'IsVerifiedInPlaceRotationRuntimeVersion' 'in-place log rotation normalizes the pinned runtime version before gating'
+Assert-Contains $maintenance '0.0.15+acceptance' 'maintenance self-test covers tunnel-client build metadata emitted by live health payloads'
 Assert-Contains $maintenance '"response-delivery",' 'maintenance self-test fixture includes the required idle component set'
 
 Assert-Contains $sharedCleanup 'EnumerateMatchingTopLevelCandidates' 'shared cleanup enumerates only allowlisted top-level names instead of materializing an unrelated 100k-entry root'

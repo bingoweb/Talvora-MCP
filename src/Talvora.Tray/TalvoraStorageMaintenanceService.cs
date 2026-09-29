@@ -67,7 +67,7 @@ internal static class TalvoraStorageMaintenanceService
             SchemaVersion: 1,
             Live: true,
             Ready: true,
-            RuntimeVersion: "0.0.15",
+            RuntimeVersion: "0.0.15+acceptance",
             RuntimeLifecycle: "running",
             Components:
             [
@@ -111,10 +111,18 @@ internal static class TalvoraStorageMaintenanceService
                 TunnelQuietPeriod) ||
             active.IsQuietForMaintenance(
                 now,
-                TunnelQuietPeriod))
+                TunnelQuietPeriod) ||
+            !IsVerifiedInPlaceRotationRuntimeVersion(
+                quiet.RuntimeVersion) ||
+            !IsVerifiedInPlaceRotationRuntimeVersion(
+                "v0.0.15") ||
+            IsVerifiedInPlaceRotationRuntimeVersion(
+                "0.0.15-rc.1") ||
+            IsVerifiedInPlaceRotationRuntimeVersion(
+                "0.0.150"))
         {
             throw new InvalidOperationException(
-                "Storage maintenance tunnel-idle contract failed.");
+                "Storage maintenance tunnel-idle/runtime-version contract failed.");
         }
     }
 
@@ -683,10 +691,8 @@ internal static class TalvoraStorageMaintenanceService
             ManagedMcpTunnelHealthSnapshot initialHealth,
             CancellationToken cancellationToken)
     {
-        if (!string.Equals(
-                initialHealth.RuntimeVersion.TrimStart('v', 'V'),
-                InPlaceRotationVerifiedRuntimeVersion,
-                StringComparison.OrdinalIgnoreCase))
+        if (!IsVerifiedInPlaceRotationRuntimeVersion(
+                initialHealth.RuntimeVersion))
         {
             return false;
         }
@@ -835,6 +841,24 @@ internal static class TalvoraStorageMaintenanceService
                 }
             }
         }
+    }
+
+    private static bool IsVerifiedInPlaceRotationRuntimeVersion(
+        string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var normalized = value.Trim().TrimStart('v', 'V');
+        return string.Equals(
+                   normalized,
+                   InPlaceRotationVerifiedRuntimeVersion,
+                   StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith(
+                   InPlaceRotationVerifiedRuntimeVersion + "+",
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsStableQuietSnapshot(
