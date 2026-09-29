@@ -1,25 +1,150 @@
 # Talvora MCP — Canonical Handoff
 
-## CURRENT — 2026-09-29
+## CURRENT — 2026-09-29 19:10+03:00 — Storage maintenance closeout / next-session checkpoint
 
-Bu dosya kesinti ve yeni oturum devamı için tek kısa kanonik handoff'tur. Eski kronoloji burada tutulmaz. Ayrıntılı bulgular `BUG-AUDIT.md`, görev geçmişi `MCP-CONTROL-CENTER-TODO.md`, Source Edit sözleşmesi `SOURCE-EDIT-ENGINE-ARCHITECTURE.md` içindedir.
+Bu dosya kesinti ve yeni oturum devamı için kanonik handoff'tur. Yeni oturumda önce bu bölüm esas alınmalıdır. Ayrıntılı tarihsel bulgular `BUG-AUDIT.md`, görev geçmişi `MCP-CONTROL-CENTER-TODO.md`, Source Edit sözleşmesi `SOURCE-EDIT-ENGINE-ARCHITECTURE.md` içindedir.
 
 ## Repo / remote / canlı durum
 
 - Repository: `%USERPROFILE%\\Talvora-MCP`
 - Branch: `main`
-- Son runtime-affecting commit: `ac467027b410ed4b23f761f0e5ad0dcf775fec18` — Dev/Admin focused surface role separation + explicit Shared overlap contract. Gitea ve GitHub'a push edildi.
-- Çalışma ağacı: SURFACE3 closeout dokümantasyonu sonrası **clean olmalıdır**; reset/clean/stash/revert yapma.
-- Docs-only closeout commit'i runtime fingerprint değildir; repo HEAD sonradan ilerlese bile exact-installed runtime source commit `ac467027b410ed4b23f761f0e5ad0dcf775fec18` olarak kalır.
-- Exact-installed canonical runtime artifact source commit: `ac467027b410ed4b23f761f0e5ad0dcf775fec18`.
-- Canonical installer SHA-256: `7079E702AB9153DB57044F37DD8BD54C4842777D65A243C04EF16E9EF68DA007`; artifact size: 342,512,911 bytes.
-- Gitea remote: `origin` -> local loopback Gitea `Talvora-MCP.git`
-- GitHub remote: `github` -> `https://github.com/bingoweb/Talvora-MCP.git`
-- Exact-installed canlı Talvora runtime `sourceCommit=ac467027b410ed4b23f761f0e5ad0dcf775fec18` bildiriyor; kurulum zamanı 2026-09-28T21:34:36Z.
-- Structured Git `info/status/log/diff/branches` LocalSystem altında kullanıcıya ait ana repoda GREEN; `main` -> `origin/main`, ahead=0 / behind=0.
-- Gitea ve GitHub `fetch --dry-run` + `push --dry-run` Talvora'nın canlı `git_run` aracıyla GREEN; SSH private key user-only kalıyor.
-- Talvora service `Running/Automatic`; exact-installed Service/Tray runtime baseline `ac46702...`.
-- Bu HANDOFF closeout değişikliği yalnız dokümantasyondur; sırf docs HEAD değişti diye yeniden deploy etme ve self-referential fingerprint döngüsü oluşturma.
+- Repo HEAD: `c4583b450b551863e04d73d2411c8b7a9f62c039` — docs-only storage-maintenance evidence refresh.
+- Runtime-affecting HEAD: `4e2cd1cb9a7ed407b17440914088d1be87eac644` — test-artifact retention hardening.
+- Önceki ana storage feature commit: `8a9caf30c9b92125d8b8d627ee67b1271e5daac3` — bounded storage maintenance.
+- `HEAD = origin/main = github/main = c4583b4...`; çalışma ağacı **clean**.
+- Docs-only `c4583b4` runtime fingerprint değildir; sırf HANDOFF/docs HEAD ilerledi diye yeniden deploy etme.
+- Exact-installed live Talvora runtime `sourceCommit=4e2cd1cb9a7ed407b17440914088d1be87eac644` bildiriyor.
+- Canonical installer: 342,570,767 bytes; SHA-256 `69A97F252BA79ED7093FF72D58713BA9535139E91B0F0E7316D5022923F60CBA`.
+- Son canonical SYSTEM deploy sonucu 0; Talvora service `Running / Auto / LocalSystem`.
+- Live healthz: product Talvora, version 3.0.0-dev, sourceCommit `4e2cd1c...`.
+- Live full/focused surface smoke GREEN; kurulu Tray `--self-test` GREEN.
+- Gitea ve Caddy servisleri `Running / Auto / LocalSystem`.
+
+## Bu oturumda eklenen son özellikler — yeniden derin denetlenecek ana kapsam
+
+### 1. OpenAI tunnel-client v0.0.15 diagnostics entegrasyonu
+
+- Dev/Admin/Gitea tunnel-client v0.0.15.
+- Control Center artık component-health schema v1 kullanıyor.
+- İzlenen sinyaller: control-plane, response-delivery, queue, dispatcher, MCP observation, runtime lifecycle/version.
+- Critical degradation repair kararı yalnız ilgili tunnel katmanını hedefliyor.
+- Detailed-health loopback-only, 256 KiB streaming ceiling, timeout dashboard'u düşürmüyor.
+- Maintenance için queue depth / dispatcher active / response in-progress / last activity timestamp sinyalleri kullanılıyor.
+
+### 2. Bounded Talvora storage maintenance
+
+- Yeni shared motor: `src/Talvora.Shared/TalvoraOwnedTempCleanup.cs`.
+- Yalnız açık Talvora allowlist/prefix'leri temizlenir; genel TEMP temizliği **yok**.
+- Reparse point traversal yapılmaz.
+- Candidate traversal bounded; bound yalnız eşleşen Talvora adaylarından sonra sayılır.
+- General Talvora temp retention: 7 gün.
+- Test-only Talvora temp retention: 2 gün.
+- Kullanıcı Tray bakım döngüsü: startup + 6 saatte bir.
+- SYSTEM maintenance background service: startup delay + 6 saatte bir.
+- SYSTEM ve kullanıcı bakım katmanları ortak cleanup motorunu kullanır.
+
+### 3. Tunnel log ve tunnel-client version retention
+
+- Aktif tunnel log rotation threshold: 32 MiB.
+- Rotation yalnız health live/ready iken ve queue=0, dispatcher active=0, response in-progress=0 iken yapılır.
+- En az 5 dakika quiet window gerekir.
+- Rotation hedefli disconnect/reconnect ile yapılır; reconnect caller cancellation'dan bağımsız tamamlanmaya çalışır.
+- Tek `.1` archive tutulur.
+- Tunnel-client `versions` altında aktif config'in kullandığı sürüm korunur ve en az iki yeni sürüm rollback için tutulur; stale staging/obsolete sürümler retention ile temizlenir.
+
+### 4. Penpot log-churn / supervisor hardening
+
+- Pre-fix canlı bulgu: `C:\ProgramData\Talvora\Penpot\logs` altında **7,412 timestamp log dosyası** oluşmuştu.
+- Kök neden: eski/elle kalmış `Start-Talvora-Penpot-Mcp.ps1` child crash-loop sırasında her ~5 saniyede yeni timestamp log çifti üretiyordu.
+- Yeni canonical supervisor artık repo kaynak kodu tarafından SYSTEM maintenance üzerinden atomik publish edilir.
+- Sabit loglar: `local-mcp.out.log`, `local-mcp.err.log`, `plugin.out.log`, `plugin.err.log`.
+- Child log restart rotation threshold: 8 MiB; supervisor error log: 1 MiB.
+- Crash-loop bounded exponential backoff: 3 -> 6 -> 12 -> ... -> max 60 saniye.
+- Legacy timestamp Penpot log retention: 1 gün; yalnız en yeni 16 legacy log tutulur; scan bounded.
+- Canlı kabul sonrası 7,412 legacy log -> **16 dosya / yaklaşık 1.22 MiB**.
+
+### 5. Canlı storage cleanup kabul sonuçları
+
+- İlk maintenance turunda **32 stale Talvora artefact silindi**.
+- Yaklaşık **1.482 GiB** disk alanı geri kazanıldı.
+- Eski `Talvora-Deploy-*` temp installer kopyaları temizlendi.
+- SYSTEM-owned `C:\ProgramData\Talvora\PenpotSmoke` temizlendi.
+- `C:\Windows\Temp\talvora-pipe-test.ps1` 2 günlük test retention sonrası temizlendi.
+- Son kontrolde `C:\Windows\Temp` altında Talvora temp kalıntısı: **0**.
+- Son kontrolde `C:\Program Files\Talvora\Versions` altında yalnız canlı `4e2cd1c...` version root'u vardı.
+- Aktif tunnel log boyutları son kontrolde yaklaşık Dev 0.92 MiB / Admin 0.99 MiB / Gitea 3.67 MiB; 32 MiB threshold'un çok altında.
+- Penpot kurulum ağacı, embedding modeli, ast-grep toolchain, repo `bin/obj` ve canonical installer artefact'ı bilinçli olarak otomatik çöp sayılmadı.
+
+## Son kalite kapıları
+
+- `STORAGE_MAINTENANCE_SOURCE_GREEN`
+- `PENPOT_ON_DEMAND_SOURCE_GREEN`
+- `TUNNEL_CLIENT_V015_INTEGRATION_GREEN`
+- `CONTROL_CENTER_REPAIR_SOURCE_GREEN`
+- `CONTROL_CENTER_UI_RESPONSIVENESS_SOURCE_GREEN`
+- Full solution Release build: **0 warning / 0 error**
+- Analyzer verify: GREEN
+- `git diff --check`: GREEN
+- Embedded canonical Penpot supervisor PowerShell parser: **0 parse error**
+- Live `TALVORA MCP SURFACE POLICY LIVE GREEN`
+- Installed Tray self-test: GREEN
+
+## ZORUNLU YENİ OTURUM GÖREVİ — DERİN BUG + TİCARİ KALİTE FAZI
+
+Yeni oturumun ana işi, bu oturumda eklenen **en son özellikleri baştan ve daha derin** incelemektir. Sadece rapor hazırlama; bulunan tüm geçerli bug ve kalite açıkları için faz oluştur ve hepsini tek tek düzelt.
+
+Zorunlu sıra:
+
+1. Önce `HANDOFF.md` dosyasını tamamen oku ve bu CURRENT bölümünü kanonik kabul et.
+2. `git status --short`, `git log -8 --oneline`, `HEAD/origin/main/github/main` eşitliğini doğrula. Reset/clean/stash/revert yapma.
+3. Özellikle şu dosyaları derin incele:
+   - `src/Talvora.Shared/TalvoraOwnedTempCleanup.cs`
+   - `src/Talvora.Tray/TalvoraStorageMaintenanceService.cs`
+   - `src/Talvora.Tray/TrayApplicationContext.StorageMaintenance.cs`
+   - `src/Talvora.Tray/ManagedMcpTunnelHealthService.cs`
+   - `src/Talvora/TalvoraSystemStorageMaintenanceService.cs`
+   - `src/Talvora/TalvoraPenpotSupervisorMaintenance.cs`
+   - `tests/StorageMaintenanceSourceRegression.ps1`
+   - ilgili installer/deploy ve Penpot lifecycle/discovery kodları.
+4. Derin inceleme başlıkları:
+   - race / cancellation / shutdown yarışları
+   - symlink/reparse/junction/path traversal güvenliği
+   - ACL/owner/LocalSystem-user boundary
+   - yanlışlıkla kullanıcı verisi silme riski
+   - stale temp kaçırma / unbounded directory scan
+   - disk/handle/process leak
+   - log writer/rotation/reconnect yarışları
+   - crash-loop/backoff ve child process cleanup
+   - Penpot supervisor drift / atomic publication / PowerShell quoting
+   - tunnel-client version rollback/prune doğruluğu
+   - 6 saatlik timer overlap / duplicate maintenance / shutdown davranışı
+   - retention sürelerinin edge-case'leri
+   - Control Center event/log gürültüsü
+   - test coverage açıkları
+   - duplicated/dead/yarım kod
+   - ticari ürün için observability ve failure reporting
+   - performans: 10k/100k temp entry senaryoları, büyük tree scan, large log folder
+   - installer/update sırasında bakımın yarışması
+5. Önce bulguları severity ve kanıtla sınıflandır; false-positive'leri ayır.
+6. Ardından ayrıntılı bir **FAZ planı** oluştur. Önerilen yapı:
+   - Faz A — correctness / data-safety
+   - Faz B — concurrency / cancellation / lifecycle
+   - Faz C — boundedness / performance / storage growth
+   - Faz D — Penpot supervisor & process/log lifecycle
+   - Faz E — regression / CI / live acceptance
+7. Kullanıcıdan her küçük değişiklik için onay isteme. Fazları sırayla uygula.
+8. Source değişikliklerinde `talvora_apply_patch` PRIMARY/default. PowerShell source editor olarak kullanılmaz.
+9. Harici kütüphane/runtime davranışı gerekiyorsa Context7 + resmi kaynakları doğrula.
+10. Her düzeltmeden sonra targeted regression; faz sonunda full relevant gates; runtime-affecting değişiklik varsa commit/push -> canonical installer -> SYSTEM deploy -> installed live acceptance.
+11. Sonuçta çalışma ağacı clean, iki remote eşit ve live runtime exact commit'e bağlı olmalı.
+
+## Yeni oturumda özellikle unutma
+
+- Bu çalışma bir “genel Talvora audit” değil; önce **bu oturumda eklenen son storage/tunnel/Penpot maintenance özelliklerine** yoğunlaş.
+- Bir bug bulursan sadece belgeleyip bırakma; gerekli test/regression'ı önce RED hale getir, minimal ama ticari seviyede fix uygula, GREEN doğrula.
+- Gerçek kullanıcı verisini silme riski olan cleanup değişikliklerinde fail-closed davran.
+- Active tunnel/Penpot işini sırf log cleanup için kesme; idle/health/lifecycle kanıtı kullan.
+- `c4583b4` docs-only; live runtime baseline `4e2cd1c`. Yeni runtime commit oluşursa installer/deploy ancak o commit üzerinden yapılmalı.
 
 ## Mevcut ürün/mimari baseline
 
