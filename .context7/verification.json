@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T19:34:53Z",
-  "scope": "Talvora storage-maintenance deep commercial-quality re-audit: preserve ownership/version safety and make stale-tree deletion cancellation-aware. A 50,000-file live fixture proved deletion continued 13.533 seconds after cancellation; recursive cleanup now observes the caller token throughout deletion and a deterministic regression verifies shutdown cancellation before further Penpot/observability and full acceptance review.",
+  "verifiedAtUtc": "2026-09-29T19:40:35Z",
+  "scope": "Talvora storage-maintenance deep commercial-quality re-audit: ownership/version/cancellation fixes remain intact while manual and automatic tunnel provisioning are serialized with the same per-registration operation coordinator used by lifecycle, repair and storage maintenance. This prevents Control Center setup from overlapping log rotation/version pruning before final Penpot/installer/CI acceptance review.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",

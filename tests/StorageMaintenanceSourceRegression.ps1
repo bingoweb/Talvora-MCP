@@ -23,6 +23,7 @@ function Assert-Contains {
 }
 
 $maintenance = Read-RepoText 'src\Talvora.Tray\TalvoraStorageMaintenanceService.cs'
+$provisioning = Read-RepoText 'src\Talvora.Tray\ManagedMcpTunnelProvisioningService.cs'
 $sharedCleanup = Read-RepoText 'src\Talvora.Shared\TalvoraOwnedTempCleanup.cs'
 $systemMaintenance = Read-RepoText 'src\Talvora\TalvoraSystemStorageMaintenanceService.cs'
 $penpotSupervisor = Read-RepoText 'src\Talvora\TalvoraPenpotSupervisorMaintenance.cs'
@@ -39,6 +40,16 @@ Assert-Contains $maintenance 'RuntimeLifecycle: "running"' 'maintenance self-tes
 Assert-Contains $maintenance 'IsVerifiedInPlaceRotationRuntimeVersion' 'in-place log rotation normalizes the pinned runtime version before gating'
 Assert-Contains $maintenance '0.0.15+acceptance' 'maintenance self-test covers tunnel-client build metadata emitted by live health payloads'
 Assert-Contains $maintenance '"response-delivery",' 'maintenance self-test fixture includes the required idle component set'
+$provisionStart = $provisioning.IndexOf('public static async Task<ManagedMcpRegistration> ProvisionAsync(', [StringComparison]::Ordinal)
+$bindStart = $provisioning.IndexOf('public static async Task<ManagedMcpRegistration> BindExistingTunnelAsync(', [StringComparison]::Ordinal)
+$configureStart = $provisioning.IndexOf('private static async Task<ManagedMcpRegistration> ConfigureAndConnectTunnelAsync(', [StringComparison]::Ordinal)
+if ($provisionStart -lt 0 -or $bindStart -le $provisionStart -or $configureStart -le $bindStart) { throw 'Storage maintenance contract failed: provisioning method boundaries are missing' }
+$provisionSection = $provisioning.Substring($provisionStart, $bindStart - $provisionStart)
+$bindSection = $provisioning.Substring($bindStart, $configureStart - $bindStart)
+Assert-Contains $provisionSection 'ManagedMcpOperationCoordinator.TryAcquire(' 'automatic tunnel provisioning serializes against maintenance/lifecycle operations'
+Assert-Contains $provisionSection 'registration.Id' 'automatic tunnel provisioning leases the target registration'
+Assert-Contains $bindSection 'ManagedMcpOperationCoordinator.TryAcquire(' 'manual existing-tunnel binding serializes against maintenance/lifecycle operations'
+Assert-Contains $bindSection 'registration.Id' 'manual tunnel binding leases the target registration'
 
 Assert-Contains $sharedCleanup 'EnumerateMatchingTopLevelCandidates' 'shared cleanup enumerates only allowlisted top-level names instead of materializing an unrelated 100k-entry root'
 Assert-Contains $sharedCleanup 'prefix + "*"' 'shared cleanup uses prefix-scoped lazy filesystem enumeration'

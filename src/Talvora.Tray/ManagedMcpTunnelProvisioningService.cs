@@ -204,6 +204,15 @@ internal static partial class ManagedMcpTunnelProvisioningService
             return registration;
         }
 
+        using var operationLease =
+            ManagedMcpOperationCoordinator.TryAcquire(
+                registration.Id);
+        if (operationLease is null)
+        {
+            throw new InvalidOperationException(
+                $"{registration.DisplayName} için başka bir yaşam döngüsü işlemi devam ediyor.");
+        }
+
         var reference = FindReusableRuntimeSource(registry)
             ?? throw new InvalidOperationException(
                 "Yeniden kullanılabilir güvenli MCP tünel Runtime API key kaynağı bulunamadı.");
@@ -296,6 +305,15 @@ internal static partial class ManagedMcpTunnelProvisioningService
             throw new ArgumentException(
                 "Tunnel ID biçimi geçersiz.",
                 nameof(tunnelId));
+        }
+
+        using var operationLease =
+            ManagedMcpOperationCoordinator.TryAcquire(
+                registration.Id);
+        if (operationLease is null)
+        {
+            throw new InvalidOperationException(
+                $"{registration.DisplayName} için başka bir yaşam döngüsü işlemi devam ediyor.");
         }
 
         var reference = FindReusableRuntimeSource(registry)
