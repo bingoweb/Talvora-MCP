@@ -52,9 +52,11 @@ internal static class TalvoraStorageMaintenanceService
         if (!TalvoraOwnedTempCleanup.IsOwnedTempName(
                 "Talvora-Deploy-deadbeef") ||
             !TalvoraOwnedTempCleanup.IsOwnedTempName(
-                "TalvoraReparseAudit") ||
+                "TalvoraReparse0123456789abcdef0123456789abcdef") ||
             !TalvoraOwnedTempCleanup.IsOwnedTempName(
                 "Talvora-Reset-And-Install.ps1") ||
+            TalvoraOwnedTempCleanup.IsOwnedTempName(
+                "TalvoraReparseAudit") ||
             TalvoraOwnedTempCleanup.IsOwnedTempName(
                 "unrelated-user-data"))
         {
@@ -276,6 +278,17 @@ internal static class TalvoraStorageMaintenanceService
 
             if (Directory.Exists(versionsRoot))
             {
+                if (!TalvoraOwnedTempCleanup.IsDirectoryPathReparseSafe(
+                        localAppData,
+                        versionsRoot))
+                {
+                    TrayLog.Write(
+                        $"Tunnel-client version maintenance deferred because its storage path contains a reparse point. Root={versionsRoot}");
+                    return new CleanupResult(
+                        deleted,
+                        reclaimedBytes);
+                }
+
                 using var versionPruneLeases =
                     TryAcquireVersionPruneLeases(
                         registrations);
@@ -346,6 +359,15 @@ internal static class TalvoraStorageMaintenanceService
                 "Talvora");
         if (!Directory.Exists(talvoraTempRoot))
         {
+            return new CleanupResult(0, 0);
+        }
+
+        if (!TalvoraOwnedTempCleanup.IsDirectoryPathReparseSafe(
+                tempRoot,
+                talvoraTempRoot))
+        {
+            TrayLog.Write(
+                $"Nested Talvora temp maintenance deferred because its path contains a reparse point. Root={talvoraTempRoot}");
             return new CleanupResult(0, 0);
         }
 
@@ -433,8 +455,9 @@ internal static class TalvoraStorageMaintenanceService
 
             try
             {
-                var config = JsonSerializer.Deserialize<BusinessConfig>(
-                    File.ReadAllText(fullConfigPath),
+                var config = JsonFileStore.ReadBounded<BusinessConfig>(
+                    fullConfigPath,
+                    ManagedMcpTunnelProvisioningService.MaximumTunnelMetadataJsonBytes,
                     StorageJsonOptions);
                 var executable = config?.TunnelClient;
                 if (string.IsNullOrWhiteSpace(executable))
@@ -605,10 +628,26 @@ internal static class TalvoraStorageMaintenanceService
             return false;
         }
 
+        var localAppData = Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localAppData) ||
+            !TalvoraOwnedTempCleanup.IsDirectoryPathReparseSafe(
+                localAppData,
+                tunnel.StateRoot))
+        {
+            return false;
+        }
+
         var logRoot = Path.GetFullPath(
             Path.Combine(
                 tunnel.StateRoot,
                 "logs"));
+        if (!TalvoraOwnedTempCleanup.IsDirectoryPathReparseSafe(
+                localAppData,
+                logRoot))
+        {
+            return false;
+        }
         var logPath = Path.GetFullPath(
             Path.Combine(
                 logRoot,
@@ -722,7 +761,9 @@ internal static class TalvoraStorageMaintenanceService
 
         var archivePath = logPath + ".1";
         var temporaryArchivePath =
-            archivePath + ".tmp";
+            archivePath + "." +
+            Guid.NewGuid().ToString("N") +
+            ".tmp";
 
         try
         {
@@ -744,7 +785,7 @@ internal static class TalvoraStorageMaintenanceService
 
             await using (var archive = new FileStream(
                              temporaryArchivePath,
-                             FileMode.Create,
+                             FileMode.CreateNew,
                              FileAccess.Write,
                              FileShare.None,
                              bufferSize: 64 * 1024,

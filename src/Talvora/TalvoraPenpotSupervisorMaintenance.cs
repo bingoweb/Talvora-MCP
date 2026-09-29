@@ -48,6 +48,7 @@ internal static class TalvoraPenpotSupervisorMaintenance
             private readonly object gate = new object();
             private FileStream inner;
             private int rotationFailures;
+            private long droppedBytes;
 
             public TalvoraRollingLogStream(string path, long maxBytes)
             {
@@ -61,6 +62,7 @@ internal static class TalvoraPenpotSupervisorMaintenance
             }
 
             public int RotationFailures { get { return Volatile.Read(ref rotationFailures); } }
+            public long DroppedBytes { get { return Interlocked.Read(ref droppedBytes); } }
             public override bool CanRead { get { return false; } }
             public override bool CanSeek { get { return false; } }
             public override bool CanWrite { get { return true; } }
@@ -72,15 +74,20 @@ internal static class TalvoraPenpotSupervisorMaintenance
                 return new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite, 65536, FileOptions.SequentialScan);
             }
 
-            private void RotateIfNeeded(int incomingBytes)
+            private bool RotateIfNeeded(int incomingBytes)
             {
-                if (inner.Length == 0 || inner.Length + incomingBytes <= maxBytes) return;
+                if (inner.Length + incomingBytes <= maxBytes) return true;
                 inner.Flush(true);
                 inner.Dispose();
+                var rotated = false;
                 try
                 {
                     if (File.Exists(archivePath)) File.Delete(archivePath);
-                    if (File.Exists(path)) File.Move(path, archivePath);
+                    if (File.Exists(path))
+                    {
+                        File.Move(path, archivePath);
+                    }
+                    rotated = true;
                 }
                 catch (IOException)
                 {
@@ -94,13 +101,29 @@ internal static class TalvoraPenpotSupervisorMaintenance
                 {
                     inner = OpenCurrent();
                 }
+
+                return rotated ||
+                    inner.Length + incomingBytes <= maxBytes;
             }
 
             public override void Write(byte[] buffer, int offset, int count)
             {
+                if (count > maxBytes)
+                {
+                    var retainedBytes = (int)maxBytes;
+                    var dropped = count - retainedBytes;
+                    offset += dropped;
+                    count = retainedBytes;
+                    Interlocked.Add(ref droppedBytes, dropped);
+                }
+
                 lock (gate)
                 {
-                    RotateIfNeeded(count);
+                    if (!RotateIfNeeded(count))
+                    {
+                        Interlocked.Add(ref droppedBytes, count);
+                        return;
+                    }
                     inner.Write(buffer, offset, count);
                 }
             }
@@ -144,11 +167,15 @@ internal static class TalvoraPenpotSupervisorMaintenance
 
         function Stop-OrphanedPenpotProcesses {
             $markers = @($serverScript, $viteScript)
+            $expectedExecutable = [IO.Path]::GetFullPath($node)
             Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
                 Where-Object {
                     $commandLine = [string]$_.CommandLine
+                    $executablePath = [string]$_.ExecutablePath
                     $_.ProcessId -ne $PID -and
                     -not [string]::IsNullOrWhiteSpace($commandLine) -and
+                    -not [string]::IsNullOrWhiteSpace($executablePath) -and
+                    [IO.Path]::GetFullPath($executablePath).Equals($expectedExecutable, [StringComparison]::OrdinalIgnoreCase) -and
                     ($markers | Where-Object { $commandLine.IndexOf($_, [StringComparison]::OrdinalIgnoreCase) -ge 0 })
                 } |
                 ForEach-Object {
@@ -157,10 +184,16 @@ internal static class TalvoraPenpotSupervisorMaintenance
         }
 
         function Rotate-Log([string]$Path, [long]$MaxBytes = 8388608) {
-            if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return }
-            $item = Get-Item -LiteralPath $Path -Force
-            if ($item.Length -lt $MaxBytes) { return }
-            Move-Item -LiteralPath $Path -Destination ($Path + '.1') -Force
+            try {
+                if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $true }
+                $item = Get-Item -LiteralPath $Path -Force
+                if ($item.Length -lt $MaxBytes) { return $true }
+                Move-Item -LiteralPath $Path -Destination ($Path + '.1') -Force
+                return $true
+            }
+            catch {
+                return $false
+            }
         }
 
         function Start-LoggedChild(
@@ -195,13 +228,15 @@ internal static class TalvoraPenpotSupervisorMaintenance
                     OutTask = $outTask
                     ErrTask = $errTask
                     ReportedRotationFailures = 0
+                    ReportedDroppedBytes = 0
+                    LastLogPressureReportUtc = [DateTime]::MinValue
                 }
             }
             catch {
-                Stop-Tree $process
-                if ($null -ne $outStream) { $outStream.Dispose() }
-                if ($null -ne $errStream) { $errStream.Dispose() }
-                $process.Dispose()
+                try { Stop-Tree $process } catch { }
+                if ($null -ne $outStream) { try { $outStream.Dispose() } catch { } }
+                if ($null -ne $errStream) { try { $errStream.Dispose() } catch { } }
+                try { $process.Dispose() } catch { }
                 throw
             }
         }
@@ -209,31 +244,51 @@ internal static class TalvoraPenpotSupervisorMaintenance
         function Report-RollingLogFailures($Child, [string]$Label) {
             if ($null -eq $Child) { return }
             $current = $Child.OutStream.RotationFailures + $Child.ErrStream.RotationFailures
-            if ($current -gt $Child.ReportedRotationFailures) {
-                Write-SupervisorError -Message ("{0} rolling log rotation was deferred {1} time(s)." -f $Label, ($current - $Child.ReportedRotationFailures))
+            $dropped = $Child.OutStream.DroppedBytes + $Child.ErrStream.DroppedBytes
+            if ($current -gt $Child.ReportedRotationFailures -or
+                $dropped -gt $Child.ReportedDroppedBytes) {
+                $now = [DateTime]::UtcNow
+                if (($now - $Child.LastLogPressureReportUtc).TotalSeconds -lt 60) {
+                    return
+                }
+                Write-SupervisorError -Message ("{0} rolling log pressure: rotation failures +{1}; dropped bytes +{2}." -f $Label, ($current - $Child.ReportedRotationFailures), ($dropped - $Child.ReportedDroppedBytes))
                 $Child.ReportedRotationFailures = $current
+                $Child.ReportedDroppedBytes = $dropped
+                $Child.LastLogPressureReportUtc = $now
             }
         }
 
         function Stop-LoggedChild($Child) {
             if ($null -eq $Child) { return }
-            Stop-Tree $Child.Process
-            try { [void]$Child.Process.WaitForExit(5000) } catch { }
+            $cleanupErrors = New-Object System.Collections.Generic.List[string]
+            try { Stop-Tree $Child.Process } catch { $cleanupErrors.Add($_.Exception.Message) }
+            try { [void]$Child.Process.WaitForExit(5000) } catch { $cleanupErrors.Add($_.Exception.Message) }
             foreach ($task in @($Child.OutTask, $Child.ErrTask)) {
-                try { [void]$task.Wait(5000) } catch { }
+                try { [void]$task.Wait(5000) } catch { $cleanupErrors.Add($_.Exception.Message) }
             }
             if ($Child.OutTask.IsFaulted -or $Child.ErrTask.IsFaulted) {
-                Write-SupervisorError -Message 'Child log drain ended with an error.'
+                $cleanupErrors.Add('Child log drain ended with an error.')
             }
-            $Child.OutStream.Dispose()
-            $Child.ErrStream.Dispose()
-            $Child.Process.Dispose()
+            try { $Child.OutStream.Dispose() } catch { $cleanupErrors.Add($_.Exception.Message) }
+            try { $Child.ErrStream.Dispose() } catch { $cleanupErrors.Add($_.Exception.Message) }
+            try { $Child.Process.Dispose() } catch { $cleanupErrors.Add($_.Exception.Message) }
+            if ($cleanupErrors.Count -gt 0) {
+                Write-SupervisorError -Message ('Child cleanup completed with recoverable errors: ' + ($cleanupErrors -join ' | '))
+            }
         }
 
         function Write-SupervisorError([string]$Message) {
-            $path = Join-Path $logDir 'supervisor-error.log'
-            Rotate-Log -Path $path -MaxBytes 1048576
-            Add-Content -LiteralPath $path -Encoding utf8 -Value ("{0:o} {1}" -f (Get-Date), $Message)
+            try {
+                $path = Join-Path $logDir 'supervisor-error.log'
+                if (-not (Rotate-Log -Path $path -MaxBytes 1048576)) {
+                    [Console]::Error.WriteLine(("{0:o} {1}" -f (Get-Date), $Message))
+                    return
+                }
+                Add-Content -LiteralPath $path -Encoding utf8 -Value ("{0:o} {1}" -f (Get-Date), $Message)
+            }
+            catch {
+                try { [Console]::Error.WriteLine(("{0:o} Penpot supervisor diagnostic write failed: {1}" -f (Get-Date), $_.Exception.Message)) } catch { }
+            }
         }
 
         $serverOut = Join-Path $logDir 'local-mcp.out.log'
@@ -282,6 +337,54 @@ internal static class TalvoraPenpotSupervisorMaintenance
                     throw 'Redirected child stream self-test failed.'
                 }
 
+                $lockedLog = Join-Path $testRoot 'locked.log'
+                $lockedArchive = $lockedLog + '.1'
+                [IO.File]::WriteAllBytes($lockedLog, [byte[]]::new(128))
+                [IO.File]::WriteAllText($lockedArchive, 'archive')
+                $archiveLock = [IO.FileStream]::new($lockedArchive, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::None)
+                try {
+                    $rotationResult = Rotate-Log -Path $lockedLog -MaxBytes 64
+                    if ($rotationResult) { throw 'Locked archive rotation unexpectedly succeeded.' }
+                }
+                finally {
+                    $archiveLock.Dispose()
+                }
+
+                $boundedLog = Join-Path $testRoot 'bounded.log'
+                $boundedArchive = $boundedLog + '.1'
+                [IO.File]::WriteAllText($boundedArchive, 'archive')
+                $boundedArchiveLock = [IO.FileStream]::new($boundedArchive, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::None)
+                try {
+                    $boundedStream = [TalvoraRollingLogStream]::new($boundedLog, [long]64)
+                    try {
+                        $boundedPayload = New-Object byte[] 48
+                        $boundedStream.Write($boundedPayload, 0, $boundedPayload.Length)
+                        $boundedStream.Write($boundedPayload, 0, $boundedPayload.Length)
+                        if ($boundedStream.Length -gt 64 -or
+                            $boundedStream.RotationFailures -lt 1 -or
+                            $boundedStream.DroppedBytes -ne 48) {
+                            throw 'Locked archive must preserve the hard child-log byte bound.'
+                        }
+                    }
+                    finally {
+                        $boundedStream.Dispose()
+                    }
+                }
+                finally {
+                    $boundedArchiveLock.Dispose()
+                }
+
+                $previousLogDir = $logDir
+                try {
+                    $logDir = Join-Path $testRoot 'error-log-failure'
+                    New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+                    New-Item -ItemType Directory -Force -Path (Join-Path $logDir 'supervisor-error.log') | Out-Null
+                    Write-SupervisorError -Message 'self-test nonfatal logging failure'
+                }
+                finally {
+                    $logDir = $previousLogDir
+                }
+
                 Write-Output 'PENPOT_SUPERVISOR_ROLLING_SELFTEST_GREEN'
             }
             finally {
@@ -295,7 +398,7 @@ internal static class TalvoraPenpotSupervisorMaintenance
 
         while ($true) {
             foreach ($path in @($serverOut, $serverErr, $pluginOut, $pluginErr)) {
-                Rotate-Log -Path $path
+                [void](Rotate-Log -Path $path)
             }
 
             $startedAt = Get-Date
@@ -343,7 +446,8 @@ internal static class TalvoraPenpotSupervisorMaintenance
         """;
 
     internal static TalvoraOwnedTempCleanupResult Maintain(
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<string, Exception>? warning = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -354,10 +458,23 @@ internal static class TalvoraPenpotSupervisorMaintenance
             return new TalvoraOwnedTempCleanupResult(0, 0);
         }
 
-        var penpotRoot = Path.Combine(
+        var talvoraRoot = Path.Combine(
             commonData,
-            "Talvora",
+            "Talvora");
+        var penpotRoot = Path.Combine(
+            talvoraRoot,
             "Penpot");
+        if (!Directory.Exists(penpotRoot))
+        {
+            return new TalvoraOwnedTempCleanupResult(0, 0);
+        }
+
+        EnsureDirectoryIsNotReparsePoint(
+            talvoraRoot,
+            "Talvora ProgramData root");
+        EnsureDirectoryIsNotReparsePoint(
+            penpotRoot,
+            "Penpot ProgramData root");
         var composePath = Path.Combine(
             penpotRoot,
             "docker-compose.yaml");
@@ -375,7 +492,8 @@ internal static class TalvoraPenpotSupervisorMaintenance
                 penpotRoot,
                 "logs"),
             DateTimeOffset.UtcNow,
-            cancellationToken);
+            cancellationToken,
+            warning);
     }
 
     private static void EnsureCanonicalSupervisorScript(
@@ -391,6 +509,13 @@ internal static class TalvoraPenpotSupervisorMaintenance
 
         if (File.Exists(path))
         {
+            if ((File.GetAttributes(path) &
+                 FileAttributes.ReparsePoint) != 0)
+            {
+                throw new InvalidDataException(
+                    $"Penpot supervisor script is a reparse point and will not be maintained: {path}");
+            }
+
             using var existingStream = new FileStream(
                 path,
                 FileMode.Open,
@@ -430,12 +555,17 @@ internal static class TalvoraPenpotSupervisorMaintenance
     private static TalvoraOwnedTempCleanupResult CleanupLegacyLogs(
         string logRoot,
         DateTimeOffset nowUtc,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<string, Exception>? warning = null)
     {
         if (!Directory.Exists(logRoot))
         {
             return new TalvoraOwnedTempCleanupResult(0, 0);
         }
+
+        EnsureDirectoryIsNotReparsePoint(
+            logRoot,
+            "Penpot legacy log root");
 
         var cutoffUtc = nowUtc - LegacyLogRetention;
         var candidates = new List<FileInfo>();
@@ -515,6 +645,9 @@ internal static class TalvoraPenpotSupervisorMaintenance
                 ex is IOException or
                 UnauthorizedAccessException)
             {
+                warning?.Invoke(
+                    $"Penpot legacy log cleanup deferred. Path={file.FullName}",
+                    ex);
             }
         }
 
@@ -563,5 +696,24 @@ internal static class TalvoraPenpotSupervisorMaintenance
         var suffix = name[
             (prefixLength + StampLength)..];
         return suffix is ".out.log" or ".err.log";
+    }
+
+    private static void EnsureDirectoryIsNotReparsePoint(
+        string path,
+        string description)
+    {
+        var directory = new DirectoryInfo(
+            Path.GetFullPath(path));
+        if (!directory.Exists)
+        {
+            return;
+        }
+
+        if ((directory.Attributes &
+             FileAttributes.ReparsePoint) != 0)
+        {
+            throw new InvalidDataException(
+                $"{description} is a reparse point and maintenance was refused: {directory.FullName}");
+        }
     }
 }

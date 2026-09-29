@@ -137,8 +137,9 @@ internal static partial class ManagedMcpTunnelProvisioningService
         try
         {
             journal =
-                await JsonFileStore.ReadAsync<TunnelClientUpdateJournal>(
+                await JsonFileStore.ReadBoundedAsync<TunnelClientUpdateJournal>(
                     journalPath,
+                    MaximumTunnelMetadataJsonBytes,
                     ConfigJsonOptions,
                     cancellationToken).ConfigureAwait(false);
         }
@@ -344,15 +345,14 @@ internal static partial class ManagedMcpTunnelProvisioningService
         TunnelClientUpdateJournal journal;
         try
         {
-            journal =
-                JsonSerializer.Deserialize<TunnelClientUpdateJournal>(
-                    File.ReadAllText(journalPath),
-                    ConfigJsonOptions)
-                ?? throw new InvalidDataException(
-                    $"Tunnel-client update recovery journal is empty: {journalPath}");
+            journal = JsonFileStore.ReadBounded<TunnelClientUpdateJournal>(
+                journalPath,
+                MaximumTunnelMetadataJsonBytes,
+                ConfigJsonOptions);
         }
         catch (Exception ex) when (
             ex is IOException or
+            InvalidDataException or
             UnauthorizedAccessException or
             JsonException)
         {
@@ -363,6 +363,10 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
         if (journal.SchemaVersion !=
                 ClientUpdateJournalSchemaVersion ||
+            string.IsNullOrWhiteSpace(
+                journal.ConfigPath) ||
+            journal.PreviousConfig is null ||
+            journal.CandidateConfig is null ||
             !string.Equals(
                 Path.GetFullPath(journal.ConfigPath),
                 Path.GetFullPath(configPath),
@@ -468,6 +472,10 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 journal.RegistrationId,
                 registration.Id,
                 StringComparison.Ordinal) ||
+            string.IsNullOrWhiteSpace(
+                journal.ConfigPath) ||
+            journal.PreviousConfig is null ||
+            journal.CandidateConfig is null ||
             !string.Equals(
                 Path.GetFullPath(journal.ConfigPath),
                 Path.GetFullPath(configPath),

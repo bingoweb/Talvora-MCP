@@ -4,6 +4,15 @@ namespace Talvora.Shared;
 
 public static class ManagedMcpRegistryStore
 {
+    public const int MaximumRegistryJsonBytes =
+        4 * 1024 * 1024;
+    public const int MaximumRegistrationManifestJsonBytes =
+        512 * 1024;
+    public const int MaximumRecoveryManifestEntries =
+        4_096;
+    private const string RecoveryManifestPattern =
+        "v2-*.json";
+
     private static readonly SemaphoreSlim Gate = new(1, 1);
 
     public static readonly JsonSerializerOptions JsonOptions = new()
@@ -70,19 +79,30 @@ public static class ManagedMcpRegistryStore
         }
 
         var registrations = new List<ManagedMcpRegistration>();
+        var manifests = Directory
+            .EnumerateFiles(
+                directory,
+                RecoveryManifestPattern,
+                SearchOption.TopDirectoryOnly)
+            .Take(MaximumRecoveryManifestEntries + 1)
+            .ToArray();
+        if (manifests.Length >
+            MaximumRecoveryManifestEntries)
+        {
+            throw new InvalidDataException(
+                $"Managed MCP recovery manifest count exceeds the {MaximumRecoveryManifestEntries}-entry limit: {directory}");
+        }
 
-        foreach (var manifest in Directory.EnumerateFiles(
-            directory,
-            "*.json",
-            SearchOption.TopDirectoryOnly))
+        foreach (var manifest in manifests)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             try
             {
                 var registration =
-                    await JsonFileStore.ReadAsync<ManagedMcpRegistration>(
+                    await JsonFileStore.ReadBoundedAsync<ManagedMcpRegistration>(
                         manifest,
+                        MaximumRegistrationManifestJsonBytes,
                         JsonOptions,
                         cancellationToken).ConfigureAwait(false);
 
@@ -121,8 +141,9 @@ public static class ManagedMcpRegistryStore
         }
 
         var document =
-            await JsonFileStore.ReadAsync<ManagedMcpRegistryDocument>(
+            await JsonFileStore.ReadBoundedAsync<ManagedMcpRegistryDocument>(
                 path,
+                MaximumRegistryJsonBytes,
                 JsonOptions,
                 cancellationToken).ConfigureAwait(false);
 
@@ -173,8 +194,9 @@ public static class ManagedMcpRegistryStore
             if (File.Exists(path))
             {
                 document =
-                    await JsonFileStore.ReadAsync<ManagedMcpRegistryDocument>(
+                    await JsonFileStore.ReadBoundedAsync<ManagedMcpRegistryDocument>(
                         path,
+                        MaximumRegistryJsonBytes,
                         JsonOptions,
                         cancellationToken).ConfigureAwait(false);
                 ValidateDocument(document);
@@ -248,6 +270,46 @@ public static class ManagedMcpRegistryStore
                 Description =
                     "Registry recovery contract probe updated.",
             };
+
+            try
+            {
+                ValidateRegistration(
+                    first with { Id = string.Empty });
+                throw new InvalidOperationException(
+                    "Blank persisted registration id was accepted.");
+            }
+            catch (InvalidDataException)
+            {
+            }
+
+            try
+            {
+                ValidateRegistration(
+                    first with
+                    {
+                        Components = null!,
+                        DiscoveryHints = null!,
+                    });
+                throw new InvalidOperationException(
+                    "Null persisted registration collections were accepted.");
+            }
+            catch (InvalidDataException)
+            {
+            }
+
+            try
+            {
+                ValidateDocument(
+                    new ManagedMcpRegistryDocument
+                    {
+                        Mcps = null!,
+                    });
+                throw new InvalidOperationException(
+                    "Null persisted registry entries were accepted.");
+            }
+            catch (InvalidDataException)
+            {
+            }
 
             await WriteAsync(
                 path,
@@ -398,6 +460,19 @@ public static class ManagedMcpRegistryStore
             new HashSet<string>(
                 StringComparer.OrdinalIgnoreCase);
 
+        if (document.Mcps is null)
+        {
+            throw new InvalidDataException(
+                "Managed MCP registry entries are required.");
+        }
+
+        if (document.Mcps.Count >
+            MaximumRecoveryManifestEntries)
+        {
+            throw new InvalidDataException(
+                $"Managed MCP registry entry count exceeds the {MaximumRecoveryManifestEntries}-entry limit.");
+        }
+
         foreach (var registration in document.Mcps)
         {
             ValidateRegistration(registration);
@@ -412,15 +487,23 @@ public static class ManagedMcpRegistryStore
     public static void ValidateRegistration(
         ManagedMcpRegistration registration)
     {
-        ArgumentNullException.ThrowIfNull(registration);
-        ArgumentException.ThrowIfNullOrWhiteSpace(
-            registration.Id);
-        ArgumentException.ThrowIfNullOrWhiteSpace(
-            registration.DisplayName);
-        ArgumentException.ThrowIfNullOrWhiteSpace(
-            registration.Description);
-        ArgumentException.ThrowIfNullOrWhiteSpace(
-            registration.Endpoint);
+        if (registration is null)
+        {
+            throw new InvalidDataException(
+                "Managed MCP registration is required.");
+        }
+        RequirePersistedValue(
+            registration.Id,
+            "id");
+        RequirePersistedValue(
+            registration.DisplayName,
+            "display name");
+        RequirePersistedValue(
+            registration.Description,
+            "description");
+        RequirePersistedValue(
+            registration.Endpoint,
+            "endpoint");
 
         if (!string.Equals(
                 registration.OwnershipMarker,
@@ -450,6 +533,79 @@ public static class ManagedMcpRegistryStore
             throw new InvalidDataException(
                 $"Managed MCP '{registration.Id}' health endpoint is invalid.");
         }
+
+        if (registration.Components is null)
+        {
+            throw new InvalidDataException(
+                $"Managed MCP '{registration.Id}' components are required.");
+        }
+
+        foreach (var component in registration.Components)
+        {
+            if (component is null)
+            {
+                throw new InvalidDataException(
+                    $"Managed MCP '{registration.Id}' contains a null component.");
+            }
+
+            RequirePersistedValue(component.Id, "component id");
+            RequirePersistedValue(
+                component.DisplayName,
+                "component display name");
+            RequirePersistedValue(component.Kind, "component kind");
+        }
+
+        if (registration.DiscoveryHints is null)
+        {
+            throw new InvalidDataException(
+                $"Managed MCP '{registration.Id}' discovery hints are required.");
+        }
+
+        foreach (var hint in registration.DiscoveryHints)
+        {
+            if (hint is null)
+            {
+                throw new InvalidDataException(
+                    $"Managed MCP '{registration.Id}' contains a null discovery hint.");
+            }
+
+            RequirePersistedValue(hint.Kind, "discovery hint kind");
+            RequirePersistedValue(hint.Value, "discovery hint value");
+        }
+
+        if (registration.ProtocolProbe is { } protocolProbe)
+        {
+            if (protocolProbe.RequiredTools is null)
+            {
+                throw new InvalidDataException(
+                    $"Managed MCP '{registration.Id}' protocol required tools are required.");
+            }
+
+            foreach (var requiredTool in protocolProbe.RequiredTools)
+            {
+                RequirePersistedValue(
+                    requiredTool,
+                    "protocol required tool");
+            }
+        }
+
+        if (registration.Tunnel is { } tunnel)
+        {
+            RequirePersistedValue(
+                tunnel.Alias,
+                "tunnel alias");
+        }
+
+        static void RequirePersistedValue(
+            string? value,
+            string fieldName)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidDataException(
+                    $"Managed MCP registration {fieldName} is required.");
+            }
+        }
     }
 
     private static async Task WriteRecoveryManifestsAsync(
@@ -464,6 +620,13 @@ public static class ManagedMcpRegistryStore
         var expected =
             new HashSet<string>(
                 StringComparer.OrdinalIgnoreCase);
+
+        if (registrations.Count >
+            MaximumRecoveryManifestEntries)
+        {
+            throw new InvalidDataException(
+                $"Managed MCP recovery manifest write count exceeds the {MaximumRecoveryManifestEntries}-entry limit.");
+        }
 
         foreach (var registration in registrations)
         {
@@ -490,11 +653,18 @@ public static class ManagedMcpRegistryStore
                 cancellationToken).ConfigureAwait(false);
         }
 
+        var inspected = 0;
         foreach (var stale in Directory.EnumerateFiles(
             directory,
-            "*.json",
+            RecoveryManifestPattern,
             SearchOption.TopDirectoryOnly))
         {
+            if (++inspected >
+                MaximumRecoveryManifestEntries)
+            {
+                break;
+            }
+
             if (expected.Contains(Path.GetFullPath(stale)))
             {
                 continue;

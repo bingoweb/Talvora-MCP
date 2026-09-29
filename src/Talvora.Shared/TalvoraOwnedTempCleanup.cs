@@ -133,6 +133,13 @@ public static class TalvoraOwnedTempCleanup
             return new TalvoraOwnedTempCleanupResult(0, 0);
         }
 
+        if (!IsDirectoryPathReparseSafe(
+                fullRoot,
+                fullRoot))
+        {
+            return new TalvoraOwnedTempCleanupResult(0, 0);
+        }
+
         var deleted = 0;
         long reclaimedBytes = 0;
         var inspectedCandidates = 0;
@@ -238,8 +245,9 @@ public static class TalvoraOwnedTempCleanup
             return new TalvoraOwnedTempCleanupResult(0, 0);
         }
 
-            var rootInfo = new DirectoryInfo(fullRoot);
-            if ((rootInfo.Attributes & FileAttributes.ReparsePoint) != 0)
+            if (!IsDirectoryPathReparseSafe(
+                    fullRoot,
+                    fullRoot))
             {
                 return new TalvoraOwnedTempCleanupResult(0, 0);
             }
@@ -325,6 +333,13 @@ public static class TalvoraOwnedTempCleanup
                 return false;
             }
 
+            if (!IsDirectoryPathReparseSafe(
+                    allowedRoot,
+                    allowedRoot))
+            {
+                return false;
+            }
+
             if (treeEntryFilter is not null &&
                 !treeEntryFilter(path))
             {
@@ -342,11 +357,11 @@ public static class TalvoraOwnedTempCleanup
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            // Once deletion begins, finish the already-proven stale owned tree
-            // instead of leaving a partially deleted tree whose directory
-            // timestamps would postpone the remaining cleanup.
+            // Revalidate ownership/filter and freshness while deleting so a
+            // candidate that becomes active after the stale scan fails closed.
             DeleteTreeWithoutFollowingReparsePoints(
                 path,
+                cutoffUtc,
                 treeEntryFilter,
                 cancellationToken);
             reclaimedBytes = scan.Bytes;
@@ -381,6 +396,80 @@ public static class TalvoraOwnedTempCleanup
             StringComparison.OrdinalIgnoreCase);
     }
 
+    public static bool IsDirectoryPathReparseSafe(
+        string trustedRoot,
+        string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(trustedRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var fullTrustedRoot =
+            Path.TrimEndingDirectorySeparator(
+                Path.GetFullPath(trustedRoot));
+        var fullPath =
+            Path.TrimEndingDirectorySeparator(
+                Path.GetFullPath(path));
+        if (!string.Equals(
+                fullTrustedRoot,
+                fullPath,
+                StringComparison.OrdinalIgnoreCase) &&
+            !IsPathUnderRoot(
+                fullPath,
+                fullTrustedRoot))
+        {
+            return false;
+        }
+
+        if (!Directory.Exists(fullTrustedRoot) ||
+            (File.GetAttributes(fullTrustedRoot) &
+             FileAttributes.ReparsePoint) != 0)
+        {
+            return false;
+        }
+
+        if (string.Equals(
+                fullTrustedRoot,
+                fullPath,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var current = fullTrustedRoot;
+        var relative = Path.GetRelativePath(
+            fullTrustedRoot,
+            fullPath);
+        foreach (var segment in relative.Split(
+                     [
+                         Path.DirectorySeparatorChar,
+                         Path.AltDirectorySeparatorChar,
+                     ],
+                     StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(
+                current,
+                segment);
+            if (File.Exists(current) &&
+                !Directory.Exists(current))
+            {
+                return false;
+            }
+
+            if (!Directory.Exists(current))
+            {
+                continue;
+            }
+
+            if ((File.GetAttributes(current) &
+                 FileAttributes.ReparsePoint) != 0)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private static bool MatchesOwnedName(
         string name,
         IReadOnlyList<string> prefixes,
@@ -396,9 +485,45 @@ public static class TalvoraOwnedTempCleanup
         }
 
         return prefixes.Any(prefix =>
-            name.StartsWith(
+            MatchesOwnedPrefix(
+                name,
+                prefix));
+    }
+
+    private static bool MatchesOwnedPrefix(
+        string name,
+        string prefix)
+    {
+        if (string.IsNullOrWhiteSpace(prefix) ||
+            !name.StartsWith(
                 prefix,
-                StringComparison.OrdinalIgnoreCase));
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (name.Length == prefix.Length)
+        {
+            return true;
+        }
+
+        var prefixTail = prefix[^1];
+        if (prefixTail is '-' or '.' or '_' or ' ')
+        {
+            return true;
+        }
+
+        var suffix = name[prefix.Length..];
+        if (suffix[0] is '-' or '.' or '_' or ' ')
+        {
+            return true;
+        }
+
+        return suffix.Length >= 32 &&
+            Guid.TryParseExact(
+                suffix[..32],
+                "N",
+                out _);
     }
 
     private static IEnumerable<string> EnumerateMatchingTopLevelCandidates(
@@ -556,12 +681,14 @@ public static class TalvoraOwnedTempCleanup
 
     private static void DeleteTreeWithoutFollowingReparsePoints(
         string path,
+        DateTimeOffset cutoffUtc,
         Func<string, bool>? treeEntryFilter,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         EnsureDeletionEntryAllowed(
             path,
+            cutoffUtc,
             treeEntryFilter);
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -586,49 +713,80 @@ public static class TalvoraOwnedTempCleanup
             return;
         }
 
-        foreach (var entry in directory.EnumerateFileSystemInfos())
+        var originalLastWriteTimeUtc =
+            directory.LastWriteTimeUtc;
+        var directoryDeleted = false;
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            EnsureDeletionEntryAllowed(
-                entry.FullName,
-                treeEntryFilter);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if ((entry.Attributes & FileAttributes.ReparsePoint) != 0)
+            foreach (var entry in directory.EnumerateFileSystemInfos())
             {
-                if (entry is DirectoryInfo reparseDirectory)
+                cancellationToken.ThrowIfCancellationRequested();
+                EnsureDeletionEntryAllowed(
+                    entry.FullName,
+                    cutoffUtc,
+                    treeEntryFilter);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if ((entry.Attributes & FileAttributes.ReparsePoint) != 0)
                 {
-                    reparseDirectory.Delete();
+                    if (entry is DirectoryInfo reparseDirectory)
+                    {
+                        reparseDirectory.Delete();
+                    }
+                    else
+                    {
+                        entry.Attributes = FileAttributes.Normal;
+                        entry.Delete();
+                    }
+
+                    continue;
+                }
+
+                if (entry is DirectoryInfo childDirectory)
+                {
+                    DeleteTreeWithoutFollowingReparsePoints(
+                        childDirectory.FullName,
+                        cutoffUtc,
+                        treeEntryFilter,
+                        cancellationToken);
                 }
                 else
                 {
                     entry.Attributes = FileAttributes.Normal;
                     entry.Delete();
                 }
-
-                continue;
             }
 
-            if (entry is DirectoryInfo childDirectory)
+            cancellationToken.ThrowIfCancellationRequested();
+            directory.Delete();
+            directoryDeleted = true;
+        }
+        finally
+        {
+            if (!directoryDeleted &&
+                Directory.Exists(path))
             {
-                DeleteTreeWithoutFollowingReparsePoints(
-                    childDirectory.FullName,
-                    treeEntryFilter,
-                    cancellationToken);
-            }
-            else
-            {
-                entry.Attributes = FileAttributes.Normal;
-                entry.Delete();
+                try
+                {
+                    Directory.SetLastWriteTimeUtc(
+                        path,
+                        originalLastWriteTimeUtc);
+                }
+                catch (Exception ex) when (
+                    ex is IOException or
+                    UnauthorizedAccessException or
+                    ArgumentException or
+                    NotSupportedException)
+                {
+                    // Preserve the original cancellation/deletion failure.
+                }
             }
         }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        directory.Delete();
     }
 
     private static void EnsureDeletionEntryAllowed(
         string path,
+        DateTimeOffset cutoffUtc,
         Func<string, bool>? treeEntryFilter)
     {
         if (treeEntryFilter is not null &&
@@ -636,6 +794,31 @@ public static class TalvoraOwnedTempCleanup
         {
             throw new IOException(
                 "Cleanup safety filter rejected an entry during deletion.");
+        }
+
+        DateTime lastWriteTimeUtc;
+        if (File.Exists(path))
+        {
+            lastWriteTimeUtc =
+                File.GetLastWriteTimeUtc(path);
+        }
+        else if (Directory.Exists(path))
+        {
+            lastWriteTimeUtc =
+                Directory.GetLastWriteTimeUtc(path);
+        }
+        else
+        {
+            return;
+        }
+
+        if (new DateTimeOffset(
+                lastWriteTimeUtc,
+                TimeSpan.Zero) >=
+            cutoffUtc)
+        {
+            throw new IOException(
+                "Cleanup entry became active after stale inspection.");
         }
     }
 

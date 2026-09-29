@@ -40,8 +40,9 @@ internal static class BusinessTunnelClient
                 ConfigPath);
         }
 
-        var config = JsonSerializer.Deserialize<BusinessConfig>(
-            File.ReadAllText(ConfigPath),
+        var config = JsonFileStore.ReadBounded<BusinessConfig>(
+            ConfigPath,
+            ManagedMcpTunnelProvisioningService.MaximumTunnelMetadataJsonBytes,
             JsonOptions);
 
         if (config is null ||

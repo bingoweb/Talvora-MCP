@@ -14,6 +14,13 @@ namespace Talvora.Installer;
 
 internal static partial class InstallerEngine
 {
+    private const int MaximumScheduledCleanupEntries =
+        100_000;
+    private const int MaximumImmediateCleanupEntries =
+        100_000;
+    private const int MaximumInstalledVersionDirectories =
+        10_000;
+
 private static async Task CleanupObsoleteInstallationsAsync(
         string installRoot,
         string activeVersionRoot,
@@ -43,7 +50,22 @@ private static async Task CleanupObsoleteInstallationsAsync(
             return;
         }
 
-        foreach (var directory in Directory.EnumerateDirectories(versionsRoot))
+        var versionDirectories = Directory
+            .EnumerateDirectories(
+                versionsRoot,
+                "*",
+                SearchOption.TopDirectoryOnly)
+            .Take(MaximumInstalledVersionDirectories + 1)
+            .ToArray();
+        if (versionDirectories.Length >
+            MaximumInstalledVersionDirectories)
+        {
+            InstallerLog.Write(
+                $"Installed-version cleanup reached its bounded scan limit. Root={versionsRoot}; Limit={MaximumInstalledVersionDirectories}");
+        }
+
+        foreach (var directory in versionDirectories
+                     .Take(MaximumInstalledVersionDirectories))
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!string.Equals(
@@ -83,34 +105,93 @@ private static async Task CleanupObsoleteInstallationsAsync(
             return;
         }
 
-        foreach (var file in Directory.EnumerateFiles(
-                     path,
-                     "*",
-                     SearchOption.AllDirectories)
-                 .OrderByDescending(item => item.Length))
-        {
-            _ = MoveFileEx(
-                file,
-                null,
-                MoveFileFlags.DelayUntilReboot);
-        }
+        var root = Path.GetFullPath(path);
+        var pending = new Stack<(string Path, bool Expanded)>();
+        pending.Push((root, false));
+        var discoveredEntries = 0;
 
-        foreach (var directory in Directory.EnumerateDirectories(
-                     path,
-                     "*",
-                     SearchOption.AllDirectories)
-                 .OrderByDescending(item => item.Length))
+        while (pending.Count > 0)
         {
-            _ = MoveFileEx(
-                directory,
-                null,
-                MoveFileFlags.DelayUntilReboot);
-        }
+            var current = pending.Pop();
+            FileAttributes attributes;
+            try
+            {
+                attributes = File.GetAttributes(current.Path);
+            }
+            catch (Exception ex) when (
+                ex is IOException or
+                UnauthorizedAccessException or
+                ArgumentException or
+                NotSupportedException)
+            {
+                InstallerLog.Write(
+                    $"Unable to inspect deferred cleanup entry. Path={current.Path}",
+                    ex);
+                continue;
+            }
 
-        if (!MoveFileEx(path, null, MoveFileFlags.DelayUntilReboot))
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                TryScheduleDeletionOnReboot(current.Path);
+                continue;
+            }
+
+            if ((attributes & FileAttributes.Directory) == 0)
+            {
+                TryScheduleDeletionOnReboot(current.Path);
+                continue;
+            }
+
+            if (current.Expanded)
+            {
+                TryScheduleDeletionOnReboot(current.Path);
+                continue;
+            }
+
+            pending.Push((current.Path, true));
+            try
+            {
+                foreach (var entry in Directory.EnumerateFileSystemEntries(
+                             current.Path,
+                             "*",
+                             SearchOption.TopDirectoryOnly))
+                {
+                    if (++discoveredEntries >
+                        MaximumScheduledCleanupEntries)
+                    {
+                        InstallerLog.Write(
+                            $"Deferred cleanup traversal reached its safety limit. Root={root}; Limit={MaximumScheduledCleanupEntries}");
+                        return;
+                    }
+
+                    pending.Push((
+                        Path.GetFullPath(entry),
+                        false));
+                }
+            }
+            catch (Exception ex) when (
+                ex is IOException or
+                UnauthorizedAccessException or
+                ArgumentException or
+                NotSupportedException)
+            {
+                InstallerLog.Write(
+                    $"Unable to enumerate deferred cleanup directory. Path={current.Path}",
+                    ex);
+            }
+        }
+    }
+
+    private static void TryScheduleDeletionOnReboot(
+        string path)
+    {
+        if (!MoveFileEx(
+                path,
+                null,
+                MoveFileFlags.DelayUntilReboot))
         {
             InstallerLog.Write(
-                $"Unable to schedule legacy directory deletion. Path={path} Win32={Marshal.GetLastWin32Error()}");
+                $"Unable to schedule legacy path deletion. Path={path} Win32={Marshal.GetLastWin32Error()}");
         }
     }
 
@@ -153,7 +234,9 @@ private static async Task CleanupObsoleteInstallationsAsync(
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                Directory.Delete(path, recursive: true);
+                DeleteDirectoryTreeCancellationAware(
+                    path,
+                    cancellationToken);
                 return;
             }
             catch (IOException) when (attempt < 9)
@@ -166,7 +249,83 @@ private static async Task CleanupObsoleteInstallationsAsync(
             }
         }
 
-        Directory.Delete(path, recursive: true);
+        DeleteDirectoryTreeCancellationAware(
+            path,
+            cancellationToken);
+    }
+
+    private static void DeleteDirectoryTreeCancellationAware(
+        string path,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var root = new DirectoryInfo(
+            Path.GetFullPath(path));
+        if (!root.Exists)
+        {
+            return;
+        }
+
+        if ((root.Attributes &
+             FileAttributes.ReparsePoint) != 0)
+        {
+            root.Delete();
+            return;
+        }
+
+        var pending =
+            new Stack<(DirectoryInfo Directory, bool Expanded)>();
+        pending.Push((root, false));
+        var discoveredEntries = 0;
+        while (pending.Count > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var current = pending.Pop();
+            if (current.Expanded)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                current.Directory.Delete();
+                continue;
+            }
+
+            pending.Push((current.Directory, true));
+            foreach (var entry in
+                     current.Directory.EnumerateFileSystemInfos())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (++discoveredEntries >
+                    MaximumImmediateCleanupEntries)
+                {
+                    throw new IOException(
+                        $"Immediate cleanup traversal exceeded its safety limit. Root={root.FullName}; Limit={MaximumImmediateCleanupEntries}");
+                }
+
+                if ((entry.Attributes &
+                     FileAttributes.ReparsePoint) != 0)
+                {
+                    if (entry is DirectoryInfo reparseDirectory)
+                    {
+                        reparseDirectory.Delete();
+                    }
+                    else
+                    {
+                        entry.Attributes = FileAttributes.Normal;
+                        entry.Delete();
+                    }
+                    continue;
+                }
+
+                if (entry is DirectoryInfo childDirectory)
+                {
+                    pending.Push((childDirectory, false));
+                }
+                else
+                {
+                    entry.Attributes = FileAttributes.Normal;
+                    entry.Delete();
+                }
+            }
+        }
     }
 
     private static async Task WriteCurrentStateAsync(

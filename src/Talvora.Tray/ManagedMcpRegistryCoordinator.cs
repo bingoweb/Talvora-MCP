@@ -182,12 +182,26 @@ internal static class ManagedMcpRegistryCoordinator
 
         if (existing is null)
         {
-            var manifests =
-                await ManagedMcpRegistryStore
-                    .TryReadRecoveryManifestsAsync(
-                        path,
-                        cancellationToken)
-                    .ConfigureAwait(false);
+            IReadOnlyList<ManagedMcpRegistration> manifests = [];
+            try
+            {
+                manifests =
+                    await ManagedMcpRegistryStore
+                        .TryReadRecoveryManifestsAsync(
+                            path,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+            }
+            catch (Exception recoveryEx) when (
+                recoveryEx is IOException or
+                InvalidDataException or
+                JsonException or
+                UnauthorizedAccessException)
+            {
+                TrayLog.Write(
+                    "Managed MCP per-entry recovery manifests could not be read.",
+                    recoveryEx);
+            }
 
             if (manifests.Count > 0)
             {
@@ -204,10 +218,24 @@ internal static class ManagedMcpRegistryCoordinator
 
         if (existing is null)
         {
-            var ownershipEntries =
-                await ManagedMcpOwnershipManifestStore.ReadAllAsync(
-                    path,
-                    cancellationToken).ConfigureAwait(false);
+            IReadOnlyList<ManagedMcpRegistration> ownershipEntries = [];
+            try
+            {
+                ownershipEntries =
+                    await ManagedMcpOwnershipManifestStore.ReadAllAsync(
+                        path,
+                        cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ownershipEx) when (
+                ownershipEx is IOException or
+                InvalidDataException or
+                JsonException or
+                UnauthorizedAccessException)
+            {
+                TrayLog.Write(
+                    "Managed MCP ownership manifests could not be read.",
+                    ownershipEx);
+            }
             if (ownershipEntries.Count > 0)
             {
                 existing = new ManagedMcpRegistryDocument

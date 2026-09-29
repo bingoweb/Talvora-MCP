@@ -93,6 +93,14 @@ Assert-Contract (
     $probe.Contains('NonSmokeCache[registration.Id]') -and
     $probe.Contains('cached.ExpiresAtUtc > now')
 ) 'Ordinary dashboard/status protocol probes must use the short TTL cache.'
+Assert-Contract (
+    $probe.Contains('MaximumProtocolStateJsonBytes') -and
+    $probe.Contains('256 * 1024') -and
+    $probe.Contains('JsonFileStore.ReadBounded<JsonElement>') -and
+    ([regex]::Matches($probe, 'TryReadProtocolStateObject\(').Count -ge 4) -and
+    $probe.Contains('ValueKind != JsonValueKind.Object') -and
+    -not $probe.Contains('File.ReadAllText(')
+) 'Managed MCP process/generation/browser state reads must be bounded and fail closed for non-object JSON.'
 
 foreach ($requiredTool in @(
     'get_gitea_mcp_server_version',

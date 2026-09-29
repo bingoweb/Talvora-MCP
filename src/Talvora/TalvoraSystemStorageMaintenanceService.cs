@@ -173,7 +173,12 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
 
                 var penpotCleanup =
                     TalvoraPenpotSupervisorMaintenance.Maintain(
-                        cancellationToken);
+                        cancellationToken,
+                        (message, exception) =>
+                            logger.LogWarning(
+                                exception,
+                                "{Message}",
+                                message));
                 deleted += penpotCleanup.DeletedEntries;
                 reclaimedBytes += penpotCleanup.ReclaimedBytes;
                 if (penpotCleanup.ScanLimitReached)
@@ -203,6 +208,13 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
                 tempRoot,
                 "Talvora");
         if (!Directory.Exists(talvoraTempRoot))
+        {
+            return new TalvoraOwnedTempCleanupResult(0, 0);
+        }
+
+        if (!TalvoraOwnedTempCleanup.IsDirectoryPathReparseSafe(
+                tempRoot,
+                talvoraTempRoot))
         {
             return new TalvoraOwnedTempCleanupResult(0, 0);
         }
@@ -258,6 +270,13 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
         var talvoraRoot = Path.Combine(
             commonData,
             "Talvora");
+        if (Directory.Exists(talvoraRoot) &&
+            !TalvoraOwnedTempCleanup.IsDirectoryPathReparseSafe(
+                commonData,
+                talvoraRoot))
+        {
+            return new TalvoraOwnedTempCleanupResult(0, 0);
+        }
         var candidates = new[]
         {
             Path.Combine(
@@ -281,6 +300,13 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
         foreach (var candidate in candidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (!TalvoraOwnedTempCleanup.IsDirectoryPathReparseSafe(
+                    commonData,
+                    candidate))
+            {
+                continue;
+            }
 
             if (!IsSystemOwnedCleanupCandidate(candidate))
             {

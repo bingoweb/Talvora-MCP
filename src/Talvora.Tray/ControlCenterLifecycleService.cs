@@ -908,6 +908,22 @@ internal static partial class ControlCenterLifecycleService
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+        var processNames = registration.DiscoveryHints
+            .Where(hint =>
+                string.Equals(
+                    hint.Kind,
+                    "process-name",
+                    StringComparison.OrdinalIgnoreCase))
+            .Select(hint => EscapePowerShellLiteral(hint.Value))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (processMarkers.Length > 0 &&
+            processNames.Length == 0)
+        {
+            throw new InvalidOperationException(
+                $"{registration.DisplayName} süreç temizliği için explicit process-name allowlist gerekli.");
+        }
 
         if (services.Length == 0 && tasks.Length == 0)
         {
@@ -941,6 +957,8 @@ internal static partial class ControlCenterLifecycleService
             (disableTasksWhenStopped ? "$true" : "$false"));
         script.AppendLine(
             $"$processMarkers = {PsArray(processMarkers)}");
+        script.AppendLine(
+            $"$processNames = {PsArray(processNames)}");
         script.AppendLine();
         script.AppendLine("function Stop-OwnedProcesses {");
         script.AppendLine(
@@ -949,6 +967,10 @@ internal static partial class ControlCenterLifecycleService
             "    $owned = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {");
         script.AppendLine(
             "        if ($_.ProcessId -eq $PID -or [string]::IsNullOrWhiteSpace([string]$_.CommandLine)) { return $false }");
+        script.AppendLine(
+            "        $processName = [string]$_.Name");
+        script.AppendLine(
+            "        if (@($processNames).Count -eq 0 -or -not (@($processNames) | Where-Object { [string]::Equals([string]$_, $processName, [StringComparison]::OrdinalIgnoreCase) })) { return $false }");
         script.AppendLine(
             "        foreach ($marker in [array]$processMarkers) {");
         script.AppendLine(

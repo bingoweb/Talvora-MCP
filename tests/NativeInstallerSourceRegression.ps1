@@ -55,8 +55,18 @@ $controlCenterActions = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora
 
 $registryCoordinator = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpRegistryCoordinator.cs'))
 $ownershipManifestStore = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpOwnershipManifestStore.cs'))
+$managedMcpRegistryStore = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Shared\ManagedMcpRegistryStore.cs'))
 $installerFlow = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.Flow.cs'))
 $installerService = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.Service.cs'))
+$installerCleanupState = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.CleanupState.cs'))
+$rebootCleanupStart = $installerCleanupState.IndexOf('private static void ScheduleDirectoryDeletionOnReboot', [StringComparison]::Ordinal)
+$copyTreeStart = $installerCleanupState.IndexOf('private static void CopyTree', $rebootCleanupStart, [StringComparison]::Ordinal)
+if ($rebootCleanupStart -lt 0 -or $copyTreeStart -le $rebootCleanupStart) { throw 'Native installer regression could not isolate reboot cleanup.' }
+$rebootCleanupSection = $installerCleanupState.Substring($rebootCleanupStart, $copyTreeStart - $rebootCleanupStart)
+$immediateCleanupStart = $installerCleanupState.IndexOf('private static async Task TryDeleteDirectoryAsync', [StringComparison]::Ordinal)
+$writeStateStart = $installerCleanupState.IndexOf('private static async Task WriteCurrentStateAsync', $immediateCleanupStart, [StringComparison]::Ordinal)
+if ($immediateCleanupStart -lt 0 -or $writeStateStart -le $immediateCleanupStart) { throw 'Native installer regression could not isolate immediate cleanup.' }
+$immediateCleanupSection = $installerCleanupState.Substring($immediateCleanupStart, $writeStateStart - $immediateCleanupStart)
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora.Installer')
 $installerProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'))
@@ -241,10 +251,18 @@ $result = [pscustomobject]@{
         $registryCoordinator -match 'ManagedMcpOwnershipManifestStore\.ReadAllAsync' -and
         $registryCoordinator -match 'ManagedMcpOwnershipManifestStore\.PersistAsync' -and
         $registryCoordinator -match 'ManagedMcpOwnershipManifestStore\.NeedsSeed' -and
+        $registryCoordinator -match 'per-entry recovery manifests could not be read' -and
+        $registryCoordinator -match 'ownership manifests could not be read' -and
+        $managedMcpRegistryStore -match 'MaximumRecoveryManifestEntries\s*=\s*4_096' -and
+        $managedMcpRegistryStore -match 'RecoveryManifestPattern\s*=\s*"v2-\*\.json"' -and
+        $managedMcpRegistryStore -match 'Take\(MaximumRecoveryManifestEntries \+ 1\)' -and
         $ownershipManifestStore -match 'managed-mcps\.d' -and
         $ownershipManifestStore -match 'AtomicFile\.WriteAllTextAsync' -and
         $ownershipManifestStore -match 'ManagedMcpRegistryStore\.ValidateRegistration' -and
-        $ownershipManifestStore -match 'Directory\.EnumerateFiles' -and
+        $ownershipManifestStore -match 'ReadBounded<ManagedMcpRegistration>' -and
+        $ownershipManifestStore -match 'ReadBoundedAsync<ManagedMcpRegistration>' -and
+        $ownershipManifestStore -match 'MaximumRecoveryManifestEntries' -and
+        $ownershipManifestStore -match '"v2-\*\.json"' -and
         $ownershipManifestStore -match 'File\.Delete\(stale\)'
     )
     BuildScriptFingerprintsDirtyProvenance = (
@@ -706,6 +724,24 @@ $result = [pscustomobject]@{
     InstallerSchedulesLockedCleanup = (
         $installerProgram -match 'MoveFileEx' -and
         $installerProgram -match 'DelayUntilReboot'
+    )
+    InstallerRebootCleanupIsReparseSafeAndBounded = (
+        $rebootCleanupSection -match 'MaximumScheduledCleanupEntries' -and
+        $rebootCleanupSection -match 'FileAttributes\.ReparsePoint' -and
+        $rebootCleanupSection -match 'SearchOption\.TopDirectoryOnly' -and
+        $rebootCleanupSection -notmatch 'SearchOption\.AllDirectories'
+    )
+    InstallerImmediateCleanupIsCancellationAwareAndBounded = (
+        $immediateCleanupSection -match 'MaximumImmediateCleanupEntries' -and
+        $immediateCleanupSection -match 'DeleteDirectoryTreeCancellationAware' -and
+        $immediateCleanupSection -match 'cancellationToken\.ThrowIfCancellationRequested\(\)' -and
+        $immediateCleanupSection -match 'FileAttributes\.ReparsePoint' -and
+        $immediateCleanupSection -notmatch 'Directory\.Delete\(path, recursive: true\)'
+    )
+    InstallerVersionRootEnumerationIsBounded = (
+        $installerCleanupState -match 'MaximumInstalledVersionDirectories =\s*10_000' -and
+        $installerCleanupState -match '\.Take\(MaximumInstalledVersionDirectories \+ 1\)' -and
+        $installerCleanupState -match 'Installed-version cleanup reached its bounded scan limit'
     )
 }
 

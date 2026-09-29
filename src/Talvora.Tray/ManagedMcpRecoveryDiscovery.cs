@@ -240,6 +240,20 @@ internal sealed class PenpotManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDis
             "Penpot",
             "penpot-2.18.0",
             "mcp");
+        var serverScript = Path.Combine(
+            localMcpRoot,
+            "packages",
+            "server",
+            "dist",
+            "index.js");
+        var viteScript = Path.Combine(
+            localMcpRoot,
+            "packages",
+            "plugin",
+            "node_modules",
+            "vite",
+            "bin",
+            "vite.js");
 
         if (!File.Exists(composePath))
         {
@@ -304,7 +318,17 @@ internal sealed class PenpotManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDis
                 new ManagedMcpDiscoveryHint
                 {
                     Kind = "process-match",
-                    Value = localMcpRoot,
+                    Value = serverScript,
+                },
+                new ManagedMcpDiscoveryHint
+                {
+                    Kind = "process-match",
+                    Value = viteScript,
+                },
+                new ManagedMcpDiscoveryHint
+                {
+                    Kind = "process-name",
+                    Value = "node.exe",
                 },
                 new ManagedMcpDiscoveryHint
                 {
@@ -338,19 +362,27 @@ internal static class ManagedMcpTunnelConfigReader
 
         try
         {
-            using var document = JsonDocument.Parse(File.ReadAllText(configPath));
-            var root = document.RootElement;
+            var config = JsonFileStore.ReadBounded<BusinessConfig>(
+                configPath,
+                ManagedMcpTunnelProvisioningService.MaximumTunnelMetadataJsonBytes);
 
             return new ManagedMcpTunnelRegistration
             {
-                Alias = ReadString(root, "Alias") ?? fallbackAlias,
-                TunnelId = ReadString(root, "TunnelId"),
+                Alias = string.IsNullOrWhiteSpace(config.Alias)
+                    ? fallbackAlias
+                    : config.Alias,
+                TunnelId = string.IsNullOrWhiteSpace(config.TunnelId)
+                    ? null
+                    : config.TunnelId,
                 ConfigPath = configPath,
-                StateRoot = ReadString(root, "StateRoot"),
+                StateRoot = string.IsNullOrWhiteSpace(config.StateRoot)
+                    ? null
+                    : config.StateRoot,
             };
         }
         catch (Exception ex) when (
             ex is IOException or
+            InvalidDataException or
             JsonException or
             UnauthorizedAccessException)
         {
@@ -365,17 +397,4 @@ internal static class ManagedMcpTunnelConfigReader
         }
     }
 
-    private static string? ReadString(
-        JsonElement element,
-        string propertyName)
-    {
-        if (!element.TryGetProperty(propertyName, out var property) ||
-            property.ValueKind != JsonValueKind.String)
-        {
-            return null;
-        }
-
-        var value = property.GetString();
-        return string.IsNullOrWhiteSpace(value) ? null : value;
-    }
 }

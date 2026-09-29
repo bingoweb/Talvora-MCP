@@ -46,6 +46,8 @@ internal sealed record ManagedMcpTunnelRuntimeStatus(
 internal static partial class ManagedMcpTunnelProvisioningService
 {
     private const int TunnelActivationDelaySeconds = 30;
+    internal const int MaximumTunnelMetadataJsonBytes =
+        256 * 1024;
     private static readonly TimeSpan RuntimeStatusCacheDuration =
         TimeSpan.FromSeconds(2);
     private static readonly ConcurrentDictionary<string, RuntimeStatusCacheEntry> RuntimeStatusCache =
@@ -372,9 +374,11 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
         if (rollbackOnFailure && configExisted)
         {
-            previousConfig = await File.ReadAllBytesAsync(
-                configPath,
-                cancellationToken).ConfigureAwait(false);
+            previousConfig = await ReadBoundedFileSnapshotAsync(
+                    configPath,
+                    MaximumTunnelMetadataJsonBytes,
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
 
         try
@@ -491,6 +495,42 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 Array.Clear(previousConfig);
             }
         }
+    }
+
+    private static async Task<byte[]> ReadBoundedFileSnapshotAsync(
+        string path,
+        int maximumBytes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        if (maximumBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumBytes));
+        }
+
+        var fullPath = Path.GetFullPath(path);
+        await using var stream = new FileStream(
+            fullPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete,
+            bufferSize: 16 * 1024,
+            FileOptions.Asynchronous |
+            FileOptions.SequentialScan);
+        var snapshotLength = stream.Length;
+        if (snapshotLength > maximumBytes)
+        {
+            throw new InvalidDataException(
+                $"Tunnel config snapshot exceeds the {maximumBytes}-byte limit: {fullPath}");
+        }
+
+        var bytes = new byte[checked((int)snapshotLength)];
+        await stream.ReadExactlyAsync(
+                bytes.AsMemory(),
+                cancellationToken)
+            .ConfigureAwait(false);
+        return bytes;
     }
 
     public static async Task<bool> EnsureLatestClientAndReconnectIfNeededAsync(
@@ -1081,12 +1121,14 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
         try
         {
-            return JsonSerializer.Deserialize<TunnelProvisioningScope>(
-                File.ReadAllText(ScopePath),
+            return JsonFileStore.ReadBounded<TunnelProvisioningScope>(
+                ScopePath,
+                MaximumTunnelMetadataJsonBytes,
                 ConfigJsonOptions);
         }
         catch (Exception ex) when (
             ex is IOException or
+            InvalidDataException or
             JsonException or
             UnauthorizedAccessException)
         {
@@ -1278,8 +1320,9 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 configPath);
         }
 
-        var config = JsonSerializer.Deserialize<BusinessConfig>(
-            File.ReadAllText(configPath),
+        var config = JsonFileStore.ReadBounded<BusinessConfig>(
+            configPath,
+            MaximumTunnelMetadataJsonBytes,
             ConfigJsonOptions);
 
         if (config is null ||

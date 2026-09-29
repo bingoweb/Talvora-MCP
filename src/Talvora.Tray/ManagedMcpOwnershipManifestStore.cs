@@ -44,15 +44,10 @@ internal static class ManagedMcpOwnershipManifestStore
             try
             {
                 var persisted =
-                    JsonSerializer.Deserialize<ManagedMcpRegistration>(
-                        File.ReadAllText(
-                            path,
-                            Utf8NoBom),
+                    JsonFileStore.ReadBounded<ManagedMcpRegistration>(
+                        path,
+                        ManagedMcpRegistryStore.MaximumRegistrationManifestJsonBytes,
                         ManagedMcpRegistryStore.JsonOptions);
-                if (persisted is null)
-                {
-                    return true;
-                }
 
                 ManagedMcpRegistryStore.ValidateRegistration(
                     persisted);
@@ -183,12 +178,22 @@ internal static class ManagedMcpOwnershipManifestStore
 
         var registrations =
             new List<ManagedMcpRegistration>();
+        var manifests = Directory
+            .EnumerateFiles(
+                directory,
+                "v2-*.json",
+                SearchOption.TopDirectoryOnly)
+            .Take(
+                ManagedMcpRegistryStore.MaximumRecoveryManifestEntries + 1)
+            .ToArray();
+        if (manifests.Length >
+            ManagedMcpRegistryStore.MaximumRecoveryManifestEntries)
+        {
+            throw new InvalidDataException(
+                $"Managed MCP ownership manifest count exceeds the {ManagedMcpRegistryStore.MaximumRecoveryManifestEntries}-entry limit: {directory}");
+        }
 
-        foreach (var path in Directory
-                     .EnumerateFiles(
-                         directory,
-                         "*.json",
-                         SearchOption.TopDirectoryOnly)
+        foreach (var path in manifests
                      .OrderBy(
                          item => item,
                          StringComparer.OrdinalIgnoreCase))
@@ -199,8 +204,9 @@ internal static class ManagedMcpOwnershipManifestStore
             {
                 var registration =
                     await JsonFileStore
-                        .ReadAsync<ManagedMcpRegistration>(
+                        .ReadBoundedAsync<ManagedMcpRegistration>(
                             path,
+                            ManagedMcpRegistryStore.MaximumRegistrationManifestJsonBytes,
                             ManagedMcpRegistryStore.JsonOptions,
                             cancellationToken)
                         .ConfigureAwait(false);
@@ -238,6 +244,12 @@ internal static class ManagedMcpOwnershipManifestStore
         foreach (var registration in registrations)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (expected.Count >=
+                ManagedMcpRegistryStore.MaximumRecoveryManifestEntries)
+            {
+                throw new InvalidDataException(
+                    $"Managed MCP ownership registration count exceeds the {ManagedMcpRegistryStore.MaximumRecoveryManifestEntries}-entry limit.");
+            }
             ManagedMcpRegistryStore.ValidateRegistration(
                 registration);
 
@@ -261,12 +273,18 @@ internal static class ManagedMcpOwnershipManifestStore
                 .ConfigureAwait(false);
         }
 
+        var inspected = 0;
         foreach (var stale in Directory.EnumerateFiles(
                      directory,
-                     "*.json",
+                     "v2-*.json",
                      SearchOption.TopDirectoryOnly))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (++inspected >
+                ManagedMcpRegistryStore.MaximumRecoveryManifestEntries)
+            {
+                break;
+            }
 
             if (expected.Contains(Path.GetFullPath(stale)))
             {

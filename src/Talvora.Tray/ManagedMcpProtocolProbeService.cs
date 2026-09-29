@@ -19,6 +19,8 @@ internal sealed record ManagedMcpProtocolProbeResult(
 
 internal static class ManagedMcpProtocolProbeService
 {
+    private const int MaximumProtocolStateJsonBytes =
+        256 * 1024;
     private static readonly TimeSpan BrowserIdentityTimeout =
         TimeSpan.FromSeconds(3);
     private static readonly TimeSpan NonSmokeCacheDuration =
@@ -419,26 +421,25 @@ internal static class ManagedMcpProtocolProbeService
         var processStatePath =
             registration.ProtocolProbe?.RuntimeProcessStatePath;
         if (string.IsNullOrWhiteSpace(processStatePath) ||
-            !File.Exists(processStatePath))
+            !TryReadProtocolStateObject(
+                processStatePath,
+                "Browser process identity could not be read",
+                out var root))
         {
             return null;
         }
 
-        try
-        {
-            using var document = JsonDocument.Parse(
-                File.ReadAllText(processStatePath));
-            if (!document.RootElement.TryGetProperty(
+        if (!root.TryGetProperty(
                     "backendPid",
                     out var backendPidElement) ||
                 backendPidElement.ValueKind != JsonValueKind.Number ||
                 !backendPidElement.TryGetInt32(out var backendPid) ||
                 backendPid <= 0)
-            {
-                return null;
-            }
+        {
+            return null;
+        }
 
-            var executableNames =
+        var executableNames =
                 registration.BrowserChannel?.ToLowerInvariant() switch
                 {
                     "msedge" => new[] { "msedge.exe" },
@@ -452,20 +453,9 @@ internal static class ManagedMcpProtocolProbeService
                     },
                 };
 
-            return WindowsProcessTree.FindClosestDescendant(
+        return WindowsProcessTree.FindClosestDescendant(
                 backendPid,
                 executableNames);
-        }
-        catch (Exception ex) when (
-            ex is IOException or
-            JsonException or
-            UnauthorizedAccessException)
-        {
-            TrayLog.Write(
-                "Browser process identity could not be read",
-                ex);
-            return null;
-        }
     }
 
     private static bool HasCurrentGenerationBrowserSmoke(
@@ -483,11 +473,13 @@ internal static class ManagedMcpProtocolProbeService
 
         try
         {
-            using var document = JsonDocument.Parse(
-                File.ReadAllText(
-                    probe.BrowserSmokeStatePath));
-
-            var root = document.RootElement;
+            if (!TryReadProtocolStateObject(
+                    probe.BrowserSmokeStatePath,
+                    "Browser smoke state could not be read",
+                    out var root))
+            {
+                return false;
+            }
 
             if (!root.TryGetProperty(
                     "generation",
@@ -646,9 +638,15 @@ internal static class ManagedMcpProtocolProbeService
 
         try
         {
-            using var document = JsonDocument.Parse(
-                File.ReadAllText(path));
-            if (!document.RootElement.TryGetProperty(
+            if (!TryReadProtocolStateObject(
+                    path,
+                    "Runtime generation state could not be read",
+                    out var root))
+            {
+                return null;
+            }
+
+            if (!root.TryGetProperty(
                     "generation",
                     out var generation) ||
                 generation.ValueKind != JsonValueKind.String)
@@ -670,6 +668,44 @@ internal static class ManagedMcpProtocolProbeService
                 "Runtime generation state could not be read",
                 ex);
             return null;
+        }
+    }
+
+    private static bool TryReadProtocolStateObject(
+        string path,
+        string failureMessage,
+        out JsonElement root)
+    {
+        root = default;
+        if (string.IsNullOrWhiteSpace(path) ||
+            !File.Exists(path))
+        {
+            return false;
+        }
+
+        try
+        {
+            var candidate = JsonFileStore.ReadBounded<JsonElement>(
+                path,
+                MaximumProtocolStateJsonBytes);
+            if (candidate.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            root = candidate;
+            return true;
+        }
+        catch (Exception ex) when (
+            ex is IOException or
+            InvalidDataException or
+            JsonException or
+            UnauthorizedAccessException)
+        {
+            TrayLog.Write(
+                failureMessage,
+                ex);
+            return false;
         }
     }
 

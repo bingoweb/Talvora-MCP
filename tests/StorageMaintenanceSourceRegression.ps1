@@ -24,6 +24,10 @@ function Assert-Contains {
 
 $maintenance = Read-RepoText 'src\Talvora.Tray\TalvoraStorageMaintenanceService.cs'
 $provisioning = Read-RepoText 'src\Talvora.Tray\ManagedMcpTunnelProvisioningService.cs'
+$clientUpdate = Read-RepoText 'src\Talvora.Tray\ManagedMcpTunnelProvisioningService.ClientUpdate.cs'
+$businessTunnelClient = Read-RepoText 'src\Talvora.Tray\BusinessTunnelClient.cs'
+$recoveryDiscovery = Read-RepoText 'src\Talvora.Tray\ManagedMcpRecoveryDiscovery.cs'
+$jsonFileStore = Read-RepoText 'src\Talvora.Shared\JsonFileStore.cs'
 $sharedCleanup = Read-RepoText 'src\Talvora.Shared\TalvoraOwnedTempCleanup.cs'
 $systemMaintenance = Read-RepoText 'src\Talvora\TalvoraSystemStorageMaintenanceService.cs'
 $penpotSupervisor = Read-RepoText 'src\Talvora\TalvoraPenpotSupervisorMaintenance.cs'
@@ -96,6 +100,12 @@ $candidateBoundIndex = $sharedCleanup.IndexOf(
 if ($matchingEnumeratorIndex -lt 0 -or $candidateBoundIndex -le $matchingEnumeratorIndex) {
     throw 'Storage maintenance contract failed: candidate bound must count matched Talvora entries, not unrelated root entries'
 }
+Assert-Contains $sharedCleanup 'IsDirectoryPathReparseSafe' 'shared cleanup exposes trusted-anchor reparse-chain validation'
+Assert-Contains $sharedCleanup 'Cleanup entry became active after stale inspection.' 'deletion revalidates retention freshness after the stale scan'
+Assert-Contains $sharedCleanup 'allowedRoot,' 'stale entry deletion validates its allowed root before traversal'
+Assert-Contains $maintenance 'Tunnel-client version maintenance deferred because its storage path contains a reparse point.' 'tunnel-client version cleanup refuses reparse storage paths'
+Assert-Contains $maintenance 'Nested Talvora temp maintenance deferred because its path contains a reparse point.' 'nested user temp cleanup refuses reparse parent paths'
+Assert-Contains $maintenance 'IsDirectoryPathReparseSafe' 'tunnel log maintenance validates state/log path reparse chains'
 
 Assert-Contains $systemMaintenance 'TimeSpan.FromDays(2)' 'system-owned test artifacts use a shorter retention window'
 Assert-Contains $systemMaintenance 'TalvoraOwnedTempCleanup.TestPrefixes' 'SYSTEM temp cleanup applies the shared test classification'
@@ -104,6 +114,7 @@ Assert-Contains $systemMaintenance 'CleanupGuidJsonFiles' 'SYSTEM semantic-worke
 Assert-Contains $systemMaintenance 'IsSystemOwnedCleanupCandidate(structuralRoot)' 'SYSTEM nested cleanup requires an owned Structural parent root'
 Assert-Contains $systemMaintenance 'IsSystemOwnedCleanupCandidate(semanticWorkerRoot)' 'SYSTEM nested cleanup requires an owned semantic-worker parent root'
 Assert-Contains $systemMaintenance 'IsSystemOwnedCleanupCandidate' 'SYSTEM cleanup refuses to delete matching names owned by an interactive user'
+Assert-Contains $systemMaintenance 'IsDirectoryPathReparseSafe' 'SYSTEM nested TEMP and ProgramData cleanup validate parent reparse chains'
 $ownerProbeStart = $systemMaintenance.IndexOf('private static bool IsSystemOwnedCleanupCandidate', [StringComparison]::Ordinal)
 $ownerProbeEnd = $systemMaintenance.IndexOf('private static IReadOnlyList<string> GetSystemTempRoots()', [StringComparison]::Ordinal)
 if ($ownerProbeStart -lt 0 -or $ownerProbeEnd -le $ownerProbeStart) { throw 'Storage maintenance contract failed: SYSTEM owner-probe boundaries are missing' }
@@ -127,12 +138,18 @@ if (($systemMaintenance.Split('IsSystemOwnedCleanupCandidate,').Count - 1) -lt 4
 Assert-Contains $systemMaintenance 'TalvoraOwnedTempCleanup.TryDeleteStaleEntry' 'SYSTEM cleanup uses the shared reparse-safe deletion engine'
 Assert-Contains $systemMaintenance 'TimeSpan.FromHours(6)' 'SYSTEM maintenance runs periodically'
 Assert-Contains $systemMaintenance 'TalvoraPenpotSupervisorMaintenance.Maintain' 'SYSTEM maintenance repairs Penpot supervisor drift and old logs'
+Assert-Contains $systemMaintenance 'logger.LogWarning' 'SYSTEM maintenance routes Penpot cleanup warnings to the service logger'
 Assert-Contains $serviceProgram 'AddHostedService<TalvoraSystemStorageMaintenanceService>()' 'the SYSTEM maintenance background service is registered'
 
 Assert-Contains $penpotSupervisor "'local-mcp.out.log'" 'Penpot MCP uses a stable stdout log instead of timestamp-file churn'
 Assert-Contains $penpotSupervisor "'plugin.out.log'" 'Penpot plugin uses a stable stdout log instead of timestamp-file churn'
 Assert-Contains $penpotSupervisor 'MaxBytes = 8388608' 'Penpot child logs have an 8 MiB rolling threshold'
 Assert-Contains $penpotSupervisor 'TalvoraRollingLogStream' 'Penpot child output is drained through supervisor-owned rolling streams'
+Assert-Contains $penpotSupervisor 'DroppedBytes' 'Penpot rolling streams expose dropped-byte pressure when disk rotation is blocked'
+Assert-Contains $penpotSupervisor 'if (!RotateIfNeeded(count))' 'Penpot child logging drops bytes instead of exceeding its hard disk bound when rotation cannot proceed'
+Assert-Contains $penpotSupervisor 'Locked archive must preserve the hard child-log byte bound.' 'Penpot self-test covers locked-archive hard-bound behavior'
+Assert-Contains $penpotSupervisor 'LastLogPressureReportUtc' 'Penpot rolling pressure reporting tracks its last emission time'
+Assert-Contains $penpotSupervisor 'TotalSeconds -lt 60' 'Penpot rolling pressure diagnostics are throttled to at most once per minute'
 Assert-Contains $penpotSupervisor 'RedirectStandardOutput = $true' 'Penpot supervisor owns stdout instead of handing the log file directly to the child'
 Assert-Contains $penpotSupervisor 'CopyToAsync' 'Penpot stdout/stderr remain continuously drained without child restart'
 if ($penpotSupervisor.Contains('$restartForLogRotation', [StringComparison]::Ordinal) -or
@@ -143,10 +160,28 @@ Assert-Contains $penpotSupervisor 'MaxBytes 1048576' 'Penpot supervisor error lo
 Assert-Contains $penpotSupervisor '[Math]::Min(60' 'Penpot crash loops use bounded exponential backoff'
 Assert-Contains $penpotSupervisor '$delaySeconds = $backoffSeconds' 'Penpot crash-loop delay starts at the documented three seconds before growth'
 Assert-Contains $penpotSupervisor 'function Stop-LoggedChild' 'Penpot rolling-log child cleanup is centralized'
+Assert-Contains $penpotSupervisor '$cleanupErrors = New-Object System.Collections.Generic.List[string]' 'Penpot child cleanup isolates individual resource failures'
+Assert-Contains $penpotSupervisor '[Console]::Error.WriteLine' 'Penpot supervisor error logging has a non-file fallback'
+$rotateStart = $penpotSupervisor.IndexOf('function Rotate-Log', [StringComparison]::Ordinal)
+$startChildStart = $penpotSupervisor.IndexOf('function Start-LoggedChild', $rotateStart, [StringComparison]::Ordinal)
+if ($rotateStart -lt 0 -or $startChildStart -le $rotateStart) { throw 'Storage maintenance contract failed: Penpot Rotate-Log boundaries are missing' }
+$rotateSection = $penpotSupervisor.Substring($rotateStart, $startChildStart - $rotateStart)
+Assert-Contains $rotateSection 'catch {' 'Penpot startup log rotation contains diagnostic I/O failures'
+Assert-Contains $rotateSection 'return $false' 'Penpot startup log rotation reports deferral instead of terminating the supervisor'
+$errorWriterStart = $penpotSupervisor.IndexOf('function Write-SupervisorError', [StringComparison]::Ordinal)
+$serverOutStart = $penpotSupervisor.IndexOf('$serverOut =', $errorWriterStart, [StringComparison]::Ordinal)
+if ($errorWriterStart -lt 0 -or $serverOutStart -le $errorWriterStart) { throw 'Storage maintenance contract failed: Penpot supervisor error writer boundaries are missing' }
+$errorWriterSection = $penpotSupervisor.Substring($errorWriterStart, $serverOutStart - $errorWriterStart)
+Assert-Contains $errorWriterSection 'catch {' 'Penpot diagnostic logging failure is contained'
+Assert-Contains $errorWriterSection '[Console]::Error.WriteLine' 'Penpot diagnostic logging failure has a fallback sink'
+Assert-Contains $errorWriterSection 'if (-not (Rotate-Log -Path $path -MaxBytes 1048576))' 'Penpot supervisor error log stops growing when its archive cannot rotate'
 Assert-Contains $penpotSupervisor '$Child.Process.Dispose()' 'Penpot child Process handles are deterministically released each cycle'
 Assert-Contains $penpotSupervisor '$Child.OutStream.Dispose()' 'Penpot rolling stdout streams are deterministically released'
 Assert-Contains $penpotSupervisor '$Child.ErrStream.Dispose()' 'Penpot rolling stderr streams are deterministically released'
 Assert-Contains $penpotSupervisor 'Stop-OrphanedPenpotProcesses' 'Penpot crash recovery sweeps marker-owned orphan child processes'
+Assert-Contains $penpotSupervisor '$expectedExecutable = [IO.Path]::GetFullPath($node)' 'Penpot orphan cleanup pins the canonical Node executable'
+Assert-Contains $penpotSupervisor '$executablePath = [string]$_.ExecutablePath' 'Penpot orphan cleanup inspects each candidate executable path'
+Assert-Contains $penpotSupervisor '$executablePath).Equals($expectedExecutable' 'Penpot orphan cleanup rejects non-Node processes even when their command line contains Penpot paths'
 Assert-Contains $penpotSupervisor '/T /F' 'Penpot orphan cleanup terminates the complete owned child process tree'
 if ($penpotSupervisor -notmatch 'function Stop-OrphanedPenpotProcesses[\s\S]*?taskkill\.exe[\s\S]*?/T /F[\s\S]*?function Rotate-Log') {
     throw 'Storage maintenance contract failed: Penpot orphan function must terminate the owned process tree'
@@ -163,6 +198,10 @@ Assert-Contains $penpotSupervisor 'TimeSpan.FromDays(1)' 'legacy Penpot logs exp
 Assert-Contains $penpotSupervisor 'MaximumLegacyLogEntriesPerPattern = 10_000' 'each legacy Penpot log family has a hard enumeration budget'
 Assert-Contains $penpotSupervisor 'scanLimitReached' 'Penpot legacy-log scan-limit deferral is propagated to SYSTEM observability'
 Assert-Contains $penpotSupervisor 'AtomicFile.WriteAllTextAsync' 'the SYSTEM-owned supervisor script is published atomically'
+Assert-Contains $penpotSupervisor 'EnsureDirectoryIsNotReparsePoint' 'Penpot SYSTEM maintenance rejects directory junction/reparse roots'
+Assert-Contains $penpotSupervisor '"Talvora ProgramData root"' 'Talvora ProgramData parent is checked before Penpot maintenance'
+Assert-Contains $penpotSupervisor '"Penpot ProgramData root"' 'Penpot ProgramData root is checked before supervisor publication'
+Assert-Contains $penpotSupervisor '"Penpot legacy log root"' 'legacy Penpot log cleanup rejects a reparse log root'
 Assert-Contains $penpotSupervisor 'Utf8NoBom.GetByteCount(expected)' 'Penpot supervisor drift check computes the canonical byte length before reading existing content'
 $penpotDriftStart = $penpotSupervisor.IndexOf('private static void EnsureCanonicalSupervisorScript(', [StringComparison]::Ordinal)
 $penpotCleanupStart = $penpotSupervisor.IndexOf('private static TalvoraOwnedTempCleanupResult CleanupLegacyLogs(', [StringComparison]::Ordinal)
@@ -171,23 +210,52 @@ $penpotDriftSection = $penpotSupervisor.Substring($penpotDriftStart, $penpotClea
 Assert-Contains $penpotDriftSection 'new FileStream(' 'Penpot supervisor drift check uses one bounded file handle'
 Assert-Contains $penpotDriftSection 'existingStream.Length == expectedByteLength' 'Penpot supervisor validates canonical size on the same opened handle'
 Assert-Contains $penpotDriftSection 'new StreamReader(' 'Penpot supervisor reads content only from the size-validated handle'
+Assert-Contains $penpotDriftSection 'FileAttributes.ReparsePoint' 'existing Penpot supervisor script reparse points are refused before SYSTEM reads or writes them'
 if ($penpotDriftSection.Contains('File.ReadAllText(', [StringComparison]::Ordinal)) { throw 'Storage maintenance contract failed: Penpot drift check must not reopen an unbounded path after the size check' }
 Assert-Contains $penpotSupervisor 'IsLegacyTimestampLogName' 'only the known legacy timestamp-log format is pruned'
+Assert-Contains $penpotSupervisor 'warning?.Invoke' 'Penpot legacy log deletion failures are observable without aborting the remaining cleanup'
+Assert-Contains $penpotSupervisor 'Penpot legacy log cleanup deferred.' 'Penpot legacy log warning identifies the deferred file path'
 
 Assert-Contains $maintenance 'PruneObsoleteTunnelClientVersions' 'old tunnel-client versions have a retention policy'
-Assert-Contains $maintenance 'JsonSerializer.Deserialize<BusinessConfig>' 'active tunnel configs protect their referenced client version'
+Assert-Contains $maintenance 'JsonFileStore.ReadBounded<BusinessConfig>' 'active tunnel configs protect their referenced client version through bounded JSON'
 Assert-Contains $maintenance 'rollbackCandidates' 'two rollback slots are selected after active/journal-protected versions are excluded'
 Assert-Contains $maintenance '.Take(2)' 'at least two non-active tunnel-client versions are retained for rollback'
 Assert-Contains $maintenance 'GetClientUpdateProtectedVersionDirectories' 'interrupted update journals protect both previous and candidate client versions'
 Assert-Contains $maintenance 'TryAcquireVersionPruneLeases' 'version pruning coordinates with every managed tunnel lifecycle/update operation'
 Assert-Contains $maintenance 'Tunnel-client version pruning deferred' 'unreadable active tunnel configuration fails version pruning closed'
 Assert-Contains $maintenance 'MaximumVersionEntriesPerRun = 10_000' 'tunnel-client staging/version enumeration has a hard work bound'
+Assert-Contains $provisioning 'MaximumTunnelMetadataJsonBytes' 'tunnel metadata declares one shared hard JSON byte ceiling'
+Assert-Contains $provisioning 'ReadBoundedFileSnapshotAsync' 'tunnel bind rollback snapshots are bounded before allocation'
+Assert-Contains $provisioning 'Tunnel config snapshot exceeds the' 'oversized rollback config snapshots fail closed'
+if ($provisioning.Contains('File.ReadAllBytesAsync(' + [Environment]::NewLine + '                configPath', [StringComparison]::Ordinal)) { throw 'Storage maintenance contract failed: tunnel bind rollback snapshot is unbounded' }
+Assert-Contains $provisioning '256 * 1024' 'tunnel metadata ceiling is 256 KiB'
+Assert-Contains $maintenance 'JsonFileStore.ReadBounded<BusinessConfig>' 'active tunnel config is read through a same-handle bounded JSON snapshot'
+Assert-Contains $provisioning 'JsonFileStore.ReadBounded<BusinessConfig>' 'runtime tunnel config reads are bounded'
+Assert-Contains $provisioning 'JsonFileStore.ReadBounded<TunnelProvisioningScope>' 'tunnel provisioning scope cache reads are bounded'
+Assert-Contains $clientUpdate 'JsonFileStore.ReadBounded<TunnelClientUpdateJournal>' 'update-journal retention inspection is bounded'
+Assert-Contains $clientUpdate 'JsonFileStore.ReadBoundedAsync<TunnelClientUpdateJournal>' 'interrupted update recovery journal read is bounded asynchronously'
+Assert-Contains $clientUpdate 'journal.PreviousConfig is null' 'malformed update journal with missing previous config fails closed before dereference'
+Assert-Contains $clientUpdate 'journal.CandidateConfig is null' 'malformed update journal with missing candidate config fails closed before dereference'
+if ($clientUpdate.Contains('JsonFileStore.ReadAsync<TunnelClientUpdateJournal>', [StringComparison]::Ordinal)) { throw 'Storage maintenance contract failed: recovery journal read is unbounded' }
+Assert-Contains $businessTunnelClient 'JsonFileStore.ReadBounded<BusinessConfig>' 'legacy business tunnel config reads are bounded'
+Assert-Contains $recoveryDiscovery 'JsonFileStore.ReadBounded<BusinessConfig>' 'managed recovery discovery config reads are bounded'
+if ($maintenance.Contains('File.ReadAllText(fullConfigPath)', [StringComparison]::Ordinal)) { throw 'Storage maintenance contract failed: active tunnel config read is unbounded' }
+if ($provisioning.Contains('File.ReadAllText(configPath)', [StringComparison]::Ordinal)) { throw 'Storage maintenance contract failed: runtime tunnel config read is unbounded' }
+if ($provisioning.Contains('File.ReadAllText(ScopePath)', [StringComparison]::Ordinal)) { throw 'Storage maintenance contract failed: tunnel scope cache read is unbounded' }
+if ($clientUpdate.Contains('File.ReadAllText(journalPath)', [StringComparison]::Ordinal)) { throw 'Storage maintenance contract failed: update-journal retention read is unbounded' }
+if ($businessTunnelClient.Contains('File.ReadAllText(ConfigPath)', [StringComparison]::Ordinal)) { throw 'Storage maintenance contract failed: legacy business tunnel config read is unbounded' }
+if ($recoveryDiscovery.Contains('File.ReadAllText(configPath)', [StringComparison]::Ordinal)) { throw 'Storage maintenance contract failed: recovery discovery config read is unbounded' }
+Assert-Contains $jsonFileStore 'ReadBounded<T>' 'shared JSON store exposes a same-handle bounded reader'
+Assert-Contains $jsonFileStore 'ReadBoundedAsync<T>' 'shared JSON store exposes a cancellation-aware bounded async reader'
 
 Assert-Contains $maintenance 'ManagedMcpOperationCoordinator.TryAcquire' 'log maintenance coordinates with MCP lifecycle operations'
 Assert-Contains $maintenance 'health.IsQuietForMaintenance' 'log rotation requires live idle telemetry'
 Assert-Contains $maintenance 'TryRotateTunnelLogWithoutStoppingRuntimeAsync' 'log maintenance never hard-stops the Windows tunnel runtime merely to rotate diagnostics'
 Assert-Contains $maintenance 'FileStream' 'live tunnel log rotation uses a bounded in-place file operation instead of a runtime hard kill'
 Assert-Contains $maintenance 'logPath + ".1"' 'only one bounded tunnel-log archive is retained'
+Assert-Contains $maintenance 'Guid.NewGuid().ToString("N")' 'tunnel log rotation uses an unpredictable temporary archive name'
+Assert-Contains $maintenance 'FileMode.CreateNew' 'tunnel log rotation never follows or truncates a pre-created temporary archive path'
+if ($maintenance.Contains('archivePath + ".tmp"', [StringComparison]::Ordinal)) { throw 'Storage maintenance contract failed: fixed tunnel archive temp path permits pre-created link redirection' }
 $rotationLoopStart = $maintenance.IndexOf('var rotatedLogs = 0;', [StringComparison]::Ordinal)
 $rotationLoopEnd = $maintenance.IndexOf('if (cleanup.DeletedEntries > 0 ||', $rotationLoopStart, [StringComparison]::Ordinal)
 if ($rotationLoopStart -lt 0 -or $rotationLoopEnd -le $rotationLoopStart) { throw 'Storage maintenance contract failed: tunnel rotation loop boundaries are missing' }
