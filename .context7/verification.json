@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T18:57:04Z",
-  "scope": "Talvora storage-maintenance deep commercial-quality re-audit: preserve fail-closed user/SYSTEM ownership boundaries and replace parent-age retention for Structural/semantic-worker crash residue with producer-shaped child-level bounded retention, while re-checking lifecycle, tunnel-client and Penpot maintenance before canonical live acceptance.",
+  "verifiedAtUtc": "2026-09-29T19:02:07Z",
+  "scope": "Talvora storage-maintenance deep commercial-quality re-audit: preserve fail-closed ownership and producer-shaped child retention while ensuring nested enumeration/ACL failures propagate into existing Tray and SYSTEM maintenance observability instead of being silently converted to an empty cleanup result; continue lifecycle/tunnel/Penpot review before canonical live acceptance.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",

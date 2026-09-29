@@ -45,6 +45,15 @@ Assert-Contains $sharedCleanup 'MaximumCleanupCandidatesPerRun = 512' 'shared cl
 Assert-Contains $sharedCleanup 'MaximumDirectChildEntriesPerRun = 10_000' 'nested managed child enumeration is bounded'
 Assert-Contains $sharedCleanup 'CleanupGuidDirectories' 'Structural crash residue is retained and cleaned per GUID child directory'
 Assert-Contains $sharedCleanup 'CleanupGuidJsonFiles' 'semantic-worker crash residue is retained and cleaned per GUID response file'
+$directChildStart = $sharedCleanup.IndexOf('private static TalvoraOwnedTempCleanupResult CleanupDirectChildren(', [StringComparison]::Ordinal)
+$tryDeleteStart = $sharedCleanup.IndexOf('public static bool TryDeleteStaleEntry(', [StringComparison]::Ordinal)
+if ($directChildStart -lt 0 -or $tryDeleteStart -le $directChildStart) {
+    throw 'Storage maintenance contract failed: direct-child cleanup boundaries are missing'
+}
+$directChildSection = $sharedCleanup.Substring($directChildStart, $tryDeleteStart - $directChildStart)
+if ($directChildSection.Contains('catch (Exception', [StringComparison]::Ordinal)) {
+    throw 'Storage maintenance contract failed: nested enumeration failures must propagate to Tray/SYSTEM observability'
+}
 Assert-Contains $sharedCleanup '"Talvora-Deploy-"' 'canonical deploy leftovers are explicitly allowlisted'
 Assert-Contains $sharedCleanup '"Talvora-Setup-"' 'crash-left native installer setup roots are explicitly allowlisted'
 Assert-Contains $sharedCleanup '"TalvoraReparse"' 'known source-edit regression leftovers are explicitly allowlisted'

@@ -231,8 +231,6 @@ public static class TalvoraOwnedTempCleanup
             return new TalvoraOwnedTempCleanupResult(0, 0);
         }
 
-        try
-        {
             var rootInfo = new DirectoryInfo(fullRoot);
             if ((rootInfo.Attributes & FileAttributes.ReparsePoint) != 0)
             {
@@ -292,15 +290,6 @@ public static class TalvoraOwnedTempCleanup
                 deleted,
                 reclaimedBytes,
                 scanLimitReached);
-        }
-        catch (Exception ex) when (
-            ex is IOException or
-            UnauthorizedAccessException or
-            ArgumentException or
-            NotSupportedException)
-        {
-            return new TalvoraOwnedTempCleanupResult(0, 0);
-        }
     }
 
     public static bool TryDeleteStaleEntry(
