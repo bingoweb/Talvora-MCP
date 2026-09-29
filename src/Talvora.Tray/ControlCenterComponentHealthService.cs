@@ -112,6 +112,13 @@ internal static class ControlCenterComponentHealthService
         {
             throw;
         }
+        catch (OperationCanceledException ex)
+        {
+            TrayLog.Write(
+                $"Detailed tunnel health timed out. MCP={registration.Id}",
+                ex);
+            return [];
+        }
         catch (Exception ex) when (
             ex is HttpRequestException or
             JsonException or

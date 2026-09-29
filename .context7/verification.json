@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T14:23:59Z",
-  "scope": "OpenAI tunnel-client v0.0.15 product integration: consume loopback-only component health schema v1 in Control Center, surface actionable tunnel diagnostics, use critical component degradation for tunnel-only repair, strengthen managed probes, and retain the complete checksum-verified Windows release package including cloudflared and compliance sidecars.",
+  "verifiedAtUtc": "2026-09-29T14:54:55Z",
+  "scope": "OpenAI tunnel-client v0.0.15 product integration and commercial hardening: consume loopback-only component health schema v1 in Control Center, surface actionable tunnel diagnostics, use critical component degradation for tunnel-only repair, keep supplemental diagnostics timeouts non-fatal to the dashboard, stream-read health payloads under a strict byte ceiling, strengthen managed probes, and retain the complete checksum-verified Windows release package including cloudflared and compliance sidecars.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -41,6 +41,7 @@
     }
   ],
   "vendorSources": [
+    "Microsoft .NET HttpClient guidance checked 2026-09-29: ResponseHeadersRead avoids default body buffering, ReadAsStreamAsync supports streamed consumption, and OperationCanceledException is the documented cancellation/timeout surface. Talvora therefore enforces its 256 KiB detailed-health ceiling while streaming and treats an internal diagnostics timeout as supplemental rather than failing the full Control Center refresh.",
     "OpenAI tunnel-client v0.0.15 health documentation checked 2026-09-29: /health, /health?details=true, /health/mcp and /health/{component} expose schema-versioned component observations; detailed health is local-only, GET-only and additive to the existing /healthz and /readyz probes. Talvora consumes only the loopback health_details_url emitted by runtimes status and bounds the payload before JSON parsing.",
     "OpenAI tunnel-client v0.0.15 component-health model checked 2026-09-29: control-plane, response-delivery, queue, dispatcher, mcp, oauth, harpoon, cloudflared and proxy are explicit components. Talvora exposes the actionable subset in Control Center and treats only degraded control-plane/response-delivery observations as critical dashboard signals; unknown tunnel-side MCP evidence on HTTP transport remains informational because Talvora independently verifies its local MCP protocol.",
     "OpenAI tunnel-client v0.0.15 routing-correction documentation checked 2026-09-29: wrong-cluster-v1 is advertised by supporting clients automatically, keeps the configured endpoint/residency fixed and requires no Talvora configuration change. Talvora therefore relies on the upgraded client rather than duplicating routing logic.",

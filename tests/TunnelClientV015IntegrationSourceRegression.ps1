@@ -48,6 +48,9 @@ Assert-Contains $provisioning '"mcp_health_url"' 'runtime status parser must rea
 Assert-Contains $provisioning '"v0.0.15"' 'source policy fixture must track the current tunnel-client generation'
 
 Assert-Contains $health 'MaximumHealthPayloadBytes' 'detailed health payloads must be size-bounded'
+Assert-Contains $health 'ReadBoundedPayloadAsync' 'detailed health reads must enforce the payload ceiling while streaming'
+Assert-Contains $health 'MaximumHealthPayloadBytes + 1 - total' 'stream reads must stop immediately after the configured ceiling'
+Assert-Contains $health 'ReadAsStreamAsync' 'detailed health must avoid unbounded body buffering when content length is absent'
 Assert-Contains $health 'candidate.IsLoopback' 'detailed health reads must be restricted to loopback'
 Assert-Contains $health '"schema_version"' 'health schema version must be parsed'
 Assert-Contains $health '"control-plane"' 'control-plane health must be parsed'
@@ -58,6 +61,7 @@ Assert-Contains $health '"mcp"' 'MCP observation health must be parsed'
 Assert-Contains $health 'HasCriticalDegradation' 'critical tunnel component degradation must be explicit'
 
 Assert-Contains $componentHealth 'GetTunnelDiagnosticStatesAsync' 'Control Center must consume detailed tunnel diagnostics'
+Assert-Contains $componentHealth 'Detailed tunnel health timed out.' 'supplemental diagnostics timeout must not fail the full Control Center refresh'
 Assert-Contains $componentHealth '"Tunnel runtime"' 'Control Center must expose the tunnel runtime generation'
 Assert-Contains $componentHealth '"Control plane"' 'Control Center must expose control-plane health'
 Assert-Contains $componentHealth '"Yanıt teslimi"' 'Control Center must expose response-delivery health'

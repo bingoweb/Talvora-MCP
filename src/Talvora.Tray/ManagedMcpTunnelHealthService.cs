@@ -106,13 +106,9 @@ internal static class ManagedMcpTunnelHealthService
                 "Tunnel health payload exceeds the supported size limit.");
         }
 
-        var payload = await response.Content.ReadAsByteArrayAsync(
+        var payload = await ReadBoundedPayloadAsync(
+            response.Content,
             cancellationToken);
-        if (payload.Length > MaximumHealthPayloadBytes)
-        {
-            throw new InvalidDataException(
-                "Tunnel health payload exceeds the supported size limit.");
-        }
 
         using var document = JsonDocument.Parse(
             payload,
@@ -188,6 +184,55 @@ internal static class ManagedMcpTunnelHealthService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(mcpId);
         _ = Cache.TryRemove(mcpId, out _);
+    }
+
+    private static async Task<byte[]> ReadBoundedPayloadAsync(
+        HttpContent content,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+
+        await using var stream = await content.ReadAsStreamAsync(
+            cancellationToken);
+        using var buffer = new MemoryStream(
+            capacity: Math.Min(
+                MaximumHealthPayloadBytes,
+                16 * 1024));
+        var chunk = new byte[16 * 1024];
+        var total = 0;
+
+        while (true)
+        {
+            var remaining = MaximumHealthPayloadBytes + 1 - total;
+            if (remaining <= 0)
+            {
+                throw new InvalidDataException(
+                    "Tunnel health payload exceeds the supported size limit.");
+            }
+
+            var read = await stream.ReadAsync(
+                chunk.AsMemory(
+                    0,
+                    Math.Min(chunk.Length, remaining)),
+                cancellationToken);
+            if (read == 0)
+            {
+                break;
+            }
+
+            total += read;
+            if (total > MaximumHealthPayloadBytes)
+            {
+                throw new InvalidDataException(
+                    "Tunnel health payload exceeds the supported size limit.");
+            }
+
+            await buffer.WriteAsync(
+                chunk.AsMemory(0, read),
+                cancellationToken);
+        }
+
+        return buffer.ToArray();
     }
 
     private static bool TryValidateLoopbackHealthUri(
