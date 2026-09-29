@@ -116,6 +116,43 @@ try {
         throw 'Deletion-time descendant safety revalidation contract failed.'
     }
 
+    $cancelRoot = Join-Path $fixtureRoot 'Cancellation'
+    $cancelCandidate = Join-Path $cancelRoot 'Owned-cancel'
+    New-Item -ItemType Directory -Path $cancelCandidate -Force | Out-Null
+    $cancelFile = Join-Path $cancelCandidate 'payload.txt'
+    [IO.File]::WriteAllText($cancelFile, 'payload')
+    [IO.File]::SetLastWriteTimeUtc($cancelFile, $old)
+    [IO.Directory]::SetLastWriteTimeUtc($cancelCandidate, $old)
+    $cts = [Threading.CancellationTokenSource]::new()
+    try {
+        $cancelState = [pscustomobject]@{ RootCalls = 0 }
+        $cancelDuringDelete = [Func[string,bool]] {
+            param($path)
+            if ([IO.Path]::GetFullPath($path).Equals([IO.Path]::GetFullPath($cancelCandidate), [StringComparison]::OrdinalIgnoreCase)) {
+                $cancelState.RootCalls++
+                if ($cancelState.RootCalls -eq 2) { $cts.Cancel() }
+            }
+            return $true
+        }
+        $cancelThrown = $false
+        try {
+            $null = [Talvora.Shared.TalvoraOwnedTempCleanup]::TryDeleteStaleEntry(
+                $cancelRoot,
+                $cancelCandidate,
+                $cutoff,
+                [ref]([long]$cancelBytes = 0),
+                $cts.Token,
+                $cancelDuringDelete)
+        } catch [OperationCanceledException] {
+            $cancelThrown = $true
+        }
+        if (-not $cancelThrown -or -not (Test-Path -LiteralPath $cancelFile)) {
+            throw 'Deletion cancellation must stop recursive cleanup before removing the next entry.'
+        }
+    } finally {
+        $cts.Dispose()
+    }
+
     Write-Output 'STORAGE_MAINTENANCE_BEHAVIOR_GREEN'
 }
 finally {

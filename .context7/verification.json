@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T19:30:56Z",
-  "scope": "Talvora storage-maintenance deep commercial-quality re-audit: preserve root/descendant ownership safety and bounded cleanup while validating real tunnel-client v0.0.15 health/version semantics. Live Dev/Admin health reports runtime version 0.0.15 plus build metadata, so in-place log rotation now accepts only the pinned 0.0.15 core with optional +build metadata and rejects prerelease/lookalike versions before further cancellation/lifecycle audit.",
+  "verifiedAtUtc": "2026-09-29T19:34:53Z",
+  "scope": "Talvora storage-maintenance deep commercial-quality re-audit: preserve ownership/version safety and make stale-tree deletion cancellation-aware. A 50,000-file live fixture proved deletion continued 13.533 seconds after cancellation; recursive cleanup now observes the caller token throughout deletion and a deterministic regression verifies shutdown cancellation before further Penpot/observability and full acceptance review.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",

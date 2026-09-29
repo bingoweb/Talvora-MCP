@@ -347,7 +347,8 @@ public static class TalvoraOwnedTempCleanup
             // timestamps would postpone the remaining cleanup.
             DeleteTreeWithoutFollowingReparsePoints(
                 path,
-                treeEntryFilter);
+                treeEntryFilter,
+                cancellationToken);
             reclaimedBytes = scan.Bytes;
             return true;
         }
@@ -555,14 +556,18 @@ public static class TalvoraOwnedTempCleanup
 
     private static void DeleteTreeWithoutFollowingReparsePoints(
         string path,
-        Func<string, bool>? treeEntryFilter)
+        Func<string, bool>? treeEntryFilter,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         EnsureDeletionEntryAllowed(
             path,
             treeEntryFilter);
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (File.Exists(path))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             File.SetAttributes(path, FileAttributes.Normal);
             File.Delete(path);
             return;
@@ -576,15 +581,18 @@ public static class TalvoraOwnedTempCleanup
 
         if ((directory.Attributes & FileAttributes.ReparsePoint) != 0)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             directory.Delete();
             return;
         }
 
         foreach (var entry in directory.EnumerateFileSystemInfos())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             EnsureDeletionEntryAllowed(
                 entry.FullName,
                 treeEntryFilter);
+            cancellationToken.ThrowIfCancellationRequested();
 
             if ((entry.Attributes & FileAttributes.ReparsePoint) != 0)
             {
@@ -605,7 +613,8 @@ public static class TalvoraOwnedTempCleanup
             {
                 DeleteTreeWithoutFollowingReparsePoints(
                     childDirectory.FullName,
-                    treeEntryFilter);
+                    treeEntryFilter,
+                    cancellationToken);
             }
             else
             {
@@ -614,6 +623,7 @@ public static class TalvoraOwnedTempCleanup
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         directory.Delete();
     }
 
