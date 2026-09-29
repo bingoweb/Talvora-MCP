@@ -131,12 +131,21 @@ Assert-Contains $serviceProgram 'AddHostedService<TalvoraSystemStorageMaintenanc
 
 Assert-Contains $penpotSupervisor "'local-mcp.out.log'" 'Penpot MCP uses a stable stdout log instead of timestamp-file churn'
 Assert-Contains $penpotSupervisor "'plugin.out.log'" 'Penpot plugin uses a stable stdout log instead of timestamp-file churn'
-Assert-Contains $penpotSupervisor 'MaxBytes = 8388608' 'Penpot child logs have an 8 MiB restart rotation threshold'
+Assert-Contains $penpotSupervisor 'MaxBytes = 8388608' 'Penpot child logs have an 8 MiB rolling threshold'
+Assert-Contains $penpotSupervisor 'TalvoraRollingLogStream' 'Penpot child output is drained through supervisor-owned rolling streams'
+Assert-Contains $penpotSupervisor 'RedirectStandardOutput = $true' 'Penpot supervisor owns stdout instead of handing the log file directly to the child'
+Assert-Contains $penpotSupervisor 'CopyToAsync' 'Penpot stdout/stderr remain continuously drained without child restart'
+if ($penpotSupervisor.Contains('$restartForLogRotation', [StringComparison]::Ordinal) -or
+    $penpotSupervisor.Contains('Test-ChildLogLimitReached', [StringComparison]::Ordinal)) {
+    throw 'Storage maintenance contract failed: Penpot log rotation must not restart an active child process'
+}
 Assert-Contains $penpotSupervisor 'MaxBytes 1048576' 'Penpot supervisor error log has a 1 MiB rotation threshold'
 Assert-Contains $penpotSupervisor '[Math]::Min(60' 'Penpot crash loops use bounded exponential backoff'
 Assert-Contains $penpotSupervisor '$delaySeconds = $backoffSeconds' 'Penpot crash-loop delay starts at the documented three seconds before growth'
-Assert-Contains $penpotSupervisor '$server.Dispose()' 'Penpot server Process handles are deterministically released each cycle'
-Assert-Contains $penpotSupervisor '$plugin.Dispose()' 'Penpot plugin Process handles are deterministically released each cycle'
+Assert-Contains $penpotSupervisor 'function Stop-LoggedChild' 'Penpot rolling-log child cleanup is centralized'
+Assert-Contains $penpotSupervisor '$Child.Process.Dispose()' 'Penpot child Process handles are deterministically released each cycle'
+Assert-Contains $penpotSupervisor '$Child.OutStream.Dispose()' 'Penpot rolling stdout streams are deterministically released'
+Assert-Contains $penpotSupervisor '$Child.ErrStream.Dispose()' 'Penpot rolling stderr streams are deterministically released'
 Assert-Contains $penpotSupervisor 'Stop-OrphanedPenpotProcesses' 'Penpot crash recovery sweeps marker-owned orphan child processes'
 Assert-Contains $penpotSupervisor '/T /F' 'Penpot orphan cleanup terminates the complete owned child process tree'
 if ($penpotSupervisor -notmatch 'function Stop-OrphanedPenpotProcesses[\s\S]*?taskkill\.exe[\s\S]*?/T /F[\s\S]*?function Rotate-Log') {
@@ -179,6 +188,11 @@ Assert-Contains $maintenance 'health.IsQuietForMaintenance' 'log rotation requir
 Assert-Contains $maintenance 'TryRotateTunnelLogWithoutStoppingRuntimeAsync' 'log maintenance never hard-stops the Windows tunnel runtime merely to rotate diagnostics'
 Assert-Contains $maintenance 'FileStream' 'live tunnel log rotation uses a bounded in-place file operation instead of a runtime hard kill'
 Assert-Contains $maintenance 'logPath + ".1"' 'only one bounded tunnel-log archive is retained'
+$rotationLoopStart = $maintenance.IndexOf('var rotatedLogs = 0;', [StringComparison]::Ordinal)
+$rotationLoopEnd = $maintenance.IndexOf('if (cleanup.DeletedEntries > 0 ||', $rotationLoopStart, [StringComparison]::Ordinal)
+if ($rotationLoopStart -lt 0 -or $rotationLoopEnd -le $rotationLoopStart) { throw 'Storage maintenance contract failed: tunnel rotation loop boundaries are missing' }
+$rotationLoop = $maintenance.Substring($rotationLoopStart, $rotationLoopEnd - $rotationLoopStart)
+Assert-Contains $rotationLoop 'InvalidDataException' 'malformed or oversized tunnel health defers only the affected registration'
 
 Assert-Contains $health 'QueueDepth == 0' 'maintenance idle state requires an empty queue'
 Assert-Contains $health 'DispatcherActive == 0' 'maintenance idle state requires no active dispatcher work'

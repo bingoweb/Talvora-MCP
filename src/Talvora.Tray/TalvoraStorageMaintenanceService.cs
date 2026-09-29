@@ -188,6 +188,7 @@ internal static class TalvoraStorageMaintenanceService
             catch (Exception ex) when (
                 ex is IOException or
                 UnauthorizedAccessException or
+                InvalidDataException or
                 InvalidOperationException or
                 JsonException or
                 HttpRequestException)

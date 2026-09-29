@@ -33,6 +33,110 @@ internal static class TalvoraPenpotSupervisorMaintenance
         $env:PENPOT_MCP_PLUGIN_SERVER_HOST = '127.0.0.1'
         $env:WS_URI = 'http://127.0.0.1:4402'
 
+        if (-not ('TalvoraRollingLogStream' -as [type])) {
+            Add-Type -TypeDefinition @'
+        using System;
+        using System.IO;
+        using System.Threading;
+        using System.Threading.Tasks;
+
+        public sealed class TalvoraRollingLogStream : Stream
+        {
+            private readonly string path;
+            private readonly string archivePath;
+            private readonly long maxBytes;
+            private readonly object gate = new object();
+            private FileStream inner;
+            private int rotationFailures;
+
+            public TalvoraRollingLogStream(string path, long maxBytes)
+            {
+                if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("path");
+                if (maxBytes <= 0) throw new ArgumentOutOfRangeException("maxBytes");
+                this.path = Path.GetFullPath(path);
+                this.archivePath = this.path + ".1";
+                this.maxBytes = maxBytes;
+                Directory.CreateDirectory(Path.GetDirectoryName(this.path));
+                this.inner = OpenCurrent();
+            }
+
+            public int RotationFailures { get { return Volatile.Read(ref rotationFailures); } }
+            public override bool CanRead { get { return false; } }
+            public override bool CanSeek { get { return false; } }
+            public override bool CanWrite { get { return true; } }
+            public override long Length { get { lock (gate) { return inner.Length; } } }
+            public override long Position { get { throw new NotSupportedException(); } set { throw new NotSupportedException(); } }
+
+            private FileStream OpenCurrent()
+            {
+                return new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite, 65536, FileOptions.SequentialScan);
+            }
+
+            private void RotateIfNeeded(int incomingBytes)
+            {
+                if (inner.Length == 0 || inner.Length + incomingBytes <= maxBytes) return;
+                inner.Flush(true);
+                inner.Dispose();
+                try
+                {
+                    if (File.Exists(archivePath)) File.Delete(archivePath);
+                    if (File.Exists(path)) File.Move(path, archivePath);
+                }
+                catch (IOException)
+                {
+                    Interlocked.Increment(ref rotationFailures);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    Interlocked.Increment(ref rotationFailures);
+                }
+                finally
+                {
+                    inner = OpenCurrent();
+                }
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                lock (gate)
+                {
+                    RotateIfNeeded(count);
+                    inner.Write(buffer, offset, count);
+                }
+            }
+
+            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                Write(buffer, offset, count);
+                return Task.FromResult(0);
+            }
+
+            public override void Flush() { lock (gate) { inner.Flush(); } }
+            public override long Seek(long offset, SeekOrigin origin) { throw new NotSupportedException(); }
+            public override void SetLength(long value) { throw new NotSupportedException(); }
+            public override int Read(byte[] buffer, int offset, int count) { throw new NotSupportedException(); }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    lock (gate)
+                    {
+                        if (inner != null)
+                        {
+                            inner.Flush();
+                            inner.Dispose();
+                            inner = null;
+                        }
+                    }
+                }
+                base.Dispose(disposing);
+            }
+        }
+        '@
+        }
+
         function Stop-Tree([System.Diagnostics.Process]$Process) {
             if ($null -eq $Process -or $Process.HasExited) { return }
             & "$env:SystemRoot\System32\taskkill.exe" /PID $Process.Id /T /F 2>$null | Out-Null
@@ -59,13 +163,71 @@ internal static class TalvoraPenpotSupervisorMaintenance
             Move-Item -LiteralPath $Path -Destination ($Path + '.1') -Force
         }
 
-        function Test-ChildLogLimitReached([string[]]$Paths, [long]$MaxBytes = 8388608) {
-            foreach ($path in $Paths) {
-                if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
-                $item = Get-Item -LiteralPath $path -Force
-                if ($item.Length -ge $MaxBytes) { return $true }
+        function Start-LoggedChild(
+            [string]$FilePath,
+            [string]$Arguments,
+            [string]$WorkingDirectory,
+            [string]$StdOutPath,
+            [string]$StdErrPath) {
+            $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+            $startInfo.FileName = $FilePath
+            $startInfo.Arguments = $Arguments
+            $startInfo.WorkingDirectory = $WorkingDirectory
+            $startInfo.UseShellExecute = $false
+            $startInfo.CreateNoWindow = $true
+            $startInfo.RedirectStandardOutput = $true
+            $startInfo.RedirectStandardError = $true
+
+            $process = New-Object System.Diagnostics.Process
+            $process.StartInfo = $startInfo
+            $outStream = $null
+            $errStream = $null
+            try {
+                if (-not $process.Start()) { throw 'Child process did not start.' }
+                $outStream = [TalvoraRollingLogStream]::new($StdOutPath, [long]8388608)
+                $errStream = [TalvoraRollingLogStream]::new($StdErrPath, [long]8388608)
+                $outTask = $process.StandardOutput.BaseStream.CopyToAsync($outStream)
+                $errTask = $process.StandardError.BaseStream.CopyToAsync($errStream)
+                return [pscustomobject]@{
+                    Process = $process
+                    OutStream = $outStream
+                    ErrStream = $errStream
+                    OutTask = $outTask
+                    ErrTask = $errTask
+                    ReportedRotationFailures = 0
+                }
             }
-            return $false
+            catch {
+                Stop-Tree $process
+                if ($null -ne $outStream) { $outStream.Dispose() }
+                if ($null -ne $errStream) { $errStream.Dispose() }
+                $process.Dispose()
+                throw
+            }
+        }
+
+        function Report-RollingLogFailures($Child, [string]$Label) {
+            if ($null -eq $Child) { return }
+            $current = $Child.OutStream.RotationFailures + $Child.ErrStream.RotationFailures
+            if ($current -gt $Child.ReportedRotationFailures) {
+                Write-SupervisorError -Message ("{0} rolling log rotation was deferred {1} time(s)." -f $Label, ($current - $Child.ReportedRotationFailures))
+                $Child.ReportedRotationFailures = $current
+            }
+        }
+
+        function Stop-LoggedChild($Child) {
+            if ($null -eq $Child) { return }
+            Stop-Tree $Child.Process
+            try { [void]$Child.Process.WaitForExit(5000) } catch { }
+            foreach ($task in @($Child.OutTask, $Child.ErrTask)) {
+                try { [void]$task.Wait(5000) } catch { }
+            }
+            if ($Child.OutTask.IsFaulted -or $Child.ErrTask.IsFaulted) {
+                Write-SupervisorError -Message 'Child log drain ended with an error.'
+            }
+            $Child.OutStream.Dispose()
+            $Child.ErrStream.Dispose()
+            $Child.Process.Dispose()
         }
 
         function Write-SupervisorError([string]$Message) {
@@ -78,6 +240,56 @@ internal static class TalvoraPenpotSupervisorMaintenance
         $serverErr = Join-Path $logDir 'local-mcp.err.log'
         $pluginOut = Join-Path $logDir 'plugin.out.log'
         $pluginErr = Join-Path $logDir 'plugin.err.log'
+
+        if ($env:TALVORA_PENPOT_SUPERVISOR_SELFTEST -eq '1') {
+            $testRoot = Join-Path $env:TEMP ('Talvora-Penpot-Rolling-' + [guid]::NewGuid().ToString('N'))
+            New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
+            try {
+                $testPath = Join-Path $testRoot 'rolling.log'
+                $testStream = [TalvoraRollingLogStream]::new($testPath, [long]64)
+                try {
+                    $payload = New-Object byte[] 48
+                    $testStream.Write($payload, 0, $payload.Length)
+                    $testStream.Write($payload, 0, $payload.Length)
+                }
+                finally {
+                    $testStream.Dispose()
+                }
+
+                $archivePath = $testPath + '.1'
+                if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf) -or
+                    (Get-Item -LiteralPath $archivePath).Length -ne 48 -or
+                    (Get-Item -LiteralPath $testPath).Length -ne 48 -or
+                    $testStream.RotationFailures -ne 0) {
+                    throw 'Rolling log stream self-test failed.'
+                }
+
+                $childOut = Join-Path $testRoot 'child.out.log'
+                $childErr = Join-Path $testRoot 'child.err.log'
+                $cmd = Join-Path $env:SystemRoot 'System32\cmd.exe'
+                $child = Start-LoggedChild -FilePath $cmd -Arguments '/d /c "echo child-ok & echo child-err 1>&2"' -WorkingDirectory $testRoot -StdOutPath $childOut -StdErrPath $childErr
+                try {
+                    if (-not $child.Process.WaitForExit(10000)) {
+                        throw 'Redirected child did not exit during self-test.'
+                    }
+                }
+                finally {
+                    Stop-LoggedChild $child
+                }
+
+                if ((Get-Content -LiteralPath $childOut -Raw).Trim() -ne 'child-ok' -or
+                    (Get-Content -LiteralPath $childErr -Raw).Trim() -ne 'child-err') {
+                    throw 'Redirected child stream self-test failed.'
+                }
+
+                Write-Output 'PENPOT_SUPERVISOR_ROLLING_SELFTEST_GREEN'
+            }
+            finally {
+                Remove-Item -LiteralPath $testRoot -Recurse -Force -ErrorAction SilentlyContinue
+            }
+            exit 0
+        }
+
         $backoffSeconds = 3
         Stop-OrphanedPenpotProcesses
 
@@ -89,18 +301,21 @@ internal static class TalvoraPenpotSupervisorMaintenance
             $startedAt = Get-Date
             $server = $null
             $plugin = $null
-            $restartForLogRotation = $false
             try {
-                $server = Start-Process -FilePath $node -ArgumentList @($serverScript) -WorkingDirectory (Split-Path $serverScript -Parent) -WindowStyle Hidden -PassThru -RedirectStandardOutput $serverOut -RedirectStandardError $serverErr
-                $plugin = Start-Process -FilePath $node -ArgumentList @($viteScript, 'preview', '--config', $viteConfig, '--host', '127.0.0.1', '--port', '4400') -WorkingDirectory $pluginRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput $pluginOut -RedirectStandardError $pluginErr
+                $serverArguments = '"{0}"' -f $serverScript
+                $pluginArguments = '"{0}" preview --config "{1}" --host 127.0.0.1 --port 4400' -f $viteScript, $viteConfig
+                $server = Start-LoggedChild -FilePath $node -Arguments $serverArguments -WorkingDirectory (Split-Path $serverScript -Parent) -StdOutPath $serverOut -StdErrPath $serverErr
+                $plugin = Start-LoggedChild -FilePath $node -Arguments $pluginArguments -WorkingDirectory $pluginRoot -StdOutPath $pluginOut -StdErrPath $pluginErr
 
-                while (-not $server.HasExited -and -not $plugin.HasExited) {
+                while (-not $server.Process.HasExited -and -not $plugin.Process.HasExited) {
                     Start-Sleep -Seconds 2
-                    $server.Refresh()
-                    $plugin.Refresh()
-                    if (Test-ChildLogLimitReached -Paths @($serverOut, $serverErr, $pluginOut, $pluginErr)) {
-                        $restartForLogRotation = $true
-                        break
+                    $server.Process.Refresh()
+                    $plugin.Process.Refresh()
+                    Report-RollingLogFailures $server 'Penpot MCP'
+                    Report-RollingLogFailures $plugin 'Penpot plugin'
+                    if ($server.OutTask.IsFaulted -or $server.ErrTask.IsFaulted -or
+                        $plugin.OutTask.IsFaulted -or $plugin.ErrTask.IsFaulted) {
+                        throw 'Penpot child log drain failed.'
                     }
                 }
             }
@@ -108,17 +323,9 @@ internal static class TalvoraPenpotSupervisorMaintenance
                 Write-SupervisorError -Message $_.Exception.Message
             }
             finally {
-                Stop-Tree $server
-                Stop-Tree $plugin
+                Stop-LoggedChild $server
+                Stop-LoggedChild $plugin
                 Stop-OrphanedPenpotProcesses
-                if ($null -ne $server) { $server.Dispose() }
-                if ($null -ne $plugin) { $plugin.Dispose() }
-            }
-
-            if ($restartForLogRotation) {
-                $backoffSeconds = 3
-                Start-Sleep -Seconds 1
-                continue
             }
 
             $runtimeSeconds = ((Get-Date) - $startedAt).TotalSeconds
