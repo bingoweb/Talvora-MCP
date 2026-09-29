@@ -340,22 +340,34 @@ internal static class TalvoraStorageMaintenanceService
             return new CleanupResult(0, 0);
         }
 
-        var result =
-            TalvoraOwnedTempCleanup.CleanupTopLevel(
-                talvoraTempRoot,
-                nowUtc - TemporaryArtifactRetention,
-                Array.Empty<string>(),
-                ["Structural", "semantic-worker"],
+        var cutoffUtc =
+            nowUtc - TemporaryArtifactRetention;
+        var structural =
+            TalvoraOwnedTempCleanup.CleanupGuidDirectories(
+                Path.Combine(
+                    talvoraTempRoot,
+                    "Structural"),
+                cutoffUtc,
                 cancellationToken);
-        if (result.ScanLimitReached)
+        var semanticWorker =
+            TalvoraOwnedTempCleanup.CleanupGuidJsonFiles(
+                Path.Combine(
+                    talvoraTempRoot,
+                    "semantic-worker"),
+                cutoffUtc,
+                cancellationToken);
+        if (structural.ScanLimitReached ||
+            semanticWorker.ScanLimitReached)
         {
             TrayLog.Write(
                 $"Storage maintenance reached its nested Talvora temp scan limit. Root={talvoraTempRoot}");
         }
 
         return new CleanupResult(
-            result.DeletedEntries,
-            result.ReclaimedBytes);
+            structural.DeletedEntries +
+            semanticWorker.DeletedEntries,
+            structural.ReclaimedBytes +
+            semanticWorker.ReclaimedBytes);
     }
 
     private static CleanupResult PruneObsoleteTunnelClientVersions(

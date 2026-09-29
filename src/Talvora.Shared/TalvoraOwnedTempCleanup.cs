@@ -11,6 +11,7 @@ public static class TalvoraOwnedTempCleanup
 {
     private const int MaximumScannedEntriesPerCandidate = 100_000;
     private const int MaximumCleanupCandidatesPerRun = 512;
+    private const int MaximumDirectChildEntriesPerRun = 10_000;
 
     public static IReadOnlyList<string> DefaultPrefixes { get; } =
     [
@@ -171,6 +172,135 @@ public static class TalvoraOwnedTempCleanup
             deleted,
             reclaimedBytes,
             scanLimitReached);
+    }
+
+    public static TalvoraOwnedTempCleanupResult CleanupGuidDirectories(
+        string root,
+        DateTimeOffset cutoffUtc,
+        CancellationToken cancellationToken,
+        Func<string, bool>? candidateFilter = null) =>
+        CleanupDirectChildren(
+            root,
+            "*",
+            directories: true,
+            static name => Guid.TryParseExact(
+                name,
+                "N",
+                out _),
+            cutoffUtc,
+            cancellationToken,
+            candidateFilter);
+
+    public static TalvoraOwnedTempCleanupResult CleanupGuidJsonFiles(
+        string root,
+        DateTimeOffset cutoffUtc,
+        CancellationToken cancellationToken,
+        Func<string, bool>? candidateFilter = null) =>
+        CleanupDirectChildren(
+            root,
+            "*.json",
+            directories: false,
+            static name =>
+                name.EndsWith(
+                    ".json",
+                    StringComparison.OrdinalIgnoreCase) &&
+                Guid.TryParseExact(
+                    Path.GetFileNameWithoutExtension(name),
+                    "N",
+                    out _),
+            cutoffUtc,
+            cancellationToken,
+            candidateFilter);
+
+    private static TalvoraOwnedTempCleanupResult CleanupDirectChildren(
+        string root,
+        string searchPattern,
+        bool directories,
+        Func<string, bool> managedNameFilter,
+        DateTimeOffset cutoffUtc,
+        CancellationToken cancellationToken,
+        Func<string, bool>? candidateFilter)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(root);
+        ArgumentException.ThrowIfNullOrWhiteSpace(searchPattern);
+        ArgumentNullException.ThrowIfNull(managedNameFilter);
+
+        var fullRoot = Path.GetFullPath(root);
+        if (!Directory.Exists(fullRoot))
+        {
+            return new TalvoraOwnedTempCleanupResult(0, 0);
+        }
+
+        try
+        {
+            var rootInfo = new DirectoryInfo(fullRoot);
+            if ((rootInfo.Attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                return new TalvoraOwnedTempCleanupResult(0, 0);
+            }
+
+            var deleted = 0;
+            long reclaimedBytes = 0;
+            var enumeratedEntries = 0;
+            var cleanupCandidates = 0;
+            var scanLimitReached = false;
+            var entries = directories
+                ? Directory.EnumerateDirectories(
+                    fullRoot,
+                    searchPattern,
+                    SearchOption.TopDirectoryOnly)
+                : Directory.EnumerateFiles(
+                    fullRoot,
+                    searchPattern,
+                    SearchOption.TopDirectoryOnly);
+
+            foreach (var entry in entries)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (++enumeratedEntries > MaximumDirectChildEntriesPerRun)
+                {
+                    scanLimitReached = true;
+                    break;
+                }
+
+                if (!managedNameFilter(Path.GetFileName(entry)) ||
+                    (candidateFilter is not null &&
+                     !candidateFilter(entry)))
+                {
+                    continue;
+                }
+
+                if (++cleanupCandidates > MaximumCleanupCandidatesPerRun)
+                {
+                    scanLimitReached = true;
+                    break;
+                }
+
+                if (TryDeleteStaleEntry(
+                        fullRoot,
+                        entry,
+                        cutoffUtc,
+                        out var bytes,
+                        cancellationToken))
+                {
+                    deleted++;
+                    reclaimedBytes += bytes;
+                }
+            }
+
+            return new TalvoraOwnedTempCleanupResult(
+                deleted,
+                reclaimedBytes,
+                scanLimitReached);
+        }
+        catch (Exception ex) when (
+            ex is IOException or
+            UnauthorizedAccessException or
+            ArgumentException or
+            NotSupportedException)
+        {
+            return new TalvoraOwnedTempCleanupResult(0, 0);
+        }
     }
 
     public static bool TryDeleteStaleEntry(

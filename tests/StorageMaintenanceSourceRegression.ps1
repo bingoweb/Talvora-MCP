@@ -42,6 +42,9 @@ Assert-Contains $sharedCleanup 'EnumerateMatchingTopLevelCandidates' 'shared cle
 Assert-Contains $sharedCleanup 'prefix + "*"' 'shared cleanup uses prefix-scoped lazy filesystem enumeration'
 Assert-Contains $sharedCleanup 'MaximumScannedEntriesPerCandidate = 100_000' 'shared cleanup can inspect a 100k-entry owned tree while remaining bounded'
 Assert-Contains $sharedCleanup 'MaximumCleanupCandidatesPerRun = 512' 'shared cleanup work per run is bounded'
+Assert-Contains $sharedCleanup 'MaximumDirectChildEntriesPerRun = 10_000' 'nested managed child enumeration is bounded'
+Assert-Contains $sharedCleanup 'CleanupGuidDirectories' 'Structural crash residue is retained and cleaned per GUID child directory'
+Assert-Contains $sharedCleanup 'CleanupGuidJsonFiles' 'semantic-worker crash residue is retained and cleaned per GUID response file'
 Assert-Contains $sharedCleanup '"Talvora-Deploy-"' 'canonical deploy leftovers are explicitly allowlisted'
 Assert-Contains $sharedCleanup '"Talvora-Setup-"' 'crash-left native installer setup roots are explicitly allowlisted'
 Assert-Contains $sharedCleanup '"TalvoraReparse"' 'known source-edit regression leftovers are explicitly allowlisted'
@@ -53,6 +56,11 @@ Assert-Contains $sharedCleanup 'DeleteTreeWithoutFollowingReparsePoints' 'cleanu
 Assert-Contains $maintenance 'TalvoraOwnedTempCleanup.CleanupTopLevel' 'interactive-user cleanup delegates to the shared engine'
 Assert-Contains $maintenance 'TestArtifactRetention' 'interactive-user test artifacts have a two-day retention path'
 Assert-Contains $maintenance 'TalvoraOwnedTempCleanup.TestPrefixes' 'interactive-user cleanup applies the shared test classification'
+Assert-Contains $maintenance 'CleanupGuidDirectories' 'interactive Structural maintenance ages GUID children independently'
+Assert-Contains $maintenance 'CleanupGuidJsonFiles' 'interactive semantic-worker maintenance ages response files independently'
+if ($maintenance.Contains('["Structural", "semantic-worker"]', [StringComparison]::Ordinal)) {
+    throw 'Storage maintenance contract failed: nested Talvora temp roots must not be deleted as one age bucket'
+}
 
 $matchingEnumeratorIndex = $sharedCleanup.IndexOf(
     'foreach (var entry in EnumerateMatchingTopLevelCandidates(',
@@ -66,6 +74,10 @@ if ($matchingEnumeratorIndex -lt 0 -or $candidateBoundIndex -le $matchingEnumera
 
 Assert-Contains $systemMaintenance 'TimeSpan.FromDays(2)' 'system-owned test artifacts use a shorter retention window'
 Assert-Contains $systemMaintenance 'TalvoraOwnedTempCleanup.TestPrefixes' 'SYSTEM temp cleanup applies the shared test classification'
+Assert-Contains $systemMaintenance 'CleanupGuidDirectories' 'SYSTEM Structural maintenance ages GUID children independently'
+Assert-Contains $systemMaintenance 'CleanupGuidJsonFiles' 'SYSTEM semantic-worker maintenance ages response files independently'
+Assert-Contains $systemMaintenance 'IsSystemOwnedCleanupCandidate(structuralRoot)' 'SYSTEM nested cleanup requires an owned Structural parent root'
+Assert-Contains $systemMaintenance 'IsSystemOwnedCleanupCandidate(semanticWorkerRoot)' 'SYSTEM nested cleanup requires an owned semantic-worker parent root'
 Assert-Contains $systemMaintenance 'IsSystemOwnedCleanupCandidate' 'SYSTEM cleanup refuses to delete matching names owned by an interactive user'
 Assert-Contains $systemMaintenance '"PenpotSmoke"' 'SYSTEM maintenance recognizes Penpot smoke data'
 Assert-Contains $systemMaintenance '"TestBrowserVisible"' 'SYSTEM maintenance recognizes Penpot browser smoke profiles'

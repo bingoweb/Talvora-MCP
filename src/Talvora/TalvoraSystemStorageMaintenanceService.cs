@@ -142,6 +142,12 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
                                 cancellationToken);
                         deleted += nestedResult.DeletedEntries;
                         reclaimedBytes += nestedResult.ReclaimedBytes;
+                        if (nestedResult.ScanLimitReached)
+                        {
+                            logger.LogWarning(
+                                "Talvora system nested temp maintenance reached its scan limit for root {Root}; remaining entries are deferred.",
+                                root);
+                        }
                     }
                     catch (Exception ex) when (
                         ex is IOException or
@@ -199,13 +205,38 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
             return new TalvoraOwnedTempCleanupResult(0, 0);
         }
 
-        return TalvoraOwnedTempCleanup.CleanupTopLevel(
+        var cutoffUtc = nowUtc - Retention;
+        var structuralRoot = Path.Combine(
             talvoraTempRoot,
-            nowUtc - Retention,
-            Array.Empty<string>(),
-            ["Structural", "semantic-worker"],
-            cancellationToken,
-            IsSystemOwnedCleanupCandidate);
+            "Structural");
+        var semanticWorkerRoot = Path.Combine(
+            talvoraTempRoot,
+            "semantic-worker");
+
+        var structural =
+            IsSystemOwnedCleanupCandidate(structuralRoot)
+                ? TalvoraOwnedTempCleanup.CleanupGuidDirectories(
+                    structuralRoot,
+                    cutoffUtc,
+                    cancellationToken,
+                    IsSystemOwnedCleanupCandidate)
+                : new TalvoraOwnedTempCleanupResult(0, 0);
+        var semanticWorker =
+            IsSystemOwnedCleanupCandidate(semanticWorkerRoot)
+                ? TalvoraOwnedTempCleanup.CleanupGuidJsonFiles(
+                    semanticWorkerRoot,
+                    cutoffUtc,
+                    cancellationToken,
+                    IsSystemOwnedCleanupCandidate)
+                : new TalvoraOwnedTempCleanupResult(0, 0);
+
+        return new TalvoraOwnedTempCleanupResult(
+            structural.DeletedEntries +
+            semanticWorker.DeletedEntries,
+            structural.ReclaimedBytes +
+            semanticWorker.ReclaimedBytes,
+            structural.ScanLimitReached ||
+            semanticWorker.ScanLimitReached);
     }
 
     private static TalvoraOwnedTempCleanupResult

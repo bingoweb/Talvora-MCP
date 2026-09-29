@@ -93,6 +93,9 @@ jobs:
           & ./tests/StorageMaintenanceSourceRegression.ps1
           if (-not $?) { throw 'Storage maintenance regression failed.' }
 
+          & ./tests/StorageMaintenanceBehaviorRegression.ps1
+          if (-not $?) { throw 'Storage maintenance behavior regression failed.' }
+
           & ./tests/ControlCenterUiResponsivenessSourceRegression.ps1
           if (-not $?) { throw 'Control Center UI responsiveness regression failed.' }
 
