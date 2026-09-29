@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-28T21:28:00Z",
-  "scope": "Focused MCP surface role separation: make Dev/Admin overlap explicit through a reviewed Shared tool contract, reduce accidental cross-role discovery, and preserve the unrestricted full Talvora capability surface.",
+  "verifiedAtUtc": "2026-09-29T04:38:27Z",
+  "scope": "Control Center commercial-quality audit: separate Core service health/actions from Dev/Admin ChatGPT connections, preserve last-known-good state during transient refresh failures, modernize responsive dashboard layout, reduce hidden-view UI work, and improve keyboard/UI Automation accessibility.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -24,8 +24,12 @@
       "verified": "Current Microsoft.ML.Tokenizers guidance confirms SentencePieceTokenizer/Create and EncodeToIds support. Talvora Phase 4 validated Microsoft SentencePiece tokenization against the Hugging Face XLM-R tokenizer using the explicit XLM-R id remap, then reproduced the benchmark ranking with Microsoft.ML.Tokenizers 2.0.0 plus Microsoft.ML.OnnxRuntime 1.30.0."
     },
     {
+      "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop_wpf",
+      "verified": "Current Microsoft WPF guidance confirms AutomationProperties.Name and HelpText are the supported UI Automation metadata surface, and keyboard focus/tab navigation should be explicit for interactive custom surfaces. Talvora Control Center now exposes automation names on key search/filter/action controls and makes dashboard cards keyboard-focusable with Enter/Space activation."
+    },
+    {
       "libraryId": "/lepoco/wpfui",
-      "verified": "Current WPF-UI Snackbar guidance confirms presenter-owned nonmodal notification UX with explicit timeout; Talvora keeps the existing WPF-UI design language while using a tray-owned WPF progress card so full text, coalescing, hover pause and lifecycle remain under Talvora control."
+      "verified": "Current WPF UI sources confirm FluentWindow, TitleBar, CardExpander, Button and TextBox remain the supported modern control surface. Talvora keeps its restrained dark WPF-UI design language while improving responsive layout and accessibility without replacing the established Control Center component system."
     },
     {
       "libraryId": "/dotnet/wpf",

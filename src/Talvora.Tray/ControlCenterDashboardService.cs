@@ -127,26 +127,47 @@ internal static class ControlCenterDashboardService
         ManagedMcpRegistration registration,
         CancellationToken cancellationToken)
     {
-        var status = await BusinessTunnelClient.GetStatusAsync(
-            cancellationToken);
+        var components =
+            await ControlCenterComponentHealthService.GetStatesAsync(
+                registration,
+                cancellationToken);
+        var service = components.FirstOrDefault(state =>
+            string.Equals(
+                state.Component.Id,
+                "service",
+                StringComparison.OrdinalIgnoreCase));
 
-        return status.State switch
+        if (service is null)
         {
-            TalvoraConnectionState.Ready => new ManagedMcpDashboardState(
+            return new ManagedMcpDashboardState(
+                registration,
+                ControlCenterHealthState.Attention,
+                "Sağlık kontrolü bekleniyor",
+                "Talvora Core Service için doğrulanabilir bir servis sağlık kaydı bulunamadı.");
+        }
+
+        return service.Health switch
+        {
+            ControlCenterHealthState.Ready => new ManagedMcpDashboardState(
                 registration,
                 ControlCenterHealthState.Ready,
                 "Hazır",
-                status.Detail),
-            TalvoraConnectionState.LocalOnly => new ManagedMcpDashboardState(
+                "Yerel Talvora servisi sağlık kontrolünü başarıyla geçti."),
+            ControlCenterHealthState.Attention => new ManagedMcpDashboardState(
                 registration,
                 ControlCenterHealthState.Attention,
-                "Bağlantı hazırlanıyor",
-                status.Detail),
+                "Dikkat gerekiyor",
+                service.Detail),
+            ControlCenterHealthState.Checking => new ManagedMcpDashboardState(
+                registration,
+                ControlCenterHealthState.Checking,
+                "Kontrol ediliyor",
+                service.Detail),
             _ => new ManagedMcpDashboardState(
                 registration,
                 ControlCenterHealthState.Offline,
                 "Çalışmıyor",
-                status.Detail),
+                service.Detail),
         };
     }
 

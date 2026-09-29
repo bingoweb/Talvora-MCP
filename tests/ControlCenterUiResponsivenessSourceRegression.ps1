@@ -39,6 +39,10 @@ $rawLogService = Read-RepoText 'src\Talvora.Tray\ControlCenterRawLogService.cs'
 $eventsWindow = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.Events.cs'
 $detailWindow = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.Detail.cs'
 $mainWindow = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.cs'
+$chromeWindow = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.Chrome.cs'
+$actionsWindow = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.Actions.cs'
+$dashboardService = Read-RepoText 'src\Talvora.Tray\ControlCenterDashboardService.cs'
+$smoke = Read-RepoText 'src\Talvora.Tray\ControlCenterSmoke.cs'
 
 Assert-Contains $eventStore 'ReadRecentAsync' 'event history exposes an async WPF-safe read boundary'
 Assert-Contains $eventsWindow 'await ControlCenterEventStore\.ReadRecentAsync' 'dashboard event history does not wait on the cross-process mutex on the dispatcher'
@@ -54,5 +58,27 @@ Assert-Contains $eventsWindow 'registrationId' 'stale raw-log results are associ
 Assert-Contains $mainWindow 'ScheduleDashboardFilter' 'dashboard search avoids rebuilding the full card tree on every key event'
 Assert-Contains $mainWindow '_dashboardFilterDebounceTimer' 'dashboard filter debounce has a dedicated dispatcher timer'
 Assert-Contains $eventsWindow '_dashboardScroller.Visibility == Visibility.Visible' 'raw-log polling is paused outside the dashboard view'
+
+Assert-Contains $dashboardService 'ControlCenterComponentHealthService\.GetStatesAsync' 'Talvora Core health is derived from the local service health chain'
+Assert-NotContains $dashboardService 'var status = await BusinessTunnelClient\.GetStatusAsync' 'Talvora Core dashboard health is not conflated with Business tunnel state'
+Assert-Contains $mainWindow 'dashboardVisible' 'hidden dashboard views avoid rebuilding card and event content'
+Assert-Contains $mainWindow '_dashboardRefreshPending' 'overlapping refresh requests are coalesced instead of discarded'
+Assert-Contains $mainWindow 'Son bilinen durum gösteriliyor' 'transient refresh failures preserve the last known dashboard state'
+Assert-Contains $mainWindow '_lastSuccessfulDashboardRefresh' 'stale dashboard state exposes its last successful refresh time'
+
+Assert-Contains $chromeWindow 'UpdateDashboardControlsLayout' 'dashboard controls have a dedicated compact layout policy'
+Assert-Contains $chromeWindow 'Grid\.SetColumnSpan\(_dashboardSearchStack, 4\)' 'compact layout gives search the full first row'
+Assert-Contains $chromeWindow 'Grid\.SetRow\(_filterBox, compact \? 1 : 0\)' 'compact layout moves toolbar actions to the second row'
+Assert-Contains $smoke 'AssertCompactDashboardLayout' 'visual smoke verifies the dashboard at the minimum supported window width'
+Assert-Contains $smoke 'AssertElementFitsHorizontally' 'compact smoke rejects horizontally clipped primary controls'
+
+Assert-Contains $mainWindow 'Focusable = true' 'dashboard cards participate in keyboard focus'
+Assert-Contains $mainWindow 'KeyboardNavigation\.SetIsTabStop\(card, true\)' 'dashboard cards participate in tab navigation'
+Assert-Contains $mainWindow 'e\.Key is not \(Key\.Enter or Key\.Space\)' 'dashboard cards support Enter and Space activation'
+Assert-Contains $mainWindow 'AutomationProperties\.SetName' 'dashboard controls expose UI Automation names'
+
+Assert-Contains $actionsWindow 'Dev/Admin bağlantılarını yenile' 'ready Core actions explicitly identify the focused ChatGPT connections'
+Assert-Contains $actionsWindow 'Servisi yeniden başlat' 'degraded Core actions repair the Core service instead of pretending to reconnect it'
+Assert-NotContains $actionsWindow '"Yeniden bağlan"[\s\r\n]+\s*SymbolRegular\.PlugConnected20' 'Core attention card no longer exposes the legacy tunnel-only contextual action'
 
 Write-Output 'CONTROL_CENTER_UI_RESPONSIVENESS_SOURCE_GREEN'

@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -42,6 +43,7 @@ internal static class ControlCenterSmoke
                 AssertWindowHasVisibleContent(window);
                 AssertWindowDpi(window);
                 AssertRenderedSurfaceIsNotBlank(window);
+                AssertCompactDashboardLayout(window);
 
                 await window.RunSmokeScenarioAsync();
                 await window.RunMemoryInspectorVisualSmokeScenarioAsync();
@@ -138,6 +140,97 @@ internal static class ControlCenterSmoke
         {
             throw new InvalidOperationException(
                 "Control Center DPI information is invalid.");
+        }
+    }
+
+    private static void AssertCompactDashboardLayout(
+        ControlCenterWindow window)
+    {
+        var originalWidth = window.Width;
+        try
+        {
+            window.Width = window.MinWidth;
+            window.UpdateLayout();
+
+            var search = FindVisualChildByAutomationName(
+                window,
+                "Yönetilen bileşenlerde ara");
+            var refresh = FindVisualChildByAutomationName(
+                window,
+                "Bileşen durumlarını yenile");
+            var memory = FindVisualChildByAutomationName(
+                window,
+                "Talvora Hafıza görünümünü aç");
+
+            AssertElementFitsHorizontally(window, search);
+            AssertElementFitsHorizontally(window, refresh);
+            AssertElementFitsHorizontally(window, memory);
+
+            var searchOrigin = search
+                .TransformToAncestor(window)
+                .Transform(new System.Windows.Point(0, 0));
+            var refreshOrigin = refresh
+                .TransformToAncestor(window)
+                .Transform(new System.Windows.Point(0, 0));
+            if (searchOrigin.Y >= refreshOrigin.Y)
+            {
+                throw new InvalidOperationException(
+                    "Compact dashboard toolbar did not move its actions below the search field.");
+            }
+
+            AssertRenderedSurfaceIsNotBlank(window);
+        }
+        finally
+        {
+            window.Width = originalWidth;
+            window.UpdateLayout();
+        }
+    }
+
+    private static FrameworkElement FindVisualChildByAutomationName(
+        DependencyObject root,
+        string automationName)
+    {
+        var count = VisualTreeHelper.GetChildrenCount(root);
+        for (var index = 0; index < count; index++)
+        {
+            var child = VisualTreeHelper.GetChild(root, index);
+            if (child is FrameworkElement element &&
+                string.Equals(
+                    AutomationProperties.GetName(element),
+                    automationName,
+                    StringComparison.Ordinal))
+            {
+                return element;
+            }
+
+            try
+            {
+                return FindVisualChildByAutomationName(
+                    child,
+                    automationName);
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Control Center element with automation name '{automationName}' was not rendered.");
+    }
+
+    private static void AssertElementFitsHorizontally(
+        ControlCenterWindow window,
+        FrameworkElement element)
+    {
+        var origin = element
+            .TransformToAncestor(window)
+            .Transform(new System.Windows.Point(0, 0));
+        if (origin.X < -1 ||
+            origin.X + element.ActualWidth > window.ActualWidth + 1)
+        {
+            throw new InvalidOperationException(
+                $"Control Center compact layout clips '{AutomationProperties.GetName(element)}'.");
         }
     }
 

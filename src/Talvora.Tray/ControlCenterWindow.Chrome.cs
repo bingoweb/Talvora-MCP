@@ -264,6 +264,52 @@ internal sealed partial class ControlCenterWindow
                 _dashboardSectionMeta.Visibility = Visibility.Visible;
             }
         }
+
+        UpdateDashboardControlsLayout(compact);
+    }
+
+    private void UpdateDashboardControlsLayout(bool compact)
+    {
+        if (_dashboardControlsGrid is null ||
+            _dashboardSearchStack is null ||
+            _memoryButton is null)
+        {
+            return;
+        }
+
+        Grid.SetRow(_dashboardSearchStack, 0);
+        Grid.SetColumn(_dashboardSearchStack, 0);
+        Grid.SetRow(_filterBox, compact ? 1 : 0);
+        Grid.SetRow(_refreshButton, compact ? 1 : 0);
+        Grid.SetRow(_memoryButton, compact ? 1 : 0);
+
+        if (compact)
+        {
+            Grid.SetColumnSpan(_dashboardSearchStack, 4);
+            _dashboardSearchStack.Margin = new Thickness(0, 0, 0, 10);
+
+            Grid.SetColumn(_filterBox, 0);
+            _filterBox.Margin = new Thickness(0);
+            _filterBox.HorizontalAlignment =
+                System.Windows.HorizontalAlignment.Left;
+
+            Grid.SetColumn(_refreshButton, 2);
+            _refreshButton.Margin = new Thickness(12, 0, 0, 0);
+            Grid.SetColumn(_memoryButton, 3);
+            _memoryButton.Margin = new Thickness(12, 0, 0, 0);
+            return;
+        }
+
+        Grid.SetColumnSpan(_dashboardSearchStack, 1);
+        _dashboardSearchStack.Margin = new Thickness(0);
+        Grid.SetColumn(_filterBox, 1);
+        _filterBox.Margin = new Thickness(12, 0, 0, 0);
+        _filterBox.HorizontalAlignment =
+            System.Windows.HorizontalAlignment.Stretch;
+        Grid.SetColumn(_refreshButton, 2);
+        _refreshButton.Margin = new Thickness(12, 0, 0, 0);
+        Grid.SetColumn(_memoryButton, 3);
+        _memoryButton.Margin = new Thickness(12, 0, 0, 0);
     }
 
     private void UpdateWindowStateVisuals()

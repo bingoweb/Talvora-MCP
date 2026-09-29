@@ -150,8 +150,8 @@ internal static partial class ControlCenterLifecycleService
                 await ReconnectTalvoraFocusedAsync(cancellationToken);
                 return new ManagedMcpLifecycleResult(
                     operation,
-                    "Talvora MCP başlatıldı",
-                    "Yerel servis ile Dev ve Admin güvenli tünelleri hazır.");
+                    "Talvora Core Service başlatıldı",
+                    "Core servis ile Dev ve Admin ChatGPT bağlantıları hazır.");
 
             case ManagedMcpLifecycleOperation.Stop:
                 ManagedMcpSessionState.MarkManuallyStopped(TalvoraId);
@@ -169,8 +169,8 @@ internal static partial class ControlCenterLifecycleService
 
                     return new ManagedMcpLifecycleResult(
                         operation,
-                        "Talvora MCP durduruldu",
-                        "Yerel servis ile Dev ve Admin güvenli tünelleri bu Windows oturumu için durduruldu.");
+                        "Talvora Core Service durduruldu",
+                        "Core servis ile Dev ve Admin ChatGPT bağlantıları bu Windows oturumu için durduruldu.");
                 }
                 catch
                 {
@@ -201,8 +201,8 @@ internal static partial class ControlCenterLifecycleService
 
                 return new ManagedMcpLifecycleResult(
                     operation,
-                    "Talvora MCP yeniden başlatıldı",
-                    "Yerel servis ile Dev ve Admin güvenli tünelleri yeniden hazırlandı.");
+                    "Talvora Core Service yeniden başlatıldı",
+                    "Core servis ile Dev ve Admin ChatGPT bağlantıları yeniden hazırlandı.");
 
             default:
                 throw new ArgumentOutOfRangeException(nameof(operation));
@@ -215,7 +215,7 @@ internal static partial class ControlCenterLifecycleService
         if (!await BusinessTunnelClient.IsLocalMcpHealthyAsync(cancellationToken))
         {
             throw new InvalidOperationException(
-                "Yerel Talvora MCP servisi çalışmıyor. Önce Talvora servisini başlatın.");
+                "Talvora Core Service çalışmıyor. Önce Core servisi başlatın.");
         }
 
         ClearTalvoraManualStopState();

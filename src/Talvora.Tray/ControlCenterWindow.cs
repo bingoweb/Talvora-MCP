@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -66,10 +67,13 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     private Border _healthSummaryDot = null!;
     private TextBlock _technicalSummaryText = null!;
     private TextBlock _lastRefreshText = null!;
+    private Grid _dashboardControlsGrid = null!;
+    private StackPanel _dashboardSearchStack = null!;
     private UiTextBox _searchBox = null!;
     private ComboBox _filterBox = null!;
     private DispatcherTimer _dashboardFilterDebounceTimer = null!;
     private UiButton _refreshButton = null!;
+    private UiButton _memoryButton = null!;
     private StackPanel _cardsPanel = null!;
     private Border _loadingState = null!;
     private TextBlock _emptyState = null!;
@@ -103,6 +107,8 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
     private ControlCenterDashboardSnapshot? _snapshot;
     private ManagedMcpDashboardState? _selectedMcp;
+    private DateTimeOffset? _lastSuccessfulDashboardRefresh;
+    private int _dashboardRefreshPending;
     private bool _detailOperationInProgress;
     private bool _applicationExitRequested;
 
@@ -321,7 +327,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             BorderThickness = new Thickness(0, 1, 0, 0),
             Child = new TextBlock
             {
-                Text = "Talvora  •  Yerel MCP yönetimi",
+                Text = "Talvora  •  Yerel yönetim ve ChatGPT bağlantıları",
                 Foreground = TertiaryTextBrush,
                 FontSize = 11,
             },
@@ -395,10 +401,11 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         });
         titleStack.Children.Add(new TextBlock
         {
-            Text = "Yerel MCP servisleri, tüneller ve durumlar tek görünümde.",
+            Text = "Talvora Core, ChatGPT bağlantıları ve yerel entegrasyonlar tek görünümde.",
             Margin = new Thickness(0, 7, 0, 0),
             Foreground = SecondaryTextBrush,
             FontSize = 14,
+            TextWrapping = TextWrapping.Wrap,
         });
         _headerGrid.Children.Add(titleStack);
 
@@ -438,7 +445,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         _technicalSummaryText = new TextBlock
         {
-            Text = "MCP bilgileri hazırlanıyor",
+            Text = "Bileşen bilgileri hazırlanıyor",
             Margin = new Thickness(0, 4, 0, 0),
             Foreground = SecondaryTextBrush,
             FontSize = 12,
@@ -529,41 +536,52 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         sectionHeader.Children.Add(_dashboardSectionMeta);
         content.Children.Add(sectionHeader);
 
-        var controlsGrid = new Grid
+        _dashboardControlsGrid = new Grid
         {
             Margin = new Thickness(0, 0, 0, 18),
         };
-        controlsGrid.ColumnDefinitions.Add(new ColumnDefinition
+        _dashboardControlsGrid.RowDefinitions.Add(new RowDefinition
+        {
+            Height = GridLength.Auto,
+        });
+        _dashboardControlsGrid.RowDefinitions.Add(new RowDefinition
+        {
+            Height = GridLength.Auto,
+        });
+        _dashboardControlsGrid.ColumnDefinitions.Add(new ColumnDefinition
         {
             Width = new GridLength(1, GridUnitType.Star),
         });
-        controlsGrid.ColumnDefinitions.Add(new ColumnDefinition
+        _dashboardControlsGrid.ColumnDefinitions.Add(new ColumnDefinition
         {
             Width = GridLength.Auto,
         });
-        controlsGrid.ColumnDefinitions.Add(new ColumnDefinition
+        _dashboardControlsGrid.ColumnDefinitions.Add(new ColumnDefinition
         {
             Width = GridLength.Auto,
         });
-        controlsGrid.ColumnDefinitions.Add(new ColumnDefinition
+        _dashboardControlsGrid.ColumnDefinitions.Add(new ColumnDefinition
         {
             Width = GridLength.Auto,
         });
 
-        var searchStack = new StackPanel();
+        _dashboardSearchStack = new StackPanel();
 
         _searchBox = new UiTextBox
         {
-            MinWidth = 300,
+            MinWidth = 0,
             Style = FindStyle("TalvoraSearchBoxStyle"),
             PlaceholderText = "Bileşen ara",
             ClearButtonEnabled = true,
             Icon = new SymbolIcon { Symbol = SymbolRegular.Search20 },
             ToolTip = "Ad veya açıklamaya göre bileşen ara",
         };
+        AutomationProperties.SetName(
+            _searchBox,
+            "Yönetilen bileşenlerde ara");
         _searchBox.TextChanged += (_, _) => ScheduleDashboardFilter();
-        searchStack.Children.Add(_searchBox);
-        controlsGrid.Children.Add(searchStack);
+        _dashboardSearchStack.Children.Add(_searchBox);
+        _dashboardControlsGrid.Children.Add(_dashboardSearchStack);
 
         _filterBox = new ComboBox
         {
@@ -574,12 +592,15 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             Visibility = Visibility.Collapsed,
             Style = FindStyle("TalvoraFilterComboBoxStyle"),
         };
+        AutomationProperties.SetName(
+            _filterBox,
+            "Bileşen durum filtresi");
         _filterBox.Items.Add("Tümü");
         _filterBox.Items.Add("Dikkat isteyenler");
         _filterBox.Items.Add("Hazır");
         _filterBox.SelectionChanged += (_, _) => ApplyDashboardFilter();
         Grid.SetColumn(_filterBox, 1);
-        controlsGrid.Children.Add(_filterBox);
+        _dashboardControlsGrid.Children.Add(_filterBox);
 
         _refreshButton = new UiButton
         {
@@ -590,11 +611,14 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             Style = FindStyle("TalvoraSecondaryButtonStyle"),
             Cursor = WpfCursors.Hand,
         };
+        AutomationProperties.SetName(
+            _refreshButton,
+            "Bileşen durumlarını yenile");
         _refreshButton.Click += async (_, _) => await RefreshDashboardAsync();
         Grid.SetColumn(_refreshButton, 2);
-        controlsGrid.Children.Add(_refreshButton);
+        _dashboardControlsGrid.Children.Add(_refreshButton);
 
-        var memoryButton = new UiButton
+        _memoryButton = new UiButton
         {
             Content = "Hafıza",
             Icon = new SymbolIcon { Symbol = SymbolRegular.BrainCircuit20 },
@@ -604,11 +628,14 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             Cursor = WpfCursors.Hand,
             ToolTip = "Talvora'nın kalıcı hafızasını incele ve yönet",
         };
-        memoryButton.Click += async (_, _) => await ShowMemoryInspectorAsync();
-        Grid.SetColumn(memoryButton, 3);
-        controlsGrid.Children.Add(memoryButton);
+        AutomationProperties.SetName(
+            _memoryButton,
+            "Talvora Hafıza görünümünü aç");
+        _memoryButton.Click += async (_, _) => await ShowMemoryInspectorAsync();
+        Grid.SetColumn(_memoryButton, 3);
+        _dashboardControlsGrid.Children.Add(_memoryButton);
 
-        content.Children.Add(controlsGrid);
+        content.Children.Add(_dashboardControlsGrid);
 
         _loadingState = new Border
         {
@@ -655,6 +682,9 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         if (!await _refreshGate.WaitAsync(0))
         {
+            Interlocked.Exchange(
+                ref _dashboardRefreshPending,
+                1);
             return;
         }
 
@@ -669,6 +699,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             var snapshot = await ControlCenterDashboardService.GetSnapshotAsync(
                 _lifetimeCts.Token);
             _snapshot = snapshot;
+            _lastSuccessfulDashboardRefresh = DateTimeOffset.Now;
 
             _healthSummaryText.Text = snapshot.HealthSummary;
             _healthSummaryText.Foreground = GetSummaryBrush(snapshot);
@@ -676,16 +707,23 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             _technicalSummaryText.Text = snapshot.TechnicalSummary;
             _dashboardSectionMeta.Text =
                 $"{snapshot.Mcps.Count} bileşen • {snapshot.ReadyCount} hazır";
-            _lastRefreshText.Text = $"Son kontrol {DateTime.Now:HH:mm:ss}";
+            _lastRefreshText.Text =
+                $"Son kontrol {_lastSuccessfulDashboardRefresh.Value:HH:mm:ss}";
             _filterBox.Visibility = snapshot.Mcps.Count >= 4
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
-            ApplyDashboardFilter();
-            RefreshSetupCard();
-            await RefreshEventsPanelAsync();
+            var dashboardVisible =
+                _dashboardScroller.Visibility == Visibility.Visible;
+            if (dashboardVisible)
+            {
+                ApplyDashboardFilter();
+                RefreshSetupCard();
+                await RefreshEventsPanelAsync();
+            }
 
-            if (_selectedMcp is not null)
+            if (_selectedMcp is not null &&
+                _detailScroller.Visibility == Visibility.Visible)
             {
                 var refreshedSelection = snapshot.Mcps.FirstOrDefault(state =>
                     string.Equals(
@@ -708,20 +746,51 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         catch (Exception ex)
         {
             TrayLog.Write("Control Center dashboard refresh failed", ex);
-            _healthSummaryText.Text = "Durum alınamadı";
+            var hasLastKnownSnapshot =
+                _snapshot is not null;
+
+            _healthSummaryText.Text = "Canlı durum alınamadı";
             _healthSummaryText.Foreground = OfflineBrush;
             _healthSummaryDot.Background = OfflineBrush;
-            _technicalSummaryText.Text = "Otomatik olarak yeniden denenecek.";
-            _lastRefreshText.Text = string.Empty;
-            _cardsPanel.Children.Clear();
-            _emptyState.Text = "MCP bilgileri şu anda alınamıyor.";
-            _emptyState.Visibility = Visibility.Visible;
+            _technicalSummaryText.Text = hasLastKnownSnapshot
+                ? "Son bilinen durum gösteriliyor • otomatik yeniden denenecek."
+                : "Bileşen bilgileri şu anda alınamıyor • otomatik yeniden denenecek.";
+            _lastRefreshText.Text = _lastSuccessfulDashboardRefresh is { } lastSuccessful
+                ? $"Son başarılı kontrol {lastSuccessful:HH:mm:ss} • güncel değil"
+                : string.Empty;
+
+            if (hasLastKnownSnapshot)
+            {
+                if (_dashboardScroller.Visibility == Visibility.Visible)
+                {
+                    ApplyDashboardFilter();
+                    RefreshSetupCard();
+                }
+            }
+            else
+            {
+                _cardsPanel.Children.Clear();
+                _emptyState.Text = "Bileşen bilgileri şu anda alınamıyor.";
+                _emptyState.Visibility = Visibility.Visible;
+            }
         }
         finally
         {
             _loadingState.Visibility = Visibility.Collapsed;
             _refreshButton.IsEnabled = true;
             _refreshGate.Release();
+
+            if (Interlocked.Exchange(
+                    ref _dashboardRefreshPending,
+                    0) != 0 &&
+                IsVisible &&
+                _memoryScroller.Visibility != Visibility.Visible &&
+                !_lifetimeCts.IsCancellationRequested)
+            {
+                _ = Dispatcher.BeginInvoke(
+                    DispatcherPriority.Background,
+                    () => _ = RefreshDashboardAsync());
+            }
         }
     }
 
@@ -971,7 +1040,15 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             Child = root,
             Tag = state.Registration.Id,
             Cursor = WpfCursors.Hand,
+            Focusable = true,
         };
+        KeyboardNavigation.SetIsTabStop(card, true);
+        AutomationProperties.SetName(
+            card,
+            $"{state.Registration.DisplayName}: {state.StatusText}");
+        AutomationProperties.SetHelpText(
+            card,
+            "Ayrıntıları açmak için Enter veya Boşluk tuşuna basın.");
         card.MouseEnter += (_, _) =>
         {
             card.Background = HoverSurfaceBrush;
@@ -980,7 +1057,32 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         card.MouseLeave += (_, _) =>
         {
             card.Background = SurfaceBrush;
-            card.BorderBrush = CardBorderBrush;
+            if (!card.IsKeyboardFocusWithin)
+            {
+                card.BorderBrush = CardBorderBrush;
+            }
+        };
+        card.GotKeyboardFocus += (_, _) =>
+        {
+            card.BorderBrush = StrongBorderBrush;
+        };
+        card.LostKeyboardFocus += (_, _) =>
+        {
+            if (!card.IsMouseOver)
+            {
+                card.BorderBrush = CardBorderBrush;
+            }
+        };
+        card.KeyDown += async (_, e) =>
+        {
+            if (IsInsideButton(e.OriginalSource as DependencyObject) ||
+                e.Key is not (Key.Enter or Key.Space))
+            {
+                return;
+            }
+
+            e.Handled = true;
+            await ShowDetailAsync(state);
         };
         card.MouseLeftButtonUp += async (_, e) =>
         {

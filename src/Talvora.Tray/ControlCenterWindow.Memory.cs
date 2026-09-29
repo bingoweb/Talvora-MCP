@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net.Http;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Wpf.Ui.Controls;
@@ -176,6 +177,9 @@ internal sealed partial class ControlCenterWindow
             ClearButtonEnabled = true,
             Icon = new SymbolIcon { Symbol = SymbolRegular.Search20 },
         };
+        AutomationProperties.SetName(
+            _memorySearchBox,
+            "Talvora hafızasında ara");
         _memorySearchBox.TextChanged += (_, _) => ScheduleMemoryRefresh();
         searchRow.Children.Add(_memorySearchBox);
 
@@ -187,6 +191,9 @@ internal sealed partial class ControlCenterWindow
             PlaceholderText = "Proje yolu / kimliği",
             ClearButtonEnabled = true,
         };
+        AutomationProperties.SetName(
+            _memoryProjectBox,
+            "Hafıza proje filtresi");
         _memoryProjectBox.TextChanged += (_, _) => ScheduleMemoryRefresh();
         Grid.SetColumn(_memoryProjectBox, 1);
         searchRow.Children.Add(_memoryProjectBox);
@@ -199,6 +206,9 @@ internal sealed partial class ControlCenterWindow
             Margin = new Thickness(12, 0, 0, 0),
             Style = FindStyle("TalvoraSecondaryButtonStyle"),
         };
+        AutomationProperties.SetName(
+            _memoryRefreshButton,
+            "Hafıza görünümünü yenile");
         _memoryRefreshButton.Click += async (_, _) => await RefreshMemoryAsync();
         Grid.SetColumn(_memoryRefreshButton, 2);
         searchRow.Children.Add(_memoryRefreshButton);
@@ -425,6 +435,7 @@ internal sealed partial class ControlCenterWindow
         _memoryLoadingState.Visibility = Visibility.Visible;
         _memoryEmptyState.Visibility = Visibility.Collapsed;
         _memoryStatusText.Text = "Hafıza ve semantic indeks kontrol ediliyor...";
+        _memoryStatusText.Foreground = SecondaryTextBrush;
 
         try
         {
@@ -465,7 +476,7 @@ internal sealed partial class ControlCenterWindow
                     embeddingTask,
                     restoreStatusTask,
                     listTask);
-                items = listTask.Result.Items;
+                items = (await listTask).Items;
             }
             else
             {
@@ -481,7 +492,7 @@ internal sealed partial class ControlCenterWindow
                     embeddingTask,
                     restoreStatusTask,
                     searchTask);
-                searchHits = searchTask.Result.Items;
+                searchHits = (await searchTask).Items;
                 items = searchHits
                     .Select(hit => hit.Item)
                     .Where(item =>
@@ -495,16 +506,20 @@ internal sealed partial class ControlCenterWindow
                 return;
             }
 
+            var diagnostics = await diagnosticsTask;
+            var embedding = await embeddingTask;
+            var restoreStatus = await restoreStatusTask;
             UpdateMemoryHealth(
-                diagnosticsTask.Result,
-                embeddingTask.Result,
-                restoreStatusTask.Result);
+                diagnostics,
+                embedding,
+                restoreStatus);
             RenderMemoryResults(items, searchHits);
             _memoryResultMetaText.Text =
                 $"{items.Count} kayıt • {DateTime.Now:HH:mm:ss}";
             _memoryStatusText.Text = string.IsNullOrWhiteSpace(query)
                 ? "En son güncellenen aktif kayıtlar gösteriliyor."
                 : "Sonuçlar FTS5 + semantic hybrid arama ile sıralandı.";
+            _memoryStatusText.Foreground = TertiaryTextBrush;
         }
         catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
         {

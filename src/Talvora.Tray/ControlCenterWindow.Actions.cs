@@ -26,18 +26,10 @@ internal sealed partial class ControlCenterWindow
 
         if (state.Health == ControlCenterHealthState.Attention)
         {
-            return string.Equals(
-                    state.Registration.Id,
-                    "talvora",
-                    StringComparison.OrdinalIgnoreCase)
-                ? new CardContextAction(
-                    "Yeniden bağlan",
-                    SymbolRegular.PlugConnected20,
-                    Primary: true)
-                : new CardContextAction(
-                    "Sorunu düzelt",
-                    SymbolRegular.Wrench20,
-                    Primary: true);
+            return new CardContextAction(
+                "Sorunu düzelt",
+                SymbolRegular.Wrench20,
+                Primary: true);
         }
 
         if (state.Health == ControlCenterHealthState.Ready &&
@@ -98,22 +90,6 @@ internal sealed partial class ControlCenterWindow
                     state.Registration,
                     _lifetimeCts.Token);
                 RecordLifecycleSuccess(state.Registration, result);
-            }
-            else if (string.Equals(
-                         state.Registration.Id,
-                         "talvora",
-                         StringComparison.OrdinalIgnoreCase))
-            {
-                ManagedMcpSessionState.ClearManualStop(state.Registration.Id);
-                await ControlCenterLifecycleService
-                    .ReconnectTalvoraConnectionsAsync(_lifetimeCts.Token);
-                ControlCenterEventStore.Record(
-                    ControlCenterEventSeverity.Info,
-                    "connection",
-                    "Talvora bağlantısı yenilendi",
-                    "Talvora Dev ve Admin güvenli MCP tünelleri yeniden bağlandı.",
-                    state.Registration.Id,
-                    "connection:talvora:manual-reconnect-success");
             }
             else
             {
@@ -199,7 +175,8 @@ internal sealed partial class ControlCenterWindow
         if (string.Equals(
                 state.Registration.Id,
                 "talvora",
-                StringComparison.OrdinalIgnoreCase))
+                StringComparison.OrdinalIgnoreCase) &&
+            state.Health == ControlCenterHealthState.Ready)
         {
             await ExecuteTalvoraReconnectFromDetailAsync();
             return;
@@ -218,7 +195,7 @@ internal sealed partial class ControlCenterWindow
 
         SetDetailOperationBusy(
             true,
-            "Güvenli MCP tüneli (Secure MCP Tunnel) yeniden bağlanıyor...");
+            "Talvora Dev ve Admin ChatGPT bağlantıları yeniden bağlanıyor...");
 
         try
         {
@@ -226,7 +203,7 @@ internal sealed partial class ControlCenterWindow
             await ControlCenterLifecycleService
                 .ReconnectTalvoraConnectionsAsync(_lifetimeCts.Token);
             SetDetailOperationBanner(
-                "Bağlantı yenilendi. Talvora MCP hazır.",
+                "Dev ve Admin ChatGPT bağlantıları yenilendi.",
                 success: true);
             ControlCenterEventStore.Record(
                 ControlCenterEventSeverity.Info,
@@ -283,9 +260,9 @@ internal sealed partial class ControlCenterWindow
             true,
             operation switch
             {
-                ManagedMcpLifecycleOperation.Start => "MCP başlatılıyor...",
-                ManagedMcpLifecycleOperation.Stop => "MCP durduruluyor...",
-                _ => "MCP yeniden başlatılıyor...",
+                ManagedMcpLifecycleOperation.Start => "Bileşen başlatılıyor...",
+                ManagedMcpLifecycleOperation.Stop => "Bileşen durduruluyor...",
+                _ => "Bileşen yeniden başlatılıyor...",
             });
 
         try
@@ -383,9 +360,9 @@ internal sealed partial class ControlCenterWindow
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Title = $"{registration.DisplayName} durdurulsun mu?",
             Content =
-                "Yerel MCP ve ona ait tünel birlikte durdurulacak. " +
+                BuildStopConfirmationText(registration) + " " +
                 "Bu Windows oturumunda siz yeniden Başlat seçeneğini kullanana kadar " +
-                "otomatik kurtarma bu MCP'yi yeniden başlatmayacak.",
+                "otomatik kurtarma bu bileşeni yeniden başlatmayacak.",
             PrimaryButtonText = "Durdur",
             PrimaryButtonAppearance = ControlAppearance.Danger,
             CloseButtonText = "Vazgeç",
@@ -464,9 +441,11 @@ internal sealed partial class ControlCenterWindow
             ConfigureButton(
                 _detailPrimaryActionButton,
                 state.Health == ControlCenterHealthState.Ready
-                    ? "Bağlantıyı yenile"
-                    : "Yeniden bağlan",
-                SymbolRegular.PlugConnected20);
+                    ? "Dev/Admin bağlantılarını yenile"
+                    : "Servisi yeniden başlat",
+                state.Health == ControlCenterHealthState.Ready
+                    ? SymbolRegular.PlugConnected20
+                    : SymbolRegular.ArrowClockwise20);
         }
         else
         {
@@ -481,6 +460,30 @@ internal sealed partial class ControlCenterWindow
         }
 
         _detailPrimaryActionButton.IsEnabled = !_detailOperationInProgress;
+    }
+
+    private static string BuildStopConfirmationText(
+        ManagedMcpRegistration registration)
+    {
+        if (string.Equals(
+                registration.Id,
+                "talvora",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return "Talvora Core Service ile Dev ve Admin ChatGPT bağlantıları birlikte durdurulacak.";
+        }
+
+        if (string.Equals(
+                registration.Id,
+                "gitea",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return "Gitea MCP zinciri ve güvenli bağlantısı birlikte durdurulacak.";
+        }
+
+        return registration.Tunnel is not null
+            ? $"{registration.DisplayName} ve güvenli bağlantısı birlikte durdurulacak."
+            : $"{registration.DisplayName} çalışma bileşenleri durdurulacak.";
     }
 
     private static void ConfigureButton(

@@ -131,6 +131,7 @@ internal sealed partial class ControlCenterWindow
             Margin = new Thickness(0, 3, 0, 0),
             Foreground = SecondaryTextBrush,
             FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
         });
         controlsGrid.Children.Add(controlCopy);
 
@@ -517,6 +518,9 @@ internal sealed partial class ControlCenterWindow
                     cancellationToken: _lifetimeCts.Token);
 
             await Task.WhenAll(componentTask, versionTask, eventTask);
+            var componentStates = await componentTask;
+            var version = await versionTask;
+            var recentEvents = await eventTask;
 
             if (_selectedMcp is null ||
                 !string.Equals(
@@ -527,11 +531,11 @@ internal sealed partial class ControlCenterWindow
                 return;
             }
 
-            _detailVersion.Text = versionTask.Result;
-            RenderComponentStates(componentTask.Result);
+            _detailVersion.Text = version;
+            RenderComponentStates(componentStates);
             RenderDetailRecentEvents(
                 selected.Registration.Id,
-                eventTask.Result);
+                recentEvents);
             UpdateDetailActionState(_selectedMcp);
         }
         catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
@@ -819,10 +823,21 @@ internal sealed partial class ControlCenterWindow
         _detailScroller.Visibility = Visibility.Collapsed;
         _memoryScroller.Visibility = Visibility.Collapsed;
         _dashboardScroller.Visibility = Visibility.Visible;
+        if (_snapshot is not null)
+        {
+            ApplyDashboardFilter();
+            RefreshSetupCard();
+        }
         _dashboardScroller.ScrollToTop();
         if (IsVisible && !_applicationExitRequested)
         {
             _refreshTimer.Start();
+            if (!_smokeMode)
+            {
+                _ = Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => _ = RefreshDashboardAsync());
+            }
         }
         UpdateRawLogTimerState();
     }
