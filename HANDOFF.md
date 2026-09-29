@@ -1,6 +1,57 @@
 # Talvora MCP — Canonical Handoff
 
-## CURRENT — 2026-09-29 23:26+03:00 — Storage/tunnel/Penpot deep re-audit FINAL closeout
+## CURRENT — 2026-09-30 01:13+03:00 — Storage/tunnel/Penpot FINAL edge re-audit / live closeout
+
+Bu bölüm kanoniktir. Kullanıcının isteğiyle Faz A→E tekrar sıfırdan yürütüldü ve önceki GREEN sonuçlar doğru varsayılmadı. Bu son tur #250–#263 arasında yeni edge-case bug/kalite kusurları buldu; hepsi düzeltildi, test edildi, iki remote'a push edildi ve canonical installer ile canlıya alındı.
+
+### Repo / exact-installed runtime
+
+- Runtime-affecting commit: `d3fd95c8f76b4d0374ad6a0b459b40c252374882` — `fix: close storage maintenance edge cases`.
+- Runtime commit push öncesi/sonrası `HEAD = origin/main = github/main = d3fd95c...`; çalışma ağacı clean.
+- Canonical installer: **342,601,999 bytes**; SHA-256 `EAB89EDA66A60D32AA544A8006F091E8A485B012CC7703E14D9A25058C668EC7`; manifest source tam `d3fd95c...`.
+- Exact-installed canlı runtime `sourceCommit=d3fd95c...`, `LocalSystem / S-1-5-18`, deploy sonrası PID 32748.
+- Talvora, Gitea ve Caddy servisleri `Running / Automatic`.
+- Dev/Admin tunnel health: schema 1, live/ready true, lifecycle `running`, runtime `0.0.15+a390c168ff1b2d14e73a95991c186c6aba3ff5a0`.
+- Installed surface-policy live smoke: GREEN.
+- Installed managed probes: Dev `Ready=True / BrowserSmokePassed=True / ToolCount=203`; Admin `Ready=True / BrowserSmokePassed=True / ToolCount=84`; tunnel live/ready ve critical degradation false.
+- Installed Tray `--self-test`: GREEN (`ManagedMcpCount=5; FocusedTalvoraCount=2`).
+- Installed Penpot supervisor, kurulu `Talvora.dll` canonical const ile byte-for-byte eşit; SHA-256 `DCED534E519045D5F1DCD5BE59EC39F6E7E5F47EEACB2448930D393C3B07CAB4`.
+- Installed Windows PowerShell 5.1 Penpot rolling/hard-bound/child-stream self-test: `PENPOT_SUPERVISOR_ROLLING_SELFTEST_GREEN`, exit 0. On-demand Penpot scheduled task idle durumda Disabled.
+
+### Bu son tekrar taramada kapanan #250–#263
+
+- #250 partial cancellation sonrası stale directory yaşının now'a sıçraması ve retention'ın ertelenmesi kapatıldı.
+- #251 separatorless temp-prefix yanlış eşleşmesi + trusted-root reparse-chain güvenliği kapatıldı.
+- #252 user-writable tunnel/protocol/registry metadata bounded same-handle sync/async JSON okumasına geçirildi.
+- #253 installer immediate/reboot/version-root cleanup cancellation/reparse/count açısından bounded hale getirildi; gerçek junction fixture eski recursive traversal'ı doğruladı.
+- #254 interrupted update journal recovery bounded ve missing nested config alanlarına karşı null-safe oldu.
+- #255 stale scan sonrası fresh dosya eklenmesiyle aktif verinin silinebildiği freshness TOCTOU gerçek fixture ile RED→GREEN kapatıldı.
+- #256 Penpot locked `.1` archive altında child logun 64-byte sınırı 96 byte'a aşması kapatıldı; rotation blocked ise bytes observable biçimde drop edilir, disk bound aşılmaz.
+- #257 Penpot orphan sweep yalnız command-line marker yerine canonical `node.exe` + exact server/vite marker şartına alındı; benign `cmd.exe` yanlış eşleşme fixture'ı kapandı.
+- #258 registry recovery/ownership manifest store'ları 512 KiB/file + 4096-entry + canonical `v2-*.json` sınırlarına alındı; fallback limit/corruption hataları startup recovery'yi kesmez.
+- #259 blank required registry alanlarının `ArgumentException` ile fallback zincirinden kaçması `InvalidDataException` sınıflandırmasıyla kapatıldı.
+- #260 persisted registry null collection/nested shape acceptance kapatıldı.
+- #261 fixed tunnel archive temp path + `FileMode.Create` hardlink redirection gerçek NTFS fixture ile doğrulandı; GUID temp + `CreateNew` ile kapatıldı.
+- #262 Penpot cleanup/diagnostic failure containment ve pressure log spam'i iyileştirildi; pressure raporu en fazla dakikada bir, delta birikimli.
+- #263 prefix hardening sonrası eski runtime self-test fixture drift'i real current-user RED→GREEN kapatıldı.
+
+### Final kalite / storage acceptance
+
+- Context7 quality gate, modernization, third-party, tunnel v0.0.15/update/pending, storage source+behavior, UI responsiveness, Penpot on-demand, native installer, Gitea readiness, focused surface ve ProcessRunner regressions: GREEN.
+- Full solution Release build: **0 warning / 0 error**.
+- `dotnet format Talvora.slnx analyzers --verify-no-changes`: exit 0.
+- Diff hygiene: 105,821-character reviewed diff; trailing whitespace/conflict marker 0.
+- Installed `--storage-maintenance`: `DeletedEntries=0; ReclaimedBytes=0; RotatedTunnelLogs=0`.
+- `C:\Windows\Temp` Talvora candidate=0; SYSTEM profile temp candidate=0. User tempte repo ownership'i kanıtlanmamış `talvora-gh-auth-status.txt` bilinçli olarak bırakıldı.
+- TunnelClient versions: yalnız `0.0.15`; Dev log 985,236 byte / Admin log 1,040,693 byte, 32 MiB threshold altında.
+- Registry recovery manifests: canonical recovery 5, ownership 5; 4096 ceiling çok altında.
+- Penpot logs: 16 legacy dosya / 1,281,322 byte; bounded retention korunuyor.
+
+### Sonraki oturum
+
+Bu storage/tunnel/Penpot edge-audit kapalıdır. #230–#263 yeni kanıt veya gerçek regresyon olmadan yeniden açılmamalı. Bu bölümden sonra yapılacak docs-only closeout commit runtime fingerprint değildir; sırf docs HEAD ilerledi diye `d3fd95c...` runtime'ı yeniden deploy etme.
+
+## PREVIOUS — 2026-09-29 23:26+03:00 — Storage/tunnel/Penpot deep re-audit FINAL closeout
 
 Bu bölüm kanoniktir ve aşağıdaki önceki checkpoint'in yerini alır. Kullanıcının isteğiyle ilk devir promptu yeniden okunarak audit Faz A→E sıfırdan tekrar yürütüldü; önceki GREEN sonuçlar varsayılmadı.
 

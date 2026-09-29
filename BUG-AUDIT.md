@@ -2,7 +2,7 @@
 
 ## CURRENT — 2026-09-29 — Storage maintenance deep commercial-quality audit
 
-Status: FINAL EDGE RE-AUDIT IN CLOSEOUT. Kullanıcının isteğiyle Faz A-E bir kez daha sıfırdan tarandı. Önceki #230-#249 kapalı kaldı; bu yeni tur #250-#263 aralığında ek data-safety/boundedness/lifecycle/test-contract kusurları yakaladı. Kaynak/regression/build/analyzer düzeltmeleri GREEN; canonical commit/deploy/live acceptance bu bölümün sonunda güncellenecek.
+Status: **FINAL LIVE VERIFIED.** Kullanıcının isteğiyle Faz A-E bir kez daha sıfırdan tarandı. Önceki #230-#249 kapalı kaldı; yeni #250-#263 bulgularının tamamı düzeltildi, runtime commit `d3fd95c...` iki remote'a push edildi, canonical installer ile SYSTEM deploy edildi ve installed live acceptance GREEN.
 
 - #230 **FIXED / BEHAVIOR VERIFIED** — TEMP discovery now uses exact-name/prefix-scoped enumeration and covers current crash leftovers plus nested `Talvora\Structural` / `semantic-worker` residue. A 100,000-unrelated-entry fixture removed only the stale owned candidate in 17 ms; a 100,001-entry owned tree hit the traversal ceiling and was fail-closed in 91 ms.
 - #231 **FIXED / SOURCE VERIFIED** — SYSTEM TEMP maintenance now requires the matching top-level candidate itself to be LocalSystem-owned and rejects reparse roots before owner inspection, so a matching interactive-user name is not sufficient for deletion.
@@ -43,12 +43,12 @@ Final source acceptance for #250-#263 before runtime closeout: Context7 quality 
 
 Closed false positives: the SYSTEM `PeriodicTimer` loop is sequential/single-consumer, so there is no six-hour overlap defect; recursive cleanup already refuses reparse traversal. Non-disruptive diagnostic copy/truncate is intentionally preferred over stopping an otherwise healthy idle tunnel; the append-writer assumption is verified against the pinned v0.0.15 source.
 
-Final live acceptance for #248/#249: canonical installer SHA-256 `DF65680251E727D25E634239C0548DA39E870C16E30E600DEE5EC20D16A12DF0`; exact-installed runtime `551f3b4...`; installed Windows PowerShell 5.1 rolling self-test GREEN; installed supervisor byte-for-byte canonical; surface policy live GREEN; Dev 203/Admin 84 managed probes Ready + BrowserSmokePassed; installed Tray self-test GREEN; storage command 0/0/0.
+Final live acceptance for #230-#263: runtime commit `d3fd95c8f76b4d0374ad6a0b459b40c252374882`; canonical installer 342,601,999 bytes / SHA-256 `EAB89EDA66A60D32AA544A8006F091E8A485B012CC7703E14D9A25058C668EC7`; exact-installed runtime same commit under LocalSystem; Talvora/Gitea/Caddy Running Automatic; surface policy live GREEN; Dev 203/Admin 84 managed probes Ready + BrowserSmokePassed; installed Tray self-test GREEN; installed Penpot supervisor canonical SHA-256 `DCED534E519045D5F1DCD5BE59EC39F6E7E5F47EEACB2448930D393C3B07CAB4` and Windows PowerShell 5.1 self-test GREEN; installed storage command 0/0/0.
 
-Last updated: 2026-09-29
+Last updated: 2026-09-30
 Branch: main
-Current repository runtime-affecting committed HEAD: `551f3b4ae03c8b8b5e6f1fc74d664b39c52d2931` — final storage/tunnel/Penpot re-audit runtime.
-Current exact-installed audit runtime: `551f3b4ae03c8b8b5e6f1fc74d664b39c52d2931`
+Current repository runtime-affecting committed HEAD: `d3fd95c8f76b4d0374ad6a0b459b40c252374882` — final storage/tunnel/Penpot edge-audit runtime.
+Current exact-installed audit runtime: `d3fd95c8f76b4d0374ad6a0b459b40c252374882`
 Canonical exact-installed tool count: 240 unique tools
 Status: historical #121–#229 remediation remains closed/test-verified. Current focused surface contract is Full=240, Development=203, Administration=84, Shared=47. Release builds, Context7/modernization gates, source focused regression and installed live surface smoke are GREEN.
 
