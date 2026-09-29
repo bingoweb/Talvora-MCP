@@ -37,7 +37,11 @@ internal sealed record ManagedMcpTunnelRuntimeStatus(
     bool ProcessRunning,
     bool Healthy,
     bool IdentityMatches,
-    string Detail);
+    string Detail,
+    string? HealthDetailsUrl = null,
+    string? McpHealthUrl = null,
+    string? UiUrl = null,
+    string? RuntimeState = null);
 
 internal static partial class ManagedMcpTunnelProvisioningService
 {
@@ -714,6 +718,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(mcpId);
         _ = RuntimeStatusCache.TryRemove(mcpId, out _);
+        ManagedMcpTunnelHealthService.Invalidate(mcpId);
     }
 
     public static async Task<ManagedMcpTunnelRuntimeStatus> GetRuntimeStatusAsync(
@@ -871,7 +876,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
             "tunnel_0123456789abcdef0123456789abcdef",
             registration.Endpoint,
             @"C:\Temp\tunnel-client.exe",
-            "v0.0.14",
+            "v0.0.15",
             @"C:\Temp\sample\state",
             DateTimeOffset.UtcNow.ToString("O"));
 
@@ -1317,15 +1322,6 @@ internal static partial class ManagedMcpTunnelProvisioningService
             var latestTag = await GetLatestTunnelClientTagAsync(
                 cancellationToken).ConfigureAwait(false);
 
-            if (string.Equals(
-                    config.TunnelClientVersion,
-                    latestTag,
-                    StringComparison.OrdinalIgnoreCase) &&
-                File.Exists(config.TunnelClient))
-            {
-                return config;
-            }
-
             var architecture = RuntimeInformation.OSArchitecture switch
             {
                 Architecture.X64 => "amd64",
@@ -1333,6 +1329,19 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 _ => throw new PlatformNotSupportedException(
                     $"OpenAI tunnel-client Windows architecture desteklenmiyor: {RuntimeInformation.OSArchitecture}"),
             };
+
+            if (string.Equals(
+                    config.TunnelClientVersion,
+                    latestTag,
+                    StringComparison.OrdinalIgnoreCase) &&
+                File.Exists(config.TunnelClient) &&
+                HasCompleteTunnelClientPackage(
+                    config.TunnelClient,
+                    latestTag,
+                    architecture))
+            {
+                return config;
+            }
 
             var archiveName =
                 $"tunnel-client-{latestTag}-windows-{architecture}.zip";
@@ -1374,13 +1383,26 @@ internal static partial class ManagedMcpTunnelProvisioningService
             var destination = Path.Combine(
                 versionRoot,
                 "tunnel-client.exe");
-            var tempDestination =
-                destination + "." +
-                Guid.NewGuid().ToString("N") +
-                ".tmp";
+            var packageBaseName =
+                Path.GetFileNameWithoutExtension(archiveName);
+            var expectedFiles = new[]
+            {
+                "tunnel-client.exe",
+                "cloudflared.exe",
+                "cloudflared-manifest.json",
+                "LICENSE",
+                "NOTICE",
+                packageBaseName + "-licenses.txt",
+                packageBaseName + ".spdx.json",
+            };
+            var stagingRoot =
+                versionRoot + ".stage." +
+                Guid.NewGuid().ToString("N");
 
             try
             {
+                Directory.CreateDirectory(stagingRoot);
+
                 using var archiveStream =
                     new MemoryStream(archiveBytes);
                 using var archive =
@@ -1389,38 +1411,67 @@ internal static partial class ManagedMcpTunnelProvisioningService
                         ZipArchiveMode.Read,
                         leaveOpen: false);
 
-                var entry = archive.Entries.FirstOrDefault(candidate =>
-                    string.Equals(
-                        Path.GetFileName(candidate.FullName),
-                        "tunnel-client.exe",
-                        StringComparison.OrdinalIgnoreCase))
-                    ?? throw new InvalidDataException(
-                        "Official tunnel-client archive does not contain tunnel-client.exe.");
-
-                await using (var source = entry.Open())
-                await using (var target = new FileStream(
-                    tempDestination,
-                    FileMode.Create,
-                    FileAccess.Write,
-                    FileShare.None,
-                    bufferSize: 64 * 1024,
-                    useAsync: true))
+                foreach (var fileName in expectedFiles)
                 {
+                    var entry = archive.Entries.FirstOrDefault(candidate =>
+                        string.Equals(
+                            Path.GetFileName(candidate.FullName),
+                            fileName,
+                            StringComparison.OrdinalIgnoreCase));
+
+                    if (entry is null)
+                    {
+                        throw new InvalidDataException(
+                            $"Official tunnel-client archive does not contain {fileName}.");
+                    }
+
+                    var stagedPath = Path.Combine(
+                        stagingRoot,
+                        fileName);
+                    await using var source = entry.Open();
+                    await using var target = new FileStream(
+                        stagedPath,
+                        FileMode.Create,
+                        FileAccess.Write,
+                        FileShare.None,
+                        bufferSize: 64 * 1024,
+                        useAsync: true);
                     await source.CopyToAsync(
                         target,
                         cancellationToken).ConfigureAwait(false);
                 }
 
-                File.Move(
-                    tempDestination,
-                    destination,
-                    overwrite: true);
+                foreach (var fileName in expectedFiles)
+                {
+                    var stagedPath = Path.Combine(
+                        stagingRoot,
+                        fileName);
+                    var finalPath = Path.Combine(
+                        versionRoot,
+                        fileName);
+
+                    if (File.Exists(finalPath) &&
+                        FilesHaveSameSha256(
+                            stagedPath,
+                            finalPath))
+                    {
+                        File.Delete(stagedPath);
+                        continue;
+                    }
+
+                    File.Move(
+                        stagedPath,
+                        finalPath,
+                        overwrite: true);
+                }
             }
             finally
             {
                 try
                 {
-                    File.Delete(tempDestination);
+                    Directory.Delete(
+                        stagingRoot,
+                        recursive: true);
                 }
                 catch (Exception ex) when (
                     ex is IOException or
@@ -1463,6 +1514,54 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
             throw;
         }
+    }
+
+    private static bool HasCompleteTunnelClientPackage(
+        string executablePath,
+        string releaseTag,
+        string architecture)
+    {
+        var versionRoot = Path.GetDirectoryName(
+            Path.GetFullPath(executablePath));
+        if (string.IsNullOrWhiteSpace(versionRoot))
+        {
+            return false;
+        }
+
+        if (!Version.TryParse(
+                releaseTag.TrimStart('v'),
+                out var releaseVersion) ||
+            releaseVersion < new Version(0, 0, 15))
+        {
+            return File.Exists(executablePath);
+        }
+
+        var packageBaseName =
+            $"tunnel-client-{releaseTag}-windows-{architecture}";
+        var expectedFiles = new[]
+        {
+            "tunnel-client.exe",
+            "cloudflared.exe",
+            "cloudflared-manifest.json",
+            "LICENSE",
+            "NOTICE",
+            packageBaseName + "-licenses.txt",
+            packageBaseName + ".spdx.json",
+        };
+
+        return expectedFiles.All(fileName =>
+            File.Exists(Path.Combine(versionRoot, fileName)));
+    }
+
+    private static bool FilesHaveSameSha256(
+        string firstPath,
+        string secondPath)
+    {
+        using var first = File.OpenRead(firstPath);
+        using var second = File.OpenRead(secondPath);
+        return SHA256.HashData(first)
+            .AsSpan()
+            .SequenceEqual(SHA256.HashData(second));
     }
 
     private static async Task<string> GetLatestTunnelClientTagAsync(
@@ -1607,6 +1706,18 @@ internal static partial class ManagedMcpTunnelProvisioningService
         var ready = TryGetTopLevelBoolean(
             root,
             "ready");
+        var healthDetailsUrl = TryGetTopLevelString(
+            root,
+            "health_details_url");
+        var mcpHealthUrl = TryGetTopLevelString(
+            root,
+            "mcp_health_url");
+        var uiUrl = TryGetTopLevelString(
+            root,
+            "ui_url");
+        var runtimeState = TryGetTopLevelString(
+            root,
+            "runtime_state");
 
         var expectedProfilePath = Path.Combine(
             config.StateRoot,
@@ -1643,7 +1754,11 @@ internal static partial class ManagedMcpTunnelProvisioningService
             processRunning,
             healthy,
             identityMatches,
-            detail);
+            detail,
+            healthDetailsUrl,
+            mcpHealthUrl,
+            uiUrl,
+            runtimeState);
     }
 
     private static string? TryGetTopLevelString(

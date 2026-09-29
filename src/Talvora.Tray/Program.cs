@@ -195,6 +195,73 @@ internal static class Program
         if (args.Length >= 1 &&
             string.Equals(
                 args[0],
+                "--managed-mcp-tunnel-update",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var managedMcpId =
+                    args.Length > 1 && !string.IsNullOrWhiteSpace(args[1])
+                        ? args[1]
+                        : "talvora-dev";
+
+                var registry = ManagedMcpRegistryCoordinator
+                    .LoadOrRecoverAsync(CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                var registration = registry.Mcps.FirstOrDefault(entry =>
+                    string.Equals(
+                        entry.Id,
+                        managedMcpId,
+                        StringComparison.OrdinalIgnoreCase))
+                    ?? throw new InvalidOperationException(
+                        $"Managed MCP kaydı bulunamadı: {managedMcpId}");
+
+                var updated = ManagedMcpTunnelProvisioningService
+                    .EnsureLatestClientAndReconnectIfNeededAsync(
+                        registration,
+                        CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+
+                ManagedMcpTunnelProvisioningService
+                    .InvalidateRuntimeStatusCache(registration.Id);
+                var runtime = ManagedMcpTunnelProvisioningService
+                    .GetRuntimeStatusAsync(
+                        registration,
+                        CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                var health = ManagedMcpTunnelHealthService
+                    .GetSnapshotAsync(
+                        registration,
+                        CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+
+                TrayLog.Write(
+                    $"Managed MCP tunnel update completed. MCP={registration.Id}; RuntimeChanged={updated}; Ready={runtime.Ready}; " +
+                    $"HealthSchema={health?.SchemaVersion.ToString() ?? "n/a"}; TunnelRuntime={health?.RuntimeVersion ?? "n/a"}; " +
+                    $"CriticalDegradation={health?.HasCriticalDegradation.ToString() ?? "n/a"}.");
+
+                return runtime.Ready &&
+                       (health is null ||
+                        (health.Live &&
+                         health.Ready &&
+                         !health.HasCriticalDegradation))
+                    ? 0
+                    : 1;
+            }
+            catch (Exception ex)
+            {
+                TrayLog.Write("Managed MCP tunnel update command failed", ex);
+                return 1;
+            }
+        }
+
+        if (args.Length >= 1 &&
+            string.Equals(
+                args[0],
                 "--managed-mcp-probe",
                 StringComparison.OrdinalIgnoreCase))
         {
@@ -229,11 +296,31 @@ internal static class Program
                 var smokeRequired =
                     registration.ProtocolProbe?.BrowserSmokeRequired == true;
 
+                ManagedMcpTunnelHealthSnapshot? tunnelHealth = null;
+                if (registration.Tunnel is { Required: true })
+                {
+                    ManagedMcpTunnelProvisioningService
+                        .InvalidateRuntimeStatusCache(registration.Id);
+                    tunnelHealth = ManagedMcpTunnelHealthService
+                        .GetSnapshotAsync(
+                            registration,
+                            CancellationToken.None)
+                        .GetAwaiter()
+                        .GetResult();
+                }
+
                 TrayLog.Write(
-                    $"Managed MCP probe completed. MCP={registration.Id}; Ready={probe.Ready}; BrowserSmokePassed={probe.BrowserSmokePassed}; ToolCount={probe.ToolCount}; Detail={probe.Detail}");
+                    $"Managed MCP probe completed. MCP={registration.Id}; Ready={probe.Ready}; BrowserSmokePassed={probe.BrowserSmokePassed}; ToolCount={probe.ToolCount}; " +
+                    $"TunnelHealthSchema={tunnelHealth?.SchemaVersion.ToString() ?? "n/a"}; TunnelRuntime={tunnelHealth?.RuntimeVersion ?? "n/a"}; " +
+                    $"TunnelLive={tunnelHealth?.Live.ToString() ?? "n/a"}; TunnelReady={tunnelHealth?.Ready.ToString() ?? "n/a"}; " +
+                    $"TunnelCriticalDegradation={tunnelHealth?.HasCriticalDegradation.ToString() ?? "n/a"}; Detail={probe.Detail}");
 
                 return probe.Ready &&
-                       (!smokeRequired || probe.BrowserSmokePassed)
+                       (!smokeRequired || probe.BrowserSmokePassed) &&
+                       (tunnelHealth is null ||
+                        (tunnelHealth.Live &&
+                         tunnelHealth.Ready &&
+                         !tunnelHealth.HasCriticalDegradation))
                     ? 0
                     : 1;
             }

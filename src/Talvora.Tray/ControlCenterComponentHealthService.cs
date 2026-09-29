@@ -42,8 +42,178 @@ internal static class ControlCenterComponentHealthService
         var tasks = registration.Components.Select(component =>
             GetStateAsync(registration, component, protocolProbe, cancellationToken));
 
-        return await Task.WhenAll(tasks);
+        var configuredStates = await Task.WhenAll(tasks);
+        if (registration.Tunnel is not { Required: true })
+        {
+            return configuredStates;
+        }
+
+        var tunnelDiagnostics = await GetTunnelDiagnosticStatesAsync(
+            registration,
+            cancellationToken);
+        if (tunnelDiagnostics.Count == 0)
+        {
+            return configuredStates;
+        }
+
+        return configuredStates
+            .Concat(tunnelDiagnostics)
+            .ToArray();
     }
+
+    private static async Task<IReadOnlyList<ManagedMcpComponentState>>
+        GetTunnelDiagnosticStatesAsync(
+            ManagedMcpRegistration registration,
+            CancellationToken cancellationToken)
+    {
+        try
+        {
+            var snapshot =
+                await ManagedMcpTunnelHealthService.GetSnapshotCachedAsync(
+                    registration,
+                    cancellationToken);
+            if (snapshot is null)
+            {
+                return [];
+            }
+
+            var states = new List<ManagedMcpComponentState>
+            {
+                new(
+                    new ManagedMcpComponentRegistration
+                    {
+                        Id = "tunnel-runtime-health",
+                        DisplayName = "Tunnel runtime",
+                        Kind = "tunnel-health",
+                        Required = false,
+                    },
+                    snapshot.Live && snapshot.Ready
+                        ? ControlCenterHealthState.Ready
+                        : ControlCenterHealthState.Attention,
+                    snapshot.Live && snapshot.Ready
+                        ? "Sağlıklı"
+                        : "Dikkat gerekiyor",
+                    BuildTunnelRuntimeDetail(snapshot)),
+            };
+
+            foreach (var component in snapshot.Components)
+            {
+                if (!ShouldExposeTunnelHealthComponent(component))
+                {
+                    continue;
+                }
+
+                states.Add(ToManagedTunnelHealthState(component));
+            }
+
+            return states;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (
+            ex is HttpRequestException or
+            JsonException or
+            InvalidDataException or
+            InvalidOperationException or
+            UnauthorizedAccessException)
+        {
+            TrayLog.Write(
+                $"Detailed tunnel health unavailable. MCP={registration.Id}",
+                ex);
+            return [];
+        }
+    }
+
+    private static ManagedMcpComponentState ToManagedTunnelHealthState(
+        ManagedMcpTunnelHealthComponentSnapshot component)
+    {
+        var health = component.Status.ToLowerInvariant() switch
+        {
+            "ok" => ControlCenterHealthState.Ready,
+            "degraded" => ControlCenterHealthState.Attention,
+            "unknown" => ControlCenterHealthState.Checking,
+            "disabled" => ControlCenterHealthState.Ready,
+            _ => ControlCenterHealthState.Checking,
+        };
+        var statusText = component.Status.ToLowerInvariant() switch
+        {
+            "ok" => "Sağlıklı",
+            "degraded" => "Dikkat gerekiyor",
+            "unknown" => "Gözlemlenmedi",
+            "disabled" => "Devre dışı",
+            _ => "Durum bilinmiyor",
+        };
+
+        return new ManagedMcpComponentState(
+            new ManagedMcpComponentRegistration
+            {
+                Id = "tunnel-health-" + component.Id,
+                DisplayName = GetTunnelHealthDisplayName(component.Id),
+                Kind = "tunnel-health",
+                Name = component.Id,
+                Required =
+                    component.Critical &&
+                    string.Equals(
+                        component.Status,
+                        "degraded",
+                        StringComparison.OrdinalIgnoreCase),
+            },
+            health,
+            statusText,
+            component.Detail);
+    }
+
+    private static bool ShouldExposeTunnelHealthComponent(
+        ManagedMcpTunnelHealthComponentSnapshot component)
+    {
+        if (string.Equals(
+                component.Status,
+                "degraded",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return component.Id.ToLowerInvariant() is
+            "control-plane" or
+            "response-delivery" or
+            "queue" or
+            "dispatcher" or
+            "mcp";
+    }
+
+    private static string BuildTunnelRuntimeDetail(
+        ManagedMcpTunnelHealthSnapshot snapshot)
+    {
+        var version = string.IsNullOrWhiteSpace(snapshot.RuntimeVersion)
+            ? "sürüm bilinmiyor"
+            : "v" + snapshot.RuntimeVersion.TrimStart('v');
+        var lifecycle = string.IsNullOrWhiteSpace(snapshot.RuntimeLifecycle)
+            ? "lifecycle bilinmiyor"
+            : snapshot.RuntimeLifecycle;
+
+        return
+            $"OpenAI tunnel-client {version} • {lifecycle} • " +
+            $"health schema v{snapshot.SchemaVersion} • " +
+            $"Live={snapshot.Live} • Ready={snapshot.Ready}.";
+    }
+
+    private static string GetTunnelHealthDisplayName(string id) =>
+        id.ToLowerInvariant() switch
+        {
+            "control-plane" => "Control plane",
+            "response-delivery" => "Yanıt teslimi",
+            "queue" => "İstek kuyruğu",
+            "dispatcher" => "İş dağıtıcı",
+            "mcp" => "Tünel MCP gözlemi",
+            "oauth" => "OAuth discovery",
+            "proxy" => "Proxy",
+            "cloudflared" => "Cloudflared",
+            "harpoon" => "Harpoon",
+            _ => id,
+        };
 
     private static Task<ManagedMcpComponentState> GetStateAsync(
         ManagedMcpRegistration registration,

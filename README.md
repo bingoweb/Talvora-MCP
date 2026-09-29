@@ -133,6 +133,7 @@ It provides:
 - live health for Talvora Core, Talvora Dev, Talvora Admin and managed integrations;
 - clear component roles instead of treating every connection as another service;
 - start, stop and restart lifecycle actions;
+- OpenAI tunnel-client v0.0.15 component health for control-plane polling, response delivery, queue pressure, dispatcher activity and tunnel-side MCP observations;
 - an event timeline and redacted raw-log view;
 - a Memory Inspector with search, filtering, provenance and semantic-health controls;
 - responsive desktop layout and keyboard/UI Automation support;
@@ -162,7 +163,7 @@ verify readiness
         verify again
 ~~~
 
-For example, if a secure tunnel is down while the local MCP remains healthy, Talvora reconnects the tunnel instead of restarting the service. The same approach is used for the Gitea chain: backend, proxy, MCP process and tunnel can be repaired independently before a full-chain restart is considered.
+For example, if a secure tunnel is down while the local MCP remains healthy, Talvora reconnects the tunnel instead of restarting the service. With tunnel-client v0.0.15, Control Center can also distinguish critical control-plane or response-delivery degradation from healthy queue/dispatcher activity and renew only the tunnel runtime when that narrower repair is sufficient. The same approach is used for the Gitea chain: backend, proxy, MCP process and tunnel can be repaired independently before a full-chain restart is considered.
 
 Manual stop intent is preserved; automatic repair does not silently undo a user's explicit stop decision.
 

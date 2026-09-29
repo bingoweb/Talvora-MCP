@@ -87,6 +87,9 @@ jobs:
           & ./tests/ThirdPartyNoticesSourceRegression.ps1
           if (-not $?) { throw 'Third-party notices regression failed.' }
 
+          & ./tests/TunnelClientV015IntegrationSourceRegression.ps1
+          if (-not $?) { throw 'Tunnel-client v0.0.15 integration regression failed.' }
+
           & ./tests/ControlCenterUiResponsivenessSourceRegression.ps1
           if (-not $?) { throw 'Control Center UI responsiveness regression failed.' }
 

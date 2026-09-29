@@ -326,6 +326,44 @@ internal static class ControlCenterRepairService
                         $"{registration.DisplayName} tüneli yeniden bağlanamadı; " +
                         $"yerel MCP/browser zinciri korunuyor: {refreshedTunnel.Detail}");
                 }
+
+                var tunnelHealth =
+                    await ManagedMcpTunnelHealthService.GetSnapshotAsync(
+                        registration,
+                        cancellationToken);
+                if (tunnelHealth is { HasCriticalDegradation: true })
+                {
+                    await ManagedMcpTunnelProvisioningService
+                        .DisconnectExistingAsync(
+                            registration,
+                            cancellationToken);
+                    await ManagedMcpTunnelProvisioningService
+                        .ConnectExistingAsync(
+                            registration,
+                            cancellationToken);
+
+                    var refreshedTunnel =
+                        await ManagedMcpTunnelProvisioningService
+                            .GetRuntimeStatusAsync(
+                                registration,
+                                cancellationToken);
+                    var refreshedHealth =
+                        await ManagedMcpTunnelHealthService.GetSnapshotAsync(
+                            registration,
+                            cancellationToken);
+
+                    if (refreshedTunnel.Ready &&
+                        refreshedHealth is not { HasCriticalDegradation: true })
+                    {
+                        return (
+                            "Yalnız tünel çalışma katmanını yenile",
+                            $"{registration.DisplayName} tünel tanısı düzeldi",
+                            "Control-plane veya yanıt teslimi katmanındaki bozulma nedeniyle yalnız Secure MCP Tunnel runtime yenilendi; yerel MCP/browser zinciri korunuyor.");
+                    }
+
+                    throw new InvalidOperationException(
+                        $"{registration.DisplayName} ayrıntılı tünel sağlık sorunu hedefli runtime yenilemesiyle giderilemedi.");
+                }
             }
         }
 

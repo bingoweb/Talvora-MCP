@@ -852,6 +852,7 @@ internal sealed partial class ControlCenterWindow
             "browser-runtime" => "Tarayıcı çalışma zamanı",
             "browser-smoke" => "Gerçek tarayıcı doğrulaması",
             "tunnel" => "Tünel",
+            "tunnel-health" => "Tünel tanısı",
             _ => kind,
         };
 }
