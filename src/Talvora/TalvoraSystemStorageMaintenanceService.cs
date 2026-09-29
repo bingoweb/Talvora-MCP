@@ -73,6 +73,17 @@ internal sealed class TalvoraSystemStorageMaintenanceService(
 
                     try
                     {
+                        var testResult =
+                            TalvoraOwnedTempCleanup.CleanupTopLevel(
+                                root,
+                                DateTimeOffset.UtcNow -
+                                TestArtifactRetention,
+                                TalvoraOwnedTempCleanup.TestPrefixes,
+                                Array.Empty<string>(),
+                                cancellationToken);
+                        deleted += testResult.DeletedEntries;
+                        reclaimedBytes += testResult.ReclaimedBytes;
+
                         var result =
                             TalvoraOwnedTempCleanup.CleanupTopLevel(
                                 root,

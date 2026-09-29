@@ -22,6 +22,9 @@ internal static class TalvoraStorageMaintenanceService
     internal static readonly TimeSpan TemporaryArtifactRetention =
         TimeSpan.FromDays(7);
 
+    internal static readonly TimeSpan TestArtifactRetention =
+        TimeSpan.FromDays(2);
+
     private static readonly JsonSerializerOptions StorageJsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -31,7 +34,8 @@ internal static class TalvoraStorageMaintenanceService
     {
         if (TunnelLogRotationBytes != 32L * 1024 * 1024 ||
             TunnelQuietPeriod != TimeSpan.FromMinutes(5) ||
-            TemporaryArtifactRetention != TimeSpan.FromDays(7))
+            TemporaryArtifactRetention != TimeSpan.FromDays(7) ||
+            TestArtifactRetention != TimeSpan.FromDays(2))
         {
             throw new InvalidOperationException(
                 "Storage maintenance retention/rotation contract failed.");
@@ -175,6 +179,16 @@ internal static class TalvoraStorageMaintenanceService
 
         if (Directory.Exists(tempRoot))
         {
+            var testResult =
+                TalvoraOwnedTempCleanup.CleanupTopLevel(
+                    tempRoot,
+                    nowUtc - TestArtifactRetention,
+                    TalvoraOwnedTempCleanup.TestPrefixes,
+                    Array.Empty<string>(),
+                    cancellationToken);
+            deleted += testResult.DeletedEntries;
+            reclaimedBytes += testResult.ReclaimedBytes;
+
             var result =
                 TalvoraOwnedTempCleanup.CleanupTopLevel(
                     tempRoot,

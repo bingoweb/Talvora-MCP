@@ -41,11 +41,26 @@ Assert-Contains $sharedCleanup 'MaximumCleanupCandidatesPerRun = 512' 'shared cl
 Assert-Contains $sharedCleanup '"Talvora-Deploy-"' 'canonical deploy leftovers are explicitly allowlisted'
 Assert-Contains $sharedCleanup '"TalvoraReparse"' 'known source-edit regression leftovers are explicitly allowlisted'
 Assert-Contains $sharedCleanup 'IsOwnedTempName' 'Tray and SYSTEM maintenance share one allowlist policy'
+Assert-Contains $sharedCleanup 'TestPrefixes' 'test-only temporary artifacts have a dedicated retention class'
+Assert-Contains $sharedCleanup '"talvora-pipe-test"' 'pipe regression leftovers are classified as test-only artifacts'
 Assert-Contains $sharedCleanup 'root.Attributes & FileAttributes.ReparsePoint' 'a candidate root reparse point is never traversed'
 Assert-Contains $sharedCleanup 'DeleteTreeWithoutFollowingReparsePoints' 'cleanup never recursively follows reparse points'
 Assert-Contains $maintenance 'TalvoraOwnedTempCleanup.CleanupTopLevel' 'interactive-user cleanup delegates to the shared engine'
+Assert-Contains $maintenance 'TestArtifactRetention' 'interactive-user test artifacts have a two-day retention path'
+Assert-Contains $maintenance 'TalvoraOwnedTempCleanup.TestPrefixes' 'interactive-user cleanup applies the shared test classification'
+
+$matchIndex = $sharedCleanup.IndexOf(
+    'if (!MatchesOwnedName(name, prefixes, exactNames))',
+    [StringComparison]::Ordinal)
+$candidateBoundIndex = $sharedCleanup.IndexOf(
+    'if (++inspected > MaximumCleanupCandidatesPerRun)',
+    [StringComparison]::Ordinal)
+if ($matchIndex -lt 0 -or $candidateBoundIndex -le $matchIndex) {
+    throw 'Storage maintenance contract failed: candidate bound must count matched Talvora entries, not unrelated root entries'
+}
 
 Assert-Contains $systemMaintenance 'TimeSpan.FromDays(2)' 'system-owned test artifacts use a shorter retention window'
+Assert-Contains $systemMaintenance 'TalvoraOwnedTempCleanup.TestPrefixes' 'SYSTEM temp cleanup applies the shared test classification'
 Assert-Contains $systemMaintenance '"PenpotSmoke"' 'SYSTEM maintenance recognizes Penpot smoke data'
 Assert-Contains $systemMaintenance '"TestBrowserVisible"' 'SYSTEM maintenance recognizes Penpot browser smoke profiles'
 Assert-Contains $systemMaintenance 'TalvoraOwnedTempCleanup.TryDeleteStaleEntry' 'SYSTEM cleanup uses the shared reparse-safe deletion engine'

@@ -58,6 +58,36 @@ public static class TalvoraOwnedTempCleanup
         "talvora-npm-user.json",
     ];
 
+    public static IReadOnlyList<string> TestPrefixes { get; } =
+    [
+        "TalvoraReparse",
+        "TalvoraGiteaLifecycle",
+        "TalvoraBuildFingerprintAudit",
+        "TalvoraHttpResumeAudit",
+        "TalvoraArchiveJunctionAudit",
+        "Talvora.AtomicFileRegression.",
+        "Talvora-business-selftest-",
+        "TalvoraBug",
+        "TalvoraSourceAudit",
+        "TalvoraIdempotencyRetentionAudit",
+        "TalvoraWalTail",
+        "TalvoraRecoveryOwnershipAudit",
+        "Talvora-Audit-",
+        "TalvoraDependencyProvenanceAudit",
+        "Talvora-Structural-",
+        "Talvora Runner Test",
+        "talvora-audit-",
+        "talvora-analyzers",
+        "talvora-shared",
+        "talvora-tray",
+        "talvora-pipe-test",
+        "talvora-args",
+        "talvora-wrapper",
+        "talvora-processrunner",
+        "talvora-onearg",
+        "talvora-git-apply-probe",
+    ];
+
     public static bool IsOwnedTempName(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -94,15 +124,15 @@ public static class TalvoraOwnedTempCleanup
                      SearchOption.TopDirectoryOnly))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (++inspected > MaximumCleanupCandidatesPerRun)
-            {
-                break;
-            }
-
             var name = Path.GetFileName(entry);
             if (!MatchesOwnedName(name, prefixes, exactNames))
             {
                 continue;
+            }
+
+            if (++inspected > MaximumCleanupCandidatesPerRun)
+            {
+                break;
             }
 
             if (TryDeleteStaleEntry(
