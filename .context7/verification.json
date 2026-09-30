@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-30T15:46:42Z",
-  "scope": "Talvora desktop notification placement follow-up: the established v2 size/position contract is preserved while stale pinned coordinates from a disconnected monitor are normalized durably back to automatic placement. The correction does not alter the persisted preferred width/height or anchor evidence, and the existing responsive diff sizing behavior remains unchanged.",
+  "verifiedAtUtc": "2026-09-30T16:30:25Z",
+  "scope": "Talvora Control Center persisted-event deep-audit follow-up: structured event history retains the existing 500-record and field-length policy, while events.json restore now enforces an 8 MiB same-handle byte ceiling before JSON allocation. A real 32 MiB fixture demonstrated the pre-fix unbounded allocation and the post-fix bounded behavior without changing normal event semantics.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET/WPF guidance continues to support multi-monitor-aware desktop window handling and treating monitor bounds as the authority for where a restored window can be shown. Talvora therefore validates a persisted pinned anchor against the currently connected screen working areas; when that monitor is no longer present, it switches to automatic placement and now persists that normalized pin state while preserving the user's saved preferred width/height and the original anchor evidence for diagnostics. Existing bounded Channels, cancellation-aware IPC, accessibility metadata, ClientAreaAnimation/HighContrast handling, and ShowActivated=false behavior remain unchanged."
+      "verified": "Current .NET System.Text.Json guidance recommends stream-based JSON processing for large inputs and explicitly warns against unbounded buffer growth that can produce excessive allocations or OutOfMemoryException. Talvora Control Center therefore keeps its existing 500-record event-history semantics but restores events.json through the shared same-handle bounded JSON reader with an 8 MiB hard ceiling before allocation. The local 32 MiB fixture dropped from about 269 MB managed allocation / 168 MB working-set growth pre-fix to about 10.7 KB managed allocation / 2.8 MB working-set growth post-fix."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop",

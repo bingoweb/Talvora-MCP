@@ -37,6 +37,8 @@ internal sealed record ControlCenterEventDocument
 internal static class ControlCenterEventStore
 {
     private const int MaxRecords = 500;
+    private const int MaximumEventDocumentBytes =
+        8 * 1024 * 1024;
     private static readonly TimeSpan DedupWindow = TimeSpan.FromHours(6);
     private static readonly Mutex CrossProcessGate =
         new(false, @"Local\Talvora.ControlCenter.EventStore");
@@ -382,12 +384,14 @@ internal static class ControlCenterEventStore
 
         try
         {
-            return JsonSerializer.Deserialize<ControlCenterEventDocument>(
-                       File.ReadAllText(PathName, Encoding.UTF8),
-                       JsonOptions)
-                   ?? new ControlCenterEventDocument();
+            return JsonFileStore.ReadBounded<ControlCenterEventDocument>(
+                PathName,
+                MaximumEventDocumentBytes,
+                JsonOptions);
         }
-        catch (JsonException)
+        catch (Exception ex) when (
+            ex is JsonException or
+            InvalidDataException)
         {
             return new ControlCenterEventDocument();
         }

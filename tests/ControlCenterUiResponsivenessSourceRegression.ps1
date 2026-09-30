@@ -45,6 +45,9 @@ $dashboardService = Read-RepoText 'src\Talvora.Tray\ControlCenterDashboardServic
 $smoke = Read-RepoText 'src\Talvora.Tray\ControlCenterSmoke.cs'
 
 Assert-Contains $eventStore 'ReadRecentAsync' 'event history exposes an async WPF-safe read boundary'
+Assert-Contains $eventStore 'MaximumEventDocumentBytes\s*=\s*8\s*\*\s*1024\s*\*\s*1024' 'structured event history has an explicit 8 MiB persisted-document ceiling'
+Assert-Contains $eventStore 'JsonFileStore\.ReadBounded<ControlCenterEventDocument>' 'structured event history uses the shared same-handle bounded JSON reader'
+Assert-NotContains $eventStore 'File\.ReadAllText\(PathName' 'structured event history never allocates an unbounded persisted JSON string'
 Assert-Contains $eventsWindow 'await ControlCenterEventStore\.ReadRecentAsync' 'dashboard event history does not wait on the cross-process mutex on the dispatcher'
 Assert-Contains $mainWindow 'await RefreshEventsPanelAsync\(\)' 'dashboard refresh awaits the async event-history path'
 Assert-Contains $detailWindow 'Task\.WhenAll\(componentTask, versionTask, eventTask\)' 'detail health, version, and event history are gathered concurrently'
