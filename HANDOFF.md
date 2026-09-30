@@ -1,5 +1,43 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-09-30 19:38+03:00 — Control Center event-store bounded restore FINAL
+
+Bu bölüm en üst kanonik checkpoint'tir. Notification #280–#283 kapalı kalır. Bu tur yeni deep-audit bulgusu #284'ü kapattı: Control Center'ın persisted `events.json` restore yolu sınırsız `File.ReadAllText` kullanıyordu.
+
+### Canonical runtime / repository state
+
+- Runtime-affecting commit: `866ea5a29f3a34616d307208e1f8bd53ecc9edd8` — `fix: bound control center event history`.
+- Runtime commit publish edildiğinde `HEAD = origin/main = github/main = 866ea5a...`; working tree clean.
+- Canonical installer: **342,628,111 bytes**; SHA-256 `962C97A2A868E6EE4E35CD158C917BE2F877C775CB3228FE9F38AB0664A847D4`; manifest source/head exact `866ea5a...`.
+- SYSTEM deploy sonrası exact-installed `talvora_system_info.sourceCommit=866ea5a...`, LocalSystem / `S-1-5-18`, service PID 16060.
+- Installed version root: `C:\Program Files\Talvora\Versions\866ea5a29f3a34616d307208e1f8bd53ecc9edd8-20260930163357491`.
+- Bu bölümün takip eden docs-only closeout commit'i runtime fingerprint değildir; sırf repo HEAD ilerledi diye `866ea5a...` yeniden deploy edilmemelidir.
+
+### #284 — persisted Control Center event history unbounded restore
+
+- Pre-fix gerçek fixture: SYSTEM profile Control Center `events.json` geçici olarak **32 MiB** valid JSON + trailing whitespace olacak şekilde üretildi; gerçek `ControlCenterEventStore.ReadRecent` reflection çağrısı yaklaşık **268,986,408 byte managed allocation**, **167,612,416 byte working-set artışı** ve **263 ms** okuma maliyeti üretti.
+- Kök neden: `ReadUnsafe()` doğrudan `File.ReadAllText(PathName)` ile persisted dosyanın tamamını string olarak allocate ediyordu.
+- Fix: mevcut `MaxRecords=500` ve field-length sözleşmesi aynen korunarak `MaximumEventDocumentBytes = 8 * 1024 * 1024` eklendi; restore artık shared same-handle `JsonFileStore.ReadBounded<ControlCenterEventDocument>` kullanıyor.
+- Malformed/oversized dosya mevcut davranıştaki gibi boş document'e fail-soft döner; normal event semantiği, dedup, retention ve write formatı değişmedi.
+- Kalıcı source regression: UI responsiveness gate artık 8 MiB ceiling'i, bounded reader kullanımını ve `File.ReadAllText(PathName)` yokluğunu doğruluyor.
+
+### RED → GREEN / live acceptance
+
+- Targeted RED: yeni source contract pre-fix kodda explicit 8 MiB ceiling olmadığı için exit 1.
+- Targeted GREEN: `CONTROL_CENTER_UI_RESPONSIVENESS_SOURCE_GREEN`; Tray Release build **0 warning / 0 error**.
+- Aynı 32 MiB post-fix fixture: **10,688 byte managed allocation**, **2,785,280 byte working-set artışı**; sonuç tipi normal event-record array.
+- Full Release solution build **0 warning / 0 error**.
+- Privacy source regression GREEN, ModernizationPolicy GREEN, Context7 gate GREEN, analyzer verify-no-changes exit 0, source-built Control Center visual smoke GREEN.
+- Context7 `/dotnet/docs` System.Text.Json / stream guidance yeniden doğrulandı: çok büyük JSON için tüm dosyayı tek string'e yükleme ve sınırsız buffer büyümesi kaçınılmalı.
+- Installed self-test exit 0; Dev `Ready=True / BrowserSmokePassed=True / ToolCount=203`; Admin `Ready=True / BrowserSmokePassed=True / ToolCount=84`.
+- Talvora/Gitea/Caddy `Running / Automatic`.
+- Exact-installed `866ea5a...` binary ile 32 MiB SYSTEM-profile `events.json` varken gerçek `--control-center-smoke` exit **0** verdi; peak working set **161,009,664 bytes**, elapsed **6795 ms**. Fixture test sonunda önceki state'e geri alındı.
+
+### Sonraki audit
+
+- #284 kapalıdır. Sonraki iş yeni deep-audit bulgusudur; #280–#284 yeni kanıt olmadan yeniden açılmamalıdır.
+- Sıra yine: gerçek çağrı zinciri/minimal reproduction -> targeted RED -> minimal fix -> GREEN -> full gates -> explicit commit/push -> gerekiyorsa canonical deploy -> live acceptance -> living-doc closeout.
+
 ## CURRENT — 2026-09-30 18:56+03:00 — Notification off-screen pin normalization FINAL
 
 Bu bölüm en üst kanonik checkpoint'tir. Önceki size/diff persistence sözleşmesi korunmuştur; bu tur yalnız bağlı olmayan eski bir monitöre ait stale pinned placement'ın disk üzerinde tekrar dirilmesi edge-case'ini kapatmıştır.

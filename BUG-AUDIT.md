@@ -1,5 +1,19 @@
 # Talvora Deep Bug Audit
 
+## CURRENT — 2026-09-30 — #284 Control Center persisted-event bounded restore
+
+Status: **FINAL LIVE VERIFIED.**
+
+- #284 **FIXED / REAL RED→GREEN / INSTALLED VERIFIED** — `ControlCenterEventStore.ReadUnsafe()` persisted `events.json` dosyasını `File.ReadAllText(PathName)` ile sınırsız allocate ediyordu. Gerçek 32 MiB valid JSON fixture pre-fix `ReadRecent` çağrısında **268,986,408 byte managed allocation**, **167,612,416 byte working-set delta** ve **263 ms** üretti. Normal üretim 500 bounded kayıtla küçük kalsa da bozulmuş/aşırı büyümüş persisted state UI event-history yolunda gereksiz yüzlerce MB allocation'a dönüşebiliyordu.
+- Fix: normal `MaxRecords=500`, dedup/retention ve field bounds korunarak `MaximumEventDocumentBytes=8 MiB` eklendi; restore shared same-handle `JsonFileStore.ReadBounded<ControlCenterEventDocument>` üzerinden yapılır. Oversized/malformed belge fail-soft boş document davranışını korur. Source regression explicit ceiling + bounded reader + unbounded `File.ReadAllText(PathName)` yokluğunu kilitler.
+- Post-fix aynı 32 MiB fixture: **10,688 byte managed allocation**, **2,785,280 byte working-set delta**; targeted UI responsiveness GREEN; Tray Release 0/0.
+
+Quality gates: full Release solution **0 warning / 0 error**; Control Center UI responsiveness source GREEN; privacy/security source GREEN; `MODERNIZATION_POLICY_GREEN`; `CONTEXT7_QUALITY_GATE_GREEN`; analyzer verify-no-changes exit 0; source-built Control Center visual smoke GREEN. Context7 `/dotnet/docs` large JSON / stream guidance aynı change içinde yenilendi.
+
+Runtime commit: `866ea5a29f3a34616d307208e1f8bd53ecc9edd8` — `fix: bound control center event history`; Gitea origin + GitHub main senkron. Canonical installer **342,628,111 bytes**, SHA-256 `962C97A2A868E6EE4E35CD158C917BE2F877C775CB3228FE9F38AB0664A847D4`; manifest exact source/head `866ea5a...`. SYSTEM deploy sonrası Dev/Admin `sourceCommit=866ea5a...`, LocalSystem / `S-1-5-18`, PID 16060.
+
+Installed acceptance: Tray self-test exit 0; Dev 203/Admin 84 Ready + BrowserSmokePassed; Talvora/Gitea/Caddy Running Automatic. Exact-installed binary ile **32 MiB** SYSTEM-profile `events.json` varken gerçek `--control-center-smoke` exit 0 verdi (peak working set **161,009,664 bytes**, elapsed **6795 ms**); fixture önceki state'e geri alındı.
+
 ## CURRENT — 2026-09-30 — Notification stale off-screen pin normalization
 
 Status: **FINAL LIVE VERIFIED.** Önceki notification geometry persistence davranışı yeniden yazılmadı. Yeni deep audit yalnız bir monitor-topology edge-case'i doğruladı ve kapattı.
