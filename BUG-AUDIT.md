@@ -1,5 +1,18 @@
 # Talvora Deep Bug Audit
 
+## CURRENT — 2026-09-30 — #287 bounded DPAPI credential restore
+
+Status: **FINAL LIVE VERIFIED.** Exact-installed runtime `fea12d219d4b6dd9998d92f9d2ba46714f7a3936`.
+
+- #287 **FIXED / REAL RED->GREEN / INSTALLED VERIFIED** — `DpapiSecretStore.ReadString` persisted runtime/Admin credential blob'unu `File.ReadAllText` ile sınırsız okuyordu. Gerçek **32 MiB** temporary credential fixture pre-fix yaklaşık **134.6 MB managed allocation / 135.2 MB working-set growth** üretti. Restore artık tek read-only `FileStream` handle'ı açıp `stream.Length` ile **64 KiB** ceiling'i allocation ve hex/DPAPI decode'dan önce doğruluyor; text yalnız bu sınır içinde okunuyor. `WriteString` protected hex blob'u da aynı persist ceiling'i aşarsa fail-closed reddediyor.
+- Aynı post-fix 32 MiB fixture yaklaşık **19.9 KB managed allocation / 0.56 MB working-set growth** ile decode öncesi reddedildi. Tray self-test normal DPAPI round-trip ve 64 KiB+1 temporary oversized blob rejection'ı gerçek credential dosyalarına dokunmadan doğruluyor. Privacy/security regression bu ceiling, same-handle length check, write bound ve unbounded read yokluğu sözleşmelerini kalıcı kilitliyor.
+
+Quality: privacy/security source GREEN; full Release solution **0 warning / 0 error**; Context7 gate GREEN; ModernizationPolicy GREEN; analyzer verify-no-changes exit 0. Context7 `/dotnet/docs` stream-based file I/O + allocation-before-size-check risk guidance aynı change içinde yenilendi.
+
+Runtime / deploy: commit `fea12d219...`; `HEAD=origin/main=github/main`; canonical installer **342,628,111 bytes**, SHA-256 `2031E214D0F17119359847162AEF0F451CF07E22AFE040118BA7044EAAE73425`, manifest exact source/head. SYSTEM install success at `20:13:55.757+03:00`; 34%->50% ~**0.56 s**, force-stop/delete/rollback yok. Exact-installed `sourceCommit=fea12d219...`, LocalSystem/S-1-5-18, PID 9276.
+
+Installed acceptance: `--self-test` exit 0; Dev/Admin managed probe exit 0 (canonical live counts Dev 203 / Admin 84, Ready + BrowserSmokePassed); Talvora/Gitea/Caddy Running Automatic; deploy sonrası yeni SCM 7034 yok.
+
 ## CURRENT — 2026-09-30 — #285 bounded manual-stop state + #286 canonical self-update cycle
 
 Status: **FINAL LIVE VERIFIED.** Final exact-installed runtime `8987aa67c90c9170238fbe4b514a71314631b4e8` includes both fixes.

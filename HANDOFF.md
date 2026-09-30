@@ -1,5 +1,48 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-09-30 20:41+03:00 — #287 bounded DPAPI credential restore FINAL
+
+Bu bölüm en üst kanonik checkpoint'tir. #280–#286 kapalı kalır. Bu tur persisted credential restore yolundaki yeni gerçek bounded-I/O bulgusu #287 kapatıldı.
+
+### Canonical runtime / repository state
+
+- Runtime-affecting commit: `fea12d219d4b6dd9998d92f9d2ba46714f7a3936` — `fix: bound DPAPI credential restore`.
+- `HEAD = origin/main = github/main = fea12d219...`; working tree clean.
+- Canonical installer: **342,628,111 bytes**; SHA-256 `2031E214D0F17119359847162AEF0F451CF07E22AFE040118BA7044EAAE73425`; manifest source/head exact `fea12d219...`.
+- Exact-installed runtime: `talvora_system_info.sourceCommit=fea12d219...`, LocalSystem / `S-1-5-18`, service PID **9276**.
+- Installed version root: `C:\Program Files\Talvora\Versions\fea12d219d4b6dd9998d92f9d2ba46714f7a3936-20260930171347189`.
+- Install log: 34% `20:13:47.728` -> 50% `20:13:48.292` (~0.56 s); force-stop/delete/rollback yok; `Install succeeded` at `20:13:55.757`.
+- Bu bölümün takip eden docs-only closeout commit'i runtime fingerprint değildir; sırf repository HEAD ilerledi diye runtime yeniden deploy edilmemelidir.
+
+### #287 — DPAPI credential restore unbounded file read
+
+- Kök neden: `DpapiSecretStore.ReadString` persisted credential blob'unu `File.ReadAllText` ile bütünüyle string'e alıyor, ancak dosya boyutuna hiçbir üst sınır koymuyordu. Credential dosyası bozulur/aşırı büyürse DPAPI decode'dan önce gereksiz büyük allocation oluşabiliyordu.
+- Gerçek 32 MiB geçici credential fixture pre-fix yaklaşık **134.6 MB managed allocation / 135.2 MB working-set büyümesi** üretti.
+- Fix:
+  - `MaximumCredentialFileBytes = 64 * 1024`.
+  - `ReadString` tek `FileStream` açıyor, aynı handle'ın `Length` değerini allocation/hex decode öncesi kontrol ediyor ve yalnız bounded text'i okuyor.
+  - `WriteString` protected hex blob'u aynı 64 KiB persist ceiling'ini aşarsa yazmayı reddediyor.
+  - Tray self-test gerçek credential dosyalarına dokunmadan normal DPAPI round-trip + oversized temporary credential rejection sözleşmesini doğruluyor.
+- Aynı 32 MiB post-fix fixture yaklaşık **19.9 KB managed allocation / 0.56 MB working-set büyümesi** ile DPAPI decode öncesi reddedildi.
+- Kalıcı `PrivacySecuritySourceRegression.ps1` 64 KiB ceiling'i, same-handle FileStream length check'i, write bound'u ve unbounded `File.ReadAllText` yokluğunu kilitliyor.
+
+### Final quality / live acceptance
+
+- `TALVORA PRIVACY SECURITY SOURCE REGRESSION GREEN`.
+- Full Release solution build **0 warning / 0 error**.
+- `CONTEXT7_QUALITY_GATE_GREEN`; `MODERNIZATION_POLICY_GREEN`; analyzer verify-no-changes exit 0.
+- Context7 `/dotnet/docs`: large/untrusted local file için stream tabanlı okuma ve allocation öncesi size bound yaklaşımı yeniden doğrulandı.
+- Exact-installed `fea12d219...` Tray `--self-test` exit **0**; oversized DPAPI self-test production binary içinde çalıştı.
+- Installed Dev/Admin managed probe exit **0**; canlı canonical tool counts Dev **203**, Admin **84**, Ready + BrowserSmokePassed.
+- Talvora/Gitea/Caddy `Running / Automatic`.
+- Deploy sonrası yeni SCM **7034 yok**.
+
+### Sonraki audit
+
+- #287 kapalıdır. Yeni deep-audit turu #288'den devam etmelidir.
+- persisted-state / lifecycle / bounded-I/O taramasında yalnız gerçek çağrı zinciri + fixture ile doğrulanan bulguyu aç.
+- #280–#287 yeni gerçek kanıt olmadan yeniden açılmamalıdır.
+
 ## CURRENT — 2026-09-30 20:01+03:00 — #285 bounded manual-stop state + #286 canonical self-update cycle FINAL
 
 Bu bölüm en üst kanonik checkpoint'tir. #280–#284 kapalı kalır. Bu tur iki gerçek deep-audit bulgusu kapatıldı ve final exact-installed runtime her ikisini birlikte taşır.
