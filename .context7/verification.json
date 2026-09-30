@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-30T16:56:03Z",
-  "scope": "Talvora canonical deployment deep-audit follow-up: #285 bounded session-state restore is exact-installed and #286 closes a live self-update cycle. Service-hosted Deploy-Windows-Installer calls now detach WaitForCompletion before the SYSTEM task reaches service stop, while the installer upgrade path preserves the canonical Talvora service registration even after a forced process stop instead of falling back to sc delete.",
+  "verifiedAtUtc": "2026-09-30T17:10:24Z",
+  "scope": "Talvora persisted-credential deep-audit follow-up: #285/#286 remain exact-installed and #287 bounds DPAPI credential restore. Runtime/Admin credential blobs now have a 64 KiB persisted-file ceiling validated from the opened FileStream before text allocation or hex decode; the same contract is enforced on writes and by Tray self-test without touching real credential files.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET System.Text.Json guidance recommends stream-based JSON processing for large inputs and explicitly warns against unbounded buffer growth that can produce excessive allocations or OutOfMemoryException. Talvora now applies this consistently to Control Center persisted state: events.json remains capped at 8 MiB, while current and legacy manual-stop session-state JSON are capped at 256 KiB through the shared same-handle bounded reader. A real 32 MiB session-state fixture dropped from about 269 MB managed allocation / 168 MB working-set growth pre-fix to about 500 KB managed allocation / 11.3 MB working-set growth post-fix, and the oversized state self-healed to a 192-byte fresh document."
+      "verified": "Current .NET file-I/O guidance recommends FileStream/stream-based processing for large inputs instead of loading entire files into memory; the same stream can expose Length before decode/allocation. Talvora now applies that discipline to DPAPI credential blobs: ReadString opens one read-only handle, rejects files above 64 KiB using stream.Length, then decodes only the bounded text. WriteString refuses a protected hex blob above the same ceiling. A real 32 MiB temporary credential fixture dropped from about 134.6 MB managed allocation / 135.2 MB working-set growth pre-fix to about 19.9 KB managed allocation / 0.56 MB working-set growth post-fix, with rejection before DPAPI decode."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop",

@@ -44,6 +44,7 @@ $securityPolicy = Read-RepoText 'SECURITY.md'
 $learningObserver = Read-RepoText 'src\Talvora\TalvoraAutomaticLearningObserver.cs'
 $learningStore = Read-RepoText 'src\Talvora\Memory\TalvoraMemoryStore.Learning.cs'
 $memoryQuality = Read-RepoText 'src\Talvora\Memory\TalvoraMemoryStore.Quality.cs'
+$dpapiSecretStore = Read-RepoText 'src\Talvora.Tray\DpapiSecretStore.cs'
 
 Assert-Contains $fileLog 'RedactSensitiveData(message)' 'persistent messages are redacted'
 Assert-Contains $fileLog 'RedactSensitiveData(exception.Message)' 'persistent exception messages are redacted'
@@ -58,6 +59,13 @@ Assert-Contains $interactive 'FileShare.None' 'stale cleanup proves the run leas
 Assert-Contains $interactive 'CleanupStaleRunDirectories(runsRoot)' 'stale interactive runs are cleaned'
 Assert-Contains $interactive 'Remove-Item -LiteralPath $RequestPath -Force' 'interactive request document is removed after deserialization'
 Assert-Contains $gitIgnore '*.dpapi' 'DPAPI blobs are ignored'
+if ($dpapiSecretStore -notmatch 'MaximumCredentialFileBytes\s*=\s*64\s*\*\s*1024') {
+    throw 'Privacy/security contract failed: DPAPI credential files have a hard byte ceiling'
+}
+Assert-Contains $dpapiSecretStore 'stream.Length > MaximumCredentialFileBytes' 'DPAPI credential length is validated on the opened handle'
+Assert-Contains $dpapiSecretStore 'FileShare.Read' 'DPAPI bounded read prevents concurrent write/delete replacement while validating'
+Assert-Contains $dpapiSecretStore 'MaximumCredentialFileBytes + 1' 'DPAPI self-test covers oversized persisted credentials'
+Assert-NotContains $dpapiSecretStore 'File.ReadAllText(fullPath)' 'DPAPI credential restore never allocates an unbounded string'
 Assert-Contains $gitIgnore '*.pfx' 'PFX bundles are ignored'
 Assert-Contains $gitIgnore '*.key' 'private-key files are ignored'
 Assert-Contains $gitIgnore '.env' 'local environment files are ignored'
