@@ -1,5 +1,41 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-09-30 17:02+03:00 — Notification size/position persistence + diff expansion FINAL
+
+Bu bölüm kanoniktir ve Faz 17 closeout'un üzerine gelir. Kullanıcının canlıda gördüğü iki son regresyon kapatıldı: notification boyut/konumu yeni mesajlarda sıfırlanıyordu ve diff ile oluşan otomatik genişleme sonraki generation'a taşınmıyordu.
+
+### Runtime / installer
+
+- Runtime-affecting commit: `0e9aa118144c744c30d9f2b118ab3992fd4814ce` — `fix: persist notification diff expansion`.
+- `origin/main = github/main = 0e9aa118...` runtime publish öncesi doğrulandı.
+- Canonical installer: **342,624,015 bytes**; SHA-256 `59ECCC53A24F82ED411CA78D0CD1E412FFAEAD76DF172ABC4382B9ECFA4F5671`; manifest exact source `0e9aa118...`.
+- SYSTEM deploy sonrası exact-installed runtime `sourceCommit=0e9aa118...`, LocalSystem / `S-1-5-18`, service PID 31804.
+- Installed version root: `C:\Program Files\Talvora\Versions\0e9aa118144c744c30d9f2b118ab3992fd4814ce-20260930135307745`.
+- Talvora, Gitea ve Caddy `Running / Automatic`.
+
+### Son persistence düzeltmeleri
+
+- Placement belgesi v2; pinned native position yanında `widthDip` ve `heightDip` saklanır. Manual WM_EXITSIZEMOVE resize `UserResizeCompleted` üzerinden preferred size'ı günceller.
+- Diff görünür olduğunda kullanıcı daha önce özel boyut seçmediyse pencere 760 DIP'e auto-expand olur.
+- Auto diff expansion artık transient değildir: presenter render sonrası finite `ActualWidth/ActualHeight` değerlerini `CaptureAutomaticPreferredSize` ile yakalar, v2 placement'a yazar ve request'i ancak başarılı capture sonrası acknowledge eder.
+- Böylece diff kartından sonraki yeni generation önce 500 DIP'e küçülmez; kaydedilmiş preferred size ile açılır. Kullanıcının sonraki manuel resize seçimi yine son sözü söyler.
+- Pinned position ayrı korunur; auto-size persistence pencereyi zorla pinlemez.
+
+### Final live acceptance
+
+- Release build **0 warning / 0 error**; `DESKTOP_PROGRESS_BEHAVIOR_GREEN`; `MODERNIZATION_POLICY_GREEN`; `SIZE_POSITION_DIFF_GATES_GREEN`.
+- Deploy öncesi gerçek kullanıcı placement dosyası v1 idi: `left=160`, `top=947`, width/height yok.
+- Installed diff frame sonrası aynı dosya otomatik v2'ye yükseldi: `widthDip=760`, `heightDip=237.656666...`, `left=160`, `top=947`.
+- User-session UI Automation diff kartını **1140×356 px** ve `160,947` konumunda ölçtü; aktif %150 DPI'da 1140 px = 760 DIP.
+- Ardından diff içermeyen yeni worklog generation gönderildi; yeni pencere yine **1140×356 px / 160,947** açıldı. Yeni mesajda küçülme regresyonu canlıda kapandı.
+- WM_ENTERSIZEMOVE/WM_EXITSIZEMOVE kabulü placement width'ini değiştirerek manual resize persistence zincirinin çalıştığını kanıtladı; test sonrası tercih `760×237.656666 DIP / 160,947` olarak geri yüklendi ve Tray restart sonrası aynı **1140×356 px / 160,947** geometri doğrulandı.
+- Installed Tray self-test GREEN (`ManagedMcpCount=5; FocusedTalvoraCount=2`).
+- Dev probe `Ready=True / BrowserSmokePassed=True / ToolCount=203`; Admin probe `Ready=True / BrowserSmokePassed=True / ToolCount=84`; tunnel runtime `0.0.15+a390c168...`, live/ready, critical degradation false.
+
+### Sonraki oturum
+
+Notification size/position/diff persistence konusu kapalıdır. Yeni mesajların küçülmesi, diff auto-width veya placement v2 konusunda yeni canlı kanıt olmadan bu bölüm yeniden açılmamalıdır. Bu bölümden sonraki docs-only commit runtime fingerprint değildir; sırf docs HEAD ilerledi diye `0e9aa118...` yeniden deploy edilmemelidir.
+
 ## CURRENT — 2026-09-30 15:58+03:00 — Notification Faz 17 responsive diff + expanded work visibility FINAL
 
 Bu bölüm kanoniktir ve alttaki Faz 16 notification closeout'un yerini alır. Kullanıcının üç isteği kapatıldı: alt teknik alan gerçek diff/değişen kodu daha geniş göstermeli ve sözcük kaydırmalı; pencere resize olduğunda diff viewport'u da responsive büyümeli; notification mümkün olduğunca gerçek değişiklik ve çalışma adımlarını göstermeli.

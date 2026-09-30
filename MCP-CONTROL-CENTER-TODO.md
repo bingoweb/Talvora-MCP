@@ -85,6 +85,10 @@ Araştırma kararları:
 - [x] NOTIFY3-008 — Runtime `eb57cd3...` iki remote'a push, canonical installer + SYSTEM deploy exact commit.
 - [x] NOTIFY3-009 — Installed responsive QA: diff 662×285→1112×539 px; HScroll=false; VScroll=true; line48 visible.
 - [x] NOTIFY3-010 — Installed work visibility QA: real read_source 5 s / 50 ms timeline boyunca görünür.
+- [x] NOTIFY3-011 — Placement v2: pinned native position + `WidthDip/HeightDip` persistence; new notification generation saved preferred size ile açılır.
+- [x] NOTIFY3-012 — Diff 760 DIP auto-expand artık transient değil; rendered size `CaptureAutomaticPreferredSize` ile placement'a persist edilir.
+- [x] NOTIFY3-013 — Installed live v1→v2 acceptance: diff 1140×356 px @150% DPI; diff'siz sonraki generation aynı 1140×356 px ve `160,947` konumunu korudu.
+- [x] NOTIFY3-014 — Manual resize WM_EXITSIZEMOVE persistence + Tray restart restore doğrulandı; runtime `0e9aa118...`, installer SHA-256 `59ECCC53A24F82ED411CA78D0CD1E412FFAEAD76DF172ABC4382B9ECFA4F5671`, self-test/probes/services GREEN.
 
 ## PREVIOUS — Faz 15: Desktop Worklog / Notification Commercial Reliability Modernization (2026-09-30)
 

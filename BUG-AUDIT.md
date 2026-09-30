@@ -1,5 +1,15 @@
 # Talvora Deep Bug Audit
 
+## CURRENT — 2026-09-30 — Notification geometry persistence / diff auto-width live closeout
+
+Status: **FINAL LIVE VERIFIED.** Repo'da size-aware placement ve diff auto-expand kaynak düzeltmesi bulunmasına rağmen installed runtime `eb57cd3...` ile geride kalmıştı; gerçek kullanıcı placement dosyası bu nedenle hâlâ v1 ve width/height'sızdı. Ayrıca source commit `f8e08ea...` auto diff width'i transient bırakıyor, sonraki notification generation'ında yeniden compact width'e dönme riski taşıyordu.
+
+- #280 **FIXED / LIVE V1→V2 VERIFIED** — placement persistence yalnız `isPinned/left/top` taşıyan v1 dosyada kalmıştı. Size-aware v2 (`HasUserSize`, `WidthDip`, `HeightDip`) installed runtime'a alındı. Gerçek `C:\Users\tayla\AppData\Local\Talvora\ControlCenter\desktop-progress-placement.json` diff acceptance sırasında v1'den v2'ye yükseldi ve `left=160`, `top=947`, `widthDip=760`, `heightDip=237.656666...` kaydetti.
+- #281 **FIXED / LIVE GENERATION VERIFIED** — diff geldiğinde 760 DIP auto-expand kaynakta vardı fakat expansion preference olarak persist edilmediği için sonraki generation 500 DIP default'a dönebiliyordu. `AutomaticSizePersistenceRequested` + `CaptureAutomaticPreferredSize` render sonrası finite actual dimensions'ı placement'a yazar; request yalnız başarılı capture sonrası acknowledge edilir. Installed UI Automation diff kartını 1140×356 px ölçtü; hemen ardından diff'siz yeni generation yine 1140×356 px ve aynı `160,947` konumunda açıldı.
+- #282 **FIXED / MANUAL-RESIZE+RESTART VERIFIED** — manual edge resize'ın persistence event zinciri installed runtime'da kabul edildi: WM_ENTERSIZEMOVE/WM_EXITSIZEMOVE sonrası placement width değişti ve native position korundu. Test geometry'si sonra `760×237.656666 DIP / 160,947` değerine geri alındı; Tray restart sonrası UI Automation aynı 1140×356 px / 160,947 geometriyi doğruladı. Kullanıcının manuel resize'ı preferred size'ı overwrite eder; auto diff expansion kullanıcı özel boyutu varken zorla override etmez.
+
+Final runtime: `0e9aa118144c744c30d9f2b118ab3992fd4814ce`; installer **342,624,015 bytes** / SHA-256 `59ECCC53A24F82ED411CA78D0CD1E412FFAEAD76DF172ABC4382B9ECFA4F5671`; exact-installed LocalSystem runtime same commit. Release 0/0; behavior/policy/size-position-diff gates GREEN; installed self-test GREEN; Dev 203/Admin 84 probes Ready + BrowserSmokePassed; Talvora/Gitea/Caddy Running Automatic.
+
 ## CURRENT — 2026-09-30 — Notification Faz 17 responsive diff / work visibility
 
 Status: **FINAL LIVE VERIFIED.** Kullanıcının üç follow-up isteği source + executable regression + installed user-session UI Automation ile kapatıldı.
