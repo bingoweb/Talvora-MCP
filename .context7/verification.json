@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-30T12:43:48Z",
-  "scope": "Talvora desktop notification Faz 17 responsive diff/work-visibility refinement: the compact single-information-layer design is retained while the optional real diff surface now word-wraps, expands with Window resize through Grid star sizing, uses the available monitor work area up to 1200x900 DIP bounds, and exposes substantially more bounded real code evidence. Structured apply-edits now produce old/new diff evidence, source/search/diff/hash inspection work is visible, and only high-frequency passive polling/status calls remain intentionally silent.",
+  "verifiedAtUtc": "2026-09-30T15:46:42Z",
+  "scope": "Talvora desktop notification placement follow-up: the established v2 size/position contract is preserved while stale pinned coordinates from a disconnected monitor are normalized durably back to automatic placement. The correction does not alter the persisted preferred width/height or anchor evidence, and the existing responsive diff sizing behavior remains unchanged.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET guidance confirms bounded Channel<T> queues require an explicit full-mode policy, cancellation-aware Stream.ReadAsync/WriteAsync overloads are available, and tracked background work should be completed/drained during shutdown. Faz 16 keeps the terminal outcome lane memory-bounded at 1024 with explicit overload counters/error logging, reduces the progress lane to capacity 1 latest-wins coalescing, retires pending progress after terminal truth, preserves framed IPC cancellation budgets, and keeps shutdown bounded. Current WPF guidance also supports UI Automation metadata and system animation/accessibility settings; the notification window now exposes automation names/help/live regions, honors ClientAreaAnimation and HighContrast, and keeps ShowActivated=false so the overlay does not steal focus."
+      "verified": "Current .NET/WPF guidance continues to support multi-monitor-aware desktop window handling and treating monitor bounds as the authority for where a restored window can be shown. Talvora therefore validates a persisted pinned anchor against the currently connected screen working areas; when that monitor is no longer present, it switches to automatic placement and now persists that normalized pin state while preserving the user's saved preferred width/height and the original anchor evidence for diagnostics. Existing bounded Channels, cancellation-aware IPC, accessibility metadata, ClientAreaAnimation/HighContrast handling, and ShowActivated=false behavior remain unchanged."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop",

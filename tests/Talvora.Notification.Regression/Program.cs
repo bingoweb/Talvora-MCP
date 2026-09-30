@@ -24,6 +24,7 @@ internal static class Program
         await AssertUncooperativeDeliveryCannotBlockShutdownAsync();
         await AssertWriteCancellationAsync();
         await AssertPipeReadTimeoutRecoveryAsync();
+        await AssertOffScreenPinnedPlacementIsNormalizedAsync();
 
         Console.WriteLine(
             "DESKTOP_PROGRESS_BEHAVIOR_GREEN");
@@ -714,6 +715,116 @@ internal static class Program
         {
             throw new InvalidOperationException(
                 "Desktop progress listener did not recover after a stalled IPC client.");
+        }
+    }
+
+    private static async Task AssertOffScreenPinnedPlacementIsNormalizedAsync()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            $"Talvora.Notification.Placement.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        var placementPath = Path.Combine(
+            root,
+            "desktop-progress-placement.json");
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                placementPath,
+                JsonSerializer.Serialize(
+                    new
+                    {
+                        version = 2,
+                        isPinned = true,
+                        leftPixels = 2_000_000_000,
+                        topPixels = 2_000_000_000,
+                        hasUserSize = true,
+                        widthDip = 598.0,
+                        heightDip = 237.33333333333331,
+                    }));
+
+            Exception? threadFailure = null;
+            var completed = NewSignal();
+            var thread = new Thread(
+                () =>
+                {
+                    ControlCenterApplication? application = null;
+                    try
+                    {
+                        application =
+                            new ControlCenterApplication(
+                                smokeTest: true);
+                        using var presenter =
+                            new DesktopProgressNotificationPresenter(
+                                application,
+                                placementPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        threadFailure = ex;
+                    }
+                    finally
+                    {
+                        application?.Shutdown();
+                        completed.TrySetResult(true);
+                    }
+                });
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+
+            await completed.Task.WaitAsync(
+                TimeSpan.FromSeconds(10));
+            if (!thread.Join(TimeSpan.FromSeconds(2)))
+            {
+                throw new InvalidOperationException(
+                    "Desktop placement regression STA thread did not exit.");
+            }
+
+            if (threadFailure is not null)
+            {
+                throw new InvalidOperationException(
+                    "Desktop placement regression failed while restoring placement.",
+                    threadFailure);
+            }
+
+            using var document = JsonDocument.Parse(
+                await File.ReadAllTextAsync(placementPath));
+            var restored = document.RootElement;
+            if (restored
+                .GetProperty("isPinned")
+                .GetBoolean())
+            {
+                throw new InvalidOperationException(
+                    "An off-screen pinned desktop placement was not persisted back as automatic placement.");
+            }
+
+            if (restored
+                    .GetProperty("leftPixels")
+                    .GetInt32() != 2_000_000_000 ||
+                restored
+                    .GetProperty("topPixels")
+                    .GetInt32() != 2_000_000_000 ||
+                Math.Abs(
+                    restored
+                        .GetProperty("widthDip")
+                        .GetDouble() -
+                    598.0) > 0.001 ||
+                Math.Abs(
+                    restored
+                        .GetProperty("heightDip")
+                        .GetDouble() -
+                    237.33333333333331) > 0.001)
+            {
+                throw new InvalidOperationException(
+                    "Normalizing an off-screen pin changed the persisted size or anchor evidence.");
+            }
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
         }
     }
 

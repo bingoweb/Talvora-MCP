@@ -52,6 +52,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             "desktop-progress-placement.json");
 
     private readonly ControlCenterApplication _application;
+    private readonly string _placementPath;
     private readonly Dictionary<string, DesktopProgressNotificationWindow> _windows =
         new(StringComparer.Ordinal);
     private readonly DesktopProgressPresentationState _presentationState =
@@ -67,9 +68,13 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
     private bool _disposed;
 
     public DesktopProgressNotificationPresenter(
-        ControlCenterApplication application)
+        ControlCenterApplication application,
+        string? placementPath = null)
     {
         _application = application;
+        _placementPath = string.IsNullOrWhiteSpace(placementPath)
+            ? PlacementPath
+            : Path.GetFullPath(placementPath);
         RestorePlacement();
     }
 
@@ -585,7 +590,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
 
     private void RestorePlacement()
     {
-        var path = PlacementPath;
+        var path = _placementPath;
         if (!File.Exists(path))
         {
             return;
@@ -629,6 +634,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                                 _anchorTopPixels))))
             {
                 _isPinned = false;
+                QueuePlacementSave();
             }
         }
         catch (Exception ex) when (
@@ -664,7 +670,9 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         _placementSaveTask =
             _placementSaveTask
                 .ContinueWith(
-                    _ => SavePlacementAsync(snapshot),
+                    _ => SavePlacementAsync(
+                        _placementPath,
+                        snapshot),
                     CancellationToken.None,
                     TaskContinuationOptions.ExecuteSynchronously,
                     TaskScheduler.Default)
@@ -672,12 +680,13 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
     }
 
     private static async Task SavePlacementAsync(
+        string path,
         DesktopProgressPlacementDocument snapshot)
     {
         try
         {
             await JsonFileStore.WriteAsync(
-                    PlacementPath,
+                    path,
                     snapshot,
                     PlacementJsonOptions,
                     createBackup: false,
