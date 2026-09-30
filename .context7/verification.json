@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-30T17:10:24Z",
-  "scope": "Talvora persisted-credential deep-audit follow-up: #285/#286 remain exact-installed and #287 bounds DPAPI credential restore. Runtime/Admin credential blobs now have a 64 KiB persisted-file ceiling validated from the opened FileStream before text allocation or hex decode; the same contract is enforced on writes and by Tray self-test without touching real credential files.",
+  "verifiedAtUtc": "2026-09-30T17:50:46Z",
+  "scope": "Talvora Control Center persisted-window-state deep-audit follow-up: #287 remains exact-installed and #288 bounds window-placement.json restore on the WPF UI startup path. Placement JSON now has a 64 KiB same-handle byte ceiling before deserialization; oversized/corrupt placement fails soft to default window geometry without changing normal persistence semantics.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET file-I/O guidance recommends FileStream/stream-based processing for large inputs instead of loading entire files into memory; the same stream can expose Length before decode/allocation. Talvora now applies that discipline to DPAPI credential blobs: ReadString opens one read-only handle, rejects files above 64 KiB using stream.Length, then decodes only the bounded text. WriteString refuses a protected hex blob above the same ceiling. A real 32 MiB temporary credential fixture dropped from about 134.6 MB managed allocation / 135.2 MB working-set growth pre-fix to about 19.9 KB managed allocation / 0.56 MB working-set growth post-fix, with rejection before DPAPI decode."
+      "verified": "Current .NET file-I/O guidance recommends stream-based or otherwise explicitly bounded processing instead of loading arbitrarily large local files into memory before validation. Talvora now applies the shared same-handle JsonFileStore.ReadBounded discipline to Control Center window-placement.json with a 64 KiB ceiling. A real production WPF SourceInitialized restore harness measured a 32 MiB placement fixture at about 279.6 MB managed allocation / 179.9 MB working-set growth pre-fix; the bounded restore reduced the same fixture to about 6.0 MB managed allocation / 34.8 MB working-set growth while preserving the normal small-file path."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop",

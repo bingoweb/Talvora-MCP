@@ -4,11 +4,15 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Talvora.Shared;
 
 namespace Talvora.Tray;
 
 internal sealed partial class ControlCenterWindow
 {
+    private const int MaximumWindowPlacementBytes =
+        64 * 1024;
+
     private sealed record WindowPlacementDocument(
         double Left,
         double Top,
@@ -66,13 +70,15 @@ internal sealed partial class ControlCenterWindow
             WindowPlacementDocument? saved;
             try
             {
-                saved = JsonSerializer.Deserialize<WindowPlacementDocument>(
-                    File.ReadAllText(path),
+                saved = JsonFileStore.ReadBounded<WindowPlacementDocument>(
+                    path,
+                    MaximumWindowPlacementBytes,
                     WindowPlacementJsonOptions);
             }
             catch (Exception ex) when (
                 ex is IOException or
                 UnauthorizedAccessException or
+                InvalidDataException or
                 JsonException)
             {
                 TrayLog.Write("Control Center window placement could not be read", ex);
