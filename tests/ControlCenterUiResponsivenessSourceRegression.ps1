@@ -42,6 +42,7 @@ $mainWindow = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.cs'
 $chromeWindow = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.Chrome.cs'
 $actionsWindow = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.Actions.cs'
 $dashboardService = Read-RepoText 'src\Talvora.Tray\ControlCenterDashboardService.cs'
+$versionService = Read-RepoText 'src\Talvora.Tray\ControlCenterVersionService.cs'
 $smoke = Read-RepoText 'src\Talvora.Tray\ControlCenterSmoke.cs'
 
 Assert-Contains $eventStore 'ReadRecentAsync' 'event history exposes an async WPF-safe read boundary'
@@ -63,6 +64,10 @@ Assert-Contains $mainWindow '_dashboardFilterDebounceTimer' 'dashboard filter de
 Assert-Contains $eventsWindow '_dashboardScroller.Visibility == Visibility.Visible' 'raw-log polling is paused outside the dashboard view'
 
 Assert-Contains $dashboardService 'ControlCenterComponentHealthService\.GetStatesAsync' 'Talvora Core health is derived from the local service health chain'
+Assert-Contains $versionService 'MaximumTalvoraVersionMetadataBytes\s*=\s*512\s*\*\s*1024' 'Talvora current version metadata has an explicit 512 KiB ceiling'
+Assert-Contains $versionService 'MaximumPackageVersionMetadataBytes\s*=\s*4\s*\*\s*1024\s*\*\s*1024' 'managed package version metadata has an explicit 4 MiB ceiling'
+Assert-Contains $versionService 'JsonFileStore\.ReadBoundedAsync<JsonDocument>' 'version metadata uses the shared same-handle bounded async JSON reader'
+Assert-NotContains $versionService 'File\.ReadAllTextAsync\(' 'version metadata never loads an unbounded local JSON file before parsing'
 Assert-NotContains $dashboardService 'var status = await BusinessTunnelClient\.GetStatusAsync' 'Talvora Core dashboard health is not conflated with Business tunnel state'
 Assert-Contains $mainWindow 'dashboardVisible' 'hidden dashboard views avoid rebuilding card and event content'
 Assert-Contains $mainWindow '_dashboardRefreshPending' 'overlapping refresh requests are coalesced instead of discarded'

@@ -8,6 +8,10 @@ namespace Talvora.Tray;
 
 internal static class ControlCenterVersionService
 {
+    private const int MaximumTalvoraVersionMetadataBytes =
+        512 * 1024;
+    private const int MaximumPackageVersionMetadataBytes =
+        4 * 1024 * 1024;
     private static readonly HttpClient Http = TalvoraHttp.CreateClient(
         timeout: TimeSpan.FromSeconds(3));
     private static readonly ConcurrentDictionary<string, DateTimeOffset> FailureLogTimes =
@@ -59,8 +63,11 @@ internal static class ControlCenterVersionService
 
         try
         {
-            using var document = JsonDocument.Parse(
-                await File.ReadAllTextAsync(packagePath, cancellationToken));
+            using var document =
+                await JsonFileStore.ReadBoundedAsync<JsonDocument>(
+                    packagePath,
+                    MaximumPackageVersionMetadataBytes,
+                    cancellationToken: cancellationToken);
 
             if (document.RootElement.TryGetProperty(
                     "version",
@@ -79,6 +86,7 @@ internal static class ControlCenterVersionService
         }
         catch (Exception ex) when (
             ex is IOException or
+            InvalidDataException or
             JsonException or
             UnauthorizedAccessException)
         {
@@ -105,8 +113,11 @@ internal static class ControlCenterVersionService
 
         try
         {
-            using var document = JsonDocument.Parse(
-                await File.ReadAllTextAsync(path, cancellationToken));
+            using var document =
+                await JsonFileStore.ReadBoundedAsync<JsonDocument>(
+                    path,
+                    MaximumTalvoraVersionMetadataBytes,
+                    cancellationToken: cancellationToken);
 
             if (document.RootElement.TryGetProperty(
                     "Version",
@@ -122,6 +133,7 @@ internal static class ControlCenterVersionService
         }
         catch (Exception ex) when (
             ex is IOException or
+            InvalidDataException or
             JsonException or
             UnauthorizedAccessException)
         {

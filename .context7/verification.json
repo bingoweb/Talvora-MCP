@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-30T17:50:46Z",
-  "scope": "Talvora Control Center persisted-window-state deep-audit follow-up: #287 remains exact-installed and #288 bounds window-placement.json restore on the WPF UI startup path. Placement JSON now has a 64 KiB same-handle byte ceiling before deserialization; oversized/corrupt placement fails soft to default window geometry without changing normal persistence semantics.",
+  "verifiedAtUtc": "2026-09-30T18:00:25Z",
+  "scope": "Talvora Control Center version-metadata deep-audit follow-up: #288 remains exact-installed and #289 bounds local version JSON reads. Talvora current.json is capped at 512 KiB and managed package metadata at 4 MiB through the shared same-handle bounded async JSON reader, preserving normal version-display behavior while oversized metadata fails soft to Bilinmiyor.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET file-I/O guidance recommends stream-based or otherwise explicitly bounded processing instead of loading arbitrarily large local files into memory before validation. Talvora now applies the shared same-handle JsonFileStore.ReadBounded discipline to Control Center window-placement.json with a 64 KiB ceiling. A real production WPF SourceInitialized restore harness measured a 32 MiB placement fixture at about 279.6 MB managed allocation / 179.9 MB working-set growth pre-fix; the bounded restore reduced the same fixture to about 6.0 MB managed allocation / 34.8 MB working-set growth while preserving the normal small-file path."
+      "verified": "Current .NET file-I/O guidance recommends explicit size bounds before allocating or parsing local metadata files. Talvora Control Center now uses JsonFileStore.ReadBoundedAsync<JsonDocument> for local version metadata: current.json has a 512 KiB ceiling and discovered package metadata has a 4 MiB ceiling. A real 32 MiB current.json fixture through ControlCenterVersionService.GetVersionAsync(talvora) allocated about 236.6 MB and grew working set about 180.3 MB pre-fix; the bounded path reduced the same fixture to about 368.8 KB managed allocation / 8.1 MB working-set growth and returned Bilinmiyor without parsing the oversized document."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop",
