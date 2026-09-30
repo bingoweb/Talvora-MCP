@@ -1,6 +1,54 @@
 # Talvora MCP — Canonical Handoff
 
-## CURRENT — 2026-09-30 17:02+03:00 — Notification size/position persistence + diff expansion FINAL
+## CURRENT — NEW SESSION TRANSITION CHECKPOINT — Notification geometry persistence
+
+Yeni oturum bu bölümden başlamalıdır. Önce bu blok tamamen okunmalı; herhangi bir kod değişikliğinden önce `git status --short`, `git log -8 --oneline`, `HEAD/origin/main/github/main` ve canlı `talvora_system_info` doğrulanmalıdır. Kullanıcıdan tekrar onay istenmeden çalışmaya devam edilmelidir.
+
+### Canonical state
+
+- Repository: `C:\Users\tayla\Talvora-MCP`.
+- Final repository/docs HEAD: `c1c584569dd9cfef532cc81ab950b5c64e45f290` — `docs: close notification geometry persistence`.
+- `HEAD = origin/main = github/main = c1c584569dd9cfef532cc81ab950b5c64e45f290`; working tree clean.
+- Exact-installed runtime-affecting commit: `0e9aa118144c744c30d9f2b118ab3992fd4814ce` — `fix: persist notification diff expansion`.
+- Canlı `talvora_system_info`: `sourceCommit=0e9aa118...`, LocalSystem / `S-1-5-18`, PID 31804.
+- `c1c584...` yalnız docs-only closeout'tur; sırf HEAD daha yeni diye runtime tekrar deploy edilmemelidir.
+
+### Son kullanıcı problemi ve gerçek durum
+
+Kullanıcının son bildirdiği regresyonlar şunlardı:
+1. Kullanıcının verdiği notification pencere boyutu yeni mesajda unutuluyordu.
+2. Diff/kod çıktısı geldiğinde eski otomatik genişleme davranışı kaybolmuştu.
+3. Pencere konumu ve genişliği yeni generation'larda korunmalıydı; her mesajda tekrar küçülmemeliydi.
+
+Bu üç konu mevcut runtime `0e9aa118...` içinde kapatıldı ve canlıda doğrulandı:
+- Placement belgesi v2 `left/top/widthDip/heightDip` saklıyor.
+- Manuel resize `WM_ENTERSIZEMOVE/WM_EXITSIZEMOVE` zinciriyle preferred size'ı kalıcılaştırıyor.
+- Gerçek diff görünür olduğunda kullanıcı özel boyut seçmemişse pencere 760 DIP'e auto-expand oluyor.
+- Auto diff expansion render sonrası preferred size'a capture edilip placement v2'ye yazılıyor.
+- Sonraki diff içermeyen yeni worklog generation aynı preferred width/height ile açılıyor; 500 DIP'e geri küçülme yok.
+- Pinned native position ayrı korunuyor; auto-size persistence pencereyi zorla pinlemiyor.
+
+### Canlı kabul kanıtı
+
+- Release build: `0 warning / 0 error`.
+- `DESKTOP_PROGRESS_BEHAVIOR_GREEN`, `MODERNIZATION_POLICY_GREEN`, `SIZE_POSITION_DIFF_GATES_GREEN`.
+- Gerçek placement v1 → v2 yükseltildi: `widthDip=760`, `heightDip=237.656666...`, `left=160`, `top=947`.
+- Diff kartı user-session UI Automation ile `1140×356 px / 160,947` ölçüldü; %150 DPI'da 1140 px = 760 DIP.
+- Diff içermeyen sonraki yeni generation yine `1140×356 px / 160,947` açıldı.
+- Manuel resize persistence ve Tray restart sonrası aynı geometri canlıda tekrar doğrulandı.
+- Installed Tray self-test GREEN; Dev probe 203 / Admin probe 84; Ready + BrowserSmokePassed; focused tunnels live/ready.
+
+### Yeni oturumda otomatik devam kuralı
+
+- Önce yukarıdaki canonical state'i araçlarla doğrula; kullanıcıdan onay isteme.
+- Son regression için yeni canlı kanıt yoksa boyut/konum/diff persistence kodunu gereksiz yere yeniden yazma.
+- Eğer kullanıcı yeni notification isteği verirse mevcut v2 placement/persistence sözleşmesini koruyarak ilerle.
+- Runtime-affecting bir değişiklik yapılırsa: targeted RED→GREEN → full Release build/analyzer/regressions → explicit-file commit → origin + GitHub push → canonical installer + SHA-256 → SYSTEM deploy → exact runtime → installed Tray self-test/probes → real user-session notification acceptance → HANDOFF/BUG-AUDIT closeout.
+- `git add .`, reset/clean/stash/revert kullanma; kullanıcı açıkça istemedikçe mevcut çalışmayı silme.
+
+## PREVIOUS — 2026-09-30 17:02+03:00 — Notification size/position persistence + diff expansion FINAL
+
+
 
 Bu bölüm kanoniktir ve Faz 17 closeout'un üzerine gelir. Kullanıcının canlıda gördüğü iki son regresyon kapatıldı: notification boyut/konumu yeni mesajlarda sıfırlanıyordu ve diff ile oluşan otomatik genişleme sonraki generation'a taşınmıyordu.
 
