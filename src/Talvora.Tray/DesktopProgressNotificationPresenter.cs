@@ -17,7 +17,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
     private const int MaximumPlacementDocumentBytes = 16 * 1024;
     private const int ScreenMarginPixels = 18;
     private const int CardGapPixels = 10;
-    private const int PlacementDocumentVersion = 1;
+    private const int PlacementDocumentVersion = 2;
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoZOrder = 0x0004;
     private const uint SwpNoActivate = 0x0010;
@@ -27,7 +27,14 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         int Version,
         bool IsPinned,
         int LeftPixels,
-        int TopPixels);
+        int TopPixels)
+    {
+        public bool HasUserSize { get; init; }
+
+        public double? WidthDip { get; init; }
+
+        public double? HeightDip { get; init; }
+    }
 
     private static readonly JsonSerializerOptions PlacementJsonOptions =
         new()
@@ -53,6 +60,9 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
     private bool _isPinned;
     private int _anchorLeftPixels;
     private int _anchorTopPixels;
+    private bool _hasPreferredSize;
+    private double _preferredWidthDip;
+    private double _preferredHeightDip;
     private string? _automaticScreenDeviceName;
     private bool _disposed;
 
@@ -130,9 +140,17 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                 FormsScreen.FromPoint(
                     FormsCursor.Position).DeviceName;
             window = new DesktopProgressNotificationWindow();
+            if (_hasPreferredSize)
+            {
+                window.ApplyPreferredSize(
+                    _preferredWidthDip,
+                    _preferredHeightDip);
+            }
             window.SetPinned(_isPinned);
             window.UserMoveCompleted +=
                 (_, _) => HandleUserMoveCompleted(window);
+            window.UserResizeCompleted +=
+                (_, _) => HandleUserResizeCompleted(window);
             window.PinStateChangeRequested +=
                 pinned => HandlePinStateChangeRequested(window, pinned);
             window.Closed += (_, _) =>
@@ -378,6 +396,37 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         Reposition();
     }
 
+    private void HandleUserResizeCompleted(
+        DesktopProgressNotificationWindow window)
+    {
+        if (_disposed ||
+            !TryGetWindowRectangle(window, out var rectangle) ||
+            !double.IsFinite(window.ActualWidth) ||
+            !double.IsFinite(window.ActualHeight) ||
+            window.ActualWidth <= 0 ||
+            window.ActualHeight <= 0)
+        {
+            return;
+        }
+
+        _isPinned = true;
+        _anchorLeftPixels = rectangle.Left;
+        _anchorTopPixels = rectangle.Top;
+        _preferredWidthDip = Math.Clamp(
+            window.ActualWidth,
+            window.MinWidth,
+            window.MaxWidth);
+        _preferredHeightDip = Math.Clamp(
+            window.ActualHeight,
+            window.MinHeight,
+            window.MaxHeight);
+        _hasPreferredSize = true;
+        window.MarkInteracted();
+        SetPinnedStateForAllWindows();
+        QueuePlacementSave();
+        Reposition();
+    }
+
     private void HandlePinStateChangeRequested(
         DesktopProgressNotificationWindow window,
         bool pinned)
@@ -513,7 +562,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                     path,
                     MaximumPlacementDocumentBytes,
                     PlacementJsonOptions);
-            if (saved.Version != PlacementDocumentVersion)
+            if (saved.Version is < 1 or > PlacementDocumentVersion)
             {
                 return;
             }
@@ -521,6 +570,19 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             _isPinned = saved.IsPinned;
             _anchorLeftPixels = saved.LeftPixels;
             _anchorTopPixels = saved.TopPixels;
+            if (saved.Version >= 2 &&
+                saved.HasUserSize &&
+                saved.WidthDip is { } savedWidth &&
+                saved.HeightDip is { } savedHeight &&
+                double.IsFinite(savedWidth) &&
+                double.IsFinite(savedHeight) &&
+                savedWidth > 0 &&
+                savedHeight > 0)
+            {
+                _hasPreferredSize = true;
+                _preferredWidthDip = savedWidth;
+                _preferredHeightDip = savedHeight;
+            }
 
             if (_isPinned &&
                 !FormsScreen.AllScreens.Any(
@@ -552,7 +614,16 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                 PlacementDocumentVersion,
                 _isPinned,
                 _anchorLeftPixels,
-                _anchorTopPixels);
+                _anchorTopPixels)
+            {
+                HasUserSize = _hasPreferredSize,
+                WidthDip = _hasPreferredSize
+                    ? _preferredWidthDip
+                    : null,
+                HeightDip = _hasPreferredSize
+                    ? _preferredHeightDip
+                    : null,
+            };
 
         _placementSaveTask =
             _placementSaveTask

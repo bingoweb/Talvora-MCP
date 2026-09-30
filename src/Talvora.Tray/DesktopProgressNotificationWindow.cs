@@ -3,6 +3,7 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -32,6 +33,9 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
         TimeSpan.FromSeconds(15);
     private static readonly TimeSpan StaleCheckInterval =
         TimeSpan.FromSeconds(10);
+    private const int WmEnterSizeMove = 0x0231;
+    private const int WmExitSizeMove = 0x0232;
+    private const double AutomaticDiffWidthDip = 760;
 
     private Border _root = null!;
     private Border _accent = null!;
@@ -61,6 +65,11 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
     private bool _isStale;
     private DateTimeOffset _lastPayloadUpdatedUtc;
     private DesktopProgressMessage? _lastMessage;
+    private HwndSource? _windowSource;
+    private double _interactiveResizeStartWidth;
+    private double _interactiveResizeStartHeight;
+    private bool _hasPreferredSize;
+    private bool _autoDiffExpanded;
 
     public DesktopProgressNotificationWindow()
     {
@@ -72,6 +81,8 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
             OnSystemParametersChanged;
     }
     public event EventHandler? UserMoveCompleted;
+
+    public event EventHandler? UserResizeCompleted;
 
     public event Action<bool>? PinStateChangeRequested;
 
@@ -93,6 +104,26 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
             DesktopProgressKind.Cancelled or
             DesktopProgressKind.Info or
             DesktopProgressKind.Warning;
+
+    public void ApplyPreferredSize(
+        double widthDip,
+        double heightDip)
+    {
+        if (!double.IsFinite(widthDip) ||
+            !double.IsFinite(heightDip) ||
+            widthDip <= 0 ||
+            heightDip <= 0)
+        {
+            return;
+        }
+
+        _hasPreferredSize = true;
+        Width = Math.Clamp(widthDip, MinWidth, MaxWidth);
+        Height = Math.Clamp(heightDip, MinHeight, MaxHeight);
+        SizeToContent = SizeToContent.Manual;
+        EnableResponsiveSizing();
+        _initialSizeLocked = true;
+    }
 
     public void Update(DesktopProgressMessage message)
     {
@@ -364,6 +395,83 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
         SetTextIfChanged(
             _codePreview,
             codePreview);
+        EnsureDiffWidth();
+    }
+
+    private void EnsureDiffWidth()
+    {
+        if (_hasPreferredSize ||
+            _autoDiffExpanded)
+        {
+            return;
+        }
+
+        var targetWidth = Math.Min(
+            MaxWidth,
+            Math.Max(Width, AutomaticDiffWidthDip));
+        if (targetWidth <= Width + 0.5)
+        {
+            return;
+        }
+
+        Width = targetWidth;
+        _autoDiffExpanded = true;
+    }
+
+    private void AttachNativeWindowHook()
+    {
+        if (_windowSource is not null)
+        {
+            return;
+        }
+
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        _windowSource = HwndSource.FromHwnd(handle);
+        _windowSource?.AddHook(WindowMessageHook);
+    }
+
+    private void DetachNativeWindowHook()
+    {
+        if (_windowSource is null)
+        {
+            return;
+        }
+
+        _windowSource.RemoveHook(WindowMessageHook);
+        _windowSource = null;
+    }
+
+    private IntPtr WindowMessageHook(
+        IntPtr hwnd,
+        int message,
+        IntPtr wParam,
+        IntPtr lParam,
+        ref bool handled)
+    {
+        if (message == WmEnterSizeMove)
+        {
+            _interactiveResizeStartWidth = ActualWidth;
+            _interactiveResizeStartHeight = ActualHeight;
+        }
+        else if (message == WmExitSizeMove)
+        {
+            var widthChanged = Math.Abs(
+                ActualWidth - _interactiveResizeStartWidth) > 0.5;
+            var heightChanged = Math.Abs(
+                ActualHeight - _interactiveResizeStartHeight) > 0.5;
+            if (widthChanged || heightChanged)
+            {
+                _hasPreferredSize = true;
+                UserResizeCompleted?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        return IntPtr.Zero;
     }
 
     private static void SetTextIfChanged(

@@ -426,6 +426,8 @@ internal sealed partial class DesktopProgressNotificationWindow
         };
         _root.PreviewMouseLeftButtonDown +=
             OnCardMouseLeftButtonDown;
+        SourceInitialized += (_, _) =>
+            AttachNativeWindowHook();
         Loaded += (_, _) =>
         {
             AnimateIn();
@@ -437,6 +439,7 @@ internal sealed partial class DesktopProgressNotificationWindow
         {
             _dismissTimer.Stop();
             _staleTimer.Stop();
+            DetachNativeWindowHook();
             SystemParameters.StaticPropertyChanged -=
                 OnSystemParametersChanged;
         };
@@ -455,6 +458,12 @@ internal sealed partial class DesktopProgressNotificationWindow
             MaxHeight);
         SizeToContent = SizeToContent.Manual;
         Height = renderedHeight;
+        EnableResponsiveSizing();
+        _initialSizeLocked = true;
+    }
+
+    private void EnableResponsiveSizing()
+    {
         _diffRow.Height = new GridLength(
             1,
             GridUnitType.Star);
@@ -462,7 +471,6 @@ internal sealed partial class DesktopProgressNotificationWindow
             1,
             GridUnitType.Star);
         _codePreview.MaxHeight = double.PositiveInfinity;
-        _initialSizeLocked = true;
     }
 
     private void OnSystemParametersChanged(
