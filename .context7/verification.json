@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-30T16:30:25Z",
-  "scope": "Talvora Control Center persisted-event deep-audit follow-up: structured event history retains the existing 500-record and field-length policy, while events.json restore now enforces an 8 MiB same-handle byte ceiling before JSON allocation. A real 32 MiB fixture demonstrated the pre-fix unbounded allocation and the post-fix bounded behavior without changing normal event semantics.",
+  "verifiedAtUtc": "2026-09-30T16:41:57Z",
+  "scope": "Talvora Control Center persisted-state deep-audit follow-up: #284 bounded events.json restore remains intact and #285 now applies the same same-handle bounded JSON discipline to Windows-session-scoped manual-stop state. Current and legacy session-state documents are capped at 256 KiB, oversized/corrupt state self-heals to a fresh session document, and normal lifecycle/manual-stop semantics remain unchanged.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET System.Text.Json guidance recommends stream-based JSON processing for large inputs and explicitly warns against unbounded buffer growth that can produce excessive allocations or OutOfMemoryException. Talvora Control Center therefore keeps its existing 500-record event-history semantics but restores events.json through the shared same-handle bounded JSON reader with an 8 MiB hard ceiling before allocation. The local 32 MiB fixture dropped from about 269 MB managed allocation / 168 MB working-set growth pre-fix to about 10.7 KB managed allocation / 2.8 MB working-set growth post-fix."
+      "verified": "Current .NET System.Text.Json guidance recommends stream-based JSON processing for large inputs and explicitly warns against unbounded buffer growth that can produce excessive allocations or OutOfMemoryException. Talvora now applies this consistently to Control Center persisted state: events.json remains capped at 8 MiB, while current and legacy manual-stop session-state JSON are capped at 256 KiB through the shared same-handle bounded reader. A real 32 MiB session-state fixture dropped from about 269 MB managed allocation / 168 MB working-set growth pre-fix to about 500 KB managed allocation / 11.3 MB working-set growth post-fix, and the oversized state self-healed to a 192-byte fresh document."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop",

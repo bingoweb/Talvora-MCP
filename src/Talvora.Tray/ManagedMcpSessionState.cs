@@ -3,11 +3,14 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.Json;
+using Talvora.Shared;
 
 namespace Talvora.Tray;
 
 internal static class ManagedMcpSessionState
 {
+    private const int MaximumSessionStateDocumentBytes =
+        256 * 1024;
     private const string MutexName =
         @"Local\Talvora.ManagedMcpSessionState";
     private static readonly object Sync = new();
@@ -174,8 +177,9 @@ internal static class ManagedMcpSessionState
 
         try
         {
-            var parsed = JsonSerializer.Deserialize<SessionStateDocument>(
-                File.ReadAllText(statePath),
+            var parsed = JsonFileStore.ReadBounded<SessionStateDocument>(
+                statePath,
+                MaximumSessionStateDocumentBytes,
                 JsonOptions);
 
             if (parsed is null ||
@@ -200,6 +204,7 @@ internal static class ManagedMcpSessionState
         catch (Exception ex) when (
             ex is IOException or
             JsonException or
+            InvalidDataException or
             UnauthorizedAccessException)
         {
             TrayLog.Write(
@@ -221,8 +226,9 @@ internal static class ManagedMcpSessionState
 
         try
         {
-            var parsed = JsonSerializer.Deserialize<SessionStateDocument>(
-                File.ReadAllText(LegacyStatePath),
+            var parsed = JsonFileStore.ReadBounded<SessionStateDocument>(
+                LegacyStatePath,
+                MaximumSessionStateDocumentBytes,
                 JsonOptions);
 
             return parsed is not null &&
@@ -242,6 +248,7 @@ internal static class ManagedMcpSessionState
         catch (Exception ex) when (
             ex is IOException or
             JsonException or
+            InvalidDataException or
             UnauthorizedAccessException)
         {
             TrayLog.Write(

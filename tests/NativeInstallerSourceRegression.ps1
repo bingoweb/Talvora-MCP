@@ -626,6 +626,12 @@ $result = [pscustomobject]@{
         $managedMcpSessionState -match 'TryLoadLegacyCurrentScope' -and
         $managedMcpSessionState -match 'GetStatePath\(Process\.GetCurrentProcess\(\)\.SessionId\)'
     )
+    ManualStopStateReadIsBounded = (
+        $managedMcpSessionState -match 'MaximumSessionStateDocumentBytes\s*=\s*256\s*\*\s*1024' -and
+        $managedMcpSessionState -match 'JsonFileStore\.ReadBounded<SessionStateDocument>' -and
+        $managedMcpSessionState -notmatch 'File\.ReadAllText\(statePath\)' -and
+        $managedMcpSessionState -notmatch 'File\.ReadAllText\(LegacyStatePath\)'
+    )
     TalvoraLifecycleUsesOperationCoordinator = (
         $controlCenterLifecycleService -match 'ManagedMcpOperationCoordinator\.TryAcquire\(TalvoraId\)' -and
         $controlCenterLifecycleService -match 'ManagedMcpOperationInProgressException\(TalvoraId\)'
