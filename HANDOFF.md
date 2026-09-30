@@ -1,5 +1,46 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-09-30 18:56+03:00 — Notification off-screen pin normalization FINAL
+
+Bu bölüm en üst kanonik checkpoint'tir. Önceki size/diff persistence sözleşmesi korunmuştur; bu tur yalnız bağlı olmayan eski bir monitöre ait stale pinned placement'ın disk üzerinde tekrar dirilmesi edge-case'ini kapatmıştır.
+
+### Canonical runtime / repository state
+
+- Repository: `C:\Users\tayla\Talvora-MCP`.
+- Runtime-affecting commit: `a029d4d3f868c1f94c17ddb07bd638e3035222b7` — `fix: normalize stale notification pin`.
+- Runtime commit publish edildiğinde `HEAD = origin/main = github/main = a029d4d3...`; working tree clean.
+- Canonical installer: **342,628,111 bytes**; SHA-256 `2A2ACE57154E1FBEA5B8BB2C4A4808253C940E0C16276A139B51AEE506C4FBCF`; manifest source/head exact `a029d4d3...`.
+- SYSTEM deploy sonrası exact-installed `talvora_system_info.sourceCommit=a029d4d3...`, LocalSystem / `S-1-5-18`, service PID 22944.
+- Installed version root: `C:\Program Files\Talvora\Versions\a029d4d3f868c1f94c17ddb07bd638e3035222b7-20260930155311120`.
+- Bu bölümün docs-only closeout commit'i runtime fingerprint değildir; sırf repository HEAD ilerledi diye `a029d4d3...` yeniden deploy edilmemelidir.
+
+### #283 — stale off-screen pinned placement
+
+- Pre-fix izole reproduksiyonda v2 placement `isPinned=true`, `left/top=2,000,000,000` olarak yazıldı. Presenter bunun bağlı hiçbir monitor work-area'sında olmadığını görüp RAM'de `_isPinned=false` yapıyor fakat dosyayı güncellemiyordu; restore+dispose sonrasında disk hâlâ `isPinned=true` kalıyordu.
+- Fix: restore sırasında stale/off-screen pin otomatik moda normalize edildiğinde aynı v2 snapshot `QueuePlacementSave()` ile kalıcı yazılıyor.
+- Preferred size ve anchor evidence değiştirilmez. Regression `left/top` ile `598×237.333... DIP` değerlerinin aynı kaldığını, yalnız `isPinned=false` olduğunu doğruluyor.
+- Test izolasyonu için presenter opsiyonel placement path alabiliyor; production default path davranışı değişmedi.
+
+### Final quality / live acceptance
+
+- Targeted RED: yeni executable regression önce production constructor/sözleşme eksikliği nedeniyle RED oldu; fix sonrası `DESKTOP_PROGRESS_BEHAVIOR_GREEN`.
+- Full Release solution build: **0 warning / 0 error**.
+- `MODERNIZATION_POLICY_GREEN`, `CONTEXT7_QUALITY_GATE_GREEN`, analyzer `--verify-no-changes` exit 0, `git diff --check` exit 0.
+- Context7 `/dotnet/docs` multi-monitor/WPF restore guidance yeniden doğrulandı; stale saved monitor coordinate current monitor working areas'a göre normalize edilirken kullanıcı boyutu korunuyor.
+- Installed Tray self-test exit 0 (`ManagedMcpCount=5; FocusedTalvoraCount=2`).
+- Installed Dev probe: `Ready=True / BrowserSmokePassed=True / ToolCount=203`; Admin: `Ready=True / BrowserSmokePassed=True / ToolCount=84`.
+- Talvora, Gitea ve Caddy `Running / Automatic`.
+- Gerçek kullanıcı placement bu turda değiştirilmedi: `isPinned=true`, `left=56`, `top=946`, `widthDip=598`, `heightDip=237.333333...`.
+- Installed Tray PID 29216, session 1. Yeni gerçek notification generation UI Automation ile **897×356 px / 56,946**, `CanResize=true`, `CanMove=true`, `IsOffscreen=false` ölçüldü. Aktif %150 DPI'da 897 px = **598 DIP**; yani mevcut kullanıcı tercihi deploy/restart ve yeni mesaj sonrası birebir korunuyor.
+- Bu tur sırasında görülen yakın zamanlı `Desktop progress IPC client timed out while sending a frame` log satırları executable regression'ın kasıtlı stalled-client recovery senaryosuyla üretildi; bu kanıt yeni bir production notification bug'ı olarak yeniden açılmamalıdır.
+
+### Sonraki oturum
+
+- İlk adım yine `git status --short`, `git log -8 --oneline`, `HEAD/origin/main/github/main` ve canlı `talvora_system_info` doğrulaması olsun.
+- Exact-installed runtime baseline `a029d4d3...` olmalıdır. Takip eden docs-only commit runtime redeploy sebebi değildir.
+- Mevcut v2 placement/persistence, manual-resize precedence ve diff auto-width sözleşmesini yeni canlı kanıt olmadan yeniden yazma.
+- #280–#283 kapalıdır; yalnız yeni gerçek regresyon/reproduction varsa yeniden aç.
+
 ## CURRENT — NEW SESSION TRANSITION CHECKPOINT — Notification geometry persistence
 
 Yeni oturum bu bölümden başlamalıdır. Önce bu blok tamamen okunmalı; herhangi bir kod değişikliğinden önce `git status --short`, `git log -8 --oneline`, `HEAD/origin/main/github/main` ve canlı `talvora_system_info` doğrulanmalıdır. Kullanıcıdan tekrar onay istenmeden çalışmaya devam edilmelidir.

@@ -1,5 +1,19 @@
 # Talvora Deep Bug Audit
 
+## CURRENT — 2026-09-30 — Notification stale off-screen pin normalization
+
+Status: **FINAL LIVE VERIFIED.** Önceki notification geometry persistence davranışı yeniden yazılmadı. Yeni deep audit yalnız bir monitor-topology edge-case'i doğruladı ve kapattı.
+
+- #283 **FIXED / RED→GREEN / LIVE VERIFIED** — v2 placement bağlı olmayan eski monitöre ait `isPinned=true` + off-screen `left/top` taşıdığında `RestorePlacement()` runtime'da `_isPinned=false` yapıyor fakat normalize edilmiş state'i diske yazmıyordu. İzole pre-fix fixture `left/top=2,000,000,000`, `widthDip=598`, `heightDip=237.333333...` ile restore+dispose sonrasında dosyanın hâlâ `isPinned=true` olduğunu birebir üretti. Runtime artık yalnız stale pin'i `false` yapıp `QueuePlacementSave()` çağırıyor; preferred size ve anchor evidence aynen korunuyor. Executable notification regression geçici placement path ile bu davranışı kalıcı olarak doğruluyor.
+
+Runtime commit: `a029d4d3f868c1f94c17ddb07bd638e3035222b7` — `fix: normalize stale notification pin`; Gitea origin + GitHub main senkron. Full Release build **0 warning / 0 error**; `DESKTOP_PROGRESS_BEHAVIOR_GREEN`; `MODERNIZATION_POLICY_GREEN`; `CONTEXT7_QUALITY_GATE_GREEN`; analyzer verify-no-changes exit 0; `git diff --check` exit 0. Context7 `/dotnet/docs` multi-monitor/WPF restore evidence aynı change içinde yenilendi.
+
+Canonical installer **342,628,111 bytes**, SHA-256 `2A2ACE57154E1FBEA5B8BB2C4A4808253C940E0C16276A139B51AEE506C4FBCF`; manifest source/head exact `a029d4d3...`. SYSTEM deploy beklenen MCP disconnect ile gerçekleşti; reconnect sonrası Dev/Admin `talvora_system_info.sourceCommit=a029d4d3...`, LocalSystem / `S-1-5-18`, PID 22944. Installed version root `C:\Program Files\Talvora\Versions\a029d4d3f868c1f94c17ddb07bd638e3035222b7-20260930155311120`.
+
+Installed self-test exit 0 (`ManagedMcpCount=5; FocusedTalvoraCount=2`); Dev `Ready=True / BrowserSmokePassed=True / ToolCount=203`; Admin `Ready=True / BrowserSmokePassed=True / ToolCount=84`; Talvora/Gitea/Caddy Running Automatic. Gerçek kullanıcı placement dosyası test boyunca korunmuştur: `isPinned=true`, `56,946`, `598×237.333333 DIP`. Session-1 UI Automation yeni installed notification generation'ını **897×356 px / 56,946**, `CanResize=true`, `CanMove=true`, `IsOffscreen=false` ölçtü; %150 DPI'da 897 px = 598 DIP.
+
+Audit note: bu turdaki yakın zamanlı `Desktop progress IPC client timed out while sending a frame` satırları `AssertPipeReadTimeoutRecoveryAsync` regression'ının kasıtlı stalled-client fixture'ıyla koreledir; canlı acceptance sağlıklı olduğu için ayrı production bug olarak açılmadı.
+
 ## CURRENT — 2026-09-30 — Notification geometry persistence / diff auto-width live closeout
 
 Status: **FINAL LIVE VERIFIED.** Repo'da size-aware placement ve diff auto-expand kaynak düzeltmesi bulunmasına rağmen installed runtime `eb57cd3...` ile geride kalmıştı; gerçek kullanıcı placement dosyası bu nedenle hâlâ v1 ve width/height'sızdı. Ayrıca source commit `f8e08ea...` auto diff width'i transient bırakıyor, sonraki notification generation'ında yeniden compact width'e dönme riski taşıyordu.
