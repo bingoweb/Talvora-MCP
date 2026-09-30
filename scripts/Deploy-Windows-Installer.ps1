@@ -13,6 +13,32 @@ if ($PSVersionTable.PSEdition -eq 'Core' -and -not $IsWindows) {
     throw 'Talvora canonical deploy launcher requires Windows.'
 }
 
+function Test-TalvoraServiceAncestor {
+    $currentProcessId = $PID
+    for ($depth = 0; $depth -lt 8; $depth++) {
+        $current = Get-CimInstance Win32_Process -Filter "ProcessId=$currentProcessId" -ErrorAction SilentlyContinue
+        if ($null -eq $current -or [int]$current.ParentProcessId -le 0) {
+            return $false
+        }
+
+        $parent = Get-CimInstance Win32_Process -Filter "ProcessId=$([int]$current.ParentProcessId)" -ErrorAction SilentlyContinue
+        if ($null -eq $parent) {
+            return $false
+        }
+
+        if ([string]::Equals(
+                [string]$parent.Name,
+                'Talvora.exe',
+                [StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+
+        $currentProcessId = [int]$parent.ProcessId
+    }
+
+    return $false
+}
+
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($InstallerPath)) {
     $InstallerPath = Join-Path $repoRoot 'artifacts\installer\Talvora-Setup.exe'
@@ -84,6 +110,10 @@ $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $windowsPrincipal = [Security.Principal.WindowsPrincipal]::new($identity)
 if (-not $windowsPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     throw 'Canonical deploy launcher must run elevated (Administrator or LocalSystem).'
+}
+
+if ($WaitForCompletion -and (Test-TalvoraServiceAncestor)) {
+    $WaitForCompletion = $false
 }
 
 $buildMutexName = 'Global\Talvora.BuildWindowsInstaller.v2'

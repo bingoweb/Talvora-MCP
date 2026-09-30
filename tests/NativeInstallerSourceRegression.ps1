@@ -83,6 +83,19 @@ $canonicalUniqueToolCount = @($canonicalToolNames | Sort-Object -Unique).Count
 $iconPath = Join-Path $RepoRoot 'assets\Talvora.ico'
 $iconBytes = [IO.File]::ReadAllBytes($iconPath)
 $iconFrameCount = if ($iconBytes.Length -ge 6) { [BitConverter]::ToUInt16($iconBytes, 4) } else { 0 }
+$upgradeStopStart = $installerService.IndexOf(
+    'private static async Task StopServiceForUpgradeAsync',
+    [StringComparison]::Ordinal)
+$restoreRecoveryStart = $installerService.IndexOf(
+    'private static async Task RestoreCanonicalServiceRecoveryPolicyAsync',
+    $upgradeStopStart,
+    [StringComparison]::Ordinal)
+if ($upgradeStopStart -lt 0 -or $restoreRecoveryStart -le $upgradeStopStart) {
+    throw 'Native installer regression could not isolate canonical service upgrade stop path.'
+}
+$upgradeStopSection = $installerService.Substring(
+    $upgradeStopStart,
+    $restoreRecoveryStart - $upgradeStopStart)
 
 $result = [pscustomobject]@{
     CanonicalDeployUsesIndependentSystemTask = (
@@ -101,6 +114,11 @@ $result = [pscustomobject]@{
         $deployInstallerScript -match '\$lastRunTransitioned\s*=\s*\$currentLastRunTime\s+-ne\s+\$previousLastRunTime' -and
         $deployInstallerScript -match '\$completionObserved\s*=\s*\$true' -and
         $deployInstallerScript -notmatch 'no running installer instance was observed'
+    )
+    CanonicalDeployDetachesServiceAncestorWait = (
+        $deployInstallerScript -match 'function Test-TalvoraServiceAncestor' -and
+        $deployInstallerScript -match '\$WaitForCompletion\s+-and\s+\(Test-TalvoraServiceAncestor\)' -and
+        $deployInstallerScript -match '\$WaitForCompletion\s*=\s*\$false'
     )
     CanonicalDeployPinsBuiltArtifactIdentity = (
         $buildInstallerScript.Contains('Talvora-Setup.manifest.json') -and
@@ -559,6 +577,11 @@ $result = [pscustomobject]@{
         $installerService -match '"binPath="' -and
         $installerService -match 'Kill\(entireProcessTree:\s*false\)' -and
         $installerService -notmatch 'process\.Kill\(entireProcessTree:\s*true\)'
+    )
+    InstallerUpgradeNeverDeletesCanonicalService = (
+        $upgradeStopSection -match 'Kill\(entireProcessTree:\s*false\)' -and
+        $upgradeStopSection -notmatch '"delete"' -and
+        $upgradeStopSection -notmatch 'WaitForServiceDeletionAsync'
     )
     PlaywrightMcpRemovedFromTalvora = (
         $installerFlow -notmatch 'InstallPlaywrightManagedMcpAsync' -and

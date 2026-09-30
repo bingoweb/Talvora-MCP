@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-30T16:41:57Z",
-  "scope": "Talvora Control Center persisted-state deep-audit follow-up: #284 bounded events.json restore remains intact and #285 now applies the same same-handle bounded JSON discipline to Windows-session-scoped manual-stop state. Current and legacy session-state documents are capped at 256 KiB, oversized/corrupt state self-heals to a fresh session document, and normal lifecycle/manual-stop semantics remain unchanged.",
+  "verifiedAtUtc": "2026-09-30T16:56:03Z",
+  "scope": "Talvora canonical deployment deep-audit follow-up: #285 bounded session-state restore is exact-installed and #286 closes a live self-update cycle. Service-hosted Deploy-Windows-Installer calls now detach WaitForCompletion before the SYSTEM task reaches service stop, while the installer upgrade path preserves the canonical Talvora service registration even after a forced process stop instead of falling back to sc delete.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -17,7 +17,7 @@
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us",
-      "verified": "Current Microsoft Windows/PowerShell task guidance supports manual task execution and explicit enable/disable control. Talvora uses that lifecycle for the opt-in Penpot task: disabled while idle, explicitly enabled before Start-ScheduledTask, and stopped/disabled again when the on-demand MCP is not in use."
+      "verified": "Current Microsoft Learn Windows-service guidance says a service should be stopped before deletion and DeleteService/sc delete only marks the service for deletion until it is no longer running and outstanding service handles are closed. Talvora canonical upgrades therefore preserve the existing service registration and reconfigure its binPath rather than deleting it as an upgrade fallback. The deploy launcher also releases a service-hosted MCP request instead of waiting on the same SYSTEM installer task that must stop that service. Live evidence: the pre-fix 2026-09-30 deploy hit SCM 7034 and timed out while deleting Talvora; the detached source-fixed launcher returned waitForCompletion=false and the same 29f009e installer then moved 34%→50% in 0.31 seconds, installed successfully, and produced no new SCM 7034 event."
     },
     {
       "libraryId": "/dotnet/docs",

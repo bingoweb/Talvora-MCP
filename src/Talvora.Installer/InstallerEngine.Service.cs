@@ -179,7 +179,7 @@ private static async Task RemoveLegacyInstallationAsync(
                 }
             }
 
-            var forcedStopDeadline = DateTime.UtcNow.AddSeconds(10);
+            var forcedStopDeadline = DateTime.UtcNow.AddSeconds(30);
             while (DateTime.UtcNow < forcedStopDeadline)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -202,18 +202,8 @@ private static async Task RemoveLegacyInstallationAsync(
                 await Task.Delay(250, cancellationToken);
             }
 
-            InstallerLog.Write(
-                $"Service remained registered after forced termination; deleting stale registration before upgrade. Service={serviceName}");
-
-            _ = await RunScAsync(
-                allowNonZero: true,
-                cancellationToken,
-                "delete",
-                serviceName);
-            await WaitForServiceDeletionAsync(
-                serviceName,
-                cancellationToken);
-            stopSucceeded = true;
+            throw new TimeoutException(
+                $"Windows service did not reach STOPPED after forced termination; registration preserved for rollback. Service={serviceName}");
         }
         finally
         {
