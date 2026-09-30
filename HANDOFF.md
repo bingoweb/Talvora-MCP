@@ -1,5 +1,73 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-09-30 20:01+03:00 — #285 bounded manual-stop state + #286 canonical self-update cycle FINAL
+
+Bu bölüm en üst kanonik checkpoint'tir. #280–#284 kapalı kalır. Bu tur iki gerçek deep-audit bulgusu kapatıldı ve final exact-installed runtime her ikisini birlikte taşır.
+
+### Canonical runtime / repository state
+
+- Runtime-affecting final commit: `8987aa67c90c9170238fbe4b514a71314631b4e8` — `fix: detach canonical self-update`.
+- Parent runtime commit `29f009e3d8dcb9344fa82a69227b5f80028cc849` — `fix: bound manual-stop session state`.
+- Final runtime publish öncesi `HEAD = origin/main = github/main = 8987aa67...`; working tree clean.
+- Canonical installer: **342,628,111 bytes**; SHA-256 `CF0EC02B58183021C0AF09D1ABDE9BEA986515CBA6530E822DDBA3DC3163813F`; manifest source/head exact `8987aa67...`.
+- SYSTEM deploy sonrası exact-installed `talvora_system_info.sourceCommit=8987aa67...`, LocalSystem / `S-1-5-18`, service PID **39076**.
+- Installed version root: `C:\Program Files\Talvora\Versions\8987aa67c90c9170238fbe4b514a71314631b4e8-20260930165949075`.
+- Takip eden docs-only closeout commit runtime fingerprint değildir; sırf repository HEAD ilerledi diye `8987aa67...` yeniden deploy edilmemelidir.
+
+### #285 — Windows-session manual-stop state unbounded JSON restore
+
+- Gerçek pre-fix fixture: SYSTEM profile `session-state.0.json` geçici olarak **32 MiB** valid JSON + trailing whitespace yapıldı. Gerçek `ManagedMcpSessionState.IsManuallyStopped("audit-probe")` çağrısı yaklaşık **268,941,928 byte managed allocation**, **167,563,264 byte working-set artışı**, **145 ms** üretti.
+- Kök neden: current ve legacy state restore yolları doğrudan `File.ReadAllText` + `JsonSerializer.Deserialize` kullanıyordu.
+- Fix: `MaximumSessionStateDocumentBytes = 256 * 1024`; current ve legacy state artık shared same-handle `JsonFileStore.ReadBounded<SessionStateDocument>` ile okunuyor. Oversized/corrupt state mevcut fail-soft davranışla fresh current-session state'e resetleniyor.
+- Post-fix aynı 32 MiB fixture: **500,288 byte managed allocation**, **11,300,864 byte working-set delta**, **256 ms**; state otomatik **192 bayt** fresh document'e self-heal oldu.
+- Exact-installed final `8987aa67...` acceptance: 32 MiB state altında installed Tray `--self-test` exit **0**, peak working set **58,011,648 bytes**, state **193 bayta** self-heal; test sonunda orijinal state geri yüklendi.
+
+### #286 — canonical deploy service-hosted wait cycle + forbidden service deletion regression
+
+- Live pre-fix failure 2026-09-30 19:45+03:00: Talvora MCP içinden `Deploy-Windows-Installer.ps1 -WaitForCompletion` aktif MCP isteğini SYSTEM installer task bitene kadar açık tuttu. Installer aynı servisi durdurmaya çalıştığı için graceful stop 8 saniyede tamamlanmadı; PID force terminate edildi, SCM 7034 oluştu. Mevcut `StopServiceForUpgradeAsync` daha sonra eski #60 invariant'ını delerek `sc delete` fallback'ine girdi; service deletion 15 saniyede tamamlanmayınca `Windows service silinemedi: Talvora` timeout ve rollback oluştu.
+- Rollback doğru çalıştı; eski `866ea5a...` runtime yeniden ayağa kalktı. Veri/service registration kaybı olmadı.
+- Historical #60/#82 contract yeniden kanonikleştirildi: upgrade yolu Talvora service registration'ını **asla silmez**; `StopAndDeleteServiceAsync` yalnız gerçek uninstall/legacy cleanup içindir.
+- `StopServiceForUpgradeAsync`: force-stop sonrası SCM STOPPED için 30 saniye bounded bekler; hâlâ terminal değilse registration'ı koruyan TimeoutException atar ve recovery policy finally ile restore edilir. Upgrade path içinde `"delete"`/WaitForServiceDeletion yoktur.
+- `Deploy-Windows-Installer.ps1`: parent chain içinde `Talvora.exe` varsa caller `-WaitForCompletion` vermiş olsa bile `WaitForCompletion=$false` yapar. SYSTEM task yine bağımsız başlar, fakat MCP request installer servisi durdurmadan önce serbest kalır.
+- Kalıcı Native Installer regression artık iki boşluğu ayrı kilitler:
+  - `CanonicalDeployDetachesServiceAncestorWait=True`
+  - `InstallerUpgradeNeverDeletesCanonicalService=True`
+- Microsoft Learn / Context7 doğrulaması: `DeleteService/sc delete` servis çalışırken veya açık service handle'ları varken yalnız marked-for-delete olur; gerçek silme ancak servis durmuş ve handle'lar kapanmışken tamamlanır. Upgrade için doğru model mevcut registration'ı stop/reconfigure etmektir.
+
+### #286 gerçek live acceptance
+
+- Source-fixed deploy launcher henüz runtime commit olmadan aynı `-WaitForCompletion` çağrısını Talvora MCP içinden aldı ve JSON'da **`waitForCompletion=false`** döndürdü; task instance `{C81DC40E-37C2-4983-85E0-A10C1D6436C1}`.
+- Aynı mevcut `29f009e...` installer bu detach ile başarıyla deploy oldu:
+  - log 34% `19:54:51.258` → 50% `19:54:51.573`: yaklaşık **0.31 s**
+  - force-stop satırı yok
+  - service-delete satırı yok
+  - yeni SCM 7034 yok
+  - install success `19:55:00.078`.
+- Final packaged `8987aa67...` installer da Talvora MCP içinden bilerek yine `-WaitForCompletion` ile çağrıldı ve **`waitForCompletion=false`** döndürdü; task instance `{FABB71DE-028D-4887-8069-08288186576A}`.
+- Final deploy:
+  - 34% `19:59:49.688` → 50% `19:59:50.242`: yaklaşık **0.55 s**
+  - force-stop yok
+  - `sc delete`/rollback yok
+  - yeni SCM event yok
+  - `Install succeeded. Commit=8987aa67... PID=39076` at `19:59:58.510`.
+
+### Final quality gates
+
+- Full Release solution build **0 warning / 0 error**.
+- `NATIVE_INSTALLER_SOURCE_GREEN`; `CANONICAL_DEPLOY_ARTIFACT_IDENTITY_GREEN`.
+- Windows PowerShell 5.1 deploy-script parse GREEN.
+- `CONTROL_CENTER_REPAIR_SOURCE_GREEN`; privacy/security source GREEN.
+- `MODERNIZATION_POLICY_GREEN`; `CONTEXT7_QUALITY_GATE_GREEN`; analyzer verify-no-changes exit 0.
+- Source Tray self-test GREEN.
+- Exact-installed final self-test exit 0; Dev/Admin managed probes exit 0. Live log canonical counts: Dev **203**, Admin **84**, Ready + BrowserSmokePassed.
+- Talvora/Gitea/Caddy `Running / Automatic`.
+
+### Sonraki audit
+
+- #285 ve #286 kapalıdır. Yeni deep-audit turu #287'den devam etmelidir.
+- Özellikle kalan persisted-state / lifecycle / bounded-I/O yollarını gerçek çağrı zinciri ve fixture ile tara; sadece reproduksiyonla doğrulanmış bug'ı aç.
+- #280–#286 yeni gerçek kanıt olmadan yeniden açılmamalıdır.
+
 ## CURRENT — 2026-09-30 19:38+03:00 — Control Center event-store bounded restore FINAL
 
 Bu bölüm en üst kanonik checkpoint'tir. Notification #280–#283 kapalı kalır. Bu tur yeni deep-audit bulgusu #284'ü kapattı: Control Center'ın persisted `events.json` restore yolu sınırsız `File.ReadAllText` kullanıyordu.

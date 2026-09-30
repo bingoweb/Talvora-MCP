@@ -1,5 +1,28 @@
 # Talvora Deep Bug Audit
 
+## CURRENT — 2026-09-30 — #285 bounded manual-stop state + #286 canonical self-update cycle
+
+Status: **FINAL LIVE VERIFIED.** Final exact-installed runtime `8987aa67c90c9170238fbe4b514a71314631b4e8` includes both fixes.
+
+- #285 **FIXED / REAL RED→GREEN / INSTALLED VERIFIED** — Windows-session-scoped manual-stop current/legacy JSON state used unbounded `File.ReadAllText`. Real 32 MiB SYSTEM `session-state.0.json` fixture with actual `ManagedMcpSessionState.IsManuallyStopped` call allocated **268,941,928 bytes**, grew working set **167,563,264 bytes**, and completed in **145 ms** pre-fix. State reads now use shared same-handle `JsonFileStore.ReadBounded<SessionStateDocument>` with **256 KiB** ceiling. Post-fix identical fixture allocated **500,288 bytes**, working-set delta **11,300,864 bytes**, and oversized state self-healed to **192 bytes**. Final exact-installed `8987aa67...` 32 MiB self-test exit 0, peak WS **58,011,648**, self-healed state **193 bytes**, original state restored afterward.
+
+- #286 **FIXED / LIVE FAILURE→LIVE GREEN** — service-hosted canonical deploy had a logical wait cycle: MCP request invoked `Deploy-Windows-Installer.ps1 -WaitForCompletion`, independent SYSTEM task started correctly, but the MCP request stayed open waiting for the task while installer needed that same Talvora service to stop. Live 19:45 run hit graceful-stop timeout, forced PID termination, SCM 7034 and a reintroduced `sc delete` fallback inside `StopServiceForUpgradeAsync`; deletion timed out with `Windows service silinemedi: Talvora`, then rollback correctly restored old `866ea5a...`. This also violated historical #60/#82 invariant that canonical upgrade never deletes Talvora registration.
+
+  Fix has two layers:
+  1. `Deploy-Windows-Installer.ps1` detects a `Talvora.exe` process ancestor. If such a caller supplied `-WaitForCompletion`, it converts the call to non-waiting mode before launching the independent SYSTEM task, releasing the MCP request before the installer reaches service stop.
+  2. `StopServiceForUpgradeAsync` no longer calls `sc delete` / `WaitForServiceDeletionAsync`; after force kill it gives SCM a bounded 30-second STOPPED window and fails with service registration preserved if terminal state still cannot be proven. Recovery policy restoration remains in `finally`.
+
+  Regression gap was fixed: the previous `InstallerCanReplaceNonStoppableService` test only forbade `StopAndDeleteServiceAsync(ServiceName)` at the flow callsite and did not inspect the body of `StopServiceForUpgradeAsync`. Native Installer regression now isolates that method and asserts no `"delete"` / WaitForServiceDeletion; it separately requires service-ancestor deploy wait detachment.
+
+  Live proof:
+  - pre-fix failure: 19:45:24 SCM 7034; 19:45:50 delete timeout + rollback.
+  - source-fixed launcher with existing 29f installer: same MCP `-WaitForCompletion` request returned `waitForCompletion=false`; deploy 34→50% in **0.31 s**, no force-stop/delete/7034, `29f009e...` installed successfully.
+  - final packaged `8987aa67...`: same explicit wait request again returned `waitForCompletion=false`; deploy 34→50% in **0.55 s**, no force-stop, no service deletion, no rollback, no new SCM event; install success at 19:59:58, service PID **39076**.
+
+Quality: full Release solution **0 warning / 0 error**; Native Installer source GREEN; canonical deploy artifact-identity GREEN; Windows PowerShell 5.1 parser GREEN; repair/privacy/modernization/Context7 gates GREEN; analyzer verify-no-changes exit 0; source Tray self-test GREEN.
+
+Final canonical installer: **342,628,111 bytes**, SHA-256 `CF0EC02B58183021C0AF09D1ABDE9BEA986515CBA6530E822DDBA3DC3163813F`; manifest source/head exact `8987aa67...`. Exact-installed Dev/Admin `sourceCommit=8987aa67...`, LocalSystem / `S-1-5-18`; installed self-test + Dev/Admin managed probes exit 0; Talvora/Gitea/Caddy Running Automatic.
+
 ## CURRENT — 2026-09-30 — #284 Control Center persisted-event bounded restore
 
 Status: **FINAL LIVE VERIFIED.**
