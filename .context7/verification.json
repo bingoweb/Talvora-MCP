@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-29T22:04:59Z",
-  "scope": "Talvora storage/tunnel/Penpot/installer final edge-case re-audit: interrupted deletion preserves stale age, freshness and ownership are revalidated at deletion time, user-writable JSON and recovery manifests are content/count bounded and shape validated, installer cleanup is cancellation/reparse/count bounded, Penpot rolling logs remain hard-bounded under archive failure, orphan cleanup pins the canonical Node executable, and tunnel rotation uses an unpredictable CreateNew temporary archive before live in-place truncation.",
+  "verifiedAtUtc": "2026-09-30T03:39:49Z",
+  "scope": "Talvora desktop worklog/notification commercial-reliability modernization plus the previously verified storage/tunnel/Penpot safeguards: service-to-Tray IPC is versioned, length-prefixed, byte-bounded and cancellation-aware; progress/terminal delivery lanes are independently bounded and gracefully drained; worklog generations preserve failure/cancellation truth; manual dismissal and out-of-order frames are stateful and bounded; placement/evidence reads are bounded; and notification behavior is covered by executable Windows regression tests.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET guidance confirms recursive SearchOption.AllDirectories descends through subdirectories, FileAttributes exposes reparse metadata, FileStream supports explicit same-handle bounded reads, and FileMode.Create replaces/truncates an existing path while FileMode.CreateNew fails when the path already exists. Talvora therefore uses explicit bounded cleanup traversal, same-handle bounded sync/async JSON readers, and an unpredictable GUID temporary tunnel-log archive opened with CreateNew so a pre-created temp path cannot be followed or truncated."
+      "verified": "Current .NET guidance confirms bounded Channel<T> queues support explicit full-mode behavior and observable pressure handling; Stream.ReadAsync/WriteAsync memory overloads accept CancellationToken; message transports should enforce received-size bounds; and tracked background work should be drained during shutdown instead of abandoned. Talvora desktop progress therefore uses separate bounded progress/terminal queues, observable pressure counters, versioned 64 KiB length-prefixed frames, cancellation-aware framed reads/writes with explicit connect/read/write budgets, deterministic aggregate payload reduction, and bounded graceful shutdown before force cancellation. Existing storage code continues to use explicit bounded cleanup traversal and same-handle bounded JSON reads."
     },
     {
       "libraryId": "/microsoftdocs/windows-powershell-docs",
@@ -41,6 +41,8 @@
     }
   ],
   "vendorSources": [
+    "Microsoft .NET Channels guidance checked 2026-09-30: bounded channels require an explicit full-mode policy; Wait provides backpressure while drop modes may discard data. Talvora avoids silent DropOldest for desktop notifications, separates progress from terminal delivery, records pressure counters, and keeps notification pressure isolated from the underlying MCP tool result.",
+    "Microsoft .NET async stream guidance checked 2026-09-30: Stream.ReadAsync and WriteAsync memory overloads accept CancellationToken, and tracked background work should be drained during shutdown. Talvora desktop progress uses versioned length-prefixed frames with connect/read/write budgets, then completes bounded queues and attempts a timed graceful drain before forced cancellation.",
     "Microsoft Learn .NET 10 BackgroundService/Windows Service guidance checked 2026-09-29: ExecuteAsync(CancellationToken) represents the lifetime of the long-running operation, the stopping token is signaled during graceful shutdown, and periodic workers should await cancellation-aware delays rather than block service startup. Talvora's LocalSystem storage-maintenance service follows this lifecycle and catches shutdown cancellation as an expected stop path.",
     "Microsoft Learn System.Threading.PeriodicTimer guidance checked 2026-09-29: only one WaitForNextTickAsync consumer may be active at a time and Dispose/cancellation can interrupt the wait. Talvora owns one PeriodicTimer inside one BackgroundService loop at a six-hour cadence and disposes it when the loop ends.",
     "Microsoft Learn ProcessStartInfo/StandardOutput guidance checked 2026-09-29: redirected standard streams require UseShellExecute=false, and simultaneously draining stdout/stderr asynchronously avoids pipe deadlocks. Talvora Penpot supervisor uses redirected BaseStream.CopyToAsync tasks into supervisor-owned rolling streams so log rotation no longer requires restarting an active child.",

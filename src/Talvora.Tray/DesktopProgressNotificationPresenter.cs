@@ -12,7 +12,8 @@ namespace Talvora.Tray;
 
 internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
 {
-    private const int MaximumVisibleCards = 1;
+    private const int MaximumVisibleCardsPerLane = 1;
+    private const int MaximumPlacementDocumentBytes = 16 * 1024;
     private const int ScreenMarginPixels = 18;
     private const int CardGapPixels = 10;
     private const int PlacementDocumentVersion = 1;
@@ -45,6 +46,8 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
     private readonly ControlCenterApplication _application;
     private readonly Dictionary<string, DesktopProgressNotificationWindow> _windows =
         new(StringComparer.Ordinal);
+    private readonly DesktopProgressPresentationState _presentationState =
+        new();
     private Task _placementSaveTask = Task.CompletedTask;
     private bool _isPinned;
     private int _anchorLeftPixels;
@@ -60,10 +63,22 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
 
     public void Publish(DesktopProgressMessage message)
     {
+        if (_application.Dispatcher.HasShutdownStarted ||
+            _application.Dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
         if (!_application.Dispatcher.CheckAccess())
         {
-            _application.Dispatcher.BeginInvoke(
-                () => Publish(message));
+            try
+            {
+                _application.Dispatcher.BeginInvoke(
+                    () => Publish(message));
+            }
+            catch (InvalidOperationException)
+            {
+            }
             return;
         }
 
@@ -99,6 +114,12 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
 
     private void PublishCore(DesktopProgressMessage message)
     {
+        if (_presentationState.Evaluate(message) !=
+            DesktopProgressPresentationDecision.Accept)
+        {
+            return;
+        }
+
         if (!_windows.TryGetValue(
                 message.OperationId,
                 out var window))
@@ -111,6 +132,14 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                 pinned => HandlePinStateChangeRequested(window, pinned);
             window.Closed += (_, _) =>
             {
+                if (window.WasManuallyClosed)
+                {
+                    _presentationState.MarkManualDismissed(
+                        message.OperationId,
+                        window.LastLane,
+                        window.IsTerminal);
+                }
+
                 _windows.Remove(message.OperationId);
                 Reposition();
             };
@@ -130,10 +159,22 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
 
     private void TrimVisibleCards()
     {
-        while (_windows.Count > MaximumVisibleCards)
+        TrimVisibleCards(
+            DesktopProgressLane.Worklog);
+        TrimVisibleCards(
+            DesktopProgressLane.Alert);
+    }
+
+    private void TrimVisibleCards(
+        DesktopProgressLane lane)
+    {
+        while (_windows.Values.Count(
+                   window => window.LastLane == lane) >
+               MaximumVisibleCardsPerLane)
         {
             var oldest =
                 _windows.Values
+                    .Where(window => window.LastLane == lane)
                     .OrderByDescending(static window => window.IsTerminal)
                     .ThenBy(static window => window.LastUpdatedUtc)
                     .First();
@@ -378,11 +419,11 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         try
         {
             var saved =
-                JsonSerializer.Deserialize<DesktopProgressPlacementDocument>(
-                    File.ReadAllText(path),
+                JsonFileStore.ReadBounded<DesktopProgressPlacementDocument>(
+                    path,
+                    MaximumPlacementDocumentBytes,
                     PlacementJsonOptions);
-            if (saved is null ||
-                saved.Version != PlacementDocumentVersion)
+            if (saved.Version != PlacementDocumentVersion)
             {
                 return;
             }
@@ -405,6 +446,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         catch (Exception ex) when (
             ex is IOException or
             UnauthorizedAccessException or
+            InvalidDataException or
             JsonException)
         {
             TrayLog.Write(
@@ -541,9 +583,12 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
 
         try
         {
-            _placementSaveTask
-                .GetAwaiter()
-                .GetResult();
+            if (!_placementSaveTask.Wait(
+                    TimeSpan.FromSeconds(2)))
+            {
+                TrayLog.Write(
+                    "Desktop progress placement save exceeded the shutdown wait budget.");
+            }
         }
         catch (Exception ex)
         {

@@ -4,7 +4,7 @@ namespace Talvora;
 
 internal sealed partial class TalvoraDesktopProgressNotifier
 {
-    private const string SharedWorklogOperationId =
+    private const string SharedWorklogOperationIdPrefix =
         "talvora-live-worklog";
 
     private sealed record ActiveWorklogItem(
@@ -16,12 +16,19 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         string Message,
         DesktopProgressEvidence? Evidence);
 
+    private sealed record PendingCancellation(
+        string Message,
+        DesktopProgressEvidence? Evidence);
+
     private readonly object _worklogGate = new();
     private readonly Dictionary<string, ActiveWorklogItem> _activeWorklog =
         new(StringComparer.Ordinal);
     private readonly Queue<string> _recentWorklogUpdates = new();
     private long _worklogSequence;
+    private long _worklogGeneration;
+    private string? _currentWorklogOperationId;
     private PendingFailure? _pendingFailure;
+    private PendingCancellation? _pendingCancellation;
 
     private void TryBeginWorklog(
         string operationId,
@@ -99,6 +106,15 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     {
         lock (_worklogGate)
         {
+            if (_activeWorklog.Count == 0)
+            {
+                _currentWorklogOperationId =
+                    $"{SharedWorklogOperationIdPrefix}-{++_worklogGeneration:x16}";
+                _pendingFailure = null;
+                _pendingCancellation = null;
+                _recentWorklogUpdates.Clear();
+            }
+
             _activeWorklog[operationId] =
                 new ActiveWorklogItem(
                     narrative,
@@ -109,7 +125,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 $"Şimdi: {narrative.Action}");
 
             Enqueue(
-                SharedWorklogOperationId,
+                GetCurrentWorklogOperationId(),
                 narrative.Subject,
                 "Şimdi bunu yapıyorum",
                 ComposeWorklogMessage(
@@ -145,7 +161,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             }
 
             Enqueue(
-                SharedWorklogOperationId,
+                GetCurrentWorklogOperationId(),
                 displayName,
                 "Hâlâ bununla uğraşıyorum",
                 ComposeWorklogMessage(
@@ -167,7 +183,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     {
         lock (_worklogGate)
         {
-            _activeWorklog.Remove(operationId);
+            if (!_activeWorklog.Remove(operationId))
+            {
+                return;
+            }
 
             if (kind == DesktopProgressKind.Failed)
             {
@@ -178,37 +197,46 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                         message,
                         evidence);
             }
+            else if (kind == DesktopProgressKind.Cancelled)
+            {
+                AddWorklogHistory(
+                    $"Durduruldu: {message}");
+                _pendingCancellation =
+                    new PendingCancellation(
+                        message,
+                        evidence);
+            }
 
             if (_activeWorklog.Count > 0)
             {
-                if (kind == DesktopProgressKind.Failed)
-                {
-                    Enqueue(
-                        SharedWorklogOperationId,
-                        "Çalışmaya devam ediyorum",
-                        title,
-                        ComposeWorklogMessage(
-                            message,
-                            evidence),
-                        kind,
-                        elapsed,
-                        evidence);
-                    return;
-                }
-
                 var latest =
                     _activeWorklog.Values
                         .MaxBy(static item => item.Sequence);
                 if (latest is not null)
                 {
-                    AddWorklogHistory(
-                        "Bir adımı tamamladım; sıradaki iş devam ediyor.");
+                    if (kind is not
+                            DesktopProgressKind.Failed and not
+                            DesktopProgressKind.Cancelled)
+                    {
+                        AddWorklogHistory(
+                            "Bir adımı tamamladım; sıradaki iş devam ediyor.");
+                    }
+
+                    var continuation = kind switch
+                    {
+                        DesktopProgressKind.Failed =>
+                            $"{latest.Narrative.Action}\n\nBir paralel adımda sorun çıktı; diğer işi durdurmadan devam ediyorum.",
+                        DesktopProgressKind.Cancelled =>
+                            $"{latest.Narrative.Action}\n\nBir paralel adım durduruldu; kalan iş üzerinde çalışmaya devam ediyorum.",
+                        _ =>
+                            $"{latest.Narrative.Action}\n\nBir önceki adımı tamamladım; sıradaki iş üzerinde çalışmaya devam ediyorum.",
+                    };
                     Enqueue(
-                        SharedWorklogOperationId,
+                        GetCurrentWorklogOperationId(),
                         latest.Narrative.Subject,
                         "Hâlâ çalışıyorum",
                         ComposeWorklogMessage(
-                            $"{latest.Narrative.Action}\n\nBir önceki adımı tamamladım; sıradaki iş üzerinde çalışmaya devam ediyorum.",
+                            continuation,
                             latest.Evidence),
                         DesktopProgressKind.Running,
                         elapsed,
@@ -218,12 +246,16 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 return;
             }
 
+            var sharedOperationId =
+                GetCurrentWorklogOperationId();
+
             if (_pendingFailure is not null)
             {
                 var pendingFailure = _pendingFailure;
                 _pendingFailure = null;
+                _pendingCancellation = null;
                 Enqueue(
-                    SharedWorklogOperationId,
+                    sharedOperationId,
                     "Kontrol gerekiyor",
                     "Bir hata buldum",
                     ComposeWorklogMessage(
@@ -232,13 +264,32 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                     DesktopProgressKind.Failed,
                     elapsed,
                     pendingFailure.Evidence);
+                _currentWorklogOperationId = null;
+                return;
+            }
+
+            if (_pendingCancellation is not null)
+            {
+                var pendingCancellation = _pendingCancellation;
+                _pendingCancellation = null;
+                Enqueue(
+                    sharedOperationId,
+                    "Çalışma durduruldu",
+                    "Bir iş durduruldu",
+                    ComposeWorklogMessage(
+                        pendingCancellation.Message,
+                        pendingCancellation.Evidence),
+                    DesktopProgressKind.Cancelled,
+                    elapsed,
+                    pendingCancellation.Evidence);
+                _currentWorklogOperationId = null;
                 return;
             }
 
             AddWorklogHistory(
                 $"Tamamlandı: {message.Replace(Environment.NewLine, " ").Trim()}");
             Enqueue(
-                SharedWorklogOperationId,
+                sharedOperationId,
                 "Çalışma tamamlandı",
                 title,
                 ComposeWorklogMessage(
@@ -247,8 +298,14 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 kind,
                 elapsed,
                 evidence);
+            _currentWorklogOperationId = null;
         }
     }
+
+    private string GetCurrentWorklogOperationId() =>
+        _currentWorklogOperationId ??
+        throw new InvalidOperationException(
+            "Desktop worklog generation is not active.");
 
     private void AddWorklogHistory(string update)
     {

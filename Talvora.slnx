@@ -4,4 +4,5 @@
   <Project Path="src/Talvora.Tray/Talvora.Tray.csproj" />
   <Project Path="tests/Talvora.Smoke/Talvora.Smoke.csproj" />
   <Project Path="tests/Talvora.SourceEdit.Regression/Talvora.SourceEdit.Regression.csproj" />
+  <Project Path="tests/Talvora.Notification.Regression/Talvora.Notification.Regression.csproj" />
 </Solution>

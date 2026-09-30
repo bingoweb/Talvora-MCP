@@ -1550,7 +1550,8 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 text,
                 kind,
                 DateTimeOffset.UtcNow,
-                ElapsedSeconds: 0));
+                ElapsedSeconds: 0,
+                Lane: DesktopProgressLane.Alert));
     }
 
     private void ExitTray()

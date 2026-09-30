@@ -117,6 +117,12 @@ jobs:
             if (-not $?) { throw "Regression failed: $test" }
           }
 
+      - name: Validate desktop notification behavior
+        shell: pwsh
+        run: |
+          dotnet run --project tests/Talvora.Notification.Regression/Talvora.Notification.Regression.csproj -c Release --no-build --nologo
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop notification behavior regression failed.' }
+
       - name: Start and verify current MCP surface
         shell: pwsh
         run: |

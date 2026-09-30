@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using ModelContextProtocol.Protocol;
@@ -18,31 +17,86 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         TimeSpan.FromSeconds(5);
     internal static readonly TimeSpan PipeConnectTimeout =
         TimeSpan.FromSeconds(2);
+    internal static readonly TimeSpan PipeWriteTimeout =
+        TimeSpan.FromSeconds(2);
+    internal static readonly TimeSpan ShutdownDrainTimeout =
+        TimeSpan.FromSeconds(8);
+    internal static readonly TimeSpan ForcedShutdownTimeout =
+        TimeSpan.FromSeconds(2);
+
+    private const int ProgressQueueCapacity = 64;
+    private const int TerminalQueueCapacity = 256;
 
     private const uint NoActiveConsoleSession = 0xFFFFFFFF;
 
     private readonly ILogger<TalvoraDesktopProgressNotifier> _logger;
-    private readonly CancellationTokenSource _lifetimeCts = new();
-    private readonly Channel<DesktopProgressMessage> _deliveryQueue;
+    private readonly CancellationTokenSource _deliveryStopCts = new();
+    private readonly Channel<DesktopProgressMessage> _progressDeliveryQueue;
+    private readonly Channel<DesktopProgressMessage> _terminalDeliveryQueue;
+    private readonly SemaphoreSlim _deliverySignal = new(0, 1);
+    private readonly Action<DesktopProgressMessage>? _deliveryObserver;
+    private readonly Func<DesktopProgressMessage, CancellationToken, Task>? _deliveryOverride;
+    private readonly TimeSpan _shutdownDrainTimeout;
+    private readonly TimeSpan _forcedShutdownTimeout;
     private readonly Task _deliveryTask;
+    private long _droppedProgressMessages;
+    private long _droppedTerminalMessages;
+    private long _deliverySequence;
+    private int _acceptingNotifications = 1;
+
+    internal long DroppedProgressMessages =>
+        Interlocked.Read(ref _droppedProgressMessages);
+
+    internal long DroppedTerminalMessages =>
+        Interlocked.Read(ref _droppedTerminalMessages);
 
     public TalvoraDesktopProgressNotifier(
         ILogger<TalvoraDesktopProgressNotifier> logger)
+        : this(
+            logger,
+            deliveryObserver: null,
+            deliveryOverride: null,
+            shutdownDrainTimeout: ShutdownDrainTimeout,
+            forcedShutdownTimeout: ForcedShutdownTimeout)
+    {
+    }
+
+    internal TalvoraDesktopProgressNotifier(
+        ILogger<TalvoraDesktopProgressNotifier> logger,
+        Action<DesktopProgressMessage>? deliveryObserver,
+        Func<DesktopProgressMessage, CancellationToken, Task>? deliveryOverride,
+        TimeSpan? shutdownDrainTimeout = null,
+        TimeSpan? forcedShutdownTimeout = null)
     {
         _logger = logger;
-        _deliveryQueue =
+        _deliveryObserver = deliveryObserver;
+        _deliveryOverride = deliveryOverride;
+        _shutdownDrainTimeout =
+            shutdownDrainTimeout ?? ShutdownDrainTimeout;
+        _forcedShutdownTimeout =
+            forcedShutdownTimeout ?? ForcedShutdownTimeout;
+        _progressDeliveryQueue =
             Channel.CreateBounded<DesktopProgressMessage>(
-                new BoundedChannelOptions(64)
+                new BoundedChannelOptions(ProgressQueueCapacity)
                 {
                     SingleReader = true,
                     SingleWriter = false,
                     AllowSynchronousContinuations = false,
-                    FullMode = BoundedChannelFullMode.DropOldest,
+                    FullMode = BoundedChannelFullMode.Wait,
+                });
+        _terminalDeliveryQueue =
+            Channel.CreateBounded<DesktopProgressMessage>(
+                new BoundedChannelOptions(TerminalQueueCapacity)
+                {
+                    SingleReader = true,
+                    SingleWriter = false,
+                    AllowSynchronousContinuations = false,
+                    FullMode = BoundedChannelFullMode.Wait,
                 });
         _deliveryTask =
             Task.Run(
                 () => DeliverQueuedNotificationsAsync(
-                    _lifetimeCts.Token));
+                    _deliveryStopCts.Token));
     }
 
     public async ValueTask<T> RunToolCallAsync<T>(
@@ -220,13 +274,12 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         TimeSpan elapsed,
         DesktopProgressEvidence? evidence = null)
     {
-        if (!OperatingSystem.IsWindows() ||
-            IsTruthy(Environment.GetEnvironmentVariable("CI")))
+        if (Volatile.Read(ref _acceptingNotifications) == 0)
         {
             return;
         }
 
-        _deliveryQueue.Writer.TryWrite(
+        var notification =
             new DesktopProgressMessage(
                 operationId,
                 toolName,
@@ -235,7 +288,69 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 kind,
                 DateTimeOffset.UtcNow,
                 elapsed.TotalSeconds,
-                evidence));
+                evidence,
+                DesktopProgressLane.Worklog,
+                Interlocked.Increment(ref _deliverySequence));
+
+        _deliveryObserver?.Invoke(notification);
+
+        if (_deliveryOverride is null &&
+            (!OperatingSystem.IsWindows() ||
+             IsTruthy(Environment.GetEnvironmentVariable("CI"))))
+        {
+            return;
+        }
+
+        var terminal = IsTerminalDelivery(kind);
+        var writer = terminal
+            ? _terminalDeliveryQueue.Writer
+            : _progressDeliveryQueue.Writer;
+        if (writer.TryWrite(notification))
+        {
+            SignalDeliveryWorker();
+            return;
+        }
+
+        if (terminal)
+        {
+            var dropped =
+                Interlocked.Increment(
+                    ref _droppedTerminalMessages);
+            _logger.LogWarning(
+                "Desktop progress terminal delivery queue is full. Dropped terminal count={DroppedCount}; Operation={OperationId}; Kind={Kind}",
+                dropped,
+                operationId,
+                kind);
+        }
+        else
+        {
+            var dropped =
+                Interlocked.Increment(
+                    ref _droppedProgressMessages);
+            if (dropped == 1 ||
+                (dropped & (dropped - 1)) == 0)
+            {
+                _logger.LogDebug(
+                    "Desktop progress queue pressure dropped a non-terminal update. DroppedProgressCount={DroppedCount}",
+                    dropped);
+            }
+        }
+    }
+
+    private void SignalDeliveryWorker()
+    {
+        try
+        {
+            _deliverySignal.Release();
+        }
+        catch (SemaphoreFullException)
+        {
+            // A wake-up is already pending.
+        }
+        catch (ObjectDisposedException)
+            when (Volatile.Read(ref _acceptingNotifications) == 0)
+        {
+        }
     }
 
     private async Task DeliverQueuedNotificationsAsync(
@@ -243,12 +358,35 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     {
         try
         {
-            await foreach (
-                var message in
-                _deliveryQueue.Reader.ReadAllAsync(cancellationToken))
+            while (!cancellationToken.IsCancellationRequested)
             {
-                await TryDeliverAsync(
-                    message,
+                while (_terminalDeliveryQueue.Reader.TryRead(
+                           out var terminalMessage))
+                {
+                    await TryDeliverAsync(
+                        terminalMessage,
+                        cancellationToken);
+                }
+
+                if (_progressDeliveryQueue.Reader.TryRead(
+                        out var progressMessage))
+                {
+                    await TryDeliverAsync(
+                        progressMessage,
+                        cancellationToken);
+                    continue;
+                }
+
+                var terminalCompleted =
+                    _terminalDeliveryQueue.Reader.Completion.IsCompleted;
+                var progressCompleted =
+                    _progressDeliveryQueue.Reader.Completion.IsCompleted;
+                if (terminalCompleted && progressCompleted)
+                {
+                    break;
+                }
+
+                await _deliverySignal.WaitAsync(
                     cancellationToken);
             }
         }
@@ -262,6 +400,15 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         DesktopProgressMessage message,
         CancellationToken cancellationToken)
     {
+        if (_deliveryOverride is not null)
+        {
+            await _deliveryOverride(
+                    message,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            return;
+        }
+
         var sessionId = WTSGetActiveConsoleSessionId();
         if (sessionId == NoActiveConsoleSession)
         {
@@ -286,16 +433,14 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 connectCts.CancelAfter(PipeConnectTimeout);
                 await pipe.ConnectAsync(connectCts.Token);
 
-                await using var writer = new StreamWriter(
+                using var writeCts =
+                    CancellationTokenSource.CreateLinkedTokenSource(
+                        cancellationToken);
+                writeCts.CancelAfter(PipeWriteTimeout);
+                await DesktopProgressProtocol.WriteFrameAsync(
                     pipe,
-                    new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
-                    bufferSize: 4096,
-                    leaveOpen: true)
-                {
-                    AutoFlush = true,
-                };
-                await writer.WriteLineAsync(
-                    DesktopProgressProtocol.Serialize(message));
+                    message,
+                    writeCts.Token);
                 return;
             }
             catch (OperationCanceledException)
@@ -469,13 +614,20 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     private static bool ShouldNotifyToolCall(string? toolName)
     {
         var normalized = NormalizeToolName(toolName);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return false;
+        }
+
         return normalized switch
         {
             "read_source" or
+            "read_text" or
             "read_text_range" or
             "read_bytes" or
             "tail_text" or
             "search_text" or
+            "knowledge_search" or
             "find_files" or
             "list" or
             "path_info" or
@@ -486,7 +638,44 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             "http_request" or
             "tcp_listeners" or
             "git_diff" or
-            "git_branches" => false,
+            "git_branches" or
+            "git_status" or
+            "git_info" or
+            "git_log" or
+            "job_get" or
+            "job_list" or
+            "service_get" or
+            "service_list" or
+            "scheduled_task_get" or
+            "scheduled_task_list" or
+            "registry_get" or
+            "env_get" or
+            "config_get" => false,
+            _ when
+                normalized.EndsWith(
+                    "_status",
+                    StringComparison.OrdinalIgnoreCase) ||
+                normalized.EndsWith(
+                    "_info",
+                    StringComparison.OrdinalIgnoreCase) ||
+                normalized.EndsWith(
+                    "_list",
+                    StringComparison.OrdinalIgnoreCase) ||
+                normalized.EndsWith(
+                    "_get",
+                    StringComparison.OrdinalIgnoreCase) ||
+                normalized.EndsWith(
+                    "_search",
+                    StringComparison.OrdinalIgnoreCase) ||
+                normalized.EndsWith(
+                    "_read",
+                    StringComparison.OrdinalIgnoreCase) ||
+                normalized.EndsWith(
+                    "_hash",
+                    StringComparison.OrdinalIgnoreCase) ||
+                normalized.EndsWith(
+                    "_diff",
+                    StringComparison.OrdinalIgnoreCase) => false,
             _ => true,
         };
     }
@@ -522,19 +711,69 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
 
+    private static bool IsTerminalDelivery(
+        DesktopProgressKind kind) =>
+        kind is
+            DesktopProgressKind.Completed or
+            DesktopProgressKind.Failed or
+            DesktopProgressKind.Cancelled or
+            DesktopProgressKind.Info or
+            DesktopProgressKind.Warning;
+
     public async ValueTask DisposeAsync()
     {
-        _deliveryQueue.Writer.TryComplete();
-        _lifetimeCts.Cancel();
+        if (Interlocked.Exchange(
+                ref _acceptingNotifications,
+                0) == 0)
+        {
+            return;
+        }
+
+        var deliveryStopped = false;
+        _progressDeliveryQueue.Writer.TryComplete();
+        _terminalDeliveryQueue.Writer.TryComplete();
+        SignalDeliveryWorker();
         try
         {
-            await _deliveryTask;
+            await _deliveryTask.WaitAsync(
+                _shutdownDrainTimeout);
+            deliveryStopped = true;
+        }
+        catch (TimeoutException)
+        {
+            _logger.LogWarning(
+                "Desktop progress delivery did not drain within {DrainTimeoutSeconds:F0}s. Remaining delivery is being cancelled. DroppedProgress={DroppedProgress}; DroppedTerminal={DroppedTerminal}",
+                _shutdownDrainTimeout.TotalSeconds,
+                Interlocked.Read(ref _droppedProgressMessages),
+                Interlocked.Read(ref _droppedTerminalMessages));
+            _deliveryStopCts.Cancel();
+            try
+            {
+                await _deliveryTask.WaitAsync(
+                    _forcedShutdownTimeout);
+                deliveryStopped = true;
+            }
+            catch (OperationCanceledException)
+            {
+                deliveryStopped = true;
+            }
+            catch (TimeoutException)
+            {
+                _logger.LogError(
+                    "Desktop progress delivery ignored forced shutdown for {ForcedShutdownSeconds:F0}s. Shutdown will continue without waiting for the notification worker.",
+                    _forcedShutdownTimeout.TotalSeconds);
+            }
         }
         catch (OperationCanceledException)
         {
+            deliveryStopped = true;
         }
 
-        _lifetimeCts.Dispose();
+        if (deliveryStopped)
+        {
+            _deliveryStopCts.Dispose();
+            _deliverySignal.Dispose();
+        }
     }
 
     [LibraryImport("kernel32.dll")]

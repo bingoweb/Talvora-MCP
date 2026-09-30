@@ -3,6 +3,65 @@
 Tarih: 2026-09-19
 Durum: PLANLAMA TAMAMLANDI — implementasyon yeni oturumda başlayacak.
 
+## CURRENT — Faz 15: Desktop Worklog / Notification Commercial Reliability Modernization (2026-09-30)
+
+Amaç: mevcut masaüstü bildirim görünümünü değiştirmeden servis → local IPC → Tray → WPF presenter zincirini tam bounded, cancellation-aware, shutdown-safe, truth-preserving ve davranış testleriyle korunan ticari kalite bir alt-sisteme yükseltmek.
+
+Context7 / .NET güncel rehber kararları:
+- bounded `Channel<T>` taşma politikasını ve dropped-item gözlemlenebilirliğini açıkça tanımla; sessiz veri kaybı kabul edilmez.
+- stream I/O'da cancellation-aware `ReadAsync` / `WriteAsync` kullan; bağlantı kurulduktan sonraki read/write aşamaları da timeout sahibi olmalı.
+- IPC mesaj boyutunu hard ceiling ile sınırla; framing ve protocol version wire üzerinde açık olmalı.
+- background delivery shutdown'da önce producer'ı kapat, bounded süreyle drain et, yalnız süre dolarsa cancellation ile kes.
+- WPF dispatcher/window lifecycle ile background IPC lifecycle birbirinden izole olmalı; dispose hiçbir tool sonucunu veya Tray shutdown'ını süresiz bloke etmemeli.
+
+### Faz 15A — Protocol / IPC correctness
+- [x] NOTIFY-001 — Line-based sınırsız wire formatını explicit versioned + length-prefixed UTF-8 frame'e taşı.
+- [x] NOTIFY-002 — `DesktopProgressProtocol.Version` wire envelope içinde gönderilsin ve receiver mismatch'i fail-closed reddetsin.
+- [x] NOTIFY-003 — Tek frame için hard maximum payload byte ceiling ekle; serialize ve receive tarafı aynı limiti uygulasın.
+- [x] NOTIFY-004 — Pipe connect, write ve server read aşamalarının her birine ayrı bounded timeout/cancellation ekle.
+- [x] NOTIFY-005 — Partial/oversized/truncated frame receiver'ı bozmasın; listener recover edip sonraki client'ı kabul etsin.
+- [x] NOTIFY-006 — Pipe ACL current-user + LocalSystem sözleşmesini koru.
+
+### Faz 15B — Delivery queue / shutdown reliability
+- [x] NOTIFY-007 — `DropOldest` sessiz kayıp politikasını terminal-state koruyan bounded/coalescing delivery buffer ile değiştir.
+- [x] NOTIFY-008 — Running/heartbeat güncellemeleri coalesce edilebilir; Failed/Cancelled/Completed terminal state sessizce düşürülemez.
+- [x] NOTIFY-009 — overflow/drop/coalesce sayıları gözlemlenebilir log/diagnostic üretmeli; kullanıcı işlemini asla fail etmemeli.
+- [x] NOTIFY-010 — `DisposeAsync` önce writer completion, sonra bounded drain, süre dolarsa cancellation sırasını kullansın.
+- [x] NOTIFY-011 — stuck IPC write shutdown'ı sonsuza kadar bloke edemesin.
+
+### Faz 15C — Worklog truth / concurrency semantics
+- [x] NOTIFY-012 — Her bağımsız worklog burst'ü unique generation operation id kullansın; sabit id yalnız logical prefix olsun.
+- [x] NOTIFY-013 — Kullanıcının elle kapattığı aktif worklog aynı generation için heartbeat ile geri açılmasın.
+- [x] NOTIFY-014 — Yeni worklog generation sonraki gerçek işte normal şekilde yeniden görünebilsin.
+- [x] NOTIFY-015 — Paralel işlerde Failed state precedence korunsun.
+- [x] NOTIFY-016 — Paralel işlerden biri Cancelled olursa cancellation kaybolmasın; diğer iş sürerken kart yanlış terminal olmasın, final terminal state gerçeği yansıtsın.
+- [x] NOTIFY-017 — Active worklog ile bağımsız Error/Warning operasyonel uyarılar birbirini görünmeden emekliye ayırmasın.
+
+### Faz 15D — Persistence / bounded data / privacy
+- [x] NOTIFY-018 — `desktop-progress-placement.json` same-handle bounded JSON reader kullansın; UI startup sınırsız `ReadAllText` yapmasın.
+- [x] NOTIFY-019 — Evidence file/result/message alanları wire ceiling altında deterministic bounded olsun.
+- [x] NOTIFY-020 — canonical secret redaction preview/result/path-derived user-visible evidence üzerinde korunup regression ile pinlensin.
+- [x] NOTIFY-021 — malformed placement/protocol payload yalnız notification katmanını etkilesin; Tray/service ana işi etkilenmesin.
+
+### Faz 15E — Commercial behavior tests / quality gates
+- [x] NOTIFY-022 — protocol framing round-trip, version mismatch, oversized frame, truncated frame davranış testleri.
+- [x] NOTIFY-023 — stalled pipe client read-timeout ve stalled receiver write-timeout fixture testleri.
+- [x] NOTIFY-024 — queue pressure altında terminal state delivery ve running coalescing testleri.
+- [x] NOTIFY-025 — manual-close suppression + next-generation reappearance davranış testi.
+- [x] NOTIFY-026 — concurrent success/failure/cancellation worklog state-machine davranış testleri.
+- [x] NOTIFY-027 — active worklog + independent Warning/Error visibility priority testi.
+- [x] NOTIFY-028 — graceful shutdown bounded-drain testi.
+- [x] NOTIFY-029 — existing ModernizationPolicyRegression ve privacy/security gates yeni mimariye güncellensin.
+- [x] NOTIFY-030 — Release build 0 warning/0 error; analyzer clean; source + behavior regressions GREEN.
+
+### Faz 15F — Runtime deployment / live acceptance
+- [ ] NOTIFY-031 — canonical installer build + SHA-256.
+- [ ] NOTIFY-032 — SYSTEM deploy exact runtime commit.
+- [ ] NOTIFY-033 — installed Tray self-test + Dev/Admin focused probes GREEN.
+- [ ] NOTIFY-034 — gerçek service→Tray notification smoke: started → running → completed ve warning/error bağımsız visibility.
+- [ ] NOTIFY-035 — shutdown/restart sırasında notification delivery worker veya pipe listener hang bırakmıyor.
+- [ ] NOTIFY-036 — working tree clean; origin/main == github/main; HANDOFF/BUG-AUDIT final closeout.
+
 ## 2026-09-29 — Dev/Admin Focused Surface Role Separation
 
 Amaç: Talvora Dev ve Talvora Admin'in aynı Core üzerinde çalışan focused discovery yüzeyleri olma mimarisini korurken, iki yüzey arasındaki gereksiz araç tekrarını azaltmak; kalan ortak araçları tesadüfi overlap yerine açıkça review edilmiş **Shared** sözleşmesine dönüştürmek. Full `/mcp` capability hiçbir şekilde daraltılmayacak.

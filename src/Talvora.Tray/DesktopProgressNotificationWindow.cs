@@ -372,6 +372,11 @@ internal sealed class DesktopProgressNotificationWindow : Window
 
     public DesktopProgressKind LastKind { get; private set; }
 
+    public DesktopProgressLane LastLane { get; private set; } =
+        DesktopProgressLane.Worklog;
+
+    public bool WasManuallyClosed => _manualClose;
+
     public bool IsTerminal =>
         LastKind is
             DesktopProgressKind.Completed or
@@ -387,6 +392,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
         OperationId = message.OperationId;
         LastUpdatedUtc = DateTimeOffset.UtcNow;
         LastKind = message.Kind;
+        LastLane = message.Lane;
         _isStale = false;
         _title.Text = message.Title;
         _message.Text = message.Message;

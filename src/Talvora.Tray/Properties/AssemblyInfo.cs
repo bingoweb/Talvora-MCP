@@ -1,4 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Talvora.SourceEdit.Regression")]
 [assembly: InternalsVisibleTo("Talvora.Notification.Regression")]

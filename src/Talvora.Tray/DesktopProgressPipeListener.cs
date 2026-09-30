@@ -2,25 +2,30 @@ using System.IO;
 using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
-using System.Text;
 using Talvora.Shared;
 
 namespace Talvora.Tray;
 
 internal sealed class DesktopProgressPipeListener : IDisposable
 {
+    internal static readonly TimeSpan PipeReadTimeout =
+        TimeSpan.FromSeconds(3);
+
     private readonly int _sessionId;
     private readonly Action<DesktopProgressMessage> _onMessage;
+    private readonly TimeSpan _readTimeout;
     private readonly CancellationTokenSource _lifetimeCts = new();
     private Task? _listenerTask;
     private bool _disposed;
 
     public DesktopProgressPipeListener(
         int sessionId,
-        Action<DesktopProgressMessage> onMessage)
+        Action<DesktopProgressMessage> onMessage,
+        TimeSpan? readTimeout = null)
     {
         _sessionId = sessionId;
         _onMessage = onMessage;
+        _readTimeout = readTimeout ?? PipeReadTimeout;
     }
 
     public void Start()
@@ -39,20 +44,15 @@ internal sealed class DesktopProgressPipeListener : IDisposable
                 await using var pipe = CreatePipe();
                 await pipe.WaitForConnectionAsync(cancellationToken);
 
-                using var reader = new StreamReader(
-                    pipe,
-                    Encoding.UTF8,
-                    detectEncodingFromByteOrderMarks: false,
-                    bufferSize: 4096,
-                    leaveOpen: true);
-
-                var payload =
-                    await reader.ReadLineAsync(cancellationToken);
-                if (payload is not null &&
-                    DesktopProgressProtocol.TryDeserialize(
-                        payload,
-                        out var message) &&
-                    message is not null)
+                using var readCts =
+                    CancellationTokenSource.CreateLinkedTokenSource(
+                        cancellationToken);
+                readCts.CancelAfter(_readTimeout);
+                var message =
+                    await DesktopProgressProtocol.ReadFrameAsync(
+                        pipe,
+                        readCts.Token);
+                if (message is not null)
                 {
                     _onMessage(message);
                 }
@@ -61,6 +61,17 @@ internal sealed class DesktopProgressPipeListener : IDisposable
                 when (cancellationToken.IsCancellationRequested)
             {
                 break;
+            }
+            catch (OperationCanceledException)
+            {
+                TrayLog.Write(
+                    "Desktop progress IPC client timed out while sending a frame.");
+            }
+            catch (InvalidDataException ex)
+            {
+                TrayLog.Write(
+                    "Desktop progress IPC frame was rejected.",
+                    ex);
             }
             catch (Exception ex)
             {

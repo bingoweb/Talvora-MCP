@@ -89,6 +89,11 @@ internal static class Program
                 ControlCenterSetupService.AssertPolicyContract();
                 ManagedMcpOperationCoordinator.AssertContract();
                 ManagedMcpSessionState.AssertContract();
+                DesktopProgressProtocol.AssertContractAsync(
+                    CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                DesktopProgressPresentationState.AssertContract();
                 ManagedMcpRegistryStore.AssertRecoveryContractAsync(
                     CancellationToken.None)
                     .GetAwaiter()

@@ -1,0 +1,528 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.IO.Pipes;
+using Microsoft.Extensions.Logging.Abstractions;
+using Talvora;
+using Talvora.Shared;
+using Talvora.Tray;
+
+internal static class Program
+{
+    public static async Task<int> Main()
+    {
+        await DesktopProgressProtocol.AssertContractAsync();
+        DesktopProgressPresentationState.AssertContract();
+        await AssertLowValueFilteringAsync();
+        await AssertConcurrentCancellationTruthAsync();
+        await AssertConcurrentFailurePrecedenceAsync();
+        await AssertQueuePressureAndDrainAsync();
+        await AssertBoundedShutdownAsync();
+        await AssertUncooperativeDeliveryCannotBlockShutdownAsync();
+        await AssertWriteCancellationAsync();
+        await AssertPipeReadTimeoutRecoveryAsync();
+
+        Console.WriteLine(
+            "DESKTOP_PROGRESS_BEHAVIOR_GREEN");
+        return 0;
+    }
+
+    private static async Task AssertLowValueFilteringAsync()
+    {
+        var observed =
+            new ConcurrentQueue<DesktopProgressMessage>();
+        var notifier = CreateNotifier(observed);
+        try
+        {
+            _ = await notifier.RunToolCallAsync<int>(
+                "talvora_read_text",
+                arguments: null,
+                _ => ValueTask.FromResult(1),
+                CancellationToken.None);
+            if (!observed.IsEmpty)
+            {
+                throw new InvalidOperationException(
+                    "Low-value read-only inspection produced a desktop worklog.");
+            }
+
+            _ = await notifier.RunToolCallAsync<int>(
+                "talvora_run_powershell",
+                arguments: null,
+                _ => ValueTask.FromResult(2),
+                CancellationToken.None);
+            if (observed.IsEmpty)
+            {
+                throw new InvalidOperationException(
+                    "Meaningful execution work was incorrectly suppressed from the desktop worklog.");
+            }
+        }
+        finally
+        {
+            await notifier.DisposeAsync();
+        }
+    }
+
+    private static async Task AssertConcurrentCancellationTruthAsync()
+    {
+        var observed =
+            new ConcurrentQueue<DesktopProgressMessage>();
+        var notifier = CreateNotifier(observed);
+        try
+        {
+            using var cancelledCall =
+                new CancellationTokenSource();
+            var secondGate =
+                new TaskCompletionSource<int>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var first = notifier.RunToolCallAsync<int>(
+                    "notification_cancel_a",
+                    arguments: null,
+                    async token =>
+                    {
+                        await Task.Delay(
+                            Timeout.InfiniteTimeSpan,
+                            token);
+                        return 1;
+                    },
+                    cancelledCall.Token)
+                .AsTask();
+            var second = notifier.RunToolCallAsync<int>(
+                    "notification_cancel_b",
+                    arguments: null,
+                    token => new ValueTask<int>(
+                        secondGate.Task.WaitAsync(token)),
+                    CancellationToken.None)
+                .AsTask();
+
+            await Task.Delay(50);
+            cancelledCall.Cancel();
+            try
+            {
+                _ = await first;
+                throw new InvalidOperationException(
+                    "Cancelled notification call unexpectedly completed.");
+            }
+            catch (OperationCanceledException)
+            {
+            }
+
+            if (!observed.Any(message =>
+                    message.Kind == DesktopProgressKind.Running &&
+                    message.Message.Contains(
+                        "durduruldu",
+                        StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException(
+                    "Concurrent cancellation was not represented as continuing work.");
+            }
+
+            secondGate.TrySetResult(2);
+            _ = await second;
+
+            var cancellationTerminal = observed
+                .Where(message => IsTerminal(message.Kind))
+                .Last();
+            if (cancellationTerminal.Kind !=
+                DesktopProgressKind.Cancelled)
+            {
+                throw new InvalidOperationException(
+                    "Concurrent cancellation was lost from the final worklog state.");
+            }
+
+            var cancelledGeneration =
+                cancellationTerminal.OperationId;
+            _ = await notifier.RunToolCallAsync<int>(
+                "notification_next_generation",
+                arguments: null,
+                _ => ValueTask.FromResult(3),
+                CancellationToken.None);
+            var nextTerminal = observed
+                .Where(message => IsTerminal(message.Kind))
+                .Last();
+            if (nextTerminal.Kind !=
+                    DesktopProgressKind.Completed ||
+                string.Equals(
+                    nextTerminal.OperationId,
+                    cancelledGeneration,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "A completed next worklog generation did not receive a fresh identity.");
+            }
+        }
+        finally
+        {
+            await notifier.DisposeAsync();
+        }
+    }
+
+    private static async Task AssertConcurrentFailurePrecedenceAsync()
+    {
+        var observed =
+            new ConcurrentQueue<DesktopProgressMessage>();
+        var notifier = CreateNotifier(observed);
+        try
+        {
+            var failReady = NewSignal();
+            var successReady = NewSignal();
+            var releaseFailure = NewSignal();
+            var releaseSuccess = NewSignal();
+
+            var failing = notifier.RunToolCallAsync<int>(
+                    "notification_failure_a",
+                    arguments: null,
+                    async token =>
+                    {
+                        failReady.TrySetResult(true);
+                        await releaseFailure.Task.WaitAsync(token);
+                        throw new InvalidOperationException(
+                            "expected regression failure");
+                    },
+                    CancellationToken.None)
+                .AsTask();
+            var succeeding = notifier.RunToolCallAsync<int>(
+                    "notification_failure_b",
+                    arguments: null,
+                    async token =>
+                    {
+                        successReady.TrySetResult(true);
+                        await releaseSuccess.Task.WaitAsync(token);
+                        return 4;
+                    },
+                    CancellationToken.None)
+                .AsTask();
+
+            await Task.WhenAll(
+                failReady.Task,
+                successReady.Task);
+            releaseFailure.TrySetResult(true);
+            try
+            {
+                _ = await failing;
+                throw new InvalidOperationException(
+                    "Expected failing notification call completed successfully.");
+            }
+            catch (InvalidOperationException ex) when (
+                ex.Message == "expected regression failure")
+            {
+            }
+
+            if (observed.Last().Kind !=
+                DesktopProgressKind.Running)
+            {
+                throw new InvalidOperationException(
+                    "A parallel failure prematurely terminated an active worklog.");
+            }
+
+            releaseSuccess.TrySetResult(true);
+            _ = await succeeding;
+            var terminal = observed
+                .Where(message => IsTerminal(message.Kind))
+                .Last();
+            if (terminal.Kind != DesktopProgressKind.Failed)
+            {
+                throw new InvalidOperationException(
+                    "Failure precedence was lost after concurrent work completed.");
+            }
+        }
+        finally
+        {
+            await notifier.DisposeAsync();
+        }
+    }
+
+    private static async Task AssertQueuePressureAndDrainAsync()
+    {
+        var observed =
+            new ConcurrentQueue<DesktopProgressMessage>();
+        var delivered =
+            new ConcurrentQueue<DesktopProgressMessage>();
+        var deliveryStarted = NewSignal();
+        var releaseDelivery = NewSignal();
+        var notifier = new TalvoraDesktopProgressNotifier(
+            NullLogger<TalvoraDesktopProgressNotifier>.Instance,
+            observed.Enqueue,
+            async (message, token) =>
+            {
+                deliveryStarted.TrySetResult(true);
+                await releaseDelivery.Task.WaitAsync(token);
+                delivered.Enqueue(message);
+            },
+            shutdownDrainTimeout: TimeSpan.FromSeconds(2));
+
+        try
+        {
+            _ = await notifier.RunToolCallAsync<int>(
+                "notification_pressure_0",
+                arguments: null,
+                _ => ValueTask.FromResult(0),
+                CancellationToken.None);
+            await deliveryStarted.Task.WaitAsync(
+                TimeSpan.FromSeconds(2));
+
+            const int additionalCalls = 100;
+            for (var index = 1;
+                 index <= additionalCalls;
+                 index++)
+            {
+                _ = await notifier.RunToolCallAsync<int>(
+                    $"notification_pressure_{index}",
+                    arguments: null,
+                    _ => ValueTask.FromResult(index),
+                    CancellationToken.None);
+            }
+
+            if (notifier.DroppedProgressMessages <= 0 ||
+                notifier.DroppedTerminalMessages != 0)
+            {
+                throw new InvalidOperationException(
+                    "Queue pressure did not preserve the terminal delivery lane.");
+            }
+
+            releaseDelivery.TrySetResult(true);
+            await notifier.DisposeAsync();
+
+            var deliveredTerminalCount = delivered.Count(
+                message => IsTerminal(message.Kind));
+            if (deliveredTerminalCount !=
+                additionalCalls + 1)
+            {
+                throw new InvalidOperationException(
+                    $"Terminal delivery drain mismatch. Expected={additionalCalls + 1}; Actual={deliveredTerminalCount}.");
+            }
+        }
+        finally
+        {
+            releaseDelivery.TrySetResult(true);
+        }
+    }
+
+    private static async Task AssertBoundedShutdownAsync()
+    {
+        var deliveryStarted = NewSignal();
+        var notifier = new TalvoraDesktopProgressNotifier(
+            NullLogger<TalvoraDesktopProgressNotifier>.Instance,
+            deliveryObserver: null,
+            async (_, token) =>
+            {
+                deliveryStarted.TrySetResult(true);
+                await Task.Delay(
+                    Timeout.InfiniteTimeSpan,
+                    token);
+            },
+            shutdownDrainTimeout: TimeSpan.FromMilliseconds(250));
+
+        _ = await notifier.RunToolCallAsync<int>(
+            "notification_shutdown_stall",
+            arguments: null,
+            _ => ValueTask.FromResult(1),
+            CancellationToken.None);
+        await deliveryStarted.Task.WaitAsync(
+            TimeSpan.FromSeconds(2));
+
+        var stopwatch = Stopwatch.StartNew();
+        await notifier.DisposeAsync();
+        stopwatch.Stop();
+        if (stopwatch.Elapsed > TimeSpan.FromSeconds(2))
+        {
+            throw new InvalidOperationException(
+                $"Desktop progress shutdown exceeded its bounded drain contract: {stopwatch.Elapsed}.");
+        }
+    }
+
+    private static async Task AssertUncooperativeDeliveryCannotBlockShutdownAsync()
+    {
+        var deliveryStarted = NewSignal();
+        var neverCompletes = NewSignal();
+        var notifier = new TalvoraDesktopProgressNotifier(
+            NullLogger<TalvoraDesktopProgressNotifier>.Instance,
+            deliveryObserver: null,
+            async (_, _) =>
+            {
+                deliveryStarted.TrySetResult(true);
+                await neverCompletes.Task;
+            },
+            shutdownDrainTimeout: TimeSpan.FromMilliseconds(150),
+            forcedShutdownTimeout: TimeSpan.FromMilliseconds(150));
+
+        _ = await notifier.RunToolCallAsync<int>(
+            "notification_uncooperative_shutdown",
+            arguments: null,
+            _ => ValueTask.FromResult(1),
+            CancellationToken.None);
+        await deliveryStarted.Task.WaitAsync(
+            TimeSpan.FromSeconds(2));
+
+        var stopwatch = Stopwatch.StartNew();
+        await notifier.DisposeAsync();
+        stopwatch.Stop();
+        if (stopwatch.Elapsed > TimeSpan.FromSeconds(1))
+        {
+            throw new InvalidOperationException(
+                $"Uncooperative desktop progress delivery blocked shutdown: {stopwatch.Elapsed}.");
+        }
+    }
+
+    private static async Task AssertWriteCancellationAsync()
+    {
+        var message = new DesktopProgressMessage(
+            "write-cancellation",
+            "self-test",
+            "Write",
+            "Cancellation",
+            DesktopProgressKind.Running,
+            DateTimeOffset.UtcNow,
+            ElapsedSeconds: 0,
+            Lane: DesktopProgressLane.Worklog,
+            Sequence: 1);
+        await using var stream = new BlockingWriteStream();
+        using var cts =
+            new CancellationTokenSource(
+                TimeSpan.FromMilliseconds(250));
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            await DesktopProgressProtocol.WriteFrameAsync(
+                stream,
+                message,
+                cts.Token);
+            throw new InvalidOperationException(
+                "Desktop progress framed write ignored cancellation.");
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        stopwatch.Stop();
+        if (stopwatch.Elapsed > TimeSpan.FromSeconds(2))
+        {
+            throw new InvalidOperationException(
+                $"Desktop progress framed write cancellation exceeded its test budget: {stopwatch.Elapsed}.");
+        }
+    }
+
+    private static async Task AssertPipeReadTimeoutRecoveryAsync()
+    {
+        var sessionId = 1_500_000_000 +
+            Random.Shared.Next(1, 100_000_000);
+        var received =
+            new TaskCompletionSource<DesktopProgressMessage>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+        using var listener = new DesktopProgressPipeListener(
+            sessionId,
+            message => received.TrySetResult(message),
+            readTimeout: TimeSpan.FromMilliseconds(250));
+        listener.Start();
+
+        await using (var stalled = new NamedPipeClientStream(
+            ".",
+            DesktopProgressProtocol.GetPipeName(sessionId),
+            PipeDirection.Out,
+            PipeOptions.Asynchronous))
+        {
+            using var connect =
+                new CancellationTokenSource(
+                    TimeSpan.FromSeconds(2));
+            await stalled.ConnectAsync(connect.Token);
+            await Task.Delay(500);
+        }
+
+        var expected = new DesktopProgressMessage(
+            "pipe-recovery",
+            "self-test",
+            "Pipe",
+            "Recovered",
+            DesktopProgressKind.Info,
+            DateTimeOffset.UtcNow,
+            ElapsedSeconds: 0,
+            Lane: DesktopProgressLane.Alert,
+            Sequence: 1);
+
+        await using (var client = new NamedPipeClientStream(
+            ".",
+            DesktopProgressProtocol.GetPipeName(sessionId),
+            PipeDirection.Out,
+            PipeOptions.Asynchronous))
+        {
+            using var connect =
+                new CancellationTokenSource(
+                    TimeSpan.FromSeconds(2));
+            await client.ConnectAsync(connect.Token);
+            await DesktopProgressProtocol.WriteFrameAsync(
+                client,
+                expected,
+                connect.Token);
+        }
+
+        var actual = await received.Task.WaitAsync(
+            TimeSpan.FromSeconds(2));
+        if (actual.OperationId != expected.OperationId)
+        {
+            throw new InvalidOperationException(
+                "Desktop progress listener did not recover after a stalled IPC client.");
+        }
+    }
+
+    private static TalvoraDesktopProgressNotifier CreateNotifier(
+        ConcurrentQueue<DesktopProgressMessage> observed) =>
+        new(
+            NullLogger<TalvoraDesktopProgressNotifier>.Instance,
+            observed.Enqueue,
+            static (_, _) => Task.CompletedTask,
+            shutdownDrainTimeout: TimeSpan.FromSeconds(1));
+
+    private static TaskCompletionSource<bool> NewSignal() =>
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    private static bool IsTerminal(
+        DesktopProgressKind kind) =>
+        kind is
+            DesktopProgressKind.Completed or
+            DesktopProgressKind.Failed or
+            DesktopProgressKind.Cancelled or
+            DesktopProgressKind.Info or
+            DesktopProgressKind.Warning;
+
+    private sealed class BlockingWriteStream : Stream
+    {
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => 0;
+        public override long Position
+        {
+            get => 0;
+            set => throw new NotSupportedException();
+        }
+
+        public override ValueTask WriteAsync(
+            ReadOnlyMemory<byte> buffer,
+            CancellationToken cancellationToken = default) =>
+            new(Task.Delay(
+                Timeout.InfiniteTimeSpan,
+                cancellationToken));
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(
+            byte[] buffer,
+            int offset,
+            int count) =>
+            throw new NotSupportedException();
+
+        public override long Seek(
+            long offset,
+            SeekOrigin origin) =>
+            throw new NotSupportedException();
+
+        public override void SetLength(long value) =>
+            throw new NotSupportedException();
+
+        public override void Write(
+            byte[] buffer,
+            int offset,
+            int count) =>
+            throw new NotSupportedException();
+    }
+}
