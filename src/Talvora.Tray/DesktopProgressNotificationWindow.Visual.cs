@@ -37,9 +37,9 @@ internal sealed partial class DesktopProgressNotificationWindow
     {
         Width = 500;
         MinWidth = 360;
-        MaxWidth = 680;
+        MaxWidth = 1200;
         MinHeight = 150;
-        MaxHeight = 620;
+        MaxHeight = 900;
         SizeToContent = SizeToContent.Height;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.CanResize;
@@ -105,11 +105,16 @@ internal sealed partial class DesktopProgressNotificationWindow
         outer.Children.Add(_accent);
 
         var content = new Grid();
-        for (var index = 0; index < 4; index++)
+        for (var index = 0; index < 3; index++)
         {
             content.RowDefinitions.Add(
                 new RowDefinition { Height = GridLength.Auto });
         }
+        _diffRow = new RowDefinition
+        {
+            Height = GridLength.Auto,
+        };
+        content.RowDefinitions.Add(_diffRow);
         Grid.SetColumn(content, 2);
 
         content.Children.Add(BuildHeader());
@@ -269,8 +274,11 @@ internal sealed partial class DesktopProgressNotificationWindow
         var grid = new Grid();
         grid.RowDefinitions.Add(
             new RowDefinition { Height = GridLength.Auto });
-        grid.RowDefinitions.Add(
-            new RowDefinition { Height = GridLength.Auto });
+        _diffContentRow = new RowDefinition
+        {
+            Height = GridLength.Auto,
+        };
+        grid.RowDefinitions.Add(_diffContentRow);
 
         var header = new Grid();
         header.ColumnDefinitions.Add(
@@ -307,11 +315,14 @@ internal sealed partial class DesktopProgressNotificationWindow
             IsReadOnlyCaretVisible = true,
             AcceptsReturn = true,
             IsUndoEnabled = false,
-            TextWrapping = TextWrapping.NoWrap,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            TextWrapping = TextWrapping.Wrap,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             MinHeight = 64,
             MaxHeight = 190,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
+            VerticalAlignment = System.Windows.VerticalAlignment.Stretch,
+            VerticalContentAlignment = System.Windows.VerticalAlignment.Top,
             Margin = new Thickness(0, 6, 0, 0),
             Padding = new Thickness(8),
             BorderThickness = new Thickness(1),
@@ -332,6 +343,8 @@ internal sealed partial class DesktopProgressNotificationWindow
             Padding = new Thickness(9),
             Margin = new Thickness(0, 10, 0, 0),
             Visibility = Visibility.Collapsed,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
+            VerticalAlignment = System.Windows.VerticalAlignment.Stretch,
             Child = grid,
         };
     }
@@ -442,6 +455,13 @@ internal sealed partial class DesktopProgressNotificationWindow
             MaxHeight);
         SizeToContent = SizeToContent.Manual;
         Height = renderedHeight;
+        _diffRow.Height = new GridLength(
+            1,
+            GridUnitType.Star);
+        _diffContentRow.Height = new GridLength(
+            1,
+            GridUnitType.Star);
+        _codePreview.MaxHeight = double.PositiveInfinity;
         _initialSizeLocked = true;
     }
 

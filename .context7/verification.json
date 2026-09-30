@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-30T05:14:17Z",
-  "scope": "Talvora desktop notification Faz 16 deep re-audit and compact commercial hacker UX: terminal outcomes are memory-bounded and overload-observable; heartbeat delivery is latest-wins/coalesced and retired after terminal truth; user-facing copy avoids future promises and duplicate current/history text; stale state is tied to real payload time; multi-monitor placement is generation-anchored and stack-height bounded; and the WPF notification surface is intentionally reduced to one plain-language information layer plus one optional real code/diff layer. WPF-UI 4.3.0 symbols, semantic design tokens, UI Automation, native edge resizing, reduced-motion/high-contrast fallbacks, Segoe UI Variable Text and Cascadia Mono are retained without duplicate terminal/evidence/status panels.",
+  "verifiedAtUtc": "2026-09-30T12:43:48Z",
+  "scope": "Talvora desktop notification Faz 17 responsive diff/work-visibility refinement: the compact single-information-layer design is retained while the optional real diff surface now word-wraps, expands with Window resize through Grid star sizing, uses the available monitor work area up to 1200x900 DIP bounds, and exposes substantially more bounded real code evidence. Structured apply-edits now produce old/new diff evidence, source/search/diff/hash inspection work is visible, and only high-frequency passive polling/status calls remain intentionally silent.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -22,6 +22,10 @@
     {
       "libraryId": "/dotnet/docs",
       "verified": "Current .NET guidance confirms bounded Channel<T> queues require an explicit full-mode policy, cancellation-aware Stream.ReadAsync/WriteAsync overloads are available, and tracked background work should be completed/drained during shutdown. Faz 16 keeps the terminal outcome lane memory-bounded at 1024 with explicit overload counters/error logging, reduces the progress lane to capacity 1 latest-wins coalescing, retires pending progress after terminal truth, preserves framed IPC cancellation budgets, and keeps shutdown bounded. Current WPF guidance also supports UI Automation metadata and system animation/accessibility settings; the notification window now exposes automation names/help/live regions, honors ClientAreaAnimation and HighContrast, and keeps ShowActivated=false so the overlay does not steal focus."
+    },
+    {
+      "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop",
+      "verified": "Microsoft's current WPF desktop guidance confirms multiline TextBox supports TextWrapping=Wrap with vertical scrolling and Grid star sizing distributes remaining space as the container/window grows. Faz 17 therefore keeps the notification initially compact, then switches the outer diff row and inner code row to star sizing after initial measurement, removes the code preview MaxHeight ceiling for user resize, disables horizontal scrolling because wrapped code reflows to width, and lets the presenter cap MaxWidth/MaxHeight against the active monitor work area."
     },
     {
       "libraryId": "/microsoftdocs/windows-powershell-docs",

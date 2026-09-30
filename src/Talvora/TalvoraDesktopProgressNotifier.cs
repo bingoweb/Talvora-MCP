@@ -709,27 +709,14 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
 
         return normalized switch
         {
-            "read_source" or
-            "read_text" or
-            "read_text_range" or
-            "read_bytes" or
-            "tail_text" or
-            "search_text" or
-            "knowledge_search" or
-            "find_files" or
             "list" or
-            "path_info" or
-            "file_hash" or
             "process_list" or
             "process_get" or
             "system_info" or
-            "http_request" or
             "tcp_listeners" or
-            "git_diff" or
             "git_branches" or
             "git_status" or
             "git_info" or
-            "git_log" or
             "job_get" or
             "job_list" or
             "service_get" or
@@ -751,18 +738,6 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                     StringComparison.OrdinalIgnoreCase) ||
                 normalized.EndsWith(
                     "_get",
-                    StringComparison.OrdinalIgnoreCase) ||
-                normalized.EndsWith(
-                    "_search",
-                    StringComparison.OrdinalIgnoreCase) ||
-                normalized.EndsWith(
-                    "_read",
-                    StringComparison.OrdinalIgnoreCase) ||
-                normalized.EndsWith(
-                    "_hash",
-                    StringComparison.OrdinalIgnoreCase) ||
-                normalized.EndsWith(
-                    "_diff",
                     StringComparison.OrdinalIgnoreCase) => false,
             _ => true,
         };

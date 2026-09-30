@@ -44,6 +44,8 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
     private TextBlock _meta = null!;
     private Border _diffPanel = null!;
     private TextBlock _diffHeader = null!;
+    private RowDefinition _diffRow = null!;
+    private RowDefinition _diffContentRow = null!;
     private WpfTextBox _codePreview = null!;
     private WpfButton _pinButton = null!;
     private WpfButton _closeButton = null!;
@@ -352,11 +354,13 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
         if (string.IsNullOrWhiteSpace(codePreview))
         {
             _diffPanel.Visibility = Visibility.Collapsed;
+            MinHeight = 150;
             SetTextIfChanged(_codePreview, string.Empty);
             return;
         }
 
         _diffPanel.Visibility = Visibility.Visible;
+        MinHeight = 220;
         SetTextIfChanged(
             _codePreview,
             codePreview);

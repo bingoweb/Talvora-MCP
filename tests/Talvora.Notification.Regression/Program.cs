@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Talvora;
 using Talvora.Shared;
@@ -12,7 +13,8 @@ internal static class Program
     {
         await DesktopProgressProtocol.AssertContractAsync();
         DesktopProgressPresentationState.AssertContract();
-        await AssertLowValueFilteringAsync();
+        await AssertWorkVisibilityFilteringAsync();
+        await AssertDiffEvidenceCoverageAsync();
         await AssertSemanticMessagingAndCanonicalToolAsync();
         await AssertConcurrentCancellationTruthAsync();
         await AssertConcurrentFailurePrecedenceAsync();
@@ -28,7 +30,7 @@ internal static class Program
         return 0;
     }
 
-    private static async Task AssertLowValueFilteringAsync()
+    private static async Task AssertWorkVisibilityFilteringAsync()
     {
         var observed =
             new ConcurrentQueue<DesktopProgressMessage>();
@@ -36,25 +38,112 @@ internal static class Program
         try
         {
             _ = await notifier.RunToolCallAsync<int>(
-                "talvora_read_text",
+                "talvora_service_get",
                 arguments: null,
                 _ => ValueTask.FromResult(1),
                 CancellationToken.None);
             if (!observed.IsEmpty)
             {
                 throw new InvalidOperationException(
-                    "Low-value read-only inspection produced a desktop worklog.");
+                    "Passive polling produced a desktop worklog.");
             }
 
             _ = await notifier.RunToolCallAsync<int>(
-                "talvora_run_powershell",
+                "talvora_read_source",
                 arguments: null,
                 _ => ValueTask.FromResult(2),
                 CancellationToken.None);
             if (observed.IsEmpty)
             {
                 throw new InvalidOperationException(
-                    "Meaningful execution work was incorrectly suppressed from the desktop worklog.");
+                    "Meaningful source inspection was incorrectly suppressed from the desktop worklog.");
+            }
+
+            if (observed.Any(message =>
+                    !string.Equals(
+                        message.ToolName,
+                        "read_source",
+                        StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException(
+                    "Source inspection did not preserve canonical tool identity.");
+            }
+        }
+        finally
+        {
+            await notifier.DisposeAsync();
+        }
+    }
+
+    private static async Task AssertDiffEvidenceCoverageAsync()
+    {
+        var observed =
+            new ConcurrentQueue<DesktopProgressMessage>();
+        var notifier = CreateNotifier(observed);
+        try
+        {
+            var oldBlock = string.Join(
+                '\n',
+                Enumerable.Range(1, 40)
+                    .Select(index => $"old-{index:00}();"));
+            var newBlock = string.Join(
+                '\n',
+                Enumerable.Range(1, 40)
+                    .Select(index => $"new-{index:00}();"));
+            var arguments = new Dictionary<string, JsonElement>
+            {
+                ["workspaceRoot"] =
+                    JsonSerializer.SerializeToElement("C:\\repo"),
+                ["changes"] =
+                    JsonSerializer.SerializeToElement(
+                        new[]
+                        {
+                            new
+                            {
+                                operation = "update",
+                                path = "src/Test.cs",
+                                edits = new[]
+                                {
+                                    new
+                                    {
+                                        expectedText = oldBlock,
+                                        newText = newBlock,
+                                    },
+                                },
+                            },
+                        }),
+            };
+
+            _ = await notifier.RunToolCallAsync<int>(
+                "talvora_apply_edits",
+                arguments,
+                _ => ValueTask.FromResult(1),
+                CancellationToken.None);
+
+            var evidence = observed
+                .Select(message => message.Evidence)
+                .FirstOrDefault(candidate =>
+                    !string.IsNullOrWhiteSpace(candidate?.CodePreview));
+            var preview = evidence?.CodePreview ?? string.Empty;
+            if (!preview.Contains(
+                    "@@ FILE src/Test.cs",
+                    StringComparison.Ordinal) ||
+                !preview.Contains(
+                    "-old-40();",
+                    StringComparison.Ordinal) ||
+                !preview.Contains(
+                    "+new-40();",
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Structured source edits did not expose a sufficiently rich real diff preview.");
+            }
+
+            if (evidence?.AddedLines != 40 ||
+                evidence.RemovedLines != 40)
+            {
+                throw new InvalidOperationException(
+                    "Structured edit evidence line counts were not preserved.");
             }
         }
         finally

@@ -480,12 +480,21 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         foreach (var window in windows)
         {
             var dpi = VisualTreeHelper.GetDpi(window);
-            var scale = Math.Max(0.5, dpi.DpiScaleY);
+            var scaleY = Math.Max(0.5, dpi.DpiScaleY);
+            var scaleX = Math.Max(0.5, dpi.DpiScaleX);
             var availableDip =
-                perWindowPixelBudget / scale;
+                perWindowPixelBudget / scaleY;
             window.MaxHeight = Math.Max(
-                180,
-                Math.Min(760, availableDip));
+                150,
+                Math.Min(900, availableDip));
+            var availableWidthDip =
+                Math.Max(
+                    360,
+                    (screen.WorkingArea.Width -
+                     (ScreenMarginPixels * 2.0)) / scaleX);
+            window.MaxWidth = Math.Max(
+                360,
+                Math.Min(1200, availableWidthDip));
         }
     }
 

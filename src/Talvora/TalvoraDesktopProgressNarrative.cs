@@ -17,6 +17,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         FileMutation,
         NetworkOperation,
         ProcessOperation,
+        Inspection,
         GenericExecution,
     }
 
@@ -32,6 +33,54 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         IDictionary<string, JsonElement>? arguments)
     {
         var normalized = NormalizeToolName(toolName);
+
+        if (normalized is
+            "read_source" or
+            "read_text" or
+            "read_text_range" or
+            "read_bytes" or
+            "tail_text" or
+            "search_text" or
+            "knowledge_search" or
+            "find_files")
+        {
+            return new(
+                OperationCategory.Inspection,
+                "İlgili kaynakları inceliyorum",
+                "İstenen işi doğru yapmak için ilgili dosya, metin ve eşleşmeleri kontrol ediyorum.",
+                "Değişiklik veya karar vermeden önce gerçek kaynak verisini görmek için.",
+                "Kaynak incelemesini tamamladım.");
+        }
+
+        if (normalized is "git_diff" or "git_log")
+        {
+            return new(
+                OperationCategory.Inspection,
+                "Değişiklik geçmişini inceliyorum",
+                "Yapılan değişikliklerin farkını ve geçmişini kontrol ediyorum.",
+                "Gerçek değişiklik durumunu doğrulamak için.",
+                "Değişiklik incelemesini tamamladım.");
+        }
+
+        if (normalized is "file_hash" or "path_info")
+        {
+            return new(
+                OperationCategory.Inspection,
+                "Dosya bilgisini doğruluyorum",
+                "Dosyanın gerçek konum, boyut veya bütünlük bilgisini kontrol ediyorum.",
+                "Sonucun varsayıma değil gerçek dosya verisine dayanması için.",
+                "Dosya doğrulamasını tamamladım.");
+        }
+
+        if (normalized == "http_request")
+        {
+            return new(
+                OperationCategory.Inspection,
+                "Bağlantıyı doğruluyorum",
+                "İlgili HTTP uç noktasının gerçek yanıtını kontrol ediyorum.",
+                "Bağlantı durumunu gerçek yanıt üzerinden doğrulamak için.",
+                "Bağlantı kontrolünü tamamladım.");
+        }
 
         if (normalized == "run_powershell")
         {

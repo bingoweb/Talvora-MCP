@@ -7,9 +7,9 @@ namespace Talvora;
 
 internal sealed partial class TalvoraDesktopProgressNotifier
 {
-    private const int MaximumEvidenceFiles = 8;
-    private const int MaximumPreviewLines = 18;
-    private const int MaximumPreviewCharacters = 2400;
+    private const int MaximumEvidenceFiles = 16;
+    private const int MaximumPreviewLines = 120;
+    private const int MaximumPreviewCharacters = 7 * 1024;
 
     private static DesktopProgressEvidence? BuildInitialEvidence(
         string? toolName,
@@ -21,6 +21,14 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             var patch = GetArgumentText(arguments, "patch");
             var workspaceRoot = GetArgumentText(arguments, "workspaceRoot");
             return BuildPatchEvidence(patch, workspaceRoot);
+        }
+
+        if (normalized is
+            "apply_edits" or
+            "structural_edit" or
+            "semantic_edit")
+        {
+            return BuildStructuredEditEvidence(arguments);
         }
 
         if (normalized is "dotnet_build" or "dotnet_test")
@@ -105,11 +113,22 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 if (separator >= 0)
                 {
                     fileCount++;
+                    var path = rawLine[(separator + 2)..];
                     AddEvidenceFile(
                         files,
-                        rawLine[(separator + 2)..],
+                        path,
                         workspaceRoot);
+                    AddPreviewLine(
+                        preview,
+                        $"@@ FILE {NormalizeEvidencePath(path, workspaceRoot)}");
                 }
+                continue;
+            }
+
+            if (rawLine.StartsWith("@@", StringComparison.Ordinal) ||
+                rawLine.StartsWith(" ", StringComparison.Ordinal))
+            {
+                AddPreviewLine(preview, rawLine);
                 continue;
             }
 
@@ -135,6 +154,128 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             AddedLines: added,
             RemovedLines: removed,
             CodePreview: JoinPreview(preview));
+    }
+
+    private static DesktopProgressEvidence? BuildStructuredEditEvidence(
+        IDictionary<string, JsonElement>? arguments)
+    {
+        if (arguments is null ||
+            !arguments.TryGetValue("changes", out var changes) ||
+            changes.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var workspaceRoot = GetArgumentText(arguments, "workspaceRoot");
+        var files = new List<string>();
+        var preview = new List<string>();
+        var fileCount = 0;
+        var added = 0;
+        var removed = 0;
+
+        foreach (var change in changes.EnumerateArray())
+        {
+            if (change.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var path = TryGetPropertyIgnoreCase(
+                    change,
+                    "path",
+                    out var pathElement) &&
+                pathElement.ValueKind == JsonValueKind.String
+                    ? pathElement.GetString() ?? string.Empty
+                    : string.Empty;
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                fileCount++;
+                AddEvidenceFile(files, path, workspaceRoot);
+                AddPreviewLine(
+                    preview,
+                    $"@@ FILE {NormalizeEvidencePath(path, workspaceRoot)}");
+            }
+
+            if (TryGetPropertyIgnoreCase(change, "edits", out var edits) &&
+                edits.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var edit in edits.EnumerateArray())
+                {
+                    if (edit.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
+                    if (TryGetPropertyIgnoreCase(
+                            edit,
+                            "expectedText",
+                            out var expectedText) &&
+                        expectedText.ValueKind == JsonValueKind.String)
+                    {
+                        AddChangedText(
+                            preview,
+                            expectedText.GetString(),
+                            '-',
+                            ref removed);
+                    }
+
+                    if (TryGetPropertyIgnoreCase(
+                            edit,
+                            "newText",
+                            out var newText) &&
+                        newText.ValueKind == JsonValueKind.String)
+                    {
+                        AddChangedText(
+                            preview,
+                            newText.GetString(),
+                            '+',
+                            ref added);
+                    }
+                }
+            }
+            else if (TryGetPropertyIgnoreCase(
+                         change,
+                         "content",
+                         out var content) &&
+                     content.ValueKind == JsonValueKind.String)
+            {
+                AddChangedText(
+                    preview,
+                    content.GetString(),
+                    '+',
+                    ref added);
+            }
+        }
+
+        if (fileCount == 0 && preview.Count == 0)
+        {
+            return null;
+        }
+
+        return new DesktopProgressEvidence(
+            Summary: $"{fileCount} dosya  //  +{added}  -{removed}",
+            Files: files,
+            AddedLines: added,
+            RemovedLines: removed,
+            CodePreview: JoinPreview(preview));
+    }
+
+    private static void AddChangedText(
+        List<string> preview,
+        string? text,
+        char prefix,
+        ref int lineCount)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
+        {
+            lineCount++;
+            AddPreviewLine(preview, $"{prefix}{line}");
+        }
     }
 
     private static void AddEvidenceFile(
@@ -163,12 +304,37 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         }
     }
 
+    private static string NormalizeEvidencePath(
+        string path,
+        string workspaceRoot)
+    {
+        var cleaned = path.Trim();
+        if (!string.IsNullOrWhiteSpace(workspaceRoot) &&
+            cleaned.StartsWith(
+                workspaceRoot,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            cleaned = cleaned[workspaceRoot.Length..]
+                .TrimStart('\\', '/');
+        }
+
+        return FileLog.RedactSensitiveData(cleaned);
+    }
+
     private static void AddPreviewLine(
         List<string> preview,
         string line)
     {
         if (preview.Count >= MaximumPreviewLines)
         {
+            if (preview.Count > 0 &&
+                !string.Equals(
+                    preview[^1],
+                    "… (diff kısaltıldı)",
+                    StringComparison.Ordinal))
+            {
+                preview[^1] = "… (diff kısaltıldı)";
+            }
             return;
         }
 
@@ -213,7 +379,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (builder.Length + line.Length + Environment.NewLine.Length >
                 MaximumPreviewCharacters)
             {
-                builder.AppendLine("…");
+                builder.AppendLine("… (diff karakter sınırında kısaltıldı)");
                 break;
             }
 
