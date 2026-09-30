@@ -1,6 +1,44 @@
 # Talvora MCP — Canonical Handoff
 
-## CURRENT — 2026-09-30 01:13+03:00 — Storage/tunnel/Penpot FINAL edge re-audit / live closeout
+## CURRENT — 2026-09-30 07:07+03:00 — Desktop notification commercial reliability FINAL live closeout
+
+Bu bölüm kanoniktir. Masaüstü bildirim görünümüne/kozmetiğine dokunulmadan servis → Named Pipe IPC → Tray listener → presenter → WPF notification hattı ticari kalite için modernize edildi ve canlıya alındı.
+
+### Runtime / build
+
+- Runtime-affecting commit: `c17f33c568db434e375b54d7baa9d8ef1b277f5d` — `feat: harden desktop progress reliability`.
+- Runtime deploy öncesi `HEAD = origin/main = github/main = c17f33c...`; working tree clean.
+- Canonical installer: **342,619,919 bytes**; SHA-256 `66DDCC0CEFB8F16E9F931E5901C0CC243B32CF666B3B5534F34C8781EE00F2A9`; manifest source tam `c17f33c...`.
+- Exact-installed runtime `sourceCommit=c17f33c...`, LocalSystem / `S-1-5-18`.
+- Talvora, Gitea ve Caddy `Running / Automatic`.
+
+### Faz 15 / #264–#270 kapanışı
+
+- Protocol v3: 4-byte length-prefixed UTF-8 frame, explicit version, 64 KiB hard ceiling, bounded read/write/connect timeout.
+- Progress ve terminal delivery ayrı bounded lanes; terminal state heartbeat baskısıyla sessizce düşürülemez; shutdown producer completion → bounded drain → force-cancel sırasını kullanır.
+- Her worklog burst unique generation id ve monotonic sequence alır; manual close aynı generation heartbeat'ini geri açmaz; late/out-of-order heartbeat terminal state'i geri oynatamaz.
+- Concurrent terminal precedence `Failed > Cancelled > Completed`; kalan paralel iş varsa kart Running kalır.
+- Worklog ve Alert ayrı visibility lanes; bağımsız Warning/Error worklog tarafından görünmeden emekliye ayrılmaz.
+- Placement JSON 16 KiB same-handle bounded; wire/evidence deterministic bounded + canonical secret redaction.
+- `Talvora.Notification.Regression` executable behavior gate olarak CI kapsamındadır.
+
+### Final quality / live acceptance
+
+- Context7 gate GREEN; ModernizationPolicy GREEN; notification executable regression `DESKTOP_PROGRESS_BEHAVIOR_GREEN`.
+- Full Release build **0 warning / 0 error**; analyzer verify-no-changes exit 0.
+- Source-built ve installed Tray `--self-test` GREEN (`ManagedMcpCount=5; FocusedTalvoraCount=2`).
+- Installed probes: Dev `Ready=True / BrowserSmokePassed=True / ToolCount=203`; Admin `Ready=True / BrowserSmokePassed=True / ToolCount=84`; tunnel live/ready, critical degradation false.
+- Real service→Tray smoke: actual MCP worklog activeken independent v3 Alert gönderildi; interactive user session 1 içinde Tray'e ait **2 görünür WPF window** aynı anda doğrulandı.
+- Window enumeration LocalSystem/session 0'dan değil gerçek user session 1 içinde yapıldı; session-isolation false-negative'i ayrıştırıldı.
+- İki açık notification window varken `Global\Talvora.Tray.Shutdown` sinyali eski Tray PID 9800'i **389 ms** içinde temiz kapattı.
+- Restart edilen installed Tray PID 27036 fresh v3 Alert frame kabul etti; user session 1'de yeniden görünür WPF notification windows doğrulandı.
+- NOTIFY-001…036 tamamlandı. #264–#270 final live verified.
+
+### Sonraki oturum
+
+Bu notification reliability fazı kapalıdır. Kozmetik görünüm ayrı iştir; bu closeout sırf tasarım değişikliği için yeniden açılmamalıdır. Bu bölümden sonraki docs-only commit runtime fingerprint değildir; sırf docs HEAD ilerledi diye `c17f33c...` runtime yeniden deploy edilmemelidir.
+
+## PREVIOUS — 2026-09-30 01:13+03:00 — Storage/tunnel/Penpot FINAL edge re-audit / live closeout
 
 Bu bölüm kanoniktir. Kullanıcının isteğiyle Faz A→E tekrar sıfırdan yürütüldü ve önceki GREEN sonuçlar doğru varsayılmadı. Bu son tur #250–#263 arasında yeni edge-case bug/kalite kusurları buldu; hepsi düzeltildi, test edildi, iki remote'a push edildi ve canonical installer ile canlıya alındı.
 

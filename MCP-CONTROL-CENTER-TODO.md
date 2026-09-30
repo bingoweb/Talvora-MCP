@@ -55,12 +55,19 @@ Context7 / .NET güncel rehber kararları:
 - [x] NOTIFY-030 — Release build 0 warning/0 error; analyzer clean; source + behavior regressions GREEN.
 
 ### Faz 15F — Runtime deployment / live acceptance
-- [ ] NOTIFY-031 — canonical installer build + SHA-256.
-- [ ] NOTIFY-032 — SYSTEM deploy exact runtime commit.
-- [ ] NOTIFY-033 — installed Tray self-test + Dev/Admin focused probes GREEN.
-- [ ] NOTIFY-034 — gerçek service→Tray notification smoke: started → running → completed ve warning/error bağımsız visibility.
-- [ ] NOTIFY-035 — shutdown/restart sırasında notification delivery worker veya pipe listener hang bırakmıyor.
-- [ ] NOTIFY-036 — working tree clean; origin/main == github/main; HANDOFF/BUG-AUDIT final closeout.
+- [x] NOTIFY-031 — canonical installer build + SHA-256.
+- [x] NOTIFY-032 — SYSTEM deploy exact runtime commit.
+- [x] NOTIFY-033 — installed Tray self-test + Dev/Admin focused probes GREEN.
+- [x] NOTIFY-034 — gerçek service→Tray notification smoke: started → running → completed ve warning/error bağımsız visibility.
+- [x] NOTIFY-035 — shutdown/restart sırasında notification delivery worker veya pipe listener hang bırakmıyor.
+- [x] NOTIFY-036 — working tree clean; origin/main == github/main; HANDOFF/BUG-AUDIT final closeout.
+
+Final live evidence:
+- Runtime commit `c17f33c568db434e375b54d7baa9d8ef1b277f5d` exact-installed under LocalSystem.
+- Canonical installer 342,619,919 bytes; SHA-256 `66DDCC0CEFB8F16E9F931E5901C0CC243B32CF666B3B5534F34C8781EE00F2A9`.
+- Installed Tray self-test GREEN; Dev probe 203 / Admin probe 84 tools, Ready + BrowserSmokePassed + tunnel live/ready.
+- Real user-session acceptance: service worklog + independent Alert lane simultaneously produced two visible WPF windows in Tray session 1.
+- Global shutdown event stress with two open notification windows exited Tray in 389 ms; restarted installed Tray accepted a fresh v3 Alert frame and again rendered visible WPF cards.
 
 ## 2026-09-29 — Dev/Admin Focused Surface Role Separation
 
