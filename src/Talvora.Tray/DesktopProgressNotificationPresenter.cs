@@ -182,6 +182,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
 
         TrimVisibleCards();
         Reposition();
+        CaptureAutomaticPreferredSize(window);
     }
 
     private void TrimVisibleCards()
@@ -458,6 +459,41 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         SetPinnedStateForAllWindows();
         QueuePlacementSave();
         Reposition();
+    }
+
+    private void CaptureAutomaticPreferredSize(
+        DesktopProgressNotificationWindow window)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (!window.AutomaticSizePersistenceRequested)
+        {
+            return;
+        }
+
+        window.UpdateLayout();
+        if (!double.IsFinite(window.ActualWidth) ||
+            !double.IsFinite(window.ActualHeight) ||
+            window.ActualWidth <= 0 ||
+            window.ActualHeight <= 0)
+        {
+            return;
+        }
+
+        _preferredWidthDip = Math.Clamp(
+            window.ActualWidth,
+            window.MinWidth,
+            window.MaxWidth);
+        _preferredHeightDip = Math.Clamp(
+            window.ActualHeight,
+            window.MinHeight,
+            window.MaxHeight);
+        _hasPreferredSize = true;
+        window.MarkAutomaticSizePersistenceHandled();
+        QueuePlacementSave();
     }
 
     private void SetPinnedStateForAllWindows()

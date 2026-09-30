@@ -70,6 +70,7 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
     private double _interactiveResizeStartHeight;
     private bool _hasPreferredSize;
     private bool _autoDiffExpanded;
+    private bool _automaticSizePersistenceRequested;
 
     public DesktopProgressNotificationWindow()
     {
@@ -96,6 +97,9 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
         DesktopProgressLane.Worklog;
 
     public bool WasManuallyClosed => _manualClose;
+
+    public bool AutomaticSizePersistenceRequested =>
+        _automaticSizePersistenceRequested;
 
     public bool IsTerminal =>
         LastKind is
@@ -416,7 +420,11 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
 
         Width = targetWidth;
         _autoDiffExpanded = true;
+        _automaticSizePersistenceRequested = true;
     }
+
+    public void MarkAutomaticSizePersistenceHandled() =>
+        _automaticSizePersistenceRequested = false;
 
     private void AttachNativeWindowHook()
     {
