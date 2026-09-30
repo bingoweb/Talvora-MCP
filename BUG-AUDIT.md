@@ -1,5 +1,19 @@
 # Talvora Deep Bug Audit
 
+## CURRENT — 2026-09-30 — #289 bounded Control Center local version metadata
+
+Status: **FINAL LIVE VERIFIED.** Exact-installed runtime `284a065d0f8842f3fcde2b2f00739580a383eab0`.
+
+- #289 **FIXED / REAL RED->GREEN / INSTALLED VERIFIED** — `ControlCenterVersionService.GetVersionAsync` local JSON metadata paths used unbounded `File.ReadAllTextAsync`: Talvora `current.json` and managed `package-file` discovery. A real 32 MiB valid `current.json` fixture through the actual Talvora registration path allocated **236,575,560 B**, grew working set **180,293,632 B**, and still returned `3.0.0-dev`; small baseline was **59,120 B alloc / 4,050,944 B WS delta**.
+- Fix: Talvora current metadata **512 KiB**, managed package metadata **4 MiB**; both use shared same-handle `JsonFileStore.ReadBoundedAsync<JsonDocument>`. Oversized/corrupt metadata fail-soft to `Bilinmiyor`. Post-fix identical 32 MiB fixture allocated **368,752 B**, WS delta **8,060,928 B**, completed in 71 ms and returned `Bilinmiyor`.
+- UI responsiveness regression now requires both ceilings, bounded async reader usage and rejects any local `File.ReadAllTextAsync` in `ControlCenterVersionService`. Fixture finally restored prior SYSTEM `current.json`.
+
+Quality: full Release solution **0 warning / 0 error**; UI responsiveness GREEN; privacy/security GREEN; ModernizationPolicy GREEN; Context7 GREEN; analyzer verify-no-changes exit 0; source Tray self-test + Control Center smoke GREEN.
+
+Runtime/deploy: commit `284a065d...`; Gitea origin + GitHub main synchronized. Canonical installer **342,628,111 bytes**, SHA-256 `A60228B3196903F8F183485AAC89F1248A2FD80E006CBE777A9795CDAC842770`, manifest exact source/head. Final deploy 34%->50% ~**0.51 s**, force-stop/delete/rollback yok; exact-installed sourceCommit `284a065d...`, LocalSystem/S-1-5-18, PID 22100.
+
+Installed acceptance: self-test/Dev/Admin probes exit 0; canonical live counts Dev 203 / Admin 84, Ready + BrowserSmokePassed; Talvora/Gitea/Caddy Running Automatic; deploy sonrası yeni SCM 7034 yok.
+
 ## CURRENT — 2026-09-30 — #288 bounded Control Center window placement restore
 
 Status: **FINAL LIVE VERIFIED.** Exact-installed runtime `7e05e19503d55b1b9f2590a6bd4abb26ed99e0a9`.

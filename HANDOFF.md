@@ -1,5 +1,53 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-09-30 21:04+03:00 — #289 bounded Control Center version metadata FINAL
+
+Bu bölüm en üst kanonik checkpoint'tir. #280–#288 kapalı kalır. Bu tur Control Center detail/version yüzeyindeki local JSON metadata restore yolunun gerçek bounded-I/O bulgusu #289 kapatıldı.
+
+### Canonical runtime / repository state
+
+- Runtime-affecting commit: `284a065d0f8842f3fcde2b2f00739580a383eab0` — `fix: bound control center version metadata`.
+- Runtime publish öncesi `HEAD = origin/main = github/main = 284a065d...`; working tree clean.
+- Canonical installer: **342,628,111 bytes**; SHA-256 `A60228B3196903F8F183485AAC89F1248A2FD80E006CBE777A9795CDAC842770`; manifest source/head exact `284a065d...`.
+- SYSTEM deploy sonrası exact-installed `talvora_system_info.sourceCommit=284a065d...`, LocalSystem / `S-1-5-18`, service PID **22100**.
+- Installed version root: `C:\Program Files\Talvora\Versions\284a065d0f8842f3fcde2b2f00739580a383eab0-20260930180339500`.
+- Takip eden docs-only closeout commit runtime fingerprint değildir; sırf repository HEAD ilerledi diye runtime yeniden deploy edilmemelidir.
+
+### #289 — unbounded local version metadata reads
+
+- Gerçek production çağrı zinciri: `ControlCenterVersionService.GetVersionAsync(registration)`.
+- `registration.Id=talvora` olduğunda `%LOCALAPPDATA%\Talvora\current.json` eski kodda `File.ReadAllTextAsync` ile sınırsız okunup sonra `JsonDocument.Parse` ediliyordu.
+- Managed MCP package discovery de aynı şekilde `package-file` hint'ini sınırsız `File.ReadAllTextAsync` ile okuyordu.
+- Gerçek pre-fix fixture:
+  - küçük `current.json`: **59,120 byte managed allocation**, **4,050,944 byte WS delta**, 21 ms.
+  - **32 MiB** valid JSON + trailing whitespace: **236,575,560 byte managed allocation**, **180,293,632 byte WS delta**, 324 ms; yine `3.0.0-dev` döndü.
+- Fix:
+  - `MaximumTalvoraVersionMetadataBytes = 512 * 1024`.
+  - `MaximumPackageVersionMetadataBytes = 4 * 1024 * 1024`.
+  - Her iki local metadata yolu shared same-handle `JsonFileStore.ReadBoundedAsync<JsonDocument>` kullanıyor.
+  - Oversized/corrupt metadata mevcut fail-soft kullanıcı davranışıyla `Bilinmiyor` döner; normal version display semantiği değişmedi.
+- Post-fix aynı 32 MiB Talvora fixture: **368,752 byte managed allocation**, **8,060,928 byte WS delta**, 71 ms; sonuç `Bilinmiyor`.
+- Fixture testleri SYSTEM profile `current.json` içeriğini sonunda birebir geri yükledi.
+- `ControlCenterUiResponsivenessSourceRegression.ps1` iki explicit ceiling'i, bounded async reader'ı ve local `File.ReadAllTextAsync` yokluğunu kalıcı kilitliyor.
+
+### Final quality / live acceptance
+
+- Targeted RED explicit metadata ceiling eksikliği nedeniyle exit 1; fix sonrası `CONTROL_CENTER_UI_RESPONSIVENESS_SOURCE_GREEN`.
+- Tray Release + full solution build **0 warning / 0 error**.
+- Privacy/security GREEN; `MODERNIZATION_POLICY_GREEN`; `CONTEXT7_QUALITY_GATE_GREEN`; analyzer verify-no-changes exit 0.
+- Source Tray self-test + Control Center smoke GREEN.
+- Context7 `/dotnet/docs`: local metadata size validation/allocation-before-parse riski aynı change içinde yenilendi.
+- Exact-installed final self-test, Dev probe ve Admin probe exit 0; canonical live counts Dev **203**, Admin **84**, Ready + BrowserSmokePassed.
+- Talvora/Gitea/Caddy `Running / Automatic`.
+- Final deploy log 34% `21:03:40.212` -> 50% `21:03:40.725`: yaklaşık **0.51 s**; force-stop/delete/rollback yok; `Install succeeded` at `21:03:49.030`.
+- Deploy sonrası yeni SCM **7034 yok**.
+
+### Sonraki audit
+
+- #289 kapalıdır. Yeni deep-audit turu #290'dan devam etmelidir.
+- persisted-state / local metadata / health-url / HTTP-body bounded-I/O adaylarını production çağrı zinciri + gerçek fixture ile ele.
+- #280–#289 yeni gerçek kanıt olmadan yeniden açılmamalıdır.
+
 ## CURRENT — 2026-09-30 20:55+03:00 — #288 bounded Control Center window placement FINAL
 
 Bu bölüm en üst kanonik checkpoint'tir. #280–#287 kapalı kalır. Bu tur Control Center'ın persisted pencere konumu/boyutu restore yolundaki gerçek UI-thread bounded-I/O bulgusu #288 kapatıldı.
