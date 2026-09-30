@@ -13,9 +13,11 @@ internal static class Program
         await DesktopProgressProtocol.AssertContractAsync();
         DesktopProgressPresentationState.AssertContract();
         await AssertLowValueFilteringAsync();
+        await AssertSemanticMessagingAndCanonicalToolAsync();
         await AssertConcurrentCancellationTruthAsync();
         await AssertConcurrentFailurePrecedenceAsync();
         await AssertQueuePressureAndDrainAsync();
+        await AssertCatastrophicTerminalOverloadIsObservableAsync();
         await AssertBoundedShutdownAsync();
         await AssertUncooperativeDeliveryCannotBlockShutdownAsync();
         await AssertWriteCancellationAsync();
@@ -58,6 +60,94 @@ internal static class Program
         finally
         {
             await notifier.DisposeAsync();
+        }
+    }
+
+    private static async Task AssertSemanticMessagingAndCanonicalToolAsync()
+    {
+        var sourceObserved =
+            new ConcurrentQueue<DesktopProgressMessage>();
+        var sourceNotifier = CreateNotifier(sourceObserved);
+        try
+        {
+            _ = await sourceNotifier.RunToolCallAsync<int>(
+                "talvora_apply_patch",
+                arguments: null,
+                _ => ValueTask.FromResult(1),
+                CancellationToken.None);
+
+            var sourceMessages = sourceObserved.ToArray();
+            if (sourceMessages.Length == 0 ||
+                sourceMessages.Any(message =>
+                    !string.Equals(
+                        message.ToolName,
+                        "apply_patch",
+                        StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException(
+                    "Desktop worklog did not preserve the canonical source-edit tool name.");
+            }
+
+            if (sourceMessages.Any(message =>
+                    message.Message.Contains(
+                        "Şimdi sıradaki adıma",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    message.Message.Contains(
+                        "Son yaptıklarım",
+                        StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException(
+                    "Desktop worklog repeated the current action or promised an unverified next step.");
+            }
+        }
+        finally
+        {
+            await sourceNotifier.DisposeAsync();
+        }
+
+        var failureObserved =
+            new ConcurrentQueue<DesktopProgressMessage>();
+        var failureNotifier = CreateNotifier(failureObserved);
+        try
+        {
+            _ = await failureNotifier.RunToolCallAsync<object>(
+                "talvora_dotnet_build",
+                arguments: null,
+                _ => ValueTask.FromResult<object>(
+                    new { success = false }),
+                CancellationToken.None);
+
+            var terminal = failureObserved
+                .Where(message => IsTerminal(message.Kind))
+                .Last();
+            if (!string.Equals(
+                    terminal.ToolName,
+                    "dotnet_build",
+                    StringComparison.Ordinal) ||
+                terminal.Kind != DesktopProgressKind.Failed)
+            {
+                throw new InvalidOperationException(
+                    "Desktop worklog failure did not preserve canonical tool identity and failure truth.");
+            }
+
+            var forbiddenPromises = new[]
+            {
+                "yeniden deneyeceğim",
+                "düzelteceğim",
+                "kontrol edip",
+            };
+            if (forbiddenPromises.Any(phrase =>
+                    terminal.Message.Contains(
+                        phrase,
+                        StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException(
+                    "Desktop worklog failure copy promised future work that had not happened.");
+            }
+        }
+        finally
+        {
+            await failureNotifier.DisposeAsync();
         }
     }
 
@@ -260,7 +350,7 @@ internal static class Program
             await deliveryStarted.Task.WaitAsync(
                 TimeSpan.FromSeconds(2));
 
-            const int additionalCalls = 100;
+            const int additionalCalls = 320;
             for (var index = 1;
                  index <= additionalCalls;
                  index++)
@@ -290,10 +380,86 @@ internal static class Program
                 throw new InvalidOperationException(
                     $"Terminal delivery drain mismatch. Expected={additionalCalls + 1}; Actual={deliveredTerminalCount}.");
             }
+
+            if (notifier.PendingTerminalMessages != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Terminal backlog was not fully drained. Remaining={notifier.PendingTerminalMessages}.");
+            }
+
+            var terminalSeen = new HashSet<string>(
+                StringComparer.Ordinal);
+            foreach (var message in delivered)
+            {
+                if (IsTerminal(message.Kind))
+                {
+                    terminalSeen.Add(message.OperationId);
+                    continue;
+                }
+
+                if (terminalSeen.Contains(message.OperationId))
+                {
+                    throw new InvalidOperationException(
+                        $"A stale progress frame was delivered after terminal state. Operation={message.OperationId}.");
+                }
+            }
         }
         finally
         {
             releaseDelivery.TrySetResult(true);
+        }
+    }
+
+    private static async Task AssertCatastrophicTerminalOverloadIsObservableAsync()
+    {
+        var deliveryStarted = NewSignal();
+        var releaseDelivery = NewSignal();
+        var notifier = new TalvoraDesktopProgressNotifier(
+            NullLogger<TalvoraDesktopProgressNotifier>.Instance,
+            deliveryObserver: null,
+            async (_, token) =>
+            {
+                deliveryStarted.TrySetResult(true);
+                await releaseDelivery.Task.WaitAsync(token);
+            },
+            shutdownDrainTimeout: TimeSpan.FromSeconds(2));
+
+        try
+        {
+            _ = await notifier.RunToolCallAsync<int>(
+                "notification_overload_seed",
+                arguments: null,
+                _ => ValueTask.FromResult(0),
+                CancellationToken.None);
+            await deliveryStarted.Task.WaitAsync(
+                TimeSpan.FromSeconds(2));
+
+            const int overloadCalls = 1_100;
+            for (var index = 0; index < overloadCalls; index++)
+            {
+                _ = await notifier.RunToolCallAsync<int>(
+                    $"notification_overload_{index}",
+                    arguments: null,
+                    _ => ValueTask.FromResult(index),
+                    CancellationToken.None);
+            }
+
+            if (notifier.DroppedTerminalMessages <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Catastrophic terminal overload was not observable.");
+            }
+
+            if (notifier.PendingTerminalMessages > 1_024)
+            {
+                throw new InvalidOperationException(
+                    $"Terminal backlog exceeded its hard bound: {notifier.PendingTerminalMessages}.");
+            }
+        }
+        finally
+        {
+            releaseDelivery.TrySetResult(true);
+            await notifier.DisposeAsync();
         }
     }
 

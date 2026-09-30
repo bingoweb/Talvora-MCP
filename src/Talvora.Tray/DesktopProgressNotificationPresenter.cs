@@ -2,6 +2,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows.Interop;
+using System.Windows.Media;
 using Talvora.Shared;
 using FormsCursor = System.Windows.Forms.Cursor;
 using FormsPoint = System.Drawing.Point;
@@ -52,6 +53,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
     private bool _isPinned;
     private int _anchorLeftPixels;
     private int _anchorTopPixels;
+    private string? _automaticScreenDeviceName;
     private bool _disposed;
 
     public DesktopProgressNotificationPresenter(
@@ -124,6 +126,9 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                 message.OperationId,
                 out var window))
         {
+            _automaticScreenDeviceName ??=
+                FormsScreen.FromPoint(
+                    FormsCursor.Position).DeviceName;
             window = new DesktopProgressNotificationWindow();
             window.SetPinned(_isPinned);
             window.UserMoveCompleted +=
@@ -141,6 +146,10 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                 }
 
                 _windows.Remove(message.OperationId);
+                if (_windows.Count == 0 && !_isPinned)
+                {
+                    _automaticScreenDeviceName = null;
+                }
                 Reposition();
             };
             _windows[message.OperationId] = window;
@@ -208,6 +217,8 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         if (_isPinned &&
             TryGetPinnedScreen(out var pinnedScreen))
         {
+            ApplyHeightConstraint(ordered, pinnedScreen);
+            UpdateLayouts(ordered);
             PositionPinned(ordered, pinnedScreen);
             return;
         }
@@ -215,18 +226,33 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         if (_isPinned)
         {
             _isPinned = false;
+            _automaticScreenDeviceName =
+                FormsScreen.FromPoint(
+                    FormsCursor.Position).DeviceName;
             SetPinnedStateForAllWindows();
             QueuePlacementSave();
         }
 
-        PositionAutomatically(ordered);
+        var automaticScreen = ResolveAutomaticScreen();
+        ApplyHeightConstraint(ordered, automaticScreen);
+        UpdateLayouts(ordered);
+        PositionAutomatically(ordered, automaticScreen);
+    }
+
+    private static void UpdateLayouts(
+        IReadOnlyList<DesktopProgressNotificationWindow> windows)
+    {
+        foreach (var window in windows)
+        {
+            window.UpdateLayout();
+        }
     }
 
     private static void PositionAutomatically(
-        IReadOnlyList<DesktopProgressNotificationWindow> ordered)
+        IReadOnlyList<DesktopProgressNotificationWindow> ordered,
+        FormsScreen screen)
     {
-        var workArea =
-            FormsScreen.FromPoint(FormsCursor.Position).WorkingArea;
+        var workArea = screen.WorkingArea;
         var right = workArea.Right - ScreenMarginPixels;
         var bottom = workArea.Bottom - ScreenMarginPixels;
 
@@ -372,6 +398,12 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             _anchorLeftPixels = rectangle.Left;
             _anchorTopPixels = rectangle.Top;
         }
+        else
+        {
+            _automaticScreenDeviceName =
+                FormsScreen.FromPoint(
+                    FormsCursor.Position).DeviceName;
+        }
 
         _isPinned = pinned;
         SetPinnedStateForAllWindows();
@@ -406,6 +438,55 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         screen = FormsScreen.PrimaryScreen ??
             FormsScreen.FromPoint(FormsCursor.Position);
         return false;
+    }
+
+    private FormsScreen ResolveAutomaticScreen()
+    {
+        if (!string.IsNullOrWhiteSpace(
+                _automaticScreenDeviceName))
+        {
+            var existing = FormsScreen.AllScreens.FirstOrDefault(
+                candidate => string.Equals(
+                    candidate.DeviceName,
+                    _automaticScreenDeviceName,
+                    StringComparison.OrdinalIgnoreCase));
+            if (existing is not null)
+            {
+                return existing;
+            }
+        }
+
+        var resolved = FormsScreen.FromPoint(
+            FormsCursor.Position);
+        _automaticScreenDeviceName = resolved.DeviceName;
+        return resolved;
+    }
+
+    private static void ApplyHeightConstraint(
+        IReadOnlyList<DesktopProgressNotificationWindow> windows,
+        FormsScreen screen)
+    {
+        var visibleCount = Math.Max(1, windows.Count);
+        var stackGapPixels =
+            CardGapPixels * Math.Max(0, visibleCount - 1);
+        var usablePixels = Math.Max(
+            180,
+            screen.WorkingArea.Height -
+            (ScreenMarginPixels * 2) -
+            stackGapPixels);
+        var perWindowPixelBudget =
+            Math.Max(180.0, usablePixels / (double)visibleCount);
+
+        foreach (var window in windows)
+        {
+            var dpi = VisualTreeHelper.GetDpi(window);
+            var scale = Math.Max(0.5, dpi.DpiScaleY);
+            var availableDip =
+                perWindowPixelBudget / scale;
+            window.MaxHeight = Math.Max(
+                180,
+                Math.Min(760, availableDip));
+        }
     }
 
     private void RestorePlacement()

@@ -8,15 +8,20 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         "talvora-live-worklog";
 
     private sealed record ActiveWorklogItem(
+        string ToolName,
         OperationNarrative Narrative,
         DesktopProgressEvidence? Evidence,
         long Sequence);
 
     private sealed record PendingFailure(
+        string ToolName,
+        string Subject,
         string Message,
         DesktopProgressEvidence? Evidence);
 
     private sealed record PendingCancellation(
+        string ToolName,
+        string Subject,
         string Message,
         DesktopProgressEvidence? Evidence);
 
@@ -29,9 +34,11 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     private string? _currentWorklogOperationId;
     private PendingFailure? _pendingFailure;
     private PendingCancellation? _pendingCancellation;
+    private string? _lastWorklogHistory;
 
     private void TryBeginWorklog(
         string operationId,
+        string toolName,
         OperationNarrative narrative,
         DesktopProgressEvidence? evidence,
         TimeSpan elapsed)
@@ -40,6 +47,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         {
             BeginWorklog(
                 operationId,
+                toolName,
                 narrative,
                 evidence,
                 elapsed);
@@ -100,6 +108,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
 
     private void BeginWorklog(
         string operationId,
+        string toolName,
         OperationNarrative narrative,
         DesktopProgressEvidence? evidence,
         TimeSpan elapsed)
@@ -113,23 +122,22 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 _pendingFailure = null;
                 _pendingCancellation = null;
                 _recentWorklogUpdates.Clear();
+                _lastWorklogHistory = null;
             }
 
             _activeWorklog[operationId] =
                 new ActiveWorklogItem(
+                    toolName,
                     narrative,
                     evidence,
                     ++_worklogSequence);
 
-            AddWorklogHistory(
-                $"Şimdi: {narrative.Action}");
-
             Enqueue(
                 GetCurrentWorklogOperationId(),
+                toolName,
                 narrative.Subject,
-                "Şimdi bunu yapıyorum",
                 ComposeWorklogMessage(
-                    $"{narrative.Action}\n\nNeden: {narrative.Reason}",
+                    $"{narrative.Action}\n\nAmaç: {narrative.Reason}",
                     evidence),
                 DesktopProgressKind.Started,
                 elapsed,
@@ -162,10 +170,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
 
             Enqueue(
                 GetCurrentWorklogOperationId(),
-                displayName,
-                "Hâlâ bununla uğraşıyorum",
+                current.ToolName,
+                current.Narrative.Subject,
                 ComposeWorklogMessage(
-                    $"{displayName}.\n\nYaklaşık {FormatElapsed(elapsed)} oldu. İşlem hâlâ devam ediyor; yeni gerçek veri geldikçe bu kartı güncelliyorum.",
+                    $"İşlem devam ediyor. Geçen süre: {FormatElapsed(elapsed)}.",
                     current.Evidence),
                 DesktopProgressKind.Running,
                 elapsed,
@@ -183,7 +191,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     {
         lock (_worklogGate)
         {
-            if (!_activeWorklog.Remove(operationId))
+            if (!_activeWorklog.Remove(
+                    operationId,
+                    out var ended))
             {
                 return;
             }
@@ -191,18 +201,22 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (kind == DesktopProgressKind.Failed)
             {
                 AddWorklogHistory(
-                    $"Sorun çıktı: {message}");
+                    $"Hata: {ended.Narrative.Subject}");
                 _pendingFailure =
                     new PendingFailure(
+                        ended.ToolName,
+                        ended.Narrative.Subject,
                         message,
                         evidence);
             }
             else if (kind == DesktopProgressKind.Cancelled)
             {
                 AddWorklogHistory(
-                    $"Durduruldu: {message}");
+                    $"Durduruldu: {ended.Narrative.Subject}");
                 _pendingCancellation =
                     new PendingCancellation(
+                        ended.ToolName,
+                        ended.Narrative.Subject,
                         message,
                         evidence);
             }
@@ -219,22 +233,22 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                             DesktopProgressKind.Cancelled)
                     {
                         AddWorklogHistory(
-                            "Bir adımı tamamladım; sıradaki iş devam ediyor.");
+                            $"Tamamlandı: {ended.Narrative.Subject}");
                     }
 
                     var continuation = kind switch
                     {
                         DesktopProgressKind.Failed =>
-                            $"{latest.Narrative.Action}\n\nBir paralel adımda sorun çıktı; diğer işi durdurmadan devam ediyorum.",
+                            "Bir paralel adım tamamlanamadı; kalan aktif işlem devam ediyor.",
                         DesktopProgressKind.Cancelled =>
-                            $"{latest.Narrative.Action}\n\nBir paralel adım durduruldu; kalan iş üzerinde çalışmaya devam ediyorum.",
+                            "Bir paralel adım durduruldu; kalan aktif işlem devam ediyor.",
                         _ =>
-                            $"{latest.Narrative.Action}\n\nBir önceki adımı tamamladım; sıradaki iş üzerinde çalışmaya devam ediyorum.",
+                            "Bir paralel adım tamamlandı; kalan aktif işlem devam ediyor.",
                     };
                     Enqueue(
                         GetCurrentWorklogOperationId(),
+                        latest.ToolName,
                         latest.Narrative.Subject,
-                        "Hâlâ çalışıyorum",
                         ComposeWorklogMessage(
                             continuation,
                             latest.Evidence),
@@ -256,8 +270,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 _pendingCancellation = null;
                 Enqueue(
                     sharedOperationId,
-                    "Kontrol gerekiyor",
-                    "Bir hata buldum",
+                    pendingFailure.ToolName,
+                    pendingFailure.Subject,
                     ComposeWorklogMessage(
                         pendingFailure.Message,
                         pendingFailure.Evidence),
@@ -274,8 +288,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 _pendingCancellation = null;
                 Enqueue(
                     sharedOperationId,
-                    "Çalışma durduruldu",
-                    "Bir iş durduruldu",
+                    pendingCancellation.ToolName,
+                    pendingCancellation.Subject,
                     ComposeWorklogMessage(
                         pendingCancellation.Message,
                         pendingCancellation.Evidence),
@@ -286,11 +300,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 return;
             }
 
-            AddWorklogHistory(
-                $"Tamamlandı: {message.Replace(Environment.NewLine, " ").Trim()}");
             Enqueue(
                 sharedOperationId,
-                "Çalışma tamamlandı",
+                ended.ToolName,
                 title,
                 ComposeWorklogMessage(
                     message,
@@ -321,8 +333,17 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             return;
         }
 
+        if (string.Equals(
+                cleaned,
+                _lastWorklogHistory,
+                StringComparison.Ordinal))
+        {
+            return;
+        }
+
         _recentWorklogUpdates.Enqueue(cleaned);
-        while (_recentWorklogUpdates.Count > 6)
+        _lastWorklogHistory = cleaned;
+        while (_recentWorklogUpdates.Count > 4)
         {
             _recentWorklogUpdates.Dequeue();
         }

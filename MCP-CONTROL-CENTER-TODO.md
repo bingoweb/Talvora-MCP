@@ -3,7 +3,78 @@
 Tarih: 2026-09-19
 Durum: PLANLAMA TAMAMLANDI — implementasyon yeni oturumda başlayacak.
 
-## CURRENT — Faz 15: Desktop Worklog / Notification Commercial Reliability Modernization (2026-09-30)
+## CURRENT — Faz 16: Desktop Notification Deep Re-audit + Professional Hacker UX (2026-09-30)
+
+Amaç: Faz 15'i doğru kabul etmeden notification alt-sistemini yeniden audit etmek; kalan reliability/correctness açıklarını kapatmak ve görsel/mesaj katmanını Fluent 2 ilkeleri, WPF-UI 4.3.0, gerçek terminal observability ve erişilebilirlik ile ticari ürün seviyesine çıkarmak. Sahte hacker telemetrisi yasak; bütün teknik görünüm gerçek runtime/tool/evidence verisinden üretilecek.
+
+Araştırma kararları:
+- WPF-UI 4.3.0 güncel NuGet sürümüdür; yeni UI framework eklenmeyecek, mevcut WPF-UI/Fluent altyapısı derinleştirilecek.
+- Fluent 2: neutral surface + semantic status colors + design tokens + güçlü tipografik hiyerarşi; renk tek bilgi kanalı olmayacak.
+- Teknik meta ve gerçek diff/kod katmanı `Cascadia Mono, Consolas`; normal metin `Segoe UI Variable Text` kullanacak. Ayrı terminal paneli user-feedback sonrası kaldırıldı.
+- Motion kısa ve kontrollü olacak; Windows reduced-motion ayarı animasyonları devre dışı bırakabilecek.
+- Hacker felsefesi: koyu graphite/navy yüzey, cyan trace accent, semantic success/warning/error, compact gerçek tool/zaman metası ve tek gerçek diff yüzeyi; rastgele IP/CPU/hex/matrix verisi yok.
+
+### Faz 16A — Sıfırdan correctness / reliability re-audit
+- [x] NOTIFY2-001 — 256 terminal queue dolduğunda terminal state'in düşebildiği overflow açığını kapat; terminal outcome sessizce kaybolmamalı.
+- [x] NOTIFY2-002 — Progress queue'da gerçek coalescing uygula; aynı generation için bekleyen heartbeat'lerin yalnız en günceli taşınsın.
+- [x] NOTIFY2-003 — Terminal geldiğinde aynı operation/generation için pending progress'i retire et; terminalden sonra stale running frame delivery edilmesin.
+- [x] NOTIFY2-004 — `DesktopProgressMessage.ToolName` gerçekten canonical tool adı taşısın; kullanıcı başlığı/subject ToolName alanına yazılmasın.
+- [x] NOTIFY2-005 — User drag/pin etkileşimi gerçek payload timestamp'ini değiştirmesin; stale detection yalnız gerçek IPC update zamanına göre çalışsın.
+- [x] NOTIFY2-006 — Auto-position heartbeat'te mouse başka monitöre geçti diye kartı monitörler arasında taşımamalı; generation boyunca automatic screen anchor sabit kalsın.
+- [x] NOTIFY2-007 — Notification shutdown/dispose ve listener recovery Faz 15 boundedness sözleşmesini korusun; yeni UI/state değişiklikleri hang üretmesin.
+
+### Faz 16B — Mesaj mimarisi / truth-preserving copy
+- [x] NOTIFY2-008 — String-equality tabanlı `BuildPlainCompletion` yerine semantic operation category + explicit start/progress/completion copy modeli kullan.
+- [x] NOTIFY2-009 — Source edit, build/test, package, service/process, git, installer/deploy, file mutation, tunnel/network ve generic execution aileleri için anlaşılır Türkçe narrative üret.
+- [x] NOTIFY2-010 — Mesajlar gelecekte yapılacağı garanti olmayan eylemleri vaat etmesin; yalnız gerçekleşen/şu anda gerçekleşen durum ve gerekli next condition anlatılsın.
+- [x] NOTIFY2-011 — “Şimdi sıradaki adıma geçiyorum” gibi gerçek olmayan generic completion cümlelerini kaldır.
+- [x] NOTIFY2-012 — Current action history'ye tekrar yazılmasın; history yalnız tamamlanan/değişen gerçek adımları taşısın.
+- [x] NOTIFY2-013 — Consecutive duplicate history entry suppression + kısa bounded history (en fazla 4 anlamlı olay).
+- [x] NOTIFY2-014 — Heartbeat mesajı her 5 saniyede aynı paragrafı yeniden üretmek yerine compact elapsed/state update olsun.
+- [x] NOTIFY2-015 — Failure/cancel copy teknik ama sade olsun; kanıt yoksa varmış gibi konuşmasın, otomatik düzeltme sözü vermesin.
+
+### Faz 16C — Professional hacker visual system
+- [x] NOTIFY2-016 — Notification-specific semantic design tokens ekle; hard-coded brush/color/font tekrarlarını kaldır.
+- [x] NOTIFY2-017 — Card yüzeyini Fluent dark neutral/elevation modeline taşı; aşırı neon yeşil yerine cyan brand trace + semantic status colors kullan.
+- [x] NOTIFY2-018 — Header: WPF-UI `SymbolIcon` + compact `TALVORA // TRACE` + semantic status badge; status renk yanında ikon/metinle de ifade edilsin.
+- [x] NOTIFY2-019 — Primary title/body `Segoe UI Variable Text`; compact tool/zaman metası ve diff/kod `Cascadia Mono, Consolas`.
+- [x] NOTIFY2-020 — User-feedback düzeltmesi: ayrı terminal panelini kaldır; canonical tool + elapsed + local time yalnız tek satır compact meta olarak gösterilsin.
+- [x] NOTIFY2-021 — Fake command/telemetry ve gereksiz operation-id gösterimini kaldır; hacker etkisi gerçek durum + gerçek diff üzerinden gelsin.
+- [x] NOTIFY2-022 — User-feedback düzeltmesi: ayrı `summary/result/files/evidence` panellerini tamamen kaldır; aynı bilgi UI'da tekrarlanmasın.
+- [x] NOTIFY2-023 — Yalnız gerçek `CodePreview` varsa `DIFF // GERÇEK DEĞİŞİKLİK` paneli göster; horizontal/vertical scroll ve copy aksiyonu korunsun.
+- [x] NOTIFY2-024 — Pin/close aksiyonları WPF-UI iconography/consistent hit target ile modernize edilsin; kart ilk gösterimde focus çalmasın.
+- [x] NOTIFY2-025 — Worklog ve Alert lane aynı ürün ailesi içinde farklı semantic status treatment kullansın; layout dili tutarlı kalsın.
+
+### Faz 16D — Accessibility / DPI / performance
+- [x] NOTIFY2-026 — Window, message, compact meta, diff, pin, close ve copy için UI Automation Name/HelpText ekle.
+- [x] NOTIFY2-027 — Pin/close mouse-only olmasın; kullanıcı tıkladığında keyboard focus/tab erişimi mümkün olsun, ilk show focus çalmasın.
+- [x] NOTIFY2-028 — Reduced-motion (`SystemParameters.ClientAreaAnimation`) animasyonları güvenli şekilde bypass etsin.
+- [x] NOTIFY2-029 — High-contrast modunda hard-coded dark palette yerine system-readable fallback kullan.
+- [x] NOTIFY2-030 — Update path'te yeni brush/effect allocation yapma; reusable/frozen token brushes ve status descriptors kullan.
+- [x] NOTIFY2-031 — Mixed-DPI positioning mevcut native pixel modelini korusun; automatic screen anchor monitor-change edge-case'lerinde fail-safe olsun.
+- [x] NOTIFY2-032 — Small work-area için card MaxHeight ekran alanına göre clamp edilsin; message/diff scroll ile erişilebilir kalsın. Varsayılan 500 DIP, min 360×150 DIP; WindowChrome ile native edge resize.
+
+### Faz 16E — Regression / visual acceptance
+- [x] NOTIFY2-033 — > terminal capacity pressure fixture: terminal outcome silent-drop yok / overload observable.
+- [x] NOTIFY2-034 — Progress coalescing + terminal-retire behavior regression.
+- [x] NOTIFY2-035 — Canonical ToolName wire regression.
+- [x] NOTIFY2-036 — Messaging regression: generic false promise yok, current/history duplicate yok, category-specific copy var.
+- [x] NOTIFY2-037 — Stale timestamp vs user interaction regression/source contract.
+- [x] NOTIFY2-038 — Monitor anchor source/behavior contract.
+- [x] NOTIFY2-039 — Accessibility/reduced-motion/high-contrast source regression.
+- [x] NOTIFY2-040 — Visual-token/icon/Cascadia/Segoe + compact two-layer UI + native resizable-window source regression.
+- [x] NOTIFY2-041 — Notification executable regression + ModernizationPolicy + full Release build 0 warning/0 error + analyzer GREEN.
+
+### Faz 16F — Publish / live acceptance
+- [ ] NOTIFY2-042 — Explicit-file commit; origin/main + github/main eşit.
+- [ ] NOTIFY2-043 — Canonical installer build + SHA-256 + SYSTEM deploy exact runtime commit.
+- [ ] NOTIFY2-044 — Installed Tray self-test + Dev/Admin probes GREEN.
+- [x] NOTIFY2-045 — Source-built gerçek user-session worklog + Alert lane aynı anda render edildi; iki WPF window accepted.
+- [x] NOTIFY2-046 — 2560×1440 real capture inspected: tekrar eden terminal/evidence/status blokları yok, diff tek teknik katman, Alert min 150 DIP, Worklog compact; UI Automation iki window için `CanResize=true` doğruladı.
+- [x] NOTIFY2-047 — İki açık notification window ile shutdown 263 ms; restarted source-built Tray fresh v3 Alert frame kabul etti ve UI Automation görünür pencereyi doğruladı.
+- [ ] NOTIFY2-048 — BUG-AUDIT + HANDOFF final closeout; working tree clean; docs-only HEAD/runtime ayrımı açık.
+
+## PREVIOUS — Faz 15: Desktop Worklog / Notification Commercial Reliability Modernization (2026-09-30)
 
 Amaç: mevcut masaüstü bildirim görünümünü değiştirmeden servis → local IPC → Tray → WPF presenter zincirini tam bounded, cancellation-aware, shutdown-safe, truth-preserving ve davranış testleriyle korunan ticari kalite bir alt-sisteme yükseltmek.
 

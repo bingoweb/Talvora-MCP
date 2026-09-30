@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-30T03:39:49Z",
-  "scope": "Talvora desktop worklog/notification commercial-reliability modernization plus the previously verified storage/tunnel/Penpot safeguards: service-to-Tray IPC is versioned, length-prefixed, byte-bounded and cancellation-aware; progress/terminal delivery lanes are independently bounded and gracefully drained; worklog generations preserve failure/cancellation truth; manual dismissal and out-of-order frames are stateful and bounded; placement/evidence reads are bounded; and notification behavior is covered by executable Windows regression tests.",
+  "verifiedAtUtc": "2026-09-30T05:14:17Z",
+  "scope": "Talvora desktop notification Faz 16 deep re-audit and compact commercial hacker UX: terminal outcomes are memory-bounded and overload-observable; heartbeat delivery is latest-wins/coalesced and retired after terminal truth; user-facing copy avoids future promises and duplicate current/history text; stale state is tied to real payload time; multi-monitor placement is generation-anchored and stack-height bounded; and the WPF notification surface is intentionally reduced to one plain-language information layer plus one optional real code/diff layer. WPF-UI 4.3.0 symbols, semantic design tokens, UI Automation, native edge resizing, reduced-motion/high-contrast fallbacks, Segoe UI Variable Text and Cascadia Mono are retained without duplicate terminal/evidence/status panels.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET guidance confirms bounded Channel<T> queues support explicit full-mode behavior and observable pressure handling; Stream.ReadAsync/WriteAsync memory overloads accept CancellationToken; message transports should enforce received-size bounds; and tracked background work should be drained during shutdown instead of abandoned. Talvora desktop progress therefore uses separate bounded progress/terminal queues, observable pressure counters, versioned 64 KiB length-prefixed frames, cancellation-aware framed reads/writes with explicit connect/read/write budgets, deterministic aggregate payload reduction, and bounded graceful shutdown before force cancellation. Existing storage code continues to use explicit bounded cleanup traversal and same-handle bounded JSON reads."
+      "verified": "Current .NET guidance confirms bounded Channel<T> queues require an explicit full-mode policy, cancellation-aware Stream.ReadAsync/WriteAsync overloads are available, and tracked background work should be completed/drained during shutdown. Faz 16 keeps the terminal outcome lane memory-bounded at 1024 with explicit overload counters/error logging, reduces the progress lane to capacity 1 latest-wins coalescing, retires pending progress after terminal truth, preserves framed IPC cancellation budgets, and keeps shutdown bounded. Current WPF guidance also supports UI Automation metadata and system animation/accessibility settings; the notification window now exposes automation names/help/live regions, honors ClientAreaAnimation and HighContrast, and keeps ShowActivated=false so the overlay does not steal focus."
     },
     {
       "libraryId": "/microsoftdocs/windows-powershell-docs",
@@ -29,11 +29,11 @@
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop_wpf",
-      "verified": "Current Microsoft WPF guidance confirms styles, margins, padding and alignment are the standard surfaces for consistent control and container presentation. The Control Center cosmetic pass keeps the existing visual tree and interactions while normalizing spacing, container radii, typography hierarchy and dark-surface contrast."
+      "verified": "Current Microsoft WPF guidance confirms styles/resources, margins/padding/alignment, AutomationProperties, dispatcher-owned UI updates and system accessibility preferences are supported production desktop UI surfaces. Faz 16 separates notification behavior from a dedicated visual partial, centralizes semantic palette/typography resources, adds AutomationProperties to window/message/compact-meta/diff/actions, avoids focus stealing on show, uses WindowChrome native edge resizing, and applies a work-area/DPI-aware presenter budget so two semantic lanes remain visible without oversized cards."
     },
     {
       "libraryId": "/lepoco/wpfui",
-      "verified": "WPF UI 4.3.0 sources confirm FluentWindow, TitleBar, CardExpander, Button and TextBox remain the established control surface. Its Primary Button template resolves AccentButtonBackground, AccentButtonBackgroundPointerOver, AccentButtonBackgroundPressed and matching foreground DynamicResources; Talvora overrides those exact resources instead of forking the template, preserving native hover/pressed behavior while applying the product accent."
+      "verified": "WPF UI 4.3.0 documentation confirms the current dark-theme resource dictionaries and SymbolIcon/SymbolRegular iconography. Faz 16 keeps the existing WPF-UI dependency instead of adding another UI framework: notification state/action affordances use WPF-UI symbols, while Talvora-specific execution-trace surfaces derive their colors and typography from semantic resources in ControlCenterTheme.xaml so theme behavior stays inside the established application stack."
     },
     {
       "libraryId": "/dotnet/wpf",
@@ -41,6 +41,9 @@
     }
   ],
   "vendorSources": [
+    "Fluent 2 color/typography/design-token guidance checked 2026-09-30: neutral surfaces carry hierarchy, semantic colors communicate status, typography uses clear role-based hierarchy, and color should not be the only state signal. Talvora Faz 16 uses neutral graphite/navy cards, cyan only as trace/brand accent, separate success/warning/error/info colors plus textual badges/icons, and centralized notification resources instead of ad-hoc per-update brushes.",
+    "Microsoft Windows Terminal/Cascadia guidance checked 2026-09-30: Cascadia Mono is the terminal-oriented monospaced family used by Windows Terminal. Talvora keeps conversational text on Segoe UI Variable Text and uses Cascadia Mono with Consolas fallback only for the compact canonical-tool/time metadata line and the optional real code/diff view; a separate terminal pane is intentionally not shown.",
+    "Talvora user-session visual acceptance 2026-09-30: a source-built Tray rendered simultaneous worklog and Alert WPF cards with real Protocol v3 frames on a 2560x1440 desktop. After the first screenshot exposed duplicate terminal/evidence/status information, those panels were removed. Final UI Automation reported CanResize=true for both windows; the Alert rendered at 750x225 physical pixels and the diff-bearing Worklog at 750x385 physical pixels at the active DPI. The final screenshot was inspected for compact hierarchy, single diff surface, semantic status color, no classic resize grip and two-lane visibility. With two windows open, global Tray shutdown completed in 263 ms and the restarted Tray accepted a fresh v3 Alert frame.",
     "Microsoft .NET Channels guidance checked 2026-09-30: bounded channels require an explicit full-mode policy; Wait provides backpressure while drop modes may discard data. Talvora avoids silent DropOldest for desktop notifications, separates progress from terminal delivery, records pressure counters, and keeps notification pressure isolated from the underlying MCP tool result.",
     "Microsoft .NET async stream guidance checked 2026-09-30: Stream.ReadAsync and WriteAsync memory overloads accept CancellationToken, and tracked background work should be drained during shutdown. Talvora desktop progress uses versioned length-prefixed frames with connect/read/write budgets, then completes bounded queues and attempts a timed graceful drain before forced cancellation.",
     "Microsoft Learn .NET 10 BackgroundService/Windows Service guidance checked 2026-09-29: ExecuteAsync(CancellationToken) represents the lifetime of the long-running operation, the stopping token is signaled during graceful shutdown, and periodic workers should await cancellation-aware delays rather than block service startup. Talvora's LocalSystem storage-maintenance service follows this lifecycle and catches shutdown cancellation as an expected stop path.",

@@ -5,10 +5,27 @@ namespace Talvora;
 
 internal sealed partial class TalvoraDesktopProgressNotifier
 {
+    private enum OperationCategory
+    {
+        SourceEdit,
+        Verification,
+        PackageBuild,
+        Deployment,
+        VersionControl,
+        ServiceOperation,
+        PackageOperation,
+        FileMutation,
+        NetworkOperation,
+        ProcessOperation,
+        GenericExecution,
+    }
+
     private sealed record OperationNarrative(
+        OperationCategory Category,
         string Subject,
         string Action,
-        string Reason);
+        string Reason,
+        string Completion);
 
     private static OperationNarrative BuildNarrative(
         string? toolName,
@@ -22,48 +39,70 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (IsCanonicalPackageBuildScript(script))
             {
                 return new(
+                    OperationCategory.PackageBuild,
                     "Yaptığım değişiklikleri kullanıma hazırlıyorum",
                     "Yaptığım son düzenlemeleri bilgisayarında kullanılabilecek hale getiriyorum.",
-                    "Birazdan yeni halini doğrudan deneyebilmen için.");
+                    "Yeni sürüm paketinin gerçekten üretildiğini doğrulamak için.",
+                    "Yeni sürüm paketini hazırladım.");
             }
 
             if (script.Contains("Install.ps1", StringComparison.OrdinalIgnoreCase))
             {
                 return new(
+                    OperationCategory.Deployment,
                     "Yeni hali bilgisayarında etkinleştiriyorum",
                     "Az önce hazırladığım değişiklikleri çalışan Talvora'ya uyguluyorum.",
-                    "Yaptığım düzeltmeleri hemen kullanabilmen için.");
+                    "Bilgisayarında çalışan sürümün yeni hale geçmesi için.",
+                    "Kurulum adımını tamamladım; çalışan sürüm ayrıca doğrulanmalı.");
             }
 
             if (script.Contains("Get-Content", StringComparison.OrdinalIgnoreCase) &&
                 script.Contains("log", StringComparison.OrdinalIgnoreCase))
             {
                 return new(
-                    "Son yaptığım değişikliği kontrol ediyorum",
-                    "Programın az önceki değişiklikten sonra düzgün çalışıp çalışmadığına bakıyorum.",
-                    "Sana tamamlandı demeden önce gerçekten sorunsuz olduğundan emin olmak için.");
+                    OperationCategory.Verification,
+                    "Çalışma kaydını kontrol ediyorum",
+                    "Programın son çalışmasındaki gerçek günlük verisini inceliyorum.",
+                    "Sonucun varsayıma değil gerçek çalışma kaydına dayanması için.",
+                    "Çalışma kaydı kontrolünü tamamladım.");
             }
 
             return new(
-                "Bilgisayarında gerekli kontrolü yapıyorum",
-                "Şu an yaptığım işin doğru ilerlediğini kontrol ediyorum.",
-                "Bir sonraki adıma güvenle geçebilmek için.");
+                OperationCategory.GenericExecution,
+                "Yerel bir sistem adımı çalıştırıyorum",
+                "Talvora'nın istediğin işi tamamlamak için gereken yerel komutu çalıştırıyorum.",
+                "Komutun gerçek sonucunu almak için.",
+                "Yerel sistem adımı tamamlandı.");
         }
 
         if (normalized is "dotnet_build" or "dotnet_test" or "dotnet_restore")
         {
             return new(
-                "Yaptığım değişikliği kontrol ediyorum",
-                "Az önce yaptığım düzenlemenin programı bozmadığını kontrol ediyorum.",
-                "Sorun varsa sana ulaşmadan önce yakalayıp düzeltmek için.");
+                OperationCategory.Verification,
+                normalized == "dotnet_test"
+                    ? "Davranış testlerini çalıştırıyorum"
+                    : "Teknik kontrolü çalıştırıyorum",
+                normalized == "dotnet_test"
+                    ? "Gerçek testlerin beklenen davranışı koruduğunu kontrol ediyorum."
+                    : "Programın bu değişiklikle hatasız hazırlanabildiğini kontrol ediyorum.",
+                "Değişikliğin gerçek teknik kontrollerden geçtiğini görmek için.",
+                normalized == "dotnet_test"
+                    ? "Davranış testleri tamamlandı."
+                    : "Teknik kontrol tamamlandı.");
         }
 
-        if (normalized == "apply_patch")
+        if (normalized is
+            "apply_patch" or
+            "apply_edits" or
+            "structural_edit" or
+            "semantic_edit")
         {
             return new(
+                OperationCategory.SourceEdit,
                 "İstediğin değişikliği uyguluyorum",
                 "Şu an istediğin davranışı programın içine yerleştiriyorum.",
-                "İstediğin şey sadece anlatılmış değil gerçekten çalışıyor olsun diye.");
+                "İstenen davranışın gerçekten programda yer alması için.",
+                "Program değişikliğini uyguladım.");
         }
 
         if (normalized == "git_run")
@@ -73,45 +112,99 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 string.Equals(gitArgs[0], "push", StringComparison.OrdinalIgnoreCase))
             {
                 return new(
-                    "Yaptığım çalışmayı güvene alıyorum",
-                    "Tamamladığım değişikliklerin güvenli bir kopyasını kaydediyorum.",
-                    "Bir sorun olursa yapılan işi kaybetmemek için.");
+                    OperationCategory.VersionControl,
+                    "Tamamlanan çalışmayı uzak depoya gönderiyorum",
+                    "Kaydettiğim değişiklikleri uzak güvenli depoya gönderiyorum.",
+                    "Yerel çalışma ile uzak kopyanın eşitlenmesi için.",
+                    "Uzak depo güncellemesini tamamladım.");
+            }
+
+            if (gitArgs.Count > 0 &&
+                string.Equals(gitArgs[0], "commit", StringComparison.OrdinalIgnoreCase))
+            {
+                return new(
+                    OperationCategory.VersionControl,
+                    "Doğrulanan değişiklikleri kaydediyorum",
+                    "Yalnız seçilmiş dosyaları yeni çalışma kaydına ekliyorum.",
+                    "Çalışmanın izlenebilir ve geri takip edilebilir olması için.",
+                    "Değişiklik kaydı oluşturuldu.");
             }
 
             return new(
-                "Yaptığım değişiklikleri toparlıyorum",
-                "Bu çalışma sırasında yaptığım düzenlemeleri kontrol edip toparlıyorum.",
-                "Bir sonraki adıma temiz ve güvenli şekilde geçmek için.");
+                OperationCategory.VersionControl,
+                "Çalışma kaydını güncelliyorum",
+                "Değişiklik geçmişinde gerekli kayıt adımını yürütüyorum.",
+                "Yapılan işin izlenebilir kalması için.",
+                "Çalışma kaydı güncellendi.");
+        }
+
+        if (normalized.Contains("service_", StringComparison.OrdinalIgnoreCase))
+        {
+            return new(
+                OperationCategory.ServiceOperation,
+                "Windows servisini güncelliyorum",
+                "İstenen servis yaşam döngüsü işlemini uyguluyorum.",
+                "Çalışan bileşenin istenen duruma geçmesi için.",
+                "Servis işlemi tamamlandı.");
+        }
+
+        if (normalized.Contains("choco_", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains("package_", StringComparison.OrdinalIgnoreCase))
+        {
+            return new(
+                OperationCategory.PackageOperation,
+                "Paket durumunu değiştiriyorum",
+                "Gerekli yazılım paketini kuruyor, güncelliyor veya kaldırıyorum.",
+                "Çalışma ortamının gereken bileşene sahip olması için.",
+                "Paket işlemi tamamlandı.");
+        }
+
+        if (normalized.Contains("file_", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains("directory_", StringComparison.OrdinalIgnoreCase) ||
+            normalized is "write_text" or "append_text" or "move" or "copy" or "delete")
+        {
+            return new(
+                OperationCategory.FileMutation,
+                "Dosya sisteminde değişiklik yapıyorum",
+                "İstenen dosya veya klasör değişikliğini uyguluyorum.",
+                "Yerel çalışma alanının istenen duruma gelmesi için.",
+                "Dosya sistemi işlemi tamamlandı.");
+        }
+
+        if (normalized.Contains("tunnel", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains("network", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains("http_", StringComparison.OrdinalIgnoreCase))
+        {
+            return new(
+                OperationCategory.NetworkOperation,
+                "Bağlantı katmanını güncelliyorum",
+                "İstenen bağlantı ayarını uyguluyorum.",
+                "Yerel ve uzak bileşenlerin doğru iletişim kurması için.",
+                "Bağlantı işlemi tamamlandı.");
+        }
+
+        if (normalized.Contains("process_", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains("job_", StringComparison.OrdinalIgnoreCase) ||
+            normalized is "run_process" or "user_process_start")
+        {
+            return new(
+                OperationCategory.ProcessOperation,
+                "Yerel işlemi yürütüyorum",
+                "İstenen arka plan işlemini başlatıyor, izliyor veya sonlandırıyorum.",
+                "İşin kontrollü biçimde çalışması veya sonlanması için.",
+                "Yerel işlem tamamlandı.");
         }
 
         return new(
-            "Şu an sıradaki işi yapıyorum",
-            "İstediğin geliştirme üzerinde çalışmaya devam ediyorum.",
-            "Talvora'yı daha düzgün ve kullanışlı hale getirmek için.");
+            OperationCategory.GenericExecution,
+            "Talvora üzerinde bir işlem yürütüyorum",
+            "İstenen görevin gerekli teknik adımını çalıştırıyorum.",
+            "İşlemin gerçek sonucunu almak için.",
+            "Teknik işlem tamamlandı.");
     }
 
     private static string BuildPlainCompletion(OperationNarrative narrative) =>
-        narrative.Subject switch
-        {
-            "Yaptığım değişiklikleri kullanıma hazırlıyorum" =>
-                "Yaptığım son düzenlemeler kullanıma hazır.",
-            "Yeni hali bilgisayarında etkinleştiriyorum" =>
-                "Yeni hali bilgisayarında etkinleştirdim.",
-            "Son yaptığım değişikliği kontrol ediyorum" =>
-                "Son yaptığım değişikliği kontrol ettim; bu adım tamamlandı.",
-            "Bilgisayarında gerekli kontrolü yapıyorum" =>
-                "Gerekli kontrolü tamamladım.",
-            "Yaptığım değişikliği kontrol ediyorum" =>
-                "Yaptığım değişikliğin bu kontrolünü tamamladım.",
-            "İstediğin değişikliği uyguluyorum" =>
-                "İstediğin değişikliği uyguladım.",
-            "Yaptığım çalışmayı güvene alıyorum" =>
-                "Yaptığım çalışmanın güvenli kopyasını kaydettim.",
-            "Yaptığım değişiklikleri toparlıyorum" =>
-                "Yaptığım değişiklikleri toparladım.",
-            _ =>
-                "Bu adımı tamamladım.",
-        };
+        narrative.Completion;
 
     private static bool TryBuildDeferredCompletion<T>(
         OperationNarrative narrative,
@@ -134,8 +227,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         message =
             "Güncellemeyi bağımsız kurucuya aktardım. " +
             "Talvora servisi güvenli biçimde yeniden başlatılıyor.\n\n" +
-            "Bu mesaj yeni sürümün hazır olduğu anlamına gelmiyor; " +
-            "bir sonraki kontrolde gerçekten açıldığını doğrulayacağım.";
+            "Bu mesaj yeni sürümün hazır olduğu anlamına gelmiyor. " +
+            "Yeni çalışan sürüm ancak ayrı sağlık doğrulaması başarılı olduğunda hazır sayılacak.";
         return true;
     }
 

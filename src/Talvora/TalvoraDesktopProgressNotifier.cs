@@ -24,8 +24,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     internal static readonly TimeSpan ForcedShutdownTimeout =
         TimeSpan.FromSeconds(2);
 
-    private const int ProgressQueueCapacity = 64;
-    private const int TerminalQueueCapacity = 256;
+    private const int ProgressQueueCapacity = 1;
+    private const int TerminalQueueCapacity = 1_024;
+    private const int MaximumRetiredProgressOperations = 512;
 
     private const uint NoActiveConsoleSession = 0xFFFFFFFF;
 
@@ -41,14 +42,23 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     private readonly Task _deliveryTask;
     private long _droppedProgressMessages;
     private long _droppedTerminalMessages;
+    private long _pendingTerminalMessages;
+    private long _terminalBacklogHighWaterMark;
     private long _deliverySequence;
     private int _acceptingNotifications = 1;
+    private readonly object _retiredProgressGate = new();
+    private readonly HashSet<string> _retiredProgressOperations =
+        new(StringComparer.Ordinal);
+    private readonly Queue<string> _retiredProgressOrder = new();
 
     internal long DroppedProgressMessages =>
         Interlocked.Read(ref _droppedProgressMessages);
 
     internal long DroppedTerminalMessages =>
         Interlocked.Read(ref _droppedTerminalMessages);
+
+    internal long PendingTerminalMessages =>
+        Interlocked.Read(ref _pendingTerminalMessages);
 
     public TalvoraDesktopProgressNotifier(
         ILogger<TalvoraDesktopProgressNotifier> logger)
@@ -82,8 +92,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                     SingleReader = true,
                     SingleWriter = false,
                     AllowSynchronousContinuations = false,
-                    FullMode = BoundedChannelFullMode.Wait,
-                });
+                    FullMode = BoundedChannelFullMode.DropOldest,
+                },
+                OnProgressMessageCoalesced);
         _terminalDeliveryQueue =
             Channel.CreateBounded<DesktopProgressMessage>(
                 new BoundedChannelOptions(TerminalQueueCapacity)
@@ -113,6 +124,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         }
 
         var narrative = BuildNarrative(toolName, arguments);
+        var canonicalToolName = NormalizeToolName(toolName);
         var initialEvidence =
             BuildInitialEvidence(toolName, arguments);
         var displayName = narrative.Subject;
@@ -120,6 +132,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         var stopwatch = Stopwatch.StartNew();
         TryBeginWorklog(
             operationId,
+            canonicalToolName,
             narrative,
             initialEvidence,
             stopwatch.Elapsed);
@@ -177,8 +190,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                         TryEndWorklog(
                             operationId,
                             DesktopProgressKind.Completed,
-                            "Bitti",
-                            $"{BuildPlainCompletion(narrative)}\n\nŞimdi sıradaki adıma geçiyorum.",
+                            narrative.Subject,
+                            BuildPlainCompletion(narrative),
                             terminalEvidence,
                             stopwatch.Elapsed);
                     }
@@ -192,8 +205,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 TryEndWorklog(
                     operationId,
                     DesktopProgressKind.Completed,
-                    "Bitti",
-                    $"{BuildPlainCompletion(narrative)}\n\nŞimdi sıradaki adıma geçiyorum.",
+                    narrative.Subject,
+                    BuildPlainCompletion(narrative),
                     initialEvidence,
                     stopwatch.Elapsed);
             }
@@ -205,8 +218,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             TryEndWorklog(
                 operationId,
                 DesktopProgressKind.Cancelled,
-                "Bu işi durdurdum",
-                $"Şu işi tamamlayamadım: {narrative.Action}",
+                narrative.Subject,
+                "İşlem tamamlanmadan durduruldu. Son doğrulanmış durum aşağıdaki gerçek kanıtta korunuyor.",
                 initialEvidence,
                 stopwatch.Elapsed);
             throw;
@@ -216,7 +229,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             TryEndWorklog(
                 operationId,
                 DesktopProgressKind.Failed,
-                "Burada bir sorun çıktı",
+                narrative.Subject,
                 BuildFriendlyExceptionMessage(toolName, narrative.Action),
                 initialEvidence,
                 stopwatch.Elapsed);
@@ -305,8 +318,18 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         var writer = terminal
             ? _terminalDeliveryQueue.Writer
             : _progressDeliveryQueue.Writer;
+        if (terminal)
+        {
+            RetireProgressOperation(operationId);
+        }
+
         if (writer.TryWrite(notification))
         {
+            if (terminal)
+            {
+                TrackTerminalQueued();
+            }
+
             SignalDeliveryWorker();
             return;
         }
@@ -316,24 +339,86 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             var dropped =
                 Interlocked.Increment(
                     ref _droppedTerminalMessages);
-            _logger.LogWarning(
-                "Desktop progress terminal delivery queue is full. Dropped terminal count={DroppedCount}; Operation={OperationId}; Kind={Kind}",
+            _logger.LogError(
+                "Desktop progress terminal delivery could not enter the bounded outcome queue. DroppedTerminal={DroppedTerminal}; Capacity={Capacity}; Operation={OperationId}; Kind={Kind}",
                 dropped,
+                TerminalQueueCapacity,
                 operationId,
                 kind);
         }
-        else
+    }
+
+    private void OnProgressMessageCoalesced(
+        DesktopProgressMessage message)
+    {
+        var coalesced =
+            Interlocked.Increment(
+                ref _droppedProgressMessages);
+        if (coalesced == 1 ||
+            (coalesced & (coalesced - 1)) == 0)
         {
-            var dropped =
-                Interlocked.Increment(
-                    ref _droppedProgressMessages);
-            if (dropped == 1 ||
-                (dropped & (dropped - 1)) == 0)
+            _logger.LogDebug(
+                "Desktop progress latest-wins coalescing replaced a stale update. CoalescedProgressCount={CoalescedCount}; Operation={OperationId}",
+                coalesced,
+                message.OperationId);
+        }
+    }
+
+    private void TrackTerminalQueued()
+    {
+        var pending =
+            Interlocked.Increment(
+                ref _pendingTerminalMessages);
+        var previousHighWater =
+            Interlocked.Read(
+                ref _terminalBacklogHighWaterMark);
+        while (pending > previousHighWater)
+        {
+            var observed = Interlocked.CompareExchange(
+                ref _terminalBacklogHighWaterMark,
+                pending,
+                previousHighWater);
+            if (observed == previousHighWater)
             {
-                _logger.LogDebug(
-                    "Desktop progress queue pressure dropped a non-terminal update. DroppedProgressCount={DroppedCount}",
-                    dropped);
+                if (pending >= 64 &&
+                    (pending & (pending - 1)) == 0)
+                {
+                    _logger.LogWarning(
+                        "Desktop progress terminal backlog reached {PendingCount} messages. Outcomes are retained; delivery remains timeout-bounded.",
+                        pending);
+                }
+
+                break;
             }
+
+            previousHighWater = observed;
+        }
+    }
+
+    private void RetireProgressOperation(string operationId)
+    {
+        lock (_retiredProgressGate)
+        {
+            if (!_retiredProgressOperations.Add(operationId))
+            {
+                return;
+            }
+
+            _retiredProgressOrder.Enqueue(operationId);
+            while (_retiredProgressOrder.Count >
+                   MaximumRetiredProgressOperations)
+            {
+                _retiredProgressOperations.Remove(
+                    _retiredProgressOrder.Dequeue());
+            }
+        }
+    }
+
+    private bool IsProgressRetired(string operationId)
+    {
+        lock (_retiredProgressGate)
+        {
+            return _retiredProgressOperations.Contains(operationId);
         }
     }
 
@@ -363,6 +448,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 while (_terminalDeliveryQueue.Reader.TryRead(
                            out var terminalMessage))
                 {
+                    Interlocked.Decrement(
+                        ref _pendingTerminalMessages);
                     await TryDeliverAsync(
                         terminalMessage,
                         cancellationToken);
@@ -371,9 +458,13 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 if (_progressDeliveryQueue.Reader.TryRead(
                         out var progressMessage))
                 {
-                    await TryDeliverAsync(
-                        progressMessage,
-                        cancellationToken);
+                    if (!IsProgressRetired(
+                            progressMessage.OperationId))
+                    {
+                        await TryDeliverAsync(
+                            progressMessage,
+                            cancellationToken);
+                    }
                     continue;
                 }
 
@@ -533,8 +624,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             timedOut.ValueKind == JsonValueKind.True)
         {
             message =
-                "Bu iş beklediğimden uzun sürdü ve tamamlanamadı. " +
-                "Takıldığı yeri kontrol edip daha güvenli bir şekilde yeniden deneyeceğim.";
+                "Bu işlem zaman sınırını aştı ve tamamlanmış sayılmıyor. " +
+                "Son doğrulanmış durum ve varsa gerçek hata ayrıntısı kanıt bölümünde korunuyor.";
             return true;
         }
 
@@ -585,24 +676,21 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         return normalized switch
         {
             "dotnet_build" =>
-                "Kontrol sırasında bir hata buldum. Yaptığım değişiklik henüz hazır değil. " +
-                "Şimdi hatanın nedenini bulup düzelteceğim ve yeniden kontrol edeceğim.",
+                "Derleme başarılı olmadı; bu değişiklik hazır sayılmıyor. " +
+                "Derleyicinin gerçek sonucu kanıt bölümünde yer alıyor.",
             "dotnet_test" =>
-                "Deneme sırasında bir hata buldum. Yaptığım değişiklik beklediğim gibi çalışmadı. " +
-                "Şimdi hatayı düzelteceğim ve aynı denemeyi yeniden yapacağım.",
+                "Davranış testi başarılı olmadı; beklenen sözleşme henüz doğrulanmadı. " +
+                "Testin gerçek sonucu kanıt bölümünde yer alıyor.",
             "apply_patch" or "apply_edits" or "structural_edit" or "semantic_edit" =>
-                "Değişiklik bu denemede uygulanmadı; mevcut dosyalar korunuyor. " +
-                "Aşağıdaki KANIT bölümünde hedeflenen gerçek dosyaları, diff önizlemesini ve sistemin verdiği gerçek hata nedenini görebilirsin. " +
-                "Şimdi aynı değişikliği daha güvenli bir adımla yeniden deneyeceğim.",
+                "Kaynak değişikliği bu denemede uygulanmadı. " +
+                "Hedef dosya/diff bilgisi mevcutsa kanıt bölümünde gösteriliyor; bu adım tamamlanmış sayılmıyor.",
             "run_powershell" =>
-                "Bilgisayarında yaptığım bu adım tamamlanmadı. " +
-                "Şimdi hangi noktada kaldığını kontrol edip düzeltmeye devam edeceğim.",
+                "Yerel sistem adımı tamamlanmadı. " +
+                "Gerçek exit/sonuç bilgisi mevcutsa kanıt bölümünde gösteriliyor.",
             "git_run" =>
-                "Yaptığım çalışmayı güvene alma adımı tamamlanmadı. Çalışmanın kendisi kaybolmadı. " +
-                "Sorunu kontrol edip yeniden deneyeceğim.",
+                "Git işlemi tamamlanmadı. Repository durumu bu bildirimle başarılı kabul edilmiyor.",
             _ =>
-                "Bu adım beklediğim gibi tamamlanmadı. " +
-                "Nedenini kontrol edip düzelttikten sonra yeniden deneyeceğim.",
+                "Bu teknik adım tamamlanmadı. Yalnız doğrulanmış sonuçlar tamamlandı olarak gösterilir.",
         };
     }
 
