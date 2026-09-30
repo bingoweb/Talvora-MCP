@@ -1,5 +1,43 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-09-30 15:58+03:00 — Notification Faz 17 responsive diff + expanded work visibility FINAL
+
+Bu bölüm kanoniktir ve alttaki Faz 16 notification closeout'un yerini alır. Kullanıcının üç isteği kapatıldı: alt teknik alan gerçek diff/değişen kodu daha geniş göstermeli ve sözcük kaydırmalı; pencere resize olduğunda diff viewport'u da responsive büyümeli; notification mümkün olduğunca gerçek değişiklik ve çalışma adımlarını göstermeli.
+
+### Runtime / installer
+
+- Runtime-affecting commit: `eb57cd3148c2591c6fa6969894a0843ee9eddd2f` — `feat: expand notification diff visibility`.
+- Runtime commit `origin/main = github/main = eb57cd3...` olarak push edildi.
+- Canonical installer: **342,619,919 bytes**; SHA-256 `3E3E7E68D916DF266B44D45160205FDB309ABBB24400E53D6F4CF041E8EC76C0`; manifest source tam `eb57cd3...`.
+- SYSTEM deploy sonrası exact-installed runtime `sourceCommit=eb57cd3...`, LocalSystem / `S-1-5-18`, service PID 21952.
+- Installed version root: `C:\Program Files\Talvora\Versions\eb57cd3148c2591c6fa6969894a0843ee9eddd2f-20260930124837404`.
+- Talvora, Gitea ve Caddy `Running / Automatic`.
+
+### Faz 17 değişiklikleri
+
+- Diff TextBox artık `TextWrapping=Wrap`; horizontal scrollbar Disabled, vertical scrollbar Auto. Dar pencerede uzun kod satırları reflow olur.
+- İlk compact ölçümden sonra outer diff row ve inner code row `GridUnitType.Star` olur; `_codePreview.MaxHeight` kaldırılır. Kullanıcı pencereyi büyüttükçe kalan alan doğrudan diff viewport'una gider.
+- Notification max genişliği 680→1200 DIP, max yüksekliği 620→900 DIP; presenter aktif monitor work-area/DPI bütçesine göre gerçek MaxWidth/MaxHeight uygular.
+- Diff varsa minimum yükseklik 220 DIP; diff yoksa 150 DIP compact davranış korunur.
+- `apply_patch` preview artık file/hunk/context satırlarını da taşır. `apply_edits` / structural / semantic edit için old/new block evidence üretimi eklendi.
+- Diff evidence legacy 18 satır / 2400 karakterden bounded **120 satır / 7 KiB** seviyesine çıkarıldı; Protocol v3 8 KiB evidence ve 64 KiB frame hard ceiling'leri korunur.
+- `read_source`, `read_text`, search, knowledge-search, find-files, git-diff/log, file-hash/path-info ve HTTP verification gibi gerçek inceleme çalışmaları artık worklog üretir. Yüksek frekanslı pasif `*_status/_info/_list/_get` ve process/service/job polling sessiz kalır.
+
+### Final quality / installed live acceptance
+
+- Release solution build **0 warning / 0 error**.
+- `DESKTOP_PROGRESS_BEHAVIOR_GREEN`, `MODERNIZATION_POLICY_GREEN`, `CONTEXT7_QUALITY_GATE_GREEN`.
+- Analyzer verify-no-changes, Control Center UI responsiveness ve privacy/security gates GREEN.
+- Installed Tray self-test GREEN (`ManagedMcpCount=5; FocusedTalvoraCount=2`).
+- Dev probe `Ready=True / BrowserSmokePassed=True / ToolCount=203`; Admin probe `Ready=True / BrowserSmokePassed=True / ToolCount=84`; tunnel `0.0.15+a390c...` live/ready, critical degradation false.
+- Installed responsive diff QA: `CanResize=true`, `HorizontalScrollable=false`, `VerticalScrollable=true`; Window **750×545 → 1200×800 px**, diff viewport **662×285 → 1112×539 px**; long `VeryLongLine` ve `changed-line-48` UI Automation value içinde mevcut.
+- Installed work-visibility QA: 5 saniyelik 50 ms timeline boyunca gerçek `talvora_read_source` çağrısı `Talvora tamam bildirimi: İlgili kaynakları inceliyorum` olarak görünür kaldı.
+- Tüm geçici Faz 17 QA dosyaları temizlendi.
+
+### Sonraki oturum
+
+Notification Faz 17 kapalıdır. Yeni evidence/resize/work-visibility regresyonu olmadan bu üç madde yeniden açılmamalı. Takip eden docs-only commit runtime fingerprint değildir; sırf docs HEAD ilerledi diye `eb57cd3...` yeniden deploy edilmemelidir.
+
 ## CURRENT — 2026-09-30 15:24+03:00 — Notification Faz 16 compact UX FINAL live closeout
 
 Bu bölüm kanoniktir ve alttaki Faz 15 notification closeout'un yerini alır. Kullanıcı geri bildirimiyle notification arayüzü yeniden denetlendi; ilk Faz 16 tasarımındaki tekrar eden terminal/evidence/status katmanları gerçek 2560×1440 ekran görüntüsü üzerinden ayıklandı. Nihai model üstte tek anlaşılır bilgi katmanı + altta yalnız gerçek kod/diff varsa açılan tek teknik katmandır.

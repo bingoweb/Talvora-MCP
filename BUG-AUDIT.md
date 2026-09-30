@@ -1,5 +1,15 @@
 # Talvora Deep Bug Audit
 
+## CURRENT — 2026-09-30 — Notification Faz 17 responsive diff / work visibility
+
+Status: **FINAL LIVE VERIFIED.** Kullanıcının üç follow-up isteği source + executable regression + installed user-session UI Automation ile kapatıldı.
+
+- #277 **FIXED / LIVE RESIZE VERIFIED** — diff TextBox `NoWrap` + horizontal scroll + 190 px MaxHeight kullanıyor; outer/inner Grid satırları `Auto` olduğu için pencere büyütülse bile kod alanı büyümüyordu. Diff artık Wrap + horizontal-scroll disabled + vertical-scroll auto; ilk compact measure sonrası outer/inner diff rows Star ve code MaxHeight infinity. Installed UI Automation: window 750×545→1200×800, diff 662×285→1112×539; CanResize=true, HorizontallyScrollable=false, VerticallyScrollable=true.
+- #278 **FIXED / EXECUTABLE+LIVE VERIFIED** — gerçek kod evidence yalnız apply_patch'te zengindi ve 18 satır/2400 karakterde erken kesiliyordu; apply_edits old/new code görünmüyordu. Preview 120 satır/7 KiB bounded; apply_patch file/hunk/context taşır; apply_edits/structural/semantic changes old/new block diff üretir. Regression 40 old + 40 new satırda `-old-40()` ve `+new-40()` evidence'ını doğrular. Live diff frame long line ve changed-line-48'i installed UI içinde doğruladı.
+- #279 **FIXED / LIVE TIMELINE VERIFIED** — `ShouldNotifyToolCall` read/search/hash/diff gibi anlamlı inceleme işlerini blanket-suppress ediyordu. Kaynak/metin okuma, arama, knowledge search, find-files, git diff/log, file hash/path info ve HTTP verification artık first-class Inspection narrative üretir; yalnız passive status/info/list/get ve process/service/job polling sessiz kalır. Installed `read_source` 5 saniyelik 50 ms timeline'ın tamamında görünür worklog olarak doğrulandı.
+
+Final runtime: `eb57cd3148c2591c6fa6969894a0843ee9eddd2f`; installer **342,619,919 bytes** / SHA-256 `3E3E7E68D916DF266B44D45160205FDB309ABBB24400E53D6F4CF041E8EC76C0`; exact-installed LocalSystem runtime same commit. Build 0/0; behavior/policy/Context7/analyzer/UI-responsiveness/privacy gates GREEN; installed self-test and Dev/Admin probes GREEN; Talvora/Gitea/Caddy Running Automatic.
+
 ## CURRENT — 2026-09-30 — Notification deep re-audit + compact commercial hacker UX
 
 Status: **FINAL LIVE VERIFIED.** Faz 15'in notification hattı doğru kabul edilmeden yeniden incelendi. Reliability, copy/state, visual hierarchy, accessibility, DPI/placement ve live WPF render ayrı ayrı test edildi. İlk yeniden tasarım gerçek ekran görüntüsünde fazla kalabalık bulundu; user-feedback sonrası terminal/evidence/status tekrarları kaldırılarak üstte tek bilgi katmanı + altta yalnız gerçek diff/kod yüzeyi modeline geçildi. Runtime commit iki remote'a push edildi, canonical installer ile SYSTEM deploy edildi ve installed-runtime acceptance GREEN.

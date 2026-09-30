@@ -74,6 +74,18 @@ Araştırma kararları:
 - [x] NOTIFY2-047 — İki açık notification window ile shutdown 263 ms; restarted source-built Tray fresh v3 Alert frame kabul etti ve UI Automation görünür pencereyi doğruladı.
 - [x] NOTIFY2-048 — BUG-AUDIT + HANDOFF final closeout runtime `5cc41e3e...` ile güncellendi; takip eden docs-only HEAD'in runtime fingerprint olmadığı açıkça kaydedildi.
 
+### Faz 17 — Responsive diff + expanded work visibility
+- [x] NOTIFY3-001 — Diff code `TextWrapping=Wrap`; horizontal scroll kapalı, vertical scroll auto.
+- [x] NOTIFY3-002 — Resize sonrası outer diff row + inner code row Star; code MaxHeight kaldırıldı; diff viewport gerçek pencere alanıyla büyüyor.
+- [x] NOTIFY3-003 — MaxWidth 1200 / MaxHeight 900 DIP; presenter per-monitor DPI/work-area MaxWidth+MaxHeight uygular.
+- [x] NOTIFY3-004 — apply_patch file/hunk/context evidence; apply_edits/structural/semantic old/new diff evidence.
+- [x] NOTIFY3-005 — Preview 120 satır / 7 KiB bounded; secret redaction ve Protocol v3 ceilings korunuyor.
+- [x] NOTIFY3-006 — read/search/diff/hash/path/HTTP inspection görünür; passive polling/status/list/get sessiz.
+- [x] NOTIFY3-007 — Executable regression + ModernizationPolicy + Release 0/0 + analyzer/UI/privacy + Context7 GREEN.
+- [x] NOTIFY3-008 — Runtime `eb57cd3...` iki remote'a push, canonical installer + SYSTEM deploy exact commit.
+- [x] NOTIFY3-009 — Installed responsive QA: diff 662×285→1112×539 px; HScroll=false; VScroll=true; line48 visible.
+- [x] NOTIFY3-010 — Installed work visibility QA: real read_source 5 s / 50 ms timeline boyunca görünür.
+
 ## PREVIOUS — Faz 15: Desktop Worklog / Notification Commercial Reliability Modernization (2026-09-30)
 
 Amaç: mevcut masaüstü bildirim görünümünü değiştirmeden servis → local IPC → Tray → WPF presenter zincirini tam bounded, cancellation-aware, shutdown-safe, truth-preserving ve davranış testleriyle korunan ticari kalite bir alt-sisteme yükseltmek.
