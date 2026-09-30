@@ -66,13 +66,13 @@ Araştırma kararları:
 - [x] NOTIFY2-041 — Notification executable regression + ModernizationPolicy + full Release build 0 warning/0 error + analyzer GREEN.
 
 ### Faz 16F — Publish / live acceptance
-- [ ] NOTIFY2-042 — Explicit-file commit; origin/main + github/main eşit.
-- [ ] NOTIFY2-043 — Canonical installer build + SHA-256 + SYSTEM deploy exact runtime commit.
-- [ ] NOTIFY2-044 — Installed Tray self-test + Dev/Admin probes GREEN.
+- [x] NOTIFY2-042 — Runtime commit `5cc41e3e...` explicit-file stage/commit ile oluşturuldu; `origin/main = github/main = 5cc41e3e...` doğrulandı.
+- [x] NOTIFY2-043 — Canonical installer 342,619,919 bytes / SHA-256 `CFD0BCF894A8608862BF900939A4268491A5528D3714371C6247A5A6BB77C0E1`; SYSTEM deploy sonrası exact runtime `5cc41e3e...`.
+- [x] NOTIFY2-044 — Installed Tray self-test GREEN; Dev probe 203 / Admin probe 84, Ready + BrowserSmokePassed + tunnel live/ready, critical degradation false.
 - [x] NOTIFY2-045 — Source-built gerçek user-session worklog + Alert lane aynı anda render edildi; iki WPF window accepted.
 - [x] NOTIFY2-046 — 2560×1440 real capture inspected: tekrar eden terminal/evidence/status blokları yok, diff tek teknik katman, Alert min 150 DIP, Worklog compact; UI Automation iki window için `CanResize=true` doğruladı.
 - [x] NOTIFY2-047 — İki açık notification window ile shutdown 263 ms; restarted source-built Tray fresh v3 Alert frame kabul etti ve UI Automation görünür pencereyi doğruladı.
-- [ ] NOTIFY2-048 — BUG-AUDIT + HANDOFF final closeout; working tree clean; docs-only HEAD/runtime ayrımı açık.
+- [x] NOTIFY2-048 — BUG-AUDIT + HANDOFF final closeout runtime `5cc41e3e...` ile güncellendi; takip eden docs-only HEAD'in runtime fingerprint olmadığı açıkça kaydedildi.
 
 ## PREVIOUS — Faz 15: Desktop Worklog / Notification Commercial Reliability Modernization (2026-09-30)
 

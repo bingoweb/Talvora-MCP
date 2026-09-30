@@ -1,5 +1,43 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-09-30 15:24+03:00 — Notification Faz 16 compact UX FINAL live closeout
+
+Bu bölüm kanoniktir ve alttaki Faz 15 notification closeout'un yerini alır. Kullanıcı geri bildirimiyle notification arayüzü yeniden denetlendi; ilk Faz 16 tasarımındaki tekrar eden terminal/evidence/status katmanları gerçek 2560×1440 ekran görüntüsü üzerinden ayıklandı. Nihai model üstte tek anlaşılır bilgi katmanı + altta yalnız gerçek kod/diff varsa açılan tek teknik katmandır.
+
+### Runtime / installer / remotes
+
+- Runtime-affecting commit: `5cc41e3e7e8dbf6a004666764481dba7e1b4e512` — `fix: modernize desktop notification experience`.
+- Runtime commit publish öncesi/sonrası `HEAD = origin/main = github/main = 5cc41e3e...`; working tree clean.
+- Canonical installer: **342,619,919 bytes**; SHA-256 `CFD0BCF894A8608862BF900939A4268491A5528D3714371C6247A5A6BB77C0E1`; manifest `sourceCommit=5cc41e3e...`.
+- SYSTEM deploy sonrası exact-installed runtime `sourceCommit=5cc41e3e...`, `LocalSystem / S-1-5-18`, service PID 38596.
+- Installed version root: `C:\Program Files\Talvora\Versions\5cc41e3e7e8dbf6a004666764481dba7e1b4e512-20260930121854500`.
+- Talvora, Gitea ve Caddy servisleri `Running / Automatic`.
+
+### Faz 16 / #271–#276 kapanışı
+
+- Terminal outcome lane hard-bound 1024 + observable overload; progress lane capacity=1 latest-wins coalescing; terminal sonrası pending progress retire edilir.
+- `ToolName` canonical tool identity taşır; kullanıcı mesajları semantic operation category üzerinden üretilir; gelecekte yapılmamış iş vaatleri ve current/history tekrarları kaldırıldı.
+- Notification surface artık ayrı terminal paneli, summary/result/files evidence blokları ve alt status tekrarını göstermez.
+- Final görünüm: `TALVORA // TRACE` + semantic state, title/body, tek `tool • elapsed • time` meta satırı; yalnız gerçek `CodePreview` varsa `DIFF // GERÇEK DEĞİŞİKLİK`.
+- Window default 500 DIP; minimum 360×150 DIP; `WindowChrome` native edge resize; legacy dotted resize grip yok; icon buttons compact/frameless.
+- Stale detection gerçek payload timestamp'ine bağlı; automatic monitor anchor generation boyunca sabit; iki semantic lane monitor work-area bütçesini paylaşır.
+- Semantic design tokens, Segoe UI Variable Text + Cascadia Mono, reduced-motion/high-contrast ve UI Automation coverage tamamlandı.
+
+### Final quality / installed live acceptance
+
+- Full Release build **0 warning / 0 error**.
+- `DESKTOP_PROGRESS_BEHAVIOR_GREEN`, `MODERNIZATION_POLICY_GREEN`, Context7 gate GREEN.
+- Analyzer verify-no-changes, UI responsiveness, privacy/security ve native-installer source regressions GREEN.
+- Installed Tray `--self-test`: GREEN (`ManagedMcpCount=5; FocusedTalvoraCount=2`).
+- Installed Dev probe: `Ready=True / BrowserSmokePassed=True / ToolCount=203`; Admin: `Ready=True / BrowserSmokePassed=True / ToolCount=84`.
+- Dev/Admin tunnel health: schema 1; runtime `0.0.15+a390c168ff1b2d14e73a95991c186c6aba3ff5a0`; Live=True; Ready=True; critical degradation false.
+- Source-built real visual acceptance: simultaneous Worklog + Alert windows, two-window `CanResize=true`; two open windows with global shutdown exited in **263 ms**; restarted Tray accepted fresh v3 Alert.
+- Installed-runtime visual acceptance: real Talvora `dotnet build` produced service→Tray notification; user-session UI Automation identified installed Tray PID 7600 from the new version root, `CanResize=true`, rendered 750×225 physical pixels at active DPI. Screenshot confirms compact single-information-layer UI with no duplicate terminal/evidence/status blocks.
+
+### Sonraki oturum
+
+Notification Faz 16 kapalıdır. Yeni kanıt veya gerçek regresyon olmadan #271–#276 yeniden açılmamalı. Bu bölümden sonra yapılacak docs-only closeout commit runtime fingerprint değildir; sırf docs HEAD ilerledi diye `5cc41e3e...` runtime yeniden deploy edilmemelidir.
+
 ## CURRENT — 2026-09-30 07:07+03:00 — Desktop notification commercial reliability FINAL live closeout
 
 Bu bölüm kanoniktir. Masaüstü bildirim görünümüne/kozmetiğine dokunulmadan servis → Named Pipe IPC → Tray listener → presenter → WPF notification hattı ticari kalite için modernize edildi ve canlıya alındı.
