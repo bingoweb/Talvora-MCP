@@ -1,5 +1,50 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-09-30 20:55+03:00 — #288 bounded Control Center window placement FINAL
+
+Bu bölüm en üst kanonik checkpoint'tir. #280–#287 kapalı kalır. Bu tur Control Center'ın persisted pencere konumu/boyutu restore yolundaki gerçek UI-thread bounded-I/O bulgusu #288 kapatıldı.
+
+### Canonical runtime / repository state
+
+- Runtime-affecting commit: `7e05e19503d55b1b9f2590a6bd4abb26ed99e0a9` — `fix: bound control center window placement`.
+- Runtime publish öncesi `HEAD = origin/main = github/main = 7e05e195...`; working tree clean.
+- Canonical installer: **342,628,111 bytes**; SHA-256 `3D24D39BB883C2259D1152F742A8E23083C4FE208B9EBFEEE9C4F07654B80AC0`; manifest source/head exact `7e05e195...`.
+- SYSTEM deploy sonrası exact-installed `talvora_system_info.sourceCommit=7e05e195...`, LocalSystem / `S-1-5-18`, service PID **4800**.
+- Installed version root: `C:\Program Files\Talvora\Versions\7e05e19503d55b1b9f2590a6bd4abb26ed99e0a9-20260930175420341`.
+- Takip eden docs-only closeout commit runtime fingerprint değildir; sırf repository HEAD ilerledi diye runtime yeniden deploy edilmemelidir.
+
+### #288 — unbounded `window-placement.json` restore on WPF startup
+
+- Reachable production path: `ControlCenterWindow(false)` içinde `SourceInitialized` doğrudan `RestoreWindowPlacement()` çağırıyor; eski kod `File.ReadAllText(path)` + `JsonSerializer.Deserialize` ile dosyanın tamamını UI thread üzerinde allocate ediyordu.
+- İlk installed `--control-center-smoke` fixture denemesi bu yolu ölçmedi çünkü smoke mode bilinçli olarak placement restore'u bypass ediyor. Bu false-negative bug sayılmadı.
+- Ardından gerçek `ControlCenterApplication` resource bootstrap + `ControlCenterWindow(false)` + `Window.Show()` production harness ile SourceInitialized restore yolu doğrudan ölçüldü.
+- Pre-fix:
+  - küçük normal placement: **5,638,592 byte managed allocation**, **27,422,720 byte WS delta**, 370 ms.
+  - **32 MiB** valid placement + trailing whitespace: **279,594,840 byte managed allocation**, **179,933,184 byte WS delta**, 368 ms.
+- Fix: `MaximumWindowPlacementBytes = 64 * 1024`; restore artık shared same-handle `JsonFileStore.ReadBounded<WindowPlacementDocument>` kullanıyor. Oversized/malformed placement mevcut fail-soft davranışla restore edilmez ve varsayılan geometry korunur. Normal save/restore semantiği değişmedi.
+- Post-fix aynı production WPF harness:
+  - küçük placement: **5,626,096 byte managed allocation**, **26,701,824 byte WS delta**.
+  - 32 MiB fixture: **5,999,456 byte managed allocation**, **34,824,192 byte WS delta**.
+- Fixture testlerinin tümü sonunda önceki SYSTEM-profile placement state'i geri yüklendi.
+- Kalıcı `ControlCenterUiResponsivenessSourceRegression.ps1` 64 KiB ceiling'i, same-handle bounded reader'ı ve UI-thread `File.ReadAllText(path)` yokluğunu kilitliyor.
+
+### Final quality / live acceptance
+
+- Targeted RED yeni ceiling eksikliği nedeniyle exit 1; fix sonrası `CONTROL_CENTER_UI_RESPONSIVENESS_SOURCE_GREEN`.
+- Tray Release ve full solution build **0 warning / 0 error**.
+- Privacy/security GREEN; `MODERNIZATION_POLICY_GREEN`; `CONTEXT7_QUALITY_GATE_GREEN`; analyzer verify-no-changes exit 0.
+- Source Tray self-test + Control Center smoke GREEN.
+- Exact-installed final self-test, Dev probe ve Admin probe exit 0; canlı canonical counts Dev **203**, Admin **84**, Ready + BrowserSmokePassed.
+- Talvora/Gitea/Caddy `Running / Automatic`.
+- Final deploy log 34% `20:54:21.143` -> 50% `20:54:21.699`: yaklaşık **0.56 s**; force-stop/delete/rollback yok; `Install succeeded` at `20:54:30.143`.
+- Deploy sonrası yeni SCM **7034 yok**.
+
+### Sonraki audit
+
+- #288 kapalıdır. Yeni deep-audit turu #289'dan devam etmelidir.
+- persisted-state / lifecycle / bounded-I/O adaylarında smoke/test bypass'larını özellikle kontrol et; yalnız production çağrı zinciri + gerçek fixture ile doğrulanan bulguyu aç.
+- #280–#288 yeni gerçek kanıt olmadan yeniden açılmamalıdır.
+
 ## CURRENT — 2026-09-30 20:41+03:00 — #287 bounded DPAPI credential restore FINAL
 
 Bu bölüm en üst kanonik checkpoint'tir. #280–#286 kapalı kalır. Bu tur persisted credential restore yolundaki yeni gerçek bounded-I/O bulgusu #287 kapatıldı.

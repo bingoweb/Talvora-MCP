@@ -1,5 +1,19 @@
 # Talvora Deep Bug Audit
 
+## CURRENT — 2026-09-30 — #288 bounded Control Center window placement restore
+
+Status: **FINAL LIVE VERIFIED.** Exact-installed runtime `7e05e19503d55b1b9f2590a6bd4abb26ed99e0a9`.
+
+- #288 **FIXED / REAL PRODUCTION RED->GREEN / INSTALLED VERIFIED** — `ControlCenterWindow(false)` WPF `SourceInitialized` path'inde `window-placement.json` doğrudan `File.ReadAllText` ile UI thread üzerinde sınırsız okunuyordu. Normal smoke mode placement restore'u bilerek bypass ettiği için ilk smoke fixture peak testi false-negative verdi; bu nedenle gerçek `ControlCenterApplication` theme/resource bootstrap + non-smoke Window.Show production harness kullanıldı.
+- Production harness pre-fix küçük file **5,638,592 B alloc / 27,422,720 B WS delta**; 32 MiB valid placement fixture **279,594,840 B alloc / 179,933,184 B WS delta**. Fix `MaximumWindowPlacementBytes=64 KiB` ve shared same-handle `JsonFileStore.ReadBounded<WindowPlacementDocument>`. Post-fix küçük file **5,626,096 B / 26,701,824 B**, aynı 32 MiB fixture **5,999,456 B / 34,824,192 B**. Oversized/malformed placement fail-soft default geometry'ye döner; normal save/restore semantiği korunur.
+- `ControlCenterUiResponsivenessSourceRegression.ps1` explicit 64 KiB ceiling, bounded reader ve `File.ReadAllText(path)` yokluğunu kalıcı kilitler. Tüm fixture'lar önceki SYSTEM placement state'ini finally ile geri yükledi.
+
+Quality: targeted RED->GREEN; full Release solution **0 warning / 0 error**; UI responsiveness GREEN; privacy/security GREEN; ModernizationPolicy GREEN; Context7 GREEN; analyzer verify-no-changes exit 0; source Tray self-test + Control Center smoke GREEN.
+
+Runtime/deploy: commit `7e05e195...`; Gitea origin + GitHub main senkron. Canonical installer **342,628,111 bytes**, SHA-256 `3D24D39BB883C2259D1152F742A8E23083C4FE208B9EBFEEE9C4F07654B80AC0`, manifest exact source/head. Final deploy 34%->50% ~**0.56 s**, force-stop/delete/rollback yok; exact-installed sourceCommit `7e05e195...`, LocalSystem/S-1-5-18, PID 4800.
+
+Installed acceptance: self-test/Dev/Admin probes exit 0; canonical live counts Dev 203 / Admin 84, Ready + BrowserSmokePassed; Talvora/Gitea/Caddy Running Automatic; deploy sonrası yeni SCM 7034 yok.
+
 ## CURRENT — 2026-09-30 — #287 bounded DPAPI credential restore
 
 Status: **FINAL LIVE VERIFIED.** Exact-installed runtime `fea12d219d4b6dd9998d92f9d2ba46714f7a3936`.
