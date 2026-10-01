@@ -145,7 +145,8 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                 FormsScreen.FromPoint(
                     FormsCursor.Position).DeviceName;
             window = new DesktopProgressNotificationWindow();
-            if (_hasPreferredSize)
+            if (_hasPreferredSize &&
+                !string.IsNullOrWhiteSpace(message.Evidence?.CodePreview))
             {
                 window.ApplyPreferredSize(
                     _preferredWidthDip,
