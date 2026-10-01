@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-09-30T18:00:25Z",
-  "scope": "Talvora Control Center version-metadata deep-audit follow-up: #288 remains exact-installed and #289 bounds local version JSON reads. Talvora current.json is capped at 512 KiB and managed package metadata at 4 MiB through the shared same-handle bounded async JSON reader, preserving normal version-display behavior while oversized metadata fails soft to Bilinmiyor.",
+  "verifiedAtUtc": "2026-10-01T03:25:00Z",
+  "scope": "Talvora tunnel health-url deep-audit follow-up: #289 remains exact-installed and #290 bounds the tiny local .url metadata consumed by both Control Center component health and Gitea tunnel readiness. A shared same-handle asynchronous text reader validates a 4 KiB ceiling before allocation; oversized health-url files fail soft before URI/HTTP work.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET file-I/O guidance recommends explicit size bounds before allocating or parsing local metadata files. Talvora Control Center now uses JsonFileStore.ReadBoundedAsync<JsonDocument> for local version metadata: current.json has a 512 KiB ceiling and discovered package metadata has a 4 MiB ceiling. A real 32 MiB current.json fixture through ControlCenterVersionService.GetVersionAsync(talvora) allocated about 236.6 MB and grew working set about 180.3 MB pre-fix; the bounded path reduced the same fixture to about 368.8 KB managed allocation / 8.1 MB working-set growth and returned Bilinmiyor without parsing the oversized document."
+      "verified": "Current .NET async file-I/O guidance supports FileStream-based asynchronous reads, memory-based buffers and ReadExactlyAsync when a caller needs explicit control over the amount read. Talvora now uses a shared TextFileStore.ReadBoundedAsync helper for tunnel health .url files: it opens one FileStream, validates stream.Length against a 4 KiB ceiling, allocates only that validated snapshot and uses ReadExactlyAsync before UTF-8 decoding. A real 32 MiB gitea-business.url fixture through GiteaTrayClient.ProbeTunnelAsync allocated about 136.0 MB / grew working set 155.7 MB / took 2.34 s pre-fix; the bounded path used about 18 KB allocation / 4.8 MB working-set growth / 117 ms and returned the existing fail-soft unavailable status before URI/HTTP work."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop",

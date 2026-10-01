@@ -42,6 +42,7 @@ $mainWindow = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.cs'
 $chromeWindow = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.Chrome.cs'
 $actionsWindow = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.Actions.cs'
 $dashboardService = Read-RepoText 'src\Talvora.Tray\ControlCenterDashboardService.cs'
+$componentHealth = Read-RepoText 'src\Talvora.Tray\ControlCenterComponentHealthService.cs'
 $versionService = Read-RepoText 'src\Talvora.Tray\ControlCenterVersionService.cs'
 $smoke = Read-RepoText 'src\Talvora.Tray\ControlCenterSmoke.cs'
 
@@ -64,6 +65,9 @@ Assert-Contains $mainWindow '_dashboardFilterDebounceTimer' 'dashboard filter de
 Assert-Contains $eventsWindow '_dashboardScroller.Visibility == Visibility.Visible' 'raw-log polling is paused outside the dashboard view'
 
 Assert-Contains $dashboardService 'ControlCenterComponentHealthService\.GetStatesAsync' 'Talvora Core health is derived from the local service health chain'
+Assert-Contains $componentHealth 'MaximumTunnelHealthUrlBytes\s*=\s*4\s*\*\s*1024' 'Control Center tunnel health URL has an explicit 4 KiB ceiling'
+Assert-Contains $componentHealth 'TextFileStore\.ReadBoundedAsync\(' 'Control Center tunnel health URL uses the shared same-handle bounded text reader'
+Assert-NotContains $componentHealth 'File\.ReadAllTextAsync\(\s*healthUrlPath' 'Control Center never loads an unbounded tunnel health URL file'
 Assert-Contains $versionService 'MaximumTalvoraVersionMetadataBytes\s*=\s*512\s*\*\s*1024' 'Talvora current version metadata has an explicit 512 KiB ceiling'
 Assert-Contains $versionService 'MaximumPackageVersionMetadataBytes\s*=\s*4\s*\*\s*1024\s*\*\s*1024' 'managed package version metadata has an explicit 4 MiB ceiling'
 Assert-Contains $versionService 'JsonFileStore\.ReadBoundedAsync<JsonDocument>' 'version metadata uses the shared same-handle bounded async JSON reader'

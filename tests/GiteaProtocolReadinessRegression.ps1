@@ -30,6 +30,12 @@ $gitea = Get-Content -LiteralPath $giteaPath -Raw
 $probe = Get-Content -LiteralPath $probePath -Raw
 $discovery = Get-Content -LiteralPath $discoveryPath -Raw
 
+Assert-Contract (
+    $gitea -match 'MaximumTunnelHealthUrlBytes\s*=\s*4\s*\*\s*1024' -and
+    $gitea -match 'TextFileStore\.ReadBoundedAsync\(' -and
+    $gitea -notmatch 'File\.ReadAllTextAsync\(\s*healthUrlPath'
+) 'Gitea tunnel health URL must use a 4 KiB same-handle bounded text read.'
+
 $statusStart = $gitea.IndexOf(
     'public static async Task<GiteaStatus> GetStatusAsync(',
     [StringComparison]::Ordinal)

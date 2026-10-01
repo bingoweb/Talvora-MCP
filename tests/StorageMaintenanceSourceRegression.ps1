@@ -28,6 +28,7 @@ $clientUpdate = Read-RepoText 'src\Talvora.Tray\ManagedMcpTunnelProvisioningServ
 $businessTunnelClient = Read-RepoText 'src\Talvora.Tray\BusinessTunnelClient.cs'
 $recoveryDiscovery = Read-RepoText 'src\Talvora.Tray\ManagedMcpRecoveryDiscovery.cs'
 $jsonFileStore = Read-RepoText 'src\Talvora.Shared\JsonFileStore.cs'
+$textFileStore = Read-RepoText 'src\Talvora.Shared\TextFileStore.cs'
 $sharedCleanup = Read-RepoText 'src\Talvora.Shared\TalvoraOwnedTempCleanup.cs'
 $systemMaintenance = Read-RepoText 'src\Talvora\TalvoraSystemStorageMaintenanceService.cs'
 $penpotSupervisor = Read-RepoText 'src\Talvora\TalvoraPenpotSupervisorMaintenance.cs'
@@ -247,6 +248,10 @@ if ($businessTunnelClient.Contains('File.ReadAllText(ConfigPath)', [StringCompar
 if ($recoveryDiscovery.Contains('File.ReadAllText(configPath)', [StringComparison]::Ordinal)) { throw 'Storage maintenance contract failed: recovery discovery config read is unbounded' }
 Assert-Contains $jsonFileStore 'ReadBounded<T>' 'shared JSON store exposes a same-handle bounded reader'
 Assert-Contains $jsonFileStore 'ReadBoundedAsync<T>' 'shared JSON store exposes a cancellation-aware bounded async reader'
+Assert-Contains $textFileStore 'snapshotLength = stream.Length' 'shared text store validates the opened file handle length before allocation'
+Assert-Contains $textFileStore 'ReadExactlyAsync' 'shared text store reads only the validated snapshot length'
+Assert-Contains $textFileStore 'maximumBytes' 'shared text store exposes an explicit byte ceiling'
+if ($textFileStore.Contains('File.ReadAllText', [StringComparison]::Ordinal)) { throw 'Storage maintenance contract failed: shared bounded text reader must not reopen the path with File.ReadAllText' }
 
 Assert-Contains $maintenance 'ManagedMcpOperationCoordinator.TryAcquire' 'log maintenance coordinates with MCP lifecycle operations'
 Assert-Contains $maintenance 'health.IsQuietForMaintenance' 'log rotation requires live idle telemetry'

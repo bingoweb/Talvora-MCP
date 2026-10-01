@@ -312,6 +312,25 @@ try {
         throw 'Bounded JSON reader must reject a snapshot larger than its byte ceiling before deserialization.'
     }
 
+    $boundedTextPath = Join-Path $fixtureRoot 'oversized.txt'
+    [IO.File]::WriteAllBytes($boundedTextPath, [byte[]]::new(65))
+    $boundedTextRejected = $false
+    try {
+        [Talvora.Shared.TextFileStore]::ReadBoundedAsync(
+            $boundedTextPath,
+            64,
+            [Threading.CancellationToken]::None).GetAwaiter().GetResult() | Out-Null
+    } catch {
+        $rootException = $_.Exception
+        while ($null -ne $rootException.InnerException) {
+            $rootException = $rootException.InnerException
+        }
+        $boundedTextRejected = $rootException -is [System.IO.InvalidDataException]
+    }
+    if (-not $boundedTextRejected) {
+        throw 'Bounded text reader must reject a snapshot larger than its byte ceiling before text allocation.'
+    }
+
     Write-Output 'STORAGE_MAINTENANCE_BEHAVIOR_GREEN'
 }
 finally {

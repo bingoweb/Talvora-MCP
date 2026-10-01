@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net.Http;
 using ModelContextProtocol.Client;
+using Talvora.Shared;
 
 namespace Talvora.Tray;
 
@@ -30,6 +31,8 @@ internal static class GiteaTrayClient
     private const string McpHealthUrl = "http://127.0.0.1:8081/healthz";
     private const string TalvoraMcpUrl = "http://127.0.0.1:7676/mcp";
     private const string TunnelAlias = "gitea-business";
+    private const int MaximumTunnelHealthUrlBytes =
+        4 * 1024;
 
     private static readonly HttpClient HealthClient = new()
     {
@@ -410,16 +413,20 @@ internal static class GiteaTrayClient
         string baseUrl;
         try
         {
-            baseUrl = (await File.ReadAllTextAsync(
-                healthUrlPath,
-                cancellationToken)).Trim();
+            baseUrl = (await TextFileStore.ReadBoundedAsync(
+                    healthUrlPath,
+                    MaximumTunnelHealthUrlBytes,
+                    cancellationToken))
+                .Trim();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
         catch (Exception ex) when (
-            ex is IOException or UnauthorizedAccessException)
+            ex is IOException or
+            InvalidDataException or
+            UnauthorizedAccessException)
         {
             return (false, "Secure MCP Tunnel durumu okunamadı.");
         }

@@ -13,6 +13,8 @@ internal sealed record ManagedMcpComponentState(
 
 internal static class ControlCenterComponentHealthService
 {
+    private const int MaximumTunnelHealthUrlBytes =
+        4 * 1024;
     private static readonly HttpClient Http = TalvoraHttp.CreateClient(
         timeout: TimeSpan.FromSeconds(3));
 
@@ -419,9 +421,11 @@ internal static class ControlCenterComponentHealthService
         string baseUrl;
         try
         {
-            baseUrl = (await File.ReadAllTextAsync(
-                healthUrlPath,
-                cancellationToken)).Trim();
+            baseUrl = (await TextFileStore.ReadBoundedAsync(
+                    healthUrlPath,
+                    MaximumTunnelHealthUrlBytes,
+                    cancellationToken))
+                .Trim();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -429,6 +433,7 @@ internal static class ControlCenterComponentHealthService
         }
         catch (Exception ex) when (
             ex is IOException or
+            InvalidDataException or
             UnauthorizedAccessException)
         {
             return new ManagedMcpComponentState(
