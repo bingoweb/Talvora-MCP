@@ -22,6 +22,8 @@ internal sealed record ManagedMcpLifecycleResult(
 
 internal static partial class ControlCenterLifecycleService
 {
+    private const int MaximumRuntimeGenerationStateBytes =
+        256 * 1024;
     private const string TalvoraId = "talvora";
     private const string TalvoraDevId = "talvora-dev";
     private const string TalvoraAdminId = "talvora-admin";
@@ -697,10 +699,11 @@ internal static partial class ControlCenterLifecycleService
         {
             try
             {
-                using var document = JsonDocument.Parse(
-                    await File.ReadAllTextAsync(
+                using var document =
+                    await JsonFileStore.ReadBoundedAsync<JsonDocument>(
                         statePath,
-                        cancellationToken));
+                        MaximumRuntimeGenerationStateBytes,
+                        cancellationToken: cancellationToken);
 
                 if (document.RootElement.TryGetProperty(
                         "launcherPid",
@@ -769,6 +772,7 @@ internal static partial class ControlCenterLifecycleService
             }
             catch (Exception ex) when (
                 ex is IOException or
+                InvalidDataException or
                 JsonException or
                 UnauthorizedAccessException)
             {

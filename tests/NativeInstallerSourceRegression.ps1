@@ -659,6 +659,11 @@ $result = [pscustomobject]@{
         $controlCenterLifecycleService -match 'ManagedMcpOperationCoordinator\.TryAcquire\(TalvoraId\)' -and
         $controlCenterLifecycleService -match 'ManagedMcpOperationInProgressException\(TalvoraId\)'
     )
+    LifecycleRuntimeGenerationStateReadIsBounded = (
+        $controlCenterLifecycleService -match 'MaximumRuntimeGenerationStateBytes\s*=\s*256\s*\*\s*1024' -and
+        $controlCenterLifecycleService -match 'JsonFileStore\.ReadBoundedAsync<JsonDocument>\(' -and
+        $controlCenterLifecycleService -notmatch 'File\.ReadAllTextAsync\(\s*statePath'
+    )
     ControlCenterExitPersistsWindowPlacementBeforeShutdown = (
         $controlCenterWindow -match 'public async Task PrepareForApplicationExitAsync\(\)' -and
         $controlCenterWindow -match '_applicationExitRequested\s*=\s*true;' -and
