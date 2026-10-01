@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-01T03:39:42Z",
-  "scope": "Talvora lifecycle persisted-protocol-state deep-audit follow-up: #290 remains exact-installed and #291 closes the last direct unbounded File.ReadAllTextAsync in the Tray lifecycle path. Stop/restart verification now reads RuntimeGenerationStatePath through the shared same-handle bounded async JSON reader with the same 256 KiB protocol-state ceiling used by readiness probes.",
+  "verifiedAtUtc": "2026-10-01T03:49:39Z",
+  "scope": "Talvora Memory pending-restore deep-audit follow-up: #291 remains exact-installed and #292 bounds the small restore identity manifest on both MCP status and service-startup apply paths. Pending restore JSON now has a 64 KiB ceiling through the shared same-handle bounded JSON reader before allocation, while length/hash/SQLite validation and quarantine behavior remain unchanged.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET async file-I/O guidance supports FileStream-based asynchronous reads, memory-based buffers and cancellation-aware operations when callers need explicit control over the amount read. Talvora lifecycle stop/restart verification now uses JsonFileStore.ReadBoundedAsync<JsonDocument> with a 256 KiB ceiling for RuntimeGenerationStatePath instead of File.ReadAllTextAsync. A safe real private-method fixture with a fake registration, closed loopback endpoint and 32 MiB JSON state allocated 236.6 MB / grew working set 184.5 MB pre-fix; the bounded path reduced this to about 424 KB allocation / 12.6 MB working-set growth while preserving process-identity and endpoint-stop verification semantics."
+      "verified": "Current .NET JSON/file-I/O guidance supports FileStream-based asynchronous deserialization and explicitly recommends streaming rather than loading large files entirely into memory. Talvora Memory now caps pending restore manifests at 64 KiB through JsonFileStore.ReadBoundedAsync for restore-status calls and JsonFileStore.ReadBounded for service-startup ApplyPendingRestoreIfPresent. A safe 32 MiB temp manifest through the actual startup method allocated about 268.9 MB / grew working set 168.7 MB pre-fix; the bounded path used about 19.7 KB allocation / 4.4 MB working-set growth while preserving mismatch quarantine behavior."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop",

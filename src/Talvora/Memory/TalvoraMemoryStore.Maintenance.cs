@@ -1,11 +1,15 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
+using Talvora.Shared;
 
 namespace Talvora.Memory;
 
 public sealed partial class TalvoraMemoryStore
 {
+    private const int MaximumPendingRestoreManifestBytes =
+        64 * 1024;
+
     private sealed record PendingRestoreManifest(
         string Sha256,
         long Length,
@@ -184,10 +188,11 @@ public sealed partial class TalvoraMemoryStore
                 null);
         }
 
-        var manifest = JsonSerializer.Deserialize<PendingRestoreManifest>(
-            await File.ReadAllTextAsync(
+        var manifest =
+            await JsonFileStore.ReadBoundedAsync<PendingRestoreManifest>(
                 manifestPath,
-                cancellationToken));
+                MaximumPendingRestoreManifestBytes,
+                cancellationToken: cancellationToken);
         return manifest is null
             ? new TalvoraMemoryRestoreStatusResult(
                 true,
@@ -232,10 +237,9 @@ public sealed partial class TalvoraMemoryStore
         try
         {
             var manifest =
-                JsonSerializer.Deserialize<PendingRestoreManifest>(
-                    File.ReadAllText(manifestPath))
-                ?? throw new InvalidDataException(
-                    "Pending memory restore manifest is invalid.");
+                JsonFileStore.ReadBounded<PendingRestoreManifest>(
+                    manifestPath,
+                    MaximumPendingRestoreManifestBytes);
             var info = new FileInfo(pendingPath);
             if (info.Length != manifest.Length)
             {

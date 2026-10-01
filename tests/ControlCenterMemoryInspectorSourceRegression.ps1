@@ -78,6 +78,12 @@ Assert-Contains $memoryActions 'ControlCenterMemoryService.RestoreStageAsync' 'M
 Assert-Contains $memoryMaintenance 'source.BackupDatabase(target)' 'live backup uses the SQLite backup API'
 Assert-Contains $memoryMaintenance 'CreateConsistentPreRestoreBackup' 'restore preserves a WAL-consistent pre-restore backup'
 Assert-Contains $memoryMaintenance 'PendingRestoreManifest' 'pending restore is identity-bound by a manifest'
+Assert-Contains $memoryMaintenance 'MaximumPendingRestoreManifestBytes' 'pending restore manifest has an explicit named ceiling'
+Assert-Contains $memoryMaintenance '64 * 1024' 'pending restore manifest ceiling is 64 KiB'
+Assert-Contains $memoryMaintenance 'JsonFileStore.ReadBoundedAsync<PendingRestoreManifest>' 'restore status reads the manifest through the shared bounded async JSON reader'
+Assert-Contains $memoryMaintenance 'JsonFileStore.ReadBounded<PendingRestoreManifest>' 'startup restore applies the manifest through the shared bounded JSON reader'
+Assert-NotContains $memoryMaintenance 'File.ReadAllTextAsync(' 'pending restore status no longer reads persisted manifests without a byte ceiling'
+Assert-NotContains $memoryMaintenance 'File.ReadAllText(manifestPath)' 'startup restore no longer reads persisted manifests without a byte ceiling'
 Assert-Contains $memoryMaintenance 'SHA256' 'pending restore integrity is hash-verified'
 Assert-Contains $memoryMaintenance 'ValidateMemoryDatabase' 'backup and restore validate SQLite/Talvora integrity'
 
