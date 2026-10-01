@@ -1,5 +1,45 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-10-01 06:55+03:00 — #292 bounded Memory pending-restore manifest FINAL
+
+Bu bölüm en üst kanonik checkpoint'tir. #280–#291 kapalı kalır. Bu tur Memory pending-restore manifestinin status ve runtime-initialization yollarındaki sınırsız JSON okuması #292 olarak kapatıldı.
+
+### Canonical runtime
+
+- Runtime commit: `5c5f6c6262ee4bd3d187884bda3dd13d23fb4edc` — `fix: bound memory restore manifest`.
+- Runtime publish öncesi `HEAD = origin/main = github/main = 5c5f6c6...`; tree clean.
+- Canonical installer: **342,629,647 B**; SHA-256 `A9F600AFA2E5994628DE813849326917D71A622FEBED42F99F612F27D27AF095`; manifest source/head exact.
+- Exact-installed runtime: `sourceCommit=5c5f6c6...`, LocalSystem/S-1-5-18.
+- Installed version root: `C:\Program Files\Talvora\Versions\5c5f6c6262ee4bd3d187884bda3dd13d23fb4edc-20261001035244513`.
+- Installer success: `2026-10-01T06:52:52.2313647+03:00`.
+- Docs-only closeout commit runtime fingerprint değildir; redeploy edilmemelidir.
+
+### #292
+
+- `TalvoraMemoryStore.RestoreStatusAsync` ve `ApplyPendingRestoreIfPresent` pending manifesti `File.ReadAllText*` ile sınırsız okuyordu.
+- Safe temp startup fixture: **32 MiB** valid manifest + 1-byte pending DB + kasıtlı length mismatch.
+- Pre-fix actual `ApplyPendingRestoreIfPresent`: **268,915,888 B allocation**, **168,681,472 B WS delta**, **190 ms**; ardından quarantine.
+- Fix:
+  - `MaximumPendingRestoreManifestBytes = 64 * 1024`.
+  - status: `JsonFileStore.ReadBoundedAsync<PendingRestoreManifest>`.
+  - runtime apply: `JsonFileStore.ReadBounded<PendingRestoreManifest>`.
+  - length/hash/SQLite validation ve quarantine semantiği değişmedi.
+- Post-fix aynı fixture: **19,672 B allocation**, **4,411,392 B WS delta**, **133 ms**; quarantine korunuyor.
+
+### Quality / installed acceptance
+
+- Targeted RED yeni 64 KiB contract'ta oluştu; fix sonrası `CONTROL_CENTER_MEMORY_INSPECTOR_SOURCE_GREEN`.
+- Full Release **0 warning / 0 error**; storage source/behavior, privacy, ModernizationPolicy, Context7, analyzer, source Tray self-test + Control Center smoke GREEN.
+- Live default memory root'ta test öncesi gerçek pending `.db/.json` yoktu.
+- Exact-installed service restart sonrası Memory runtime ilk kullanımı `talvora_memory_restore_status` ile tetiklendi; oversized test manifesti fail-soft quarantine edildi ve tool `pending=false` döndürdü.
+- Testten önce rejected pattern sayısı 0 idi; oluşan 1-byte DB + 32 MiB manifest rejected çiftinin ikisi de test sonunda exact path ile silindi. Pending/rejected test kalıntısı **0**.
+- Installed `--self-test`, Dev probe, Admin probe exit **0**; Talvora/Gitea/Caddy Running/Automatic.
+
+### Sonraki audit
+
+- #292 kapalıdır. #293'ten devam et.
+- Kalan öncelik: installer/runtime metadata, interactive-user result metadata, Memory/restore yan dosyaları, HTTP response bodies ve process-output bounded-I/O.
+
 ## CURRENT — 2026-10-01 06:43+03:00 — #291 bounded lifecycle runtime-generation state FINAL
 
 Bu bölüm en üst kanonik checkpoint'tir. #280–#290 kapalı kalır. Bu tur generic managed-MCP stop/restart verification içindeki son doğrudan unbounded `File.ReadAllTextAsync` yolu #291 olarak kapatıldı.
