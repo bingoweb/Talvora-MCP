@@ -1,5 +1,74 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-10-01 06:43+03:00 — #291 bounded lifecycle runtime-generation state FINAL
+
+Bu bölüm en üst kanonik checkpoint'tir. #280–#290 kapalı kalır. Bu tur generic managed-MCP stop/restart verification içindeki son doğrudan unbounded `File.ReadAllTextAsync` yolu #291 olarak kapatıldı.
+
+### Canonical runtime / repository state
+
+- Runtime-affecting commit: `783e1242306c6dec2ee490d932971b67c7c8ee25` — `fix: bound lifecycle runtime state`.
+- Runtime publish öncesi `HEAD = origin/main = github/main = 783e124...`; working tree clean.
+- Canonical installer: **342,629,647 bytes**; SHA-256 `4E70930BED23C0AC71F1D8F82D427E66D370C77123F34FC3CED8B3FAA3C30C2F`; manifest source/head exact `783e124...`.
+- Exact-installed runtime: `talvora_system_info.sourceCommit=783e124...`, LocalSystem / `S-1-5-18`, PID **1944**.
+- Installed version root: `C:\Program Files\Talvora\Versions\783e1242306c6dec2ee490d932971b67c7c8ee25-20261001034241498`.
+- Installer success: `2026-10-01T06:42:50.7868966+03:00`; Tray stable PID 11428.
+- Takip eden docs-only closeout commit runtime fingerprint değildir; sırf repo HEAD ilerledi diye runtime yeniden deploy edilmemelidir.
+
+### #291 — lifecycle stop/restart unbounded RuntimeGenerationStatePath
+
+- Reachable chain:
+  - generic managed MCP `Stop` -> lifecycle PowerShell stop -> `EnsureRegisteredRuntimeStoppedAsync`.
+  - generic managed MCP `Restart` -> stop -> aynı verification -> start.
+- Aynı `RuntimeGenerationStatePath` readiness/probe tarafında zaten `JsonFileStore.ReadBounded(..., 256 KiB)` ile bounded iken lifecycle verification eski `File.ReadAllTextAsync + JsonDocument.Parse` yolunda kalmıştı.
+- Safe gerçek private-method fixture:
+  - sahte `ManagedMcpRegistration`;
+  - endpoint/backend `http://127.0.0.1:65534/mcp` (kapalı);
+  - state yalnız `{"generation":"audit"}` + trailing whitespace, **launcherPid yok**;
+  - dolayısıyla hiçbir gerçek PID/process/service kill yolu çalışmadı.
+- Pre-fix **32 MiB** state:
+  - **236,588,536 B managed allocation**
+  - **184,500,224 B working-set delta**
+  - **893 ms**
+- Fix:
+  - `MaximumRuntimeGenerationStateBytes = 256 * 1024`.
+  - lifecycle restore artık `JsonFileStore.ReadBoundedAsync<JsonDocument>`.
+  - cancellation token korunuyor.
+  - `InvalidDataException` mevcut fail-soft log boundary'sine dahil.
+  - process identity/launcher kill/endpoint-closure semantiği değiştirilmedi.
+- Post-fix aynı fixture:
+  - **424,056 B allocation**
+  - **12,578,816 B working-set delta**
+  - **904 ms**; kalan süre kapalı-loopback endpoint stop doğrulamasından geliyor.
+
+### Permanent regression / quality
+
+- `NativeInstallerSourceRegression.ps1` artık `LifecycleRuntimeGenerationStateReadIsBounded=True` şartını taşır:
+  - explicit 256 KiB ceiling,
+  - `JsonFileStore.ReadBoundedAsync<JsonDocument>`,
+  - lifecycle `File.ReadAllTextAsync(statePath)` yokluğu.
+- Targeted RED yalnız bu yeni contract'ta False oldu; fix sonrası Native Installer source GREEN.
+- Full Release solution build **0 warning / 0 error**.
+- Focused MCP surface GREEN; Gitea stop-chain terminal GREEN; privacy/security GREEN; ModernizationPolicy GREEN; Context7 GREEN; analyzer verify-no-changes exit 0; source Tray self-test + Control Center smoke GREEN.
+- Context7 `/dotnet/docs`: FileStream async I/O, cancellation-aware bounded read yaklaşımı aynı change içinde yenilendi.
+
+### Installed acceptance
+
+- Canonical deploy service-hosted caller'dan yine `waitForCompletion=false` detach ile çalıştı.
+- Exact installed `783e124...` Tray single-file layout'tur; ayrı `Talvora.Tray.dll`/Shared DLL publish edilmediği için external reflection harness hayali DLL path üzerinden koşturulmadı.
+- Exact-installed kanonik yüzeyler:
+  - `--self-test` exit **0**
+  - `--managed-mcp-probe talvora-dev` exit **0**
+  - `--managed-mcp-probe talvora-admin` exit **0**
+  - Talvora/Gitea/Caddy `Running / Automatic`
+  - deploy sonrası yeni SCM error event yok.
+- Feature-specific 32 MiB real private-method behavior fixture source-built **aynı committed code** üzerinde GREEN; canonical installer source/head fingerprint exact aynı commit olarak doğrulandı.
+
+### Sonraki audit
+
+- #291 kapalıdır. Yeni deep-audit #292'den devam etmelidir.
+- Öncelik: kalan local metadata / HTTP body / process-output / persisted state bounded-I/O ve lifecycle resource-release yolları.
+- #280–#291 yeni gerçek kanıt olmadan yeniden açılmamalıdır.
+
 ## CURRENT — 2026-10-01 06:34+03:00 — #290 bounded tunnel health-url reads FINAL
 
 Bu bölüm en üst kanonik checkpoint'tir. #280–#289 kapalı kalır. Bu tur Control Center component health ve Gitea tunnel readiness yollarında aynı küçük `.url` metadata dosyasının sınırsız okunması #290 olarak kapatıldı.

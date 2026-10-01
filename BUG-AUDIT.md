@@ -1,5 +1,20 @@
 # Talvora Deep Bug Audit
 
+## CURRENT — 2026-10-01 — #291 bounded lifecycle runtime-generation state
+
+Status: **FINAL LIVE VERIFIED.** Exact-installed runtime `783e1242306c6dec2ee490d932971b67c7c8ee25`.
+
+- #291 **FIXED / REAL PRIVATE-METHOD RED->GREEN / INSTALLED VERIFIED** — generic managed-MCP Stop/Restart verification `EnsureRegisteredRuntimeStoppedAsync` read `ProtocolProbe.RuntimeGenerationStatePath` through unbounded `File.ReadAllTextAsync + JsonDocument.Parse`, although readiness/probe code already bounded the same protocol-state family at **256 KiB**.
+- Safe fixture used a fake registration, closed loopback endpoint and a 32 MiB JSON state with no launcher PID, so no real process/service mutation could occur. Pre-fix actual private method: **236,588,536 B allocation / 184,500,224 B WS delta / 893 ms**.
+- Fix adds `MaximumRuntimeGenerationStateBytes=256 KiB`, `JsonFileStore.ReadBoundedAsync<JsonDocument>`, cancellation preservation and `InvalidDataException` fail-soft handling. Post-fix identical fixture: **424,056 B allocation / 12,578,816 B WS delta / 904 ms**; remaining time is endpoint-closure probing, not file allocation.
+- Native Installer source regression now permanently requires the bounded lifecycle contract and rejects reintroduction of `File.ReadAllTextAsync(statePath)`.
+
+Quality: full Release **0 warning / 0 error**; Native Installer source GREEN; Focused MCP surface GREEN; Gitea stop-chain GREEN; privacy/security GREEN; ModernizationPolicy GREEN; Context7 GREEN; analyzer exit 0; source Tray self-test + Control Center smoke GREEN.
+
+Runtime/deploy: commit `783e124...`; origin/GitHub synchronized. Canonical installer **342,629,647 B**, SHA-256 `4E70930BED23C0AC71F1D8F82D427E66D370C77123F34FC3CED8B3FAA3C30C2F`, exact manifest source/head. Install succeeded `06:42:50.786+03:00`; exact runtime LocalSystem PID 1944.
+
+Installed acceptance: single-file Tray publish; `--self-test`, Dev probe, Admin probe all exit 0; Talvora/Gitea/Caddy Running Automatic; no new SCM error event after deploy. Feature-specific private-method fixture was run on the same committed source build because canonical installed Tray intentionally contains no standalone managed DLL surface.
+
 ## CURRENT — 2026-10-01 — #290 bounded tunnel health-url reads
 
 Status: **FINAL LIVE VERIFIED.** Exact-installed runtime `aa7efbd9f74776481fe25c077c87e7558db35b3f`.
