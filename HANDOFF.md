@@ -10,7 +10,11 @@ User scope: improve desktop notification design, automatically expand when code/
 - Validation: Release solution build 0 warnings / 0 errors; 1000 old + 1000 new changed lines survive notifier and exact framed IPC; actual WPF compact-size expansion and terminal-size preservation GREEN. Modernization, Context7, privacy/security and UI responsiveness GREEN.
 - Context7 /dotnet/docs plus official Microsoft Window.SizeToContent documentation checked: explicit dimensions require Manual mode.
 - Gitea issue creation was rejected by automatic approval review; no issue created. Local records serve as the review trail.
-- Canonical installer deployment and exact-installed acceptance are the remaining closeout step.
+- Runtime FINAL: exact-installed sourceCommit 990e40e6ca7914b60f4515379ef85eff6ec6c2e9; installer 342,629,647 B, SHA-256 D479365D08A1BD4DBA5781AC281E6C6A9F5BEF1622A4BACA70364C71C8A4399A.
+- Installed Tray live QA: 1440x1021 native-pixel window; code viewport 1352x761; 10,308 code characters SHA-256 2D5E16376B650EE9AD275E7B30B844C9EB33012F6A52C0978ABE645237B0B92B matches sender exactly; CanResize true. Visual inspection confirms code is readable and unobscured.
+- Visual follow-up 990e40e keeps new notifications without code compact instead of inheriting large diff geometry. Regression covers both code expansion and compact non-code generations; DESKTOP_PROGRESS_BEHAVIOR_GREEN.
+- Installed Tray self-test exit 0; Talvora/Gitea/Caddy Running/Automatic. Source-affecting changes are committed on main; the three earlier installer edits remain untouched.
+- Subsequent docs/test closeout commit does not require runtime redeployment.
 
 ## CURRENT — 2026-10-01 06:55+03:00 — #292 bounded Memory pending-restore manifest FINAL
 

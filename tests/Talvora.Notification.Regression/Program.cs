@@ -799,6 +799,15 @@ internal static class Program
                             new DesktopProgressNotificationPresenter(
                                 application,
                                 placementPath);
+                        presenter.Publish(new DesktopProgressMessage(
+                            "compact-regression", "read_source", "Kaynaklar inceleniyor", "İnceleme tamamlandı.",
+                            DesktopProgressKind.Completed, DateTimeOffset.UtcNow, 1, Sequence: 1));
+                        var compactWindow = application.Windows.OfType<DesktopProgressNotificationWindow>().Single();
+                        compactWindow.UpdateLayout();
+                        if (compactWindow.ActualWidth > 501 || compactWindow.ActualHeight > 300)
+                        {
+                            throw new InvalidOperationException("A notification without code inherited oversized code geometry.");
+                        }
                     }
                     catch (Exception ex)
                     {
