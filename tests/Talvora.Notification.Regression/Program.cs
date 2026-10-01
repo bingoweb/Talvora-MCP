@@ -85,11 +85,11 @@ internal static class Program
         {
             var oldBlock = string.Join(
                 '\n',
-                Enumerable.Range(1, 40)
+                Enumerable.Range(1, 1000)
                     .Select(index => $"old-{index:00}();"));
             var newBlock = string.Join(
                 '\n',
-                Enumerable.Range(1, 40)
+                Enumerable.Range(1, 1000)
                     .Select(index => $"new-{index:00}();"));
             var arguments = new Dictionary<string, JsonElement>
             {
@@ -130,18 +130,28 @@ internal static class Program
                     "@@ FILE src/Test.cs",
                     StringComparison.Ordinal) ||
                 !preview.Contains(
-                    "-old-40();",
+                    "-old-1000();",
                     StringComparison.Ordinal) ||
                 !preview.Contains(
-                    "+new-40();",
+                    "+new-1000();",
                     StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
                     "Structured source edits did not expose a sufficiently rich real diff preview.");
             }
 
-            if (evidence?.AddedLines != 40 ||
-                evidence.RemovedLines != 40)
+            var messageWithCode = observed.First(message => message.Evidence == evidence);
+            await using var frame = new MemoryStream();
+            await DesktopProgressProtocol.WriteFrameAsync(frame, messageWithCode);
+            frame.Position = 0;
+            var restoredCode = await DesktopProgressProtocol.ReadFrameAsync(frame);
+            if (restoredCode?.Evidence?.CodePreview != preview)
+            {
+                throw new InvalidOperationException("A large real diff lost code during IPC round-trip.");
+            }
+
+            if (evidence?.AddedLines != 1000 ||
+                evidence.RemovedLines != 1000)
             {
                 throw new InvalidOperationException(
                     "Structured edit evidence line counts were not preserved.");
@@ -755,6 +765,36 @@ internal static class Program
                         application =
                             new ControlCenterApplication(
                                 smokeTest: true);
+                        var window = new DesktopProgressNotificationWindow();
+                        try
+                        {
+                            window.ApplyPreferredSize(420, 240);
+                            var code = string.Join('\n', Enumerable.Range(1, 1000).Select(index => $"+changed-{index}();"));
+                            var message = new DesktopProgressMessage(
+                                "resize-regression", "apply_patch", "Kod güncelleniyor", "Gerçek kod değişiklikleri",
+                                DesktopProgressKind.Running, DateTimeOffset.UtcNow, 1,
+                                new DesktopProgressEvidence(AddedLines: 1000, CodePreview: code), Sequence: 1);
+                            window.Update(message);
+                            window.Show();
+                            window.UpdateLayout();
+                            if (window.ActualWidth < 959 || window.ActualHeight < 719 ||
+                                window.SizeToContent != System.Windows.SizeToContent.Manual)
+                            {
+                                throw new InvalidOperationException("Saved compact size blocked automatic two-axis diff expansion.");
+                            }
+                            var width = window.ActualWidth;
+                            var height = window.ActualHeight;
+                            window.Update(message with { Kind = DesktopProgressKind.Completed, Sequence = 2 });
+                            window.UpdateLayout();
+                            if (Math.Abs(window.ActualWidth - width) > 0.5 || Math.Abs(window.ActualHeight - height) > 0.5)
+                            {
+                                throw new InvalidOperationException("Terminal update shrank the expanded diff window.");
+                            }
+                        }
+                        finally
+                        {
+                            window.Close();
+                        }
                         using var presenter =
                             new DesktopProgressNotificationPresenter(
                                 application,

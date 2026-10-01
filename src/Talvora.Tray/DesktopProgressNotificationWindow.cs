@@ -35,7 +35,7 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
         TimeSpan.FromSeconds(10);
     private const int WmEnterSizeMove = 0x0231;
     private const int WmExitSizeMove = 0x0232;
-    private const double AutomaticDiffWidthDip = 760;
+    private const double AutomaticDiffWidthDip = 960;
 
     private Border _root = null!;
     private Border _accent = null!;
@@ -68,7 +68,6 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
     private HwndSource? _windowSource;
     private double _interactiveResizeStartWidth;
     private double _interactiveResizeStartHeight;
-    private bool _hasPreferredSize;
     private bool _autoDiffExpanded;
     private bool _automaticSizePersistenceRequested;
 
@@ -121,7 +120,6 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
             return;
         }
 
-        _hasPreferredSize = true;
         Width = Math.Clamp(widthDip, MinWidth, MaxWidth);
         Height = Math.Clamp(heightDip, MinHeight, MaxHeight);
         SizeToContent = SizeToContent.Manual;
@@ -395,7 +393,8 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
         }
 
         _diffPanel.Visibility = Visibility.Visible;
-        MinHeight = 220;
+        MinHeight = Math.Min(360, MaxHeight);
+        _diffHeader.Text = $"KOD DEĞİŞİKLİKLERİ · {DesktopProgressVisualTheme.Describe(message.Kind).Label}  +{evidence?.AddedLines ?? 0}  −{evidence?.RemovedLines ?? 0}";
         SetTextIfChanged(
             _codePreview,
             codePreview);
@@ -404,8 +403,7 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
 
     private void EnsureDiffWidth()
     {
-        if (_hasPreferredSize ||
-            _autoDiffExpanded)
+        if (_autoDiffExpanded)
         {
             return;
         }
@@ -413,12 +411,14 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
         var targetWidth = Math.Min(
             MaxWidth,
             Math.Max(Width, AutomaticDiffWidthDip));
-        if (targetWidth <= Width + 0.5)
-        {
-            return;
-        }
-
+        var lineCount = _codePreview.Text.Count(character => character == '\n') + 1;
+        var targetHeight = Math.Min(MaxHeight, Math.Clamp(220 + lineCount * 17.0, 460, 720));
+        var currentHeight = double.IsFinite(Height) ? Height : Math.Max(ActualHeight, MinHeight);
+        SizeToContent = SizeToContent.Manual;
         Width = targetWidth;
+        Height = Math.Min(MaxHeight, Math.Max(currentHeight, targetHeight));
+        EnableResponsiveSizing();
+        _initialSizeLocked = true;
         _autoDiffExpanded = true;
         _automaticSizePersistenceRequested = true;
     }
@@ -474,7 +474,6 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
                 ActualHeight - _interactiveResizeStartHeight) > 0.5;
             if (widthChanged || heightChanged)
             {
-                _hasPreferredSize = true;
                 UserResizeCompleted?.Invoke(this, EventArgs.Empty);
             }
         }

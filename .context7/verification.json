@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-01T03:49:39Z",
-  "scope": "Talvora Memory pending-restore deep-audit follow-up: #291 remains exact-installed and #292 bounds the small restore identity manifest on both MCP status and service-startup apply paths. Pending restore JSON now has a 64 KiB ceiling through the shared same-handle bounded JSON reader before allocation, while length/hash/SQLite validation and quarantine behavior remain unchanged.",
+  "verifiedAtUtc": "2026-10-01T17:39:31.347Z",
+  "scope": "Desktop code visibility: dedicated 512 KiB redacted code transport, automatic two-axis expansion from saved compact geometry, larger scrollable monospace code.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -110,6 +110,7 @@
     "Microsoft .NET native interop best practices checked 2026-09-27; new one-off Win32 calls use LibraryImport generated interop",
     "Microsoft .NET IDisposable and Process analyzer guidance checked 2026-09-27: disposable objects that own OS resources should be deterministically disposed; avoid unnecessary Process allocation for invariant/current-process information",
     "Microsoft NuGet Central Package Management transitive-pinning guidance checked 2026-09-27; centrally pinned versions are equal to or higher than dependency-requested versions",
-    "Microsoft.Build.Framework 18.10.1 was evaluated and intentionally not adopted on net10.0-windows: its Microsoft.NET.StringTools 18.10.1 dependency reports net11+ support and Microsoft.Build.Locator rejects the promoted runtime asset graph (MSBL001); 17.14.28 remains the compatible pin"
+    "Microsoft.Build.Framework 18.10.1 was evaluated and intentionally not adopted on net10.0-windows: its Microsoft.NET.StringTools 18.10.1 dependency reports net11+ support and Microsoft.Build.Locator rejects the promoted runtime asset graph (MSBL001); 17.14.28 remains the compatible pin",
+    "Microsoft WPF Window.SizeToContent checked 2026-10-01: explicit Width/Height take effect in Manual mode; Grid star rows and wrapped scrollable TextBox retain responsive code viewport. https://learn.microsoft.com/en-us/dotnet/api/system.windows.window.sizetocontent?view=windowsdesktop-10.0"
   ]
 }

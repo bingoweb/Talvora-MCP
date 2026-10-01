@@ -291,7 +291,7 @@ internal sealed partial class DesktopProgressNotificationWindow
 
         _diffHeader = new TextBlock
         {
-            Text = "DIFF // GERÇEK DEĞİŞİKLİK",
+            Text = "KOD DEĞİŞİKLİKLERİ",
             FontFamily = DesktopProgressVisualTheme.TerminalFont,
             FontSize = 9.5,
             FontWeight = FontWeights.SemiBold,
@@ -327,12 +327,12 @@ internal sealed partial class DesktopProgressNotificationWindow
             Padding = new Thickness(8),
             BorderThickness = new Thickness(1),
             FontFamily = DesktopProgressVisualTheme.TerminalFont,
-            FontSize = 10,
+            FontSize = 12,
             Cursor = WpfCursors.IBeam,
         };
         AutomationProperties.SetName(
             _codePreview,
-            "Gerçek kod veya diff önizlemesi");
+            "Gerçek kod değişiklikleri");
         Grid.SetRow(_codePreview, 1);
         grid.Children.Add(_codePreview);
 

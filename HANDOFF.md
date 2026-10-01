@@ -1,5 +1,17 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-10-01 — Notification Faz 18 code visibility
+User scope: improve desktop notification design, automatically expand when code/diff arrives, show real changed code.
+- Isolated feature/notification-code-view worktree preserves the three pre-existing installer changes in the primary repository.
+- Saved compact geometry no longer blocks code expansion. First diff grows both axes to at least 960 DIP width and content-based 460–720 DIP height, clamped to monitor limits. Further terminal updates preserve size; native user resizing and existing position/size persistence remain.
+- Code font 10 -> 12 DIP; dedicated lower code viewport stays wrapped, selectable, scrollable and copyable; header carries real +/- counts and current operation state.
+- Removed 120-line / 7 KiB preview ceilings. Dedicated code budget is 524,288 characters; larger output has an explicit incomplete-content marker. Secret redaction remains. Frame maximum is 4 MiB, retaining cancellation, ACL and bounded reads.
+- Unified diff file headers are preserved as well as hunks/context.
+- Validation: Release solution build 0 warnings / 0 errors; 1000 old + 1000 new changed lines survive notifier and exact framed IPC; actual WPF compact-size expansion and terminal-size preservation GREEN. Modernization, Context7, privacy/security and UI responsiveness GREEN.
+- Context7 /dotnet/docs plus official Microsoft Window.SizeToContent documentation checked: explicit dimensions require Manual mode.
+- Gitea issue creation was rejected by automatic approval review; no issue created. Local records serve as the review trail.
+- Canonical installer deployment and exact-installed acceptance are the remaining closeout step.
+
 ## CURRENT — 2026-10-01 06:55+03:00 — #292 bounded Memory pending-restore manifest FINAL
 
 Bu bölüm en üst kanonik checkpoint'tir. #280–#291 kapalı kalır. Bu tur Memory pending-restore manifestinin status ve runtime-initialization yollarındaki sınırsız JSON okuması #292 olarak kapatıldı.

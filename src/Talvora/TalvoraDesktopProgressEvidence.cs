@@ -8,8 +8,7 @@ namespace Talvora;
 internal sealed partial class TalvoraDesktopProgressNotifier
 {
     private const int MaximumEvidenceFiles = 16;
-    private const int MaximumPreviewLines = 120;
-    private const int MaximumPreviewCharacters = 7 * 1024;
+    private const int MaximumPreviewCharacters = DesktopProgressProtocol.MaximumCodeCharacters - 128;
 
     private static DesktopProgressEvidence? BuildInitialEvidence(
         string? toolName,
@@ -122,6 +121,13 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                         preview,
                         $"@@ FILE {NormalizeEvidencePath(path, workspaceRoot)}");
                 }
+                continue;
+            }
+
+            if (rawLine.StartsWith("+++ ", StringComparison.Ordinal) ||
+                rawLine.StartsWith("--- ", StringComparison.Ordinal))
+            {
+                AddPreviewLine(preview, rawLine);
                 continue;
             }
 
@@ -325,19 +331,6 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         List<string> preview,
         string line)
     {
-        if (preview.Count >= MaximumPreviewLines)
-        {
-            if (preview.Count > 0 &&
-                !string.Equals(
-                    preview[^1],
-                    "… (diff kısaltıldı)",
-                    StringComparison.Ordinal))
-            {
-                preview[^1] = "… (diff kısaltıldı)";
-            }
-            return;
-        }
-
         preview.Add(RedactSensitivePreviewLine(line));
     }
 
@@ -379,7 +372,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (builder.Length + line.Length + Environment.NewLine.Length >
                 MaximumPreviewCharacters)
             {
-                builder.AppendLine("… (diff karakter sınırında kısaltıldı)");
+                builder.AppendLine("… (524.288 karakterlik gösterim sınırı aşıldı; kalan kod bu kartta gösterilemiyor)");
                 break;
             }
 

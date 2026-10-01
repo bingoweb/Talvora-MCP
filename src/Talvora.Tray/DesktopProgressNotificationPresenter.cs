@@ -574,9 +574,11 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             var scaleX = Math.Max(0.5, dpi.DpiScaleX);
             var availableDip =
                 perWindowPixelBudget / scaleY;
-            window.MaxHeight = Math.Max(
+            var maximumHeightDip = Math.Max(
                 150,
                 Math.Min(900, availableDip));
+            window.MinHeight = Math.Min(window.MinHeight, maximumHeightDip);
+            window.MaxHeight = maximumHeightDip;
             var availableWidthDip =
                 Math.Max(
                     360,

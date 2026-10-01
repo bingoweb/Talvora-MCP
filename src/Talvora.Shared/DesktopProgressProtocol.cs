@@ -46,7 +46,7 @@ public static class DesktopProgressProtocol
 {
     public const int Version = 3;
     public const string PipeNamePrefix = "Talvora.DesktopProgress.";
-    public const int MaximumFrameBytes = 64 * 1024;
+    public const int MaximumFrameBytes = 4 * 1024 * 1024;
     public const int MaximumOperationIdCharacters = 160;
     public const int MaximumToolNameCharacters = 256;
     public const int MaximumTitleCharacters = 512;
@@ -54,6 +54,7 @@ public static class DesktopProgressProtocol
     public const int MaximumEvidenceFiles = 32;
     public const int MaximumEvidenceFileCharacters = 2 * 1024;
     public const int MaximumEvidenceTextCharacters = 8 * 1024;
+    public const int MaximumCodeCharacters = 512 * 1024;
 
     private const int FrameHeaderBytes = sizeof(int);
 
@@ -443,7 +444,7 @@ public static class DesktopProgressProtocol
                 message.Evidence.RemovedLines,
                 RedactAndClip(
                     message.Evidence.CodePreview,
-                    MaximumEvidenceTextCharacters),
+                    MaximumCodeCharacters),
                 RedactAndClip(
                     message.Evidence.Result,
                     MaximumEvidenceTextCharacters));
@@ -505,7 +506,7 @@ public static class DesktopProgressProtocol
                 file is null ||
                 file.Length > MaximumEvidenceFileCharacters) is true ||
             evidence.Summary?.Length > MaximumEvidenceTextCharacters ||
-            evidence.CodePreview?.Length > MaximumEvidenceTextCharacters ||
+            evidence.CodePreview?.Length > MaximumCodeCharacters ||
             evidence.Result?.Length > MaximumEvidenceTextCharacters)
         {
             return false;
