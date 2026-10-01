@@ -1,5 +1,76 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-10-01 06:34+03:00 — #290 bounded tunnel health-url reads FINAL
+
+Bu bölüm en üst kanonik checkpoint'tir. #280–#289 kapalı kalır. Bu tur Control Center component health ve Gitea tunnel readiness yollarında aynı küçük `.url` metadata dosyasının sınırsız okunması #290 olarak kapatıldı.
+
+### Canonical runtime / repository state
+
+- Runtime-affecting commit: `aa7efbd9f74776481fe25c077c87e7558db35b3f` — `fix: bound tunnel health url reads`.
+- Runtime publish öncesi `HEAD = origin/main = github/main = aa7efbd9...`; working tree clean.
+- Canonical installer: **342,629,647 bytes**; SHA-256 `15B34E0BDFA5BD1B6FAFDF01BB60F1313418B595D7DE09444D855EE977C263C4`; manifest source/head exact `aa7efbd9...`.
+- Exact-installed runtime: `talvora_system_info.sourceCommit=aa7efbd9...`, LocalSystem / `S-1-5-18`, PID **4724**.
+- Installed version root: `C:\Program Files\Talvora\Versions\aa7efbd9f74776481fe25c077c87e7558db35b3f-20261001033300039`.
+- Docs-only closeout commit runtime fingerprint değildir; sırf repo HEAD ilerledi diye runtime yeniden deploy edilmemelidir.
+
+### #290 — unbounded tunnel health URL metadata reads
+
+- Reachable production paths:
+  - `ControlCenterComponentHealthService` -> `health/<alias>.url`.
+  - `GiteaTrayClient.ProbeTunnelAsync` -> `gitea-business.url`.
+- Eski kod her iki yolda da `File.ReadAllTextAsync(...).Trim()` ile dosyanın tamamını allocate ediyor, ardından URI/HTTP işine giriyordu.
+- Yeni shared `Talvora.Shared.TextFileStore.ReadBoundedAsync`:
+  - tek `FileStream` açar;
+  - aynı handle'ın `Length` değerini allocation öncesi doğrular;
+  - explicit maximum byte ceiling uygular;
+  - yalnız doğrulanmış snapshot kadar buffer ayırır;
+  - `ReadExactlyAsync` ile aynı snapshot'ı okur;
+  - UTF-8 decode eder.
+- Her iki consumer için ceiling **4 KiB**. Oversized/bozuk dosya mevcut kullanıcı davranışıyla fail-soft unavailable/offline durumuna döner; URI/HTTP çağrısı yapılmaz.
+
+### Gerçek A/B fixture kanıtı
+
+- Fixture: SYSTEM profile `Gitea\McpTunnel\state\health\gitea-business.url`, **32 MiB**, başında geçerli `http://127.0.0.1:65534`, devamı whitespace. Test sonunda gerçek dosya birebir geri yüklendi.
+- Pre-fix HEAD `6bdf076...` snapshot build, gerçek `GiteaTrayClient.ProbeTunnelAsync`:
+  - **136,023,664 B managed allocation**
+  - **155,729,920 B working-set delta**
+  - **2337 ms**
+  - daha sonra HTTP timeout yoluna girdi.
+- Post-fix worktree:
+  - **18,240 B managed allocation**
+  - **4,767,744 B working-set delta**
+  - **117 ms**
+  - 4 KiB bound'da fail-soft döndü, URI/HTTP işine gitmedi.
+
+### Kalıcı regression / quality
+
+- `ControlCenterUiResponsivenessSourceRegression.ps1`: Control Center health URL 4 KiB ceiling + `TextFileStore.ReadBoundedAsync` + eski unbounded read yokluğu.
+- `GiteaProtocolReadinessRegression.ps1`: Gitea health URL 4 KiB same-handle bounded contract.
+- `StorageMaintenanceSourceRegression.ps1`: shared `TextFileStore` stream length / exact snapshot / byte ceiling sözleşmesi.
+- `StorageMaintenanceBehaviorRegression.ps1`: 65 B text / 64 B ceiling gerçekten `InvalidDataException`.
+- Full Release solution build **0 warning / 0 error**.
+- Storage source/behavior, UI responsiveness, Gitea readiness, privacy/security, ModernizationPolicy, Context7, analyzer, source Tray self-test ve Control Center smoke GREEN.
+- Context7 `/dotnet/docs`: FileStream async I/O, memory-based reads ve `ReadExactlyAsync` evidence aynı change içinde yenilendi.
+
+### Deploy / installed acceptance
+
+- İlk deploy denemesi yeni service start sırasında tek seferlik SCM 7009/7000 **1053 / 30 s timeout** yaşadı; installer doğru rollback ile `284a065d...` runtime'ı geri getirdi.
+- Yeni `aa7efbd...` service EXE daha sonra kontrollü console bootstrap'ta Kestrel'e hızla ulaştı ve beklenen `7676 already in use` ile çıktı; binary/bootstrap bozukluğu görülmedi. Defender/Code Integrity tarafında Talvora blok kaydı yoktu.
+- Aynı canonical artifact ikinci deploy'da başarılı:
+  - 34% `06:33:00.660` -> 50% `06:33:01.026`: yaklaşık **0.37 s**
+  - force-stop/delete/rollback yok
+  - `Install succeeded` at `06:33:09.607`
+  - yeni SCM error event yok.
+- Installed self-test + Dev/Admin managed probes exit 0.
+- Exact-installed 32 MiB `gitea-business.url` altında real `--control-center-smoke` exit **0**, peak WS **161,284,096 B**, elapsed **7172 ms**; fixture sonunda geri yüklendi.
+- Talvora/Gitea/Caddy `Running / Automatic`.
+
+### Sonraki audit
+
+- #290 kapalıdır. Yeni deep-audit turu #291'den devam etmelidir.
+- Öncelik: kalan persisted-state / lifecycle / local metadata / HTTP-body bounded-I/O yolları. Yalnız gerçek çağrı zinciri + fixture ile doğrulanan bulguyu aç.
+- #280–#290 yeni gerçek kanıt olmadan yeniden açılmamalıdır.
+
 ## CURRENT — 2026-09-30 21:04+03:00 — #289 bounded Control Center version metadata FINAL
 
 Bu bölüm en üst kanonik checkpoint'tir. #280–#288 kapalı kalır. Bu tur Control Center detail/version yüzeyindeki local JSON metadata restore yolunun gerçek bounded-I/O bulgusu #289 kapatıldı.

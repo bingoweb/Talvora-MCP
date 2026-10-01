@@ -1,5 +1,22 @@
 # Talvora Deep Bug Audit
 
+## CURRENT — 2026-10-01 — #290 bounded tunnel health-url reads
+
+Status: **FINAL LIVE VERIFIED.** Exact-installed runtime `aa7efbd9f74776481fe25c077c87e7558db35b3f`.
+
+- #290 **FIXED / REAL A-B RED->GREEN / INSTALLED VERIFIED** — Control Center component health ve Gitea tunnel readiness, küçük `health/<alias>.url` metadata dosyalarını `File.ReadAllTextAsync` ile sınırsız okuyordu. Gerçek **32 MiB** SYSTEM `gitea-business.url` fixture + actual `GiteaTrayClient.ProbeTunnelAsync` pre-fix HEAD `6bdf076...` build'de **136,023,664 B allocation**, **155,729,920 B WS delta**, **2337 ms** üretti ve sonrasında HTTP timeout yoluna girdi.
+- Fix: shared `Talvora.Shared.TextFileStore.ReadBoundedAsync` tek FileStream handle'ında `stream.Length` ile byte ceiling'i allocation öncesi doğrular, yalnız doğrulanmış snapshot kadar buffer ayırır, `ReadExactlyAsync` ile okur ve UTF-8 decode eder. Control Center ve Gitea health URL consumer'ları **4 KiB** ceiling kullanır; `InvalidDataException` mevcut fail-soft unavailable/offline davranışına çevrilir.
+- Post-fix aynı fixture: **18,240 B allocation**, **4,767,744 B WS delta**, **117 ms**; URI/HTTP aşamasına geçmeden fail-soft döndü.
+- Kalıcı source + behavior gates: UI responsiveness, Gitea readiness, StorageMaintenance source ve 65 B / 64 B bounded-text behavior regression.
+
+Quality: full Release **0 warning / 0 error**; storage source/behavior GREEN; UI responsiveness GREEN; Gitea readiness GREEN; privacy/security GREEN; ModernizationPolicy GREEN; Context7 GREEN; analyzer verify-no-changes exit 0; source Tray self-test + Control Center smoke GREEN.
+
+Runtime/deploy: commit `aa7efbd9...`; Gitea origin + GitHub main senkron. Canonical installer **342,629,647 B**, SHA-256 `15B34E0BDFA5BD1B6FAFDF01BB60F1313418B595D7DE09444D855EE977C263C4`, manifest exact source/head.
+
+Deploy note: ilk denemede new-service start tek seferlik SCM **7009/7000 / 1053 30 s timeout** verdi ve rollback eski `284a065d...` runtime'ı sağlıklı döndürdü. Yeni service EXE console bootstrap'ta Kestrel'e normal ulaştı; Talvora için Defender/Code Integrity block kaydı yoktu. Aynı artifact ikinci denemede 34%->50% yaklaşık **0.37 s**, yeni SCM error yok, `Install succeeded` at 06:33:09.607. Tekrar üretilemediği için ayrı bug açılmadı.
+
+Installed acceptance: exact `sourceCommit=aa7efbd9...`, LocalSystem/S-1-5-18, PID 4724; self-test/Dev/Admin probes exit 0; 32 MiB installed health-url fixture altında Control Center smoke exit 0; Talvora/Gitea/Caddy Running Automatic; fixture geri yüklendi.
+
 ## CURRENT — 2026-09-30 — #289 bounded Control Center local version metadata
 
 Status: **FINAL LIVE VERIFIED.** Exact-installed runtime `284a065d0f8842f3fcde2b2f00739580a383eab0`.
