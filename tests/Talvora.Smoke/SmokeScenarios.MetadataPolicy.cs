@@ -52,6 +52,12 @@ internal static partial class SmokeScenarios
         AssertWorldScope("talvora_modal_app_list", true);
         AssertWorldScope("talvora_modal_endpoint_list", true);
         AssertWorldScope("talvora_modal_run", true);
+        AssertWorldScope("talvora_stitch_info", true);
+        AssertWorldScope("talvora_stitch_schema", true);
+        AssertWorldScope("talvora_stitch_find", true);
+        AssertWorldScope("talvora_stitch_get", true);
+        AssertWorldScope("talvora_stitch_generate", true);
+        AssertWorldScope("talvora_stitch_run", true);
         AssertWorldScope("talvora_penpot_status", true);
         AssertWorldScope("talvora_penpot_overview", true);
         AssertWorldScope("talvora_penpot_read_tool", true);
@@ -303,6 +309,42 @@ internal static partial class SmokeScenarios
         AssertLiveTool(
             tools,
             "talvora_modal_run",
+            readOnly: false,
+            destructive: true,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_stitch_info",
+            readOnly: true,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_stitch_schema",
+            readOnly: true,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_stitch_find",
+            readOnly: true,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_stitch_get",
+            readOnly: true,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_stitch_generate",
+            readOnly: false,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_stitch_run",
             readOnly: false,
             destructive: true,
             openWorld: true);

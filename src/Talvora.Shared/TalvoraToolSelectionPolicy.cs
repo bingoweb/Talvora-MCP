@@ -69,6 +69,16 @@ public static class TalvoraToolSelectionPolicy
                 "talvora_penpot_call_tool",
             ]),
         new(
+            "stitch-design-generation",
+            "Google Stitch ile yeni bir arayüz tasarımı üret; önce canlı CLI sözleşmesini doğrula.",
+            true,
+            TalvoraMcpToolSurface.Development,
+            [
+                "talvora_stitch_info",
+                "talvora_stitch_schema",
+                "talvora_stitch_generate",
+            ]),
+        new(
             "service-restart",
             "Yerel Windows servisini yeniden başlat.",
             true,

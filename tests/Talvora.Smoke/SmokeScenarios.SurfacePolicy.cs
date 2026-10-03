@@ -162,6 +162,30 @@ internal static partial class SmokeScenarios
             development: true,
             administration: false);
         AssertSurface(
+            "talvora_stitch_info",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_schema",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_find",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_get",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_generate",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_run",
+            development: true,
+            administration: false);
+        AssertSurface(
             "talvora_penpot_status",
             development: true,
             administration: false);
