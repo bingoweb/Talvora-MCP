@@ -14,8 +14,8 @@ public enum TalvoraMcpToolSurface
 /// </summary>
 public static class TalvoraMcpToolSurfacePolicy
 {
-    public const int ExpectedFullToolCount = 246;
-    public const int ExpectedDevelopmentToolCount = 209;
+    public const int ExpectedFullToolCount = 258;
+    public const int ExpectedDevelopmentToolCount = 221;
     public const int ExpectedAdministrationToolCount = 84;
     public const int ExpectedSharedToolCount = 47;
 

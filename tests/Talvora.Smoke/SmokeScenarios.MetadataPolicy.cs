@@ -57,6 +57,18 @@ internal static partial class SmokeScenarios
         AssertWorldScope("talvora_stitch_find", true);
         AssertWorldScope("talvora_stitch_get", true);
         AssertWorldScope("talvora_stitch_generate", true);
+        AssertWorldScope("talvora_stitch_create", true);
+        AssertWorldScope("talvora_stitch_edit", true);
+        AssertWorldScope("talvora_stitch_delete", true);
+        AssertWorldScope("talvora_stitch_capture", true);
+        AssertWorldScope("talvora_stitch_upload", true);
+        AssertWorldScope("talvora_stitch_url", true);
+        AssertWorldScope("talvora_stitch_open", true);
+        AssertWorldScope("talvora_stitch_serve_start", true);
+        AssertWorldScope("talvora_stitch_agent_skills", true);
+        AssertWorldScope("talvora_stitch_config", true);
+        AssertWorldScope("talvora_stitch_mcp_status", true);
+        AssertWorldScope("talvora_stitch_mcp_call_tool", true);
         AssertWorldScope("talvora_stitch_run", true);
         AssertWorldScope("talvora_penpot_status", true);
         AssertWorldScope("talvora_penpot_overview", true);
@@ -341,6 +353,36 @@ internal static partial class SmokeScenarios
             "talvora_stitch_generate",
             readOnly: false,
             destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_stitch_create",
+            readOnly: false,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_stitch_delete",
+            readOnly: false,
+            destructive: true,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_stitch_upload",
+            readOnly: false,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_stitch_mcp_status",
+            readOnly: true,
+            destructive: false,
+            openWorld: true);
+        AssertLiveTool(
+            tools,
+            "talvora_stitch_mcp_call_tool",
+            readOnly: false,
+            destructive: true,
             openWorld: true);
         AssertLiveTool(
             tools,

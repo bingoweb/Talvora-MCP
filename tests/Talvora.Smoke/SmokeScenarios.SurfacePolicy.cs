@@ -182,6 +182,54 @@ internal static partial class SmokeScenarios
             development: true,
             administration: false);
         AssertSurface(
+            "talvora_stitch_create",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_edit",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_delete",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_capture",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_upload",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_url",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_open",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_serve_start",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_agent_skills",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_config",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_mcp_status",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_stitch_mcp_call_tool",
+            development: true,
+            administration: false);
+        AssertSurface(
             "talvora_stitch_run",
             development: true,
             administration: false);
