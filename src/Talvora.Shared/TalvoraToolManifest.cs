@@ -258,6 +258,8 @@ public static class TalvoraToolManifest
         "talvora_stitch_mcp_status",
         "talvora_stitch_mcp_call_tool",
         "talvora_stitch_run",
+        "talvora_hostinger_mcp_status",
+        "talvora_hostinger_mcp_call_tool",
         "talvora_penpot_status",
         "talvora_penpot_overview",
         "talvora_penpot_read_tool",
