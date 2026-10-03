@@ -21,7 +21,7 @@ public static class GitHubCliTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraGitHubCliInfoResponse)),
-     Description("Resolve the current GitHub CLI and report its version plus authentication status for the Talvora service context. Missing or unauthenticated gh is reported structurally.")]
+     Description("Resolve the current GitHub CLI and report its version plus authentication status for the logged-on Windows user. Missing or unauthenticated gh is reported structurally.")]
     public static async Task<TalvoraGitHubCliInfoResponse> Info(
         string? workingDirectory = null,
         Dictionary<string, string?>? environment = null,
@@ -41,7 +41,7 @@ public static class GitHubCliTools
 
         var cwd = NormalizeWorkingDirectory(workingDirectory);
 
-        var version = await ProcessRunner.RunAsync(
+        var version = await InteractiveUserProcessRunner.RunAsync(
             executable,
             cwd,
             ["--version"],
@@ -49,7 +49,7 @@ public static class GitHubCliTools
             timeoutSeconds: 30,
             cancellationToken);
 
-        var auth = await ProcessRunner.RunAsync(
+        var auth = await InteractiveUserProcessRunner.RunAsync(
             executable,
             cwd,
             ["auth", "status"],
@@ -77,7 +77,7 @@ public static class GitHubCliTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraCliCommandResponse)),
-     Description("Run GitHub CLI with an arbitrary argument vector, working directory, environment overrides, and timeout. No repository/host/API/issue/pull-request/workflow/release/auth/extension/option allowlist or denylist is applied.")]
+     Description("Run GitHub CLI as the logged-on Windows user with an arbitrary argument vector, working directory, environment overrides, and timeout. This preserves the user's GitHub CLI keyring/session so Talvora does not prompt for a separate LocalSystem login. No repository/host/API/issue/pull-request/workflow/release/auth/extension/option allowlist or denylist is applied.")]
     public static async Task<TalvoraCliCommandResponse> Run(
         string workingDirectory,
         string[] arguments,
@@ -98,7 +98,7 @@ public static class GitHubCliTools
                 "GitHub CLI executable was not found.");
         }
 
-        var result = await ProcessRunner.RunAsync(
+        var result = await InteractiveUserProcessRunner.RunAsync(
             executable,
             NormalizeWorkingDirectory(workingDirectory),
             arguments,
@@ -148,9 +148,18 @@ public static class GitHubCliTools
     private static string NormalizeWorkingDirectory(
         string? workingDirectory)
     {
-        var full = string.IsNullOrWhiteSpace(workingDirectory)
-            ? Path.GetFullPath(Environment.CurrentDirectory)
-            : Path.GetFullPath(workingDirectory);
+        string full;
+        if (string.IsNullOrWhiteSpace(workingDirectory))
+        {
+            var context = WindowsSessionLauncher.GetDefaultInteractiveUser();
+            full = context.UserProfile
+                ?? throw new InvalidOperationException(
+                    "Logged-on Windows user's profile directory could not be resolved.");
+        }
+        else
+        {
+            full = Path.GetFullPath(workingDirectory);
+        }
 
         if (!Directory.Exists(full))
         {
