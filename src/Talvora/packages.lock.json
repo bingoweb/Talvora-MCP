@@ -4,9 +4,12 @@
     "net10.0-windows7.0": {
       "Microsoft.Build.Framework": {
         "type": "Direct",
-        "requested": "[17.14.28, )",
-        "resolved": "17.14.28",
-        "contentHash": "wRcyTzGV0LRAtFdrddtioh59Ky4/zbvyraP0cQkDzRSRkhgAQb0K88D/JNC6VHLIXanRi3mtV1jU0uQkBwmiVg=="
+        "requested": "[18.10.1, )",
+        "resolved": "18.10.1",
+        "contentHash": "nL8dvvg9V/6PJQ92iQheiGnpkgS/VTBV2py8XM0pzxRYc8byHY83IuriHa3YXkLf3KMWnKlkdoTTt0c5irOXZQ==",
+        "dependencies": {
+          "Microsoft.NET.StringTools": "[18.10.1]"
+        }
       },
       "Microsoft.Build.Locator": {
         "type": "Direct",
@@ -165,6 +168,11 @@
         "dependencies": {
           "System.Numerics.Tensors": "9.0.0"
         }
+      },
+      "Microsoft.NET.StringTools": {
+        "type": "Transitive",
+        "resolved": "18.10.1",
+        "contentHash": "/fIQMMIRzamkho+Teh7K0G8YaH85s2meFwxjFleBJ1DMnX2RHnRjg4xyWoFbmj260Vl4W2b1r7CuvbMAC+W+nQ=="
       },
       "Microsoft.VisualStudio.SolutionPersistence": {
         "type": "Transitive",
