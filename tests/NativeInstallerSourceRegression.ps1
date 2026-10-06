@@ -59,6 +59,7 @@ $managedMcpRegistryStore = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talv
 $installerFlow = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.Flow.cs'))
 $installerService = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.Service.cs'))
 $installerCleanupState = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.CleanupState.cs'))
+$installerRollbackState = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.RollbackState.cs'))
 $rebootCleanupStart = $installerCleanupState.IndexOf('private static void ScheduleDirectoryDeletionOnReboot', [StringComparison]::Ordinal)
 $copyTreeStart = $installerCleanupState.IndexOf('private static void CopyTree', $rebootCleanupStart, [StringComparison]::Ordinal)
 if ($rebootCleanupStart -lt 0 -or $copyTreeStart -le $rebootCleanupStart) { throw 'Native installer regression could not isolate reboot cleanup.' }
@@ -743,6 +744,15 @@ $result = [pscustomobject]@{
     InstallerSupportsRollback = (
         $installerProgram -match 'rolling back' -and
         $installerProgram -match 'previousServiceExecutable'
+    )
+    InstallerUserStateRollbackReadsAreBounded = (
+        $installerRollbackState -match 'MaximumInstallerUserStateFileBytes\s*=\s*8\s*\*\s*1024\s*\*\s*1024' -and
+        $installerRollbackState -match 'snapshotLength\s*=\s*stream\.Length' -and
+        $installerRollbackState -match 'ReadExactlyAsync' -and
+        $installerRollbackState -notmatch 'File\.ReadAllBytesAsync' -and
+        $installerCleanupState -match 'TextFileStore\.ReadBoundedAsync\(' -and
+        $installerCleanupState -match 'MaximumInstallerUserStateFileBytes' -and
+        $installerCleanupState -notmatch 'File\.ReadAllTextAsync\(path,\s*cancellationToken\)'
     )
     TraySupportsGracefulShutdown = (
         $trayProgram -match 'Global\\Talvora\.Tray\.Shutdown' -and

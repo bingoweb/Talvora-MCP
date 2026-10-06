@@ -331,7 +331,14 @@ internal static class ControlCenterRepairService
                     await ManagedMcpTunnelHealthService.GetSnapshotAsync(
                         registration,
                         cancellationToken);
-                if (tunnelHealth is { HasCriticalDegradation: true })
+                // A control-plane degradation commonly represents an upstream
+                // network/DNS interruption. tunnel-client already owns retry and
+                // exponential backoff for that condition. Restarting an otherwise
+                // ready runtime here creates a restart storm and makes the remote
+                // MCP less available. Only response-delivery degradation warrants
+                // a tunnel-runtime renewal while the runtime itself still reports
+                // Ready=true; a genuinely unready runtime is handled above.
+                if (tunnelHealth is { RequiresRuntimeRenewal: true })
                 {
                     await ManagedMcpTunnelProvisioningService
                         .DisconnectExistingAsync(
@@ -353,7 +360,7 @@ internal static class ControlCenterRepairService
                             cancellationToken);
 
                     if (refreshedTunnel.Ready &&
-                        refreshedHealth is not { HasCriticalDegradation: true })
+                        refreshedHealth is not { RequiresRuntimeRenewal: true })
                     {
                         return (
                             "Yalnız tünel çalışma katmanını yenile",

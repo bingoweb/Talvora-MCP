@@ -36,6 +36,17 @@ internal sealed record ManagedMcpTunnelHealthSnapshot(
                 "degraded",
                 StringComparison.OrdinalIgnoreCase));
 
+    public bool RequiresRuntimeRenewal =>
+        Components.Any(component =>
+            string.Equals(
+                component.Id,
+                "response-delivery",
+                StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(
+                component.Status,
+                "degraded",
+                StringComparison.OrdinalIgnoreCase));
+
     public bool IsQuietForMaintenance(
         DateTimeOffset nowUtc,
         TimeSpan quietPeriod)

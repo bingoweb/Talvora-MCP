@@ -4,6 +4,9 @@ namespace Talvora.Installer;
 
 internal static partial class InstallerEngine
 {
+    private const int MaximumInstallerUserStateFileBytes =
+        8 * 1024 * 1024;
+
     private sealed record InstallerFileRollbackSnapshot(
         string Path,
         bool Existed,
@@ -58,9 +61,10 @@ internal static partial class InstallerEngine
                 Attributes: null);
         }
 
-        var content = await File.ReadAllBytesAsync(
-            path,
-            cancellationToken);
+        var content =
+            await ReadInstallerUserStateBytesAsync(
+                path,
+                cancellationToken);
         var attributes = File.GetAttributes(path);
 
         return new InstallerFileRollbackSnapshot(
@@ -68,6 +72,35 @@ internal static partial class InstallerEngine
             Existed: true,
             content,
             attributes);
+    }
+
+    private static async Task<byte[]> ReadInstallerUserStateBytesAsync(
+        string path,
+        CancellationToken cancellationToken)
+    {
+        var fullPath = Path.GetFullPath(path);
+        await using var stream = new FileStream(
+            fullPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete,
+            bufferSize: 64 * 1024,
+            FileOptions.Asynchronous |
+            FileOptions.SequentialScan);
+        var snapshotLength = stream.Length;
+        if (snapshotLength > MaximumInstallerUserStateFileBytes)
+        {
+            throw new InvalidDataException(
+                $"Installer user-state file exceeds the {MaximumInstallerUserStateFileBytes}-byte limit: {fullPath}");
+        }
+
+        var content =
+            new byte[checked((int)snapshotLength)];
+        await stream.ReadExactlyAsync(
+                content.AsMemory(),
+                cancellationToken)
+            .ConfigureAwait(false);
+        return content;
     }
 
     private static InstallerTrayStartupRollbackSnapshot

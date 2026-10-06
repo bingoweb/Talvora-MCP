@@ -59,6 +59,7 @@ Assert-Contains $health '"queue"' 'queue health must be parsed'
 Assert-Contains $health '"dispatcher"' 'dispatcher health must be parsed'
 Assert-Contains $health '"mcp"' 'MCP observation health must be parsed'
 Assert-Contains $health 'HasCriticalDegradation' 'critical tunnel component degradation must be explicit'
+Assert-Contains $health 'RequiresRuntimeRenewal' 'runtime renewal must distinguish actionable delivery degradation from upstream control-plane faults'
 
 Assert-Contains $componentHealth 'GetTunnelDiagnosticStatesAsync' 'Control Center must consume detailed tunnel diagnostics'
 Assert-Contains $componentHealth 'Detailed tunnel health timed out.' 'supplemental diagnostics timeout must not fail the full Control Center refresh'
@@ -70,7 +71,8 @@ Assert-Contains $componentHealth '"İş dağıtıcı"' 'Control Center must expo
 Assert-Contains $componentHealth '"Tünel MCP gözlemi"' 'Control Center must expose tunnel-side MCP observations'
 Assert-Contains $detail '"tunnel-health" => "Tünel tanısı"' 'detail UI must label v0.0.15 health rows in user language'
 
-Assert-Contains $repair 'tunnelHealth is { HasCriticalDegradation: true }' 'repair must recognize detailed critical tunnel degradation'
+Assert-Contains $repair 'tunnelHealth is { RequiresRuntimeRenewal: true }' 'repair must renew the runtime only for actionable response-delivery degradation'
+Assert-Contains $repair 'tunnel-client already owns retry and' 'repair must document why control-plane network faults are left to tunnel-client backoff'
 Assert-Contains $repair 'DisconnectExistingAsync' 'critical detailed degradation must use tunnel-only remediation'
 Assert-Contains $repair '"Yalnız tünel çalışma katmanını yenile"' 'targeted repair strategy must remain explicit'
 Assert-Contains $program 'TunnelHealthSchema=' 'managed MCP probe must report detailed health schema'
