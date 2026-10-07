@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-10-07T12:25:00Z",
+  "sourceUrl": "https://www.awwwards.com/",
+  "scope": "Talvora project-delivery enforcement. This change adds the mandatory Awwwards delivery gate itself and does not redesign a user-facing product surface.",
+  "references": [
+    "https://www.awwwards.com/"
+  ],
+  "designDecisions": [
+    "Every Talvora project delivery must carry fresh Awwwards evidence; projects with creative/UI work cannot be pushed or published through Talvora without an Awwwards reference.",
+    "This enforcement change has no end-user visual redesign, so the recorded design decision is explicit non-UI applicability rather than invented visual review evidence."
+  ]
+}

@@ -81,6 +81,9 @@ jobs:
           & ./scripts/Validate-Context7Gate.ps1
           if (-not $?) { throw 'Context7 quality gate failed.' }
 
+          & ./scripts/Validate-ProjectDeliveryGate.ps1
+          if (-not $?) { throw 'Project delivery gate failed.' }
+
           & ./tests/ModernizationPolicyRegression.ps1
           if (-not $?) { throw 'Modernization policy regression failed.' }
 

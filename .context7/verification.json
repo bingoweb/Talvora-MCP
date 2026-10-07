@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-01T17:39:31.347Z",
-  "scope": "Desktop code visibility: dedicated 512 KiB redacted code transport, automatic two-axis expansion from saved compact geometry, larger scrollable monospace code.",
+  "verifiedAtUtc": "2026-10-07T12:25:00Z",
+  "scope": "Project delivery enforcement: Context7 and Awwwards are fail-closed code-based gates for Talvora git push and dotnet publish operations.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -21,7 +21,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET JSON/file-I/O guidance supports FileStream-based asynchronous deserialization and explicitly recommends streaming rather than loading large files entirely into memory. Talvora Memory now caps pending restore manifests at 64 KiB through JsonFileStore.ReadBoundedAsync for restore-status calls and JsonFileStore.ReadBounded for service-startup ApplyPendingRestoreIfPresent. A safe 32 MiB temp manifest through the actual startup method allocated about 268.9 MB / grew working set 168.7 MB pre-fix; the bounded path used about 19.7 KB allocation / 4.4 MB working-set growth while preserving mismatch quarantine behavior."
+      "verified": "Current .NET System.Text.Json guidance documents explicit property lookup and structured JSON parsing, while DateTimeOffset parsing supports UTC-aware freshness checks. Talvora's delivery gate uses strict JSON evidence, required properties, canonical Context7 library IDs, UTC freshness checks, and fail-closed filesystem validation before push/publish."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop",
@@ -45,6 +45,7 @@
     }
   ],
   "vendorSources": [
+    "Context7 /dotnet/docs checked 2026-10-07 for System.Text.Json property validation and UTC DateTimeOffset handling used by the fail-closed project delivery evidence gate.",
     "Fluent 2 color/typography/design-token guidance checked 2026-09-30: neutral surfaces carry hierarchy, semantic colors communicate status, typography uses clear role-based hierarchy, and color should not be the only state signal. Talvora Faz 16 uses neutral graphite/navy cards, cyan only as trace/brand accent, separate success/warning/error/info colors plus textual badges/icons, and centralized notification resources instead of ad-hoc per-update brushes.",
     "Microsoft Windows Terminal/Cascadia guidance checked 2026-09-30: Cascadia Mono is the terminal-oriented monospaced family used by Windows Terminal. Talvora keeps conversational text on Segoe UI Variable Text and uses Cascadia Mono with Consolas fallback only for the compact canonical-tool/time metadata line and the optional real code/diff view; a separate terminal pane is intentionally not shown.",
     "Talvora user-session visual acceptance 2026-09-30: a source-built Tray rendered simultaneous worklog and Alert WPF cards with real Protocol v3 frames on a 2560x1440 desktop. After the first screenshot exposed duplicate terminal/evidence/status information, those panels were removed. Final UI Automation reported CanResize=true for both windows; the Alert rendered at 750x225 physical pixels and the diff-bearing Worklog at 750x385 physical pixels at the active DPI. The final screenshot was inspected for compact hierarchy, single diff surface, semantic status color, no classic resize grip and two-lane visibility. With two windows open, global Tray shutdown completed in 263 ms and the restarted Tray accepted a fresh v3 Alert frame.",

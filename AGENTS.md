@@ -15,6 +15,13 @@
 - Record the Context7 library ID(s) and the verified API/migration point in the active Gitea issue or pull request as the human-readable audit trail. A phase may not be closed without that evidence.
 - If Context7 has no suitable source, record that gap and use the vendor's primary documentation. Never substitute memory or an old code example for current documentation.
 
+## Mandatory project delivery gates
+
+- Context7 is a release/delivery gate enforced by Talvora code, not a prompt convention. Talvora must reject project delivery when fresh, valid .context7/verification.json evidence is missing.
+- Awwwards is the mandatory design delivery reference for every project developed with Talvora. Creative/UI work must review https://www.awwwards.com/ and record fresh machine-readable evidence in .talvora/awwwards-verification.json.
+- These gates are fail-closed. talvora_git_run push and talvora_dotnet_publish must refuse to continue when either evidence contract is missing, stale, malformed, or incomplete.
+- Handoff text, model memory, issue prose, or a verbal claim never satisfies these gates. Only the machine-readable evidence accepted by ProjectDeliveryGate permits delivery.
+
 ## Mandatory Windows desktop progress reporting
 
 - Talvora must proactively report meaningful work to the active interactive Windows desktop. This is a software/runtime contract, not a prompt preference and not an optional courtesy.

@@ -2,6 +2,7 @@ using Talvora.Shared;
 using System.ComponentModel;
 using System.Diagnostics;
 using ModelContextProtocol.Server;
+using Talvora.SourceEditing;
 
 namespace Talvora.Tools;
 
@@ -207,6 +208,9 @@ public static partial class BuildRunnerTools
         int timeoutSeconds = 1800,
         CancellationToken cancellationToken = default)
     {
+        ProjectDeliveryGate.EnsureSatisfied(
+            workingDirectory);
+
         var arguments = new List<string> { "publish" };
         AddTarget(arguments, target);
 

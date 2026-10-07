@@ -525,12 +525,37 @@ public static class GitTools
             "talvora_git_run",
             explicitAdmin);
 
+        if (IsPush(arguments))
+        {
+            ProjectDeliveryGate.EnsureSatisfied(
+                normalizedRepositoryPath);
+        }
+
         return RunGitAsync(
             normalizedRepositoryPath,
             arguments,
             environment,
             timeoutSeconds,
             cancellationToken);
+    }
+
+    private static bool IsPush(IReadOnlyList<string> arguments)
+    {
+        foreach (var argument in arguments)
+        {
+            if (string.IsNullOrWhiteSpace(argument) ||
+                argument.StartsWith("-", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            return string.Equals(
+                argument,
+                "push",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
     }
 
     private static async Task<(
