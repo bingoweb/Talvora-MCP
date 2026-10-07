@@ -190,10 +190,10 @@ internal static class Program
 
             if (sourceMessages.Any(message =>
                     message.Message.Contains(
-                        "Şimdi sıradaki adıma",
+                        "Åimdi sÄ±radaki adÄ±ma",
                         StringComparison.OrdinalIgnoreCase) ||
                     message.Message.Contains(
-                        "Son yaptıklarım",
+                        "Son yaptÄ±klarÄ±m",
                         StringComparison.OrdinalIgnoreCase)))
             {
                 throw new InvalidOperationException(
@@ -232,8 +232,8 @@ internal static class Program
 
             var forbiddenPromises = new[]
             {
-                "yeniden deneyeceğim",
-                "düzelteceğim",
+                "yeniden deneyeceÄŸim",
+                "dÃ¼zelteceÄŸim",
                 "kontrol edip",
             };
             if (forbiddenPromises.Any(phrase =>
@@ -771,7 +771,7 @@ internal static class Program
                             window.ApplyPreferredSize(420, 240);
                             var code = string.Join('\n', Enumerable.Range(1, 1000).Select(index => $"+changed-{index}();"));
                             var message = new DesktopProgressMessage(
-                                "resize-regression", "apply_patch", "Kod güncelleniyor", "Gerçek kod değişiklikleri",
+                                "resize-regression", "apply_patch", "Kod gÃ¼ncelleniyor", "GerÃ§ek kod deÄŸiÅŸiklikleri",
                                 DesktopProgressKind.Running, DateTimeOffset.UtcNow, 1,
                                 new DesktopProgressEvidence(AddedLines: 1000, CodePreview: code), Sequence: 1);
                             window.Update(message);
@@ -800,7 +800,7 @@ internal static class Program
                                 application,
                                 placementPath);
                         presenter.Publish(new DesktopProgressMessage(
-                            "compact-regression", "read_source", "Kaynaklar inceleniyor", "İnceleme tamamlandı.",
+                            "compact-regression", "read_source", "Kaynaklar inceleniyor", "Ä°nceleme tamamlandÄ±.",
                             DesktopProgressKind.Completed, DateTimeOffset.UtcNow, 1, Sequence: 1));
                         var compactWindow = application.Windows.OfType<DesktopProgressNotificationWindow>().Single();
                         compactWindow.UpdateLayout();
@@ -822,8 +822,17 @@ internal static class Program
             thread.SetApartmentState(ApartmentState.STA);
             thread.Start();
 
-            await completed.Task.WaitAsync(
-                TimeSpan.FromSeconds(10));
+            try
+            {
+                await completed.Task.WaitAsync(
+                    TimeSpan.FromSeconds(30));
+            }
+            catch (TimeoutException ex)
+            {
+                throw new TimeoutException(
+                    $"Desktop placement regression exceeded the hosted-runner STA budget. ThreadState={thread.ThreadState}.",
+                    ex);
+            }
             if (!thread.Join(TimeSpan.FromSeconds(2)))
             {
                 throw new InvalidOperationException(

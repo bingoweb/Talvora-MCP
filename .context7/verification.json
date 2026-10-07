@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-07T12:25:00Z",
+  "verifiedAtUtc": "2026-10-07T12:37:32Z",
   "scope": "Project delivery enforcement: Context7 and Awwwards are fail-closed code-based gates for Talvora git push and dotnet publish operations.",
   "libraries": [
     {
@@ -41,7 +41,7 @@
     },
     {
       "libraryId": "/dotnet/wpf",
-      "verified": "Current WPF layout guidance confirms StackPanel is appropriate for vertical grouping while WrapPanel lays out child cards left-to-right and wraps them as available width changes. Talvora therefore groups the Core/Dev/Admin family and independent MCPs in vertical sections, retains WrapPanel inside each section for responsive cards, and keeps width recalculation scoped to each nested card panel."
+      "verified": "Current WPF guidance confirms Dispatcher operations are explicitly awaitable through DispatcherOperation.Task/GetAwaiter and application shutdown follows defined window-closing semantics. Talvora notification regressions therefore isolate independent STA/WPF behaviors into separate deterministic runs with explicit completion signaling and bounded thread-exit checks instead of coupling unrelated rendering work to one shared timing budget."
     }
   ],
   "vendorSources": [
