@@ -1,11 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-07T12:37:32Z",
-  "scope": "Project delivery enforcement: Context7 and Awwwards are fail-closed code-based gates for Talvora git push and dotnet publish operations.",
+  "verifiedAtUtc": "2026-10-07T12:53:51Z",
+  "scope": "Modernization sweep: adopt OpenAI tunnel-client v0.0.16 security/compatibility evidence, keep the .NET 10 SDK and direct NuGet graph current, and suppress the incompatible Microsoft.Build.Framework 18.x Dependabot line until the .NET 11 migration.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
       "verified": "Current GitHub Actions workflow guidance confirms pwsh steps run fail-fast with ErrorActionPreference=Stop and workflow success is determined by process exit status. The failing run therefore correctly stopped at the source-contract regression; the fix belongs in the deterministic regression/source contract rather than in CI error suppression or continue-on-error behavior."
+    },
+    {
+      "libraryId": "/github/docs",
+      "verified": "Current GitHub Dependabot documentation supports per-dependency ignore rules with version constraints. Talvora therefore ignores Microsoft.Build.Framework >=18.0.0 while the repository targets net10.0-windows, preventing a known incompatible upgrade from repeatedly reopening while leaving all other NuGet, SDK and GitHub Actions updates enabled."
     },
     {
       "libraryId": "/websites/sqlite_docs",
@@ -45,6 +49,11 @@
     }
   ],
   "vendorSources": [
+    "OpenAI tunnel-client v0.0.16 release checked 2026-10-07: the release adds optional MCP response timing and opt-in W3C trace-context forwarding, updates OpenTelemetry modules to 1.43.0 for CVE-2026-39883 / GHSA-hfvc-g4fc-pqhx, retains Windows amd64/arm64 release bundles with SHA256SUMS, SPDX and license evidence, and states that timing requires no customer MCP server changes while trace forwarding defaults to false.",
+    "OpenAI tunnel-client v0.0.15...v0.0.16 source comparison checked 2026-10-07: no tunnel logging implementation files changed, so Talvora's verified append-writer log-rotation contract remains applicable to v0.0.16 while the pinned runtime-version gate advances to the new stable release.",
+    ".NET 10.0.12 official release checked 2026-10-07: SDK 10.0.401 is the current .NET 10 feature-band SDK shipped with the September 2026 servicing release; Talvora global.json already pins 10.0.401 and the local machine has that SDK plus the 10.0.12 runtime.",
+    "GitHub Actions releases checked 2026-10-07: actions/checkout v7.0.1 and actions/setup-dotnet v6.0.0 remain the current stable releases, matching Talvora's full-SHA pinned workflow entries.",
+    "NuGet graph checked 2026-10-07 with dotnet list package: no direct Talvora package has a safe stable update except Microsoft.Build.Framework 18.10.1, whose new Microsoft.NET.StringTools 18.10.1 dependency is intentionally incompatible with the current net10.0-windows toolchain; no vulnerable or deprecated packages were reported.",
     "Context7 /dotnet/docs checked 2026-10-07 for System.Text.Json property validation and UTC DateTimeOffset handling used by the fail-closed project delivery evidence gate.",
     "Fluent 2 color/typography/design-token guidance checked 2026-09-30: neutral surfaces carry hierarchy, semantic colors communicate status, typography uses clear role-based hierarchy, and color should not be the only state signal. Talvora Faz 16 uses neutral graphite/navy cards, cyan only as trace/brand accent, separate success/warning/error/info colors plus textual badges/icons, and centralized notification resources instead of ad-hoc per-update brushes.",
     "Microsoft Windows Terminal/Cascadia guidance checked 2026-09-30: Cascadia Mono is the terminal-oriented monospaced family used by Windows Terminal. Talvora keeps conversational text on Segoe UI Variable Text and uses Cascadia Mono with Consolas fallback only for the compact canonical-tool/time metadata line and the optional real code/diff view; a separate terminal pane is intentionally not shown.",

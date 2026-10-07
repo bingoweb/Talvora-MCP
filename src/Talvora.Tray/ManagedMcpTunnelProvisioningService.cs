@@ -934,7 +934,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
             "tunnel_0123456789abcdef0123456789abcdef",
             registration.Endpoint,
             @"C:\Temp\tunnel-client.exe",
-            "v0.0.15",
+            "v0.0.16",
             @"C:\Temp\sample\state",
             DateTimeOffset.UtcNow.ToString("O"));
 

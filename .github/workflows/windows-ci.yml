@@ -90,8 +90,8 @@ jobs:
           & ./tests/ThirdPartyNoticesSourceRegression.ps1
           if (-not $?) { throw 'Third-party notices regression failed.' }
 
-          & ./tests/TunnelClientV015IntegrationSourceRegression.ps1
-          if (-not $?) { throw 'Tunnel-client v0.0.15 integration regression failed.' }
+          & ./tests/TunnelClientV016IntegrationSourceRegression.ps1
+          if (-not $?) { throw 'Tunnel-client v0.0.16 integration regression failed.' }
 
           & ./tests/StorageMaintenanceSourceRegression.ps1
           if (-not $?) { throw 'Storage maintenance regression failed.' }

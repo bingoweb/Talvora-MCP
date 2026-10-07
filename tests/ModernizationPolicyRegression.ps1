@@ -185,6 +185,9 @@ Assert-Contains '.github/workflows/windows-ci.yml' 'Validate-ProjectDeliveryGate
 Assert-Contains '.github/workflows/windows-ci.yml' 'actions/checkout@[0-9a-f]{40}\s+#\s+v\d+\.\d+\.\d+' 'actions/checkout must be pinned to a full release SHA.'
 Assert-Contains '.github/workflows/windows-ci.yml' 'actions/setup-dotnet@[0-9a-f]{40}\s+#\s+v\d+\.\d+\.\d+' 'actions/setup-dotnet must be pinned to a full release SHA.'
 Assert-Contains '.github/dependabot.yml' 'package-ecosystem:\s*"dotnet-sdk"' 'Dependabot must keep global.json current.'
+Assert-Contains '.github/dependabot.yml' 'dependency-name:\s*"Microsoft\.Build\.Framework"' 'Dependabot must retain the net10-compatible Microsoft.Build.Framework guard.'
+Assert-Contains '.github/dependabot.yml' 'versions:\s*\r?\n\s*-\s*">=18\.0\.0"' 'Dependabot must ignore the incompatible Microsoft.Build.Framework 18.x line until the .NET 11 migration.'
+Assert-Contains '.github/workflows/windows-ci.yml' 'TunnelClientV016IntegrationSourceRegression\.ps1' 'CI must validate the current tunnel-client v0.0.16 integration contract.'
 Assert-Contains '.context7/verification.json' '"schemaVersion"\s*:\s*1' 'Context7 evidence schema must remain versioned.'
 
 $projectVersions = Get-ChildItem (Join-Path $root 'src'), (Join-Path $root 'tests') -Filter '*.csproj' -Recurse |

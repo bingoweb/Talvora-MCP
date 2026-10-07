@@ -172,13 +172,13 @@ The following projects are not Talvora-owned. They are separate products or comp
 | Caddy | 2.11.4 | Matthew Holt and The Caddy Authors | Apache-2.0 | local proxy used by the Gitea stack |
 | Penpot | 2.18.0 | KALEIDOS SUBSIDIARY SL | MPL-2.0 | optional self-hosted design integration |
 | Penpot MCP | 2.18.0 source tree | KALEIDOS SUBSIDIARY SL / Penpot contributors | MPL-2.0 | optional local Penpot MCP integration |
-| OpenAI Secure MCP Tunnel client | v0.0.15 | OpenAI | Apache-2.0 | optional outbound transport for ChatGPT Business and managed companion tunnels |
+| OpenAI Secure MCP Tunnel client | v0.0.16 | OpenAI | Apache-2.0 | optional outbound transport for ChatGPT Business and managed companion tunnels |
 | Modal SDK / CLI | 1.5.5 | Modal Labs | Apache-2.0 | optional external SDK/CLI integration |
 
 Additional notes:
 
 - The installed Gitea MCP binary carries its own MIT license notice identifying **The Gitea Authors**.
-- Talvora Dev, Talvora Admin, and the current Gitea companion tunnel all use OpenAI tunnel-client v0.0.15. The Windows amd64 release archive contains the executable together with `LICENSE`, `NOTICE`, a generated dependency-license report, and an SPDX SBOM.
+- Talvora Dev, Talvora Admin, and the current Gitea companion tunnel track OpenAI tunnel-client v0.0.16. The Windows amd64 release archive contains the executable together with `LICENSE`, `NOTICE`, a generated dependency-license report, and an SPDX SBOM.
 - Penpot's own dependency tree and notices remain governed by the Penpot distribution. Talvora does not relicense Penpot or its npm dependencies.
 - Caddy is a registered trademark of Stack Holdings GmbH; use of the name here identifies interoperability only.
 

@@ -43,7 +43,7 @@ Assert-Contains $maintenance 'TimeSpan.FromMinutes(5)' 'tunnel log rotation requ
 Assert-Contains $maintenance 'TimeSpan.FromDays(7)' 'general Talvora temporary artifacts have age retention'
 Assert-Contains $maintenance 'RuntimeLifecycle: "running"' 'maintenance self-test fixture uses the current runtime lifecycle contract'
 Assert-Contains $maintenance 'IsVerifiedInPlaceRotationRuntimeVersion' 'in-place log rotation normalizes the pinned runtime version before gating'
-Assert-Contains $maintenance '0.0.15+acceptance' 'maintenance self-test covers tunnel-client build metadata emitted by live health payloads'
+Assert-Contains $maintenance '0.0.16+acceptance' 'maintenance self-test covers tunnel-client build metadata emitted by live health payloads'
 Assert-Contains $maintenance '"response-delivery",' 'maintenance self-test fixture includes the required idle component set'
 $provisionStart = $provisioning.IndexOf('public static async Task<ManagedMcpRegistration> ProvisionAsync(', [StringComparison]::Ordinal)
 $bindStart = $provisioning.IndexOf('public static async Task<ManagedMcpRegistration> BindExistingTunnelAsync(', [StringComparison]::Ordinal)

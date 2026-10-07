@@ -10,6 +10,13 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
+    ignore:
+      # Microsoft.Build.Framework 18.x pulls Microsoft.NET.StringTools 18.x,
+      # which is not compatible with Talvora's current net10.0-windows toolchain.
+      # Revisit this guard when the repository moves to the .NET 11 toolchain.
+      - dependency-name: "Microsoft.Build.Framework"
+        versions:
+          - ">=18.0.0"
     groups:
       nuget-stable:
         patterns:

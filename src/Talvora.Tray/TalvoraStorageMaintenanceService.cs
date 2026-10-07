@@ -31,7 +31,7 @@ internal static class TalvoraStorageMaintenanceService
         TimeSpan.FromSeconds(2);
 
     private const string InPlaceRotationVerifiedRuntimeVersion =
-        "0.0.15";
+        "0.0.16";
 
     private static readonly JsonSerializerOptions StorageJsonOptions = new()
     {
@@ -69,7 +69,7 @@ internal static class TalvoraStorageMaintenanceService
             SchemaVersion: 1,
             Live: true,
             Ready: true,
-            RuntimeVersion: "0.0.15+acceptance",
+            RuntimeVersion: "0.0.16+acceptance",
             RuntimeLifecycle: "running",
             Components:
             [
@@ -117,11 +117,11 @@ internal static class TalvoraStorageMaintenanceService
             !IsVerifiedInPlaceRotationRuntimeVersion(
                 quiet.RuntimeVersion) ||
             !IsVerifiedInPlaceRotationRuntimeVersion(
-                "v0.0.15") ||
+                "v0.0.16") ||
             IsVerifiedInPlaceRotationRuntimeVersion(
-                "0.0.15-rc.1") ||
+                "0.0.16-rc.1") ||
             IsVerifiedInPlaceRotationRuntimeVersion(
-                "0.0.150"))
+                "0.0.160"))
         {
             throw new InvalidOperationException(
                 "Storage maintenance tunnel-idle/runtime-version contract failed.");
@@ -849,7 +849,7 @@ internal static class TalvoraStorageMaintenanceService
                 archivePath,
                 overwrite: true);
 
-            // The v0.0.15 Windows runtime keeps this log open with append
+            // The v0.0.16 Windows runtime keeps the same append-writer contract
             // semantics and read/write sharing. Truncating the same file
             // preserves the live writer handle and therefore never needs the
             // hard process termination performed by "runtimes stop".
