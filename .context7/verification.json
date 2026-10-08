@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-07T12:53:51Z",
-  "scope": "Modernization sweep: adopt OpenAI tunnel-client v0.0.16 security/compatibility evidence, keep the .NET 10 SDK and direct NuGet graph current, and suppress the incompatible Microsoft.Build.Framework 18.x Dependabot line until the .NET 11 migration.",
+  "verifiedAtUtc": "2026-10-08T12:30:00Z",
+  "scope": "Windows hardware diagnostics: read-only PnP enumeration and DirectShow camera media-mode discovery; .NET System.Management and process tool contracts reviewed against current official documentation.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
