@@ -5,6 +5,8 @@ public static class TalvoraToolManifest
     public static readonly IReadOnlyList<string> Names =
     [
         "talvora_system_info",
+        "talvora_device_inspect",
+        "talvora_camera_modes",
         "talvora_read_text",
         "talvora_read_source",
         "talvora_apply_patch",

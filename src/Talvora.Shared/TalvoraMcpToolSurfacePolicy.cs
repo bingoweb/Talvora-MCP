@@ -14,10 +14,10 @@ public enum TalvoraMcpToolSurface
 /// </summary>
 public static class TalvoraMcpToolSurfacePolicy
 {
-    public const int ExpectedFullToolCount = 260;
-    public const int ExpectedDevelopmentToolCount = 223;
-    public const int ExpectedAdministrationToolCount = 86;
-    public const int ExpectedSharedToolCount = 49;
+    public const int ExpectedFullToolCount = 262;
+    public const int ExpectedDevelopmentToolCount = 225;
+    public const int ExpectedAdministrationToolCount = 88;
+    public const int ExpectedSharedToolCount = 51;
 
     private static readonly HashSet<string> DevelopmentExcludedTools =
         new(StringComparer.Ordinal)
@@ -67,6 +67,8 @@ public static class TalvoraMcpToolSurfacePolicy
             "search",
             "fetch",
             "talvora_run_powershell",
+            "talvora_device_inspect",
+            "talvora_camera_modes",
             "talvora_run_process",
             "talvora_process_get",
             "talvora_process_list",
@@ -158,6 +160,8 @@ public static class TalvoraMcpToolSurfacePolicy
             "search",
             "fetch",
             "talvora_run_powershell",
+            "talvora_device_inspect",
+            "talvora_camera_modes",
             "talvora_run_process",
             "talvora_process_get",
             "talvora_process_list",
