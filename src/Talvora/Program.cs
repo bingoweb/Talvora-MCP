@@ -137,6 +137,7 @@ app.MapGet("/healthz", () =>
 });
 
 PenpotAiPluginEndpoints.Map(app);
+EmbeddedMcpIntegrationHealth.Map(app);
 app.MapMcp("/mcp");
 app.MapMcp("/mcp/dev");
 app.MapMcp("/mcp/admin");

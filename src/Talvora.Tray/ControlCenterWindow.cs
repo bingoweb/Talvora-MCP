@@ -686,6 +686,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             var snapshot = await ControlCenterDashboardService.GetSnapshotAsync(
                 _lifetimeCts.Token);
             _snapshot = snapshot;
+            await RefreshEmbeddedMcpIntegrationsAsync(_lifetimeCts.Token);
             _lastSuccessfulDashboardRefresh = DateTimeOffset.Now;
 
             _healthSummaryText.Text = snapshot.HealthSummary;
@@ -841,6 +842,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
                 "Talvora'dan bağımsız yönetilen yerel MCP ve entegrasyonlar.",
                 otherMcps));
         }
+        AppendEmbeddedMcpIntegrationSection(query, selectedFilter);
 
         _emptyState.Text = _snapshot.Mcps.Count == 0
             ? "Henüz yönetilen bir bileşen bulunamadı."
