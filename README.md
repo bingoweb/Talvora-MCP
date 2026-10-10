@@ -10,10 +10,14 @@
 </p>
 
 <p align="center">
+  <sub>Windows için yerel MCP sunucusu: yapay zekâ destekli yazılım geliştirme, kaynak kod düzenleme ve sistem yönetimi.</sub>
+</p>
+
+<p align="center">
   <a href="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml"><img alt="Windows CI" src="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml/badge.svg?branch=main"></a>
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0B65C2?logo=windows11&logoColor=white">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white">
-  <img alt="Focused MCP endpoints" src="https://img.shields.io/badge/MCP-Dev%20%7C%20Admin-198754">
+  <img alt="MCP 234 tools" src="https://img.shields.io/badge/MCP-234%20tools-198754">
   <img alt="Active development" src="https://img.shields.io/badge/status-active%20development-6C757D">
 </p>
 
@@ -34,12 +38,20 @@
 ---
 
 <p align="center">
-  <img src="docs/media/control-center.png" alt="Talvora Control Center" width="100%" />
+  <img src="docs/media/control-center.png" alt="Native Talvora Control Center with navigation, health cards and MCP services" width="100%" />
 </p>
 
 <p align="center">
-  <sub>Actual Talvora Control Center render from the current Windows build.</sub>
+  <sub>Actual WPF Control Center smoke-test render from the current Windows build. Health reflects the test workstation.</sub>
 </p>
+
+## What's new
+
+- **Rebuilt desktop experience:** a Stitch-inspired, native WPF Control Center with clear sidebar navigation, live status cards, full-width MCP service rows and a collapsible setup panel.
+- **Honest service health:** intentionally stopped or on-demand MCPs are neutral, not red errors. Genuine outages and warnings remain visible.
+- **User-controlled notifications:** code output may expand the notification vertically without changing its user-set width; non-code updates return to a compact layout.
+- **Lean MCP surface:** **234 total**, **197 Dev**, **88 Admin**, with **51 explicitly shared** tools. The former automatic memory and embedding subsystem has been removed.
+- **Reproducible Windows delivery:** locked dependencies, GitHub Actions, a canonical installer and installed-runtime MCP smoke tests.
 
 ## Why Talvora exists
 
@@ -114,7 +126,7 @@ Talvora exposes three local endpoints:
 | <code>/mcp/dev</code> | Development, source editing, builds, Git, jobs, Penpot and Modal workflows | **197** |
 | <code>/mcp/admin</code> | Windows administration, services, registry, environment and machine management | **88** |
 
-Dev and Admin share **47 reviewed tools** for diagnostics and common fallback operations. The overlap is explicit and regression-tested; it is not accidental duplication.
+Dev and Admin share **51 reviewed tools** for diagnostics and common fallback operations. The overlap is explicit and regression-tested; it is not accidental duplication.
 
 Examples of intentional role separation:
 
@@ -130,6 +142,8 @@ The Control Center is a native WPF desktop application, not a web dashboard bolt
 It provides:
 
 - live health for Talvora Core, Talvora Dev, Talvora Admin and managed integrations;
+- a light, Stitch-inspired layout with real sidebar navigation, snapshot-derived metrics and full-width service rows;
+- neutral status for intentionally stopped or on-demand integrations;
 - clear component roles instead of treating every connection as another service;
 - start, stop and restart lifecycle actions;
 - OpenAI tunnel-client v0.0.16 component health for control-plane polling, response delivery, queue pressure, dispatcher activity and tunnel-side MCP observations;
@@ -260,10 +274,12 @@ The Business setup uses OpenAI Secure MCP Tunnel to attach the focused Dev/Admin
 
 ### Install or rebuild
 
-Run from the repository root:
+Clone the repository, then install from an **elevated Windows PowerShell or Terminal**:
 
-~~~bat
-TALVORA-KUR.cmd
+~~~powershell
+git clone https://github.com/bingoweb/Talvora-MCP.git
+cd Talvora-MCP
+.\TALVORA-KUR.cmd
 ~~~
 
 The canonical installer publishes the runtime, installs the Windows Service, updates the Tray/Control Center and verifies the deployed MCP surface.

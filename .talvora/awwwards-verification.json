@@ -1,13 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-10T21:29:07Z",
+  "verifiedAtUtc": "2026-10-10T22:01:04Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "Talvora Q-01..Q-06 quality audit closeout. This batch changes only backend JSON/text bounded reads, verification schema, job-log file ownership, regression fixtures and documentation; no user-facing visual surface is redesigned.",
+  "scope": "Public GitHub repository landing-page refresh (2026-10-11 TRT): current native WPF screenshot, real MCP counts, concise bilingual introduction and documentation navigation. Metadata description and search topics are updated through authenticated GitHub CLI; the Windows runtime is unchanged.",
   "references": [
-    "https://www.awwwards.com/"
+    "https://www.awwwards.com/websites/single-page-1/",
+    "https://www.awwwards.com/sites/kaleidoztm-design-website"
   ],
   "designDecisions": [
-    "The audit does not change visual components or design tokens. The existing reviewed Awwwards reference is retained; the verified decision is no visual applicability to Q-01..Q-06.",
-    "This enforcement change has no end-user visual redesign, so the recorded design decision is explicit non-UI applicability rather than invented visual review evidence."
+    "Use authentic current WPF Control Center imagery rather than a fabricated web mockup or obsolete screenshot containing the removed Memory button.",
+    "Use accessible content hierarchy: project identity, short description, live CI badge, direct documentation navigation, latest capabilities, then detailed implementation notes.",
+    "Keep the restrained existing brand palette; avoid decorative fake metrics and invented online product URLs. Explicitly label the screenshot health as a smoke-test workstation state.",
+    "Improve GitHub discoverability with accurate About text, 15 relevant technology topics and a Turkish introductory line while retaining clear English technical documentation."
   ]
 }
