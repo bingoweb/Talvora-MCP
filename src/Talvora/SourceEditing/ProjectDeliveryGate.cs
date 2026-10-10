@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using Talvora.Shared;
 
 namespace Talvora.SourceEditing;
 
@@ -7,6 +8,7 @@ internal static class ProjectDeliveryGate
 {
     private const string Context7Evidence = ".context7/verification.json";
     private const string AwwwardsEvidence = ".talvora/awwwards-verification.json";
+    private const int MaximumEvidenceFileBytes = 256 * 1024;
     private static readonly TimeSpan MaximumEvidenceAge = TimeSpan.FromDays(14);
     private static readonly TimeSpan MaximumFutureSkew = TimeSpan.FromMinutes(15);
 
@@ -40,6 +42,10 @@ internal static class ProjectDeliveryGate
         var path = Path.Combine(root, Context7Evidence.Replace('/', Path.DirectorySeparatorChar));
         using var document = ReadEvidence(path, "Context7");
         var evidence = document.RootElement;
+        if (evidence.ValueKind != JsonValueKind.Object)
+        {
+            throw Blocked("Context7 evidence must be a JSON object.");
+        }
         RequireSchemaVersion(evidence, "Context7");
         RequireFreshTimestamp(evidence, "Context7");
         if (!evidence.TryGetProperty("scope", out var scope) ||
@@ -56,10 +62,13 @@ internal static class ProjectDeliveryGate
         }
         foreach (var library in libraries.EnumerateArray())
         {
+            if (library.ValueKind != JsonValueKind.Object)
+            {
+                throw Blocked("Every Context7 library entry must be a JSON object.");
+            }
             var libraryId = library.TryGetProperty("libraryId", out var id) && id.ValueKind == JsonValueKind.String ? id.GetString() : null;
             var verified = library.TryGetProperty("verified", out var guidance) && guidance.ValueKind == JsonValueKind.String ? guidance.GetString() : null;
-            if (string.IsNullOrWhiteSpace(libraryId) ||
-                !libraryId.StartsWith("/", StringComparison.Ordinal) ||
+            if (!IsCanonicalLibraryId(libraryId) ||
                 string.IsNullOrWhiteSpace(verified))
             {
                 throw Blocked("Every Context7 library entry must contain a canonical /org/project libraryId and verified guidance.");
@@ -67,9 +76,12 @@ internal static class ProjectDeliveryGate
         }
         if (!evidence.TryGetProperty("vendorSources", out var vendorSources) ||
             vendorSources.ValueKind != JsonValueKind.Array ||
-            vendorSources.GetArrayLength() == 0)
+            vendorSources.GetArrayLength() == 0 ||
+            vendorSources.EnumerateArray().Any(source =>
+                source.ValueKind != JsonValueKind.String ||
+                string.IsNullOrWhiteSpace(source.GetString())))
         {
-            throw Blocked("Context7 evidence must include at least one official/vendor source confirmation.");
+            throw Blocked("Context7 evidence must contain non-empty official/vendor source confirmations.");
         }
     }
 
@@ -78,6 +90,10 @@ internal static class ProjectDeliveryGate
         var path = Path.Combine(root, AwwwardsEvidence.Replace('/', Path.DirectorySeparatorChar));
         using var document = ReadEvidence(path, "Awwwards");
         var evidence = document.RootElement;
+        if (evidence.ValueKind != JsonValueKind.Object)
+        {
+            throw Blocked("Awwwards evidence must be a JSON object.");
+        }
         RequireSchemaVersion(evidence, "Awwwards");
         RequireFreshTimestamp(evidence, "Awwwards");
         var sourceUrl = evidence.TryGetProperty("sourceUrl", out var source) && source.ValueKind == JsonValueKind.String ? source.GetString() : null;
@@ -113,11 +129,25 @@ internal static class ProjectDeliveryGate
         }
         try
         {
-            return JsonDocument.Parse(File.ReadAllText(path));
+            return JsonFileStore.ReadBounded<JsonDocument>(
+                path,
+                MaximumEvidenceFileBytes);
         }
         catch (JsonException ex)
         {
             throw Blocked($"{gate} evidence is not valid JSON: {ex.Message}");
+        }
+        catch (InvalidDataException ex)
+        {
+            throw Blocked($"{gate} evidence is missing, malformed, or too large: {ex.Message}");
+        }
+        catch (IOException ex)
+        {
+            throw Blocked($"{gate} evidence could not be read: {ex.Message}");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw Blocked($"{gate} evidence is not accessible: {ex.Message}");
         }
     }
 
@@ -160,6 +190,23 @@ internal static class ProjectDeliveryGate
         uri.Scheme == Uri.UriSchemeHttps &&
         (string.Equals(uri.Host, "awwwards.com", StringComparison.OrdinalIgnoreCase) ||
          string.Equals(uri.Host, "www.awwwards.com", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsCanonicalLibraryId(string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id) ||
+            !id.StartsWith("/", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var components = id.Split('/');
+        return components.Length >= 3 &&
+            components[0].Length == 0 &&
+            components.Skip(1).All(component =>
+                !string.IsNullOrWhiteSpace(component) &&
+                !component.Any(char.IsWhiteSpace) &&
+                !component.Contains('\\'));
+    }
 
     private static InvalidOperationException Blocked(string reason) =>
         new($"TALVORA_DELIVERY_GATE_BLOCKED: {reason}");

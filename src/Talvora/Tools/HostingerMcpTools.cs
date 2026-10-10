@@ -29,6 +29,8 @@ public sealed record HostingerMcpStatusResponse(
 public static class HostingerMcpTools
 {
     private const int MaxArgumentsJsonCharacters = 4 * 1024 * 1024;
+    private const int MaximumCredentialBytes = 64 * 1024;
+    private const int MaximumPackageMetadataBytes = 256 * 1024;
 
     [McpServerTool(
         Name = "talvora_hostinger_mcp_status",
@@ -76,6 +78,7 @@ public static class HostingerMcpTools
         }
         catch (Exception ex) when (
             ex is McpException or
+            InvalidDataException or
             InvalidOperationException or
             IOException or
             UnauthorizedAccessException or
@@ -220,7 +223,8 @@ public static class HostingerMcpTools
                 "Secrets",
                 "hostinger-api-token.txt");
             return File.Exists(path) &&
-                !string.IsNullOrWhiteSpace(File.ReadAllText(path));
+                !string.IsNullOrWhiteSpace(
+                    TextFileStore.ReadBounded(path, MaximumCredentialBytes));
         }
         catch
         {
@@ -244,7 +248,8 @@ public static class HostingerMcpTools
                 tokenPath);
         }
 
-        var token = File.ReadAllText(tokenPath).Trim();
+        var token = TextFileStore.ReadBounded(
+            tokenPath, MaximumCredentialBytes).Trim();
         if (string.IsNullOrWhiteSpace(token))
         {
             throw new InvalidOperationException(
@@ -256,8 +261,8 @@ public static class HostingerMcpTools
 
     private static string ReadPackageVersion(string packageJson)
     {
-        using var document = JsonDocument.Parse(
-            File.ReadAllText(packageJson));
+        using var document = JsonFileStore.ReadBounded<JsonDocument>(
+            packageJson, MaximumPackageMetadataBytes);
         return document.RootElement.TryGetProperty(
                 "version",
                 out var version) &&

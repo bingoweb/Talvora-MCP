@@ -1,3 +1,10 @@
+if (args.Contains("--quality-audit-only", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunQualityAuditAsync();
+    Console.WriteLine("TALVORA QUALITY AUDIT REGRESSION GREEN");
+    return;
+}
+
 if (args.Contains(
         "--semantic-solution-only",
         StringComparer.OrdinalIgnoreCase))

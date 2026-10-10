@@ -128,32 +128,45 @@ public static partial class JobTools
         FileStream File,
         long Generation)> OpenStableJobLogSnapshotAsync(
         string path,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<string, CancellationToken, Task<long>>? generationReader = null)
     {
+        var readGeneration = generationReader ?? ReadLogGenerationAsync;
         for (var attempt = 0; attempt < 5; attempt++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                var before = await ReadLogGenerationAsync(
+                var before = await readGeneration(
                     path,
                     cancellationToken).ConfigureAwait(false);
-                var file = new FileStream(
-                    path,
-                    FileMode.Open,
-                    FileAccess.Read,
-                    FileShare.ReadWrite | FileShare.Delete,
-                    bufferSize: 64 * 1024,
-                    useAsync: true);
-                var after = await ReadLogGenerationAsync(
-                    path,
-                    cancellationToken).ConfigureAwait(false);
-                if (before == after)
+                FileStream? file = null;
+                try
                 {
-                    return (file, before);
+                    file = new FileStream(
+                        path,
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.ReadWrite | FileShare.Delete,
+                        bufferSize: 64 * 1024,
+                        useAsync: true);
+                    var after = await readGeneration(
+                        path,
+                        cancellationToken).ConfigureAwait(false);
+                    if (before == after)
+                    {
+                        var stableFile = file;
+                        file = null;
+                        return (stableFile, before);
+                    }
                 }
-
-                await file.DisposeAsync().ConfigureAwait(false);
+                finally
+                {
+                    if (file is not null)
+                    {
+                        await file.DisposeAsync().ConfigureAwait(false);
+                    }
+                }
             }
             catch (FileNotFoundException) when (attempt < 4)
             {

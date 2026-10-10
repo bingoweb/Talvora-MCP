@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-09T14:46:40Z",
-  "scope": "Talvora Windows-native .NET 10 quality audit: strict project-delivery evidence schema, bounded JSON/text metadata reads, job-log FileStream ownership, and isolated RED-to-GREEN regression verification. Earlier scoped evidence remains below.",
+  "verifiedAtUtc": "2026-10-10T21:29:07Z",
+  "scope": "Talvora Windows-native .NET 10 quality audit closeout 2026-10-11: strict delivery evidence schema, bounded JSON and text metadata, job-log FileStream ownership, isolated regression checks, full Release build and installed acceptance. Context7 /dotnet/docs rechecked 2026-10-11 for JsonElement ValueKind/TryGetProperty/EnumerateArray and FileStream async/exception behavior. Earlier scoped evidence remains below.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",

@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-07T12:25:00Z",
+  "verifiedAtUtc": "2026-10-10T21:29:07Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "Talvora project-delivery enforcement. This change adds the mandatory Awwwards delivery gate itself and does not redesign a user-facing product surface.",
+  "scope": "Talvora Q-01..Q-06 quality audit closeout. This batch changes only backend JSON/text bounded reads, verification schema, job-log file ownership, regression fixtures and documentation; no user-facing visual surface is redesigned.",
   "references": [
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
-    "Every Talvora project delivery must carry fresh Awwwards evidence; projects with creative/UI work cannot be pushed or published through Talvora without an Awwwards reference.",
+    "The audit does not change visual components or design tokens. The existing reviewed Awwwards reference is retained; the verified decision is no visual applicability to Q-01..Q-06.",
     "This enforcement change has no end-user visual redesign, so the recorded design decision is explicit non-UI applicability rather than invented visual review evidence."
   ]
 }

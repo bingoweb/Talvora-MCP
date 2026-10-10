@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Talvora.Shared;
 
 namespace Talvora;
 
@@ -6,6 +7,7 @@ public sealed record TalvoraRuntimeMetadata(
     string? SourceCommit,
     string? InstalledAtUtc)
 {
+    private const int MaximumRuntimeMetadataBytes = 16 * 1024;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -19,9 +21,11 @@ public sealed record TalvoraRuntimeMetadata(
 
     public static TalvoraRuntimeMetadata Load() => Cached.Value;
 
-    private static TalvoraRuntimeMetadata LoadFromDisk()
+    private static TalvoraRuntimeMetadata LoadFromDisk() =>
+        ReadFromPath(Path.Combine(AppContext.BaseDirectory, "talvora-runtime.json"));
+
+    internal static TalvoraRuntimeMetadata ReadFromPath(string path)
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "talvora-runtime.json");
         if (!File.Exists(path))
         {
             return Empty;
@@ -29,13 +33,18 @@ public sealed record TalvoraRuntimeMetadata(
 
         try
         {
-            var metadata = JsonSerializer.Deserialize<TalvoraRuntimeMetadata>(
-                File.ReadAllText(path),
+            var metadata = JsonFileStore.ReadBounded<TalvoraRuntimeMetadata>(
+                path,
+                MaximumRuntimeMetadataBytes,
                 JsonOptions);
 
             return metadata ?? Empty;
         }
         catch (JsonException)
+        {
+            return Empty;
+        }
+        catch (InvalidDataException)
         {
             return Empty;
         }

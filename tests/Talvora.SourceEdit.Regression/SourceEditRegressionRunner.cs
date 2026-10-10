@@ -8,6 +8,7 @@ internal static partial class SourceEditRegressionRunner
         var tests = new (string Name, Func<Task> Run)[]
         {
             ("exact-patch-success", ExactPatchSuccessAsync),
+            ("quality-audit-delivery-and-jobs", RunQualityAuditAsync),
             ("unified-diff-compatibility", UnifiedDiffCompatibilityAsync),
             ("unified-diff-exact-guards", UnifiedDiffExactGuardsAsync),
             ("context-missing", ContextMissingAsync),

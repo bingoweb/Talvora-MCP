@@ -41,6 +41,8 @@ private static string GetJobsRoot()
     private static string GetLogGenerationPath(string path) =>
         path + ".generation";
 
+    private const int MaximumLogGenerationBytes = 64;
+
     private static async Task<long> ReadLogGenerationAsync(
         string path,
         CancellationToken cancellationToken)
@@ -51,8 +53,9 @@ private static string GetJobsRoot()
             return 0;
         }
 
-        var text = await File.ReadAllTextAsync(
+        var text = await TextFileStore.ReadBoundedAsync(
             generationPath,
+            MaximumLogGenerationBytes,
             cancellationToken).ConfigureAwait(false);
         if (!long.TryParse(text.Trim(), out var generation) ||
             generation < 0)
