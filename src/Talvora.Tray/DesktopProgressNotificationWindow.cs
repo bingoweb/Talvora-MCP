@@ -35,7 +35,6 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
         TimeSpan.FromSeconds(10);
     private const int WmEnterSizeMove = 0x0231;
     private const int WmExitSizeMove = 0x0232;
-    private const double AutomaticDiffWidthDip = 960;
 
     private Border _root = null!;
     private Border _accent = null!;
@@ -63,13 +62,13 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
     private bool _isClosing;
     private bool _manualClose;
     private bool _isStale;
+    private bool _wasShowingCode;
+    private bool _autoDiffHeightExpanded;
     private DateTimeOffset _lastPayloadUpdatedUtc;
     private DesktopProgressMessage? _lastMessage;
     private HwndSource? _windowSource;
     private double _interactiveResizeStartWidth;
     private double _interactiveResizeStartHeight;
-    private bool _autoDiffExpanded;
-    private bool _automaticSizePersistenceRequested;
 
     public DesktopProgressNotificationWindow()
     {
@@ -97,8 +96,6 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
 
     public bool WasManuallyClosed => _manualClose;
 
-    public bool AutomaticSizePersistenceRequested =>
-        _automaticSizePersistenceRequested;
 
     public bool IsTerminal =>
         LastKind is
@@ -120,9 +117,9 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
             return;
         }
 
+        SizeToContent = SizeToContent.Manual;
         Width = Math.Clamp(widthDip, MinWidth, MaxWidth);
         Height = Math.Clamp(heightDip, MinHeight, MaxHeight);
-        SizeToContent = SizeToContent.Manual;
         EnableResponsiveSizing();
         _initialSizeLocked = true;
     }
@@ -389,42 +386,47 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
             _diffPanel.Visibility = Visibility.Collapsed;
             MinHeight = 150;
             SetTextIfChanged(_codePreview, string.Empty);
+            if (_wasShowingCode)
+            {
+                // A code-free update may shrink; manual code sizing is restored on the next code update.
+                _wasShowingCode = false;
+                _autoDiffHeightExpanded = false;
+                SizeToContent = SizeToContent.Height;
+            }
             return;
         }
 
+        _wasShowingCode = true;
         _diffPanel.Visibility = Visibility.Visible;
-        MinHeight = Math.Min(360, MaxHeight);
         _diffHeader.Text = $"KOD DEĞİŞİKLİKLERİ · {DesktopProgressVisualTheme.Describe(message.Kind).Label}  +{evidence?.AddedLines ?? 0}  −{evidence?.RemovedLines ?? 0}";
         SetTextIfChanged(
             _codePreview,
             codePreview);
-        EnsureDiffWidth();
+        ExpandForCodeHeight();
     }
 
-    private void EnsureDiffWidth()
+    private void ExpandForCodeHeight()
     {
-        if (_autoDiffExpanded)
+        if (_autoDiffHeightExpanded)
         {
             return;
         }
 
-        var targetWidth = Math.Min(
-            MaxWidth,
-            Math.Max(Width, AutomaticDiffWidthDip));
-        var lineCount = _codePreview.Text.Count(character => character == '\n') + 1;
-        var targetHeight = Math.Min(MaxHeight, Math.Clamp(220 + lineCount * 17.0, 460, 720));
-        var currentHeight = double.IsFinite(Height) ? Height : Math.Max(ActualHeight, MinHeight);
+        // Expand vertically for code, but never change the user's width.
+        var lineCount = _codePreview.Text.Count(c => c == '\n') + 1;
+        var targetHeight = Math.Min(
+            MaxHeight,
+            Math.Clamp(220 + lineCount * 17.0, 460, 720));
+        var currentHeight = double.IsFinite(Height)
+            ? Height
+            : Math.Max(ActualHeight, MinHeight);
+
         SizeToContent = SizeToContent.Manual;
-        Width = targetWidth;
         Height = Math.Min(MaxHeight, Math.Max(currentHeight, targetHeight));
         EnableResponsiveSizing();
         _initialSizeLocked = true;
-        _autoDiffExpanded = true;
-        _automaticSizePersistenceRequested = true;
+        _autoDiffHeightExpanded = true;
     }
-
-    public void MarkAutomaticSizePersistenceHandled() =>
-        _automaticSizePersistenceRequested = false;
 
     private void AttachNativeWindowHook()
     {

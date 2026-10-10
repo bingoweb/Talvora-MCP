@@ -81,6 +81,7 @@ internal static class Program
                         "Talvora Dev/Admin yönetim kayıtları eksik.");
                 }
                 ManagedMcpRecoveryState.AssertPolicyContract();
+                ManagedMcpAggregateHealthPolicy.AssertContract();
                 ControlCenterEventStore.AssertPolicyContract();
                 ControlCenterRawLogService.AssertBoundedReadContract();
                 DpapiSecretStore.AssertRoundTripContract();

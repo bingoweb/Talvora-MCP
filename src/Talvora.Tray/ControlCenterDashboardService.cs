@@ -49,15 +49,25 @@ internal static class ControlCenterDashboardService
 
         var ready = ordered.Count(state =>
             state.Health == ControlCenterHealthState.Ready);
-        var attention = ordered.Count(state =>
+        var classified = ordered.Select(state => (
+            State: state,
+            Ignored: ManagedMcpAggregateHealthPolicy.IsIgnored(
+                state.Registration,
+                state.Health,
+                ManagedMcpSessionState.IsManuallyStopped(
+                    state.Registration.Id)))).ToArray();
+        var active = classified
+            .Where(item => !item.Ignored)
+            .Select(item => item.State)
+            .ToArray();
+        var attention = active.Count(state =>
             state.Health is ControlCenterHealthState.Attention
                 or ControlCenterHealthState.Checking);
-        var offline = ordered.Count(state =>
-            state.Health == ControlCenterHealthState.Offline &&
-            state.Registration.AutoStart);
-        var onDemandStopped = ordered.Count(state =>
-            state.Health == ControlCenterHealthState.Offline &&
-            !state.Registration.AutoStart);
+        var offline = active.Count(state =>
+            state.Health == ControlCenterHealthState.Offline);
+        var onDemandStopped = classified.Count(item =>
+            item.Ignored &&
+            item.State.Health != ControlCenterHealthState.Ready);
         var tunnelCount = ordered.Count(state =>
             state.Registration.Tunnel is not null);
 

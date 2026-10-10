@@ -13,6 +13,7 @@ internal static class Program
     {
         await DesktopProgressProtocol.AssertContractAsync();
         DesktopProgressPresentationState.AssertContract();
+        ManagedMcpAggregateHealthPolicy.AssertContract();
         await AssertWorkVisibilityFilteringAsync();
         await AssertDiffEvidenceCoverageAsync();
         await AssertSemanticMessagingAndCanonicalToolAsync();
@@ -777,18 +778,26 @@ internal static class Program
                             window.Update(message);
                             window.Show();
                             window.UpdateLayout();
-                            if (window.ActualWidth < 959 || window.ActualHeight < 719 ||
+                            if (Math.Abs(window.ActualWidth - 420) > 0.75 ||
+                                Math.Abs(window.ActualHeight - 720) > 0.75 ||
                                 window.SizeToContent != System.Windows.SizeToContent.Manual)
                             {
-                                throw new InvalidOperationException("Saved compact size blocked automatic two-axis diff expansion.");
+                                throw new InvalidOperationException(
+                                    "Code output must expand height while retaining the user's width.");
                             }
                             var width = window.ActualWidth;
                             var height = window.ActualHeight;
-                            window.Update(message with { Kind = DesktopProgressKind.Completed, Sequence = 2 });
-                            window.UpdateLayout();
-                            if (Math.Abs(window.ActualWidth - width) > 0.5 || Math.Abs(window.ActualHeight - height) > 0.5)
+                            window.Update(message with
                             {
-                                throw new InvalidOperationException("Terminal update shrank the expanded diff window.");
+                                Kind = DesktopProgressKind.Completed,
+                                Sequence = 2,
+                            });
+                            window.UpdateLayout();
+                            if (Math.Abs(window.ActualWidth - width) > 0.75 ||
+                                Math.Abs(window.ActualHeight - height) > 0.75)
+                            {
+                                throw new InvalidOperationException(
+                                    "Terminal code update changed the user-selected notification size.");
                             }
                         }
                         finally
@@ -807,6 +816,110 @@ internal static class Program
                         if (compactWindow.ActualWidth > 501 || compactWindow.ActualHeight > 300)
                         {
                             throw new InvalidOperationException("A notification without code inherited oversized code geometry.");
+                        }
+                        var regressionCode = string.Join(
+                            '\n',
+                            Enumerable.Range(1, 1000)
+                                .Select(index => $"+changed-{index}();"));
+                        var savedCodeMessage = new DesktopProgressMessage(
+                            "saved-size-code",
+                            "apply_patch",
+                            "Kod değişiklikleri",
+                            "Kod önizlemesi",
+                            DesktopProgressKind.Running,
+                            DateTimeOffset.UtcNow,
+                            1,
+                            new DesktopProgressEvidence(
+                                AddedLines: 1000,
+                                CodePreview: regressionCode),
+                            Sequence: 1);
+                        presenter.Publish(savedCodeMessage);
+                        var savedCodeWindow = application.Windows
+                            .OfType<DesktopProgressNotificationWindow>()
+                            .Single(item => item.OperationId == "saved-size-code");
+                        savedCodeWindow.UpdateLayout();
+                        var expandedSavedHeight = Math.Min(
+                            720,
+                            savedCodeWindow.MaxHeight);
+                        if (Math.Abs(savedCodeWindow.ActualWidth - 598) > 0.75 ||
+                            Math.Abs(savedCodeWindow.ActualHeight - expandedSavedHeight) > 1)
+                        {
+                            throw new InvalidOperationException(
+                                $"Saved width was ignored or code height did not expand: " +
+                                $"width={savedCodeWindow.ActualWidth:F2}, height={savedCodeWindow.ActualHeight:F2}, " +
+                                $"expectedHeight={expandedSavedHeight:F2}.");
+                        }
+                        presenter.Publish(savedCodeMessage with
+                        {
+                            Evidence = null,
+                            Sequence = 2,
+                        });
+                        savedCodeWindow.UpdateLayout();
+                        if (savedCodeWindow.SizeToContent !=
+                            System.Windows.SizeToContent.Height)
+                        {
+                            throw new InvalidOperationException(
+                                "A notification without code did not return to compact height sizing.");
+                        }
+                        presenter.Publish(savedCodeMessage with
+                        {
+                            Sequence = 3,
+                        });
+                        savedCodeWindow.UpdateLayout();
+                        if (savedCodeWindow.SizeToContent != System.Windows.SizeToContent.Manual ||
+                            Math.Abs(savedCodeWindow.ActualWidth - 598) > 0.75 ||
+                            Math.Abs(savedCodeWindow.ActualHeight - expandedSavedHeight) > 1)
+                        {
+                            throw new InvalidOperationException(
+                                $"Code must restore vertical expansion without changing the user's width: mode={savedCodeWindow.SizeToContent}, width={savedCodeWindow.ActualWidth:F2}, height={savedCodeWindow.ActualHeight:F2}.");
+                        }
+
+                        using var defaultPresenter =
+                            new DesktopProgressNotificationPresenter(
+                                application,
+                                Path.Combine(root, "no-preference.json"));
+                        defaultPresenter.Publish(savedCodeMessage with
+                        {
+                            OperationId = "default-size-code",
+                        });
+                        var defaultCodeWindow = application.Windows
+                            .OfType<DesktopProgressNotificationWindow>()
+                            .Single(item => item.OperationId == "default-size-code");
+                        defaultCodeWindow.UpdateLayout();
+                        var expandedDefaultHeight = Math.Min(
+                            720,
+                            defaultCodeWindow.MaxHeight);
+                        if (Math.Abs(defaultCodeWindow.ActualWidth - 500) > 0.75 ||
+                            Math.Abs(defaultCodeWindow.ActualHeight - expandedDefaultHeight) > 1)
+                        {
+                            throw new InvalidOperationException(
+                                "Code notification must grow vertically without widening the default width.");
+                        }
+                        defaultPresenter.Publish(savedCodeMessage with
+                        {
+                            OperationId = "default-size-code",
+                            Evidence = null,
+                            Sequence = 2,
+                        });
+                        defaultCodeWindow.UpdateLayout();
+                        if (defaultCodeWindow.SizeToContent !=
+                            System.Windows.SizeToContent.Height)
+                        {
+                            throw new InvalidOperationException(
+                                "Unconfigured code-free notification did not shrink naturally.");
+                        }
+                        defaultPresenter.Publish(savedCodeMessage with
+                        {
+                            OperationId = "default-size-code",
+                            Sequence = 3,
+                        });
+                        defaultCodeWindow.UpdateLayout();
+                        if (defaultCodeWindow.SizeToContent != System.Windows.SizeToContent.Manual ||
+                            Math.Abs(defaultCodeWindow.ActualWidth - 500) > 0.75 ||
+                            Math.Abs(defaultCodeWindow.ActualHeight - expandedDefaultHeight) > 1)
+                        {
+                            throw new InvalidOperationException(
+                                "Returning code must re-expand vertically without widening the notification.");
                         }
                     }
                     catch (Exception ex)

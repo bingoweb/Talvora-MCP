@@ -17,6 +17,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
     private const int MaximumPlacementDocumentBytes = 16 * 1024;
     private const int ScreenMarginPixels = 18;
     private const int CardGapPixels = 10;
+    private const double DefaultCodeNotificationHeightDip = 240;
     private const int PlacementDocumentVersion = 2;
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoZOrder = 0x0004;
@@ -145,13 +146,6 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                 FormsScreen.FromPoint(
                     FormsCursor.Position).DeviceName;
             window = new DesktopProgressNotificationWindow();
-            if (_hasPreferredSize &&
-                !string.IsNullOrWhiteSpace(message.Evidence?.CodePreview))
-            {
-                window.ApplyPreferredSize(
-                    _preferredWidthDip,
-                    _preferredHeightDip);
-            }
             window.SetPinned(_isPinned);
             window.UserMoveCompleted +=
                 (_, _) => HandleUserMoveCompleted(window);
@@ -179,6 +173,30 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             _windows[message.OperationId] = window;
         }
 
+        if (!string.IsNullOrWhiteSpace(message.Evidence?.CodePreview))
+        {
+            if (_hasPreferredSize &&
+                (!window.IsVisible ||
+                 window.SizeToContent != System.Windows.SizeToContent.Manual))
+            {
+                window.ApplyPreferredSize(
+                    _preferredWidthDip,
+                    _preferredHeightDip);
+            }
+            else if (!_hasPreferredSize &&
+                     (!window.IsVisible ||
+                      window.SizeToContent != System.Windows.SizeToContent.Manual))
+            {
+                // First use stays compact; after a code-free shrink, freeze the current size.
+                var heightDip = window.IsVisible &&
+                                double.IsFinite(window.ActualHeight) &&
+                                window.ActualHeight > 0
+                    ? window.ActualHeight
+                    : DefaultCodeNotificationHeightDip;
+                window.ApplyPreferredSize(window.Width, heightDip);
+            }
+        }
+
         window.Update(message);
 
         if (!window.IsVisible)
@@ -188,7 +206,6 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
 
         TrimVisibleCards();
         Reposition();
-        CaptureAutomaticPreferredSize(window);
     }
 
     private void TrimVisibleCards()
@@ -467,40 +484,6 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         Reposition();
     }
 
-    private void CaptureAutomaticPreferredSize(
-        DesktopProgressNotificationWindow window)
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        if (!window.AutomaticSizePersistenceRequested)
-        {
-            return;
-        }
-
-        window.UpdateLayout();
-        if (!double.IsFinite(window.ActualWidth) ||
-            !double.IsFinite(window.ActualHeight) ||
-            window.ActualWidth <= 0 ||
-            window.ActualHeight <= 0)
-        {
-            return;
-        }
-
-        _preferredWidthDip = Math.Clamp(
-            window.ActualWidth,
-            window.MinWidth,
-            window.MaxWidth);
-        _preferredHeightDip = Math.Clamp(
-            window.ActualHeight,
-            window.MinHeight,
-            window.MaxHeight);
-        _hasPreferredSize = true;
-        window.MarkAutomaticSizePersistenceHandled();
-        QueuePlacementSave();
-    }
 
     private void SetPinnedStateForAllWindows()
     {

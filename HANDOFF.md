@@ -1,5 +1,12 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-10-10 — MCP tray health and notification sizing
+
+- Manually stopped MCP registrations are intentionally inactive and are ignored by the aggregate tray health. On-demand integrations with `AutoStart=false` are also ignored while offline or not yet checked; active attention states still count. Talvora Core remains mandatory and genuine running-service faults still show warning/red. Dashboard aggregate health follows the same policy; individual stopped MCPs stay visible as stopped.
+- Code/diff notifications **never auto-increase width**. Restored user width or the 500-DIP initial width remains in force, and the user can resize it interactively. Code automatically expands **height only**, with 460–720 DIP target based on code length and bounded by the active monitor. Subsequent updates do not repeatedly change dimensions until the code section has been removed; code-free updates return to compact height and a later code update can expand vertically again.
+- Only manual resize updates persistent user width/height. Automatic code height must not overwrite `desktop-progress-placement.json`. Old entries in this file describing automatic 960-DIP width or persisting computed diff geometry are superseded by this decision.
+- Tests: `ManagedMcpAggregateHealthPolicy.AssertContract`, `Talvora.Tray --self-test`, `Talvora.Notification.Regression` WPF long-code/compact/restore cases, `ModernizationPolicyRegression.ps1` and Release build.
+
 ## CURRENT — 2026-10-01 — Notification Faz 18 code visibility
 User scope: improve desktop notification design, automatically expand when code/diff arrives, show real changed code.
 - Isolated feature/notification-code-view worktree preserves the three pre-existing installer changes in the primary repository.

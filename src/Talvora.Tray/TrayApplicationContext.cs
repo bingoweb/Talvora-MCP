@@ -1313,50 +1313,35 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
 
         var genericStates = _genericRegistrations
             .Select(registration =>
+            {
                 _genericDashboardStates.TryGetValue(
                     registration.Id,
-                    out var state)
-                    ? state
-                    : null)
+                    out var state);
+                var ignored = ManagedMcpAggregateHealthPolicy.IsIgnored(
+                    registration,
+                    state?.Health,
+                    ManagedMcpSessionState.IsManuallyStopped(registration.Id));
+                return new AggregateMcpState(state?.Health, ignored);
+            })
             .ToArray();
 
-        var genericOffline = genericStates.Any(state =>
-            state?.Health == ControlCenterHealthState.Offline);
-        var genericUnknown = genericStates.Count(state => state is null);
-        var genericNotReady = genericStates.Count(state =>
-            state is null || state.Health != ControlCenterHealthState.Ready);
-
-        TalvoraConnectionState aggregateState;
-        string summary;
-        string detail;
-
-        if (_talvoraStatus.State == TalvoraConnectionState.Offline ||
-            _giteaStatus.State == GiteaConnectionState.Offline ||
-            genericOffline)
+        var ignoreGitea =
+            ManagedMcpSessionState.IsManuallyStopped("gitea") ||
+            (_giteaRegistration is { AutoStart: false } &&
+             _giteaStatus.State != GiteaConnectionState.Running);
+        var evaluation = ManagedMcpAggregateHealthPolicy.Evaluate(
+            _talvoraStatus.State,
+            _giteaStatus.State,
+            ignoreGitea,
+            genericStates);
+        var aggregateState = evaluation.State;
+        var summary = aggregateState switch
         {
-            aggregateState = TalvoraConnectionState.Offline;
-            summary = "Müdahale gerekiyor";
-            detail = BuildAggregateDetail();
-        }
-        else if (_talvoraStatus.State == TalvoraConnectionState.Ready &&
-                 _giteaStatus.State == GiteaConnectionState.Running &&
-                 genericUnknown == 0 &&
-                 genericNotReady == 0)
-        {
-            aggregateState = TalvoraConnectionState.Ready;
-            summary = "Her şey hazır";
-            detail = BuildAggregateDetail();
-        }
-        else
-        {
-            aggregateState = TalvoraConnectionState.LocalOnly;
-            var attentionCount =
-                (_talvoraStatus.State == TalvoraConnectionState.Ready ? 0 : 1) +
-                (_giteaStatus.State == GiteaConnectionState.Running ? 0 : 1) +
-                genericNotReady;
-            summary = $"{attentionCount} MCP dikkat istiyor";
-            detail = BuildAggregateDetail();
-        }
+            TalvoraConnectionState.Ready => "Her şey hazır",
+            TalvoraConnectionState.Offline => "Müdahale gerekiyor",
+            _ => $"{evaluation.AttentionCount} MCP dikkat istiyor",
+        };
+        var detail = BuildAggregateDetail();
 
         _statusItem.Text = summary;
 
