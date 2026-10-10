@@ -19,9 +19,12 @@
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white">
   <img alt="MCP 234 tools" src="https://img.shields.io/badge/MCP-234%20tools-198754">
   <img alt="Active development" src="https://img.shields.io/badge/status-active%20development-6C757D">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2EA44F"></a>
 </p>
 
 <p align="center">
+  <a href="LICENSE">MIT License</a>
+  ·
   <a href="docs/ARCHITECTURE.md">Architecture</a>
   ·
   <a href="docs/DEVELOPMENT-ENVIRONMENT.md">Development environment</a>
@@ -339,6 +342,16 @@ Talvora is intentionally powerful.
 - General-purpose process and PowerShell tools remain available by design.
 
 If you are evaluating or redistributing Talvora, read [SECURITY.md](SECURITY.md) first.
+
+## License
+
+**Talvora's original code and project documentation are released under the [MIT License](LICENSE).** Anyone may use, copy, fork, modify, merge, publish, redistribute, sublicense, or sell copies—including in commercial or closed-source projects.
+
+The license only requires that the original copyright and permission notice accompany copies or substantial portions of Talvora. The software is provided **as is, without warranty**.
+
+**Türkçe:** Talvora'nın özgün kodunu herkes ücretsiz olarak indirebilir, çoğaltabilir, değiştirebilir, paylaşabilir ve ticari projelerinde kullanabilir. Kopyalarda telif hakkı ve MIT lisans bildirimi korunmalıdır.
+
+Third-party libraries, bundled runtime components, optional integrations, and upstream trademarks remain subject to their **own** rights and licenses. See [Third-Party Notices](THIRD-PARTY-NOTICES.md).
 
 ## Third-party software & license attribution
 

@@ -4,7 +4,9 @@ Talvora includes, redistributes, or interoperates with third-party software. Thi
 
 This file is an attribution inventory. The upstream license text is authoritative. Nothing in this document transfers ownership of third-party software, trademarks, or other intellectual property to Talvora.
 
-Talvora's own licensing is separate from the licenses listed here.
+Talvora's original source code and project documentation are available under the repository's [MIT License](LICENSE), Copyright (c) 2026 Taylan Soylu. The MIT license permits copying, modification, redistribution and commercial use, subject to retaining its copyright and permission notice.
+
+**This MIT grant covers Talvora-owned material only.** Bundled third-party libraries, separate upstream applications, runtime packs, their license notices and trademarks remain governed by their respective rights and licenses; this repository does not purport to relicense them.
 
 ## Scope and maintenance
 
