@@ -1,5 +1,14 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-10-11 — Windows CI recovery (issue #18)
+
+- GitHub windows-ci run 38087996308 passed locked restore, Release build, script parsing and WinGet rejection but failed at `PenpotOnDemandSourceRegression.ps1`: the test still required inline `!state.Registration.AutoStart` after health status was centralized in `ManagedMcpAggregateHealthPolicy.IsIgnored`. The original test failed both on GitHub and in the local workspace.
+- Updated the Penpot regression to require the actual shared health policy, actionably counted offline states and tray self-test coverage; manually stopped / inactive opt-in MCPs stay neutral, while real required outages and active optional warnings remain visible.
+- Same PowerShell regression host first loads `Talvora.Shared.dll` via `Add-Type`; `ProcessRunnerRegression.ps1` had rebuilt the file while it was locked. Regression now requires the prebuilt Release assembly and invokes dotnet run `--no-build`.
+- Historical tool-surface pins still counted 28 deleted memory tools: reviewed Full=234, Dev=197, Admin=88, Shared=51; corrected exact count pins and the focused policy source check without restoring the removed tools or altering the Dev/Admin access policy.
+- Verified: targeted Penpot regression GREEN, all 16 CI source contract scripts GREEN in the same PowerShell process after the no-build fix, Release solution 0 warnings/0 errors, desktop notification behavior GREEN, and live MCP full/dev/admin surface policy GREEN. Context7 official PowerShell regex and .NET LINQ set membership documentation checked; .context7/verification.json refreshed.
+- Follow-up: GitHub Actions must finish a fresh complete windows-ci run before marking CI green. The installed Windows runtime should only be updated from a canonical verified installer if the new source policy needs deployment.
+
 ## CURRENT — 2026-10-11 — Stitch-backed Control Center WPF redesign
 
 - Google Stitch CLI v0.11.0 authenticated (OAuth), generated actual native-desktop design direction under project `projects/9163047541738545802`, screen `cbab0028b2ea4193abd667faf1c74625`; Canvas URL: https://stitch.google.com/projects/9163047541738545802?node-id=cbab0028b2ea4193abd667faf1c74625.

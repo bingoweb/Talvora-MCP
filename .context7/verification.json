@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-10T21:29:07Z",
-  "scope": "Talvora Windows-native .NET 10 quality audit closeout 2026-10-11: strict delivery evidence schema, bounded JSON and text metadata, job-log FileStream ownership, isolated regression checks, full Release build and installed acceptance. Context7 /dotnet/docs rechecked 2026-10-11 for JsonElement ValueKind/TryGetProperty/EnumerateArray and FileStream async/exception behavior. Earlier scoped evidence remains below.",
+  "verifiedAtUtc": "2026-10-10T21:37:16Z",
+  "scope": "Talvora windows-ci follow-up 2026-10-11: align Penpot source regression with central MCP health policy, use the existing Release build in PowerShell regression under Add-Type assembly locks, and repin Full/Development tool counts to 234/197 after intentional removal of 28 memory tools. Verify full/focused MCP set membership and the Dev/Admin overlap with the .NET LINQ and ordinal equality contract. Context7 /microsoftdocs/powershell-docs and /dotnet/docs checked; historical audit evidence preserved.",
   "libraries": [
+    {
+      "libraryId": "/microsoftdocs/powershell-docs",
+      "verified": "2026-10-11 official PowerShell 7 comparison-operator documentation: -match/-notmatch evaluate .NET regular expressions against strings, case-insensitively unless -cmatch is used. CI source assertions therefore check observable shared-policy wiring plus existing runtime contract rather than an obsolete inline AutoStart expression."
+    },
     {
       "libraryId": "/websites/github_en_actions",
       "verified": "Current GitHub Actions workflow guidance confirms pwsh steps run fail-fast with ErrorActionPreference=Stop and workflow success is determined by process exit status. The failing run therefore correctly stopped at the source-contract regression; the fix belongs in the deterministic regression/source contract rather than in CI error suppression or continue-on-error behavior."
@@ -49,6 +53,8 @@
     }
   ],
   "vendorSources": [
+    "2026-10-11 Microsoft official LINQ set operations and OrdinalComparer documentation checked: https://learn.microsoft.com/en-us/dotnet/csharp/linq/standard-query-operators/set-operations — Intersect with StringComparer.Ordinal permits exact Dev/Admin MCP overlap verification after intentionally removing memory tools.",
+    "2026-10-11 Microsoft PowerShell official comparison operators reference checked: https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_comparison_operators — -match/-notmatch test .NET regex patterns; the Penpot regression now matches the semantic health policy and runtime checks.",
     "2026-10-09 Microsoft Learn .NET 10 JsonElement official reference verified: https://learn.microsoft.com/en-us/dotnet/api/system.text.json.jsonelement?view=net-10.0 — ValueKind and EnumerateArray allow rejecting invalid release-gate schema entries before content access.",
     "2026-10-09 Microsoft Learn .NET 10 JsonDocument official reference verified: https://learn.microsoft.com/en-us/dotnet/api/system.text.json.jsondocument?view=net-10.0 — structured JSON parsing is paired with a bounded FileStream snapshot to avoid unconstrained file consumption.",
     "OpenAI tunnel-client v0.0.16 release checked 2026-10-07: the release adds optional MCP response timing and opt-in W3C trace-context forwarding, updates OpenTelemetry modules to 1.43.0 for CVE-2026-39883 / GHSA-hfvc-g4fc-pqhx, retains Windows amd64/arm64 release bundles with SHA256SUMS, SPDX and license evidence, and states that timing requires no customer MCP server changes while trace forwarding defaults to false.",

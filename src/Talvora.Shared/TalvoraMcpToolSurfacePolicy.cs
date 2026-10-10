@@ -14,8 +14,10 @@ public enum TalvoraMcpToolSurface
 /// </summary>
 public static class TalvoraMcpToolSurfacePolicy
 {
-    public const int ExpectedFullToolCount = 262;
-    public const int ExpectedDevelopmentToolCount = 225;
+    // The memory subsystem was intentionally removed (28 Dev-only tools).
+    // Keep review counts pinned to the current canonical manifest.
+    public const int ExpectedFullToolCount = 234;
+    public const int ExpectedDevelopmentToolCount = 197;
     public const int ExpectedAdministrationToolCount = 88;
     public const int ExpectedSharedToolCount = 51;
 
