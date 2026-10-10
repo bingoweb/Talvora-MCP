@@ -821,7 +821,6 @@ internal sealed partial class ControlCenterWindow
     {
         _selectedMcp = null;
         _detailScroller.Visibility = Visibility.Collapsed;
-        _memoryScroller.Visibility = Visibility.Collapsed;
         _dashboardScroller.Visibility = Visibility.Visible;
         if (_snapshot is not null)
         {

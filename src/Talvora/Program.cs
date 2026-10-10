@@ -28,7 +28,6 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 builder.Host.UseWindowsService(options => options.ServiceName = "Talvora");
 builder.WebHost.ConfigureKestrel(options => options.ListenLocalhost(7676));
 builder.Services.AddSingleton<TalvoraDesktopProgressNotifier>();
-builder.Services.AddSingleton<TalvoraAutomaticLearningObserver>();
 builder.Services.AddHostedService<TalvoraSystemStorageMaintenanceService>();
 
 builder.Services
@@ -58,9 +57,6 @@ builder.Services
         {
             var notifier =
                 request.Services?.GetService<TalvoraDesktopProgressNotifier>();
-            var learner =
-                request.Services?.GetService<TalvoraAutomaticLearningObserver>();
-
             Func<CancellationToken, ValueTask<CallToolResult>> operation =
                 token => next(request, token);
             if (notifier is not null)
@@ -73,13 +69,7 @@ builder.Services
                     token);
             }
 
-            return learner is null
-                ? await operation(cancellationToken)
-                : await learner.RunToolCallAsync(
-                    request.Params.Name,
-                    request.Params.Arguments,
-                    operation,
-                    cancellationToken);
+            return await operation(cancellationToken);
         });
 
         filters.AddListToolsFilter(next => async (

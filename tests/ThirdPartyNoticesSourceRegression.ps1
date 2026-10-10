@@ -65,7 +65,6 @@ $requiredNoticeContracts = @(
     'Microsoft.NETCore.App.Runtime.win-x64',
     'Microsoft.WindowsDesktop.App.Runtime.win-x64',
     'Microsoft.AspNetCore.App.Runtime.win-x64',
-    'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
     'Gitea MCP Server',
     'Caddy',
     'Penpot',
@@ -83,7 +82,7 @@ foreach ($contract in $requiredNoticeContracts) {
 $requiredReadmeContracts = @(
     'Third-party software & license attribution',
     'THIRD-PARTY-NOTICES.md',
-    '48 locked NuGet runtime packages'
+    'locked NuGet runtime packages'
 )
 
 foreach ($contract in $requiredReadmeContracts) {

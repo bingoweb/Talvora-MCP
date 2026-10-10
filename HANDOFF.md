@@ -16,45 +16,6 @@ User scope: improve desktop notification design, automatically expand when code/
 - Installed Tray self-test exit 0; Talvora/Gitea/Caddy Running/Automatic. Source-affecting changes are committed on main; the three earlier installer edits remain untouched.
 - Subsequent docs/test closeout commit does not require runtime redeployment.
 
-## CURRENT — 2026-10-01 06:55+03:00 — #292 bounded Memory pending-restore manifest FINAL
-
-Bu bölüm en üst kanonik checkpoint'tir. #280–#291 kapalı kalır. Bu tur Memory pending-restore manifestinin status ve runtime-initialization yollarındaki sınırsız JSON okuması #292 olarak kapatıldı.
-
-### Canonical runtime
-
-- Runtime commit: `5c5f6c6262ee4bd3d187884bda3dd13d23fb4edc` — `fix: bound memory restore manifest`.
-- Runtime publish öncesi `HEAD = origin/main = github/main = 5c5f6c6...`; tree clean.
-- Canonical installer: **342,629,647 B**; SHA-256 `A9F600AFA2E5994628DE813849326917D71A622FEBED42F99F612F27D27AF095`; manifest source/head exact.
-- Exact-installed runtime: `sourceCommit=5c5f6c6...`, LocalSystem/S-1-5-18.
-- Installed version root: `C:\Program Files\Talvora\Versions\5c5f6c6262ee4bd3d187884bda3dd13d23fb4edc-20261001035244513`.
-- Installer success: `2026-10-01T06:52:52.2313647+03:00`.
-- Docs-only closeout commit runtime fingerprint değildir; redeploy edilmemelidir.
-
-### #292
-
-- `TalvoraMemoryStore.RestoreStatusAsync` ve `ApplyPendingRestoreIfPresent` pending manifesti `File.ReadAllText*` ile sınırsız okuyordu.
-- Safe temp startup fixture: **32 MiB** valid manifest + 1-byte pending DB + kasıtlı length mismatch.
-- Pre-fix actual `ApplyPendingRestoreIfPresent`: **268,915,888 B allocation**, **168,681,472 B WS delta**, **190 ms**; ardından quarantine.
-- Fix:
-  - `MaximumPendingRestoreManifestBytes = 64 * 1024`.
-  - status: `JsonFileStore.ReadBoundedAsync<PendingRestoreManifest>`.
-  - runtime apply: `JsonFileStore.ReadBounded<PendingRestoreManifest>`.
-  - length/hash/SQLite validation ve quarantine semantiği değişmedi.
-- Post-fix aynı fixture: **19,672 B allocation**, **4,411,392 B WS delta**, **133 ms**; quarantine korunuyor.
-
-### Quality / installed acceptance
-
-- Targeted RED yeni 64 KiB contract'ta oluştu; fix sonrası `CONTROL_CENTER_MEMORY_INSPECTOR_SOURCE_GREEN`.
-- Full Release **0 warning / 0 error**; storage source/behavior, privacy, ModernizationPolicy, Context7, analyzer, source Tray self-test + Control Center smoke GREEN.
-- Live default memory root'ta test öncesi gerçek pending `.db/.json` yoktu.
-- Exact-installed service restart sonrası Memory runtime ilk kullanımı `talvora_memory_restore_status` ile tetiklendi; oversized test manifesti fail-soft quarantine edildi ve tool `pending=false` döndürdü.
-- Testten önce rejected pattern sayısı 0 idi; oluşan 1-byte DB + 32 MiB manifest rejected çiftinin ikisi de test sonunda exact path ile silindi. Pending/rejected test kalıntısı **0**.
-- Installed `--self-test`, Dev probe, Admin probe exit **0**; Talvora/Gitea/Caddy Running/Automatic.
-
-### Sonraki audit
-
-- #292 kapalıdır. #293'ten devam et.
-- Kalan öncelik: installer/runtime metadata, interactive-user result metadata, Memory/restore yan dosyaları, HTTP response bodies ve process-output bounded-I/O.
 
 ## CURRENT — 2026-10-01 06:43+03:00 — #291 bounded lifecycle runtime-generation state FINAL
 
@@ -847,7 +808,7 @@ Bu dosya kesinti ve yeni oturum devamı için kanonik handoff'tur. Yeni oturumda
 - Son kontrolde `C:\Windows\Temp` altında Talvora temp kalıntısı: **0**.
 - Son kontrolde `C:\Program Files\Talvora\Versions` altında yalnız canlı `4e2cd1c...` version root'u vardı.
 - Aktif tunnel log boyutları son kontrolde yaklaşık Dev 0.92 MiB / Admin 0.99 MiB / Gitea 3.67 MiB; 32 MiB threshold'un çok altında.
-- Penpot kurulum ağacı, embedding modeli, ast-grep toolchain, repo `bin/obj` ve canonical installer artefact'ı bilinçli olarak otomatik çöp sayılmadı.
+- Penpot kurulum ağacı, ast-grep toolchain, repo `bin/obj` ve canonical installer artefact'ı bilinçli olarak otomatik çöp sayılmadı.
 
 ## Son kalite kapıları
 
@@ -938,24 +899,13 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Response/resource bounds, pagination/continuation, process output bounding, watcher/HTTP mock backpressure ve archive/read/list sınırları.
 - Focused MCP yüzeyleri canlı discovery ile **Full 240 / Dev 203 / Admin 84 / Shared 47** doğrulandı. Dev/Admin overlap artık explicit `SharedTools` allowlist'tir; `IsFocusedSurfaceReviewComplete` gerçek Dev∩Admin kesişiminin Shared ile exact eşitliğini doğrular. Package mutation + persistent env mutation + arbitrary PID kill Admin-only; long-running job ailesi Dev-only oldu. Full `/mcp` 240-tool capability aynen korunur; focused ayrım privilege sandbox değil discovery/tool-selection boundary'sidir.
 - Installed live surface smoke GREEN: Dev'de excluded service/package/process-kill ve Admin'de excluded job direct invocation `Unknown tool` sınırından geçemiyor. Managed Business probe canlı **Dev Ready=True / BrowserSmokePassed=True / ToolCount=203**, **Admin Ready=True / BrowserSmokePassed=True / ToolCount=84**.
-- Talvora Memory Phase 5 Control Center canlıdır: ayrı Memory Inspector görünümü, bounded list/search/filter, provenance/confidence/importance/retention ayrıntıları, stale-result korumalı edit/expire/forget/supersede, semantic health/re-embed, online SQLite backup ve restart-at-staging restore akışı vardır. Control Center doğrudan SQLite şemasına bağlanmaz; resmi MCP C# client ile yerel `/mcp/dev` contract'ını kullanır. Dispatcher crash recovery, async bounded shutdown, timer detach, hidden-view polling suppression ve dashboard debounce kalıcı regression ile korunur. Release build 0 warning/0 error, kaynak regressions ve source/installed WPF visual smoke GREEN.
-- Memory backup/restore canlı acceptance GREEN: online backup SHA-256 ile doğrulandı; restore önce quick-check + Talvora schema + SHA manifest ile pending staging'e alındı; restart sırasında eski canlı DB için WAL-dahil SQLite Backup API pre-restore yedeği oluşturuldu, staging atomik uygulandı, restart sonrası `pending=false`; test backup/pending/pre-restore fixture'ları temizlendi.
-- Talvora Memory Phase 6 Handoff integration canlıdır: `talvora_memory_handoff_candidates` yüksek değerli aktif proje hafızalarından bounded patch-ready markdown üretir; `talvora_memory_handoff_review` HANDOFF.md'yi **read-only** inceler, canlı Git branch/HEAD ve Talvora repo için `/healthz sourceCommit` ile stale/current farklarını raporlar. Handoff araçları hiçbir repository dosyasını yazmaz; gerçek HANDOFF güncellemesi yalnız açık closeout source-edit adımıdır. İzole acceptance'ta stale Git HEAD ve iki eksik yüksek-değerli hafıza maddesi yakalandı, düşük öncelikli hafıza elendi, review öncesi/sonrası HANDOFF SHA-256 birebir aynı kaldı ve test residue=0.
-- Talvora Memory Phase 3 automatic learning canlıdır. Yüksek değerli durable lesson başlığı **Verified recovery: dotnet_build after source edit** olarak korunur. MCP CallTool filter yalnız sabit allowlist'teki `talvora_apply_patch/apply_edits/structural_edit/semantic_edit` editörleri ve `talvora_dotnet_build/dotnet_test/msbuild_run` verifier'larını gözlemler. Ham arguments/results saklanmaz; yalnız canonical project, tool adı, outcome/failure sınıfı, elapsed metadata tutulur. Verified recovery deseni `verifier fail -> source edit(s) -> aynı verifier success` olarak fingerprint'lenir; ilk occurrence pending kalır, tekrar eden eşdeğer pattern coalesce edilir ve occurrence>=2 + confidence>=0.90 + importance>=0.75 eşiğinde tek durable `lesson` memory'ye promote olur. Canlı acceptance'ta occurrence 1 pending, occurrence 2 promoted, confidence=0.95, importance=0.8 ve tek promoted memory doğrulandı.
-- Automatic-learning suppression global/project/tool/project+tool seviyesinde çalışır. Canlı suppression acceptance'ta üçüncü gerçek build-fail -> patch -> build-success döngüsü yapılmasına rağmen occurrenceCount 2'de kaldı. Explicit decision yolu yalnız açık user/project kararları içindir; normal karar pending candidate oldu, `promote=true` durable decision oluşturdu, `api_key=...` secret-like içerik `isError=true` ile reddedildi. Acceptance sonrası tüm smoke pattern/candidate/memory/observation/suppression kayıtları ve geçici repo silindi; residue=0.
-- Talvora Memory Phase 4 hybrid semantic retrieval canlıdır. Benchmark sonucunda `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` q8 / 384d seçildi: yerel 12-sorguluk Türkçe+İngilizce+cross-lingual benchmark'ta MiniLM Top-1=0.8333 / MRR=0.9028; `multilingual-e5-small` Top-1=0.4167 / MRR=0.6417. Production-parity C# testinde `Microsoft.ML.Tokenizers 2.0.0` + `Microsoft.ML.OnnxRuntime 1.30.0` MiniLM Top-1=0.8333 / MRR=0.8958 ve ~7.17 ms ortalama query embedding üretti.
-- Embedding modeli installer payload'ına hash-pinned vendor edilir; kurulu canlı model SHA-256 `66FC00F5F29AFCAFF34092E1BDD20008CA3918265A82FB9695A551E510CC4EBC`, tokenizer SHA-256 `CFC8146ABE2A0488E9E2A0C56DE7952F7C11AB059ECA145A0A727AFCE0DB2865`, provenance license `Apache-2.0`. Runtime `embedding_status.available=true`, model revision `q8-sha256-66fc00f5f29afcaf`, dimensions=384.
-- Hybrid search FTS5 lexical + semantic cosine + source authority + confidence + importance + recency kullanır; project/scope/session/category semantic tarafta da sert filtrelerdir. Minimum semantic cosine `0.25`; alakasız üç canlı sorgu 0 sonuç verdi. Canlı acceptance'ta 6/6 TR/EN/cross-lingual sorgu doğru Top-1; exact lexical match güçlü kaldı; other-project kayıt sızmadı; expired ve superseded ID'ler sonuçta görünmedi.
-- `memory_embeddings` model id/revision, dimensions, content hash ve canonical `item_updated_utc` ile stale-vector koruması taşır. Resumable re-embed canlı testinde 7 eksik embedding `batchSize=3` ile 3+3+1 olarak işlendi, failed=0, remaining=0. Servis restart sonrası 7/7 embedding kalıcı ve cross-lingual retrieval GREEN. Null-provider production-store acceptance'ta `available=false` iken FTS5-only exact retrieval doğru Top-1 verdi.
-- Phase 4 smoke/benchmark geçici memory/embedding ve repo-dışı benchmark klasörleri temizlendi; test projesi final residue memory=0 / embedding=0. Production build cache ve exact-installed model korunuyor.
 - 2026-09-27 repository-wide audit: çözüm build/analyzer temiz; vulnerable/deprecated NuGet bulgusu yok; Source Edit focused alt-regresyonları, metadata/surface/privacy/shared-infrastructure smoke ve live metadata/surface policy GREEN. Installer Tray process polling handle sahipliği düzeltildi; health handle regression kalıcı istemci modeline düzeltildi ve canlı 200 istekte **delta=0**; dört kopya `FirstNonEmptyLine` ortak `TextLines.FirstNonEmpty` helper'ına indirildi; stale append encoding regression düzeltildi.
 - Final 212-tool full smoke **GREEN**. Kapanış sırasında `target=user` environment persistence aktif kullanıcının gerçek `HKU\<SID>\Environment` hive'ına deterministik hale getirildi; smoke user-process probe argüman yarışı giderildi; nullable continuation alanının JSON'da omitted olabilmesi teste işlendi; Yarn/Corepack info probe'u 10 saniyelik bounded/non-download probe'a dönüştürüldü.
 - Masaüstü çalışma günlüğü zorunlu runtime sözleşmesidir: her MCP çağrısı sarmaldan geçer, düşük değerli read/search/health çağrıları sessizdir. Anlamlı iş tek kartta **Şimdi bunu yapıyorum** -> 30 saniyeyi aşarsa **Hâlâ bununla uğraşıyorum** -> **Bitti / Bir hata buldum** akışını kullanır. Aktif kart iş bitmeden kaybolmaz; başarı yaklaşık 3 dakika, hata yaklaşık 5 dakika okunabilir kalır. Hata sonucu exception olmak zorunda değildir: MCP `IsError`, structured `success=false`, nonzero sonuç ve timeout da sade kullanıcı diliyle failure kartına dönüşür. Teknik tool/komut/stack trace/exit-code metni kullanıcı kartına sızdırılmaz.
 - Talvora self-update servis-içinden çağrıldığında 2.5 sn gecikmeli detached installer bootstrap kullanır; MCP isteği önce kapanır, SCM STOP normal tamamlanır ve forced process-kill fallback'e girilmez. Canlı acceptance sonrası yeni SCM 7034 veya Application/.NET Runtime hatası oluşmadı.
-- Smoke test failure sınırı artık top-level exception'ı kontrollü nonzero exit + stderr'e çevirir; kasıtlı failure acceptance'ta yeni Windows Application Error/.NET Runtime crash kaydı oluşmadı. Önceki 212-tool full-smoke baseline GREEN; Memory V1 için hedefli canlı smoke ayrıca GREEN.
+- Smoke test failure sınırı artık top-level exception'ı kontrollü nonzero exit + stderr'e çevirir; kasıtlı failure acceptance'ta yeni Windows Application Error/.NET Runtime crash kaydı oluşmadı. Önceki 212-tool full-smoke baseline GREEN
 - Detached self-update masaüstü kartı `TALVORA_UPDATE_DETACHED` gerçek marker'ını okuyup `Kurucuya devrettim` mesajı gösterir; yeni runtime doğrulanmadan `etkinleştirdim` iddiasında bulunmaz.
 - Focused Dev/Admin tunnel registry + config + DPAPI runtime credential recovery canlı doğrulandı; tunnel-client Dev/Admin için `process_running/healthy/ready=true`; güncel canlı MCP discovery Dev=203 / Admin=84 ve iki managed probe için `BrowserSmokePassed=true`.
-- Önceki 212-tool full-smoke baseline GREEN. Güncel Memory Phase 4 değişikliğinde Release build 0 warning/0 error; focused-surface, modernization, privacy/security ve MemorySemantic source regression GREEN; NuGet vulnerable/deprecated audit temiz; canlı benchmark/hybrid/noise-floor/re-embed/fallback/restart-persistence/cleanup acceptance GREEN.
 
 ## Penpot / Talvora entegrasyonu — CURRENT
 
@@ -983,7 +933,7 @@ Aşağıdaki ana çalışma alanları tamamlanmış ve korunmalıdır:
 - Resmi Modal Python SDK/CLI **1.5.5** sistem Python 3.14 altına kuruldu; executable `C:\Python314\Scripts\modal.exe`.
 - Modal için ayrı üçüncü taraf MCP yerine Talvora Dev yüzeyinde 4 native yönetim aracı vardır: `talvora_modal_info`, `talvora_modal_app_list`, `talvora_modal_endpoint_list`, `talvora_modal_run`. `app_list`, yeni Endpoint ürünü öncesi klasik Modal App deployment'larını da keşfeder.
 - Modal CLI çağrıları credential/profile sahipliği için logged-on Windows user session'ında çalışır. `talvora_modal_info` aktif profili ve credential kullanılabilirliğini ayrı raporlar; credential değeri response'a alınmaz. Modal API/proxy/OAuth credential prefix'leri persistent log redaction kapsamındadır. Generic run, resmi CLI yüzeyini korur.
-- Modal hardening aşamasındaki yüzey **Full 217 / Dev 187 / Admin 91** idi; Penpot entegrasyonu sonrasında yüzey bir aşamada **Full 221 / Dev 191 / Admin 91** oldu. Güncel global yüzey Memory V1 ile **Full 218 / Dev 188 / Admin 91**. Surface-policy live GREEN, Talvora + Smoke Release build 0 warning / 0 error.
+- Modal hardening aşamasındaki yüzey **Full 217 / Dev 187 / Admin 91** idi; Penpot entegrasyonu sonrasında yüzey bir aşamada **Full 221 / Dev 191 / Admin 91** oldu. Surface-policy live GREEN.
 - Modal user profile setup tamamlandı; aktif profile `taylansoylu`. Native `modal endpoint list` boş çünkü bu model yeni Endpoint ürünü değil, custom Modal App olarak deploy edilmiş.
 - Custom app `codepilot-huihui-qwen38` deployed; public OpenAI-compatible base `https://taylansoylu--codepilot-huihui-qwen38-serve.modal.run/v1`.
 - Auth secret adı `codepilot-inference-api`; required env key adı `LLAMA_API_KEY`. Secret değeri okunmadı, loglanmadı veya HANDOFF'a yazılmadı.

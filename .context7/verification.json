@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-08T12:30:00Z",
-  "scope": "Windows hardware diagnostics: read-only PnP enumeration and DirectShow camera media-mode discovery; .NET System.Management and process tool contracts reviewed against current official documentation.",
+  "verifiedAtUtc": "2026-10-09T14:46:40Z",
+  "scope": "Talvora Windows-native .NET 10 quality audit: strict project-delivery evidence schema, bounded JSON/text metadata reads, job-log FileStream ownership, and isolated RED-to-GREEN regression verification. Earlier scoped evidence remains below.",
   "libraries": [
     {
       "libraryId": "/websites/github_en_actions",
@@ -13,7 +13,7 @@
     },
     {
       "libraryId": "/websites/sqlite_docs",
-      "verified": "Current SQLite guidance supports additive durable metadata tables, foreign-key cascade cleanup, CHECK constraints, BLOB storage, and bounded indexed queries. Talvora Memory Phase 4 stores normalized float32 embeddings as length-constrained BLOBs with model id/revision, content hash, and canonical item update timestamp while retaining FTS5 as the authoritative deterministic fallback."
+      "verified": "Current SQLite guidance supports additive metadata tables, foreign-key cascade cleanup, CHECK constraints, BLOB storage, and bounded indexed queries."
     },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
@@ -25,7 +25,7 @@
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Current .NET System.Text.Json guidance documents explicit property lookup and structured JSON parsing, while DateTimeOffset parsing supports UTC-aware freshness checks. Talvora's delivery gate uses strict JSON evidence, required properties, canonical Context7 library IDs, UTC freshness checks, and fail-closed filesystem validation before push/publish."
+      "verified": "Rechecked 2026-10-09: official .NET 10 System.Text.Json JsonDocument and JsonElement guidance documents ValueKind/TryGetProperty/EnumerateArray for strict schema inspection; .NET FileStream/ReadExactly and IDisposable/async disposal contracts support a bounded one-handle file snapshot. The audit now rejects invalid/missing vendor evidence and incomplete Context7 identifiers, bounds project evidence/sidecars/secrets/runtime metadata, disposes job-log streams even when the second generation read fails, and permanently tests those cases with disposable fixtures."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet_desktop",
@@ -49,6 +49,8 @@
     }
   ],
   "vendorSources": [
+    "2026-10-09 Microsoft Learn .NET 10 JsonElement official reference verified: https://learn.microsoft.com/en-us/dotnet/api/system.text.json.jsonelement?view=net-10.0 — ValueKind and EnumerateArray allow rejecting invalid release-gate schema entries before content access.",
+    "2026-10-09 Microsoft Learn .NET 10 JsonDocument official reference verified: https://learn.microsoft.com/en-us/dotnet/api/system.text.json.jsondocument?view=net-10.0 — structured JSON parsing is paired with a bounded FileStream snapshot to avoid unconstrained file consumption.",
     "OpenAI tunnel-client v0.0.16 release checked 2026-10-07: the release adds optional MCP response timing and opt-in W3C trace-context forwarding, updates OpenTelemetry modules to 1.43.0 for CVE-2026-39883 / GHSA-hfvc-g4fc-pqhx, retains Windows amd64/arm64 release bundles with SHA256SUMS, SPDX and license evidence, and states that timing requires no customer MCP server changes while trace forwarding defaults to false.",
     "OpenAI tunnel-client v0.0.15...v0.0.16 source comparison checked 2026-10-07: no tunnel logging implementation files changed, so Talvora's verified append-writer log-rotation contract remains applicable to v0.0.16 while the pinned runtime-version gate advances to the new stable release.",
     ".NET 10.0.12 official release checked 2026-10-07: SDK 10.0.401 is the current .NET 10 feature-band SDK shipped with the September 2026 servicing release; Talvora global.json already pins 10.0.401 and the local machine has that SDK plus the 10.0.12 runtime.",
@@ -78,8 +80,8 @@
     "Local official Gitea MCP 1.7.0 installation checked 2026-09-29: the installed Gitea MCP LICENSE file is MIT and states Copyright (c) 2025 The Gitea Authors; the installed README points to https://gitea.com/gitea/gitea-mcp.",
     "OpenAI tunnel-client v0.0.15 release and live installations checked 2026-09-29: the official release is current/latest; Talvora Dev, Talvora Admin and Gitea companion all run v0.0.15 with process_running=true, healthy=true and ready=true. The Windows amd64 ZIP contains tunnel-client.exe, cloudflared.exe, LICENSE, NOTICE, a generated dependency-license report and an SPDX SBOM.",
     "Penpot 2.18.0 local source LICENSE checked 2026-09-29 and official upstream repository verified as MPL-2.0 with copyright attribution to KALEIDOS SUBSIDIARY SL.",
-    "Official upstream license metadata checked 2026-09-29: OpenAI tunnel-client is Apache-2.0; Caddy is Apache-2.0 and attributes Matthew Holt and The Caddy Authors; Gitea is MIT; Modal SDK is Apache-2.0; sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 is Apache-2.0; ONNX Runtime is MIT; WPF UI is MIT.",
-    "Talvora Control Center rendered-surface review 2026-09-29: real WPF RenderTargetBitmap captures of the populated dashboard and Memory view were visually inspected. The pass corrected an over-stretched state badge, unified navy-dark surfaces/radii/spacing, and verified the final Primary Hafıza action renders with the Talvora blue accent.",
+    "Official upstream license metadata checked 2026-09-29: OpenAI tunnel-client is Apache-2.0; Caddy is Apache-2.0 and attributes Matthew Holt and The Caddy Authors; Gitea is MIT; Modal SDK is Apache-2.0; WPF UI is MIT.",
+    "Talvora Control Center rendered-surface review 2026-09-29: real WPF RenderTargetBitmap captures of the populated dashboard were visually inspected. The pass corrected an over-stretched state badge and unified navy-dark surfaces, radii and spacing.",
     "WPF UI 4.3.0 Button.xaml checked 2026-09-29: Appearance=Primary binds background and interaction states to AccentButtonBackground, AccentButtonBackgroundPointerOver and AccentButtonBackgroundPressed, with AccentButtonForeground resources for text/icon color; Talvora now overrides those exact keys in its local theme dictionary.",
     "Talvora live repair acceptance 2026-09-29: with the normal tray recovery loop intentionally paused, talvora-admin-business was stopped until tunnel-client reported process_running=false and ready=false; the source repair command restored it with Strategy=Yalnız güvenli tüneli yeniden bağla, Escalated=False and FinalHealth=Ready while the Talvora Core service and Dev connector remained available.",
     "Gitea live repair acceptance 2026-09-29: with automatic tray recovery intentionally paused, gitea-business was stopped until tunnel-client reported process_running=false and ready=false; the source repair command restored only the secure tunnel with Escalated=False and FinalHealth=Ready while the Gitea service PID remained 3560 and the Caddy service PID remained 6352.",
@@ -88,19 +90,15 @@
     "GitHub Actions run 36477651154 inspected 2026-09-28: checkout, locked restore and Release build all passed; Validate source contracts failed specifically in ModernizationPolicyRegression.ps1 with 'User-facing desktop worklog language must not expose developer jargon.'",
     "GitHub Actions runner-images checked 2026-09-28: windows-latest is currently Windows Server 2025; the observed image was windows-2025-vs2026 20260922.246.2. No runner-image failure preceded the policy regression.",
     "Microsoft .NET regular-expression guidance checked 2026-09-28: case-insensitive regex matching uses current-culture casing unless RegexOptions.CultureInvariant is supplied; the documented Turkish tr-TR FILE/file example reproduces the same dotted/dotless-I class of mismatch that made local 'Installer' checks differ from the GitHub runner.",
-    "Hugging Face model metadata checked 2026-09-28: paraphrase-multilingual-MiniLM-L12-v2 is Apache-2.0, multilingual and 384-dimensional; multilingual-e5-small was benchmarked as an alternative.",
-    "Talvora local benchmark 2026-09-28: MiniLM q8 Top-1=0.8333 / MRR=0.9028 versus multilingual-e5-small q8 Top-1=0.4167 / MRR=0.6417 on 12 Turkish/English/cross-lingual memory queries; MiniLM selected.",
-    "Talvora C# parity benchmark 2026-09-28: Microsoft.ML.Tokenizers 2.0.0 + Microsoft.ML.OnnxRuntime 1.30.0 reproduced MiniLM Top-1=0.8333 / MRR=0.8958 with ~7.17 ms average query embedding on the local 12-logical-CPU machine.",
-    "NuGet vulnerability/deprecation audit checked 2026-09-28: Talvora with Microsoft.ML.OnnxRuntime 1.30.0 and Microsoft.ML.Tokenizers 2.0.0 reports no vulnerable or deprecated packages.",
     "Model Context Protocol C# SDK filter documentation checked 2026-09-28: ordinary AddCallToolFilter filters wrap tools exactly once and are appropriate for logging/telemetry-style cross-cutting concerns when downstream results are preserved.",
     "Model Context Protocol C# SDK stateless transport documentation checked 2026-09-29: ConfigureSessionOptions executes for each HTTP request and supports request-specific ToolCollection customization; Talvora's route-based Full/Dev/Admin filtering remains aligned with the official SDK model.",
     "SQLite official partial-index/WAL/transaction documentation checked 2026-09-28: selective indexes and short local transactions are suitable for bounded observation and pattern metadata.",
     "SQLite official partial-index and transaction guidance checked 2026-09-28: selective pending-row indexes and transaction-backed batch inserts are appropriate for durable workflow queues.",
     "SQLite official ALTER TABLE and PRAGMA table_info guidance checked 2026-09-28: additive columns can be introduced to existing tables after schema inspection without rebuilding the canonical table.",
     "SQLite official PRAGMA documentation checked 2026-09-28: quick_check is suitable for lightweight integrity diagnostics; schema/index inspection remains available through PRAGMA.",
-    "SQLite official language/index documentation checked 2026-09-28: expression and partial indexes are supported for selective/query-derived optimization when later memory migrations need them.",
+    "SQLite official language/index documentation checked 2026-09-28: expression and partial indexes are supported for selective/query-derived optimization for indexing and query optimization.",
     "SQLite official FTS5 documentation checked 2026-09-28: external-content tables require synchronization with the content table and can rebuild the index from canonical content.",
-    "Microsoft.Data.Sqlite transaction documentation checked 2026-09-28: transactions are atomic and SQLite permits one transaction with pending changes at a time, so bounded busy timeout/conservative write transactions remain appropriate for Talvora Memory V1.",
+    "Microsoft.Data.Sqlite transaction documentation checked 2026-09-28: transactions are atomic and SQLite permits one transaction with pending changes at a time, so bounded busy timeout and conservative write transactions remain appropriate for local application metadata.",
     "NuGet Gallery current stable package metadata checked 2026-09-27",
     "GitHub actions/checkout v7.0.1 release checked 2026-09-27",
     "GitHub actions/setup-dotnet v6.0.0 release checked 2026-09-27",

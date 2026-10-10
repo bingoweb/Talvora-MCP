@@ -6,14 +6,14 @@
 
 <p align="center">
   <strong>A Windows-native MCP runtime for serious local development and administration.</strong><br />
-  One service. Focused Dev/Admin surfaces. Transactional source editing. Persistent memory. A desktop Control Center that can actually diagnose and repair its managed components.
+  One service. Focused Dev/Admin surfaces. Transactional source editing. A desktop Control Center that can actually diagnose and repair its managed components.
 </p>
 
 <p align="center">
   <a href="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml"><img alt="Windows CI" src="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml/badge.svg?branch=main"></a>
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0B65C2?logo=windows11&logoColor=white">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white">
-  <img alt="Full MCP surface: 240 tools" src="https://img.shields.io/badge/MCP%20surface-240%20tools-198754">
+  <img alt="Focused MCP endpoints" src="https://img.shields.io/badge/MCP-Dev%20%7C%20Admin-198754">
   <img alt="Active development" src="https://img.shields.io/badge/status-active%20development-6C757D">
 </p>
 
@@ -63,10 +63,9 @@ The project is deliberately opinionated:
 | Area | Current implementation |
 | --- | --- |
 | **Runtime** | Windows Service, LocalSystem, loopback MCP on <code>127.0.0.1:7676</code> |
-| **MCP surfaces** | Full: **240** tools · Dev: **203** · Admin: **84** · Shared: **47** |
+| **MCP surfaces** | Full, Dev and Admin endpoints with live tool discovery and a shared-tool policy |
 | **Source editing** | Revision-aware transactional edits, WAL/receipt recovery, rollback, Roslyn and ast-grep specialists |
 | **Control Center** | Native WPF desktop UI, live health, component lifecycle, event timeline, real diagnostic repair |
-| **Memory** | SQLite + FTS5 + local multilingual semantic embeddings, automatic learning and handoff review |
 | **Transport** | Local-first; ChatGPT Business uses optional Secure MCP Tunnel connections |
 | **Integrations** | Gitea, Penpot, Modal, GitHub tooling, Windows toolchains and local developer infrastructure |
 | **Release discipline** | Locked dependencies, source regressions, installer provenance and installed-runtime smoke verification |
@@ -79,7 +78,7 @@ The project is deliberately opinionated:
                           ChatGPT Business
                          /                \
                  Talvora Dev          Talvora Admin
-                   203 tools             84 tools
+                   197 tools             88 tools
                          \              /
                           Secure MCP Tunnel
                                  |
@@ -90,12 +89,12 @@ Local MCP clients ------>  Talvora Windows Service
                   +--------------+--------------+
                   |              |              |
               /mcp           /mcp/dev       /mcp/admin
-            240 tools        203 tools        84 tools
+            234 tools        197 tools        88 tools
                   |
-        +---------+----------+-----------+-----------+
-        |                    |           |           |
-   Source editing         Memory      Windows     Toolchains
-   Git / builds / jobs    search      control     & integrations
+        +----------------+----------------+----------------+
+        |                |                |                |
+   Source editing     Windows        Toolchains      Integrations
+   Git / builds       control        & jobs            & MCP
         |
         +---- Control Center / Tray
               health · lifecycle · diagnostics · repair
@@ -111,9 +110,9 @@ Talvora exposes three local endpoints:
 
 | Endpoint | Purpose | Tools |
 | --- | --- | ---: |
-| <code>/mcp</code> | Complete backwards-compatible capability surface | **240** |
-| <code>/mcp/dev</code> | Development, source editing, builds, Git, jobs, Memory, Penpot and Modal workflows | **203** |
-| <code>/mcp/admin</code> | Windows administration, services, registry, environment and machine management | **84** |
+| <code>/mcp</code> | Complete capability surface | **234** |
+| <code>/mcp/dev</code> | Development, source editing, builds, Git, jobs, Penpot and Modal workflows | **197** |
+| <code>/mcp/admin</code> | Windows administration, services, registry, environment and machine management | **88** |
 
 Dev and Admin share **47 reviewed tools** for diagnostics and common fallback operations. The overlap is explicit and regression-tested; it is not accidental duplication.
 
@@ -135,7 +134,6 @@ It provides:
 - start, stop and restart lifecycle actions;
 - OpenAI tunnel-client v0.0.16 component health for control-plane polling, response delivery, queue pressure, dispatcher activity and tunnel-side MCP observations;
 - an event timeline and redacted raw-log view;
-- a Memory Inspector with search, filtering, provenance and semantic-health controls;
 - responsive desktop layout and keyboard/UI Automation support;
 - visual smoke tests against the rendered WPF surface.
 
@@ -197,25 +195,6 @@ Specialist paths are available when the job calls for them:
 
 The source-edit regression suite covers stale revisions, concurrent writers, crash recovery, WAL corruption, encoding/newline preservation, rollback, transaction replay and large-edit scenarios.
 
-## Memory
-
-Talvora Memory is local and built into the runtime.
-
-Current capabilities include:
-
-- SQLite-backed durable records;
-- FTS5 lexical retrieval;
-- local multilingual semantic search using a 384-dimensional MiniLM embedding model;
-- hybrid ranking with source authority, confidence, importance and recency;
-- project/scope/session/category filtering;
-- stale-vector protection and resumable re-embedding;
-- explicit decisions and automatic verified-recovery learning;
-- duplicate/coalesced observations rather than uncontrolled memory growth;
-- backup, staged restore and pre-restore safety backup;
-- Control Center Memory Inspector;
-- read-only handoff candidate/review tools for project continuity.
-
-The embedding model is shipped locally with pinned provenance and hashes. Memory search falls back to lexical retrieval when semantic embedding is unavailable.
 
 ## Developer and machine tooling
 
@@ -351,18 +330,17 @@ Talvora is built on open-source software and also integrates with separately own
 
 | Component family | Upstream / attribution | License | Relationship |
 | --- | --- | --- | --- |
-| **.NET 10, Roslyn, Microsoft.Extensions, ONNX Runtime** | Microsoft | MIT | bundled / self-contained runtime |
+| **.NET 10, Roslyn, Microsoft.Extensions** | Microsoft | MIT | bundled / self-contained runtime |
 | **Model Context Protocol C# SDK** | Model Context Protocol contributors | Apache-2.0 | bundled |
 | **WPF UI** | Leszek Pomianowski and WPF UI Contributors | MIT | bundled Control Center UI |
 | **SQLite / SQLitePCLRaw** | SQLite project / Eric Sink | Public Domain / Apache-2.0 | bundled |
 | **YamlDotNet / Tomlyn** | Antoine Aubry / Alexandre Mutel | MIT / BSD-2-Clause | bundled |
 | **Google.Protobuf / Humanizer.Core** | Google Inc. / Humanizer contributors | BSD-3-Clause / MIT | transitive bundled dependencies |
-| **Multilingual MiniLM embedding model** | Sentence Transformers contributors; ONNX conversion hosted by Xenova | Apache-2.0 | hash-pinned bundled model |
 | **Gitea / official Gitea MCP / Caddy** | Gitea Authors / Caddy Authors | MIT / MIT / Apache-2.0 | optional managed local stack |
 | **Penpot / Penpot MCP** | KALEIDOS SUBSIDIARY SL and Penpot contributors | MPL-2.0 | optional design integration |
 | **OpenAI Secure MCP Tunnel / Modal SDK** | OpenAI / Modal Labs | Apache-2.0 / Apache-2.0 | optional external integrations |
 
-The complete, versioned inventory covers the **48 locked NuGet runtime packages**, self-contained .NET runtime packs, bundled Memory model, and managed companion components:
+The complete, versioned inventory covers the locked NuGet runtime packages, self-contained .NET runtime packs, and managed companion components:
 
 **[Read THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)**
 

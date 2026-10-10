@@ -74,7 +74,6 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     private ComboBox _filterBox = null!;
     private DispatcherTimer _dashboardFilterDebounceTimer = null!;
     private UiButton _refreshButton = null!;
-    private UiButton _memoryButton = null!;
     private StackPanel _cardsPanel = null!;
     private Border _loadingState = null!;
     private TextBlock _emptyState = null!;
@@ -209,14 +208,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         Topmost = false;
         Focus();
 
-        if (_memoryScroller.Visibility == Visibility.Visible)
-        {
-            _ = RefreshMemoryAsync();
-        }
-        else
-        {
-            _ = RefreshDashboardAsync();
-        }
+        _ = RefreshDashboardAsync();
     }
 
     public async Task PrepareForApplicationExitAsync()
@@ -225,7 +217,6 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         _refreshTimer.Stop();
         _windowPlacementSaveTimer.Stop();
         _rawLogRefreshTimer?.Stop();
-        _memorySearchDebounceTimer?.Stop();
         _dashboardFilterDebounceTimer.Stop();
 
         try
@@ -269,10 +260,6 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         {
             _rawLogRefreshTimer.Tick -= OnRawLogRefreshTimerTick;
         }
-        if (_memorySearchDebounceTimer is not null)
-        {
-            _memorySearchDebounceTimer.Tick -= OnMemorySearchDebounceTick;
-        }
     }
 
     private UIElement BuildContent()
@@ -309,14 +296,6 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         };
         bodyHost.Children.Add(_detailScroller);
 
-        _memoryScroller = new ScrollViewer
-        {
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Visibility = Visibility.Collapsed,
-            Content = BuildMemoryView(),
-        };
-        bodyHost.Children.Add(_memoryScroller);
 
         Grid.SetRow(bodyHost, 2);
         root.Children.Add(bodyHost);
@@ -562,10 +541,6 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         {
             Width = GridLength.Auto,
         });
-        _dashboardControlsGrid.ColumnDefinitions.Add(new ColumnDefinition
-        {
-            Width = GridLength.Auto,
-        });
 
         _dashboardSearchStack = new StackPanel();
 
@@ -620,22 +595,6 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         Grid.SetColumn(_refreshButton, 2);
         _dashboardControlsGrid.Children.Add(_refreshButton);
 
-        _memoryButton = new UiButton
-        {
-            Content = "Hafıza",
-            Icon = new SymbolIcon { Symbol = SymbolRegular.BrainCircuit20 },
-            MinWidth = 112,
-            Margin = new Thickness(12, 0, 0, 0),
-            Style = FindStyle("TalvoraPrimaryButtonStyle"),
-            Cursor = WpfCursors.Hand,
-            ToolTip = "Talvora'nın kalıcı hafızasını incele ve yönet",
-        };
-        AutomationProperties.SetName(
-            _memoryButton,
-            "Talvora Hafıza görünümünü aç");
-        _memoryButton.Click += async (_, _) => await ShowMemoryInspectorAsync();
-        Grid.SetColumn(_memoryButton, 3);
-        _dashboardControlsGrid.Children.Add(_memoryButton);
 
         content.Children.Add(_dashboardControlsGrid);
 
@@ -677,10 +636,6 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             return;
         }
 
-        if (_memoryScroller.Visibility == Visibility.Visible)
-        {
-            return;
-        }
 
         if (!await _refreshGate.WaitAsync(0))
         {
@@ -790,7 +745,6 @@ internal sealed partial class ControlCenterWindow : FluentWindow
                     ref _dashboardRefreshPending,
                     0) != 0 &&
                 IsVisible &&
-                _memoryScroller.Visibility != Visibility.Visible &&
                 !_lifetimeCts.IsCancellationRequested)
             {
                 _ = Dispatcher.BeginInvoke(
@@ -1359,16 +1313,8 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         if (IsVisible)
         {
-            if (_memoryScroller.Visibility == Visibility.Visible)
-            {
-                _refreshTimer.Stop();
-                _ = RefreshMemoryAsync();
-            }
-            else
-            {
-                _refreshTimer.Start();
-                _ = RefreshDashboardAsync();
-            }
+            _refreshTimer.Start();
+            _ = RefreshDashboardAsync();
             UpdateRawLogTimerState();
         }
         else

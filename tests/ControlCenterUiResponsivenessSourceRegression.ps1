@@ -82,7 +82,7 @@ Assert-Contains $chromeWindow 'UpdateDashboardControlsLayout' 'dashboard control
 Assert-Contains $chromeWindow 'MaximumWindowPlacementBytes\s*=\s*64\s*\*\s*1024' 'window placement restore has an explicit 64 KiB persisted-document ceiling'
 Assert-Contains $chromeWindow 'JsonFileStore\.ReadBounded<WindowPlacementDocument>' 'window placement restore uses the shared same-handle bounded JSON reader'
 Assert-NotContains $chromeWindow 'File\.ReadAllText\(path\)' 'window placement restore never allocates an unbounded persisted JSON string on the UI thread'
-Assert-Contains $chromeWindow 'Grid\.SetColumnSpan\(_dashboardSearchStack, 4\)' 'compact layout gives search the full first row'
+Assert-Contains $chromeWindow 'Grid\.SetColumnSpan\(_dashboardSearchStack, 3\)' 'compact layout gives search the full first row'
 Assert-Contains $chromeWindow 'Grid\.SetRow\(_filterBox, compact \? 1 : 0\)' 'compact layout moves toolbar actions to the second row'
 Assert-Contains $smoke 'AssertCompactDashboardLayout' 'visual smoke verifies the dashboard at the minimum supported window width'
 Assert-Contains $smoke 'AssertElementFitsHorizontally' 'compact smoke rejects horizontally clipped primary controls'

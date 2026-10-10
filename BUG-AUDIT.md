@@ -1,19 +1,5 @@
 # Talvora Deep Bug Audit
 
-## CURRENT — 2026-10-01 — #292 bounded Memory pending-restore manifest
-
-Status: **FINAL LIVE VERIFIED.** Exact-installed runtime `5c5f6c6262ee4bd3d187884bda3dd13d23fb4edc`.
-
-- #292 **FIXED / REAL STARTUP-PATH RED->GREEN / INSTALLED VERIFIED** — Memory restore status ve runtime initialization pending manifesti sınırsız `File.ReadAllText*` ile okuyordu. 32 MiB temp manifest fixture actual `ApplyPendingRestoreIfPresent` üzerinde pre-fix **268,915,888 B allocation / 168,681,472 B WS / 190 ms** üretti.
-- Fix: explicit **64 KiB** ceiling; status yolu `JsonFileStore.ReadBoundedAsync<PendingRestoreManifest>`, runtime apply yolu `JsonFileStore.ReadBounded<PendingRestoreManifest>`. Length/hash/SQLite validation ve quarantine aynen korunur.
-- Post-fix identical fixture **19,672 B allocation / 4,411,392 B WS / 133 ms**.
-- Source regression Memory Inspector içinde ceiling + sync/async bounded reader + unbounded manifest read yokluğu sözleşmesini kilitler.
-
-Quality: Release **0/0**; Memory Inspector, storage source/behavior, privacy, ModernizationPolicy, Context7, analyzer, source Tray self-test/Control Center smoke GREEN.
-
-Runtime: commit `5c5f6c6...`; canonical installer **342,629,647 B**, SHA-256 `A9F600AFA2E5994628DE813849326917D71A622FEBED42F99F612F27D27AF095`; exact manifest. Install success 06:52:52.231+03:00.
-
-Live acceptance: default ProgramData memory root'ta meşru pending pair yokken 1-byte pending DB + 32 MiB manifest oluşturuldu. Kanonik Talvora self-restart sonrası Memory runtime ilk kullanımında `talvora_memory_restore_status` çağrısı gerçek initialization yolunu tetikledi; result `pending=false`, iki test dosyası `InvalidDataException` rejected quarantine'a taşındı. Test öncesi rejected count=0 olduğundan yalnız bu iki exact rejected dosya silindi; final pending/rejected test kalıntısı 0. Installed self-test/Dev/Admin probes exit 0; services Running Automatic.
 
 ## CURRENT — 2026-10-01 — #291 bounded lifecycle runtime-generation state
 

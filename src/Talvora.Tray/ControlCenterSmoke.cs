@@ -46,9 +46,6 @@ internal static class ControlCenterSmoke
                 AssertCompactDashboardLayout(window);
 
                 await window.RunSmokeScenarioAsync();
-                await window.RunMemoryInspectorVisualSmokeScenarioAsync();
-                AssertRenderedSurfaceIsNotBlank(window);
-                window.EndMemoryInspectorVisualSmokeScenario();
 
                 window.Close();
                 if (window.IsVisible)
@@ -158,13 +155,9 @@ internal static class ControlCenterSmoke
             var refresh = FindVisualChildByAutomationName(
                 window,
                 "Bileşen durumlarını yenile");
-            var memory = FindVisualChildByAutomationName(
-                window,
-                "Talvora Hafıza görünümünü aç");
 
             AssertElementFitsHorizontally(window, search);
             AssertElementFitsHorizontally(window, refresh);
-            AssertElementFitsHorizontally(window, memory);
 
             var searchOrigin = search
                 .TransformToAncestor(window)

@@ -277,8 +277,7 @@ internal sealed partial class ControlCenterWindow
     private void UpdateDashboardControlsLayout(bool compact)
     {
         if (_dashboardControlsGrid is null ||
-            _dashboardSearchStack is null ||
-            _memoryButton is null)
+            _dashboardSearchStack is null)
         {
             return;
         }
@@ -287,11 +286,10 @@ internal sealed partial class ControlCenterWindow
         Grid.SetColumn(_dashboardSearchStack, 0);
         Grid.SetRow(_filterBox, compact ? 1 : 0);
         Grid.SetRow(_refreshButton, compact ? 1 : 0);
-        Grid.SetRow(_memoryButton, compact ? 1 : 0);
 
         if (compact)
         {
-            Grid.SetColumnSpan(_dashboardSearchStack, 4);
+            Grid.SetColumnSpan(_dashboardSearchStack, 3);
             _dashboardSearchStack.Margin = new Thickness(0, 0, 0, 10);
 
             Grid.SetColumn(_filterBox, 0);
@@ -301,8 +299,6 @@ internal sealed partial class ControlCenterWindow
 
             Grid.SetColumn(_refreshButton, 2);
             _refreshButton.Margin = new Thickness(12, 0, 0, 0);
-            Grid.SetColumn(_memoryButton, 3);
-            _memoryButton.Margin = new Thickness(12, 0, 0, 0);
             return;
         }
 
@@ -314,8 +310,6 @@ internal sealed partial class ControlCenterWindow
             System.Windows.HorizontalAlignment.Stretch;
         Grid.SetColumn(_refreshButton, 2);
         _refreshButton.Margin = new Thickness(12, 0, 0, 0);
-        Grid.SetColumn(_memoryButton, 3);
-        _memoryButton.Margin = new Thickness(12, 0, 0, 0);
     }
 
     private void UpdateWindowStateVisuals()
@@ -358,14 +352,6 @@ internal sealed partial class ControlCenterWindow
             return;
         }
 
-        if ((e.Key == Key.Escape ||
-             (e.Key == Key.Left && Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))) &&
-            _memoryScroller.Visibility == Visibility.Visible)
-        {
-            e.Handled = true;
-            ShowDashboard();
-            return;
-        }
 
         if (e.Key == Key.Escape &&
             _dashboardScroller.Visibility == Visibility.Visible)

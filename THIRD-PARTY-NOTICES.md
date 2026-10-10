@@ -13,7 +13,6 @@ The bundled runtime inventory is derived from:
 - `src/Talvora/packages.lock.json`
 - `src/Talvora.Tray/packages.lock.json`
 - the self-contained .NET 10 Windows runtime packs used by the installer
-- the hash-pinned Memory embedding payload resolved by `scripts/Build-Windows-Installer.ps1`
 
 Optional integrations are listed separately because Talvora may manage or invoke them without incorporating them into the Talvora core binary.
 
@@ -23,7 +22,7 @@ When a bundled dependency, model, or managed integration changes, this notice mu
 
 ## Bundled with the Talvora runtime
 
-### Microsoft .NET, Roslyn, data, hosting, ML, and Windows libraries
+### Microsoft .NET, Roslyn, data, hosting, and Windows libraries
 
 **Upstream / copyright attribution:** Microsoft  
 **Primary license:** MIT  
@@ -52,9 +51,6 @@ The current locked package set includes:
 - `Microsoft.Extensions.Logging.Abstractions 10.0.12`
 - `Microsoft.Extensions.Options 10.0.12`
 - `Microsoft.Extensions.Primitives 10.0.12`
-- `Microsoft.ML.OnnxRuntime 1.30.0`
-- `Microsoft.ML.OnnxRuntime.Managed 1.30.0`
-- `Microsoft.ML.Tokenizers 2.0.0`
 - `Microsoft.NET.ILLink.Tasks 10.0.12`
 - `Microsoft.VisualStudio.SolutionPersistence 1.0.52`
 - `System.Composition 10.0.12`
@@ -72,14 +68,12 @@ The self-contained installer also carries the matching Windows runtime packs:
 - `Microsoft.WindowsDesktop.App.Runtime.win-x64 10.0.12`
 - `Microsoft.AspNetCore.App.Runtime.win-x64 10.0.12`
 
-**Important:** ONNX Runtime and the .NET runtime contain their own third-party components. Their upstream third-party notices remain applicable in addition to the MIT license of the primary projects.
+**Important:** The .NET runtime contains third-party components. Upstream third-party notices remain applicable in addition to the MIT license of the primary projects.
 
 Upstream:
 
 - https://github.com/dotnet/dotnet
 - https://github.com/dotnet/roslyn
-- https://github.com/microsoft/onnxruntime
-- https://github.com/dotnet/machinelearning
 
 ### Model Context Protocol C# SDK
 
@@ -142,22 +136,6 @@ Upstream:
 - https://github.com/protocolbuffers/protobuf
 - https://github.com/Humanizr/Humanizer
 
-### Local multilingual embedding model
-
-Talvora vendors a hash-pinned quantized ONNX embedding model for local Memory search.
-
-**Model family:** `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`  
-**Upstream / attribution:** Sentence Transformers project and model contributors  
-**License:** Apache-2.0  
-**Bundled artifacts:** quantized ONNX model plus SentencePiece tokenizer  
-**ONNX conversion source:** Xenova / Hugging Face conversion repository derived from the upstream Sentence Transformers model.
-
-Talvora records the exact model and tokenizer SHA-256 values in the installer provenance metadata and does not relicense the model.
-
-Upstream:
-
-- https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
-- https://huggingface.co/Xenova/paraphrase-multilingual-MiniLM-L12-v2
 
 ---
 
