@@ -3,25 +3,25 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <ResourceDictionary.MergedDictionaries>
-        <ui:ThemesDictionary Theme="Dark" />
+        <ui:ThemesDictionary Theme="Light" />
         <ui:ControlsDictionary />
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- Talvora product palette: deep neutral-navy surfaces, quiet borders, one cool accent. -->
-    <Color x:Key="Talvora.Background.Color">#0D1118</Color>
-    <Color x:Key="Talvora.Surface.Color">#131A24</Color>
-    <Color x:Key="Talvora.SurfaceRaised.Color">#18212D</Color>
-    <Color x:Key="Talvora.SurfaceHover.Color">#202B39</Color>
-    <Color x:Key="Talvora.Border.Color">#283443</Color>
-    <Color x:Key="Talvora.BorderStrong.Color">#3A4C62</Color>
-    <Color x:Key="Talvora.TextPrimary.Color">#F6F8FB</Color>
-    <Color x:Key="Talvora.TextSecondary.Color">#AAB6C7</Color>
-    <Color x:Key="Talvora.TextTertiary.Color">#758399</Color>
-    <Color x:Key="Talvora.Accent.Color">#74A8FF</Color>
-    <Color x:Key="Talvora.AccentSoft.Color">#182A46</Color>
-    <Color x:Key="Talvora.Ready.Color">#4FD39C</Color>
-    <Color x:Key="Talvora.Attention.Color">#F2BB5C</Color>
-    <Color x:Key="Talvora.Offline.Color">#EE6C7B</Color>
+    <!-- Stitch: Talvora Control Center desktop light design tokens. Notification colors remain independent. -->
+    <Color x:Key="Talvora.Background.Color">#F7F9FF</Color>
+    <Color x:Key="Talvora.Surface.Color">#FFFFFF</Color>
+    <Color x:Key="Talvora.SurfaceRaised.Color">#F0F4FB</Color>
+    <Color x:Key="Talvora.SurfaceHover.Color">#EBF0FC</Color>
+    <Color x:Key="Talvora.Border.Color">#E5E9F0</Color>
+    <Color x:Key="Talvora.BorderStrong.Color">#C7D0DF</Color>
+    <Color x:Key="Talvora.TextPrimary.Color">#172333</Color>
+    <Color x:Key="Talvora.TextSecondary.Color">#576579</Color>
+    <Color x:Key="Talvora.TextTertiary.Color">#758398</Color>
+    <Color x:Key="Talvora.Accent.Color">#384EC0</Color>
+    <Color x:Key="Talvora.AccentSoft.Color">#EAF0FF</Color>
+    <Color x:Key="Talvora.Ready.Color">#167653</Color>
+    <Color x:Key="Talvora.Attention.Color">#976313</Color>
+    <Color x:Key="Talvora.Offline.Color">#BE3F52</Color>
 
     <SolidColorBrush x:Key="Talvora.Background" Color="{StaticResource Talvora.Background.Color}" />
     <SolidColorBrush x:Key="Talvora.Surface" Color="{StaticResource Talvora.Surface.Color}" />
@@ -77,18 +77,18 @@
     <!-- WPF-UI 4.3.0 Primary buttons resolve these DynamicResource keys
          from the control template. Override that exact surface so Talvora
          owns normal, hover, pressed and foreground states consistently. -->
-    <SolidColorBrush x:Key="AccentButtonBackground" Color="#74A8FF" />
-    <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#82B2FF" />
-    <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#6398EE" />
-    <SolidColorBrush x:Key="AccentButtonForeground" Color="#0D1118" />
+    <SolidColorBrush x:Key="AccentButtonBackground" Color="#384EC0" />
+    <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#455DD5" />
+    <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#283DA2" />
+    <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFF" />
     <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#0D1118" />
-    <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#18212D" />
+    <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FFFFFF" />
 
     <Style x:Key="TalvoraCardStyle" TargetType="{x:Type Border}">
         <Setter Property="Background" Value="{StaticResource Talvora.Surface}" />
         <Setter Property="BorderBrush" Value="{StaticResource Talvora.Border}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="CornerRadius" Value="16" />
         <Setter Property="Padding" Value="20" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
     </Style>
@@ -97,9 +97,27 @@
         <Setter Property="Background" Value="{StaticResource Talvora.SurfaceRaised}" />
         <Setter Property="BorderBrush" Value="{StaticResource Talvora.Border}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="11" />
+        <Setter Property="CornerRadius" Value="14" />
         <Setter Property="Padding" Value="16" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <!-- Stitch navigation rail: a calm dark workspace, true actions only. -->
+    <Style
+        x:Key="TalvoraSidebarButtonStyle"
+        TargetType="{x:Type ui:Button}"
+        BasedOn="{StaticResource {x:Type ui:Button}}">
+        <Setter Property="Appearance" Value="Transparent" />
+        <Setter Property="Background" Value="#101827" />
+        <Setter Property="Foreground" Value="#AEBBD2" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="MinHeight" Value="47" />
+        <Setter Property="Padding" Value="13,9" />
+        <Setter Property="CornerRadius" Value="11" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="13.5" />
+        <Setter Property="Cursor" Value="Hand" />
     </Style>
 
     <Style
@@ -123,7 +141,7 @@
         <Setter Property="Appearance" Value="Primary" />
         <Setter Property="Background" Value="{StaticResource Talvora.Accent}" />
         <Setter Property="BorderBrush" Value="{StaticResource Talvora.Accent}" />
-        <Setter Property="Foreground" Value="{StaticResource Talvora.Background}" />
+        <Setter Property="Foreground" Value="#FFFFFF" />
         <Setter Property="MinHeight" Value="38" />
         <Setter Property="Padding" Value="15,7" />
         <Setter Property="CornerRadius" Value="9" />

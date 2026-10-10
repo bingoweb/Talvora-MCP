@@ -44,6 +44,10 @@ internal sealed partial class ControlCenterWindow
         });
 
         var content = new StackPanel();
+        var summaryHeader = new StackPanel
+        {
+            Margin = new Thickness(0, 2, 8, 2),
+        };
 
         _setupTitleText = new TextBlock
         {
@@ -51,7 +55,7 @@ internal sealed partial class ControlCenterWindow
             FontSize = 16,
             FontWeight = FontWeights.SemiBold,
         };
-        content.Children.Add(_setupTitleText);
+        summaryHeader.Children.Add(_setupTitleText);
 
         _setupDetailText = new TextBlock
         {
@@ -60,7 +64,7 @@ internal sealed partial class ControlCenterWindow
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap,
         };
-        content.Children.Add(_setupDetailText);
+        summaryHeader.Children.Add(_setupDetailText);
 
         var existingTunnelHeading = new TextBlock
         {
@@ -218,16 +222,28 @@ internal sealed partial class ControlCenterWindow
         Grid.SetColumn(content, 1);
         root.Children.Add(content);
 
+        // Critical system state stays visible, while the rarely needed key/tunnel
+        // fields remain available on demand instead of hiding the service overview.
+        var expander = new Expander
+        {
+            Header = summaryHeader,
+            Content = root,
+            IsExpanded = false,
+            Background = AttentionSoftBrush,
+            Foreground = PrimaryTextBrush,
+            HorizontalContentAlignment = HAlign.Stretch,
+            Tag = "talvora-setup-expander",
+        };
         return new Border
         {
             Margin = new Thickness(0, 0, 0, 22),
-            Padding = new Thickness(16),
+            Padding = new Thickness(12, 10, 12, 10),
             Background = AttentionSoftBrush,
             BorderBrush = AttentionBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
+            CornerRadius = new CornerRadius(14),
             Visibility = Visibility.Collapsed,
-            Child = root,
+            Child = expander,
         };
     }
 
@@ -531,19 +547,22 @@ internal sealed partial class ControlCenterWindow
         object tag)
         where T : FrameworkElement
     {
-        var count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(root);
-        for (var index = 0; index < count; index++)
+        // Expander content can be collapsed and absent from the visual tree.
+        // Logical descendants remain reachable so setup labels still receive
+        // correct visibility and validation before the user opens the form.
+        if (root is T element && Equals(element.Tag, tag))
         {
-            var child =
-                System.Windows.Media.VisualTreeHelper.GetChild(root, index);
+            return element;
+        }
 
-            if (child is T typed &&
-                Equals(typed.Tag, tag))
+        foreach (var child in LogicalTreeHelper.GetChildren(root))
+        {
+            if (child is not DependencyObject dependency)
             {
-                return typed;
+                continue;
             }
 
-            var nested = FindTaggedElement<T>(child, tag);
+            var nested = FindTaggedElement<T>(dependency, tag);
             if (nested is not null)
             {
                 return nested;

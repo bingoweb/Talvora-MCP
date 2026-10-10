@@ -22,25 +22,32 @@ namespace Talvora.Tray;
 
 internal sealed partial class ControlCenterWindow : FluentWindow
 {
-    private static readonly SolidColorBrush BackgroundBrush = CreateBrush(13, 17, 24);
-    private static readonly SolidColorBrush SurfaceBrush = CreateBrush(19, 26, 36);
-    private static readonly SolidColorBrush RaisedSurfaceBrush = CreateBrush(24, 33, 45);
-    private static readonly SolidColorBrush HoverSurfaceBrush = CreateBrush(32, 43, 57);
-    private static readonly SolidColorBrush CardBorderBrush = CreateBrush(40, 52, 67);
-    private static readonly SolidColorBrush StrongBorderBrush = CreateBrush(58, 76, 98);
-    private static readonly SolidColorBrush PrimaryTextBrush = CreateBrush(246, 248, 251);
-    private static readonly SolidColorBrush SecondaryTextBrush = CreateBrush(170, 182, 199);
-    private static readonly SolidColorBrush TertiaryTextBrush = CreateBrush(117, 131, 153);
-    private static readonly SolidColorBrush AccentBrush = CreateBrush(116, 168, 255);
-    private static readonly SolidColorBrush AccentSoftBrush = CreateBrush(24, 42, 70);
-    private static readonly SolidColorBrush ReadyBrush = CreateBrush(79, 211, 156);
-    private static readonly SolidColorBrush AttentionBrush = CreateBrush(242, 187, 92);
-    private static readonly SolidColorBrush OfflineBrush = CreateBrush(238, 108, 123);
-    private static readonly SolidColorBrush CheckingBrush = CreateBrush(116, 168, 255);
-    private static readonly SolidColorBrush ReadySoftBrush = CreateBrush(34, 79, 211, 156);
-    private static readonly SolidColorBrush AttentionSoftBrush = CreateBrush(36, 242, 187, 92);
-    private static readonly SolidColorBrush OfflineSoftBrush = CreateBrush(36, 238, 108, 123);
-    private static readonly SolidColorBrush CheckingSoftBrush = CreateBrush(34, 116, 168, 255);
+    // Stitch-derived "Kontrol Merkezi Desktop" palette: calm light workspace.
+    private static readonly SolidColorBrush BackgroundBrush = CreateBrush(247, 249, 255);
+    private static readonly SolidColorBrush SurfaceBrush = CreateBrush(255, 255, 255);
+    private static readonly SolidColorBrush RaisedSurfaceBrush = CreateBrush(240, 244, 251);
+    private static readonly SolidColorBrush HoverSurfaceBrush = CreateBrush(235, 240, 252);
+    private static readonly SolidColorBrush CardBorderBrush = CreateBrush(229, 233, 240);
+    private static readonly SolidColorBrush StrongBorderBrush = CreateBrush(199, 208, 223);
+    private static readonly SolidColorBrush PrimaryTextBrush = CreateBrush(23, 35, 51);
+    private static readonly SolidColorBrush SecondaryTextBrush = CreateBrush(87, 101, 121);
+    private static readonly SolidColorBrush TertiaryTextBrush = CreateBrush(117, 131, 152);
+    private static readonly SolidColorBrush AccentBrush = CreateBrush(56, 78, 192);
+    private static readonly SolidColorBrush AccentSoftBrush = CreateBrush(234, 240, 255);
+    private static readonly SolidColorBrush ReadyBrush = CreateBrush(22, 118, 83);
+    private static readonly SolidColorBrush AttentionBrush = CreateBrush(151, 99, 19);
+    private static readonly SolidColorBrush OfflineBrush = CreateBrush(190, 63, 82);
+    private static readonly SolidColorBrush CheckingBrush = CreateBrush(79, 103, 207);
+    private static readonly SolidColorBrush ReadySoftBrush = CreateBrush(230, 246, 237);
+    private static readonly SolidColorBrush AttentionSoftBrush = CreateBrush(255, 242, 217);
+    private static readonly SolidColorBrush OfflineSoftBrush = CreateBrush(252, 232, 237);
+    private static readonly SolidColorBrush CheckingSoftBrush = CreateBrush(235, 240, 255);
+    private static readonly SolidColorBrush IdleBrush = CreateBrush(99, 112, 131);
+    private static readonly SolidColorBrush IdleSoftBrush = CreateBrush(241, 243, 247);
+    private static readonly SolidColorBrush SidebarBrush = CreateBrush(16, 24, 39);
+    private static readonly SolidColorBrush SidebarSecondaryBrush = CreateBrush(174, 189, 210);
+    private static readonly SolidColorBrush SidebarAccentBrush = CreateBrush(170, 189, 255);
+    private static readonly SolidColorBrush SidebarHoverBrush = CreateBrush(32, 43, 64);
 
     private readonly DispatcherTimer _refreshTimer;
     private readonly bool _smokeMode;
@@ -150,6 +157,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         {
             UpdateCardWidths();
             UpdateHeaderLayout();
+            UpdateOverviewMetricsLayout();
             ScheduleWindowPlacementSave();
         };
         StateChanged += (_, _) =>
@@ -264,21 +272,42 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
     private UIElement BuildContent()
     {
-        var root = new Grid();
+        var root = new Grid
+        {
+            Background = BackgroundBrush,
+        };
+        root.ColumnDefinitions.Add(new ColumnDefinition
+        {
+            Width = new GridLength(226),
+        });
+        root.ColumnDefinitions.Add(new ColumnDefinition
+        {
+            Width = new GridLength(1, GridUnitType.Star),
+        });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.RowDefinitions.Add(new RowDefinition
+        {
+            Height = new GridLength(1, GridUnitType.Star),
+        });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         _windowTitleBar = BuildWindowTitleBar();
+        Grid.SetColumnSpan(_windowTitleBar, 2);
         root.Children.Add(_windowTitleBar);
 
         var header = BuildHeader();
         Grid.SetRow(header, 1);
+        Grid.SetColumn(header, 1);
         root.Children.Add(header);
 
-        var bodyHost = new Grid();
+        var sidebar = BuildNavigationSidebar();
+        Grid.SetRow(sidebar, 1);
+        Grid.SetRowSpan(sidebar, 3);
+        Grid.SetColumn(sidebar, 0);
+        root.Children.Add(sidebar);
 
+        var bodyHost = new Grid();
         _dashboardScroller = new ScrollViewer
         {
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
@@ -295,25 +324,25 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             Content = BuildDetailView(),
         };
         bodyHost.Children.Add(_detailScroller);
-
-
         Grid.SetRow(bodyHost, 2);
+        Grid.SetColumn(bodyHost, 1);
         root.Children.Add(bodyHost);
 
         var footer = new Border
         {
-            Padding = new Thickness(32, 12, 32, 12),
+            Padding = new Thickness(28, 10, 28, 10),
             Background = SurfaceBrush,
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(0, 1, 0, 0),
             Child = new TextBlock
             {
-                Text = "Talvora  •  Yerel yönetim ve ChatGPT bağlantıları",
+                Text = "Talvora  /  Yerel MCP yönetimi  •  Windows",
                 Foreground = TertiaryTextBrush,
                 FontSize = 10.5,
             },
         };
         Grid.SetRow(footer, 3);
+        Grid.SetColumn(footer, 1);
         root.Children.Add(footer);
 
         return root;
@@ -323,13 +352,13 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     {
         var titleBar = new TitleBar
         {
-            Title = "Talvora Yönetim Merkezi",
-            Height = 48,
+            Title = "Talvora  /  Kontrol Merkezi",
+            Height = 46,
             Padding = new Thickness(18, 0, 0, 0),
-            Background = BackgroundBrush,
+            Background = SurfaceBrush,
             Foreground = SecondaryTextBrush,
             ButtonsForeground = PrimaryTextBrush,
-            ButtonsBackground = BackgroundBrush,
+            ButtonsBackground = SurfaceBrush,
             ShowMinimize = true,
             ShowMaximize = true,
             ShowClose = true,
@@ -368,21 +397,21 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         };
         titleStack.Children.Add(new TextBlock
         {
-            Text = "TALVORA",
+            Text = "YEREL / WINDOWS",
             Foreground = AccentBrush,
             FontSize = 10.5,
             FontWeight = FontWeights.SemiBold,
         });
         titleStack.Children.Add(new TextBlock
         {
-            Text = "Yönetim Merkezi",
-            Margin = new Thickness(0, 7, 0, 0),
-            FontSize = 30,
+            Text = "Kontrol Merkezi",
+            Margin = new Thickness(0, 6, 0, 0),
+            FontSize = 26,
             FontWeight = FontWeights.SemiBold,
         });
         titleStack.Children.Add(new TextBlock
         {
-            Text = "Talvora Core, ChatGPT bağlantıları ve yerel entegrasyonlar tek görünümde.",
+            Text = "MCP hizmetleri, bağlantılar ve sistem olayları tek bir çalışma alanında.",
             Margin = new Thickness(0, 8, 0, 0),
             Foreground = SecondaryTextBrush,
             FontSize = 13.5,
@@ -460,7 +489,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         return new Border
         {
-            Padding = new Thickness(32, 26, 32, 22),
+            Padding = new Thickness(28, 24, 28, 20),
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(0, 0, 0, 1),
             Child = _headerGrid,
@@ -471,11 +500,12 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     {
         var content = new StackPanel
         {
-            Margin = new Thickness(32, 26, 32, 34),
+            Margin = new Thickness(28, 24, 28, 32),
         };
 
         _setupCard = BuildSetupCard();
         content.Children.Add(_setupCard);
+        content.Children.Add(BuildOverviewMetrics());
 
         var sectionHeader = new Grid
         {
@@ -493,13 +523,13 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         var sectionTitleStack = new StackPanel();
         sectionTitleStack.Children.Add(new TextBlock
         {
-            Text = "Yönetilen bileşenler",
+            Text = "Yönetilen MCP hizmetleri",
             FontSize = 19,
             FontWeight = FontWeights.SemiBold,
         });
         sectionTitleStack.Children.Add(new TextBlock
         {
-            Text = "Talvora Core, ChatGPT bağlantıları ve diğer MCP bileşenlerini tek yerden yönetin.",
+            Text = "Gerçek durumları görüntüleyin, gerektiğinde hizmetleri tek tıkla yönetin.",
             Margin = new Thickness(0, 5, 0, 0),
             Foreground = SecondaryTextBrush,
             FontSize = 12.5,
@@ -662,8 +692,9 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             _healthSummaryText.Foreground = GetSummaryBrush(snapshot);
             _healthSummaryDot.Background = GetSummaryBrush(snapshot);
             _headerStatusCard.Background = GetSummarySoftBrush(snapshot);
-            _headerStatusCard.BorderBrush = GetSummaryBrush(snapshot);
+            _headerStatusCard.BorderBrush = CardBorderBrush;
             _technicalSummaryText.Text = snapshot.TechnicalSummary;
+            RefreshOverviewMetrics(snapshot);
             _dashboardSectionMeta.Text =
                 $"{snapshot.Mcps.Count} bileşen • {snapshot.ReadyCount} hazır";
             _lastRefreshText.Text =
@@ -709,6 +740,8 @@ internal sealed partial class ControlCenterWindow : FluentWindow
                 _snapshot is not null;
 
             _healthSummaryText.Text = "Canlı durum alınamadı";
+            _sidebarHealthText.Text = "Canlı durum alınamadı";
+            _sidebarHealthDot.Background = OfflineBrush;
             _healthSummaryText.Foreground = OfflineBrush;
             _healthSummaryDot.Background = OfflineBrush;
             _headerStatusCard.Background = OfflineSoftBrush;
@@ -775,7 +808,12 @@ internal sealed partial class ControlCenterWindow : FluentWindow
                     StringComparison.CurrentCultureIgnoreCase))
             .Where(state => selectedFilter switch
             {
-                1 => state.Health != ControlCenterHealthState.Ready,
+                1 => state.Health != ControlCenterHealthState.Ready &&
+                     !ManagedMcpAggregateHealthPolicy.IsIgnored(
+                         state.Registration,
+                         state.Health,
+                         ManagedMcpSessionState.IsManuallyStopped(
+                             state.Registration.Id)),
                 2 => state.Health == ControlCenterHealthState.Ready,
                 _ => true,
             })
@@ -841,10 +879,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             FontSize = 11.5,
         });
         section.Children.Add(header);
-        var cards = new WrapPanel
-        {
-            Orientation = Orientation.Horizontal,
-        };
+        var cards = new StackPanel();
         foreach (var state in states)
         {
             cards.Children.Add(CreateMcpCard(state));
@@ -878,7 +913,18 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
     private Border CreateMcpCard(ManagedMcpDashboardState state)
     {
-        var statusBrush = GetHealthBrush(state.Health);
+        var intentionallyInactive =
+            state.Health != ControlCenterHealthState.Ready &&
+            ManagedMcpAggregateHealthPolicy.IsIgnored(
+                state.Registration,
+                state.Health,
+                ManagedMcpSessionState.IsManuallyStopped(
+                    state.Registration.Id));
+        var cardStroke =
+            intentionallyInactive ||
+            state.Health == ControlCenterHealthState.Ready
+                ? CardBorderBrush
+                : GetHealthSoftBrush(state.Health);
 
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -898,7 +944,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         var titleStack = new StackPanel
         {
-            Margin = new Thickness(15, 0, 14, 0),
+            Margin = new Thickness(14, 0, 12, 0),
             VerticalAlignment = VAlign.Center,
         };
         var roleLabel = GetMcpRoleLabel(state.Registration.Id);
@@ -916,7 +962,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         titleStack.Children.Add(new TextBlock
         {
             Text = state.Registration.DisplayName,
-            FontSize = 17.5,
+            FontSize = 16.5,
             FontWeight = FontWeights.SemiBold,
             TextTrimming = TextTrimming.CharacterEllipsis,
         });
@@ -932,7 +978,10 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         Grid.SetColumn(titleStack, 1);
         header.Children.Add(titleStack);
 
-        var statusPill = CreateStatusPill(state.Health, state.StatusText);
+        var statusPill = CreateStatusPill(
+            state.Health,
+            state.StatusText,
+            intentionallyInactive);
         Grid.SetColumn(statusPill, 2);
         header.Children.Add(statusPill);
 
@@ -941,7 +990,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         var detail = new TextBlock
         {
             Text = state.Detail,
-            Margin = new Thickness(0, 18, 0, 0),
+            Margin = new Thickness(0, 12, 0, 0),
             Foreground = SecondaryTextBrush,
             FontSize = 12,
             TextWrapping = TextWrapping.Wrap,
@@ -952,7 +1001,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         var actionRow = new Grid
         {
-            Margin = new Thickness(0, 16, 0, 0),
+            Margin = new Thickness(0, 12, 0, 0),
         };
         actionRow.ColumnDefinitions.Add(new ColumnDefinition
         {
@@ -976,8 +1025,8 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         {
             Content = contextualAction.Text,
             Icon = new SymbolIcon { Symbol = contextualAction.Icon },
-            MinHeight = 32,
-            Padding = new Thickness(11, 4, 11, 4),
+            MinHeight = 36,
+            Padding = new Thickness(12, 6, 12, 6),
             Style = FindStyle(
                 contextualAction.Primary
                     ? "TalvoraPrimaryButtonStyle"
@@ -994,12 +1043,10 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
         var card = new Border
         {
-            Margin = new Thickness(0, 0, 18, 18),
-            MinHeight = 184,
+            Margin = new Thickness(0, 0, 0, 12),
+            MinHeight = 145,
             Style = FindStyle("TalvoraCardStyle"),
-            BorderBrush = state.Health == ControlCenterHealthState.Ready
-                ? CardBorderBrush
-                : GetHealthSoftBrush(state.Health),
+            BorderBrush = cardStroke,
             Child = root,
             Tag = state.Registration.Id,
             Cursor = WpfCursors.Hand,
@@ -1022,9 +1069,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             card.Background = SurfaceBrush;
             if (!card.IsKeyboardFocusWithin)
             {
-                card.BorderBrush = state.Health == ControlCenterHealthState.Ready
-                    ? CardBorderBrush
-                    : GetHealthSoftBrush(state.Health);
+                card.BorderBrush = cardStroke;
             }
         };
         card.GotKeyboardFocus += (_, _) =>
@@ -1035,9 +1080,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         {
             if (!card.IsMouseOver)
             {
-                card.BorderBrush = state.Health == ControlCenterHealthState.Ready
-                    ? CardBorderBrush
-                    : GetHealthSoftBrush(state.Health);
+                card.BorderBrush = cardStroke;
             }
         };
         card.KeyDown += async (_, e) =>
@@ -1127,34 +1170,20 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
     private void UpdateCardWidths()
     {
-        if (_cardsPanel is null || _cardsPanel.ActualWidth <= 0)
+        if (_cardsPanel is null)
         {
             return;
         }
 
-
+        // Full-width rows eliminate the empty gutters of the old card grid.
         foreach (var section in _cardsPanel.Children.OfType<StackPanel>())
         {
-            foreach (var panel in section.Children.OfType<WrapPanel>())
+            foreach (var panel in section.Children.OfType<StackPanel>())
             {
-                var available = Math.Max(
-                    320,
-                    panel.ActualWidth > 0
-                        ? panel.ActualWidth
-                        : _cardsPanel.ActualWidth);
-                var columns = available >= 1040
-                    ? 3
-                    : available >= 680
-                        ? 2
-                        : 1;
-                var gaps = 18 * (columns - 1);
-                var cardWidth = Math.Max(
-                    300,
-                    Math.Floor((available - gaps) / columns) -
-                    (columns == 1 ? 0 : 1));
-                foreach (var child in panel.Children.OfType<Border>())
+                foreach (var item in panel.Children.OfType<Border>())
                 {
-                    child.Width = cardWidth;
+                    item.Width = double.NaN;
+                    item.HorizontalAlignment = HAlign.Stretch;
                 }
             }
         }
@@ -1230,9 +1259,12 @@ internal sealed partial class ControlCenterWindow : FluentWindow
 
     private static Border CreateStatusPill(
         ControlCenterHealthState health,
-        string text)
+        string text,
+        bool intentionallyInactive = false)
     {
-        var foreground = GetHealthBrush(health);
+        var foreground = intentionallyInactive
+            ? IdleBrush
+            : GetHealthBrush(health);
         var panel = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -1257,7 +1289,9 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         return new Border
         {
             Padding = new Thickness(10, 6, 10, 6),
-            Background = GetHealthSoftBrush(health),
+            Background = intentionallyInactive
+                ? IdleSoftBrush
+                : GetHealthSoftBrush(health),
             CornerRadius = new CornerRadius(11),
             HorizontalAlignment = HAlign.Right,
             VerticalAlignment = VAlign.Top,

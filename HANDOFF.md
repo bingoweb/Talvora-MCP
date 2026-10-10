@@ -1,5 +1,14 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-10-11 — Stitch-backed Control Center WPF redesign
+
+- Google Stitch CLI v0.11.0 authenticated (OAuth), generated actual native-desktop design direction under project `projects/9163047541738545802`, screen `cbab0028b2ea4193abd667faf1c74625`; Canvas URL: https://stitch.google.com/projects/9163047541738545802?node-id=cbab0028b2ea4193abd667faf1c74625.
+- Implemented in native WPF, not an HTML/web overlay. New `ControlCenterWindow.Stitch.cs` owns working keyboard-accessible navigation: Genel Bakış, MCP Hizmetleri and Olaylar. Sidebar routes to existing live actions; there are no placebo navigation buttons.
+- Stitch design system translated to `ControlCenterTheme.xaml`: bright #F7F9FF canvas, white cards, deep #101827 rail, indigo #384EC0 and restrained semantic state colors, Segoe UI Variable typography. Existing dark notification/trace palette remains intentionally independent.
+- Snapshot-derived four metric tiles: ready, intentionally inactive, actionable warning/error, total registered. No fake CPU/traffic telemetry. Entire MCP roster moved from rigid 2/3-column card grid to full-width, keyboard-accessible service rows. On-demand/explicitly stopped registrations remain visible with NEUTRAL status rather than error red; true faults retain warning/error semantics.
+- Service action handlers, component health, async dashboard refresh/debounce, detail lifecycle buttons, event log filters, raw log IO, installer/service dependencies, and existing desktop-notification size behavior are preserved. Detail lifecycle controls wrap on narrow windows.
+- Added WPF smoke checks for sidebar navigation and a strictly opt-in PNG screenshot emitter, enabled only with `TALVORA_STITCH_PREVIEW_PNG`; source regression checks guard native WPF design, live metrics and expected state behavior. Existing unrelated uncommitted work must remain untouched.
+
 ## CURRENT — 2026-10-10 — MCP tray health and notification sizing
 
 - Manually stopped MCP registrations are intentionally inactive and are ignored by the aggregate tray health. On-demand integrations with `AutoStart=false` are also ignored while offline or not yet checked; active attention states still count. Talvora Core remains mandatory and genuine running-service faults still show warning/red. Dashboard aggregate health follows the same policy; individual stopped MCPs stay visible as stopped.

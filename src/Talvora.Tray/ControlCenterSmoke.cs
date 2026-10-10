@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -43,9 +44,12 @@ internal static class ControlCenterSmoke
                 AssertWindowHasVisibleContent(window);
                 AssertWindowDpi(window);
                 AssertRenderedSurfaceIsNotBlank(window);
+                AssertStitchNavigation(window);
+                SaveVisualSnapshotIfRequested(window);
                 AssertCompactDashboardLayout(window);
 
                 await window.RunSmokeScenarioAsync();
+                SaveVisualSnapshotIfRequested(window, "loaded");
 
                 window.Close();
                 if (window.IsVisible)
@@ -91,6 +95,7 @@ internal static class ControlCenterSmoke
         {
             "TextFillColorPrimaryBrush",
             "TalvoraCardStyle",
+            "TalvoraSidebarButtonStyle",
             "TalvoraSecondaryButtonStyle",
             "TalvoraSearchBoxStyle",
         };
@@ -103,6 +108,52 @@ internal static class ControlCenterSmoke
                     $"Fluent resource '{key}' is not loaded.");
             }
         }
+    }
+
+    private static void AssertStitchNavigation(ControlCenterWindow window)
+    {
+        foreach (var name in new[] { "Genel Bakış", "MCP Hizmetleri", "Olaylar" })
+        {
+            var link = FindVisualChildByAutomationName(window, name);
+            if (!link.IsEnabled || link.ActualWidth < 80 || link.ActualHeight < 30)
+            {
+                throw new InvalidOperationException(
+                    $"Stitch navigation item '{name}' is not usable.");
+            }
+        }
+    }
+
+    private static void SaveVisualSnapshotIfRequested(
+        ControlCenterWindow window,
+        string? variant = null)
+    {
+        var path = Environment.GetEnvironmentVariable(
+            "TALVORA_STITCH_PREVIEW_PNG");
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        window.UpdateLayout();
+        var bitmap = new RenderTargetBitmap(
+            Math.Max(1, (int)Math.Round(window.ActualWidth)),
+            Math.Max(1, (int)Math.Round(window.ActualHeight)),
+            96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(window);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        var output = Path.GetFullPath(path);
+        if (!string.IsNullOrWhiteSpace(variant))
+        {
+            output = Path.Combine(
+                Path.GetDirectoryName(output)!,
+                Path.GetFileNameWithoutExtension(output) +
+                "-" + variant +
+                Path.GetExtension(output));
+        }
+        Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+        using var file = File.Create(output);
+        encoder.Save(file);
     }
 
     private static void AssertWindowChrome(ControlCenterWindow window)

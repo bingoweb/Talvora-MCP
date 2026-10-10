@@ -13,7 +13,7 @@ internal sealed partial class ControlCenterWindow
     {
         var content = new StackPanel
         {
-            Margin = new Thickness(32, 26, 32, 34),
+            Margin = new Thickness(28, 24, 28, 32),
         };
 
         var backButton = new UiButton
@@ -48,7 +48,7 @@ internal sealed partial class ControlCenterWindow
 
         _detailTitle = new TextBlock
         {
-            FontSize = 30,
+            FontSize = 26,
             FontWeight = FontWeights.SemiBold,
         };
         titleStack.Children.Add(_detailTitle);
@@ -105,15 +105,7 @@ internal sealed partial class ControlCenterWindow
             Style = FindStyle("TalvoraSubtleCardStyle"),
         };
 
-        var controlsGrid = new Grid();
-        controlsGrid.ColumnDefinitions.Add(new ColumnDefinition
-        {
-            Width = new GridLength(1, GridUnitType.Star),
-        });
-        controlsGrid.ColumnDefinitions.Add(new ColumnDefinition
-        {
-            Width = GridLength.Auto,
-        });
+        var controlsGrid = new StackPanel();
 
         var controlCopy = new StackPanel
         {
@@ -135,10 +127,10 @@ internal sealed partial class ControlCenterWindow
         });
         controlsGrid.Children.Add(controlCopy);
 
-        var buttonRow = new StackPanel
+        var buttonRow = new WrapPanel
         {
             Orientation = System.Windows.Controls.Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 14, 0, 0),
         };
 
         _detailStartButton = new UiButton
@@ -183,7 +175,6 @@ internal sealed partial class ControlCenterWindow
                 ManagedMcpLifecycleOperation.Restart);
         buttonRow.Children.Add(_detailRestartButton);
 
-        Grid.SetColumn(buttonRow, 1);
         controlsGrid.Children.Add(buttonRow);
 
         controlsCard.Child = controlsGrid;
@@ -646,7 +637,14 @@ internal sealed partial class ControlCenterWindow
     private void UpdateDetailSummary(ManagedMcpDashboardState state)
     {
         _detailStatus.Text = $"{state.StatusText} — {state.Detail}";
-        _detailStatus.Foreground = GetHealthBrush(state.Health);
+        var intentionallyInactive = state.Health != ControlCenterHealthState.Ready &&
+            ManagedMcpAggregateHealthPolicy.IsIgnored(
+                state.Registration,
+                state.Health,
+                ManagedMcpSessionState.IsManuallyStopped(state.Registration.Id));
+        _detailStatus.Foreground = intentionallyInactive
+            ? IdleBrush
+            : GetHealthBrush(state.Health);
     }
 
     private void RenderComponentStates(
@@ -673,7 +671,16 @@ internal sealed partial class ControlCenterWindow
                 Width = GridLength.Auto,
             });
 
-            var statusBrush = GetHealthBrush(state.Health);
+            var intentionallyInactive = _selectedMcp is { } selected &&
+                ManagedMcpAggregateHealthPolicy.IsIgnored(
+                    selected.Registration,
+                    selected.Health,
+                    ManagedMcpSessionState.IsManuallyStopped(
+                        selected.Registration.Id));
+            var statusBrush = intentionallyInactive &&
+                              state.Health == ControlCenterHealthState.Offline
+                ? IdleBrush
+                : GetHealthBrush(state.Health);
             row.Children.Add(new Border
             {
                 Width = 8,

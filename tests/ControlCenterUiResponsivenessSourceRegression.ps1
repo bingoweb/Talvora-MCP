@@ -45,6 +45,8 @@ $dashboardService = Read-RepoText 'src\Talvora.Tray\ControlCenterDashboardServic
 $componentHealth = Read-RepoText 'src\Talvora.Tray\ControlCenterComponentHealthService.cs'
 $versionService = Read-RepoText 'src\Talvora.Tray\ControlCenterVersionService.cs'
 $smoke = Read-RepoText 'src\Talvora.Tray\ControlCenterSmoke.cs'
+$stitchWindow = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.Stitch.cs'
+$theme = Read-RepoText 'src\Talvora.Tray\ControlCenterTheme.xaml'
 
 Assert-Contains $eventStore 'ReadRecentAsync' 'event history exposes an async WPF-safe read boundary'
 Assert-Contains $eventStore 'MaximumEventDocumentBytes\s*=\s*8\s*\*\s*1024\s*\*\s*1024' 'structured event history has an explicit 8 MiB persisted-document ceiling'
@@ -95,5 +97,19 @@ Assert-Contains $mainWindow 'AutomationProperties\.SetName' 'dashboard controls 
 Assert-Contains $actionsWindow 'Dev/Admin bağlantılarını yenile' 'ready Core actions explicitly identify the focused ChatGPT connections'
 Assert-Contains $actionsWindow 'Servisi yeniden başlat' 'degraded Core actions repair the Core service instead of pretending to reconnect it'
 Assert-NotContains $actionsWindow '"Yeniden bağlan"[\s\r\n]+\s*SymbolRegular\.PlugConnected20' 'Core attention card no longer exposes the legacy tunnel-only contextual action'
+
+Assert-Contains $stitchWindow 'BuildNavigationSidebar' 'Google Stitch control center navigation must exist as native WPF.'
+Assert-Contains $stitchWindow 'Genel Bakış' 'Stitch navigation must expose the real overview.'
+Assert-Contains $stitchWindow 'MCP Hizmetleri' 'Stitch navigation must expose the real managed MCP services.'
+Assert-Contains $stitchWindow '_eventsExpander\.IsExpanded = true' 'Events navigation must actually open the live event history.'
+Assert-Contains $stitchWindow 'RefreshOverviewMetrics' 'Overview metric values must be driven by actual MCP snapshot data.'
+Assert-Contains $stitchWindow 'ManagedMcpAggregateHealthPolicy\.IsIgnored' 'Optional stopped MCPs must be classified as intentionally inactive.'
+Assert-Contains $mainWindow 'var cards = new StackPanel' 'Managed MCP cards must use a gap-free full-width service list.'
+Assert-NotContains $mainWindow 'var cards = new WrapPanel' 'Old multi-column service tiles must not regress.'
+Assert-Contains $mainWindow 'intentionallyInactive' 'MCP status badge must distinguish expected offline from real failure.'
+Assert-Contains $theme '<ui:ThemesDictionary Theme="Light"' 'Stitch light-surface resource theme must be active.'
+Assert-Contains $theme 'Talvora\.Background\.Color' 'Stitch UI must retain a product-owned surface palette.'
+Assert-Contains $smoke 'AssertStitchNavigation' 'Visible sidebar navigation must be tested in WPF smoke.'
+Assert-Contains $smoke 'SaveVisualSnapshotIfRequested' 'WPF design must allow opt-in real rendered screenshot validation.'
 
 Write-Output 'CONTROL_CENTER_UI_RESPONSIVENESS_SOURCE_GREEN'
