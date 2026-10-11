@@ -74,6 +74,8 @@ public static class TalvoraToolManifest
         "talvora_git_run",
         "talvora_gh_info",
         "talvora_gh_run",
+        "talvora_codex_info",
+        "talvora_codex_exec",
         "talvora_read_text_range",
         "talvora_tail_text",
         "talvora_append_text",

@@ -338,6 +338,18 @@ internal static partial class SmokeScenarios
             });
         }
 
+        // Read-only discovery must work even on headless GitHub runners
+        // without an installed Codex desktop app or signed-in session.
+        var codex = await EnsureSuccess(
+            byName["talvora_codex_info"], new());
+        if (GetString(codex, "model") != "gpt-6.1-sol" ||
+            GetString(codex, "reasoningEffort") != "medium" ||
+            GetString(codex, "sandbox") != "workspace-write")
+        {
+            throw new InvalidOperationException(
+                "Codex discovery did not expose the reviewed default model, effort and sandbox.");
+        }
+
         var windowsRelease = await EnsureSuccess(
             byName["talvora_windows_release_tools_info"],
             new());

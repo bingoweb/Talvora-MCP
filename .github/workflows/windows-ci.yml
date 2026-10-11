@@ -108,6 +108,9 @@ jobs:
           & ./tests/NativeInstallerSourceRegression.ps1
           if (-not $?) { throw 'Native installer source regression failed.' }
 
+          & ./tests/CodexCliIntegrationSourceRegression.ps1
+          if (-not $?) { throw 'Codex CLI integration regression failed.' }
+
           foreach ($test in @(
             './tests/FileListMetadataRegression.ps1',
             './tests/KnowledgeSearchScanRegression.ps1',

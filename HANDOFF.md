@@ -1,5 +1,13 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-10-11 — Codex desktop CLI bridge
+
+- Existing Windows Codex desktop CLI is present as a real executable under the signed-in user's `LOCALAPPDATA\OpenAI\Codex\bin\<version-hash>\codex.exe`. The hash changes on updates, so resolution now enumerates bounded current desktop directories and falls back to the current WindowsApps Codex package.
+- Added development-facing MCP tools `talvora_codex_info` (read-only discovery, version, interactive-user login status) and `talvora_codex_exec` (coding tasks executed through the existing `InteractiveUserProcessRunner`; never under LocalSystem).
+- Defaults: `gpt-6.1-sol`, `model_reasoning_effort="medium"`. Task execution explicitly uses `workspace-write` or `read-only` with `-a never` to deny noninteractive privilege escalation, overriding unrelated broader desktop config. No API key, duplicate installation, prompt echo or raw credentials are returned.
+- The reviewed MCP manifest grows to Full=236 / Dev=199 / Admin=88 / Shared=51. Source gate and the application-development smoke contract are updated. Quality evidence: Context7 `/openai/codex` and `/dotnet/docs` with official GitHub/Microsoft sources.
+- Do not call this bridge a way to bypass security restrictions. The CLI and local sandbox remain bound to normal-user privileges and allowed workspaces.
+
 ## CURRENT — 2026-10-11 — Windows CI recovery (issue #18)
 
 - GitHub windows-ci run 38087996308 passed locked restore, Release build, script parsing and WinGet rejection but failed at `PenpotOnDemandSourceRegression.ps1`: the test still required inline `!state.Registration.AutoStart` after health status was centralized in `ManagedMcpAggregateHealthPolicy.IsIgnored`. The original test failed both on GitHub and in the local workspace.
