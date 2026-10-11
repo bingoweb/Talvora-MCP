@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-10T21:37:16Z",
-  "scope": "Talvora windows-ci follow-up 2026-10-11: align Penpot source regression with central MCP health policy, use the existing Release build in PowerShell regression under Add-Type assembly locks, and repin Full/Development tool counts to 234/197 after intentional removal of 28 memory tools. Verify full/focused MCP set membership and the Dev/Admin overlap with the .NET LINQ and ordinal equality contract. Context7 /microsoftdocs/powershell-docs and /dotnet/docs checked; historical audit evidence preserved.",
+  "verifiedAtUtc": "2026-10-11T00:15:38.640Z",
+  "scope": "CI recovery 2026-10-11 for failed windows-ci run #668 (cca5ebf): verify the new read-only embedded Stitch and Hostinger MCP health endpoint, ASP.NET Core Minimal API JSON/HttpContext/CancellationToken contracts, and linked .NET timeout-cancellation behavior. Context7 /dotnet/aspnetcore.docs and /dotnet/docs were queried against official documentation. This refresh accompanies follow-up verification after the original source commit omitted its required evidence; historical audit entries retained.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/aspnetcore.docs",
+      "verified": "2026-10-11 Context7 query checked the official ASP.NET Core Minimal APIs docs: MapGet can bind HttpContext and the request CancellationToken and can return Results.Json. Talvora EmbeddedMcpIntegrationHealth.Map returns a read-only JSON envelope with schemaVersion and integration states; downstream UI consumes the endpoint using an explicitly bounded HttpClient."
+    },
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-11 Context7 query checked official .NET linked cancellation token and CancelAfter guidance: a linked CancellationTokenSource propagates either caller cancellation or the configured timeout, and an awaited operation may raise OperationCanceledException. Talvora's integration health probe uses a linked bounded cancellation budget and disposes it, so the timeout path must be treated as cancellation rather than proof of a healthy integration."
+    },
     {
       "libraryId": "/microsoftdocs/powershell-docs",
       "verified": "2026-10-11 official PowerShell 7 comparison-operator documentation: -match/-notmatch evaluate .NET regular expressions against strings, case-insensitively unless -cmatch is used. CI source assertions therefore check observable shared-policy wiring plus existing runtime contract rather than an obsolete inline AutoStart expression."
@@ -53,6 +61,8 @@
     }
   ],
   "vendorSources": [
+    "2026-10-11 Official ASP.NET Core Minimal API docs verified through Context7 /dotnet/aspnetcore.docs: https://github.com/dotnet/aspnetcore.docs/blob/main/aspnetcore/fundamentals/minimal-apis/includes/parameter-binding7.md (CancellationToken binding); https://github.com/dotnet/aspnetcore.docs/blob/main/aspnetcore/fundamentals/minimal-apis/includes/responses7-8.md (Results.Json); https://github.com/dotnet/aspnetcore.docs/blob/main/aspnetcore/fundamentals/http-context.md (HttpContext handler injection).",
+    "2026-10-11 Official .NET cancellation documentation verified through Context7 /dotnet/docs: https://github.com/dotnet/docs/blob/main/docs/standard/asynchronous-programming-patterns/coalesce-cancellation-tokens-from-timeouts.md (linked caller and timeout tokens) and https://github.com/dotnet/docs/blob/main/docs/csharp/asynchronous-programming/cancel-async-tasks-after-a-period-of-time.md (CancelAfter and OperationCanceledException).",
     "2026-10-11 Microsoft official LINQ set operations and OrdinalComparer documentation checked: https://learn.microsoft.com/en-us/dotnet/csharp/linq/standard-query-operators/set-operations — Intersect with StringComparer.Ordinal permits exact Dev/Admin MCP overlap verification after intentionally removing memory tools.",
     "2026-10-11 Microsoft PowerShell official comparison operators reference checked: https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_comparison_operators — -match/-notmatch test .NET regex patterns; the Penpot regression now matches the semantic health policy and runtime checks.",
     "2026-10-09 Microsoft Learn .NET 10 JsonElement official reference verified: https://learn.microsoft.com/en-us/dotnet/api/system.text.json.jsonelement?view=net-10.0 — ValueKind and EnumerateArray allow rejecting invalid release-gate schema entries before content access.",
