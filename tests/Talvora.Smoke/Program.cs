@@ -4,6 +4,15 @@ using static SmokeSupport;
 
 try
 {
+if (args.Length == 1 &&
+    string.Equals(args[0], "--codex-integration-policy-only",
+        StringComparison.Ordinal))
+{
+    await SmokeScenarios.RunCodexIntegrationPolicyAsync();
+    Console.WriteLine("TALVORA CODEX INTEGRATION POLICY GREEN");
+    return;
+}
+
 if (args.Length >= 3 &&
     string.Equals(
         args[0],

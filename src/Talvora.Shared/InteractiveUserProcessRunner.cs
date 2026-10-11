@@ -17,12 +17,18 @@ public static class InteractiveUserProcessRunner
         string StandardOutputPath,
         string StandardErrorPath,
         string ResultPath,
-        string HelperAssemblyPath);
+        string HelperAssemblyPath,
+        int MaximumPersistedCharacters,
+        bool DiscardStandardError);
 
     private sealed record Result(
         int ExitCode,
         string? Error,
-        long ElapsedMilliseconds);
+        long ElapsedMilliseconds,
+        long StandardOutputTotalCharacters = 0,
+        long StandardErrorTotalCharacters = 0,
+        bool StandardOutputTruncated = false,
+        bool StandardErrorTruncated = false);
 
     public static async Task<ProcessExecutionResult> RunAsync(
         string executable,
@@ -32,7 +38,9 @@ public static class InteractiveUserProcessRunner
         int timeoutSeconds = 0,
         CancellationToken cancellationToken = default,
         int maxCapturedCharactersPerStream =
-            ProcessRunner.DefaultMaximumCapturedCharacters)
+            ProcessRunner.DefaultMaximumCapturedCharacters,
+        InteractiveUserContext? interactiveUser = null,
+        bool discardStandardError = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
         ArgumentException.ThrowIfNullOrWhiteSpace(workingDirectory);
@@ -44,7 +52,19 @@ public static class InteractiveUserProcessRunner
                 nameof(maxCapturedCharactersPerStream));
         }
 
-        var context = WindowsSessionLauncher.GetDefaultInteractiveUser();
+        var context = interactiveUser ??
+            WindowsSessionLauncher.GetDefaultInteractiveUser();
+        if (interactiveUser is not null)
+        {
+            var current = WindowsSessionLauncher.GetActiveUserForSession(
+                context.SessionId);
+            if (!string.Equals(current.Sid, context.Sid,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException(
+                    "The Windows user session identity changed before launch.");
+            }
+        }
         var localAppData = context.Environment.TryGetValue(
             "LOCALAPPDATA",
             out var localValue)
@@ -88,7 +108,9 @@ public static class InteractiveUserProcessRunner
             resultPath,
             typeof(InteractiveUserProcessRunner)
                 .Assembly
-                .Location);
+                .Location,
+            maxCapturedCharactersPerStream,
+            discardStandardError);
 
         FileStream? runLease = null;
         try
@@ -134,7 +156,8 @@ public static class InteractiveUserProcessRunner
                 runRoot,
                 environment: null,
                 visible: false,
-                newConsole: false);
+                newConsole: false,
+                expectedUserSid: interactiveUser?.Sid);
 
             using var process = Process.GetProcessById(launch.ProcessId);
             using var timeoutCts = timeoutSeconds > 0
@@ -181,11 +204,13 @@ public static class InteractiveUserProcessRunner
             var stderr = stderrCapture.Text;
 
             Result? result = null;
-            if (File.Exists(resultPath))
+            // A timed-out helper may leave an incomplete result document.
+            // Report the timeout using the already bounded partial output.
+            if (!timedOut && File.Exists(resultPath))
             {
                 result = JsonSerializer.Deserialize<Result>(
-                    await File.ReadAllTextAsync(
-                        resultPath,
+                    await TextFileStore.ReadBoundedAsync(
+                        resultPath, 64 * 1024,
                         cancellationToken).ConfigureAwait(false));
             }
 
@@ -201,8 +226,8 @@ public static class InteractiveUserProcessRunner
                     Path.GetFullPath(workingDirectory),
                     requestedArguments,
                     timeoutSeconds * 1000L,
-                    stdoutCapture.Truncated,
-                    stderrCapture.Truncated,
+                    stdoutCapture.Truncated || result?.StandardOutputTruncated == true,
+                    stderrCapture.Truncated || result?.StandardErrorTruncated == true,
                     false,
                     stdoutCapture.TotalCharacters,
                     stderrCapture.TotalCharacters);
@@ -216,9 +241,16 @@ public static class InteractiveUserProcessRunner
 
             if (!string.IsNullOrWhiteSpace(result.Error))
             {
+                // The helper may return an exception message after the
+                // bounded stderr capture. Do not let it bypass the limit.
+                var remaining = Math.Max(0,
+                    maxCapturedCharactersPerStream - stderr.Length);
+                var safeError = result.Error.Length > remaining
+                    ? result.Error[..remaining]
+                    : result.Error;
                 stderr = string.IsNullOrWhiteSpace(stderr)
-                    ? result.Error
-                    : stderr + Environment.NewLine + result.Error;
+                    ? safeError
+                    : stderr + Environment.NewLine + safeError;
             }
 
             return new ProcessExecutionResult(
@@ -231,11 +263,12 @@ public static class InteractiveUserProcessRunner
                 Path.GetFullPath(workingDirectory),
                 requestedArguments,
                 result.ElapsedMilliseconds,
-                stdoutCapture.Truncated,
-                stderrCapture.Truncated,
+                stdoutCapture.Truncated || result.StandardOutputTruncated,
+                stderrCapture.Truncated || result.StandardErrorTruncated ||
+                    stderr.Length >= maxCapturedCharactersPerStream,
                 false,
-                stdoutCapture.TotalCharacters,
-                stderrCapture.TotalCharacters);
+                Math.Max(stdoutCapture.TotalCharacters, result.StandardOutputTotalCharacters),
+                Math.Max(stderrCapture.TotalCharacters, result.StandardErrorTotalCharacters));
         }
         finally
         {
@@ -352,18 +385,22 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $sw = [Diagnostics.Stopwatch]::StartNew()
-$request = Get-Content -Raw -LiteralPath $RequestPath | ConvertFrom-Json
-Remove-Item -LiteralPath $RequestPath -Force -ErrorAction SilentlyContinue
-[void][Reflection.Assembly]::LoadFrom(
-    [string]$request.HelperAssemblyPath)
-
+$resultPath = Join-Path (Split-Path -Parent $RequestPath) 'result.json'
 try {
+    $request = Get-Content -Raw -LiteralPath $RequestPath | ConvertFrom-Json
+    Remove-Item -LiteralPath $RequestPath -Force -ErrorAction SilentlyContinue
+    [void][Reflection.Assembly]::LoadFrom(
+        [string]$request.HelperAssemblyPath)
+
     $psi = [Diagnostics.ProcessStartInfo]::new()
     $psi.FileName = [string]$request.Executable
     $psi.WorkingDirectory = [string]$request.WorkingDirectory
     $psi.UseShellExecute = $false
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
+    # Native Codex emits UTF-8, regardless of the Windows OEM code page.
+    $psi.StandardOutputEncoding = [Text.UTF8Encoding]::new($false)
+    $psi.StandardErrorEncoding = [Text.UTF8Encoding]::new($false)
     $psi.CreateNoWindow = $true
 
     foreach($arg in @($request.Arguments)) {
@@ -384,23 +421,43 @@ try {
         throw "Failed to start interactive child process."
     }
 
+    $pumpCts = [Threading.CancellationTokenSource]::new()
     $stdoutTask = [Talvora.Shared.ProcessOutputPump]::PumpToUtf8FileAsync(
         $process.StandardOutput,
-        [string]$request.StandardOutputPath)
+        [string]$request.StandardOutputPath,
+        [int]$request.MaximumPersistedCharacters,
+        $pumpCts.Token)
+    $stderrBudget = if($request.DiscardStandardError) {
+        0
+    } else {
+        [int]$request.MaximumPersistedCharacters
+    }
     $stderrTask = [Talvora.Shared.ProcessOutputPump]::PumpToUtf8FileAsync(
         $process.StandardError,
-        [string]$request.StandardErrorPath)
+        [string]$request.StandardErrorPath,
+        $stderrBudget,
+        $pumpCts.Token)
     $process.WaitForExit()
-    $stdoutTask.GetAwaiter().GetResult()
-    $stderrTask.GetAwaiter().GetResult()
+    $drainTask = [Threading.Tasks.Task]::WhenAll(
+        [Threading.Tasks.Task[]]@($stdoutTask, $stderrTask))
+    if(-not $drainTask.Wait(5000)) {
+        $pumpCts.Cancel()
+        throw 'Interactive process output pipes did not close after process exit.'
+    }
+    $stdoutResult = $stdoutTask.GetAwaiter().GetResult()
+    $stderrResult = $stderrTask.GetAwaiter().GetResult()
 
     $sw.Stop()
     @{
         ExitCode = $process.ExitCode
         Error = $null
         ElapsedMilliseconds = $sw.ElapsedMilliseconds
+        StandardOutputTotalCharacters = $stdoutResult.TotalCharacters
+        StandardErrorTotalCharacters = $stderrResult.TotalCharacters
+        StandardOutputTruncated = $stdoutResult.Truncated
+        StandardErrorTruncated = $stderrResult.Truncated
     } | ConvertTo-Json -Compress |
-        Set-Content -LiteralPath ([string]$request.ResultPath) -Encoding utf8
+        Set-Content -LiteralPath $resultPath -Encoding utf8
 }
 catch {
     $sw.Stop()
@@ -409,7 +466,7 @@ catch {
         Error = $_.Exception.Message
         ElapsedMilliseconds = $sw.ElapsedMilliseconds
     } | ConvertTo-Json -Compress |
-        Set-Content -LiteralPath ([string]$request.ResultPath) -Encoding utf8
+        Set-Content -LiteralPath $resultPath -Encoding utf8
 }
 """;
 }

@@ -123,6 +123,12 @@ jobs:
             if (-not $?) { throw "Regression failed: $test" }
           }
 
+      - name: Validate Codex CLI behavior
+        shell: pwsh
+        run: |
+          dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-build -- '--codex-integration-policy-only'
+          if ($LASTEXITCODE -ne 0) { throw 'Codex CLI behavior regression failed.' }
+
       - name: Validate desktop notification behavior
         shell: pwsh
         run: |

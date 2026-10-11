@@ -61,7 +61,7 @@ public static class CodexCliTools
         InteractiveUserContext context;
         try
         {
-            context = WindowsSessionLauncher.GetDefaultInteractiveUser();
+            context = WindowsSessionLauncher.GetActiveInteractiveUser();
         }
         catch (InvalidOperationException)
         {
@@ -85,12 +85,14 @@ public static class CodexCliTools
             executable, cwd, ["--version"],
             timeoutSeconds: 30,
             cancellationToken: cancellationToken,
-            maxCapturedCharactersPerStream: 4096);
+            maxCapturedCharactersPerStream: 4096,
+            interactiveUser: context);
         var login = await InteractiveUserProcessRunner.RunAsync(
             executable, cwd, ["login", "status"],
             timeoutSeconds: 30,
             cancellationToken: cancellationToken,
-            maxCapturedCharactersPerStream: 4096);
+            maxCapturedCharactersPerStream: 4096,
+            interactiveUser: context);
         return new TalvoraCodexCliInfoResponse(
             true,
             executable,
@@ -150,37 +152,26 @@ public static class CodexCliTools
             throw new ArgumentOutOfRangeException(nameof(timeoutSeconds));
         }
 
-        var context = WindowsSessionLauncher.GetDefaultInteractiveUser();
+        var context = WindowsSessionLauncher.GetActiveInteractiveUser();
         var executable = ResolveCodex(context)
             ?? throw new FileNotFoundException(
                 "Codex CLI was not found in the interactive Windows user's desktop app.");
         var cwd = GetWorkingDirectory(workingDirectory, context);
-        // Explicit sandbox/approval flags override any less-restrictive user
-        // settings. Separate argv elements avoid shell interpolation.
-        string[] arguments =
-        [
-            "-a", "never",
-            "exec",
-            "--ephemeral",
-            "--model", model,
-            "--sandbox", sandbox,
-            "--config", $"model_reasoning_effort=\"{reasoningEffort}\"",
-            "--color", "never",
-            "--cd", cwd,
-            prompt,
-        ];
+        // Keep task text after the command-line option terminator.
+        var arguments = CodexCliInvocationPolicy.CreateArguments(
+            cwd, prompt, model, reasoningEffort, sandbox);
         var result = await InteractiveUserProcessRunner.RunAsync(
             executable, cwd, arguments,
             timeoutSeconds: timeoutSeconds,
             cancellationToken: cancellationToken,
-            maxCapturedCharactersPerStream: MaximumOutputCharacters);
-        // Codex echoes the user's original task into stderr as part of its
-        // session header. Remove that exact text from both streams before
-        // returning output to MCP clients. Do not return command arguments.
+            maxCapturedCharactersPerStream: MaximumOutputCharacters,
+            interactiveUser: context,
+            discardStandardError: true);
+        // Raw stderr echoes the task and tool transcripts. Never expose it.
         return new TalvoraCodexCliExecResponse(
             result.ExitCode,
-            RedactTaskEcho(result.StandardOutput, prompt),
-            RedactTaskEcho(result.StandardError, prompt),
+            CodexCliInvocationPolicy.SanitizeFinalAnswer(result.StandardOutput, prompt),
+            CodexCliInvocationPolicy.SafeErrorSummary(result.ExitCode, result.TimedOut),
             result.TimedOut,
             result.ProcessId,
             executable,
@@ -192,13 +183,6 @@ public static class CodexCliTools
             result.StandardOutputTruncated,
             result.StandardErrorTruncated);
     }
-
-    private static string RedactTaskEcho(string output, string prompt) =>
-        FileLog.RedactSensitiveData(
-            output.Replace(
-                prompt,
-                "[TASK_PROMPT_REDACTED]",
-                StringComparison.Ordinal));
 
     private static string GetWorkingDirectory(
         string? workingDirectory,
@@ -244,8 +228,11 @@ public static class CodexCliTools
             directories = Directory.EnumerateDirectories(
                     root, isAppPackage ? "OpenAI.Codex_*" : "*",
                     SearchOption.TopDirectoryOnly)
-                .Take(128)
+                .Where(directory => isAppPackage ||
+                    (new DirectoryInfo(directory).Name is { Length: 16 } name &&
+                     name.All(Uri.IsHexDigit)))
                 .OrderByDescending(Directory.GetLastWriteTimeUtc)
+                .Take(128)
                 .ToArray();
         }
         catch (Exception ex) when (

@@ -23,6 +23,33 @@ public static IReadOnlyList<WindowsSessionInfo> ListSessions()
         return ReadUserContext(target);
     }
 
+    public static InteractiveUserContext GetActiveInteractiveUser()
+    {
+        EnsureWindows();
+        var active = EnumerateSessions()
+            .Where(item => item.IsActive &&
+                !string.IsNullOrWhiteSpace(item.UserName))
+            .ToArray();
+        if (active.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "No active interactive Windows user session is available.");
+        }
+        return ReadUserContext(SelectDefaultSession(active));
+    }
+
+    public static InteractiveUserContext GetActiveUserForSession(int sessionId)
+    {
+        EnsureWindows();
+        var session = EnumerateSessions().FirstOrDefault(item =>
+            item.SessionId == sessionId && item.IsActive &&
+            !string.IsNullOrWhiteSpace(item.UserName));
+        return session is null
+            ? throw new InvalidOperationException(
+                $"Windows user session {sessionId} is not active.")
+            : ReadUserContext(session);
+    }
+
     public static UserProcessLaunchResult StartProcess(
         string executable,
         IReadOnlyList<string>? arguments = null,
@@ -30,7 +57,8 @@ public static IReadOnlyList<WindowsSessionInfo> ListSessions()
         string? workingDirectory = null,
         IReadOnlyDictionary<string, string?>? environment = null,
         bool visible = true,
-        bool newConsole = false)
+        bool newConsole = false,
+        string? expectedUserSid = null)
     {
         EnsureWindows();
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
@@ -49,6 +77,16 @@ public static IReadOnlyList<WindowsSessionInfo> ListSessions()
         try
         {
             userToken = QueryUserToken(target.SessionId);
+            if (!string.IsNullOrWhiteSpace(expectedUserSid))
+            {
+                using var identity = new WindowsIdentity(userToken);
+                if (!string.Equals(identity.User?.Value, expectedUserSid,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new UnauthorizedAccessException(
+                        "Interactive Windows user identity changed during launch.");
+                }
+            }
             baseEnvironment = CreateUserEnvironment(userToken, target.SessionId);
             var environmentValues = ReadEnvironmentBlock(baseEnvironment);
             ApplyEnvironmentOverrides(environmentValues, environment);

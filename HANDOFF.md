@@ -1,5 +1,14 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-10-11 — Codex CLI reliability/security remediation
+
+- Root audit found live failures: UTF-8 Turkish output mojibake, prompt text starting with `--help` parsed as a CLI option, and synthetic private-task text leaking through diagnostic stderr when its Unicode bytes were decoded incorrectly. Source-built `Talvora.Shared` now passes live interactive-user Codex tests for UTF-8 output, option separation and discarded stderr.
+- `CodexCliInvocationPolicy` centralizes a literal `--` option terminator, output sanitization (remove full original prompt before generic secret redaction) and safe error summaries. `CodexCliTools` never returns raw Codex stderr; default `gpt-6.1-sol`, `medium`, `-a never` and read-only/workspace-write sandboxes remain unchanged.
+- `InteractiveUserProcessRunner` pins an active session SID from discovery through `CreateProcessAsUser`, explicitly decodes UTF-8, bounds helper result JSON and persisted logs, and reports timeouts even when a killed helper left incomplete result JSON. Output pumping persists a bounded head immediately and a bounded tail on completion. In a real 2-second timeout test, the early output survived, process exited and the run directory was removed.
+- `CodexMcpConfiguration` replaces unsafe TOML line skipping: recognizes quoted dotted table-key components and avoids interpreting header-shaped text inside multiline basic/literal strings; preserves unrelated registrations. Dynamic Codex executable discovery now filters candidates before taking newest 128.
+- Added `--codex-integration-policy-only` deterministic .NET smoke (task args, Unicode/privacy, synthetic password, TOML quoted/multiline fixtures, huge output, stderr discard and blocked partial-output cancellation) plus a Windows CI behavior step; refreshed source gate and Context7 evidence. Full Release solution build had zero warnings/errors; 18 source/quality/installer/security gates and Codex behavior smoke passed.
+- At this checkpoint, production Talvora service remains at source commit `a6ce585`. A canonical installer build and safe detached deploy with exact-installed acceptance are the next steps. Do not claim the installed runtime is fixed until that acceptance passes.
+
 ## CURRENT — 2026-10-11 — Codex CLI prompt-echo privacy hardening
 
 - Following successful live deployment of the initial Codex CLI bridge (commit `17d950b`, full 236/Dev 199 MCP surface), an actual `talvora_codex_exec` read-only smoke succeeded with `gpt-6.1-sol` / `medium` but revealed Codex echoes the full task prompt in stderr.

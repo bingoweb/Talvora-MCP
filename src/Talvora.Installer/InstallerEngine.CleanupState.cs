@@ -381,50 +381,9 @@ private static async Task CleanupObsoleteInstallationsAsync(
                 cancellationToken)
             : string.Empty;
 
-        const string header = "[mcp_servers.talvora_local]";
-        var lines = original.Replace("\r\n", "\n").Split('\n').ToList();
-        var output = new List<string>();
-        var skipping = false;
-
-        foreach (var line in lines)
-        {
-            var trimmed = line.Trim();
-            if (string.Equals(trimmed, header, StringComparison.Ordinal))
-            {
-                skipping = true;
-                continue;
-            }
-
-            if (skipping &&
-                trimmed.StartsWith("[", StringComparison.Ordinal) &&
-                trimmed.EndsWith("]", StringComparison.Ordinal))
-            {
-                skipping = false;
-            }
-
-            if (!skipping)
-            {
-                output.Add(line);
-            }
-        }
-
-        while (output.Count > 0 && string.IsNullOrWhiteSpace(output[^1]))
-        {
-            output.RemoveAt(output.Count - 1);
-        }
-
-        if (output.Count > 0)
-        {
-            output.Add(string.Empty);
-        }
-
-        output.Add(header);
-        output.Add($"url = \"{McpUrl}\"");
-        output.Add(string.Empty);
-
         _ = await AtomicFile.WriteAllTextAsync(
             path,
-            string.Join(Environment.NewLine, output),
+            CodexMcpConfiguration.UpsertTalvoraLocal(original, McpUrl),
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
             createBackup: true,
             cancellationToken);
