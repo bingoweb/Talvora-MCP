@@ -241,7 +241,9 @@ public static class ProcessOutputPump
         var headWritten = 0;
         var tailCount = 0;
         var tailWriteIndex = 0;
-        var progressTracker = codexProgressPath is null
+        // PowerShell's reflection binder turns an optional null string
+        // argument into an empty string. Both mean "no progress file".
+        var progressTracker = string.IsNullOrWhiteSpace(codexProgressPath)
             ? null
             : new CodexCliStreamingProgress();
 

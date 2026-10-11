@@ -1,5 +1,10 @@
 # Talvora MCP — Canonical Handoff
 
+## HOTFIX — 2026-10-11 — Codex interactive runner PowerShell binding
+
+- The first installed 6eb7ea9 service was Running and healthy, but live Codex info reported authenticated=false and exec exited 1. Debugging the interactive-user runner with its release DLL exposed two PowerShell/.NET invocation incompatibilities: the stderr PumpToUtf8FileAsync call still supplied four arguments although the helper method now has five, and PowerShell binds an optional null string argument as an empty string, causing an invalid progress file path when no progress observer was requested.
+- Updated the helper stderr call to pass a fifth null argument and made the output pump treat blank progress paths as absent. Added a focused behavior fixture for blank paths. Direct release-DLL interactive-user acceptance now shows Codex --version exit 0 and login status exit 0, both without timeouts or errors. Rebuild/repackage/deploy hotfix and verify background work against the exact installed commit.
+
 ## CURRENT — 2026-10-11 — Trusted Codex productivity, NuGet and long jobs
 
 - User requested more productive freedom and complete developer-tool functionality. Installed ripgrep 15.2.0 globally; verified rg --version from actual Codex session. Compared NuGet HEAD from LocalSystem, regular interactive user and Codex sandbox: both normal contexts HTTP 200, sandbox Schannel SEC_E_NO_CREDENTIALS. Windows unelevated override alone did not fix it. Explicit opt-in full normal-user mode produced NuGet HTTP 200; Codex downloaded Newtonsoft.Json 13.0.3 to a clean project-local cache and built a .NET 10 app with zero warnings/errors.

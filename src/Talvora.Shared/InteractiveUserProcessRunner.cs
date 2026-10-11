@@ -554,7 +554,8 @@ try {
         $process.StandardError,
         [string]$request.StandardErrorPath,
         $stderrBudget,
-        $pumpCts.Token)
+        $pumpCts.Token,
+        $null)
     $process.WaitForExit()
     $drainTask = [Threading.Tasks.Task]::WhenAll(
         [Threading.Tasks.Task[]]@($stdoutTask, $stderrTask))

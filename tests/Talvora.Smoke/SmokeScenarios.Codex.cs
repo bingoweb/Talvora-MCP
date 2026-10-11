@@ -318,6 +318,21 @@ internal static partial class SmokeScenarios
             try { await livePump; }
             catch (OperationCanceledException) { }
 
+            // Windows PowerShell binds optional null string parameters as
+            // empty strings. Explicitly verify an empty progress path is off.
+            var noProgressOutput = Path.Combine(temp, "no-progress-pump.txt");
+            using (var reader = new StringReader("NORMAL-CLI-OUTPUT"))
+            {
+                await ProcessOutputPump.PumpToUtf8FileAsync(
+                    reader, noProgressOutput, maximumCharacters: 128,
+                    codexProgressPath: string.Empty);
+            }
+            if (await File.ReadAllTextAsync(noProgressOutput) !=
+                "NORMAL-CLI-OUTPUT")
+            {
+                throw new InvalidOperationException(
+                    "An empty optional progress path broke normal Codex CLI output.");
+            }
             var discardedPath = Path.Combine(temp, "discarded.txt");
             using (var reader = new StringReader("secret payload"))
             {
