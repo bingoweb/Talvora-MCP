@@ -174,12 +174,13 @@ public static class CodexCliTools
             timeoutSeconds: timeoutSeconds,
             cancellationToken: cancellationToken,
             maxCapturedCharactersPerStream: MaximumOutputCharacters);
-        // Do not include raw prompts, command arguments or auth data in
-        // returned metadata.
+        // Codex echoes the user's original task into stderr as part of its
+        // session header. Remove that exact text from both streams before
+        // returning output to MCP clients. Do not return command arguments.
         return new TalvoraCodexCliExecResponse(
             result.ExitCode,
-            FileLog.RedactSensitiveData(result.StandardOutput),
-            FileLog.RedactSensitiveData(result.StandardError),
+            RedactTaskEcho(result.StandardOutput, prompt),
+            RedactTaskEcho(result.StandardError, prompt),
             result.TimedOut,
             result.ProcessId,
             executable,
@@ -191,6 +192,13 @@ public static class CodexCliTools
             result.StandardOutputTruncated,
             result.StandardErrorTruncated);
     }
+
+    private static string RedactTaskEcho(string output, string prompt) =>
+        FileLog.RedactSensitiveData(
+            output.Replace(
+                prompt,
+                "[TASK_PROMPT_REDACTED]",
+                StringComparison.Ordinal));
 
     private static string GetWorkingDirectory(
         string? workingDirectory,

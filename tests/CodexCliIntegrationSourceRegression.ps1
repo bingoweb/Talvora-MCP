@@ -48,7 +48,11 @@ $checks = [ordered]@{
         $source.Contains('MaximumPromptCharacters') -and
         $source.Contains('MaximumOutputCharacters') -and
         $source.Contains('timeoutSeconds is < 1 or > 3600') -and
-        $source.Contains('FileLog.RedactSensitiveData(result.StandardOutput)') -and
+        $source.Contains('RedactTaskEcho(result.StandardOutput, prompt)') -and
+        $source.Contains('RedactTaskEcho(result.StandardError, prompt)') -and
+        $source.Contains('output.Replace(') -and
+        $source.Contains('StringComparison.Ordinal') -and
+        $source.Contains('[TASK_PROMPT_REDACTED]') -and
         -not $source.Contains('result.Arguments,')
     )
     FocusedSurfaceCountUpdated = (

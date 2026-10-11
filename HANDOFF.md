@@ -1,5 +1,11 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-10-11 — Codex CLI prompt-echo privacy hardening
+
+- Following successful live deployment of the initial Codex CLI bridge (commit `17d950b`, full 236/Dev 199 MCP surface), an actual `talvora_codex_exec` read-only smoke succeeded with `gpt-6.1-sol` / `medium` but revealed Codex echoes the full task prompt in stderr.
+- CodexCliTools now removes exact task-prompt occurrences from both bounded result streams using ordinal substring replacement, then applies existing Talvora secret redaction. Existing sandbox, account/session, model and timeout settings remain unchanged.
+- Extended Codex CLI source regression to guard both redacted streams and non-echo contract. Context7 official .NET string replacement and ordinal comparison documentation verified and evidence refreshed. Follow-up GitHub Windows CI and exact-installed runtime acceptance are required before final closeout.
+
 ## CURRENT — 2026-10-11 — Codex desktop CLI bridge
 
 - Existing Windows Codex desktop CLI is present as a real executable under the signed-in user's `LOCALAPPDATA\OpenAI\Codex\bin\<version-hash>\codex.exe`. The hash changes on updates, so resolution now enumerates bounded current desktop directories and falls back to the current WindowsApps Codex package.
