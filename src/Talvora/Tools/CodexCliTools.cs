@@ -63,7 +63,7 @@ public static class CodexCliTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraCodexCliInfoResponse)),
-     Description("Discover the Windows desktop Codex CLI, user login, GPT-6.1 Sol/medium default, and new autonomous coding defaults: workspace-write, automatic approvals, network access and saved resumable sessions.")]
+     Description("Discover desktop Codex CLI, signed-in user, model and preferred developer profile. Balanced is writable workspace; trusted gives Codex full normal-user development access with functional NuGet/network support.")]
     public static async Task<TalvoraCodexCliInfoResponse> Info(
         CancellationToken cancellationToken = default)
     {
@@ -90,6 +90,9 @@ public static class CodexCliTools
         }
 
         var cwd = GetWorkingDirectory(null, context);
+        var userProfile = CodexPreferencesStore.Read(
+            context.LocalAppData ?? throw new InvalidOperationException(
+                "Interactive LOCALAPPDATA is unavailable."));
         var version = await InteractiveUserProcessRunner.RunAsync(
             executable, cwd, ["--version"],
             timeoutSeconds: 30,
@@ -111,7 +114,9 @@ public static class CodexCliTools
             context.User,
             DefaultModel,
             DefaultReasoningEffort,
-            ProtectedSandbox,
+            userProfile == CodexPreferencesStore.Trusted
+                ? "danger-full-access"
+                : ProtectedSandbox,
             login.ExitCode == 0 && !login.TimedOut
                 ? null
                 : "Codex is installed but the Windows user's ChatGPT login is unavailable.");
@@ -124,13 +129,13 @@ public static class CodexCliTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraCodexCliExecResponse)),
-     Description("Build software with the logged-on user's Codex CLI. Defaults: GPT-6.1 Sol/medium, writable project, network and automatic approval review. Supports resumable sessions, extra writable folders and explicitly opted-in full access. Returns session ID, final answer and concise work summary.")]
-    public static async Task<TalvoraCodexCliExecResponse> Exec(
+     Description("Build software with desktop Codex and the logged-on user's development profile. Balanced: writable project/automatic review. Trusted: full normal-user development access and NuGet/network support. Supports saved session resume, extra roots and structured work summaries.")]
+    public static Task<TalvoraCodexCliExecResponse> Exec(
         string workingDirectory,
         string prompt,
         string model = DefaultModel,
         string reasoningEffort = DefaultReasoningEffort,
-        string sandbox = ProtectedSandbox,
+        string sandbox = "auto",
         int timeoutSeconds = 1800,
         string? resumeSessionId = null,
         bool preserveSession = true,
@@ -139,7 +144,31 @@ public static class CodexCliTools
         string[]? additionalWritableDirectories = null,
         bool allowNonGitWorkspace = true,
         bool allowFullAccess = false,
+        string windowsSandboxMode = "default",
         CancellationToken cancellationToken = default)
+        => ExecuteCore(
+            workingDirectory, prompt, model, reasoningEffort, sandbox,
+            timeoutSeconds, resumeSessionId, preserveSession, networkAccess,
+            approvalMode, additionalWritableDirectories, allowNonGitWorkspace,
+            allowFullAccess, windowsSandboxMode, cancellationToken, null);
+
+    internal static async Task<TalvoraCodexCliExecResponse> ExecuteCore(
+        string workingDirectory,
+        string prompt,
+        string model,
+        string reasoningEffort,
+        string sandbox,
+        int timeoutSeconds,
+        string? resumeSessionId,
+        bool preserveSession,
+        bool networkAccess,
+        string approvalMode,
+        string[]? additionalWritableDirectories,
+        bool allowNonGitWorkspace,
+        bool allowFullAccess,
+        string windowsSandboxMode,
+        CancellationToken cancellationToken,
+        Action<CodexCliEventResult>? onProgress)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
         if (prompt.Length > MaximumPromptCharacters)
@@ -157,17 +186,11 @@ public static class CodexCliTools
                 "Reasoning effort must be low, medium, high, xhigh or max.",
                 nameof(reasoningEffort));
         }
-        if (sandbox is not ("read-only" or ProtectedSandbox or "danger-full-access"))
+        if (sandbox is not ("auto" or "read-only" or ProtectedSandbox or "danger-full-access"))
         {
             throw new ArgumentException(
-                "Codex sandbox must be read-only, workspace-write or danger-full-access.",
+                "Codex sandbox must be auto, read-only, workspace-write or danger-full-access.",
                 nameof(sandbox));
-        }
-        if (sandbox == "danger-full-access" && !allowFullAccess)
-        {
-            throw new ArgumentException(
-                "Full access requires allowFullAccess=true explicitly for this task.",
-                nameof(allowFullAccess));
         }
         if (approvalMode is not ("automatic" or "never"))
         {
@@ -186,12 +209,30 @@ public static class CodexCliTools
             throw new ArgumentOutOfRangeException(nameof(additionalWritableDirectories),
                 "Specify at most twelve additional writable directories.");
         }
-        if (timeoutSeconds is < 1 or > 3600)
+        // Background developer tasks may run for several hours.
+        if (timeoutSeconds is < 1 or > 43200)
         {
             throw new ArgumentOutOfRangeException(nameof(timeoutSeconds));
         }
 
         var context = WindowsSessionLauncher.GetActiveInteractiveUser();
+        var configuredProfile = CodexPreferencesStore.Read(
+            context.LocalAppData ?? throw new InvalidOperationException(
+                "Interactive LOCALAPPDATA is unavailable."));
+        var effectiveSandbox = sandbox == "auto"
+            ? configuredProfile == CodexPreferencesStore.Trusted
+                ? "danger-full-access"
+                : ProtectedSandbox
+            : sandbox;
+        if (effectiveSandbox == "danger-full-access" &&
+            !allowFullAccess &&
+            !(sandbox == "auto" &&
+              configuredProfile == CodexPreferencesStore.Trusted))
+        {
+            throw new ArgumentException(
+                "Select the trusted developer profile or set allowFullAccess=true for this task.",
+                nameof(allowFullAccess));
+        }
         var executable = ResolveCodex(context)
             ?? throw new FileNotFoundException(
                 "Codex CLI was not found in the interactive Windows user's desktop app.");
@@ -213,16 +254,17 @@ public static class CodexCliTools
         }
         // Keep task text after the command-line option terminator.
         var arguments = CodexCliInvocationPolicy.CreateArguments(
-            cwd, prompt, model, reasoningEffort, sandbox,
+            cwd, prompt, model, reasoningEffort, effectiveSandbox,
             resumeSessionId, preserveSession, networkAccess, approvalMode,
-            writableDirectories, allowNonGitWorkspace);
+            writableDirectories, allowNonGitWorkspace, windowsSandboxMode);
         var result = await InteractiveUserProcessRunner.RunAsync(
             executable, cwd, arguments,
             timeoutSeconds: timeoutSeconds,
             cancellationToken: cancellationToken,
             maxCapturedCharactersPerStream: MaximumOutputCharacters,
             interactiveUser: context,
-            discardStandardError: true);
+            discardStandardError: true,
+            onCodexProgress: onProgress);
         // Extract final answer and task activity from Codex's JSONL output.
         var events = CodexCliEventSummary.Parse(result.StandardOutput);
         var finalAnswer = events.HasEvents
@@ -242,7 +284,7 @@ public static class CodexCliTools
             cwd,
             model,
             reasoningEffort,
-            sandbox,
+            effectiveSandbox,
             result.ElapsedMilliseconds,
             result.StandardOutputTruncated,
             result.StandardErrorTruncated,

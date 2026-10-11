@@ -219,6 +219,37 @@ internal static partial class SmokeScenarios
         Directory.CreateDirectory(temp);
         try
         {
+            var userData = Path.Combine(temp, "profile");
+            if (CodexPreferencesStore.Read(userData) !=
+                CodexPreferencesStore.Balanced)
+            {
+                throw new InvalidOperationException(
+                    "New Codex users must initially use a balanced profile.");
+            }
+            await CodexPreferencesStore.WriteAsync(
+                userData, CodexPreferencesStore.Trusted);
+            if (CodexPreferencesStore.Read(userData) !=
+                CodexPreferencesStore.Trusted)
+            {
+                throw new InvalidOperationException(
+                    "Trusted development preference did not persist.");
+            }
+            await CodexPreferencesStore.WriteAsync(
+                userData, CodexPreferencesStore.Balanced);
+            if (CodexPreferencesStore.Read(userData) !=
+                CodexPreferencesStore.Balanced)
+            {
+                throw new InvalidOperationException(
+                    "Balanced development preference could not be restored.");
+            }
+            var windowsMode = CodexCliInvocationPolicy.CreateArguments(
+                temp, "Build", "gpt-6.1-sol", "medium", "workspace-write",
+                windowsSandboxMode: "unelevated");
+            if (!windowsMode.Contains("windows.sandbox=\"unelevated\""))
+            {
+                throw new InvalidOperationException(
+                    "Supported Windows sandbox mode override was not passed.");
+            }
             var capturedPath = Path.Combine(temp, "bounded.txt");
             var content = "BEGIN-İstanbul-" + new string('x', 250_000) + "-SON-çöğüş";
             using (var reader = new StringReader(content))
@@ -235,6 +266,57 @@ internal static partial class SmokeScenarios
                         "Interactive output pump lost UTF-8 or exceeded disk budget.");
                 }
             }
+
+            // A high-volume JSONL stream must keep reporting commands even
+            // after its bounded stdout head has stopped growing.
+            var session = "01a128db-1111-7111-8111-222222222222";
+            var eventLines = new System.Text.StringBuilder();
+            eventLines.AppendLine("{\"type\":\"thread.started\",\"thread_id\":\"" +
+                session + "\"}");
+            for (var index = 0; index < 900; index++)
+            {
+                eventLines.AppendLine(
+                    "{\"type\":\"item.completed\",\"item\":{\"type\":\"command_execution\",\"command\":\"dotnet test\",\"exit_code\":0}}");
+            }
+            var journalPath = Path.Combine(temp, "codex-live-journal.json");
+            using (var reader = new StringReader(eventLines.ToString()))
+            {
+                await ProcessOutputPump.PumpToUtf8FileAsync(
+                    reader, Path.Combine(temp, "codex-bounded-output.txt"),
+                    maximumCharacters: 512,
+                    codexProgressPath: journalPath);
+            }
+            var journal = System.Text.Json.JsonSerializer
+                .Deserialize<CodexCliEventResult>(
+                    await File.ReadAllTextAsync(journalPath));
+            if (journal?.SessionId != session ||
+                journal.CompletedCommands != 900 ||
+                journal.FailedCommands != 0)
+            {
+                throw new InvalidOperationException(
+                    "Long-running Codex progress counters stopped at the stdout cap.");
+            }
+            var streamingPath = Path.Combine(temp, "codex-live-stream.json");
+            using var eventReader = new BlockingTextReader(
+                "{\"type\":\"item.completed\",\"item\":{\"type\":\"command_execution\",\"command\":\"dotnet test\",\"exit_code\":0}}\n");
+            using var streamCancel = new CancellationTokenSource();
+            var livePump = ProcessOutputPump.PumpToUtf8FileAsync(
+                eventReader, Path.Combine(temp, "codex-event-head.txt"),
+                maximumCharacters: 64,
+                cancellationToken: streamCancel.Token,
+                codexProgressPath: streamingPath);
+            await eventReader.WaitingForNextRead.WaitAsync(TimeSpan.FromSeconds(5));
+            var liveState = System.Text.Json.JsonSerializer
+                .Deserialize<CodexCliEventResult>(
+                    await File.ReadAllTextAsync(streamingPath));
+            if (liveState?.CompletedCommands != 1)
+            {
+                throw new InvalidOperationException(
+                    "Codex progress was not visible before child process completion.");
+            }
+            streamCancel.Cancel();
+            try { await livePump; }
+            catch (OperationCanceledException) { }
 
             var discardedPath = Path.Combine(temp, "discarded.txt");
             using (var reader = new StringReader("secret payload"))

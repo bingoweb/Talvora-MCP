@@ -1,5 +1,13 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-10-11 — Trusted Codex productivity, NuGet and long jobs
+
+- User requested more productive freedom and complete developer-tool functionality. Installed ripgrep 15.2.0 globally; verified rg --version from actual Codex session. Compared NuGet HEAD from LocalSystem, regular interactive user and Codex sandbox: both normal contexts HTTP 200, sandbox Schannel SEC_E_NO_CREDENTIALS. Windows unelevated override alone did not fix it. Explicit opt-in full normal-user mode produced NuGet HTTP 200; Codex downloaded Newtonsoft.Json 13.0.3 to a clean project-local cache and built a .NET 10 app with zero warnings/errors.
+- Added per-user persisted balanced/trusted developer profiles (CodexPreferencesStore, talvora_codex_preferences and talvora_codex_configure). Trusted default resolves auto sandbox to danger-full-access without acquiring SYSTEM/admin privileges. User can revert to balanced. Existing explicit per-task full access remains.
+- Added genuine asynchronous Codex background-job tools: talvora_codex_start/status/list/cancel. Jobs survive client/tunnel disconnect during one Talvora service lifetime, support cancellation via process-tree termination, and expose completed results and saved Codex session IDs for resume.
+- Added bounded incremental Codex JSONL progress recording independent of truncated stdout and fixed early cancellation job-state race; covered by high-volume and mid-stream deterministic smoke tests. Integrated start/progress/terminal with Talvora desktop worklog, so the UI tracks the entire asynchronous job instead of the short start request.
+- Updated full/development MCP manifest and surface counts to 242/205 (Admin 88, Shared 51), Codex/focused-source regression contracts, tests and docs/Codex-Autonomy.md. Verify full Release, CI, canonical installer, exact-installed tools, trusted setting persistence, asynchronous worklog and cancellation before closeout.
+
 ## CURRENT — 2026-10-11 — Codex autonomy and productive workflow
 
 - User requested productive autonomy rather than accumulating restrictions. Isolated real Codex workspace-write test successfully created/build/run a .NET 10 app emitting CODEX_AUTONOMY_OK. The codex CLI's Windows sandbox needed workarounds for NuGet/cache; git/dotnet were available, rg was not.

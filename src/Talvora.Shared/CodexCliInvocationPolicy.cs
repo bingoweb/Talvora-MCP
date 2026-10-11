@@ -17,7 +17,8 @@ public static class CodexCliInvocationPolicy
         bool networkAccess = true,
         string approvalMode = "automatic",
         IReadOnlyList<string>? additionalWritableDirectories = null,
-        bool allowNonGitWorkspace = true)
+        bool allowNonGitWorkspace = true,
+        string windowsSandboxMode = "default")
     {
         if (approvalMode is not ("automatic" or "never"))
         {
@@ -28,6 +29,12 @@ public static class CodexCliInvocationPolicy
         {
             throw new ArgumentException(
                 "A resumed session cannot be ephemeral.", nameof(preserveSession));
+        }
+        if (windowsSandboxMode is not ("default" or "unelevated" or "elevated"))
+        {
+            throw new ArgumentException(
+                "Windows sandbox mode must be default, unelevated or elevated.",
+                nameof(windowsSandboxMode));
         }
         if (resumeSessionId is not null &&
             additionalWritableDirectories is { Count: > 0 })
@@ -75,6 +82,10 @@ public static class CodexCliInvocationPolicy
             args.AddRange(["--config", $"sandbox_mode=\"{sandbox}\""]);
         }
         args.AddRange(["--config", $"model_reasoning_effort=\"{reasoningEffort}\""]);
+        if (windowsSandboxMode != "default")
+        {
+            args.AddRange(["--config", $"windows.sandbox=\"{windowsSandboxMode}\""]);
+        }
         if (sandbox == "workspace-write")
         {
             args.AddRange([

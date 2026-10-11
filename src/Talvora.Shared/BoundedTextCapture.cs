@@ -220,7 +220,8 @@ public static class ProcessOutputPump
         TextReader reader,
         string path,
         int maximumCharacters = BoundedTextCapture.DefaultMaximumCharacters,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? codexProgressPath = null)
     {
         ArgumentNullException.ThrowIfNull(reader);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -240,6 +241,9 @@ public static class ProcessOutputPump
         var headWritten = 0;
         var tailCount = 0;
         var tailWriteIndex = 0;
+        var progressTracker = codexProgressPath is null
+            ? null
+            : new CodexCliStreamingProgress();
 
         try
         {
@@ -258,6 +262,12 @@ public static class ProcessOutputPump
                     .ConfigureAwait(false);
                 if (read == 0) { break; }
                 totalCharacters = checked(totalCharacters + read);
+                if (progressTracker is not null)
+                {
+                    await progressTracker.ObserveAsync(
+                        buffer.AsMemory(0, read), codexProgressPath!,
+                        cancellationToken).ConfigureAwait(false);
+                }
                 var headAccepted = Math.Min(read, headLimit - headWritten);
                 if (headAccepted > 0)
                 {
@@ -279,6 +289,11 @@ public static class ProcessOutputPump
                 }
             }
 
+            if (progressTracker is not null)
+            {
+                await progressTracker.CompleteAsync(
+                    codexProgressPath!, cancellationToken).ConfigureAwait(false);
+            }
             if (totalCharacters > maximumCharacters &&
                 maximumCharacters > 0)
             {

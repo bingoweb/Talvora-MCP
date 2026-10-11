@@ -1,4 +1,5 @@
 using Talvora;
+using Talvora.Tools;
 using Talvora.SourceEditing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.WindowsServices;
@@ -87,6 +88,8 @@ builder.Services
     .WithToolsFromAssembly();
 
 var app = builder.Build();
+CodexBackgroundJobTools.DesktopNotifier =
+    app.Services.GetRequiredService<TalvoraDesktopProgressNotifier>();
 var isWindowsService =
     OperatingSystem.IsWindows() &&
     WindowsServiceHelpers.IsWindowsService();

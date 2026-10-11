@@ -6,6 +6,18 @@ $policy = [IO.File]::ReadAllText(
     (Join-Path $root 'src\Talvora.Shared\CodexCliInvocationPolicy.cs'))
 $events = [IO.File]::ReadAllText(
     (Join-Path $root 'src\Talvora.Shared\CodexCliEventSummary.cs'))
+$jobTools = [IO.File]::ReadAllText(
+    (Join-Path $root 'src\Talvora\Tools\CodexBackgroundJobTools.cs'))
+$profileTools = [IO.File]::ReadAllText(
+    (Join-Path $root 'src\Talvora\Tools\CodexPreferencesTools.cs'))
+$profileStore = [IO.File]::ReadAllText(
+    (Join-Path $root 'src\Talvora.Shared\CodexPreferencesStore.cs'))
+$liveJournal = [IO.File]::ReadAllText(
+    (Join-Path $root 'src\Talvora.Shared\CodexCliStreamingProgress.cs'))
+$desktopCodex = [IO.File]::ReadAllText(
+    (Join-Path $root 'src\Talvora\TalvoraDesktopCodexWorklog.cs'))
+$hostProgram = [IO.File]::ReadAllText(
+    (Join-Path $root 'src\Talvora\Program.cs'))
 $runner = [IO.File]::ReadAllText(
     (Join-Path $root 'src\Talvora.Shared\InteractiveUserProcessRunner.cs'))
 $pump = [IO.File]::ReadAllText(
@@ -24,7 +36,13 @@ $workflow = [IO.File]::ReadAllText(
 $checks = [ordered]@{
     ToolsAppearInManifest = (
         $manifest.Contains('"talvora_codex_info"') -and
-        $manifest.Contains('"talvora_codex_exec"')
+        $manifest.Contains('"talvora_codex_exec"') -and
+        $manifest.Contains('"talvora_codex_preferences"') -and
+        $manifest.Contains('"talvora_codex_configure"') -and
+        $manifest.Contains('"talvora_codex_start"') -and
+        $manifest.Contains('"talvora_codex_status"') -and
+        $manifest.Contains('"talvora_codex_list"') -and
+        $manifest.Contains('"talvora_codex_cancel"')
     )
     ToolsRegisteredAsMcp = (
         $source.Contains('[McpServerToolType]') -and
@@ -53,8 +71,9 @@ $checks = [ordered]@{
     )
     AutonomousWorkspaceWithExplicitFullAccess = (
         $source.Contains('"workspace-write"') -and
-        $source.Contains('sandbox is not ("read-only" or ProtectedSandbox or "danger-full-access")') -and
-        $source.Contains('sandbox == "danger-full-access" && !allowFullAccess') -and
+        $source.Contains('sandbox is not ("auto" or "read-only" or ProtectedSandbox or "danger-full-access")') -and
+        $source.Contains('effectiveSandbox == "danger-full-access" &&') -and
+        $source.Contains('!allowFullAccess') -and
         $policy.Contains('"--approve-for-me"') -and
         $policy.Contains('"-a", "never"') -and
         $policy.Contains('"--sandbox", sandbox') -and
@@ -75,10 +94,31 @@ $checks = [ordered]@{
         $policy.Contains('sandbox_workspace_write.network_access=') -and
         $policy.Contains('"--skip-git-repo-check"')
     )
+    TrustedDeveloperProfileAndBackgroundControl = (
+        $profileTools.Contains('Name = "talvora_codex_configure"') -and
+        $profileTools.Contains('Name = "talvora_codex_preferences"') -and
+        $profileStore.Contains('public const string Trusted = "trusted"') -and
+        $source.Contains('CodexPreferencesStore.Read(') -and
+        $source.Contains('effectiveSandbox') -and
+        $jobTools.Contains('Name = "talvora_codex_start"') -and
+        $jobTools.Contains('Name = "talvora_codex_status"') -and
+        $jobTools.Contains('Name = "talvora_codex_list"') -and
+        $jobTools.Contains('Name = "talvora_codex_cancel"') -and
+        $jobTools.Contains('job.Cancellation.Token') -and
+        $runner.Contains('onCodexProgress') -and
+        $liveJournal.Contains('class CodexCliStreamingProgress') -and
+        $pump.Contains('codexProgressPath') -and
+        $jobTools.Contains('DesktopNotifier?.BeginCodexJob') -and
+        $jobTools.Contains('DesktopNotifier?.UpdateCodexJob') -and
+        $jobTools.Contains('DesktopNotifier?.EndCodexJob') -and
+        $desktopCodex.Contains('internal void EndCodexJob(') -and
+        $hostProgram.Contains('CodexBackgroundJobTools.DesktopNotifier') -and
+        $policy.Contains('windows.sandbox=')
+    )
     BoundedTasksAndRedactedResults = (
         $source.Contains('MaximumPromptCharacters') -and
         $source.Contains('MaximumOutputCharacters') -and
-        $source.Contains('timeoutSeconds is < 1 or > 3600') -and
+        $source.Contains('timeoutSeconds is < 1 or > 43200') -and
         $source.Contains('CodexCliInvocationPolicy.SanitizeFinalAnswer(') -and
         $source.Contains('CodexCliInvocationPolicy.SafeErrorSummary(') -and
         $source.Contains('discardStandardError: true') -and
@@ -98,8 +138,8 @@ $checks = [ordered]@{
         $toml.Contains('tableParts[1], "talvora_local"')
     )
     FocusedSurfaceCountUpdated = (
-        $surface.Contains('ExpectedFullToolCount = 236') -and
-        $surface.Contains('ExpectedDevelopmentToolCount = 199') -and
+        $surface.Contains('ExpectedFullToolCount = 242') -and
+        $surface.Contains('ExpectedDevelopmentToolCount = 205') -and
         $surface.Contains('ExpectedAdministrationToolCount = 88') -and
         $surface.Contains('ExpectedSharedToolCount = 51')
     )

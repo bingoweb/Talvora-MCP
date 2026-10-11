@@ -19,7 +19,8 @@ public static class InteractiveUserProcessRunner
         string ResultPath,
         string HelperAssemblyPath,
         int MaximumPersistedCharacters,
-        bool DiscardStandardError);
+        bool DiscardStandardError,
+        string? CodexProgressPath);
 
     private sealed record Result(
         int ExitCode,
@@ -40,7 +41,9 @@ public static class InteractiveUserProcessRunner
         int maxCapturedCharactersPerStream =
             ProcessRunner.DefaultMaximumCapturedCharacters,
         InteractiveUserContext? interactiveUser = null,
-        bool discardStandardError = false)
+        bool discardStandardError = false,
+        Action<string>? onStandardOutputSnapshot = null,
+        Action<CodexCliEventResult>? onCodexProgress = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
         ArgumentException.ThrowIfNullOrWhiteSpace(workingDirectory);
@@ -94,6 +97,9 @@ public static class InteractiveUserProcessRunner
         var stderrPath = Path.Combine(runRoot, "stderr.txt");
         var resultPath = Path.Combine(runRoot, "result.json");
         var scriptPath = Path.Combine(runRoot, "runner.ps1");
+        var progressPath = onCodexProgress is null
+            ? null
+            : Path.Combine(runRoot, "codex-progress.json");
 
         var requestedArguments = arguments?.ToArray() ?? [];
         var request = new Request(
@@ -110,7 +116,8 @@ public static class InteractiveUserProcessRunner
                 .Assembly
                 .Location,
             maxCapturedCharactersPerStream,
-            discardStandardError);
+            discardStandardError,
+            progressPath);
 
         FileStream? runLease = null;
         try
@@ -167,6 +174,15 @@ public static class InteractiveUserProcessRunner
                 CancellationTokenSource.CreateLinkedTokenSource(
                     cancellationToken,
                     timeoutCts.Token);
+            using var progressCts = new CancellationTokenSource();
+            var progressMonitor = onStandardOutputSnapshot is null
+                ? Task.CompletedTask
+                : MonitorStandardOutputAsync(
+                    stdoutPath, onStandardOutputSnapshot, progressCts.Token);
+            var codexMonitor = onCodexProgress is null
+                ? Task.CompletedTask
+                : MonitorCodexProgressAsync(
+                    progressPath!, onCodexProgress, progressCts.Token);
 
             var timedOut = false;
             try
@@ -189,6 +205,30 @@ public static class InteractiveUserProcessRunner
                 await WaitForExitBestEffortAsync(process).ConfigureAwait(false);
                 throw;
             }
+            finally
+            {
+                progressCts.Cancel();
+                try
+                {
+                    await progressMonitor.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when the interactive process exits.
+                }
+                try
+                {
+                    await codexMonitor.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when the interactive process exits.
+                }
+                if (onCodexProgress is not null)
+                {
+                    TryReadCodexProgress(progressPath!, onCodexProgress);
+                }
+            }
 
             var stdoutCapture =
                 await BoundedTextCapture.ReadFileAsync(
@@ -202,6 +242,7 @@ public static class InteractiveUserProcessRunner
                     cancellationToken).ConfigureAwait(false);
             var stdout = stdoutCapture.Text;
             var stderr = stderrCapture.Text;
+            onStandardOutputSnapshot?.Invoke(stdout);
 
             Result? result = null;
             // A timed-out helper may leave an incomplete result document.
@@ -282,6 +323,82 @@ public static class InteractiveUserProcessRunner
                 ex is IOException or UnauthorizedAccessException)
             {
             }
+        }
+    }
+
+    private static async Task MonitorCodexProgressAsync(
+        string path,
+        Action<CodexCliEventResult> observer,
+        CancellationToken cancellationToken)
+    {
+        string? previous = null;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var latest = TryReadCodexProgress(path, observer, previous);
+            if (latest is not null) { previous = latest; }
+            await Task.Delay(600, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static string? TryReadCodexProgress(
+        string path,
+        Action<CodexCliEventResult> observer,
+        string? previous = null)
+    {
+        try
+        {
+            if (!File.Exists(path) || new FileInfo(path).Length > 16 * 1024)
+            {
+                return null;
+            }
+            var json = File.ReadAllText(path, Encoding.UTF8);
+            if (json == previous) { return json; }
+            var progress = JsonSerializer.Deserialize<CodexCliEventResult>(json);
+            if (progress is not null && progress.HasEvents)
+            {
+                observer(progress);
+            }
+            return json;
+        }
+        catch (Exception ex) when (
+            ex is FileNotFoundException or DirectoryNotFoundException or
+            IOException or JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static async Task MonitorStandardOutputAsync(
+        string path,
+        Action<string> observer,
+        CancellationToken cancellationToken)
+    {
+        long previousLength = -1;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await using var stream = new FileStream(
+                    path, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete,
+                    bufferSize: 4096, useAsync: true);
+                var length = Math.Min(stream.Length, 256 * 1024L);
+                if (length > 0 && length != previousLength)
+                {
+                    var bytes = new byte[(int)length];
+                    await stream.ReadExactlyAsync(
+                        bytes, cancellationToken).ConfigureAwait(false);
+                    observer(Encoding.UTF8.GetString(bytes));
+                    previousLength = length;
+                }
+            }
+            catch (Exception ex) when (
+                ex is FileNotFoundException or DirectoryNotFoundException or
+                IOException)
+            {
+                // The helper may not have opened its pipes yet.
+            }
+            await Task.Delay(600, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -426,7 +543,8 @@ try {
         $process.StandardOutput,
         [string]$request.StandardOutputPath,
         [int]$request.MaximumPersistedCharacters,
-        $pumpCts.Token)
+        $pumpCts.Token,
+        $request.CodexProgressPath)
     $stderrBudget = if($request.DiscardStandardError) {
         0
     } else {
