@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-11T01:49:06.782Z",
-  "scope": "Talvora 2026-10-11 Codex CLI quality and security remediation: enforce UTF-8 redirected streams, protect MCP results from full or partial Codex prompt echoes by discarding verbose stderr, separate CLI flags from positional prompts, bind active interactive Windows session to expected user SID, enforce bounded persistent output with live partial-head flush and bounded tail, preserve unrelated TOML keys/multiline strings during registration upsert, and test timeout, Unicode, parameter parsing and configuration semantics. Consulted Context7 /dotnet/docs and /openai/codex, official Microsoft ProcessStartInfo reference and OpenAI Codex CLI source. Historical library/vendor evidence retained.",
+  "verifiedAtUtc": "2026-10-11T01:57:09.976Z",
+  "scope": "Talvora 2026-10-11 Codex CLI security and quality remediation including post-deployment final-output precision. Enforce UTF-8 redirected streams, prevent diagnostic task echo leaks, separate command flags from positional prompt, bind active Windows SID, bound on-disk stdout/stderr and preserve timeout partial output, protect TOML multiline/quoted user settings. The post-deployment smoke observed overzealous redaction of a short --help task inside useful CLI examples. The final follow-up sanitizes short prompts only on complete output lines, retaining Unicode/newline whole-prompt and generic secret protections. Context7 /dotnet/docs and /openai/codex rechecked, with official Microsoft ProcessStartInfo / .NET regex documentation and live CLI validation. Historical evidence retained.",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",

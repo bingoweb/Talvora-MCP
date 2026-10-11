@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Talvora.Shared;
 
 /// <summary>
@@ -37,8 +39,25 @@ public static class CodexCliInvocationPolicy
         {
             if (variant.Length > 0)
             {
-                safe = safe.Replace(variant, PromptRedactionMarker,
-                    StringComparison.Ordinal);
+                if (variant.Length <= 24 && !variant.Contains('\n'))
+                {
+                    // Short tasks such as "--help" may also be legitimate
+                    // tokens inside an otherwise useful final answer.
+                    // Conceal a complete echoed task line, not every
+                    // occurrence of a common argument or word.
+                    safe = Regex.Replace(
+                        safe,
+                        @"(?m)^(?<indent>[ \t]*)" + Regex.Escape(variant) +
+                        @"(?=\r?$)",
+                        match => match.Groups["indent"].Value +
+                            PromptRedactionMarker,
+                        RegexOptions.CultureInvariant);
+                }
+                else
+                {
+                    safe = safe.Replace(variant, PromptRedactionMarker,
+                        StringComparison.Ordinal);
+                }
             }
         }
         return FileLog.RedactSensitiveData(safe);

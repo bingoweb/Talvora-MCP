@@ -23,6 +23,19 @@ internal static partial class SmokeScenarios
             }
         }
 
+        var helpAnswer = CodexCliInvocationPolicy.SanitizeFinalAnswer(
+            "To inspect usage run talvora --help.\n", "--help");
+        var helpEcho = CodexCliInvocationPolicy.SanitizeFinalAnswer(
+            "--help\r\n", "--help");
+        if (!helpAnswer.Contains("talvora --help", StringComparison.Ordinal) ||
+            helpEcho.Contains("--help", StringComparison.Ordinal) ||
+            !helpEcho.Contains(CodexCliInvocationPolicy.PromptRedactionMarker,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Codex short task sanitization removed useful CLI syntax.");
+        }
+
         const string canary = "SYNTHETIC_PRIVATE_CANARY_9K4";
         var task = $"Türkçe çığırtkanlık\r\nsecond line {canary}";
         foreach (var echo in new[]

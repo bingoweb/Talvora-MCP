@@ -1,5 +1,11 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-10-11 — Codex final-output precision closeout
+
+- The canonical `24efbaae5fe7921b801eba042946ef2ce4d3676f` installer was built and deployed successfully with SHA-256 `26A5F628BEAB4DA0D79C2537BD6ADA24198F5825170A963DBCF04429578BD6AB`. Exact-installed `talvora_system_info.sourceCommit` matched; Talvora service Running/Automatic, Codex authenticated, repository clean, UTF-8/--help/synthetic-private-canary live MCP calls passed, and bounded timeout returned a safe error.
+- Follow-up live observation: redacting a very short task like `--help` anywhere in the Codex final answer replaced a legitimate `talvora --help` example with a placeholder. `CodexCliInvocationPolicy` now redacts short-task echoes only when they occupy a full line, while longer/multiline original tasks and generic secrets remain sanitized. A deterministic behavior fixture verifies both useful embedded arguments and standalone echoed-task removal.
+- Follow-up release still needs source gate, canonical re-package and exact-installed acceptance before declaring complete. Historical checkpoint below is retained for provenance, not current installed status.
+
 ## CURRENT — 2026-10-11 — Codex CLI reliability/security remediation
 
 - Root audit found live failures: UTF-8 Turkish output mojibake, prompt text starting with `--help` parsed as a CLI option, and synthetic private-task text leaking through diagnostic stderr when its Unicode bytes were decoded incorrectly. Source-built `Talvora.Shared` now passes live interactive-user Codex tests for UTF-8 output, option separation and discarded stderr.
