@@ -14,7 +14,10 @@ public sealed record TalvoraCodexCliInfoResponse(
     string Model,
     string ReasoningEffort,
     string Sandbox,
-    string? Error);
+    string? Error,
+    string DefaultApprovalMode = "automatic",
+    bool DefaultNetworkAccess = true,
+    bool SupportsSessionResume = true);
 
 public sealed record TalvoraCodexCliExecResponse(
     int ExitCode,
@@ -29,7 +32,13 @@ public sealed record TalvoraCodexCliExecResponse(
     string Sandbox,
     long ElapsedMilliseconds,
     bool StandardOutputTruncated,
-    bool StandardErrorTruncated);
+    bool StandardErrorTruncated,
+    string? SessionId = null,
+    int CompletedCommands = 0,
+    int FailedCommands = 0,
+    int McpToolCalls = 0,
+    IReadOnlyList<string>? RecentActivities = null,
+    string? ErrorDetail = null);
 
 /// <summary>
 /// Uses the Codex CLI bundled with the signed-in user's desktop app.
@@ -41,8 +50,8 @@ public static class CodexCliTools
     private const string DefaultModel = "gpt-6.1-sol";
     private const string DefaultReasoningEffort = "medium";
     private const string ProtectedSandbox = "workspace-write";
-    private const int MaximumPromptCharacters = 20_000;
-    private const int MaximumOutputCharacters = 128 * 1024;
+    private const int MaximumPromptCharacters = 100_000;
+    private const int MaximumOutputCharacters = 256 * 1024;
     private static readonly Regex ModelNamePattern = new(
         @"^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -54,7 +63,7 @@ public static class CodexCliTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraCodexCliInfoResponse)),
-     Description("Discover the existing Codex Windows desktop CLI, its version and the logged-on Windows user's ChatGPT login. Never expose credentials. The default Talvora Codex model is GPT-6.1 Sol with medium reasoning.")]
+     Description("Discover the Windows desktop Codex CLI, user login, GPT-6.1 Sol/medium default, and new autonomous coding defaults: workspace-write, automatic approvals, network access and saved resumable sessions.")]
     public static async Task<TalvoraCodexCliInfoResponse> Info(
         CancellationToken cancellationToken = default)
     {
@@ -115,7 +124,7 @@ public static class CodexCliTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraCodexCliExecResponse)),
-     Description("Delegate a coding task to the existing Codex CLI in the signed-in Windows user's session, not LocalSystem. Default GPT-6.1 Sol, medium reasoning. Use read-only or workspace-write sandbox; noninteractive approvals fail closed. Not a means to bypass security restrictions.")]
+     Description("Build software with the logged-on user's Codex CLI. Defaults: GPT-6.1 Sol/medium, writable project, network and automatic approval review. Supports resumable sessions, extra writable folders and explicitly opted-in full access. Returns session ID, final answer and concise work summary.")]
     public static async Task<TalvoraCodexCliExecResponse> Exec(
         string workingDirectory,
         string prompt,
@@ -123,6 +132,13 @@ public static class CodexCliTools
         string reasoningEffort = DefaultReasoningEffort,
         string sandbox = ProtectedSandbox,
         int timeoutSeconds = 1800,
+        string? resumeSessionId = null,
+        bool preserveSession = true,
+        bool networkAccess = true,
+        string approvalMode = "automatic",
+        string[]? additionalWritableDirectories = null,
+        bool allowNonGitWorkspace = true,
+        bool allowFullAccess = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
@@ -141,11 +157,34 @@ public static class CodexCliTools
                 "Reasoning effort must be low, medium, high, xhigh or max.",
                 nameof(reasoningEffort));
         }
-        if (sandbox is not ("read-only" or ProtectedSandbox))
+        if (sandbox is not ("read-only" or ProtectedSandbox or "danger-full-access"))
         {
             throw new ArgumentException(
-                "Codex can run only in read-only or workspace-write mode.",
+                "Codex sandbox must be read-only, workspace-write or danger-full-access.",
                 nameof(sandbox));
+        }
+        if (sandbox == "danger-full-access" && !allowFullAccess)
+        {
+            throw new ArgumentException(
+                "Full access requires allowFullAccess=true explicitly for this task.",
+                nameof(allowFullAccess));
+        }
+        if (approvalMode is not ("automatic" or "never"))
+        {
+            throw new ArgumentException(
+                "Approval mode must be automatic or never.", nameof(approvalMode));
+        }
+        if (resumeSessionId is not null &&
+            (!Guid.TryParse(resumeSessionId, out _) || !preserveSession))
+        {
+            throw new ArgumentException(
+                "Resume requires a saved Codex session UUID and preserveSession=true.",
+                nameof(resumeSessionId));
+        }
+        if (additionalWritableDirectories is { Length: > 12 })
+        {
+            throw new ArgumentOutOfRangeException(nameof(additionalWritableDirectories),
+                "Specify at most twelve additional writable directories.");
         }
         if (timeoutSeconds is < 1 or > 3600)
         {
@@ -157,9 +196,26 @@ public static class CodexCliTools
             ?? throw new FileNotFoundException(
                 "Codex CLI was not found in the interactive Windows user's desktop app.");
         var cwd = GetWorkingDirectory(workingDirectory, context);
+        var writableDirectories = new List<string>();
+        if (additionalWritableDirectories is not null)
+        {
+            foreach (var directory in additionalWritableDirectories)
+            {
+                if (string.IsNullOrWhiteSpace(directory) ||
+                    !Path.IsPathFullyQualified(directory))
+                {
+                    throw new ArgumentException(
+                        "Additional writable directories must be absolute paths.",
+                        nameof(additionalWritableDirectories));
+                }
+                writableDirectories.Add(GetWorkingDirectory(directory, context));
+            }
+        }
         // Keep task text after the command-line option terminator.
         var arguments = CodexCliInvocationPolicy.CreateArguments(
-            cwd, prompt, model, reasoningEffort, sandbox);
+            cwd, prompt, model, reasoningEffort, sandbox,
+            resumeSessionId, preserveSession, networkAccess, approvalMode,
+            writableDirectories, allowNonGitWorkspace);
         var result = await InteractiveUserProcessRunner.RunAsync(
             executable, cwd, arguments,
             timeoutSeconds: timeoutSeconds,
@@ -167,10 +223,18 @@ public static class CodexCliTools
             maxCapturedCharactersPerStream: MaximumOutputCharacters,
             interactiveUser: context,
             discardStandardError: true);
-        // Raw stderr echoes the task and tool transcripts. Never expose it.
+        // Extract final answer and task activity from Codex's JSONL output.
+        var events = CodexCliEventSummary.Parse(result.StandardOutput);
+        var finalAnswer = events.HasEvents
+            ? events.FinalAnswer
+            : result.StandardOutput;
+        var safeError = events.LastError is null
+            ? null
+            : CodexCliInvocationPolicy.SanitizeFinalAnswer(
+                events.LastError, prompt);
         return new TalvoraCodexCliExecResponse(
             result.ExitCode,
-            CodexCliInvocationPolicy.SanitizeFinalAnswer(result.StandardOutput, prompt),
+            CodexCliInvocationPolicy.SanitizeFinalAnswer(finalAnswer, prompt),
             CodexCliInvocationPolicy.SafeErrorSummary(result.ExitCode, result.TimedOut),
             result.TimedOut,
             result.ProcessId,
@@ -181,7 +245,18 @@ public static class CodexCliTools
             sandbox,
             result.ElapsedMilliseconds,
             result.StandardOutputTruncated,
-            result.StandardErrorTruncated);
+            result.StandardErrorTruncated,
+            preserveSession
+                ? events.SessionId ?? resumeSessionId
+                : null,
+            events.CompletedCommands,
+            events.FailedCommands,
+            events.McpToolCalls,
+            events.RecentActivities
+                .Select(activity => CodexCliInvocationPolicy.SanitizeFinalAnswer(
+                    activity, prompt))
+                .ToArray(),
+            safeError);
     }
 
     private static string GetWorkingDirectory(

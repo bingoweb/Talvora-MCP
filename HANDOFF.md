@@ -1,5 +1,13 @@
 # Talvora MCP — Canonical Handoff
 
+## CURRENT — 2026-10-11 — Codex autonomy and productive workflow
+
+- User requested productive autonomy rather than accumulating restrictions. Isolated real Codex workspace-write test successfully created/build/run a .NET 10 app emitting CODEX_AUTONOMY_OK. The codex CLI's Windows sandbox needed workarounds for NuGet/cache; git/dotnet were available, rg was not.
+- CodexCliTools now defaults to workspace-write, approvalMode=automatic, networkAccess=true and preserved sessions. The user can resume by UUID, allow additional writable folders, and opt into one-task danger-full-access with explicit allowFullAccess=true, still as a normal Windows user.
+- CodexCliInvocationPolicy emits JSONL, persists threads, supports exec resume, and supplies skip-git-repo-check and network overrides. Context7 verified --approve-for-me conflicts with --sandbox, so the explicit flag is omitted when automatic review selects workspace-write.
+- CodexCliEventSummary returns final answer, session ID, shell/MCP call counts, recent activity and useful structured errors. A live Codex --json test established thread.started UUID and item.completed final answer.
+- Added tests, source regression and docs/Codex-Autonomy.md. Full build and installed-runtime acceptance still pending for this revision. Streaming background status remains a follow-up.
+
 ## CURRENT — 2026-10-11 — Codex final-output precision closeout
 
 - The canonical `24efbaae5fe7921b801eba042946ef2ce4d3676f` installer was built and deployed successfully with SHA-256 `26A5F628BEAB4DA0D79C2537BD6ADA24198F5825170A963DBCF04429578BD6AB`. Exact-installed `talvora_system_info.sourceCommit` matched; Talvora service Running/Automatic, Codex authenticated, repository clean, UTF-8/--help/synthetic-private-canary live MCP calls passed, and bounded timeout returned a safe error.

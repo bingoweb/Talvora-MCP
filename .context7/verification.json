@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-11T01:57:09.976Z",
-  "scope": "Talvora 2026-10-11 Codex CLI security and quality remediation including post-deployment final-output precision. Enforce UTF-8 redirected streams, prevent diagnostic task echo leaks, separate command flags from positional prompt, bind active Windows SID, bound on-disk stdout/stderr and preserve timeout partial output, protect TOML multiline/quoted user settings. The post-deployment smoke observed overzealous redaction of a short --help task inside useful CLI examples. The final follow-up sanitizes short prompts only on complete output lines, retaining Unicode/newline whole-prompt and generic secret protections. Context7 /dotnet/docs and /openai/codex rechecked, with official Microsoft ProcessStartInfo / .NET regex documentation and live CLI validation. Historical evidence retained.",
+  "verifiedAtUtc": "2026-10-11T02:26:43.285Z",
+  "scope": "Talvora 2026-10-11 Codex autonomous development bridge. Verified /openai/codex source through Context7: exec --json JSONL thread.started and session resume, --approve-for-me automatic review that conflicts with explicit --sandbox, network_access workspace-write config and additional writable --add-dir. Installed Windows CLI help and live JSONL session also inspected. Source supports persistent sessions, per-task optional full access, writable dirs, network permission request, automatic approvals and structured activity summaries. /dotnet/docs System.Text.Json JsonDocument/TryGetProperty guidance checked. Prior vendor and library evidence retained.",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",

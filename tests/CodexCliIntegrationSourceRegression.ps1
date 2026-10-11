@@ -4,6 +4,8 @@ $source = [IO.File]::ReadAllText(
     (Join-Path $root 'src\Talvora\Tools\CodexCliTools.cs'))
 $policy = [IO.File]::ReadAllText(
     (Join-Path $root 'src\Talvora.Shared\CodexCliInvocationPolicy.cs'))
+$events = [IO.File]::ReadAllText(
+    (Join-Path $root 'src\Talvora.Shared\CodexCliEventSummary.cs'))
 $runner = [IO.File]::ReadAllText(
     (Join-Path $root 'src\Talvora.Shared\InteractiveUserProcessRunner.cs'))
 $pump = [IO.File]::ReadAllText(
@@ -49,13 +51,29 @@ $checks = [ordered]@{
         $runner.Contains('expectedUserSid: interactiveUser?.Sid') -and
         $source.Contains('["login", "status"]')
     )
-    FailsClosedOnPrivilegeEscalation = (
+    AutonomousWorkspaceWithExplicitFullAccess = (
         $source.Contains('"workspace-write"') -and
-        $source.Contains('sandbox is not ("read-only" or ProtectedSandbox)') -and
+        $source.Contains('sandbox is not ("read-only" or ProtectedSandbox or "danger-full-access")') -and
+        $source.Contains('sandbox == "danger-full-access" && !allowFullAccess') -and
+        $policy.Contains('"--approve-for-me"') -and
         $policy.Contains('"-a", "never"') -and
         $policy.Contains('"--sandbox", sandbox') -and
         $policy.Contains('"--", prompt') -and
         -not $source.Contains('dangerously-bypass-approvals-and-sandbox')
+    )
+    PersistentSessionsAndWorkSummary = (
+        $source.Contains('string? resumeSessionId = null') -and
+        $source.Contains('bool preserveSession = true') -and
+        $source.Contains('bool networkAccess = true') -and
+        $source.Contains('string[]? additionalWritableDirectories = null') -and
+        $source.Contains('CodexCliEventSummary.Parse(result.StandardOutput)') -and
+        $events.Contains('case "thread.started"') -and
+        $events.Contains('case "command_execution"') -and
+        $events.Contains('case "mcp_tool_call"') -and
+        $policy.Contains('"--json"') -and
+        $policy.Contains('"--add-dir"') -and
+        $policy.Contains('sandbox_workspace_write.network_access=') -and
+        $policy.Contains('"--skip-git-repo-check"')
     )
     BoundedTasksAndRedactedResults = (
         $source.Contains('MaximumPromptCharacters') -and

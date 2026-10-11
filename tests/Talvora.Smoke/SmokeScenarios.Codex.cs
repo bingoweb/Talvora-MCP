@@ -23,6 +23,99 @@ internal static partial class SmokeScenarios
             }
         }
 
+        var autonomous = CodexCliInvocationPolicy.CreateArguments(
+            @"C:\workspace", "Create a working application", "gpt-6.1-sol",
+            "medium", "workspace-write",
+            additionalWritableDirectories: [@"C:\workspace-assets"]);
+        if (autonomous[0] != "--approve-for-me" ||
+            !autonomous.Contains("--json") ||
+            autonomous.Contains("--ephemeral") ||
+            autonomous.Contains("--sandbox") ||
+            !autonomous.Contains("sandbox_workspace_write.network_access=true") ||
+            !autonomous.Contains("--add-dir") ||
+            !autonomous.Contains(@"C:\workspace-assets") ||
+            !autonomous.Contains("--skip-git-repo-check"))
+        {
+            throw new InvalidOperationException(
+                "Default Codex coding mode is not autonomous, network-enabled and persistent.");
+        }
+
+        const string priorSession = "01a128c3-0c50-7aa0-a9b4-cd0f5f85a7e6";
+        var resumed = CodexCliInvocationPolicy.CreateArguments(
+            @"C:\workspace", "Continue", "gpt-6.1-sol", "medium",
+            "workspace-write", resumeSessionId: priorSession);
+        if (!resumed.Contains("resume") ||
+            !resumed.Contains(priorSession) ||
+            !resumed.Contains("sandbox_mode=\"workspace-write\"") ||
+            resumed.Contains("--ephemeral") ||
+            resumed.Contains("--cd"))
+        {
+            throw new InvalidOperationException(
+                "Codex session continuation arguments are invalid.");
+        }
+
+        var ephemeral = CodexCliInvocationPolicy.CreateArguments(
+            @"C:\workspace", "One-off", "gpt-6.1-sol", "medium",
+            "workspace-write", preserveSession: false, approvalMode: "never",
+            networkAccess: false);
+        if (!ephemeral.Contains("--ephemeral") ||
+            !ephemeral.Contains("sandbox_workspace_write.network_access=false") ||
+            !ephemeral.Contains("-a") || ephemeral.Contains("--approve-for-me"))
+        {
+            throw new InvalidOperationException(
+                "Explicit ephemeral/non-network coding settings were not honored.");
+        }
+        var unlimited = CodexCliInvocationPolicy.CreateArguments(
+            @"C:\workspace", "Use full workspace", "gpt-6.1-sol", "medium",
+            "danger-full-access", approvalMode: "never");
+        if (!unlimited.Contains("danger-full-access"))
+        {
+            throw new InvalidOperationException(
+                "Explicit full-access Codex mode is missing.");
+        }
+        var unsupportedResumeDir = false;
+        try
+        {
+            _ = CodexCliInvocationPolicy.CreateArguments(
+                @"C:\workspace", "Continue", "gpt-6.1-sol", "medium",
+                "workspace-write", resumeSessionId: priorSession,
+                additionalWritableDirectories: [@"C:\assets"]);
+        }
+        catch (ArgumentException)
+        {
+            unsupportedResumeDir = true;
+        }
+        if (!unsupportedResumeDir)
+        {
+            throw new InvalidOperationException(
+                "Unsupported resume --add-dir was silently accepted.");
+        }
+
+        var parsed = CodexCliEventSummary.Parse(
+            "{\"type\":\"thread.started\",\"thread_id\":\"" + priorSession + "\"}\n" +
+            "{\"type\":\"item.completed\",\"item\":{\"type\":\"command_execution\",\"command\":\"dotnet test\",\"exit_code\":0}}\n" +
+            "{\"type\":\"item.completed\",\"item\":{\"type\":\"mcp_tool_call\",\"server\":\"Talvora\",\"tool\":\"search\"}}\n" +
+            "{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"Build and tests passed.\"}}\n" +
+            "{\"type\":\"turn.completed\"}\n");
+        if (!parsed.HasEvents || parsed.SessionId != priorSession ||
+            parsed.FinalAnswer != "Build and tests passed." ||
+            parsed.CompletedCommands != 1 || parsed.FailedCommands != 0 ||
+            parsed.McpToolCalls != 1 ||
+            !parsed.RecentActivities.Any(item => item.Contains("dotnet test",
+                StringComparison.Ordinal)))
+        {
+            throw new InvalidOperationException(
+                "Codex structured session and activity parsing failed.");
+        }
+        var invalidTail = CodexCliEventSummary.Parse(
+            "{\"type\":\"thread.started\",\"thread_id\":\"" + priorSession + "\"}\n" +
+            "{\"type\":\"item.completed\",\"item\":");
+        if (invalidTail.SessionId != priorSession)
+        {
+            throw new InvalidOperationException(
+                "Incomplete bounded Codex JSONL damaged valid earlier events.");
+        }
+
         var helpAnswer = CodexCliInvocationPolicy.SanitizeFinalAnswer(
             "To inspect usage run talvora --help.\n", "--help");
         var helpEcho = CodexCliInvocationPolicy.SanitizeFinalAnswer(
