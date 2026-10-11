@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-11T00:15:38.640Z",
-  "scope": "CI recovery 2026-10-11 for failed windows-ci run #668 (cca5ebf): verify the new read-only embedded Stitch and Hostinger MCP health endpoint, ASP.NET Core Minimal API JSON/HttpContext/CancellationToken contracts, and linked .NET timeout-cancellation behavior. Context7 /dotnet/aspnetcore.docs and /dotnet/docs were queried against official documentation. This refresh accompanies follow-up verification after the original source commit omitted its required evidence; historical audit entries retained.",
+  "verifiedAtUtc": "2026-10-11T00:55:40.218Z",
+  "scope": "Talvora Windows Codex desktop CLI bridge 2026-10-11: resolve bundled Codex after desktop updates from the logged-on user's LOCALAPPDATA or installed WindowsApps package; execute in interactive Windows user session using existing ChatGPT credentials (never LocalSystem), default GPT-6.1 Sol / medium reasoning, explicit workspace-write sandbox and fail-closed noninteractive approval policy. Context7 /openai/codex and /dotnet/docs verified; official OpenAI Codex CLI source, OpenAI GPT-6.1 Sol model documentation and Microsoft cancellation guidance checked. Evidence refreshed in same development change; historical audits retained.",
   "libraries": [
+    {
+      "libraryId": "/openai/codex",
+      "verified": "2026-10-11 Context7 official Codex CLI source (codex-rs/exec/src/cli.rs, codex-rs/utils/cli/src/shared_options.rs): exec --model selects a per-run model; --sandbox read-only/workspace-write restricts command execution; --ephemeral avoids persistent rollout files; -c model_reasoning_effort selects effort; approval policy is a top-level CLI option. Talvora passes explicit argument tokens and invokes the CLI in the signed-in Windows user session."
+    },
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-11 Context7 official .NET async cancellation and timeout guidance: cancellation-aware asynchronous child-process waiting should dispose linked CancellationTokenSource, propagate caller cancellation, and keep output bounded. Talvora reuses its existing InteractiveUserProcessRunner that implements cancellation, bounded output and per-run cleanup rather than inventing a privileged separate runner."
+    },
     {
       "libraryId": "/dotnet/aspnetcore.docs",
       "verified": "2026-10-11 Context7 query checked the official ASP.NET Core Minimal APIs docs: MapGet can bind HttpContext and the request CancellationToken and can return Results.Json. Talvora EmbeddedMcpIntegrationHealth.Map returns a read-only JSON envelope with schemaVersion and integration states; downstream UI consumes the endpoint using an explicitly bounded HttpClient."
@@ -61,6 +69,8 @@
     }
   ],
   "vendorSources": [
+    "2026-10-11 Official Codex CLI source checked: https://github.com/openai/codex/blob/main/codex-rs/exec/src/cli.rs and https://github.com/openai/codex/blob/main/codex-rs/utils/cli/src/shared_options.rs — exec supports ephemeral, model and sandbox controls; approval remains a root option; explicit workspace-write overrides a broader stored profile.",
+    "2026-10-11 OpenAI GPT-6.1 Sol official model documentation checked: https://developers.openai.com/api/docs/models/gpt-6.1-sol — model ID gpt-6.1-sol supports medium reasoning effort. Microsoft .NET official cancellation-token guidance checked: https://github.com/dotnet/docs/blob/main/docs/standard/asynchronous-programming-patterns/coalesce-cancellation-tokens-from-timeouts.md.",
     "2026-10-11 Official ASP.NET Core Minimal API docs verified through Context7 /dotnet/aspnetcore.docs: https://github.com/dotnet/aspnetcore.docs/blob/main/aspnetcore/fundamentals/minimal-apis/includes/parameter-binding7.md (CancellationToken binding); https://github.com/dotnet/aspnetcore.docs/blob/main/aspnetcore/fundamentals/minimal-apis/includes/responses7-8.md (Results.Json); https://github.com/dotnet/aspnetcore.docs/blob/main/aspnetcore/fundamentals/http-context.md (HttpContext handler injection).",
     "2026-10-11 Official .NET cancellation documentation verified through Context7 /dotnet/docs: https://github.com/dotnet/docs/blob/main/docs/standard/asynchronous-programming-patterns/coalesce-cancellation-tokens-from-timeouts.md (linked caller and timeout tokens) and https://github.com/dotnet/docs/blob/main/docs/csharp/asynchronous-programming/cancel-async-tasks-after-a-period-of-time.md (CancelAfter and OperationCanceledException).",
     "2026-10-11 Microsoft official LINQ set operations and OrdinalComparer documentation checked: https://learn.microsoft.com/en-us/dotnet/csharp/linq/standard-query-operators/set-operations — Intersect with StringComparer.Ordinal permits exact Dev/Admin MCP overlap verification after intentionally removing memory tools.",
