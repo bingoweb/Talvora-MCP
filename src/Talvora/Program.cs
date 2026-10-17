@@ -88,6 +88,8 @@ builder.Services
     .WithToolsFromAssembly();
 
 var app = builder.Build();
+ClaudeBackgroundJobTools.DesktopNotifier =
+    app.Services.GetRequiredService<TalvoraDesktopProgressNotifier>();
 CodexBackgroundJobTools.DesktopNotifier =
     app.Services.GetRequiredService<TalvoraDesktopProgressNotifier>();
 var isWindowsService =

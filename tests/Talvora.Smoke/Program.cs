@@ -4,6 +4,13 @@ using static SmokeSupport;
 
 try
 {
+if (args.Length == 1 && args[0] == "--claude-integration-policy-only")
+{
+    await SmokeScenarios.RunClaudeIntegrationPolicyAsync();
+    Console.WriteLine("TALVORA CLAUDE INTEGRATION GREEN");
+    return;
+}
+
 if (args.Length == 1 &&
     string.Equals(args[0], "--codex-integration-policy-only",
         StringComparison.Ordinal))

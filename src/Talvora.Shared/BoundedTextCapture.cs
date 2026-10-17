@@ -221,7 +221,8 @@ public static class ProcessOutputPump
         string path,
         int maximumCharacters = BoundedTextCapture.DefaultMaximumCharacters,
         CancellationToken cancellationToken = default,
-        string? codexProgressPath = null)
+string? codexProgressPath = null,
+        string? claudeProgressPath = null)
     {
         ArgumentNullException.ThrowIfNull(reader);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -246,6 +247,8 @@ public static class ProcessOutputPump
         var progressTracker = string.IsNullOrWhiteSpace(codexProgressPath)
             ? null
             : new CodexCliStreamingProgress();
+        var claudeTracker = string.IsNullOrWhiteSpace(claudeProgressPath)
+            ? null : new ClaudeCliStreamingProgress();
 
         try
         {
@@ -269,6 +272,11 @@ public static class ProcessOutputPump
                     await progressTracker.ObserveAsync(
                         buffer.AsMemory(0, read), codexProgressPath!,
                         cancellationToken).ConfigureAwait(false);
+                }
+                if (claudeTracker is not null)
+                {
+                    await claudeTracker.ObserveAsync(buffer.AsMemory(0, read),
+                        claudeProgressPath!, cancellationToken).ConfigureAwait(false);
                 }
                 var headAccepted = Math.Min(read, headLimit - headWritten);
                 if (headAccepted > 0)
@@ -295,6 +303,11 @@ public static class ProcessOutputPump
             {
                 await progressTracker.CompleteAsync(
                     codexProgressPath!, cancellationToken).ConfigureAwait(false);
+            }
+            if (claudeTracker is not null)
+            {
+                await claudeTracker.CompleteAsync(claudeProgressPath!, cancellationToken)
+                    .ConfigureAwait(false);
             }
             if (totalCharacters > maximumCharacters &&
                 maximumCharacters > 0)

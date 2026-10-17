@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-11T02:57:28.644Z",
-  "scope": "Talvora 2026-10-11 Codex trusted developer workflow and long-running tasks, including interactive PowerShell overload hotfix. Official Codex configuration verified through Context7: Windows sandbox modes elevated/unelevated, workspace-write network and automatic approval mechanics, CLI JSONL and resume. Actual Windows sandbox Schannel SEC_E_NO_CREDENTIALS reproduced; normal interactive user and explicitly trusted Codex full normal-user mode returned NuGet HTTP 200, and isolated Codex downloaded Newtonsoft.Json 13.0.3 and built .NET 10 successfully. User-scoped balanced/trusted preferences and new Codex start/status/list/cancel tools implemented. Initial installed build exposed helper PowerShell/.NET optional argument mismatch causing auth status and exec exit 1; fixed method arity and empty optional string handling, with direct release-DLL Codex --version and login status both exit 0. Full-service post-hotfix acceptance still required. Historic evidence retained.",
+  "verifiedAtUtc": "2026-10-17T11:24:00Z",
+  "scope": "Optional Claude Code CLI engine: native logged-on-user execution, print/stream JSON progress, native permissions and configuration, session resume, generic argument-vector subcommands, cancelable background jobs and existing desktop worklog. Codex behavior and developer preferences preserved. Context7 and official Anthropic CLI/setup/headless/permissions/Agent SDK docs reviewed 2026-10-17. Historical platform evidence retained below.",
   "libraries": [
+    {
+      "libraryId": "/websites/code_claude",
+      "verified": "2026-10-17 Context7 verified native --print --output-format stream-json --verbose, --resume, --model and --effort, native permission-mode auto/acceptEdits/plan/bypassPermissions, result/is_error/errors and permission_denials. Official Windows stable installation is user-scoped ~/.local/bin/claude.exe; auth status exits zero when logged in. No custom allowlist or isolated settings are injected. TTY-dependent commands remain user-terminal work."
+    },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-11 current Context7 /dotnet/docs and Microsoft ProcessStartInfo reference: process redirected output/error text has configurable StandardOutputEncoding and StandardErrorEncoding; UTF-8 should be selected explicitly for Codex Rust CLI streams rather than relying on a Windows OEM code page. Bounded async captures and cancellation protect output. The final-answer sanitization now removes full Unicode/newline task echoes before generic secret redaction; verbose Codex stderr is not persisted or returned."
@@ -73,6 +77,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-17 Anthropic primary documentation reviewed: https://code.claude.com/docs/en/cli-reference , https://code.claude.com/docs/en/setup , https://code.claude.com/docs/en/headless , https://code.claude.com/docs/en/permissions and https://code.claude.com/docs/en/agent-sdk . Native stable 2.1.292 installed as MSI/tayla with official install.ps1 stable; --version and auth status exercised without exposing auth payloads. CLI remains unauthenticated until the user signs in.",
     "2026-10-11 Official Microsoft .NET documentation rechecked via Context7 for exact substring replacement and ordinal comparison: https://github.com/dotnet/docs/blob/main/docs/csharp/fundamentals/strings/common-tasks/modify.md and https://github.com/dotnet/docs/blob/main/docs/standard/base-types/best-practices-strings.md . Privacy hardening avoids returning raw Codex task echoes from stderr.",
     "2026-10-11 Official Codex CLI source checked: https://github.com/openai/codex/blob/main/codex-rs/exec/src/cli.rs and https://github.com/openai/codex/blob/main/codex-rs/utils/cli/src/shared_options.rs — exec supports ephemeral, model and sandbox controls; approval remains a root option; explicit workspace-write overrides a broader stored profile.",
     "2026-10-11 OpenAI GPT-6.1 Sol official model documentation checked: https://developers.openai.com/api/docs/models/gpt-6.1-sol — model ID gpt-6.1-sol supports medium reasoning effort. Microsoft .NET official cancellation-token guidance checked: https://github.com/dotnet/docs/blob/main/docs/standard/asynchronous-programming-patterns/coalesce-cancellation-tokens-from-timeouts.md.",

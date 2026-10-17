@@ -420,3 +420,56 @@ A few project choices are deliberate and unlikely to change casually:
 <p align="center">
   <strong>Talvora is built for a real Windows workstation: local, inspectable, repairable and explicit about what it can do.</strong>
 </p>
+
+## Optional Claude Code engine
+
+Codex tools and the user's Codex developer profile keep their existing behavior. When the user explicitly says **“bu kodu Claude Code ile düzenle”**, select `talvora_claude_exec` for a bounded request or `talvora_claude_start` for longer work.
+
+Install the official native Windows CLI as the signed-in user, then log in in that user's terminal:
+
+```powershell
+& ([scriptblock]::Create((irm https://claude.ai/install.ps1))) stable
+& "$env:USERPROFILE\.local\bin\claude.exe" auth login
+```
+
+The bridge finds `~/.local/bin/claude.exe` directly (PATH changes are unnecessary), with an interactive-user PATH fallback. `talvora_claude_info {}` reports installed/version/authenticated state without returning credentials. The LocalSystem service launches Claude through the existing user-session runner, using that user's auth and environment. It does not elevate Claude or create a service-account Claude profile.
+
+MCP call examples (tool name followed by its JSON arguments):
+
+```json
+talvora_claude_exec {
+  "workingDirectory": "C:\\Users\\tayla\\Talvora-MCP",
+  "prompt": "Bu kodu Claude Code ile düzenle: belirtilen hatayı düzelt.",
+  "model": "sonnet",
+  "effort": "high",
+  "permissionMode": "auto",
+  "timeoutSeconds": 1800
+}
+talvora_claude_start {
+  "workingDirectory": "C:\\Users\\tayla\\Talvora-MCP",
+  "prompt": "Önceki değişikliği tamamla ve doğrula.",
+  "resumeSessionId": "<sessionId>",
+  "permissionMode": "bypassPermissions",
+  "additionalDirectories": ["C:\\Users\\tayla\\shared"],
+  "extraArguments": ["--mcp-config", "C:\\Users\\tayla\\claude-mcp.json"],
+  "environment": {"EXAMPLE_SETTING": "value"}
+}
+talvora_claude_status {"jobId": "<jobId>", "includeResult": true}
+talvora_claude_list {"maxResults": 20}
+talvora_claude_cancel {"jobId": "<jobId>"}
+talvora_claude_run {
+  "workingDirectory": "C:\\Users\\tayla\\Talvora-MCP",
+  "arguments": ["plugin", "list"],
+  "timeoutSeconds": 120
+}
+```
+
+Omit `model`/`effort` to preserve the user's Claude defaults. Native permission modes are `auto` (default), `default`, `acceptEdits`, `plan`, `dontAsk`, and explicit `bypassPermissions`. Claude/organization settings and model eligibility still apply; no automatic fallback to bypass mode occurs. Denied actions are returned as `Success=false` with a permission-denial count, including when the native process exits zero. A missing final result, timeout or structured Claude error also cannot count as success.
+
+The engine preserves native `~/.claude` settings, CLAUDE.md, skills, hooks, agents, plugins, MCP and network behavior. Talvora injects no tool allowlist, workspace fence or replacement configuration. `extraArguments` accepts native flags (including settings/agents/plugins/MCP); print/input/output framing is reserved for the coding tools. Use `talvora_claude_run` for unrestricted native argument vectors and subcommands such as `["auth","status"]`, `["mcp","list"]` or `["plugin","list"]`. No shell interpolation is involved.
+
+The runner has **no PTY or interactive stdin**. Complete login and TTY-only configuration in the user's terminal; a command requiring input may fail or time out, and is never reported as successful because it timed out. Token-producing `setup-token` output is withheld. Outputs pass canonical sensitive-data redaction, and responses omit argument/environment echoes.
+
+Background jobs survive MCP disconnects while the service lives, support cancellation by process-tree termination, and retain bounded real activity summaries independent of stdout truncation. Session IDs come from Claude's native output and can be resumed in a later call. Jobs themselves are held in memory and disappear on service restart. The tray worklog remains active through the job, with a restrained 25-second heartbeat and terminal outcome.
+
+References: [CLI](https://code.claude.com/docs/en/cli-reference), [Windows setup](https://code.claude.com/docs/en/setup), [programmatic execution](https://code.claude.com/docs/en/headless), [permissions](https://code.claude.com/docs/en/permissions).

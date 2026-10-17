@@ -34,6 +34,17 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     {
         var normalized = NormalizeToolName(toolName);
 
+        if (normalized is "claude_exec" or "claude_run" or "claude_start")
+        {
+            return new(OperationCategory.GenericExecution,
+                "Claude istenen çalışma üzerinde ilerliyor",
+                "İsteğinizi oturum açmış kullanıcının hesabıyla işliyor.",
+                "İstediğiniz kod çalışmasını tamamlamak için.",
+                normalized == "claude_start"
+                    ? "Claude çalışması başlatıldı; ilerleme izleniyor."
+                    : "Claude çalışmasını tamamladı.");
+        }
+
         if (normalized is
             "read_source" or
             "read_text" or

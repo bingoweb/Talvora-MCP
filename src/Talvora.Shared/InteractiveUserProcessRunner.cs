@@ -20,7 +20,9 @@ public static class InteractiveUserProcessRunner
         string HelperAssemblyPath,
         int MaximumPersistedCharacters,
         bool DiscardStandardError,
-        string? CodexProgressPath);
+string? CodexProgressPath,
+        string? ClaudeProgressPath,
+        bool CloseStandardInput);
 
     private sealed record Result(
         int ExitCode,
@@ -43,7 +45,9 @@ public static class InteractiveUserProcessRunner
         InteractiveUserContext? interactiveUser = null,
         bool discardStandardError = false,
         Action<string>? onStandardOutputSnapshot = null,
-        Action<CodexCliEventResult>? onCodexProgress = null)
+Action<CodexCliEventResult>? onCodexProgress = null,
+        Action<ClaudeCliProgress>? onClaudeProgress = null,
+        bool closeStandardInput = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
         ArgumentException.ThrowIfNullOrWhiteSpace(workingDirectory);
@@ -101,6 +105,8 @@ public static class InteractiveUserProcessRunner
             ? null
             : Path.Combine(runRoot, "codex-progress.json");
 
+        var claudeProgressPath = onClaudeProgress is null
+            ? null : Path.Combine(runRoot, "claude-progress.json");
         var requestedArguments = arguments?.ToArray() ?? [];
         var request = new Request(
             executable,
@@ -117,7 +123,9 @@ public static class InteractiveUserProcessRunner
                 .Location,
             maxCapturedCharactersPerStream,
             discardStandardError,
-            progressPath);
+            progressPath,
+            claudeProgressPath,
+            closeStandardInput);
 
         FileStream? runLease = null;
         try
@@ -184,6 +192,10 @@ public static class InteractiveUserProcessRunner
                 : MonitorCodexProgressAsync(
                     progressPath!, onCodexProgress, progressCts.Token);
 
+            var claudeMonitor = onClaudeProgress is null
+                ? Task.CompletedTask
+                : MonitorClaudeProgressAsync(claudeProgressPath!, onClaudeProgress, progressCts.Token);
+
             var timedOut = false;
             try
             {
@@ -223,6 +235,12 @@ public static class InteractiveUserProcessRunner
                 catch (OperationCanceledException)
                 {
                     // Expected when the interactive process exits.
+                }
+                try { await claudeMonitor.ConfigureAwait(false); }
+                catch (OperationCanceledException) { }
+                if (onClaudeProgress is not null)
+                {
+                    TryReadClaudeProgress(claudeProgressPath!, onClaudeProgress);
                 }
                 if (onCodexProgress is not null)
                 {
@@ -324,6 +342,27 @@ public static class InteractiveUserProcessRunner
             {
             }
         }
+    }
+
+    private static async Task MonitorClaudeProgressAsync(
+        string path, Action<ClaudeCliProgress> observer, CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            TryReadClaudeProgress(path, observer);
+            await Task.Delay(600, token).ConfigureAwait(false);
+        }
+    }
+
+    private static void TryReadClaudeProgress(string path, Action<ClaudeCliProgress> observer)
+    {
+        try
+        {
+            if (!File.Exists(path) || new FileInfo(path).Length > 2 * 1024 * 1024) { return; }
+            var value = JsonSerializer.Deserialize<ClaudeCliProgress>(File.ReadAllText(path, Encoding.UTF8));
+            if (value is not null) { observer(value); }
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException) { }
     }
 
     private static async Task MonitorCodexProgressAsync(
@@ -515,6 +554,7 @@ try {
     $psi.UseShellExecute = $false
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
+    $psi.RedirectStandardInput = [bool]$request.CloseStandardInput
     # Native Codex emits UTF-8, regardless of the Windows OEM code page.
     $psi.StandardOutputEncoding = [Text.UTF8Encoding]::new($false)
     $psi.StandardErrorEncoding = [Text.UTF8Encoding]::new($false)
@@ -538,13 +578,15 @@ try {
         throw "Failed to start interactive child process."
     }
 
+    if ($request.CloseStandardInput) { $process.StandardInput.Close() }
     $pumpCts = [Threading.CancellationTokenSource]::new()
     $stdoutTask = [Talvora.Shared.ProcessOutputPump]::PumpToUtf8FileAsync(
         $process.StandardOutput,
         [string]$request.StandardOutputPath,
         [int]$request.MaximumPersistedCharacters,
         $pumpCts.Token,
-        $request.CodexProgressPath)
+        $request.CodexProgressPath,
+        $request.ClaudeProgressPath)
     $stderrBudget = if($request.DiscardStandardError) {
         0
     } else {
@@ -555,6 +597,7 @@ try {
         [string]$request.StandardErrorPath,
         $stderrBudget,
         $pumpCts.Token,
+        $null,
         $null)
     $process.WaitForExit()
     $drainTask = [Threading.Tasks.Task]::WhenAll(

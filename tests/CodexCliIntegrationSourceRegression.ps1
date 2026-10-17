@@ -138,8 +138,8 @@ $checks = [ordered]@{
         $toml.Contains('tableParts[1], "talvora_local"')
     )
     FocusedSurfaceCountUpdated = (
-        $surface.Contains('ExpectedFullToolCount = 242') -and
-        $surface.Contains('ExpectedDevelopmentToolCount = 205') -and
+        $surface.Contains('ExpectedFullToolCount = 249') -and
+        $surface.Contains('ExpectedDevelopmentToolCount = 212') -and
         $surface.Contains('ExpectedAdministrationToolCount = 88') -and
         $surface.Contains('ExpectedSharedToolCount = 51')
     )
