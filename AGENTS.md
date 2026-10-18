@@ -28,13 +28,50 @@ The user decided (2026-10-18): Codex does **only** what Claude's cards say, **ex
 
 Violations found in Claude's audits become D-cards that revert the unrequested change.
 
+## TOKEN ECONOMY (work cheaply, never at the cost of correctness)
+
+Every file read, command output, MCP tool schema and screenshot costs tokens. These rules never override a card's Acceptance: if a rule would skip required evidence, the card wins.
+
+**A. Read only what the card needs**
+1. **Context helper first.** Run `pwsh scripts/Get-CodexContext.ps1` (or `-Card <ID>`) and work from its output. Never open a whole `docs/codex/*.md` file. Before K1 exists, print a single card with:
+   `$id='S1'; $f='docs/codex/ROADMAP.md'; $l=Get-Content $f -Encoding UTF8; $s=($l | Select-String "^### $id " | Select -First 1).LineNumber; $e=($l[$s..($l.Count-1)] | Select-String '^#{2,3} ' | Select -First 1).LineNumber; $l[($s-1)..($s+$e-2)]` (N cards: `$f='docs/codex/DESIGN-WORKLOG.md'`; UI cards: `docs/codex/DESIGN-CONTROL-CENTER.md`, then read only the spec sections the card cites).
+2. **STATUS without history:** read `docs/codex/STATUS.md` up to `## Log` plus the newest Log entry only.
+3. **AGENTS.md once per session.** Do not re-read it between steps of the same card.
+4. **Locate, then read a window.** `git grep -n "<symbol>"` / `rg -n`, then read ±40 lines (`Get-Content f | Select -Skip <n-41> -First 80`). Read a whole file only if it is < 250 lines or the card rewrites most of it.
+5. **Never open in full:** `packages.lock.json`, `BUG-AUDIT.md`, `HANDOFF.md`, `MCP-CONTROL-CENTER-TODO.md`, `SOURCE-EDIT-ENGINE-ARCHITECTURE.md`, `docs/archive/**`, `THIRD-PARTY-NOTICES.md`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Misc.cs` (2 500+ lines), `src/Talvora/SourceEditing/RoslynSemanticEditEngine.cs` (2 200+ lines), `src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs` (1 800+ lines), images, `bin/`, `obj/`, `artifacts/`. Grep them.
+6. **Do not re-read a file you just edited** to check it; re-read only the hunk if a build/test fails there.
+7. **Talvora MCP calls:** always pass small limits (`maxMatches`, `maxResults`, `lineCount`, `maxCommits`) and the narrowest `root`; never list/search the whole repo or a drive root.
+
+**B. Build and test cheaply**
+1. **Inner loop = one project / one suite.** Build only the touched project: `dotnet build src/<Project>/<Project>.csproj -c Release --no-restore -v q -nologo -clp:ErrorsOnly`. Run only the affected suite/scenario (e.g. `dotnet run --project tests/Talvora.Notification.Regression -c Release --no-build`, or one `tests/*.ps1`).
+2. **Restore once per card** (`--locked-mode`), not before every build.
+3. **Full gate once per card**, at the end: `pwsh scripts/Invoke-QualityGate.ps1` (prints only the summary and failing steps). Never twice in a row without a code change in between.
+4. **Tails only:** `... 2>&1 | Select -Last 40`. Look further up only when the tail points there.
+5. **Installer/deploy once per card**, only for cards whose Acceptance requires the installed runtime; read only the last 20 lines of its output unless it failed; poll `/healthz` (small JSON) instead of reading logs.
+6. **Screenshots:** only the PNGs the card requires, produced by the preview/smoke harness, cropped to the element; verify text/structure with UI Automation or numbers, not extra screenshots.
+
+**C. Write cheaply**
+1. **STATUS Log entry ≤ 8 lines:** what changed, gate last line + counts, measured numbers, installed commit, anything open. No pasted code or command output.
+2. **Commit message:** subject + ≤ 6 body lines + `Codex-Card:` trailer.
+3. **Report to the user (Turkish):** the protocol step 11 items in short sentences; `git diff --stat`, never the full diff.
+4. **Do not echo** large files, JSON or logs into chat, STATUS or Gitea; summarise in one line with the key numbers.
+
+**D. Avoid wasted work**
+1. One card per message; do not look ahead into later cards.
+2. If the same approach fails a third time, stop and write a proposal (EXECUTION MANDATE rule 5) instead of burning tokens.
+3. Do not regenerate lock files, generated assets or notices unless the card says so.
+
+## QUEUE ADDITIONS (how Claude adds cards while Codex is working)
+
+Before selecting an item (CONTINUE PROTOCOL step 5), if `docs/codex/QUEUE-ADDITIONS.md` contains entries under "## Pending", insert each listed queue line into `docs/codex/STATUS.md` → "Agent queue" exactly at the position it names, move the entry to "## Applied" with the date, and include both files in the next card's commit. Do not change the wording of the queue lines.
+
 ## CONTINUE PROTOCOL ("Talvora'ya devam et")
 
 When the user says "Talvora'ya devam et", "Talvora devam", "sıradaki adım" or similar, execute this sequence without asking questions. **One queue item per message**, then stop and report.
 
 1. **Location:** work in `C:\Users\tayla\Talvora-MCP`. If git reports "dubious ownership", prefix git commands with `-c safe.directory=C:/Users/tayla/Talvora-MCP`; do not change global git config.
 2. **Sync:** `git fetch origin`. Dirty tree: continue it only if it belongs to STATUS "In progress"; otherwise stop and ask. `git pull --ff-only origin main`; never force, reset --hard, rebase or rewrite history.
-3. **Context (token economy):** after K1 run `pwsh scripts/Get-CodexContext.ps1` and read only its output plus the files the card names. Do not read `docs/archive/*`, `BUG-AUDIT.md`, `HANDOFF.md` history or `MCP-CONTROL-CENTER-TODO.md` unless the card points to a section.
+3. **Context:** follow the **TOKEN ECONOMY** section of this file. Apply pending **QUEUE ADDITIONS** before step 5.
 4. **Baseline:** run the quality gate (`pwsh scripts/Invoke-QualityGate.ps1 -Scope Fast`; before K1: locked restore + Release build). If it is red at the start, this message's task is to make it green (exception: the in-progress item is K0/K1).
 5. **Select:** the first `[ ]` item in `docs/codex/STATUS.md` → "Agent queue" (skip `[?]`), or the "In progress" item. Write "In progress: <item>" into STATUS first.
 6. **Implement:** follow the card's **Why / Files / Do / Don't / Acceptance** exactly (`docs/codex/ROADMAP.md`; N cards in `docs/codex/DESIGN-WORKLOG.md`; UI cards in `docs/codex/DESIGN-CONTROL-CENTER.md`). Test first (red), then code (green). When a card prescribes a technique, values or code shape, use it; if it cannot work as written, record an open question with evidence and stop — do not improvise. Context7 before relying on any framework/SDK/CLI behaviour.

@@ -444,6 +444,100 @@ Use it in both places; verify the option list against `git help git` for the ins
 
 ---
 
+## Phase E — Token economy (Talvora's cost to every agent)
+
+Measured live on 2026-10-18 (installed build, `/mcp/dev`):
+
+| Measurement | Value |
+|---|---|
+| Codex registration | `~/.codex/config.toml` → `[mcp_servers.talvora_local] url = "http://127.0.0.1:7676/mcp"` → every Codex session receives **249 tool schemas ≈ 302 KB (~75 k tokens)** before doing anything. |
+| Result duplication | **Every** tool result carries the same JSON twice: a `text` content block and `structuredContent` (git_status 2 314 + 2 309 chars, git_log 13 799 + 13 549, find_files 20 729 + 20 729). |
+| `talvora_git_status` | `entries` are raw porcelain-v2 lines with two 40-char object ids each, **and** the whole porcelain output is repeated in `raw`. |
+| `talvora_git_log` | default 50 commits with full hash, author name, author e-mail, date, subject → 34 KB per call. |
+| `talvora_find_files` | one 60-file folder → 52 KB. |
+| `talvora_search_text` | defaults `maxMatches=500`, `maxLineChars=4000`. |
+
+Zero-capability-loss rule (user decision Q2) applies: every reduced default stays reachable through an explicit parameter.
+
+### E1 — Codex sees only the Talvora tools it uses
+
+**Why:** ~75 k tokens of tool schemas per Codex session; Codex uses its own shell for everything except Talvora's source-edit family, PowerShell-as-SYSTEM (installer deploy) and the gated `git push`.
+
+**Files:** `src/Talvora.Shared/CodexMcpConfiguration.cs` (the code that writes Talvora's Codex registration), `scripts/Install.ps1`/installer step that calls it, `tests/` (behavioural test on a temp `config.toml`), `README.md` (one line).
+
+**Do:**
+- Context7 `/openai/codex`: confirm the `config.toml` keys for a streamable-HTTP MCP server's tool allow-list (`enabled_tools`) for the installed Codex version. If the key does not exist, stop with a proposal.
+- Write the registration exactly as:
+  ```toml
+  [mcp_servers.talvora_local]
+  url = "http://127.0.0.1:7676/mcp/dev"
+  enabled_tools = [
+    "talvora_source_edit_guide", "talvora_read_source", "talvora_apply_patch",
+    "talvora_apply_edits", "talvora_structural_edit", "talvora_semantic_edit",
+    "talvora_run_powershell", "talvora_git_run",
+  ]
+  ```
+  Preserve every other key/table in the user's `config.toml` byte-for-byte (existing TOML round-trip code; test with a fixture that contains other servers and comments). `talvora_run_powershell` must exist on `/mcp/dev` (it is a shared tool today — verify; if not, stop with a proposal).
+- Apply the change to this workstation via the installer path (no manual edit).
+
+**Don't:** change other MCP servers or Codex settings; remove the registration.
+
+**Acceptance:** fixture test; on the workstation `codex mcp list` (or the documented equivalent) shows `talvora_local` with 8 tools; a Codex session can still read + patch a scratch file and run the installer deploy; Log records the measured schema size Codex receives (≈ 8 tools).
+
+### E2 — Stop sending every result twice
+
+**Why:** text block + `structuredContent` with identical JSON doubles the result tokens for clients that forward both.
+
+**Files:** `src/Talvora/Program.cs` (call-tool filter), new `src/Talvora/ToolResultTextPolicy.cs`, smoke scenario.
+
+**Do (deterministic decision, record evidence in the Log):**
+1. Context7 + vendor docs: for **Codex CLI**, **ChatGPT custom MCP connectors** and **Claude Code**, find whether the model receives `structuredContent`, the text block, or both, when a result has both.
+2. If **all three** use `structuredContent` when present → replace the text block of results that have `structuredContent` with a one-line text: `"Structured result: see structuredContent."` (keep `isError` results' text unchanged).
+3. If **any** of them reads only the text block → keep both and do nothing else in this card except recording the evidence (the card is then `[x]` with "no change, evidence recorded").
+4. Never touch results without `structuredContent`.
+
+**Acceptance:** evidence table in the Log (client → field used, source); if changed: smoke asserts the one-line text and unchanged `structuredContent`; Codex and ChatGPT Dev still work end-to-end (one call each, logged).
+
+### E3 — Lean defaults for the high-frequency tools
+
+**Why:** see the measurement table. These tools are called many times per session.
+
+**Files:** `src/Talvora/Tools/GitTools.cs`, `DeveloperTools.FileSearch.cs`, `DeveloperTools.Files.cs` (find/list), `ProcessTools.cs`, `PowerShellTools.cs`, `BuildRunnerTools.Dotnet.cs`, smoke scenarios for each, README tool notes.
+
+**Do (exact new defaults; the old behaviour stays reachable via the named parameter):**
+
+| Tool | New default | Opt-in to old/full output |
+|---|---|---|
+| `talvora_git_status` | `entries` = parsed objects `{ path, origPath?, index, worktree }` (XY codes from porcelain v2; no object ids); no `raw` | `includeRaw=true` |
+| `talvora_git_log` | `maxCommits=20`; commit = `{ shortCommit, date (yyyy-MM-dd HH:mm), subject }` | `maxCommits=<n>`, `detail="full"` (today's fields) |
+| `talvora_find_files` | `maxResults=200`; entry = `{ path (relative to root), size }` | `detail="full"` (today's fields), `maxResults=0` |
+| `talvora_list` | entry = `{ name, type, size }` | `detail="full"` |
+| `talvora_search_text` | `maxMatches=100`, `maxLineChars=300` | explicit values (0 = server maximum, as today) |
+| `talvora_run_process` / `talvora_run_powershell` | captured stdout/stderr returned as **head 2 000 + tail 14 000 chars** with a marker line `… {n} characters omitted …` between them (model-facing text, English) when longer; totals in `standardOutputTotalCharacters` | `maxOutputCharacters=<n>` |
+| `talvora_dotnet_build` / `talvora_dotnet_test` | add `summary` = `{ errors, warnings, testsPassed?, testsFailed?, failedTests[≤10], diagnostics[≤20] {file,line,code,message} }`; `standardOutput` limited like run_process | `fullOutput=true` |
+
+Descriptions of these tools mention the opt-in parameter in ≤ 1 short sentence.
+
+**Don't:** change semantics of any other field; remove fields from `detail="full"`.
+
+**Acceptance:** smoke per tool asserting the new default shape and the opt-in full shape; measured sizes logged before/after on this repo (target: git_status ≤ 1 KB for ≤ 10 entries, git_log default ≤ 3 KB, find_files on `src/Talvora/Tools` ≤ 8 KB).
+
+### E4 — Worklog frames stay small (covered by N3b)
+
+No separate work: N3b's `CodeChangeId` rule (heartbeats ≤ 4 KB) is the token/IPC economy for the desktop worklog. Listed here so the audit checks it.
+
+### E5 — Context helper and gate output are minimal (extends K1)
+
+**Why:** K1 introduced `Get-CodexContext.ps1` and `Invoke-QualityGate.ps1`; the TOKEN ECONOMY section of AGENTS.md relies on them.
+
+**Files:** `scripts/Get-CodexContext.ps1`, `scripts/Invoke-QualityGate.ps1`, their tests.
+
+**Do:**
+- `Get-CodexContext.ps1`: support all three card files (ROADMAP `### K0 — …`, DESIGN-WORKLOG `### N1 — …`, DESIGN-CONTROL-CENTER `### UI1 — …`); for a UI/N card also print the spec sections it cites (`§3.1`, `§5.4.1` …) and nothing else; print STATUS up to `## Log` + newest entry; print pending `QUEUE-ADDITIONS.md` entries; print open proposals' titles from `PROPOSALS.md`. Total output target ≤ 250 lines for any card.
+- `Invoke-QualityGate.ps1`: default output = one line per step (`✓ Derleme 12 sn`), on failure only the failing step's last 60 lines; final two lines `N kontrol, 0 hata` and `Hepsi geçti.`/`Kontrol başarısız: <adım>`.
+
+**Acceptance:** tests with fixture docs; output line counts asserted (≤ 250 for the largest current card; ≤ 30 lines for a green gate run).
+
 ## Phase N — Desktop worklog redesign ("Seyir Defteri")
 
 Full review (defects W1–W19, code-terminal defects C1–C7, live screenshot), information model, copy deck, visual spec and cards: **`docs/codex/DESIGN-WORKLOG.md`**. Order: N1 → N2 → N3 → N3b → N4 → N5 → N6 → N7 (needs UI2 shell) → N8 (needs UI6). The vertical "code terminal" expansion is the user's favourite feature: every N-card must keep it working, and N3b/N5 make it exact (only applied changes), persistent for the session and terminal-like.
