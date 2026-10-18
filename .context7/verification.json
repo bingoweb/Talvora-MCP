@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-18T12:06:08Z",
-  "scope": "K2: Win32 safe directory identity probes (zero desired data/delete access and shared read/write/delete), FILE_ID_INFO 128-bit directory IDs, bounded sharing-violation retries, and separate existing rename-protection handles when compatible. Historical evidence preserved.",
+  "verifiedAtUtc": "2026-10-18T12:30:03Z",
+  "scope": "E5: PowerShell 7 context helper selects only relevant card and referenced design sections, shows pending additions and proposal titles, and keeps output below 250 lines. Quality gate groups successful regressions, times steps and limits failed diagnostics to 60 lines. Historical evidence preserved.",
   "libraries": [
     {
       "libraryId": "/websites/learn_microsoft_en-us_windows_win32_api",
@@ -9,7 +9,7 @@
     },
     {
       "libraryId": "/microsoftdocs/powershell-docs",
-      "verified": "2026-10-18 K1: Official PowerShell docs via Context7 confirm native commands require explicit LASTEXITCODE handling; pwsh -File returns 1 on terminating script exceptions and 0 on normal script completion. Language.Parser.ParseFile reports syntax diagnostics in the errors reference. Unified quality gate checks child-process exit codes, parses scripts, captures diagnostics and attributes failures to the named test."
+      "verified": "2026-10-18 K1: Official PowerShell docs via Context7 confirm native commands require explicit LASTEXITCODE handling; pwsh -File returns 1 on terminating script exceptions and 0 on normal script completion. Language.Parser.ParseFile reports syntax diagnostics in the errors reference. Unified quality gate checks child-process exit codes, parses scripts, captures diagnostics and attributes failures to the named test. 2026-10-18 E5: about_Redirection confirms *> captures PowerShell streams including Write-Host information stream; Get-Content -Tail provides bounded failure diagnostics. Successful regression substeps can be grouped without hiding failed step names, preserving the native exit code check."
     },
     {
       "libraryId": "/dotnet/docs",
@@ -89,6 +89,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-18 E5 Microsoft PowerShell 7 official documentation verified with Context7 /microsoftdocs/powershell-docs and Microsoft Learn: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_redirection?view=powershell-7 (all-stream *> redirection captures Write-Host/information stream); https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-content?view=powershell-7 (Get-Content -Tail limits diagnostic lines).",
     "2026-10-18 Microsoft Win32 official API checked with Context7 /websites/learn_microsoft_en-us_windows_win32_api: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew ; https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfileinformationbyhandleex ; https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_info . Use directory backup-semantic, non-follow reparse, metadata-only handles and compare full FILE_ID_INFO.",
     "2026-10-18 Microsoft PowerShell 7 current official references verified through Context7 /microsoftdocs/powershell-docs: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_error_handling and https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables . Native failures require explicit LASTEXITCODE checks; direct script exception behavior and Parser.ParseFile diagnostics guide the executable quality gate.",
     "2026-10-18 Microsoft https://learn.microsoft.com/en-us/dotnet/core/tools/global-json and https://learn.microsoft.com/en-us/dotnet/core/install/upgrade verified: exact SDK plus rollForward=disable keeps SDK and locked dependency graph in lockstep.",

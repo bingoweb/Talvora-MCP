@@ -85,6 +85,111 @@ try {
         $contextOutput -match '### K2\s+[—-]') {
         throw 'The context helper must print the selected card without neighbouring cards.'
     }
+
+    $fixtureRoot = Join-Path $tempRoot 'context-fixture'
+    $fixtureScripts = Join-Path $fixtureRoot 'scripts'
+    $fixtureDocs = Join-Path $fixtureRoot 'docs/codex'
+    New-Item -ItemType Directory -Path $fixtureScripts, $fixtureDocs -Force | Out-Null
+    $fixtureHelper = Join-Path $fixtureScripts 'Get-CodexContext.ps1'
+    Copy-Item -LiteralPath $contextPath -Destination $fixtureHelper
+    @'
+## In progress
+(none)
+## Agent queue
+- [ ] N1 — Worklog terminal
+- [ ] UI1 — UI theme
+## User queue
+(none)
+## Open questions
+(none)
+## Log
+- 2026-10-18 — NEWEST_LOG_ONLY
+- 2026-10-17 — STALE_LOG_MUST_NOT_APPEAR
+'@ | Set-Content -LiteralPath (Join-Path $fixtureDocs 'STATUS.md') -Encoding utf8
+    @'
+### K1 — Baseline
+## Unrelated
+ROADMAP_UNRELATED_SENTINEL
+'@ | Set-Content -LiteralPath (Join-Path $fixtureDocs 'ROADMAP.md') -Encoding utf8
+    @'
+## 3. Worklog
+### 3.1 Code terminal
+WORKLOG_TERMINAL_SENTINEL
+## 5. Worklog behaviour
+### 5.4 Agent jobs
+#### 5.4.1 Code display
+WORKLOG_AGENT_SENTINEL
+## 6. Other
+WORKLOG_UNRELATED_SENTINEL
+## Implementation cards
+### N1 — Current card
+**Files:** `src/Example.cs`
+**Do:** Follow §3.1 and §5.4.1 only.
+### N2 — Next card
+NEXT_WORKLOG_CARD_SENTINEL
+'@ | Set-Content -LiteralPath (Join-Path $fixtureDocs 'DESIGN-WORKLOG.md') -Encoding utf8
+    @'
+## 3. UI tokens
+### 3.1 Dark colours
+UI_COLOUR_SENTINEL
+## 7. UI code
+### 7.1 Dictionary
+UI_DICTIONARY_SENTINEL
+### 7.2 Theme switch
+UI_SWITCH_SENTINEL
+## 8. Other
+UI_UNRELATED_SENTINEL
+## Implementation cards
+### UI1 — Current card
+**Files:** `src/Theme.cs`
+**Do:** Follow §3.1, §7.1–7.2.
+### UI2 — Next card
+NEXT_UI_CARD_SENTINEL
+'@ | Set-Content -LiteralPath (Join-Path $fixtureDocs 'DESIGN-CONTROL-CENTER.md') -Encoding utf8
+    @'
+## Pending
+- [ ] E8 — PENDING_QUEUE_SENTINEL
+## Applied
+APPLIED_QUEUE_MUST_NOT_APPEAR
+'@ | Set-Content -LiteralPath (Join-Path $fixtureDocs 'QUEUE-ADDITIONS.md') -Encoding utf8
+    @'
+## Open
+### P-1 — OPEN_PROPOSAL_TITLE
+PRIVATE_PROPOSAL_BODY_MUST_NOT_APPEAR
+## Decided
+### P-2 — DECIDED_PROPOSAL_MUST_NOT_APPEAR
+'@ | Set-Content -LiteralPath (Join-Path $fixtureDocs 'PROPOSALS.md') -Encoding utf8
+    foreach ($spec in @(
+        @{ Card='N1'; Required=@('WORKLOG_TERMINAL_SENTINEL','WORKLOG_AGENT_SENTINEL'); Forbidden=@('NEXT_WORKLOG_CARD_SENTINEL','WORKLOG_UNRELATED_SENTINEL') },
+        @{ Card='UI1'; Required=@('UI_COLOUR_SENTINEL','UI_DICTIONARY_SENTINEL','UI_SWITCH_SENTINEL'); Forbidden=@('NEXT_UI_CARD_SENTINEL','UI_UNRELATED_SENTINEL') }
+    )) {
+        $out = @(& $fixtureHelper -Card $spec.Card | Out-String) -join ''
+        foreach ($expected in @($spec.Required + @('NEWEST_LOG_ONLY','PENDING_QUEUE_SENTINEL','OPEN_PROPOSAL_TITLE'))) {
+            if (-not $out.Contains($expected)) { throw "Missing $expected for $($spec.Card)." }
+        }
+        foreach ($forbidden in @($spec.Forbidden + @('STALE_LOG_MUST_NOT_APPEAR','APPLIED_QUEUE_MUST_NOT_APPEAR','PRIVATE_PROPOSAL_BODY_MUST_NOT_APPEAR','DECIDED_PROPOSAL_MUST_NOT_APPEAR'))) {
+            if ($out.Contains($forbidden)) { throw "Unexpected $forbidden for $($spec.Card)." }
+        }
+        if (($out -split '\r?\n').Count -gt 250) { throw "Oversized fixture context for $($spec.Card)." }
+    }
+    foreach ($card in @('UI1','UI2','UI3','UI4','UI5','UI6','UI7','UI8',
+            'N1','N2','N3','N3b','N4','N5','N6','N7','N8')) {
+        $actual = @(& $contextPath -Card $card | Out-String) -join ''
+        if (($actual -split '\r?\n').Count -gt 250) {
+            throw "Real context for $card exceeds 250 lines."
+        }
+    }
+
+    $quietOutput = @(& {
+        Invoke-QualityCheck -Name 'FixtureQuiet' -Action { Write-Output 'Quiet successful step' } -QuietSuccess
+    } 6>&1)
+    if ($quietOutput.Count -gt 1 -or ($quietOutput.Count -eq 1 -and
+            [string]$quietOutput[0] -match 'PASS|FixtureQuiet')) {
+        throw 'Successful regression substeps must be silent when grouped.'
+    }
+    if ([IO.File]::ReadAllText($gatePath) -notmatch '-Tail\s+60') {
+        throw 'Failure diagnostics must be limited to the last 60 lines.'
+    }
 }
 finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue

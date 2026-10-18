@@ -15,21 +15,30 @@ $script:GateCaptureRoot = Join-Path ([IO.Path]::GetTempPath()) ('TalvoraQualityG
 New-Item -ItemType Directory -Path $script:GateCaptureRoot -Force | Out-Null
 
 function Invoke-QualityCheck {
-    param([Parameter(Mandatory)][string] $Name, [Parameter(Mandatory)][scriptblock] $Action)
+    param(
+        [Parameter(Mandatory)][string] $Name,
+        [Parameter(Mandatory)][scriptblock] $Action,
+        [switch] $QuietSuccess
+    )
     $script:GateChecks++
     $logPath = Join-Path $script:GateCaptureRoot ([string]$script:GateChecks + '.log')
+    $timer = [Diagnostics.Stopwatch]::StartNew()
     try {
         & $Action *> $logPath
         if (-not $?) { throw 'The step reported an unsuccessful PowerShell status.' }
+        $timer.Stop()
         if ($script:GateVerbose) { Get-Content -LiteralPath $logPath | ForEach-Object { Write-Host $_ } }
-        Write-Host "PASS $Name"
+        if (-not $QuietSuccess) {
+            Write-Host ("PASS {0} {1:0.0} sn" -f $Name, $timer.Elapsed.TotalSeconds)
+        }
         return $true
     }
     catch {
+        $timer.Stop()
         $script:GateFailure = $Name
         Write-Host "FAIL $Name"
         if (Test-Path -LiteralPath $logPath) {
-            Get-Content -LiteralPath $logPath -Tail 80 | ForEach-Object { Write-Host $_ }
+            Get-Content -LiteralPath $logPath -Tail 60 | ForEach-Object { Write-Host $_ }
         }
         Write-Host ("Reason: " + $_.Exception.Message)
         return $false
@@ -112,6 +121,8 @@ try {
             ForEach-Object { Get-Item -LiteralPath (Join-Path $repoRoot ('tests/' + $_)) }
     }
     if ($canContinue) {
+        $regressions = 0
+        $regressionTimer = [Diagnostics.Stopwatch]::StartNew()
         foreach ($test in $selected) {
             if ($test.Name -eq 'HealthHandleRegression.ps1') {
                 Write-Host 'SKIP HealthHandle: requires an installed, running Talvora service.'
@@ -124,8 +135,14 @@ try {
             $path = $test.FullName
             $canContinue = Invoke-QualityCheck ('PS:' + $test.BaseName) {
                 Invoke-ExternalChecked pwsh @('-NoLogo','-NoProfile','-NonInteractive','-File',$path)
-            }
+            } -QuietSuccess
             if (-not $canContinue) { break }
+            $regressions++
+        }
+        $regressionTimer.Stop()
+        if ($canContinue -and $regressions -gt 0) {
+            Write-Host ("PASS PowerShellRegressions ({0} tests) {1:0.0} sn" -f
+                $regressions, $regressionTimer.Elapsed.TotalSeconds)
         }
     }
     if ($canContinue -and $Scope -eq 'Full') {
