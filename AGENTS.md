@@ -1,5 +1,29 @@
 # Talvora engineering rules
 
+## Language policy
+
+- Agent-facing documents (`docs/codex/*`, this file, code comments, commit messages, tool descriptions) are **English**.
+- Everything Talvora shows to people — Control Center, tray, desktop worklog, user-facing error messages, MCP tool **titles** — is **ordinary Turkish** with correct diacritics.
+- Codex always reports to the user in **Turkish**.
+
+## CONTINUE PROTOCOL ("Talvora'ya devam et")
+
+When the user says "Talvora'ya devam et", "Talvora devam", "sıradaki adım" or similar, execute this sequence without asking questions. **One queue item per message**, then stop and report.
+
+1. **Location:** work in `C:\Users\tayla\Talvora-MCP`. If git reports "dubious ownership", prefix git commands with `-c safe.directory=C:/Users/tayla/Talvora-MCP`; do not change global git config.
+2. **Sync:** `git fetch origin`. Dirty tree: continue it only if it belongs to STATUS "In progress"; otherwise stop and ask. `git pull --ff-only origin main`; never force, reset --hard, rebase or rewrite history.
+3. **Context (token economy):** after K1 run `pwsh scripts/Get-CodexContext.ps1` and read only its output plus the files the card names. Do not read `docs/archive/*`, `BUG-AUDIT.md`, `HANDOFF.md` history or `MCP-CONTROL-CENTER-TODO.md` unless the card points to a section.
+4. **Baseline:** run the quality gate (`pwsh scripts/Invoke-QualityGate.ps1 -Scope Fast`; before K1: locked restore + Release build). If it is red at the start, this message's task is to make it green (exception: the in-progress item is K0/K1).
+5. **Select:** the first `[ ]` item in `docs/codex/STATUS.md` → "Agent queue" (skip `[?]`), or the "In progress" item. Write "In progress: <item>" into STATUS first.
+6. **Implement:** follow the card's **Why / Files / Do / Don't / Acceptance** exactly (`docs/codex/ROADMAP.md`; N cards in `docs/codex/DESIGN-WORKLOG.md`; UI cards in `docs/codex/DESIGN-CONTROL-CENTER.md`). Test first (red), then code (green). When a card prescribes a technique, values or code shape, use it; if it cannot work as written, record an open question with evidence and stop — do not improvise. Context7 before relying on any framework/SDK/CLI behaviour.
+7. **Verify:** quality gate → last line **`Hepsi geçti.`**; runtime-affecting cards also deploy with `scripts/Deploy-Windows-Installer.ps1` and verify `/healthz.sourceCommit` + installed smoke; UI cards attach both-theme PNGs.
+8. **Record:** tick the item (`[x]`, or `[~]` + a "User queue" line when user evidence is needed), add a Log entry (English, newest on top: what changed, tests, Context7 IDs, installed commit), reset "In progress" to `(none)`; mirror the evidence to the active Gitea issue.
+9. **Commit:** exactly one commit per item: `<type>(<area>): <summary>` + body + trailer `Codex-Card: <ID>`.
+10. **Push:** only while STATUS "Fixed facts" says `Push: Authorized`; then `git push origin main` and `git push github main`, never force. On failure retry once, then report.
+11. **Report to the user in Turkish, short:** item done · changed files · gate last line · deploy/installed commit · push status · next item · what the user must do (if anything).
+
+**Stop conditions** (report in Turkish and wait): agent queue empty (list the user queue); acceptance impossible without breaking a rule (write an open question); a `[?]` dependency is required; the work needs history rewrite, repo visibility/settings changes, reading/moving anything in `C:\ProgramData\Talvora\Secrets`, or running `scripts/Reset-And-Install.ps1` before R3.
+
 ## Modern-by-default policy
 
 - Keep Talvora on supported, current stable toolchains and libraries. Prefer the newest supported stable release; use an LTS line when it is the correct machine/runtime baseline.

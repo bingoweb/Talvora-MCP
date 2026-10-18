@@ -1,0 +1,53 @@
+# Codex prompts — Talvora
+
+All prompts below are in English on purpose (agent-facing). Codex always answers the user in **Turkish**, and every user-facing text it writes into Talvora (Control Center, tray, desktop worklog, error messages) is **ordinary Turkish** (AGENTS.md).
+
+## Shortest path (daily use)
+
+The user only types:
+
+```
+Talvora'ya devam et
+```
+
+Codex applies `AGENTS.md` → **CONTINUE PROTOCOL**: takes the first `[ ]` item of `docs/codex/STATUS.md` → "Agent queue", implements it per its card (`docs/codex/ROADMAP.md`; `docs/codex/DESIGN-WORKLOG.md` for N cards; `docs/codex/DESIGN-CONTROL-CENTER.md` for UI cards), runs `scripts/Invoke-QualityGate.ps1` (after K1), commits once, pushes to `origin` and `github`, and reports in Turkish. If Codex is opened in another folder, the `talvora-devam` skill routes it here.
+
+The prompts below are only for special situations.
+
+## A specific card
+
+```
+Talvora: implement card <CARD> (e.g. S3, N3b, UI3) from docs/codex/ROADMAP.md, docs/codex/DESIGN-WORKLOG.md or docs/codex/DESIGN-CONTROL-CENTER.md. Do not move on to another card.
+Follow AGENTS.md and the CONTINUE PROTOCOL; failing test first, then code; Context7 evidence; run the quality gate (last line "Hepsi geçti."); update docs/codex/STATUS.md in English; exactly one commit with trailer "Codex-Card: <CARD>". Report to me in Turkish.
+```
+
+## Code review (after a card, separate task)
+
+```
+Talvora: review the last commit against AGENTS.md and the "Don't" and "Acceptance" items of its card.
+Do not change code. List only violations with file:line and the rule/item each one breaks. Report to me in Turkish.
+```
+
+## Queue status
+
+```
+Talvora: read docs/codex/STATUS.md and tell me briefly, in Turkish: finished cards, the next card, blocked cards and why, what is waiting for me in the user queue, open questions. Change nothing.
+```
+
+## Answering an open question
+
+```
+Talvora: answer to STATUS "Open questions" → <Q-ID>: <answer>. Record it in docs/codex/STATUS.md (move the question with its answer into the Log, in English), unblock the affected queue item ([?] → [ ]), update the card text if the answer changes it, one commit ("docs(codex): answer <Q-ID>"). Do not start a queue item. Confirm to me in Turkish.
+```
+
+## Audit fixes (after Claude's audit)
+
+```
+Talvora: implement the D-cards from the newest "Audit fixes" table in docs/codex/ROADMAP.md in order, one commit per D-card, each with a failing test first. Do not start other queue items. Report in Turkish.
+```
+
+## Deploy the current commit to this PC
+
+```
+Talvora: build and deploy the current HEAD with scripts/Deploy-Windows-Installer.ps1 (no code changes). Wait until /healthz.sourceCommit equals HEAD, run the installed-runtime smoke, and log the result in docs/codex/STATUS.md (English). Report in Turkish.
+```
