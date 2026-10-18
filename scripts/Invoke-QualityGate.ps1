@@ -113,6 +113,10 @@ try {
     }
     if ($canContinue) {
         foreach ($test in $selected) {
+            if ($test.Name -eq 'HealthHandleRegression.ps1') {
+                Write-Host 'SKIP HealthHandle: requires an installed, running Talvora service.'
+                continue
+            }
             if ($test.Name -eq 'NativeInstallerRuntimeRegression.ps1') {
                 Write-Host 'SKIP NativeInstallerRuntime: requires installed service and signed-in desktop.'
                 continue

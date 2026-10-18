@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-18T11:30:32Z",
-  "scope": "K1 unified quality gate for locked restore/build, PowerShell parsing and native exit statuses, full test-suite CI coverage, legacy rollback fixture correction, and bounded agent context extraction. Historical framework evidence retained below.",
+  "verifiedAtUtc": "2026-10-18T11:50:57Z",
+  "scope": "K1 CI follow-up: defer HealthHandle service-handle regression until the Windows installer has created and started Talvora. Preserve all quality suites and Context7 PowerShell exit-code contracts; historical framework evidence retained below.",
   "libraries": [
     {
       "libraryId": "/microsoftdocs/powershell-docs",

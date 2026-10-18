@@ -125,6 +125,12 @@ jobs:
           dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-build -- '--surface-policy-live' 'http://127.0.0.1:7676'
           if ($LASTEXITCODE -ne 0) { throw 'Installed MCP surface smoke failed.' }
 
+      - name: Validate installed health handle stability
+        shell: pwsh
+        run: |
+          & ./tests/HealthHandleRegression.ps1
+          if (-not $?) { throw 'Installed service health-handle regression failed.' }
+
       - name: Validate optional signed-in desktop installation
         shell: pwsh
         run: |

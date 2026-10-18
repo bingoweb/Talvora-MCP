@@ -68,8 +68,15 @@ try {
 
     $workflow = [IO.File]::ReadAllText($workflowPath)
     if ($workflow -notmatch 'Invoke-QualityGate\.ps1\s+-Scope\s+Full' -or
-        $workflow -notmatch 'NativeInstallerRuntimeRegression\.ps1') {
+        $workflow -notmatch 'NativeInstallerRuntimeRegression\.ps1' -or
+        $workflow -notmatch 'HealthHandleRegression\.ps1') {
         throw 'CI must run the full shared gate and defer installed-runtime tests.'
+    }
+
+    $installIndex = $workflow.IndexOf('      - name: Install and verify canonical runtime')
+    $healthIndex = $workflow.IndexOf('      - name: Validate installed health handle stability')
+    if ($installIndex -lt 0 -or $healthIndex -le $installIndex) {
+        throw 'HealthHandle regression must run after installing the Windows service.'
     }
 
     $contextOutput = @(& $contextPath -Card K1 | Out-String) -join ''
