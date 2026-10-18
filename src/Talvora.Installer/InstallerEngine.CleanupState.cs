@@ -383,7 +383,7 @@ private static async Task CleanupObsoleteInstallationsAsync(
 
         _ = await AtomicFile.WriteAllTextAsync(
             path,
-            CodexMcpConfiguration.UpsertTalvoraLocal(original, McpUrl),
+            CodexMcpConfiguration.UpsertTalvoraLocal(original, McpUrl + "/dev"),
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
             createBackup: true,
             cancellationToken);

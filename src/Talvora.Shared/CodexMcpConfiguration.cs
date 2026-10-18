@@ -12,14 +12,17 @@ public static class CodexMcpConfiguration
     {
         ArgumentNullException.ThrowIfNull(original);
         ArgumentException.ThrowIfNullOrWhiteSpace(mcpUrl);
-        var output = new List<string>();
+        var output = new StringBuilder(original.Length + 512);
         var skipping = false;
         string? multilineDelimiter = null;
-        var lines = original.Replace("\r\n", "\n", StringComparison.Ordinal)
-            .Split('\n');
-
-        foreach (var line in lines)
+        var newline = original.Contains("\r\n", StringComparison.Ordinal)
+            ? "\r\n" : "\n";
+        for (var start = 0; start < original.Length;)
         {
+            var lineFeed = original.IndexOf('\n', start);
+            var end = lineFeed < 0 ? original.Length : lineFeed + 1;
+            var rawLine = original[start..end];
+            var line = rawLine.TrimEnd('\r', '\n');
             // Table-like text inside a TOML multiline string is data.
             var tableParts = multilineDelimiter is null
                 ? ReadTableParts(line)
@@ -36,23 +39,33 @@ public static class CodexMcpConfiguration
             }
             if (!skipping)
             {
-                output.Add(line);
+                // Preserve every user-owned byte, including comments and CRLF.
+                output.Append(rawLine);
             }
             UpdateMultilineState(line, ref multilineDelimiter);
+            start = end;
         }
 
-        while (output.Count > 0 && string.IsNullOrWhiteSpace(output[^1]))
+        if (output.Length > 0)
         {
-            output.RemoveAt(output.Count - 1);
+            var retained = output.ToString();
+            if (!retained.EndsWith(newline + newline, StringComparison.Ordinal))
+            {
+                if (!retained.EndsWith('\n'))
+                {
+                    output.Append(newline);
+                }
+                output.Append(newline);
+            }
         }
-        if (output.Count > 0)
-        {
-            output.Add(string.Empty);
-        }
-        output.Add("[mcp_servers.talvora_local]");
-        output.Add($"url = \"{mcpUrl}\"");
-        output.Add(string.Empty);
-        return string.Join(Environment.NewLine, output);
+        output.Append("[mcp_servers.talvora_local]").Append(newline);
+        output.Append("url = \"").Append(mcpUrl).Append('"').Append(newline);
+        output.Append("enabled_tools = [").Append(newline);
+        output.Append("  \"talvora_source_edit_guide\", \"talvora_read_source\", \"talvora_apply_patch\",").Append(newline);
+        output.Append("  \"talvora_apply_edits\", \"talvora_structural_edit\", \"talvora_semantic_edit\",").Append(newline);
+        output.Append("  \"talvora_run_powershell\", \"talvora_git_run\",").Append(newline);
+        output.Append(']').Append(newline);
+        return output.ToString();
     }
 
     private static List<string>? ReadTableParts(string line)

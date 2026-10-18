@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-18T12:30:03Z",
-  "scope": "E5: PowerShell 7 context helper selects only relevant card and referenced design sections, shows pending additions and proposal titles, and keeps output below 250 lines. Quality gate groups successful regressions, times steps and limits failed diagnostics to 60 lines. Historical evidence preserved.",
+  "verifiedAtUtc": "2026-10-18T12:41:44Z",
+  "scope": "E1: OpenAI Codex config.toml streamable HTTP MCP URL and enabled_tools allow-list restrict only Codex's talvora_local client registration to eight source-edit/deploy/push tools; ChatGPT Talvora Dev/Admin server surfaces remain unchanged. Historical evidence preserved.",
   "libraries": [
     {
       "libraryId": "/websites/learn_microsoft_en-us_windows_win32_api",
@@ -25,7 +25,7 @@
     },
     {
       "libraryId": "/openai/codex",
-      "verified": "2026-10-11 current Context7 official Codex CLI source (codex-rs/exec/src/cli.rs, codex-rs/utils/cli/src/shared_options.rs): exec supports explicit model, read-only/workspace-write sandbox, ephemeral session, --config reasoning effort, and noninteractive approvals. The locally installed codex-cli 0.162.0-alpha.17.2 was also exercised: a positional --help without an option terminator displayed CLI help, whereas the fixed -- separator passed it as task text. Default GPT-6.1 Sol, medium effort and explicit approval/sandbox controls were observed."
+      "verified": "2026-10-11 current Context7 official Codex CLI source (codex-rs/exec/src/cli.rs, codex-rs/utils/cli/src/shared_options.rs): exec supports explicit model, read-only/workspace-write sandbox, ephemeral session, --config reasoning effort, and noninteractive approvals. The locally installed codex-cli 0.162.0-alpha.17.2 was also exercised: a positional --help without an option terminator displayed CLI help, whereas the fixed -- separator passed it as task text. Default GPT-6.1 Sol, medium effort and explicit approval/sandbox controls were observed. 2026-10-18 E1 current Context7 /openai/codex: codex-mcp/src/tools.rs ToolFilter.from_config reads enabled_tools as a set and rejects names not in the set; config/src/mcp_types.rs supports StreamableHttp url and enabled_tools in McpServerConfig. The filter is Codex-client-side and does not remove MCP server tools for other clients. No Codex CLI was launched."
     },
     {
       "libraryId": "/dotnet/docs",
@@ -89,6 +89,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-18 E1 OpenAI Codex current official configuration and implementation verified via Context7 /openai/codex: https://github.com/openai/codex/blob/main/codex-rs/codex-mcp/src/tools.rs (enabled_tools allow-list enforcement), https://github.com/openai/codex/blob/main/codex-rs/config/src/mcp_types.rs (streamable-HTTP url and tool filter config); https://developers.openai.com/learn/docs-mcp (Codex client supports config.toml MCP URL). Talvora ChatGPT Dev/Admin endpoints unchanged.",
     "2026-10-18 E5 Microsoft PowerShell 7 official documentation verified with Context7 /microsoftdocs/powershell-docs and Microsoft Learn: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_redirection?view=powershell-7 (all-stream *> redirection captures Write-Host/information stream); https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-content?view=powershell-7 (Get-Content -Tail limits diagnostic lines).",
     "2026-10-18 Microsoft Win32 official API checked with Context7 /websites/learn_microsoft_en-us_windows_win32_api: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew ; https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfileinformationbyhandleex ; https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_info . Use directory backup-semantic, non-follow reparse, metadata-only handles and compare full FILE_ID_INFO.",
     "2026-10-18 Microsoft PowerShell 7 current official references verified through Context7 /microsoftdocs/powershell-docs: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_error_handling and https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables . Native failures require explicit LASTEXITCODE checks; direct script exception behavior and Parser.ParseFile diagnostics guide the executable quality gate.",

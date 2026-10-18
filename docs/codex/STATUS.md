@@ -32,7 +32,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] K1 — `Invoke-QualityGate.ps1`, all suites in CI, `Get-CodexContext.ps1`
 - [x] K2 — `talvora_apply_patch` works on this repository (Win32 32)
 - [x] E5 — Context helper and gate output minimal (extends K1)
-- [ ] E1 — Codex sees only the Talvora tools it uses
+- [~] E1 — Codex sees only the Talvora tools it uses (live Codex session check deferred by user)
 - [ ] E2 — Stop sending every result twice (evidence-driven)
 - [ ] E3 — Lean defaults for high-frequency tools
 - [ ] S1 — Reject foreign Host/Origin (DNS rebinding)
@@ -74,6 +74,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## User queue
 
+- U7 — E1: optional live Codex MCP get and scratch read/patch verification is deferred by the user's "do not use Codex" instruction; no action is needed unless Codex use is reauthorized. Installer registration and ChatGPT connectors are verified independently.
 - U2 — Claude Code is installed but **not logged in** (HANDOFF 2026-10-17). If you want the optional Claude engine: run `& "$env:USERPROFILE\.local\bin\claude.exe" auth login` in your own terminal.
 - U3 — After S5 ships: if the Control Center asks for the OpenAI Admin key again during setup, enter it once (it will no longer be stored).
 - U4 — After Q2 ships: refresh the Talvora Dev/Admin connectors in ChatGPT Business so the new tool list is picked up.
@@ -86,6 +87,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-18 — E1: registered only eight selected Talvora Dev tools for Codex at /mcp/dev, preserving unrelated TOML comments, tables and CRLF bytes; installer writes Codex-only configuration. Current live /mcp/dev exposes 212 tools and /mcp/admin 88 unchanged; the eight selected schemas are 18,691 versus 265,499 characters (full Dev). Fixture test RED then GREEN; targeted policy/source tests passed. Context7 /openai/codex confirmed enabled_tools client-side filtering. Full gate: 49 controls, 0 errors; Hepsi geçti. Canonical installer/deploy after commit; Codex CLI/session not used per user instruction (U7).
 - 2026-10-18 — E5: context helper now selects only the card, cited N/UI spec sections, pending queue additions and open proposal titles; fixture docs and all 17 real N/UI cards asserted at ≤250 lines. Quality gate times steps, groups 39 successful PowerShell regressions, and shows only the failing step's last 60 diagnostic lines; the fixture was RED before the fix and GREEN after. Context7 /microsoftdocs/powershell-docs, official Microsoft Learn about_Redirection and Get-Content sources; .context7/verification.json refreshed. Local Full gate: 49 controls, 0 errors, 15 lines; Hepsi geçti. Installed runtime stays 457565f (no runtime changes). Commit/remote sync to be verified.
 - 2026-10-18 — K2: verified Win32 32 on installed patch tool and in a RED test with a separate DELETE-capable directory holder; the targeted test is now GREEN. Metadata identity probes use shared backup-semantic non-reparse handles with no data/delete access; FILE_ID_INFO checks 128-bit identity + volume, sharing retries 50/100/200 ms, with rename-protection handles retained when compatible. Minimal SourceEditModels.cs addition preserves legacy journal FileId and adds optional full ID (required outside Files list). Context7 /websites/learn_microsoft_en-us_windows_win32_api. Applied E5/E1/E2/E3 queue additions verbatim. Local Full gate: 49 kontrol, 0 hata; Hepsi geçti. Install, live patch smoke, CI and push remain to be verified; baseline installed runtime f0b5f9d.
 - 2026-10-18 — K1 CI follow-up: GitHub Actions 39124553887 proved locked restore/build, SourceEdit, Notification and 14 additional checks green, then failed because HealthHandleRegression requires a running Talvora service but Full gate ran before installer. The gate now explicitly defers only this service-dependent test; CI executes its same 225 health requests and process-handle stability assertion after installer setup. QualityGateRegression enforces workflow step ordering. Context7 /microsoftdocs/powershell-docs evidence refreshed; new CI verification pending.

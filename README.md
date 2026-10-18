@@ -55,6 +55,7 @@
 - **User-controlled notifications:** code output may expand the notification vertically without changing its user-set width; non-code updates return to a compact layout.
 - **Lean MCP surface:** **236 total**, **199 Dev**, **88 Admin**, with **51 explicitly shared** tools. The former automatic memory and embedding subsystem has been removed.
 - **Codex desktop bridge:** detect the already-installed Windows Codex CLI and use the interactive user's existing ChatGPT session with GPT-6.1 Sol / Medium, bounded workspace sandboxing and no duplicate installation.
+- **Separate MCP clients:** the installer limits only Codex CLI's registration to eight Talvora Dev tools; ChatGPT's Dev/Admin connectors retain their full tool surfaces.
 - **Reproducible Windows delivery:** locked dependencies, GitHub Actions, a canonical installer and installed-runtime MCP smoke tests.
 
 ## Why Talvora exists

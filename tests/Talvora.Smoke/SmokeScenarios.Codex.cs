@@ -193,7 +193,15 @@ internal static partial class SmokeScenarios
             "[[unrelated.arrays]] # more user settings\n" +
             "name = \"preserve me\"\n";
         var updated = CodexMcpConfiguration.UpsertTalvoraLocal(
-            originalConfig, "http://127.0.0.1:7676/mcp");
+            originalConfig, "http://127.0.0.1:7676/mcp/dev");
+        const string expectedRegistration =
+            "[mcp_servers.talvora_local]\n" +
+            "url = \"http://127.0.0.1:7676/mcp/dev\"\n" +
+            "enabled_tools = [\n" +
+            "  \"talvora_source_edit_guide\", \"talvora_read_source\", \"talvora_apply_patch\",\n" +
+            "  \"talvora_apply_edits\", \"talvora_structural_edit\", \"talvora_semantic_edit\",\n" +
+            "  \"talvora_run_powershell\", \"talvora_git_run\",\n" +
+            "]\n";
         if (!updated.Contains("keep = true", StringComparison.Ordinal) ||
             !updated.Contains("https://other.invalid", StringComparison.Ordinal) ||
             !updated.Contains("preserve me", StringComparison.Ordinal) ||
@@ -208,10 +216,35 @@ internal static partial class SmokeScenarios
             // newly appended header: three total textual occurrences.
             updated.Split("[mcp_servers.talvora_local]", StringSplitOptions.None).Length != 4 ||
             updated != CodexMcpConfiguration.UpsertTalvoraLocal(
-                updated, "http://127.0.0.1:7676/mcp"))
+                updated, "http://127.0.0.1:7676/mcp/dev") ||
+            !updated.Replace("\r\n", "\n", StringComparison.Ordinal)
+                .EndsWith(expectedRegistration, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 "Codex TOML upsert lost unrelated user settings or is not idempotent.");
+        }
+
+        const string otherServerFixture =
+            "# User comment and exact CRLF\r\n" +
+            "model = \"do-not-change\"\r\n" +
+            "\r\n" +
+            "[mcp_servers.other] # preserve table comment\r\n" +
+            "url = \"https://another.example/mcp\"\r\n" +
+            "enabled_tools = [\"unchanged\"]\r\n" +
+            "\r\n" +
+            "[features]\r\n" +
+            "multi_agent = true\r\n";
+        var withOtherServers = CodexMcpConfiguration.UpsertTalvoraLocal(
+            otherServerFixture, "http://127.0.0.1:7676/mcp/dev");
+        if (!withOtherServers.StartsWith(otherServerFixture, StringComparison.Ordinal) ||
+            !withOtherServers.EndsWith(
+                expectedRegistration.Replace("\n", "\r\n", StringComparison.Ordinal),
+                StringComparison.Ordinal) ||
+            withOtherServers != CodexMcpConfiguration.UpsertTalvoraLocal(
+                withOtherServers, "http://127.0.0.1:7676/mcp/dev"))
+        {
+            throw new InvalidOperationException(
+                "Codex registration changed unrelated TOML bytes or reordered other MCP servers.");
         }
 
         var temp = Path.Combine(Path.GetTempPath(),
