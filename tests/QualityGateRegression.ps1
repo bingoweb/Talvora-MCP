@@ -36,6 +36,38 @@ if ($null -eq $step) {
     throw 'The shared quality check executor is missing.'
 }
 
+$runtimeProbeAst = $qualityAst.Find({
+    param($node)
+    $node -is [Management.Automation.Language.FunctionDefinitionAst] -and
+    $node.Name -eq 'Get-InstalledRuntimeAvailability'
+}, $true)
+if ($null -eq $runtimeProbeAst) { throw 'The installed-runtime gate probe is missing.' }
+Invoke-Expression $runtimeProbeAst.Extent.Text
+$interactive = Get-InstalledRuntimeAvailability -Probe {
+    [pscustomobject]@{ isWindowsService = $true }
+} -GetUserName { 'fixture\interactive' }
+if (-not $interactive.HealthHandle -or -not $interactive.NativeInstallerRuntime) {
+    throw 'Service and desktop must run both checks.'
+}
+$headless = Get-InstalledRuntimeAvailability -Probe {
+    [pscustomobject]@{ isWindowsService = $true }
+} -GetUserName { '' }
+if (-not $headless.HealthHandle -or $headless.NativeInstallerRuntime) {
+    throw 'Headless service must run only HealthHandle.'
+}
+$unavailable = Get-InstalledRuntimeAvailability -Probe {
+    [pscustomobject]@{ isWindowsService = $false }
+} -GetUserName { throw 'Unexpected session probe.' }
+if ($unavailable.HealthHandle -or $unavailable.NativeInstallerRuntime) {
+    throw 'Non-service response must skip service-dependent checks.'
+}
+$unreachable = Get-InstalledRuntimeAvailability -Probe {
+    throw 'Simulated connection failure'
+} -GetUserName { throw 'Unexpected session probe.' }
+if ($unreachable.HealthHandle -or $unreachable.NativeInstallerRuntime) {
+    throw 'Unreachable service must skip service-dependent checks.'
+}
+
 $tempRoot = Join-Path ([IO.Path]::GetTempPath()) (
     'TalvoraQualityGateRegression-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null

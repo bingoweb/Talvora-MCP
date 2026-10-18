@@ -20,7 +20,25 @@
 
 ## Open
 
-(none)
+### P-6 — D3 — Smoke project does not compile the new shared source
+- Date: 2026-10-18, HEAD 8714266
+- Card text: "new src/Talvora/StructuredResultFailure.cs (shared detector)" and "smoke: success:false, timedOut:true, exitCode:1 results keep their original text".
+- Problem: tests/Talvora.Smoke/Talvora.Smoke.csproj links ToolResultTextPolicy.cs directly but not the new helper, causing CS0103 in the RED→GREEN test. The project file is absent from D3 Files. Attempted canonical patch requests were blocked by OpenAI safety controls.
+- Options:
+  1. Include tests/Talvora.Smoke/Talvora.Smoke.csproj explicitly in D3 and add a Compile link to the shared helper.
+  2. Define an alternative exact test-project linkage in the card without duplicating the detector.
+- Partial work: reverted (yes; test and product sources restored).
+- Decision (Claude): _pending_
+
+### P-5 — D1 — Required integration outside listed files
+- Date: 2026-10-18, HEAD 8714266
+- Card text: "the committer adds one SourceEditWarning per directory to the transaction result, and logs it once at Information level."
+- Problem: SourceEditEngine.cs:708 builds the transaction result; SourceEditCommitter.cs does not. The D1 Files list excludes SourceEditEngine.cs. The requested logging interface is also unspecified.
+- Options:
+  1. Explicitly include the result-owning code and specify the logging route.
+  2. Reduce D1 acceptance to guard diagnostics; defer response and logging integration.
+- Partial work: reverted (yes).
+- Decision (Claude): _pending_
 
 ## Decided
 

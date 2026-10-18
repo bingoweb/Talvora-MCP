@@ -35,9 +35,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] E5 — Context helper and gate output minimal (extends K1)
 - [~] E1 — Codex sees only the Talvora tools it uses (live Codex session check deferred by user)
 - [~] E2 — Stop sending every result twice (Codex live acceptance deferred by user)
-- [ ] D1 — Make the rename-protection fallback visible (audit 2026-10-18 (2))
-- [ ] D3 — Keep the text of structured failures (audit 2026-10-18 (2))
-- [ ] D4 — Run service-dependent gate checks locally when the service is up (audit 2026-10-18 (2))
+- [?] D1 — Make the rename-protection fallback visible (waiting for Claude: P-5)
+- [?] D3 — Keep the text of structured failures (waiting for Claude: P-6)
+- [x] D4 — Run service-dependent gate checks locally when the service is up (audit 2026-10-18 (2))
 - [ ] D2 — Compare legacy directory identities with the legacy serial (audit 2026-10-18 (2))
 - [ ] A2 — `talvora_agent_brief` (rules + current card for any agent)
 - [ ] A1 — `talvora_user_run` + keep file ownership + one-time owner repair
@@ -93,7 +93,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Open questions
 
-(none — P-1…P-4 decided in `docs/codex/PROPOSALS.md` → "Decided")
+P-5/P-6 — D1 and D3 need scope decisions (docs/codex/PROPOSALS.md).
 
 ## Findings for Claude
 
@@ -101,6 +101,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-18 — D4 (executor: ChatGPT via Talvora): the local Full gate probes `/healthz` without proxy and with 2-second timeouts; runs HealthHandle for a Windows service, and NativeInstallerRuntime only with an interactive desktop. CI still skips both when no service exists.
+  Fixture cases: service+desktop, headless, non-service and unreachable all green; installed HealthHandle 200 requests with +3 handles (max +25), and NativeInstallerRuntime green.
+  Context7 `/microsoftdocs/powershell-docs`, official PowerShell/CIM evidence in `.context7/verification.json`. Local Fast 13/0; Full 51/0, last line `Hepsi geçti.`; installed runtime `b79ac3e` unchanged (scripts/tests only).
+  Carry-over: P-5/P-6 proposal records document why D1/D3 remain blocked. Gitea SSH sync failed: private-key permissions too open; push delivery to be checked after commit. Next D2.
 - 2026-10-18 — Claude audit (2) of `8b1a611..dd4ee5b` (executor: ChatGPT via Talvora): local Full gate 49/0 `Hepsi geçti.`, CI green since `fca44fe`, installed `b79ac3e`, K2 verified live (apply_patch add/delete in this repo committed). Findings → D1–D4 + A1; proposals P-1…P-4 decided (E3, S1, Q6 re-scoped + Q6b, N1 unblocked). New Phase A (A1–A3) makes ChatGPT+Talvora follow the same contract as Codex; AGENTS.md generalised to "the agent", trailer is now `Card: <ID>`. Next audit baseline: tag `audit/2026-10-18-02` = `dd4ee5b`.
 - 2026-10-18 — Blocked E3/S1/Q6/N1 without runtime modifications. P-1: E3 listed DeveloperTools.Files.cs but talvora_list is in FileTools.cs; P-2: S1 Penpot browser origin unavailable; P-3: Q6 SDK handles tool exceptions before outer filters; P-4: N1 no-copy filler conflicts with IPC's nonempty Message validation. N1 test proved RED; attempted fix compiled 0 warnings but hit existing IPC validation; partial source/test changes fully reverted. Context7: /modelcontextprotocol/csharp-sdk, /dotnet/aspnetcore.docs, /dotnet/wpf. Installed runtime remains b79ac3e; baseline Fast gate 13/13, Hepsi geçti. Next N2 depends on N1 decisions.
 - 2026-10-18 — E2: replace duplicate text with one short marker only for successful non-null structured results; structured JSON and non-text blocks unchanged; isError/only-text/null-JSON preserved. Fixture and installed-live smoke RED before code/deploy; in-process targeted smoke GREEN. Source: Context7 /openai/codex and /modelcontextprotocol/csharp-sdk; vendor sources in .context7/verification.json.

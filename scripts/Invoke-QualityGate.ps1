@@ -49,6 +49,34 @@ function Invoke-ExternalChecked {
     & $Executable @Arguments
     if ($LASTEXITCODE -ne 0) { throw "$Executable returned exit code $LASTEXITCODE." }
 }
+function Get-InstalledRuntimeAvailability {
+    param(
+        [scriptblock] $Probe = {
+            Invoke-RestMethod -Uri 'http://127.0.0.1:7676/healthz' -NoProxy -ConnectionTimeoutSeconds 2 -OperationTimeoutSeconds 2 -ErrorAction Stop
+        },
+        [scriptblock] $GetUserName = {
+            (Get-CimInstance -ClassName Win32_ComputerSystem -Property UserName -ErrorAction Stop).UserName
+        }
+    )
+    $serviceReady = $false
+    try {
+        $health = & $Probe
+        $serviceReady = $null -ne $health -and $health.isWindowsService -eq $true
+    }
+    catch {
+        $serviceReady = $false
+    }
+    $userName = ''
+    if ($serviceReady) {
+        try { $userName = [string](& $GetUserName) }
+        catch { $userName = '' }
+    }
+    [pscustomobject]@{
+        HealthHandle = $serviceReady
+        NativeInstallerRuntime = ($serviceReady -and -not [string]::IsNullOrWhiteSpace($userName))
+    }
+}
+
 function Assert-ScriptSyntax {
     $files = @(
         Get-ChildItem -LiteralPath (Join-Path $repoRoot 'scripts') -File -Filter '*.ps1'
@@ -121,21 +149,34 @@ try {
             ForEach-Object { Get-Item -LiteralPath (Join-Path $repoRoot ('tests/' + $_)) }
     }
     if ($canContinue) {
+        $availability = if ($Scope -eq 'Full') {
+            Get-InstalledRuntimeAvailability
+        }
+        else {
+            [pscustomobject]@{ HealthHandle = $false; NativeInstallerRuntime = $false }
+        }
         $regressions = 0
         $regressionTimer = [Diagnostics.Stopwatch]::StartNew()
         foreach ($test in $selected) {
-            if ($test.Name -eq 'HealthHandleRegression.ps1') {
+            if ($test.Name -eq 'HealthHandleRegression.ps1' -and
+                -not $availability.HealthHandle) {
                 Write-Host 'SKIP HealthHandle: requires an installed, running Talvora service.'
                 continue
             }
-            if ($test.Name -eq 'NativeInstallerRuntimeRegression.ps1') {
+            if ($test.Name -eq 'NativeInstallerRuntimeRegression.ps1' -and
+                -not $availability.NativeInstallerRuntime) {
                 Write-Host 'SKIP NativeInstallerRuntime: requires installed service and signed-in desktop.'
                 continue
             }
             $path = $test.FullName
-            $canContinue = Invoke-QualityCheck ('PS:' + $test.BaseName) {
+            $serviceDependent = $test.Name -in @(
+                'HealthHandleRegression.ps1', 'NativeInstallerRuntimeRegression.ps1')
+            $checkName = if ($serviceDependent) {
+                $test.BaseName.Replace('Regression','')
+            } else { 'PS:' + $test.BaseName }
+            $canContinue = Invoke-QualityCheck $checkName {
                 Invoke-ExternalChecked pwsh @('-NoLogo','-NoProfile','-NonInteractive','-File',$path)
-            } -QuietSuccess
+            } -QuietSuccess:(-not $serviceDependent)
             if (-not $canContinue) { break }
             $regressions++
         }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-18T13:29:43Z",
-  "scope": "Planning-only review of blocked E3, S1, Q6 and N1; official MCP C# SDK tool metadata/error handling, ASP.NET HostFiltering and WPF dispatcher/notification behavior checked. No Talvora runtime changes; N1 draft was rolled back after a real IPC protocol regression. Historical evidence preserved.",
+  "verifiedAtUtc": "2026-10-18T14:34:16Z",
+  "scope": "D4: local quality gate runs service-dependent checks only when the installed Talvora Windows service responds and an interactive user is present; fixture coverage for both branches. Context7 /microsoftdocs/powershell-docs and Microsoft vendor documentation checked. P-5/P-6 remain proposed and D1/D3 implementation attempts were reverted. Historical evidence preserved.",
   "libraries": [
     {
       "libraryId": "/websites/learn_microsoft_en-us_windows_win32_api",
@@ -9,7 +9,7 @@
     },
     {
       "libraryId": "/microsoftdocs/powershell-docs",
-      "verified": "2026-10-18 K1: Official PowerShell docs via Context7 confirm native commands require explicit LASTEXITCODE handling; pwsh -File returns 1 on terminating script exceptions and 0 on normal script completion. Language.Parser.ParseFile reports syntax diagnostics in the errors reference. Unified quality gate checks child-process exit codes, parses scripts, captures diagnostics and attributes failures to the named test. 2026-10-18 E5: about_Redirection confirms *> captures PowerShell streams including Write-Host information stream; Get-Content -Tail provides bounded failure diagnostics. Successful regression substeps can be grouped without hiding failed step names, preserving the native exit code check."
+      "verified": "2026-10-18 K1: Official PowerShell docs via Context7 confirm native commands require explicit LASTEXITCODE handling; pwsh -File returns 1 on terminating script exceptions and 0 on normal script completion. Language.Parser.ParseFile reports syntax diagnostics in the errors reference. Unified quality gate checks child-process exit codes, parses scripts, captures diagnostics and attributes failures to the named test. 2026-10-18 E5: about_Redirection confirms *> captures PowerShell streams including Write-Host information stream; Get-Content -Tail provides bounded failure diagnostics. Successful regression substeps can be grouped without hiding failed step names, preserving the native exit code check. 2026-10-18 D4: Official PowerShell 7 Invoke-RestMethod reference confirms -NoProxy and 2-second connection/operation timeouts; Win32_ComputerSystem UserName reports signed-in desktop presence through Get-CimInstance. Source-independent fixture scripts test both availability branches before enabling installed-runtime regressions."
     },
     {
       "libraryId": "/dotnet/docs",
@@ -89,6 +89,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-18 D4 PowerShell 7 official Invoke-RestMethod options (-NoProxy, -ConnectionTimeoutSeconds, -OperationTimeoutSeconds): https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Utility/Invoke-RestMethod.md ; signed-in Windows desktop user property: https://github.com/microsoftdocs/powershell-docs/blob/main/reference/docs-conceptual/samples/Collecting-Information-About-Computers.md . Verified with Context7 /microsoftdocs/powershell-docs.",
     "2026-10-18 blocked-card reviews: Model Context Protocol C# SDK tools and filters https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md and https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/filters.md ; ASP.NET Core host filtering https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/host-filtering ; WPF Dispatcher async scheduling https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/WindowsBase/System/Windows/Threading/DispatcherOperation.cs . Evidence recorded in docs/codex/PROPOSALS.md; no runtime change.",
     "2026-10-18 E2 Codex official upstream source via Context7 /openai/codex: https://github.com/openai/codex/blob/main/protocol/src/models.rs , as_function_call_output_payload uses structured_content when present and not null; normal text blocks are not included in model output in that branch.",
     "2026-10-18 E2 OpenAI official ChatGPT plugin reference and MCP guidance: https://developers.openai.com/plugins/reference (both structuredContent and content are model-visible) and https://developers.openai.com/api/docs/mcp (serialized text mirror recommended for compatibility). This optimized path is limited to the three supported clients documented by E2; text-only or error results retain their content.",
