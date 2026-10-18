@@ -25,8 +25,10 @@ if (-not [Text.RegularExpressions.Regex]::IsMatch(
     throw 'Modernization policy regex checks must be culture-invariant across local and GitHub runners.'
 }
 
-Assert-Contains 'global.json' '"version"\s*:\s*"10\.0\.4\d{2}"' 'global.json must pin the current .NET 10.0.4xx feature band.'
-Assert-Contains 'global.json' '"rollForward"\s*:\s*"latestFeature"' 'global.json must permit current servicing SDKs in the pinned feature band.'
+$sdk = (Get-Content -LiteralPath (Join-Path $root 'global.json') -Raw | ConvertFrom-Json).sdk
+if ($sdk.version -cnotmatch '^10\.0\.4\d{2}$' -or $sdk.rollForward -cne 'disable' -or $sdk.allowPrerelease -cne $false) {
+    throw 'global.json must pin an exact stable .NET 10.0.4xx SDK with rollForward=disable and allowPrerelease=false so SDK and NuGet lock files stay in lockstep.'
+}
 Assert-Contains 'Directory.Packages.props' '<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>' 'Central Package Management must remain enabled.'
 Assert-Contains 'Directory.Build.props' '<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>' 'NuGet lock files must remain enabled.'
 Assert-Contains 'Directory.Build.props' '<NuGetAuditMode>all</NuGetAuditMode>' 'NuGet audit must cover transitive dependencies.'
@@ -212,6 +214,73 @@ foreach ($project in $projects) {
     if (-not (Test-Path -LiteralPath $lock -PathType Leaf)) {
         throw "Missing NuGet lock file for $($project.FullName)"
     }
+}
+
+# Execute the workflow's actual SDK gate with event fixtures and a bounded Git stub.
+# No repository history, refs, SDK environment overrides or service state is mutated.
+$workflow = [IO.File]::ReadAllText((Join-Path $root '.github/workflows/windows-ci.yml'))
+$gateMatch = [regex]::Match($workflow, '(?ms)^      - name: Require lock files with SDK updates\r?\n        shell: pwsh\r?\n        run: \|\r?\n(?<script>.*?)(?=^      - )')
+if (-not $gateMatch.Success) { throw 'CI must require lock files with SDK updates.' }
+$sdkGate = [scriptblock]::Create(($gateMatch.Groups['script'].Value -replace '(?m)^          ', ''))
+$eventPath = [IO.Path]::GetTempFileName()
+$savedEventPath = $env:GITHUB_EVENT_PATH
+$savedEventName = $env:GITHUB_EVENT_NAME
+try {
+    $env:GITHUB_EVENT_PATH = $eventPath
+    foreach ($case in @(
+        @{ Name = 'PR SDK only'; Event = 'pull_request'; Changed = @('global.json'); Updated = @('global.json'); Error = 'global.json changed without' },
+        @{ Name = 'PR SDK with locks'; Event = 'pull_request'; Changed = @('global.json', 'src/Talvora.Tray/packages.lock.json'); Updated = @('global.json', 'src/Talvora.Tray/packages.lock.json') },
+        @{ Name = 'push SDK only'; Event = 'push'; Changed = @('global.json'); Updated = @('global.json'); Error = 'global.json changed without' },
+        @{ Name = 'push SDK with installer lock'; Event = 'push'; Changed = @('global.json', 'src/Talvora.Installer/packages.lock.json'); Updated = @('global.json', 'src/Talvora.Installer/packages.lock.json') },
+        @{ Name = 'new branch'; Event = 'push'; NewBranch = $true; Changed = @('global.json', 'tests/Talvora.Smoke/packages.lock.json'); Updated = @('global.json', 'tests/Talvora.Smoke/packages.lock.json') },
+        @{ Name = 'unrelated change'; Event = 'push'; Changed = @('README.md'); Updated = @('README.md') },
+        @{ Name = 'deleted lock is insufficient'; Event = 'push'; Changed = @('global.json', 'src/Talvora.Tray/packages.lock.json'); Updated = @('global.json'); Error = 'global.json changed without' },
+        @{ Name = 'missing push revision'; Event = 'push'; Changed = @(); Updated = @(); GitFailure = $true; Error = 'could not read the event change set' },
+        @{ Name = 'missing PR merge base'; Event = 'pull_request'; Changed = @(); Updated = @(); GitFailure = $true; Error = 'could not determine the PR merge base' }
+    )) {
+        $env:GITHUB_EVENT_NAME = $case.Event
+        $baseSha = '1' * 40
+        $headSha = '2' * 40
+        @{
+            before = if ($case.NewBranch) { '0' * 40 } else { $baseSha }
+            after = $headSha
+            pull_request = @{ base = @{ sha = $baseSha }; head = @{ sha = $headSha } }
+        } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $eventPath -Encoding utf8
+        $failure = $null
+        try {
+            & {
+                function git {
+                    $global:LASTEXITCODE = 0
+                    switch ($args[0]) {
+                        'merge-base' {
+                            if ($args[1] -ne $baseSha -or $args[2] -ne $headSha) { throw 'Wrong PR revision range.' }
+                            if ($case.GitFailure) { $global:LASTEXITCODE = 128; return }
+                            'merge-base-sha'
+                        }
+                        'hash-object' { 'empty-tree-sha' }
+                        'diff' {
+                            $expectedBase = if ($case.Event -eq 'pull_request') { 'merge-base-sha' } elseif ($case.NewBranch) { 'empty-tree-sha' } else { $baseSha }
+                            if ($args[-2] -ne $expectedBase -or $args[-1] -ne $headSha) { throw 'Wrong event diff range.' }
+                            if ($case.GitFailure) { $global:LASTEXITCODE = 128; return }
+                            if ($args -contains '--diff-filter=AM') { $case.Updated } else { $case.Changed }
+                        }
+                        default { throw 'Unexpected Git operation in SDK lock gate.' }
+                    }
+                }
+                & $sdkGate
+            }
+        }
+        catch { $failure = $_.Exception.Message }
+        if ($case.Error) {
+            if (-not $failure -or -not $failure.Contains($case.Error)) { throw "SDK gate case '$($case.Name)' did not produce the expected diagnostic: $failure" }
+        }
+        elseif ($failure) { throw "SDK gate case '$($case.Name)' failed: $failure" }
+    }
+}
+finally {
+    $env:GITHUB_EVENT_PATH = $savedEventPath
+    $env:GITHUB_EVENT_NAME = $savedEventName
+    Remove-Item -LiteralPath $eventPath -Force
 }
 
 Write-Host 'MODERNIZATION_POLICY_GREEN'

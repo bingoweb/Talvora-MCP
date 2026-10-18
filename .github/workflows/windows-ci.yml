@@ -22,6 +22,37 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Require lock files with SDK updates
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $event = Get-Content -LiteralPath $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
+          if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
+            $headRef = [string]$event.pull_request.head.sha
+            $baseRef = & git merge-base ([string]$event.pull_request.base.sha) $headRef
+            if ($LASTEXITCODE -ne 0) { throw 'SDK lock gate could not determine the PR merge base.' }
+          }
+          elseif ($env:GITHUB_EVENT_NAME -eq 'push') {
+            $headRef = [string]$event.after
+            $baseRef = [string]$event.before
+            if ($baseRef -match '^0{40}$') {
+              # A new branch has no previous commit; compare against the empty tree.
+              $baseRef = '' | & git hash-object -t tree --stdin
+              if ($LASTEXITCODE -ne 0) { throw 'SDK lock gate could not determine the empty tree.' }
+            }
+          }
+          else { throw 'SDK lock gate requires a pull_request or push event.' }
+          if ([string]::IsNullOrWhiteSpace($baseRef) -or [string]::IsNullOrWhiteSpace($headRef)) {
+            throw 'SDK lock gate requires valid base and head revisions.'
+          }
+          $changedFiles = @(& git diff --name-only --no-renames $baseRef $headRef)
+          if ($LASTEXITCODE -ne 0) { throw 'SDK lock gate could not read the event change set; ensure both revisions are available.' }
+          $updatedFiles = @(& git diff --name-only --no-renames --diff-filter=AM $baseRef $headRef)
+          if ($LASTEXITCODE -ne 0) { throw 'SDK lock gate could not read updated lock files.' }
+          if ($changedFiles -contains 'global.json' -and -not ($updatedFiles -cmatch '^(src|tests)/.+/packages\.lock\.json$')) {
+            throw 'global.json changed without updated NuGet lock files. Install the exact SDK from global.json, run dotnet restore Talvora.slnx --force-evaluate and dotnet restore src/Talvora.Installer/Talvora.Installer.csproj --force-evaluate without environment overrides, and include the changed packages.lock.json files in the same PR (including Dependabot SDK PRs).'
+          }
+
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json

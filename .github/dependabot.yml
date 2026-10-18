@@ -22,6 +22,9 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: "dotnet-sdk"
+    # SDK PRs must include regenerated solution and installer packages.lock.json files.
+    # Run both --force-evaluate restores with the proposed exact SDK before merging;
+    # windows-ci rejects SDK-only updates, including Dependabot PRs.
     directory: "/"
     schedule:
       interval: "weekly"

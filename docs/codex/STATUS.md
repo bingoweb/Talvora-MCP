@@ -28,7 +28,7 @@
 
 Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · `[?]` blocked on an open question · `[-]` won't do.
 
-- [ ] K0 — Locked restore green, SDK drift policy
+- [x] K0 — Locked restore green, SDK drift policy
 - [ ] K1 — `Invoke-QualityGate.ps1`, all suites in CI, `Get-CodexContext.ps1`
 - [ ] K2 — `talvora_apply_patch` works on this repository (Win32 32)
 - [ ] S1 — Reject foreign Host/Origin (DNS rebinding)
@@ -82,5 +82,6 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-18 — K0: pinned .NET SDK 10.0.401/latestFeature to 10.0.402/disable per Context7 /dotnet/docs and current Microsoft docs; regenerated the Tray and Installer ILLink lock entries to 10.0.13 without dependency overrides. Added SDK-change lock evidence requirement to GitHub CI for PR and push, with fixture-backed modernization policy regressions. Verified solution and installer --locked-mode restores, Release solution build (0 warnings / 0 errors), ModernizationPolicyRegression.ps1, Context7 gate, git diff --check; installer/deployment and GitHub CI must be checked against the post-commit SHA.
 - 2026-10-18 — Claude: user answers recorded. Q1 = no local token (S2 → won't do; S1 stays, it needs no client change). Q2 = consolidate only with zero capability loss (Q2 unblocked, hard rule added). Q3 = push after each card to `origin` and `github`. Q4 = delegated to design → Control Center follows the Windows theme, Gece fallback, worklog always Gece. New: deep review of the desktop worklog (live screenshot `docs/codex/evidence/worklog-card-2026-10-18.png`) → `docs/codex/DESIGN-WORKLOG.md` (defects W1–W19, code-terminal defects C1–C7, cards N1–N8 + N3b); new card Q6 (opaque tool errors, verified live). Queue reordered: worklog correctness (N1–N4) right after the security/build basics.
 - 2026-10-18 — Claude: deep review at `8b1a611`; created `docs/codex/ROADMAP.md`, `docs/codex/DESIGN-CONTROL-CENTER.md`, this STATUS and `docs/codex/CODEX-PROMPT.md`; added CONTINUE PROTOCOL to AGENTS.md. No source code changed. Key evidence: locked restore NU1004 (CI run 39028784145 red), foreign `Host` accepted by `/mcp` (HTTP 200), `C:\ProgramData\Talvora` inherits `BUILTIN\Users:(CI)(WD,AD)`, Control Center smoke fails with `WhiteRatio=68.2%`, live tool counts 249/212/88 and `tools/list` 302 KB on `/mcp`.

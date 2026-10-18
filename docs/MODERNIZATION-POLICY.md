@@ -6,7 +6,7 @@ Talvora is maintained as a modern-by-default Windows/.NET MCP system.
 
 1. **Current documentation gate** — Every meaningful development change starts with Context7 verification of the current platform/framework/library contract. Refresh `.context7/verification.json` in the same change, record the Context7 library ID and verified behavior/migration rule, and use official vendor documentation for release/support/breaking-change confirmation.
 2. **Supported-version gate** — Use supported stable releases. Avoid wildcard dependency versions and deprecated compatibility paths. Central NuGet versions live in `Directory.Packages.props`.
-3. **Reproducibility gate** — `global.json` defines the .NET SDK feature band, package lock files are committed, and CI restores with `--locked-mode`.
+3. **Reproducibility gate** — `global.json` pins the exact stable .NET SDK (`10.0.402`, `rollForward: disable`, `allowPrerelease: false`), package lock files are committed, and CI restores with `--locked-mode`. SDK servicing changes implicit platform packages such as ILLink/Crossgen; even an SDK patch must move together with the lock graph. Do not use `RuntimeFrameworkVersion` environment/script overrides or manual implicit-package pins to hide drift.
 4. **Quality gate** — Release builds have zero warnings/errors. NuGet audit covers direct and transitive dependencies at high severity and above.
 5. **Runtime gate** — Runtime/shared/dependency/installer changes must pass the canonical Windows installer and installed MCP surface verification. Hosted CI intentionally does not emulate durable interactive-user behavior.
 6. **Tracking gate** — Each modernization phase is a Gitea issue under the active modernization milestone. Context7 evidence, tests, commit and deployment evidence are written there before closure.
@@ -21,6 +21,8 @@ Talvora is maintained as a modern-by-default Windows/.NET MCP system.
 **Implementation:** define the .NET 10 SDK in `global.json`; use `Talvora.slnx` as the canonical non-installer solution graph; enable Central Package Management; commit per-project NuGet lock files; make CI restore in locked mode; keep warnings-as-errors, latest analysis and deterministic builds.
 
 **Exit criteria:** clean locked restore, release build with zero warnings/errors, every project has a lock file, CI uses the same graph.
+
+**SDK updates (including Dependabot):** install the exact proposed stable SDK, retain `rollForward: disable`, then run `dotnet restore Talvora.slnx --force-evaluate` and `dotnet restore src/Talvora.Installer/Talvora.Installer.csproj --force-evaluate` without environment overrides. Include every changed `packages.lock.json` with `global.json` in the same PR; do not bump unrelated packages or force a downgrade. Verify both restores again with `--locked-mode` and run `dotnet build Talvora.slnx -c Release --no-restore`. CI rejects SDK changes without added/modified project lock files before restore. PR checks compare the merge base to the PR head; push checks compare the event's before/after revisions (or the empty tree for a new branch), so multi-commit updates are checked together. Missing revisions fail with a diagnostic rather than silently skipping the check.
 
 ### MOD-02 — Dependency modernization and API compatibility
 
