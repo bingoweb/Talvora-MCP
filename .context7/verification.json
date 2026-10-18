@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-18T12:41:44Z",
-  "scope": "E1: OpenAI Codex config.toml streamable HTTP MCP URL and enabled_tools allow-list restrict only Codex's talvora_local client registration to eight source-edit/deploy/push tools; ChatGPT Talvora Dev/Admin server surfaces remain unchanged. Historical evidence preserved.",
+  "verifiedAtUtc": "2026-10-18T12:57:35Z",
+  "scope": "E2: evidence-backed MCP tool result de-duplication. Codex prioritizes non-null structuredContent; ChatGPT custom plugins expose structuredContent and content to the model; Claude Code reports show structuredContent precedence when both are present. Preserve error text and unstructured results; use MCP C# SDK CallToolResult and request filters. Historical evidence preserved.",
   "libraries": [
     {
       "libraryId": "/websites/learn_microsoft_en-us_windows_win32_api",
@@ -25,7 +25,7 @@
     },
     {
       "libraryId": "/openai/codex",
-      "verified": "2026-10-11 current Context7 official Codex CLI source (codex-rs/exec/src/cli.rs, codex-rs/utils/cli/src/shared_options.rs): exec supports explicit model, read-only/workspace-write sandbox, ephemeral session, --config reasoning effort, and noninteractive approvals. The locally installed codex-cli 0.162.0-alpha.17.2 was also exercised: a positional --help without an option terminator displayed CLI help, whereas the fixed -- separator passed it as task text. Default GPT-6.1 Sol, medium effort and explicit approval/sandbox controls were observed. 2026-10-18 E1 current Context7 /openai/codex: codex-mcp/src/tools.rs ToolFilter.from_config reads enabled_tools as a set and rejects names not in the set; config/src/mcp_types.rs supports StreamableHttp url and enabled_tools in McpServerConfig. The filter is Codex-client-side and does not remove MCP server tools for other clients. No Codex CLI was launched."
+      "verified": "2026-10-11 current Context7 official Codex CLI source (codex-rs/exec/src/cli.rs, codex-rs/utils/cli/src/shared_options.rs): exec supports explicit model, read-only/workspace-write sandbox, ephemeral session, --config reasoning effort, and noninteractive approvals. The locally installed codex-cli 0.162.0-alpha.17.2 was also exercised: a positional --help without an option terminator displayed CLI help, whereas the fixed -- separator passed it as task text. Default GPT-6.1 Sol, medium effort and explicit approval/sandbox controls were observed. 2026-10-18 E1 current Context7 /openai/codex: codex-mcp/src/tools.rs ToolFilter.from_config reads enabled_tools as a set and rejects names not in the set; config/src/mcp_types.rs supports StreamableHttp url and enabled_tools in McpServerConfig. The filter is Codex-client-side and does not remove MCP server tools for other clients. 2026-10-18 E2 Context7 /openai/codex: protocol/src/models.rs as_function_call_output_payload serializes non-null structured_content to the model-visible text body, ignoring ordinary text blocks (encrypted blocks are a documented exception). No Codex CLI was launched."
     },
     {
       "libraryId": "/dotnet/docs",
@@ -57,7 +57,7 @@
     },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "Current official C# SDK stateless HTTP guidance confirms ConfigureSessionOptions runs per request and can replace the request-local ToolCollection using current HttpContext data such as route/path. Talvora keeps one canonical implementation set and uses /mcp/dev and /mcp/admin only as request-local discovery/invocation views; the new explicit Shared contract changes membership policy, not transport or runtime privilege."
+      "verified": "Current official C# SDK stateless HTTP guidance confirms ConfigureSessionOptions runs per request and can replace the request-local ToolCollection using current HttpContext data such as route/path. Talvora keeps one canonical implementation set and uses /mcp/dev and /mcp/admin only as request-local discovery/invocation views; the new explicit Shared contract changes membership policy, not transport or runtime privilege. 2026-10-18 E2 Context7 verifies AddCallToolFilter wraps the original async CallToolResult and the SDK defines settable Content (IList<ContentBlock>), StructuredContent (JsonElement?) and IsError (bool?). The filter preserves StructuredContent and isError, changes text blocks only for successful non-null structured output, and leaves all other content blocks untouched."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us",
@@ -89,6 +89,10 @@
     }
   ],
   "vendorSources": [
+    "2026-10-18 E2 Codex official upstream source via Context7 /openai/codex: https://github.com/openai/codex/blob/main/protocol/src/models.rs , as_function_call_output_payload uses structured_content when present and not null; normal text blocks are not included in model output in that branch.",
+    "2026-10-18 E2 OpenAI official ChatGPT plugin reference and MCP guidance: https://developers.openai.com/plugins/reference (both structuredContent and content are model-visible) and https://developers.openai.com/api/docs/mcp (serialized text mirror recommended for compatibility). This optimized path is limited to the three supported clients documented by E2; text-only or error results retain their content.",
+    "2026-10-18 E2 Claude Code context and vendor-repository reports: https://github.com/anthropics/claude-code/blob/main/mods/types/claude-code.d.ts (both MCP result fields supported), https://github.com/anthropics/claude-code/issues/54737 and https://github.com/anthropics/claude-code/issues/55677 (reproducible model seeing only structuredContent when both are supplied; reported behavior, not a formal guarantee).",
+    "2026-10-18 E2 MCP SDK and specification: https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/filters.md and https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Protocol/CallToolResult.cs ; https://modelcontextprotocol.io/specification/2026-07-28/server/tools recommends a serialized TextContent mirror for backward compatibility. Talvora keeps all actual data in structuredContent and preserves isError and unstructured-only text.",
     "2026-10-18 E1 OpenAI Codex current official configuration and implementation verified via Context7 /openai/codex: https://github.com/openai/codex/blob/main/codex-rs/codex-mcp/src/tools.rs (enabled_tools allow-list enforcement), https://github.com/openai/codex/blob/main/codex-rs/config/src/mcp_types.rs (streamable-HTTP url and tool filter config); https://developers.openai.com/learn/docs-mcp (Codex client supports config.toml MCP URL). Talvora ChatGPT Dev/Admin endpoints unchanged.",
     "2026-10-18 E5 Microsoft PowerShell 7 official documentation verified with Context7 /microsoftdocs/powershell-docs and Microsoft Learn: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_redirection?view=powershell-7 (all-stream *> redirection captures Write-Host/information stream); https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-content?view=powershell-7 (Get-Content -Tail limits diagnostic lines).",
     "2026-10-18 Microsoft Win32 official API checked with Context7 /websites/learn_microsoft_en-us_windows_win32_api: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew ; https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfileinformationbyhandleex ; https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_info . Use directory backup-semantic, non-follow reparse, metadata-only handles and compare full FILE_ID_INFO.",

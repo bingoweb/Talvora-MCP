@@ -16,7 +16,19 @@ if (args.Length == 1 &&
         StringComparison.Ordinal))
 {
     await SmokeScenarios.RunCodexIntegrationPolicyAsync();
+    SmokeScenarios.RunToolResultTextPolicy();
     Console.WriteLine("TALVORA CODEX INTEGRATION POLICY GREEN");
+    return;
+}
+
+if (args.Length == 1 &&
+    string.Equals(args[0], "--tool-result-text-policy-live",
+        StringComparison.Ordinal))
+{
+    await SmokeScenarios.RunLiveToolResultTextPolicyAsync(
+        "http://127.0.0.1:7676/mcp/dev",
+        Directory.GetCurrentDirectory());
+    Console.WriteLine("TALVORA TOOL RESULT TEXT LIVE GREEN");
     return;
 }
 

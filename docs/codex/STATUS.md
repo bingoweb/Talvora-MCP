@@ -33,7 +33,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] K2 — `talvora_apply_patch` works on this repository (Win32 32)
 - [x] E5 — Context helper and gate output minimal (extends K1)
 - [~] E1 — Codex sees only the Talvora tools it uses (live Codex session check deferred by user)
-- [ ] E2 — Stop sending every result twice (evidence-driven)
+- [~] E2 — Stop sending every result twice (Codex live acceptance deferred by user)
 - [ ] E3 — Lean defaults for high-frequency tools
 - [ ] S1 — Reject foreign Host/Origin (DNS rebinding)
 - [-] S2 — Local MCP caller authentication (user decision Q1: no)
@@ -74,6 +74,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## User queue
 
+- U8 — E2: live Codex MCP round-trip intentionally deferred under "do not use Codex". Unit, installed wire smoke and ChatGPT Dev connector will be checked without running Codex; nothing to do unless Codex use is reauthorized.
 - U7 — E1: optional live Codex MCP get and scratch read/patch verification is deferred by the user's "do not use Codex" instruction; no action is needed unless Codex use is reauthorized. Installer registration and ChatGPT connectors are verified independently.
 - U2 — Claude Code is installed but **not logged in** (HANDOFF 2026-10-17). If you want the optional Claude engine: run `& "$env:USERPROFILE\.local\bin\claude.exe" auth login` in your own terminal.
 - U3 — After S5 ships: if the Control Center asks for the OpenAI Admin key again during setup, enter it once (it will no longer be stored).
@@ -87,6 +88,14 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-18 — E2: replace duplicate text with one short marker only for successful non-null structured results; structured JSON and non-text blocks unchanged; isError/only-text/null-JSON preserved. Fixture and installed-live smoke RED before code/deploy; in-process targeted smoke GREEN. Source: Context7 /openai/codex and /modelcontextprotocol/csharp-sdk; vendor sources in .context7/verification.json.
+  | Client | Model receives when both fields exist | Evidence |
+  |---|---|---|
+  | Codex CLI | structuredContent preferred; ordinary text ignored | github.com/openai/codex/blob/main/protocol/src/models.rs |
+  | ChatGPT custom MCP | structuredContent and text both model-visible | developers.openai.com/plugins/reference |
+  | Claude Code | structuredContent alone in reported versions | github.com/anthropics/claude-code/issues/54737 |
+  Full gate: 49 controls, 0 failures; Hepsi geçti. Installer sourceCommit and wire/ChatGPT smoke pending; Codex session forbidden by user (U8).
+  Compatibility note: MCP 2026-07-28 spec SHOULD mirror JSON in text for older text-only clients; the E2 card restricts this decision to the three researched clients.
 - 2026-10-18 — E1: registered only eight selected Talvora Dev tools for Codex at /mcp/dev, preserving unrelated TOML comments, tables and CRLF bytes; installer writes Codex-only configuration. Current live /mcp/dev exposes 212 tools and /mcp/admin 88 unchanged; the eight selected schemas are 18,691 versus 265,499 characters (full Dev). Fixture test RED then GREEN; targeted policy/source tests passed. Context7 /openai/codex confirmed enabled_tools client-side filtering. Full gate: 49 controls, 0 errors; Hepsi geçti. Canonical installer/deploy after commit; Codex CLI/session not used per user instruction (U7).
 - 2026-10-18 — E5: context helper now selects only the card, cited N/UI spec sections, pending queue additions and open proposal titles; fixture docs and all 17 real N/UI cards asserted at ≤250 lines. Quality gate times steps, groups 39 successful PowerShell regressions, and shows only the failing step's last 60 diagnostic lines; the fixture was RED before the fix and GREEN after. Context7 /microsoftdocs/powershell-docs, official Microsoft Learn about_Redirection and Get-Content sources; .context7/verification.json refreshed. Local Full gate: 49 controls, 0 errors, 15 lines; Hepsi geçti. Installed runtime stays 457565f (no runtime changes). Commit/remote sync to be verified.
 - 2026-10-18 — K2: verified Win32 32 on installed patch tool and in a RED test with a separate DELETE-capable directory holder; the targeted test is now GREEN. Metadata identity probes use shared backup-semantic non-reparse handles with no data/delete access; FILE_ID_INFO checks 128-bit identity + volume, sharing retries 50/100/200 ms, with rename-protection handles retained when compatible. Minimal SourceEditModels.cs addition preserves legacy journal FileId and adds optional full ID (required outside Files list). Context7 /websites/learn_microsoft_en-us_windows_win32_api. Applied E5/E1/E2/E3 queue additions verbatim. Local Full gate: 49 kontrol, 0 hata; Hepsi geçti. Install, live patch smoke, CI and push remain to be verified; baseline installed runtime f0b5f9d.

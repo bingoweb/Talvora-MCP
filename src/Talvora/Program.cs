@@ -70,7 +70,7 @@ builder.Services
                     token);
             }
 
-            return await operation(cancellationToken);
+            return ToolResultTextPolicy.Apply(await operation(cancellationToken));
         });
 
         filters.AddListToolsFilter(next => async (
