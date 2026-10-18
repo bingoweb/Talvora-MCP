@@ -252,7 +252,7 @@ Classify the real error once in the service (`WorklogFailureClassifier`) from th
 | `PermissionDenied` (agents) | Claude permission denials | Claude izin gerektiren adımları yapamadı. | İzin modunu değiştirerek yeniden başlatılabilir. |
 | `Unknown` | anything else | Bu adım tamamlanamadı. | — |
 
-The raw (redacted) error message goes to "Ayrıntılar". "What is protected" (AGENTS.md) is part of `PlainReason` when true and known (e.g. "kodunuz değişmedi" only when the step is a rejected edit — never claim protection that is not verified).
+The raw (redacted) error message goes to "Ayrıntılar". "What is protected" (AGENTS.md) uses exactly these sentences and only when verified: rejected source edit → append "Kodunuz değişmedi." to `PlainReason`; failed build/test → the `NextStep` text in the table already states it; every other kind → no protection sentence. No other protection wording.
 
 ### 5.4 Agent jobs
 
@@ -268,7 +268,7 @@ The raw (redacted) error message goes to "Ayrıntılar". "What is protected" (AG
 
 ### 5.5 Diff engine
 
-One shared `TextDiffBuilder` (service side) produces the unified diff + per-file added/removed counts from before/after text for every path above. Prefer a maintained library (e.g. DiffPlex — verify licence, current version and API with Context7; add to `Directory.Packages.props`, lock files and THIRD-PARTY-NOTICES) or implement Myers O(ND) with a size guard. Binary files: "ikili dosya değişti · {boyut}". CRLF/LF-only changes: "Yalnız satır sonları değişti". Encoding-only: "Yalnız kodlama değişti".
+One shared `TextDiffBuilder` (service side) produces the unified diff + per-file added/removed counts from before/after text for every path above. Use **DiffPlex** (`DiffPlex` NuGet package, line-level `InlineDiffBuilder`/`Differ`): take the current stable version, licence and API from Context7/NuGet; add it to `Directory.Packages.props`, lock files and THIRD-PARTY-NOTICES. Size guard: files > 1 MB or > 20 000 lines show "Dosya çok büyük; değişiklik özeti: +{a} −{r}" without a preview. If DiffPlex cannot be used (licence/compatibility), stop with a proposal — do not write a custom diff algorithm. Binary files: "ikili dosya değişti · {boyut}". CRLF/LF-only changes: "Yalnız satır sonları değişti". Encoding-only: "Yalnız kodlama değişti".
 
 ## 6. Copy deck (authoritative)
 
@@ -304,7 +304,8 @@ Timeline labels = Succeeded/Failed column + optional "· {kısa olgu}". Footer: 
 |---|---|
 | Surface | `#101722` (Gece `Tv.Surface`), 1 px border `#1F2A3B`, radius 14, shadow blur 24 / opacity 0.35; no shadow in high contrast |
 | Live line | 2 px at the top inside the border, Aurora gradient, 1.6 s shimmer translate; static when reduced motion |
-| Header | Talvora glyph 16 px (Aurora when active, `TextMuted` otherwise) · project chip (`SurfaceRaised`, radius 6, 12 px semibold `Text`) · actor chip (same, `TextMuted`) · state badge (glyph + word, state colour on 14 % tint) · icon buttons 28×28 |
+| Header | Talvora "T" mark 16 px (same silhouette as the tray icon; Aurora gradient fill when active, `TextMuted` otherwise) · project chip (`SurfaceRaised`, radius 6, padding 8,2, 12 px semibold `Text`) · actor chip (same, text `TextMuted`) · state badge (glyph + word, radius 6, padding 8,2, state colour text on 14 % tint) · icon buttons 28×28 (`Pin20`/`PinOff20`, `Dismiss20`) |
+| Glyphs | WPF-UI `SymbolRegular`, exactly: Çalışıyor `ArrowSync20` (static, no spin), Tamamlandı `Checkmark20`, Hata `ErrorCircle20`, Durduruldu `Stop20`, Yanıt bekleniyor `Clock20`, muted inspection failure `Warning20`. Timeline rows use the same symbols at 12 px. State colours: running `Tv.Accent`, succeeded `Tv.Ready`, failed `Tv.Offline`, cancelled/waiting `Tv.Attention`, muted `Tv.TextFaint`. |
 | Title | Segoe UI Variable Display 15 / 20 semibold `Tv.Text` |
 | Fact line | Segoe UI Variable Text 13 / 18 `Tv.TextMuted`; numbers tabular |
 | Outcome | 13 / 18 `Tv.Text`; first sentence reason, second next step in `Tv.TextMuted` |

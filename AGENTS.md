@@ -6,6 +6,28 @@
 - Everything Talvora shows to people — Control Center, tray, desktop worklog, user-facing error messages, MCP tool **titles** — is **ordinary Turkish** with correct diacritics.
 - Codex always reports to the user in **Turkish**.
 
+## EXECUTION MANDATE — Codex implements, Claude decides (binding, highest priority)
+
+The user decided (2026-10-18): Codex does **only** what Claude's cards say, **exactly** the way they say it. Claude owns every product, architecture and especially every **visual/cosmetic** decision. This section overrides any other wording in this file or in `docs/codex/*` that seems to leave room for Codex's own judgement.
+
+**Scope**
+1. Work only on the current queue card. No "while I'm here" fixes, refactors, renames, reformatting, file moves, comment rewrites, dependency bumps or test rewrites outside the card's **Files** list. If another file must change for the card to compile or pass, change the minimum and list it in the Log with the reason.
+2. Do not start work that is not a card. Things you notice go to STATUS → "Findings for Claude" (one line each: file:line + what you saw). Do not fix them.
+3. Do not add, remove or upgrade packages, tools, services, endpoints, settings or MCP tools unless the card names them.
+
+**Decisions**
+4. Where a card prescribes values, names, code shape, library, algorithm, order or copy, use exactly that. Do not "improve" it.
+5. If a card is ambiguous, contradicts the code, contradicts current upstream docs (Context7), or cannot meet its Acceptance as written: **do not choose yourself**. Write the question with evidence and 1–3 options into `docs/codex/PROPOSALS.md` (template there), mark the card `[?]` in STATUS with "waiting for Claude: P-<n>", revert any partial work of that card, and continue with the next `[ ]` card.
+6. Context7/vendor docs are used to **verify** the prescribed approach and fill exact API names/versions — never to replace the prescribed approach with a different one.
+
+**Design and cosmetics (zero autonomy)**
+7. Everything visible — layout, colours, fonts, sizes, spacing, radii, shadows, icons, glyphs, motion, timing, wording/Turkish copy, tooltips, empty/loading/error states, tool titles — comes **only** from `docs/codex/DESIGN-CONTROL-CENTER.md`, `docs/codex/DESIGN-WORKLOG.md` or an approved proposal. Never invent a colour, icon, animation, string, visual element or behaviour.
+8. Where the spec is silent about a **minor layout detail** (an alignment or a gap inside an element the spec defines), use only values from the spec's token scales (`Tv.Space.*`, `Tv.Radius.*`, `Tv.Type.*`, colour tokens) and list each such choice in the Log under "Design gaps filled" so Claude can audit it. Anything else that is visible and not specified (a new element, text, icon, colour, state, animation) → proposal (rule 5), never a guess.
+9. Awwwards research is **evidence only**. It must not change the spec. In `.talvora/awwwards-verification.json`, `designDecisions` must quote the spec sections being implemented (e.g. "DESIGN-WORKLOG §3.1 code terminal"), not new ideas.
+10. Every UI/worklog card ends with the before/after PNGs required by its Acceptance; Claude approves the look in the next audit.
+
+Violations found in Claude's audits become D-cards that revert the unrequested change.
+
 ## CONTINUE PROTOCOL ("Talvora'ya devam et")
 
 When the user says "Talvora'ya devam et", "Talvora devam", "sıradaki adım" or similar, execute this sequence without asking questions. **One queue item per message**, then stop and report.

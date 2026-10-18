@@ -66,7 +66,7 @@
 
 **Do:**
 - Query Context7 (`/dotnet/docs`, `/nuget/docs` or the vendor page) for the current guidance on lock files + implicit platform packages (ILLink/Crossgen) and `global.json` roll-forward.
-- Move to the newest stable SDK installed on the workstation (10.0.402 today — verify), set `"rollForward": "latestPatch"` **or** `"disable"` (pick per the docs; justify in the Log), regenerate every lock file with `dotnet restore --force-evaluate`, and commit them together.
+- Set `global.json` to `"version": "10.0.402"` (the SDK installed on the workstation — verify with `dotnet --list-sdks`) and `"rollForward": "disable"`, `"allowPrerelease": false`. Regenerate every lock file with `dotnet restore --force-evaluate` (solution + installer project) and commit them together. If 10.0.402 is not the newest stable SDK installed, stop with a proposal.
 - Remove any `RuntimeFrameworkVersion` override from scripts.
 - Dependabot `dotnet-sdk` updates must regenerate lock files in the same PR: add a CI step that fails with a clear message when `global.json` changed but lock files did not.
 
@@ -114,7 +114,7 @@
 
 **Do:**
 - Context7: `/modelcontextprotocol/csharp-sdk` (does 2.2.0 ship an Origin/Host validation option? use it if so) and `/dotnet/aspnetcore.docs` (Host filtering).
-- Host allow-list: `localhost`, `127.0.0.1`, `[::1]` with port 7676 only. Prefer the built-in host filtering:
+- Host allow-list: `localhost`, `127.0.0.1`, `[::1]`. Use the built-in host filtering exactly like this (if Context7 shows it does not apply to minimal hosting as written, stop with a proposal — do not write a custom Host middleware):
   ```csharp
   builder.Configuration["AllowedHosts"] = "localhost;127.0.0.1;[::1]";
   // WebApplication adds HostFiltering automatically when AllowedHosts is set; verify with Context7 and a test.
@@ -152,7 +152,7 @@
           AllowedOriginHosts.Contains(uri.Host);
   }
   ```
-  Treat the snippet as a starting point. The Penpot plugin is loaded by the Penpot web app: find its real origin (check `PenpotAiPlugin/manifest.json`, `PenpotAiPluginEndpoints.cs` and the local Penpot URL), allow that origin **only** for the static plugin `GET` routes, never for `/mcp*`.
+  Implement the middleware as written (Turkish error text exactly as shown). The Penpot plugin is loaded by the Penpot web app: determine its real origin from `PenpotAiPlugin/manifest.json`, `PenpotAiPluginEndpoints.cs` and the local Penpot URL, and allow that single origin **only** for the static plugin `GET` routes, never for `/mcp*`. If the origin cannot be determined with evidence, stop with a proposal.
 - Requests without `Origin` (CLI clients, tunnel-client) stay allowed — S2 adds authentication for them.
 - Behavioural tests against a real Kestrel instance (`WebApplicationFactory` or the existing live smoke): foreign Host → 400, foreign Origin → 403, loopback Host without Origin → 200, `Origin: http://127.0.0.1:7676` → 200, Penpot plugin origin → 200 for plugin files.
 
@@ -375,7 +375,9 @@ Use it in both places; verify the option list against `git help git` for the ins
 
 **Files:** all `[McpServerTool]` attributes in `src/Talvora/Tools/*.cs`, `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`, `src/Talvora/McpToolMetadataWirePolicy.cs`, smoke `SmokeScenarios.MetadataPolicy.cs`.
 
-**Do:** every tool gets a short Turkish `Title` (≤ 4 words, e.g. "Kaynak dosya oku", "Yama uygula", "Servis yeniden başlat"); descriptions ≤ 220 chars, English, first sentence = what it does, second = when to prefer another tool; move shared policy text into server instructions once. Add a smoke assertion: `tools/list` JSON for `/mcp/dev` ≤ 180 KB now (Q2 lowers it).
+**Order rule:** while Q2 is not `[x]` in STATUS, treat Q1 as blocked (skip it like a `[?]` item) and take the next card; come back to Q1 right after Q2 is done (titles for tools that Q2 removes would be wasted).
+
+**Do:** Titles are user-visible copy, so Claude decides them: Codex first generates `docs/codex/proposals/tool-titles.md` — a table `tool name | one-line English purpose | proposed Turkish title (≤ 4 words, verb-first, e.g. "Kaynak dosya oku")` for every tool on `/mcp` — adds proposal P-n "Q1 tool titles", marks Q1 `[?]` and stops. After Claude approves (edits the table), apply the approved titles verbatim. Descriptions: ≤ 220 chars, English, first sentence = what it does, second = when to use another tool; move repeated policy text into the server instructions once. Add a smoke assertion: `tools/list` JSON for `/mcp/dev` ≤ 120 KB.
 
 **Acceptance:** smoke budget test green; no tool without title; annotations unchanged.
 
@@ -416,7 +418,7 @@ Use it in both places; verify the option list against `git help git` for the ins
 
 **Files:** `HANDOFF.md`, `BUG-AUDIT.md`, `MCP-CONTROL-CENTER-TODO.md`, `docs/TALVORA-AUDIT-2026-10-09-*.md`, README, `docs/Codex-Autonomy.md`, new `docs/archive/`.
 
-**Do:** move the three big files and the 2026-10-09 audit to `docs/archive/` unchanged (git mv); replace `HANDOFF.md` with a ≤ 150-line "current state" page pointing to `docs/codex/STATUS.md`; README: counts from the manifest (validated by Q2's test), move "Optional Claude Code engine" under Integrations, remove machine-specific paths from examples (`C:\\path\\to\\repo`); rewrite `docs/Codex-Autonomy.md` in proper Turkish with diacritics.
+**Do:** move the three big files and the 2026-10-09 audit to `docs/archive/` unchanged (git mv); replace `HANDOFF.md` with a ≤ 150-line "current state" page pointing to `docs/codex/STATUS.md`; README: counts from the manifest (validated by Q2's test), move "Optional Claude Code engine" under Integrations, remove machine-specific paths from examples (`C:\\path\\to\\repo`); rewrite `docs/Codex-Autonomy.md` with correct Turkish diacritics — same sentences and meaning, no added or removed content.
 
 **Acceptance:** root markdown total < 120 KB; links still resolve (simple link checker in the quality gate).
 

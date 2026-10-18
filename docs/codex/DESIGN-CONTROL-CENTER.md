@@ -30,7 +30,7 @@ Two signature elements, used sparingly:
 
 Everything else is restrained: flat surfaces, 1 px borders, generous spacing, one accent.
 
-Awwwards direction for Codex to research and record in `.talvora/awwwards-verification.json` (cards must cite the concrete pages actually reviewed): look at Awwwards *Dashboard/Data*, *Technology* and *Dark* collections for (a) node/graph visualisations used as primary navigation, (b) restrained single-accent dark UIs with strong type hierarchy, (c) status/monitoring sites that use motion only to signal liveness. Record 3–5 references and the decision each one informed.
+Awwwards evidence (required by the delivery gate) is **evidence only** — it never changes this spec (AGENTS.md → EXECUTION MANDATE rule 9). For each UI card, review Awwwards *Dashboard/Data*, *Technology* and *Dark* collections, record 3–5 concrete page URLs in `.talvora/awwwards-verification.json` `references`, and fill `designDecisions` with the spec sections implemented by that card (e.g. "DESIGN-CONTROL-CENTER §5.1 overview hero band"). If a reference suggests a change you think is better, write a proposal; do not implement it.
 
 ## 3. Design tokens
 
@@ -128,7 +128,7 @@ Numbers in tiles use `Typography.NumeralAlignment="Tabular"`.
  72 px rail (collapsed) / 232 px (expanded with labels, toggled by the ◉ logo or width ≥ 1360)
 ```
 
-- **Rail items** (icon + label when expanded, tooltip when collapsed): `Genel bakış` (⌂), `Hizmetler` (⛁), `Çalışma günlüğü` (✎ — session history of the desktop worklog, spec in `DESIGN-WORKLOG.md` §8, card N7), `Bağlantı zinciri` (⟡), `Olaylar` (☰); bottom: `Ayarlar ve kurulum` (⚙) and a tiny **Nabız dot** with the attention count. Use WPF-UI `SymbolRegular` icons (e.g., `Home24`, `Server24`, `Notebook24`, `Organization24`, `TextBulletListLtr24`, `Settings24`) — verify names in WPF-UI 4.3 docs via Context7. Keyboard: `Ctrl+1..5` follow the rail order.
+- **Rail items** (icon + label when expanded, tooltip when collapsed): `Genel bakış` (⌂), `Hizmetler` (⛁), `Çalışma günlüğü` (✎ — session history of the desktop worklog, spec in `DESIGN-WORKLOG.md` §8, card N7), `Bağlantı zinciri` (⟡), `Olaylar` (☰); bottom: `Ayarlar ve kurulum` (⚙) and a tiny **Nabız dot** with the attention count. Icons (WPF-UI `SymbolRegular`, exactly these): Genel bakış `Home24`, Hizmetler `Server24`, Çalışma günlüğü `Notebook24`, Bağlantı zinciri `Organization24`, Olaylar `TextBulletListLtr24`, Ayarlar ve kurulum `Settings24`. Verify each name exists in WPF-UI 4.3 (Context7/source); if one does not exist, stop with a proposal — do not substitute. Keyboard: `Ctrl+1..5` follow the rail order.
 - **Theme decision (user delegated Q4 to design, 2026-10-18):** default preference = **Sistem** (follow Windows app theme, live). If the system theme cannot be read, use **Gece**. The user can override in Ayarlar → Görünüm. The desktop worklog card always uses Gece (terminal identity).
 - Selected item: `Tv.AccentSoft` background, 3 px `Tv.Accent` bar on the left edge, text `Tv.Text`.
 - **Title bar**: logo mark (Aurora gradient "T" glyph, 20 px), breadcrumb, command palette box, theme toggle (◐: Sistem / Gece / Gün), window buttons. Window title (taskbar) = **"Talvora Kontrol Merkezi"** everywhere.
@@ -403,10 +403,10 @@ The centre text ("4/5", `Title` style) and the breathing animation are XAML on t
 ## 8. Architecture of the new UI
 
 - Move views to XAML: `Views/ShellWindow.xaml`, `Views/OverviewView.xaml`, `Views/ServicesView.xaml`, `Views/ServiceDetailView.xaml`, `Views/ChainView.xaml`, `Views/EventsView.xaml`, `Views/SettingsView.xaml`; components under `Controls/`; styles under `Themes/`.
-- ViewModels: thin, testable, no WPF types except `ICommand`; they wrap the existing services (do not change service behaviour). Use **CommunityToolkit.Mvvm** (MIT) for `ObservableObject`/`RelayCommand`/source generators — verify the current stable version with Context7, add it to `Directory.Packages.props`, lock files and `THIRD-PARTY-NOTICES.md`. If Codex finds a blocking reason, a small hand-written `ObservableObject` is acceptable; record the decision.
+- ViewModels: thin, testable, no WPF types except `ICommand`; they wrap the existing services (do not change service behaviour). Use **CommunityToolkit.Mvvm** (MIT) for `ObservableObject`/`RelayCommand`/source generators — take the current stable version from Context7/NuGet, add it to `Directory.Packages.props`, lock files and `THIRD-PARTY-NOTICES.md`. If it cannot be used (licence, .NET 10 incompatibility, analyzer conflict with `TreatWarningsAsErrors`), stop with a proposal — no hand-written replacement without Claude's decision.
 - Keep: UI-thread responsiveness guarantees (all I/O off the dispatcher; existing tests in `ControlCenterUiResponsivenessSourceRegression.ps1` must be re-expressed as behaviour tests on ViewModels — e.g., "refresh does not run on the dispatcher thread").
 - Delete the old imperative builders only in UI8, after every screen is replaced.
-- Desktop worklog card (`DesktopProgressNotificationWindow*`) keeps its layout and AGENTS.md contract; UI7 only maps its colours to the shared Gece tokens where they already match (e.g., Trace = `Tv.Accent`).
+- Desktop worklog card (`DesktopProgressNotificationWindow*`): its layout and behaviour are owned by `docs/codex/DESIGN-WORKLOG.md` (cards N1–N8). UI cards never change it; UI7 only checks that the worklog uses the shared Gece token values listed in DESIGN-WORKLOG §7.
 
 ## 9. Copy deck (authoritative Turkish strings)
 
@@ -488,7 +488,7 @@ Each card = one commit, Awwwards evidence refreshed (cite pages actually reviewe
 ### UI7 — Tray icon, tray menu, worklog colour alignment, About
 
 **Files:** `TrayIconFactory.cs`, `TrayApplicationContext.cs` (menu), `DesktopProgressVisualTheme.cs` (colour mapping only), Settings "Hakkında".
-**Do:** monochrome Talvora glyph with a state dot (Ready/Attention/Offline/Neutral), light/dark taskbar aware (`SystemUsesLightTheme` registry value); tray menu in Turkish: "Kontrol Merkezini aç", "Durum: …", "Yenile", "Çıkış". Worklog card colours reference the same values as Gece tokens where they already match; no layout/behaviour change to the card.
+**Do:** tray icon = the existing Talvora "T" mark from `assets/Talvora.png`/`Talvora.ico`, rendered as a single-colour silhouette: `#FFFFFF` when the taskbar is dark, `#1A1A1A` when light (`HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize\SystemUsesLightTheme`, live). State dot: circle, diameter 37.5 % of the icon size, bottom-right, 1 px ring in the taskbar colour; colours Ready `#3DDC97`, Attention `#F5B84B`, Offline `#FF6B81`; Neutral/unknown = no dot. Tray menu items in this order: "Kontrol Merkezini aç" (bold, default), "Durum: {§9 status sentence}" (disabled text), separator, "Yenile", separator, "Çıkış". Tooltip: "Talvora Kontrol Merkezi — {§9 status sentence}". The same "T" mark is the 16 px glyph in the worklog header (DESIGN-WORKLOG §7). No change to the worklog card here.
 **Acceptance:** icon renders crisp at 16/20/24/32 px (PNG proof), notification regression suite green.
 
 ### UI8 — Polish, accessibility, cleanup, proof
