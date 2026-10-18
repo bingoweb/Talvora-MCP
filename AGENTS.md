@@ -1,5 +1,13 @@
 # Talvora engineering rules
 
+## PERMANENT USER-APPROVED AGENT PROMPT (2026-10-18)
+
+**Mandatory for every Talvora development session, not just the chat in which it was supplied:** the full user-approved prompt is stored verbatim in docs/codex/CODEX-PROMPT.md. Every implementing agent, including ChatGPT using the Talvora Dev/Admin connector and Codex when the user authorizes it, must load and follow that file **together with this AGENTS.md** before making a repository change. The user does not need to paste the prompt again in subsequent sessions.
+
+- AGENTS.md remains the authoritative implementation and safety contract; the stored prompt supplies the required ChatGPT bootstrap, daily shortcut and special-request workflows. A specific-card, review, status, question-answer, audit or deployment template applies only when the user invokes that workflow.
+- For a new ChatGPT + Talvora chat, first use talvora_agent_brief if available; otherwise read AGENTS.md lines 1-140 and run scripts/Get-CodexContext.ps1 via Talvora, then load this permanent prompt. Use Talvora tools directly; never delegate to Codex or Claude without the user's explicit permission in that chat.
+- The ChatGPT Project custom-instructions snippet in the stored prompt is a bootstrap option, **not** evidence that project-level settings have been changed. If the agent cannot access these repository instructions, it must not claim to have followed them.
+
 ## WHO MUST FOLLOW THESE RULES
 
 These rules bind **every implementing agent** that changes this repository, identically:
