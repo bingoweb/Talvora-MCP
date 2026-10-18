@@ -53,7 +53,7 @@ The current locked package set includes:
 - `Microsoft.Extensions.Logging.Abstractions 10.0.12`
 - `Microsoft.Extensions.Options 10.0.12`
 - `Microsoft.Extensions.Primitives 10.0.12`
-- `Microsoft.NET.ILLink.Tasks 10.0.12`
+- `Microsoft.NET.ILLink.Tasks 10.0.13`
 - `Microsoft.VisualStudio.SolutionPersistence 1.0.52`
 - `System.Composition 10.0.12`
 - `System.Composition.AttributedModel 10.0.12`
