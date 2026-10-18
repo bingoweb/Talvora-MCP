@@ -32,6 +32,8 @@ $surface = [IO.File]::ReadAllText(
     (Join-Path $root 'src\Talvora.Shared\TalvoraMcpToolSurfacePolicy.cs'))
 $workflow = [IO.File]::ReadAllText(
     (Join-Path $root '.github\workflows\windows-ci.yml'))
+$qualityGate = [IO.File]::ReadAllText(
+    (Join-Path $root 'scripts\Invoke-QualityGate.ps1'))
 
 $checks = [ordered]@{
     ToolsAppearInManifest = (
@@ -143,9 +145,10 @@ $checks = [ordered]@{
         $surface.Contains('ExpectedAdministrationToolCount = 88') -and
         $surface.Contains('ExpectedSharedToolCount = 51')
     )
-    DedicatedCiGateExists = (
-        $workflow.Contains('./tests/CodexCliIntegrationSourceRegression.ps1') -and
-        $workflow.Contains('--codex-integration-policy-only')
+    UnifiedCiGateIncludesPolicy = (
+        $workflow.Contains('./scripts/Invoke-QualityGate.ps1 -Scope Full') -and
+        $qualityGate.Contains('--codex-integration-policy-only') -and
+        $qualityGate.Contains('Get-ChildItem -LiteralPath (Join-Path $repoRoot ''tests'') -File -Filter ''*.ps1''')
     )
 }
 

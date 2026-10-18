@@ -29,7 +29,9 @@ $result = [pscustomobject]@{
     )
     RollbackRestoresCurrentStateBytes = (
         $rollback -match 'current\.json' -and
-        $rollback -match 'File\.ReadAllBytesAsync' -and
+        $rollback -match 'ReadInstallerUserStateBytesAsync' -and
+        $rollback -match 'ReadExactlyAsync' -and
+        $rollback -match 'MaximumInstallerUserStateFileBytes' -and
         $rollback -match 'File\.Move\(' -and
         $rollback -match 'overwrite:\s*true' -and
         $rollback -match 'Flush\(flushToDisk:\s*true\)'

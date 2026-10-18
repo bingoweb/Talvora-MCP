@@ -59,112 +59,11 @@ jobs:
           cache: true
           cache-dependency-path: '**/packages.lock.json'
 
-      - name: Restore locked dependency graph
+      - name: Validate build and all test suites (including SourceEdit)
         shell: pwsh
         run: |
-          dotnet restore Talvora.slnx --locked-mode --nologo
-          if ($LASTEXITCODE -ne 0) { throw 'Locked solution restore failed.' }
-
-          dotnet restore src/Talvora.Installer/Talvora.Installer.csproj --locked-mode --nologo
-          if ($LASTEXITCODE -ne 0) { throw 'Locked installer restore failed.' }
-
-      - name: Build non-payload projects
-        shell: pwsh
-        run: |
-          dotnet build Talvora.slnx -c Release --no-restore --nologo
-          if ($LASTEXITCODE -ne 0) { throw 'Canonical solution build failed.' }
-
-      - name: Parse PowerShell scripts
-        shell: pwsh
-        run: |
-          $errorsFound = @()
-          foreach ($script in Get-ChildItem scripts -Filter '*.ps1') {
-            $tokens = $null
-            $errors = $null
-            [Management.Automation.Language.Parser]::ParseFile($script.FullName, [ref]$tokens, [ref]$errors) | Out-Null
-            if ($errors.Count) { $errorsFound += $errors }
-          }
-          if ($errorsFound.Count) {
-            $errorsFound | Format-List | Out-Host
-            throw 'PowerShell parse failed.'
-          }
-
-      - name: Reject WinGet
-        shell: pwsh
-        run: |
-          $hits = @(
-            & git grep -n -I -i -E '(^|[^A-Za-z0-9_])winget(\.exe)?([^A-Za-z0-9_]|$)' -- src scripts TALVORA-KUR.cmd TALVORA-BUSINESS-KUR.cmd
-          )
-          if ($LASTEXITCODE -notin 0, 1) {
-            throw "git grep failed with exit code $LASTEXITCODE."
-          }
-          if ($hits.Count -gt 0) {
-            $hits | ForEach-Object { Write-Error $_ }
-            throw 'WinGet is forbidden. Use Chocolatey.'
-          }
-          # git grep returns 1 when there are no matches; do not let the
-          # GitHub pwsh wrapper treat that expected result as step failure.
-          exit 0
-
-      - name: Validate source contracts
-        shell: pwsh
-        run: |
-          & ./scripts/Validate-Context7Gate.ps1
-          if (-not $?) { throw 'Context7 quality gate failed.' }
-
-          & ./scripts/Validate-ProjectDeliveryGate.ps1
-          if (-not $?) { throw 'Project delivery gate failed.' }
-
-          & ./tests/ModernizationPolicyRegression.ps1
-          if (-not $?) { throw 'Modernization policy regression failed.' }
-
-          & ./tests/ThirdPartyNoticesSourceRegression.ps1
-          if (-not $?) { throw 'Third-party notices regression failed.' }
-
-          & ./tests/TunnelClientV016IntegrationSourceRegression.ps1
-          if (-not $?) { throw 'Tunnel-client v0.0.16 integration regression failed.' }
-
-          & ./tests/StorageMaintenanceSourceRegression.ps1
-          if (-not $?) { throw 'Storage maintenance regression failed.' }
-
-          & ./tests/StorageMaintenanceBehaviorRegression.ps1
-          if (-not $?) { throw 'Storage maintenance behavior regression failed.' }
-
-          & ./tests/ControlCenterUiResponsivenessSourceRegression.ps1
-          if (-not $?) { throw 'Control Center UI responsiveness regression failed.' }
-
-          & ./tests/PenpotOnDemandSourceRegression.ps1
-          if (-not $?) { throw 'Penpot on-demand regression failed.' }
-
-          & ./tests/NativeInstallerSourceRegression.ps1
-          if (-not $?) { throw 'Native installer source regression failed.' }
-
-          & ./tests/CodexCliIntegrationSourceRegression.ps1
-          if (-not $?) { throw 'Codex CLI integration regression failed.' }
-
-          foreach ($test in @(
-            './tests/FileListMetadataRegression.ps1',
-            './tests/KnowledgeSearchScanRegression.ps1',
-            './tests/RuntimeIdentityCacheRegression.ps1',
-            './tests/RuntimeMetadataCacheRegression.ps1',
-            './tests/SmokeKnowledgeRootsIsolationRegression.ps1',
-            './tests/ProcessRunnerRegression.ps1'
-          )) {
-            & $test
-            if (-not $?) { throw "Regression failed: $test" }
-          }
-
-      - name: Validate Codex CLI behavior
-        shell: pwsh
-        run: |
-          dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-build -- '--codex-integration-policy-only'
-          if ($LASTEXITCODE -ne 0) { throw 'Codex CLI behavior regression failed.' }
-
-      - name: Validate desktop notification behavior
-        shell: pwsh
-        run: |
-          dotnet run --project tests/Talvora.Notification.Regression/Talvora.Notification.Regression.csproj -c Release --no-build --nologo
-          if ($LASTEXITCODE -ne 0) { throw 'Desktop notification behavior regression failed.' }
+          & ./scripts/Invoke-QualityGate.ps1 -Scope Full
+          if ($LASTEXITCODE -ne 0) { throw 'Unified quality gate failed.' }
 
       - name: Start and verify current MCP surface
         shell: pwsh
@@ -192,17 +91,6 @@ jobs:
           finally {
             Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
           }
-
-      - name: Validate ChatGPT Business bootstrap
-        shell: pwsh
-        run: |
-          $script = (Resolve-Path './scripts/Configure-ChatGPT-Business.ps1').Path
-          & $script -SelfTest
-          if (-not $?) { throw 'Business bootstrap self-test failed.' }
-
-          $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-          & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script -SelfTest
-          if ($LASTEXITCODE -ne 0) { throw 'Windows PowerShell 5.1 Business bootstrap self-test failed.' }
 
       - name: Build canonical native installer
         shell: pwsh
@@ -236,6 +124,20 @@ jobs:
           # Hosted runners do not provide the durable interactive-user session required by the full smoke.
           dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release --no-build -- '--surface-policy-live' 'http://127.0.0.1:7676'
           if ($LASTEXITCODE -ne 0) { throw 'Installed MCP surface smoke failed.' }
+
+      - name: Validate optional signed-in desktop installation
+        shell: pwsh
+        run: |
+          # This integration fixture needs a real interactive Windows logon.
+          # Hosted CI runners generally do not provide one.
+          $desktopUser = (Get-CimInstance Win32_ComputerSystem).UserName
+          if ([string]::IsNullOrWhiteSpace($desktopUser)) {
+            Write-Host 'SKIP NativeInstallerRuntime: no signed-in interactive desktop.'
+          }
+          else {
+            & ./tests/NativeInstallerRuntimeRegression.ps1
+            if (-not $?) { throw 'Installed desktop runtime regression failed.' }
+          }
 
       - name: Clean service test
         if: always()
