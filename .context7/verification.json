@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-18T12:57:35Z",
-  "scope": "E2: evidence-backed MCP tool result de-duplication. Codex prioritizes non-null structuredContent; ChatGPT custom plugins expose structuredContent and content to the model; Claude Code reports show structuredContent precedence when both are present. Preserve error text and unstructured results; use MCP C# SDK CallToolResult and request filters. Historical evidence preserved.",
+  "verifiedAtUtc": "2026-10-18T13:29:43Z",
+  "scope": "Planning-only review of blocked E3, S1, Q6 and N1; official MCP C# SDK tool metadata/error handling, ASP.NET HostFiltering and WPF dispatcher/notification behavior checked. No Talvora runtime changes; N1 draft was rolled back after a real IPC protocol regression. Historical evidence preserved.",
   "libraries": [
     {
       "libraryId": "/websites/learn_microsoft_en-us_windows_win32_api",
@@ -33,7 +33,7 @@
     },
     {
       "libraryId": "/dotnet/aspnetcore.docs",
-      "verified": "2026-10-11 Context7 query checked the official ASP.NET Core Minimal APIs docs: MapGet can bind HttpContext and the request CancellationToken and can return Results.Json. Talvora EmbeddedMcpIntegrationHealth.Map returns a read-only JSON envelope with schemaVersion and integration states; downstream UI consumes the endpoint using an explicitly bounded HttpClient."
+      "verified": "2026-10-11 Context7 query checked the official ASP.NET Core Minimal APIs docs: MapGet can bind HttpContext and the request CancellationToken and can return Results.Json. Talvora EmbeddedMcpIntegrationHealth.Map returns a read-only JSON envelope with schemaVersion and integration states; downstream UI consumes the endpoint using an explicitly bounded HttpClient. 2026-10-18 S1 review: official ASP.NET Core Kestrel host filtering documentation confirms AllowedHosts restricted to localhost/127.0.0.1/[::1] rejects foreign Host with HTTP 400 when HostFiltering middleware is enabled. Host filtering does not establish the Penpot browser Origin; S1 remains blocked pending explicit origin evidence."
     },
     {
       "libraryId": "/dotnet/docs",
@@ -57,7 +57,7 @@
     },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "Current official C# SDK stateless HTTP guidance confirms ConfigureSessionOptions runs per request and can replace the request-local ToolCollection using current HttpContext data such as route/path. Talvora keeps one canonical implementation set and uses /mcp/dev and /mcp/admin only as request-local discovery/invocation views; the new explicit Shared contract changes membership policy, not transport or runtime privilege. 2026-10-18 E2 Context7 verifies AddCallToolFilter wraps the original async CallToolResult and the SDK defines settable Content (IList<ContentBlock>), StructuredContent (JsonElement?) and IsError (bool?). The filter preserves StructuredContent and isError, changes text blocks only for successful non-null structured output, and leaves all other content blocks untouched."
+      "verified": "Current official C# SDK stateless HTTP guidance confirms ConfigureSessionOptions runs per request and can replace the request-local ToolCollection using current HttpContext data such as route/path. Talvora keeps one canonical implementation set and uses /mcp/dev and /mcp/admin only as request-local discovery/invocation views; the new explicit Shared contract changes membership policy, not transport or runtime privilege. 2026-10-18 E2 Context7 verifies AddCallToolFilter wraps the original async CallToolResult and the SDK defines settable Content (IList<ContentBlock>), StructuredContent (JsonElement?) and IsError (bool?). The filter preserves StructuredContent and isError, changes text blocks only for successful non-null structured output, and leaves all other content blocks untouched. 2026-10-18 E3/Q6: McpServerTool signatures generate optional-parameter defaults and schemas. AIFunctionMcpServerTool.InvokeAsync converts non-McpException tool exceptions to generic IsError tool results before outer call-tool filters can classify the original types; Q6 requires an invocation-layer change or a revised acceptance."
     },
     {
       "libraryId": "/websites/learn_microsoft_en-us",
@@ -85,10 +85,11 @@
     },
     {
       "libraryId": "/dotnet/wpf",
-      "verified": "Current WPF guidance confirms Dispatcher operations are explicitly awaitable through DispatcherOperation.Task/GetAwaiter and application shutdown follows defined window-closing semantics. Talvora notification regressions therefore isolate independent STA/WPF behaviors into separate deterministic runs with explicit completion signaling and bounded thread-exit checks instead of coupling unrelated rendering work to one shared timing budget."
+      "verified": "Current WPF guidance confirms Dispatcher operations are explicitly awaitable through DispatcherOperation.Task/GetAwaiter and application shutdown follows defined window-closing semantics. Talvora notification regressions therefore isolate independent STA/WPF behaviors into separate deterministic runs with explicit completion signaling and bounded thread-exit checks instead of coupling unrelated rendering work to one shared timing budget. 2026-10-18 N1 review: status-to-view rendering is dispatched through the WPF UI thread; N1 copy deck cannot emit an empty success Message because Talvora DesktopProgressProtocol.IsValidMessage explicitly rejects whitespace-only messages. The draft was rolled back; no new WPF UI copy was invented."
     }
   ],
   "vendorSources": [
+    "2026-10-18 blocked-card reviews: Model Context Protocol C# SDK tools and filters https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md and https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/filters.md ; ASP.NET Core host filtering https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/host-filtering ; WPF Dispatcher async scheduling https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/WindowsBase/System/Windows/Threading/DispatcherOperation.cs . Evidence recorded in docs/codex/PROPOSALS.md; no runtime change.",
     "2026-10-18 E2 Codex official upstream source via Context7 /openai/codex: https://github.com/openai/codex/blob/main/protocol/src/models.rs , as_function_call_output_payload uses structured_content when present and not null; normal text blocks are not included in model output in that branch.",
     "2026-10-18 E2 OpenAI official ChatGPT plugin reference and MCP guidance: https://developers.openai.com/plugins/reference (both structuredContent and content are model-visible) and https://developers.openai.com/api/docs/mcp (serialized text mirror recommended for compatibility). This optimized path is limited to the three supported clients documented by E2; text-only or error results retain their content.",
     "2026-10-18 E2 Claude Code context and vendor-repository reports: https://github.com/anthropics/claude-code/blob/main/mods/types/claude-code.d.ts (both MCP result fields supported), https://github.com/anthropics/claude-code/issues/54737 and https://github.com/anthropics/claude-code/issues/55677 (reproducible model seeing only structuredContent when both are supplied; reported behavior, not a formal guarantee).",

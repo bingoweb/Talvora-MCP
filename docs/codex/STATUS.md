@@ -34,11 +34,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] E5 — Context helper and gate output minimal (extends K1)
 - [~] E1 — Codex sees only the Talvora tools it uses (live Codex session check deferred by user)
 - [~] E2 — Stop sending every result twice (Codex live acceptance deferred by user)
-- [ ] E3 — Lean defaults for high-frequency tools
-- [ ] S1 — Reject foreign Host/Origin (DNS rebinding)
+- [?] E3 — Lean defaults for high-frequency tools (waiting for Claude: P-1)
+- [?] S1 — Reject foreign Host/Origin (waiting for Claude: P-2)
 - [-] S2 — Local MCP caller authentication (user decision Q1: no)
-- [ ] Q6 — Tell the calling agent what went wrong (opaque tool errors)
-- [ ] N1 — Worklog: correct states, titles, reasons; no duplication
+- [?] Q6 — Tell the calling agent what went wrong (waiting for Claude: P-3)
+- [?] N1 — Worklog: correct states, titles, reasons; no duplication (waiting for Claude: P-4)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context
 - [ ] N3 — Worklog: real facts from results
 - [ ] N3b — Worklog: code terminal real, complete, persistent
@@ -84,10 +84,14 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Open questions
 
-(none)
+- P-1 — E3 tool file scope and default/full shape mismatch; see docs/codex/PROPOSALS.md.
+- P-2 — S1 Penpot browser origin cannot be proven from the checked sources; see docs/codex/PROPOSALS.md.
+- P-3 — Q6 tool exceptions are swallowed by the MCP SDK before the requested filter; see docs/codex/PROPOSALS.md.
+- P-4 — N1 requires approved nonempty success text or a protocol change; see docs/codex/PROPOSALS.md.
 
 ## Log
 
+- 2026-10-18 — Blocked E3/S1/Q6/N1 without runtime modifications. P-1: E3 listed DeveloperTools.Files.cs but talvora_list is in FileTools.cs; P-2: S1 Penpot browser origin unavailable; P-3: Q6 SDK handles tool exceptions before outer filters; P-4: N1 no-copy filler conflicts with IPC's nonempty Message validation. N1 test proved RED; attempted fix compiled 0 warnings but hit existing IPC validation; partial source/test changes fully reverted. Context7: /modelcontextprotocol/csharp-sdk, /dotnet/aspnetcore.docs, /dotnet/wpf. Installed runtime remains b79ac3e; baseline Fast gate 13/13, Hepsi geçti. Next N2 depends on N1 decisions.
 - 2026-10-18 — E2: replace duplicate text with one short marker only for successful non-null structured results; structured JSON and non-text blocks unchanged; isError/only-text/null-JSON preserved. Fixture and installed-live smoke RED before code/deploy; in-process targeted smoke GREEN. Source: Context7 /openai/codex and /modelcontextprotocol/csharp-sdk; vendor sources in .context7/verification.json.
   | Client | Model receives when both fields exist | Evidence |
   |---|---|---|
