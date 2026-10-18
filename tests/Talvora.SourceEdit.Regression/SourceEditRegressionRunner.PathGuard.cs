@@ -399,4 +399,117 @@ internal static partial class SourceEditRegressionRunner
             await File.ReadAllTextAsync(destination),
             "The guarded edited-move destination content is incorrect.");
     }
+
+    internal static async Task RunDirectoryGuardContractsAsync()
+    {
+        await PathGuardBlocksDeleteParentRenameAsync();
+        await PathGuardBlocksMoveParentRenameAsync();
+        await PathGuardBlocksNewAddParentRenameAsync();
+        await PathGuardBlocksUpdateParentRenameAsync();
+        await PathGuardBlocksEditedMoveParentRenameAsync();
+    }
+    internal static async Task DirectoryIdentitySharingWithExternalProcessAsync()
+    {
+        await using var fixture = await TestWorkspace.CreateAsync();
+        await fixture.WriteUtf8Async("k2-probe.txt", "before\n");
+        var source = fixture.PathInWorkspace("k2-probe.txt");
+        var revision = await RevisionAsync(fixture.CreateEngine(), source);
+        var processRoot = Path.Combine(
+            Path.GetTempPath(),
+            "TalvoraK2Sharing-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(processRoot);
+        var scriptPath = Path.Combine(processRoot, "hold.ps1");
+        var readyPath = Path.Combine(processRoot, "ready");
+        var releasePath = Path.Combine(processRoot, "release");
+        await File.WriteAllTextAsync(
+            scriptPath,
+            """
+            param([string] $Target, [string] $Ready, [string] $Release)
+            $ErrorActionPreference = 'Stop'
+            Add-Type -TypeDefinition @'
+            using System;
+            using System.Runtime.InteropServices;
+            public static class K2DirectoryHandle
+            {
+                [DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
+                public static extern IntPtr Open(string path, uint access, uint share, IntPtr security, uint disposition, uint flags, IntPtr template);
+                [DllImport("kernel32.dll", SetLastError = true)]
+                [return: MarshalAs(UnmanagedType.Bool)]
+                public static extern bool CloseHandle(IntPtr handle);
+            }
+            '@
+            $handle = [K2DirectoryHandle]::Open($Target, 0x00010080, 7, [IntPtr]::Zero, 3, 0x02000000, [IntPtr]::Zero)
+            if ($handle -eq [IntPtr](-1)) { throw "Cannot hold external directory handle, Win32 $([Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
+            try {
+                [IO.File]::WriteAllText($Ready, 'ready')
+                while (-not [IO.File]::Exists($Release)) { Start-Sleep -Milliseconds 25 }
+            }
+            finally {
+                if (-not [K2DirectoryHandle]::CloseHandle($handle)) { throw 'CloseHandle failed.' }
+            }
+            """);
+        var start = new System.Diagnostics.ProcessStartInfo("pwsh")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardError = true,
+        };
+        foreach (var argument in new[]
+        {
+            "-NoProfile", "-NonInteractive", "-File",
+            scriptPath, fixture.Root, readyPath, releasePath,
+        })
+        {
+            start.ArgumentList.Add(argument);
+        }
+
+        using var child = System.Diagnostics.Process.Start(start)
+            ?? throw new InvalidOperationException("External handle holder did not start.");
+        try
+        {
+            for (var attempt = 0; attempt < 200 && !File.Exists(readyPath); attempt++)
+            {
+                if (child.HasExited)
+                {
+                    throw new InvalidOperationException(
+                        "External directory handle setup failed: " +
+                        await child.StandardError.ReadToEndAsync());
+                }
+
+                await Task.Delay(40);
+            }
+
+            Assert(File.Exists(readyPath), "External directory handle never became ready.");
+            var result = await fixture.CreateEngine().ApplyEditsAsync(
+                fixture.Root,
+                NewTransactionId(),
+                [Update("k2-probe.txt", revision, 0, 0, 0, 6, "after", "before")],
+                true,
+                CancellationToken.None);
+            Assert(
+                result.Success,
+                "Directory identity was blocked by a concurrent external reader: " +
+                (result.Error?.Message ?? "unknown error"));
+            AssertEqual(
+                "after\n",
+                await File.ReadAllTextAsync(source),
+                "Concurrent directory reader interfered with a source edit.");
+        }
+        finally
+        {
+            await File.WriteAllTextAsync(releasePath, "release");
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            try
+            {
+                await child.WaitForExitAsync(timeout.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                child.Kill(entireProcessTree: true);
+                await child.WaitForExitAsync();
+            }
+
+            Directory.Delete(processRoot, recursive: true);
+        }
+    }
 }

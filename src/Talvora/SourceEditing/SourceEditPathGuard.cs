@@ -12,6 +12,8 @@ internal sealed class SourceEditPathGuard : IDisposable
     private const uint OpenExisting = 3;
     private const uint FileFlagBackupSemantics = 0x02000000;
     private const uint FileFlagOpenReparsePoint = 0x00200000;
+    private const int FileIdInfoClass = 18;
+    private const int SharingViolation = 32;
 
     private readonly List<SafeFileHandle> handles = [];
     private readonly Dictionary<string, SafeFileHandle> directoryHandles =
@@ -638,40 +640,58 @@ internal sealed class SourceEditPathGuard : IDisposable
         string path,
         bool denyDeleteShare)
     {
+        // Identity probes never request content access and share all operations.
+        // The commit guard still blocks external parent renames if possible.
         var desiredAccess =
-            FileReadAttributes |
-            (denyDeleteShare ? DeleteAccess : 0);
+            denyDeleteShare ? FileReadAttributes | DeleteAccess : 0u;
         var share =
             FileShare.Read |
-            FileShare.Write;
-        if (!denyDeleteShare)
-        {
-            share |= FileShare.Delete;
-        }
+            FileShare.Write |
+            (denyDeleteShare ? FileShare.None : FileShare.Delete);
 
-        var handle =
-            CreateFileW(
-                path,
-                desiredAccess,
-                share,
-                IntPtr.Zero,
-                OpenExisting,
-                FileFlagBackupSemantics |
-                FileFlagOpenReparsePoint,
-                IntPtr.Zero);
-        if (handle.IsInvalid)
+        for (var attempt = 0; attempt <= 3; attempt++)
         {
+            var handle =
+                CreateFileW(
+                    path,
+                    desiredAccess,
+                    share,
+                    IntPtr.Zero,
+                    OpenExisting,
+                    FileFlagBackupSemantics |
+                    FileFlagOpenReparsePoint,
+                    IntPtr.Zero);
+            if (!handle.IsInvalid)
+            {
+                return handle;
+            }
+
             var error = Marshal.GetLastWin32Error();
             handle.Dispose();
+
+            if (error == SharingViolation && attempt < 3)
+            {
+                Thread.Sleep(50 << attempt);
+                continue;
+            }
+
+            if (error == SharingViolation && denyDeleteShare)
+            {
+                // A concurrent actor already holding DELETE access must not
+                // prevent identity verification. A shared metadata-only
+                // handle still confirms volume and 128-bit identity.
+                return OpenDirectory(path, denyDeleteShare: false);
+            }
+
             throw new SourceEditDomainException(
                 SourceEditCodes.Conflict,
-                $"Source-edit directory identity could not be opened with stable sharing semantics. Win32 error {error}.",
+                $"Klasörün kimliği doğrulanamadı. Başka bir uygulama klasörü geçici olarak kilitlemiş olabilir.",
                 path,
                 innerException:
                     new Win32Exception(error));
         }
 
-        return handle;
+        throw new InvalidOperationException("Unreachable source-edit directory open.");
     }
 
     private static SourceEditDirectoryIdentity ReadAndValidateIdentity(
@@ -710,17 +730,34 @@ internal sealed class SourceEditPathGuard : IDisposable
                 path);
         }
 
+        if (!GetFileInformationByHandleEx(
+                handle,
+                FileIdInfoClass,
+                out var fileIdInfo,
+                (uint)Marshal.SizeOf<FileIdInfo>()))
+        {
+            var error = Marshal.GetLastWin32Error();
+            throw new SourceEditDomainException(
+                SourceEditCodes.IoFailure,
+                $"Kaynak düzenleme klasörünün kimlik bilgileri okunamadı.",
+                path,
+                innerException: new Win32Exception(error));
+        }
+
         var actual =
             new SourceEditDirectoryIdentity(
                 Path.TrimEndingDirectorySeparator(
                     Path.GetFullPath(path)),
-                info.VolumeSerialNumber,
+                fileIdInfo.VolumeSerialNumber,
                 ((ulong)info.FileIndexHigh << 32) |
-                info.FileIndexLow);
+                info.FileIndexLow,
+                new Guid(fileIdInfo.FileId));
         if (expected is not null &&
             (actual.VolumeSerialNumber !=
              expected.VolumeSerialNumber ||
-             actual.FileId != expected.FileId))
+             (expected.FileId128 is { } expected128
+                 ? actual.FileId128 != expected128
+                 : actual.FileId != expected.FileId)))
         {
             throw new SourceEditDomainException(
                 SourceEditCodes.Conflict,
@@ -763,6 +800,15 @@ internal sealed class SourceEditPathGuard : IDisposable
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    private struct FileIdInfo
+    {
+        public ulong VolumeSerialNumber;
+
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+        public byte[] FileId;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     private struct IoStatusBlock
     {
         public IntPtr Status;
@@ -790,6 +836,16 @@ internal sealed class SourceEditPathGuard : IDisposable
     private static extern bool GetFileInformationByHandle(
         SafeFileHandle file,
         out ByHandleFileInformation fileInformation);
+
+    [DllImport(
+        "kernel32.dll",
+        SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetFileInformationByHandleEx(
+        SafeFileHandle file,
+        int informationClass,
+        out FileIdInfo fileInformation,
+        uint bufferSize);
 
     [DllImport(
         "kernel32.dll",

@@ -268,8 +268,9 @@ internal sealed record SourceEditPreparedFile(
 
 internal sealed record SourceEditDirectoryIdentity(
     string Path,
-    uint VolumeSerialNumber,
-    ulong FileId);
+    ulong VolumeSerialNumber,
+    ulong FileId,
+    Guid? FileId128 = null);
 
 internal sealed record SourceEditPreparedTransaction(
     NormalizedSourceEditChangeSet ChangeSet,

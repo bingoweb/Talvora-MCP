@@ -19,6 +19,7 @@ internal static partial class SourceEditRegressionRunner
             ("injected-commit-failure-rollback", InjectedCommitFailureAsync),
             ("crash-recovery-rollback", CrashRecoveryRollbackAsync),
             ("crash-recovery-preserves-unapplied-external-add", CrashRecoveryPreservesUnappliedExternalAddAsync),
+            ("directory-identity-external-reader", DirectoryIdentitySharingWithExternalProcessAsync),
             ("path-guard-blocks-delete-parent-rename", PathGuardBlocksDeleteParentRenameAsync),
             ("path-guard-blocks-move-parent-rename", PathGuardBlocksMoveParentRenameAsync),
             ("path-guard-blocks-new-add-parent-rename", PathGuardBlocksNewAddParentRenameAsync),

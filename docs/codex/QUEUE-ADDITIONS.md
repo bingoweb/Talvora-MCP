@@ -4,6 +4,12 @@
 
 ## Pending
 
+(none)
+
+## Applied
+
+### Applied 2026-10-18
+
 ### 2026-10-18 — Token economy cards (ROADMAP Phase E)
 
 Insert these lines into "Agent queue" **directly after the K2 line** (before S1), in this order:
@@ -16,7 +22,3 @@ Insert these lines into "Agent queue" **directly after the K2 line** (before S1)
 ```
 
 E4 needs no queue line (it is part of N3b).
-
-## Applied
-
-(none)

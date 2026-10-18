@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-18T11:50:57Z",
-  "scope": "K1 CI follow-up: defer HealthHandle service-handle regression until the Windows installer has created and started Talvora. Preserve all quality suites and Context7 PowerShell exit-code contracts; historical framework evidence retained below.",
+  "verifiedAtUtc": "2026-10-18T12:06:08Z",
+  "scope": "K2: Win32 safe directory identity probes (zero desired data/delete access and shared read/write/delete), FILE_ID_INFO 128-bit directory IDs, bounded sharing-violation retries, and separate existing rename-protection handles when compatible. Historical evidence preserved.",
   "libraries": [
+    {
+      "libraryId": "/websites/learn_microsoft_en-us_windows_win32_api",
+      "verified": "2026-10-18 K2: Microsoft CreateFileW accepts zero dwDesiredAccess for metadata queries, FILE_FLAG_BACKUP_SEMANTICS for directory handles, FILE_FLAG_OPEN_REPARSE_POINT for reparse-safe inspection and FILE_SHARE_READ|WRITE|DELETE. GetFileInformationByHandleEx(FileIdInfo) provides FILE_ID_INFO with a 64-bit volume serial and 128-bit ID (unlike the ReFS-unsafe 64-bit legacy file index). Sharing violations use bounded 50/100/200 ms retries; exclusive rename protection remains attempted before a metadata-only fallback."
+    },
     {
       "libraryId": "/microsoftdocs/powershell-docs",
       "verified": "2026-10-18 K1: Official PowerShell docs via Context7 confirm native commands require explicit LASTEXITCODE handling; pwsh -File returns 1 on terminating script exceptions and 0 on normal script completion. Language.Parser.ParseFile reports syntax diagnostics in the errors reference. Unified quality gate checks child-process exit codes, parses scripts, captures diagnostics and attributes failures to the named test."
@@ -85,6 +89,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-18 Microsoft Win32 official API checked with Context7 /websites/learn_microsoft_en-us_windows_win32_api: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew ; https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfileinformationbyhandleex ; https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_info . Use directory backup-semantic, non-follow reparse, metadata-only handles and compare full FILE_ID_INFO.",
     "2026-10-18 Microsoft PowerShell 7 current official references verified through Context7 /microsoftdocs/powershell-docs: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_error_handling and https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables . Native failures require explicit LASTEXITCODE checks; direct script exception behavior and Parser.ParseFile diagnostics guide the executable quality gate.",
     "2026-10-18 Microsoft https://learn.microsoft.com/en-us/dotnet/core/tools/global-json and https://learn.microsoft.com/en-us/dotnet/core/install/upgrade verified: exact SDK plus rollForward=disable keeps SDK and locked dependency graph in lockstep.",
     "2026-10-18 GitHub https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request and https://docs.github.com/en/webhooks/webhook-events-and-payloads#push verified: PR head SHA differs from synthetic merge SHA; push before/after describe the event commit range.",

@@ -101,5 +101,17 @@ if (args.Contains(
     return;
 }
 
+if (args.Contains("--directory-guard-contract-only", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunDirectoryGuardContractsAsync();
+    Console.WriteLine("TALVORA DIRECTORY GUARD CONTRACT REGRESSION GREEN");
+    return;
+}
+if (args.Contains("--directory-identity-sharing-only", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.DirectoryIdentitySharingWithExternalProcessAsync();
+    Console.WriteLine("TALVORA DIRECTORY IDENTITY SHARING REGRESSION GREEN");
+    return;
+}
 await SourceEditRegressionRunner.RunAllAsync();
 Console.WriteLine("TALVORA SOURCE EDIT REGRESSION GREEN");
