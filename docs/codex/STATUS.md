@@ -1,6 +1,6 @@
 # Talvora — Codex status
 
-> Single live status for Codex work. English. Newest Log entry on top.
+> Single live status for agent work (Codex or ChatGPT via Talvora). English. Newest Log entry on top.
 > Cards: `docs/codex/ROADMAP.md` (fixes, K/S/R/Q), `docs/codex/DESIGN-WORKLOG.md` (desktop worklog N1–N8), `docs/codex/DESIGN-CONTROL-CENTER.md` (Control Center UI1–UI8).
 > Protocol: AGENTS.md → **CONTINUE PROTOCOL**. Shortcut for the user: "Talvora'ya devam et".
 
@@ -13,7 +13,8 @@
 | Branch | `main` only. Do not create branches. Do not touch `dependabot/*`. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | `8b1a611` (2026-10-17). Claude's next audit diffs from here; tag it `audit/2026-10-18` before the first card commit. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-18-02` = `dd4ee5b`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
 | Install path | `scripts/Deploy-Windows-Installer.ps1` (SYSTEM task; when called from inside Talvora it does not wait — poll `/healthz.sourceCommit`). Never run `Reset-And-Install.ps1` (destructive until R3). |
@@ -34,11 +35,19 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] E5 — Context helper and gate output minimal (extends K1)
 - [~] E1 — Codex sees only the Talvora tools it uses (live Codex session check deferred by user)
 - [~] E2 — Stop sending every result twice (Codex live acceptance deferred by user)
-- [?] E3 — Lean defaults for high-frequency tools (waiting for Claude: P-1)
-- [?] S1 — Reject foreign Host/Origin (waiting for Claude: P-2)
+- [ ] D1 — Make the rename-protection fallback visible (audit 2026-10-18 (2))
+- [ ] D3 — Keep the text of structured failures (audit 2026-10-18 (2))
+- [ ] D4 — Run service-dependent gate checks locally when the service is up (audit 2026-10-18 (2))
+- [ ] D2 — Compare legacy directory identities with the legacy serial (audit 2026-10-18 (2))
+- [ ] A2 — `talvora_agent_brief` (rules + current card for any agent)
+- [ ] A1 — `talvora_user_run` + keep file ownership + one-time owner repair
+- [ ] A3 — Work-contract gate in `talvora_git_run`
+- [ ] E3 — Lean defaults for high-frequency tools (P-1 decided: no `talvora_list` row)
+- [ ] S1 — Reject foreign Host/Origin (P-2 decided: Penpot static routes exempt from Origin guard)
 - [-] S2 — Local MCP caller authentication (user decision Q1: no)
-- [?] Q6 — Tell the calling agent what went wrong (waiting for Claude: P-3)
-- [?] N1 — Worklog: correct states, titles, reasons; no duplication (waiting for Claude: P-4)
+- [ ] Q6 — Schema validation of tool arguments before invocation (P-3 decided, re-scoped)
+- [ ] Q6b — Research: supported exception-translation mechanism (proposal only, no product code)
+- [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4 decided: message fallbacks)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context
 - [ ] N3 — Worklog: real facts from results
 - [ ] N3b — Worklog: code terminal real, complete, persistent
@@ -84,13 +93,15 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Open questions
 
-- P-1 — E3 tool file scope and default/full shape mismatch; see docs/codex/PROPOSALS.md.
-- P-2 — S1 Penpot browser origin cannot be proven from the checked sources; see docs/codex/PROPOSALS.md.
-- P-3 — Q6 tool exceptions are swallowed by the MCP SDK before the requested filter; see docs/codex/PROPOSALS.md.
-- P-4 — N1 requires approved nonempty success text or a protocol change; see docs/codex/PROPOSALS.md.
+(none — P-1…P-4 decided in `docs/codex/PROPOSALS.md` → "Decided")
+
+## Findings for Claude
+
+(The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
 
+- 2026-10-18 — Claude audit (2) of `8b1a611..dd4ee5b` (executor: ChatGPT via Talvora): local Full gate 49/0 `Hepsi geçti.`, CI green since `fca44fe`, installed `b79ac3e`, K2 verified live (apply_patch add/delete in this repo committed). Findings → D1–D4 + A1; proposals P-1…P-4 decided (E3, S1, Q6 re-scoped + Q6b, N1 unblocked). New Phase A (A1–A3) makes ChatGPT+Talvora follow the same contract as Codex; AGENTS.md generalised to "the agent", trailer is now `Card: <ID>`. Next audit baseline: tag `audit/2026-10-18-02` = `dd4ee5b`.
 - 2026-10-18 — Blocked E3/S1/Q6/N1 without runtime modifications. P-1: E3 listed DeveloperTools.Files.cs but talvora_list is in FileTools.cs; P-2: S1 Penpot browser origin unavailable; P-3: Q6 SDK handles tool exceptions before outer filters; P-4: N1 no-copy filler conflicts with IPC's nonempty Message validation. N1 test proved RED; attempted fix compiled 0 warnings but hit existing IPC validation; partial source/test changes fully reverted. Context7: /modelcontextprotocol/csharp-sdk, /dotnet/aspnetcore.docs, /dotnet/wpf. Installed runtime remains b79ac3e; baseline Fast gate 13/13, Hepsi geçti. Next N2 depends on N1 decisions.
 - 2026-10-18 — E2: replace duplicate text with one short marker only for successful non-null structured results; structured JSON and non-text blocks unchanged; isError/only-text/null-JSON preserved. Fixture and installed-live smoke RED before code/deploy; in-process targeted smoke GREEN. Source: Context7 /openai/codex and /modelcontextprotocol/csharp-sdk; vendor sources in .context7/verification.json.
   | Client | Model receives when both fields exist | Evidence |

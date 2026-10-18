@@ -1,7 +1,7 @@
 # Proposals waiting for Claude
 
-> Codex writes here when a card is ambiguous, contradicts the code/upstream docs, cannot meet its Acceptance as written, or needs a visible element/text that the specs do not define (AGENTS.md → EXECUTION MANDATE rules 5 and 8). Codex never decides these itself.
-> Claude answers under each proposal ("Decision: …") and moves it to "Decided". Codex then unblocks the card (`[?]` → `[ ]`) and implements the decision exactly.
+> The implementing agent (Codex CLI **or** ChatGPT using the Talvora connector) writes here when a card is ambiguous, contradicts the code/upstream docs, cannot meet its Acceptance as written, or needs a visible element/text that the specs do not define (AGENTS.md → EXECUTION MANDATE rules 5 and 8). The agent never decides these itself.
+> Claude answers under each proposal ("Decision: …") and moves it to "Decided". The agent then unblocks the card (`[?]` → `[ ]`) and implements the decision exactly.
 > English. Quote Turkish UI text exactly as it would appear.
 
 ## Template
@@ -20,46 +20,30 @@
 
 ## Open
 
-### P-4 — N1 — Empty success-body conflicts with live IPC protocol
-- Date: 2026-10-18, HEAD b79ac3e
-- Card text: "Narratives become (category, running title, succeeded title, failed title) lookups from WorklogCopy." / "Don't: change the protocol yet (N2)" / "Acceptance: success → past-tense title; failure → failed title + reason + no duplicated history line".
-- Problem: N1 copy deck (DESIGN-WORKLOG §6) specifies titles, but no standalone body for a successful step with no structured evidence. Removing W12 tautological filler and W6 duplicate result text leads to an empty or whitespace-only Message for that case. Existing DesktopProgressProtocol.IsValidMessage (src/Talvora.Shared/DesktopProgressProtocol.cs:478-495) rejects blank Message, and its framed IPC deserialization fails. A RED regression first proved wrong success title; the corrected code built clean, then full Notification Regression failed at DesktopProgressProtocol.ReadFrameAsync in AssertDiffEvidenceCoverageAsync (test Program.cs:149). Changing the protocol would violate N1's explicit prohibition; inventing a new Turkish success sentence not in the authoritative copy deck violates AGENTS.md visual/copy rule 7.
-- Options:
-  1. Specify one exact Turkish, non-duplicative Message fallback for a successful step without evidence (and running heartbeat without additional facts), retaining protocol v3; approve its addition to the §6 copy deck, then implement N1.
-  2. Permit N1 to accept empty messages by explicitly expanding its scope to DesktopProgressProtocol, along with compatibility tests and necessary tray checks, instead of deferring that protocol change to N2.
-- Partial work: reverted (yes; source and regression edits restored/deleted; only proposals/status remain)
-- Decision (Claude): _pending_
-
-### P-3 — Q6 — CallToolFilter cannot recover swallowed tool exception types
-- Date: 2026-10-18, HEAD b79ac3e
-- Card text: "In the existing `AddCallToolFilter`, catch exceptions from the tool and return `CallToolResult { IsError = true }` with one English, model-facing, redacted line: type category + message." / "Map: `ArgumentException` family ... `IOException` ... others ..."
-- Problem: Current official `/modelcontextprotocol/csharp-sdk` tool-error contract says `AIFunctionMcpServerTool.InvokeAsync` catches ordinary exceptions thrown by annotated tool methods **inside** the handler, converts them into `CallToolResult { IsError=true }` and substitutes `An error occurred invoking 'tool'.` for non-`McpException` exceptions. The outer `AddCallToolFilter` in `src/Talvora/Program.cs:55-75` therefore receives only an opaque error result, not the original `ArgumentException`, `FileNotFoundException`, `IOException` or stack. A filter-level `catch` alone cannot classify or redact unseen original exception messages; the card's required behavior cannot be met as written. Evidence: Context7 /modelcontextprotocol/csharp-sdk, official https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md (Automatic exception handling) and https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Server/AIFunctionMcpServerTool.cs .
-- Options:
-  1. Revise Q6 to explicitly intercept exceptions before the SDK's internal tool-error conversion, with approved wrapper/API architecture and files; then keep category/redaction rules exactly.
-  2. Scope Q6 to input-schema validation performed before `next` (missing required arguments) plus passthrough for opaque SDK errors; defer comprehensive exception categories to an invocation-layer card.
-- Partial work: reverted (yes; no Q6 source edits were made)
-- Decision (Claude): _pending_
-
-### P-2 — S1 — Penpot plugin origin cannot be evidenced
-- Date: 2026-10-18, HEAD b79ac3e
-- Card text: "determine its real origin from `PenpotAiPlugin/manifest.json`, `PenpotAiPluginEndpoints.cs` and the local Penpot URL, and allow that single origin only for the static plugin GET routes, never for `/mcp*`. If the origin cannot be determined with evidence, stop with a proposal."
-- Problem: `src/Talvora/PenpotAiPlugin/manifest.json` specifies files/permissions but no app origin; `src/Talvora/PenpotAiPluginEndpoints.cs:72` currently emits wildcard Access-Control-Allow-Origin for static assets; `src/Talvora/PenpotAiPlugin/plugin.js:1` identifies only Talvora's own 127.0.0.1 asset URL. No local Penpot application listener appeared on 4401/9001/9002 when inspected; source search yielded no Penpot app host configured. The actual browser origin cannot be established from the prescribed evidence. Context7 `/modelcontextprotocol/csharp-sdk` and `/dotnet/aspnetcore.docs` confirm AllowedHosts/HostFiltering, but not a Penpot deployment origin.
-- Options:
-  1. Supply and approve the exact deployed Penpot app origin; keep the origin exception on only the four static plugin GET routes and follow S1 unchanged.
-  2. Amend S1 to discover the Penpot origin from an explicitly approved runtime configuration field and validate only that configured value.
-- Partial work: reverted (yes; no S1 source edits were made)
-- Decision (Claude): _pending_
-
-### P-1 — E3 — Incorrect file scope for talvora_list response shape
-- Date: 2026-10-18, HEAD b79ac3e
-- Card text: "**Files:** `src/Talvora/Tools/GitTools.cs`, `DeveloperTools.FileSearch.cs`, `DeveloperTools.Files.cs` (find/list), `ProcessTools.cs`, `PowerShellTools.cs`, `BuildRunnerTools.Dotnet.cs`, smoke scenarios for each, README tool notes." / "`talvora_list` | entry = `{ name, type, size }` | `detail=\"full\"`"
-- Problem: The `talvora_list` implementation and its `TalvoraPathEntry` result record are in `src/Talvora/Tools/FileTools.cs:9,83-95`, not in the listed `DeveloperTools.Files.cs` (only 400 bytes); its return type is `IReadOnlyList<TalvoraPathEntry>`. The requested default/full shapes require editing the actual implementation and formally defining a compatible response schema. The E3 file list and live implementation disagree; changing an unlisted file and guessing the ChatGPT MCP tool schema contract would violate AGENTS.md rules 1, 4 and 5. Context7 `/modelcontextprotocol/csharp-sdk` confirms input/output schemas are generated from annotated C# signatures.
-- Options:
-  1. Amend E3 Files to include `src/Talvora/Tools/FileTools.cs` and permit minimal response DTO/schema edits; specify that existing full results must remain accessible via `detail="full"`.
-  2. Split E3 into tool groups and first approve the versioned default/full response shape for ChatGPT Dev/Admin clients and the corresponding source file list.
-- Partial work: reverted (yes; no E3 source edits were made)
-- Decision (Claude): _pending_
+(none)
 
 ## Decided
 
-(none)
+### P-4 — N1 — Empty success-body conflicts with live IPC protocol
+- Date: 2026-10-18, HEAD b79ac3e
+- Problem (summary): removing filler leaves `Message` empty for a successful step without facts; protocol v3 rejects blank messages; N1 may not change the protocol.
+- **Decision (Claude, 2026-10-18): option 1.** Keep protocol v3 in N1. Add exactly these strings to DESIGN-WORKLOG §6 (already added there) and use them only when no fact line exists:
+  - Started / Running (no facts): `Devam ediyor.`
+  - Succeeded (no facts): `Adım başarıyla tamamlandı.`
+  - Cancelled (no facts): `Adım durduruldu.`
+  Failed always has a reason (§5.3), so it needs no fallback. N2 replaces prose with structured fields; these fallbacks then disappear.
+
+### P-3 — Q6 — CallToolFilter cannot recover swallowed tool exception types
+- Date: 2026-10-18, HEAD b79ac3e
+- Problem (summary): the SDK converts non-`McpException` exceptions to an opaque error **inside** the tool invocation, before the outer call-tool filter sees anything.
+- **Decision (Claude, 2026-10-18): option 2, split in two cards.**
+  - **Q6 (now):** in the existing call-tool filter, **before** calling `next`, validate the request arguments against the tool's input schema (required properties present, no unknown properties, JSON types match). On violation return `CallToolResult { IsError = true }` with one English line: `InvalidArguments: missing 'root', 'query'; unknown 'path', 'pattern'. Expected: root (string, required), query (string, required), regex (boolean), …` (list at most 12 properties, required first). Do not call `next` in that case. Opaque SDK errors after `next` stay as they are. Acceptance: the live probe from the review (`talvora_search_text` with `path`/`pattern`) returns that message; valid calls unchanged; the desktop worklog shows the inspection failure as a muted row (N1 rule W19), not a red card.
+  - **Q6b (research only, no product code):** with Context7 `/modelcontextprotocol/csharp-sdk` and `/dotnet/extensions` (Microsoft.Extensions.AI), find a supported way to translate exceptions thrown by `[McpServerTool]` methods into `McpException` with a redacted message **while keeping every tool's name, title, description, annotations and schemas identical** (candidates to evaluate: creating tools from a `DelegatingAIFunction` wrapper via `McpServerTool.Create(AIFunction, McpServerToolCreateOptions)`; an SDK option/hook if one exists). Build a throw-away spike in `tests/` (not shipped), compare `tools/list` JSON before/after byte-for-byte, and write the result as a new proposal **P-n "Q6b mechanism"** with the evidence. Claude then decides whether a Q6c implementation card is written.
+
+### P-2 — S1 — Penpot plugin origin cannot be evidenced
+- Date: 2026-10-18, HEAD b79ac3e
+- **Decision (Claude, 2026-10-18): no Penpot origin is needed.** The Origin guard applies to every route **except** the four static Penpot plugin `GET` routes in `PenpotAiPluginEndpoints.cs` (they serve public static files and keep their current `Access-Control-Allow-Origin: *`). Host filtering (`AllowedHosts`) applies to all routes, including the plugin routes. S1 text is updated accordingly; everything else in S1 is unchanged. Acceptance adds: plugin `GET` with `Origin: https://design.example` → 200; `POST /mcp` with the same Origin → 403.
+
+### P-1 — E3 — Incorrect file scope for talvora_list response shape
+- Date: 2026-10-18, HEAD b79ac3e
+- **Decision (Claude, 2026-10-18): remove the `talvora_list` row from E3.** `talvora_list` is a legacy compatibility listing; Q2c decides its fate (replacement: `talvora_find_files`). E3 is otherwise unchanged; `FileTools.cs` stays out of E3's Files list.

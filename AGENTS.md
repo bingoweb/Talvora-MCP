@@ -1,87 +1,111 @@
 # Talvora engineering rules
 
+## WHO MUST FOLLOW THESE RULES
+
+These rules bind **every implementing agent** that changes this repository, identically:
+
+- **Codex** (CLI/desktop), and
+- **ChatGPT** in a chat that uses the **Talvora** connector (Dev or Admin surface) — the user often works this way.
+
+"The agent" below means whichever of them is working. Nothing in a chat, a prompt, a memory or a previous session relaxes these rules; only Claude's cards/decisions in `docs/codex/*` and the user's explicit answers recorded in `docs/codex/STATUS.md` can change them. The commit trailer is `Card: <ID>` (older commits use `Codex-Card:`).
+
+**ChatGPT via Talvora — mandatory mechanics** (Codex uses its own shell for the same steps):
+
+| Protocol need | ChatGPT must use |
+|---|---|
+| Start of every session | `talvora_agent_brief {workspaceRoot: "C:\\Users\\tayla\\Talvora-MCP"}` once A2 exists; until then `talvora_read_text_range` on `AGENTS.md` lines 1–140 and `talvora_run_powershell` → `pwsh -NoProfile -File scripts/Get-CodexContext.ps1` (workingDirectory = repo root). |
+| Reading code | `talvora_search_text` (narrow `root`, `maxMatches` ≤ 50) then `talvora_read_source` with a line window (≤ 120 lines). Never read whole large files. |
+| Editing source/docs | `talvora_apply_patch` only (read revisions first with `talvora_read_source`). Never `talvora_write_text`, `talvora_replace_text`, `talvora_append_text`, `talvora_write_bytes` or PowerShell `Set-Content` for repository files. |
+| Build / tests / gate | Until A1 exists: `talvora_run_powershell` with `pwsh -NoProfile -File scripts/Invoke-QualityGate.ps1 -Scope Fast` (or the card's targeted command). After A1: `talvora_user_run` (runs as the signed-in user, so no SYSTEM-owned `obj/`, `bin/` or `.git/index`). |
+| Git status/diff/log | `talvora_git_status`, `talvora_git_diff`, `talvora_git_log` with small limits. |
+| Commit / push | `talvora_git_run` only (it enforces the delivery gate and, after A3, the work contract). Never commit or push through `talvora_run_powershell`/`talvora_run_process`. |
+| Deploy | `talvora_run_powershell` → `scripts/Deploy-Windows-Installer.ps1`, then poll `/healthz` with `talvora_http_request`. |
+| Report to the user | Turkish, short (protocol step 11). |
+
+ChatGPT must not use Codex/Claude delegation tools (`talvora_codex_*`, `talvora_claude_*`) to do card work unless the user explicitly asks in that chat.
+
 ## Language policy
 
 - Agent-facing documents (`docs/codex/*`, this file, code comments, commit messages, tool descriptions) are **English**.
 - Everything Talvora shows to people — Control Center, tray, desktop worklog, user-facing error messages, MCP tool **titles** — is **ordinary Turkish** with correct diacritics.
-- Codex always reports to the user in **Turkish**.
+- The agent always reports to the user in **Turkish**, with correct diacritics (also in STATUS gate lines such as `Hepsi geçti.`).
 
-## EXECUTION MANDATE — Codex implements, Claude decides (binding, highest priority)
+## EXECUTION MANDATE — the agent implements, Claude decides (binding, highest priority)
 
-The user decided (2026-10-18): Codex does **only** what Claude's cards say, **exactly** the way they say it. Claude owns every product, architecture and especially every **visual/cosmetic** decision. This section overrides any other wording in this file or in `docs/codex/*` that seems to leave room for Codex's own judgement.
+The user decided (2026-10-18): the agent does **only** what Claude's cards say, **exactly** the way they say it. Claude owns every product, architecture and especially every **visual/cosmetic** decision. This section overrides any other wording in this file or in `docs/codex/*` that seems to leave room for the agent's own judgement.
 
 **Scope**
 1. Work only on the current queue card. No "while I'm here" fixes, refactors, renames, reformatting, file moves, comment rewrites, dependency bumps or test rewrites outside the card's **Files** list. If another file must change for the card to compile or pass, change the minimum and list it in the Log with the reason.
 2. Do not start work that is not a card. Things you notice go to STATUS → "Findings for Claude" (one line each: file:line + what you saw). Do not fix them.
 3. Do not add, remove or upgrade packages, tools, services, endpoints, settings or MCP tools unless the card names them.
+4. **One card = one commit.** A follow-up fix to a card that is already committed is **not** a second commit with the same card id: write it into "Findings for Claude"; Claude turns it into a D-card. (Exception: a card's commit that fails CI may be fixed by one commit with trailer `Card: <ID>` and body line `CI follow-up: <run id>`.)
 
 **Decisions**
-4. Where a card prescribes values, names, code shape, library, algorithm, order or copy, use exactly that. Do not "improve" it.
-5. If a card is ambiguous, contradicts the code, contradicts current upstream docs (Context7), or cannot meet its Acceptance as written: **do not choose yourself**. Write the question with evidence and 1–3 options into `docs/codex/PROPOSALS.md` (template there), mark the card `[?]` in STATUS with "waiting for Claude: P-<n>", revert any partial work of that card, and continue with the next `[ ]` card.
-6. Context7/vendor docs are used to **verify** the prescribed approach and fill exact API names/versions — never to replace the prescribed approach with a different one.
+5. Where a card prescribes values, names, code shape, library, algorithm, order or copy, use exactly that. Do not "improve" it.
+6. If a card is ambiguous, contradicts the code, contradicts current upstream docs (Context7), or cannot meet its Acceptance as written: **do not choose yourself**. Write the question with evidence and 1–3 options into `docs/codex/PROPOSALS.md` (template there), mark the card `[?]` in STATUS with "waiting for Claude: P-<n>", revert any partial work of that card, and continue with the next `[ ]` card. A safety mechanism (guard, check, lock, validation) may never be weakened, bypassed or given a fallback without a proposal.
+7. Context7/vendor docs are used to **verify** the prescribed approach and fill exact API names/versions — never to replace the prescribed approach with a different one.
 
 **Design and cosmetics (zero autonomy)**
-7. Everything visible — layout, colours, fonts, sizes, spacing, radii, shadows, icons, glyphs, motion, timing, wording/Turkish copy, tooltips, empty/loading/error states, tool titles — comes **only** from `docs/codex/DESIGN-CONTROL-CENTER.md`, `docs/codex/DESIGN-WORKLOG.md` or an approved proposal. Never invent a colour, icon, animation, string, visual element or behaviour.
-8. Where the spec is silent about a **minor layout detail** (an alignment or a gap inside an element the spec defines), use only values from the spec's token scales (`Tv.Space.*`, `Tv.Radius.*`, `Tv.Type.*`, colour tokens) and list each such choice in the Log under "Design gaps filled" so Claude can audit it. Anything else that is visible and not specified (a new element, text, icon, colour, state, animation) → proposal (rule 5), never a guess.
-9. Awwwards research is **evidence only**. It must not change the spec. In `.talvora/awwwards-verification.json`, `designDecisions` must quote the spec sections being implemented (e.g. "DESIGN-WORKLOG §3.1 code terminal"), not new ideas.
-10. Every UI/worklog card ends with the before/after PNGs required by its Acceptance; Claude approves the look in the next audit.
+8. Everything visible — layout, colours, fonts, sizes, spacing, radii, shadows, icons, glyphs, motion, timing, wording/Turkish copy, tooltips, empty/loading/error states, tool titles — comes **only** from `docs/codex/DESIGN-CONTROL-CENTER.md`, `docs/codex/DESIGN-WORKLOG.md` or an approved proposal. Never invent a colour, icon, animation, string, visual element or behaviour.
+9. Where the spec is silent about a **minor layout detail** (an alignment or a gap inside an element the spec defines), use only values from the spec's token scales (`Tv.Space.*`, `Tv.Radius.*`, `Tv.Type.*`, colour tokens) and list each such choice in the Log under "Design gaps filled" so Claude can audit it. Anything else that is visible and not specified (a new element, text, icon, colour, state, animation) → proposal (rule 6), never a guess.
+10. Awwwards research is **evidence only**. It must not change the spec. In `.talvora/awwwards-verification.json`, `designDecisions` must quote the spec sections being implemented (e.g. "DESIGN-WORKLOG §3.1 code terminal"), not new ideas.
+11. Every UI/worklog card ends with the before/after PNGs required by its Acceptance; Claude approves the look in the next audit.
 
 Violations found in Claude's audits become D-cards that revert the unrequested change.
 
 ## TOKEN ECONOMY (work cheaply, never at the cost of correctness)
 
-Every file read, command output, MCP tool schema and screenshot costs tokens. These rules never override a card's Acceptance: if a rule would skip required evidence, the card wins.
+Every file read, command output, MCP tool schema and screenshot costs tokens. These rules never override a card's Acceptance: if a rule would skip required evidence, the card wins. ChatGPT applies them through the Talvora tools listed in "WHO MUST FOLLOW THESE RULES".
 
 **A. Read only what the card needs**
-1. **Context helper first.** Run `pwsh scripts/Get-CodexContext.ps1` (or `-Card <ID>`) and work from its output. Never open a whole `docs/codex/*.md` file. Before K1 exists, print a single card with:
-   `$id='S1'; $f='docs/codex/ROADMAP.md'; $l=Get-Content $f -Encoding UTF8; $s=($l | Select-String "^### $id " | Select -First 1).LineNumber; $e=($l[$s..($l.Count-1)] | Select-String '^#{2,3} ' | Select -First 1).LineNumber; $l[($s-1)..($s+$e-2)]` (N cards: `$f='docs/codex/DESIGN-WORKLOG.md'`; UI cards: `docs/codex/DESIGN-CONTROL-CENTER.md`, then read only the spec sections the card cites).
+1. **Context helper first.** Run `pwsh scripts/Get-CodexContext.ps1` (or `-Card <ID>`) — ChatGPT: `talvora_agent_brief` (after A2) — and work from its output. Never open a whole `docs/codex/*.md` file.
 2. **STATUS without history:** read `docs/codex/STATUS.md` up to `## Log` plus the newest Log entry only.
 3. **AGENTS.md once per session.** Do not re-read it between steps of the same card.
-4. **Locate, then read a window.** `git grep -n "<symbol>"` / `rg -n`, then read ±40 lines (`Get-Content f | Select -Skip <n-41> -First 80`). Read a whole file only if it is < 250 lines or the card rewrites most of it.
+4. **Locate, then read a window.** `git grep -n "<symbol>"` / `rg -n` (ChatGPT: `talvora_search_text`), then read ±40 lines. Read a whole file only if it is < 250 lines or the card rewrites most of it.
 5. **Never open in full:** `packages.lock.json`, `BUG-AUDIT.md`, `HANDOFF.md`, `MCP-CONTROL-CENTER-TODO.md`, `SOURCE-EDIT-ENGINE-ARCHITECTURE.md`, `docs/archive/**`, `THIRD-PARTY-NOTICES.md`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Misc.cs` (2 500+ lines), `src/Talvora/SourceEditing/RoslynSemanticEditEngine.cs` (2 200+ lines), `src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs` (1 800+ lines), images, `bin/`, `obj/`, `artifacts/`. Grep them.
 6. **Do not re-read a file you just edited** to check it; re-read only the hunk if a build/test fails there.
 7. **Talvora MCP calls:** always pass small limits (`maxMatches`, `maxResults`, `lineCount`, `maxCommits`) and the narrowest `root`; never list/search the whole repo or a drive root.
 
 **B. Build and test cheaply**
-1. **Inner loop = one project / one suite.** Build only the touched project: `dotnet build src/<Project>/<Project>.csproj -c Release --no-restore -v q -nologo -clp:ErrorsOnly`. Run only the affected suite/scenario (e.g. `dotnet run --project tests/Talvora.Notification.Regression -c Release --no-build`, or one `tests/*.ps1`).
+1. **Inner loop = one project / one suite.** Build only the touched project: `dotnet build src/<Project>/<Project>.csproj -c Release --no-restore -v q -nologo -clp:ErrorsOnly`. Run only the affected suite/scenario.
 2. **Restore once per card** (`--locked-mode`), not before every build.
-3. **Full gate once per card**, at the end: `pwsh scripts/Invoke-QualityGate.ps1` (prints only the summary and failing steps). Never twice in a row without a code change in between.
-4. **Tails only:** `... 2>&1 | Select -Last 40`. Look further up only when the tail points there.
+3. **Full gate once per card**, at the end: `pwsh scripts/Invoke-QualityGate.ps1`. Never twice in a row without a code change in between.
+4. **Tails only:** `... 2>&1 | Select -Last 40` (ChatGPT: put this inside the PowerShell script and set `maxCapturedCharactersPerStream` ≤ 8000).
 5. **Installer/deploy once per card**, only for cards whose Acceptance requires the installed runtime; read only the last 20 lines of its output unless it failed; poll `/healthz` (small JSON) instead of reading logs.
-6. **Screenshots:** only the PNGs the card requires, produced by the preview/smoke harness, cropped to the element; verify text/structure with UI Automation or numbers, not extra screenshots.
+6. **Screenshots:** only the PNGs the card requires, produced by the preview/smoke harness, cropped to the element.
 
 **C. Write cheaply**
 1. **STATUS Log entry ≤ 8 lines:** what changed, gate last line + counts, measured numbers, installed commit, anything open. No pasted code or command output.
-2. **Commit message:** subject + ≤ 6 body lines + `Codex-Card:` trailer.
+2. **Commit message:** subject + ≤ 6 body lines + `Card: <ID>` trailer.
 3. **Report to the user (Turkish):** the protocol step 11 items in short sentences; `git diff --stat`, never the full diff.
 4. **Do not echo** large files, JSON or logs into chat, STATUS or Gitea; summarise in one line with the key numbers.
 
 **D. Avoid wasted work**
 1. One card per message; do not look ahead into later cards.
-2. If the same approach fails a third time, stop and write a proposal (EXECUTION MANDATE rule 5) instead of burning tokens.
+2. If the same approach fails a third time, stop and write a proposal (EXECUTION MANDATE rule 6) instead of burning tokens.
 3. Do not regenerate lock files, generated assets or notices unless the card says so.
 
-## QUEUE ADDITIONS (how Claude adds cards while Codex is working)
+## QUEUE ADDITIONS (how Claude adds cards while the agent is working)
 
 Before selecting an item (CONTINUE PROTOCOL step 5), if `docs/codex/QUEUE-ADDITIONS.md` contains entries under "## Pending", insert each listed queue line into `docs/codex/STATUS.md` → "Agent queue" exactly at the position it names, move the entry to "## Applied" with the date, and include both files in the next card's commit. Do not change the wording of the queue lines.
 
 ## CONTINUE PROTOCOL ("Talvora'ya devam et")
 
-When the user says "Talvora'ya devam et", "Talvora devam", "sıradaki adım" or similar, execute this sequence without asking questions. **One queue item per message**, then stop and report.
+When the user says "Talvora'ya devam et", "Talvora devam", "sıradaki adım" or similar — in Codex **or** in a ChatGPT chat with the Talvora connector — execute this sequence without asking questions. **One queue item per message**, then stop and report.
 
 1. **Location:** work in `C:\Users\tayla\Talvora-MCP`. If git reports "dubious ownership", prefix git commands with `-c safe.directory=C:/Users/tayla/Talvora-MCP`; do not change global git config.
 2. **Sync:** `git fetch origin`. Dirty tree: continue it only if it belongs to STATUS "In progress"; otherwise stop and ask. `git pull --ff-only origin main`; never force, reset --hard, rebase or rewrite history.
-3. **Context:** follow the **TOKEN ECONOMY** section of this file. Apply pending **QUEUE ADDITIONS** before step 5.
-4. **Baseline:** run the quality gate (`pwsh scripts/Invoke-QualityGate.ps1 -Scope Fast`; before K1: locked restore + Release build). If it is red at the start, this message's task is to make it green (exception: the in-progress item is K0/K1).
+3. **Context:** follow the **TOKEN ECONOMY** section of this file. Apply pending **QUEUE ADDITIONS** before step 5. Read "## Decided" in `docs/codex/PROPOSALS.md` for decisions that affect the selected card.
+4. **Baseline:** run the quality gate (`pwsh scripts/Invoke-QualityGate.ps1 -Scope Fast`). If it is red at the start, this message's task is to make it green.
 5. **Select:** the first `[ ]` item in `docs/codex/STATUS.md` → "Agent queue" (skip `[?]`), or the "In progress" item. Write "In progress: <item>" into STATUS first.
-6. **Implement:** follow the card's **Why / Files / Do / Don't / Acceptance** exactly (`docs/codex/ROADMAP.md`; N cards in `docs/codex/DESIGN-WORKLOG.md`; UI cards in `docs/codex/DESIGN-CONTROL-CENTER.md`). Test first (red), then code (green). When a card prescribes a technique, values or code shape, use it; if it cannot work as written, record an open question with evidence and stop — do not improvise. Context7 before relying on any framework/SDK/CLI behaviour.
+6. **Implement:** follow the card's **Why / Files / Do / Don't / Acceptance** exactly (`docs/codex/ROADMAP.md`; N cards in `docs/codex/DESIGN-WORKLOG.md`; UI cards in `docs/codex/DESIGN-CONTROL-CENTER.md`; decisions in `docs/codex/PROPOSALS.md`). Test first (red), then code (green). If it cannot work as written, write a proposal (EXECUTION MANDATE rule 6) — do not improvise. Context7 before relying on any framework/SDK/CLI behaviour.
 7. **Verify:** quality gate → last line **`Hepsi geçti.`**; runtime-affecting cards also deploy with `scripts/Deploy-Windows-Installer.ps1` and verify `/healthz.sourceCommit` + installed smoke; UI cards attach both-theme PNGs.
-8. **Record:** tick the item (`[x]`, or `[~]` + a "User queue" line when user evidence is needed), add a Log entry (English, newest on top: what changed, tests, Context7 IDs, installed commit), reset "In progress" to `(none)`; mirror the evidence to the active Gitea issue.
-9. **Commit:** exactly one commit per item: `<type>(<area>): <summary>` + body + trailer `Codex-Card: <ID>`.
+8. **Record:** tick the item (`[x]`, or `[~]` + a "User queue" line when user evidence is needed), add a Log entry (English, newest on top: what changed, tests, Context7 IDs, installed commit, executor = Codex or ChatGPT), reset "In progress" to `(none)`; mirror the evidence to the active Gitea issue.
+9. **Commit:** exactly one commit per item: `<type>(<area>): <summary>` + body + trailer `Card: <ID>`.
 10. **Push:** only while STATUS "Fixed facts" says `Push: Authorized`; then `git push origin main` and `git push github main`, never force. On failure retry once, then report.
 11. **Report to the user in Turkish, short:** item done · changed files · gate last line · deploy/installed commit · push status · next item · what the user must do (if anything).
 
-**Stop conditions** (report in Turkish and wait): agent queue empty (list the user queue); acceptance impossible without breaking a rule (write an open question); a `[?]` dependency is required; the work needs history rewrite, repo visibility/settings changes, reading/moving anything in `C:\ProgramData\Talvora\Secrets`, or running `scripts/Reset-And-Install.ps1` before R3.
+**Stop conditions** (report in Turkish and wait): agent queue empty (list the user queue); acceptance impossible without breaking a rule (write a proposal); a `[?]` dependency is required; the work needs history rewrite, repo visibility/settings changes, reading/moving anything in `C:\ProgramData\Talvora\Secrets`, or running `scripts/Reset-And-Install.ps1` before R3.
 
 ## Modern-by-default policy
 

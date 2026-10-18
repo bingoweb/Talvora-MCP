@@ -48,7 +48,7 @@
   3. Targeted tests for the card + the always-on set (`scripts/Invoke-QualityGate.ps1`, introduced in K1).
   4. Runtime/packaging/shared-infrastructure cards: canonical installer (`scripts/Deploy-Windows-Installer.ps1`) + exact-installed smoke; record the installed `sourceCommit` from `/healthz`.
   5. `.context7/verification.json` refreshed when the gate requires it; Awwwards evidence for UI cards.
-  6. `docs/codex/STATUS.md` updated (queue tick + one Log entry, English), one commit with trailer `Codex-Card: <ID>`; mirror the evidence to the active Gitea issue.
+  6. `docs/codex/STATUS.md` updated (queue tick + one Log entry, English), one commit with trailer `Card: <ID>`; mirror the evidence to the active Gitea issue.
 - User-facing strings: ordinary Turkish, no tool names / exit codes / stack traces / transport terms. Errors say what went wrong, what is protected, what happens next. Example: `"Bu istek Talvora'ya yerel bir uygulamadan gelmediği için reddedildi. Sistem güvende; bağlantınızı Talvora ayarlarından yeniden yapın."`
 - Tool **descriptions** stay English (model-facing). Tool **titles** (human-facing in client approval dialogs) are short Turkish.
 - Never print, copy or commit secrets. Never read files in `C:\ProgramData\Talvora\Secrets` content; listing names and ACLs is enough.
@@ -119,7 +119,7 @@
   builder.Configuration["AllowedHosts"] = "localhost;127.0.0.1;[::1]";
   // WebApplication adds HostFiltering automatically when AllowedHosts is set; verify with Context7 and a test.
   ```
-- Origin guard middleware registered **before** `MapMcp` and before the Penpot/health endpoints:
+- Origin guard middleware registered **before** `MapMcp` and before the health endpoints. **Exception (decision P-2):** the four static Penpot plugin `GET` routes in `PenpotAiPluginEndpoints.cs` are exempt from the Origin guard and keep `Access-Control-Allow-Origin: *`; host filtering still applies to them. Acceptance addition: plugin `GET` with `Origin: https://design.example` → 200; `POST /mcp` with the same Origin → 403.
   ```csharp
   internal static class LoopbackRequestGuard
   {
@@ -402,6 +402,8 @@ Use it in both places; verify the option list against `git help git` for the ins
 
 ### Q6 — Tell the calling agent what went wrong (opaque tool errors)
 
+> **Re-scoped by decision P-3 (2026-10-18).** Implement only the schema-validation part described in PROPOSALS.md → P-3 (Q6), and the research card Q6b. The original text below is kept as background; where it conflicts with P-3, P-3 wins.
+
 **Why:** verified live: calling `talvora_search_text` with wrong argument names returns only `An error occurred invoking 'talvora_search_text'.` (`isError: true`). The MCP SDK hides messages of non-`McpException` exceptions; Talvora throws 351 plain exceptions vs 20 `McpException`s, so Codex/ChatGPT cannot self-correct and retries blindly.
 
 **Files:** `src/Talvora/Program.cs` (call-tool filter), new `src/Talvora/ToolErrorTranslator.cs`, smoke scenario, `SECURITY.md` (what is exposed).
@@ -511,7 +513,6 @@ Zero-capability-loss rule (user decision Q2) applies: every reduced default stay
 | `talvora_git_status` | `entries` = parsed objects `{ path, origPath?, index, worktree }` (XY codes from porcelain v2; no object ids); no `raw` | `includeRaw=true` |
 | `talvora_git_log` | `maxCommits=20`; commit = `{ shortCommit, date (yyyy-MM-dd HH:mm), subject }` | `maxCommits=<n>`, `detail="full"` (today's fields) |
 | `talvora_find_files` | `maxResults=200`; entry = `{ path (relative to root), size }` | `detail="full"` (today's fields), `maxResults=0` |
-| `talvora_list` | entry = `{ name, type, size }` | `detail="full"` |
 | `talvora_search_text` | `maxMatches=100`, `maxLineChars=300` | explicit values (0 = server maximum, as today) |
 | `talvora_run_process` / `talvora_run_powershell` | captured stdout/stderr returned as **head 2 000 + tail 14 000 chars** with a marker line `… {n} characters omitted …` between them (model-facing text, English) when longer; totals in `standardOutputTotalCharacters` | `maxOutputCharacters=<n>` |
 | `talvora_dotnet_build` / `talvora_dotnet_test` | add `summary` = `{ errors, warnings, testsPassed?, testsFailed?, failedTests[≤10], diagnostics[≤20] {file,line,code,message} }`; `standardOutput` limited like run_process | `fullOutput=true` |
@@ -563,4 +564,112 @@ Card details (Files / Do / Don't / Acceptance) are in the design spec, section "
 
 ## Audit fixes (external audits by Claude)
 
-_Empty. When the user asks Claude to check Codex's work, Claude appends an audit table here with D-cards (D1, D2, …). D-cards go to the top of the agent queue._
+D-cards go to the top of the agent queue. Newest audit first.
+
+### Audit 2026-10-18 (2) · range `audit/2026-10-18 (8b1a611)..dd4ee5b` · executor: ChatGPT via Talvora · result: FIXES REQUIRED
+
+Cards delivered: K0, K1, K2, E5 `[x]`; E1, E2 `[~]` (live Codex session deferred by the user); E3, S1, Q6, N1 blocked with proposals P-1…P-4 (all four now decided in `PROPOSALS.md`).
+
+Verified by Claude: local `Invoke-QualityGate.ps1 -Scope Full` → `49 kontrol, 0 hata` / `Hepsi geçti.`; GitHub CI green for every commit since `fca44fe` (the K1 CI miss was fixed by `fca44fe`); installed runtime `/healthz.sourceCommit = b79ac3e` (E2); `global.json` pinned `10.0.402` + `rollForward: disable`, ILLink 10.0.13 locks; Codex registration on the workstation is `/mcp/dev` + 8 `enabled_tools`, other TOML untouched (`config.toml.bak` kept); **K2 fixed live**: `talvora_apply_patch` add + delete of a probe file in this repository both `committed` through the installed service (probe removed, tree clean); E2 marker live: `"Structured result: see structuredContent."`; proposals were well-evidenced and partial work was reverted as required — good discipline.
+
+| # | Severity | Type | Where | Finding | Fix card |
+|---|---|---|---|---|---|
+| 1 | MEDIUM | rule / safety | `src/Talvora/SourceEditing/SourceEditPathGuard.cs` `OpenDirectory` (sharing-violation branch, `return OpenDirectory(path, denyDeleteShare: false)`) | K2 asked for identity probing with bounded retries. The implementation additionally **falls back to a shared handle when the rename-protecting (deny-delete) open fails**, i.e. the commit guard silently stops protecting the parent directory against renames. A safety mechanism was weakened without a proposal and without any signal in the result. | D1 |
+| 2 | LOW | bug | same file, `ReadAndValidateIdentity`; `SourceEditModels.cs` `SourceEditDirectoryIdentity` | Volume serial changed from the 32-bit `BY_HANDLE_FILE_INFORMATION` value to the 64-bit `FILE_ID_INFO` value. Identities persisted by the previous version (journals pending across an upgrade: `FileId128 == null`) are now compared against a different serial → spurious conflict/quarantine during recovery. | D2 |
+| 3 | LOW | bug | `src/Talvora/ToolResultTextPolicy.cs` | Structured **failures** that are not `isError` (`success:false`, `timedOut:true`, non-zero `exitCode`) also lose their text (verified live: a rejected `apply_patch` returned only the marker). Text-reading clients and logs then see no failure at all. | D3 |
+| 4 | LOW | tooling | `scripts/Invoke-QualityGate.ps1:127-132` | `HealthHandle` and `NativeInstallerRuntime` are **always** skipped locally, even when the service is installed and answering (verified: both `SKIP` while `/healthz` was up). Local gate never exercises them. | D4 |
+| 5 | MEDIUM | robustness | repository files written through Talvora | Work done by ChatGPT through Talvora runs as **LocalSystem**: `scripts/Invoke-QualityGate.ps1`, `src/Talvora/ToolResultTextPolicy.cs`, `docs/codex/STATUS.md`, `.git/index`, `src/Talvora/bin`, `src/Talvora/obj` are now **owned by `NT AUTHORITY\SYSTEM`** (atomic replace creates a new file owned by the writer). Builds/tests also run as SYSTEM. Risk: user-context tools (Codex sandbox, Visual Studio, git) hitting ownership/ACL surprises; artefacts built with SYSTEM's environment/profile. | A1 |
+| 6 | LOW | rule | commits `f0b5f9d`+`a8d0177` (K0), `456da3f`+`fca44fe` (K1); commit bodies | Two commits per card (the K1 one was a legitimate CI follow-up; K0's second commit was a fix-up); commit bodies write `Hepsi gecti` without diacritics. Rule clarified in AGENTS.md (EXECUTION MANDATE rule 4, Language policy). No code action. | — |
+| 7 | INFO | process | E1/E2 `[~]` | Live Codex round-trip deferred by the user. When Codex is used again, the first session must confirm: `talvora_local` lists 8 tools; a read + patch of a scratch file works; a tool result arrives without duplicate JSON. | user queue U7/U8 |
+
+---
+
+## D1 — Make the rename-protection fallback visible (keep it, never silent)
+
+**Why:** audit finding 1.
+
+**Files:** `src/Talvora/SourceEditing/SourceEditPathGuard.cs`, `src/Talvora/SourceEditing/SourceEditCommitter.cs` (only to surface the warning), `src/Talvora/SourceEditing/SourceEditModels.cs` (warning code constant only), `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.PathGuard.cs`.
+
+**Do:** keep the fallback (it is what made K2 work on this repository), but record it: the guard exposes `IReadOnlyList<string> UnprotectedDirectories`; the committer adds one `SourceEditWarning(Code: "DIRECTORY_RENAME_UNPROTECTED", Message: "Another process holds delete access to '<relative dir>'; the commit continued without rename protection for that directory.", Path: <dir>)` per directory to the transaction result, and logs it once at Information level. No retry change.
+
+**Don't:** remove the fallback; change identity comparison (D2 does that).
+
+**Acceptance:** the existing external-DELETE-holder regression now also asserts exactly one `DIRECTORY_RENAME_UNPROTECTED` warning; normal commits have no such warning.
+
+## D2 — Compare legacy directory identities with the legacy serial
+
+**Why:** audit finding 2.
+
+**Files:** `SourceEditPathGuard.cs`, `SourceEditModels.cs`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.PathGuard.cs` (or `.Transaction.cs` for the journal fixture).
+
+**Do:** store both serials: `SourceEditDirectoryIdentity(Path, ulong VolumeSerialNumber, ulong FileId, Guid? FileId128 = null, uint? LegacyVolumeSerialNumber = null)`. New identities fill `VolumeSerialNumber` (FILE_ID_INFO), `FileId128` and `LegacyVolumeSerialNumber` (BY_HANDLE value). Comparison: if `expected.FileId128` is set → compare 64-bit serial + 128-bit id; else (legacy record) → compare `(uint)` BY_HANDLE serial with the stored serial and the 64-bit `FileId`.
+
+**Acceptance:** regression with a journal fixture whose identity has only the old fields (32-bit serial + 64-bit id of the real directory) recovers without conflict; a different directory with the same legacy fields still conflicts.
+
+## D3 — Keep the text of structured failures
+
+**Why:** audit finding 3.
+
+**Files:** `src/Talvora/ToolResultTextPolicy.cs`, new `src/Talvora/StructuredResultFailure.cs` (shared detector), `src/Talvora/TalvoraDesktopProgressNotifier.cs` (use the shared detector instead of its private copy), `tests/Talvora.Smoke/SmokeScenarios.ToolResultText.cs`.
+
+**Do:** move the existing detection rules from `TryDescribeStructuredFailure` (`timedOut == true`, `success == false`, numeric `exitCode != 0`, case-insensitive property names) into `StructuredResultFailure.IsFailure(JsonElement)`; `ToolResultTextPolicy.Apply` returns the result unchanged when it is a structured failure. The notifier calls the same helper (no behaviour change there).
+
+**Acceptance:** smoke: `success:false`, `timedOut:true`, `exitCode:1` results keep their original text; successful structured results still get the marker; notification regression unchanged.
+
+## D4 — Run service-dependent checks locally when the service is up
+
+**Why:** audit finding 4.
+
+**Files:** `scripts/Invoke-QualityGate.ps1`, `tests/QualityGateRegression.ps1`.
+
+**Do:** before the PowerShell regressions, probe `http://127.0.0.1:7676/healthz` (2 s timeout, no proxy). If it answers with `isWindowsService = true`: run `HealthHandleRegression.ps1`; additionally run `NativeInstallerRuntimeRegression.ps1` when an interactive user session exists (`(Get-CimInstance Win32_ComputerSystem).UserName` not empty). Otherwise keep today's `SKIP …` lines. CI behaviour unchanged (no service during the gate there).
+
+**Acceptance:** fixture tests for both branches (stubbed probe); local run on this workstation shows `PASS HealthHandle` and `PASS NativeInstallerRuntime`.
+
+---
+
+## Phase A — Same rules for ChatGPT + Talvora as for Codex
+
+The user often implements cards from a ChatGPT chat using the Talvora connector instead of Codex. These cards make Talvora itself carry and enforce the working contract, so the rules do not depend on the chat remembering them.
+
+### A2 — `talvora_agent_brief`: the project's rules and current card in one cheap call
+
+**Why:** ChatGPT does not read `AGENTS.md` by itself; reading it with generic file tools is expensive and easy to skip.
+
+**Files:** new `src/Talvora/Tools/AgentBriefTools.cs`, `src/Talvora.Shared/TalvoraToolManifest.cs`, `src/Talvora.Shared/TalvoraMcpToolSurfacePolicy.cs` (Dev surface + Full), `src/Talvora/SourceEditing/SourceEditRoutingContract.cs` (server instructions), surface/metadata smoke tests, README tool list.
+
+**Do:**
+- Tool `talvora_agent_brief { workspaceRoot: string, card?: string }`, read-only, idempotent, title **"Proje talimatlarını getir"**. Description (English, exact): "Return the binding agent rules (AGENTS.md mandate, token economy, continue protocol) and the current card for a workspace. Call this first in every session before changing files in that workspace."
+- Behaviour: resolve `workspaceRoot` (must exist). If `AGENTS.md` exists, extract the sections `## WHO MUST FOLLOW THESE RULES`, `## Language policy`, `## EXECUTION MANDATE…`, `## TOKEN ECONOMY…`, `## QUEUE ADDITIONS…`, `## CONTINUE PROTOCOL…` by heading (until the next `## `). If `scripts/Get-CodexContext.ps1` exists, run it **as the interactive user** (A1 runner; until A1 lands use `InteractiveUserProcessRunner` directly) with `-Card <card>` when given, 60 s timeout, and append its stdout. Structured result: `{ workspaceRoot, agentsSections: string, context: string, truncated: bool }`; total ≤ 60 000 characters (truncate `context` first, then sections, set `truncated`).
+- Server instructions (`SourceEditRoutingContract.ServerInstructions`): append exactly: "If a workspace contains AGENTS.md, call talvora_agent_brief for it before any change and follow its rules strictly; the rules apply to every agent, including chat assistants."
+- Surface: Dev and Full only (not Admin). Update counts/tests.
+
+**Acceptance:** smoke on this repo: sections present, context contains the first open card, size ≤ 60 000; a workspace without AGENTS.md returns empty sections and no error; tools/list shows the Turkish title.
+
+### A1 — Run builds/tests as the signed-in user and keep file ownership
+
+**Why:** audit finding 5.
+
+**Files:** new `src/Talvora/Tools/UserRunTools.cs`, `src/Talvora.Shared/InteractiveUserProcessRunner.cs` (reuse only), `src/Talvora/SourceEditing/SourceEditCommitter.cs` + `src/Talvora.Shared/AtomicFile.cs` (owner preservation), manifest/surface policy, smoke + source-edit regression.
+
+**Do:**
+1. Tool `talvora_user_run { executable, arguments[], workingDirectory, environment?, timeoutSeconds = 600, maxOutputCharacters = 16000 }` — Dev + Full surfaces, title **"Kullanıcı olarak çalıştır"**, description (English, exact): "Run an executable as the signed-in Windows user (not LocalSystem) and return exit code and bounded output. Use for builds, tests and scripts inside user workspaces." Implementation = `InteractiveUserProcessRunner.RunAsync` (no shell; arguments as a vector); output shaping exactly as E3's head 2 000 + tail rule; `success = exitCode == 0 && !timedOut`.
+2. Ownership: before replacing an existing file, capture its owner SID; after the atomic replace, set the same owner on the new file (`FileSecurity.SetOwner`, SYSTEM holds `SeRestorePrivilege` — enable it via the existing privilege helper or `AdjustTokenPrivileges`; verify with Context7 `/dotnet/docs`). New files and directories created by a source-edit transaction get the owner of the workspace root. Failure to set the owner adds a `SourceEditWarning("OWNER_NOT_PRESERVED", …)` and does not fail the commit.
+3. One-time repair on this workstation (log it, no script in the repo): as SYSTEM, `icacls "C:\Users\tayla\Talvora-MCP" /setowner "MSI\tayla" /T /C /Q`, then `git status` must still be clean.
+
+**Don't:** change `talvora_run_powershell` / `talvora_run_process` (they stay LocalSystem by design); touch files outside the workspace.
+
+**Acceptance:** smoke: `talvora_user_run` of `whoami` returns the interactive user; a source-edit replace of a user-owned file keeps the owner (regression with a temp file owned by the current user); a new file gets the workspace-root owner; after the repair, `Get-Acl` of the five files listed in finding 5 shows `MSI\tayla`.
+
+### A3 — Work-contract gate in `talvora_git_run`
+
+**Why:** the one-card-one-commit / trailer / STATUS rules must hold no matter which agent commits.
+
+**Files:** new `src/Talvora/SourceEditing/WorkContractGate.cs`, `src/Talvora/Tools/GitTools.cs` (call it for `commit`, using `GitArgumentParser` from S8 — if S8 is not done yet, implement the parser here exactly as specified in S8 and mark S8's parser part as done in the Log), new `.talvora/work-contract.json` in this repo, tests.
+
+**Do:**
+- Opt-in file `.talvora/work-contract.json`: `{ "schemaVersion": 1, "statusFile": "docs/codex/STATUS.md", "cardTrailer": "Card", "legacyCardTrailers": ["Codex-Card"], "auditTagPrefix": "audit/" }`.
+- When the repository has this file and the git subcommand is `commit`: read the message from `-m`/`-F`/`--file` arguments; refuse (structured failure, English message, nothing executed) unless (1) the message has exactly one `Card: <ID>` trailer (or a legacy one), (2) `statusFile` is staged (`git diff --cached --name-only` contains it), (3) no commit after the newest `audit/*` tag already carries the same card id — **unless** the body contains a line `CI follow-up: <run id>` (EXECUTION MANDATE rule 4 exception). `--amend` is refused in such repositories.
+- Repositories without the file are unaffected. Document honestly in `SECURITY.md`: commits made through general process/PowerShell tools are not gated.
+
+**Acceptance:** table-driven tests (valid; missing trailer; two trailers; STATUS not staged; duplicate card after the audit tag; duplicate with CI follow-up line; `--amend`; repo without contract file).

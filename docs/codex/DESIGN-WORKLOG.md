@@ -296,6 +296,8 @@ Voice: **impersonal, present-progressive for running, past for done**, no "sen/s
 | Claude job | Claude {proje} üzerinde çalışıyor | Claude görevi tamamlandı | Claude görevi tamamlanamadı |
 | Generic | İşlem yürütülüyor | İşlem tamamlandı | İşlem tamamlanamadı |
 
+Message fallbacks while protocol v3 is still in use (decision P-4; only when the step has no fact line): Started/Running `Devam ediyor.` · Succeeded `Adım başarıyla tamamlandı.` · Cancelled `Adım durduruldu.` (Failed always has a reason from §5.3.)
+
 Timeline labels = Succeeded/Failed column + optional "· {kısa olgu}". Footer: `{n} adım · {süre} · {m} dosya değişti` (omit zero parts). Overline: `BU OTURUMDA`. Expander: `Ayrıntılar`. Copy button: `Kopyala`. Pin tooltip: `Konumu sabitle` / `Otomatik konuma dön`. Close: `Kapat`.
 
 ## 7. Visual spec
