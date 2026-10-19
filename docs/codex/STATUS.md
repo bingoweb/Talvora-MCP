@@ -38,7 +38,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [?] D1 — Make the rename-protection fallback visible (waiting for Claude: P-5)
 - [?] D3 — Keep the text of structured failures (waiting for Claude: P-6)
 - [x] D4 — Run service-dependent gate checks locally when the service is up (audit 2026-10-18 (2))
-- [ ] D2 — Compare legacy directory identities with the legacy serial (audit 2026-10-18 (2))
+- [x] D2 — Compare legacy directory identities with the legacy serial (audit 2026-10-18 (2))
 - [ ] A2 — `talvora_agent_brief` (rules + current card for any agent)
 - [ ] A1 — `talvora_user_run` + keep file ownership + one-time owner repair
 - [ ] A3 — Work-contract gate in `talvora_git_run`
@@ -99,8 +99,14 @@ P-5/P-6 — D1 and D3 need scope decisions (docs/codex/PROPOSALS.md).
 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
+- scripts/Get-CodexContext.ps1:41 — `-Card D2` reports "Card D2 could not be found" although ROADMAP.md:599 contains the D2 heading; outside D2 scope, not changed.
+
 ## Log
 
+- 2026-10-19 — D2 (executor: ChatGPT via Talvora): directory identities now store BY_HANDLE DWORD serial along with FILE_ID_INFO 64-bit serial, legacy 64-bit file index and modern 128-bit ID; modern journals compare full serial + 128-bit ID, legacy journals compare the DWORD serial + 64-bit index.
+  Legacy pending-journal fixture recovered without conflict; unrelated directory using identical old identity fields was rejected. RED test build: missing legacy field; GREEN targeted build: 0 warnings/0 errors, SourceEdit regression suite passed.
+  Context7 `/websites/learn_microsoft_en-us_windows_win32_api`, official Microsoft Win32 sources in `.context7/verification.json`. Fast baseline 13/0; final Full gate 51/0, last line `Hepsi geçti.`.
+  Runtime code changed: canonical installer deployment and installed smoke follow the single commit; issue evidence will record the actual installed SHA. Next A2.
 - 2026-10-18 — D4 (executor: ChatGPT via Talvora): the local Full gate probes `/healthz` without proxy and with 2-second timeouts; runs HealthHandle for a Windows service, and NativeInstallerRuntime only with an interactive desktop. CI still skips both when no service exists.
   Fixture cases: service+desktop, headless, non-service and unreachable all green; installed HealthHandle 200 requests with +3 handles (max +25), and NativeInstallerRuntime green.
   Context7 `/microsoftdocs/powershell-docs`, official PowerShell/CIM evidence in `.context7/verification.json`. Local Fast 13/0; Full 51/0, last line `Hepsi geçti.`; installed runtime `b79ac3e` unchanged (scripts/tests only).

@@ -183,7 +183,66 @@ internal static partial class SourceEditRegressionRunner
             await File.ReadAllTextAsync(two),
             "Second file should remain in before-state before recovery.");
 
-        var recoveryEngine = fixture.CreateEngine();
+        // Recreate the pending journal with the pre-128-bit directory format.
+        // These are the real directory's BY_HANDLE serial and 64-bit file ID.
+        var recordedState = await new SourceEditTransactionStore(fixture.StateRoot)
+            .ReadStateAsync(transactionId, CancellationToken.None)
+            ?? throw new InvalidOperationException("Crash journal is missing.");
+        var legacyIdentities = (recordedState.Plan.DirectoryIdentities
+                ?? throw new InvalidOperationException("Crash journal has no directory identities."))
+            .Select(identity => new SourceEditDirectoryIdentity(
+                identity.Path,
+                identity.LegacyVolumeSerialNumber
+                    ?? throw new InvalidOperationException("BY_HANDLE serial is missing."),
+                identity.FileId))
+            .ToArray();
+        Assert(legacyIdentities.Length > 0, "Legacy journal has no directory anchors.");
+        var legacyPlan = recordedState.Plan with
+        {
+            DirectoryIdentities = legacyIdentities,
+        };
+
+        // Repoint one old identity to an unrelated directory on the same volume:
+        // its serial is the same, but its file ID must not be accepted.
+        var unrelatedDirectory = fixture.PathInWorkspace("unrelated-directory");
+        Directory.CreateDirectory(unrelatedDirectory);
+        var workspaceIdentity = legacyIdentities.Single(identity =>
+            string.Equals(identity.Path, fixture.Root, StringComparison.OrdinalIgnoreCase));
+        var wrongDirectoryPlan = legacyPlan with
+        {
+            DirectoryIdentities = [workspaceIdentity with { Path = unrelatedDirectory }],
+        };
+        var wrongDirectoryRejected = false;
+        try
+        {
+            using var unexpectedGuard = SourceEditPathGuard.AcquireJournal(wrongDirectoryPlan);
+        }
+        catch (SourceEditDomainException ex) when (ex.Code == SourceEditCodes.Conflict)
+        {
+            wrongDirectoryRejected = true;
+        }
+        Assert(wrongDirectoryRejected, "A different directory passed legacy identity validation.");
+
+        var legacyStateRoot = Path.Combine(fixture.StateRoot, "legacy-journal");
+        var legacyStore = new SourceEditTransactionStore(legacyStateRoot);
+        await legacyStore.AppendPreparedAsync(legacyPlan, CancellationToken.None);
+        await legacyStore.AppendEventAsync(
+            legacyPlan,
+            "CommitStepStarting",
+            new { index = 0 },
+            CancellationToken.None);
+        var journalFixture = await legacyStore.ReadStateAsync(
+            transactionId, CancellationToken.None)
+            ?? throw new InvalidOperationException("Legacy journal fixture did not round-trip.");
+        Assert(
+            journalFixture.Plan.DirectoryIdentities!.All(identity =>
+                identity.FileId128 is null && identity.LegacyVolumeSerialNumber is null),
+            "Legacy journal fixture unexpectedly contains modern directory fields.");
+
+        var recoveryEngine = new SourceEditEngine(new SourceEditEngineOptions
+        {
+            StateRoot = legacyStateRoot,
+        });
         await recoveryEngine.RecoverAllPendingAsync(
             CancellationToken.None);
 

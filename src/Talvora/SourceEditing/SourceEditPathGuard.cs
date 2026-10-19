@@ -751,13 +751,14 @@ internal sealed class SourceEditPathGuard : IDisposable
                 fileIdInfo.VolumeSerialNumber,
                 ((ulong)info.FileIndexHigh << 32) |
                 info.FileIndexLow,
-                new Guid(fileIdInfo.FileId));
+                new Guid(fileIdInfo.FileId),
+                info.VolumeSerialNumber);
         if (expected is not null &&
-            (actual.VolumeSerialNumber !=
-             expected.VolumeSerialNumber ||
-             (expected.FileId128 is { } expected128
-                 ? actual.FileId128 != expected128
-                 : actual.FileId != expected.FileId)))
+            (expected.FileId128 is { } expected128
+                ? actual.VolumeSerialNumber != expected.VolumeSerialNumber ||
+                  actual.FileId128 != expected128
+                : actual.LegacyVolumeSerialNumber != expected.VolumeSerialNumber ||
+                  actual.FileId != expected.FileId))
         {
             throw new SourceEditDomainException(
                 SourceEditCodes.Conflict,
