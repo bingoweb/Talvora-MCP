@@ -4,6 +4,13 @@ using static SmokeSupport;
 
 try
 {
+if (args.Length == 1 && args[0] == "--loopback-policy-live")
+{
+    await SmokeScenarios.RunLoopbackHostOriginLiveAsync();
+    Console.WriteLine("TALVORA LOOPBACK SECURITY GREEN");
+    return;
+}
+
 if (args.Length >= 1 && args[0] == "--lean-defaults-live")
 {
     await SmokeScenarios.RunLeanDefaultsLiveAsync(

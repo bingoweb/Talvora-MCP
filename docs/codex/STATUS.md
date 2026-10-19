@@ -43,7 +43,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [?] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (waiting for Claude: P-7)
 - [x] A3 — Work-contract gate in `talvora_git_run`
 - [x] E3 — Lean defaults for high-frequency tools (P-1 decided: no `talvora_list` row)
-- [ ] S1 — Reject foreign Host/Origin (P-2 decided: Penpot static routes exempt from Origin guard)
+- [x] S1 — Reject foreign Host/Origin (P-2 decided: Penpot static routes exempt from Origin guard)
 - [-] S2 — Local MCP caller authentication (user decision Q1: no)
 - [ ] Q6 — Schema validation of tool arguments before invocation (P-3 decided, re-scoped)
 - [ ] Q6b — Research: supported exception-translation mechanism (proposal only, no product code)
@@ -104,6 +104,11 @@ P-7 — A1 requires an owner-warning result-path decision and clarification of a
 
 ## Log
 
+- 2026-10-19 — S1 (executor: ChatGPT via Talvora): AllowedHosts loopback allow-list and a pre-endpoint Origin guard reject foreign HTTP origins; exactly four static Penpot GET assets remain Origin-exempt (P-2), without adding MCP CORS or changing tunnel/loopback binding.
+  RED installed pre-fix test: foreign Host accepted (HTTP 200 vs expected 400); GREEN isolated real Kestrel: foreign Host=400, foreign Origin=403, local Origin/no Origin=200, Penpot asset with foreign Origin=200. New live smoke CLI entrypoint required a minimal Program.cs change.
+  Talvora Release and Smoke builds: 0 warnings, 0 errors. Full quality gate: 51 controls, 0 failures; final line `Hepsi geçti.`.
+  Context7 `/modelcontextprotocol/csharp-sdk` and `/dotnet/aspnetcore.docs`, official MCP 2026-07-28 and Microsoft ASP.NET Core host filtering references recorded in `.context7/verification.json`.
+  Canonical deploy + installed smoke follow single commit; next Q6. No Codex invoked.
 - 2026-10-19 — E3 (executor: ChatGPT via Talvora): added compact defaults to git_status/git_log/find_files/search_text, process/PowerShell output, and dotnet build/test summaries; explicit full-output opt-ins preserve prior details. `talvora_list` unchanged (P-1).
   Changed response record definitions in `DeveloperTools.cs` and `BuildRunnerTools.cs`, and adjusted `SourceEditRegressionRunner.Misc.cs` call sites for E3's typed compact/full entries and renamed `maxCommits`; these minimal extra files are required for compilation.
   RED live smoke detected legacy Git entries; GREEN direct tool smoke validated compact/full variants across eight tool groups, targeted builds 0 warnings/0 errors. Baseline git_log(20) 5608 B → 2553 B, find_files(Tools, 106) 21108 B → 5159 B; compact git_status fixture(10) 1038 B.

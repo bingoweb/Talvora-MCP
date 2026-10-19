@@ -10,6 +10,20 @@ Talvora is intentionally a high-capability local development MCP. Security harde
 - Stored OpenAI credentials use Windows DPAPI in the current interactive user context.
 - Secrets must never be committed to the repository or written to persistent logs in plaintext.
 
+## Loopback HTTP request validation
+
+Talvora listens on the local loopback interface only. ASP.NET Core Host Filtering
+restricts HTTP Host to `localhost`, `127.0.0.1`, or `[::1]` (HTTP 400 for other hosts).
+Every endpoint also rejects a supplied non-loopback HTTP/HTTPS `Origin` with
+HTTP 403. Origin-less requests remain available to local CLI and tunnel clients;
+this does not introduce MCP CORS or HTTP authentication.
+
+Only the four public static Penpot plugin GET assets under `/penpot-ai/`
+(`manifest.json`, `plugin.js`, `index.html`, `icon.svg`) are exempt from the
+Origin restriction and retain `Access-Control-Allow-Origin: *`. Host filtering
+still applies to those assets; `/penpot-ai/healthz` and all `/mcp*` routes
+remain subject to the Origin guard.
+
 ## Logging and privacy
 
 Talvora keeps operational logging for diagnostics, but persistent logs must redact common credential forms such as authorization tokens, API keys, passwords, client secrets, GitHub tokens, OpenAI-style keys, and JWTs.

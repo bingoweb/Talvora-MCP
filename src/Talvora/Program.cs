@@ -27,6 +27,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 });
 
 builder.Host.UseWindowsService(options => options.ServiceName = "Talvora");
+builder.Configuration["AllowedHosts"] = "localhost;127.0.0.1;[::1]";
 builder.WebHost.ConfigureKestrel(options => options.ListenLocalhost(7676));
 builder.Services.AddSingleton<TalvoraDesktopProgressNotifier>();
 builder.Services.AddHostedService<TalvoraSystemStorageMaintenanceService>();
@@ -88,6 +89,7 @@ builder.Services
     .WithToolsFromAssembly();
 
 var app = builder.Build();
+app.UseLoopbackOriginGuard();
 ClaudeBackgroundJobTools.DesktopNotifier =
     app.Services.GetRequiredService<TalvoraDesktopProgressNotifier>();
 CodexBackgroundJobTools.DesktopNotifier =
