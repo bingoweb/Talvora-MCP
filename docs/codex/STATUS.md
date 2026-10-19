@@ -39,7 +39,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [?] D3 — Keep the text of structured failures (waiting for Claude: P-6)
 - [x] D4 — Run service-dependent gate checks locally when the service is up (audit 2026-10-18 (2))
 - [x] D2 — Compare legacy directory identities with the legacy serial (audit 2026-10-18 (2))
-- [ ] A2 — `talvora_agent_brief` (rules + current card for any agent)
+- [x] A2 — `talvora_agent_brief` (rules + current card for any agent)
 - [ ] A1 — `talvora_user_run` + keep file ownership + one-time owner repair
 - [ ] A3 — Work-contract gate in `talvora_git_run`
 - [ ] E3 — Lean defaults for high-frequency tools (P-1 decided: no `talvora_list` row)
@@ -103,6 +103,10 @@ P-5/P-6 — D1 and D3 need scope decisions (docs/codex/PROPOSALS.md).
 
 ## Log
 
+- 2026-10-19 — A2 (executor: ChatGPT via Talvora): added read-only `talvora_agent_brief` for Dev/Full, with six AGENTS.md sections, current/selected card, signed-in-user context runner, 60-second timeout, and 60,000-character bound; added Turkish title and mandatory server instructions.
+  RED surface test rejected missing tool; GREEN targeted smoke source policies, two source regressions, and Talvora Release build (0 warnings, 0 errors). Extra CodexCliIntegrationSourceRegression and FocusedMcpSurfaceSourceRegression files were necessary to update their pinned Full/Dev tool counts (250/213).
+  Context7 `/dotnet/docs` and official Microsoft `File.ReadAllTextAsync`/regex guidance verified, recorded in `.context7/verification.json`; initial Fast gate 13/0.
+  Pre-install Full gate: 30 controls, 1 expected NativeInstallerRuntime failure because installed 249-tool commit predates A2's 250-tool manifest. Canonical deployment, installed smoke, and final Full gate must run after committing; outcome to be mirrored in Gitea issue #5. Next A1.
 - 2026-10-19 — D2 (executor: ChatGPT via Talvora): directory identities now store BY_HANDLE DWORD serial along with FILE_ID_INFO 64-bit serial, legacy 64-bit file index and modern 128-bit ID; modern journals compare full serial + 128-bit ID, legacy journals compare the DWORD serial + 64-bit index.
   Legacy pending-journal fixture recovered without conflict; unrelated directory using identical old identity fields was rejected. RED test build: missing legacy field; GREEN targeted build: 0 warnings/0 errors, SourceEdit regression suite passed.
   Context7 `/websites/learn_microsoft_en-us_windows_win32_api`, official Microsoft Win32 sources in `.context7/verification.json`. Fast baseline 13/0; final Full gate 51/0, last line `Hepsi geçti.`.

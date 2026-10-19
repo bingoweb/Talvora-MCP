@@ -90,6 +90,10 @@ internal static partial class SmokeScenarios
             development: true,
             administration: false);
         AssertSurface(
+            "talvora_agent_brief",
+            development: true,
+            administration: false);
+        AssertSurface(
             "talvora_dotnet_build",
             development: true,
             administration: false);
@@ -324,6 +328,21 @@ internal static partial class SmokeScenarios
         AssertLiveSurface(
             TalvoraMcpToolSurface.Administration,
             administration);
+
+        var agentBrief = development.Single(tool =>
+            string.Equals(tool.Name, "talvora_agent_brief",
+                StringComparison.Ordinal));
+        if (agentBrief.ProtocolTool.Title != "Proje talimatlarını getir" ||
+            agentBrief.Description !=
+                "Return the binding agent rules (AGENTS.md mandate, token economy, continue protocol) and the current card for a workspace. Call this first in every session before changing files in that workspace.")
+        {
+            throw new InvalidOperationException(
+                "Agent brief tool title/description contract changed.");
+        }
+        AssertSameToolMetadata(
+            full,
+            development,
+            "talvora_agent_brief");
 
         AssertSameToolMetadata(
             full,

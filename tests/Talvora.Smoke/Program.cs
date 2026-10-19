@@ -4,6 +4,17 @@ using static SmokeSupport;
 
 try
 {
+if (args.Length >= 1 &&
+    string.Equals(args[0], "--agent-brief-live",
+        StringComparison.Ordinal))
+{
+    await SmokeScenarios.RunAgentBriefLiveAsync(
+        args.Length > 1 ? args[1] : "http://127.0.0.1:7676",
+        args.Length > 2 ? args[2] : Directory.GetCurrentDirectory());
+    Console.WriteLine("TALVORA AGENT BRIEF LIVE GREEN");
+    return;
+}
+
 if (args.Length == 1 && args[0] == "--claude-integration-policy-only")
 {
     await SmokeScenarios.RunClaudeIntegrationPolicyAsync();

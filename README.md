@@ -211,6 +211,7 @@ Specialist paths are available when the job calls for them:
 - <code>talvora_apply_edits</code> — exact precomputed ranges;
 - <code>talvora_structural_edit</code> — ast-grep structural transformations;
 - <code>talvora_semantic_edit</code> — Roslyn symbol-aware C# edits.
+- <code>talvora_agent_brief</code> — read the workspace's binding agent rules and the active card before making changes (Development and Full MCP surfaces).
 
 The source-edit regression suite covers stale revisions, concurrent writers, crash recovery, WAL corruption, encoding/newline preservation, rollback, transaction replay and large-edit scenarios.
 

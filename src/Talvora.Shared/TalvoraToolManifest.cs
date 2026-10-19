@@ -9,6 +9,7 @@ public static class TalvoraToolManifest
         "talvora_camera_modes",
         "talvora_read_text",
         "talvora_read_source",
+        "talvora_agent_brief",
         "talvora_apply_patch",
         "talvora_apply_edits",
         "talvora_source_edit_guide",

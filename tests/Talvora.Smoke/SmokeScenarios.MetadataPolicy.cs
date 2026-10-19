@@ -42,6 +42,7 @@ internal static partial class SmokeScenarios
         AssertWorldScope("talvora_search_text", false);
         AssertWorldScope("talvora_git_status", false);
         AssertWorldScope("talvora_apply_patch", false);
+        AssertWorldScope("talvora_agent_brief", false);
         AssertWorldScope("talvora_http_mock_start", false);
         AssertWorldScope("talvora_http_request", true);
         AssertWorldScope("talvora_git_run", true);
