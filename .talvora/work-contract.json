@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "statusFile": "docs/codex/STATUS.md",
+  "cardTrailer": "Card",
+  "legacyCardTrailers": ["Codex-Card"],
+  "auditTagPrefix": "audit/"
+}

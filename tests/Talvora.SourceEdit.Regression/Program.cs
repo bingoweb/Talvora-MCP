@@ -1,3 +1,10 @@
+if (args.Contains("--work-contract-only", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunWorkContractAsync();
+    Console.WriteLine("TALVORA WORK CONTRACT REGRESSION GREEN");
+    return;
+}
+
 if (args.Contains("--quality-audit-only", StringComparer.OrdinalIgnoreCase))
 {
     await SourceEditRegressionRunner.RunQualityAuditAsync();

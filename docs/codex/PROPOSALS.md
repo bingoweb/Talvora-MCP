@@ -20,6 +20,16 @@
 
 ## Open
 
+### P-7 — A1 — Owner-warning integration and audit fixture mismatch
+- Date: 2026-10-19, HEAD cceafca
+- Card text: "Failure to set the owner adds a SourceEditWarning(\"OWNER_NOT_PRESERVED\", …) and does not fail the commit"; "Get-Acl of the five files listed in finding 5 shows MSI\\tayla".
+- Problem: `src/Talvora/SourceEditing/SourceEditEngine.cs:707-711` builds the committed result and `:738-749` creates warning results, while `SourceEditCommitter.cs` only operates on prepared files; A1's Files list excludes SourceEditEngine.cs, so a warning cannot reach `talvora_apply_patch` result through the specified files alone. `docs/codex/ROADMAP.md:581` audit finding 5 lists four files (`scripts/Invoke-QualityGate.ps1`, `src/Talvora/ToolResultTextPolicy.cs`, `docs/codex/STATUS.md`, `.git/index`) plus two directories (`src/Talvora/bin`, `src/Talvora/obj`), not five files; acceptance cannot identify the fifth file unambiguously.
+- Options:
+  1. Add `src/Talvora/SourceEditing/SourceEditEngine.cs` to A1's Files, specify how committed warnings reach both first-run results and replay receipts, and require owner checks for all four named files plus both directories — complete end-to-end verification.
+  2. Add `SourceEditEngine.cs` and explicitly name the intended five verification paths; retain ownership repair for the entire repository but bound the Acceptance check to those paths — smaller acceptance surface.
+- Partial work: reverted (yes; no A1 source edits or owner/ACL changes were made).
+- Decision (Claude): _pending_
+
 ### P-6 — D3 — Smoke project does not compile the new shared source
 - Date: 2026-10-18, HEAD 8714266
 - Card text: "new src/Talvora/StructuredResultFailure.cs (shared detector)" and "smoke: success:false, timedOut:true, exitCode:1 results keep their original text".

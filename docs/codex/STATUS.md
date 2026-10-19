@@ -40,8 +40,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D4 — Run service-dependent gate checks locally when the service is up (audit 2026-10-18 (2))
 - [x] D2 — Compare legacy directory identities with the legacy serial (audit 2026-10-18 (2))
 - [x] A2 — `talvora_agent_brief` (rules + current card for any agent)
-- [ ] A1 — `talvora_user_run` + keep file ownership + one-time owner repair
-- [ ] A3 — Work-contract gate in `talvora_git_run`
+- [?] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (waiting for Claude: P-7)
+- [x] A3 — Work-contract gate in `talvora_git_run`
 - [ ] E3 — Lean defaults for high-frequency tools (P-1 decided: no `talvora_list` row)
 - [ ] S1 — Reject foreign Host/Origin (P-2 decided: Penpot static routes exempt from Origin guard)
 - [-] S2 — Local MCP caller authentication (user decision Q1: no)
@@ -94,6 +94,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 ## Open questions
 
 P-5/P-6 — D1 and D3 need scope decisions (docs/codex/PROPOSALS.md).
+P-7 — A1 requires an owner-warning result-path decision and clarification of audit fixture count.
 
 ## Findings for Claude
 
@@ -103,6 +104,10 @@ P-5/P-6 — D1 and D3 need scope decisions (docs/codex/PROPOSALS.md).
 
 ## Log
 
+- 2026-10-19 — A3 (executor: ChatGPT via Talvora): A1 blocked by P-7 and skipped under the continue protocol (audit finding #5 specifies four files plus two directories, while A1 Acceptance says five files; result-warning integration requires SourceEditEngine.cs outside A1 Files). No A1 source change or ownership repair was attempted.
+  Added opt-in `.talvora/work-contract.json`, new WorkContractGate for `talvora_git_run` commits, staged STATUS requirement, exactly one Card/Codex-Card footer, duplicate-card detection since latest audit tag, CI follow-up exception, and --amend rejection. Without contract the Git tool retains existing behavior. Rejections are structured nonzero Git responses; nothing is executed. SECURITY.md names the PowerShell/process-tool bypass.
+  Implemented exact GitArgumentParser helper from S8 for A3 commit detection (S8 parser PART only; S8's SourceMutationPolicy integration remains open). Verified installed `git version 2.55.0.windows.5` and global flags via `git -h`, plus Context7 `/dotnet/docs`; evidence in `.context7/verification.json`.
+  RED regression: missing trailer permitted a commit before code; GREEN table-driven cases 10/10 (valid, missing/double footer, unstaged STATUS, duplicate after audit, CI follow-up, amend, contract opt-out, global options, message file). Legacy synchronous policy rejection preserved. Full quality gate 51 controls, 0 errors; last line `Hepsi geçti.`. No Codex invoked. Canonical deployment and installed smoke to follow the single A3 commit. Next E3.
 - 2026-10-19 — A2 (executor: ChatGPT via Talvora): added read-only `talvora_agent_brief` for Dev/Full, with six AGENTS.md sections, current/selected card, signed-in-user context runner, 60-second timeout, and 60,000-character bound; added Turkish title and mandatory server instructions.
   RED surface test rejected missing tool; GREEN targeted smoke source policies, two source regressions, and Talvora Release build (0 warnings, 0 errors). Extra CodexCliIntegrationSourceRegression and FocusedMcpSurfaceSourceRegression files were necessary to update their pinned Full/Dev tool counts (250/213).
   Context7 `/dotnet/docs` and official Microsoft `File.ReadAllTextAsync`/regex guidance verified, recorded in `.context7/verification.json`; initial Fast gate 13/0.

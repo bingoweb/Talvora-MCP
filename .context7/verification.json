@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-19T06:49:19Z",
-  "scope": "A2: talvora_agent_brief extracts six AGENTS.md headings and invokes the existing signed-in-user process runner with a 60-second timeout, argument vector, and bounded output. Context7 /dotnet/docs verified multiline heading anchors and async file cancellation; Microsoft Learn File.ReadAllTextAsync official reference checked. Historical evidence preserved.",
+  "verifiedAtUtc": "2026-10-19T10:37:17Z",
+  "scope": "A3: opt-in talvora_git_run work-contract validation checks Card trailers, staged STATUS, duplicate commits since the latest audit tag, and the CI follow-up exception without executing rejected commits. S8 GitArgumentParser exact global-option parser added; SourceMutationPolicy integration remains with S8. Context7 /dotnet/docs and official Git CLI/manual verified, historical evidence preserved.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-19 A3: Context7 /dotnet/docs confirms .NET C# multiline regex anchors and JSON deserialization patterns; source-verified ProcessRunner runs argument vectors with cancellation and bounded captured output. Git for Windows 2.55.0.windows.5 -h output confirms global -C/-c/--git-dir/--work-tree/--namespace/--config-env options. Official upstream Git manual https://git-scm.com/docs/git/2.56.0.html confirms these options and their separate or =value forms; https://git-scm.com/docs/git-log confirms format selection. The parser exactly follows ROADMAP S8; behavior regression covers valid/missing/two trailers, staged STATUS, duplicate since audit, CI follow-up, amend, opt-out repo, global options and file messages."
+    },
     {
       "libraryId": "/websites/learn_microsoft_en-us_windows_win32_api",
       "verified": "2026-10-18 K2: Microsoft CreateFileW accepts zero dwDesiredAccess for metadata queries, FILE_FLAG_BACKUP_SEMANTICS for directory handles, FILE_FLAG_OPEN_REPARSE_POINT for reparse-safe inspection and FILE_SHARE_READ|WRITE|DELETE. GetFileInformationByHandleEx(FileIdInfo) provides FILE_ID_INFO with a 64-bit volume serial and 128-bit ID (unlike the ReFS-unsafe 64-bit legacy file index). Sharing violations use bounded 50/100/200 ms retries; exclusive rename protection remains attempted before a metadata-only fallback. 2026-10-19 D2: BY_HANDLE_FILE_INFORMATION exposes DWORD dwVolumeSerialNumber plus nFileIndexHigh/Low, while GetFileInformationByHandleEx(FileIdInfo) exposes FILE_ID_INFO with ULONGLONG VolumeSerialNumber plus FILE_ID_128. Current identities store both volume serial representations; legacy journals compare the original DWORD serial and the 64-bit file index, current journals compare the full serial and 128-bit file ID."

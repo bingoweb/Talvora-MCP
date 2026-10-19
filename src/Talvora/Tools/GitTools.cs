@@ -531,7 +531,44 @@ public static class GitTools
                 normalizedRepositoryPath);
         }
 
-        return RunGitAsync(
+        return RunWithWorkContractAsync(
+            normalizedRepositoryPath,
+            arguments,
+            environment,
+            timeoutSeconds,
+            cancellationToken);
+    }
+
+    private static async Task<TalvoraGitRunResponse> RunWithWorkContractAsync(
+        string normalizedRepositoryPath,
+        string[] arguments,
+        Dictionary<string, string?>? environment,
+        int timeoutSeconds,
+        CancellationToken cancellationToken)
+    {
+        var workContractError = await WorkContractGate.ValidateAsync(
+            normalizedRepositoryPath,
+            arguments,
+            async (gitArguments, token) =>
+                (await RunGitCheckedAsync(
+                    normalizedRepositoryPath,
+                    gitArguments,
+                    cancellationToken: token)).StandardOutput,
+            cancellationToken);
+        if (workContractError is not null)
+        {
+            return new TalvoraGitRunResponse(
+                1,
+                string.Empty,
+                "WorkContract: " + workContractError,
+                false,
+                0,
+                ResolveGitExecutable(),
+                normalizedRepositoryPath,
+                arguments);
+        }
+
+        return await RunGitAsync(
             normalizedRepositoryPath,
             arguments,
             environment,

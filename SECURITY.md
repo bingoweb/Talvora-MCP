@@ -28,6 +28,8 @@ Local secret files, DPAPI blobs, private keys, PFX/P12 bundles, and real environ
 
 Machine-specific evidence in public documentation should use generic placeholders such as `%USERPROFILE%`, `%APPDATA%`, `%LOCALAPPDATA%`, or `<interactive-user>` unless the literal identity is essential to reproduce a bug.
 
+The opt-in work-contract gate validates commits made through `talvora_git_run` only. Commits made through general PowerShell or process tools are not gated by design.
+
 ## Reporting a security issue
 
 Do not post live credentials, private keys, or sensitive logs in a public issue. Use a private repository security-reporting channel when available, or contact the repository owner privately with a minimal reproduction and sanitized evidence.
