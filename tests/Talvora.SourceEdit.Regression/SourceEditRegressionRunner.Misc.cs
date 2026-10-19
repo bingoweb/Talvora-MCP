@@ -2058,7 +2058,7 @@ internal static partial class SourceEditRegressionRunner
                 DeveloperTools.FindFiles(
                     searchRoot,
                     patterns: ["*.txt"],
-                    maxResults: 2);
+                    maxResults: 2, detail: "full");
             AssertEqual(
                 2,
                 firstFilePage.Count,
@@ -2068,8 +2068,8 @@ internal static partial class SourceEditRegressionRunner
                 firstFilePage.NextResultOffset == 2,
                 "File search did not expose continuation offset.");
             Assert(
-                firstFilePage.Entries[0].Name == "a.txt" &&
-                firstFilePage.Entries[1].Name == "b.txt",
+                ((TalvoraFileSearchEntry)firstFilePage.Entries[0]).Name == "a.txt" &&
+                ((TalvoraFileSearchEntry)firstFilePage.Entries[1]).Name == "b.txt",
                 "File search traversal is not deterministic.");
 
             var secondFilePage =
@@ -2078,7 +2078,7 @@ internal static partial class SourceEditRegressionRunner
                     patterns: ["*.txt"],
                     maxResults: 2,
                     resultOffset:
-                        firstFilePage.NextResultOffset!.Value);
+                        firstFilePage.NextResultOffset!.Value, detail: "full");
             AssertEqual(
                 1,
                 secondFilePage.Count,
@@ -2086,7 +2086,7 @@ internal static partial class SourceEditRegressionRunner
             Assert(
                 !secondFilePage.Truncated &&
                 secondFilePage.NextResultOffset is null &&
-                secondFilePage.Entries[0].Name == "c.txt",
+                ((TalvoraFileSearchEntry)secondFilePage.Entries[0]).Name == "c.txt",
                 "File search continuation did not terminate cleanly.");
 
             var firstTextPage =
@@ -2422,7 +2422,7 @@ internal static partial class SourceEditRegressionRunner
             var firstGitPage =
                 await GitTools.Log(
                     gitRoot,
-                    maxCount: 2);
+                    maxCommits: 2);
             Assert(
                 firstGitPage.Count == 2 &&
                 firstGitPage.Truncated &&
@@ -2431,7 +2431,7 @@ internal static partial class SourceEditRegressionRunner
             var secondGitPage =
                 await GitTools.Log(
                     gitRoot,
-                    maxCount: 2,
+                    maxCommits: 2,
                     skip:
                         firstGitPage.NextSkip!.Value);
             Assert(

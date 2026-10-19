@@ -1,6 +1,7 @@
 using Talvora.Shared;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 using Talvora.SourceEditing;
 
@@ -102,8 +103,8 @@ public static partial class BuildRunnerTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraCliCommandResponse)),
-     Description("Run dotnet build for any project/solution/file. Common configuration/no-restore options are modeled and arbitrary additional dotnet arguments remain available.")]
-    public static Task<TalvoraCliCommandResponse> DotnetBuild(
+     Description("Run dotnet build with a diagnostic summary and compact text. Set fullOutput=true to preserve complete stdout/stderr.")]
+    public static async Task<TalvoraCliCommandResponse> DotnetBuild(
         string workingDirectory,
         string? target = null,
         string? configuration = null,
@@ -111,6 +112,7 @@ public static partial class BuildRunnerTools
         string[]? additionalArguments = null,
         Dictionary<string, string?>? environment = null,
         int timeoutSeconds = 1200,
+        bool fullOutput = false,
         CancellationToken cancellationToken = default)
     {
         var arguments = new List<string> { "build" };
@@ -128,12 +130,13 @@ public static partial class BuildRunnerTools
 
         arguments.AddRange(additionalArguments ?? []);
 
-        return RunDotnetAsync(
+        var result = await RunDotnetAsync(
             workingDirectory,
             arguments,
             environment,
             timeoutSeconds,
             cancellationToken);
+        return FormatDotnetResult(result, fullOutput);
     }
 
     [McpServerTool(
@@ -143,8 +146,8 @@ public static partial class BuildRunnerTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraCliCommandResponse)),
-     Description("Run dotnet test for any project/solution/file. Supports common configuration/no-restore/no-build/filter controls plus arbitrary additional arguments.")]
-    public static Task<TalvoraCliCommandResponse> DotnetTest(
+     Description("Run dotnet test with a diagnostic summary and compact text. Set fullOutput=true to preserve complete stdout/stderr.")]
+    public static async Task<TalvoraCliCommandResponse> DotnetTest(
         string workingDirectory,
         string? target = null,
         string? configuration = null,
@@ -154,6 +157,7 @@ public static partial class BuildRunnerTools
         string[]? additionalArguments = null,
         Dictionary<string, string?>? environment = null,
         int timeoutSeconds = 1800,
+        bool fullOutput = false,
         CancellationToken cancellationToken = default)
     {
         var arguments = new List<string> { "test" };
@@ -180,12 +184,13 @@ public static partial class BuildRunnerTools
 
         arguments.AddRange(additionalArguments ?? []);
 
-        return RunDotnetAsync(
+        var result = await RunDotnetAsync(
             workingDirectory,
             arguments,
             environment,
             timeoutSeconds,
             cancellationToken);
+        return FormatDotnetResult(result, fullOutput);
     }
 
     [McpServerTool(
@@ -269,4 +274,83 @@ public static partial class BuildRunnerTools
             timeoutSeconds,
             cancellationToken);
     }
+    private static TalvoraCliCommandResponse FormatDotnetResult(
+        TalvoraCliCommandResponse result, bool fullOutput)
+    {
+        var diagnostics = new List<TalvoraDotnetDiagnostic>();
+        var failedTests = new List<string>();
+        var errors = 0;
+        var warnings = 0;
+        int? testsPassed = null;
+        int? testsFailed = null;
+
+        foreach (var original in (result.StandardOutput + "\n" + result.StandardError)
+                     .Split('\n'))
+        {
+            var text = original.TrimEnd('\r');
+            var match = Regex.Match(text,
+                @"^(?<file>.+?)\((?<line>\d+)(?:,\d+)?\):\s*(?<severity>error|warning)\s+(?<code>[A-Z][A-Z0-9]+):\s*(?<message>.+)$",
+                RegexOptions.IgnoreCase);
+            if (match.Success)
+            {
+                if (match.Groups["severity"].Value.Equals(
+                    "error", StringComparison.OrdinalIgnoreCase)) errors++;
+                else warnings++;
+                if (diagnostics.Count < 20)
+                {
+                    diagnostics.Add(new TalvoraDotnetDiagnostic(
+                        match.Groups["file"].Value,
+                        int.Parse(match.Groups["line"].Value,
+                            System.Globalization.CultureInfo.InvariantCulture),
+                        match.Groups["code"].Value,
+                        match.Groups["message"].Value));
+                }
+            }
+
+            var total = Regex.Match(text,
+                @"^\s*(?<count>\d+)\s+(?<kind>Error\(s\)|Warning\(s\)|Errors?|Warnings?|hata|uyarı)\s*$",
+                RegexOptions.IgnoreCase);
+            if (total.Success)
+            {
+                var count = int.Parse(total.Groups["count"].Value,
+                    System.Globalization.CultureInfo.InvariantCulture);
+                var kind = total.Groups["kind"].Value;
+                if (kind.StartsWith("Error", StringComparison.OrdinalIgnoreCase) ||
+                    kind.Equals("hata", StringComparison.OrdinalIgnoreCase))
+                    errors = count;
+                else warnings = count;
+            }
+
+            foreach (Match countMatch in Regex.Matches(text,
+                         @"\b(?<kind>Passed|Failed):\s*(?<count>\d+)\b",
+                         RegexOptions.IgnoreCase))
+            {
+                var count = int.Parse(countMatch.Groups["count"].Value,
+                    System.Globalization.CultureInfo.InvariantCulture);
+                if (countMatch.Groups["kind"].Value.Equals(
+                    "Passed", StringComparison.OrdinalIgnoreCase))
+                    testsPassed = count;
+                else testsFailed = count;
+            }
+
+            var name = text.Trim();
+            if (name.StartsWith("Failed ", StringComparison.OrdinalIgnoreCase) &&
+                failedTests.Count < 10)
+                failedTests.Add(name["Failed ".Length..]);
+        }
+
+        return result with
+        {
+            StandardOutput = fullOutput ? result.StandardOutput :
+                ToolOutputCompactor.Compact(result.StandardOutput,
+                    ToolOutputCompactor.DefaultMaximumOutputCharacters),
+            StandardError = fullOutput ? result.StandardError :
+                ToolOutputCompactor.Compact(result.StandardError,
+                    ToolOutputCompactor.DefaultMaximumOutputCharacters),
+            Summary = new TalvoraDotnetRunSummary(
+                errors, warnings, testsPassed, testsFailed,
+                failedTests, diagnostics),
+        };
+    }
+
 }

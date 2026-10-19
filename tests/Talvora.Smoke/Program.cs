@@ -4,6 +4,14 @@ using static SmokeSupport;
 
 try
 {
+if (args.Length >= 1 && args[0] == "--lean-defaults-live")
+{
+    await SmokeScenarios.RunLeanDefaultsLiveAsync(
+        args.Length > 1 ? args[1] : Directory.GetCurrentDirectory());
+    Console.WriteLine("TALVORA LEAN DEFAULTS GREEN");
+    return;
+}
+
 if (args.Length >= 1 &&
     string.Equals(args[0], "--agent-brief-live",
         StringComparison.Ordinal))

@@ -36,7 +36,7 @@ public sealed record TalvoraFileSearchResponse(
     int Count,
     bool Truncated,
     long? NextResultOffset,
-    IReadOnlyList<TalvoraFileSearchEntry> Entries,
+    IReadOnlyList<object> Entries,
     IReadOnlyList<string> Errors);
 
 public sealed record TalvoraTextSearchMatch(

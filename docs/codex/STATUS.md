@@ -42,7 +42,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] A2 — `talvora_agent_brief` (rules + current card for any agent)
 - [?] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (waiting for Claude: P-7)
 - [x] A3 — Work-contract gate in `talvora_git_run`
-- [ ] E3 — Lean defaults for high-frequency tools (P-1 decided: no `talvora_list` row)
+- [x] E3 — Lean defaults for high-frequency tools (P-1 decided: no `talvora_list` row)
 - [ ] S1 — Reject foreign Host/Origin (P-2 decided: Penpot static routes exempt from Origin guard)
 - [-] S2 — Local MCP caller authentication (user decision Q1: no)
 - [ ] Q6 — Schema validation of tool arguments before invocation (P-3 decided, re-scoped)
@@ -104,6 +104,12 @@ P-7 — A1 requires an owner-warning result-path decision and clarification of a
 
 ## Log
 
+- 2026-10-19 — E3 (executor: ChatGPT via Talvora): added compact defaults to git_status/git_log/find_files/search_text, process/PowerShell output, and dotnet build/test summaries; explicit full-output opt-ins preserve prior details. `talvora_list` unchanged (P-1).
+  Changed response record definitions in `DeveloperTools.cs` and `BuildRunnerTools.cs`, and adjusted `SourceEditRegressionRunner.Misc.cs` call sites for E3's typed compact/full entries and renamed `maxCommits`; these minimal extra files are required for compilation.
+  RED live smoke detected legacy Git entries; GREEN direct tool smoke validated compact/full variants across eight tool groups, targeted builds 0 warnings/0 errors. Baseline git_log(20) 5608 B → 2553 B, find_files(Tools, 106) 21108 B → 5159 B; compact git_status fixture(10) 1038 B.
+  Context7 `/modelcontextprotocol/csharp-sdk` and `/dotnet/docs`, official MCP SDK and Microsoft System.Text.Json verified; machine evidence in `.context7/verification.json`.
+  Full quality gate: 51 checks, 0 failures, final line `Hepsi geçti.`. Installed source commit prior to E3 is `bbeb262` — canonical deploy and live MCP smoke follow commit.
+  Next S1; no Codex invoked.
 - 2026-10-19 — A3 (executor: ChatGPT via Talvora): A1 blocked by P-7 and skipped under the continue protocol (audit finding #5 specifies four files plus two directories, while A1 Acceptance says five files; result-warning integration requires SourceEditEngine.cs outside A1 Files). No A1 source change or ownership repair was attempted.
   Added opt-in `.talvora/work-contract.json`, new WorkContractGate for `talvora_git_run` commits, staged STATUS requirement, exactly one Card/Codex-Card footer, duplicate-card detection since latest audit tag, CI follow-up exception, and --amend rejection. Without contract the Git tool retains existing behavior. Rejections are structured nonzero Git responses; nothing is executed. SECURITY.md names the PowerShell/process-tool bypass.
   Implemented exact GitArgumentParser helper from S8 for A3 commit detection (S8 parser PART only; S8's SourceMutationPolicy integration remains open). Verified installed `git version 2.55.0.windows.5` and global flags via `git -h`, plus Context7 `/dotnet/docs`; evidence in `.context7/verification.json`.

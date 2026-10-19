@@ -30,7 +30,7 @@ public static class PowerShellTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraPowerShellResult)),
-     Description("Run an arbitrary multiline PowerShell script as the Talvora LocalSystem service. " + SourceEditRoutingContract.EscapeHatchRouting + " The script is passed with UTF-16LE Base64 -EncodedCommand to avoid quoting loss. No command or script deny-list is applied.")]
+     Description("Run an arbitrary multiline PowerShell script as the Talvora LocalSystem service. " + SourceEditRoutingContract.EscapeHatchRouting + " The script is passed with UTF-16LE Base64 -EncodedCommand to avoid quoting loss. No command or script deny-list is applied. Set maxOutputCharacters=<n> for full captured text.")]
     public static async Task<TalvoraPowerShellResult> RunPowerShell(
         string script,
         string engine = "auto",
@@ -38,6 +38,7 @@ public static class PowerShellTools
         int timeoutSeconds = 300,
         int maxCapturedCharactersPerStream =
             ProcessRunner.DefaultMaximumCapturedCharacters,
+        int maxOutputCharacters = ToolOutputCompactor.DefaultMaximumOutputCharacters,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(script);
@@ -73,8 +74,8 @@ public static class PowerShellTools
             resolved.Name,
             resolved.Executable,
             result.ExitCode,
-            result.StandardOutput,
-            result.StandardError,
+            ToolOutputCompactor.Compact(result.StandardOutput, maxOutputCharacters),
+            ToolOutputCompactor.Compact(result.StandardError, maxOutputCharacters),
             result.TimedOut,
             result.ProcessId,
             result.StandardOutputTotalCharacters,

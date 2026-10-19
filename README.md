@@ -234,6 +234,17 @@ Talvora covers the workflows I actually use on Windows rather than trying to hid
 | **Networking** | DNS, ping, TCP listeners/connections, TLS inspection, HTTP and readiness checks |
 | **Data/config** | SQLite, JSON, YAML, TOML, XML, INI, dotenv and archives |
 
+High-frequency MCP calls return compact payloads by default. `talvora_git_status`
+omits porcelain text unless `includeRaw=true`; `talvora_git_log` returns 20
+short commits (`maxCommits=<n>`, `detail=full` for complete metadata).
+`talvora_find_files` returns 200 relative `{path,size}` entries by default
+(`detail=full`, `maxResults=0` for original metadata and maximum paging).
+`talvora_search_text` defaults to 100 matches and 300-character lines (0
+still requests server limits). Process/PowerShell text preserves its head and
+tail; request a larger `maxOutputCharacters` for more output. .NET build/test
+results include a bounded diagnostic `summary`; set `fullOutput=true` to
+retain the original stdout and stderr.
+
 Chocolatey is the only Windows package manager used by the production/bootstrap path. WinGet is intentionally excluded.
 
 ## Integrations

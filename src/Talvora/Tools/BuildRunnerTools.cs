@@ -1,6 +1,7 @@
 using Talvora.Shared;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 
 namespace Talvora.Tools;
@@ -14,7 +15,25 @@ public sealed record TalvoraCliCommandResponse(
     string Executable,
     string WorkingDirectory,
     IReadOnlyList<string> Arguments,
-    long ElapsedMilliseconds);
+    long ElapsedMilliseconds)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public TalvoraDotnetRunSummary? Summary { get; init; }
+}
+
+public sealed record TalvoraDotnetDiagnostic(
+    string File,
+    int Line,
+    string Code,
+    string Message);
+
+public sealed record TalvoraDotnetRunSummary(
+    int Errors,
+    int Warnings,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? TestsPassed,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? TestsFailed,
+    IReadOnlyList<string> FailedTests,
+    IReadOnlyList<TalvoraDotnetDiagnostic> Diagnostics);
 
 public sealed record TalvoraDotnetInfoResponse(
     bool Found,

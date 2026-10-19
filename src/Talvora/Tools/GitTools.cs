@@ -2,6 +2,7 @@ using Talvora.Shared;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Talvora.SourceEditing;
 
@@ -28,6 +29,12 @@ public sealed record TalvoraGitInfoResponse(
     bool Dirty,
     IReadOnlyList<string> Remotes);
 
+public sealed record TalvoraGitStatusEntry(
+    string Path,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? OrigPath,
+    string Index,
+    string Worktree);
+
 public sealed record TalvoraGitStatusResponse(
     string Root,
     string? Branch,
@@ -36,8 +43,8 @@ public sealed record TalvoraGitStatusResponse(
     int Ahead,
     int Behind,
     bool Dirty,
-    IReadOnlyList<string> Entries,
-    string Raw);
+    IReadOnlyList<TalvoraGitStatusEntry> Entries,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Raw);
 
 public sealed record TalvoraGitDiffResponse(
     string Root,
@@ -55,10 +62,15 @@ public sealed record TalvoraGitCommitEntry(
     DateTimeOffset AuthorDate,
     string Subject);
 
+public sealed record TalvoraGitCompactCommitEntry(
+    string ShortCommit,
+    string Date,
+    string Subject);
+
 public sealed record TalvoraGitLogResponse(
     string Root,
     int Count,
-    IReadOnlyList<TalvoraGitCommitEntry> Commits,
+    IReadOnlyList<object> Commits,
     long Skip = 0,
     bool Truncated = false,
     long? NextSkip = null);
@@ -148,10 +160,11 @@ public static class GitTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraGitStatusResponse)),
-     Description("Return Git porcelain-v2 status with parsed branch/HEAD/upstream/ahead/behind metadata and raw machine-readable entry lines.")]
+     Description("Return compact parsed porcelain-v2 status. Set includeRaw=true for raw machine-readable lines.")]
     public static async Task<TalvoraGitStatusResponse> Status(
         string repositoryPath,
         bool includeUntracked = true,
+        bool includeRaw = false,
         CancellationToken cancellationToken = default)
     {
         var path = NormalizeRepositoryPath(repositoryPath);
@@ -171,7 +184,7 @@ public static class GitTools
         string? upstream = null;
         var ahead = 0;
         var behind = 0;
-        var entries = new List<string>();
+        var entries = new List<TalvoraGitStatusEntry>();
 
         foreach (var line in lines)
         {
@@ -222,7 +235,7 @@ public static class GitTools
             }
             else if (!line.StartsWith("# ", StringComparison.Ordinal))
             {
-                entries.Add(line);
+                entries.Add(ParseStatusEntry(line));
             }
         }
 
@@ -240,7 +253,38 @@ public static class GitTools
             behind,
             entries.Count > 0,
             entries,
-            result.StandardOutput);
+            includeRaw ? result.StandardOutput : null);
+    }
+
+    private static TalvoraGitStatusEntry ParseStatusEntry(string line)
+    {
+        if (line.Length >= 3 && line[1] == ' ' &&
+            line[0] is '?' or '!')
+        {
+            var state = line[0].ToString();
+            return new TalvoraGitStatusEntry(
+                line[2..], null, state, state);
+        }
+
+        var fieldCount = line[0] switch
+        {
+            '1' => 9,
+            '2' => 10,
+            'u' => 11,
+            _ => throw new FormatException("Unexpected Git porcelain-v2 record type."),
+        };
+        var fields = line.Split(' ', fieldCount);
+        if (fields.Length != fieldCount || fields[1].Length != 2)
+        {
+            throw new FormatException("Invalid Git porcelain-v2 status record.");
+        }
+
+        var paths = fields[^1].Split('\t', 2);
+        return new TalvoraGitStatusEntry(
+            paths[0],
+            paths.Length == 2 ? paths[1] : null,
+            fields[1][0].ToString(),
+            fields[1][1].ToString());
     }
 
     [McpServerTool(
@@ -314,20 +358,21 @@ public static class GitTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraGitLogResponse)),
-     Description("Return structured Git commit history. maxCount=0 requests the finite server maximum page. Use skip/nextSkip to continue the same revision selection while refs are unchanged; revision can be any Git revision or revision range.")]
+     Description("Return 20 compact commits by default; set maxCommits=<n> and detail=full for historical full fields. Pagination supports skip/nextSkip.")]
     public static async Task<TalvoraGitLogResponse> Log(
         string repositoryPath,
         string? revision = null,
-        int maxCount = 50,
+        int maxCommits = 20,
         long skip = 0,
         bool all = false,
+        string detail = "compact",
         CancellationToken cancellationToken = default)
     {
-        if (maxCount < 0)
+        if (maxCommits < 0)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(maxCount),
-                "maxCount cannot be negative.");
+                nameof(maxCommits),
+                "maxCommits cannot be negative.");
         }
 
         if (skip < 0)
@@ -338,10 +383,10 @@ public static class GitTools
         }
 
         var effectiveMaxCount =
-            maxCount == 0
+            maxCommits == 0
                 ? AbsoluteGitLogResults
                 : Math.Min(
-                    maxCount,
+                    maxCommits,
                     AbsoluteGitLogResults);
 
         var path = NormalizeRepositoryPath(repositoryPath);
@@ -415,7 +460,16 @@ public static class GitTools
         return new TalvoraGitLogResponse(
             root,
             commits.Count,
-            commits,
+            detail switch
+            {
+                "full" => commits.Cast<object>().ToArray(),
+                "compact" => commits.Select(commit =>
+                    (object)new TalvoraGitCompactCommitEntry(
+                        commit.ShortCommit,
+                        commit.AuthorDate.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
+                        commit.Subject)).ToArray(),
+                _ => throw new ArgumentOutOfRangeException(nameof(detail)),
+            },
             skip,
             truncated,
             truncated
