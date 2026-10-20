@@ -53,8 +53,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] Q4 — Context7 gate covers XAML/tests
 - [x] D8 — Context budget ignores literal implementation blocks (D8's unrelated S6 CI failure resolved by D7; subsequent main CI 39485713921 green)
 - [x] D7 — Knowledge roots degrade instead of throwing (GitHub CI 39485713921 green; installed 2455014 verified)
-- [~] CI1 — Every push checks its own GitHub run (Get-CiStatus.ps1 copied and verified; own CI pending)
-- [ ] CI3 — Deadline instead of a fixed loop in the directory-holder test (flaky CI)
+- [x] CI1 — Every push checks its own GitHub run (GitHub windows-ci 39488042425 green; Get-CiStatus.ps1 verified)
+- [~] CI3 — Deadline instead of a fixed loop in the directory-holder test (local Full gate green; own CI pending)
 - [ ] CI2 — .NET platform packages in lockstep 10.0.13; Dependabot ignore list; close PR #16
 - [ ] D6 — Context helper finds `##` and `###` card headings (audit 2026-10-20 (3))
 - [ ] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (audit 2026-10-20 (3))
@@ -114,6 +114,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-20 — CI3 (executor: ChatGPT via Talvora): replaced the 200 x 40 ms readiness loop in PathGuard.cs with the card's exact Stopwatch 90 s deadline and 50 ms delay; no runtime changes.
+  RED before: exact deadline condition absent; GREEN after. Targeted SourceEdit directory-identity-sharing regression GREEN; Release build 0 errors, 0 warnings.
+  Baseline Fast gate: 13 checks, 0 errors. Final Full gate: 53 checks, 0 errors, "Hepsi geçti."; gate run as LocalSystem (Kimlik: NT AUTHORITY\SYSTEM).
+  Context7 /dotnet/docs; official Microsoft .NET Stopwatch.StartNew and Task.Delay references verified. No deploy required.
+  CI1 GitHub run 39488042425 green, reconciled in queue. CI3 own exact-commit GitHub CI pending after push.
 - 2026-10-20 — CI1 (executor: ChatGPT via Talvora): copied docs/codex/reference/ci/Get-CiStatus.ps1 byte-for-byte using the card-approved administrative exception; SHA-256 237c335b0ee2a21dadcc9c6d1dc027f9e99599c7a69fd6eed2dd132c76308c09 matches SHA256SUMS.txt.
   Test first: destination absent; after copy PowerShell parse errors 0. Fast gate: 13 checks, 0 errors; Full gate: 53 checks, 0 errors, "Hepsi geçti."; gate run as LocalSystem (Kimlik: NT AUTHORITY\SYSTEM).
   Context7 /websites/cli_github_manual; official GitHub CLI gh run list/view docs. Previous D7 CI başarılı: https://github.com/bingoweb/Talvora-MCP/actions/runs/39485713921 .

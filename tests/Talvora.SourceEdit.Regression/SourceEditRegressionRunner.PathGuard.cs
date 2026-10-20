@@ -467,7 +467,9 @@ internal static partial class SourceEditRegressionRunner
             ?? throw new InvalidOperationException("External handle holder did not start.");
         try
         {
-            for (var attempt = 0; attempt < 200 && !File.Exists(readyPath); attempt++)
+            // A cold CI runner can need well over 8 s to start pwsh and compile the Add-Type helper.
+            var readyDeadline = System.Diagnostics.Stopwatch.StartNew();
+            while (!File.Exists(readyPath) && readyDeadline.Elapsed < TimeSpan.FromSeconds(90))
             {
                 if (child.HasExited)
                 {
@@ -476,7 +478,7 @@ internal static partial class SourceEditRegressionRunner
                         await child.StandardError.ReadToEndAsync());
                 }
 
-                await Task.Delay(40);
+                await Task.Delay(50);
             }
 
             Assert(File.Exists(readyPath), "External directory handle never became ready.");

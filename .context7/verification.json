@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-20T19:53:50Z",
-  "scope": "CI1 exact reference copy: docs/codex/reference/ci/Get-CiStatus.ps1 was copied byte-for-byte to scripts/Get-CiStatus.ps1 and its SHA-256 matches docs/codex/reference/ci/SHA256SUMS.txt. The new script checks the windows-ci run for the specified commit and reports a concise result. Context7 /websites/cli_github_manual and official GitHub CLI manual verify gh run list --workflow --commit --json and gh run view --log-failed flags; no product code or dependency changes.",
+  "verifiedAtUtc": "2026-10-20T20:16:09Z",
+  "scope": "CI3 exact implementation in SourceEditRegressionRunner.PathGuard.cs: replace the 200-attempt fixed readiness loop with Stopwatch.StartNew elapsed time limited to 90 seconds and Task.Delay(50), preserving external child exit handling. An isolated source invariant failed before the change and passed after; the targeted external directory-holder regression passes. Context7 /dotnet/docs and official Microsoft .NET reference verify elapsed-time and asynchronous delay APIs; no product code or dependency changes.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-20 CI3: Current Microsoft .NET documentation confirms Stopwatch-based elapsed-time measurement and Task.Delay for asynchronous polling and timeouts. ROADMAP CI3's exact Stopwatch.StartNew(), Elapsed < TimeSpan.FromSeconds(90), Task.Delay(50) snippet is applied without changing the directory-handle test's assertions."
+    },
     {
       "libraryId": "/websites/cli_github_manual",
       "verified": "2026-10-20 CI1: GitHub CLI official gh run list manual confirms --repo, --workflow, --commit, --json and --limit to select a commit-specific workflow run with databaseId/status/conclusion/url; gh run view supports --repo and --log-failed for failed-step diagnostics. The prescribed reference script was copied without modification and parsed with zero PowerShell syntax errors."
@@ -137,6 +141,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-20 CI3: Official .NET Stopwatch.StartNew https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.stopwatch.startnew?view=net-10.0 and Task.Delay https://learn.microsoft.com/en-us/dotnet/api/system.threading.tasks.task.delay?view=net-10.0 ; Context7 /dotnet/docs. Targeted directory identity sharing regression GREEN after the exact fixed-loop-to-deadline change.",
     "2026-10-20 CI1: GitHub CLI official manual https://cli.github.com/manual/gh_run_list (commit SHA, workflow and JSON filters) and https://cli.github.com/manual/gh_run_view (failed-step log retrieval). Context7 /websites/cli_github_manual. CI1 template SHA256 matches the approved docs/codex/reference/ci/SHA256SUMS.txt.",
     "2026-10-20 D7: Official Microsoft .NET documentation on WindowsIdentity.GetCurrent https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.windowsidentity.getcurrent?view=net-10.0 , Environment.GetFolderPath https://learn.microsoft.com/en-us/dotnet/api/system.environment.getfolderpath?view=net-10.0 , Path.IsPathFullyQualified https://learn.microsoft.com/en-us/dotnet/api/system.io.path.ispathfullyqualified?view=net-10.0 ; Context7 /dotnet/docs. Verified compatibility of ROADMAP exact D7 implementation and Windows identity gate diagnostics.",
     "2026-10-20 D8: Microsoft PowerShell official about_Split https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_split?view=powershell-7.6 and about_Comparison_Operators https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_comparison_operators?view=powershell-7.6 ; Context7 /microsoftdocs/powershell-docs. Verified prescribed regex line split and wildcard section-classification operators for tests/QualityGateRegression.ps1 only.",
