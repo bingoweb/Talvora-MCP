@@ -197,9 +197,11 @@ $result = [pscustomobject]@{
         $buildInstallerScript -match '@ast-grep/cli-win32-x64-msvc' -and
         $buildInstallerScript -match '@ast-grep/cli-win32-arm64-msvc' -and
         $buildInstallerScript -match '@ast-grep/cli-win32-ia32-msvc' -and
-        $buildInstallerScript -match '@latest' -and
-        $buildInstallerScript -match '--ignore-scripts' -and
-        $buildInstallerScript -match 'dist\.integrity' -and
+        $buildInstallerScript -notmatch '@latest' -and
+        $buildInstallerScript -match 'Get-PinnedAstGrepMetadata' -and
+        $buildInstallerScript -match 'Assert-PinnedAstGrepTarball' -and
+        $buildInstallerScript -match 'Assert-PinnedAstGrepExecutable' -and
+        $buildInstallerScript -match 'ast-grep-pin\.json' -and
         $buildInstallerScript -match 'sha512-' -and
         $buildInstallerScript -match 'Get-FileHash.*SHA256' -and
         $buildInstallerScript -match 'Service/tools/ast-grep/ast-grep\.exe' -and
@@ -224,8 +226,10 @@ $result = [pscustomobject]@{
         $astGrepToolchainManager -match 'provenance\.json' -and
         $astGrepToolchainManager -match 'executableSha256' -and
         $buildInstallerScript -match 'https://registry\.npmjs\.org/' -and
-        $buildInstallerScript -match '--ignore-scripts' -and
-        $buildInstallerScript -match 'dist\.integrity' -and
+        $buildInstallerScript -notmatch '@latest' -and
+        $buildInstallerScript -match 'Assert-PinnedAstGrepTarball' -and
+        $buildInstallerScript -match 'Assert-PinnedAstGrepExecutable' -and
+        $astGrepToolchainManager -match 'LoadPinnedMetadata' -and
         $buildInstallerScript -match 'Service/tools/ast-grep/ast-grep\.exe' -and
         $buildInstallerScript -match 'Service/tools/ast-grep/provenance\.json' -and
         $toolManifest -match 'talvora_structural_edit'

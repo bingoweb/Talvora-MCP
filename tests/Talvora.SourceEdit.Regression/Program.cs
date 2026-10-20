@@ -1,3 +1,10 @@
+if (args.Contains("--ast-grep-pin-only", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunPinnedAstGrepCacheAsync();
+    Console.WriteLine("TALVORA AST GREP PIN REGRESSION GREEN");
+    return;
+}
+
 if (args.Contains("--work-contract-only", StringComparer.OrdinalIgnoreCase))
 {
     await SourceEditRegressionRunner.RunWorkContractAsync();

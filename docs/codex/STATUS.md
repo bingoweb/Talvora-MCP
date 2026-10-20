@@ -47,13 +47,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [-] S2 — Local MCP caller authentication (user decision Q1: no)
 - [?] Q6 — Schema validation of tool arguments before invocation (waiting for Claude: P-8)
 - [x] Q6b — Research: supported exception-translation mechanism (proposal only, no product code)
-- [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4 decided: message fallbacks)
-- [ ] N2 — Worklog: protocol v4, sessions, project/actor context
-- [ ] N3 — Worklog: real facts from results
-- [ ] N3b — Worklog: code terminal real, complete, persistent
-- [ ] N4 — Worklog: agent jobs tell their story (+ Codex code terminal)
-- [ ] S3 — ProgramData ACL + interactive runs out of user-controlled paths
-- [ ] S4 — Pin ast-grep toolchain
+- [?] N1 — Worklog: correct states, titles, reasons; no duplication (waiting for Claude: P-10)
+- [?] N2 — Worklog: protocol v4, sessions, project/actor context (waiting for Claude: P-11)
+- [?] N3 — Worklog: real facts from results (waiting for Claude: P-11)
+- [?] N3b — Worklog: code terminal real, complete, persistent (waiting for Claude: P-11)
+- [?] N4 — Worklog: agent jobs tell their story (+ Codex code terminal) (waiting for Claude: P-11)
+- [?] S3 — ProgramData ACL + interactive runs out of user-controlled paths (waiting for Claude: P-12)
+- [x] S4 — Pin ast-grep toolchain
 - [ ] S5 — Do not keep the OpenAI Admin key
 - [ ] S6 — Knowledge tools: scoped fetch, no cloud hydration
 - [ ] S7 — Desktop IPC server verification + real interactive session
@@ -97,6 +97,9 @@ P-5/P-6 — D1 and D3 need scope decisions (docs/codex/PROPOSALS.md).
 P-7 — A1 requires an owner-warning result-path decision and clarification of audit fixture count.
 P-8 — Q6 muted inspection row conflicts with N1 worklog ownership (docs/codex/PROPOSALS.md).
 P-9 — Q6b redacted exception translator mechanism awaits Claude decision (docs/codex/PROPOSALS.md).
+P-10 — N1 muted timeline and preview screenshot requirements await Claude (docs/codex/PROPOSALS.md).
+P-11 — N2–N4 worklog dependencies and screenshot gate await Claude (docs/codex/PROPOSALS.md).
+P-12 — S3 startup notice route needs a decision (docs/codex/PROPOSALS.md).
 
 ## Findings for Claude
 
@@ -105,6 +108,12 @@ P-9 — Q6b redacted exception translator mechanism awaits Claude decision (docs
 - scripts/Get-CodexContext.ps1:41 — `-Card D2` reports "Card D2 could not be found" although ROADMAP.md:599 contains the D2 heading; outside D2 scope, not changed.
 
 ## Log
+- 2026-10-20 — S4 (executor: ChatGPT via Talvora): pinned ast-grep 0.45.3 for Windows x64, Arm64 and x86 using official SHA-512 npm SRI and extracted executable SHA-256; exact tarball only, no runtime `/latest` or unverified cache execution.
+  Tests: missing pin RED; tampered tarball, executable and private cached binary rejected before launch. Updated old native-installer and cache regression assertions to the stronger pin contract. Full gate: 51 controls, 0 failures, `Hepsi geçti.`.
+  Extra minimum files: installer build script + native installer regression enforce identical pin in canonical payload; `Talvora.csproj` ships pinned JSON; source-edit regression project runs cache fixture.
+  Context7 `/ast-grep/ast-grep` and `/dotnet/docs`, official npm three-platform integrity snapshots in `.context7/verification.json`.
+  Manual bump: review release notes; independently verify SHA-512 and extracted exe SHA-256 for 3 architectures; update reviewed `ast-grep-pin.json` and rerun tamper tests and Full gate. Dependabot does not track the custom manifest.
+  Prior installed runtime: `7287309`. Canonical deploy and installed smoke follow one S4 commit; next S5. No Codex/Claude invoked.
 
 - 2026-10-20 — Q6b (executor: ChatGPT via Talvora): researched a supported exception-translation mechanism only; no product code shipped. Proposed P-9 for Claude and documented Q6 muted-row acceptance conflict as P-8; Q6 blocked pending decision.
   Context7 `/modelcontextprotocol/csharp-sdk` and `/dotnet/extensions`; SDK 2.2.0 / Microsoft.Extensions.AI.Abstractions 10.10.1. Transient `tests/Q6bSpike` removed including generated outputs.

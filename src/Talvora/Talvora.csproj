@@ -22,6 +22,9 @@
     <PackageReference Include="Tomlyn" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="ast-grep-pin.json"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
     <None Update="PenpotAiPlugin\**\*"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="PreserveNewest" />

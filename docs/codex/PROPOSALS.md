@@ -19,6 +19,37 @@
 ```
 
 ## Open
+### P-12 — S3 — Service startup Control Center notice has no defined delivery path
+- Date: 2026-10-20, HEAD ac708d7
+- Card text: "Installer (and a service startup self-check that only logs) applies a protected ACL on the root"; "Startup self-check: if the root ACL still grants Users write, log one warning and show one Turkish Control Center notice ('Talvora klasör izinleri güncel değil. Kurulumu yeniden çalıştırın.')."
+- Problem: S3 Files permits `InstallerEngine.*.cs`, `InteractiveUserProcessRunner.cs`, `TalvoraOwnedTempCleanup.cs` and `Program.cs`, but `TalvoraDesktopProgressNotifier.cs:63-113,786` exposes no method to publish service-start warnings; all worklog enqueue methods are private, while `ControlCenterEventStore` lives in `src/Talvora.Tray` outside S3 Files and belongs to an independent per-user process. No service-to-Control-Center notice route is defined or identified. The same card ambiguously says the startup self-check 'only logs' yet also requires a user-visible notice and speaks of 'applies' the ACL. Implementing a notice without an approved surface/route would create an unrequested IPC/UI behavior, forbidden by AGENTS.md.
+- Inventory evidence (CommonApplicationData grep, required S3 step 1): Tray `ControlCenterLifecycleService.Penpot.cs:283-289` reads `Talvora/Penpot/docker-compose.yaml`; `ManagedMcpRecoveryDiscovery.cs:230-242` discovers that file plus `Talvora/Penpot/penpot-2.18.0/mcp`; no CommonApplicationData references in `src/Talvora.Shared` or `scripts`. Neither shown user-context consumer requires ProgramData write/append.
+- Options:
+  1. Define a service-to-tray notice route, explicit additional Files and the startup behavior (log-only security check vs remediation); retain exact prescribed Turkish copy and test one startup notice.
+  2. Amend S3 Acceptance to use logging-only startup self-check, deferring the visible Control Center notice to an explicit follow-up UI/IPC card; installer still restricts ProgramData ACL and preserves explicit file ACEs.
+- Partial work: reverted (yes; no S3 production ACL or run-directory changes attempted, no Secrets were read/touched).
+- Decision (Claude): _pending_
+
+### P-11 — N2/N3/N3b/N4 — Prerequisite worklog stages and PNG gate
+- Date: 2026-10-20, HEAD ac708d7
+- Card text: N2 "WorklogStep.Title ... already tense-correct Turkish from the copy deck" (§4), N3 "Facts only from real results" (§4.2), N3b "the pane keeps the latest code change of the session", N4 "agent jobs ... join the session", and §9 "Each card ... before/after PNG ... preview harness ... added in N5".
+- Problem: N1 has no implementation yet (waiting for Claude P-10); N2's v4 producer is explicitly expected to consume N1's authoritative `WorklogCopy` and `WorklogFailureClassifier` fields but neither file exists. N3 requires the v4 `WorklogStep.FactLine`/totals defined in N2; N3b needs v4 session-level code identity; N4 needs N2's actor/session propagation and N1 titles. `DesktopProgressProtocol.cs:25-37` currently has v3 only. All N1-N4 also inherit the §9 before/after real PNG delivery gate while deterministic preview harness is assigned solely to N5 (`DESIGN-WORKLOG.md:366`). Implementing or visually verifying these cards in the present order would make unspecified, out-of-scope changes and could create inconsistent producer/consumer protocol releases.
+- Options:
+  1. Approve prerequisite ordering and acceptance amendments: unblock N1 (P-10) with protocol-v3-only tests, then N2 through N4 in sequence; defer the PNG requirement for N1-N4 until N5 adds the preview harness, with retrospective real before/after fixtures as defined by Claude.
+  2. Move the minimal preview harness and authoritative copy/classifier contracts to new specified prerequisite card(s), then keep N1-N4 acceptance unchanged.
+- Partial work: reverted (yes; no N2/N3/N3b/N4 product/test code changed).
+- Decision (Claude): _pending_
+
+### P-10 — N1 — W19 timeline and screenshot acceptance precede their infrastructure
+- Date: 2026-10-20, HEAD ac708d7
+- Card text: "fix ... W19"; "Don't: change the protocol yet (N2); change tray layout"; "before/after PNG of real cards (use a deterministic preview harness ... added in N5) attached to the Gitea issue".
+- Problem: DESIGN-WORKLOG.md:223/331-340 requires a muted inspection-failure timeline row with its own warning state, but `src/Talvora.Shared/DesktopProgressProtocol.cs:25-36` protocol v3 carries only a single Title/Message/Kind and no typed timeline or session step; N2 alone adds the v4 session/timeline model. N1 explicitly forbids changing the protocol and tray layout; current `TalvoraDesktopWorklogState.cs:352-383` has only plain text `Son yaptıklarım`, which cannot be styled as an independently muted row. The general N-card gate also requires before/after real-card PNGs using `--worklog-preview`, but DESIGN-WORKLOG.md:366-370 defines creation of that harness only in N5, outside N1 Files. Meeting the exact N1 visual acceptance would require unlisted N2/N5 changes.
+- Options:
+  1. Narrow N1 Acceptance to failure classification, past-tense titles, no duplicate text or red inspection card in protocol v3; explicitly defer the muted timeline row to N2 and the mandatory before/after PNG gate to N5 (no unapproved visuals).
+  2. Reorder N5's preview harness and N2's v4 timeline foundations into separately approved prerequisite cards before N1, with exact Files/acceptance; then implement N1 unchanged.
+- Partial work: reverted (yes; no N1 product or test files changed).
+- Decision (Claude): _pending_
+
 ### P-9 — Q6b mechanism — Preserve MCP metadata while translating tool exceptions
 - Date: 2026-10-20, HEAD 7287309
 - Card text: "find a supported way to translate exceptions thrown by [McpServerTool] methods into McpException with a redacted message while keeping every tool's name, title, description, annotations and schemas identical".

@@ -18,14 +18,9 @@ internal static class AstGrepToolchainManager
 {
     private static readonly SemaphoreSlim Gate = new(1, 1);
     private static readonly HttpClient Http = CreateHttpClient();
-    private static readonly TimeSpan MetadataTtl = TimeSpan.FromHours(6);
-    private static readonly TimeSpan MetadataTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromMinutes(3);
     private const long MaxTarballBytes = 256L * 1024L * 1024L;
     private const int RetainedVersions = 3;
-
-    private static AstGrepRegistryMetadata? cachedMetadata;
-    private static DateTimeOffset cachedMetadataAtUtc;
 
     public static async Task<AstGrepToolchain> ResolveAsync(
         CancellationToken cancellationToken)
@@ -36,85 +31,30 @@ internal static class AstGrepToolchainManager
                 "The ast-grep structural adapter currently requires a Windows Talvora runtime.");
         }
 
-        var vendored =
-            await TryResolveVendoredAsync(
-                cancellationToken);
+        var pinned = LoadPinnedMetadata(ResolveArchitectureKey());
+        var vendored = await TryResolveVendoredAsync(pinned, cancellationToken);
         if (vendored is not null)
         {
             return vendored;
         }
 
-        var packageName = ResolvePackageName();
-        var architectureKey = ResolveArchitectureKey();
         var root = Path.Combine(
-            Environment.GetFolderPath(
-                Environment.SpecialFolder.CommonApplicationData),
-            "Talvora",
-            "Toolchains",
-            "ast-grep",
-            architectureKey);
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "Talvora", "Toolchains", "ast-grep", ResolveArchitectureKey());
         Directory.CreateDirectory(root);
 
         await Gate.WaitAsync(cancellationToken);
         try
         {
-            AstGrepRegistryMetadata? latest = null;
-            Exception? metadataFailure = null;
-            try
+            var installed = await TryResolveInstalledAsync(
+                root, pinned.Version, pinned.PackageName, pinned.Integrity,
+                cancellationToken);
+            if (installed is not null)
             {
-                latest =
-                    await GetLatestMetadataAsync(
-                        packageName,
-                        cancellationToken);
-            }
-            catch (Exception ex) when (
-                ex is HttpRequestException or
-                    IOException or
-                    JsonException or
-                    TaskCanceledException or
-                    SourceEditDomainException)
-            {
-                metadataFailure = ex;
+                return installed;
             }
 
-            if (latest is not null)
-            {
-                var installed =
-                    await TryResolveInstalledAsync(
-                        root,
-                        latest.Version,
-                        packageName,
-                        latest.Integrity,
-                        cancellationToken);
-                if (installed is not null)
-                {
-                    return installed;
-                }
-
-                return await InstallAsync(
-                    root,
-                    latest,
-                    cancellationToken);
-            }
-
-            var fallback =
-                await TryResolveNewestCachedAsync(
-                    root,
-                    packageName,
-                    cancellationToken);
-            if (fallback is not null)
-            {
-                return fallback with
-                {
-                    Warning =
-                        "Latest ast-grep metadata could not be refreshed; using the newest previously verified private Talvora cache. " +
-                        (metadataFailure?.Message ?? "Registry metadata was unavailable."),
-                };
-            }
-
-            throw Unavailable(
-                "No verified ast-grep cache is available and the latest official npm registry metadata could not be retrieved.",
-                metadataFailure);
+            return await InstallAsync(root, pinned, cancellationToken);
         }
         finally
         {
@@ -122,109 +62,57 @@ internal static class AstGrepToolchainManager
         }
     }
 
-    private static async Task<AstGrepRegistryMetadata> GetLatestMetadataAsync(
-        string packageName,
-        CancellationToken cancellationToken)
+    private static AstGrepRegistryMetadata LoadPinnedMetadata(string architectureKey)
     {
-        if (cachedMetadata is not null &&
-            string.Equals(
-                cachedMetadata.PackageName,
-                packageName,
-                StringComparison.Ordinal) &&
-            DateTimeOffset.UtcNow - cachedMetadataAtUtc < MetadataTtl)
+        var path = Path.Combine(AppContext.BaseDirectory, "ast-grep-pin.json");
+        if (!File.Exists(path))
         {
-            return cachedMetadata;
+            throw Unavailable("The checked-in ast-grep pin manifest is missing.");
         }
 
-        var encoded =
-            Uri.EscapeDataString(packageName);
-        var uri =
-            new Uri(
-                $"https://registry.npmjs.org/{encoded}/latest");
-
-        using var timeout =
-            CancellationTokenSource.CreateLinkedTokenSource(
-                cancellationToken);
-        timeout.CancelAfter(MetadataTimeout);
-
-        using var response =
-            await Http.GetAsync(
-                uri,
-                HttpCompletionOption.ResponseHeadersRead,
-                timeout.Token);
-        response.EnsureSuccessStatusCode();
-
-        await using var body =
-            await response.Content.ReadAsStreamAsync(
-                timeout.Token);
-        using var json =
-            await JsonDocument.ParseAsync(
-                body,
-                cancellationToken: timeout.Token);
-        var root = json.RootElement;
-        var version =
-            RequireString(root, "version");
-        var license =
-            root.TryGetProperty("license", out var licenseNode) &&
-            licenseNode.ValueKind == JsonValueKind.String
-                ? licenseNode.GetString()
-                : null;
-
-        if (!string.Equals(
-                license,
-                "MIT",
-                StringComparison.OrdinalIgnoreCase))
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        var root = document.RootElement;
+        if (root.GetProperty("schemaVersion").GetInt32() != 1 ||
+            !root.TryGetProperty("platforms", out var platforms) ||
+            !platforms.TryGetProperty(architectureKey, out var platform))
         {
-            throw Unavailable(
-                $"Unexpected ast-grep package license '{license ?? "<missing>"}'.");
+            throw Unavailable("The ast-grep pin manifest has no matching platform.");
         }
 
-        if (!root.TryGetProperty("dist", out var dist) ||
-            dist.ValueKind != JsonValueKind.Object)
+        var packageName = RequireString(platform, "packageName");
+        var version = RequireString(root, "version");
+        var integrity = RequireString(platform, "integrity");
+        var executableSha = RequireString(platform, "executableSha256");
+        var tarballText = RequireString(platform, "tarball");
+        if (!string.Equals(packageName, ResolvePackageName(), StringComparison.Ordinal))
         {
-            throw Unavailable(
-                "ast-grep registry metadata is missing the dist object.");
+            throw Unavailable("The ast-grep pinned package does not match this architecture.");
         }
 
-        var integrity =
-            RequireString(dist, "integrity");
-        var tarballText =
-            RequireString(dist, "tarball");
-        if (!integrity.StartsWith(
-                "sha512-",
-                StringComparison.Ordinal))
+        var packageBaseName = packageName.Split('/')[1];
+        var expectedTarball = $"https://registry.npmjs.org/{packageName}/-/{packageBaseName}-{version}.tgz";
+        if (!string.Equals(tarballText, expectedTarball, StringComparison.Ordinal) ||
+            !Uri.TryCreate(tarballText, UriKind.Absolute, out var tarball))
         {
-            throw Unavailable(
-                "ast-grep registry metadata does not provide SHA-512 SRI integrity.");
+            throw Unavailable("The ast-grep pinned tarball URL is not the official exact-version tarball.");
         }
 
-        if (!Uri.TryCreate(
-                tarballText,
-                UriKind.Absolute,
-                out var tarball) ||
-            !string.Equals(
-                tarball.Scheme,
-                Uri.UriSchemeHttps,
-                StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(
-                tarball.Host,
-                "registry.npmjs.org",
-                StringComparison.OrdinalIgnoreCase))
+        try
         {
-            throw Unavailable(
-                "ast-grep tarball metadata does not point to the official HTTPS npm registry.");
+            if (!integrity.StartsWith("sha512-", StringComparison.Ordinal) ||
+                Convert.FromBase64String(integrity["sha512-".Length..]).Length != 64 ||
+                Convert.FromHexString(executableSha).Length != 32)
+            {
+                throw Unavailable("The ast-grep pinned SHA-512 or executable SHA-256 is invalid.");
+            }
+        }
+        catch (FormatException ex)
+        {
+            throw Unavailable("The ast-grep pin manifest contains a malformed digest.", ex);
         }
 
-        var metadata =
-            new AstGrepRegistryMetadata(
-                packageName,
-                version,
-                integrity,
-                tarball);
-        cachedMetadata = metadata;
-        cachedMetadataAtUtc =
-            DateTimeOffset.UtcNow;
-        return metadata;
+        return new AstGrepRegistryMetadata(
+            packageName, version, integrity, tarball, executableSha);
     }
 
     private static async Task<AstGrepToolchain> InstallAsync(
@@ -272,6 +160,8 @@ internal static class AstGrepToolchainManager
                 executable,
                 cancellationToken);
             File.Delete(archive);
+            await VerifyPinnedExecutableAsync(
+                executable, metadata.ExecutableSha256, cancellationToken);
 
             await VerifyVersionAsync(
                 executable,
@@ -290,7 +180,7 @@ internal static class AstGrepToolchainManager
                         packageName = metadata.PackageName,
                         version = metadata.Version,
                         integrity = metadata.Integrity,
-                        executableSha256 = await ComputeFileSha256Async(executable, cancellationToken),
+                        executableSha256 = metadata.ExecutableSha256,
                         installedAtUtc = DateTimeOffset.UtcNow,
                     }),
                 cancellationToken);
@@ -298,6 +188,8 @@ internal static class AstGrepToolchainManager
             Directory.Move(
                 staging,
                 finalDirectory);
+            await VerifyPinnedExecutableAsync(
+                finalExecutable, metadata.ExecutableSha256, cancellationToken);
             await VerifyVersionAsync(
                 finalExecutable,
                 metadata.Version,
@@ -484,6 +376,7 @@ internal static class AstGrepToolchainManager
     }
 
     private static async Task<AstGrepToolchain?> TryResolveVendoredAsync(
+        AstGrepRegistryMetadata pinned,
         CancellationToken cancellationToken)
     {
         var directory =
@@ -543,6 +436,14 @@ internal static class AstGrepToolchainManager
                 RequireString(
                     root,
                     "executableSha256");
+            if (!string.Equals(packageName, pinned.PackageName, StringComparison.Ordinal) ||
+                !string.Equals(version, pinned.Version, StringComparison.Ordinal) ||
+                !string.Equals(integrity, pinned.Integrity, StringComparison.Ordinal) ||
+                !string.Equals(expectedSha, pinned.ExecutableSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                throw Unavailable("Installed ast-grep provenance does not match the checked-in pin.");
+            }
+
             var actualSha =
                 await ComputeFileSha256Async(
                     executable,
@@ -646,34 +547,23 @@ internal static class AstGrepToolchainManager
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or
             JsonException or FormatException or SourceEditDomainException)
         {
-            SafeDeleteDirectory(Path.GetDirectoryName(executable)!);
-            return null;
+            throw Unavailable("Pinned ast-grep cache failed integrity verification; execution refused.", ex);
         }
     }
 
-    private static async Task<AstGrepToolchain?> TryResolveNewestCachedAsync(
-        string root,
-        string packageName,
+    private static async Task VerifyPinnedExecutableAsync(
+        string executable,
+        string pinnedSha256,
         CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        if (!Directory.Exists(root)) return null;
-
-        foreach (var item in Directory.EnumerateDirectories(root)
-                     .Select(path => new
-                     {
-                         Name = Path.GetFileName(path),
-                         Version = Version.TryParse(Path.GetFileName(path), out var parsed) ? parsed : null,
-                     })
-                     .Where(item => item.Version is not null)
-                     .OrderByDescending(item => item.Version))
+        var actualSha = await ComputeFileSha256Async(executable, cancellationToken);
+        var expected = Convert.FromHexString(pinnedSha256);
+        var actual = Convert.FromHexString(actualSha);
+        if (!CryptographicOperations.FixedTimeEquals(expected, actual))
         {
-            var cached = await TryResolveInstalledAsync(
-                root, item.Name, packageName, integrity: null, cancellationToken);
-            if (cached is not null) return cached;
+            throw Unavailable(
+                "ast-grep.exe SHA-256 does not match the reviewed, checked-in pin; execution refused.");
         }
-
-        return null;
     }
 
     private static async Task VerifyVersionAsync(
@@ -730,6 +620,16 @@ internal static class AstGrepToolchainManager
         }
 
         var expectedSha = Convert.FromHexString(RequireString(metadata, "executableSha256"));
+        var pinned = LoadPinnedMetadata(ResolveArchitectureKey());
+        if (!string.Equals(packageName, pinned.PackageName, StringComparison.Ordinal) ||
+            !string.Equals(version, pinned.Version, StringComparison.Ordinal) ||
+            !string.Equals(integrity, pinned.Integrity, StringComparison.Ordinal) ||
+            !CryptographicOperations.FixedTimeEquals(
+                expectedSha, Convert.FromHexString(pinned.ExecutableSha256)))
+        {
+            throw Unavailable("Cached ast-grep metadata does not match the checked-in pin.");
+        }
+
         var actualSha = Convert.FromHexString(await ComputeFileSha256Async(executable, cancellationToken));
         if (expectedSha.Length != 32 || !CryptographicOperations.FixedTimeEquals(expectedSha, actualSha))
         {
@@ -880,5 +780,6 @@ internal static class AstGrepToolchainManager
         string PackageName,
         string Version,
         string Integrity,
-        Uri Tarball);
+        Uri Tarball,
+        string ExecutableSha256);
 }

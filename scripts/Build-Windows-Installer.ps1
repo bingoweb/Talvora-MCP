@@ -675,124 +675,139 @@ function Assert-DependencyAssetsUnchanged {
     }
 }
 
-function Install-AstGrepPayload {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string] $Rid,
-
-        [Parameter(Mandatory = $true)]
-        [string] $DestinationRoot,
-
-        [Parameter(Mandatory = $true)]
-        [string] $StagingRoot
-    )
-
-    $packageName = switch ($Rid) {
+function Get-PinnedAstGrepMetadata {
+    param([Parameter(Mandatory = $true)][string] $Rid)
+    $manifestPath = Join-Path $RepoRoot 'src\Talvora\ast-grep-pin.json'
+    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+        throw "The checked-in ast-grep pin manifest is missing."
+    }
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    $property = $manifest.platforms.PSObject.Properties[$Rid]
+    if ($manifest.schemaVersion -ne 1 -or $null -eq $property) {
+        throw "No pinned ast-grep package exists for runtime '$Rid'."
+    }
+    $platform = $property.Value
+    $name = [string]$platform.packageName
+    $version = [string]$manifest.version
+    $integrity = [string]$platform.integrity
+    $sha256 = [string]$platform.executableSha256
+    $url = [string]$platform.tarball
+    $expectedName = switch ($Rid) {
         'win-x64' { '@ast-grep/cli-win32-x64-msvc' }
         'win-arm64' { '@ast-grep/cli-win32-arm64-msvc' }
         'win-x86' { '@ast-grep/cli-win32-ia32-msvc' }
-        default { throw "No official ast-grep Windows package mapping exists for RuntimeIdentifier '$Rid'." }
+        default { throw "Unknown ast-grep runtime '$Rid'." }
     }
+    $packageBase = $expectedName.Split('/')[1]
+    $expectedUrl = "https://registry.npmjs.org/$expectedName/-/$packageBase-$version.tgz"
+    if ($name -cne $expectedName -or $url -cne $expectedUrl -or
+        [string]::IsNullOrWhiteSpace($version) -or -not $integrity.StartsWith('sha512-', [StringComparison]::Ordinal) -or
+        $sha256 -notmatch '^[A-Fa-f0-9]{64}$') {
+        throw "The checked-in ast-grep pin does not match its official exact-version npm artifact."
+    }
+    $expectedDigest = [Convert]::FromBase64String($integrity.Substring(7))
+    if ($expectedDigest.Length -ne 64) { throw 'Pinned ast-grep SHA-512 digest is invalid.' }
+    return [pscustomobject]@{
+        packageName = $name
+        version = $version
+        integrity = $integrity
+        executableSha256 = $sha256
+        tarball = $url
+    }
+}
 
-    $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
-    if ($null -eq $npmCommand) {
-        $npmCommand = Get-Command npm -ErrorAction SilentlyContinue
+function Assert-PinnedAstGrepTarball {
+    param([Parameter(Mandatory = $true)][string] $Path,
+        [Parameter(Mandatory = $true)][string] $Integrity)
+    if (-not $Integrity.StartsWith('sha512-', [StringComparison]::Ordinal)) {
+        throw 'Pinned ast-grep tarball SHA-512 is missing.'
     }
-    if ($null -eq $npmCommand) {
-        throw 'npm is required to resolve the current official ast-grep platform package.'
+    $expected = [Convert]::ToHexString([Convert]::FromBase64String($Integrity.Substring(7)))
+    $actual = (Get-FileHash -LiteralPath $Path -Algorithm SHA512).Hash
+    if (-not [string]::Equals($expected, $actual, [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Pinned ast-grep tarball SHA-512 verification failed; execution refused.'
     }
-    $registry = 'https://registry.npmjs.org/'
+}
 
-    # Resolve all provenance fields from the same registry response.
-    $metadataJson = (& $npmCommand.Source view ($packageName + '@latest') --json "--registry=$registry" | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($metadataJson)) {
-        throw "Unable to resolve ast-grep npm metadata for $packageName."
+function Assert-PinnedAstGrepExecutable {
+    param([Parameter(Mandatory = $true)][string] $Path,
+        [Parameter(Mandatory = $true)][string] $Sha256)
+    $actual = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash
+    if (-not [string]::Equals($Sha256, $actual, [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Pinned ast-grep.exe SHA-256 verification failed; execution refused.'
     }
-    $metadataItems = @($metadataJson | ConvertFrom-Json)
-    if ($metadataItems.Count -ne 1) {
-        throw "Unexpected ast-grep package metadata cardinality: $($metadataItems.Count)."
-    }
-    $metadata = $metadataItems[0]
-    if ($null -eq $metadata -or
-        -not [string]::Equals([string]$metadata.name, $packageName, [StringComparison]::Ordinal)) {
-        throw 'Unexpected ast-grep package metadata identity or shape.'
-    }
-    $version = [string]$metadata.version
-    $license = [string]$metadata.license
-    $integrity = [string]$metadata.dist.integrity
+}
 
-    if ([string]::IsNullOrWhiteSpace($version)) {
-        throw 'ast-grep latest version metadata is empty.'
-    }
-    if (-not [string]::Equals($license, 'MIT', [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Unexpected ast-grep license '$license'."
-    }
-    if (-not $integrity.StartsWith('sha512-', [StringComparison]::Ordinal)) {
-        throw 'ast-grep package metadata does not provide SHA-512 SRI integrity.'
-    }
-
+function Install-AstGrepPayload {
+    param(
+        [Parameter(Mandatory = $true)][string] $Rid,
+        [Parameter(Mandatory = $true)][string] $DestinationRoot,
+        [Parameter(Mandatory = $true)][string] $StagingRoot
+    )
+    $pin = Get-PinnedAstGrepMetadata -Rid $Rid
     Remove-Item -LiteralPath $StagingRoot -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Path $StagingRoot -Force | Out-Null
-    $stagingPackageJson = Join-Path $StagingRoot 'package.json'
-    [IO.File]::WriteAllText(
-        $stagingPackageJson,
-        '{"name":"talvora-ast-grep-stage","private":true}',
-        [Text.UTF8Encoding]::new($false))
+    $tarball = Join-Path $StagingRoot 'pinned-ast-grep.tgz'
+    $executable = Join-Path $StagingRoot 'ast-grep.exe'
 
-    Push-Location $StagingRoot
+    Invoke-WebRequest -Uri $pin.tarball -OutFile $tarball -MaximumRedirection 0 -TimeoutSec 180 -ErrorAction Stop | Out-Null
+    Assert-PinnedAstGrepTarball -Path $tarball -Integrity $pin.integrity
+
+    $file = [IO.File]::OpenRead($tarball)
     try {
-        $installOutput = @(& $npmCommand.Source install --ignore-scripts --no-audit --no-fund --save-exact "--registry=$registry" ($packageName + '@' + $version) 2>&1)
-        $installExitCode = $LASTEXITCODE
-        foreach ($line in $installOutput) {
-            Write-Host ([string]$line)
+        $gzip = [IO.Compression.GZipStream]::new($file, [IO.Compression.CompressionMode]::Decompress)
+        try {
+            $reader = [System.Formats.Tar.TarReader]::new($gzip)
+            try {
+                $found = $false
+                while ($null -ne ($entry = $reader.GetNextEntry())) {
+                    if ($entry.Name -cne 'package/ast-grep.exe') { continue }
+                    if ($null -eq $entry.DataStream) { throw 'Pinned ast-grep tarball executable is empty.' }
+                    $output = [IO.File]::Create($executable)
+                    try { $entry.DataStream.CopyTo($output) }
+                    finally { $output.Dispose() }
+                    $found = $true
+                    break
+                }
+                if (-not $found) { throw 'Pinned ast-grep tarball did not contain package/ast-grep.exe.' }
+            }
+            finally { $reader.Dispose() }
         }
-        if ($installExitCode -ne 0) {
-            throw "ast-grep platform package install failed: $installExitCode"
-        }
+        finally { $gzip.Dispose() }
     }
-    finally {
-        Pop-Location
-    }
+    finally { $file.Dispose() }
 
-    $packageRelative = $packageName -replace '/', [IO.Path]::DirectorySeparatorChar
-    $sourceExecutable = Join-Path $StagingRoot ('node_modules\' + $packageRelative + '\ast-grep.exe')
-    if (-not (Test-Path -LiteralPath $sourceExecutable -PathType Leaf)) {
-        throw "ast-grep platform package did not contain ast-grep.exe: $sourceExecutable"
-    }
-
-    $versionOutput = (& $sourceExecutable --version | Out-String).Trim()
+    Assert-PinnedAstGrepExecutable -Path $executable -Sha256 $pin.executableSha256
+    $versionOutput = (& $executable --version | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or
-        -not [string]::Equals($versionOutput, ('ast-grep ' + $version), [StringComparison]::Ordinal)) {
-        throw "ast-grep executable version verification failed. Expected='ast-grep $version' Actual='$versionOutput'"
+        -not [string]::Equals($versionOutput, ('ast-grep ' + $pin.version), [StringComparison]::Ordinal)) {
+        throw "Pinned ast-grep executable version verification failed. Expected='ast-grep $($pin.version)' Actual='$versionOutput'"
     }
 
     Remove-Item -LiteralPath $DestinationRoot -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Path $DestinationRoot -Force | Out-Null
     $destinationExecutable = Join-Path $DestinationRoot 'ast-grep.exe'
-    Copy-Item -LiteralPath $sourceExecutable -Destination $destinationExecutable -Force
-    $executableSha256 = (Get-FileHash -LiteralPath $destinationExecutable -Algorithm SHA256).Hash
-
+    Copy-Item -LiteralPath $executable -Destination $destinationExecutable -Force
+    Assert-PinnedAstGrepExecutable -Path $destinationExecutable -Sha256 $pin.executableSha256
     $provenance = [ordered]@{
-        packageName = $packageName
-        version = $version
-        license = $license
-        integrity = $integrity
-        executableSha256 = $executableSha256
-        registry = $registry
+        packageName = $pin.packageName
+        version = $pin.version
+        license = 'MIT'
+        integrity = $pin.integrity
+        executableSha256 = $pin.executableSha256
+        registry = 'https://registry.npmjs.org/'
         resolvedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
     }
-    $provenancePath = Join-Path $DestinationRoot 'provenance.json'
     [IO.File]::WriteAllText(
-        $provenancePath,
+        (Join-Path $DestinationRoot 'provenance.json'),
         ($provenance | ConvertTo-Json -Depth 4),
         [Text.UTF8Encoding]::new($false))
-
     return [pscustomobject]@{
-        packageName = $packageName
-        version = $version
-        license = $license
-        integrity = $integrity
-        executableSha256 = $executableSha256
+        packageName = $pin.packageName
+        version = $pin.version
+        license = 'MIT'
+        integrity = $pin.integrity
+        executableSha256 = $pin.executableSha256
     }
 }
 

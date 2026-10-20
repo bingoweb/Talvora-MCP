@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "version": "0.45.3",
+  "platforms": {
+    "win-x64": {
+      "packageName": "@ast-grep/cli-win32-x64-msvc",
+      "tarball": "https://registry.npmjs.org/@ast-grep/cli-win32-x64-msvc/-/cli-win32-x64-msvc-0.45.3.tgz",
+      "integrity": "sha512-UZrpVbjLQqQIRxWqeMcwyLSIhlDZyhYb8SinssM38Oo6mEB2jMfHCEoigay9UOZTfUR268n72BBV48nW2h+QwA==",
+      "executableSha256": "DAFF0F5963FAAB7617045833132A3538C85EEE65F3AFEEDF347F829A7B8D83FB"
+    },
+    "win-arm64": {
+      "packageName": "@ast-grep/cli-win32-arm64-msvc",
+      "tarball": "https://registry.npmjs.org/@ast-grep/cli-win32-arm64-msvc/-/cli-win32-arm64-msvc-0.45.3.tgz",
+      "integrity": "sha512-X0+81Mgr8zsH6hu4Pqdr5h1IyAFUWbKS1PMkKT6awYiiTo/1uhVM/6WzJ+ohOQPmMTyt4poyyg46u2E4WzKECg==",
+      "executableSha256": "8B881D2E98C303F0F90AD6D2A9422DFE89AB32552873A49C7F35899138E813B7"
+    },
+    "win-x86": {
+      "packageName": "@ast-grep/cli-win32-ia32-msvc",
+      "tarball": "https://registry.npmjs.org/@ast-grep/cli-win32-ia32-msvc/-/cli-win32-ia32-msvc-0.45.3.tgz",
+      "integrity": "sha512-W4H27lU/xzzIOvRo4vDTjzq91PioLCjupR7jLmLVkAqAkX2YiNRixf8NjMcQgzAgr33jUsMlyutiTElLgi1O9g==",
+      "executableSha256": "6610FD6C366C1BD7FB1D13973569F3701EE9A0FCA581BB9DE4CD0601107FC585"
+    }
+  }
+}

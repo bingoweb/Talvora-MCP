@@ -50,29 +50,42 @@ internal static partial class SourceEditRegressionRunner
         async Task<AstGrepToolchain?> ResolveAsync(CancellationToken token = default)
         {
             var method = typeof(AstGrepToolchainManager).GetMethod(
-                offline ? "TryResolveNewestCachedAsync" : "TryResolveInstalledAsync",
-                BindingFlags.NonPublic | BindingFlags.Static)!;
-            var parameters = offline
-                ? new object[] { cache, toolchain.PackageName, token }
-                : new object[] { cache, toolchain.Version, toolchain.PackageName, toolchain.Integrity, token };
-            return await (Task<AstGrepToolchain?>)method.Invoke(null, parameters)!;
+                "TryResolveInstalledAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
+            return await (Task<AstGrepToolchain?>)method.Invoke(null,
+                [cache, toolchain.Version, toolchain.PackageName, toolchain.Integrity, token])!;
+        }
+
+        async Task ExpectRejectedAsync(string explanation)
+        {
+            try
+            {
+                _ = await ResolveAsync();
+            }
+            catch (SourceEditDomainException ex) when (
+                ex.Message.Contains("Pinned ast-grep cache failed integrity verification; execution refused.",
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            throw new InvalidOperationException("Pinned cache did not fail closed: " + explanation);
         }
 
         await PrepareAsync(new string('0', 64));
-        Assert(await ResolveAsync() is null, "Cache with a mismatched executable hash was accepted.");
+        await ExpectRejectedAsync("mismatched executable SHA-256");
         await PrepareAsync(null);
-        Assert(await ResolveAsync() is null, "Legacy cache without executable hash was accepted.");
+        await ExpectRejectedAsync("legacy cache without executable hash");
         await PrepareAsync(expectedSha, "@different/package");
-        Assert(await ResolveAsync() is null, "Cache with another package identity was accepted.");
+        await ExpectRejectedAsync("another package identity");
         foreach (var invalidManifest in new[] { "[]", "{", "null" })
         {
             await PrepareAsync(expectedSha);
             await File.WriteAllTextAsync(manifest, invalidManifest);
-            Assert(await ResolveAsync() is null, "Malformed cache provenance was accepted.");
+            await ExpectRejectedAsync("malformed provenance");
         }
         await PrepareAsync(expectedSha);
         File.Delete(manifest);
-        Assert(await ResolveAsync() is null, "Cache without provenance was accepted.");
+        await ExpectRejectedAsync("missing provenance");
         await PrepareAsync(expectedSha);
         var valid = await ResolveAsync();
         Assert(valid is not null && valid.Integrity == toolchain.Integrity, "Verified cache could not be reused.");
