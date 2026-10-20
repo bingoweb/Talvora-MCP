@@ -346,7 +346,10 @@ private static async Task CleanupObsoleteInstallationsAsync(
         var state = new
         {
             Product = "Talvora",
-            Version = health.Version ?? "3.0.0-dev",
+            Version = health.Version ??
+                typeof(InstallerEngine).Assembly
+                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                    ?.InformationalVersion,
             SourceCommit = sourceCommit,
             Service = ServiceName,
             ServiceSid = health.Sid ?? "S-1-5-18",

@@ -1,6 +1,9 @@
 <Project>
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
+    <Version>3.0.0-dev</Version>
+    <InformationalVersion>$(Version)+$(SourceRevisionId)</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

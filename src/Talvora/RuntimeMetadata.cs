@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using Talvora.Shared;
 
@@ -7,6 +8,13 @@ public sealed record TalvoraRuntimeMetadata(
     string? SourceCommit,
     string? InstalledAtUtc)
 {
+    public static string InformationalVersion { get; } =
+        typeof(TalvoraRuntimeMetadata).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion
+        ?? throw new InvalidOperationException(
+            "Talvora assembly informational version is missing.");
+
     private const int MaximumRuntimeMetadataBytes = 16 * 1024;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

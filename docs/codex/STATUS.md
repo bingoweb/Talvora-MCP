@@ -62,7 +62,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [?] R2 — Prompts via stdin (waiting for Claude: P-14; protected S3 run folder prerequisite)
 - [?] R3 — Safe Reset-And-Install (waiting for Claude: P-15)
 - [x] R4 — Upstream-degradation aware recovery, bounded logs
-- [ ] R5 — One version everywhere
+- [x] R5 — One version everywhere
 - [ ] Q1 — Tool titles, shorter descriptions, payload budget
 - [ ] Q2 — Tool surface consolidation Q2a/Q2b/Q2c (zero capability loss)
 - [ ] Q3 — Documentation diet
@@ -112,6 +112,12 @@ P-12 — S3 startup notice route needs a decision (docs/codex/PROPOSALS.md).
 - scripts/Get-CodexContext.ps1:41 — `-Card D2` reports "Card D2 could not be found" although ROADMAP.md:599 contains the D2 heading; outside D2 scope, not changed.
 
 ## Log
+- 2026-10-20 — R5 (executor: ChatGPT via Talvora): set Directory.Build.props Version 3.0.0-dev and InformationalVersion $(Version)+$(SourceRevisionId), disabled duplicate SDK revision append.
+  /healthz and MCP ServerInfo now use the same service AssemblyInformationalVersionAttribute; Control Center shows the matching tray informational version, retaining bounded current.json compatibility.
+  Installer build injects identical SourceRevisionId into service, tray and setup; installed current.json version falls back to the installer attribute rather than a hardcoded literal.
+  RED missing unified version property; GREEN notification service/tray assembly equality regression. Context7 /dotnet/sdk and /modelcontextprotocol/csharp-sdk.
+  Fast baseline 13/0; Full gate 52 checks, 0 errors, last line `Hepsi geçti.`. Installer canonical deployment and live 3-way version check follow the one R5 commit.
+  No Codex used; next card Q1.
 - 2026-10-20 — R4 (executor: ChatGPT via Talvora): classified upstream control-plane degradation separately from local protocol, tunnel process and response-delivery faults; healthy local components are not restarted for upstream slowness.
   Recovery uses approved Turkish waiting status and 1/2/5/10-minute bounded probe backoff. Manual-stop, optional MCP, and local repair paths preserved.
   TrayLog deduplicates identical messages for ten minutes; per incident/MCP, only the first attempt contains a full stack trace.

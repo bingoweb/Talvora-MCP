@@ -34,8 +34,15 @@ builder.Services.AddHostedService<TalvoraSystemStorageMaintenanceService>();
 
 builder.Services
     .AddMcpServer(options =>
+    {
+        options.ServerInfo = new Implementation
+        {
+            Name = "Talvora",
+            Version = TalvoraRuntimeMetadata.InformationalVersion,
+        };
         options.ServerInstructions =
-            SourceEditRoutingContract.ServerInstructions)
+            SourceEditRoutingContract.ServerInstructions;
+    })
     .WithHttpTransport(options =>
     {
         options.SessionMode =
@@ -130,7 +137,7 @@ app.MapGet("/healthz", () =>
     return Results.Json(new
     {
         product = "Talvora",
-        version = "3.0.0-dev",
+        version = TalvoraRuntimeMetadata.InformationalVersion,
         sourceCommit = runtime.SourceCommit,
         installedAtUtc = runtime.InstalledAtUtc,
         mcp = "/mcp",

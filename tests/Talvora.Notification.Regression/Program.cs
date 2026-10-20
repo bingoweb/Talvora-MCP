@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Reflection;
 using System.Security.Principal;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -15,6 +16,7 @@ internal static class Program
         await DesktopProgressProtocol.AssertContractAsync();
         DesktopProgressPresentationState.AssertContract();
         ManagedMcpAggregateHealthPolicy.AssertContract();
+        AssertUnifiedVersionContract();
         AssertUpstreamRecoveryContract();
         await AssertWorkVisibilityFilteringAsync();
         await AssertDiffEvidenceCoverageAsync();
@@ -34,6 +36,20 @@ internal static class Program
         Console.WriteLine(
             "DESKTOP_PROGRESS_BEHAVIOR_GREEN");
         return 0;
+    }
+
+    private static void AssertUnifiedVersionContract()
+    {
+        var serviceVersion = TalvoraRuntimeMetadata.InformationalVersion;
+        var trayVersion = typeof(ControlCenterVersionService).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+        if (!serviceVersion.StartsWith("3.0.0-dev+", StringComparison.Ordinal) ||
+            !string.Equals(serviceVersion, trayVersion, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Service and Control Center must use one assembly informational version.");
+        }
     }
 
     private static void AssertUpstreamRecoveryContract()

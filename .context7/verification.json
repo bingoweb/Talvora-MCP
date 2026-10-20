@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-20T16:24:56Z",
-  "scope": "R4 managed MCP recovery diagnostics: classify control-plane degraded while local protocol and tunnel process healthy separately from local/response-delivery faults; wait without restart for upstream degradation and probe after prescribed 1/2/5/10 minutes. TrayLog deduplicates identical messages for ten minutes and preserves only one full stack per failure fingerprint in that window. Context7 /dotnet/docs checked System.Text.Json JsonDocument/JsonElement parsing for sanitized fixture cases, no new package dependencies.",
+  "verifiedAtUtc": "2026-10-20T16:44:26Z",
+  "scope": "R5 unified assembly informational version: Directory.Build.props sets Version=3.0.0-dev and InformationalVersion=$(Version)+$(SourceRevisionId). Canonical installer build injects SourceRevisionId into service, tray and installer publish, and disables duplicate SDK automatic SourceRevisionId suffix. /healthz and MCP ServerInfo use TalvoraRuntimeMetadata assembly informational attribute; Control Center version service shows its embedded matching assembly version while preserving bounded installer current.json compatibility. Context7 /dotnet/sdk and /modelcontextprotocol/csharp-sdk verified attribute generation, SourceRevisionId, and McpServerOptions.ServerInfo. Installed runtime acceptance checks the same version in health, MCP initialize and Control Center metadata.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/sdk",
+      "verified": "2026-10-20 R5: Microsoft.NET.GenerateAssemblyInfo.targets generates System.Reflection.AssemblyInformationalVersionAttribute from the InformationalVersion property; IncludeSourceRevisionInInformationalVersion defaults true and AddSourceRevisionToInformationalVersion appends SourceRevisionId unless disabled. SDK SourceLink default imports are implicit. R5 explicitly sets the prescribed combined version and false duplicate-append flag; the installer build injects SourceRevisionId at publish time."
+    },
+    {
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-10-20 R5: official SDK samples/EverythingServer/Program.cs configures AddMcpServer(options => options.ServerInfo = new Implementation { Name, Version, Title }); McpServerOptions.ServerInfo is the initialization implementation identity, and Implementation.Version is a required string. Configured Talvora service MCP ServerInfo.Version from the same assembly attribute as /healthz."
+    },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-20 R4: official System.Text.Json DOM documentation shows using JsonDocument.Parse and JsonElement.TryGetProperty/EnumerateObject to read bounded JSON and build safe detached snapshots before disposing the JsonDocument; Context7 /dotnet/docs verified. Reused existing tunnel health parser; sanitized JSON fixtures cover control-plane-only degradation and local response-delivery degradation. TimeSpan.FromMinutes and DateTimeOffset.Add implement the R4 fixed retry schedule."
@@ -113,6 +121,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-20 R5: .NET SDK official Microsoft.NET.GenerateAssemblyInfo.targets https://github.com/dotnet/sdk/blob/main/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.GenerateAssemblyInfo.targets ; https://learn.microsoft.com/en-us/dotnet/standard/assembly/set-attributes-project-file ; Context7 /dotnet/sdk. MCP C# SDK EverythingServer serverInfo example https://github.com/modelcontextprotocol/csharp-sdk/blob/main/samples/EverythingServer/Program.cs and McpServerOptions class source https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Server/McpServerOptions.cs ; Context7 /modelcontextprotocol/csharp-sdk. Assembly attribute RED then GREEN test; installed verification after one R5 commit.",
     "2026-10-20 R4: Microsoft .NET System.Text.Json DOM https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/use-dom and DateTimeOffset.Add https://learn.microsoft.com/en-us/dotnet/api/system.datetimeoffset.add?view=net-10.0 ; Context7 /dotnet/docs. Local in-process classifier fixtures and repeated-error logging tests run without a remote service, with no new packages.",
     "2026-10-20 S8 official Git CLI manual https://git-scm.com/docs/git (git 2.56.0 online) and https://github.com/git/htmldocs/blob/gh-pages/git.adoc through Context7 /git/htmldocs. Installed Git for Windows 2.55.0.windows.5 git -h confirms global options; git help git viewer timed out under LocalSystem. S8 fixtures validate push/non-push detection and working-tree mutation routing through the single existing parser.",
     "2026-10-20 S7: Microsoft .NET NamedPipeClientStream constructor with explicit TokenImpersonationLevel https://learn.microsoft.com/en-us/dotnet/api/system.io.pipes.namedpipeclientstream.-ctor?view=net-10.0 ; Windows GetNamedPipeServerProcessId https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getnamedpipeserverprocessid ; Context7 /dotnet/docs. Tested with installed Talvora.Tray.exe under Program Files in user session.",

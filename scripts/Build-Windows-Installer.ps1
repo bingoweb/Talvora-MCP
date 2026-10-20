@@ -880,6 +880,7 @@ $serviceArgs = @(
     $ServiceProject,
     '-c','Release',
     '-r',$RuntimeIdentifier,
+    ('-p:SourceRevisionId=' + $SourceCommit),
     '--self-contained','true',
     '--artifacts-path',$DependencyArtifactsRoot,
     '--no-restore',
@@ -900,6 +901,7 @@ $trayArgs = @(
     $TrayProject,
     '-c','Release',
     '-r',$RuntimeIdentifier,
+    ('-p:SourceRevisionId=' + $SourceCommit),
     '--self-contained','true',
     '--artifacts-path',$DependencyArtifactsRoot,
     '--no-restore',
@@ -1184,6 +1186,7 @@ try {
         $InstallerProject,
         '-c','Release',
         '-r',$RuntimeIdentifier,
+        ('-p:SourceRevisionId=' + $SourceCommit),
         '--self-contained','true',
         '-o',$ArtifactsRoot
     )

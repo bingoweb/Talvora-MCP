@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
+using System.Reflection;
 using System.Text.Json;
 using Talvora.Shared;
 
@@ -101,6 +102,9 @@ internal static class ControlCenterVersionService
     private static async Task<string> GetTalvoraVersionAsync(
         CancellationToken cancellationToken)
     {
+        var assemblyVersion = typeof(ControlCenterVersionService).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
         var path = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Talvora",
@@ -108,7 +112,7 @@ internal static class ControlCenterVersionService
 
         if (!File.Exists(path))
         {
-            return "Bilinmiyor";
+            return assemblyVersion ?? "Bilinmiyor";
         }
 
         try
@@ -124,7 +128,7 @@ internal static class ControlCenterVersionService
                     out var version) &&
                 version.ValueKind == JsonValueKind.String)
             {
-                return version.GetString() ?? "Bilinmiyor";
+                return assemblyVersion ?? version.GetString() ?? "Bilinmiyor";
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -140,7 +144,7 @@ internal static class ControlCenterVersionService
             TrayLog.Write("Talvora version metadata could not be read", ex);
         }
 
-        return "Bilinmiyor";
+        return assemblyVersion ?? "Bilinmiyor";
     }
 
     private static async Task<string> GetGiteaVersionAsync(
