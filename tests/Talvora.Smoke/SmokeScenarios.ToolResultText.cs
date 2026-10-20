@@ -76,6 +76,30 @@ internal static partial class SmokeScenarios
             throw new InvalidOperationException(
                 "Null JSON must preserve original text.");
         }
+
+        foreach (var failureJson in new object[]
+        {
+            new { success = false, error = "rejected" },
+            new { timedOut = true },
+            new { exitCode = 1, standardError = "boom" },
+        })
+        {
+            var failureStructured = JsonSerializer.SerializeToElement(failureJson);
+            var failureText = failureStructured.GetRawText();
+            var failureInput = new CallToolResult
+            {
+                StructuredContent = failureStructured,
+                Content = [new TextContentBlock { Text = failureText }],
+            };
+            var failureOutput = ToolResultTextPolicy.Apply(failureInput);
+            if (failureOutput.Content.Count != 1 ||
+                failureOutput.Content[0] is not TextContentBlock kept ||
+                kept.Text != failureText)
+            {
+                throw new InvalidOperationException(
+                    "Structured failures must keep their original text: " + failureText);
+            }
+        }
     }
 
     internal static async Task RunLiveToolResultTextPolicyAsync(

@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-20T21:26:06Z",
-  "scope": "D1 exact roadmap implementation with approved P-5 amendment: SourceEditPathGuard records directories whose DELETE-share rename protection fell back to a shared metadata handle, and SourceEditEngine surfaces exactly one DIRECTORY_RENAME_UNPROTECTED warning per directory in the committed result while preserving warnings on receipt-persistence errors. Targeted external DELETE holder regression was RED (expected 1 warning, got 0) and became GREEN; normal protected guard contracts GREEN. No retry or identity matching logic changed. Context7 /dotnet/docs and official Microsoft Windows CreateFileW/file-sharing semantics verify the SafeFileHandle and sharing behavior. D5 was separately blocked by proposal P-20 with partial D5 code reverted.",
+  "verifiedAtUtc": "2026-10-20T21:43:27Z",
+  "scope": "D3 exact roadmap/P-6 implementation: StructuredResultFailure now owns case-insensitive structured tool failure detection for timedOut=true, success=false, and nonzero integer exitCode. ToolResultTextPolicy preserves original text for such failures while retaining the success marker. TalvoraDesktopProgressNotifier reuses the shared detector without changing Turkish failure messages; the smoke project links the shared source. Test-first RED on success:false original text, then targeted smoke and notification regressions GREEN. Context7 /dotnet/docs confirms JsonElement.ValueKind/EnumerateObject and JSON inspection semantics; no dependency changes.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-20 D3: Current Microsoft System.Text.Json guidance confirms JsonElement.ValueKind, JsonElement.EnumerateObject, and manual case-insensitive comparison of JSON property names. The exact ROADMAP D3 helper and smoke Compile link were used without modifying existing success-result behavior."
+    },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-20 D1: .NET SafeFileHandle guidance confirms releasing Win32 handles with SafeHandle and independent file-sharing behavior. ROADMAP D1 required the existing CreateFileW fallback to remain unchanged while exposing the protection state; targeted tests proved one warning for an external DELETE holder and none for an ordinary protected commit."
@@ -153,6 +157,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-20 D3: Microsoft System.Text.Json DOM guide https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/use-dom and casing documentation https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/character-casing ; Context7 /dotnet/docs. Targeted text preservation regression RED then GREEN; notification regression DESKTOP_PROGRESS_BEHAVIOR_GREEN.",
     "2026-10-20 D1: Microsoft Windows CreateFileW https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew (FILE_SHARE_DELETE and sharing violation semantics) and .NET FileShare https://learn.microsoft.com/en-us/dotnet/api/system.io.fileshare?view=net-10.0 ; Context7 /dotnet/docs. D1 source result warnings tested RED to GREEN with unchanged directory fallback and rename guard contracts.",
     "2026-10-20 D6: Microsoft PowerShell about_Regular_Expressions https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_regular_expressions?view=powershell-7.7 ; Context7 /microsoftdocs/powershell-docs. Verified (?ms) ^ anchor, exact card ID separated by horizontal whitespace, [regex]::Escape, and lookahead. Targeted QualityGateRegression RED then GREEN; real D1/D2/D7 lookups GREEN.",
     "2026-10-20 CI2: Microsoft NuGet central package management https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management and restore lock-file guidance https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files and https://learn.microsoft.com/en-us/nuget/reference/errors-and-warnings/nu1512 ; NuGet 10.0.13 availability https://www.nuget.org/packages/Microsoft.Extensions.Hosting.WindowsServices/10.0.13 ; GitHub Dependabot ignore and wildcard behavior https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/configuring-dependabot-version-updates . Context7 /websites/learn_microsoft_en-us_nuget and approved CI2 reference scripts. Locked solution/installer restores and Release build GREEN, PR #16 CLOSED.",

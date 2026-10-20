@@ -12,7 +12,8 @@ internal static class ToolResultTextPolicy
         // Codex prefers structured data; leave empty/null payloads and errors untouched.
         if (result.IsError is true ||
             result.StructuredContent is not { } structured ||
-            structured.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+            structured.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null ||
+            StructuredResultFailure.IsFailure(structured))
         {
             return result;
         }

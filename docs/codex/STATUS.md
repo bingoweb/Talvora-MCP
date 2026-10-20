@@ -58,8 +58,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] CI2 — .NET platform packages in lockstep 10.0.13 (GitHub CI 39494729468 green; installed 6538264 verified; PR #16 closed)
 - [x] D6 — Context helper finds `##` and `###` card headings (GitHub windows-ci 39497367643 green)
 - [?] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (waiting for Claude: P-20; N5 §3.1 acceptance conflicts with exact implementation)
-- [~] D1 — Make the rename-protection fallback visible (Full 54/0 as LocalSystem; own GitHub CI and installed runtime pending)
-- [ ] D3 — Keep the text of structured failures (P-6 decided)
+- [x] D1 — Make the rename-protection fallback visible (GitHub CI 39501010691 green; installed f060eba verified)
+- [~] D3 — Keep the text of structured failures (local Full gate green; own GitHub CI and installed runtime verification pending)
 - [ ] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (P-7 decided)
 - [ ] Q6 — Schema validation of tool arguments before invocation (P-3, P-8 decided)
 - [ ] Q6c — Translate tool exceptions into redacted, categorised errors (P-9 decided)
@@ -114,6 +114,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — D3 (executor: ChatGPT via Talvora): added the exact shared StructuredResultFailure detector; ToolResultTextPolicy preserves failure text, and the notifier reuses detection without changing its Turkish messages. Smoke csproj links the shared helper (P-6).
+  Test-first RED: success:false result lost original error text. Targeted smoke GREEN (success:false, timedOut:true, exitCode:1) and DESKTOP_PROGRESS_BEHAVIOR_GREEN; Release build 0 errors/warnings.
+  Supporting change outside card Files: tests/ModernizationPolicyRegression.ps1 now checks the detector's exitCode plus notifier use of the shared helper; first Full gate 31/1 from stale static path, targeted MODERNIZATION_POLICY_GREEN after fix.
+  Final Full gate: 54 checks, 0 errors, "Hepsi geçti."; gate run as LocalSystem (Kimlik: NT AUTHORITY\SYSTEM). Context7 /dotnet/docs; Microsoft System.Text.Json DOM and casing guidance.
+  D1 completion reconciled (GitHub run 39501010691 green; installed sourceCommit f060eba); D5 remains blocked on P-20. D3 own exact-commit CI and runtime deployment pending after push.
 - 2026-10-21 — D1 (executor: ChatGPT via Talvora): applied exact P-5/ROADMAP path-guard fallback reporting and preserved it in the committed result and receipt warning; no retry/identity behavior changed.
   RED before: external DELETE-holder warning Expected=1 Actual=0; GREEN after: external holder and normal protected directory guard regressions. Release build 0 errors/warnings.
   Final Full quality gate: 54 checks, 0 errors, "Hepsi geçti." (Kimlik: NT AUTHORITY\SYSTEM). Context7 /dotnet/docs plus official Microsoft CreateFileW/FileShare documentation.

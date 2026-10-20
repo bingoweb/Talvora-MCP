@@ -696,39 +696,21 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         string? toolName,
         out string message)
     {
-        if (json.ValueKind != JsonValueKind.Object)
+        switch (StructuredResultFailure.Describe(json))
         {
-            message = string.Empty;
-            return false;
+            case StructuredResultFailure.TimedOut:
+                message =
+                    "Bu işlem zaman sınırını aştı ve tamamlanmış sayılmıyor. " +
+                    "Son doğrulanmış durum ve varsa gerçek hata ayrıntısı kanıt bölümünde korunuyor.";
+                return true;
+            case StructuredResultFailure.Unsuccessful:
+            case StructuredResultFailure.NonZeroExit:
+                message = BuildFriendlyResultFailureMessage(toolName);
+                return true;
+            default:
+                message = string.Empty;
+                return false;
         }
-
-        if (TryGetPropertyIgnoreCase(json, "timedOut", out var timedOut) &&
-            timedOut.ValueKind == JsonValueKind.True)
-        {
-            message =
-                "Bu işlem zaman sınırını aştı ve tamamlanmış sayılmıyor. " +
-                "Son doğrulanmış durum ve varsa gerçek hata ayrıntısı kanıt bölümünde korunuyor.";
-            return true;
-        }
-
-        if (TryGetPropertyIgnoreCase(json, "success", out var success) &&
-            success.ValueKind == JsonValueKind.False)
-        {
-            message = BuildFriendlyResultFailureMessage(toolName);
-            return true;
-        }
-
-        if (TryGetPropertyIgnoreCase(json, "exitCode", out var exitCode) &&
-            exitCode.ValueKind == JsonValueKind.Number &&
-            exitCode.TryGetInt32(out var code) &&
-            code != 0)
-        {
-            message = BuildFriendlyResultFailureMessage(toolName);
-            return true;
-        }
-
-        message = string.Empty;
-        return false;
     }
 
     private static bool TryGetPropertyIgnoreCase(

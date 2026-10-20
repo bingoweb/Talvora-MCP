@@ -11,5 +11,7 @@
   <ItemGroup>
     <Compile Include="..\..\src\Talvora\ToolResultTextPolicy.cs"
              Link="ToolResultTextPolicy.cs" />
+    <Compile Include="..\..\src\Talvora\StructuredResultFailure.cs"
+             Link="StructuredResultFailure.cs" />
   </ItemGroup>
 </Project>
