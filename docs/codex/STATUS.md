@@ -51,7 +51,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] R4 — Upstream-degradation aware recovery, bounded logs
 - [x] R5 — One version everywhere
 - [x] Q4 — Context7 gate covers XAML/tests
-- [ ] D8 — Context budget ignores literal implementation blocks (audit 2026-10-20 (4), P-19 decided)
+- [~] D8 — Context budget ignores literal implementation blocks (local gates green; GitHub CI pending)
 - [ ] D7 — Knowledge roots degrade instead of throwing; gate passes as the signed-in user (audit 2026-10-20 (3), HIGH)
 - [ ] CI1 — Every push checks its own GitHub run (Get-CiStatus.ps1; AGENTS step 10b)
 - [ ] CI3 — Deadline instead of a fixed loop in the directory-holder test (flaky CI)
@@ -114,6 +114,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-20 — D8 (executor: ChatGPT via Talvora): applied ROADMAP's literal regression change in tests/QualityGateRegression.ps1; required supporting Context7 evidence refreshed in .context7/verification.json.
+  Red before: N1 real context exceeded 250 lines; targeted test GREEN after. Fast gate: 13 checks, 0 errors, "Hepsi geçti."; Full gate: 53 checks, 0 errors, "Hepsi geçti." (LocalSystem executor).
+  Context7: /microsoftdocs/powershell-docs; vendor: Microsoft PowerShell about_Split and about_Comparison_Operators. No runtime changes, so no deploy.
+  GitHub windows-ci was already red at baseline (6ad3804, run 39480443756; known S6 user-identity issue). D8 CI result pending; next planned correction is D7.
 - 2026-10-20 — Claude: GitHub CI root-cause analysis. All windows-ci runs since `edcef4f` fail on the S6 regression (Win32 1314, test only passes as LocalSystem; the local gate ran as LocalSystem so the agent never saw it, and nothing required checking CI). Also: one timing-flaky PathGuard test and Dependabot PR #16 (NU1109 platform package downgrade). Added Phase CI (CI1 Get-CiStatus + AGENTS step 10b, CI3 deadline, CI2 lockstep bump 10.0.13 + Dependabot ignores) with scripts written and verified by Claude in `docs/codex/reference/ci`. Order: D8 → D7 → CI1 → CI3 → CI2.
 - 2026-10-20 — Claude audit (4): no agent commits since `429591f`; D7/D6 correctly blocked and reverted. Root cause was Claude's long exact-implementation blocks breaking the 250-line context test (N1 343, N5 299). P-19 decided → D8 first (test-only, exact code), then D7, D6. Agent's uncommitted D7/D6 Log lines and P-19 are included in this commit. Audit baseline stays `audit/2026-10-20-03` (no new agent code).
 - 2026-10-20 — D6 blocked (executor: ChatGPT via Talvora). User approved including the uncommitted P-19/STATUS records in D6's one commit. Local HEAD and fetched origin/main both 429591f; git pull failed due loose SSH key ACL.

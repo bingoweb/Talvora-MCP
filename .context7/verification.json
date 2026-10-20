@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-20T17:04:16Z",
-  "scope": "Q4 Context7 gate coverage: scripts/Validate-Context7Gate.ps1 now includes src/**/*.xaml, json, js, html and tests/**/*.ps1 in the meaningful development-change patterns without including docs-only changes. An isolated temporary Git repository regression verifies five code-only changes each demand refreshed evidence and docs/research.md does not. Context7 /microsoftdocs/powershell-docs and official PowerShell 7 regular-expression documentation confirm -match uses .NET regex and literal file-extension dots require escaping. P-16/P-17 record Q2/Q3 order and commit-count dependencies; no Q1/Q2/Q3 product changes.",
+  "verifiedAtUtc": "2026-10-20T19:19:40Z",
+  "scope": "D8 test-only context budget regression: count non-STATUS, non-literal-exact-implementation text against the existing 250-line cap. The card prescribes the code literally, without any product change. Context7 /microsoftdocs/powershell-docs and Microsoft PowerShell documentation verify -split regex delimiters and -like wildcard comparisons; the actual tests/QualityGateRegression.ps1 fails before and passes after the prescribed change.",
   "libraries": [
+    {
+      "libraryId": "/microsoftdocs/powershell-docs",
+      "verified": "2026-10-20 D8: PowerShell 7.7 about_Comparison_Operators and language specification document the wildcard matching and boolean scalar result of -like; about_Split documents its regex delimiter. Confirmed exact card-prescribed -like '=== *' / '#### Exact implementation*' and -split '\\r?\\n' constructs; targeted QualityGateRegression changes from red to QUALITY_GATE_REGRESSION_GREEN."
+    },
     {
       "libraryId": "/microsoftdocs/powershell-docs",
       "verified": "2026-10-20 Q4: PowerShell 7 About Regular Expressions documents the .NET regex engine used by -match, with literal extension dots escaped using backslash; the comparison operator is case-insensitive by default. Verified the prescribed ^src/.+\\.(xaml|json|js|html)$ and ^tests/.+\\.ps1$ scope rules in an isolated Git fixture under Windows, including docs-only exclusion."
@@ -125,6 +129,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-20 D8: Microsoft PowerShell official about_Split https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_split?view=powershell-7.6 and about_Comparison_Operators https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_comparison_operators?view=powershell-7.6 ; Context7 /microsoftdocs/powershell-docs. Verified prescribed regex line split and wildcard section-classification operators for tests/QualityGateRegression.ps1 only.",
     "2026-10-20 Q4: Microsoft PowerShell 7 about_Regular_Expressions https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_regular_expressions and comparison operator reference https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_comparison_operators ; Context7 /microsoftdocs/powershell-docs. Temp-repo Context7ScopeRegression.ps1 independently proves each new file extension is gated and docs-only changes remain exempt.",
     "2026-10-20 R5: .NET SDK official Microsoft.NET.GenerateAssemblyInfo.targets https://github.com/dotnet/sdk/blob/main/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.GenerateAssemblyInfo.targets ; https://learn.microsoft.com/en-us/dotnet/standard/assembly/set-attributes-project-file ; Context7 /dotnet/sdk. MCP C# SDK EverythingServer serverInfo example https://github.com/modelcontextprotocol/csharp-sdk/blob/main/samples/EverythingServer/Program.cs and McpServerOptions class source https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Server/McpServerOptions.cs ; Context7 /modelcontextprotocol/csharp-sdk. Assembly attribute RED then GREEN test; installed verification after one R5 commit.",
     "2026-10-20 R4: Microsoft .NET System.Text.Json DOM https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/use-dom and DateTimeOffset.Add https://learn.microsoft.com/en-us/dotnet/api/system.datetimeoffset.add?view=net-10.0 ; Context7 /dotnet/docs. Local in-process classifier fixtures and repeated-error logging tests run without a remote service, with no new packages.",

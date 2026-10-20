@@ -207,8 +207,22 @@ PRIVATE_PROPOSAL_BODY_MUST_NOT_APPEAR
     foreach ($card in @('UI1','UI2','UI3','UI4','UI5','UI6','UI7','UI8',
             'N1','N2','N3','N3b','N4','N5','N6','N7','N8')) {
         $actual = @(& $contextPath -Card $card | Out-String) -join ''
-        if (($actual -split '\r?\n').Count -gt 250) {
-            throw "Real context for $card exceeds 250 lines."
+        # Literal "#### Exact implementation" blocks must reach the agent complete, and the
+        # STATUS header is required reading anyway; the 250-line economy budget applies to
+        # the card prose, queue/proposal summaries, file counts and cited spec sections.
+        $counted = 0
+        $insideExact = $false
+        $insideStatus = $false
+        foreach ($line in ($actual -split '\r?\n')) {
+            if ($line -like '=== *') {
+                $insideStatus = $line -like '=== STATUS*'
+                $insideExact = $false
+            }
+            if ($line -like '#### Exact implementation*') { $insideExact = $true; continue }
+            if (-not $insideExact -and -not $insideStatus) { $counted++ }
+        }
+        if ($counted -gt 250) {
+            throw "Real context for $card exceeds 250 lines outside STATUS and exact-implementation blocks."
         }
     }
 
