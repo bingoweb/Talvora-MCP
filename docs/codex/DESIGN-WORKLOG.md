@@ -300,25 +300,28 @@ Message fallbacks while protocol v3 is still in use (decision P-4; only when the
 
 Timeline labels = Succeeded/Failed column + optional "· {kısa olgu}". Footer: `{n} adım · {süre} · {m} dosya değişti` (omit zero parts). Overline: `BU OTURUMDA`. Expander: `Ayrıntılar`. Copy button: `Kopyala`. Pin tooltip: `Konumu sabitle` / `Otomatik konuma dön`. Close: `Kapat`.
 
-## 7. Visual spec
+## 7. Visual spec — "Phosphor" (hacker terminal), superseding the earlier table (Claude, 2026-10-20)
 
-| Element | Spec |
+**The authoritative design is code, not prose:** `docs/codex/reference/worklog-phosphor/src/*` — eight files written and **compiled by Claude** in a scratch WPF project with the same settings as `Talvora.Tray` (net10.0-windows, UseWPF + UseWindowsForms, TreatWarningsAsErrors, AssemblyName `Talvora.Tray`): 0 warnings, 0 errors. `docs/codex/reference/worklog-phosphor/previews/*.png` are the target renders (150 %), including a real window capture. Card N5 copies these files verbatim. Where any text in this document disagrees with those files, **the files win**.
+
+Summary of what the files implement (for reading, not for re-implementing):
+
+| Element | Phosphor design |
 |---|---|
-| Surface | `#101722` (Gece `Tv.Surface`), 1 px border `#1F2A3B`, radius 14, shadow blur 24 / opacity 0.35; no shadow in high contrast |
-| Live line | 2 px at the top inside the border, Aurora gradient, 1.6 s shimmer translate; static when reduced motion |
-| Header | Talvora "T" mark 16 px (same silhouette as the tray icon; Aurora gradient fill when active, `TextMuted` otherwise) · project chip (`SurfaceRaised`, radius 6, padding 8,2, 12 px semibold `Text`) · actor chip (same, text `TextMuted`) · state badge (glyph + word, radius 6, padding 8,2, state colour text on 14 % tint) · icon buttons 28×28 (`Pin20`/`PinOff20`, `Dismiss20`) |
-| Glyphs | WPF-UI `SymbolRegular`, exactly: Çalışıyor `ArrowSync20` (static, no spin), Tamamlandı `Checkmark20`, Hata `ErrorCircle20`, Durduruldu `Stop20`, Yanıt bekleniyor `Clock20`, muted inspection failure `Warning20`. Timeline rows use the same symbols at 12 px. State colours: running `Tv.Accent`, succeeded `Tv.Ready`, failed `Tv.Offline`, cancelled/waiting `Tv.Attention`, muted `Tv.TextFaint`. |
-| Title | Segoe UI Variable Display 15 / 20 semibold `Tv.Text` |
-| Fact line | Segoe UI Variable Text 13 / 18 `Tv.TextMuted`; numbers tabular |
-| Outcome | 13 / 18 `Tv.Text`; first sentence reason, second next step in `Tv.TextMuted` |
-| Timeline | overline 11 / 14 `Tv.TextFaint` letter-spacing 80; rows 12.5 / 18: state glyph (12 px, state colour) · time (Cascadia Mono 11.5, `TextFaint`) · label (`TextMuted`); max 5 rows visible, "+N adım daha" link expands in place |
-| Footer | top divider `Tv.Border`; Cascadia Mono 11.5 digits, `TextFaint`; "Ayrıntılar ▸" text button `Tv.Accent` |
-| Code terminal | §3.1: `Tv.SurfaceSunken #070A10`, Cascadia Mono 12 / 17, gutter `TextFaint`, `+` `#3DDC97` on 8 % tint, `−` `#FF6B81` on 8 % tint, file headers/tabs `Tv.Accent`, `↳` wrapped continuations |
-| Evidence | same sunken surface, Cascadia Mono 12 / 17, two-column key/value layout, copy button |
-| Motion | enter: 180 ms fade + 12 px rise (existing); state change: 120 ms colour cross-fade; timeline row insert: 160 ms height expand; all disabled when `SystemParameters.ClientAreaAnimation` is false |
-| High contrast | `SystemColors` brushes (existing fallback), no gradients, focus rectangles visible |
+| Palette | near-black green surfaces `#05080A` / `#090E0C` / `#0E1611`, terminal `#030504`; phosphor green `#39FF88` (prompt, success, cursor), cyan `#5BD8FF` (running, links, file names), amber `#FFB547` (waiting/stopped), red `#FF4D6A` (failure); text `#D8FFE7` / muted `#8CB9A0` / faint `#557363` |
+| Type | Cascadia Mono everywhere (fallback Cascadia Code, Consolas); title 14.5 semibold with a soft green phosphor glow; body 12; meta 11–11.5 |
+| Header | shell-prompt line `talvora@<machine>:~/<project>` (green, real values) · actor (`codex`, `chatgpt·dev`, `claude`…) · braille spinner `⠋⠙⠹…` while running · state tag `[ÇALIŞIYOR]` / `[TAMAM]` / `[HATA]` / `[DURDU]` / `[BEKLİYOR]` in state colour · pin + close (Segoe Fluent Icons) |
+| Title | `> Title▍` — prompt mark coloured by state, block cursor blinking (530 ms) only while running |
+| Facts / outcome | fact line indented 2 ch; failure reason prefixed with a red `!`, next step below in muted text |
+| Timeline | `── oturum ────` rule, rows `[ ✓ ] 14:02 label` with boot-log style tags: `[ ▸ ]` cyan running, `[ ✓ ]` green, `[ ✗ ]` red, `[ ■ ]` amber, `[ · ]` faint muted; max 5 rows + `+N adım daha` |
+| Code terminal | real-terminal block: title bar with three window dots, `diff · HH:mm:ss`, `kopyala`; per-file tabs `name +a −r`; rows with line-number gutter, `+`/`−` markers, green/red text on 10 % tints, hunk headers cyan on a cyan tint, file headers with a cyan bar; wrapped code continues in the code column; scrolls inside after the max height (420 DIP default; user-resized height − 240, clamped 160–900) |
+| Texture | 1 px scanline every 3 px at 3.5 % opacity (decorative, never hit-testable) |
+| Live line | 2 px phosphor→cyan gradient sweeping across the top while running (1.6 s) |
+| Footer | `14 adım · 06:12 · 5 dosya değişti` (duration as `mm:ss`/`h:mm:ss`) · `ayrıntılar ▸` (hidden until N6 wires it — see N5 step 4) |
+| Motion | spinner, cursor blink, live line: only while running, window visible, `SystemParameters.ClientAreaAnimation` true and not high contrast; enter fade 180 ms + 12 px rise; close fade 160 ms |
+| High contrast | system colours (`WindowBrush`, `WindowTextBrush`, `GrayTextBrush`), no tints, no glow, no scanlines, no animation |
 
-Tokens come from the shared Gece dictionary (UI1); the worklog does **not** follow the light theme (terminal identity per AGENTS.md).
+The worklog never follows the light theme (terminal identity per AGENTS.md). The Control Center keeps its own Gece/Gün tokens; UI7 must not change these files.
 
 ## 8. Control Center integration
 
@@ -583,9 +586,175 @@ No PNG for N1 (P-11).
 
 > **Amended by P-11 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
 
-**Files:** `src/Talvora.Tray/DesktopProgressNotificationWindow*.cs` (move to XAML `Views/WorklogCard.xaml` + small view model), `DesktopProgressVisualTheme.cs` (map to Gece tokens), new `--worklog-preview` command in `Program.cs`, `ControlCenterSmoke.cs` (scenario renders).
+**Files / Do / Acceptance:** superseded by "#### Exact implementation — Phosphor card" at the end of this card (Claude, 2026-10-20). The earlier text below is kept only as history; follow the Exact implementation block.
+
+~~`src/Talvora.Tray/DesktopProgressNotificationWindow*.cs` (move to XAML `Views/WorklogCard.xaml` + small view model), `DesktopProgressVisualTheme.cs` (map to Gece tokens), new `--worklog-preview` command in `Program.cs`, `ControlCenterSmoke.cs` (scenario renders).~~
 **Do:** §3, §3.1 (terminal look, reveal, height rules — fixes C5, C6), §7; fix W5, W17; content-driven height up to 60 % work area; same window reused per session; keep drag/pin/resize/mixed-DPI behaviour and the manual-dismiss semantics. The vertical code expansion must keep working at every step of this card — it is the user's favourite feature.
 **Acceptance:** preview PNGs for: running edit, success with timeline, **2-line change (small pane)**, **3-file 300-line change (tabs, scroll, colours, gutter, wrapped continuation)**, build failure after a code change (pane still open), inspection-failure row, Codex job running/completed, stale; contrast test on token pairs; mixed-DPI placement regression unchanged; reduced-motion render identical except animation.
+
+#### Exact implementation — "Phosphor" card (copy verified files, do not reinterpret)
+
+All design and code for this card already exists and is **compiled and rendered by Claude**: `docs/codex/reference/worklog-phosphor/` (`src/` = 8 files, `previews/` = target PNGs, `SHA256SUMS.txt`). Your job is to place these files, remove the old card code, wire two small call sites and prove the renders are identical. You write almost no new code.
+
+Prerequisite: N2 is `[x]` (protocol v4 types `DesktopWorklogFrame`, `WorklogSessionHeader`, `WorklogStep`, `WorklogOutcome`, `WorklogTimelineEntry`, `WorklogTotals`, `WorklogStepState`, `WorklogCheckState` exist in `Talvora.Shared` with the names of DESIGN-WORKLOG §4). If N2 used different names, adapt **only the names** inside the copied files (rule 5a) and list each renamed identifier in the Log.
+
+Step 1 — copy verbatim (byte-for-byte; use `Copy-Item` in Codex's shell, or `talvora_copy` with `explicitAdmin: true` in ChatGPT — this is the approved exception to the apply_patch rule for N5 only):
+
+| From `docs/codex/reference/worklog-phosphor/src/` | To |
+|---|---|
+| `WorklogTheme.xaml` | `src/Talvora.Tray/Worklog/WorklogTheme.xaml` |
+| `WorklogCardView.xaml` | `src/Talvora.Tray/Worklog/WorklogCardView.xaml` |
+| `WorklogCardView.xaml.cs` | `src/Talvora.Tray/Worklog/WorklogCardView.xaml.cs` |
+| `WorklogCardViewModel.cs` | `src/Talvora.Tray/Worklog/WorklogCardViewModel.cs` |
+| `UnifiedDiffViewParser.cs` | `src/Talvora.Tray/Worklog/UnifiedDiffViewParser.cs` |
+| `WorklogCardMapper.cs` | `src/Talvora.Tray/Worklog/WorklogCardMapper.cs` |
+| `WorklogPreviewScenarios.cs` | `src/Talvora.Tray/Worklog/WorklogPreviewScenarios.cs` |
+| `DesktopProgressNotificationWindow.cs` | `src/Talvora.Tray/DesktopProgressNotificationWindow.cs` (replaces the existing file completely) |
+
+Then verify (must print `IDENTICAL` eight times; line endings are normalised so CRLF/LF does not matter):
+
+```powershell
+$ref = 'docs/codex/reference/worklog-phosphor/src'
+$map = @{
+  'WorklogTheme.xaml' = 'src/Talvora.Tray/Worklog/WorklogTheme.xaml'
+  'WorklogCardView.xaml' = 'src/Talvora.Tray/Worklog/WorklogCardView.xaml'
+  'WorklogCardView.xaml.cs' = 'src/Talvora.Tray/Worklog/WorklogCardView.xaml.cs'
+  'WorklogCardViewModel.cs' = 'src/Talvora.Tray/Worklog/WorklogCardViewModel.cs'
+  'UnifiedDiffViewParser.cs' = 'src/Talvora.Tray/Worklog/UnifiedDiffViewParser.cs'
+  'WorklogCardMapper.cs' = 'src/Talvora.Tray/Worklog/WorklogCardMapper.cs'
+  'WorklogPreviewScenarios.cs' = 'src/Talvora.Tray/Worklog/WorklogPreviewScenarios.cs'
+  'DesktopProgressNotificationWindow.cs' = 'src/Talvora.Tray/DesktopProgressNotificationWindow.cs'
+}
+foreach ($k in $map.Keys) {
+  $a = [IO.File]::ReadAllText((Join-Path $ref $k)).Replace("`r`n", "`n")
+  $b = [IO.File]::ReadAllText($map[$k]).Replace("`r`n", "`n")
+  if ($a -ceq $b) { "IDENTICAL $k" } else { "DIFFERENT $k" }
+}
+```
+
+A `DIFFERENT` line is allowed only for an N2 name adaptation listed in the Log.
+
+Step 2 — delete (they are fully replaced): `src/Talvora.Tray/DesktopProgressNotificationWindow.Visual.cs`, `src/Talvora.Tray/DesktopProgressVisualTheme.cs`. In `src/Talvora.Tray/ControlCenterTheme.xaml` delete every `Talvora.Notification.*` `Color` and `SolidColorBrush` entry and the comment above them (nothing else uses them after this card; `git grep "Talvora.Notification\."` must return nothing in `src/`).
+
+Step 3 — `src/Talvora.Tray/DesktopProgressNotificationPresenter.cs` (only these changes):
+- every `window.OperationId` / `message.OperationId` used as the window key → the session id the N2 presenter already uses (`frame.SessionId`);
+- replace the whole `if (!string.IsNullOrWhiteSpace(message.Evidence?.CodePreview)) { … }` block in `PublishCore` with exactly:
+
+```csharp
+if (_hasPreferredSize)
+{
+    window.ApplyPreferredSize(_preferredWidthDip, _preferredHeightDip);
+}
+```
+
+- delete the now unused constant `DefaultCodeNotificationHeightDip`.
+
+Step 4 — the "ayrıntılar ▸" button stays hidden (`HasDetails` defaults to `false`). N6 sets it. Do not set it in N5.
+
+Step 5 — preview command in `src/Talvora.Tray/Program.cs`: insert as the **first** statement of `Main` (before the `--reconnect` check):
+
+```csharp
+if (args.Length >= 2 &&
+    string.Equals(args[0], "--worklog-preview", StringComparison.OrdinalIgnoreCase))
+{
+    var exitCode = 1;
+    var renderThread = new Thread(() =>
+    {
+        try
+        {
+            _ = new System.Windows.Application { ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown };
+            foreach (var path in Talvora.Tray.Worklog.WorklogPreviewScenarios.RenderAll(args[1]))
+            {
+                Console.WriteLine(path);
+            }
+
+            exitCode = 0;
+        }
+        catch (Exception ex)
+        {
+            TrayLog.Write("Worklog preview render failed", ex);
+        }
+    });
+    renderThread.SetApartmentState(ApartmentState.STA);
+    renderThread.Start();
+    renderThread.Join();
+    return exitCode;
+}
+```
+
+Step 6 — `tests/Talvora.Notification.Regression/Program.cs`:
+- add a helper class at the end of the file, exactly:
+
+```csharp
+internal static class WorklogTestFrames
+{
+    internal static DesktopWorklogFrame Running(string sessionId, string? codePreview, long sequence = 1) =>
+        new(
+            SessionId: sessionId,
+            Sequence: sequence,
+            TimestampUtc: DateTimeOffset.UtcNow,
+            Header: new WorklogSessionHeader("Talvora-MCP", "Codex"),
+            Current: new WorklogStep(
+                WorklogStepCategory.SourceEdit,
+                WorklogStepState.Running,
+                "Kod değişikliği uygulanıyor",
+                "1 dosya · +1000 −0 · big.cs",
+                null,
+                1),
+            Timeline: [],
+            Totals: new WorklogTotals(1, 1, 1, WorklogCheckState.Unknown, WorklogCheckState.Unknown),
+            Evidence: codePreview is null ? null : new DesktopProgressEvidence(CodePreview: codePreview),
+            ExpectedNextUpdateSeconds: 15);
+}
+```
+
+(use the real enum member names from N2 for `WorklogStepCategory.SourceEdit` / `WorklogCheckState.Unknown`.)
+- in the window-sizing regression thread, replace the block from `var window = new DesktopProgressNotificationWindow();` down to (and including) the last `throw` of the `default-size-code` checks with exactly:
+
+```csharp
+var window = new DesktopProgressNotificationWindow();
+try
+{
+    window.ApplyPreferredSize(560, 700);
+    var code = "+++ b/big.cs\n@@ -1,1 +1,1000 @@\n" +
+        string.Join('\n', Enumerable.Range(1, 1000).Select(index => $"+changed{index}();"));
+    window.Update(WorklogTestFrames.Running("resize-regression", code));
+    window.Show();
+    window.UpdateLayout();
+    if (Math.Abs(window.ActualWidth - 560) > 0.75)
+    {
+        throw new InvalidOperationException("The card must keep the user's width.");
+    }
+
+    var heightWithCode = window.ActualHeight;
+    window.Update(WorklogTestFrames.Running("resize-regression", codePreview: null, sequence: 2));
+    window.UpdateLayout();
+    if (window.ActualHeight >= heightWithCode || Math.Abs(window.ActualWidth - 560) > 0.75)
+    {
+        throw new InvalidOperationException("A frame without code must shrink the card and keep its width.");
+    }
+
+    window.Update(WorklogTestFrames.Running("resize-regression", code, sequence: 3));
+    window.UpdateLayout();
+    if (Math.Abs(window.ActualHeight - heightWithCode) > 1)
+    {
+        throw new InvalidOperationException("Returning code must re-open the terminal to the same height.");
+    }
+}
+finally
+{
+    window.Close();
+}
+```
+
+(The removed presenter assertions encoded the old fixed 720 DIP manual sizing, which this design replaces; presenter placement/pin tests elsewhere in the file stay unchanged.)
+
+Step 7 — prove it:
+1. build Tray + notification regression; run the regression;
+2. `Talvora.Tray.exe --worklog-preview <tmp>` (from the Release build output, as the signed-in user) and compare each PNG with `docs/codex/reference/worklog-phosphor/previews/` byte-for-byte (`Get-FileHash`). Same machine and fonts → identical. If any differs, attach both PNGs to the Gitea issue and stop with a proposal — do not "fix" the design;
+3. deploy; trigger one real `talvora_apply_patch` on a scratch file and capture the live card (crop to the card) into the Gitea issue next to `previews/09-live-window-150pct.png`.
+
+**Acceptance:** eight `IDENTICAL` lines (or Log-listed N2 name adaptations only); old files deleted; preview PNGs byte-identical to the references; regression green; live card captured. User step U6 follows.
 
 ### N6 — Evidence surface ("Ayrıntılar")
 
