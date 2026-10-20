@@ -53,6 +53,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] Q4 — Context7 gate covers XAML/tests
 - [ ] D8 — Context budget ignores literal implementation blocks (audit 2026-10-20 (4), P-19 decided)
 - [ ] D7 — Knowledge roots degrade instead of throwing; gate passes as the signed-in user (audit 2026-10-20 (3), HIGH)
+- [ ] CI1 — Every push checks its own GitHub run (Get-CiStatus.ps1; AGENTS step 10b)
+- [ ] CI3 — Deadline instead of a fixed loop in the directory-holder test (flaky CI)
+- [ ] CI2 — .NET platform packages in lockstep 10.0.13; Dependabot ignore list; close PR #16
 - [ ] D6 — Context helper finds `##` and `###` card headings (audit 2026-10-20 (3))
 - [ ] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (audit 2026-10-20 (3))
 - [ ] D1 — Make the rename-protection fallback visible (P-5 decided)
@@ -111,6 +114,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-20 — Claude: GitHub CI root-cause analysis. All windows-ci runs since `edcef4f` fail on the S6 regression (Win32 1314, test only passes as LocalSystem; the local gate ran as LocalSystem so the agent never saw it, and nothing required checking CI). Also: one timing-flaky PathGuard test and Dependabot PR #16 (NU1109 platform package downgrade). Added Phase CI (CI1 Get-CiStatus + AGENTS step 10b, CI3 deadline, CI2 lockstep bump 10.0.13 + Dependabot ignores) with scripts written and verified by Claude in `docs/codex/reference/ci`. Order: D8 → D7 → CI1 → CI3 → CI2.
 - 2026-10-20 — Claude audit (4): no agent commits since `429591f`; D7/D6 correctly blocked and reverted. Root cause was Claude's long exact-implementation blocks breaking the 250-line context test (N1 343, N5 299). P-19 decided → D8 first (test-only, exact code), then D7, D6. Agent's uncommitted D7/D6 Log lines and P-19 are included in this commit. Audit baseline stays `audit/2026-10-20-03` (no new agent code).
 - 2026-10-20 — D6 blocked (executor: ChatGPT via Talvora). User approved including the uncommitted P-19/STATUS records in D6's one commit. Local HEAD and fetched origin/main both 429591f; git pull failed due loose SSH key ACL.
   Baseline Fast gate: 12 checks, 1 failure (PS:QualityGateRegression; N1 context 343 > 250 lines). D6 fixture was RED on missing D2, then passed all heading assertions after the literal card change; real D1, D2, D7 headings passed.

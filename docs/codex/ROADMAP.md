@@ -811,6 +811,130 @@ with exactly:
 
 **Acceptance:** `pwsh -NoProfile -File tests/QualityGateRegression.ps1` passes; the Fast gate ends with `Hepsi geçti.`; one commit `test(quality): exempt exact-implementation blocks from the context budget` with trailer `Card: D8`. Then continue with D7 (unchanged card) — P-19 is decided.
 
+## Phase CI — Stop the recurring GitHub failures (root cause, Claude 2026-10-20)
+
+**Verified by Claude from the GitHub logs:** every `windows-ci` run since `edcef4f` (S6, 20 Oct) failed at the same place — `FAIL SourceEdit … knowledge-s6-scoped-fetch: Win32Exception (1314) WTSQueryUserToken failed`. The test only passes as LocalSystem; the runner is a normal administrator. Locally the agent ran the gate through `talvora_run_powershell` **as LocalSystem**, so it never saw the failure, and nothing in the protocol made it look at CI after pushing. Two more independent failure classes exist: a timing-flaky test (`directory-identity-external-reader: External directory handle never became ready`, run `39239571794`) and Dependabot PR #16 (`NU1109 Detected package downgrade … from 10.0.13 to centrally defined 10.0.12`: Dependabot bumped some .NET platform packages, central transitive pinning kept the rest at 10.0.12).
+
+Root-cause rules (now also in AGENTS.md):
+1. **CI is part of "done".** A card is `[x]` only after the GitHub run for its commit is green, checked with `scripts/Get-CiStatus.ps1` (CI1). A red run makes the next message's task the CI fix (one `CI follow-up: <run id>` commit, EXECUTION MANDATE rule 4).
+2. **A LocalSystem gate is not CI-equivalent.** Behaviour that depends on the identity (interactive session, user profile, SSH keys) must be tested in both identities (D7 does this for S6).
+3. **.NET platform packages move together** (CI2).
+4. **No fixed-iteration waits in tests** for external processes; use a deadline (CI3).
+
+Order: D8 → D7 → CI1 → CI3 → CI2 (D7 removes the current red; CI1 makes every later push self-checking).
+
+### CI1 — Every push checks its own GitHub run
+
+**Files:** `scripts/Get-CiStatus.ps1` (new, copied verbatim), `AGENTS.md` is already updated by Claude (do not edit it).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — copy `docs/codex/reference/ci/Get-CiStatus.ps1` → `scripts/Get-CiStatus.ps1` byte-for-byte (Codex: `Copy-Item`; ChatGPT: `talvora_copy` with `explicitAdmin: true` — approved exception for files under `docs/codex/reference/`). Verify with `Get-FileHash` against `docs/codex/reference/ci/SHA256SUMS.txt`.
+
+Claude ran this script against the failing commit `429591f`; it printed exactly the 7 lines that matter (`FAIL SourceEdit`, the S6 Win32 1314 line, `Kontrol başarısız: SourceEdit`, …) and exited 1.
+
+Step 2 — how to run it after every push (CONTINUE PROTOCOL step 10b):
+- Codex: `pwsh -NoProfile -File scripts/Get-CiStatus.ps1` (default: HEAD, waits up to 25 min, polls every 30 s).
+- ChatGPT before A1: call `talvora_gh_run` (runs as the signed-in user) with `["run","list","--repo","bingoweb/Talvora-MCP","--workflow","windows-ci.yml","--commit","<full sha>","--json","databaseId,status,conclusion,url","--limit","1"]` every ~60 s until `status` is `completed`; on `failure` call `["run","view","<databaseId>","--repo","bingoweb/Talvora-MCP","--log-failed"]` and read only lines containing `FAIL `, `Kontrol başarısız`, `Reason:`, `regression failures`, `Exception (`. ChatGPT after A1: `talvora_user_run` with `executable: "pwsh"`, `arguments: ["-NoProfile","-File","scripts/Get-CiStatus.ps1"]`.
+- Exit 0 → mark the card `[x]`. Exit 1 → do not start another card; fix CI (one `CI follow-up` commit). Exit 2 (no run / timeout) → mark `[~]` with "CI pending" and check again at the start of the next message before anything else.
+
+**Acceptance:** script copied identical; this card's own push is checked with it and the Log contains its output line (`CI başarılı: …` or the failure lines).
+
+### CI3 — Deadline instead of a fixed loop in the directory-holder test
+
+**Files:** `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.PathGuard.cs` only.
+
+#### Exact implementation — copy this, do not reinterpret
+
+In `DirectoryIdentitySharingWithExternalProcessAsync`, replace
+
+```csharp
+for (var attempt = 0; attempt < 200 && !File.Exists(readyPath); attempt++)
+{
+    if (child.HasExited)
+    {
+        throw new InvalidOperationException(
+            "External directory handle setup failed: " +
+            await child.StandardError.ReadToEndAsync());
+    }
+
+    await Task.Delay(40);
+}
+```
+
+with
+
+```csharp
+// A cold CI runner can need well over 8 s to start pwsh and compile the Add-Type helper.
+var readyDeadline = System.Diagnostics.Stopwatch.StartNew();
+while (!File.Exists(readyPath) && readyDeadline.Elapsed < TimeSpan.FromSeconds(90))
+{
+    if (child.HasExited)
+    {
+        throw new InvalidOperationException(
+            "External directory handle setup failed: " +
+            await child.StandardError.ReadToEndAsync());
+    }
+
+    await Task.Delay(50);
+}
+```
+
+**Acceptance:** SourceEdit regression green locally and in CI (checked with CI1).
+
+### CI2 — .NET platform packages in lockstep; Dependabot can no longer split them
+
+**Files:** `tests/PlatformPackageLockstepRegression.ps1` (new, verbatim), `scripts/Update-DotnetPlatformPackages.ps1` (new, verbatim), `Directory.Packages.props` (changed only by the script), all `packages.lock.json` (regenerated only by the script), `.github/dependabot.yml`, `docs/MODERNIZATION-POLICY.md` (one paragraph).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — copy verbatim and verify against `docs/codex/reference/ci/SHA256SUMS.txt`:
+- `docs/codex/reference/ci/PlatformPackageLockstepRegression.ps1` → `tests/PlatformPackageLockstepRegression.ps1` (the quality gate picks up every `tests/*.ps1` automatically);
+- `docs/codex/reference/ci/Update-DotnetPlatformPackages.ps1` → `scripts/Update-DotnetPlatformPackages.ps1`.
+
+Step 2 — run, as the signed-in user (Codex shell; ChatGPT via `talvora_user_run` after A1, otherwise `talvora_run_powershell` and note "LocalSystem" in the Log):
+
+```powershell
+pwsh -NoProfile -File scripts/Update-DotnetPlatformPackages.ps1 -Version 10.0.13
+```
+
+Verified by Claude on a clean copy of HEAD `bf010aa`: 17 packages moved 10.0.12 → 10.0.13 (`Microsoft.Extensions.AI.Abstractions` 10.10.1 and `Microsoft.Build.Framework` untouched), both `--locked-mode` restores pass, Release build 0 errors. All 10.0.13 versions exist on nuget.org.
+
+Step 3 — `.github/dependabot.yml`: in the `nuget` entry, replace the `ignore:` list with exactly (keep everything else):
+
+```yaml
+    ignore:
+      # Microsoft.Build.Framework 18.x pulls Microsoft.NET.StringTools 18.x,
+      # which is not compatible with Talvora's current net10.0-windows toolchain.
+      # Revisit this guard when the repository moves to the .NET 11 toolchain.
+      - dependency-name: "Microsoft.Build.Framework"
+        versions:
+          - ">=18.0.0"
+      # .NET platform packages ship with the runtime and must move together.
+      # Bump them only with scripts/Update-DotnetPlatformPackages.ps1 (CI2);
+      # single-package bumps cause NU1109 downgrade errors under central transitive pinning.
+      - dependency-name: "Microsoft.Data.Sqlite"
+      - dependency-name: "Microsoft.Extensions.Caching.Abstractions"
+      - dependency-name: "Microsoft.Extensions.Configuration.Abstractions"
+      - dependency-name: "Microsoft.Extensions.DependencyInjection.Abstractions"
+      - dependency-name: "Microsoft.Extensions.Diagnostics.Abstractions"
+      - dependency-name: "Microsoft.Extensions.FileProviders.Abstractions"
+      - dependency-name: "Microsoft.Extensions.Hosting.Abstractions"
+      - dependency-name: "Microsoft.Extensions.Hosting.WindowsServices"
+      - dependency-name: "Microsoft.Extensions.Logging.Abstractions"
+      - dependency-name: "Microsoft.Extensions.Options"
+      - dependency-name: "Microsoft.Extensions.Primitives"
+      - dependency-name: "System.Composition*"
+```
+
+Step 4 — `docs/MODERNIZATION-POLICY.md`: append exactly this paragraph:
+
+> **.NET platform packages.** `Microsoft.Extensions.*` (except `Microsoft.Extensions.AI.Abstractions`), `Microsoft.Data.Sqlite` and `System.Composition*` are bumped together with `scripts/Update-DotnetPlatformPackages.ps1 -Version <runtime patch>` — normally in the same change as a .NET SDK bump. `tests/PlatformPackageLockstepRegression.ps1` fails the gate if they diverge. Dependabot ignores them on purpose.
+
+Step 5 — close Dependabot PR #16 with `gh pr close 16 --repo bingoweb/Talvora-MCP --comment "Superseded by CI2: .NET platform packages are bumped together with scripts/Update-DotnetPlatformPackages.ps1."` (ChatGPT: `talvora_gh_run`; this PR closure is authorised by the user's request to fix CI at the root).
+
+**Acceptance:** lockstep regression prints `PLATFORM_PACKAGE_LOCKSTEP_GREEN 10.0.13 (17 packages)`; locked restores + full gate green; CI green for the commit (CI1); PR #16 closed. Deploy (runtime packages changed) and verify `/healthz`.
+
 ### Audit 2026-10-20 (3) · range `audit/2026-10-18-02 (dd4ee5b)..36fe923` · 17 commits · executor: ChatGPT via Talvora · result: FIXES REQUIRED
 
 Cards delivered: D2, D4, A2, A3, E3, S1, Q6b (research), S4, S5 (`[~]`), S6, S7, S8, R4, R5, Q4; user-requested AGENTS.md section `8714266` (permanent prompt). 14 proposals P-5…P-18 raised — **all decided now** (PROPOSALS.md → Decided); EXECUTION MANDATE rule 1 clarified so that supporting changes and ordering no longer produce proposals.
