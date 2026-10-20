@@ -1,3 +1,9 @@
+if (args.Contains("--knowledge-s6-local", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunKnowledgeS6LocalAsync();
+    Console.WriteLine("TALVORA S6 KNOWLEDGE LOCAL GREEN");
+    return;
+}
 if (args.Contains("--ast-grep-pin-only", StringComparer.OrdinalIgnoreCase))
 {
     await SourceEditRegressionRunner.RunPinnedAstGrepCacheAsync();

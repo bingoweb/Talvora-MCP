@@ -10,6 +10,7 @@ internal static partial class SourceEditRegressionRunner
             ("exact-patch-success", ExactPatchSuccessAsync),
             ("git-work-contract", RunWorkContractAsync),
             ("ast-grep-pinned-cache-tamper", RunPinnedAstGrepCacheAsync),
+            ("knowledge-s6-scoped-fetch", RunKnowledgeS6LocalAsync),
             ("quality-audit-delivery-and-jobs", RunQualityAuditAsync),
             ("unified-diff-compatibility", UnifiedDiffCompatibilityAsync),
             ("unified-diff-exact-guards", UnifiedDiffExactGuardsAsync),

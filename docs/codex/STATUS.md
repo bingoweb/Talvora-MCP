@@ -55,7 +55,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [?] S3 — ProgramData ACL + interactive runs out of user-controlled paths (waiting for Claude: P-12)
 - [x] S4 — Pin ast-grep toolchain
 - [~] S5 — Do not keep the OpenAI Admin key (code and gate done; U3 real new-tunnel provisioning evidence when prompted)
-- [ ] S6 — Knowledge tools: scoped fetch, no cloud hydration
+- [x] S6 — Knowledge tools: scoped fetch, no cloud hydration
 - [ ] S7 — Desktop IPC server verification + real interactive session
 - [ ] S8 — Git push detection parser
 - [ ] R1 — Agent job registry, persistence, orphan recovery, limits
@@ -108,6 +108,12 @@ P-12 — S3 startup notice route needs a decision (docs/codex/PROPOSALS.md).
 - scripts/Get-CodexContext.ps1:41 — `-Card D2` reports "Card D2 could not be found" although ROADMAP.md:599 contains the D2 heading; outside D2 scope, not changed.
 
 ## Log
+- 2026-10-20 — S6 (executor: ChatGPT via Talvora): `search`/`fetch` now use the active interactive user's Documents/Desktop/Downloads/OneDrive, Public Documents, and ProgramData/Talvora/Knowledge by default; `TALVORA_KNOWLEDGE_ROOTS` override preserved.
+  Fetch and search enforce handle-resolved final-path containment; Offline, RECALL_ON_OPEN, RECALL_ON_DATA_ACCESS and cloud reparse files are skipped before reading. Out-of-root fetch gives Turkish MCP error directing to `talvora_read_text_range`; general filesystem tools unchanged.
+  RED scope regression first; GREEN real code fixtures for other-profile default, outside-root fetch, symlink escape, Offline and reparse tags. Full gate 52 controls, 0 failures, final line `Hepsi geçti.`.
+  Context7 `/dotnet/docs`, `/modelcontextprotocol/csharp-sdk` and official Microsoft Win32 path/reparse docs in `.context7/verification.json`.
+  Additional minimal test files: reused existing SourceEditRegression for direct local test to preserve locked NuGet graph, plus isolated live MCP smoke in Talvora.Smoke; no package/lock change.
+  Canonical installed deployment and live MCP smoke follow this commit; next S7. No Codex/Claude invoked.
 - 2026-10-20 — S5 (executor: ChatGPT via Talvora): removed persisted Admin-key read/write calls; setup forwards an ephemeral char[] to the tunnel provisioner and zeros it on completion/failure. Runtime DPAPI key code and file remain untouched.
   Startup upgrade deletes only the legacy `openai-admin-key.dpapi` (when present), then records exactly the approved Turkish Control Center event once. Setup detail also reuses the approved non-persistence copy.
   Required minimal out-of-list files: `ManagedMcpTunnelProvisioningService.cs` forwards the transient buffer rather than reading DPAPI, and `TrayApplicationContext.cs` performs startup migration/event delivery.

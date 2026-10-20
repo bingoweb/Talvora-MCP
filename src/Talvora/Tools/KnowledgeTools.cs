@@ -1,6 +1,11 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Security;
+using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Win32.SafeHandles;
+using Talvora.Shared;
+using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
 namespace Talvora.Tools;
@@ -41,7 +46,7 @@ public static class KnowledgeTools
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraSearchResponse)),
-     Description("Search local Windows text documents available to Talvora. Returns document IDs that can be passed to fetch. By default Talvora searches Public Documents plus each local user's Documents, Desktop, Downloads, and OneDrive folders. Set TALVORA_KNOWLEDGE_ROOTS to replace the default corpus.")]
+     Description("Search local Windows text documents available to Talvora. Returns document IDs that can be passed to fetch. By default searches the active interactive Windows user's Documents, Desktop, Downloads, OneDrive, Public Documents and Talvora Knowledge. Set TALVORA_KNOWLEDGE_ROOTS to replace the default corpus.")]
     public static async Task<TalvoraSearchResponse> Search(
         string query,
         CancellationToken cancellationToken = default)
@@ -56,7 +61,8 @@ public static class KnowledgeTools
         var seenFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var stopwatch = Stopwatch.StartNew();
 
-        foreach (var root in GetSearchRoots())
+        var roots = GetSearchRoots().ToArray();
+        foreach (var root in roots)
         {
             foreach (var file in EnumerateFilesSafe(root))
             {
@@ -86,12 +92,28 @@ public static class KnowledgeTools
                 try
                 {
                     info = new FileInfo(fullPath);
-                    if (info.Length > MaxSearchFileBytes)
+                    if (IsCloudOnly(info.Attributes) ||
+                        IsCloudReparseTag(fullPath, info.Attributes) ||
+                        info.Length > MaxSearchFileBytes)
+                    {
+                        continue;
+                    }
+
+                    fullPath = ResolveFinalPath(fullPath);
+                    if (!IsWithinSearchRoot(fullPath, roots))
+                    {
+                        continue;
+                    }
+
+                    info = new FileInfo(fullPath);
+                    if (IsCloudOnly(info.Attributes) ||
+                        IsCloudReparseTag(fullPath, info.Attributes) ||
+                        info.Length > MaxSearchFileBytes)
                     {
                         continue;
                     }
                 }
-                catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or SecurityException)
+                catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or SecurityException or Win32Exception or ArgumentException)
                 {
                     continue;
                 }
@@ -137,7 +159,7 @@ public static class KnowledgeTools
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraFetchResponse)),
-     Description("Fetch the complete text of a local Windows document by the ID returned from search. The document ID is its absolute Windows path. Files larger than 4 MiB or decoded text above the 4 MiB response budget are rejected before MCP serialization; use talvora_read_text_range for larger documents.")]
+     Description("Fetch the complete text of a local Windows document by the ID returned from search. The document ID must resolve under an allowed knowledge root. For unrestricted local reads use talvora_read_text_range. Files larger than 4 MiB or decoded text above the 4 MiB response budget are rejected before MCP serialization; use talvora_read_text_range for larger documents.")]
     public static async Task<TalvoraFetchResponse> Fetch(
         string id,
         CancellationToken cancellationToken = default)
@@ -147,13 +169,39 @@ public static class KnowledgeTools
             throw new ArgumentException("Document ID is required.", nameof(id));
         }
 
+        if (!Path.IsPathFullyQualified(id))
+        {
+            throw new ArgumentException("Document ID must be an absolute path.", nameof(id));
+        }
+
         var fullPath = Path.GetFullPath(id);
         if (!File.Exists(fullPath))
         {
             throw new FileNotFoundException("Document was not found.", fullPath);
         }
 
+        var initialAttributes = File.GetAttributes(fullPath);
+        if (IsCloudOnly(initialAttributes) ||
+            IsCloudReparseTag(fullPath, initialAttributes))
+        {
+            throw new InvalidOperationException(
+                "Bulutta yalnızca çevrimiçi bulunan dosya otomatik indirilmeyecek.");
+        }
+
+        fullPath = ResolveFinalPath(fullPath);
+        if (!IsWithinSearchRoot(fullPath, GetSearchRoots().ToArray()))
+        {
+            throw new McpException(
+                "Belge izin verilen bilgi klasörlerinin dışında. Genel erişim için talvora_read_text_range aracını kullanın.");
+        }
+
         var info = new FileInfo(fullPath);
+        if (IsCloudOnly(info.Attributes) ||
+            IsCloudReparseTag(fullPath, info.Attributes))
+        {
+            throw new InvalidOperationException(
+                "Bulutta yalnızca çevrimiçi bulunan dosya otomatik indirilmeyecek.");
+        }
         if (info.Length > MaxSearchFileBytes)
         {
             throw new InvalidOperationException(
@@ -187,7 +235,9 @@ public static class KnowledgeTools
 
         if (!string.IsNullOrWhiteSpace(configured))
         {
-            roots.AddRange(configured.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            roots.AddRange(configured.Split(
+                Path.PathSeparator,
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
         }
         else
         {
@@ -197,69 +247,86 @@ public static class KnowledgeTools
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var root in roots)
         {
-            string fullPath;
+            string? finalPath = null;
             try
             {
-                fullPath = Path.GetFullPath(Environment.ExpandEnvironmentVariables(root));
+                var fullPath = Path.GetFullPath(Environment.ExpandEnvironmentVariables(root));
+                if (!Directory.Exists(fullPath) ||
+                    IsCloudOnly(File.GetAttributes(fullPath)))
+                {
+                    continue;
+                }
+
+                finalPath = ResolveFinalPath(fullPath);
             }
-            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            catch (Exception ex) when (ex is
+                ArgumentException or NotSupportedException or PathTooLongException or
+                Win32Exception or UnauthorizedAccessException or IOException or SecurityException)
             {
-                continue;
+                // A non-readable knowledge root is not an authorization grant.
             }
 
-            if (Directory.Exists(fullPath) && seen.Add(fullPath))
+            if (finalPath is not null && seen.Add(finalPath))
             {
-                yield return fullPath;
+                yield return finalPath;
             }
         }
     }
 
     private static void AddDefaultSearchRoots(List<string> roots)
     {
-        var publicDocuments = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments);
+        var publicDocuments = Environment.GetFolderPath(
+            Environment.SpecialFolder.CommonDocuments);
         if (!string.IsNullOrWhiteSpace(publicDocuments))
         {
             roots.Add(publicDocuments);
         }
 
-        var systemDrive = Path.GetPathRoot(Environment.SystemDirectory);
-        if (!string.IsNullOrWhiteSpace(systemDrive))
+        try
         {
-            var usersRoot = Path.Combine(systemDrive, "Users");
-            string[] profiles;
-            try
-            {
-                profiles = Directory.GetDirectories(usersRoot);
-            }
-            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or SecurityException or DirectoryNotFoundException)
-            {
-                profiles = [];
-            }
-
-            foreach (var profile in profiles)
+            var user = WindowsSessionLauncher.GetActiveInteractiveUser();
+            var profile = user.UserProfile;
+            if (!string.IsNullOrWhiteSpace(profile) &&
+                Path.IsPathFullyQualified(profile))
             {
                 roots.Add(Path.Combine(profile, "Documents"));
                 roots.Add(Path.Combine(profile, "Desktop"));
                 roots.Add(Path.Combine(profile, "Downloads"));
 
-                string[] oneDriveRoots;
+                foreach (var name in new[]
+                {
+                    "OneDrive", "OneDriveConsumer", "OneDriveCommercial",
+                })
+                {
+                    if (user.Environment.TryGetValue(name, out var configuredOneDrive) &&
+                        !string.IsNullOrWhiteSpace(configuredOneDrive))
+                    {
+                        roots.Add(configuredOneDrive);
+                    }
+                }
+
                 try
                 {
-                    oneDriveRoots = Directory.GetDirectories(profile, "OneDrive*", SearchOption.TopDirectoryOnly);
+                    roots.AddRange(Directory.GetDirectories(
+                        profile, "OneDrive*", SearchOption.TopDirectoryOnly));
                 }
-                catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or SecurityException)
+                catch (Exception ex) when (ex is
+                    UnauthorizedAccessException or IOException or SecurityException)
                 {
-                    oneDriveRoots = [];
+                    // Missing/inaccessible OneDrive directories are optional.
                 }
-
-                roots.AddRange(oneDriveRoots);
             }
         }
+        catch (InvalidOperationException)
+        {
+            // Never fall back to enumerating another local user's profile.
+        }
 
-        var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        var programData = Environment.GetFolderPath(
+            Environment.SpecialFolder.CommonApplicationData);
         if (!string.IsNullOrWhiteSpace(programData))
         {
-            roots.Add(Path.Combine(programData, "Talvora"));
+            roots.Add(Path.Combine(programData, "Talvora", "Knowledge"));
         }
     }
 
@@ -301,7 +368,8 @@ public static class KnowledgeTools
             {
                 try
                 {
-                    if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) == 0)
+                    var attributes = File.GetAttributes(directory);
+                    if ((attributes & FileAttributes.ReparsePoint) == 0 && !IsCloudOnly(attributes))
                     {
                         pending.Push(directory);
                     }
@@ -313,6 +381,142 @@ public static class KnowledgeTools
             }
         }
     }
+
+    private const FileAttributes RecallOnOpen = (FileAttributes)0x00040000;
+    private const FileAttributes RecallOnDataAccess = (FileAttributes)0x00400000;
+
+    private static bool IsCloudOnly(FileAttributes a) =>
+        (a & (FileAttributes.Offline | RecallOnOpen | RecallOnDataAccess)) != 0;
+
+    private static bool IsWithinSearchRoot(
+        string finalPath,
+        IReadOnlyList<string> configuredRoots) =>
+        configuredRoots.Any(root =>
+            string.Equals(finalPath, root, StringComparison.OrdinalIgnoreCase) ||
+            finalPath.StartsWith(
+                Path.EndsInDirectorySeparator(root)
+                    ? root
+                    : root + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsCloudReparseTag(string path, FileAttributes attributes)
+    {
+        if ((attributes & FileAttributes.ReparsePoint) == 0)
+        {
+            return false;
+        }
+
+        var findHandle = FindFirstFileW(path, out var found);
+        if (findHandle == new IntPtr(-1))
+        {
+            return true; // Unknown reparse metadata is not safe to hydrate.
+        }
+
+        try
+        {
+            return IsCloudReparseTag(found.ReparseTag);
+        }
+        finally
+        {
+            FindClose(findHandle);
+        }
+    }
+
+    private static bool IsCloudReparseTag(uint tag) =>
+        (tag & 0xFFFF0FFFu) == 0x9000001Au;
+
+    // Resolve junctions and symbolic links, including links in a parent directory.
+    // Metadata-only access does not read the document's data stream.
+    private static string ResolveFinalPath(string path)
+    {
+        var normalized = Path.GetFullPath(path);
+        using var handle = CreateFileW(
+            normalized,
+            desiredAccess: 0x00000080u, // FILE_READ_ATTRIBUTES
+            shareMode: 0x00000007u, // READ | WRITE | DELETE
+            securityAttributes: IntPtr.Zero,
+            creationDisposition: 3u, // OPEN_EXISTING
+            flagsAndAttributes: 0x02000000u, // FILE_FLAG_BACKUP_SEMANTICS
+            templateFile: IntPtr.Zero);
+        if (handle.IsInvalid)
+        {
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+        }
+
+        var buffer = new StringBuilder(512);
+        var length = GetFinalPathNameByHandleW(
+            handle, buffer, (uint)buffer.Capacity, 0);
+        if (length >= buffer.Capacity)
+        {
+            buffer = new StringBuilder(checked((int)length + 1));
+            length = GetFinalPathNameByHandleW(
+                handle, buffer, (uint)buffer.Capacity, 0);
+        }
+
+        if (length == 0 || length >= buffer.Capacity)
+        {
+            throw new Win32Exception(Marshal.GetLastWin32Error(),
+                "The Windows filesystem could not resolve the final document path.");
+        }
+
+        var finalPath = buffer.ToString();
+        if (finalPath.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase))
+        {
+            finalPath = @"\\" + finalPath[8..];
+        }
+        else if (finalPath.StartsWith(@"\\?\", StringComparison.OrdinalIgnoreCase))
+        {
+            finalPath = finalPath[4..];
+        }
+        return Path.GetFullPath(finalPath);
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct Win32FindData
+    {
+        public FileAttributes Attributes;
+        public System.Runtime.InteropServices.ComTypes.FILETIME CreationTime;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastAccessTime;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastWriteTime;
+        public uint FileSizeHigh;
+        public uint FileSizeLow;
+        public uint ReparseTag;
+        public uint Reserved1;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+        public string? FileName;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 14)]
+        public string? AlternateFileName;
+    }
+
+    [DllImport("kernel32.dll", EntryPoint = "FindFirstFileW",
+        CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr FindFirstFileW(
+        string path, out Win32FindData findData);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool FindClose(IntPtr findHandle);
+
+    [DllImport("kernel32.dll", EntryPoint = "CreateFileW",
+        CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern SafeFileHandle CreateFileW(
+        string fileName,
+        uint desiredAccess,
+        uint shareMode,
+        IntPtr securityAttributes,
+        uint creationDisposition,
+        uint flagsAndAttributes,
+        IntPtr templateFile);
+
+    [DllImport("kernel32.dll", EntryPoint = "GetFinalPathNameByHandleW",
+        CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern uint GetFinalPathNameByHandleW(
+        SafeFileHandle handle,
+        StringBuilder output,
+        uint outputLength,
+        uint flags);
 
     private static string CreateSnippet(string text, int matchIndex, int queryLength)
     {

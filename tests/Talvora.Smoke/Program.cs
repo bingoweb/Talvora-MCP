@@ -4,6 +4,13 @@ using static SmokeSupport;
 
 try
 {
+if (args.Length >= 1 && args[0] == "--knowledge-s6-live")
+{
+    await SmokeScenarios.RunKnowledgeS6LiveAsync(
+        args.Length > 1 ? args[1] : "http://127.0.0.1:7676/mcp");
+    return;
+}
+
 if (args.Length == 1 && args[0] == "--loopback-policy-live")
 {
     await SmokeScenarios.RunLoopbackHostOriginLiveAsync();
