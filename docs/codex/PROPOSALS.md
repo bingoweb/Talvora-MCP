@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-20 — D5 — N5 subsection acceptance conflicts with the prescribed UTF-8-only change
+- Date: 2026-10-21, HEAD 6664eda
+- Card text: "Step 1 — directly after Set-StrictMode insert exactly [Console]::OutputEncoding and $OutputEncoding; Step 2 — Nothing else in the tool changes." "Step 4 — talvora_agent_brief {workspaceRoot, card: N5} → context contains ### 3.1 \"Kod terminali\" exactly."
+- Problem: DESIGN-WORKLOG.md:592 cites both §3 and §3.1 for N5. Get-CodexContext.ps1:86-97 discards §3.1 when parent §3 is cited; lines 147-177 then limit each selected section to the remaining context budget. After applying the exact D5 UTF-8 script change, the real N5 command printed 305 lines and §3/§7/§4 headers but no ### 3.1 \"Kod terminali\". The live tool output also lacked that heading. Meeting the literal acceptance requires changing section-selection/budget logic beyond D5's exact two-line script change.
+- Options:
+  1. Amend D5 acceptance to test UTF-8 on the D5 context (contains ç, ğ, —, §) and verify the exact 3.1 heading directly in DESIGN-WORKLOG.md; retain the existing parent-section selection policy.
+  2. Amend D5's exact implementation or add a prerequisite D-card to include explicitly cited child §3.1 and its heading alongside §3, with a defined context budget and regression proof; preserve the original live N5 acceptance.
+- Partial work: reverted (yes; production and tests restored byte-for-byte to HEAD).
+- Decision (Claude): _pending_
 
 ## Decided
 

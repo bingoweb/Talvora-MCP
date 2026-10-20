@@ -56,9 +56,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] CI1 — Every push checks its own GitHub run (GitHub windows-ci 39488042425 green; Get-CiStatus.ps1 verified)
 - [x] CI3 — Deadline instead of a fixed loop in the directory-holder test (GitHub windows-ci 39491180856 green)
 - [x] CI2 — .NET platform packages in lockstep 10.0.13 (GitHub CI 39494729468 green; installed 6538264 verified; PR #16 closed)
-- [~] D6 — Context helper finds `##` and `###` card headings (local Full gate green; own GitHub CI pending)
-- [ ] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (audit 2026-10-20 (3))
-- [ ] D1 — Make the rename-protection fallback visible (P-5 decided)
+- [x] D6 — Context helper finds `##` and `###` card headings (GitHub windows-ci 39497367643 green)
+- [?] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (waiting for Claude: P-20; N5 §3.1 acceptance conflicts with exact implementation)
+- [~] D1 — Make the rename-protection fallback visible (Full 54/0 as LocalSystem; own GitHub CI and installed runtime pending)
 - [ ] D3 — Keep the text of structured failures (P-6 decided)
 - [ ] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (P-7 decided)
 - [ ] Q6 — Schema validation of tool arguments before invocation (P-3, P-8 decided)
@@ -114,6 +114,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — D1 (executor: ChatGPT via Talvora): applied exact P-5/ROADMAP path-guard fallback reporting and preserved it in the committed result and receipt warning; no retry/identity behavior changed.
+  RED before: external DELETE-holder warning Expected=1 Actual=0; GREEN after: external holder and normal protected directory guard regressions. Release build 0 errors/warnings.
+  Final Full quality gate: 54 checks, 0 errors, "Hepsi geçti." (Kimlik: NT AUTHORITY\SYSTEM). Context7 /dotnet/docs plus official Microsoft CreateFileW/FileShare documentation.
+  D5 P-20 blocked and partial D5 edits reverted; D1 owns this single commit. D1 GitHub CI and installed runtime validation pending after push.
+- 2026-10-21 — D5 blocked (executor: ChatGPT via Talvora): P-20 opened. Test-first RED: missing UTF-8 output; live N5 lost ç and permanent prompt. Exact D5 changes compiled and targeted regression GREEN, but live N5 lacked required §3.1 heading because Get-CodexContext collapses child citations when §3 is cited. All partial D5 edits reverted.
+  Context7 /microsoftdocs/powershell-docs confirmed OutputEncoding semantics. No D5 commit/deploy. D6 GitHub CI 39497367643 green; proceeding with D1.
 - 2026-10-20 — D6 (executor: ChatGPT via Talvora): applied ROADMAP's exact one-line Get-CodexContext.ps1 regex update; added isolated ## D2 / ### D10 / ### Q2a / ### N5 / ### UI1 fixture coverage to QualityGateRegression.ps1.
   RED before: Card D2 could not be found; GREEN after: QUALITY_GATE_REGRESSION_GREEN. Actual -Card D1, D2 and D7 headings verified.
   Baseline Fast: 13 checks, 0 errors. Final Full: 54 checks, 0 errors, "Hepsi geçti."; gate run as LocalSystem (Kimlik: NT AUTHORITY\SYSTEM).

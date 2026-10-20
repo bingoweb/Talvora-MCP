@@ -22,6 +22,10 @@ internal sealed class SourceEditPathGuard : IDisposable
         new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> createdDirectories =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly SortedSet<string> unprotectedDirectories =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    public IReadOnlyCollection<string> UnprotectedDirectories => unprotectedDirectories;
 
     private SourceEditPathGuard()
     {
@@ -51,7 +55,8 @@ internal sealed class SourceEditPathGuard : IDisposable
             using var handle =
                 OpenDirectory(
                     directory,
-                    denyDeleteShare: false);
+                    denyDeleteShare: false,
+                    out _);
             captured[directory] =
                 ReadAndValidateIdentity(
                     handle,
@@ -221,7 +226,8 @@ internal sealed class SourceEditPathGuard : IDisposable
             using var current =
                 OpenDirectory(
                     expected.Path,
-                    denyDeleteShare: false);
+                    denyDeleteShare: false,
+                    out _);
             _ = ReadAndValidateIdentity(
                 current,
                 expected.Path,
@@ -293,7 +299,12 @@ internal sealed class SourceEditPathGuard : IDisposable
         var handle =
             OpenDirectory(
                 path,
-                denyDeleteShare: true);
+                denyDeleteShare: true,
+                out var renameProtected);
+        if (!renameProtected)
+        {
+            unprotectedDirectories.Add(path);
+        }
         try
         {
             var actual =
@@ -356,7 +367,12 @@ internal sealed class SourceEditPathGuard : IDisposable
             handle =
                 OpenDirectory(
                     path,
-                    denyDeleteShare: true);
+                    denyDeleteShare: true,
+                    out var renameProtected);
+            if (!renameProtected)
+            {
+                unprotectedDirectories.Add(path);
+            }
             var actual =
                 ReadAndValidateIdentity(
                     handle,
@@ -638,7 +654,8 @@ internal sealed class SourceEditPathGuard : IDisposable
 
     private static SafeFileHandle OpenDirectory(
         string path,
-        bool denyDeleteShare)
+        bool denyDeleteShare,
+        out bool renameProtected)
     {
         // Identity probes never request content access and share all operations.
         // The commit guard still blocks external parent renames if possible.
@@ -663,6 +680,7 @@ internal sealed class SourceEditPathGuard : IDisposable
                     IntPtr.Zero);
             if (!handle.IsInvalid)
             {
+                renameProtected = denyDeleteShare;
                 return handle;
             }
 
@@ -680,7 +698,9 @@ internal sealed class SourceEditPathGuard : IDisposable
                 // A concurrent actor already holding DELETE access must not
                 // prevent identity verification. A shared metadata-only
                 // handle still confirms volume and 128-bit identity.
-                return OpenDirectory(path, denyDeleteShare: false);
+                var shared = OpenDirectory(path, denyDeleteShare: false, out _);
+                renameProtected = false;
+                return shared;
             }
 
             throw new SourceEditDomainException(

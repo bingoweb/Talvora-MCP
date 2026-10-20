@@ -60,6 +60,10 @@ internal static partial class SourceEditRegressionRunner
                 CancellationToken.None);
 
         Assert(result.Success, result.Error?.Message ?? "Delete transaction failed.");
+        AssertEqual(
+            0,
+            result.Warnings.Count(w => w.Code == "DIRECTORY_RENAME_UNPROTECTED"),
+            "A normally protected commit must not report DIRECTORY_RENAME_UNPROTECTED.");
         Assert(
             renameBlocked,
             "The guarded parent directory was still renameable during delete commit.");
@@ -492,6 +496,10 @@ internal static partial class SourceEditRegressionRunner
                 result.Success,
                 "Directory identity was blocked by a concurrent external reader: " +
                 (result.Error?.Message ?? "unknown error"));
+            AssertEqual(
+                1,
+                result.Warnings.Count(w => w.Code == "DIRECTORY_RENAME_UNPROTECTED"),
+                "A commit that lost rename protection must report exactly one DIRECTORY_RENAME_UNPROTECTED warning.");
             AssertEqual(
                 "after\n",
                 await File.ReadAllTextAsync(source),

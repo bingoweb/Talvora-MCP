@@ -711,6 +711,21 @@ internal sealed class SourceEditEngine
                     status: "committed",
                     replayed: false,
                     error: null);
+            if (pathGuard.UnprotectedDirectories.Count > 0)
+            {
+                committed = committed with
+                {
+                    Warnings =
+                    [
+                        .. committed.Warnings,
+                        .. pathGuard.UnprotectedDirectories.Select(directory =>
+                            new SourceEditWarning(
+                                "DIRECTORY_RENAME_UNPROTECTED",
+                                $"Another process holds delete access to '{Path.GetRelativePath(plan.WorkspaceRoot, directory)}'; the commit continued without rename protection for that directory.",
+                                directory)),
+                    ],
+                };
+            }
 
             await store.AppendEventAsync(
                 plan,
@@ -741,6 +756,7 @@ internal sealed class SourceEditEngine
                 {
                     Warnings =
                     [
+                        .. committed.Warnings,
                         new SourceEditWarning(
                             "SOURCE_EDIT_RECEIPT_PERSISTENCE_PENDING",
                             $"Commit is durable in the WAL, but receipt persistence/cleanup needs recovery: {ex.Message}",
