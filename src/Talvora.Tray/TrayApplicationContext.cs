@@ -196,6 +196,16 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
     {
         try
         {
+            if (ControlCenterAdminCredentialStore.DeleteLegacyIfPresent())
+            {
+                ControlCenterEventStore.Record(
+                    ControlCenterEventSeverity.Info,
+                    "setup",
+                    "Yönetici anahtarı artık saklanmıyor; yalnızca kurulum sırasında kullanılıyor.",
+                    string.Empty,
+                    dedupKey: "setup:admin-credential-retired");
+            }
+
             var registry = await ManagedMcpRegistryCoordinator.LoadOrRecoverAsync(
                 _lifetimeCts.Token);
 

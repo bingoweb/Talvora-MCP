@@ -94,7 +94,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 HasTunnelId: false,
                 HasConfig: false,
                 HasRuntimeCredential: false,
-                HasAdminCredential: ControlCenterAdminCredentialStore.Exists(),
+                HasAdminCredential: false,
                 CanAutoProvision: false,
                 Summary: "Bu MCP için tünel gerekmiyor.");
         }
@@ -104,7 +104,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
         var hasTunnelId = IsTunnelId(tunnel.TunnelId);
         var hasConfig = File.Exists(configPath);
         var hasRuntime = IsRuntimeCredentialUsable(credentialPath);
-        var hasAdmin = ControlCenterAdminCredentialStore.Exists();
+        var hasAdmin = false;
         var hasReusableRuntime = hasRuntime || HasReusableRuntimeSource();
         var hasPendingTunnelId =
             !hasTunnelId &&
@@ -139,7 +139,8 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
     public static async Task<ManagedMcpRegistryDocument> EnsureMissingTunnelsAsync(
         ManagedMcpRegistryDocument registry,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        char[]? adminKeyBuffer = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
 
@@ -155,7 +156,9 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 (assessment.HasTunnelId &&
                  assessment.HasConfig &&
                  assessment.HasRuntimeCredential) ||
-                !assessment.CanAutoProvision)
+                !(assessment.CanAutoProvision ||
+                  (adminKeyBuffer is { Length: > 0 } &&
+                   HasReusableRuntimeCredential(current))))
             {
                 continue;
             }
@@ -165,7 +168,8 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 var provisioned = await ProvisionAsync(
                     registration,
                     current,
-                    cancellationToken).ConfigureAwait(false);
+                    cancellationToken,
+                    adminKeyBuffer).ConfigureAwait(false);
 
                 current = await ManagedMcpRegistryCoordinator.UpsertAsync(
                     provisioned,
@@ -196,7 +200,8 @@ internal static partial class ManagedMcpTunnelProvisioningService
     public static async Task<ManagedMcpRegistration> ProvisionAsync(
         ManagedMcpRegistration registration,
         ManagedMcpRegistryDocument registry,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        char[]? adminKeyBuffer = null)
     {
         ArgumentNullException.ThrowIfNull(registration);
         ArgumentNullException.ThrowIfNull(registry);
@@ -231,10 +236,9 @@ internal static partial class ManagedMcpTunnelProvisioningService
             var tunnelId = registration.Tunnel.TunnelId;
             if (!IsTunnelId(tunnelId))
             {
-                if (ControlCenterAdminCredentialStore.Exists())
+                if (adminKeyBuffer is { Length: > 0 })
                 {
-                    adminKey =
-                        ControlCenterAdminCredentialStore.Read();
+                    adminKey = new string(adminKeyBuffer);
                 }
 
                 var scope = await GetOrDiscoverScopeAsync(
@@ -874,7 +878,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 reference.Config.TunnelClientVersion,
                 scope.OrganizationIds.Count,
                 scope.WorkspaceIds.Count,
-                ControlCenterAdminCredentialStore.Exists());
+                false);
         }
         finally
         {
@@ -885,6 +889,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
     internal static void AssertPolicyContract()
     {
         ControlCenterAdminCredentialStore.AssertSeparationContract();
+        ControlCenterAdminCredentialStore.AssertNoPersistenceContract();
 
         if (!IsTunnelId("tunnel_0123456789abcdef0123456789abcdef") ||
             IsTunnelId("tunnel_0123456789ABCDEF0123456789ABCDEF") ||

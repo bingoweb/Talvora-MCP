@@ -443,9 +443,7 @@ internal sealed partial class ControlCenterWindow
         }
 
         _setupActionButton.IsEnabled = false;
-        var adminKey = _setupAdminKeyBox.Visibility == Visibility.Visible
-            ? _setupAdminKeyBox.Password
-            : null;
+        char[]? adminKeyBuffer = null;
         var existingTunnelIds =
             new Dictionary<string, string?>(
                 StringComparer.OrdinalIgnoreCase);
@@ -466,8 +464,14 @@ internal sealed partial class ControlCenterWindow
 
         try
         {
+            if (_setupAdminKeyBox.Visibility == Visibility.Visible)
+            {
+                adminKeyBuffer = ControlCenterAdminCredentialStore.CopyTransientKey(
+                    _setupAdminKeyBox.Password);
+            }
+
             var state = await ControlCenterSetupService.CompleteAsync(
-                adminKey,
+                adminKeyBuffer,
                 existingTunnelIds,
                 _lifetimeCts.Token);
 
@@ -504,7 +508,8 @@ internal sealed partial class ControlCenterWindow
         }
         finally
         {
-            adminKey = null;
+            ControlCenterAdminCredentialStore.ClearTransientKey(adminKeyBuffer);
+            adminKeyBuffer = null;
             existingTunnelIds.Clear();
             _setupDevTunnelIdBox.Text = string.Empty;
             _setupAdminTunnelIdBox.Text = string.Empty;

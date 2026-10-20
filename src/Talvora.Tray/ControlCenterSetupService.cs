@@ -20,7 +20,7 @@ internal static class ControlCenterSetupService
 
         return EvaluateCore(
             registry,
-            ControlCenterAdminCredentialStore.Exists(),
+            false,
             ManagedMcpTunnelProvisioningService.HasReusableRuntimeCredential(
                 registry));
     }
@@ -133,7 +133,7 @@ internal static class ControlCenterSetupService
             summary = "Yeni MCP tüneli için tek bilgi gerekiyor";
             detail =
                 "OpenAI Admin API key yalnız yeni tüneli oluşturmak için kullanılacak. " +
-                "Runtime key'den ayrı, Windows current-user DPAPI ile saklanacak ve ekranda gösterilmeyecek.";
+                "Yönetici anahtarı artık saklanmıyor; yalnızca kurulum sırasında kullanılıyor.";
         }
         else
         {
@@ -153,15 +153,32 @@ internal static class ControlCenterSetupService
     }
 
     public static Task<ControlCenterSetupState> CompleteAsync(
-        string? adminKey,
+        char[]? adminKeyBuffer,
         CancellationToken cancellationToken) =>
         CompleteAsync(
-            adminKey,
+            adminKeyBuffer,
             existingTunnelIds: null,
             cancellationToken);
 
     public static async Task<ControlCenterSetupState> CompleteAsync(
-        string? adminKey,
+        char[]? adminKeyBuffer,
+        IReadOnlyDictionary<string, string?>? existingTunnelIds,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await CompleteCoreAsync(
+                adminKeyBuffer, existingTunnelIds, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            ControlCenterAdminCredentialStore.ClearTransientKey(adminKeyBuffer);
+        }
+    }
+
+    private static async Task<ControlCenterSetupState> CompleteCoreAsync(
+        char[]? adminKeyBuffer,
         IReadOnlyDictionary<string, string?>? existingTunnelIds,
         CancellationToken cancellationToken)
     {
@@ -208,7 +225,7 @@ internal static class ControlCenterSetupService
         }
 
         if (before.NeedsAdminCredential &&
-            string.IsNullOrWhiteSpace(adminKey))
+            adminKeyBuffer is not { Length: > 0 })
         {
             var allMissingTunnelIdsSupplied =
                 before.MissingTunnelRegistrationIds.All(id =>
@@ -287,19 +304,19 @@ internal static class ControlCenterSetupService
 
         if (before.NeedsAdminCredential)
         {
-            if (string.IsNullOrWhiteSpace(adminKey))
+            if (adminKeyBuffer is not { Length: > 0 })
             {
                 throw new InvalidOperationException(
                     "Yeni tünel oluşturmak için OpenAI Admin API key gerekiyor.");
             }
 
-            ControlCenterAdminCredentialStore.Save(adminKey);
         }
 
         registry = await ManagedMcpTunnelProvisioningService
             .EnsureMissingTunnelsAsync(
                 registry,
-                cancellationToken)
+                cancellationToken,
+                adminKeyBuffer)
             .ConfigureAwait(false);
 
         var after = Evaluate(registry);

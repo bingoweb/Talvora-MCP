@@ -54,7 +54,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [?] N4 — Worklog: agent jobs tell their story (+ Codex code terminal) (waiting for Claude: P-11)
 - [?] S3 — ProgramData ACL + interactive runs out of user-controlled paths (waiting for Claude: P-12)
 - [x] S4 — Pin ast-grep toolchain
-- [ ] S5 — Do not keep the OpenAI Admin key
+- [~] S5 — Do not keep the OpenAI Admin key (code and gate done; U3 real new-tunnel provisioning evidence when prompted)
 - [ ] S6 — Knowledge tools: scoped fetch, no cloud hydration
 - [ ] S7 — Desktop IPC server verification + real interactive session
 - [ ] S8 — Git push detection parser
@@ -108,6 +108,12 @@ P-12 — S3 startup notice route needs a decision (docs/codex/PROPOSALS.md).
 - scripts/Get-CodexContext.ps1:41 — `-Card D2` reports "Card D2 could not be found" although ROADMAP.md:599 contains the D2 heading; outside D2 scope, not changed.
 
 ## Log
+- 2026-10-20 — S5 (executor: ChatGPT via Talvora): removed persisted Admin-key read/write calls; setup forwards an ephemeral char[] to the tunnel provisioner and zeros it on completion/failure. Runtime DPAPI key code and file remain untouched.
+  Startup upgrade deletes only the legacy `openai-admin-key.dpapi` (when present), then records exactly the approved Turkish Control Center event once. Setup detail also reuses the approved non-persistence copy.
+  Required minimal out-of-list files: `ManagedMcpTunnelProvisioningService.cs` forwards the transient buffer rather than reading DPAPI, and `TrayApplicationContext.cs` performs startup migration/event delivery.
+  RED S5 non-persistence test; GREEN 12/12 source checks, synthetic legacy-file deletion + char[] wipe contract via Tray `--self-test`; Full gate 52 checks, 0 errors, `Hepsi geçti.`.
+  Context7 `/dotnet/docs` and official Microsoft .NET guidance verified; Wpf.Ui PasswordBox lacks `SecurePassword`, so a short-lived managed string may remain until GC, but the transient char[] is deterministically zeroed.
+  Canonical installer/deploy and installed-runtime verification follow this commit; record actual results in the Gitea issue. U3: real new-tunnel provisioning requires re-entering the Admin key once when prompted; no Admin key is stored. Next S6.
 - 2026-10-20 — S4 (executor: ChatGPT via Talvora): pinned ast-grep 0.45.3 for Windows x64, Arm64 and x86 using official SHA-512 npm SRI and extracted executable SHA-256; exact tarball only, no runtime `/latest` or unverified cache execution.
   Tests: missing pin RED; tampered tarball, executable and private cached binary rejected before launch. Updated old native-installer and cache regression assertions to the stronger pin contract. Full gate: 51 controls, 0 failures, `Hepsi geçti.`.
   Extra minimum files: installer build script + native installer regression enforce identical pin in canonical payload; `Talvora.csproj` ships pinned JSON; source-edit regression project runs cache fixture.
