@@ -56,7 +56,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] S4 — Pin ast-grep toolchain
 - [~] S5 — Do not keep the OpenAI Admin key (code and gate done; U3 real new-tunnel provisioning evidence when prompted)
 - [x] S6 — Knowledge tools: scoped fetch, no cloud hydration
-- [ ] S7 — Desktop IPC server verification + real interactive session
+- [x] S7 — Desktop IPC server verification + real interactive session
 - [ ] S8 — Git push detection parser
 - [ ] R1 — Agent job registry, persistence, orphan recovery, limits
 - [ ] R2 — Prompts via stdin
@@ -90,6 +90,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - U4 — After Q2 ships: refresh the Talvora Dev/Admin connectors in ChatGPT Business so the new tool list is picked up.
 - U5 — After UI2: check window placement on your multi-monitor setup (drag between monitors, restart tray).
 - U6 — After N5: look at the worklog preview PNGs on the Gitea issue and say "beğendim" or what to change.
+- U9 — S7 RDP acceptance: when an RDP session is the only active interactive user session, trigger a Talvora tool and verify its desktop progress appears in that session's tray. Console/foreign-pipe regressions passed; this RDP-specific manual step is still open.
 
 ## Open questions
 
@@ -108,6 +109,12 @@ P-12 — S3 startup notice route needs a decision (docs/codex/PROPOSALS.md).
 - scripts/Get-CodexContext.ps1:41 — `-Card D2` reports "Card D2 could not be found" although ROADMAP.md:599 contains the D2 heading; outside D2 scope, not changed.
 
 ## Log
+- 2026-10-20 — S7 (executor: ChatGPT via Talvora): desktop IPC client requests Identification-level impersonation and selects the default interactive WTS session via WindowsSessionLauncher (active console first, RDP supported).
+  GetNamedPipeServerProcessId verifies the connected server process is Talvora.Tray.exe under Program Files/Talvora in the selected session; mismatches drop the frame at Debug, preserving best-effort delivery and frame protocol.
+  RED missing verified-write API; GREEN notification regression: foreign executable receives zero bytes, installed tray pipe accepted. RDP-specific acceptance documented in U9.
+  Minimal extra files: .context7/verification.json (mandatory Context7 gate evidence) and tests/ModernizationPolicyRegression.ps1 (replaces obsolete console-only assertion).
+  Context7 /dotnet/docs and official Microsoft .NET 10 / Win32 docs. Fast baseline 13/0; Full quality gate 52 controls, 0 errors, final line `Hepsi geçti.`.
+  Canonical installer build, deployment and installed smoke follow this single commit; prior installed source edcef4f3. Gitea SSH key file permission warning observed on pull; pushes will be attempted. Next S8; no Codex invoked.
 - 2026-10-20 — S6 (executor: ChatGPT via Talvora): `search`/`fetch` now use the active interactive user's Documents/Desktop/Downloads/OneDrive, Public Documents, and ProgramData/Talvora/Knowledge by default; `TALVORA_KNOWLEDGE_ROOTS` override preserved.
   Fetch and search enforce handle-resolved final-path containment; Offline, RECALL_ON_OPEN, RECALL_ON_DATA_ACCESS and cloud reparse files are skipped before reading. Out-of-root fetch gives Turkish MCP error directing to `talvora_read_text_range`; general filesystem tools unchanged.
   RED scope regression first; GREEN real code fixtures for other-profile default, outside-root fetch, symlink escape, Offline and reparse tags. Full gate 52 controls, 0 failures, final line `Hepsi geçti.`.

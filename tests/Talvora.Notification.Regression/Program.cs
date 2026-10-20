@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Security.Principal;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Talvora;
@@ -24,6 +25,8 @@ internal static class Program
         await AssertBoundedShutdownAsync();
         await AssertUncooperativeDeliveryCannotBlockShutdownAsync();
         await AssertWriteCancellationAsync();
+        await AssertForeignPipeServerIsRejectedAsync();
+        await AssertInstalledTrayPipeIsTrustedWhenRunningAsync();
         await AssertPipeReadTimeoutRecoveryAsync();
         await AssertOffScreenPinnedPlacementIsNormalizedAsync();
 
@@ -664,6 +667,105 @@ internal static class Program
         {
             throw new InvalidOperationException(
                 $"Desktop progress framed write cancellation exceeded its test budget: {stopwatch.Elapsed}.");
+        }
+    }
+
+    private static async Task AssertForeignPipeServerIsRejectedAsync()
+    {
+        var fakePipeId = 1_500_000_000 +
+            Random.Shared.Next(1, 100_000_000);
+        var pipeName = DesktopProgressProtocol.GetPipeName(fakePipeId);
+        await using var fakeServer = new NamedPipeServerStream(
+            pipeName,
+            PipeDirection.In,
+            maxNumberOfServerInstances: 1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous);
+        await using var client = new NamedPipeClientStream(
+            ".",
+            pipeName,
+            PipeDirection.Out,
+            PipeOptions.Asynchronous,
+            TokenImpersonationLevel.Identification);
+        using var timeout =
+            new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var acceptTask = fakeServer.WaitForConnectionAsync(timeout.Token);
+        await client.ConnectAsync(timeout.Token);
+        await acceptTask;
+
+        var message = new DesktopProgressMessage(
+            "foreign-pipe-test",
+            "self-test",
+            "Pipe",
+            "Untrusted server",
+            DesktopProgressKind.Info,
+            DateTimeOffset.UtcNow,
+            ElapsedSeconds: 0,
+            Lane: DesktopProgressLane.Alert,
+            Sequence: 1);
+        var delivered = await TalvoraDesktopProgressNotifier
+            .TryWriteToVerifiedTrayPipeAsync(
+                client,
+                Process.GetCurrentProcess().SessionId,
+                message,
+                timeout.Token);
+        if (delivered)
+        {
+            throw new InvalidOperationException(
+                "A pipe served by a foreign executable received desktop progress.");
+        }
+
+        await client.DisposeAsync();
+        var buffer = new byte[1];
+        if (await fakeServer.ReadAsync(buffer, timeout.Token) != 0)
+        {
+            throw new InvalidOperationException(
+                "The foreign pipe server received notification bytes.");
+        }
+    }
+
+    private static async Task AssertInstalledTrayPipeIsTrustedWhenRunningAsync()
+    {
+        var trayProcesses = Process.GetProcessesByName("Talvora.Tray");
+        try
+        {
+            if (trayProcesses.Length == 0)
+            {
+                // The CI runner does not have a logged-on Talvora tray.
+                return;
+            }
+
+            var sessionId = WindowsSessionLauncher
+                .GetDefaultInteractiveUser().SessionId;
+            if (!trayProcesses.Any(process =>
+                    process.SessionId == sessionId))
+            {
+                return;
+            }
+
+            await using var client = new NamedPipeClientStream(
+                ".",
+                DesktopProgressProtocol.GetPipeName(sessionId),
+                PipeDirection.Out,
+                PipeOptions.Asynchronous,
+                TokenImpersonationLevel.Identification);
+            using var timeout =
+                new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            await client.ConnectAsync(timeout.Token);
+            if (!TalvoraDesktopProgressNotifier.IsTrustedTrayPipeServer(
+                    client.SafePipeHandle,
+                    sessionId))
+            {
+                throw new InvalidOperationException(
+                    "The installed Talvora tray pipe was not trusted.");
+            }
+        }
+        finally
+        {
+            foreach (var process in trayProcesses)
+            {
+                process.Dispose();
+            }
         }
     }
 

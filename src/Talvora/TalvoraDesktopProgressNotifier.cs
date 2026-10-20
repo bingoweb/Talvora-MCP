@@ -1,6 +1,8 @@
+using Microsoft.Win32.SafeHandles;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.Text.Json;
 using System.Threading.Channels;
 using ModelContextProtocol.Protocol;
@@ -27,8 +29,6 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     private const int ProgressQueueCapacity = 1;
     private const int TerminalQueueCapacity = 1_024;
     private const int MaximumRetiredProgressOperations = 512;
-
-    private const uint NoActiveConsoleSession = 0xFFFFFFFF;
 
     private readonly ILogger<TalvoraDesktopProgressNotifier> _logger;
     private readonly CancellationTokenSource _deliveryStopCts = new();
@@ -500,9 +500,17 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             return;
         }
 
-        var sessionId = WTSGetActiveConsoleSessionId();
-        if (sessionId == NoActiveConsoleSession)
+        int sessionId;
+        try
         {
+            sessionId = WindowsSessionLauncher
+                .GetDefaultInteractiveUser().SessionId;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(
+                ex,
+                "No interactive user session is available for desktop progress delivery.");
             return;
         }
 
@@ -516,7 +524,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                     DesktopProgressProtocol.GetPipeName(
                         checked((int)sessionId)),
                     PipeDirection.Out,
-                    PipeOptions.Asynchronous);
+                    PipeOptions.Asynchronous,
+                    TokenImpersonationLevel.Identification);
 
                 using var connectCts =
                     CancellationTokenSource.CreateLinkedTokenSource(
@@ -528,10 +537,16 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                     CancellationTokenSource.CreateLinkedTokenSource(
                         cancellationToken);
                 writeCts.CancelAfter(PipeWriteTimeout);
-                await DesktopProgressProtocol.WriteFrameAsync(
-                    pipe,
-                    message,
-                    writeCts.Token);
+                if (!await TryWriteToVerifiedTrayPipeAsync(
+                        pipe,
+                        sessionId,
+                        message,
+                        writeCts.Token))
+                {
+                    _logger.LogDebug(
+                        "Desktop progress pipe server rejected: not the installed Talvora.Tray.exe in session {SessionId}.",
+                        sessionId);
+                }
                 return;
             }
             catch (OperationCanceledException)
@@ -562,6 +577,73 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             _logger.LogDebug(
                 lastError,
                 "Desktop progress notification failed after retrying without affecting the tool operation.");
+        }
+    }
+
+    internal static async Task<bool> TryWriteToVerifiedTrayPipeAsync(
+        NamedPipeClientStream pipe,
+        int expectedSessionId,
+        DesktopProgressMessage message,
+        CancellationToken cancellationToken)
+    {
+        if (!IsTrustedTrayPipeServer(
+                pipe.SafePipeHandle,
+                expectedSessionId))
+        {
+            return false;
+        }
+
+        await DesktopProgressProtocol.WriteFrameAsync(
+            pipe,
+            message,
+            cancellationToken);
+        return true;
+    }
+
+    internal static bool IsTrustedTrayPipeServer(
+        SafePipeHandle pipeHandle,
+        int expectedSessionId)
+    {
+        if (!GetNamedPipeServerProcessId(
+                pipeHandle,
+                out var serverProcessId) ||
+            serverProcessId == 0 ||
+            serverProcessId > int.MaxValue)
+        {
+            return false;
+        }
+
+        try
+        {
+            using var process =
+                Process.GetProcessById(checked((int)serverProcessId));
+            if (process.SessionId != expectedSessionId)
+            {
+                return false;
+            }
+
+            var imagePath = process.MainModule?.FileName;
+            if (string.IsNullOrWhiteSpace(imagePath))
+            {
+                return false;
+            }
+
+            var installedRoot = Path.Combine(
+                    Environment.GetFolderPath(
+                        Environment.SpecialFolder.ProgramFiles),
+                    "Talvora") + Path.DirectorySeparatorChar;
+            var actualPath = Path.GetFullPath(imagePath);
+            return actualPath.StartsWith(
+                    installedRoot,
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    Path.GetFileName(actualPath),
+                    "Talvora.Tray.exe",
+                    StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception)
+        {
+            return false;
         }
     }
 
@@ -839,6 +921,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         }
     }
 
-    [LibraryImport("kernel32.dll")]
-    private static partial uint WTSGetActiveConsoleSessionId();
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetNamedPipeServerProcessId(
+        SafePipeHandle pipe,
+        out uint serverProcessId);
 }

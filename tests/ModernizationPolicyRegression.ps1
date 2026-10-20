@@ -97,7 +97,7 @@ Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'BuildNarrative\
 Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'ShouldNotifyToolCall' 'Desktop progress must suppress low-value internal inspection chatter.'
 Assert-Contains 'src/Talvora/TalvoraDesktopProgressNarrative.cs' 'OperationCategory\.Inspection' 'Meaningful read/search/diff/hash work must have a first-class user-facing narrative.'
 Assert-NotContains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' '"read_source" or\s*\r?\n?\s*"read_text"' 'Meaningful source inspection must not be blanket-suppressed from desktop work visibility.'
-Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'WTSGetActiveConsoleSessionId' 'Desktop progress must target the active console session.'
+Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'GetDefaultInteractiveUser' 'Desktop progress must target the default interactive Windows session (console preferred, RDP supported).'
 Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'NamedPipeClientStream' 'The service must hand desktop progress to the interactive tray over local IPC.'
 Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'PipeWriteTimeout' 'Desktop progress pipe writes must have a bounded timeout.'
 Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'TerminalQueueCapacity\s*=\s*1_024' 'Terminal outcomes must use a high-capacity but memory-bounded delivery lane.'
