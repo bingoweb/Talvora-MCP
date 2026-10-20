@@ -45,8 +45,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] E3 — Lean defaults for high-frequency tools (P-1 decided: no `talvora_list` row)
 - [x] S1 — Reject foreign Host/Origin (P-2 decided: Penpot static routes exempt from Origin guard)
 - [-] S2 — Local MCP caller authentication (user decision Q1: no)
-- [ ] Q6 — Schema validation of tool arguments before invocation (P-3 decided, re-scoped)
-- [ ] Q6b — Research: supported exception-translation mechanism (proposal only, no product code)
+- [?] Q6 — Schema validation of tool arguments before invocation (waiting for Claude: P-8)
+- [x] Q6b — Research: supported exception-translation mechanism (proposal only, no product code)
 - [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4 decided: message fallbacks)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context
 - [ ] N3 — Worklog: real facts from results
@@ -95,6 +95,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 P-5/P-6 — D1 and D3 need scope decisions (docs/codex/PROPOSALS.md).
 P-7 — A1 requires an owner-warning result-path decision and clarification of audit fixture count.
+P-8 — Q6 muted inspection row conflicts with N1 worklog ownership (docs/codex/PROPOSALS.md).
+P-9 — Q6b redacted exception translator mechanism awaits Claude decision (docs/codex/PROPOSALS.md).
 
 ## Findings for Claude
 
@@ -104,6 +106,10 @@ P-7 — A1 requires an owner-warning result-path decision and clarification of a
 
 ## Log
 
+- 2026-10-20 — Q6b (executor: ChatGPT via Talvora): researched a supported exception-translation mechanism only; no product code shipped. Proposed P-9 for Claude and documented Q6 muted-row acceptance conflict as P-8; Q6 blocked pending decision.
+  Context7 `/modelcontextprotocol/csharp-sdk` and `/dotnet/extensions`; SDK 2.2.0 / Microsoft.Extensions.AI.Abstractions 10.10.1. Transient `tests/Q6bSpike` removed including generated outputs.
+  Spike (in-memory MCP client/server): unwrapped FileNotFound exception gave opaque text; wrapped DelegatingAIFunction emitted redacted `NotFound` via McpException; identical sample `ListToolsResult` JSON before/after (550/550 bytes). Entire production catalog not yet proven byte-identical.
+  Fast baseline 13/0; Full gate 51 controls, 0 failures, last line `Hepsi geçti.`. Installed runtime unchanged at `7287309` (research/docs only). Next N1.
 - 2026-10-19 — S1 (executor: ChatGPT via Talvora): AllowedHosts loopback allow-list and a pre-endpoint Origin guard reject foreign HTTP origins; exactly four static Penpot GET assets remain Origin-exempt (P-2), without adding MCP CORS or changing tunnel/loopback binding.
   RED installed pre-fix test: foreign Host accepted (HTTP 200 vs expected 400); GREEN isolated real Kestrel: foreign Host=400, foreign Origin=403, local Origin/no Origin=200, Penpot asset with foreign Origin=200. New live smoke CLI entrypoint required a minimal Program.cs change.
   Talvora Release and Smoke builds: 0 warnings, 0 errors. Full quality gate: 51 controls, 0 failures; final line `Hepsi geçti.`.

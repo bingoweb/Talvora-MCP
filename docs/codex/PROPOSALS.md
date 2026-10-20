@@ -19,6 +19,28 @@
 ```
 
 ## Open
+### P-9 — Q6b mechanism — Preserve MCP metadata while translating tool exceptions
+- Date: 2026-10-20, HEAD 7287309
+- Card text: "find a supported way to translate exceptions thrown by [McpServerTool] methods into McpException with a redacted message while keeping every tool's name, title, description, annotations and schemas identical".
+- Finding: Supported in ModelContextProtocol 2.2.0 and Microsoft.Extensions.AI.Abstractions 10.10.1: `DelegatingAIFunction` forwards name, description, input/output JSON schemas, serializer options, underlying method and additional properties; override `InvokeCoreAsync` to catch supported exceptions, call `FileLog.RedactSensitiveData`, and throw `McpException`. `McpServerTool.Create(AIFunction, McpServerToolCreateOptions)` accepts the wrapper and can match the original protocol tool's metadata.
+- Evidence: throw-away `tests/Q6bSpike` fixture (removed before commit) compared `ListToolsResult` JSON byte-for-byte for one attributed tool, including name, title, description, schemas and annotations: 550 bytes before = 550 after, exact equality. In-memory MCP server/client: baseline error text was opaque; wrapped error was `An error occurred invoking 'q6b_probe': NotFound: api_key=[REDACTED]`, without leaking the fixture value. No production code changed.
+- Limitation: the spike covers one representative tool, not all production tools. A Q6c implementation must reproduce SDK parameter binding/injected arguments, serializer settings and metadata, and verify the complete `tools/list` wire JSON byte-for-byte for all tools and supported protocol versions (including legacy output-schema shaping). A custom McpServerTool subclass has different legacy output-schema treatment.
+- Options:
+  1. Create a Q6c implementation card for this wrapper, requiring byte-identical full tool catalog, successful invocation and sanitized error/cancellation tests; explicitly specify allowable categories and safe fallback text.
+  2. Defer translating tool exceptions until an SDK invocation hook is supported; keep Q6 pre-call schema validation as the near-term fix.
+- Partial work: reverted (yes; research spike source and build outputs removed; no shipped tool changes).
+- Decision (Claude): _pending_
+
+### P-8 — Q6 — Muted inspection failure requires N1 worklog implementation
+- Date: 2026-10-20, HEAD 7287309
+- Card text: "the desktop worklog shows the inspection failure as a muted row (N1 rule W19), not a red card."
+- Problem: P-3 requires pre-invocation schema validation in Program.cs, but current TalvoraDesktopProgressNotifier.cs:113-207 classifies tool-call failures as DesktopProgressKind.Failed (red), and TalvoraDesktopWorklogState.cs:39-96 only starts/updates/ends the existing card. An early return before the notifier instead produces no timeline row. DESIGN-WORKLOG.md:223 and :334-339 explicitly assign muted inspection steps (W19) to N1. Q6's Files list excludes notifier/state and the N1 classifier/copy deck; exact muted-row acceptance would require out-of-card product choices.
+- Options:
+  1. Limit Q6 Acceptance to pre-invocation InvalidArguments with no red card, and leave the muted timeline row to N1 (W19).
+  2. Expand Q6 Files/Do to prescribe the exact muted-row path and notifier/state modifications now.
+- Partial work: reverted (yes; no Q6 product/test code changes).
+- Decision (Claude): _pending_
+
 
 ### P-7 — A1 — Owner-warning integration and audit fixture mismatch
 - Date: 2026-10-19, HEAD cceafca

@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-19T15:10:27Z",
-  "scope": "S1: local Kestrel Host allow-list and request Origin validation for DNS rebinding prevention, with P-2 static Penpot exception. Verified Context7 /modelcontextprotocol/csharp-sdk and /dotnet/aspnetcore.docs plus official MCP transport spec. A real Kestrel fixture confirmed Host=400, Origin=403, loopback=200 and exempt Penpot GET=200. Prior evidence retained.",
+  "verifiedAtUtc": "2026-10-20T04:40:45Z",
+  "scope": "Q6b research only: Context7 /modelcontextprotocol/csharp-sdk and /dotnet/extensions verified a supported DelegatingAIFunction wrapper with McpServerTool.Create(AIFunction) for redacted McpException translation. Temporary in-memory SDK 2.2.0 spike confirmed one tool has byte-identical tools/list protocol JSON (550 B), generic baseline vs redacted annotated wire errors, and produced no shipped code. Q6 blocked on P-8; Q6b findings P-9.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/extensions",
+      "verified": "2026-10-20 Q6b: Microsoft.Extensions.AI.Abstractions 10.10.1 DelegatingAIFunction forwards Name, Description, JsonSchema, ReturnJsonSchema, JsonSerializerOptions, UnderlyingMethod and AdditionalProperties to InnerFunction and offers InvokeCoreAsync override. SDK-backed throwaway comparison for one [McpServerTool] method: ListToolsResult 550 bytes before/after identical, and FileLog.RedactSensitiveData + McpException produced a sanitized error on in-memory MCP wire."
+    },
     {
       "libraryId": "/dotnet/aspnetcore.docs",
       "verified": "2026-10-19 S1: Official ASP.NET Core host filtering docs confirm setting AllowedHosts as semicolon-delimited host names without ports enables framework HostFilteringMiddleware to reject foreign Host with HTTP 400. WebApplication minimal hosting can register app.Use custom origin middleware before mapped endpoints; tested with a real Kestrel fixture against current net10.0 runtime. No custom Host middleware is required."
@@ -97,6 +101,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-20 Q6b official code: https://github.com/dotnet/extensions/blob/main/src/Libraries/Microsoft.Extensions.AI.Abstractions/Functions/DelegatingAIFunction.cs ; https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Server/AIFunctionMcpServerTool.cs ; https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/transports/transports.md . Context7 IDs /dotnet/extensions and /modelcontextprotocol/csharp-sdk. Real in-memory server/client wire test verified an opaque baseline and redacted wrapped McpException with identical sample tool-list JSON.",
     "2026-10-19 S1: official MCP 2026-07-28 Streamable HTTP security requires invalid Origin to return 403: https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/docs/specification/2026-07-28/basic/transports/streamable-http.mdx ; official C# SDK transport security: https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/transports/transports.md ; official Microsoft ASP.NET Core Kestrel Host Filtering: https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel/host-filtering?view=aspnetcore-10.0 ; Context7 /modelcontextprotocol/csharp-sdk and /dotnet/aspnetcore.docs.",
     "2026-10-19 E3 official C# MCP SDK tool schema/default handling and structured return values: https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md ; official System.Text.Json optional-null property behavior: https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/ignore-properties . Verified with Context7 /modelcontextprotocol/csharp-sdk and /dotnet/docs.",
     "2026-10-19 D2 official Microsoft Win32 API verified through Context7 /websites/learn_microsoft_en-us_windows_win32_api: BY_HANDLE_FILE_INFORMATION 32-bit DWORD serial and 64-bit nFileIndex pair https://learn.microsoft.com/en-us/windows/win32/api/fileapi/ns-fileapi-by_handle_file_information ; GetFileInformationByHandle https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfileinformationbyhandle ; FILE_ID_INFO 64-bit serial and 128-bit identifier https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_info ; FileIdInfo class https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ne-minwinbase-file_info_by_handle_class .",
