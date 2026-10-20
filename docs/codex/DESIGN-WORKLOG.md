@@ -339,6 +339,212 @@ Each card: test first; `Talvora.Notification.Regression` extended with behaviour
 **Don't:** change the protocol yet (N2); change tray layout.
 **Acceptance:** regression scenarios: success → past-tense title; failure → failed title + reason + no duplicated history line; inspection failure → no red card; parallel steps → no "paralel adım" text; no tool name in Title/Message for any category (property test over all manifest tools).
 
+#### Exact implementation (scope = decisions P-4 + P-10) — copy this, do not reinterpret
+
+Protocol stays v3. No tray/layout change. All strings below are the approved copy — use them character for character.
+
+Step 1 — new file `src/Talvora/WorklogCopy.cs`, exactly:
+
+```csharp
+namespace Talvora;
+
+internal sealed record WorklogTitles(string Running, string Succeeded, string Failed);
+
+/// <summary>Approved Turkish copy (DESIGN-WORKLOG §6, decisions P-4/P-10). Do not edit without Claude.</summary>
+internal static class WorklogCopy
+{
+    internal const string RunningFallback = "Devam ediyor.";
+    internal const string SucceededFallback = "Adım başarıyla tamamlandı.";
+    internal const string CancelledFallback = "Adım durduruldu.";
+    internal const string CancelledTitle = "İşlem durduruldu";
+
+    internal static readonly WorklogTitles SourceEdit = new("Kod değişikliği uygulanıyor", "Kod değişikliği uygulandı", "Kod değişikliği uygulanamadı");
+    internal static readonly WorklogTitles Build = new("Derleniyor", "Derleme başarılı", "Derleme başarısız");
+    internal static readonly WorklogTitles Tests = new("Testler çalışıyor", "Testler geçti", "Testler başarısız");
+    internal static readonly WorklogTitles Restore = new("Paketler geri yükleniyor", "Paketler hazır", "Paketler geri yüklenemedi");
+    internal static readonly WorklogTitles PackageBuild = new("Kurulum paketi hazırlanıyor", "Kurulum paketi hazırlandı", "Kurulum paketi hazırlanamadı");
+    internal static readonly WorklogTitles Deploy = new("Yeni sürüm kuruluyor", "Kurulum devredildi · doğrulama bekleniyor", "Yeni sürüm kurulamadı");
+    internal static readonly WorklogTitles Commit = new("Değişiklikler kaydediliyor", "Değişiklikler kaydedildi", "Kayıt oluşturulamadı");
+    internal static readonly WorklogTitles Push = new("Uzak depoya gönderiliyor", "Uzak depoya gönderildi", "Gönderim yapılamadı");
+    internal static readonly WorklogTitles OtherGit = new("Git işlemi yapılıyor", "Git işlemi tamamlandı", "Git işlemi tamamlanamadı");
+    internal static readonly WorklogTitles Service = new("Servis işlemi yapılıyor", "Servis işlemi tamamlandı", "Servis istenen duruma geçmedi");
+    internal static readonly WorklogTitles Package = new("Paket işlemi yapılıyor", "Paket işlemi tamamlandı", "Paket işlemi tamamlanamadı");
+    internal static readonly WorklogTitles FileMutation = new("Dosyalar düzenleniyor", "Dosyalar düzenlendi", "Dosya işlemi tamamlanamadı");
+    internal static readonly WorklogTitles Network = new("Bağlantı denetleniyor", "Bağlantı denetlendi", "Bağlantı kurulamadı");
+    internal static readonly WorklogTitles Process = new("Program çalışıyor", "Program bitti", "Program hata ile bitti");
+    internal static readonly WorklogTitles Codex = new("Codex çalışıyor", "Codex görevi tamamlandı", "Codex görevi tamamlanamadı");
+    internal static readonly WorklogTitles Claude = new("Claude çalışıyor", "Claude görevi tamamlandı", "Claude görevi tamamlanamadı");
+    internal static readonly WorklogTitles Generic = new("İşlem yürütülüyor", "İşlem tamamlandı", "İşlem tamamlanamadı");
+}
+```
+
+Step 2 — `src/Talvora/TalvoraDesktopProgressNarrative.cs`:
+
+a) Replace the record with
+
+```csharp
+private sealed record OperationNarrative(
+    OperationCategory Category,
+    WorklogTitles Titles);
+```
+
+b) Rewrite `BuildNarrative` so every branch returns `new(<category>, WorklogCopy.<X>)` with this exact mapping (keep the existing detection logic of each branch; only the returned values change):
+
+| Existing branch | Category | Copy |
+|---|---|---|
+| `claude_exec` / `claude_run` / `claude_start` | GenericExecution | `WorklogCopy.Claude` |
+| `run_powershell` + canonical package-build script | PackageBuild | `WorklogCopy.PackageBuild` |
+| `run_powershell` + `Install.ps1` | Deployment | `WorklogCopy.Deploy` |
+| any other `run_powershell` (including the old "log" branch — delete that branch) | GenericExecution | `WorklogCopy.Generic` |
+| `dotnet_build` | Verification | `WorklogCopy.Build` |
+| `dotnet_test` | Verification | `WorklogCopy.Tests` |
+| `dotnet_restore` | Verification | `WorklogCopy.Restore` |
+| `apply_patch` / `apply_edits` / `structural_edit` / `semantic_edit` | SourceEdit | `WorklogCopy.SourceEdit` |
+| `git_run` with subcommand `push` | VersionControl | `WorklogCopy.Push` |
+| `git_run` with subcommand `commit` | VersionControl | `WorklogCopy.Commit` |
+| other `git_run` | VersionControl | `WorklogCopy.OtherGit` |
+| contains `service_` | ServiceOperation | `WorklogCopy.Service` |
+| contains `choco_` or `package_` | PackageOperation | `WorklogCopy.Package` |
+| file mutation branch | FileMutation | `WorklogCopy.FileMutation` |
+| tunnel / network / `http_` branch (except `http_request`, see Step 3) | NetworkOperation | `WorklogCopy.Network` |
+| process / job branch | ProcessOperation | `WorklogCopy.Process` |
+| fallback | GenericExecution | `WorklogCopy.Generic` |
+
+For the git subcommand use the shared `GitArgumentParser.GetSubcommand(arguments)` (from A3/S8) on the `arguments` array — never `gitArgs[0]` (fixes W18).
+
+c) Delete the inspection branches (`read_source` … `find_files`, `git_diff`/`git_log`, `file_hash`/`path_info`, `http_request`) — see Step 3. Delete `BuildPlainCompletion`. In `TryBuildDeferredCompletion` replace the subject comparison with `narrative.Category == OperationCategory.Deployment`, the title with `WorklogCopy.Deploy.Succeeded` and keep the existing message text unchanged.
+
+Step 3 — inspection steps are silent (P-10, AGENTS.md "low-value reads remain silent"): in `ShouldNotifyToolCall` add these names to the `=> false` list: `read_source`, `read_text`, `read_text_range`, `read_bytes`, `tail_text`, `search_text`, `knowledge_search`, `search`, `fetch`, `find_files`, `git_diff`, `git_log`, `file_hash`, `path_info`, `http_request`.
+
+Step 4 — `src/Talvora/WorklogFailureClassifier.cs`, new, exactly:
+
+```csharp
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using ModelContextProtocol.Protocol;
+
+namespace Talvora;
+
+internal static partial class WorklogFailureClassifier
+{
+    /// <summary>Returns the plain Turkish reason (DESIGN-WORKLOG §5.3) for a failed step.</summary>
+    internal static string Describe(CallToolResult result, string normalizedToolName)
+    {
+        if (result.StructuredContent is JsonElement json && json.ValueKind == JsonValueKind.Object)
+        {
+            if (TryGetErrorCode(json) is { } code)
+            {
+                return code switch
+                {
+                    "EXPECTED_REVISION_MISMATCH" or "SOURCE_EDIT_CONFLICT" =>
+                        "Dosya bu arada değişmişti; eski hâline göre değişiklik yapılmadı. Kodunuz değişmedi. Ajan güncel hâli okuyup yeniden deneyecek.",
+                    "PATCH_PARSE_ERROR" or "PATCH_CONTEXT_NOT_FOUND" or "PATCH_CONTEXT_AMBIGUOUS" or "PATCH_OVERLAPPING_EDITS" =>
+                        "Değişiklik isteği dosyanın güncel hâliyle eşleşmedi. Kodunuz değişmedi. Ajan isteği düzeltip yeniden deneyebilir.",
+                    "SOURCE_VALIDATION_FAILED" =>
+                        "Değişiklik sözdizimi kontrolünden geçmedi. Kodunuz değişmedi. Ajan hatayı düzeltip yeniden deneyebilir.",
+                    _ => "Bu adım tamamlanamadı.",
+                };
+            }
+
+            if (StructuredResultFailure.Describe(json) == StructuredResultFailure.TimedOut)
+            {
+                return "İşlem zaman sınırını aştı ve tamamlanmış sayılmıyor.";
+            }
+
+            if (normalizedToolName == "dotnet_build")
+            {
+                return "Derleme hata verdi. Ajan hataları düzeltebilir; kodunuz kaydedildiği hâliyle duruyor.";
+            }
+
+            if (normalizedToolName == "dotnet_test")
+            {
+                return "Testlerin bir kısmı başarısız oldu.";
+            }
+
+            if (ContainsText(json, "TALVORA_DELIVERY_GATE_BLOCKED") || ContainsText(json, "WorkContract:"))
+            {
+                return "Teslim kontrolü eksik kanıt nedeniyle gönderimi durdurdu. Kanıt dosyaları güncellenince tekrar denenebilir.";
+            }
+        }
+
+        var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
+        return CategoryPrefix().Match(text) is { Success: true } match
+            ? match.Groups["c"].Value switch
+            {
+                "InvalidArguments" => "İstek eksik ya da hatalı bilgi içeriyordu. Ajan isteği düzeltip yeniden deneyebilir.",
+                "NotFound" => "Aranan dosya ya da kayıt bulunamadı.",
+                "AccessDenied" => "Windows bu işleme izin vermedi.",
+                "Timeout" => "İşlem zaman sınırını aştı ve tamamlanmış sayılmıyor.",
+                _ => "Bu adım tamamlanamadı.",
+            }
+            : "Bu adım tamamlanamadı.";
+    }
+
+    private static string? TryGetErrorCode(JsonElement json)
+    {
+        foreach (var property in json.EnumerateObject())
+        {
+            if (string.Equals(property.Name, "error", StringComparison.OrdinalIgnoreCase) &&
+                property.Value.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var inner in property.Value.EnumerateObject())
+                {
+                    if (string.Equals(inner.Name, "code", StringComparison.OrdinalIgnoreCase) &&
+                        inner.Value.ValueKind == JsonValueKind.String)
+                    {
+                        return inner.Value.GetString();
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static bool ContainsText(JsonElement json, string needle) =>
+        json.GetRawText().Contains(needle, StringComparison.Ordinal);
+
+    [GeneratedRegex(@"^(?<c>InvalidArguments|NotFound|AccessDenied|Timeout|IO|Failed):")]
+    private static partial Regex CategoryPrefix();
+}
+```
+
+Step 5 — `src/Talvora/TalvoraDesktopProgressNotifier.cs` `RunToolCallAsync`:
+- `var displayName = narrative.Titles.Running;`
+- success terminal: `TryEndWorklog(operationId, DesktopProgressKind.Completed, narrative.Titles.Succeeded, WorklogCopy.SucceededFallback, terminalEvidence, stopwatch.Elapsed);` (both the normal and the classification-exception branch).
+- failure terminal (result is a failure): `TryEndWorklog(operationId, DesktopProgressKind.Failed, narrative.Titles.Failed, result is CallToolResult call ? WorklogFailureClassifier.Describe(call, canonicalToolName) : "Bu adım tamamlanamadı.", terminalEvidence, stopwatch.Elapsed);`
+- cancelled: title `WorklogCopy.CancelledTitle`, message `WorklogCopy.CancelledFallback`.
+- thrown exception: title `narrative.Titles.Failed`, message `"Bu adım tamamlanamadı."`.
+- Delete `BuildFriendlyResultFailureMessage` and `BuildFriendlyExceptionMessage` if no longer referenced (keep `TryDescribeStructuredFailure` only as the boolean failure detector — make its `message` output unused or remove the out parameter; behaviour of *detecting* failure must not change).
+
+Step 6 — `src/Talvora/TalvoraDesktopWorklogState.cs`:
+- `ActiveWorklogItem` keeps the narrative; `PendingFailure`/`PendingCancellation` store the **terminal title** passed to `EndWorklog`, not `ended.Narrative…`:
+  `_pendingFailure = new PendingFailure(ended.ToolName, title, message, evidence);` and same for cancellation; the final `Enqueue` uses `pendingFailure.Subject` (which now holds the failed title). Rename the record field `Subject` → `Title` for clarity.
+- `BeginWorklog`: message = `WorklogCopy.RunningFallback` (no "Amaç:" sentence).
+- `UpdateWorklogProgress`: message = `WorklogCopy.RunningFallback` (no elapsed time in prose; the meta line already shows it).
+- parallel continuation (inside `if (_activeWorklog.Count > 0)`): message = `WorklogCopy.RunningFallback`; title = `latest.Narrative.Titles.Running`.
+- Remove the "Son yaptıklarım" history completely: delete `_recentWorklogUpdates`, `_lastWorklogHistory`, `AddWorklogHistory` and every call; `ComposeWorklogMessage(current, evidence)` returns `current.Trim()` only (delete `DescribeEvidenceForUser` — facts are shown once, in the diff header; N3 brings real facts).
+- every `narrative.Subject` / `item.Narrative.Subject` → `….Titles.Running`.
+
+Step 7 — `TalvoraDesktopCodexWorklog.cs` and `TalvoraDesktopClaudeWorklog.cs`: narratives become `new OperationNarrative(OperationCategory.GenericExecution, WorklogCopy.Codex)` / `WorklogCopy.Claude`. Progress messages exactly:
+- Codex: `$"{commands} komut, {mcpCalls} araç çağrısı."` (plus the existing redacted activity line on a new line when present).
+- Claude: `$"{toolCalls} geliştirme adımı."`
+End titles: completed → `Titles.Succeeded`; failed/timed_out → `Titles.Failed`; cancelled → `WorklogCopy.CancelledTitle`. End messages exactly:
+- completed: `WorklogCopy.SucceededFallback`
+- cancelled: `"Görev isteğiniz üzerine durduruldu."`
+- timed_out: `"Görev ayrılan sürede bitmedi; yapılan değişiklikler tamamlanmış sayılmıyor."`
+- failed: `"Görev tamamlanamadı; yapılan değişiklikler tamamlanmış sayılmıyor."`
+
+Step 8 — tests in `tests/Talvora.Notification.Regression/Program.cs` (behaviour, using the existing delivery-override harness):
+1. success of `talvora_apply_patch` → terminal frame Title `Kod değişikliği uygulandı`, Message `Adım başarıyla tamamlandı.`;
+2. structured failure `{ success:false, error:{ code:"EXPECTED_REVISION_MISMATCH" } }` → Title `Kod değişikliği uygulanamadı`, Message starts with `Dosya bu arada değişmişti`;
+3. `talvora_search_text` (success or failure) → **no frame at all**;
+4. for every frame produced in tests 1–2: Message does not contain `Son yaptıklarım`, `Amaç:`, `Geçen süre`, `Sonuç:` or any tool name (`apply_patch`, `talvora_`);
+5. Codex job end `timed_out` → Title `Codex görevi tamamlanamadı` and the exact timed-out message;
+6. ASCII-Turkish guard: no frame text matches `gelistir|dogrul|cagri|gecen sure|tamamladi` (case-insensitive).
+
+No PNG for N1 (P-11).
+
 ### N2 — Protocol v4, sessions and actor/project context
 
 > **Amended by P-11 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.

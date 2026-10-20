@@ -448,6 +448,154 @@ Implement only the **Q2c** bullet of card Q2 above, same rules as Q2a, plus the 
 
 **Acceptance:** smoke: wrong argument names → message names the missing parameter; nonexistent path → `NotFound: …`; a secret-looking value inside an exception message is redacted; cancellation still reported as cancellation.
 
+#### Exact implementation (scope = decision P-3/P-8) — copy this, do not reinterpret
+
+API names verified by Claude in the installed ModelContextProtocol 2.2.0 XML docs: `McpServer.ServerOptions`, `McpServerOptions.ToolCollection`, `McpServerPrimitiveCollection<T>.TryGetPrimitive(string, out T)`.
+
+Step 1 — new file `src/Talvora/ToolArgumentValidator.cs`, exactly:
+
+```csharp
+using System.Text.Json;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
+
+namespace Talvora;
+
+internal static class ToolArgumentValidator
+{
+    private const int MaximumListedProperties = 12;
+
+    internal static CallToolResult? TryCreateError(
+        RequestContext<CallToolRequestParams> request)
+    {
+        var name = request.Params?.Name;
+        if (string.IsNullOrWhiteSpace(name) ||
+            request.Server?.ServerOptions?.ToolCollection is not { } tools ||
+            !tools.TryGetPrimitive(name, out var tool))
+        {
+            return null; // Unknown tool: keep the SDK's own answer.
+        }
+
+        var message = Validate(tool.ProtocolTool.InputSchema, request.Params!.Arguments);
+        return message is null
+            ? null
+            : new CallToolResult
+            {
+                IsError = true,
+                Content = [new TextContentBlock { Text = message }],
+            };
+    }
+
+    internal static string? Validate(
+        JsonElement schema,
+        IDictionary<string, JsonElement>? arguments)
+    {
+        var args = arguments ?? new Dictionary<string, JsonElement>();
+        var properties = schema.ValueKind == JsonValueKind.Object &&
+            schema.TryGetProperty("properties", out var p) &&
+            p.ValueKind == JsonValueKind.Object
+                ? p.EnumerateObject().ToDictionary(x => x.Name, x => x.Value, StringComparer.Ordinal)
+                : new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        var required = schema.ValueKind == JsonValueKind.Object &&
+            schema.TryGetProperty("required", out var r) &&
+            r.ValueKind == JsonValueKind.Array
+                ? r.EnumerateArray()
+                    .Where(x => x.ValueKind == JsonValueKind.String)
+                    .Select(x => x.GetString()!)
+                    .ToArray()
+                : [];
+        var allowsAdditional = schema.ValueKind == JsonValueKind.Object &&
+            schema.TryGetProperty("additionalProperties", out var ap) &&
+            ap.ValueKind is not JsonValueKind.False;
+
+        var missing = required.Where(n => !args.ContainsKey(n)).ToArray();
+        var unknown = allowsAdditional
+            ? []
+            : args.Keys.Where(k => !properties.ContainsKey(k)).ToArray();
+        var wrongType = args
+            .Where(a => properties.TryGetValue(a.Key, out var ps) && !TypeMatches(ps, a.Value))
+            .Select(a => $"'{a.Key}' (expected {TypeLabel(properties[a.Key])})")
+            .ToArray();
+
+        if (missing.Length == 0 && unknown.Length == 0 && wrongType.Length == 0)
+        {
+            return null;
+        }
+
+        var parts = new List<string>();
+        if (missing.Length > 0) parts.Add("missing " + string.Join(", ", missing.Select(m => $"'{m}'")));
+        if (unknown.Length > 0) parts.Add("unknown " + string.Join(", ", unknown.Select(u => $"'{u}'")));
+        if (wrongType.Length > 0) parts.Add("wrong type " + string.Join(", ", wrongType));
+
+        var expected = properties.Keys
+            .OrderBy(k => Array.IndexOf(required, k) is var i && i >= 0 ? i : int.MaxValue)
+            .Take(MaximumListedProperties)
+            .Select(k => $"{k} ({TypeLabel(properties[k])}{(required.Contains(k) ? ", required" : string.Empty)})");
+        var more = properties.Count > MaximumListedProperties ? ", …" : string.Empty;
+
+        return $"InvalidArguments: {string.Join("; ", parts)}. Expected: {string.Join(", ", expected)}{more}";
+    }
+
+    private static IReadOnlyList<string> Types(JsonElement propertySchema) =>
+        !propertySchema.TryGetProperty("type", out var type)
+            ? []
+            : type.ValueKind switch
+            {
+                JsonValueKind.String => [type.GetString()!],
+                JsonValueKind.Array => type.EnumerateArray()
+                    .Where(t => t.ValueKind == JsonValueKind.String)
+                    .Select(t => t.GetString()!)
+                    .ToArray(),
+                _ => [],
+            };
+
+    private static string TypeLabel(JsonElement propertySchema)
+    {
+        var types = Types(propertySchema).Where(t => t != "null").ToArray();
+        return types.Length == 0 ? "any" : string.Join("|", types);
+    }
+
+    private static bool TypeMatches(JsonElement propertySchema, JsonElement value)
+    {
+        var types = Types(propertySchema);
+        if (types.Count == 0)
+        {
+            return true;
+        }
+
+        return types.Any(t => t switch
+        {
+            "string" => value.ValueKind == JsonValueKind.String,
+            "boolean" => value.ValueKind is JsonValueKind.True or JsonValueKind.False,
+            "integer" => value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out _),
+            "number" => value.ValueKind == JsonValueKind.Number,
+            "array" => value.ValueKind == JsonValueKind.Array,
+            "object" => value.ValueKind == JsonValueKind.Object,
+            "null" => value.ValueKind == JsonValueKind.Null,
+            _ => true,
+        });
+    }
+}
+```
+
+Step 2 — `src/Talvora/Program.cs`, inside `filters.AddCallToolFilter(next => async (request, cancellationToken) => { … })`, insert as the **first** statements of the lambda (before `var notifier = …`), so no desktop card is created for invalid calls (P-8):
+
+```csharp
+if (ToolArgumentValidator.TryCreateError(request) is { } invalidArguments)
+{
+    return invalidArguments;
+}
+```
+
+Step 3 — new smoke scenario `tests/Talvora.Smoke/SmokeScenarios.ArgumentValidation.cs` (registered in `tests/Talvora.Smoke/Program.cs` like the other scenarios; link `ToolArgumentValidator.cs` into the smoke project the same way as `ToolResultTextPolicy.cs` if the scenario is in-process):
+- unit part: a schema `{"type":"object","properties":{"root":{"type":"string"},"query":{"type":"string"},"regex":{"type":"boolean"}},"required":["root","query"]}` with arguments `{"path":"x","pattern":"y"}` must give exactly
+  `InvalidArguments: missing 'root', 'query'; unknown 'path', 'pattern'. Expected: root (string, required), query (string, required), regex (boolean)`;
+- `{"root":"x","query":"y","regex":"yes"}` → message contains `wrong type 'regex' (expected boolean)`;
+- valid arguments → `null`;
+- live part (installed service, `/mcp/dev`): `talvora_search_text {"path":"x","pattern":"y"}` → `isError: true` and the text starts with `InvalidArguments: missing 'root', 'query'`.
+
+Step 4 — deploy; run the live part; Log the exact returned line.
+
 ### Q3 — Documentation diet and correctness
 
 > **Amended by P-17 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
@@ -633,6 +781,71 @@ Verified live by Claude on the installed build `041c723`: `/healthz.version` = M
 
 **Acceptance:** smoke on this repo: `context` contains `ç`, `ğ`, `—` and `§`; `agentsSections` starts with the permanent-prompt section; `-Card N5` output contains `### 3.1 "Kod terminali"` intact.
 
+#### Exact implementation — copy this, do not reinterpret
+
+Cause (verified): the child `pwsh` writes redirected output in the console code page (cp857 on this machine); the runner decodes it as UTF-8, so every non-ASCII character breaks.
+
+Step 1 — `scripts/Get-CodexContext.ps1`: directly after the line `Set-StrictMode -Version Latest` insert exactly:
+
+```powershell
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Text.UTF8Encoding]::new($false)
+```
+
+Step 2 — `src/Talvora/Tools/AgentBriefTools.cs`:
+
+a) Replace the `RequiredHeadings` initializer with exactly:
+
+```csharp
+private static readonly string[] RequiredHeadings =
+[
+    "## PERMANENT USER-APPROVED AGENT PROMPT",
+    "## WHO MUST FOLLOW THESE RULES",
+    "## Language policy",
+    "## EXECUTION MANDATE",
+    "## TOKEN ECONOMY",
+    "## QUEUE ADDITIONS",
+    "## CONTINUE PROTOCOL",
+];
+```
+
+b) Replace the `arguments` list initializer with exactly:
+
+```csharp
+var arguments = new List<string>
+{
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    scriptPath,
+};
+```
+
+Nothing else in the tool changes.
+
+Step 3 — `tests/Talvora.Smoke/SmokeScenarios.AgentBrief.cs`: add these assertions to the existing live scenario for this repository (use the scenario's existing failure style):
+
+```csharp
+foreach (var mustContain in new[] { "ç", "ğ", "—", "§" })
+{
+    if (!response.Context.Contains(mustContain, StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException(
+            $"agent_brief context lost the character '{mustContain}'.");
+    }
+}
+if (!response.AgentsSections.StartsWith(
+        "## PERMANENT USER-APPROVED AGENT PROMPT", StringComparison.Ordinal))
+{
+    throw new InvalidOperationException(
+        "agent_brief must start with the permanent-prompt section.");
+}
+```
+
+(If the scenario calls the tool with a `card`, call it with `card: "N5"`; the N5 card cites §3.1, so `§` and `—` are guaranteed in the context.)
+
+Step 4 — deploy (runtime change) and verify live through the installed service: `talvora_agent_brief {workspaceRoot, card: "N5"}` → context contains `### 3.1 "Kod terminali"` exactly as in `docs/codex/DESIGN-WORKLOG.md`.
+
 ### D6 — Context helper finds `##` and `###` card headings
 
 > Audit 2026-10-20 (3), finding 4.
@@ -642,6 +855,38 @@ Verified live by Claude on the installed build `041c723`: `/healthz.version` = M
 **Do:** match card headings with `^#{2,3} <ID> — ` (exact ID, no prefix match: `D1` must not match `D10`); the card ends at the next heading of the same or higher level.
 
 **Acceptance:** fixture test for `## D2 — `, `### N5 — `, `### UI1 — `, and `D1` vs `D10`; `-Card D7` prints this roadmap's D7 card.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — `scripts/Get-CodexContext.ps1`: replace the single line
+
+```powershell
+$cardPattern = '(?ms)^###\s+' + [regex]::Escape($Card) + '\s+[—–-].*?(?=^#{2,3}\s+|\z)'
+```
+
+with
+
+```powershell
+$cardPattern = '(?ms)^#{2,3}[ \t]+' + [regex]::Escape($Card) + '[ \t]+[—–-].*?(?=^#{2,3}[ \t]+|\z)'
+```
+
+Nothing else in the script changes. (`[ \t]+` after the id is what keeps `D1` from matching `D10`.)
+
+Step 2 — `tests/QualityGateRegression.ps1`: add one fixture block (same style as the existing fixtures in that file: temporary repo copy with its own `docs/codex/STATUS.md` and `docs/codex/ROADMAP.md`). ROADMAP fixture content — the lines below are shown with a leading `|` so this roadmap's own heading parser does not see them; write each line **without** the `| ` prefix:
+
+```text
+| ## D2 — two-hash card
+| D2 BODY
+| ### D10 — ten
+| D10 BODY
+| ### Q2a — split card
+| Q2A BODY
+| ## Next section
+```
+
+Assertions: `-Card D2` output contains `D2 BODY` and not `D10 BODY`; `-Card D10` contains `D10 BODY` and not `Q2A BODY`; `-Card D1` throws "could not be found"; `-Card Q2a` contains `Q2A BODY` and not `Next section`.
+
+Step 3 — verify: `pwsh -NoProfile -File tests/QualityGateRegression.ps1`, then `pwsh -NoProfile -File scripts/Get-CodexContext.ps1 -Card D1` on the real repo prints `=== CARD D1 (docs/codex/ROADMAP.md) ===`.
 
 ### D7 — Knowledge roots degrade instead of throwing; the gate passes as a normal user
 
@@ -657,6 +902,153 @@ Verified live by Claude on the installed build `041c723`: `/healthz.version` = M
 **Acceptance:** `pwsh scripts/Invoke-QualityGate.ps1 -Scope Full` run **as the signed-in user** (not through `talvora_run_powershell`) ends with `Hepsi geçti.`; the same command through `talvora_run_powershell` (LocalSystem) also ends with `Hepsi geçti.`; Log records both identity lines.
 
 **Rule from now on (also in AGENTS.md):** a card's final gate counts only if run as the signed-in user — ChatGPT uses `talvora_user_run` once A1 exists; until then ChatGPT must state "gate run as LocalSystem" in the Log and Claude re-runs it as the user at audit time.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — `src/Talvora/Tools/KnowledgeTools.cs`: add `using System.Security.Principal;` to the usings. Add these members to the `KnowledgeTools` class (place them directly above `AddDefaultSearchRoots`):
+
+```csharp
+internal sealed record KnowledgeUserProfile(
+    string ProfilePath,
+    IReadOnlyList<string> OneDriveRoots);
+
+// Test seam only. Production code never sets it.
+internal static Func<KnowledgeUserProfile?>? UserProfileResolverOverride { get; set; }
+
+internal static KnowledgeUserProfile? ResolveKnowledgeUserProfile()
+{
+    if (UserProfileResolverOverride is { } overrideResolver)
+    {
+        return overrideResolver();
+    }
+
+    if (IsRunningAsLocalSystem())
+    {
+        try
+        {
+            var user = WindowsSessionLauncher.GetActiveInteractiveUser();
+            return CreateKnowledgeUserProfile(
+                user.UserProfile,
+                name => user.Environment.TryGetValue(name, out var value) ? value : null);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or Win32Exception)
+        {
+            // LocalSystem never falls back to its own or another user's profile.
+            return null;
+        }
+    }
+
+    return CreateKnowledgeUserProfile(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        Environment.GetEnvironmentVariable);
+}
+
+private static KnowledgeUserProfile? CreateKnowledgeUserProfile(
+    string? profile,
+    Func<string, string?> readVariable)
+{
+    if (string.IsNullOrWhiteSpace(profile) || !Path.IsPathFullyQualified(profile))
+    {
+        return null;
+    }
+
+    var oneDrive = new List<string>();
+    foreach (var name in new[] { "OneDrive", "OneDriveConsumer", "OneDriveCommercial" })
+    {
+        var value = readVariable(name);
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            oneDrive.Add(value);
+        }
+    }
+
+    return new KnowledgeUserProfile(profile, oneDrive);
+}
+
+private static bool IsRunningAsLocalSystem()
+{
+    using var identity = WindowsIdentity.GetCurrent();
+    return identity.User?.IsWellKnown(WellKnownSidType.LocalSystemSid) == true;
+}
+```
+
+Step 2 — in `AddDefaultSearchRoots`, replace the whole `try { var user = WindowsSessionLauncher.GetActiveInteractiveUser(); … } catch (InvalidOperationException) { … }` block with exactly:
+
+```csharp
+var userProfile = ResolveKnowledgeUserProfile();
+if (userProfile is not null)
+{
+    var profile = userProfile.ProfilePath;
+    roots.Add(Path.Combine(profile, "Documents"));
+    roots.Add(Path.Combine(profile, "Desktop"));
+    roots.Add(Path.Combine(profile, "Downloads"));
+    roots.AddRange(userProfile.OneDriveRoots);
+
+    try
+    {
+        roots.AddRange(Directory.GetDirectories(
+            profile, "OneDrive*", SearchOption.TopDirectoryOnly));
+    }
+    catch (Exception ex) when (ex is
+        UnauthorizedAccessException or IOException or SecurityException)
+    {
+        // Missing/inaccessible OneDrive directories are optional.
+    }
+}
+```
+
+Nothing else in `KnowledgeTools.cs` changes (Public Documents and `ProgramData\Talvora\Knowledge` lines stay).
+
+Step 3 — `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.KnowledgeS6.cs`: replace
+
+```csharp
+var user = WindowsSessionLauncher.GetActiveInteractiveUser();
+var profile = Path.GetFullPath(user.UserProfile!);
+```
+
+with
+
+```csharp
+var resolved = KnowledgeTools.ResolveKnowledgeUserProfile()
+    ?? throw new InvalidOperationException("S6: no knowledge user profile could be resolved.");
+var profile = Path.GetFullPath(resolved.ProfilePath);
+```
+
+and add, directly after the line `Console.WriteLine("PASS S6 active-session roots exclude other profiles");`, these two checks (they run in every identity):
+
+```csharp
+var fakeProfile = Path.Combine(workspace, "fake-profile");
+Directory.CreateDirectory(Path.Combine(fakeProfile, "Documents"));
+KnowledgeTools.UserProfileResolverOverride =
+    () => new KnowledgeTools.KnowledgeUserProfile(fakeProfile, []);
+try
+{
+    var fakeRoots = ((IEnumerable<string>)rootsMethod.Invoke(null, null)!).ToArray();
+    Check(fakeRoots.Any(r => r.Equals(Path.Combine(fakeProfile, "Documents"),
+            StringComparison.OrdinalIgnoreCase)),
+        "the resolved user's Documents folder was not used as a root");
+
+    KnowledgeTools.UserProfileResolverOverride = () => null;
+    var noUserRoots = ((IEnumerable<string>)rootsMethod.Invoke(null, null)!).ToArray();
+    Check(!noUserRoots.Any(r => r.StartsWith(fakeProfile, StringComparison.OrdinalIgnoreCase)),
+        "roots must not contain a user profile when none can be resolved");
+}
+finally
+{
+    KnowledgeTools.UserProfileResolverOverride = null;
+}
+Console.WriteLine("PASS S6 profile resolver degrades without throwing");
+```
+
+(`rootsMethod` returns the final-path-resolved existing directories, so `fakeProfile\Documents` must exist — it is created above. If `ResolveFinalPath` returns a different casing or `\\?\` prefix, compare with `Path.GetFullPath` on both sides; do not change `GetSearchRoots`.)
+
+Step 4 — `scripts/Invoke-QualityGate.ps1`: directly after the line `New-Item -ItemType Directory -Path $script:GateCaptureRoot -Force | Out-Null` add exactly:
+
+```powershell
+Write-Host ("Kimlik: " + [Security.Principal.WindowsIdentity]::GetCurrent().Name)
+```
+
+Step 5 — verify in this order: (a) `dotnet build tests/Talvora.SourceEdit.Regression -c Release --no-restore -v q -nologo -clp:ErrorsOnly`; (b) run the full gate. ChatGPT cannot run it as the signed-in user yet (A1 not done): run it through `talvora_run_powershell`, write "gate run as LocalSystem (Kimlik: NT AUTHORITY\SYSTEM); signed-in run will be checked by Claude" in the Log and mark the card `[x]` — Claude re-runs it as the user at the next audit. Codex runs it in its own shell.
 
 ---
 
@@ -692,6 +1084,163 @@ Verified by Claude: local `Invoke-QualityGate.ps1 -Scope Full` → `49 kontrol, 
 
 **Acceptance:** the existing external-DELETE-holder regression now also asserts exactly one `DIRECTORY_RENAME_UNPROTECTED` warning; normal commits have no such warning.
 
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — `src/Talvora/SourceEditing/SourceEditPathGuard.cs`:
+
+a) Add a field and a property next to the existing `createdDirectories` field:
+
+```csharp
+private readonly SortedSet<string> unprotectedDirectories =
+    new(StringComparer.OrdinalIgnoreCase);
+
+public IReadOnlyCollection<string> UnprotectedDirectories => unprotectedDirectories;
+```
+
+b) Change the signature of the static `OpenDirectory` to return whether rename protection was obtained, and change its body exactly as follows (only the marked lines differ from today):
+
+```csharp
+private static SafeFileHandle OpenDirectory(
+    string path,
+    bool denyDeleteShare,
+    out bool renameProtected)                                   // NEW parameter
+{
+    // (unchanged: desiredAccess / share computation)
+    for (var attempt = 0; attempt <= 3; attempt++)
+    {
+        var handle = CreateFileW(/* unchanged arguments */);
+        if (!handle.IsInvalid)
+        {
+            renameProtected = denyDeleteShare;                  // NEW
+            return handle;
+        }
+
+        var error = Marshal.GetLastWin32Error();
+        handle.Dispose();
+
+        if (error == SharingViolation && attempt < 3)
+        {
+            Thread.Sleep(50 << attempt);
+            continue;
+        }
+
+        if (error == SharingViolation && denyDeleteShare)
+        {
+            var shared = OpenDirectory(path, denyDeleteShare: false, out _);   // CHANGED
+            renameProtected = false;                                         // NEW
+            return shared;                                                   // CHANGED
+        }
+
+        throw new SourceEditDomainException(/* unchanged */);
+    }
+
+    throw new InvalidOperationException("Unreachable source-edit directory open.");
+}
+```
+
+c) Update the four call sites:
+- the two `denyDeleteShare: false` calls (in `CapturePreparedIdentities` and in the expected-identity re-check): add `, out _`.
+- in `HoldExisting` (the `denyDeleteShare: true` call):
+
+```csharp
+var handle =
+    OpenDirectory(
+        path,
+        denyDeleteShare: true,
+        out var renameProtected);
+if (!renameProtected)
+{
+    unprotectedDirectories.Add(path);
+}
+```
+
+- in `CreateAndHoldDirectory` (the other `denyDeleteShare: true` call): same pattern —
+
+```csharp
+handle =
+    OpenDirectory(
+        path,
+        denyDeleteShare: true,
+        out var renameProtected);
+if (!renameProtected)
+{
+    unprotectedDirectories.Add(path);
+}
+```
+
+Step 2 — `src/Talvora/SourceEditing/SourceEditEngine.cs`, in the prepared-transaction commit path (the method that declares `using var pathGuard = committer.AcquirePreparedPathGuard(prepared);`), replace
+
+```csharp
+var committed =
+    BuildPlanResult(
+        plan,
+        success: true,
+        status: "committed",
+        replayed: false,
+        error: null);
+```
+
+with
+
+```csharp
+var committed =
+    BuildPlanResult(
+        plan,
+        success: true,
+        status: "committed",
+        replayed: false,
+        error: null);
+if (pathGuard.UnprotectedDirectories.Count > 0)
+{
+    committed = committed with
+    {
+        Warnings =
+        [
+            .. committed.Warnings,
+            .. pathGuard.UnprotectedDirectories.Select(directory =>
+                new SourceEditWarning(
+                    "DIRECTORY_RENAME_UNPROTECTED",
+                    $"Another process holds delete access to '{Path.GetRelativePath(plan.WorkspaceRoot, directory)}'; the commit continued without rename protection for that directory.",
+                    directory)),
+        ],
+    };
+}
+```
+
+and in the `catch` right below (receipt persistence), change `Warnings = [ new SourceEditWarning("SOURCE_EDIT_RECEIPT_PERSISTENCE_PENDING", …) ]` to keep earlier warnings:
+
+```csharp
+Warnings =
+[
+    .. committed.Warnings,
+    new SourceEditWarning(
+        "SOURCE_EDIT_RECEIPT_PERSISTENCE_PENDING",
+        $"Commit is durable in the WAL, but receipt persistence/cleanup needs recovery: {ex.Message}",
+        null),
+],
+```
+
+No logging is added (decision P-5). The journal-recovery path is not changed.
+
+Step 3 — `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.PathGuard.cs`:
+- in `DirectoryIdentitySharingWithExternalProcessAsync`, after the existing `Assert(result.Success, …)` add:
+
+```csharp
+AssertEqual(
+    1,
+    result.Warnings.Count(w => w.Code == "DIRECTORY_RENAME_UNPROTECTED"),
+    "A commit that lost rename protection must report exactly one DIRECTORY_RENAME_UNPROTECTED warning.");
+```
+
+- in `PathGuardBlocksDeleteParentRenameAsync`, after its success assert add:
+
+```csharp
+AssertEqual(
+    0,
+    result.Warnings.Count(w => w.Code == "DIRECTORY_RENAME_UNPROTECTED"),
+    "A normally protected commit must not report DIRECTORY_RENAME_UNPROTECTED.");
+```
+
 ## D2 — Compare legacy directory identities with the legacy serial
 
 **Why:** audit finding 2.
@@ -713,6 +1262,143 @@ Verified by Claude: local `Invoke-QualityGate.ps1 -Scope Full` → `49 kontrol, 
 **Do:** move the existing detection rules from `TryDescribeStructuredFailure` (`timedOut == true`, `success == false`, numeric `exitCode != 0`, case-insensitive property names) into `StructuredResultFailure.IsFailure(JsonElement)`; `ToolResultTextPolicy.Apply` returns the result unchanged when it is a structured failure. The notifier calls the same helper (no behaviour change there).
 
 **Acceptance:** smoke: `success:false`, `timedOut:true`, `exitCode:1` results keep their original text; successful structured results still get the marker; notification regression unchanged.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — new file `src/Talvora/StructuredResultFailure.cs`, exactly:
+
+```csharp
+using System.Text.Json;
+
+namespace Talvora;
+
+/// <summary>Shared detection of structured tool failures that are not flagged isError.</summary>
+internal static class StructuredResultFailure
+{
+    internal const string TimedOut = "timedOut";
+    internal const string Unsuccessful = "success";
+    internal const string NonZeroExit = "exitCode";
+
+    internal static bool IsFailure(JsonElement json) => Describe(json) is not null;
+
+    internal static string? Describe(JsonElement json)
+    {
+        if (json.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (TryGetPropertyIgnoreCase(json, "timedOut", out var timedOut) &&
+            timedOut.ValueKind == JsonValueKind.True)
+        {
+            return TimedOut;
+        }
+
+        if (TryGetPropertyIgnoreCase(json, "success", out var success) &&
+            success.ValueKind == JsonValueKind.False)
+        {
+            return Unsuccessful;
+        }
+
+        if (TryGetPropertyIgnoreCase(json, "exitCode", out var exitCode) &&
+            exitCode.ValueKind == JsonValueKind.Number &&
+            exitCode.TryGetInt32(out var code) &&
+            code != 0)
+        {
+            return NonZeroExit;
+        }
+
+        return null;
+    }
+
+    private static bool TryGetPropertyIgnoreCase(
+        JsonElement json, string name, out JsonElement value)
+    {
+        foreach (var property in json.EnumerateObject())
+        {
+            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
+    }
+}
+```
+
+Step 2 — `src/Talvora/ToolResultTextPolicy.cs`: change the first `if` to
+
+```csharp
+if (result.IsError is true ||
+    result.StructuredContent is not { } structured ||
+    structured.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null ||
+    StructuredResultFailure.IsFailure(structured))
+{
+    return result;
+}
+```
+
+Step 3 — `src/Talvora/TalvoraDesktopProgressNotifier.cs`: replace the body of `TryDescribeStructuredFailure` with (messages unchanged):
+
+```csharp
+switch (StructuredResultFailure.Describe(json))
+{
+    case StructuredResultFailure.TimedOut:
+        message =
+            "Bu işlem zaman sınırını aştı ve tamamlanmış sayılmıyor. " +
+            "Son doğrulanmış durum ve varsa gerçek hata ayrıntısı kanıt bölümünde korunuyor.";
+        return true;
+    case StructuredResultFailure.Unsuccessful:
+    case StructuredResultFailure.NonZeroExit:
+        message = BuildFriendlyResultFailureMessage(toolName);
+        return true;
+    default:
+        message = string.Empty;
+        return false;
+}
+```
+
+Keep the notifier's own `TryGetPropertyIgnoreCase` (other code uses it).
+
+Step 4 — `tests/Talvora.Smoke/Talvora.Smoke.csproj`: inside the existing `<ItemGroup>` that links `ToolResultTextPolicy.cs`, add
+
+```xml
+<Compile Include="..\..\src\Talvora\StructuredResultFailure.cs"
+         Link="StructuredResultFailure.cs" />
+```
+
+Step 5 — `tests/Talvora.Smoke/SmokeScenarios.ToolResultText.cs`: add at the end of `RunToolResultTextPolicy()`:
+
+```csharp
+foreach (var failureJson in new object[]
+{
+    new { success = false, error = "rejected" },
+    new { timedOut = true },
+    new { exitCode = 1, standardError = "boom" },
+})
+{
+    var failureStructured = JsonSerializer.SerializeToElement(failureJson);
+    var failureText = failureStructured.GetRawText();
+    var failureInput = new CallToolResult
+    {
+        StructuredContent = failureStructured,
+        Content = [new TextContentBlock { Text = failureText }],
+    };
+    var failureOutput = ToolResultTextPolicy.Apply(failureInput);
+    if (failureOutput.Content.Count != 1 ||
+        failureOutput.Content[0] is not TextContentBlock kept ||
+        kept.Text != failureText)
+    {
+        throw new InvalidOperationException(
+            "Structured failures must keep their original text: " + failureText);
+    }
+}
+```
+
+Step 6 — deploy and re-run the live probe: `talvora_git_run commit -m "probe"` in this repo (WorkContract refusal, `exitCode: 1`) must now return the refusal text in the text block instead of `Structured result: see structuredContent.`.
 
 ## D4 — Run service-dependent checks locally when the service is up
 
@@ -760,6 +1446,333 @@ The user often implements cards from a ChatGPT chat using the Talvora connector 
 **Don't:** change `talvora_run_powershell` / `talvora_run_process` (they stay LocalSystem by design); touch files outside the workspace.
 
 **Acceptance:** smoke: `talvora_user_run` of `whoami` returns the interactive user; a source-edit replace of a user-owned file keeps the owner (regression with a temp file owned by the current user); a new file gets the workspace-root owner; after the repair, `Get-Acl` of the five files listed in finding 5 shows `MSI\tayla`.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Part A — the tool.
+
+Step A1 — new file `src/Talvora/Tools/UserRunTools.cs`, exactly:
+
+```csharp
+using System.ComponentModel;
+using ModelContextProtocol.Server;
+using Talvora.Shared;
+
+namespace Talvora.Tools;
+
+public sealed record TalvoraUserRunResponse(
+    bool Success,
+    int ExitCode,
+    bool TimedOut,
+    string User,
+    string WorkingDirectory,
+    long ElapsedMilliseconds,
+    string StandardOutput,
+    string StandardError,
+    long StandardOutputTotalCharacters,
+    long StandardErrorTotalCharacters);
+
+[McpServerToolType]
+public static class UserRunTools
+{
+    [McpServerTool(
+        Name = "talvora_user_run",
+        Title = "Kullanıcı olarak çalıştır",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = true,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TalvoraUserRunResponse)),
+     Description("Run an executable as the signed-in Windows user (not LocalSystem) and return exit code and bounded output. Use for builds, tests and scripts inside user workspaces.")]
+    public static async Task<TalvoraUserRunResponse> Run(
+        string executable,
+        string[] arguments,
+        string workingDirectory,
+        Dictionary<string, string?>? environment = null,
+        int timeoutSeconds = 600,
+        int maxOutputCharacters = ToolOutputCompactor.DefaultMaximumOutputCharacters,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(executable);
+        ArgumentNullException.ThrowIfNull(arguments);
+        if (timeoutSeconds is < 1 or > 43200)
+        {
+            throw new ArgumentOutOfRangeException(nameof(timeoutSeconds));
+        }
+
+        var cwd = Path.GetFullPath(workingDirectory);
+        if (!Directory.Exists(cwd))
+        {
+            throw new DirectoryNotFoundException(cwd);
+        }
+
+        var user = WindowsSessionLauncher.GetActiveInteractiveUser();
+        var result = await InteractiveUserProcessRunner.RunAsync(
+            executable,
+            cwd,
+            arguments,
+            environment,
+            timeoutSeconds,
+            cancellationToken,
+            ProcessRunner.DefaultMaximumCapturedCharacters,
+            user,
+            closeStandardInput: true).ConfigureAwait(false);
+
+        return new TalvoraUserRunResponse(
+            result.ExitCode == 0 && !result.TimedOut,
+            result.ExitCode,
+            result.TimedOut,
+            user.User,
+            cwd,
+            result.ElapsedMilliseconds,
+            ToolOutputCompactor.Compact(
+                FileLog.RedactSensitiveData(result.StandardOutput), maxOutputCharacters),
+            ToolOutputCompactor.Compact(
+                FileLog.RedactSensitiveData(result.StandardError), maxOutputCharacters),
+            result.StandardOutputTotalCharacters,
+            result.StandardErrorTotalCharacters);
+    }
+}
+```
+
+(`ToolOutputCompactor` is the E3 helper; if it lives in another namespace, add that `using`. Do not create a second compactor.)
+
+Step A2 — register `talvora_user_run` in `TalvoraToolManifest.cs` and on **Dev + Full** only in `TalvoraMcpToolSurfacePolicy.cs` (not Admin); update the surface/metadata smoke expectations and README tool list. These are supporting changes (no proposal).
+
+Part B — ownership.
+
+Step B1 — new file `src/Talvora/SourceEditing/FileOwnership.cs`, exactly:
+
+```csharp
+using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+using System.Security.Principal;
+
+namespace Talvora.SourceEditing;
+
+internal static partial class FileOwnership
+{
+    internal static SecurityIdentifier? TryGetOwner(string path)
+    {
+        try
+        {
+            FileSystemSecurity security = Directory.Exists(path)
+                ? new DirectoryInfo(path).GetAccessControl(AccessControlSections.Owner)
+                : new FileInfo(path).GetAccessControl(AccessControlSections.Owner);
+            return security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or
+            PrivilegeNotHeldException or InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    internal static bool TrySetOwner(string path, SecurityIdentifier owner)
+    {
+        try
+        {
+            if (TryGetOwner(path) is { } current && current == owner)
+            {
+                return true;
+            }
+
+            using var restore = RestorePrivilege.Enable();
+            if (Directory.Exists(path))
+            {
+                var directory = new DirectoryInfo(path);
+                var security = directory.GetAccessControl(AccessControlSections.Owner);
+                security.SetOwner(owner);
+                directory.SetAccessControl(security);
+            }
+            else
+            {
+                var file = new FileInfo(path);
+                var security = file.GetAccessControl(AccessControlSections.Owner);
+                security.SetOwner(owner);
+                file.SetAccessControl(security);
+            }
+
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or
+            PrivilegeNotHeldException or InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Enables SeRestorePrivilege on the process token for the scope, then restores it.</summary>
+    private sealed partial class RestorePrivilege : IDisposable
+    {
+        private const uint TokenAdjustPrivileges = 0x0020;
+        private const uint TokenQuery = 0x0008;
+        private const uint SePrivilegeEnabled = 0x00000002;
+
+        private readonly nint token;
+        private readonly TokenPrivileges previous;
+        private readonly bool changed;
+
+        private RestorePrivilege(nint token, TokenPrivileges previous, bool changed)
+        {
+            this.token = token;
+            this.previous = previous;
+            this.changed = changed;
+        }
+
+        internal static RestorePrivilege Enable()
+        {
+            if (!OpenProcessToken(GetCurrentProcess(), TokenAdjustPrivileges | TokenQuery, out var token))
+            {
+                return new RestorePrivilege(0, default, false);
+            }
+
+            var privileges = new TokenPrivileges { PrivilegeCount = 1, Attributes = SePrivilegeEnabled };
+            if (!LookupPrivilegeValueW(null, "SeRestorePrivilege", out privileges.Luid) ||
+                !AdjustTokenPrivileges(token, false, ref privileges,
+                    (uint)Marshal.SizeOf<TokenPrivileges>(), out var previous, out _) ||
+                Marshal.GetLastPInvokeError() != 0)
+            {
+                // Not held (normal user): owner changes to another account will fail and
+                // are reported as OWNER_NOT_PRESERVED by the caller.
+                return new RestorePrivilege(token, default, false);
+            }
+
+            return new RestorePrivilege(token, previous, true);
+        }
+
+        public void Dispose()
+        {
+            if (changed)
+            {
+                var restore = previous;
+                AdjustTokenPrivileges(token, false, ref restore, 0, out _, out _);
+            }
+
+            if (token != 0)
+            {
+                CloseHandle(token);
+            }
+        }
+
+        // TOKEN_PRIVILEGES with one LUID_AND_ATTRIBUTES: LUID is 4-byte aligned → Pack = 4 (16 bytes total).
+        [StructLayout(LayoutKind.Sequential, Pack = 4)]
+        private struct TokenPrivileges
+        {
+            public uint PrivilegeCount;
+            public long Luid;
+            public uint Attributes;
+        }
+
+        [LibraryImport("advapi32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool OpenProcessToken(nint process, uint access, out nint token);
+
+        [LibraryImport("advapi32.dll", EntryPoint = "LookupPrivilegeValueW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool LookupPrivilegeValueW(string? system, string name, out long luid);
+
+        [LibraryImport("advapi32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool AdjustTokenPrivileges(
+            nint token, [MarshalAs(UnmanagedType.Bool)] bool disableAll,
+            ref TokenPrivileges newState, uint bufferLength,
+            out TokenPrivileges previousState, out uint returnLength);
+
+        [LibraryImport("kernel32.dll")]
+        private static partial nint GetCurrentProcess();
+
+        [LibraryImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool CloseHandle(nint handle);
+    }
+}
+```
+
+(Layout note: `Marshal.SizeOf<TokenPrivileges>()` must be 16. Enforce it with this static constructor inside `RestorePrivilege`: `static RestorePrivilege() { if (Marshal.SizeOf<TokenPrivileges>() != 16) throw new InvalidOperationException("TOKEN_PRIVILEGES layout mismatch."); }` (the ownership regression then exercises it). If Context7/Win32 docs show a different size, fix only the layout — this is an API-detail fill, not a design change.)
+
+Step B2 — `src/Talvora/SourceEditing/SourceEditPathGuard.cs`: add
+
+```csharp
+private readonly SortedSet<string> ownerNotPreserved = new(StringComparer.OrdinalIgnoreCase);
+
+public IReadOnlyCollection<string> OwnerNotPreserved => ownerNotPreserved;
+
+public System.Security.Principal.SecurityIdentifier? WorkspaceRootOwner { get; private set; }
+
+public void RecordOwnerNotPreserved(string path) => ownerNotPreserved.Add(path);
+```
+
+In `AcquirePrepared` set `guard.WorkspaceRootOwner = FileOwnership.TryGetOwner(prepared.ChangeSet.WorkspaceRoot);` right after `var guard = new SourceEditPathGuard();`; in `AcquireJournal` use `plan.WorkspaceRoot`. In `CreateAndHoldDirectory`, directly after the successful `CreateDirectoryW(path, IntPtr.Zero)` call add:
+
+```csharp
+if (WorkspaceRootOwner is { } rootOwner &&
+    !FileOwnership.TrySetOwner(path, rootOwner))
+{
+    RecordOwnerNotPreserved(path);
+}
+```
+
+Step B3 — `src/Talvora/SourceEditing/SourceEditCommitter.cs`:
+- `CommitUpdateAsync`: first line inside the method after the `expectedBefore` assignment: `var originalOwner = FileOwnership.TryGetOwner(change.FullPath);`. After the final `FlushPathToDisk(change.FullPath);` add:
+
+```csharp
+if (originalOwner is not null &&
+    !FileOwnership.TrySetOwner(change.FullPath, originalOwner))
+{
+    pathGuard.RecordOwnerNotPreserved(change.FullPath);
+}
+```
+
+- `CommitAddAsync`: after `FlushPathToDisk(target);` add:
+
+```csharp
+if (pathGuard.WorkspaceRootOwner is { } rootOwner &&
+    !FileOwnership.TrySetOwner(target, rootOwner))
+{
+    pathGuard.RecordOwnerNotPreserved(target);
+}
+```
+
+- `CommitMoveAsync`: if the move path uses `File.Replace` (edited move), apply the same `originalOwner` pattern as update to the destination; a plain rename keeps the owner — no change.
+
+Step B4 — `src/Talvora/SourceEditing/SourceEditEngine.cs`: in the same place as D1's warning merge, add (after the D1 block):
+
+```csharp
+if (pathGuard.OwnerNotPreserved.Count > 0)
+{
+    committed = committed with
+    {
+        Warnings =
+        [
+            .. committed.Warnings,
+            .. pathGuard.OwnerNotPreserved.Select(path =>
+                new SourceEditWarning(
+                    "OWNER_NOT_PRESERVED",
+                    $"The file owner of '{Path.GetRelativePath(plan.WorkspaceRoot, path)}' could not be preserved.",
+                    path)),
+        ],
+    };
+}
+```
+
+Step B5 — tests in `tests/Talvora.SourceEdit.Regression` (new runner partial `SourceEditRegressionRunner.Ownership.cs`, registered like the other partials):
+1. update keeps owner: create a file in a fixture workspace, read its owner, apply an update, assert owner unchanged and no `OWNER_NOT_PRESERVED` warning;
+2. add takes the workspace-root owner: assert the new file's owner equals `FileOwnership.TryGetOwner(fixture.Root)`;
+3. (only when the test process runs as LocalSystem) set the fixture file owner to `BUILTIN\Administrators` first, update, assert it is still `BUILTIN\Administrators`. Skip with a `SKIP` line otherwise.
+
+Part C — one-time repair on this workstation (no script in the repo).
+
+Run once through `talvora_run_powershell` (LocalSystem):
+
+```powershell
+icacls "C:\Users\tayla\Talvora-MCP" /setowner "MSI\tayla" /T /C /Q
+git -C "C:\Users\tayla\Talvora-MCP" -c safe.directory=C:/Users/tayla/Talvora-MCP status --short
+```
+
+Then check owners of the six paths from P-7 with `(Get-Acl <path>).Owner` → all `MSI\tayla`. Paste the six lines (path → owner) into the Log.
+
+Part D — from now on the agent runs builds/tests/gate with `talvora_user_run` (`executable: "pwsh"`, `arguments: ["-NoProfile","-File","scripts/Invoke-QualityGate.ps1","-Scope","Full"]`, `workingDirectory: repo root`). The Log's gate line must show `Kimlik: MSI\tayla`.
 
 ### A3 — Work-contract gate in `talvora_git_run`
 
