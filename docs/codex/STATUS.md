@@ -13,7 +13,7 @@
 | Branch | `main` only. Do not create branches. Do not touch `dependabot/*`. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-18-02` = `dd4ee5b`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-20-03` = `36fe923`. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -35,48 +35,54 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] E5 — Context helper and gate output minimal (extends K1)
 - [~] E1 — Codex sees only the Talvora tools it uses (live Codex session check deferred by user)
 - [~] E2 — Stop sending every result twice (Codex live acceptance deferred by user)
-- [?] D1 — Make the rename-protection fallback visible (waiting for Claude: P-5)
-- [?] D3 — Keep the text of structured failures (waiting for Claude: P-6)
 - [x] D4 — Run service-dependent gate checks locally when the service is up (audit 2026-10-18 (2))
 - [x] D2 — Compare legacy directory identities with the legacy serial (audit 2026-10-18 (2))
 - [x] A2 — `talvora_agent_brief` (rules + current card for any agent)
-- [?] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (waiting for Claude: P-7)
 - [x] A3 — Work-contract gate in `talvora_git_run`
 - [x] E3 — Lean defaults for high-frequency tools (P-1 decided: no `talvora_list` row)
 - [x] S1 — Reject foreign Host/Origin (P-2 decided: Penpot static routes exempt from Origin guard)
 - [-] S2 — Local MCP caller authentication (user decision Q1: no)
-- [?] Q6 — Schema validation of tool arguments before invocation (waiting for Claude: P-8)
 - [x] Q6b — Research: supported exception-translation mechanism (proposal only, no product code)
-- [?] N1 — Worklog: correct states, titles, reasons; no duplication (waiting for Claude: P-10)
-- [?] N2 — Worklog: protocol v4, sessions, project/actor context (waiting for Claude: P-11)
-- [?] N3 — Worklog: real facts from results (waiting for Claude: P-11)
-- [?] N3b — Worklog: code terminal real, complete, persistent (waiting for Claude: P-11)
-- [?] N4 — Worklog: agent jobs tell their story (+ Codex code terminal) (waiting for Claude: P-11)
-- [?] S3 — ProgramData ACL + interactive runs out of user-controlled paths (waiting for Claude: P-12)
 - [x] S4 — Pin ast-grep toolchain
 - [~] S5 — Do not keep the OpenAI Admin key (code and gate done; U3 real new-tunnel provisioning evidence when prompted)
 - [x] S6 — Knowledge tools: scoped fetch, no cloud hydration
 - [x] S7 — Desktop IPC server verification + real interactive session
 - [x] S8 — Git push detection parser
-- [?] R1 — Agent job registry, persistence, orphan recovery, limits (waiting for Claude: P-13; S3 ACL prerequisite)
-- [?] R2 — Prompts via stdin (waiting for Claude: P-14; protected S3 run folder prerequisite)
-- [?] R3 — Safe Reset-And-Install (waiting for Claude: P-15)
 - [x] R4 — Upstream-degradation aware recovery, bounded logs
 - [x] R5 — One version everywhere
-- [ ] Q1 — Tool titles, shorter descriptions, payload budget
-- [?] Q2 — Tool surface consolidation Q2a/Q2b/Q2c (waiting for Claude: P-16)
-- [?] Q3 — Documentation diet (waiting for Claude: P-17; Q2 count test prerequisite)
 - [x] Q4 — Context7 gate covers XAML/tests
-- [ ] Q5 — Control Center smoke works for light and dark
-- [ ] UI1 — Tokens, theme manager (Sistem default, Gece fallback), typography
-- [ ] N5 — Worklog card visual redesign + preview harness
+- [ ] D7 — Knowledge roots degrade instead of throwing; gate passes as the signed-in user (audit 2026-10-20 (3), HIGH)
+- [ ] D6 — Context helper finds `##` and `###` card headings (audit 2026-10-20 (3))
+- [ ] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (audit 2026-10-20 (3))
+- [ ] D1 — Make the rename-protection fallback visible (P-5 decided)
+- [ ] D3 — Keep the text of structured failures (P-6 decided)
+- [ ] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (P-7 decided)
+- [ ] Q6 — Schema validation of tool arguments before invocation (P-3, P-8 decided)
+- [ ] Q6c — Translate tool exceptions into redacted, categorised errors (P-9 decided)
+- [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided)
+- [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
+- [ ] N3 — Worklog: real facts from results (P-11 decided)
+- [ ] N3b — Worklog: code terminal real, complete, persistent (P-11 decided)
+- [ ] N4 — Worklog: agent jobs tell their story (+ Codex code terminal) (P-11 decided)
+- [ ] N5 — Worklog card visual redesign + preview harness (renders N1–N4 proof, P-11)
 - [ ] N6 — Worklog evidence surface ("Ayrıntılar")
+- [ ] S3 — ProgramData ACL + interactive runs out of user-controlled paths (P-12 decided: log-only startup check)
+- [ ] R1 — Agent job registry, persistence, orphan recovery, limits (P-13 decided; after S3)
+- [ ] R2 — Prompts via stdin (P-14 decided; after S3)
+- [ ] R3 — Safe Reset-And-Install (P-15 decided: Secrets never touched)
+- [ ] Q5 — Control Center smoke: structural checks, current theme PNG (P-18 decided)
+- [ ] UI1 — Tokens, theme manager (Sistem default, Gece fallback), typography; both-theme proof via Q5 smoke (P-18)
+- [ ] Q2a — Toolchain info/run consolidation (P-16 decided; zero capability loss)
+- [ ] Q2b — Config get/set/delete consolidation (P-16 decided; zero capability loss)
+- [ ] Q2c — Legacy text mutators removed + manifest-driven README count test (P-16 decided)
+- [ ] Q1 — Tool titles (proposal table first), shorter descriptions, payload budget
+- [ ] Q3 — Documentation diet (P-17 decided: after Q2c, `git mv` via talvora_git_run explicitAdmin)
 - [ ] UI2 — Shell, rail, title bar, command palette
 - [ ] N7 — "Çalışma günlüğü" history page
 - [ ] UI3 — Overview: Nabız ring + chain strip
 - [ ] UI4 — Services list + detail
 - [ ] UI5 — Events + raw log
-- [ ] UI6 — Settings + setup stepper
+- [ ] UI6 — Settings + setup stepper (+ deferred S3 ACL notice, to be specified)
 - [ ] N8 — Notification settings
 - [ ] UI7 — Tray icon/menu, worklog colour alignment, About
 - [ ] UI8 — Polish, accessibility, cleanup, screenshots
@@ -94,26 +100,17 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Open questions
 
-P-17 — Q3 requires Q2 manifest-count test and an approved archive move method (docs/codex/PROPOSALS.md).
-P-16 — Q2 three commits conflict with one-card-one-commit mandate (docs/codex/PROPOSALS.md).
-P-15 — R3 user-data preservation and backup scope need a decision (docs/codex/PROPOSALS.md).
-P-14 — R2 stdin prompt spooling requires protected S3 run-folder migration (docs/codex/PROPOSALS.md).
-P-13 — R1 AgentJobs storage ACL and process-start identity/startup recovery need scope/sequence decision (docs/codex/PROPOSALS.md).
-P-5/P-6 — D1 and D3 need scope decisions (docs/codex/PROPOSALS.md).
-P-7 — A1 requires an owner-warning result-path decision and clarification of audit fixture count.
-P-8 — Q6 muted inspection row conflicts with N1 worklog ownership (docs/codex/PROPOSALS.md).
-P-9 — Q6b redacted exception translator mechanism awaits Claude decision (docs/codex/PROPOSALS.md).
-P-10 — N1 muted timeline and preview screenshot requirements await Claude (docs/codex/PROPOSALS.md).
-P-11 — N2–N4 worklog dependencies and screenshot gate await Claude (docs/codex/PROPOSALS.md).
-P-12 — S3 startup notice route needs a decision (docs/codex/PROPOSALS.md).
+(none — P-5…P-18 decided in `docs/codex/PROPOSALS.md` → "Decided")
 
 ## Findings for Claude
 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
-- scripts/Get-CodexContext.ps1:41 — `-Card D2` reports "Card D2 could not be found" although ROADMAP.md:599 contains the D2 heading; outside D2 scope, not changed.
+- (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-20 — Claude audit (3) of `dd4ee5b..36fe923` (17 commits, executor ChatGPT via Talvora): S1/R5/S6/E3/A3/S5 verified live on installed `041c723`. Full gate run **as the signed-in user** is RED (S6 regression, Win32 1314 outside LocalSystem) → D7 (HIGH); agent_brief loses non-ASCII and misses the permanent-prompt section → D5; context helper misses `##` cards → D6. P-5…P-18 decided; queue reordered (N1→N5, S3 before R1/R2, Q2 split into Q2a/b/c, Q5 before UI1). AGENTS.md: supporting changes/ordering are not proposal material; final gate must run as the signed-in user. Agent's uncommitted Q5 review (P-18) is included in this commit. Next audit baseline `audit/2026-10-20-03` = `36fe923`.
+- 2026-10-20 — Q5 prerequisite review (executor: ChatGPT via Talvora): blocked Q5 and UI1 under P-18. Existing ControlCenterTheme.xaml Light, ControlCenterApplication Dark, and light-only static ControlCenterWindow brushes cannot provide the two distinct themes Q5 Acceptance requires without UI1 source changes. Fast gate 13/0, `Hepsi geçti.`; no product changes and no Codex; advance to next independent card.
 - 2026-10-20 — Q4 (executor: ChatGPT via Talvora): Context7 gate now treats src XAML/JSON/JS/HTML and tests PS1 changes as development scope, while keeping docs-only changes exempt.
   RED/green isolated temporary Git fixture: five extension cases require refreshed Context7 evidence, docs-only does not; `CONTEXT7_SCOPE_REGRESSION_GREEN`.
   Context7 `/microsoftdocs/powershell-docs` official PowerShell 7 regular-expression guide; refreshed .context7/verification.json.

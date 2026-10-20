@@ -332,12 +332,16 @@ Each card: test first; `Talvora.Notification.Regression` extended with behaviour
 
 ### N1 — Correct states, titles and reasons; remove duplication
 
+> **Amended by P-4, P-10 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
+
 **Files:** `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `TalvoraDesktopWorklogState.cs`, `TalvoraDesktopProgressNarrative.cs`, new `src/Talvora/WorklogFailureClassifier.cs`, new `src/Talvora/WorklogCopy.cs` (copy deck §6 as data), `tests/Talvora.Notification.Regression/*`.
 **Do:** fix W1, W2 (classifier §5.3 with redacted raw message to evidence), W3, W6, W9, W11, W12, W18 (reuse `GitArgumentParser` from S8; if S8 is not done yet, add the parser here and let S8 reuse it), W19. Narratives become (category, running title, succeeded title, failed title) lookups from `WorklogCopy`.
 **Don't:** change the protocol yet (N2); change tray layout.
 **Acceptance:** regression scenarios: success → past-tense title; failure → failed title + reason + no duplicated history line; inspection failure → no red card; parallel steps → no "paralel adım" text; no tool name in Title/Message for any category (property test over all manifest tools).
 
 ### N2 — Protocol v4, sessions and actor/project context
+
+> **Amended by P-11 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
 
 **Files:** `src/Talvora.Shared/DesktopProgressProtocol.cs` (v4 records §4), `src/Talvora/TalvoraDesktopWorklogState.cs` (session model §4.1), `Program.cs` (pass surface path / client info into the filter), `TalvoraDesktopCodexWorklog.cs`, `TalvoraDesktopClaudeWorklog.cs`, `src/Talvora.Tray/DesktopProgressPipeListener.cs`, `DesktopProgressPresentationState.cs`, `DesktopProgressNotificationPresenter.cs` (key by `SessionId`, reuse window), regression tests.
 **Do:** §4, §4.1, §5.2 (`ExpectedNextUpdateSeconds`), §5.1 lifetimes; bounds/validation for every new field (same style as v3 limits); frame size budget unchanged.
@@ -346,11 +350,15 @@ Each card: test first; `Talvora.Notification.Regression` extended with behaviour
 
 ### N3 — Real facts from results
 
+> **Amended by P-11 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
+
 **Files:** `src/Talvora/SourceEditing/SourceEditModels.cs` (+ `AddedLines`/`RemovedLines` per receipt), `SourceEditCommitter.cs` (compute from committed before/after text), `TalvoraDesktopProgressEvidence.cs`, build/test result summarizers (reuse `QualityTools.Diagnostics`, `ConfigFormatTools.TestReports`), git commit/push result parsing, `tests/Talvora.SourceEdit.Regression` (receipt counts), notification regression.
 **Do:** §4.2 table; fix W7 and W8 (true totals, unified-diff file detection from `+++ b/…`, preview-limit text from the constant).
 **Acceptance:** rejected patch → no counts; unified diff of 2 files → "2 dosya"; build with 3 errors → "Derleme başarısız · 3 hata" + file names; test failure lists up to 3 failing names; commit card shows the real short hash.
 
 ### N3b — Code terminal: real, complete, persistent (protect the favourite feature)
+
+> **Amended by P-11 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
 
 **Files:** new `src/Talvora/WorklogDiff/TextDiffBuilder.cs`, `TalvoraDesktopProgressEvidence.cs`, source-edit committer (expose before/after text or the diff to the notifier without re-reading), mutator tools in `DeveloperTools.FileMutation.cs`, `ConfigFormatTools.*`, `StructuredConfigTools.*`, `ConfigAssetTools.Json.cs`, `FileTools.cs` (workspace writes only), `TalvoraDesktopWorklogState.cs` (session keeps latest code change), `DesktopProgressProtocol.cs` (send the preview once per change: `CodeChangeId` + preview; heartbeats carry only the id), notification regression + source-edit regression.
 **Do:** fix C1–C4 and C7 per §3.1, §5.4.1 (Claude part here; Codex part in N4), §5.5. Rejected/failed edits show no diff. The latest code change survives later non-code steps for the whole session.
@@ -359,11 +367,15 @@ Each card: test first; `Talvora.Notification.Regression` extended with behaviour
 
 ### N4 — Agent jobs tell their story
 
+> **Amended by P-11 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
+
 **Files:** `TalvoraDesktopCodexWorklog.cs`, `TalvoraDesktopClaudeWorklog.cs`, `src/Talvora.Shared/CodexCliEventSummary.cs` (activity classification), `ClaudeCliStreamingProgress.cs`, regression tests.
 **Do:** §5.4 and §5.4.1 (Codex code terminal); fix W10 (diacritics) and W13; completion totals and changed files; summary excerpt in evidence only.
 **Acceptance:** recorded JSONL fixtures (sanitised) → expected activity lines, never a raw command; completion card shows totals; texts pass a diacritics check (test: no "gelistir|dogrul|cagri|gecen sure" ASCII forms).
 
 ### N5 — Visual redesign of the card + preview harness
+
+> **Amended by P-11 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
 
 **Files:** `src/Talvora.Tray/DesktopProgressNotificationWindow*.cs` (move to XAML `Views/WorklogCard.xaml` + small view model), `DesktopProgressVisualTheme.cs` (map to Gece tokens), new `--worklog-preview` command in `Program.cs`, `ControlCenterSmoke.cs` (scenario renders).
 **Do:** §3, §3.1 (terminal look, reveal, height rules — fixes C5, C6), §7; fix W5, W17; content-driven height up to 60 % work area; same window reused per session; keep drag/pin/resize/mixed-DPI behaviour and the manual-dismiss semantics. The vertical code expansion must keep working at every step of this card — it is the user's favourite feature.

@@ -449,6 +449,8 @@ Each card = one commit, Awwwards evidence refreshed (cite pages actually reviewe
 
 ### UI1 — Tokens, theme manager, typography
 
+> **Amended by P-18 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
+
 **Files:** new `src/Talvora.Tray/Themes/Tokens.Gece.xaml`, `Tokens.Gun.xaml`, `Typography.xaml`, `Controls.xaml`; `ControlCenterTheme.xaml` (reduce to merges), `ControlCenterApplication.cs`, new `TalvoraThemeManager.cs`, settings persistence next to window placement.
 **Do:** §3 + §7.1–7.2; fix the Light/Dark mismatch; Mica on Windows 11; replace hard-coded colours in Control Center code with resource lookups (the layout code is replaced later — only colours/fonts now); fix the primary-button hover contrast.
 **Don't:** change layout; touch the desktop worklog window.

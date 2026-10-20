@@ -181,6 +181,8 @@
 
 ### S3 — Harden `%ProgramData%\Talvora` ACL and move interactive runs out of user-controlled paths
 
+> **Amended by P-12 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
+
 **Why:** `BUILTIN\Users:(CI)(WD,AD)` inherited on every subfolder (verified with `icacls`). SYSTEM reads/executes from there (journals, toolchains, tools) and stores secrets. `InteractiveUserProcessRunner` writes/deletes as SYSTEM under the user's `%LOCALAPPDATA%` (user-controlled, junction-able) with a recursive 24 h cleanup and no reparse check.
 
 **Files:** `src/Talvora.Installer/InstallerEngine.*.cs` (new `InstallerEngine.Acl.cs`), `src/Talvora.Shared/InteractiveUserProcessRunner.cs`, `src/Talvora.Shared/TalvoraOwnedTempCleanup.cs` (reuse), `src/Talvora/Program.cs` (startup self-check), tests.
@@ -303,6 +305,8 @@ Use it in both places; verify the option list against `git help git` for the ins
 
 ### R1 — Agent jobs: one registry, persisted metadata, orphan recovery, concurrency limits
 
+> **Amended by P-13 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
+
 **Why:** Codex and Claude jobs are in-memory `ConcurrentDictionary`s (duplicated code); a service restart loses track of a still-running user-session agent; unlimited concurrent jobs and no per-workspace exclusivity.
 
 **Files:** new `src/Talvora/Tools/AgentJobRegistry.cs`, `CodexBackgroundJobTools.cs`, `ClaudeBackgroundJobTools.cs`, `JobTools.Persistence.cs` (reuse PID+start-time identity), `TalvoraDesktopCodexWorklog.cs`, `TalvoraDesktopClaudeWorklog.cs`, smoke scenarios `SmokeScenarios.Codex.cs` / `.Claude.cs`, README + `docs/Codex-Autonomy.md`.
@@ -319,6 +323,8 @@ Use it in both places; verify the option list against `git help git` for the ins
 
 ### R2 — Send prompts through stdin, not the command line
 
+> **Amended by P-14 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
+
 **Why:** Claude prompts up to 100 000 chars exceed the 32 767-char Windows command line; prompts are visible to any process that can read command lines (WMI, Process Explorer, 4688 audit events).
 
 **Files:** `src/Talvora.Shared/InteractiveUserProcessRunner.cs` (new `standardInputText` option), `ClaudeCliArguments.cs`, `CodexCliInvocationPolicy.cs`, `ClaudeCliTools.cs`, `CodexCliTools.cs`, tests.
@@ -334,6 +340,8 @@ Use it in both places; verify the option list against `git help git` for the ins
 **Acceptance:** tests: 120 k-char Turkish prompt reaches the child intact (fake child echoing stdin hash); process command line (via `Win32_Process.CommandLine` in the test) does not contain the prompt.
 
 ### R3 — Make `Reset-And-Install.ps1` safe
+
+> **Amended by P-15 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
 
 **Why:** silent recursive deletion of `%ProgramData%\Talvora` (user secrets/backups/Penpot data), `%LOCALAPPDATA%\Talvora` (tunnel credentials) and any Desktop/Start-menu item whose name contains "Talvora".
 
@@ -383,6 +391,8 @@ Use it in both places; verify the option list against `git help git` for the ins
 
 ### Q2 — Consolidate the tool surface (approved by the user 2026-10-18: "only if no feature is lost")
 
+> **Amended by P-16 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
+
 **Why:** 36 `*_run` pass-through wrappers + 32 `*_info` probes + 18 config-format CRUD tools + legacy text mutators (`talvora_write_text`, `talvora_append_text`, `talvora_replace_text`) described by the server itself as "compatibility surfaces" — AGENTS.md forbids legacy aliases. Large surfaces measurably hurt tool selection.
 
 **Files:** `src/Talvora/Tools/*`, `src/Talvora.Shared/TalvoraToolManifest.cs`, `TalvoraMcpToolSurfacePolicy.cs`, `SourceEditRoutingContract.cs`, smoke surface tests, README/ARCHITECTURE counts.
@@ -400,7 +410,31 @@ Use it in both places; verify the option list against `git help git` for the ins
 
 **Acceptance:** surface smoke updated; mapping table complete; live installed `tools/list` counts match README.
 
+### Q2a — Toolchain info/run consolidation (split of Q2, decision P-16)
+
+Implement only the **Q2a** bullet of card Q2 above, with Q2's hard rule (zero capability loss, behavioural test per removed tool before removal), its Don't list, and its mapping table in the Log. Acceptance: Q2 Acceptance restricted to the Q2a tools + installed `tools/list` counts recorded. One commit.
+
+### Q2b — Config get/set/delete consolidation (split of Q2, decision P-16)
+
+Implement only the **Q2b** bullet of card Q2 above, same rules as Q2a. One commit.
+
+### Q2c — Remove legacy text mutators; manifest-driven counts (split of Q2, decision P-16)
+
+Implement only the **Q2c** bullet of card Q2 above, same rules as Q2a, plus the README/ARCHITECTURE count test generated from the manifest and the final surface targets of Q2 (Full ≤ 150, Dev ≤ 115, Admin ≤ 70, Dev `tools/list` ≤ 120 KB). User step U4 follows. One commit.
+
+### Q6c — Translate tool exceptions into redacted, categorised errors (decision P-9)
+
+**Files:** `src/Talvora/Program.cs` (tool registration), new `src/Talvora/RedactingToolFunction.cs` (`DelegatingAIFunction` subclass), new `src/Talvora/ToolErrorTranslator.cs`, `tests/Talvora.Smoke/*` (catalog snapshot + error scenarios), new `tests/Talvora.Smoke/Snapshots/tools-list-{full,dev,admin}.json`.
+
+**Do:** exactly the mechanism proven in P-9: wrap every assembly tool's `AIFunction` in `RedactingToolFunction` (override `InvokeCoreAsync`; catch per the original Q6 category table; throw `McpException("<Category>: " + FileLog.RedactSensitiveData(message))`; rethrow `OperationCanceledException` when the request token is cancelled) and register it with `McpServerTool.Create(AIFunction, McpServerToolCreateOptions)` carrying the attribute's name, title, description and annotations. **First** commit nothing: capture the three `tools/list` snapshots from the current build, then implement, then compare byte-for-byte.
+
+**Don't:** change any tool's metadata; partial rollout (if one tool cannot be byte-identical, stop with a proposal).
+
+**Acceptance:** byte-identical snapshots for all three surfaces; smoke: missing file → `NotFound: …`, bad argument → `InvalidArguments: …`, secret-looking text in a message redacted, client cancel → cancellation; full gate green as the signed-in user.
+
 ### Q6 — Tell the calling agent what went wrong (opaque tool errors)
+
+> **Amended by P-3, P-8 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
 
 > **Re-scoped by decision P-3 (2026-10-18).** Implement only the schema-validation part described in PROPOSALS.md → P-3 (Q6), and the research card Q6b. The original text below is kept as background; where it conflicts with P-3, P-3 wins.
 
@@ -415,6 +449,8 @@ Use it in both places; verify the option list against `git help git` for the ins
 **Acceptance:** smoke: wrong argument names → message names the missing parameter; nonexistent path → `NotFound: …`; a secret-looking value inside an exception message is redacted; cancellation still reported as cancellation.
 
 ### Q3 — Documentation diet and correctness
+
+> **Amended by P-17 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
 
 **Why:** 500+ KB of living history in the root costs every agent session; README contradicts itself on counts; Turkish doc without diacritics.
 
@@ -435,6 +471,8 @@ Use it in both places; verify the option list against `git help git` for the ins
 **Acceptance:** regression shows a `.xaml`-only change requires evidence.
 
 ### Q5 — Replace the broken Control Center visual smoke heuristic
+
+> **Amended by P-18 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
 
 **Why:** installed build: `Control Center render looks blank/light. WhiteRatio=%68.2` — the light Stitch design fails a heuristic written for the old dark UI; the smoke can never pass.
 
@@ -566,6 +604,62 @@ Card details (Files / Do / Don't / Acceptance) are in the design spec, section "
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-20 (3) · range `audit/2026-10-18-02 (dd4ee5b)..36fe923` · 17 commits · executor: ChatGPT via Talvora · result: FIXES REQUIRED
+
+Cards delivered: D2, D4, A2, A3, E3, S1, Q6b (research), S4, S5 (`[~]`), S6, S7, S8, R4, R5, Q4; user-requested AGENTS.md section `8714266` (permanent prompt). 14 proposals P-5…P-18 raised — **all decided now** (PROPOSALS.md → Decided); EXECUTION MANDATE rule 1 clarified so that supporting changes and ordering no longer produce proposals.
+
+Verified live by Claude on the installed build `041c723`: `/healthz.version` = MCP `serverInfo.version` = `3.0.0-dev+041c723…` (R5 ✓); foreign `Host` → 400, foreign `Origin` → 403 with the Turkish message, loopback/no Origin → 200, Penpot static `manifest.json` with foreign Origin → 200 + `ACAO: *`, Penpot `healthz` with foreign Origin → 403 (S1 + P-2 ✓); `fetch C:\Windows\win.ini` refused (S6 ✓); E3 sizes on this repo: git_status 431 B, git_log 2.6 KB, find_files 5.3 KB, search_text 3.5 KB (all within targets ✓); `talvora_git_run commit` without a `Card:` trailer refused by WorkContract (A3 ✓); S5: the old admin DPAPI file is gone ✓.
+
+| # | Severity | Type | Where | Finding | Fix card |
+|---|---|---|---|---|---|
+| 1 | **HIGH** | tooling / bug | `src/Talvora/Tools/KnowledgeTools.cs` `AddDefaultSearchRoots` (catch only `InvalidOperationException`); `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.KnowledgeS6.cs:45` | **The quality gate is red for a normal user.** Claude ran `Invoke-QualityGate.ps1 -Scope Full` as `MSI\tayla`: `knowledge-s6-scoped-fetch` → `Win32Exception (1314) WTSQueryUserToken failed` → `7 kontrol, 1 hata / Kontrol başarısız: SourceEdit`. Every "Hepsi geçti." in the Log since S6 was produced by `talvora_run_powershell` **as LocalSystem**, which holds `SeTcbPrivilege`. The product bug: outside LocalSystem (dev `dotnet run`, tests, any non-service host) `search`/`fetch` default roots throw instead of degrading. | D7 |
+| 2 | MEDIUM | bug | `talvora_agent_brief` context (`scripts/Get-CodexContext.ps1` output via the user runner) | Live: every non-ASCII character in the context is lost (`beğendim` → `be�endim`, `—` → `-`, `§3` → `�3`; `ç`, `ı`, `§` count = 0) while `agentsSections` keeps them. ChatGPT reads Turkish copy decks and spec section numbers from this context — corrupted copy would end up in the product. | D5 |
+| 3 | MEDIUM | gap | `src/Talvora/Tools/AgentBriefTools.cs` section list | The brief does not return the new `## PERMANENT USER-APPROVED AGENT PROMPT` section of AGENTS.md (added by `8714266`), so a ChatGPT session that relies on the brief never sees it. | D5 |
+| 4 | LOW | tooling | `scripts/Get-CodexContext.ps1:41` | `-Card D2` fails ("could not be found"): D-cards use `## D<n> — ` headings, the helper only matches `### `. (Agent reported it correctly in "Findings for Claude".) | D6 |
+| 5 | LOW | rule | queue | N5 (visual redesign that renders N1–N4 outcomes) was the next open card although N1–N4 are blocked — it would have been built on protocol v3. Queue reordered (P-11). | — (STATUS) |
+| 6 | INFO | process | 14 proposals for file-list plumbing and ordering | Over-strict reading of EXECUTION MANDATE rule 1; clarified in AGENTS.md (supporting changes and ordering are not proposal material). | — |
+
+---
+
+### D5 — `talvora_agent_brief`: keep UTF-8 and include the permanent-prompt section
+
+> Audit 2026-10-20 (3), findings 2 and 3.
+
+**Files:** `scripts/Get-CodexContext.ps1`, `src/Talvora/Tools/AgentBriefTools.cs`, `tests/Talvora.Smoke/SmokeScenarios.AgentBrief.cs`, `tests/QualityGateRegression.ps1`.
+
+**Do:**
+- `Get-CodexContext.ps1`: first statements `[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)` and `$OutputEncoding = [Text.UTF8Encoding]::new($false)`; read every file with `-Encoding UTF8`.
+- `AgentBriefTools`: run the script with `pwsh -NoProfile -NonInteractive -OutputFormat Text -File …` and decode stdout as UTF-8 (the interactive runner already captures UTF-8 — verify end-to-end); add `## PERMANENT USER-APPROVED AGENT PROMPT` as the **first** extracted section.
+
+**Acceptance:** smoke on this repo: `context` contains `ç`, `ğ`, `—` and `§`; `agentsSections` starts with the permanent-prompt section; `-Card N5` output contains `### 3.1 "Kod terminali"` intact.
+
+### D6 — Context helper finds `##` and `###` card headings
+
+> Audit 2026-10-20 (3), finding 4.
+
+**Files:** `scripts/Get-CodexContext.ps1`, `tests/QualityGateRegression.ps1`.
+
+**Do:** match card headings with `^#{2,3} <ID> — ` (exact ID, no prefix match: `D1` must not match `D10`); the card ends at the next heading of the same or higher level.
+
+**Acceptance:** fixture test for `## D2 — `, `### N5 — `, `### UI1 — `, and `D1` vs `D10`; `-Card D7` prints this roadmap's D7 card.
+
+### D7 — Knowledge roots degrade instead of throwing; the gate passes as a normal user
+
+> Audit 2026-10-20 (3), finding 1 (HIGH).
+
+**Files:** `src/Talvora/Tools/KnowledgeTools.cs`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.KnowledgeS6.cs`, `scripts/Invoke-QualityGate.ps1` (only the identity line below).
+
+**Do:**
+- In `AddDefaultSearchRoots`, resolve the user profile as: (1) if the process runs as LocalSystem → `WindowsSessionLauncher.GetActiveInteractiveUser()` (today's behaviour); (2) otherwise → the **current process user's** profile (`Environment.GetFolderPath(UserProfile)` + `OneDrive*` environment variables of the current process). Catch `InvalidOperationException` **and** `System.ComponentModel.Win32Exception` around (1); on failure fall back to (2). Never throw from root resolution.
+- The S6 regression must pass in both identities: run its root-resolution assertions against an injectable resolver (LocalSystem branch with a fake interactive user; current-user branch for real).
+- `Invoke-QualityGate.ps1` prints one line at the start: `Kimlik: <DOMAIN\user>` so every Log entry shows which identity produced the result.
+
+**Acceptance:** `pwsh scripts/Invoke-QualityGate.ps1 -Scope Full` run **as the signed-in user** (not through `talvora_run_powershell`) ends with `Hepsi geçti.`; the same command through `talvora_run_powershell` (LocalSystem) also ends with `Hepsi geçti.`; Log records both identity lines.
+
+**Rule from now on (also in AGENTS.md):** a card's final gate counts only if run as the signed-in user — ChatGPT uses `talvora_user_run` once A1 exists; until then ChatGPT must state "gate run as LocalSystem" in the Log and Claude re-runs it as the user at audit time.
+
+---
+
 ### Audit 2026-10-18 (2) · range `audit/2026-10-18 (8b1a611)..dd4ee5b` · executor: ChatGPT via Talvora · result: FIXES REQUIRED
 
 Cards delivered: K0, K1, K2, E5 `[x]`; E1, E2 `[~]` (live Codex session deferred by the user); E3, S1, Q6, N1 blocked with proposals P-1…P-4 (all four now decided in `PROPOSALS.md`).
@@ -585,6 +679,8 @@ Verified by Claude: local `Invoke-QualityGate.ps1 -Scope Full` → `49 kontrol, 
 ---
 
 ## D1 — Make the rename-protection fallback visible (keep it, never silent)
+
+> **Amended by P-5 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
 
 **Why:** audit finding 1.
 
@@ -607,6 +703,8 @@ Verified by Claude: local `Invoke-QualityGate.ps1 -Scope Full` → `49 kontrol, 
 **Acceptance:** regression with a journal fixture whose identity has only the old fields (32-bit serial + 64-bit id of the real directory) recovers without conflict; a different directory with the same legacy fields still conflicts.
 
 ## D3 — Keep the text of structured failures
+
+> **Amended by P-6 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
 
 **Why:** audit finding 3.
 
@@ -647,6 +745,8 @@ The user often implements cards from a ChatGPT chat using the Talvora connector 
 **Acceptance:** smoke on this repo: sections present, context contains the first open card, size ≤ 60 000; a workspace without AGENTS.md returns empty sections and no error; tools/list shows the Turkish title.
 
 ### A1 — Run builds/tests as the signed-in user and keep file ownership
+
+> **Amended by P-7 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
 
 **Why:** audit finding 5.
 
