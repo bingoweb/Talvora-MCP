@@ -47,8 +47,9 @@ internal static partial class SourceEditRegressionRunner
             var defaultRoots = ((IEnumerable<string>)rootsMethod.Invoke(null, null)!)
                 .ToArray();
 
-            var user = WindowsSessionLauncher.GetActiveInteractiveUser();
-            var profile = Path.GetFullPath(user.UserProfile!);
+            var resolved = KnowledgeTools.ResolveKnowledgeUserProfile()
+                ?? throw new InvalidOperationException("S6: no knowledge user profile could be resolved.");
+            var profile = Path.GetFullPath(resolved.ProfilePath);
             var profilesParent = Path.GetDirectoryName(profile)!;
             var publicDocs = Path.GetFullPath(
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments));
@@ -66,6 +67,28 @@ internal static partial class SourceEditRegressionRunner
                     "a different local Windows user's profile was included by default");
             }
             Console.WriteLine("PASS S6 active-session roots exclude other profiles");
+
+            var fakeProfile = Path.Combine(workspace, "fake-profile");
+            Directory.CreateDirectory(Path.Combine(fakeProfile, "Documents"));
+            KnowledgeTools.UserProfileResolverOverride =
+                () => new KnowledgeTools.KnowledgeUserProfile(fakeProfile, []);
+            try
+            {
+                var fakeRoots = ((IEnumerable<string>)rootsMethod.Invoke(null, null)!).ToArray();
+                Check(fakeRoots.Any(r => r.Equals(Path.Combine(fakeProfile, "Documents"),
+                        StringComparison.OrdinalIgnoreCase)),
+                    "the resolved user's Documents folder was not used as a root");
+
+                KnowledgeTools.UserProfileResolverOverride = () => null;
+                var noUserRoots = ((IEnumerable<string>)rootsMethod.Invoke(null, null)!).ToArray();
+                Check(!noUserRoots.Any(r => r.StartsWith(fakeProfile, StringComparison.OrdinalIgnoreCase)),
+                    "roots must not contain a user profile when none can be resolved");
+            }
+            finally
+            {
+                KnowledgeTools.UserProfileResolverOverride = null;
+            }
+            Console.WriteLine("PASS S6 profile resolver degrades without throwing");
 
             Environment.SetEnvironmentVariable(rootsVariable, allowed);
             var inside = Path.Combine(allowed, "inside-s6.txt");

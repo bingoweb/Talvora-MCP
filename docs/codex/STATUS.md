@@ -51,8 +51,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] R4 — Upstream-degradation aware recovery, bounded logs
 - [x] R5 — One version everywhere
 - [x] Q4 — Context7 gate covers XAML/tests
-- [~] D8 — Context budget ignores literal implementation blocks (local gates green; GitHub CI pending)
-- [ ] D7 — Knowledge roots degrade instead of throwing; gate passes as the signed-in user (audit 2026-10-20 (3), HIGH)
+- [?] D8 — Context budget ignores literal implementation blocks (local gates green; GitHub CI 39483595331 failed on pre-existing S6; waiting for D7)
+- [~] D7 — Knowledge roots degrade instead of throwing (Full 53/0 as LocalSystem; GitHub CI pending)
 - [ ] CI1 — Every push checks its own GitHub run (Get-CiStatus.ps1; AGENTS step 10b)
 - [ ] CI3 — Deadline instead of a fixed loop in the directory-holder test (flaky CI)
 - [ ] CI2 — .NET platform packages in lockstep 10.0.13; Dependabot ignore list; close PR #16
@@ -114,6 +114,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-20 — D7 (executor: ChatGPT via Talvora): applied the exact prescribed KnowledgeTools resolver, injectable S6 regression checks, and gate identity line.
+  Supporting change outside Files: tests/SmokeKnowledgeRootsIsolationRegression.ps1 now checks ResolveKnowledgeUserProfile rather than the old direct call; no policy behavior removed.
+  Red before: GitHub D8 CI 39483595331 S6 Win32 1314; first D7 Full gate 44 checks, 1 failure on the stale structural test. Targeted smoke GREEN after support fix. SourceEdit regression build: 0 errors, 0 warnings.
+  Final Full gate: 53 checks, 0 errors, "Hepsi geçti."; gate run as LocalSystem (Kimlik: NT AUTHORITY\SYSTEM); signed-in run will be checked by Claude.
+  Context7: /dotnet/docs, official Microsoft .NET WindowsIdentity.GetCurrent, Environment.GetFolderPath and Path.IsPathFullyQualified. D7 GitHub CI and installed runtime verification pending.
 - 2026-10-20 — D8 (executor: ChatGPT via Talvora): applied ROADMAP's literal regression change in tests/QualityGateRegression.ps1; required supporting Context7 evidence refreshed in .context7/verification.json.
   Red before: N1 real context exceeded 250 lines; targeted test GREEN after. Fast gate: 13 checks, 0 errors, "Hepsi geçti."; Full gate: 53 checks, 0 errors, "Hepsi geçti." (LocalSystem executor).
   Context7: /microsoftdocs/powershell-docs; vendor: Microsoft PowerShell about_Split and about_Comparison_Operators. No runtime changes, so no deploy.

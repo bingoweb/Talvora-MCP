@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-20T19:19:40Z",
-  "scope": "D8 test-only context budget regression: count non-STATUS, non-literal-exact-implementation text against the existing 250-line cap. The card prescribes the code literally, without any product change. Context7 /microsoftdocs/powershell-docs and Microsoft PowerShell documentation verify -split regex delimiters and -like wildcard comparisons; the actual tests/QualityGateRegression.ps1 fails before and passes after the prescribed change.",
+  "verifiedAtUtc": "2026-10-20T19:33:23Z",
+  "scope": "D7 exact implementation: KnowledgeTools resolves the current process user's profile directly unless running as LocalSystem, where it accesses the interactive user through WindowsSessionLauncher with bounded fallback to no user roots. The KnowledgeS6 test adds an injected fake resolver and no-user resolution check, and Invoke-QualityGate.ps1 prints Windows identity. Context7 /dotnet/docs confirms WindowsIdentity.GetCurrent and fully-qualified path validation. GitHub windows-ci run 39483595331 demonstrated the pre-existing Win32 1314 regression before this change.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-20 D7: Microsoft .NET documentation confirms WindowsIdentity.GetCurrent provides current thread/process identity, Environment.GetFolderPath selects a SpecialFolder within the process user's profile, and Path.IsPathFullyQualified distinguishes fully qualified paths from drive-relative paths. ROADMAP D7 code followed exactly; interactive-session token acquisition remains LocalSystem-only and exceptions are bounded as prescribed."
+    },
     {
       "libraryId": "/microsoftdocs/powershell-docs",
       "verified": "2026-10-20 D8: PowerShell 7.7 about_Comparison_Operators and language specification document the wildcard matching and boolean scalar result of -like; about_Split documents its regex delimiter. Confirmed exact card-prescribed -like '=== *' / '#### Exact implementation*' and -split '\\r?\\n' constructs; targeted QualityGateRegression changes from red to QUALITY_GATE_REGRESSION_GREEN."
@@ -129,6 +133,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-20 D7: Official Microsoft .NET documentation on WindowsIdentity.GetCurrent https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.windowsidentity.getcurrent?view=net-10.0 , Environment.GetFolderPath https://learn.microsoft.com/en-us/dotnet/api/system.environment.getfolderpath?view=net-10.0 , Path.IsPathFullyQualified https://learn.microsoft.com/en-us/dotnet/api/system.io.path.ispathfullyqualified?view=net-10.0 ; Context7 /dotnet/docs. Verified compatibility of ROADMAP exact D7 implementation and Windows identity gate diagnostics.",
     "2026-10-20 D8: Microsoft PowerShell official about_Split https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_split?view=powershell-7.6 and about_Comparison_Operators https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_comparison_operators?view=powershell-7.6 ; Context7 /microsoftdocs/powershell-docs. Verified prescribed regex line split and wildcard section-classification operators for tests/QualityGateRegression.ps1 only.",
     "2026-10-20 Q4: Microsoft PowerShell 7 about_Regular_Expressions https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_regular_expressions and comparison operator reference https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_comparison_operators ; Context7 /microsoftdocs/powershell-docs. Temp-repo Context7ScopeRegression.ps1 independently proves each new file extension is gated and docs-only changes remain exempt.",
     "2026-10-20 R5: .NET SDK official Microsoft.NET.GenerateAssemblyInfo.targets https://github.com/dotnet/sdk/blob/main/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.GenerateAssemblyInfo.targets ; https://learn.microsoft.com/en-us/dotnet/standard/assembly/set-attributes-project-file ; Context7 /dotnet/sdk. MCP C# SDK EverythingServer serverInfo example https://github.com/modelcontextprotocol/csharp-sdk/blob/main/samples/EverythingServer/Program.cs and McpServerOptions class source https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Server/McpServerOptions.cs ; Context7 /modelcontextprotocol/csharp-sdk. Assembly attribute RED then GREEN test; installed verification after one R5 commit.",

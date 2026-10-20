@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Security;
+using System.Security.Principal;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
@@ -273,6 +274,69 @@ public static class KnowledgeTools
         }
     }
 
+    internal sealed record KnowledgeUserProfile(
+        string ProfilePath,
+        IReadOnlyList<string> OneDriveRoots);
+
+    // Test seam only. Production code never sets it.
+    internal static Func<KnowledgeUserProfile?>? UserProfileResolverOverride { get; set; }
+
+    internal static KnowledgeUserProfile? ResolveKnowledgeUserProfile()
+    {
+        if (UserProfileResolverOverride is { } overrideResolver)
+        {
+            return overrideResolver();
+        }
+
+        if (IsRunningAsLocalSystem())
+        {
+            try
+            {
+                var user = WindowsSessionLauncher.GetActiveInteractiveUser();
+                return CreateKnowledgeUserProfile(
+                    user.UserProfile,
+                    name => user.Environment.TryGetValue(name, out var value) ? value : null);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or Win32Exception)
+            {
+                // LocalSystem never falls back to its own or another user's profile.
+                return null;
+            }
+        }
+
+        return CreateKnowledgeUserProfile(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            Environment.GetEnvironmentVariable);
+    }
+
+    private static KnowledgeUserProfile? CreateKnowledgeUserProfile(
+        string? profile,
+        Func<string, string?> readVariable)
+    {
+        if (string.IsNullOrWhiteSpace(profile) || !Path.IsPathFullyQualified(profile))
+        {
+            return null;
+        }
+
+        var oneDrive = new List<string>();
+        foreach (var name in new[] { "OneDrive", "OneDriveConsumer", "OneDriveCommercial" })
+        {
+            var value = readVariable(name);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                oneDrive.Add(value);
+            }
+        }
+
+        return new KnowledgeUserProfile(profile, oneDrive);
+    }
+
+    private static bool IsRunningAsLocalSystem()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        return identity.User?.IsWellKnown(WellKnownSidType.LocalSystemSid) == true;
+    }
+
     private static void AddDefaultSearchRoots(List<string> roots)
     {
         var publicDocuments = Environment.GetFolderPath(
@@ -282,44 +346,25 @@ public static class KnowledgeTools
             roots.Add(publicDocuments);
         }
 
-        try
+        var userProfile = ResolveKnowledgeUserProfile();
+        if (userProfile is not null)
         {
-            var user = WindowsSessionLauncher.GetActiveInteractiveUser();
-            var profile = user.UserProfile;
-            if (!string.IsNullOrWhiteSpace(profile) &&
-                Path.IsPathFullyQualified(profile))
+            var profile = userProfile.ProfilePath;
+            roots.Add(Path.Combine(profile, "Documents"));
+            roots.Add(Path.Combine(profile, "Desktop"));
+            roots.Add(Path.Combine(profile, "Downloads"));
+            roots.AddRange(userProfile.OneDriveRoots);
+
+            try
             {
-                roots.Add(Path.Combine(profile, "Documents"));
-                roots.Add(Path.Combine(profile, "Desktop"));
-                roots.Add(Path.Combine(profile, "Downloads"));
-
-                foreach (var name in new[]
-                {
-                    "OneDrive", "OneDriveConsumer", "OneDriveCommercial",
-                })
-                {
-                    if (user.Environment.TryGetValue(name, out var configuredOneDrive) &&
-                        !string.IsNullOrWhiteSpace(configuredOneDrive))
-                    {
-                        roots.Add(configuredOneDrive);
-                    }
-                }
-
-                try
-                {
-                    roots.AddRange(Directory.GetDirectories(
-                        profile, "OneDrive*", SearchOption.TopDirectoryOnly));
-                }
-                catch (Exception ex) when (ex is
-                    UnauthorizedAccessException or IOException or SecurityException)
-                {
-                    // Missing/inaccessible OneDrive directories are optional.
-                }
+                roots.AddRange(Directory.GetDirectories(
+                    profile, "OneDrive*", SearchOption.TopDirectoryOnly));
             }
-        }
-        catch (InvalidOperationException)
-        {
-            // Never fall back to enumerating another local user's profile.
+            catch (Exception ex) when (ex is
+                UnauthorizedAccessException or IOException or SecurityException)
+            {
+                // Missing/inaccessible OneDrive directories are optional.
+            }
         }
 
         var programData = Environment.GetFolderPath(

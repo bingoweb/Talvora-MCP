@@ -13,6 +13,7 @@ $script:GateFailure = $null
 $script:GateVerbose = $PSBoundParameters.ContainsKey('Verbose')
 $script:GateCaptureRoot = Join-Path ([IO.Path]::GetTempPath()) ('TalvoraQualityGate-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $script:GateCaptureRoot -Force | Out-Null
+Write-Host ("Kimlik: " + [Security.Principal.WindowsIdentity]::GetCurrent().Name)
 
 function Invoke-QualityCheck {
     param(

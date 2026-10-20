@@ -15,7 +15,7 @@ $s6Entry = [IO.File]::ReadAllText(
 $verifiesS6 = $s6Scenario.Contains('RunKnowledgeS6LocalAsync') -and
     $s6Scenario.Contains('ExpectOutsideAsync') -and
     $s6Scenario.Contains('FileAttributes.Offline') -and
-    $s6Scenario.Contains('GetActiveInteractiveUser()') -and
+    $s6Scenario.Contains('ResolveKnowledgeUserProfile()') -and
     $s6Scenario.Contains('File.CreateSymbolicLink(') -and
     $s6Entry.Contains('--knowledge-s6-local')
 
