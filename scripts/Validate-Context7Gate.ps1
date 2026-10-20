@@ -32,7 +32,9 @@ try {
     $changedFiles = @($changedFiles | ForEach-Object { ([string]$_).Trim().Replace('\', '/') } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)
     $meaningfulPatterns = @(
         '^src/.+\.(cs|csproj)$',
+        '^src/.+\.(xaml|json|js|html)$',
         '^tests/.+\.(cs|csproj)$',
+        '^tests/.+\.ps1$',
         '^scripts/.+\.ps1$',
         '^Directory\.(Build|Packages)\.props$',
         '^global\.json$',

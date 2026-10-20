@@ -64,9 +64,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] R4 — Upstream-degradation aware recovery, bounded logs
 - [x] R5 — One version everywhere
 - [ ] Q1 — Tool titles, shorter descriptions, payload budget
-- [ ] Q2 — Tool surface consolidation Q2a/Q2b/Q2c (zero capability loss)
-- [ ] Q3 — Documentation diet
-- [ ] Q4 — Context7 gate covers XAML/tests
+- [?] Q2 — Tool surface consolidation Q2a/Q2b/Q2c (waiting for Claude: P-16)
+- [?] Q3 — Documentation diet (waiting for Claude: P-17; Q2 count test prerequisite)
+- [x] Q4 — Context7 gate covers XAML/tests
 - [ ] Q5 — Control Center smoke works for light and dark
 - [ ] UI1 — Tokens, theme manager (Sistem default, Gece fallback), typography
 - [ ] N5 — Worklog card visual redesign + preview harness
@@ -94,6 +94,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Open questions
 
+P-17 — Q3 requires Q2 manifest-count test and an approved archive move method (docs/codex/PROPOSALS.md).
+P-16 — Q2 three commits conflict with one-card-one-commit mandate (docs/codex/PROPOSALS.md).
 P-15 — R3 user-data preservation and backup scope need a decision (docs/codex/PROPOSALS.md).
 P-14 — R2 stdin prompt spooling requires protected S3 run-folder migration (docs/codex/PROPOSALS.md).
 P-13 — R1 AgentJobs storage ACL and process-start identity/startup recovery need scope/sequence decision (docs/codex/PROPOSALS.md).
@@ -112,6 +114,12 @@ P-12 — S3 startup notice route needs a decision (docs/codex/PROPOSALS.md).
 - scripts/Get-CodexContext.ps1:41 — `-Card D2` reports "Card D2 could not be found" although ROADMAP.md:599 contains the D2 heading; outside D2 scope, not changed.
 
 ## Log
+- 2026-10-20 — Q4 (executor: ChatGPT via Talvora): Context7 gate now treats src XAML/JSON/JS/HTML and tests PS1 changes as development scope, while keeping docs-only changes exempt.
+  RED/green isolated temporary Git fixture: five extension cases require refreshed Context7 evidence, docs-only does not; `CONTEXT7_SCOPE_REGRESSION_GREEN`.
+  Context7 `/microsoftdocs/powershell-docs` official PowerShell 7 regular-expression guide; refreshed .context7/verification.json.
+  Fast baseline 13 checks/0 errors; full gate 53 checks/0 errors (43 PowerShell regressions), final line `Hepsi geçti.`.
+  No runtime deployment (script + regression only); last installed source remains R5 041c723. Next Q5. No Codex used.
+- 2026-10-20 — Q1 skipped by explicit Q2-order rule; Q2 blocked by P-16 (three commits conflict with one-card-one-commit AGENTS.md rule), Q3 blocked by P-17 (requires Q2 manifest-count test and source move exception). No product changes for Q1/Q2/Q3. Next independent item Q4.
 - 2026-10-20 — R5 (executor: ChatGPT via Talvora): set Directory.Build.props Version 3.0.0-dev and InformationalVersion $(Version)+$(SourceRevisionId), disabled duplicate SDK revision append.
   /healthz and MCP ServerInfo now use the same service AssemblyInformationalVersionAttribute; Control Center shows the matching tray informational version, retaining bounded current.json compatibility.
   Installer build injects identical SourceRevisionId into service, tray and setup; installed current.json version falls back to the installer attribute rather than a hardcoded literal.

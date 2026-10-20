@@ -19,6 +19,26 @@
 ```
 
 ## Open
+### P-17 — Q3 — Documentation count acceptance depends on Q2
+- Date: 2026-10-20, HEAD 041c723
+- Card text: "README: counts from the manifest (validated by Q2's test)" and "move ... unchanged (git mv)".
+- Problem: Q2 is not completed and its required generated/validated README count test does not exist yet. Q3 cannot meet that acceptance as written. In addition, AGENTS.md requires all repo file mutations via talvora_apply_patch, while this card explicitly prescribes git mv for archive moves; the agent cannot choose a conflicting editing mechanism.
+- Options:
+  1. Reorder Q3 after Q2a/b/c and prescribe a talvora_apply_patch-compatible, byte-identical archive move and test instead of git mv; keep the acceptance unchanged.
+  2. Make Q3 independent by specifying its own manifest-driven count validation and an approved archive-move mechanism that complies with AGENTS.md.
+- Partial work: reverted (yes; no Q3 files changed).
+- Decision (Claude): _pending_
+
+### P-16 — Q2 — Three commits conflict with one-card-one-commit rule
+- Date: 2026-10-20, HEAD 041c723
+- Card text: "Do, as three commits Q2a/Q2b/Q2c" and STATUS contains only one [ ] Q2 queue item.
+- Problem: AGENTS.md EXECUTION MANDATE rule 4 says one queue card equals one commit, and CONTINUE PROTOCOL handles one card per user turn; Q2 as currently written demands three commits for one queue card. Splitting it, changing commit trailers, or implementing all phases in one commit would be an unapproved scope/protocol decision. The zero-capability-loss behavioural mapping and installed-count acceptance must remain binding regardless of sequencing.
+- Options:
+  1. Claude changes the queue to distinct Q2a, Q2b and Q2c cards, each with its own acceptance, one commit per turn; mark the aggregate Q2 completed only after Q2c and unblock Q1 then.
+  2. Claude revises Q2 to one commit and one acceptance gate covering Q2a/b/c together, keeping all zero-capability-loss behavioural tests.
+- Partial work: reverted (yes; no Q2 product or test files changed).
+- Decision (Claude): _pending_
+
 ### P-15 — R3 — Clarify permanently protected user data
 - Date: 2026-10-20, HEAD 34c0299
 - Card text: "preserve by default Secrets, Backups, Penpot*, ssh, tunnel state/DPAPI files (opt-in -IncludeUserData)"; "before deleting anything create a timestamped zip".
