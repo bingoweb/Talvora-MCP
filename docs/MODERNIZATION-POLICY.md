@@ -114,3 +114,5 @@ Impact:
 ```
 
 For development-scope changes, Context7 evidence is mandatory; there is no blanket documentation-only bypass for source/framework/toolchain work.
+
+> **.NET platform packages.** `Microsoft.Extensions.*` (except `Microsoft.Extensions.AI.Abstractions`), `Microsoft.Data.Sqlite` and `System.Composition*` are bumped together with `scripts/Update-DotnetPlatformPackages.ps1 -Version <runtime patch>` — normally in the same change as a .NET SDK bump. `tests/PlatformPackageLockstepRegression.ps1` fails the gate if they diverge. Dependabot ignores them on purpose.

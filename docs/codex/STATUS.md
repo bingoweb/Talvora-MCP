@@ -54,8 +54,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D8 — Context budget ignores literal implementation blocks (D8's unrelated S6 CI failure resolved by D7; subsequent main CI 39485713921 green)
 - [x] D7 — Knowledge roots degrade instead of throwing (GitHub CI 39485713921 green; installed 2455014 verified)
 - [x] CI1 — Every push checks its own GitHub run (GitHub windows-ci 39488042425 green; Get-CiStatus.ps1 verified)
-- [~] CI3 — Deadline instead of a fixed loop in the directory-holder test (local Full gate green; own CI pending)
-- [ ] CI2 — .NET platform packages in lockstep 10.0.13; Dependabot ignore list; close PR #16
+- [x] CI3 — Deadline instead of a fixed loop in the directory-holder test (GitHub windows-ci 39491180856 green)
+- [~] CI2 — .NET platform packages in lockstep 10.0.13 (local Full gate green; own CI and installed runtime verification pending; PR #16 closed)
 - [ ] D6 — Context helper finds `##` and `###` card headings (audit 2026-10-20 (3))
 - [ ] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (audit 2026-10-20 (3))
 - [ ] D1 — Make the rename-protection fallback visible (P-5 decided)
@@ -114,6 +114,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-20 — CI2 (executor: ChatGPT via Talvora): copied both approved reference scripts with SHA-256 matches; updated 17 .NET platform packages to 10.0.13 using the exact updater and refreshed 5 affected lock files; added Dependabot ignores and policy paragraph.
+  RED before: 17 packages at 10.0.12; GREEN after: PLATFORM_PACKAGE_LOCKSTEP_GREEN 10.0.13 (17 packages). Solution and installer locked restores passed; Release build 0 errors and 0 warnings.
+  Supporting file outside card Files: THIRD-PARTY-NOTICES.md — 19 version-only changes required by the unchanged ThirdPartyNoticesSourceRegression gate against runtime lock files.
+  Initial Full gate failed 49/1 on stale notices; supporting correction GREEN (43 packages). Final Full gate 54 checks, 0 errors, "Hepsi geçti." (LocalSystem).
+  Context7 /websites/learn_microsoft_en-us_nuget; official NuGet central package/lock and GitHub Dependabot ignore documentation. GitHub Dependabot PR #16 CLOSED.
+  CI3 GitHub run 39491180856 green, reconciled. CI2 own GitHub CI and installation to current HEAD pending after push.
 - 2026-10-20 — CI3 (executor: ChatGPT via Talvora): replaced the 200 x 40 ms readiness loop in PathGuard.cs with the card's exact Stopwatch 90 s deadline and 50 ms delay; no runtime changes.
   RED before: exact deadline condition absent; GREEN after. Targeted SourceEdit directory-identity-sharing regression GREEN; Release build 0 errors, 0 warnings.
   Baseline Fast gate: 13 checks, 0 errors. Final Full gate: 53 checks, 0 errors, "Hepsi geçti."; gate run as LocalSystem (Kimlik: NT AUTHORITY\SYSTEM).

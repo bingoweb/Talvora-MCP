@@ -17,6 +17,21 @@ updates:
       - dependency-name: "Microsoft.Build.Framework"
         versions:
           - ">=18.0.0"
+      # .NET platform packages ship with the runtime and must move together.
+      # Bump them only with scripts/Update-DotnetPlatformPackages.ps1 (CI2);
+      # single-package bumps cause NU1109 downgrade errors under central transitive pinning.
+      - dependency-name: "Microsoft.Data.Sqlite"
+      - dependency-name: "Microsoft.Extensions.Caching.Abstractions"
+      - dependency-name: "Microsoft.Extensions.Configuration.Abstractions"
+      - dependency-name: "Microsoft.Extensions.DependencyInjection.Abstractions"
+      - dependency-name: "Microsoft.Extensions.Diagnostics.Abstractions"
+      - dependency-name: "Microsoft.Extensions.FileProviders.Abstractions"
+      - dependency-name: "Microsoft.Extensions.Hosting.Abstractions"
+      - dependency-name: "Microsoft.Extensions.Hosting.WindowsServices"
+      - dependency-name: "Microsoft.Extensions.Logging.Abstractions"
+      - dependency-name: "Microsoft.Extensions.Options"
+      - dependency-name: "Microsoft.Extensions.Primitives"
+      - dependency-name: "System.Composition*"
     groups:
       nuget-stable:
         patterns:
