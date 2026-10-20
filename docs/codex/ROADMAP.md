@@ -752,6 +752,65 @@ Card details (Files / Do / Don't / Acceptance) are in the design spec, section "
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-20 (4) · range `429591f..429591f` (no agent commits) · result: FIX REQUIRED (caused by Claude)
+
+The agent made **no commits**: it started D7, found the gate red on a clean HEAD, reverted everything and raised P-19; D6 hit the same red baseline and was also reverted. That is exactly the required behaviour.
+
+Root cause (verified by Claude): `tests/QualityGateRegression.ps1:207-213` enforces ≤ 250 context lines for every N/UI card; Claude's `#### Exact implementation` blocks (commits `3d176bf`, `429591f`) made `-Card N1` 343 lines and `-Card N5` 299 lines. The guard was right for prose, wrong for literal implementation blocks, which must reach the agent complete.
+
+| # | Severity | Type | Where | Finding | Fix card |
+|---|---|---|---|---|---|
+| 1 | HIGH | gate (caused by Claude) | `tests/QualityGateRegression.ps1:207-213` | Gate red on clean HEAD: real N1 context 343 > 250 lines (N5 299). Blocks every card. | D8 (decision P-19) |
+| 2 | INFO | environment | protocol step 2 as LocalSystem | `git pull` through Talvora failed ("loose SSH key ACL"): LocalSystem uses its own SSH setup. Harmless today (local = origin). After A1, run `git fetch`/`git pull` with `talvora_user_run` (signed-in user's SSH). | note in A1 Part D |
+
+### D8 — Context budget ignores literal implementation blocks (decision P-19)
+
+> Audit 2026-10-20 (4), finding 1. Do this card first; it turns the gate green again.
+
+**Files:** `tests/QualityGateRegression.ps1` only.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Replace exactly this block (lines 207–213 today):
+
+```powershell
+    foreach ($card in @('UI1','UI2','UI3','UI4','UI5','UI6','UI7','UI8',
+            'N1','N2','N3','N3b','N4','N5','N6','N7','N8')) {
+        $actual = @(& $contextPath -Card $card | Out-String) -join ''
+        if (($actual -split '\r?\n').Count -gt 250) {
+            throw "Real context for $card exceeds 250 lines."
+        }
+    }
+```
+
+with exactly:
+
+```powershell
+    foreach ($card in @('UI1','UI2','UI3','UI4','UI5','UI6','UI7','UI8',
+            'N1','N2','N3','N3b','N4','N5','N6','N7','N8')) {
+        $actual = @(& $contextPath -Card $card | Out-String) -join ''
+        # Literal "#### Exact implementation" blocks must reach the agent complete, and the
+        # STATUS header is required reading anyway; the 250-line economy budget applies to
+        # the card prose, queue/proposal summaries, file counts and cited spec sections.
+        $counted = 0
+        $insideExact = $false
+        $insideStatus = $false
+        foreach ($line in ($actual -split '\r?\n')) {
+            if ($line -like '=== *') {
+                $insideStatus = $line -like '=== STATUS*'
+                $insideExact = $false
+            }
+            if ($line -like '#### Exact implementation*') { $insideExact = $true; continue }
+            if (-not $insideExact -and -not $insideStatus) { $counted++ }
+        }
+        if ($counted -gt 250) {
+            throw "Real context for $card exceeds 250 lines outside STATUS and exact-implementation blocks."
+        }
+    }
+```
+
+**Acceptance:** `pwsh -NoProfile -File tests/QualityGateRegression.ps1` passes; the Fast gate ends with `Hepsi geçti.`; one commit `test(quality): exempt exact-implementation blocks from the context budget` with trailer `Card: D8`. Then continue with D7 (unchanged card) — P-19 is decided.
+
 ### Audit 2026-10-20 (3) · range `audit/2026-10-18-02 (dd4ee5b)..36fe923` · 17 commits · executor: ChatGPT via Talvora · result: FIXES REQUIRED
 
 Cards delivered: D2, D4, A2, A3, E3, S1, Q6b (research), S4, S5 (`[~]`), S6, S7, S8, R4, R5, Q4; user-requested AGENTS.md section `8714266` (permanent prompt). 14 proposals P-5…P-18 raised — **all decided now** (PROPOSALS.md → Decided); EXECUTION MANDATE rule 1 clarified so that supporting changes and ordering no longer produce proposals.
@@ -1772,7 +1831,7 @@ git -C "C:\Users\tayla\Talvora-MCP" -c safe.directory=C:/Users/tayla/Talvora-MCP
 
 Then check owners of the six paths from P-7 with `(Get-Acl <path>).Owner` → all `MSI\tayla`. Paste the six lines (path → owner) into the Log.
 
-Part D — from now on the agent runs builds/tests/gate with `talvora_user_run` (`executable: "pwsh"`, `arguments: ["-NoProfile","-File","scripts/Invoke-QualityGate.ps1","-Scope","Full"]`, `workingDirectory: repo root`). The Log's gate line must show `Kimlik: MSI\tayla`.
+Part D — from now on the agent runs builds/tests/gate with `talvora_user_run` (`executable: "pwsh"`, `arguments: ["-NoProfile","-File","scripts/Invoke-QualityGate.ps1","-Scope","Full"]`, `workingDirectory: repo root`). The Log's gate line must show `Kimlik: MSI\tayla`. Run protocol step 2 (`git fetch origin`, `git pull --ff-only origin main`) the same way (`executable: "git"`), so the signed-in user's SSH keys are used (audit 4, finding 2).
 
 ### A3 — Work-contract gate in `talvora_git_run`
 

@@ -51,6 +51,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] R4 — Upstream-degradation aware recovery, bounded logs
 - [x] R5 — One version everywhere
 - [x] Q4 — Context7 gate covers XAML/tests
+- [ ] D8 — Context budget ignores literal implementation blocks (audit 2026-10-20 (4), P-19 decided)
 - [ ] D7 — Knowledge roots degrade instead of throwing; gate passes as the signed-in user (audit 2026-10-20 (3), HIGH)
 - [ ] D6 — Context helper finds `##` and `###` card headings (audit 2026-10-20 (3))
 - [ ] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (audit 2026-10-20 (3))
@@ -100,7 +101,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Open questions
 
-(none — P-5…P-18 decided in `docs/codex/PROPOSALS.md` → "Decided")
+
+(none — P-19 decided)
 
 ## Findings for Claude
 
@@ -109,6 +111,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-20 — Claude audit (4): no agent commits since `429591f`; D7/D6 correctly blocked and reverted. Root cause was Claude's long exact-implementation blocks breaking the 250-line context test (N1 343, N5 299). P-19 decided → D8 first (test-only, exact code), then D7, D6. Agent's uncommitted D7/D6 Log lines and P-19 are included in this commit. Audit baseline stays `audit/2026-10-20-03` (no new agent code).
+- 2026-10-20 — D6 blocked (executor: ChatGPT via Talvora). User approved including the uncommitted P-19/STATUS records in D6's one commit. Local HEAD and fetched origin/main both 429591f; git pull failed due loose SSH key ACL.
+  Baseline Fast gate: 12 checks, 1 failure (PS:QualityGateRegression; N1 context 343 > 250 lines). D6 fixture was RED on missing D2, then passed all heading assertions after the literal card change; real D1, D2, D7 headings passed.
+  The full regression still failed on the same pre-existing N1 line cap. D6 script and test changes were reverted; P-19 remains open, D6 waits for its decision. No D6 commit, deploy or push. Next independent card: D5.
+- 2026-10-20 — D7 blocked (executor: ChatGPT via Talvora; proposal P-19). Baseline Fast gate on clean HEAD: 12 checks, 1 failure; Full gate during D7: 37 checks, 1 failure. Both fail PS:QualityGateRegression at tests/QualityGateRegression.ps1:211: real N1 context 343 lines exceeds the 250-line limit.
+  D7 source/S6 changes built with 0 errors and 0 warnings; Full gate SourceEdit passed (182.5 s), as did Notification and IntegrationPolicy. All partial D7 code, tests, identity line and Context7 evidence were reverted; no D7 commit, deploy or push.
+  Full gate identity: NT AUTHORITY\SYSTEM (LocalSystem); signed-in gate awaits A1/Claude. Next actionable card: D6. Claude must decide P-19 for the pre-existing gate failure.
 - 2026-10-20 — Claude audit (3) of `dd4ee5b..36fe923` (17 commits, executor ChatGPT via Talvora): S1/R5/S6/E3/A3/S5 verified live on installed `041c723`. Full gate run **as the signed-in user** is RED (S6 regression, Win32 1314 outside LocalSystem) → D7 (HIGH); agent_brief loses non-ASCII and misses the permanent-prompt section → D5; context helper misses `##` cards → D6. P-5…P-18 decided; queue reordered (N1→N5, S3 before R1/R2, Q2 split into Q2a/b/c, Q5 before UI1). AGENTS.md: supporting changes/ordering are not proposal material; final gate must run as the signed-in user. Agent's uncommitted Q5 review (P-18) is included in this commit. Next audit baseline `audit/2026-10-20-03` = `36fe923`.
 - 2026-10-20 — Q5 prerequisite review (executor: ChatGPT via Talvora): blocked Q5 and UI1 under P-18. Existing ControlCenterTheme.xaml Light, ControlCenterApplication Dark, and light-only static ControlCenterWindow brushes cannot provide the two distinct themes Q5 Acceptance requires without UI1 source changes. Fast gate 13/0, `Hepsi geçti.`; no product changes and no Codex; advance to next independent card.
 - 2026-10-20 — Q4 (executor: ChatGPT via Talvora): Context7 gate now treats src XAML/JSON/JS/HTML and tests PS1 changes as development scope, while keeping docs-only changes exempt.

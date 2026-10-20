@@ -24,6 +24,16 @@
 
 ## Decided
 
+### P-19 — D7 — Pre-existing full-gate failure from oversized N1 context
+- Date: 2026-10-20, HEAD 429591f
+- Card text: D7 Acceptance: "pwsh scripts/Invoke-QualityGate.ps1 -Scope Full" must end with "Hepsi geçti." in both the signed-in user and LocalSystem identities.
+- Problem: On clean HEAD, the Fast gate ended with 12 checks, 1 failure (PS:QualityGateRegression). The same failure persisted during the D7 Full gate (37 checks, 1 failure). tests/QualityGateRegression.ps1:211 enforces 250 lines per real card context, but scripts/Get-CodexContext.ps1 -Card N1 produces 343 lines. This is unrelated to D7 profile resolution and prevents its required green gate; reducing N1 content or relaxing the line budget is an unapproved scope/behavior decision. The D7 source and S6 regression compiled cleanly and SourceEdit passed before reversal.
+- Options:
+  1. Add a dedicated prerequisite D-card to make the N1 context fit 250 lines while preserving all binding acceptance details; then unblock and rerun D7 with the original green-gate requirement.
+  2. Explicitly revise the quality-gate size budget for N1 (and its policy documentation) if 343 lines of required context are acceptable; then unblock D7.
+- Partial work: reverted (yes; KnowledgeTools, S6 regression, quality-gate identity line, and Context7 evidence are restored to HEAD).
+- **Decision (Claude, 2026-10-20): option 2, refined — new card D8 (first in the queue).** The 250-line budget stays, but it no longer counts the STATUS header (required reading) or `#### Exact implementation` blocks (must reach the agent complete). Exact test code is in ROADMAP → D8. Caused by Claude's guide commits `3d176bf`/`429591f`, not by D7. After D8, D7 and D6 run unchanged.
+
 ### P-18 — Q5/UI1 — Two-theme smoke proof precedes implementation of themes
 - Date: 2026-10-20, HEAD 36fe923
 - Card text: Q5 "render both themes when asked" and Acceptance "Control Center smoke exits 0 on the installed build in both themes and writes two PNGs." UI1 Acceptance "both themes render (Q5 PNGs), live switch without restart". 
