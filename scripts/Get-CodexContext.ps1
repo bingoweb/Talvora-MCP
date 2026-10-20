@@ -36,7 +36,7 @@ else {
     'docs/codex/ROADMAP.md'
 }
 $roadmap = [IO.File]::ReadAllText((Join-Path $repoRoot $source))
-$cardPattern = '(?ms)^###\s+' + [regex]::Escape($Card) + '\s+[—–-].*?(?=^#{2,3}\s+|\z)'
+$cardPattern = '(?ms)^#{2,3}[ \t]+' + [regex]::Escape($Card) + '[ \t]+[—–-].*?(?=^#{2,3}[ \t]+|\z)'
 $cardMatch = [regex]::Match($roadmap, $cardPattern)
 if (-not $cardMatch.Success) { throw "Card $Card could not be found in $source." }
 $cardText = $cardMatch.Value.TrimEnd()

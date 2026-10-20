@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-20T20:35:14Z",
-  "scope": "CI2 prescribed .NET platform package lockstep update: copied the two approved reference scripts byte-for-byte and verified SHA-256, then applied scripts/Update-DotnetPlatformPackages.ps1 -Version 10.0.13 to all 17 platform packages and regenerated affected packages.lock.json files. Both solution and installer --locked-mode restores pass; Release build zero errors/warnings; targeted lockstep regression prints PLATFORM_PACKAGE_LOCKSTEP_GREEN 10.0.13 (17 packages). Dependabot NuGet ignore entries and modernization policy updated per card; superseded GitHub PR #16 closed. Context7 NuGet official documentation validates central package management, transitive pinning and --force-evaluate/--locked-mode restore behavior; GitHub Docs confirms Dependabot ignore with wildcard package names and version constraints.",
+  "verifiedAtUtc": "2026-10-20T20:59:36Z",
+  "scope": "D6 exact roadmap implementation: Get-CodexContext.ps1 card matching now accepts ## and ### headings with an exact ID boundary and stops before the next level-2 or level-3 heading. QualityGateRegression.ps1 now includes isolated D2/D10/Q2a and N5 fixtures plus the existing UI1 fixture. The targeted test failed before (Card D2 could not be found) and passed after (QUALITY_GATE_REGRESSION_GREEN); actual D1/D2/D7 cards resolve. Context7 /microsoftdocs/powershell-docs confirms .NET regex matching, anchored multiline headings, singleline body spans, and Regex.Escape.",
   "libraries": [
+    {
+      "libraryId": "/microsoftdocs/powershell-docs",
+      "verified": "2026-10-20 D6: PowerShell 7.7 official about_Regular_Expressions documents [regex]::Escape, multiline ^ anchors and singleline . semantics. The exact ROADMAP-mandated card heading regex was used verbatim, with regression fixtures proving ## D2, ### N5/UI1, D1 not matching D10, and real D7 lookup."
+    },
     {
       "libraryId": "/websites/learn_microsoft_en-us_nuget",
       "verified": "2026-10-20 CI2: NuGet Central Package Management reference confirms Directory.Packages.props PackageVersion entries and CentralPackageTransitivePinningEnabled; NuGet restore reference confirms --force-evaluate regenerates lock files while --locked-mode requires unchanged resolved dependencies. The exact CI2 updater changed 17 aligned platform packages from 10.0.12 to 10.0.13 without changing Microsoft.Extensions.AI.Abstractions or Microsoft.Build.Framework."
@@ -145,6 +149,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-20 D6: Microsoft PowerShell about_Regular_Expressions https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_regular_expressions?view=powershell-7.7 ; Context7 /microsoftdocs/powershell-docs. Verified (?ms) ^ anchor, exact card ID separated by horizontal whitespace, [regex]::Escape, and lookahead. Targeted QualityGateRegression RED then GREEN; real D1/D2/D7 lookups GREEN.",
     "2026-10-20 CI2: Microsoft NuGet central package management https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management and restore lock-file guidance https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files and https://learn.microsoft.com/en-us/nuget/reference/errors-and-warnings/nu1512 ; NuGet 10.0.13 availability https://www.nuget.org/packages/Microsoft.Extensions.Hosting.WindowsServices/10.0.13 ; GitHub Dependabot ignore and wildcard behavior https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/configuring-dependabot-version-updates . Context7 /websites/learn_microsoft_en-us_nuget and approved CI2 reference scripts. Locked solution/installer restores and Release build GREEN, PR #16 CLOSED.",
     "2026-10-20 CI3: Official .NET Stopwatch.StartNew https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.stopwatch.startnew?view=net-10.0 and Task.Delay https://learn.microsoft.com/en-us/dotnet/api/system.threading.tasks.task.delay?view=net-10.0 ; Context7 /dotnet/docs. Targeted directory identity sharing regression GREEN after the exact fixed-loop-to-deadline change.",
     "2026-10-20 CI1: GitHub CLI official manual https://cli.github.com/manual/gh_run_list (commit SHA, workflow and JSON filters) and https://cli.github.com/manual/gh_run_view (failed-step log retrieval). Context7 /websites/cli_github_manual. CI1 template SHA256 matches the approved docs/codex/reference/ci/SHA256SUMS.txt.",

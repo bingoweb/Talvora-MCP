@@ -55,8 +55,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D7 — Knowledge roots degrade instead of throwing (GitHub CI 39485713921 green; installed 2455014 verified)
 - [x] CI1 — Every push checks its own GitHub run (GitHub windows-ci 39488042425 green; Get-CiStatus.ps1 verified)
 - [x] CI3 — Deadline instead of a fixed loop in the directory-holder test (GitHub windows-ci 39491180856 green)
-- [~] CI2 — .NET platform packages in lockstep 10.0.13 (local Full gate green; own CI and installed runtime verification pending; PR #16 closed)
-- [ ] D6 — Context helper finds `##` and `###` card headings (audit 2026-10-20 (3))
+- [x] CI2 — .NET platform packages in lockstep 10.0.13 (GitHub CI 39494729468 green; installed 6538264 verified; PR #16 closed)
+- [~] D6 — Context helper finds `##` and `###` card headings (local Full gate green; own GitHub CI pending)
 - [ ] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (audit 2026-10-20 (3))
 - [ ] D1 — Make the rename-protection fallback visible (P-5 decided)
 - [ ] D3 — Keep the text of structured failures (P-6 decided)
@@ -114,6 +114,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-20 — D6 (executor: ChatGPT via Talvora): applied ROADMAP's exact one-line Get-CodexContext.ps1 regex update; added isolated ## D2 / ### D10 / ### Q2a / ### N5 / ### UI1 fixture coverage to QualityGateRegression.ps1.
+  RED before: Card D2 could not be found; GREEN after: QUALITY_GATE_REGRESSION_GREEN. Actual -Card D1, D2 and D7 headings verified.
+  Baseline Fast: 13 checks, 0 errors. Final Full: 54 checks, 0 errors, "Hepsi geçti."; gate run as LocalSystem (Kimlik: NT AUTHORITY\SYSTEM).
+  Context7 /microsoftdocs/powershell-docs; Microsoft PowerShell regex anchors, options and Regex.Escape verified. No runtime changes or deploy.
+  CI2 completion reconciled (GitHub run 39494729468 green, installed sourceCommit 6538264); D6 own GitHub CI pending after push.
 - 2026-10-20 — CI2 (executor: ChatGPT via Talvora): copied both approved reference scripts with SHA-256 matches; updated 17 .NET platform packages to 10.0.13 using the exact updater and refreshed 5 affected lock files; added Dependabot ignores and policy paragraph.
   RED before: 17 packages at 10.0.12; GREEN after: PLATFORM_PACKAGE_LOCKSTEP_GREEN 10.0.13 (17 packages). Solution and installer locked restores passed; Release build 0 errors and 0 warnings.
   Supporting file outside card Files: THIRD-PARTY-NOTICES.md — 19 version-only changes required by the unchanged ThirdPartyNoticesSourceRegression gate against runtime lock files.

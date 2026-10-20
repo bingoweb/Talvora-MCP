@@ -159,6 +159,10 @@ WORKLOG_UNRELATED_SENTINEL
 **Do:** Follow §3.1 and §5.4.1 only.
 ### N2 — Next card
 NEXT_WORKLOG_CARD_SENTINEL
+### N5 — Fifth card
+N5 BODY
+### N6 — Next card after N5
+N6 BODY
 '@ | Set-Content -LiteralPath (Join-Path $fixtureDocs 'DESIGN-WORKLOG.md') -Encoding utf8
     @'
 ## 3. UI tokens
@@ -193,6 +197,7 @@ PRIVATE_PROPOSAL_BODY_MUST_NOT_APPEAR
 '@ | Set-Content -LiteralPath (Join-Path $fixtureDocs 'PROPOSALS.md') -Encoding utf8
     foreach ($spec in @(
         @{ Card='N1'; Required=@('WORKLOG_TERMINAL_SENTINEL','WORKLOG_AGENT_SENTINEL'); Forbidden=@('NEXT_WORKLOG_CARD_SENTINEL','WORKLOG_UNRELATED_SENTINEL') },
+        @{ Card='N5'; Required=@('N5 BODY'); Forbidden=@('N6 BODY','NEXT_WORKLOG_CARD_SENTINEL') },
         @{ Card='UI1'; Required=@('UI_COLOUR_SENTINEL','UI_DICTIONARY_SENTINEL','UI_SWITCH_SENTINEL'); Forbidden=@('NEXT_UI_CARD_SENTINEL','UI_UNRELATED_SENTINEL') }
     )) {
         $out = @(& $fixtureHelper -Card $spec.Card | Out-String) -join ''
@@ -204,6 +209,41 @@ PRIVATE_PROPOSAL_BODY_MUST_NOT_APPEAR
         }
         if (($out -split '\r?\n').Count -gt 250) { throw "Oversized fixture context for $($spec.Card)." }
     }
+    @'
+## D2 — two-hash card
+D2 BODY
+### D10 — ten
+D10 BODY
+### Q2a — split card
+Q2A BODY
+## Next section
+'@ | Set-Content -LiteralPath (Join-Path $fixtureDocs 'ROADMAP.md') -Encoding utf8
+
+    foreach ($spec in @(
+        @{ Card='D2'; Required='D2 BODY'; Forbidden='D10 BODY' },
+        @{ Card='D10'; Required='D10 BODY'; Forbidden='Q2A BODY' },
+        @{ Card='Q2a'; Required='Q2A BODY'; Forbidden='Next section' }
+    )) {
+        $out = @(& $fixtureHelper -Card $spec.Card | Out-String) -join ''
+        if (-not $out.Contains($spec.Required)) {
+            throw "Missing $($spec.Required) for $($spec.Card)."
+        }
+        if ($out.Contains($spec.Forbidden)) {
+            throw "Unexpected $($spec.Forbidden) for $($spec.Card)."
+        }
+    }
+    $d1Missing = $false
+    try {
+        $null = & $fixtureHelper -Card D1 2>&1
+    }
+    catch {
+        if ($_.Exception.Message -notlike '*could not be found*') { throw }
+        $d1Missing = $true
+    }
+    if (-not $d1Missing) {
+        throw 'D1 must not match the D10 fixture card.'
+    }
+
     foreach ($card in @('UI1','UI2','UI3','UI4','UI5','UI6','UI7','UI8',
             'N1','N2','N3','N3b','N4','N5','N6','N7','N8')) {
         $actual = @(& $contextPath -Card $card | Out-String) -join ''
