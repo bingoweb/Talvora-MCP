@@ -19,6 +19,36 @@
 ```
 
 ## Open
+### P-15 — R3 — Clarify permanently protected user data
+- Date: 2026-10-20, HEAD 34c0299
+- Card text: "preserve by default Secrets, Backups, Penpot*, ssh, tunnel state/DPAPI files (opt-in -IncludeUserData)"; "before deleting anything create a timestamped zip".
+- Problem: AGENTS.md prohibits even reading the separate-project Secrets directory, but R3 does not distinguish it from other -IncludeUserData opt-ins or backup archive sources. Its scope needs explicit confirmation before implementing either behavior. The approved temporary fixture-path injection is also not defined; acceptance requires safe isolated test roots.
+- Options:
+  1. Never access Secrets under any option; -IncludeUserData may affect only other named data, which can be archived with an explicitly limited fixture-test mode.
+  2. Remove the opt-in and preserve all user data, including Secrets, unconditionally; approve a separate test fixture route.
+- Partial work: reverted (yes; no reset code changes or cleanup).
+- Decision (Claude): _pending_
+
+### P-14 — R2 — Stdin prompt spool requires protected S3 run folder
+- Date: 2026-10-20, HEAD 34c0299
+- Card text: "Runner: write the prompt to stdin.txt inside the ACL'd run folder (S3) ... delete the file immediately after the copy"; "process command line ... does not contain the prompt".
+- Problem: S3 remains [?] pending P-12 and has not moved `src/Talvora.Shared/InteractiveUserProcessRunner.cs:73-86` from the interactive user's `%LOCALAPPDATA%/Talvora/InteractiveRuns` to the protected per-user-SID ProgramData run root. Adding R2's SYSTEM-written `stdin.txt` with full prompt text to that currently user-controlled/reparse-point-capable location would violate the explicitly named ACL prerequisite and leave private prompts exposed during execution. R2 cannot meet its security Acceptance without S3's run-directory change.
+- Options:
+  1. Complete S3 first, then implement R2 unchanged using the protected S3 run folder, delete-on-copy, and 120k-character no-command-line prompt test.
+  2. Change R2 Files/Acceptance explicitly to authorize implementing S3's protected run-folder migration within R2, without modifying the unresolved S3 Control Center notice behavior; require all S3 file/ACL and reparse tests before writing prompt files.
+- Partial work: reverted (yes; no R2 source changes or prompt files made).
+- Decision (Claude): _pending_
+
+### P-13 — R1 — Protected AgentJobs storage and process identity are blocked by S3 / file scope
+- Date: 2026-10-20, HEAD 34c0299
+- Card text: "Persist job metadata ... under %ProgramData%\\Talvora\\AgentJobs\\<jobId>.json (S3 ACL)"; "On service start: for each non-terminal record, if the PID still exists with the same start time, mark orphaned ... cancellable by process-tree kill".
+- Problem: S3 is currently [?] waiting for Claude P-12 and has not applied its required protected ProgramData ACL (STATUS and P-12). Persisting process identities to that unprotected location and using their contents to select a process-tree kill would depend on the unresolved trust boundary. `src/Talvora.Shared/InteractiveUserProcessRunner.cs:36-52,165-177` starts the real helper process but exposes its PID only after `RunAsync` returns on exit; `CodexCliTools.cs:260` and `ClaudeCliTools.cs:83` have no launch-time PID callback. `src/Talvora/Program.cs:93-119` owns startup but is absent from R1 Files; startup recovery cannot be hooked as written. Accepting the specified orphan-after-service-restart smoke needs both the protected storage prerequisite and explicit API/startup wiring beyond the allowed Files.
+- Options:
+  1. Resolve and ship S3's protected ACL first, then explicitly add `src/Talvora.Shared/InteractiveUserProcessRunner.cs` (PID+start-time callback) and `src/Talvora/Program.cs` (startup recovery) to R1 Files, and retain its full original Acceptance; update tests to cover PID reuse and orphan tree cancellation.
+  2. Split R1 into an in-memory shared registry/concurrency-limits card and a post-S3 persistence, orphan-recovery and tree-cancellation card with an explicit expanded Files list; do not claim full R1 Acceptance before the follow-up.
+- Partial work: reverted (yes; no R1 runtime/metadata files changed, no service job or secret touched).
+- Decision (Claude): _pending_
+
 ### P-12 — S3 — Service startup Control Center notice has no defined delivery path
 - Date: 2026-10-20, HEAD ac708d7
 - Card text: "Installer (and a service startup self-check that only logs) applies a protected ACL on the root"; "Startup self-check: if the root ACL still grants Users write, log one warning and show one Turkish Control Center notice ('Talvora klasör izinleri güncel değil. Kurulumu yeniden çalıştırın.')."

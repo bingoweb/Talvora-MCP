@@ -58,10 +58,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] S6 — Knowledge tools: scoped fetch, no cloud hydration
 - [x] S7 — Desktop IPC server verification + real interactive session
 - [x] S8 — Git push detection parser
-- [ ] R1 — Agent job registry, persistence, orphan recovery, limits
-- [ ] R2 — Prompts via stdin
-- [ ] R3 — Safe Reset-And-Install
-- [ ] R4 — Upstream-degradation aware recovery, bounded logs
+- [?] R1 — Agent job registry, persistence, orphan recovery, limits (waiting for Claude: P-13; S3 ACL prerequisite)
+- [?] R2 — Prompts via stdin (waiting for Claude: P-14; protected S3 run folder prerequisite)
+- [?] R3 — Safe Reset-And-Install (waiting for Claude: P-15)
+- [x] R4 — Upstream-degradation aware recovery, bounded logs
 - [ ] R5 — One version everywhere
 - [ ] Q1 — Tool titles, shorter descriptions, payload budget
 - [ ] Q2 — Tool surface consolidation Q2a/Q2b/Q2c (zero capability loss)
@@ -94,6 +94,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Open questions
 
+P-15 — R3 user-data preservation and backup scope need a decision (docs/codex/PROPOSALS.md).
+P-14 — R2 stdin prompt spooling requires protected S3 run-folder migration (docs/codex/PROPOSALS.md).
+P-13 — R1 AgentJobs storage ACL and process-start identity/startup recovery need scope/sequence decision (docs/codex/PROPOSALS.md).
 P-5/P-6 — D1 and D3 need scope decisions (docs/codex/PROPOSALS.md).
 P-7 — A1 requires an owner-warning result-path decision and clarification of audit fixture count.
 P-8 — Q6 muted inspection row conflicts with N1 worklog ownership (docs/codex/PROPOSALS.md).
@@ -109,6 +112,15 @@ P-12 — S3 startup notice route needs a decision (docs/codex/PROPOSALS.md).
 - scripts/Get-CodexContext.ps1:41 — `-Card D2` reports "Card D2 could not be found" although ROADMAP.md:599 contains the D2 heading; outside D2 scope, not changed.
 
 ## Log
+- 2026-10-20 — R4 (executor: ChatGPT via Talvora): classified upstream control-plane degradation separately from local protocol, tunnel process and response-delivery faults; healthy local components are not restarted for upstream slowness.
+  Recovery uses approved Turkish waiting status and 1/2/5/10-minute bounded probe backoff. Manual-stop, optional MCP, and local repair paths preserved.
+  TrayLog deduplicates identical messages for ten minutes; per incident/MCP, only the first attempt contains a full stack trace.
+  RED missing retry API; GREEN fixture-based classifier/backoff and 6-error/1-stack log regression. Full gate 52 controls, 0 failures, `Hepsi geçti.`.
+  Context7 /dotnet/docs and Microsoft System.Text.Json documentation; mandatory evidence JSON and notification test fixture updated.
+  R1/R2/R3 remain blocked pending Claude P-13/P-14/P-15; no source work on those cards. Canonical deployment and smoke follow this commit; next R5. No Codex used.
+- 2026-10-20 — R3 scope review (executor: ChatGPT via Talvora): blocked pending P-15 because the user-data opt-in conflicts with the immutable Secrets boundary. No reset script invoked, no production changes; next R4.
+- 2026-10-20 — R2 prerequisite review (executor: ChatGPT via Talvora): blocked pending P-14; R2 requires writing prompt text into the S3 ACL-protected run folder while S3/P-12 is still open and the current runner uses interactive user's LocalAppData. No R2 source changes, next independent card R3.
+- 2026-10-20 — R1 scope review (executor: ChatGPT via Talvora): blocked pending P-13. Required protected ProgramData AgentJobs ACL belongs to blocked S3/P-12; root helper PID/start-time and service-start recovery require runner and Program.cs outside R1 Files. No product changes. Fast gate 13/0, last line `Hepsi geçti.`; no Codex used. Continue to the next open card after recording the dependency.
 - 2026-10-20 — S8 (executor: ChatGPT via Talvora): GitTools.IsPush and SourceMutationPolicy now share the unchanged A3 GitArgumentParser; removed the duplicate source-mutation token scanner.
   RED: `-C x push` incorrectly classified as non-push; GREEN seven push/status cases, six working-tree mutations and existing explicitAdmin behavior. Prior work-contract tests unchanged.
   SECURITY.md records structured-tool guard rails; .context7/verification.json and focused test-runner entry were required supporting changes.

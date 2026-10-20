@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-20T15:49:18Z",
-  "scope": "S8 Git global-argument classification: reuse the existing card-specified GitArgumentParser in GitTools push delivery-gate detection and SourceMutationPolicy working-tree routing. Context7 /git/htmldocs and installed Git for Windows 2.55.0.windows.5 -h syntax verified global -C, -c, --git-dir, --work-tree, --namespace, --config-env, --exec-path options preceding subcommands. Official git(1) manual checked; --super-prefix remains the card-prescribed parser option. A focused table covers pushes, status and mutation routing; process/PowerShell tools intentionally remain outside structured-tool gates.",
+  "verifiedAtUtc": "2026-10-20T16:24:56Z",
+  "scope": "R4 managed MCP recovery diagnostics: classify control-plane degraded while local protocol and tunnel process healthy separately from local/response-delivery faults; wait without restart for upstream degradation and probe after prescribed 1/2/5/10 minutes. TrayLog deduplicates identical messages for ten minutes and preserves only one full stack per failure fingerprint in that window. Context7 /dotnet/docs checked System.Text.Json JsonDocument/JsonElement parsing for sanitized fixture cases, no new package dependencies.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-20 R4: official System.Text.Json DOM documentation shows using JsonDocument.Parse and JsonElement.TryGetProperty/EnumerateObject to read bounded JSON and build safe detached snapshots before disposing the JsonDocument; Context7 /dotnet/docs verified. Reused existing tunnel health parser; sanitized JSON fixtures cover control-plane-only degradation and local response-delivery degradation. TimeSpan.FromMinutes and DateTimeOffset.Add implement the R4 fixed retry schedule."
+    },
     {
       "libraryId": "/git/htmldocs",
       "verified": "2026-10-20 S8: Context7 git(1) synopsis and official Git htmldocs describe global -C <path>, -c <name>=<value>, --git-dir[=<path>], --work-tree, --namespace, --config-env and --exec-path[=<path>] before the Git subcommand. Installed Git for Windows 2.55.0.windows.5 git -h confirms the option list and --opt=value forms; git help git could not open a manual viewer in the service session (timeout), so git -h and official public manual were used. The A3-introduced shared parser exactly matches ROADMAP S8, and S8 connects both gates without changing it."
@@ -109,6 +113,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-20 R4: Microsoft .NET System.Text.Json DOM https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/use-dom and DateTimeOffset.Add https://learn.microsoft.com/en-us/dotnet/api/system.datetimeoffset.add?view=net-10.0 ; Context7 /dotnet/docs. Local in-process classifier fixtures and repeated-error logging tests run without a remote service, with no new packages.",
     "2026-10-20 S8 official Git CLI manual https://git-scm.com/docs/git (git 2.56.0 online) and https://github.com/git/htmldocs/blob/gh-pages/git.adoc through Context7 /git/htmldocs. Installed Git for Windows 2.55.0.windows.5 git -h confirms global options; git help git viewer timed out under LocalSystem. S8 fixtures validate push/non-push detection and working-tree mutation routing through the single existing parser.",
     "2026-10-20 S7: Microsoft .NET NamedPipeClientStream constructor with explicit TokenImpersonationLevel https://learn.microsoft.com/en-us/dotnet/api/system.io.pipes.namedpipeclientstream.-ctor?view=net-10.0 ; Windows GetNamedPipeServerProcessId https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getnamedpipeserverprocessid ; Context7 /dotnet/docs. Tested with installed Talvora.Tray.exe under Program Files in user session.",
     "2026-10-20 S6: GetFinalPathNameByHandleW (resolved final path) https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfinalpathnamebyhandlew ; WIN32_FIND_DATAW dwReserved0 holds reparse tag https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-win32_find_dataw ; Reparse tag details https://learn.microsoft.com/en-us/windows/win32/fileio/reparse-point-tags ; official MCP SDK tool errors https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md ; Context7 /dotnet/docs and /modelcontextprotocol/csharp-sdk.",

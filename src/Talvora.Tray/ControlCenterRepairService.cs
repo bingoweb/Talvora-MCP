@@ -2,6 +2,12 @@ using Talvora.Shared;
 
 namespace Talvora.Tray;
 
+internal enum ManagedMcpRecoveryFaultKind
+{
+    LocalFault,
+    UpstreamDegraded,
+}
+
 internal sealed record ManagedMcpRepairResult(
     string Strategy,
     string Summary,
@@ -12,6 +18,82 @@ internal sealed record ManagedMcpRepairResult(
 
 internal static class ControlCenterRepairService
 {
+    internal const string UpstreamWaitingText =
+        "OpenAI tarafı yavaş yanıt veriyor; Talvora bekliyor";
+
+    internal static TimeSpan GetUpstreamRetryDelay(int attempt) =>
+        TimeSpan.FromMinutes(attempt switch
+        {
+            <= 1 => 1,
+            2 => 2,
+            3 => 5,
+            _ => 10,
+        });
+
+    internal static ManagedMcpRecoveryFaultKind ClassifyFault(
+        ManagedMcpTunnelHealthSnapshot? snapshot,
+        bool localProtocolReady,
+        ManagedMcpTunnelRuntimeStatus runtime)
+    {
+        if (!localProtocolReady ||
+            !runtime.ProcessRunning ||
+            !runtime.Healthy ||
+            !runtime.IdentityMatches ||
+            snapshot is not { Live: true } ||
+            snapshot.RequiresRuntimeRenewal)
+        {
+            return ManagedMcpRecoveryFaultKind.LocalFault;
+        }
+
+        return snapshot.Components.Any(component =>
+            string.Equals(component.Id, "control-plane",
+                StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(component.Status, "degraded",
+                StringComparison.OrdinalIgnoreCase))
+            ? ManagedMcpRecoveryFaultKind.UpstreamDegraded
+            : ManagedMcpRecoveryFaultKind.LocalFault;
+    }
+
+    internal static async Task<ManagedMcpRecoveryFaultKind> ClassifyAsync(
+        ManagedMcpRegistration registration,
+        CancellationToken cancellationToken)
+    {
+        if (registration.Tunnel is not { Required: true } ||
+            registration.ProtocolProbe is null)
+        {
+            return ManagedMcpRecoveryFaultKind.LocalFault;
+        }
+
+        try
+        {
+            var protocol = await ManagedMcpProtocolProbeService.ProbeCachedAsync(
+                registration, cancellationToken);
+            if (!protocol.Ready)
+            {
+                return ManagedMcpRecoveryFaultKind.LocalFault;
+            }
+            var runtime = await ManagedMcpTunnelProvisioningService
+                .GetRuntimeStatusCachedAsync(registration, cancellationToken);
+            if (!runtime.ProcessRunning || !runtime.Healthy ||
+                !runtime.IdentityMatches)
+            {
+                return ManagedMcpRecoveryFaultKind.LocalFault;
+            }
+            var snapshot = await ManagedMcpTunnelHealthService
+                .GetSnapshotCachedAsync(registration, cancellationToken);
+            return ClassifyFault(snapshot, protocol.Ready, runtime);
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return ManagedMcpRecoveryFaultKind.LocalFault;
+        }
+    }
+
     public static async Task<ManagedMcpRepairResult> RepairAsync(
         ManagedMcpRegistration registration,
         CancellationToken cancellationToken)
@@ -81,6 +163,20 @@ internal static class ControlCenterRepairService
                 registration,
                 observedState,
                 cancellationToken);
+        }
+
+        if (await ClassifyAsync(registration, cancellationToken) ==
+            ManagedMcpRecoveryFaultKind.UpstreamDegraded)
+        {
+            var waiting = observedState with
+            {
+                Health = ControlCenterHealthState.Attention,
+                StatusText = UpstreamWaitingText,
+                Detail = UpstreamWaitingText,
+            };
+            return new ManagedMcpRepairResult(
+                UpstreamWaitingText, UpstreamWaitingText, UpstreamWaitingText,
+                Escalated: false, observedState, waiting);
         }
 
         return await RepairGenericAsync(

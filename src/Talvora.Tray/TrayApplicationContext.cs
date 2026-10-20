@@ -45,6 +45,8 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
     private readonly ManagedMcpRecoveryState _giteaRecoveryState = new("gitea");
     private readonly Dictionary<string, ManagedMcpRecoveryState> _genericRecoveryStates =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (int Attempts, DateTimeOffset NextProbeUtc)> _genericUpstreamRetry =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, ManagedMcpDashboardState> _genericDashboardStates =
         new(StringComparer.OrdinalIgnoreCase);
     private ManagedMcpRegistration? _talvoraRegistration;
@@ -1112,6 +1114,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 if (ManagedMcpSessionState.IsManuallyStopped(registration.Id))
                 {
                     recoveryState.ResetForManualAction();
+                    _genericUpstreamRetry.Remove(registration.Id);
                     _genericDashboardStates[registration.Id] =
                         new ManagedMcpDashboardState(
                             registration,
@@ -1131,12 +1134,20 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 if (!tunnelSetupComplete)
                 {
                     recoveryState.ResetForManualAction();
+                    _genericUpstreamRetry.Remove(registration.Id);
                     _genericDashboardStates[registration.Id] =
                         new ManagedMcpDashboardState(
                             registration,
                             ControlCenterHealthState.Attention,
                             "Kurulum tamamlanmadı",
                             tunnelAssessment.Summary);
+                    continue;
+                }
+
+                if (_genericUpstreamRetry.TryGetValue(
+                        registration.Id, out var upstreamPause) &&
+                    DateTimeOffset.UtcNow < upstreamPause.NextProbeUtc)
+                {
                     continue;
                 }
 
@@ -1179,6 +1190,33 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                     registration,
                     _lifetimeCts.Token);
                 _genericDashboardStates[registration.Id] = state;
+
+                if (registration.AutoStart &&
+                    state.Health != ControlCenterHealthState.Ready &&
+                    registration.Tunnel is { Required: true } &&
+                    await ControlCenterRepairService.ClassifyAsync(
+                        registration, _lifetimeCts.Token) ==
+                    ManagedMcpRecoveryFaultKind.UpstreamDegraded)
+                {
+                    var attempt = _genericUpstreamRetry.TryGetValue(
+                        registration.Id, out var previousRetry)
+                        ? previousRetry.Attempts + 1 : 1;
+                    var delay = ControlCenterRepairService.GetUpstreamRetryDelay(
+                        attempt);
+                    _genericUpstreamRetry[registration.Id] =
+                        (attempt, DateTimeOffset.UtcNow.Add(delay));
+                    _genericDashboardStates[registration.Id] = state with
+                    {
+                        Health = ControlCenterHealthState.Attention,
+                        StatusText = ControlCenterRepairService.UpstreamWaitingText,
+                        Detail = ControlCenterRepairService.UpstreamWaitingText,
+                    };
+                    TrayLog.Write(
+                        $"Upstream managed MCP probe postponed. MCP={registration.Id}; Attempt={attempt}; RetryIn={delay.TotalMinutes:F0}min");
+                    continue;
+                }
+
+                _genericUpstreamRetry.Remove(registration.Id);
 
                 if (state.Health == ControlCenterHealthState.Ready)
                 {

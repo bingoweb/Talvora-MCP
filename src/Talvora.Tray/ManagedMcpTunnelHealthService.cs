@@ -176,7 +176,11 @@ internal static class ManagedMcpTunnelHealthService
             {
                 MaxDepth = 64,
             });
-        var root = document.RootElement;
+        return ParseSnapshot(document.RootElement);
+    }
+
+    internal static ManagedMcpTunnelHealthSnapshot ParseSnapshot(JsonElement root)
+    {
 
         var schemaVersion = TryGetInt32(root, "schema_version");
         if (schemaVersion <= 0)

@@ -15,6 +15,7 @@ internal static class Program
         await DesktopProgressProtocol.AssertContractAsync();
         DesktopProgressPresentationState.AssertContract();
         ManagedMcpAggregateHealthPolicy.AssertContract();
+        AssertUpstreamRecoveryContract();
         await AssertWorkVisibilityFilteringAsync();
         await AssertDiffEvidenceCoverageAsync();
         await AssertSemanticMessagingAndCanonicalToolAsync();
@@ -33,6 +34,77 @@ internal static class Program
         Console.WriteLine(
             "DESKTOP_PROGRESS_BEHAVIOR_GREEN");
         return 0;
+    }
+
+    private static void AssertUpstreamRecoveryContract()
+    {
+        const string upstreamJson = "{\"schema_version\":1,\"live\":true,\"ready\":false,\"components\":{\"control-plane\":{\"status\":\"degraded\"},\"response-delivery\":{\"status\":\"ok\"}}}";
+        using var fixture = JsonDocument.Parse(upstreamJson);
+        var health = ManagedMcpTunnelHealthService.ParseSnapshot(fixture.RootElement);
+        var runtime = new ManagedMcpTunnelRuntimeStatus(false, true, true, true, "fixture");
+        if (ControlCenterRepairService.ClassifyFault(health, true, runtime) !=
+            ManagedMcpRecoveryFaultKind.UpstreamDegraded)
+        {
+            throw new InvalidOperationException("Upstream degradation classified incorrectly.");
+        }
+        const string localJson = "{\"schema_version\":1,\"live\":true,\"ready\":false,\"components\":{\"control-plane\":{\"status\":\"degraded\"},\"response-delivery\":{\"status\":\"degraded\"}}}";
+        using var localFixture = JsonDocument.Parse(localJson);
+        var localHealth = ManagedMcpTunnelHealthService.ParseSnapshot(
+            localFixture.RootElement);
+        if (ControlCenterRepairService.ClassifyFault(localHealth, true, runtime) !=
+                ManagedMcpRecoveryFaultKind.LocalFault ||
+            ControlCenterRepairService.ClassifyFault(health, false, runtime) !=
+                ManagedMcpRecoveryFaultKind.LocalFault ||
+            ControlCenterRepairService.ClassifyFault(
+                health, true, runtime with { ProcessRunning = false }) !=
+                ManagedMcpRecoveryFaultKind.LocalFault)
+        {
+            throw new InvalidOperationException("A local fault was mistaken for an upstream outage.");
+        }
+        var delays = new[] { 1, 2, 5, 10, 10 };
+        for (var index = 0; index < delays.Length; index++)
+        {
+            if (ControlCenterRepairService.GetUpstreamRetryDelay(index + 1) !=
+                TimeSpan.FromMinutes(delays[index]))
+            {
+                throw new InvalidOperationException("Incorrect upstream recovery delay.");
+            }
+        }
+        AssertRecoveryLogContract();
+    }
+
+    private static void AssertRecoveryLogContract()
+    {
+        var root = Path.Combine(Path.GetTempPath(),
+            "Talvora-R4-Log-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var path = Path.Combine(root, "recovery.log");
+        try
+        {
+            TrayLog.PathOverrideForTests = path;
+            for (var attempt = 1; attempt <= 6; attempt++)
+            {
+                try { throw new InvalidOperationException("synthetic upstream outage"); }
+                catch (InvalidOperationException ex)
+                {
+                    TrayLog.Write("R4 attempt " + attempt, ex);
+                }
+            }
+            TrayLog.Write("R4 duplicate probe");
+            TrayLog.Write("R4 duplicate probe");
+            var lines = File.ReadAllLines(path);
+            if (lines.Count(line => line.Contains(" | Stack:", StringComparison.Ordinal)) != 1 ||
+                lines.Count(line => line.Contains("R4 attempt ", StringComparison.Ordinal)) != 6 ||
+                lines.Count(line => line.Contains("R4 duplicate probe", StringComparison.Ordinal)) != 1)
+            {
+                throw new InvalidOperationException("Recovery log incident deduplication failed.");
+            }
+        }
+        finally
+        {
+            TrayLog.PathOverrideForTests = null;
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     private static async Task AssertWorkVisibilityFilteringAsync()
