@@ -121,6 +121,12 @@ if (args.Contains(
     return;
 }
 
+if (args.Contains("--git-argument-classification-only", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunGitArgumentClassificationAsync();
+    Console.WriteLine("TALVORA GIT ARGUMENT CLASSIFICATION GREEN");
+    return;
+}
 if (args.Contains("--directory-guard-contract-only", StringComparer.OrdinalIgnoreCase))
 {
     await SourceEditRegressionRunner.RunDirectoryGuardContractsAsync();

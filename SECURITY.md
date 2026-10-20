@@ -42,7 +42,7 @@ Local secret files, DPAPI blobs, private keys, PFX/P12 bundles, and real environ
 
 Machine-specific evidence in public documentation should use generic placeholders such as `%USERPROFILE%`, `%APPDATA%`, `%LOCALAPPDATA%`, or `<interactive-user>` unless the literal identity is essential to reproduce a bug.
 
-The opt-in work-contract gate validates commits made through `talvora_git_run` only. Commits made through general PowerShell or process tools are not gated by design.
+The Git push delivery gate and working-tree mutation routing are guard rails for structured Talvora tools, not universal restrictions on Git execution. General PowerShell and process tools are not gated by design. The opt-in work-contract gate validates commits made through `talvora_git_run` only.
 
 ## Reporting a security issue
 

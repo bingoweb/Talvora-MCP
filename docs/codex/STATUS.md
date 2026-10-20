@@ -57,7 +57,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] S5 — Do not keep the OpenAI Admin key (code and gate done; U3 real new-tunnel provisioning evidence when prompted)
 - [x] S6 — Knowledge tools: scoped fetch, no cloud hydration
 - [x] S7 — Desktop IPC server verification + real interactive session
-- [ ] S8 — Git push detection parser
+- [x] S8 — Git push detection parser
 - [ ] R1 — Agent job registry, persistence, orphan recovery, limits
 - [ ] R2 — Prompts via stdin
 - [ ] R3 — Safe Reset-And-Install
@@ -109,6 +109,12 @@ P-12 — S3 startup notice route needs a decision (docs/codex/PROPOSALS.md).
 - scripts/Get-CodexContext.ps1:41 — `-Card D2` reports "Card D2 could not be found" although ROADMAP.md:599 contains the D2 heading; outside D2 scope, not changed.
 
 ## Log
+- 2026-10-20 — S8 (executor: ChatGPT via Talvora): GitTools.IsPush and SourceMutationPolicy now share the unchanged A3 GitArgumentParser; removed the duplicate source-mutation token scanner.
+  RED: `-C x push` incorrectly classified as non-push; GREEN seven push/status cases, six working-tree mutations and existing explicitAdmin behavior. Prior work-contract tests unchanged.
+  SECURITY.md records structured-tool guard rails; .context7/verification.json and focused test-runner entry were required supporting changes.
+  Context7 `/git/htmldocs`, official git(1) manual, installed Git for Windows 2.55.0.windows.5 `git -h`; `git help git` timed out without a manual viewer.
+  Fast baseline 13/0; Full gate 52 checks, 0 errors, last line `Hepsi geçti.`.
+  Previously installed a376646; installer deployment and installed smoke follow the S8 commit. Fetch showed no divergence; pull had an SSH key permission warning. Next R1; no Codex used.
 - 2026-10-20 — S7 (executor: ChatGPT via Talvora): desktop IPC client requests Identification-level impersonation and selects the default interactive WTS session via WindowsSessionLauncher (active console first, RDP supported).
   GetNamedPipeServerProcessId verifies the connected server process is Talvora.Tray.exe under Program Files/Talvora in the selected session; mismatches drop the frame at Debug, preserving best-effort delivery and frame protocol.
   RED missing verified-write API; GREEN notification regression: foreign executable receives zero bytes, installed tray pipe accepted. RDP-specific acceptance documented in U9.

@@ -1,7 +1,61 @@
+using Talvora.SourceEditing;
 using Talvora.Tools;
 
 internal static partial class SourceEditRegressionRunner
 {
+    public static async Task RunGitArgumentClassificationAsync()
+    {
+        var cases = new (string Name, string[] Arguments, string Command, bool Push)[]
+        {
+            ("push", ["push"], "push", true),
+            ("change-directory", ["-C", "x", "push"], "push", true),
+            ("config", ["-c", "a=b", "push"], "push", true),
+            ("git-dir-equals", ["--git-dir=x", "push"], "push", true),
+            ("git-dir-separated", ["--git-dir", "x", "push"], "push", true),
+            ("status", ["status"], "status", false),
+            ("super-prefix", ["--super-prefix", "prefix", "push"], "push", true),
+        };
+        var pushMethod = typeof(GitTools).GetMethod(
+            "IsPush",
+            System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Static)
+            ?? throw new InvalidOperationException(
+                "GitTools.IsPush is missing.");
+
+        foreach (var (name, arguments, command, push) in cases)
+        {
+            AssertEqual(command, GitArgumentParser.GetSubcommand(arguments),
+                $"Git parser incorrectly classified {name}.");
+            var detected = (bool)(pushMethod.Invoke(null, [arguments]) ??
+                throw new InvalidOperationException("Git push detection returned null."));
+            Assert(detected == push,
+                $"Git delivery gate incorrectly classified {name}.");
+        }
+
+        await using var fixture = await TestWorkspace.CreateAsync();
+        foreach (var arguments in new string[][]
+        {
+            ["restore", "--", "App.cs"],
+            ["-C", "x", "restore", "--", "App.cs"],
+            ["-c", "a=b", "reset", "--hard"],
+            ["--git-dir=x", "checkout", "--", "App.cs"],
+            ["--git-dir", "x", "pull"],
+            ["--super-prefix", "prefix", "switch", "main"],
+        })
+        {
+            ExpectPolicyViolation(() =>
+                SourceMutationPolicy.EnsureGitWorkingTreeMutationAllowed(
+                    fixture.Root, arguments, "talvora_git_run",
+                    explicitAdmin: false));
+            SourceMutationPolicy.EnsureGitWorkingTreeMutationAllowed(
+                fixture.Root, arguments, "talvora_git_run",
+                explicitAdmin: true);
+        }
+        SourceMutationPolicy.EnsureGitWorkingTreeMutationAllowed(
+            fixture.Root, ["status"], "talvora_git_run",
+            explicitAdmin: false);
+    }
+
     public static async Task RunWorkContractAsync()
     {
         var cases = new (string Name, Func<string, Task> Run)[]

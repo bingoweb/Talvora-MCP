@@ -1,3 +1,5 @@
+using Talvora.Tools;
+
 namespace Talvora.SourceEditing;
 
 internal static class SourceMutationPolicy
@@ -187,7 +189,7 @@ internal static class SourceMutationPolicy
         }
 
         var command =
-            FindGitSubcommand(arguments);
+            GitArgumentParser.GetSubcommand(arguments);
         if (command is null ||
             !GitWorkingTreeMutationCommands.Contains(command))
         {
@@ -209,47 +211,6 @@ internal static class SourceMutationPolicy
             repositoryPath,
             toolName,
             classification);
-    }
-
-    private static string? FindGitSubcommand(
-        IReadOnlyList<string> arguments)
-    {
-        var skipNext = false;
-        for (var index = 0; index < arguments.Count; index++)
-        {
-            var argument =
-                arguments[index];
-            if (skipNext)
-            {
-                skipNext = false;
-                continue;
-            }
-
-            if (string.IsNullOrWhiteSpace(argument))
-            {
-                continue;
-            }
-
-            if (argument is "-C" or "-c" or
-                "--git-dir" or "--work-tree" or
-                "--namespace" or "--config-env" or
-                "--exec-path")
-            {
-                skipNext = true;
-                continue;
-            }
-
-            if (argument.StartsWith(
-                    "-",
-                    StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            return argument;
-        }
-
-        return null;
     }
 
     private static void ThrowPolicyViolation(

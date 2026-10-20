@@ -632,21 +632,10 @@ public static class GitTools
 
     private static bool IsPush(IReadOnlyList<string> arguments)
     {
-        foreach (var argument in arguments)
-        {
-            if (string.IsNullOrWhiteSpace(argument) ||
-                argument.StartsWith("-", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            return string.Equals(
-                argument,
-                "push",
-                StringComparison.OrdinalIgnoreCase);
-        }
-
-        return false;
+        return string.Equals(
+            GitArgumentParser.GetSubcommand(arguments),
+            "push",
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<(
