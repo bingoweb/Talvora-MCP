@@ -752,6 +752,95 @@ Card details (Files / Do / Don't / Acceptance) are in the design spec, section "
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-21 (7) · range `audit/2026-10-21-06 (5048232)..eff0f85` · 4 card commits · executor: ChatGPT via Talvora · result: TWO FIXES (D12, D13) — one caused by Claude
+
+Delivered: D9 (`5899995`), D11 (`a7bf0dd`), D5 (`61da387`), DEP1 (`eff0f85`); A1 ticked with the D9 signed-in gate. Blocked with proposals: P-24 (git pull identity), P-25 (DEP17) — both decided now.
+
+**Fidelity: exact.** D9 and D11 diffs equal the card blocks line for line (D11 also equals Claude's verified scratch diff); `tests/IdentityPortabilityRegression.ps1` and `scripts/Apply-DependabotPr.ps1` equal the references by normalised hash; D5 equals the block (the smoke uses the scenario's existing `context`/`sections` variables, as allowed). GitHub `windows-ci` green for all four commits (39602635240, 39605559155, 39609582483, 39614105176). The agent stopped correctly twice instead of improvising (P-24, P-25) and reverted DEP17 cleanly; PR #17 is still open, `origin/main` = `github/main` = `eff0f85`.
+
+Verified live by Claude on installed `61da387`:
+- D11: `talvora_apply_patch` on a fresh workspace **while that root was this shell's current directory** → `committed`, warnings `[]` (before D11: `DIRECTORY_RENAME_UNPROTECTED`).
+- D5: `talvora_agent_brief {card: "N5"}` → `agentsSections` starts with `## PERMANENT USER-APPROVED AGENT PROMPT`; `ğ`, `—`, `§` intact. (`ç` simply does not occur in the N5 context — the local helper output has none either; the smoke test without a card checks all four. Claude's P-20 wording overstated this; no action.)
+
+| # | Severity | Type | Where | Finding | Fix |
+|---|---|---|---|---|---|
+| 1 | MEDIUM | identity (user-reported) | `src/Talvora/Tools/GitTools.cs:777-799` `ShouldUseInteractiveUserForRemoteGitAsync` | Only `push`/`fetch` are routed to the signed-in user. `git pull --ff-only origin main` (CONTINUE PROTOCOL step 2!) runs as LocalSystem and fails on the user's SSH key (`UNPROTECTED PRIVATE KEY FILE`). The key ACL is correct and must stay. | D12 (P-24 option 1) |
+| 2 | MEDIUM | process (caused by Claude) | `scripts/Apply-DependabotPr.ps1:26-27, 63-69` | The script refused a pre-edited `.context7/verification.json` and never staged it, so its own Full gate always fails `Context7` for a package change; it also committed/pushed with raw `git`, bypassing `talvora_git_run`'s delivery gate. Claude's re-run then hit the next gap: `tests/ThirdPartyNoticesSourceRegression.ps1` requires `THIRD-PARTY-NOTICES.md` to carry the new version (`Microsoft.Extensions.AI.Abstractions 10.11.0`), and nothing updated it. | D13 (P-25 option 2, adjusted) |
+
+Claude verified both before writing them, in a scratch clone of `eff0f85` as `MSI\tayla`:
+- D12: without the change `tests/GitSafeDirectoryRegression.ps1` is RED (`Git SSH fetch/push does not route…`); with it `GIT_CREDENTIAL_CONTEXT_SOURCE_GREEN`; `src/Talvora` Release build 0 errors.
+- D13: revised script + refreshed `.context7/verification.json`, real run `-Pr 17` → Full gate `55 kontrol, 0 hata` / `Hepsi geçti.` and `READY DEP17`; changed files: `Directory.Packages.props`, `THIRD-PARTY-NOTICES.md` (one line, 10.10.1 → 10.11.0), five `packages.lock.json`, `.context7/verification.json`. Nothing committed or pushed by the script; the clone was discarded.
+
+### D12 — `git pull` uses the signed-in user's credentials (decision P-24)
+
+> Audit 2026-10-21 (7), finding 1.
+
+**Files:** `src/Talvora/Tools/GitTools.cs`, `tests/GitSafeDirectoryRegression.ps1`, `AGENTS.md` (Claude already added the invariant — do not edit it).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — `GitTools.cs`, in `ShouldUseInteractiveUserForRemoteGitAsync`, replace
+
+```csharp
+                string.Equals(
+                    arguments[index],
+                    "fetch",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                remoteCommandIndex = index;
+```
+
+with
+
+```csharp
+                string.Equals(
+                    arguments[index],
+                    "fetch",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    arguments[index],
+                    "pull",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                remoteCommandIndex = index;
+```
+
+(`pull` resolves the remote like `fetch`: `remote get-url <remote>`, not `--push`. Nothing else changes.)
+
+Step 2 — `tests/GitSafeDirectoryRegression.ps1`: replace the line
+
+```powershell
+    $text -match '"push"[\s\S]*?"fetch"' -and
+```
+
+with
+
+```powershell
+    $text -match '"push"[\s\S]*?"fetch"[\s\S]*?"pull"' -and
+```
+
+and replace `throw 'Git SSH fetch/push does not route through the logged-on user credential context.'` with `throw 'Git SSH fetch/pull/push does not route through the logged-on user credential context.'`.
+
+**Don't:** touch the SSH key, its ACL, `~/.ssh`, git config, or any other git verb.
+
+**Acceptance:** test-first: the regression is RED before Step 1 and prints `GIT_CREDENTIAL_CONTEXT_SOURCE_GREEN` after; Full gate `Hepsi geçti.` as the signed-in user; deploy; live `talvora_git_run {args: ["pull","--ff-only","origin","main"]}` → exit code 0 (paste its first output line into the Log); GitHub CI green (10b).
+
+### D13 — The Dependabot script prepares and verifies; Talvora tools commit (decision P-25)
+
+> Audit 2026-10-21 (7), finding 2. Replaces DEP1 Step 4 for every future `DEP<n>`.
+
+**Files:** `scripts/Apply-DependabotPr.ps1` (verbatim copy), `docs/MODERNIZATION-POLICY.md` (one paragraph).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — copy `docs/codex/reference/ci/Apply-DependabotPr.ps1` → `scripts/Apply-DependabotPr.ps1` (AGENTS.md rule 5 "Reference copies"; normalised hash `681cd1cd7b08c4096027b67f479f2e3739949325c4c0965b039d2b86c3879d3e`).
+
+Step 2 — `docs/MODERNIZATION-POLICY.md`: in the paragraph that starts with `> **Dependabot PRs.**`, replace the text from `Apply it with` to the end of the paragraph with exactly:
+
+> Apply it as the signed-in user in this order: refresh `.context7/verification.json` (NuGet + the updated package), then `pwsh scripts/Apply-DependabotPr.ps1 -Pr <n>` — it takes only `Directory.Packages.props`/`global.json` from the PR, regenerates every lock file, runs the lockstep test, locked restores and Release build, updates the versions in `THIRD-PARTY-NOTICES.md` (it stops if a new runtime package has no notice line — that needs a license review), runs the Full gate and prints `READY DEP<n>`. It never commits. Then commit once with `talvora_git_run` (`Card: DEP<n>`), push both remotes, close the PR with `talvora_gh_run pr close <n> --comment "Applied on main as <sha>"`, and check CI (10b).
+
+**Acceptance:** normalised hash matches; PowerShell parse 0 errors; Full gate green as the signed-in user; GitHub CI green. Then DEP17 runs as rewritten below.
+
 ### Audit 2026-10-21 (6) · range `audit/2026-10-21-05 (3bb0bd6)..5048232` · 2 card commits · executor: ChatGPT via Talvora · result: ONE FIX (D11) + one Claude-caused block (P-23)
 
 Delivered: D10 (`11dc434`), A1 (`5048232`). Blocked: D9 (P-23, caused by Claude's reference file — decided now), D5 (waits for D9).
@@ -965,12 +1054,24 @@ Step 4 — apply PR #17: first add the queue/Log line for `DEP17` to STATUS (the
 
 **Acceptance:** DEP1 commit (script + policy + STATUS) green on CI; DEP17 commit green on CI; PR #17 closed with the comment the script writes; `origin/main` = `github/main`.
 
-**Standing procedure (also for future PRs):** every new Dependabot NuGet PR becomes one queue item `DEP<n>` (no hyphen; the context helper reads letter+digit ids) handled exactly by Step 4. SDK PRs (`global.json`): run the same script, then `scripts/Update-DotnetPlatformPackages.ps1 -Version <runtime patch of that SDK>` if the lockstep test fails, inside the same card.
+**Standing procedure (also for future PRs):** every new Dependabot NuGet PR becomes one queue item `DEP<n>` (no hyphen; the context helper reads letter+digit ids) handled exactly like the rewritten DEP17 card (P-25; replaces Step 4). SDK PRs (`global.json`): run the same script, then `scripts/Update-DotnetPlatformPackages.ps1 -Version <runtime patch of that SDK>` if the lockstep test fails, inside the same card.
 
 
 ### DEP17 — Apply Dependabot PR #17 (`Microsoft.Extensions.AI.Abstractions` 10.10.1 → 10.11.0)
 
-Follow DEP1 → Step 4 exactly (dry run first, then the real run as the signed-in user). One commit made by the script, trailer `Card: DEP17`. Acceptance as in DEP1.
+> **Rewritten by P-25 (Claude, audit 2026-10-21 (7)).** Runs after D13. Replaces the earlier "script commits" text.
+
+#### Exact implementation — copy this, do not reinterpret
+
+1. `docs/codex/STATUS.md`: write `In progress: DEP17`. Refresh `.context7/verification.json` with `talvora_apply_patch` (scope `DEP17: Microsoft.Extensions.AI.Abstractions 10.10.1 -> 10.11.0`, Context7 `/websites/learn_microsoft_en-us_nuget` for lock-file regeneration and the package's own docs; `verifiedAtUtc` = now).
+2. `talvora_user_run` → `pwsh -NoProfile -File scripts/Apply-DependabotPr.ps1 -Pr 17` (workingDirectory = repo root). It must end with `READY DEP17: …`. Anything else → stop; restore with `talvora_git_run {args:["restore","--staged","--worktree","--",".",":!docs/codex/STATUS.md",":!.context7/verification.json"]}` and report.
+3. STATUS: tick DEP17 and add the Log entry (changed files line from step 2, gate last line).
+4. `talvora_git_run {args:["add","--","Directory.Packages.props","global.json","*packages.lock.json","THIRD-PARTY-NOTICES.md",".context7/verification.json","docs/codex/STATUS.md"]}`, then commit with subject `build(deps): apply Dependabot PR #17`, body `Microsoft.Extensions.AI.Abstractions 10.10.1 -> 10.11.0; all lock files regenerated with --force-evaluate.` and trailer `Card: DEP17`.
+5. `talvora_git_run` push `origin main`, then `github main`.
+6. `talvora_gh_run {args:["pr","close","17","--repo","bingoweb/Talvora-MCP","--comment","Applied on main as <short sha> with all lock files regenerated (scripts/Apply-DependabotPr.ps1)."]}`.
+7. CI check (10b). Deploy is required (runtime dependency): `scripts/Deploy-Windows-Installer.ps1`, `/healthz.sourceCommit` = the DEP17 commit.
+
+**Acceptance:** exactly one DEP17 commit; CI green; PR #17 closed (not merged); `origin/main` = `github/main`; installed commit = DEP17.
 
 ### Audit 2026-10-20 (4) · range `429591f..429591f` (no agent commits) · result: FIX REQUIRED (caused by Claude)
 

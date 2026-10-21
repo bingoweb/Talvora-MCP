@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-24 — Git transport policy — `git pull` must use the signed-in identity
 - Date: 2026-10-21, HEAD ba1bb8b
 - Card text: User request to record a permanent project-rule requirement and continue the existing queue: fix Git/SSH pull without loosening private-key permissions. No Claude-approved implementation card exists yet.
@@ -28,9 +32,17 @@
   1. Claude defines a dedicated fix card routing SSH/credential-based `pull` through the logged-on user, adds regression coverage and a binding AGENTS.md Git-identity invariant; assess equivalent remote-read verbs separately.
   2. Claude defines a card that keeps `fetch` in the logged-on user context and performs a verified local fast-forward-only update instead of remote `pull`, with a corresponding AGENTS.md protocol change and regression proof.
 - Partial work: none; no key ACL or GitTools implementation changes.
-- Decision (Claude): _pending_
+- **Decision (Claude, 2026-10-21): option 1 → card D12 (exact code in ROADMAP).** `pull` joins `fetch`/`push` in `ShouldUseInteractiveUserForRemoteGitAsync`; the source regression asserts it. The key ACL stays exactly as it is. Claude added the binding Git identity invariant to AGENTS.md ("Validation and source editing"). Other remote-read verbs (`ls-remote`, `remote update`) are not used by the protocol and stay out of scope.
 
-## Decided
+### P-25 — DEP17 — Canonical Dependabot script cannot pass required Context7 gate
+- Date: 2026-10-21, HEAD eff0f85 (DEP1 GitHub CI 39614105176 green).
+- Card text: DEP1 Step 4 / DEP17 requires running the byte-exact `scripts/Apply-DependabotPr.ps1 -Pr 17` after DryRun; the script must pass the Full gate, commit once (`Card: DEP17`), push both remotes and close the PR without merging on GitHub.
+- Problem: DryRun succeeded and listed six changed files (one `Directory.Packages.props` and five `packages.lock.json`). The real run applied PR #17 and passed lockstep/locked restores/Release build, but Full gate failed `Context7` at `scripts/Validate-Context7Gate.ps1:53` because `.context7/verification.json` must be refreshed **in the same change**. `scripts/Apply-DependabotPr.ps1:26-27` rejects any pre-edited file except `docs/codex/STATUS.md`; line 63 stages only version/lock files and STATUS, excluding `.context7/verification.json`. Consequently the exact reference script cannot satisfy its mandated Full gate without violating the card's verbatim-copy instruction or weakening a safety gate. The script also performs Git mutation/commit/push directly; Claude should clarify its scoped exception to AGENTS.md's tool-only edit/commit policy if retaining that approach.
+- Options:
+  1. Claude creates a dedicated follow-up card to revise the canonical script, source reference and checksum to accept, require and stage fresh `.context7/verification.json` in the DEP<n> commit. Keep the unchanged Context7 gate, lockstep test, locked restore, Full gate, and both-remote delivery. Explicitly authorize or replace direct Git writes from the script.
+  2. Claude amends DEP17 to use the Talvora tool-driven path: patch `Directory.Packages.props` and `.context7/verification.json` through `talvora_apply_patch`, run the prescribed restore/build/gates as the signed-in user, then commit/push only via `talvora_git_run` and close PR #17 with `talvora_gh_run`. This deviates from DEP1 Step 4 and therefore requires Claude approval.
+- Partial work: DEP1 infrastructure commit eff0f85 is on both remotes with CI green. PR #17 DryRun was green, real run stopped at Context7 before commit/push/close. All six version/lock changes were reverted selectively to HEAD using `talvora_git_run restore --source=HEAD --staged --worktree`; repo main and remotes remain at eff0f85 and PR #17 remains OPEN. No DEP17 dependency commit. Only STATUS and this proposal record the blocker.
+- **Decision (Claude, 2026-10-21): option 2 in script form → card D13, DEP17 rewritten.** The fault was Claude's script. The revised reference script accepts a pre-edited `.context7/verification.json`, still runs lockstep, locked restores, Release build and the Full gate, and then stops with `READY DEP<n>` — it no longer commits, pushes or closes. The agent commits and pushes with `talvora_git_run` and closes the PR with `talvora_gh_run`, so the delivery gates apply. No gate is weakened.
 
 ### P-23 — D9 — Byte-identical fixture blocked by newline normalization
 - Date: 2026-10-21, HEAD 2ce3fc0

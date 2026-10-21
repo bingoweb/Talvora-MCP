@@ -13,7 +13,7 @@
 | Branch | `main` only. Do not create branches. Dependabot PRs: apply with scripts/Apply-DependabotPr.ps1 (DEP1), never merge on GitHub. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-21-06` = `5048232`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-21-07` = `eff0f85`. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -66,8 +66,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D5 — `talvora_agent_brief` UTF-8 + permanent-prompt first (signed-in Full 55/0; deployment and exact-commit CI follow)
 - [x] Q6 — Schema validation of tool arguments before invocation (GitHub CI 39545892517 green; installed 3bb0bd6 and live invalid-arguments test verified)
 - [-] Q6c — Translate tool exceptions (deferred by P-22 until the MCP SDK exposes a public invocation hook)
-- [x] DEP1 — Dependabot PR procedure installed on main (reference/policy gate 55/0; exact-commit CI and DEP17 acceptance follow)
-- [ ] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the DEP1 procedure
+- [x] DEP1 — Dependabot PR procedure installed on main (signed-in Full gate 55/0; GitHub CI 39614105176 green)
+- [ ] D12 — `git pull` uses the signed-in user's credentials (P-24 decided)
+- [ ] D13 — Dependabot script prepares and verifies; Talvora tools commit (P-25 decided)
+- [ ] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the rewritten DEP17 steps (after D13)
 - [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
 - [ ] N3 — Worklog: real facts from results (P-11 decided)
@@ -121,6 +123,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — Claude audit 7 of `5048232..eff0f85` (D9, D11, D5, DEP1): exact fidelity, CI green for all four; D11 and D5 verified live on installed 61da387. P-24 → D12 (`pull` as signed-in user; AGENTS Git identity invariant). P-25 (Claude's script) → D13 + DEP17 rewritten (script stops at `READY DEP<n>`, commit/push/close via Talvora tools). Both verified in a scratch clone. Queue: D12 → D13 → DEP17 → N1. Tag `audit/2026-10-21-07` = `eff0f85`.
+- 2026-10-21 — DEP17 blocked (executor: ChatGPT via Talvora): real `Apply-DependabotPr.ps1 -Pr 17` passed PR patch, lockstep, locked restores and Release build, but Full gate failed `Context7` at `scripts/Validate-Context7Gate.ps1:53` (requires same-change `.context7/verification.json`).
+  The exact script rejects pre-edited Context7 evidence at lines 26-27 and omits it from staged files at line 63; no gate bypass or out-of-card script change attempted. Proposal P-25 awaits Claude.
+  Selectively reverted all six package/version files to HEAD; no DEP17 commit or push, PR #17 remains OPEN, origin/github/main remain eff0f85. DEP1 infrastructure CI 39614105176 GREEN.
+- 2026-10-21 — DEP17 (executor: ChatGPT via Talvora): `-DryRun` Changed files: Directory.Packages.props, src/Talvora.Tray/packages.lock.json, src/Talvora/packages.lock.json, tests/Talvora.Notification.Regression/packages.lock.json, tests/Talvora.Smoke/packages.lock.json, tests/Talvora.SourceEdit.Regression/packages.lock.json.
+  DryRun: `PLATFORM_PACKAGE_LOCKSTEP_GREEN 10.0.13 (17 packages)`; force-evaluate/locked restores and Release build passed; reverted with no commit or push, clean tree verified. Canonical DEP1 script will apply PR #17 and commit/push/close; GitHub exact-commit CI to be checked.
+- 2026-10-21 — DEP1 completion: `eff0f85840219c35b053751091bb9eb90001a96a`, GitHub windows-ci 39614105176 GREEN; deployed runtime unchanged (script/policy only).
 - 2026-10-21 — DEP1 (executor: ChatGPT via Talvora): copied canonical `scripts/Apply-DependabotPr.ps1` byte-for-byte except newlines, normalized SHA-256 `1c37620e0cce915a6af3ec5a906b2ff1ea2747c9e799467325e82eb1c8b9a4b2`; parser 0 errors; appended the exact Dependabot policy and updated the Branch fixed fact.
   Test-first RED: script absent before patch; checksum/PowerShell parse GREEN after. Context7 `/websites/learn_microsoft_en-us_nuget` and `/websites/cli_github_manual` verified lock regeneration and PR close without merge.
   Signed-in-user Full gate: 55 checks, 0 errors, `Hepsi geçti.`. DEP17 DryRun and exact Changed files evidence follow DEP1 commit; DEP17 application, PR closure and both exact-commit CIs are required for final acceptance.

@@ -164,5 +164,6 @@ When the user says "Talvora'ya devam et", "Talvora devam", "sıradaki adım" or 
 ## Validation and source editing
 
 - Use `talvora_apply_patch` as the primary source/config/document editor and read existing files before mutation.
+- **Git identity invariant (P-24, 2026-10-21):** remote Git verbs that use the user's credentials (`fetch`, `pull`, `push`) run as the signed-in user, never as LocalSystem. Never loosen SSH key ACLs, copy keys, or change git config to make a LocalSystem git call work; a credential failure as LocalSystem is a routing bug → Findings for Claude.
 - Keep targeted validation fast during implementation; run the canonical installer/exact-installed smoke when runtime, packaging, shared infrastructure, dependency graph, or release behavior changes.
 - Gitea is the primary modernization tracker. Keep the active phase issue updated with findings, validation evidence, commit SHA, and closeout state.

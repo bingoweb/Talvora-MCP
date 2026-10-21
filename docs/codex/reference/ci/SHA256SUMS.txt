@@ -1,5 +1,5 @@
 # SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
-1c37620e0cce915a6af3ec5a906b2ff1ea2747c9e799467325e82eb1c8b9a4b2  Apply-DependabotPr.ps1
+681cd1cd7b08c4096027b67f479f2e3739949325c4c0965b039d2b86c3879d3e  Apply-DependabotPr.ps1
 37816917c9ebb363ed62ba45435d432e3b2734512db2e8e3f99dc83e5ca3e221  Get-CiStatus.ps1
 1665f15d938a860ef8d0b55f6ecb7fbb7d011d9ce65ec337b48aaca7ce3e80d3  IdentityPortabilityRegression.ps1
 801758f324da5e7f90a674ef8aa224d0196bfedc7741bccc9316cc1d52b0e352  PlatformPackageLockstepRegression.ps1
