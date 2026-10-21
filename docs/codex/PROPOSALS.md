@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-24 — Git transport policy — `git pull` must use the signed-in identity
+- Date: 2026-10-21, HEAD ba1bb8b
+- Card text: User request to record a permanent project-rule requirement and continue the existing queue: fix Git/SSH pull without loosening private-key permissions. No Claude-approved implementation card exists yet.
+- Problem: `src/Talvora/Tools/GitTools.cs:787-803` selects the interactive user's credentials only for remote `fetch`/`push`; `git pull --ff-only origin main` instead ran as LocalSystem and failed with `UNPROTECTED PRIVATE KEY FILE`/`bad permissions` for the private SSH key owned solely by the signed-in Windows user. The file has inheritance disabled and only the owner has FullControl; `fetch origin` succeeds. This is a process-identity mismatch, not a reason to weaken SSH ACLs.
+- Options:
+  1. Claude defines a dedicated fix card routing SSH/credential-based `pull` through the logged-on user, adds regression coverage and a binding AGENTS.md Git-identity invariant; assess equivalent remote-read verbs separately.
+  2. Claude defines a card that keeps `fetch` in the logged-on user context and performs a verified local fast-forward-only update instead of remote `pull`, with a corresponding AGENTS.md protocol change and regression proof.
+- Partial work: none; no key ACL or GitTools implementation changes.
+- Decision (Claude): _pending_
 
 ## Decided
 

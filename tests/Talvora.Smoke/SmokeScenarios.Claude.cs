@@ -59,6 +59,14 @@ internal static partial class SmokeScenarios
                 throw new InvalidOperationException("Structured failure/redaction contract failed.");
             }
 
+            using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+            if (identity.User?.IsWellKnown(System.Security.Principal.WellKnownSidType.LocalSystemSid) != true)
+            {
+                // WTSQueryUserToken needs LocalSystem; CI and the signed-in user skip this live part.
+                Console.WriteLine("SKIP Claude user-session runner: requires LocalSystem.");
+            }
+            else
+            {
             // Exercise the actual user-session launcher, PowerShell helper and six-argument pump binding.
             var user = WindowsSessionLauncher.GetActiveInteractiveUser();
             var pwsh = CommandResolver.Resolve(["pwsh.exe"], [@"C:\Program Files\PowerShell\7\pwsh.exe"])
@@ -83,6 +91,7 @@ internal static partial class SmokeScenarios
                 throw new InvalidOperationException("Cancellation did not stop the user process.");
             }
             catch (OperationCanceledException) when (cancel.IsCancellationRequested) { }
+            }
         }
         finally { Directory.Delete(root, recursive: true); }
         if (!TalvoraMcpToolSurfacePolicy.IsFocusedSurfaceReviewComplete())

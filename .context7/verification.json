@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-21T08:20:29Z",
-  "scope": "A1 exact ROADMAP/P-7/P-21 implementation: talvora_user_run delegates to InteractiveUserProcessRunner with the active interactive Windows user and bounded, redacted output, available on Dev and Full (not Admin). FileOwnership restores original owners after file replacement, assigns workspace-root owner to added files/directories, and scopes SeRestorePrivilege via a checked 16-byte TOKEN_PRIVILEGES layout. Owner errors surface as OWNER_NOT_PRESERVED warnings on first-run committed results while replay uses stored receipts. Test-first ownership regression RED (missing FileOwnership) then GREEN including a SYSTEM-created Administrators-owned fixture; source release build and surface/metadata fixtures green. D10 fixed pre-deploy native-installed-tool-count comparison. Context7 /dotnet/docs confirms the Windows FileSystemAclExtensions and FileSecurity SetOwner API.",
+  "verifiedAtUtc": "2026-10-21T12:40:50Z",
+  "scope": "D9 exact ROADMAP/P-23 identity-portability regression fixes: Notification tray-pipe test selects the current process session under non-LocalSystem Windows identities and the interactive session under LocalSystem. Smoke Claude integration policy skips the WTSQueryUserToken-dependent live runner outside LocalSystem. The IdentityPortabilityRegression.ps1 reference was copied verbatim with the required normalized SHA-256 and returns IDENTITY_PORTABILITY_GREEN. Signed-in-user baseline Fast gate was RED (WTSQueryUserToken 1314); after D9, targeted Notification DESKTOP_PROGRESS_BEHAVIOR_GREEN and integration-policy test GREEN. Context7 /dotnet/docs confirms WindowsIdentity.GetCurrent and .User SID inspection; prescribed Process.SessionId and SID check compiled without errors.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-21 D9: Current official .NET security documentation confirms WindowsIdentity.GetCurrent() and WindowsIdentity.User for inspecting the executing Windows security identity/SID. Exact card-prescribed IsRunningAsLocalSystem() and Process.GetCurrentProcess().SessionId compiled under .NET 10; signed-in-user Notification and Smoke integration-policy regressions passed after the initial WTSQueryUserToken 1314 failure."
+    },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-21 A1: Official Windows .NET FileSystemAclExtensions docs confirm FileInfo/DirectoryInfo.GetAccessControl and SetAccessControl for SecurityIdentifier owner restoration; exact A1 helper preserves file owners and limits SeRestorePrivilege adjustment to scope. SourceEdit regression RED before helper and GREEN after."

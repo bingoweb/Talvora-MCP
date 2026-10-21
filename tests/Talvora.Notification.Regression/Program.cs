@@ -823,8 +823,10 @@ internal static class Program
                 return;
             }
 
-            var sessionId = WindowsSessionLauncher
-                .GetDefaultInteractiveUser().SessionId;
+            // LocalSystem resolves the interactive session; any other identity already runs in it.
+            var sessionId = IsRunningAsLocalSystem()
+                ? WindowsSessionLauncher.GetDefaultInteractiveUser().SessionId
+                : Process.GetCurrentProcess().SessionId;
             if (!trayProcesses.Any(process =>
                     process.SessionId == sessionId))
             {
@@ -855,6 +857,12 @@ internal static class Program
                 process.Dispose();
             }
         }
+    }
+
+    private static bool IsRunningAsLocalSystem()
+    {
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        return identity.User?.IsWellKnown(System.Security.Principal.WellKnownSidType.LocalSystemSid) == true;
     }
 
     private static async Task AssertPipeReadTimeoutRecoveryAsync()

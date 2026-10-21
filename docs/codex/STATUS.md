@@ -59,10 +59,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D6 — Context helper finds `##` and `###` card headings (GitHub windows-ci 39497367643 green)
 - [x] D1 — Make the rename-protection fallback visible (GitHub CI 39501010691 green; installed f060eba verified)
 - [x] D3 — Keep the text of structured failures (GitHub CI 39503786490 green; installed ee38286 and live failure text verified)
-- [ ] D9 — Identity-portable tests + guard (P-23 decided: reference files are LF, verify normalised hash per AGENTS.md rule 5 "Reference copies")
+- [x] D9 — Identity-portable tests + guard (signed-in Full gate 55/0; exact-commit GitHub CI to be checked after push)
 - [ ] D11 — Do not rename-lock the workspace root (audit 2026-10-21 (6))
 - [x] D10 — Installed-runtime test compares installed with installed (P-21 decided; Full gate 54/0 as LocalSystem)
-- [~] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (Full 54/0 as LocalSystem; CI green; Claude verified installed 5048232: user_run = MSI	ayla, repo owners already MSI	ayla, patch keeps owner — only the signed-in Full gate is open: tick `[x]` with the D9 gate run, no other work)
+- [x] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (Claude verified installed 5048232; D9 signed-in Full gate 55/0 green; remaining acceptance satisfied)
 - [?] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (runs after D9 and D11; set back to `[ ]` when D9 is `[x]`)
 - [x] Q6 — Schema validation of tool arguments before invocation (GitHub CI 39545892517 green; installed 3bb0bd6 and live invalid-arguments test verified)
 - [-] Q6c — Translate tool exceptions (deferred by P-22 until the MCP SDK exposes a public invocation hook)
@@ -117,9 +117,14 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
+- src/Talvora/Tools/GitTools.cs:787 - User requests a permanent Git/SSH project-rule fix: remote `fetch`/`push` use the signed-in identity but `pull` does not, so `git pull --ff-only origin main` runs as LocalSystem and cannot open the correctly ACL-protected user SSH key; see P-24. Preserve the key ACL.
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — D9 (executor: ChatGPT via Talvora): exact identity guards in Notification and Smoke, identity portability regression fixture copied with normalised SHA-256 `1665f15d938a860ef8d0b55f6ecb7fbb7d011d9ce65ec337b48aaca7ce3e80d3`; added required Context7 evidence.
+  Test-first RED: signed-in Fast gate 8 checks/1 error (WTSQueryUserToken 1314); after D9, IDENTITY_PORTABILITY_GREEN, DESKTOP_PROGRESS_BEHAVIOR_GREEN, integration-policy regression GREEN.
+  Signed-in Full gate: 55 checks, 0 errors, `Hepsi geçti.`; Context7 `/dotnet/docs` verified; A1 signed-in Full acceptance satisfied. Test-only card, no deployment.
+  User-requested persistent Git/SSH project-rule proposal P-24 and finding recorded (no GitTools/key-permission edits). Exact-commit GitHub CI check follows push; next D11.
 - 2026-10-21 — Claude audit 6 of `3bb0bd6..5048232` (D10, A1): exact fidelity, CI green; A1 verified live on installed 5048232. P-23 decided (Claude's reference files had mixed newlines → now LF, normalised-hash rule in AGENTS.md rule 5). New card D11 (workspace-root rename warning), verified in a scratch clone (SourceEdit regression GREEN). Queue: D9 → D11 → A1 tick → D5 → DEP1 → DEP17. Tag `audit/2026-10-21-06` = `5048232`.
 - 2026-10-21 — D5 deferred (executor: ChatGPT via Talvora): clean HEAD 5048232, origin fetch/pull as MSI\tayla succeeded; its exact-commit GitHub CI 39569282996 succeeded. P-20 decision and D5 exact implementation inspected, no production edits attempted.
   Required signed-in-user baseline Fast gate ran as MSI\tayla and failed 8 checks / 1 error in pre-existing Notification regression: WTSQueryUserToken(session 1) Win32Error=1314 from WindowsSessionLauncher.Sessions.cs:54, called by Talvora.Notification.Regression/Program.cs:826. D5 cannot correct this without editing another card's files, forbidden by AGENTS.md. D9 still waits on Claude P-23. No commit, deployment, or reset performed.
