@@ -3,8 +3,18 @@ param()
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$toolManifest = [IO.File]::ReadAllText((Join-Path $repoRoot 'src\Talvora.Shared\TalvoraToolManifest.cs'))
-$expectedToolCount = ([regex]::Matches($toolManifest, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count
+# Installed state must match the INSTALLED runtime. The working-tree manifest may already be
+# newer (a card adding a tool runs this gate before its own deployment); source-side counts are
+# covered by the surface smoke tests.
+$listResponse = Invoke-WebRequest 'http://127.0.0.1:7676/mcp' -Method Post -UseBasicParsing -TimeoutSec 15 `
+    -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } `
+    -Body '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+$listText = $listResponse.Content
+if ($listText -match '^event:') {
+    $listText = (($listText -split "`n") | Where-Object { $_ -like 'data:*' } | ForEach-Object { $_.Substring(5) }) -join ''
+}
+$expectedToolCount = @(($listText | ConvertFrom-Json).result.tools).Count
+if ($expectedToolCount -lt 1) { throw 'The installed Talvora runtime returned no tools.' }
 
 $service = Get-CimInstance Win32_Service -Filter "Name='Talvora'"
 if ($null -eq $service) { throw 'Talvora service is missing.' }

@@ -59,8 +59,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D6 — Context helper finds `##` and `###` card headings (GitHub windows-ci 39497367643 green)
 - [x] D1 — Make the rename-protection fallback visible (GitHub CI 39501010691 green; installed f060eba verified)
 - [x] D3 — Keep the text of structured failures (GitHub CI 39503786490 green; installed ee38286 and live failure text verified)
-- [ ] D9 — Identity-portable tests + IdentityPortabilityRegression guard (audit 2026-10-21 (5), HIGH)
-- [ ] D10 — Installed-runtime test compares installed with installed (P-21 decided)
+- [?] D9 — waiting for Claude: P-23 (verbatim fixture byte copy vs patch newline normalization)
+- [x] D10 — Installed-runtime test compares installed with installed (P-21 decided; Full gate 54/0 as LocalSystem)
 - [ ] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (P-7, P-21 decided; after D10)
 - [ ] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (P-20 decided: amended acceptance)
 - [x] Q6 — Schema validation of tool arguments before invocation (GitHub CI 39545892517 green; installed 3bb0bd6 and live invalid-arguments test verified)
@@ -119,6 +119,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — D10 (executor: ChatGPT via Talvora): exact P-21 implementation in `tests/NativeInstallerRuntimeRegression.ps1` compares installed `current.json` ToolCount to installed MCP `tools/list`; source-manifest coupling removed.
+  Test-first D10 invariant RED; targeted `NATIVE_INSTALLER_RUNTIME_GREEN`, 250 installed tools. Baseline Fast 13/0; final Full 54 checks, 0 failures, `Hepsi geçti.` (executor: LocalSystem; signed-in-user gate deferred until A1).
+  Context7 `/microsoftdocs/powershell-docs` and official Invoke-WebRequest/ConvertFrom-Json docs verified in `.context7/verification.json`; no deployment for this test-only card.
+  D9 is blocked pending Claude P-23 because canonical patches normalize the mixed-newline reference fixture and fail its byte-identical checksum; all partial D9 code/test work reverted. D9 proposal and queue state recorded in this D10 commit.
+  GitHub CI will be checked on the exact pushed D10 commit (CONTINUE PROTOCOL 10b).
 - 2026-10-21 — Claude audit (5) of `36fe923..3bb0bd6` (9 card commits, executor ChatGPT via Talvora): exact-implementation fidelity verified byte-for-byte; CI green on all 9; Q6/D3 verified live. Full gate as `MSI\tayla` RED in Notification (S7 test calls a LocalSystem-only API when a tray runs; CI has no tray, ChatGPT gate is LocalSystem) → D9 + IdentityPortabilityRegression guard. Dependabot PR #17 fails NU1004 (test-project locks not regenerated) → DEP1 + DEP-17. P-20 amended D5 acceptance; P-21 → D10; P-22 defers Q6c. Agent's uncommitted Q6/Q6c records are included in this commit. Next audit baseline `audit/2026-10-21-05` = `3bb0bd6`.
 - 2026-10-21 — Q6c blocked (executor: ChatGPT via Talvora): P-22 records the missing public SDK accessor for the original attributed AIFunction and two possible implementation routes. Baseline captured full/dev/admin 250/213/88; exact byte equality was verified on all 9 surface/protocol combinations before changes.
   Test-first RED: missing ToolErrorTranslator; then isolated categories, masking, successful wrapper and client cancellation GREEN. Installed SDK 2.2.0 reflection shows AIFunctionMcpServerTool.AIFunction getter is non-public, so the card cannot choose a metadata-preserving registration strategy without an architecture decision.

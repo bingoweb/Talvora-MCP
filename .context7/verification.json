@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-21T04:41:29Z",
-  "scope": "Q6 exact implementation (decisions P-3/P-8): new ToolArgumentValidator validates required, unknown and mismatched JSON properties against MCP tool schemas before the desktop progress notifier; unknown tools retain SDK handling, successful calls stay unchanged, and tool exception translation remains Q6c. Test-first targeted smoke failed with missing validator; then Release build and exact schema unit fixtures GREEN. Current MCP C# SDK Context7 reference confirms AddCallToolFilter returning CallToolResult with IsError=true and TextContentBlock before next(). The user explicitly authorized including existing P-21 A1 proposal and STATUS changes in the Q6 one-card commit.",
+  "verifiedAtUtc": "2026-10-21T05:48:52Z",
+  "scope": "D10 exact implementation (P-21 decided): tests/NativeInstallerRuntimeRegression.ps1 compares installed current.json ToolCount against installed MCP tools/list, not the working-tree tool manifest. Test-first D10 invariant RED; installed-runtime test GREEN with 250 tools. Context7 PowerShell documentation verified Invoke-WebRequest .Content and ConvertFrom-Json; the mandated code was copied without changes. D9 is blocked by P-23 pending Claude's decision on exact mixed-newline reference fixture copying.",
   "libraries": [
+    {
+      "libraryId": "/microsoftdocs/powershell-docs",
+      "verified": "2026-10-21 D10: Official PowerShell ConvertFrom-Json documentation confirms JSON becomes a PowerShell object, and Invoke-WebRequest exposes response .Content. Verified card's exact installed MCP tools/list POST, optional event-stream data extraction and count comparison; targeted NATIVE_INSTALLER_RUNTIME_GREEN (250 installed tools)."
+    },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
       "verified": "2026-10-21 Q6: current official SDK request-filter examples show AddCallToolFilter returning CallToolResult with IsError=true and TextContentBlock before next; SDK tool collection/schema APIs match the prescribed ModelContextProtocol 2.2.0 exact code, which compiles with no warnings."
@@ -161,6 +165,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-21 D10: Official Microsoft PowerShell ConvertFrom-Json https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Utility/ConvertFrom-Json.md and Invoke-WebRequest https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Utility/Invoke-WebRequest.md; Context7 /microsoftdocs/powershell-docs. D10 exact ROADMAP snippet requests installed MCP tools/list; source manifest count is intentionally no longer used. Targeted native installer runtime GREEN (250).",
     "2026-10-21 Q6: official MCP C# SDK filters documentation https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/filters.md and CallToolResult https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Protocol/CallToolResult.cs ; Context7 /modelcontextprotocol/csharp-sdk. Targeted wrong-arguments unit regression RED before implementation and GREEN after; installed live probe and Full gate pending.",
     "2026-10-20 D3: Microsoft System.Text.Json DOM guide https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/use-dom and casing documentation https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/character-casing ; Context7 /dotnet/docs. Targeted text preservation regression RED then GREEN; notification regression DESKTOP_PROGRESS_BEHAVIOR_GREEN.",
     "2026-10-20 D1: Microsoft Windows CreateFileW https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew (FILE_SHARE_DELETE and sharing violation semantics) and .NET FileShare https://learn.microsoft.com/en-us/dotnet/api/system.io.fileshare?view=net-10.0 ; Context7 /dotnet/docs. D1 source result warnings tested RED to GREEN with unchanged directory fallback and rename guard contracts.",

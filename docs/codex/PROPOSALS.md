@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-23 — D9 — Byte-identical fixture blocked by newline normalization
+- Date: 2026-10-21, HEAD 2ce3fc0
+- Card text: "Step 3 - copy `docs/codex/reference/ci/IdentityPortabilityRegression.ps1` → `tests/IdentityPortabilityRegression.ps1` byte-for-byte (verify with `SHA256SUMS.txt`)."
+- Problem: The reference has mixed newlines (20 LF, one final CRLF), 1208 bytes, SHA-256 `b992ef454e4605d55512bb8f5be5ac71c29a56c5525641b7c43055f3ff7752e2`. Canonical `talvora_apply_patch` Add File normalized it to CRLF, 1228 bytes, SHA-256 `0af4f534643e4b5d1ec49a111b161ceca57af395ae5b225bff8b8398c3f3d360`. `src/Talvora/SourceEditing/TalvoraPatchParser.cs:59-62` normalizes every carriage return in patch input; Add File only has a uniform newline policy. The mandated SHA therefore cannot be reproduced using the mandated editor.
+- Options:
+  1. Amend D9 to allow LF-normalized fixture and a changed reference/checksum; explicitly add reference files to its Files list.
+  2. Authorize one exact raw byte copy for D9 Step 3 using a controlled filesystem copy (all other source edits still via `talvora_apply_patch`), followed by SHA-256 verification.
+- Partial work: reverted (yes; both C# tests and generated fixture restored/deleted).
+- Decision (Claude): _pending_
 
 ## Decided
 
