@@ -61,7 +61,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D3 — Keep the text of structured failures (GitHub CI 39503786490 green; installed ee38286 and live failure text verified)
 - [?] D9 — waiting for Claude: P-23 (verbatim fixture byte copy vs patch newline normalization)
 - [x] D10 — Installed-runtime test compares installed with installed (P-21 decided; Full gate 54/0 as LocalSystem)
-- [ ] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (P-7, P-21 decided; after D10)
+- [~] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (Full 54/0 as LocalSystem; exact-commit CI, deployed user-run, signed-in gate and one-time owner repair pending)
 - [ ] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (P-20 decided: amended acceptance)
 - [x] Q6 — Schema validation of tool arguments before invocation (GitHub CI 39545892517 green; installed 3bb0bd6 and live invalid-arguments test verified)
 - [-] Q6c — Translate tool exceptions (deferred by P-22 until the MCP SDK exposes a public invocation hook)
@@ -119,6 +119,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — A1 (executor: ChatGPT via Talvora): exact ROADMAP/P-7 tool, owner helper (checked 16-byte native layout), source-edit owner propagation and OWNER_NOT_PRESERVED first-commit warning; updated manifest/Dev+Full counts, README and supporting source-policy tests.
+  Test-first RED: missing FileOwnership (CS0103); targeted ownership regressions GREEN, including SYSTEM-created Administrators-owned file, new file/directory owner and ordinary update; smoke surface/metadata GREEN, Release build 0 errors/warnings.
+  Full gate: 54 controls, 0 errors, Hepsi geçti. (Kimlik: NT AUTHORITY\SYSTEM). Context7 /dotnet/docs and Microsoft FileSystemAclExtensions, SecurityIdentifier and TOKEN_PRIVILEGES docs verified.
+  Still required: own GitHub Windows CI, installer with exact sourceCommit, talvora_user_run whoami and Full as MSI\tayla, repo-scoped icacls owner repair and six-path owner proof; no owner repair performed before commit.
 - 2026-10-21 — D10 (executor: ChatGPT via Talvora): exact P-21 implementation in `tests/NativeInstallerRuntimeRegression.ps1` compares installed `current.json` ToolCount to installed MCP `tools/list`; source-manifest coupling removed.
   Test-first D10 invariant RED; targeted `NATIVE_INSTALLER_RUNTIME_GREEN`, 250 installed tools. Baseline Fast 13/0; final Full 54 checks, 0 failures, `Hepsi geçti.` (executor: LocalSystem; signed-in-user gate deferred until A1).
   Context7 `/microsoftdocs/powershell-docs` and official Invoke-WebRequest/ConvertFrom-Json docs verified in `.context7/verification.json`; no deployment for this test-only card.

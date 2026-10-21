@@ -29,6 +29,7 @@ public static class TalvoraToolManifest
         "talvora_eventlog_query",
         "talvora_run_process",
         "talvora_run_powershell",
+        "talvora_user_run",
         "talvora_process_list",
         "talvora_process_get",
         "talvora_process_kill",

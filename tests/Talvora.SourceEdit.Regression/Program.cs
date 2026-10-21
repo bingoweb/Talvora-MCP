@@ -139,5 +139,11 @@ if (args.Contains("--directory-identity-sharing-only", StringComparer.OrdinalIgn
     Console.WriteLine("TALVORA DIRECTORY IDENTITY SHARING REGRESSION GREEN");
     return;
 }
+if (args.Contains("--ownership-only", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunOwnershipContractsAsync();
+    Console.WriteLine("TALVORA FILE OWNERSHIP REGRESSION GREEN");
+    return;
+}
 await SourceEditRegressionRunner.RunAllAsync();
 Console.WriteLine("TALVORA SOURCE EDIT REGRESSION GREEN");

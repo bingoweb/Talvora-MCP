@@ -726,6 +726,21 @@ internal sealed class SourceEditEngine
                     ],
                 };
             }
+            if (pathGuard.OwnerNotPreserved.Count > 0)
+            {
+                committed = committed with
+                {
+                    Warnings =
+                    [
+                        .. committed.Warnings,
+                        .. pathGuard.OwnerNotPreserved.Select(path =>
+                            new SourceEditWarning(
+                                "OWNER_NOT_PRESERVED",
+                                $"The file owner of '{Path.GetRelativePath(plan.WorkspaceRoot, path)}' could not be preserved.",
+                                path)),
+                    ],
+                };
+            }
 
             await store.AppendEventAsync(
                 plan,

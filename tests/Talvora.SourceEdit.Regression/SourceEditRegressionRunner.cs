@@ -8,6 +8,7 @@ internal static partial class SourceEditRegressionRunner
         var tests = new (string Name, Func<Task> Run)[]
         {
             ("exact-patch-success", ExactPatchSuccessAsync),
+            ("ownership-preservation", RunOwnershipContractsAsync),
             ("git-work-contract", RunWorkContractAsync),
             ("git-argument-classification", RunGitArgumentClassificationAsync),
             ("ast-grep-pinned-cache-tamper", RunPinnedAstGrepCacheAsync),

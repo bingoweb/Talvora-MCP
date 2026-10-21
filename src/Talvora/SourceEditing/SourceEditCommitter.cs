@@ -494,6 +494,7 @@ internal sealed class SourceEditCommitter
             change.Before?.Revision ??
             throw new InvalidOperationException(
                 "Update before revision is missing.");
+        var originalOwner = FileOwnership.TryGetOwner(change.FullPath);
 
         await VerifyStillExpectedAsync(
             change.FullPath,
@@ -545,6 +546,11 @@ internal sealed class SourceEditCommitter
             prepared.AfterRevision,
             cancellationToken);
         FlushPathToDisk(change.FullPath);
+        if (originalOwner is not null &&
+            !FileOwnership.TrySetOwner(change.FullPath, originalOwner))
+        {
+            pathGuard.RecordOwnerNotPreserved(change.FullPath);
+        }
     }
 
     private static async Task CommitAddAsync(
@@ -573,6 +579,11 @@ internal sealed class SourceEditCommitter
             prepared.AfterRevision,
             cancellationToken);
         FlushPathToDisk(target);
+        if (pathGuard.WorkspaceRootOwner is { } rootOwner &&
+            !FileOwnership.TrySetOwner(target, rootOwner))
+        {
+            pathGuard.RecordOwnerNotPreserved(target);
+        }
     }
 
     private static async Task CommitDeleteAsync(
@@ -633,6 +644,9 @@ internal sealed class SourceEditCommitter
             change.Before?.Revision ??
             throw new InvalidOperationException(
                 "Move before revision is missing.");
+        var originalOwner = prepared.StagePath is not null
+            ? FileOwnership.TryGetOwner(source)
+            : null;
 
         if (File.Exists(destination) ||
             Directory.Exists(destination))
@@ -731,6 +745,12 @@ internal sealed class SourceEditCommitter
             prepared.AfterRevision,
             cancellationToken);
         FlushPathToDisk(destination);
+        if (prepared.StagePath is not null &&
+            originalOwner is not null &&
+            !FileOwnership.TrySetOwner(destination, originalOwner))
+        {
+            pathGuard.RecordOwnerNotPreserved(destination);
+        }
     }
 
     private static async Task RollbackUpdateAsync(

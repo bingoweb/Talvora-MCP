@@ -26,6 +26,15 @@ if (args.Length >= 1 && args[0] == "--lean-defaults-live")
     return;
 }
 
+if (args.Length >= 1 && args[0] == "--user-run-live")
+{
+    await SmokeScenarios.RunUserRunLiveAsync(
+        args.Length > 1 ? args[1] : "http://127.0.0.1:7676",
+        args.Length > 2 ? args[2] : Directory.GetCurrentDirectory());
+    Console.WriteLine("TALVORA USER RUN LIVE GREEN");
+    return;
+}
+
 if (args.Length >= 1 &&
     string.Equals(args[0], "--agent-brief-live",
         StringComparison.Ordinal))

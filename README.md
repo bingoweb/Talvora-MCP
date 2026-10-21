@@ -17,7 +17,7 @@
   <a href="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml"><img alt="Windows CI" src="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml/badge.svg?branch=main"></a>
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0B65C2?logo=windows11&logoColor=white">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white">
-  <img alt="MCP 236 tools" src="https://img.shields.io/badge/MCP-236%20tools-198754">
+  <img alt="MCP 251 tools" src="https://img.shields.io/badge/MCP-251%20tools-198754">
   <img alt="Active development" src="https://img.shields.io/badge/status-active%20development-6C757D">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2EA44F"></a>
 </p>
@@ -53,7 +53,8 @@
 - **Rebuilt desktop experience:** a Stitch-inspired, native WPF Control Center with clear sidebar navigation, live status cards, full-width MCP service rows and a collapsible setup panel.
 - **Honest service health:** intentionally stopped or on-demand MCPs are neutral, not red errors. Genuine outages and warnings remain visible.
 - **User-controlled notifications:** code output may expand the notification vertically without changing its user-set width; non-code updates return to a compact layout.
-- **Lean MCP surface:** **236 total**, **199 Dev**, **88 Admin**, with **51 explicitly shared** tools. The former automatic memory and embedding subsystem has been removed.
+- **Lean MCP surface:** **251 total**, **214 Dev**, **88 Admin**, with **51 explicitly shared** tools. The former automatic memory and embedding subsystem has been removed.
+- **Signed-in user execution:** `talvora_user_run` runs an executable as the signed-in Windows user (not LocalSystem) and returns an exit code and bounded output.
 - **Codex desktop bridge:** detect the already-installed Windows Codex CLI and use the interactive user's existing ChatGPT session with GPT-6.1 Sol / Medium, bounded workspace sandboxing and no duplicate installation.
 - **Separate MCP clients:** the installer limits only Codex CLI's registration to eight Talvora Dev tools; ChatGPT's Dev/Admin connectors retain their full tool surfaces.
 - **Reproducible Windows delivery:** locked dependencies, GitHub Actions, a canonical installer and installed-runtime MCP smoke tests.
@@ -95,7 +96,7 @@ The project is deliberately opinionated:
                           ChatGPT Business
                          /                \
                  Talvora Dev          Talvora Admin
-                   199 tools             88 tools
+                   214 tools             88 tools
                          \              /
                           Secure MCP Tunnel
                                  |
@@ -106,7 +107,7 @@ Local MCP clients ------>  Talvora Windows Service
                   +--------------+--------------+
                   |              |              |
               /mcp           /mcp/dev       /mcp/admin
-            236 tools        199 tools        88 tools
+            251 tools        214 tools        88 tools
                   |
         +----------------+----------------+----------------+
         |                |                |                |
@@ -127,8 +128,8 @@ Talvora exposes three local endpoints:
 
 | Endpoint | Purpose | Tools |
 | --- | --- | ---: |
-| <code>/mcp</code> | Complete capability surface | **234** |
-| <code>/mcp/dev</code> | Development, source editing, builds, Git, jobs, Penpot and Modal workflows | **197** |
+| <code>/mcp</code> | Complete capability surface | **251** |
+| <code>/mcp/dev</code> | Development, source editing, builds, Git, jobs, Penpot and Modal workflows | **214** |
 | <code>/mcp/admin</code> | Windows administration, services, registry, environment and machine management | **88** |
 
 Dev and Admin share **51 reviewed tools** for diagnostics and common fallback operations. The overlap is explicit and regression-tested; it is not accidental duplication.

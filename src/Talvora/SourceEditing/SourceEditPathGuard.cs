@@ -24,8 +24,13 @@ internal sealed class SourceEditPathGuard : IDisposable
         new(StringComparer.OrdinalIgnoreCase);
     private readonly SortedSet<string> unprotectedDirectories =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly SortedSet<string> ownerNotPreserved =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlyCollection<string> UnprotectedDirectories => unprotectedDirectories;
+    public IReadOnlyCollection<string> OwnerNotPreserved => ownerNotPreserved;
+    public System.Security.Principal.SecurityIdentifier? WorkspaceRootOwner { get; private set; }
+    public void RecordOwnerNotPreserved(string path) => ownerNotPreserved.Add(path);
 
     private SourceEditPathGuard()
     {
@@ -73,6 +78,7 @@ internal sealed class SourceEditPathGuard : IDisposable
         SourceEditPreparedTransaction prepared)
     {
         var guard = new SourceEditPathGuard();
+        guard.WorkspaceRootOwner = FileOwnership.TryGetOwner(prepared.ChangeSet.WorkspaceRoot);
         try
         {
             foreach (var expected in prepared.DirectoryIdentities
@@ -121,6 +127,7 @@ internal sealed class SourceEditPathGuard : IDisposable
         }
 
         var guard = new SourceEditPathGuard();
+        guard.WorkspaceRootOwner = FileOwnership.TryGetOwner(plan.WorkspaceRoot);
         try
         {
             foreach (var expected in plan.DirectoryIdentities
@@ -359,6 +366,12 @@ internal sealed class SourceEditPathGuard : IDisposable
                 path,
                 innerException:
                     new Win32Exception(error));
+        }
+
+        if (WorkspaceRootOwner is { } rootOwner &&
+            !FileOwnership.TrySetOwner(path, rootOwner))
+        {
+            RecordOwnerNotPreserved(path);
         }
 
         SafeFileHandle? handle = null;
