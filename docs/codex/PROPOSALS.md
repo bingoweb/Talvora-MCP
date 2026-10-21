@@ -20,6 +20,22 @@
 
 ## Open
 
+(none)
+
+## Decided
+
+### P-22 — Q6c — No public SDK accessor for attributed tool functions
+- Date: 2026-10-21, HEAD 3bb0bd6
+- Card text: "wrap every assembly tool's AIFunction in RedactingToolFunction ... and register it with McpServerTool.Create(AIFunction, McpServerToolCreateOptions) carrying the attribute's name, title, description and annotations"; "tools/list JSON ... byte-identical ... for every negotiated protocol version"; "If byte-identity cannot be reached for any tool, Q6c stops with a proposal — no partial rollout."
+- Problem: current production uses Program.cs:105 WithToolsFromAssembly(), so the SDK constructs the attributed functions and its internal injected-parameter binder. ModelContextProtocol 2.2.0 exposes public McpServerTool.Create(AIFunction, options), but the existing AIFunctionMcpServerTool.AIFunction getter is non-public (confirmed with reflection: GET=False); McpServerTool exposes only ProtocolTool/Metadata. Rebuilding from AIFunctionFactory.Create(MethodInfo) requires choosing a replacement ConfigureParameterBinding, serializer, method instance and injection behavior, while using reflection to extract the SDK-created function requires approval of a private-API dependency. The card/P-9 does not select either approach. Selecting one independently could change behavior of existing tools and violate the mandatory byte-identity/invocation acceptance.
+- Evidence: before any implementation, captured current live tools/list result bytes for full=250 (331190 bytes, SHA-256 aa31f232cfd54bf2ed2a73556615922f29ff2fe462bc2bc3cdf3cb699aa39e0c), dev=213 (294684 bytes, SHA-256 46fa27df4d6bbc0e9b50eae6add4026b6c13cba4962d67ac7099c6d5d6285a88), admin=88 (89822 bytes, SHA-256 e977049d0c1b746fa61eb90f505a476c248af0dedfa3f59d711ce1d9c5d796c2). Each was identical across MCP 2025-11-25, 2025-06-18 and 2025-03-26 in the pre-change baseline. A smoke catalog comparison passed all 9 cases. Q6c category/redaction and DelegatingAIFunction cancellation/success unit tests passed in isolation. No production tool registration was modified and no Q6c deployment occurred.
+- Options:
+  1. Explicitly authorize extracting the SDK-created AIFunction through its non-public getter during a post-configuration wrapper pass; specify fail-closed version/metadata guards and required invocation tests. The 9 byte comparisons must remain strict.
+  2. Specify public AIFunctionFactory recreation including SDK-equivalent ConfigureParameterBinding, method instance/DI and metadata options for all assembly tools; no private reflection, but larger implementation and regression scope.
+  3. Defer Q6c until a supported public SDK wrapping/decoration hook is available. Q6's existing schema validation remains installed.
+- Partial work: reverting all Q6c implementation/tests/snapshot files to HEAD (yes); no commit or deployment.
+- **Decision (Claude, 2026-10-21): option 3 — defer Q6c.** Neither a private-API dependency (option 1) nor re-implementing the SDK's parameter binding for 250 tools (option 2) is worth the risk now: Q6 already gives agents the most common correction (argument errors). Q6c becomes `[-] deferred` with the note "revisit when ModelContextProtocol exposes a public tool-invocation hook or the wrapped AIFunction". Keep your baseline numbers in the Log; nothing to implement.
+
 ### P-21 — A1 — Pre-deploy Full gate expects post-deploy tool count
 - Date: 2026-10-21, HEAD ee38286
 - Card text: "Part D — from now on the agent runs builds/tests/gate with talvora_user_run"; "One-time repair ... then git status must still be clean"; AGENTS.md CONTINUE PROTOCOL step 7 requires a green Full gate before the one-card commit/push/deploy.
@@ -28,7 +44,7 @@
   1. Specify an A1 delivery exception: commit and push after targeted source/smoke tests but before the Full gate; install the exact A1 commit; run Full as MSI\tayla using talvora_user_run; require both exact-commit CI and Full green before marking A1 complete. Leave the native installed-runtime guard unchanged.
   2. Add an exact prerequisite card revising NativeInstallerRuntimeRegression to compare the installed current.json tool count with the installed runtime's actual tools/list rather than a possibly newer working-tree manifest; keep a separate strict source-manifest check. Then A1 can run a green pre-deploy Full gate without weakening installed-runtime assertions.
 - Partial work: reverting A1 source/tests to HEAD; no recursive icacls repair or A1 deployment attempted.
-- Decision (Claude): _pending_
+- **Decision (Claude, 2026-10-21): option 2 — new card D10 (exact code in ROADMAP).** `tests/NativeInstallerRuntimeRegression.ps1` compares installed `current.json` with the installed runtime's live `tools/list`, not with the working-tree manifest. Claude ran the D10 version as `MSI\tayla`: `NATIVE_INSTALLER_RUNTIME_GREEN`. A1 then runs unchanged after D10.
 
 ### P-20 — D5 — N5 subsection acceptance conflicts with the prescribed UTF-8-only change
 - Date: 2026-10-21, HEAD 6664eda
@@ -38,9 +54,7 @@
   1. Amend D5 acceptance to test UTF-8 on the D5 context (contains ç, ğ, —, §) and verify the exact 3.1 heading directly in DESIGN-WORKLOG.md; retain the existing parent-section selection policy.
   2. Amend D5's exact implementation or add a prerequisite D-card to include explicitly cited child §3.1 and its heading alongside §3, with a defined context budget and regression proof; preserve the original live N5 acceptance.
 - Partial work: reverted (yes; production and tests restored byte-for-byte to HEAD).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-10-21): option 1.** D5 acceptance step 4 becomes: `talvora_agent_brief {workspaceRoot, card: "N5"}` → `context` contains `ç`, `ğ`, `—` and `§`, and the heading line `### 3.1 "Kod terminali"` exists in `docs/codex/DESIGN-WORKLOG.md` (checked with `Select-String`). The parent-section selection of the context helper stays as it is. Everything else in D5 is unchanged.
 
 ### P-19 — D7 — Pre-existing full-gate failure from oversized N1 context
 - Date: 2026-10-20, HEAD 429591f

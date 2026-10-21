@@ -13,7 +13,7 @@
 | Branch | `main` only. Do not create branches. Do not touch `dependabot/*`. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-20-03` = `36fe923`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-21-05` = `3bb0bd6`. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -57,12 +57,16 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] CI3 — Deadline instead of a fixed loop in the directory-holder test (GitHub windows-ci 39491180856 green)
 - [x] CI2 — .NET platform packages in lockstep 10.0.13 (GitHub CI 39494729468 green; installed 6538264 verified; PR #16 closed)
 - [x] D6 — Context helper finds `##` and `###` card headings (GitHub windows-ci 39497367643 green)
-- [?] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (waiting for Claude: P-20; N5 §3.1 acceptance conflicts with exact implementation)
 - [x] D1 — Make the rename-protection fallback visible (GitHub CI 39501010691 green; installed f060eba verified)
 - [x] D3 — Keep the text of structured failures (GitHub CI 39503786490 green; installed ee38286 and live failure text verified)
-- [?] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (waiting for Claude: P-21, pre-deploy Full gate checks installed tool count against newer source manifest)
-- [~] Q6 — Schema validation of tool arguments before invocation (Full 54/0 green; exact-commit GitHub CI and installed live validation pending)
-- [ ] Q6c — Translate tool exceptions into redacted, categorised errors (P-9 decided)
+- [ ] D9 — Identity-portable tests + IdentityPortabilityRegression guard (audit 2026-10-21 (5), HIGH)
+- [ ] D10 — Installed-runtime test compares installed with installed (P-21 decided)
+- [ ] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (P-7, P-21 decided; after D10)
+- [ ] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (P-20 decided: amended acceptance)
+- [x] Q6 — Schema validation of tool arguments before invocation (GitHub CI 39545892517 green; installed 3bb0bd6 and live invalid-arguments test verified)
+- [-] Q6c — Translate tool exceptions (deferred by P-22 until the MCP SDK exposes a public invocation hook)
+- [ ] DEP1 — Dependabot PRs applied on main via Apply-DependabotPr.ps1 (after A1)
+- [ ] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the DEP1 procedure
 - [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
 - [ ] N3 — Worklog: real facts from results (P-11 decided)
@@ -105,7 +109,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 ## Open questions
 
 
-(none — P-19 decided)
+
+(none — P-20, P-21, P-22 decided)
 
 ## Findings for Claude
 
@@ -114,6 +119,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — Claude audit (5) of `36fe923..3bb0bd6` (9 card commits, executor ChatGPT via Talvora): exact-implementation fidelity verified byte-for-byte; CI green on all 9; Q6/D3 verified live. Full gate as `MSI\tayla` RED in Notification (S7 test calls a LocalSystem-only API when a tray runs; CI has no tray, ChatGPT gate is LocalSystem) → D9 + IdentityPortabilityRegression guard. Dependabot PR #17 fails NU1004 (test-project locks not regenerated) → DEP1 + DEP-17. P-20 amended D5 acceptance; P-21 → D10; P-22 defers Q6c. Agent's uncommitted Q6/Q6c records are included in this commit. Next audit baseline `audit/2026-10-21-05` = `3bb0bd6`.
+- 2026-10-21 — Q6c blocked (executor: ChatGPT via Talvora): P-22 records the missing public SDK accessor for the original attributed AIFunction and two possible implementation routes. Baseline captured full/dev/admin 250/213/88; exact byte equality was verified on all 9 surface/protocol combinations before changes.
+  Test-first RED: missing ToolErrorTranslator; then isolated categories, masking, successful wrapper and client cancellation GREEN. Installed SDK 2.2.0 reflection shows AIFunctionMcpServerTool.AIFunction getter is non-public, so the card cannot choose a metadata-preserving registration strategy without an architecture decision.
+  All Q6c code/test/snapshot changes reverted to HEAD via talvora_apply_patch; no Q6c build/deploy/commit/push. Baseline Fast 13 checks / 0 errors (LocalSystem); latest GitHub CI 39545892517 green, installed 3bb0bd6 remains active.
 - 2026-10-21 — Q6 (executor: ChatGPT via Talvora): implemented the exact P-3/P-8 ToolArgumentValidator for required, unknown and wrong-type JSON inputs; early call-tool filter returns InvalidArguments before desktop notifications. Unknown tools and valid calls retain existing SDK behavior.
   Test-first RED: CS0103 missing ToolArgumentValidator (3 errors); after implementation Release build 0 warnings/errors and TALVORA ARGUMENT VALIDATION UNIT GREEN (exact message, wrong boolean type, valid inputs).
   Baseline Fast 13/0; final Full 54 checks, 0 errors, "Hepsi geçti." (LocalSystem; Kimlik: NT AUTHORITY\SYSTEM). Context7 /modelcontextprotocol/csharp-sdk verified official AddCallToolFilter and CallToolResult behavior. Security policy documented.

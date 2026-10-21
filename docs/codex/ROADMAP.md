@@ -752,6 +752,141 @@ Card details (Files / Do / Don't / Acceptance) are in the design spec, section "
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-21 (5) · range `audit/2026-10-20-03 (36fe923)..3bb0bd6` · 9 card commits · executor: ChatGPT via Talvora · result: FIXES REQUIRED (test identity, Dependabot)
+
+Delivered: D8, D7, CI1, CI3, CI2, D6, D1, D3, Q6. Blocked with proposals: D5 (P-20), A1 (P-21), Q6c (P-22) — all decided now.
+
+**Fidelity to the exact-implementation blocks: excellent.** Claude compared byte-for-byte: `ToolArgumentValidator.cs` and `StructuredResultFailure.cs` are identical to the card code; `Get-CiStatus.ps1`, `PlatformPackageLockstepRegression.ps1`, `Update-DotnetPlatformPackages.ps1` identical to `docs/codex/reference/ci`; D1, D7, D8 diffs match the guides line for line; supporting changes (one smoke assertion in D7, one modernization assertion in D3, notices/locks in CI2) are minimal and logged. CI rule 10b was followed for every card (each `[x]` cites its green run).
+
+Verified live by Claude on installed `3bb0bd6`: GitHub CI green for all 9 commits since D7; `talvora_search_text {path,pattern}` → `isError: true`, `InvalidArguments: missing 'root', 'query'; unknown 'pattern', 'path'. Expected: …` (Q6 ✓); WorkContract refusal now keeps its text (D3 ✓); installed `current.json` ToolCount 250 = live `/mcp` 250 = manifest 250.
+
+| # | Severity | Type | Where | Finding | Fix card |
+|---|---|---|---|---|---|
+| 1 | **HIGH** | test identity (same class as D7) | `tests/Talvora.Notification.Regression/Program.cs:826-827` (S7 test `AssertInstalledTrayPipeIsTrustedWhenRunningAsync`) | Claude ran the Full gate **as `MSI\tayla`**: `FAIL Notification … Win32Exception (1314) WTSQueryUserToken failed`. The test calls a LocalSystem-only API whenever a tray is running. GitHub CI has no tray (test returns early) and ChatGPT's gate runs as LocalSystem — so both stay green while Codex and the user get a red gate. `tests/Talvora.Smoke/SmokeScenarios.Claude.cs:63` has the same unguarded call (not in the gate today). | D9 |
+| 2 | MEDIUM | process | — | The same identity bug class has now escaped twice. A static guard is needed so it cannot come back. | D9 (IdentityPortabilityRegression) |
+| 3 | MEDIUM | CI / deps | Dependabot PR #17 (`Microsoft.Extensions.AI.Abstractions` 10.10.1 → 10.11.0), run `39495063592` | `FAIL Restore … NU1004`: Dependabot regenerates only the lock files of projects that reference the package directly; the three test projects pin it transitively and stay stale. Every future NuGet PR will fail the same way, and merging on GitHub would also fork GitHub from Gitea. | DEP1 |
+| 4 | LOW | acceptance (Claude) | D5 step 4 | `-Card N5` context keeps parent §3 and drops child §3.1 by design, so "contains `### 3.1 "Kod terminali"`" could not hold. | P-20 decided (acceptance amended) |
+| 5 | LOW | ordering (Claude) | A1 vs `tests/NativeInstallerRuntimeRegression.ps1:6-7` | The installed-runtime test compares installed `current.json` with the **working-tree** manifest, so any card adding a tool is red before its own deployment. | D10 (P-21) |
+
+Claude verified D9 and D10 before writing them: in a scratch clone of `3bb0bd6` with D9 applied, `IDENTITY_PORTABILITY_GREEN`, `DESKTOP_PROGRESS_BEHAVIOR_GREEN` and `TALVORA CLAUDE INTEGRATION GREEN` (with the SKIP line) as `MSI\tayla`; the D10 version of `NativeInstallerRuntimeRegression.ps1` prints `NATIVE_INSTALLER_RUNTIME_GREEN` as `MSI\tayla`. With D9 applied, the complete Full gate as `MSI\tayla` on that clone: `55 kontrol, 0 hata` / `Hepsi geçti.` (HealthHandle and NativeInstallerRuntime included) — no other identity-dependent failure is hiding behind the Notification one. `scripts/Apply-DependabotPr.ps1 -Pr 17 -DryRun` on a scratch clone regenerated all five affected lock files (including the three Dependabot missed), locked restores and Release build passed, and the tree was left clean.
+
+### D9 — Identity-portable tests + a guard so the class cannot return
+
+> Audit 2026-10-21 (5), findings 1–2.
+
+**Files:** `tests/Talvora.Notification.Regression/Program.cs`, `tests/Talvora.Smoke/SmokeScenarios.Claude.cs`, `tests/IdentityPortabilityRegression.ps1` (new, verbatim copy).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — `tests/Talvora.Notification.Regression/Program.cs`, in `AssertInstalledTrayPipeIsTrustedWhenRunningAsync`, replace
+
+```csharp
+            var sessionId = WindowsSessionLauncher
+                .GetDefaultInteractiveUser().SessionId;
+```
+
+with
+
+```csharp
+            // LocalSystem resolves the interactive session; any other identity already runs in it.
+            var sessionId = IsRunningAsLocalSystem()
+                ? WindowsSessionLauncher.GetDefaultInteractiveUser().SessionId
+                : Process.GetCurrentProcess().SessionId;
+```
+
+and insert directly above `private static async Task AssertPipeReadTimeoutRecoveryAsync()`:
+
+```csharp
+    private static bool IsRunningAsLocalSystem()
+    {
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        return identity.User?.IsWellKnown(System.Security.Principal.WellKnownSidType.LocalSystemSid) == true;
+    }
+
+```
+
+Step 2 — `tests/Talvora.Smoke/SmokeScenarios.Claude.cs`: insert directly **above** the line `            // Exercise the actual user-session launcher, PowerShell helper and six-argument pump binding.`
+
+```csharp
+            using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+            if (identity.User?.IsWellKnown(System.Security.Principal.WellKnownSidType.LocalSystemSid) != true)
+            {
+                // WTSQueryUserToken needs LocalSystem; CI and the signed-in user skip this live part.
+                Console.WriteLine("SKIP Claude user-session runner: requires LocalSystem.");
+            }
+            else
+            {
+```
+
+and insert a closing line `            }` directly **below** the line `            catch (OperationCanceledException) when (cancel.IsCancellationRequested) { }`.
+
+Step 3 — copy `docs/codex/reference/ci/IdentityPortabilityRegression.ps1` → `tests/IdentityPortabilityRegression.ps1` byte-for-byte (verify with `SHA256SUMS.txt`). The gate picks it up automatically.
+
+**Acceptance:** run as the **signed-in user** (Codex shell; ChatGPT: say "gate run as LocalSystem; Claude re-checks" until A1): `IDENTITY_PORTABILITY_GREEN`, `DESKTOP_PROGRESS_BEHAVIOR_GREEN`, Full gate `Hepsi geçti.`; GitHub CI green (10b).
+
+### D10 — Installed-runtime test compares installed with installed (decision P-21)
+
+> Audit 2026-10-21 (5), finding 5. Unblocks A1.
+
+**Files:** `tests/NativeInstallerRuntimeRegression.ps1` only.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Replace exactly these two lines:
+
+```powershell
+$toolManifest = [IO.File]::ReadAllText((Join-Path $repoRoot 'src\Talvora.Shared\TalvoraToolManifest.cs'))
+$expectedToolCount = ([regex]::Matches($toolManifest, '"(?:talvora_[a-z0-9_]+|search|fetch)"')).Count
+```
+
+with exactly:
+
+```powershell
+# Installed state must match the INSTALLED runtime. The working-tree manifest may already be
+# newer (a card adding a tool runs this gate before its own deployment); source-side counts are
+# covered by the surface smoke tests.
+$listResponse = Invoke-WebRequest 'http://127.0.0.1:7676/mcp' -Method Post -UseBasicParsing -TimeoutSec 15 `
+    -ContentType 'application/json' -Headers @{ Accept = 'application/json, text/event-stream' } `
+    -Body '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+$listText = $listResponse.Content
+if ($listText -match '^event:') {
+    $listText = (($listText -split "`n") | Where-Object { $_ -like 'data:*' } | ForEach-Object { $_.Substring(5) }) -join ''
+}
+$expectedToolCount = @(($listText | ConvertFrom-Json).result.tools).Count
+if ($expectedToolCount -lt 1) { throw 'The installed Talvora runtime returned no tools.' }
+```
+
+(`$repoRoot` stays defined; it is no longer used for the count.)
+
+**Acceptance:** `pwsh -NoProfile -File tests/NativeInstallerRuntimeRegression.ps1` → `NATIVE_INSTALLER_RUNTIME_GREEN`; Full gate green; CI green. Then A1 runs unchanged (its Full gate no longer depends on deployment order).
+
+### DEP1 — Dependabot PRs are applied on main, never merged on GitHub
+
+> Audit 2026-10-21 (5), finding 3. Run **after A1** (the script calls `gh`, which only works as the signed-in user).
+
+**Files:** `scripts/Apply-DependabotPr.ps1` (new, verbatim copy), `docs/MODERNIZATION-POLICY.md` (one paragraph), `docs/codex/STATUS.md` (fixed facts line).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — copy `docs/codex/reference/ci/Apply-DependabotPr.ps1` → `scripts/Apply-DependabotPr.ps1` byte-for-byte; verify with `SHA256SUMS.txt`.
+
+Step 2 — append to `docs/MODERNIZATION-POLICY.md` exactly:
+
+> **Dependabot PRs.** Never merge a Dependabot PR on GitHub (it would fork GitHub from Gitea and leaves transitive `packages.lock.json` files stale → NU1004). Apply it with `pwsh scripts/Apply-DependabotPr.ps1 -Pr <n>` as the signed-in user: it takes only `Directory.Packages.props`/`global.json` from the PR, regenerates every lock file, runs the lockstep test, locked restores, Release build and the Full gate, commits once (`Card: DEP<n>`), pushes to both remotes, closes the PR and checks CI.
+
+Step 3 — `docs/codex/STATUS.md` → Fixed facts → Branch row: replace `Do not touch \`dependabot/*\`.` with `Dependabot PRs: apply with scripts/Apply-DependabotPr.ps1 (DEP1), never merge on GitHub.`
+
+Step 4 — apply PR #17: first add the queue/Log line for `DEP17` to STATUS (the script commits STATUS together with the update), then run `talvora_user_run` → `pwsh -NoProfile -File scripts/Apply-DependabotPr.ps1 -Pr 17`. Before that, run it once with `-DryRun` and paste its "Changed files" line into the Log.
+
+**Acceptance:** DEP1 commit (script + policy + STATUS) green on CI; DEP17 commit green on CI; PR #17 closed with the comment the script writes; `origin/main` = `github/main`.
+
+**Standing procedure (also for future PRs):** every new Dependabot NuGet PR becomes one queue item `DEP<n>` (no hyphen; the context helper reads letter+digit ids) handled exactly by Step 4. SDK PRs (`global.json`): run the same script, then `scripts/Update-DotnetPlatformPackages.ps1 -Version <runtime patch of that SDK>` if the lockstep test fails, inside the same card.
+
+
+### DEP17 — Apply Dependabot PR #17 (`Microsoft.Extensions.AI.Abstractions` 10.10.1 → 10.11.0)
+
+Follow DEP1 → Step 4 exactly (dry run first, then the real run as the signed-in user). One commit made by the script, trailer `Card: DEP17`. Acceptance as in DEP1.
+
 ### Audit 2026-10-20 (4) · range `429591f..429591f` (no agent commits) · result: FIX REQUIRED (caused by Claude)
 
 The agent made **no commits**: it started D7, found the gate red on a clean HEAD, reverted everything and raised P-19; D6 hit the same red baseline and was also reverted. That is exactly the required behaviour.
@@ -953,6 +1088,8 @@ Verified live by Claude on the installed build `041c723`: `/healthz.version` = M
 ---
 
 ### D5 — `talvora_agent_brief`: keep UTF-8 and include the permanent-prompt section
+
+> **Amended by P-20 (Claude, 2026-10-21)** — Step 4 acceptance is replaced by the P-20 decision text in `docs/codex/PROPOSALS.md` → "Decided".
 
 > Audit 2026-10-20 (3), findings 2 and 3.
 
