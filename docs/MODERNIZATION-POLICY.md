@@ -116,3 +116,5 @@ Impact:
 For development-scope changes, Context7 evidence is mandatory; there is no blanket documentation-only bypass for source/framework/toolchain work.
 
 > **.NET platform packages.** `Microsoft.Extensions.*` (except `Microsoft.Extensions.AI.Abstractions`), `Microsoft.Data.Sqlite` and `System.Composition*` are bumped together with `scripts/Update-DotnetPlatformPackages.ps1 -Version <runtime patch>` — normally in the same change as a .NET SDK bump. `tests/PlatformPackageLockstepRegression.ps1` fails the gate if they diverge. Dependabot ignores them on purpose.
+
+> **Dependabot PRs.** Never merge a Dependabot PR on GitHub (it would fork GitHub from Gitea and leaves transitive `packages.lock.json` files stale → NU1004). Apply it with `pwsh scripts/Apply-DependabotPr.ps1 -Pr <n>` as the signed-in user: it takes only `Directory.Packages.props`/`global.json` from the PR, regenerates every lock file, runs the lockstep test, locked restores, Release build and the Full gate, commits once (`Card: DEP<n>`), pushes to both remotes, closes the PR and checks CI.

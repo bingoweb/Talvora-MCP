@@ -10,7 +10,7 @@
 |---|---|
 | Local folder | `C:\Users\tayla\Talvora-MCP` |
 | Remotes | `origin` = local Gitea `ssh://git@127.0.0.1:2222/taylan/Talvora-MCP.git` (primary tracker) · `github` = `https://github.com/bingoweb/Talvora-MCP.git` (**PUBLIC** — never commit secrets, machine-specific credentials or personal data) |
-| Branch | `main` only. Do not create branches. Do not touch `dependabot/*`. |
+| Branch | `main` only. Do not create branches. Dependabot PRs: apply with scripts/Apply-DependabotPr.ps1 (DEP1), never merge on GitHub. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Audit baseline | Newest Claude audit tag `audit/2026-10-21-06` = `5048232`. Claude creates and moves `audit/*` tags; the agent never does. |
@@ -66,7 +66,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D5 — `talvora_agent_brief` UTF-8 + permanent-prompt first (signed-in Full 55/0; deployment and exact-commit CI follow)
 - [x] Q6 — Schema validation of tool arguments before invocation (GitHub CI 39545892517 green; installed 3bb0bd6 and live invalid-arguments test verified)
 - [-] Q6c — Translate tool exceptions (deferred by P-22 until the MCP SDK exposes a public invocation hook)
-- [ ] DEP1 — Dependabot PRs applied on main via Apply-DependabotPr.ps1 (after A1)
+- [x] DEP1 — Dependabot PR procedure installed on main (reference/policy gate 55/0; exact-commit CI and DEP17 acceptance follow)
 - [ ] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the DEP1 procedure
 - [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
@@ -121,6 +121,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — DEP1 (executor: ChatGPT via Talvora): copied canonical `scripts/Apply-DependabotPr.ps1` byte-for-byte except newlines, normalized SHA-256 `1c37620e0cce915a6af3ec5a906b2ff1ea2747c9e799467325e82eb1c8b9a4b2`; parser 0 errors; appended the exact Dependabot policy and updated the Branch fixed fact.
+  Test-first RED: script absent before patch; checksum/PowerShell parse GREEN after. Context7 `/websites/learn_microsoft_en-us_nuget` and `/websites/cli_github_manual` verified lock regeneration and PR close without merge.
+  Signed-in-user Full gate: 55 checks, 0 errors, `Hepsi geçti.`. DEP17 DryRun and exact Changed files evidence follow DEP1 commit; DEP17 application, PR closure and both exact-commit CIs are required for final acceptance.
 - 2026-10-21 — D5 (executor: ChatGPT via Talvora): exact UTF-8 console/output changes, permanent AGENTS heading first, and noninteractive child; UTF-8 verification sample: ç, ğ, —, §.
   Test-first RED: old installed agent_brief lost 'ç'; targeted build/QualityGateRegression GREEN; strict UTF-8 D5 script output preserved all four characters (0 replacement chars). P-20 retained parent-section selection; DESIGN-WORKLOG §3.1 heading verified in source.
   Signed-in Full gate: 55 checks, 0 errors, `Hepsi geçti.`; Context7 `/microsoftdocs/powershell-docs` verified. Runtime installer and live N5 smoke to follow the one-card commit; exact-commit GitHub CI to be checked after push.

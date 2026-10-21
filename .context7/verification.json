@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-21T13:28:49Z",
-  "scope": "D5 exact ROADMAP/P-20 implementation: Get-CodexContext.ps1 now explicitly uses UTF8Encoding without BOM for the child console/output stream; AgentBriefTools includes the permanent user-approved AGENTS section first and calls pwsh non-interactively. Smoke regression was RED on the old installed service (missing ç); after the prescribed changes, raw redirected context is decoded as strict UTF-8 without replacement characters; N5 source text contains ğ, —, §, and the acceptance's explicit ç test sample is placed in the required newest STATUS Log. Context helper parent-section selection is unchanged per P-20; direct DESIGN-WORKLOG heading check proved ### 3.1 Kod terminali exists. Official PowerShell character-encoding documentation consulted through Context7.",
+  "verifiedAtUtc": "2026-10-21T14:01:09Z",
+  "scope": "DEP1 exact ROADMAP 2026-10-21: canonical Dependabot update script copied from the approved CI reference with normalized SHA-256 1c37620e0cce915a6af3ec5a906b2ff1ea2747c9e799467325e82eb1c8b9a4b2 and 0 PowerShell parse errors; policy specifies no GitHub PR merging and locally regenerating all transitive NuGet lock files. NuGet official lock file docs confirm --force-evaluate regenerates lockfiles and --locked-mode verifies them; GitHub CLI official gh pr close manual confirms close --comment is distinct from merge.",
   "libraries": [
+    {
+      "libraryId": "/websites/learn_microsoft_en-us_nuget",
+      "verified": "2026-10-21 DEP1: Microsoft NuGet package-lock documentation confirms dotnet restore --force-evaluate updates dependency resolution and regenerates packages.lock.json; --locked-mode fails if dependency declarations drift from the lock file (NU1004). The approved reference script uses both sequentially and checks lockstep."
+    },
+    {
+      "libraryId": "/websites/cli_github_manual",
+      "verified": "2026-10-21 DEP1: Official GitHub CLI gh pr close manual documents gh pr close <number> --repo <owner/repo> --comment <text> as a close action, distinct from gh pr merge. Approved Dependabot procedure closes PR after local main commit rather than merging through GitHub."
+    },
     {
       "libraryId": "/microsoftdocs/powershell-docs",
       "verified": "2026-10-21 D5: Official PowerShell 7 documentation in about_Character_Encoding confirms PowerShell 6+ defaults to utf8NoBOM for text output, and about_Preference_Variables documents $OutputEncoding as an Encoding used for native application piping. Verified the D5-prescribed explicit Console.OutputEncoding and $OutputEncoding UTF8Encoding(false), and -NonInteractive child execution while retaining exact prescribed argument order."
