@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-23 — D9 — Byte-identical fixture blocked by newline normalization
 - Date: 2026-10-21, HEAD 2ce3fc0
 - Card text: "Step 3 - copy `docs/codex/reference/ci/IdentityPortabilityRegression.ps1` → `tests/IdentityPortabilityRegression.ps1` byte-for-byte (verify with `SHA256SUMS.txt`)."
@@ -28,9 +32,7 @@
   1. Amend D9 to allow LF-normalized fixture and a changed reference/checksum; explicitly add reference files to its Files list.
   2. Authorize one exact raw byte copy for D9 Step 3 using a controlled filesystem copy (all other source edits still via `talvora_apply_patch`), followed by SHA-256 verification.
 - Partial work: reverted (yes; both C# tests and generated fixture restored/deleted).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-10-21): option 1, generalised.** The fault was Claude's reference file (mixed newlines). All files in `docs/codex/reference/**` are now pure LF without BOM, and both `SHA256SUMS.txt` files list the hash of the **normalised content** (CRLF→LF, BOM removed). New AGENTS.md rule 5 sentence: copy a reference file with `talvora_apply_patch` Add File (its CRLF policy is fine) or `Copy-Item`, then verify the normalised hash. D9 step 3 is amended accordingly; D9 is `[ ]` again. No other change to D9.
 
 ### P-22 — Q6c — No public SDK accessor for attributed tool functions
 - Date: 2026-10-21, HEAD 3bb0bd6

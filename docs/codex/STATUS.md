@@ -13,7 +13,7 @@
 | Branch | `main` only. Do not create branches. Do not touch `dependabot/*`. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-21-05` = `3bb0bd6`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-21-06` = `5048232`. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -59,10 +59,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D6 — Context helper finds `##` and `###` card headings (GitHub windows-ci 39497367643 green)
 - [x] D1 — Make the rename-protection fallback visible (GitHub CI 39501010691 green; installed f060eba verified)
 - [x] D3 — Keep the text of structured failures (GitHub CI 39503786490 green; installed ee38286 and live failure text verified)
-- [?] D9 — waiting for Claude: P-23 (verbatim fixture byte copy vs patch newline normalization)
+- [ ] D9 — Identity-portable tests + guard (P-23 decided: reference files are LF, verify normalised hash per AGENTS.md rule 5 "Reference copies")
+- [ ] D11 — Do not rename-lock the workspace root (audit 2026-10-21 (6))
 - [x] D10 — Installed-runtime test compares installed with installed (P-21 decided; Full gate 54/0 as LocalSystem)
-- [~] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (Full 54/0 as LocalSystem; exact-commit CI, deployed user-run, signed-in gate and one-time owner repair pending)
-- [ ] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (P-20 decided: amended acceptance)
+- [~] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (Full 54/0 as LocalSystem; CI green; Claude verified installed 5048232: user_run = MSI	ayla, repo owners already MSI	ayla, patch keeps owner — only the signed-in Full gate is open: tick `[x]` with the D9 gate run, no other work)
+- [?] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (runs after D9 and D11; set back to `[ ]` when D9 is `[x]`)
 - [x] Q6 — Schema validation of tool arguments before invocation (GitHub CI 39545892517 green; installed 3bb0bd6 and live invalid-arguments test verified)
 - [-] Q6c — Translate tool exceptions (deferred by P-22 until the MCP SDK exposes a public invocation hook)
 - [ ] DEP1 — Dependabot PRs applied on main via Apply-DependabotPr.ps1 (after A1)
@@ -119,6 +120,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — Claude audit 6 of `3bb0bd6..5048232` (D10, A1): exact fidelity, CI green; A1 verified live on installed 5048232. P-23 decided (Claude's reference files had mixed newlines → now LF, normalised-hash rule in AGENTS.md rule 5). New card D11 (workspace-root rename warning), verified in a scratch clone (SourceEdit regression GREEN). Queue: D9 → D11 → A1 tick → D5 → DEP1 → DEP17. Tag `audit/2026-10-21-06` = `5048232`.
+- 2026-10-21 — D5 deferred (executor: ChatGPT via Talvora): clean HEAD 5048232, origin fetch/pull as MSI\tayla succeeded; its exact-commit GitHub CI 39569282996 succeeded. P-20 decision and D5 exact implementation inspected, no production edits attempted.
+  Required signed-in-user baseline Fast gate ran as MSI\tayla and failed 8 checks / 1 error in pre-existing Notification regression: WTSQueryUserToken(session 1) Win32Error=1314 from WindowsSessionLauncher.Sessions.cs:54, called by Talvora.Notification.Regression/Program.cs:826. D5 cannot correct this without editing another card's files, forbidden by AGENTS.md. D9 still waits on Claude P-23. No commit, deployment, or reset performed.
 - 2026-10-21 — A1 (executor: ChatGPT via Talvora): exact ROADMAP/P-7 tool, owner helper (checked 16-byte native layout), source-edit owner propagation and OWNER_NOT_PRESERVED first-commit warning; updated manifest/Dev+Full counts, README and supporting source-policy tests.
   Test-first RED: missing FileOwnership (CS0103); targeted ownership regressions GREEN, including SYSTEM-created Administrators-owned file, new file/directory owner and ordinary update; smoke surface/metadata GREEN, Release build 0 errors/warnings.
   Full gate: 54 controls, 0 errors, Hepsi geçti. (Kimlik: NT AUTHORITY\SYSTEM). Context7 /dotnet/docs and Microsoft FileSystemAclExtensions, SecurityIdentifier and TOKEN_PRIVILEGES docs verified.

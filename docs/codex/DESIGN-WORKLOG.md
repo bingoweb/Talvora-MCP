@@ -598,7 +598,7 @@ All design and code for this card already exists and is **compiled and rendered 
 
 Prerequisite: N2 is `[x]` (protocol v4 types `DesktopWorklogFrame`, `WorklogSessionHeader`, `WorklogStep`, `WorklogOutcome`, `WorklogTimelineEntry`, `WorklogTotals`, `WorklogStepState`, `WorklogCheckState` exist in `Talvora.Shared` with the names of DESIGN-WORKLOG §4). If N2 used different names, adapt **only the names** inside the copied files (rule 5a) and list each renamed identifier in the Log.
 
-Step 1 — copy verbatim (byte-for-byte; use `Copy-Item` in Codex's shell, or `talvora_copy` with `explicitAdmin: true` in ChatGPT — this is the approved exception to the apply_patch rule for N5 only):
+Step 1 — copy verbatim (AGENTS.md rule 5 "Reference copies": `Copy-Item` in Codex's shell, `talvora_apply_patch` Add File in ChatGPT; newline differences do not matter):
 
 | From `docs/codex/reference/worklog-phosphor/src/` | To |
 |---|---|

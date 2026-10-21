@@ -1,3 +1,4 @@
+# SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
 f0ab71805a8a2c7ca5d37e7d137b3fb7de1c1dafb94d0cc639fcacfe90d9c94e  src/DesktopProgressNotificationWindow.cs
 7d38dea03461c4c442e12466f4619829d2ec24eabcae08cd5773fbc00e6b9f3f  src/UnifiedDiffViewParser.cs
 3073941bbd47356e218d082d041f93f91aece717d7149315af3e75c778ff5e4d  src/WorklogCardMapper.cs

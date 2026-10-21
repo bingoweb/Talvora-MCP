@@ -752,6 +752,91 @@ Card details (Files / Do / Don't / Acceptance) are in the design spec, section "
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-21 (6) · range `audit/2026-10-21-05 (3bb0bd6)..5048232` · 2 card commits · executor: ChatGPT via Talvora · result: ONE FIX (D11) + one Claude-caused block (P-23)
+
+Delivered: D10 (`11dc434`), A1 (`5048232`). Blocked: D9 (P-23, caused by Claude's reference file — decided now), D5 (waits for D9).
+
+**Fidelity: exact.** `tests/NativeInstallerRuntimeRegression.ps1` matches the D10 block line for line; `UserRunTools.cs` is identical to the A1 block; `FileOwnership.cs` equals the A1 block plus the static layout check the card asked for. GitHub CI green for both commits (10b followed).
+
+Verified live by Claude on installed `5048232`: `talvora_user_run` → `whoami` = `MSI\tayla`; the six repository paths (`obj/`, `bin/`, `.git/index`, …) are owned by `MSI\tayla`; a `talvora_apply_patch` edit keeps the file owner; Full gate as `MSI\tayla` with D9 applied in a scratch clone: `55 kontrol, 0 hata` / `Hepsi geçti.`.
+
+| # | Severity | Type | Where | Finding | Fix |
+|---|---|---|---|---|---|
+| 1 | MEDIUM | false warning on every edit | `src/Talvora/SourceEditing/SourceEditPathGuard.cs` `HoldExisting` → `SourceEditEngine.cs:723` | Every `talvora_apply_patch`/commit reports `DIRECTORY_RENAME_UNPROTECTED` for the **workspace root**. The root is the current directory of shells/editors, which never share DELETE, so deny-delete can never succeed there. A warning that is always present teaches agents to ignore the real one (a protected subdirectory that could not be locked). The root's identity is already checked (FILE_ID_INFO) before and after the edit. | D11 |
+| 2 | LOW | reference file (Claude) | `docs/codex/reference/ci/*.ps1` | Mixed newlines in Claude's reference copies made the "byte-for-byte" check impossible with `talvora_apply_patch`. Fixed by Claude in this audit: all reference files are pure LF, `SHA256SUMS.txt` lists normalised-content hashes, AGENTS.md rule 5 "Reference copies" says how to copy and verify. | P-23 decided |
+| 3 | INFO | A1 status | STATUS | A1 stays `[~]` only until D9 makes the signed-in gate green; then tick it with the D9 run as evidence (no extra work). | — |
+
+Claude verified D11 before writing it: scratch clone of `5048232` with the D11 edits → full `Talvora.SourceEdit.Regression` GREEN, including the five parent-rename protection tests and `DirectoryIdentitySharingWithExternalProcessAsync`.
+
+### D11 — Do not rename-lock the workspace root (it is identity-checked instead)
+
+> Audit 2026-10-21 (6), finding 1. Run directly after D9.
+
+**Files:** `src/Talvora/SourceEditing/SourceEditPathGuard.cs`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.PathGuard.cs`.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — `SourceEditPathGuard.cs`: directly below the line
+`    public System.Security.Principal.SecurityIdentifier? WorkspaceRootOwner { get; private set; }`
+insert:
+
+```csharp
+
+    // The workspace root is usually some process's current directory (shells, editors), which never
+    // shares DELETE; it is identity-checked but not rename-protected (audit 2026-10-21 (6)).
+    private string? workspaceRoot;
+```
+
+Step 2 — same file, three one-line insertions:
+
+- below `        guard.WorkspaceRootOwner = FileOwnership.TryGetOwner(prepared.ChangeSet.WorkspaceRoot);` insert `        guard.workspaceRoot = prepared.ChangeSet.WorkspaceRoot;`
+- below `        guard.WorkspaceRootOwner = FileOwnership.TryGetOwner(plan.WorkspaceRoot);` insert `        guard.workspaceRoot = plan.WorkspaceRoot;`
+- in `AcquireFileSystemTargets`, below its `        var guard = new SourceEditPathGuard();` insert `        guard.workspaceRoot = existingRoot;`
+
+Step 3 — same file, directly above `    private void HoldExisting(` insert:
+
+```csharp
+    private bool IsWorkspaceRoot(string path) =>
+        workspaceRoot is not null &&
+        string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(workspaceRoot)),
+            StringComparison.OrdinalIgnoreCase);
+
+```
+
+Step 4 — same file, inside `HoldExisting`, replace
+
+```csharp
+        var handle =
+            OpenDirectory(
+                path,
+                denyDeleteShare: true,
+                out var renameProtected);
+        if (!renameProtected)
+```
+
+with
+
+```csharp
+        var isWorkspaceRoot = IsWorkspaceRoot(path);
+        var handle =
+            OpenDirectory(
+                path,
+                denyDeleteShare: !isWorkspaceRoot,
+                out var renameProtected);
+        if (!renameProtected && !isWorkspaceRoot)
+```
+
+Step 5 — `SourceEditRegressionRunner.PathGuard.cs`, in `DirectoryIdentitySharingWithExternalProcessAsync` (the external holder must now hold a subdirectory, because the root is no longer opened with deny-delete):
+
+- `"k2-probe.txt"` → `"held/k2-probe.txt"` in the `WriteUtf8Async`, `PathInWorkspace` and `Update(...)` calls (3 places);
+- in the process argument list replace `scriptPath, fixture.Root, readyPath, releasePath,` with `scriptPath, Path.Combine(fixture.Root, "held"), readyPath, releasePath,`.
+
+**Don't:** change `OpenDirectory`, the identity checks, the warning code or text, or any other directory's protection.
+
+**Acceptance:** `Talvora.SourceEdit.Regression` GREEN (all five `PathGuardBlocks*ParentRename` tests pass); Full gate `Hepsi geçti.` as the signed-in user; deploy; a `talvora_apply_patch` edit of one file in this repository returns **no** `DIRECTORY_RENAME_UNPROTECTED` warning (paste the result's warning list, empty, into the Log); GitHub CI green (10b).
+
 ### Audit 2026-10-21 (5) · range `audit/2026-10-20-03 (36fe923)..3bb0bd6` · 9 card commits · executor: ChatGPT via Talvora · result: FIXES REQUIRED (test identity, Dependabot)
 
 Delivered: D8, D7, CI1, CI3, CI2, D6, D1, D3, Q6. Blocked with proposals: D5 (P-20), A1 (P-21), Q6c (P-22) — all decided now.
@@ -820,7 +905,7 @@ Step 2 — `tests/Talvora.Smoke/SmokeScenarios.Claude.cs`: insert directly **abo
 
 and insert a closing line `            }` directly **below** the line `            catch (OperationCanceledException) when (cancel.IsCancellationRequested) { }`.
 
-Step 3 — copy `docs/codex/reference/ci/IdentityPortabilityRegression.ps1` → `tests/IdentityPortabilityRegression.ps1` byte-for-byte (verify with `SHA256SUMS.txt`). The gate picks it up automatically.
+Step 3 — copy `docs/codex/reference/ci/IdentityPortabilityRegression.ps1` → `tests/IdentityPortabilityRegression.ps1` (AGENTS.md rule 5 "Reference copies"; verify the normalised hash with `SHA256SUMS.txt`, decision P-23). The gate picks it up automatically.
 
 **Acceptance:** run as the **signed-in user** (Codex shell; ChatGPT: say "gate run as LocalSystem; Claude re-checks" until A1): `IDENTITY_PORTABILITY_GREEN`, `DESKTOP_PROGRESS_BEHAVIOR_GREEN`, Full gate `Hepsi geçti.`; GitHub CI green (10b).
 
@@ -868,7 +953,7 @@ if ($expectedToolCount -lt 1) { throw 'The installed Talvora runtime returned no
 
 #### Exact implementation — copy this, do not reinterpret
 
-Step 1 — copy `docs/codex/reference/ci/Apply-DependabotPr.ps1` → `scripts/Apply-DependabotPr.ps1` byte-for-byte; verify with `SHA256SUMS.txt`.
+Step 1 — copy `docs/codex/reference/ci/Apply-DependabotPr.ps1` → `scripts/Apply-DependabotPr.ps1` (AGENTS.md rule 5 "Reference copies"; verify the normalised hash with `SHA256SUMS.txt`).
 
 Step 2 — append to `docs/MODERNIZATION-POLICY.md` exactly:
 
