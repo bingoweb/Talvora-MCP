@@ -415,8 +415,8 @@ internal static partial class SourceEditRegressionRunner
     internal static async Task DirectoryIdentitySharingWithExternalProcessAsync()
     {
         await using var fixture = await TestWorkspace.CreateAsync();
-        await fixture.WriteUtf8Async("k2-probe.txt", "before\n");
-        var source = fixture.PathInWorkspace("k2-probe.txt");
+        await fixture.WriteUtf8Async("held/k2-probe.txt", "before\n");
+        var source = fixture.PathInWorkspace("held/k2-probe.txt");
         var revision = await RevisionAsync(fixture.CreateEngine(), source);
         var processRoot = Path.Combine(
             Path.GetTempPath(),
@@ -461,7 +461,7 @@ internal static partial class SourceEditRegressionRunner
         foreach (var argument in new[]
         {
             "-NoProfile", "-NonInteractive", "-File",
-            scriptPath, fixture.Root, readyPath, releasePath,
+            scriptPath, Path.Combine(fixture.Root, "held"), readyPath, releasePath,
         })
         {
             start.ArgumentList.Add(argument);
@@ -489,7 +489,7 @@ internal static partial class SourceEditRegressionRunner
             var result = await fixture.CreateEngine().ApplyEditsAsync(
                 fixture.Root,
                 NewTransactionId(),
-                [Update("k2-probe.txt", revision, 0, 0, 0, 6, "after", "before")],
+                [Update("held/k2-probe.txt", revision, 0, 0, 0, 6, "after", "before")],
                 true,
                 CancellationToken.None);
             Assert(

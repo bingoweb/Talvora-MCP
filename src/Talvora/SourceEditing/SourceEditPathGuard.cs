@@ -30,6 +30,10 @@ internal sealed class SourceEditPathGuard : IDisposable
     public IReadOnlyCollection<string> UnprotectedDirectories => unprotectedDirectories;
     public IReadOnlyCollection<string> OwnerNotPreserved => ownerNotPreserved;
     public System.Security.Principal.SecurityIdentifier? WorkspaceRootOwner { get; private set; }
+
+    // The workspace root is usually some process's current directory (shells, editors), which never
+    // shares DELETE; it is identity-checked but not rename-protected (audit 2026-10-21 (6)).
+    private string? workspaceRoot;
     public void RecordOwnerNotPreserved(string path) => ownerNotPreserved.Add(path);
 
     private SourceEditPathGuard()
@@ -79,6 +83,7 @@ internal sealed class SourceEditPathGuard : IDisposable
     {
         var guard = new SourceEditPathGuard();
         guard.WorkspaceRootOwner = FileOwnership.TryGetOwner(prepared.ChangeSet.WorkspaceRoot);
+        guard.workspaceRoot = prepared.ChangeSet.WorkspaceRoot;
         try
         {
             foreach (var expected in prepared.DirectoryIdentities
@@ -128,6 +133,7 @@ internal sealed class SourceEditPathGuard : IDisposable
 
         var guard = new SourceEditPathGuard();
         guard.WorkspaceRootOwner = FileOwnership.TryGetOwner(plan.WorkspaceRoot);
+        guard.workspaceRoot = plan.WorkspaceRoot;
         try
         {
             foreach (var expected in plan.DirectoryIdentities
@@ -162,6 +168,7 @@ internal sealed class SourceEditPathGuard : IDisposable
         IEnumerable<string> targetPaths)
     {
         var guard = new SourceEditPathGuard();
+        guard.workspaceRoot = existingRoot;
         try
         {
             foreach (var directory in EnumerateRelevantDirectories(
@@ -286,6 +293,13 @@ internal sealed class SourceEditPathGuard : IDisposable
         }
     }
 
+    private bool IsWorkspaceRoot(string path) =>
+        workspaceRoot is not null &&
+        string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(workspaceRoot)),
+            StringComparison.OrdinalIgnoreCase);
+
     private void HoldExisting(
         string path,
         SourceEditDirectoryIdentity? expected)
@@ -303,12 +317,13 @@ internal sealed class SourceEditPathGuard : IDisposable
                 path);
         }
 
+        var isWorkspaceRoot = IsWorkspaceRoot(path);
         var handle =
             OpenDirectory(
                 path,
-                denyDeleteShare: true,
+                denyDeleteShare: !isWorkspaceRoot,
                 out var renameProtected);
-        if (!renameProtected)
+        if (!renameProtected && !isWorkspaceRoot)
         {
             unprotectedDirectories.Add(path);
         }

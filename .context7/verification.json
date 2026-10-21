@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-21T12:40:50Z",
-  "scope": "D9 exact ROADMAP/P-23 identity-portability regression fixes: Notification tray-pipe test selects the current process session under non-LocalSystem Windows identities and the interactive session under LocalSystem. Smoke Claude integration policy skips the WTSQueryUserToken-dependent live runner outside LocalSystem. The IdentityPortabilityRegression.ps1 reference was copied verbatim with the required normalized SHA-256 and returns IDENTITY_PORTABILITY_GREEN. Signed-in-user baseline Fast gate was RED (WTSQueryUserToken 1314); after D9, targeted Notification DESKTOP_PROGRESS_BEHAVIOR_GREEN and integration-policy test GREEN. Context7 /dotnet/docs confirms WindowsIdentity.GetCurrent and .User SID inspection; prescribed Process.SessionId and SID check compiled without errors.",
+  "verifiedAtUtc": "2026-10-21T13:00:48Z",
+  "scope": "D11 exact ROADMAP/audit 2026-10-21 (6): SourceEditPathGuard retains workspace-root directory identity validation but omits root rename-exclusive handles, leaving protection unchanged for child directories; the concurrent external-holder regression was moved into held/. Before the code fix, a normal source patch emitted DIRECTORY_RENAME_UNPROTECTED on the workspace root. After the exact source and test changes, all five PathGuardBlocks*ParentRename tests and the external-reader test passed in the signed-in-user SourceEdit regression. Context7 /dotnet/docs path normalization documentation confirms Path.GetFullPath canonicalizes Windows path components and separators; the card-prescribed TrimEndingDirectorySeparator plus OrdinalIgnoreCase comparison was applied without reinterpretation.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-21 D11: Current official .NET file-path-format guidance documents Path.GetFullPath normalization of Windows paths, resolving relative components, and canonical separators. Verified the exact card-prescribed workspace-root identity comparison based on Path.GetFullPath, Path.TrimEndingDirectorySeparator, and OrdinalIgnoreCase. The source change compiles and the five child-parent-rename regression checks passed."
+    },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-21 D9: Current official .NET security documentation confirms WindowsIdentity.GetCurrent() and WindowsIdentity.User for inspecting the executing Windows security identity/SID. Exact card-prescribed IsRunningAsLocalSystem() and Process.GetCurrentProcess().SessionId compiled under .NET 10; signed-in-user Notification and Smoke integration-policy regressions passed after the initial WTSQueryUserToken 1314 failure."

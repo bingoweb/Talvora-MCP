@@ -60,10 +60,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D1 — Make the rename-protection fallback visible (GitHub CI 39501010691 green; installed f060eba verified)
 - [x] D3 — Keep the text of structured failures (GitHub CI 39503786490 green; installed ee38286 and live failure text verified)
 - [x] D9 — Identity-portable tests + guard (signed-in Full gate 55/0; exact-commit GitHub CI to be checked after push)
-- [ ] D11 — Do not rename-lock the workspace root (audit 2026-10-21 (6))
+- [x] D11 — Do not rename-lock the workspace root (signed-in Full gate 55/0; deployment and exact-commit CI evidence follow commit)
 - [x] D10 — Installed-runtime test compares installed with installed (P-21 decided; Full gate 54/0 as LocalSystem)
 - [x] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (Claude verified installed 5048232; D9 signed-in Full gate 55/0 green; remaining acceptance satisfied)
-- [?] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (runs after D9 and D11; set back to `[ ]` when D9 is `[x]`)
+- [ ] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (P-20 decided; D9 and D11 prerequisites met)
 - [x] Q6 — Schema validation of tool arguments before invocation (GitHub CI 39545892517 green; installed 3bb0bd6 and live invalid-arguments test verified)
 - [-] Q6c — Translate tool exceptions (deferred by P-22 until the MCP SDK exposes a public invocation hook)
 - [ ] DEP1 — Dependabot PRs applied on main via Apply-DependabotPr.ps1 (after A1)
@@ -121,6 +121,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — D11 (executor: ChatGPT via Talvora): exactly applied root identity-only SourceEditPathGuard change and moved external-holder regression to `held/`; no other directory protection altered. Context7 `/dotnet/docs` verified Windows path normalization.
+  Test-first RED: pre-change `talvora_apply_patch` reported `DIRECTORY_RENAME_UNPROTECTED` for workspace root; targeted SourceEdit regression GREEN (all 5 PathGuardBlocks*ParentRename and external-holder tests passed).
+  Signed-in Full gate: 55 checks, 0 errors, `Hepsi geçti.`. Exact D11 commit installer build/deploy and post-install one-file warning-list probe will be recorded in Gitea issue #5 after commit.
+  D5 unblocked; P-24 Git pull identity proposal remains pending. Exact-commit GitHub windows-ci must be checked after push.
 - 2026-10-21 — D9 (executor: ChatGPT via Talvora): exact identity guards in Notification and Smoke, identity portability regression fixture copied with normalised SHA-256 `1665f15d938a860ef8d0b55f6ecb7fbb7d011d9ce65ec337b48aaca7ce3e80d3`; added required Context7 evidence.
   Test-first RED: signed-in Fast gate 8 checks/1 error (WTSQueryUserToken 1314); after D9, IDENTITY_PORTABILITY_GREEN, DESKTOP_PROGRESS_BEHAVIOR_GREEN, integration-policy regression GREEN.
   Signed-in Full gate: 55 checks, 0 errors, `Hepsi geçti.`; Context7 `/dotnet/docs` verified; A1 signed-in Full acceptance satisfied. Test-only card, no deployment.
