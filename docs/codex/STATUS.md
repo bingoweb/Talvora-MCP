@@ -68,7 +68,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [-] Q6c — Translate tool exceptions (deferred by P-22 until the MCP SDK exposes a public invocation hook)
 - [x] DEP1 — Dependabot PR procedure installed on main (signed-in Full gate 55/0; GitHub CI 39614105176 green)
 - [x] D12 — `git pull` uses the signed-in user's credentials (P-24 decided)
-- [ ] D13 — Dependabot script prepares and verifies; Talvora tools commit (P-25 decided)
+- [x] D13 — Dependabot script prepares and verifies; Talvora tools commit (P-25 decided)
 - [ ] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the rewritten DEP17 steps (after D13)
 - [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
@@ -123,6 +123,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — D13 (executor: ChatGPT via Talvora): copied exact approved Dependabot reference into scripts/Apply-DependabotPr.ps1; normalized SHA-256 681cd1cd7b08c4096027b67f479f2e3739949325c4c0965b039d2b86c3879d3e; 0 PowerShell parse errors. Updated one modernization-policy paragraph.
+  Test-first RED: old reference hash 1c37620e0cce915a6af3ec5a906b2ff1ea2747c9e799467325e82eb1c8b9a4b2 != approved D13 hash; GREEN after copy. Context7 `/microsoftdocs/powershell-docs` and official PowerShell exit-code guidance verified; supporting evidence refreshed.
+  Signed-in user MSI\\tayla: baseline Fast gate 13 checks / 0 errors, Full gate 55 checks / 0 errors, `Hepsi geçti.`.
+  Script/docs-only card: installed runtime remains 56bce29; exact-commit GitHub CI to be checked after push. Next DEP17.
 - 2026-10-21 — D12 (executor: ChatGPT via Talvora): exact ROADMAP pull/fetch/push credential-context routing and regression assertions; no SSH key, ACL, git config or other Git verb changes. Supporting .context7/verification.json refreshed.
   Test-first RED: SSH fetch/pull/push credential-context assertion; GREEN: GIT_CREDENTIAL_CONTEXT_SOURCE_GREEN, GIT_SAFE_DIRECTORY_SOURCE_GREEN.
   Signed-in-user Full gate: 55 checks, 0 errors, `Hepsi geçti.`; Context7 `/dotnet/docs` confirmed ordinal command-name equality.
