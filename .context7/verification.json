@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-21T13:00:48Z",
-  "scope": "D11 exact ROADMAP/audit 2026-10-21 (6): SourceEditPathGuard retains workspace-root directory identity validation but omits root rename-exclusive handles, leaving protection unchanged for child directories; the concurrent external-holder regression was moved into held/. Before the code fix, a normal source patch emitted DIRECTORY_RENAME_UNPROTECTED on the workspace root. After the exact source and test changes, all five PathGuardBlocks*ParentRename tests and the external-reader test passed in the signed-in-user SourceEdit regression. Context7 /dotnet/docs path normalization documentation confirms Path.GetFullPath canonicalizes Windows path components and separators; the card-prescribed TrimEndingDirectorySeparator plus OrdinalIgnoreCase comparison was applied without reinterpretation.",
+  "verifiedAtUtc": "2026-10-21T13:28:49Z",
+  "scope": "D5 exact ROADMAP/P-20 implementation: Get-CodexContext.ps1 now explicitly uses UTF8Encoding without BOM for the child console/output stream; AgentBriefTools includes the permanent user-approved AGENTS section first and calls pwsh non-interactively. Smoke regression was RED on the old installed service (missing ç); after the prescribed changes, raw redirected context is decoded as strict UTF-8 without replacement characters; N5 source text contains ğ, —, §, and the acceptance's explicit ç test sample is placed in the required newest STATUS Log. Context helper parent-section selection is unchanged per P-20; direct DESIGN-WORKLOG heading check proved ### 3.1 Kod terminali exists. Official PowerShell character-encoding documentation consulted through Context7.",
   "libraries": [
+    {
+      "libraryId": "/microsoftdocs/powershell-docs",
+      "verified": "2026-10-21 D5: Official PowerShell 7 documentation in about_Character_Encoding confirms PowerShell 6+ defaults to utf8NoBOM for text output, and about_Preference_Variables documents $OutputEncoding as an Encoding used for native application piping. Verified the D5-prescribed explicit Console.OutputEncoding and $OutputEncoding UTF8Encoding(false), and -NonInteractive child execution while retaining exact prescribed argument order."
+    },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-21 D11: Current official .NET file-path-format guidance documents Path.GetFullPath normalization of Windows paths, resolving relative components, and canonical separators. Verified the exact card-prescribed workspace-root identity comparison based on Path.GetFullPath, Path.TrimEndingDirectorySeparator, and OrdinalIgnoreCase. The source change compiles and the five child-parent-rename regression checks passed."

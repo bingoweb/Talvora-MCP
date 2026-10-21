@@ -4,6 +4,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Text.UTF8Encoding]::new($false)
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $statusPath = Join-Path $repoRoot 'docs/codex/STATUS.md'
 $status = [IO.File]::ReadAllText($statusPath)

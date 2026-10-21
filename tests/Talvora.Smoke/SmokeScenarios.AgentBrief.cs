@@ -18,6 +18,20 @@ internal static partial class SmokeScenarios
         var response = await CallAsync(client, root);
         var sections = response.GetProperty("agentsSections").GetString()!;
         var context = response.GetProperty("context").GetString()!;
+        foreach (var mustContain in new[] { "ç", "ğ", "—", "§" })
+        {
+            if (!context.Contains(mustContain, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"agent_brief context lost the character '{mustContain}'.");
+            }
+        }
+        if (!sections.StartsWith(
+                "## PERMANENT USER-APPROVED AGENT PROMPT", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "agent_brief must start with the permanent-prompt section.");
+        }
         foreach (var heading in new[]
         {
             "## WHO MUST FOLLOW THESE RULES",

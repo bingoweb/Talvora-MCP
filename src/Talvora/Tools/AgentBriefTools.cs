@@ -17,6 +17,7 @@ public static class AgentBriefTools
     private const int MaxTotalCharacters = 60_000;
     private static readonly string[] RequiredHeadings =
     [
+        "## PERMANENT USER-APPROVED AGENT PROMPT",
         "## WHO MUST FOLLOW THESE RULES",
         "## Language policy",
         "## EXECUTION MANDATE",
@@ -65,6 +66,7 @@ public static class AgentBriefTools
             var arguments = new List<string>
             {
                 "-NoProfile",
+                "-NonInteractive",
                 "-File",
                 scriptPath,
             };

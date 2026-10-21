@@ -63,7 +63,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D11 — Do not rename-lock the workspace root (signed-in Full gate 55/0; deployment and exact-commit CI evidence follow commit)
 - [x] D10 — Installed-runtime test compares installed with installed (P-21 decided; Full gate 54/0 as LocalSystem)
 - [x] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (Claude verified installed 5048232; D9 signed-in Full gate 55/0 green; remaining acceptance satisfied)
-- [ ] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (P-20 decided; D9 and D11 prerequisites met)
+- [x] D5 — `talvora_agent_brief` UTF-8 + permanent-prompt first (signed-in Full 55/0; deployment and exact-commit CI follow)
 - [x] Q6 — Schema validation of tool arguments before invocation (GitHub CI 39545892517 green; installed 3bb0bd6 and live invalid-arguments test verified)
 - [-] Q6c — Translate tool exceptions (deferred by P-22 until the MCP SDK exposes a public invocation hook)
 - [ ] DEP1 — Dependabot PRs applied on main via Apply-DependabotPr.ps1 (after A1)
@@ -121,6 +121,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — D5 (executor: ChatGPT via Talvora): exact UTF-8 console/output changes, permanent AGENTS heading first, and noninteractive child; UTF-8 verification sample: ç, ğ, —, §.
+  Test-first RED: old installed agent_brief lost 'ç'; targeted build/QualityGateRegression GREEN; strict UTF-8 D5 script output preserved all four characters (0 replacement chars). P-20 retained parent-section selection; DESIGN-WORKLOG §3.1 heading verified in source.
+  Signed-in Full gate: 55 checks, 0 errors, `Hepsi geçti.`; Context7 `/microsoftdocs/powershell-docs` verified. Runtime installer and live N5 smoke to follow the one-card commit; exact-commit GitHub CI to be checked after push.
+  Next DEP1; P-24 Git transport proposal still waiting for Claude.
 - 2026-10-21 — D11 (executor: ChatGPT via Talvora): exactly applied root identity-only SourceEditPathGuard change and moved external-holder regression to `held/`; no other directory protection altered. Context7 `/dotnet/docs` verified Windows path normalization.
   Test-first RED: pre-change `talvora_apply_patch` reported `DIRECTORY_RENAME_UNPROTECTED` for workspace root; targeted SourceEdit regression GREEN (all 5 PathGuardBlocks*ParentRename and external-holder tests passed).
   Signed-in Full gate: 55 checks, 0 errors, `Hepsi geçti.`. Exact D11 commit installer build/deploy and post-install one-file warning-list probe will be recorded in Gitea issue #5 after commit.
