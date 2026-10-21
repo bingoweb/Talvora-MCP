@@ -64,6 +64,11 @@ builder.Services
             request,
             cancellationToken) =>
         {
+            if (ToolArgumentValidator.TryCreateError(request) is { } invalidArguments)
+            {
+                return invalidArguments;
+            }
+
             var notifier =
                 request.Services?.GetService<TalvoraDesktopProgressNotifier>();
             Func<CancellationToken, ValueTask<CallToolResult>> operation =

@@ -20,6 +20,16 @@
 
 ## Open
 
+### P-21 — A1 — Pre-deploy Full gate expects post-deploy tool count
+- Date: 2026-10-21, HEAD ee38286
+- Card text: "Part D — from now on the agent runs builds/tests/gate with talvora_user_run"; "One-time repair ... then git status must still be clean"; AGENTS.md CONTINUE PROTOCOL step 7 requires a green Full gate before the one-card commit/push/deploy.
+- Problem: A1 adds talvora_user_run and increases source manifest count from 250 to 251 while the installed ee38286 service still exposes 250 tools. tests/NativeInstallerRuntimeRegression.ps1:5-6 derives expected count from the uncommitted source manifest; :55 and :81 then compare it to the installed current.json ToolCount. The local Full gate passed compilation, SourceEdit, notifications, metadata, and 31+ checks but failed NativeInstallerRuntime solely because SOURCE_TOOL_COUNT=251 and INSTALLED_TOOL_COUNT=250. Pre-commit installation cannot report the final sourceCommit because the A1 commit does not yet exist; the new signed-in-user runner also cannot execute until deployment. Two stale count assertions were repaired in supporting tests; all targeted owner/surface/metadata tests are green. This is an ordering/acceptance contradiction, not a request to skip an unsuccessful runtime test.
+- Options:
+  1. Specify an A1 delivery exception: commit and push after targeted source/smoke tests but before the Full gate; install the exact A1 commit; run Full as MSI\tayla using talvora_user_run; require both exact-commit CI and Full green before marking A1 complete. Leave the native installed-runtime guard unchanged.
+  2. Add an exact prerequisite card revising NativeInstallerRuntimeRegression to compare the installed current.json tool count with the installed runtime's actual tools/list rather than a possibly newer working-tree manifest; keep a separate strict source-manifest check. Then A1 can run a green pre-deploy Full gate without weakening installed-runtime assertions.
+- Partial work: reverting A1 source/tests to HEAD; no recursive icacls repair or A1 deployment attempted.
+- Decision (Claude): _pending_
+
 ### P-20 — D5 — N5 subsection acceptance conflicts with the prescribed UTF-8-only change
 - Date: 2026-10-21, HEAD 6664eda
 - Card text: "Step 1 — directly after Set-StrictMode insert exactly [Console]::OutputEncoding and $OutputEncoding; Step 2 — Nothing else in the tool changes." "Step 4 — talvora_agent_brief {workspaceRoot, card: N5} → context contains ### 3.1 \"Kod terminali\" exactly."

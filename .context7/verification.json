@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-20T21:43:27Z",
-  "scope": "D3 exact roadmap/P-6 implementation: StructuredResultFailure now owns case-insensitive structured tool failure detection for timedOut=true, success=false, and nonzero integer exitCode. ToolResultTextPolicy preserves original text for such failures while retaining the success marker. TalvoraDesktopProgressNotifier reuses the shared detector without changing Turkish failure messages; the smoke project links the shared source. Test-first RED on success:false original text, then targeted smoke and notification regressions GREEN. Context7 /dotnet/docs confirms JsonElement.ValueKind/EnumerateObject and JSON inspection semantics; no dependency changes.",
+  "verifiedAtUtc": "2026-10-21T04:41:29Z",
+  "scope": "Q6 exact implementation (decisions P-3/P-8): new ToolArgumentValidator validates required, unknown and mismatched JSON properties against MCP tool schemas before the desktop progress notifier; unknown tools retain SDK handling, successful calls stay unchanged, and tool exception translation remains Q6c. Test-first targeted smoke failed with missing validator; then Release build and exact schema unit fixtures GREEN. Current MCP C# SDK Context7 reference confirms AddCallToolFilter returning CallToolResult with IsError=true and TextContentBlock before next(). The user explicitly authorized including existing P-21 A1 proposal and STATUS changes in the Q6 one-card commit.",
   "libraries": [
+    {
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-10-21 Q6: current official SDK request-filter examples show AddCallToolFilter returning CallToolResult with IsError=true and TextContentBlock before next; SDK tool collection/schema APIs match the prescribed ModelContextProtocol 2.2.0 exact code, which compiles with no warnings."
+    },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-20 D3: Current Microsoft System.Text.Json guidance confirms JsonElement.ValueKind, JsonElement.EnumerateObject, and manual case-insensitive comparison of JSON property names. The exact ROADMAP D3 helper and smoke Compile link were used without modifying existing success-result behavior."
@@ -157,6 +161,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-21 Q6: official MCP C# SDK filters documentation https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/filters.md and CallToolResult https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Protocol/CallToolResult.cs ; Context7 /modelcontextprotocol/csharp-sdk. Targeted wrong-arguments unit regression RED before implementation and GREEN after; installed live probe and Full gate pending.",
     "2026-10-20 D3: Microsoft System.Text.Json DOM guide https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/use-dom and casing documentation https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/character-casing ; Context7 /dotnet/docs. Targeted text preservation regression RED then GREEN; notification regression DESKTOP_PROGRESS_BEHAVIOR_GREEN.",
     "2026-10-20 D1: Microsoft Windows CreateFileW https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew (FILE_SHARE_DELETE and sharing violation semantics) and .NET FileShare https://learn.microsoft.com/en-us/dotnet/api/system.io.fileshare?view=net-10.0 ; Context7 /dotnet/docs. D1 source result warnings tested RED to GREEN with unchanged directory fallback and rename guard contracts.",
     "2026-10-20 D6: Microsoft PowerShell about_Regular_Expressions https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_regular_expressions?view=powershell-7.7 ; Context7 /microsoftdocs/powershell-docs. Verified (?ms) ^ anchor, exact card ID separated by horizontal whitespace, [regex]::Escape, and lookahead. Targeted QualityGateRegression RED then GREEN; real D1/D2/D7 lookups GREEN.",

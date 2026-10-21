@@ -13,5 +13,7 @@
              Link="ToolResultTextPolicy.cs" />
     <Compile Include="..\..\src\Talvora\StructuredResultFailure.cs"
              Link="StructuredResultFailure.cs" />
+    <Compile Include="..\..\src\Talvora\ToolArgumentValidator.cs"
+             Link="ToolArgumentValidator.cs" />
   </ItemGroup>
 </Project>

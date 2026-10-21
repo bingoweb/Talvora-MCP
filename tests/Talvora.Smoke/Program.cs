@@ -54,6 +54,21 @@ if (args.Length == 1 &&
     return;
 }
 
+if (args.Length == 1 && args[0] == "--argument-validation-unit-only")
+{
+    SmokeScenarios.RunArgumentValidationUnit();
+    Console.WriteLine("TALVORA ARGUMENT VALIDATION UNIT GREEN");
+    return;
+}
+
+if (args.Length >= 1 && args[0] == "--argument-validation-live")
+{
+    await SmokeScenarios.RunArgumentValidationLiveAsync(
+        args.Length > 1 ? args[1] : "http://127.0.0.1:7676");
+    Console.WriteLine("TALVORA ARGUMENT VALIDATION LIVE GREEN");
+    return;
+}
+
 if (args.Length == 1 &&
     string.Equals(args[0], "--tool-result-text-policy-live",
         StringComparison.Ordinal))

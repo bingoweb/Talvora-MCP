@@ -59,9 +59,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D6 — Context helper finds `##` and `###` card headings (GitHub windows-ci 39497367643 green)
 - [?] D5 — `talvora_agent_brief` keeps UTF-8 and includes the permanent-prompt section (waiting for Claude: P-20; N5 §3.1 acceptance conflicts with exact implementation)
 - [x] D1 — Make the rename-protection fallback visible (GitHub CI 39501010691 green; installed f060eba verified)
-- [~] D3 — Keep the text of structured failures (local Full gate green; own GitHub CI and installed runtime verification pending)
-- [ ] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (P-7 decided)
-- [ ] Q6 — Schema validation of tool arguments before invocation (P-3, P-8 decided)
+- [x] D3 — Keep the text of structured failures (GitHub CI 39503786490 green; installed ee38286 and live failure text verified)
+- [?] A1 — `talvora_user_run` + keep file ownership + one-time owner repair (waiting for Claude: P-21, pre-deploy Full gate checks installed tool count against newer source manifest)
+- [~] Q6 — Schema validation of tool arguments before invocation (Full 54/0 green; exact-commit GitHub CI and installed live validation pending)
 - [ ] Q6c — Translate tool exceptions into redacted, categorised errors (P-9 decided)
 - [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
@@ -114,6 +114,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — Q6 (executor: ChatGPT via Talvora): implemented the exact P-3/P-8 ToolArgumentValidator for required, unknown and wrong-type JSON inputs; early call-tool filter returns InvalidArguments before desktop notifications. Unknown tools and valid calls retain existing SDK behavior.
+  Test-first RED: CS0103 missing ToolArgumentValidator (3 errors); after implementation Release build 0 warnings/errors and TALVORA ARGUMENT VALIDATION UNIT GREEN (exact message, wrong boolean type, valid inputs).
+  Baseline Fast 13/0; final Full 54 checks, 0 errors, "Hepsi geçti." (LocalSystem; Kimlik: NT AUTHORITY\SYSTEM). Context7 /modelcontextprotocol/csharp-sdk verified official AddCallToolFilter and CallToolResult behavior. Security policy documented.
+  User expressly authorized carrying previous A1/P-21 PROPOSALS.md and STATUS.md uncommitted evidence into this single Q6 commit. Q6 GitHub CI, installation and live invalid-argument response pending after push; Q6c remains separate.
+- 2026-10-21 — A1 blocked (executor: ChatGPT via Talvora): P-21 opened for pre-deploy Full gate versus post-deploy tool-count/user-run ordering. Test-first surface RED, then targeted surface, metadata, ownership (including LocalSystem Administrators-owner fixture), and C# build GREEN.
+  Full gate attempts failed 14/1 and 21/1 on stale 250/213 static count assertions (minimal supporting fixes temporarily green), then 32/1 in NativeInstallerRuntime: new source manifest 251 vs installed ee38286 current.json 250; service itself HTTP 200.
+  Context7 /dotnet/docs ACL/privilege APIs verified; no A1 deployment or recursive icacls repair. All partial A1 source/test/README/Context7 edits reverted to HEAD through talvora_apply_patch. P-21 awaits Claude; D3 remains fully verified.
 - 2026-10-21 — D3 (executor: ChatGPT via Talvora): added the exact shared StructuredResultFailure detector; ToolResultTextPolicy preserves failure text, and the notifier reuses detection without changing its Turkish messages. Smoke csproj links the shared helper (P-6).
   Test-first RED: success:false result lost original error text. Targeted smoke GREEN (success:false, timedOut:true, exitCode:1) and DESKTOP_PROGRESS_BEHAVIOR_GREEN; Release build 0 errors/warnings.
   Supporting change outside card Files: tests/ModernizationPolicyRegression.ps1 now checks the detector's exitCode plus notifier use of the shared helper; first Full gate 31/1 from stale static path, targeted MODERNIZATION_POLICY_GREEN after fix.

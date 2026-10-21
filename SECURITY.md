@@ -24,6 +24,15 @@ Origin restriction and retain `Access-Control-Allow-Origin: *`. Host filtering
 still applies to those assets; `/penpot-ai/healthz` and all `/mcp*` routes
 remain subject to the Origin guard.
 
+## MCP tool argument validation
+
+Before invoking a known MCP tool, Talvora checks required argument names, unknown
+argument names, and JSON value types against that tool's input schema. Invalid
+calls receive one English, model-facing InvalidArguments text response marked
+isError: true, listing parameter names and expected types, not argument values.
+The call is rejected before the desktop progress notifier starts; valid calls
+keep their existing responses. Exception translation is separate work (Q6c).
+
 ## Logging and privacy
 
 Talvora keeps operational logging for diagnostics, but persistent logs must redact common credential forms such as authorization tokens, API keys, passwords, client secrets, GitHub tokens, OpenAI-style keys, and JWTs.
