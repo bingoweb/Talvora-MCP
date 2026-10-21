@@ -791,6 +791,10 @@ public static class GitTools
                 string.Equals(
                     arguments[index],
                     "fetch",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    arguments[index],
+                    "pull",
                     StringComparison.OrdinalIgnoreCase))
             {
                 remoteCommandIndex = index;

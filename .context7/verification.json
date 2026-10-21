@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-21T14:01:09Z",
-  "scope": "DEP1 exact ROADMAP 2026-10-21: canonical Dependabot update script copied from the approved CI reference with normalized SHA-256 1c37620e0cce915a6af3ec5a906b2ff1ea2747c9e799467325e82eb1c8b9a4b2 and 0 PowerShell parse errors; policy specifies no GitHub PR merging and locally regenerating all transitive NuGet lock files. NuGet official lock file docs confirm --force-evaluate regenerates lockfiles and --locked-mode verifies them; GitHub CLI official gh pr close manual confirms close --comment is distinct from merge.",
+  "verifiedAtUtc": "2026-10-21T15:13:59Z",
+  "scope": "D12 exact ROADMAP 2026-10-21: credential-based git pull joins push/fetch in the existing interactive-user Git routing. GitSafeDirectoryRegression was RED before the source change and GREEN after. Existing SSH key ACL, remote-resolution behavior and all other Git verbs remain untouched.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-21 D12: Official .NET C# string equality guidance confirms StringComparison.OrdinalIgnoreCase performs non-linguistic, culture-independent case-insensitive equality for command names. The exact D12 implementation extends the pre-existing push/fetch check to pull using the same String.Equals overload; regression RED before and GREEN after."
+    },
     {
       "libraryId": "/websites/learn_microsoft_en-us_nuget",
       "verified": "2026-10-21 DEP1: Microsoft NuGet package-lock documentation confirms dotnet restore --force-evaluate updates dependency resolution and regenerates packages.lock.json; --locked-mode fails if dependency declarations drift from the lock file (NU1004). The approved reference script uses both sequentially and checks lockstep."
@@ -189,6 +193,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-21 D12: Microsoft C# string comparison https://github.com/dotnet/docs/blob/main/docs/csharp/fundamentals/strings/common-tasks/compare.md and Microsoft .NET best practices https://learn.microsoft.com/en-us/dotnet/standard/base-types/best-practices-strings ; Context7 /dotnet/docs. The D12 exact command comparison remains ordinal and culture independent.",
     "2026-10-21 A1: Microsoft FileSystemAclExtensions GetAccessControl and SetAccessControl https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemaclextensions?view=net-10.0 , FileSecurity.SetOwner https://learn.microsoft.com/en-us/dotnet/api/system.security.accesscontrol.objectsecurity.setowner?view=net-10.0 , Win32 TOKEN_PRIVILEGES https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-token_privileges and AdjustTokenPrivileges https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-adjusttokenprivileges ; Context7 /dotnet/docs. Targeted ownership and surface/metadata tests GREEN.",
     "2026-10-21 D10: Official Microsoft PowerShell ConvertFrom-Json https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Utility/ConvertFrom-Json.md and Invoke-WebRequest https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Utility/Invoke-WebRequest.md; Context7 /microsoftdocs/powershell-docs. D10 exact ROADMAP snippet requests installed MCP tools/list; source manifest count is intentionally no longer used. Targeted native installer runtime GREEN (250).",
     "2026-10-21 Q6: official MCP C# SDK filters documentation https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/filters.md and CallToolResult https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Protocol/CallToolResult.cs ; Context7 /modelcontextprotocol/csharp-sdk. Targeted wrong-arguments unit regression RED before implementation and GREEN after; installed live probe and Full gate pending.",

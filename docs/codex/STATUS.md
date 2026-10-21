@@ -67,7 +67,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] Q6 — Schema validation of tool arguments before invocation (GitHub CI 39545892517 green; installed 3bb0bd6 and live invalid-arguments test verified)
 - [-] Q6c — Translate tool exceptions (deferred by P-22 until the MCP SDK exposes a public invocation hook)
 - [x] DEP1 — Dependabot PR procedure installed on main (signed-in Full gate 55/0; GitHub CI 39614105176 green)
-- [ ] D12 — `git pull` uses the signed-in user's credentials (P-24 decided)
+- [x] D12 — `git pull` uses the signed-in user's credentials (P-24 decided)
 - [ ] D13 — Dependabot script prepares and verifies; Talvora tools commit (P-25 decided)
 - [ ] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the rewritten DEP17 steps (after D13)
 - [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided)
@@ -123,6 +123,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-21 — D12 (executor: ChatGPT via Talvora): exact ROADMAP pull/fetch/push credential-context routing and regression assertions; no SSH key, ACL, git config or other Git verb changes. Supporting .context7/verification.json refreshed.
+  Test-first RED: SSH fetch/pull/push credential-context assertion; GREEN: GIT_CREDENTIAL_CONTEXT_SOURCE_GREEN, GIT_SAFE_DIRECTORY_SOURCE_GREEN.
+  Signed-in-user Full gate: 55 checks, 0 errors, `Hepsi geçti.`; Context7 `/dotnet/docs` confirmed ordinal command-name equality.
+  Baseline: origin/main ac6a002, GitHub windows-ci 39620054867 GREEN. Delivery: deploy, installed-runtime live pull and exact-commit GitHub CI to verify after commit/push.
+  Next: D13.
 - 2026-10-21 — Claude audit 7 of `5048232..eff0f85` (D9, D11, D5, DEP1): exact fidelity, CI green for all four; D11 and D5 verified live on installed 61da387. P-24 → D12 (`pull` as signed-in user; AGENTS Git identity invariant). P-25 (Claude's script) → D13 + DEP17 rewritten (script stops at `READY DEP<n>`, commit/push/close via Talvora tools). Both verified in a scratch clone. Queue: D12 → D13 → DEP17 → N1. Tag `audit/2026-10-21-07` = `eff0f85`.
 - 2026-10-21 — DEP17 blocked (executor: ChatGPT via Talvora): real `Apply-DependabotPr.ps1 -Pr 17` passed PR patch, lockstep, locked restores and Release build, but Full gate failed `Context7` at `scripts/Validate-Context7Gate.ps1:53` (requires same-change `.context7/verification.json`).
   The exact script rejects pre-edited Context7 evidence at lines 26-27 and omits it from staged files at line 63; no gate bypass or out-of-card script change attempted. Proposal P-25 awaits Claude.
