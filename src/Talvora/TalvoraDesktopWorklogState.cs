@@ -32,6 +32,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         public DateTimeOffset LastActivityUtc { get; set; } = DateTimeOffset.UtcNow;
         public List<WorklogTimelineEntry> Timeline { get; } = [];
         public int Steps { get; set; }
+        public HashSet<string> ChangedFiles { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public WorklogCheckState LastBuild { get; set; } = WorklogCheckState.Unknown;
+        public WorklogCheckState LastTests { get; set; } = WorklogCheckState.Unknown;
         public OperationCategory Category { get; set; } = OperationCategory.GenericExecution;
         public string ToolName { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
@@ -162,6 +165,13 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             var session = ended.Session;
             session.LastActivityUtc = DateTimeOffset.UtcNow;
             session.Steps++;
+            if (kind == DesktopProgressKind.Completed && IsSourceEditTool(ended.ToolName) &&
+                evidence?.Files is { } changedFiles)
+                session.ChangedFiles.UnionWith(changedFiles);
+            if (ended.ToolName == "dotnet_build")
+                session.LastBuild = kind == DesktopProgressKind.Completed ? WorklogCheckState.Succeeded : WorklogCheckState.Failed;
+            if (ended.ToolName == "dotnet_test")
+                session.LastTests = kind == DesktopProgressKind.Completed ? WorklogCheckState.Succeeded : WorklogCheckState.Failed;
             session.Timeline.Insert(0, new WorklogTimelineEntry(
                 session.LastActivityUtc, ToWorklogState(kind), title));
             if (session.Timeline.Count > DesktopProgressProtocol.MaximumTimelineEntries)
@@ -398,12 +408,12 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 session.Id, sequence, DateTimeOffset.UtcNow,
                 new WorklogSessionHeader(session.ProjectName, session.Actor),
                 new WorklogStep((WorklogStepCategory)session.Category,
-                    ToWorklogState(kind), title, null, outcome,
+                    ToWorklogState(kind), title, isTerminal ? evidence?.Summary : null, outcome,
                     Math.Max(0, elapsed.TotalSeconds)),
                 session.Timeline.ToArray(),
                 new WorklogTotals(session.Steps,
                     Math.Max(0, (DateTimeOffset.UtcNow - session.BeganUtc).TotalSeconds),
-                    0, WorklogCheckState.Unknown, WorklogCheckState.Unknown),
+                    session.ChangedFiles.Count, session.LastBuild, session.LastTests),
                 evidence,
                 session.Actor switch
                 {

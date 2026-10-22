@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-22T16:54:46Z",
-  "scope": "N2 worklog protocol v4, bounded sessions and timeline, project/actor context through MCP filters, presenter window reuse, expected heartbeat intervals and terminal lifetimes.",
+  "verifiedAtUtc": "2026-10-22T17:48:12Z",
+  "scope": "N3 real source-edit receipt line counts persisted with committed journals; result-backed worklog facts, uncapped totals, diagnostic/test summaries, actual Git commit and push destinations, and preview-limit copy from its constant.",
   "libraries": [
+    {
+      "libraryId": "/mmanela/diffplex",
+      "verified": "2026-10-22 N3: Differ.CreateCustomDiffs uses a supplied line chunker and returns DiffBlocks with InsertCountB/DeleteCountA. DiffPlex 1.9.0 is the current stable Apache-2.0 package; N3 uses the prescribed shared differ for exact committed receipt counts without a custom diff algorithm."
+    },
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-22 N3: JsonElement ValueKind, TryGetProperty and EnumerateObject/EnumerateArray support bounded, case-insensitive structured-result inspection. Facts come from successful receipts, diagnostic/test summaries and actual Git results; requested patch counts are never used as committed facts."
+    },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
       "verified": "2026-10-22 N2: Official MCP C# SDK documents McpServer.ClientInfo, request filters, stateless ConfigureSessionOptions and IHttpContextAccessor for obtaining the request surface path; these supply actor context without changing tool results."
@@ -241,6 +249,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-22 N3: DiffPlex upstream API https://github.com/mmanela/diffplex/blob/master/README.md and DiffBlock fields https://github.com/mmanela/diffplex/blob/master/DiffPlex/Model/DiffBlock.cs ; stable version, target frameworks and Apache-2.0 license verified at https://www.nuget.org/packages/DiffPlex/1.9.0 ; .NET JSON DOM https://github.com/dotnet/docs/blob/main/docs/standard/serialization/system-text-json/use-dom.md . Context7 /mmanela/diffplex and /dotnet/docs verified.",
     "2026-10-22 N2: MCP official C# SDK stateless sessions https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/stateless/stateless.md , HTTP request context https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/httpcontext/httpcontext.md and McpServer.ClientInfo https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Server/McpServer.cs ; .NET SHA256.HashData https://github.com/dotnet/docs/blob/main/docs/fundamentals/code-analysis/quality-rules/ca1850.md and DispatcherTimer https://github.com/dotnet/docs/blob/main/docs/standard/threading/timers.md ; Context7 /modelcontextprotocol/csharp-sdk and /dotnet/docs verified.",
     "2026-10-22 D16: Official .NET System.Text.Json trailing comma defaults https://github.com/dotnet/docs/blob/main/docs/standard/serialization/system-text-json/invalid-json.md and JsonDocument disposal https://github.com/dotnet/docs/blob/main/docs/standard/serialization/system-text-json/use-dom.md ; PowerShell 7.7 Test-Json strict behavior https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Utility/Test-Json.md and error handling https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Error_Handling.md ; Context7 /dotnet/docs and /microsoftdocs/powershell-docs verified.",
     "2026-10-22 N1: Official .NET GeneratedRegex source generator https://github.com/dotnet/docs/blob/main/docs/standard/base-types/regular-expression-source-generators.md and System.Text.Json DOM https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/use-dom ; MCP CallToolResult https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Protocol/CallToolResult.cs and official tools guide https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md ; Context7 /dotnet/docs and /modelcontextprotocol/csharp-sdk verified.",

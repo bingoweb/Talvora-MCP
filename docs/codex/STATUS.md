@@ -74,8 +74,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided; pushed by Claude as f40e402 after the evidence-JSON unblock; CI 39800505820 green; installed f40e402)
 - [x] D15 — Delivery-gate refusals reach the agent (SourceEdit GREEN, signed-in Full 55/0; exact-commit delivery evidence follows)
 - [x] D16 — Local evidence gates parse as strictly as the push gate (signed-in Full 56/0; exact-commit GitHub CI check after push)
-- [x] N2 — Worklog: protocol v4, sessions, project/actor context (P-11; signed-in Full 56/0; exact-commit CI and runtime evidence follow delivery)
-- [ ] N3 — Worklog: real facts from results (P-11 decided)
+- [x] N2 — Worklog: protocol v4, sessions, project/actor context (P-11; signed-in Full 56/0; CI 39819719963 green; installed c56c7ee verified)
+- [~] N3 — Worklog: real facts from results (P-11; signed-in Full 56/0; CI pending, exact-commit deployment follows)
 - [ ] N3b — Worklog: code terminal real, complete, persistent (P-11 decided)
 - [ ] N4 — Worklog: agent jobs tell their story (+ Codex code terminal) (P-11 decided)
 - [ ] N5 — Worklog card visual redesign + preview harness (renders N1–N4 proof, P-11)
@@ -126,11 +126,19 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-22 — N3 (executor: Codex via Talvora): committed receipt AddedLines/RemovedLines persisted through WAL/replay; worklog facts use actual receipts, uncapped file totals, diagnostics/test summaries and Git results; requested counts are never reported as applied.
+  RED: committed receipts lacked AddedLines; rejected patch claimed requested counts; repeated console diagnostics overcounted errors. GREEN: TALVORA RECEIPT COUNTS GREEN and DESKTOP_PROGRESS_BEHAVIOR_GREEN, including unified 2-file edits, 20-file totals, three-error build, three failing names and real commit hash.
+  Signed-in MSI\tayla baseline Fast 13/0; Full 56 checks, 0 failures / 46 PowerShell regressions; exit 0, last line "Hepsi geçti.". Diff --check clean.
+  Supporting files: SourceEditEngine/TransactionStore carry committed counts; shared TextDiffBuilder + DiffPlex 1.9.0, central pin/three lock graphs and Apache-2.0 notices implement the prescribed §5.5 counter; fact helper and runner registrations plumb existing results.
+  Context7 /mmanela/diffplex and /dotnet/docs plus upstream/NuGet vendor checks recorded in .context7/verification.json. No layout change; PNG proof remains deferred to N5 under P-11.
+  User approved preserving N2 delivery evidence in this commit. Exact-commit GitHub CI, canonical installer build/deploy, installed sourceCommit and runtime smoke follow commit/push; next N3b.
 - 2026-10-22 — N2 (executor: ChatGPT via Talvora): protocol v4 worklog frames, bounded fields/timeline; project+actor session SHA-256, 90-second idle closure, MCP surface and clientInfo, background-job sessions, same-window presenter, heartbeat stale thresholds and 3/8/5-minute terminal lifetimes. No PNG (P-11: deferred to N5).
   RED: sequential same-project calls opened separate generations. GREEN: DESKTOP_PROGRESS_BEHAVIOR_GREEN; structured v4 round-trip/rejection, same WPF window instance, distinct projects, Claude 25-second heartbeat and three-minute completion tested.
   Updated superseded assertions in tests/ModernizationPolicyRegression.ps1 to the N2 contract, not guard removals; MODERNIZATION_POLICY_GREEN.
   Signed-in MSI\tayla baseline Fast 13/0; Full 56 checks, 0 failures / 46 PowerShell regressions; last line "Hepsi geçti.". Context7: /modelcontextprotocol/csharp-sdk, /dotnet/docs and official vendor sources.
-  Supporting .context7/verification.json refreshed; full installer deployment, /healthz.sourceCommit, installed runtime smoke and exact-commit windows-ci follow commit/push; next N3.
+  Supporting .context7/verification.json refreshed. Delivery closeout (executor: Codex via Talvora): detached installer build exit 0; SourceCommit c56c7ee026249a07f15c94057d304d8a86ab3d5d; canonical deploy task exit 0.
+  Installed /healthz.sourceCommit = HEAD c56c7ee026249a07f15c94057d304d8a86ab3d5d; signed-in NATIVE_INSTALLER_RUNTIME_GREEN; 251 tools; tray runs from the same version root in session 1.
+  Exact-commit windows-ci 39819719963 GREEN; origin/main = github/main = HEAD at N2 delivery. Continuation Fast 13/0, exit 0 (detached after connector wait limits); last line "Hepsi geçti.". N2 delivery evidence included in N3 with the user approval given on 2026-10-22.
 - 2026-10-22 — D16 (executor: ChatGPT via Talvora): applied exact strict System.Text.Json pre-parsing in Validate-Context7Gate.ps1 and Validate-ProjectDeliveryGate.ps1; preserved ConvertFrom-Json.
   Test-first RED: scripts/Validate-Context7Gate.ps1 lacked strict parsing. GREEN: STRICT_EVIDENCE_JSON_GREEN; approved test copy normalized SHA-256 e2897d0b48df809e5cb8163aa6302131c691db3dccc0d8c332bf73fbc99a6d32.
   Signed-in MSI\tayla baseline Fast 13/0; Full quality gate 56 controls, 0 failures (46 PowerShell regressions), last line "Hepsi geçti."; diff --check clean.

@@ -160,7 +160,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             var terminalEvidence =
                 BuildTerminalEvidence(
                     initialEvidence,
-                    result);
+                    result,
+                    canonicalToolName);
 
             try
             {
@@ -169,7 +170,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                     TryEndWorklog(
                         operationId,
                         DesktopProgressKind.Failed,
-                        narrative.Titles.Failed,
+                        EnrichTerminalTitle(canonicalToolName, narrative.Titles.Failed, terminalEvidence),
                         result is CallToolResult call ? WorklogFailureClassifier.Describe(call, canonicalToolName) : "Bu adım tamamlanamadı.",
                         terminalEvidence,
                         stopwatch.Elapsed);

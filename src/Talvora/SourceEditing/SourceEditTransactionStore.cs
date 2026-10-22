@@ -16,7 +16,11 @@ internal sealed record SourceEditJournalFilePlan(
     long AfterBytes,
     string? StagePath,
     string? BackupPath,
-    IReadOnlyList<string> CreatedDirectories);
+    IReadOnlyList<string> CreatedDirectories)
+{
+    public int? AddedLines { get; init; }
+    public int? RemovedLines { get; init; }
+}
 
 internal sealed record SourceEditJournalPlan(
     int SchemaVersion,
@@ -186,7 +190,11 @@ internal sealed class SourceEditTransactionStore
                     file.AfterBytes,
                     file.StagePath,
                     file.BackupPath,
-                    file.CreatedDirectories);
+                    file.CreatedDirectories)
+                {
+                    AddedLines = file.AddedLines,
+                    RemovedLines = file.RemovedLines,
+                };
             })
             .ToArray();
 

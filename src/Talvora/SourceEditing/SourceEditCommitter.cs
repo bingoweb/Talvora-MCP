@@ -119,6 +119,13 @@ internal sealed class SourceEditCommitter
                         $".talvora-backup-{transactionKey}-{index:D4}.tmp");
                 }
 
+                var counts = change.Before?.Exists == true && change.Before.Document is null
+                    ? ((int? Added, int? Removed))(null, null)
+                    : WorklogDiff.TextDiffBuilder.Count(
+                        change.Before?.Document?.Text ?? string.Empty,
+                        change.Operation == SourceEditOperationKind.Move
+                            ? change.ProposedDocument?.Text ?? change.Before?.Document?.Text ?? string.Empty
+                            : change.ProposedDocument?.Text ?? string.Empty);
                 prepared.Add(
                     new SourceEditPreparedFile(
                         index,
@@ -127,7 +134,11 @@ internal sealed class SourceEditCommitter
                         backupPath,
                         afterRevision,
                         afterBytes,
-                        createdDirectories));
+                        createdDirectories)
+                    {
+                        AddedLines = counts.Added,
+                        RemovedLines = counts.Removed,
+                    });
             }
 
             var directoryIdentities =
@@ -1108,7 +1119,11 @@ internal sealed class SourceEditCommitter
             prepared.AfterBytes,
             prepared.StagePath,
             prepared.BackupPath,
-            prepared.CreatedDirectories);
+            prepared.CreatedDirectories)
+        {
+            AddedLines = prepared.AddedLines,
+            RemovedLines = prepared.RemovedLines,
+        };
     }
 
     private static IReadOnlyList<string> GetMissingDirectories(

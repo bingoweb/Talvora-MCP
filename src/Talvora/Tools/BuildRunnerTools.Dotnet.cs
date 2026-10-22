@@ -274,7 +274,7 @@ public static partial class BuildRunnerTools
             timeoutSeconds,
             cancellationToken);
     }
-    private static TalvoraCliCommandResponse FormatDotnetResult(
+    internal static TalvoraCliCommandResponse FormatDotnetResult(
         TalvoraCliCommandResponse result, bool fullOutput)
     {
         var diagnostics = new List<TalvoraDotnetDiagnostic>();

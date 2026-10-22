@@ -1,3 +1,9 @@
+if (args.Contains("--receipt-counts-only", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunReceiptCountsAsync();
+    Console.WriteLine("TALVORA RECEIPT COUNTS GREEN");
+    return;
+}
 if (args.Contains("--knowledge-s6-local", StringComparer.OrdinalIgnoreCase))
 {
     await SourceEditRegressionRunner.RunKnowledgeS6LocalAsync();

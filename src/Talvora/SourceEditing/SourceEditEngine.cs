@@ -1498,7 +1498,9 @@ internal sealed class SourceEditEngine
                 file.BeforeRevision,
                 file.AfterRevision,
                 file.BeforeBytes,
-                file.AfterBytes);
+                file.AfterBytes,
+                success ? file.AddedLines : null,
+                success ? file.RemovedLines : null);
         }).ToArray();
 
         return new SourceEditTransactionResult(

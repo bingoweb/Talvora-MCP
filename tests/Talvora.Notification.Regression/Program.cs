@@ -10,7 +10,7 @@ using Talvora;
 using Talvora.Shared;
 using Talvora.Tray;
 
-internal static class Program
+internal static partial class Program
 {
     public static async Task<int> Main()
     {
@@ -23,6 +23,7 @@ internal static class Program
         AssertN1ManifestCopy();
         await AssertN1WorklogCopyAsync();
         await AssertN2ProjectSessionsAsync();
+        await AssertN3FactsAsync();
         await AssertDiffEvidenceCoverageAsync();
         await AssertSemanticMessagingAndCanonicalToolAsync();
         await AssertConcurrentCancellationTruthAsync();
@@ -206,13 +207,18 @@ internal static class Program
                         }),
             };
 
-            _ = await notifier.RunToolCallAsync<int>(
+            _ = await notifier.RunToolCallAsync<object>(
                 "talvora_apply_edits",
                 arguments,
-                _ => ValueTask.FromResult(1),
+                _ => ValueTask.FromResult<object>(new
+                {
+                    success = true, status = "committed",
+                    files = new[] { new { newPath = "src/Test.cs", addedLines = 1000, removedLines = 1000 } },
+                }),
                 CancellationToken.None);
 
             var evidence = observed
+                .Where(message => message.Kind == DesktopProgressKind.Completed)
                 .Select(message => message.Evidence)
                 .FirstOrDefault(candidate =>
                     !string.IsNullOrWhiteSpace(candidate?.CodePreview));

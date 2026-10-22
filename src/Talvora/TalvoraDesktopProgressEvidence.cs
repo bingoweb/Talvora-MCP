@@ -49,41 +49,42 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     }
 
     private static DesktopProgressEvidence? BuildTerminalEvidence<T>(
-        DesktopProgressEvidence? initial,
-        T result)
+        DesktopProgressEvidence? initial, T result, string toolName)
     {
         try
         {
-            var json =
-                result is CallToolResult callToolResult &&
+            var json = result is CallToolResult callToolResult &&
                 callToolResult.StructuredContent is JsonElement structured
-                    ? structured
-                    : JsonSerializer.SerializeToElement(result);
+                    ? structured : JsonSerializer.SerializeToElement(result);
             var resultSummary = DescribeStructuredResult(json);
             var resultFiles = ExtractStructuredFiles(json);
-
-            if (initial is null &&
-                string.IsNullOrWhiteSpace(resultSummary) &&
-                resultFiles.Count == 0)
+            if (IsSourceEditTool(toolName))
             {
-                return null;
+                var committed = TryGetPropertyIgnoreCase(json, "success", out var success) &&
+                    success.ValueKind == JsonValueKind.True &&
+                    string.Equals(FactText(json, "status"), "committed", StringComparison.Ordinal);
+                if (!committed)
+                    return new DesktopProgressEvidence(
+                        Summary: FactText(json, "status") == "rejected" ? "Değişiklik uygulanmadı" : null,
+                        Result: resultSummary);
+                var counts = ReceiptCounts(json);
+                var fact = $"{resultFiles.Count} dosya" +
+                    (counts.Added is not null && counts.Removed is not null
+                        ? $" · +{counts.Added} −{counts.Removed}" : "") +
+                    (resultFiles.Count > 0 ? " · " + DescribeFactFiles(resultFiles) : "");
+                return new DesktopProgressEvidence(fact, resultFiles,
+                    counts.Added, counts.Removed, initial?.CodePreview, resultSummary);
             }
-
-            var files =
-                initial?.Files is { Count: > 0 }
-                    ? initial.Files
-                    : resultFiles;
-            return new DesktopProgressEvidence(
-                Summary: initial?.Summary,
-                Files: files,
-                AddedLines: initial?.AddedLines,
-                RemovedLines: initial?.RemovedLines,
-                CodePreview: initial?.CodePreview,
-                Result: resultSummary ?? initial?.Result);
+            var resultFact = DescribeResultFact(toolName, json);
+            if (initial is null && resultSummary is null && resultFact is null && resultFiles.Count == 0)
+                return null;
+            return new DesktopProgressEvidence(resultFact, resultFiles,
+                CodePreview: initial?.CodePreview, Result: resultSummary);
         }
         catch
         {
-            return initial;
+            // Reporting remains best effort; never substitute requested counts for missing results.
+            return null;
         }
     }
 
@@ -99,6 +100,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         var files = new List<string>();
         var preview = new List<string>();
         var fileCount = 0;
+        string? unifiedOldPath = null;
         var added = 0;
         var removed = 0;
 
@@ -124,9 +126,23 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 continue;
             }
 
-            if (rawLine.StartsWith("+++ ", StringComparison.Ordinal) ||
-                rawLine.StartsWith("--- ", StringComparison.Ordinal))
+            if (rawLine.StartsWith("--- ", StringComparison.Ordinal))
             {
+                unifiedOldPath = rawLine[4..].Split('\t')[0].Trim('"');
+                AddPreviewLine(preview, rawLine);
+                continue;
+            }
+            if (rawLine.StartsWith("+++ ", StringComparison.Ordinal))
+            {
+                var path = rawLine[4..].Split('\t')[0].Trim('"');
+                if (path == "/dev/null") path = unifiedOldPath ?? string.Empty;
+                if (path.StartsWith("a/", StringComparison.Ordinal) ||
+                    path.StartsWith("b/", StringComparison.Ordinal)) path = path[2..];
+                if (!string.IsNullOrWhiteSpace(path) && path != "/dev/null")
+                {
+                    fileCount++;
+                    AddEvidenceFile(files, path, workspaceRoot);
+                }
                 AddPreviewLine(preview, rawLine);
                 continue;
             }
@@ -153,12 +169,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         }
 
         var summary =
-            $"{fileCount} dosya  //  +{added}  -{removed}";
+            $"{fileCount} dosya";
         return new DesktopProgressEvidence(
             Summary: summary,
             Files: files,
-            AddedLines: added,
-            RemovedLines: removed,
             CodePreview: JoinPreview(preview));
     }
 
@@ -259,10 +273,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         }
 
         return new DesktopProgressEvidence(
-            Summary: $"{fileCount} dosya  //  +{added}  -{removed}",
+            Summary: $"{fileCount} dosya",
             Files: files,
-            AddedLines: added,
-            RemovedLines: removed,
             CodePreview: JoinPreview(preview));
     }
 
@@ -372,7 +384,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (builder.Length + line.Length + Environment.NewLine.Length >
                 MaximumPreviewCharacters)
             {
-                builder.AppendLine("… (524.288 karakterlik gösterim sınırı aşıldı; kalan kod bu kartta gösterilemiyor)");
+                builder.AppendLine($"… ({MaximumPreviewCharacters.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("tr-TR"))} karakterlik gösterim sınırı aşıldı; kalan kod bu kartta gösterilemiyor)");
                 break;
             }
 
@@ -485,8 +497,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         var files = new List<string>();
         foreach (var item in filesElement.EnumerateArray())
         {
-            if (files.Count >= MaximumEvidenceFiles ||
-                item.ValueKind != JsonValueKind.Object)
+            if (item.ValueKind != JsonValueKind.Object)
             {
                 break;
             }

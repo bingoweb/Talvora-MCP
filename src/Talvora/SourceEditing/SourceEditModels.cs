@@ -114,7 +114,9 @@ public sealed record SourceEditFileReceipt(
     string? BeforeRevision,
     string? AfterRevision,
     long BeforeBytes,
-    long AfterBytes);
+    long AfterBytes,
+    int? AddedLines = null,
+    int? RemovedLines = null);
 
 public sealed record SourceEditTransactionResult(
     bool Success,
@@ -264,7 +266,11 @@ internal sealed record SourceEditPreparedFile(
     string? BackupPath,
     string? AfterRevision,
     long AfterBytes,
-    IReadOnlyList<string> CreatedDirectories);
+    IReadOnlyList<string> CreatedDirectories)
+{
+    public int? AddedLines { get; init; }
+    public int? RemovedLines { get; init; }
+}
 
 internal sealed record SourceEditDirectoryIdentity(
     string Path,

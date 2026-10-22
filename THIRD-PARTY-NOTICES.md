@@ -24,6 +24,14 @@ When a bundled dependency, model, or managed integration changes, this notice mu
 
 ## Bundled with the Talvora runtime
 
+### DiffPlex 1.9.0
+
+**Upstream:** [DiffPlex contributors](https://github.com/mmanela/diffplex)
+
+**License:** [Apache-2.0](https://licenses.nuget.org/Apache-2.0)
+
+**Relationship:** bundled line differencing for real source-edit receipt counts, as prescribed by DESIGN-WORKLOG §5.5.
+
 ### Microsoft .NET, Roslyn, data, hosting, and Windows libraries
 
 **Upstream / copyright attribution:** Microsoft  
