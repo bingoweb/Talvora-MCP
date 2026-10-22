@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-21T16:05:40Z",
-  "scope": "D13 exact ROADMAP 2026-10-21: replace scripts/Apply-DependabotPr.ps1 with the approved reference, SHA-256 681cd1cd7b08c4096027b67f479f2e3739949325c4c0965b039d2b86c3879d3e (normalized); parser 0 errors. The updated script prepares/verifies packages and license notices; DEP commits and pushes remain exclusive to Talvora Git tools.",
+  "verifiedAtUtc": "2026-10-22T05:20:44Z",
+  "scope": "2026-10-22 D14 exact ROADMAP: copied docs/codex/reference/ci/Apply-DependabotPr.ps1 to scripts/Apply-DependabotPr.ps1 unchanged, normalized SHA-256 465380c5aeb18187af54a6e19374a53e521da5e190c00d5eb923bc62b9f7b33d and 0 PowerShell parse errors. The approved script adds exclusive file locking, a detailed execution log/result file, and named dirty-tree paths; delivery continues through Talvora tools.",
   "libraries": [
+    {
+      "libraryId": "/microsoftdocs/powershell-docs",
+      "verified": "2026-10-22 D14: Official PowerShell 7.7 documentation confirms Add-Content -Encoding utf8 for logs, $LASTEXITCODE for native program failure detection, and finally blocks executing even when the script exits. The exact Claude-approved reference was copied without alterations and passed normalized-hash and parse checks."
+    },
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-22 D14: Official .NET FileStream examples show FileShare.None for exclusive access and handle disposal for releasing the file. The exact D14 reference uses [IO.File]::Open with None sharing and Dispose in finally, preventing overlapping Dependabot runs."
+    },
     {
       "libraryId": "/microsoftdocs/powershell-docs",
       "verified": "2026-10-21 D13: PowerShell 7.7 official documentation confirms Parser.ParseFile with tokens/errors references validates script syntax; native CLI failures must be handled using $LASTEXITCODE (nonzero exit does not automatically throw). The approved reference script retains Invoke-Checked for git/dotnet/pwsh commands; normalization hash and 0 parse errors verified, with no discretionary changes."
@@ -197,6 +205,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-22 D14: Microsoft PowerShell 7.7 about_Error_Handling https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Error_Handling.md , about_Language_Keywords https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Language_Keywords.md and Add-Content https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Management/Add-Content.md ; .NET official FileShare.None usage https://github.com/dotnet/docs/blob/main/csharp/asynchronous-programming/snippets/file-access/Program.cs . Context7 verified; approved reference hash and parse GREEN.",
     "2026-10-21 D13: Official PowerShell 7.7 about_Error_Handling https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Error_Handling.md and about_Automatic_Variables https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Automatic_Variables.md ; Context7 /microsoftdocs/powershell-docs. Exact D13 reference verifies native child exit codes and retains lockstep/locked restore/Full gate without automatically committing, pushing or closing PRs.",
     "2026-10-21 D12: Microsoft C# string comparison https://github.com/dotnet/docs/blob/main/docs/csharp/fundamentals/strings/common-tasks/compare.md and Microsoft .NET best practices https://learn.microsoft.com/en-us/dotnet/standard/base-types/best-practices-strings ; Context7 /dotnet/docs. The D12 exact command comparison remains ordinal and culture independent.",
     "2026-10-21 A1: Microsoft FileSystemAclExtensions GetAccessControl and SetAccessControl https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemaclextensions?view=net-10.0 , FileSecurity.SetOwner https://learn.microsoft.com/en-us/dotnet/api/system.security.accesscontrol.objectsecurity.setowner?view=net-10.0 , Win32 TOKEN_PRIVILEGES https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-token_privileges and AdjustTokenPrivileges https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-adjusttokenprivileges ; Context7 /dotnet/docs. Targeted ownership and surface/metadata tests GREEN.",

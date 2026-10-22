@@ -69,7 +69,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] DEP1 — Dependabot PR procedure installed on main (signed-in Full gate 55/0; GitHub CI 39614105176 green)
 - [x] D12 — `git pull` uses the signed-in user's credentials (P-24 decided)
 - [x] D13 — Dependabot script prepares and verifies; Talvora tools commit (P-25 decided)
-- [ ] D14 — Dependabot script runs detached, single-instance and observable (P-26 decided)
+- [x] D14 — Dependabot script runs detached, single-instance and observable (P-26 decided)
 - [ ] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the rewritten DEP17 steps (after D14; step 2 = detached start + poll)
 - [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
@@ -124,6 +124,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-22 — D14 (executor: ChatGPT via Talvora): copied approved script verbatim; normalized SHA-256 465380c5aeb18187af54a6e19374a53e521da5e190c00d5eb923bc62b9f7b33d; parse 0 errors; exclusive lock, per-PR log/result and named dirty paths.
+  Test-first RED: prior normalized hash 681cd1cd7b08c4096027b67f479f2e3739949325c4c0965b039d2b86c3879d3e; GREEN after copy.
+  Signed-in MSI\tayla: baseline Fast 13/0 and Full 55/0, `Hepsi geçti.`; Context7 `/microsoftdocs/powershell-docs`, `/dotnet/docs` and official vendor sources refreshed.
+  Script-only: installed runtime 56bce29 unchanged. Exact-commit GitHub windows-ci check follows push; next DEP17.
 - 2026-10-22 — Claude audit 8 of `eff0f85..a28f77b` (D12, D13): exact fidelity, CI green. P-26 decided: the long script outlived the chat tool-call limit and a retried call met the first run's files. New card D14 (lock, named dirty files, log/result files) and DEP17 step 2 = one detached start + polling; verified in a fresh clone (real run 55/0 READY, concurrent second start exit 3, detached start via the installed service DRY RUN OK). Queue: D14 → DEP17 → N1. Tag `audit/2026-10-22-08` = `a28f77b`.
 - 2026-10-22 — DEP17 blocked (executor: ChatGPT via Talvora): third failed invocation of the exact approved script; scripts/Apply-DependabotPr.ps1:29 reports unexpected dirty files even though signed-in Git status immediately beforehand listed only STATUS and Context7 changes. Subsequent diff again contained the PR's version/locks/notices, implying a concurrent or repeated writer (not yet identified).
   Signed-in baseline Fast gate: 13 checks / 0 errors, `Hepsi geçti.`; existing GitHub CI 39632553300 green. The exact selective git restore removed all version/lock/notice changes; Context7 DEP17 draft reverted; no DEP17 commit, push, PR close or deployment.
