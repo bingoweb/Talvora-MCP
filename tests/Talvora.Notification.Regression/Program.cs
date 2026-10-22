@@ -4,6 +4,7 @@ using System.IO.Pipes;
 using System.Reflection;
 using System.Security.Principal;
 using System.Text.Json;
+using ModelContextProtocol.Protocol;
 using Microsoft.Extensions.Logging.Abstractions;
 using Talvora;
 using Talvora.Shared;
@@ -19,6 +20,8 @@ internal static class Program
         AssertUnifiedVersionContract();
         AssertUpstreamRecoveryContract();
         await AssertWorkVisibilityFilteringAsync();
+        AssertN1ManifestCopy();
+        await AssertN1WorklogCopyAsync();
         await AssertDiffEvidenceCoverageAsync();
         await AssertSemanticMessagingAndCanonicalToolAsync();
         await AssertConcurrentCancellationTruthAsync();
@@ -146,20 +149,15 @@ internal static class Program
                 arguments: null,
                 _ => ValueTask.FromResult(2),
                 CancellationToken.None);
-            if (observed.IsEmpty)
+            _ = await notifier.RunToolCallAsync<object>(
+                "talvora_search_text",
+                arguments: null,
+                _ => ValueTask.FromResult<object>(new { success = false }),
+                CancellationToken.None);
+            if (!observed.IsEmpty)
             {
                 throw new InvalidOperationException(
-                    "Meaningful source inspection was incorrectly suppressed from the desktop worklog.");
-            }
-
-            if (observed.Any(message =>
-                    !string.Equals(
-                        message.ToolName,
-                        "read_source",
-                        StringComparison.Ordinal)))
-            {
-                throw new InvalidOperationException(
-                    "Source inspection did not preserve canonical tool identity.");
+                    "N1: inspection success or failure must not produce a frame.");
             }
         }
         finally
@@ -343,6 +341,104 @@ internal static class Program
         }
     }
 
+    private static async Task AssertN1WorklogCopyAsync()
+    {
+        var observed = new ConcurrentQueue<DesktopProgressMessage>();
+        var notifier = CreateNotifier(observed);
+        try
+        {
+            _ = await notifier.RunToolCallAsync<int>(
+                "talvora_apply_patch",
+                null,
+                _ => ValueTask.FromResult(1),
+                CancellationToken.None);
+            var terminal = observed.Where(x => IsTerminal(x.Kind)).Last();
+            if (terminal.Title != "Kod değişikliği uygulandı" ||
+                terminal.Message != "Adım başarıyla tamamlandı.")
+            {
+                throw new InvalidOperationException("N1 success title or message mismatch.");
+            }
+            AssertN1FrameCopy(observed);
+            var errorResult = new CallToolResult
+            {
+                StructuredContent = JsonSerializer.SerializeToElement(
+                    new { success = false, error = new { code = "EXPECTED_REVISION_MISMATCH" } }),
+            };
+            if (!WorklogFailureClassifier.Describe(errorResult, "apply_patch")
+                    .StartsWith("Dosya bu arada değişmişti", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("N1 revision conflict reason mismatch.");
+            }
+            _ = await notifier.RunToolCallAsync(
+                "talvora_apply_patch", null,
+                _ => ValueTask.FromResult(errorResult), CancellationToken.None);
+            terminal = observed.Where(x => IsTerminal(x.Kind)).Last();
+            if (terminal.Title != "Kod değişikliği uygulanamadı" ||
+                !terminal.Message.StartsWith("Dosya bu arada değişmişti", StringComparison.Ordinal))
+                throw new InvalidOperationException("N1 structured failure terminal mismatch.");
+            AssertN1FrameCopy(observed);
+            observed.Clear();
+            notifier.BeginCodexJob("n1-timeout", "C:\\repo");
+            notifier.EndCodexJob("n1-timeout", "timed_out", TimeSpan.FromSeconds(10));
+            terminal = observed.Where(x => IsTerminal(x.Kind)).Last();
+            if (terminal.Title != "Codex görevi tamamlanamadı" ||
+                terminal.Message != "Görev ayrılan sürede bitmedi; yapılan değişiklikler tamamlanmış sayılmıyor.")
+                throw new InvalidOperationException("N1 Codex timeout message mismatch.");
+            AssertN1FrameCopy(observed);
+        }
+        finally
+        {
+            await notifier.DisposeAsync();
+        }
+    }
+
+    private static void AssertN1FrameCopy(IEnumerable<DesktopProgressMessage> frames)
+    {
+        foreach (var frame in frames)
+        {
+            var text = frame.Title + "\n" + frame.Message;
+            if (new[] { "Son yaptıklarım", "Amaç:", "Geçen süre", "Sonuç:",
+                "apply_patch", "talvora_", "paralel adım" }
+                .Any(term => text.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                System.Text.RegularExpressions.Regex.IsMatch(
+                    text, "gelistir|dogrul|cagri|gecen sure|tamamladi",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                throw new InvalidOperationException("N1 copy contains forbidden text.");
+        }
+    }
+
+    private static void AssertN1ManifestCopy()
+    {
+        var lookup = typeof(TalvoraDesktopProgressNotifier).GetMethod(
+            "BuildNarrative", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("N1 missing narrative mapping.");
+        foreach (var toolName in TalvoraToolManifest.Names)
+        {
+            var narrative = lookup.Invoke(null, [toolName, null]);
+            var titlesProperty = narrative?.GetType().GetProperty("Titles");
+            if (titlesProperty?.GetValue(narrative) is not WorklogTitles titles)
+                throw new InvalidOperationException("N1 missing copy category: " + toolName);
+
+            var canonical = toolName.StartsWith("talvora_", StringComparison.OrdinalIgnoreCase)
+                ? toolName["talvora_".Length..] : toolName;
+            var strings = new[] { titles.Running, titles.Succeeded, titles.Failed,
+                WorklogCopy.RunningFallback, WorklogCopy.SucceededFallback };
+            if (strings.Any(text =>
+                text.Contains(toolName, StringComparison.OrdinalIgnoreCase) ||
+                text.Contains(canonical, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException("N1 technical tool name visible: " + toolName);
+        }
+        var args = new Dictionary<string, JsonElement>
+        {
+            ["arguments"] = JsonSerializer.SerializeToElement(
+                new[] { "-c", "core.quotepath=false", "PUSH", "origin", "main" }),
+        };
+        var classified = lookup.Invoke(null, ["talvora_git_run", args]);
+        var values = classified?.GetType().GetProperty("Titles")?.GetValue(classified) as WorklogTitles;
+        if (values?.Succeeded != WorklogCopy.Push.Succeeded)
+            throw new InvalidOperationException("N1 Git subcommand classification mismatch.");
+    }
+
     private static async Task AssertConcurrentCancellationTruthAsync()
     {
         var observed =
@@ -390,9 +486,9 @@ internal static class Program
 
             if (!observed.Any(message =>
                     message.Kind == DesktopProgressKind.Running &&
-                    message.Message.Contains(
-                        "durduruldu",
-                        StringComparison.OrdinalIgnoreCase)))
+                    message.Message == "Devam ediyor.") ||
+                observed.Any(message =>
+                    message.Message.Contains("paralel adım", StringComparison.OrdinalIgnoreCase)))
             {
                 throw new InvalidOperationException(
                     "Concurrent cancellation was not represented as continuing work.");

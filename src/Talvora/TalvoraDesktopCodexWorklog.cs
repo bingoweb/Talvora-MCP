@@ -11,13 +11,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
 {
     internal void BeginCodexJob(string jobId, string workingDirectory)
     {
-        var subject = "Codex projeyi gelistiriyor";
         var narrative = new OperationNarrative(
-            OperationCategory.GenericExecution,
-            subject,
-            "Codex kodlari inceliyor, degistiriyor ve dogruluyor.",
-            "Uzun suren kod gelistirme gorevini tamamlamak icin.",
-            "Codex gelistirme gorevini tamamladi.");
+            OperationCategory.GenericExecution, WorklogCopy.Codex);
         TryBeginWorklog(
             "codex-" + jobId, "codex_background",
             narrative, null, TimeSpan.Zero);
@@ -40,9 +35,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             var latest = _activeWorklog.Values.MaxBy(
                 static active => active.Sequence);
             if (latest?.Sequence != item.Sequence) { return; }
-            var details =
-                $"Codex devam ediyor. {commands} komut, {mcpCalls} MCP cagrisi." +
-                $" Gecen sure: {FormatElapsed(elapsed)}.";
+            var details = $"{commands} komut, {mcpCalls} araç çağrısı.";
             if (!string.IsNullOrWhiteSpace(activity))
             {
                 details += Environment.NewLine +
@@ -51,7 +44,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             Enqueue(
                 GetCurrentWorklogOperationId(),
                 item.ToolName,
-                item.Narrative.Subject,
+                item.Narrative.Titles.Running,
                 ComposeWorklogMessage(details, null),
                 DesktopProgressKind.Running,
                 elapsed);
@@ -67,15 +60,22 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             "cancelled" => DesktopProgressKind.Cancelled,
             _ => DesktopProgressKind.Failed,
         };
+        var titles = WorklogCopy.Codex;
+        var title = state switch
+        {
+            "completed" => titles.Succeeded,
+            "cancelled" => WorklogCopy.CancelledTitle,
+            _ => titles.Failed,
+        };
         TryEndWorklog(
             "codex-" + jobId, kind,
-            "Codex gelistirme gorevi",
+            title,
             state switch
             {
-                "completed" => "Codex gorevi tamamladi. Sonuc Talvora uzerinden incelenebilir.",
-                "cancelled" => "Codex gorevi kullanici istegiyle durduruldu.",
-                "timed_out" => "Codex gorevi belirlenen zaman sinirina ulasti.",
-                _ => "Codex gorevi tamamlanamadi. Son durum Talvora kaydinda.",
+                "completed" => WorklogCopy.SucceededFallback,
+                "cancelled" => "Görev isteğiniz üzerine durduruldu.",
+                "timed_out" => "Görev ayrılan sürede bitmedi; yapılan değişiklikler tamamlanmış sayılmıyor.",
+                _ => "Görev tamamlanamadı; yapılan değişiklikler tamamlanmış sayılmıyor.",
             },
             null, elapsed);
     }

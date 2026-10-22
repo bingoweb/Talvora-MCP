@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-22T13:17:05Z",
-  "scope": "DEP17: Microsoft.Extensions.AI.Abstractions 10.10.1 -> 10.11.0",
+  "verifiedAtUtc": "2026-10-22T14:18:54Z",
+  "scope": "N1 exact DESIGN-WORKLOG implementation: Turkish worklog copy, past-tense terminal titles, failure reasons, silent inspection calls, no repeated history, Codex/Claude job copy; protocol v3 unchanged.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-22 N1: Current official .NET regex source-generator guidance confirms [GeneratedRegex] on a partial method returning Regex; System.Text.Json DOM guidance verifies JsonElement.ValueKind and EnumerateObject. The approved N1 classifier uses these APIs exactly."
+    },
+    {
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-10-22 N1: Current MCP C# SDK CallToolResult documentation confirms IsError, StructuredContent (JsonElement), and Content TextContentBlock fields. N1 preserves tool failure detection, maps approved Turkish reasons and keeps untrusted error text out of visible step title/message."
+    },
     {
       "libraryId": "/websites/learn_microsoft_en-us_nuget",
       "verified": "2026-10-22 DEP17: NuGet package-reference lock-file guidance documents dotnet restore --force-evaluate to recompute the dependency graph and regenerate packages.lock.json, followed by --locked-mode for reproducible validation. The exact Claude-approved Dependabot script runs separate normal and locked restores for solution and installer."
@@ -213,6 +221,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-22 N1: Official .NET GeneratedRegex source generator https://github.com/dotnet/docs/blob/main/docs/standard/base-types/regular-expression-source-generators.md and System.Text.Json DOM https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/use-dom ; MCP CallToolResult https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Protocol/CallToolResult.cs and official tools guide https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md ; Context7 /dotnet/docs and /modelcontextprotocol/csharp-sdk verified.",
     "2026-10-22 DEP17: NuGet package lock-file documentation https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files and warning NU1512 https://learn.microsoft.com/en-us/nuget/reference/errors-and-warnings/nu1512 ; official Microsoft.Extensions.AI.Abstractions package README https://github.com/dotnet/extensions/blob/main/src/Libraries/Microsoft.Extensions.AI.Abstractions/README.md and NuGet 10.11.0 https://www.nuget.org/packages/Microsoft.Extensions.AI.Abstractions/10.11.0 . Context7 /websites/learn_microsoft_en-us_nuget and /dotnet/extensions verified.",
     "2026-10-22 D14: Microsoft PowerShell 7.7 about_Error_Handling https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Error_Handling.md , about_Language_Keywords https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Language_Keywords.md and Add-Content https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Management/Add-Content.md ; .NET official FileShare.None usage https://github.com/dotnet/docs/blob/main/csharp/asynchronous-programming/snippets/file-access/Program.cs . Context7 verified; approved reference hash and parse GREEN.",
     "2026-10-21 D13: Official PowerShell 7.7 about_Error_Handling https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Error_Handling.md and about_Automatic_Variables https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Automatic_Variables.md ; Context7 /microsoftdocs/powershell-docs. Exact D13 reference verifies native child exit codes and retains lockstep/locked restore/Full gate without automatically committing, pushing or closing PRs.",

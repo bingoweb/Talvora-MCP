@@ -6,11 +6,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
 {
     internal void BeginClaudeJob(string jobId)
     {
-        var narrative = new OperationNarrative(OperationCategory.GenericExecution,
-            "Claude kod üzerinde çalışıyor",
-            "Kodları inceliyor, düzenliyor ve sonucu kontrol ediyor.",
-            "İstediğiniz kod değişikliğini hazırlamak için.",
-            "Claude çalışmasını tamamladı.");
+        var narrative = new OperationNarrative(
+            OperationCategory.GenericExecution, WorklogCopy.Claude);
         TryBeginWorklog("claude-" + jobId, "claude_background", narrative, null, TimeSpan.Zero);
     }
 
@@ -20,9 +17,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         {
             if (!_activeWorklog.TryGetValue("claude-" + jobId, out var item)) { return; }
             if (_activeWorklog.Values.MaxBy(static active => active.Sequence)?.Sequence != item.Sequence) { return; }
-            Enqueue(GetCurrentWorklogOperationId(), item.ToolName, item.Narrative.Subject,
+            Enqueue(GetCurrentWorklogOperationId(), item.ToolName, item.Narrative.Titles.Running,
                 ComposeWorklogMessage(
-                    $"Claude çalışmaya devam ediyor. Başlatılan geliştirme adımı: {toolCalls}. Geçen süre: {FormatElapsed(elapsed)}.",
+                    $"{toolCalls} geliştirme adımı.",
                     null), DesktopProgressKind.Running, elapsed);
         }
     }
@@ -35,13 +32,20 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             "cancelled" => DesktopProgressKind.Cancelled,
             _ => DesktopProgressKind.Failed,
         };
-        TryEndWorklog("claude-" + jobId, kind, "Claude kod çalışması",
+        var titles = WorklogCopy.Claude;
+        var title = state switch
+        {
+            "completed" => titles.Succeeded,
+            "cancelled" => WorklogCopy.CancelledTitle,
+            _ => titles.Failed,
+        };
+        TryEndWorklog("claude-" + jobId, kind, title,
             state switch
             {
-                "completed" => "Claude işi tamamladı. Sonucu Talvora üzerinden inceleyebilirsiniz.",
-                "cancelled" => "Claude çalışması isteğinizle durduruldu.",
-                "timed_out" => "Claude ayrılan sürede bitiremedi. Yapılan değişiklikler tamamlanmış sayılmıyor. Devam etmek için son durum incelenecek.",
-                _ => "Claude işi tamamlayamadı. Yapılan değişiklikler tamamlanmış sayılmıyor. Hesap girişi, erişim izinleri ve son durum incelenecek.",
+                "completed" => WorklogCopy.SucceededFallback,
+                "cancelled" => "Görev isteğiniz üzerine durduruldu.",
+                "timed_out" => "Görev ayrılan sürede bitmedi; yapılan değişiklikler tamamlanmış sayılmıyor.",
+                _ => "Görev tamamlanamadı; yapılan değişiklikler tamamlanmış sayılmıyor.",
             }, null, elapsed);
     }
 }

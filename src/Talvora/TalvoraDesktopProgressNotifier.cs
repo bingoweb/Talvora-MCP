@@ -127,7 +127,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         var canonicalToolName = NormalizeToolName(toolName);
         var initialEvidence =
             BuildInitialEvidence(toolName, arguments);
-        var displayName = narrative.Subject;
+        var displayName = narrative.Titles.Running;
         var operationId = Guid.NewGuid().ToString("N");
         var stopwatch = Stopwatch.StartNew();
         TryBeginWorklog(
@@ -156,16 +156,13 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
 
             try
             {
-                if (TryDescribeFailure(
-                        result,
-                        toolName,
-                        out var failureMessage))
+                if (TryDescribeFailure(result))
                 {
                     TryEndWorklog(
                         operationId,
                         DesktopProgressKind.Failed,
-                        "Bir hata buldum",
-                        failureMessage,
+                        narrative.Titles.Failed,
+                        result is CallToolResult call ? WorklogFailureClassifier.Describe(call, canonicalToolName) : "Bu adım tamamlanamadı.",
                         terminalEvidence,
                         stopwatch.Elapsed);
                 }
@@ -190,8 +187,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                         TryEndWorklog(
                             operationId,
                             DesktopProgressKind.Completed,
-                            narrative.Subject,
-                            BuildPlainCompletion(narrative),
+                            narrative.Titles.Succeeded,
+                            WorklogCopy.SucceededFallback,
                             terminalEvidence,
                             stopwatch.Elapsed);
                     }
@@ -205,8 +202,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 TryEndWorklog(
                     operationId,
                     DesktopProgressKind.Completed,
-                    narrative.Subject,
-                    BuildPlainCompletion(narrative),
+                    narrative.Titles.Succeeded,
+                    WorklogCopy.SucceededFallback,
                     initialEvidence,
                     stopwatch.Elapsed);
             }
@@ -218,8 +215,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             TryEndWorklog(
                 operationId,
                 DesktopProgressKind.Cancelled,
-                narrative.Subject,
-                "İşlem tamamlanmadan durduruldu. Son doğrulanmış durum aşağıdaki gerçek kanıtta korunuyor.",
+                WorklogCopy.CancelledTitle,
+                WorklogCopy.CancelledFallback,
                 initialEvidence,
                 stopwatch.Elapsed);
             throw;
@@ -229,8 +226,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             TryEndWorklog(
                 operationId,
                 DesktopProgressKind.Failed,
-                narrative.Subject,
-                BuildFriendlyExceptionMessage(toolName, narrative.Action),
+                narrative.Titles.Failed,
+                "Bu adım tamamlanamadı.",
                 initialEvidence,
                 stopwatch.Elapsed);
             throw;
@@ -647,24 +644,17 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         }
     }
 
-    private static bool TryDescribeFailure<T>(
-        T result,
-        string? toolName,
-        out string message)
+    private static bool TryDescribeFailure<T>(T result)
     {
         if (result is CallToolResult callToolResult)
         {
             if (callToolResult.IsError is true)
             {
-                message = BuildFriendlyResultFailureMessage(toolName);
                 return true;
             }
 
             if (callToolResult.StructuredContent is JsonElement structured &&
-                TryDescribeStructuredFailure(
-                    structured,
-                    toolName,
-                    out message))
+                StructuredResultFailure.IsFailure(structured))
             {
                 return true;
             }
@@ -672,14 +662,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
 
         try
         {
-            var json = JsonSerializer.SerializeToElement(result);
-            if (TryDescribeStructuredFailure(
-                    json,
-                    toolName,
-                    out message))
-            {
-                return true;
-            }
+            return StructuredResultFailure.IsFailure(JsonSerializer.SerializeToElement(result));
         }
         catch (Exception ex)
         {
@@ -687,30 +670,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 $"Desktop worklog failure inspection skipped: {ex.GetType().Name}");
         }
 
-        message = string.Empty;
         return false;
-    }
-
-    private static bool TryDescribeStructuredFailure(
-        JsonElement json,
-        string? toolName,
-        out string message)
-    {
-        switch (StructuredResultFailure.Describe(json))
-        {
-            case StructuredResultFailure.TimedOut:
-                message =
-                    "Bu işlem zaman sınırını aştı ve tamamlanmış sayılmıyor. " +
-                    "Son doğrulanmış durum ve varsa gerçek hata ayrıntısı kanıt bölümünde korunuyor.";
-                return true;
-            case StructuredResultFailure.Unsuccessful:
-            case StructuredResultFailure.NonZeroExit:
-                message = BuildFriendlyResultFailureMessage(toolName);
-                return true;
-            default:
-                message = string.Empty;
-                return false;
-        }
     }
 
     private static bool TryGetPropertyIgnoreCase(
@@ -733,35 +693,6 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         value = default;
         return false;
     }
-
-    private static string BuildFriendlyResultFailureMessage(string? toolName)
-    {
-        var normalized = NormalizeToolName(toolName);
-        return normalized switch
-        {
-            "dotnet_build" =>
-                "Derleme başarılı olmadı; bu değişiklik hazır sayılmıyor. " +
-                "Derleyicinin gerçek sonucu kanıt bölümünde yer alıyor.",
-            "dotnet_test" =>
-                "Davranış testi başarılı olmadı; beklenen sözleşme henüz doğrulanmadı. " +
-                "Testin gerçek sonucu kanıt bölümünde yer alıyor.",
-            "apply_patch" or "apply_edits" or "structural_edit" or "semantic_edit" =>
-                "Kaynak değişikliği bu denemede uygulanmadı. " +
-                "Hedef dosya/diff bilgisi mevcutsa kanıt bölümünde gösteriliyor; bu adım tamamlanmış sayılmıyor.",
-            "run_powershell" =>
-                "Yerel sistem adımı tamamlanmadı. " +
-                "Gerçek exit/sonuç bilgisi mevcutsa kanıt bölümünde gösteriliyor.",
-            "git_run" =>
-                "Git işlemi tamamlanmadı. Repository durumu bu bildirimle başarılı kabul edilmiyor.",
-            _ =>
-                "Bu teknik adım tamamlanmadı. Yalnız doğrulanmış sonuçlar tamamlandı olarak gösterilir.",
-        };
-    }
-
-    private static string BuildFriendlyExceptionMessage(
-        string? toolName,
-        string action) =>
-        $"{action}\n\n{BuildFriendlyResultFailureMessage(toolName)}";
 
     private static bool ShouldNotifyToolCall(string? toolName)
     {
@@ -790,6 +721,21 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             "registry_get" or
             "env_get" or
             "config_get" => false,
+            "read_source" or
+            "read_text" or
+            "read_text_range" or
+            "read_bytes" or
+            "tail_text" or
+            "search_text" or
+            "knowledge_search" or
+            "search" or
+            "fetch" or
+            "find_files" or
+            "git_diff" or
+            "git_log" or
+            "file_hash" or
+            "path_info" or
+            "http_request" => false,
             _ when
                 normalized.EndsWith(
                     "_status",

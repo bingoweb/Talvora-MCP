@@ -15,26 +15,24 @@ internal sealed partial class TalvoraDesktopProgressNotifier
 
     private sealed record PendingFailure(
         string ToolName,
-        string Subject,
+        string Title,
         string Message,
         DesktopProgressEvidence? Evidence);
 
     private sealed record PendingCancellation(
         string ToolName,
-        string Subject,
+        string Title,
         string Message,
         DesktopProgressEvidence? Evidence);
 
     private readonly object _worklogGate = new();
     private readonly Dictionary<string, ActiveWorklogItem> _activeWorklog =
         new(StringComparer.Ordinal);
-    private readonly Queue<string> _recentWorklogUpdates = new();
     private long _worklogSequence;
     private long _worklogGeneration;
     private string? _currentWorklogOperationId;
     private PendingFailure? _pendingFailure;
     private PendingCancellation? _pendingCancellation;
-    private string? _lastWorklogHistory;
 
     private void TryBeginWorklog(
         string operationId,
@@ -121,8 +119,6 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                     $"{SharedWorklogOperationIdPrefix}-{++_worklogGeneration:x16}";
                 _pendingFailure = null;
                 _pendingCancellation = null;
-                _recentWorklogUpdates.Clear();
-                _lastWorklogHistory = null;
             }
 
             _activeWorklog[operationId] =
@@ -135,9 +131,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             Enqueue(
                 GetCurrentWorklogOperationId(),
                 toolName,
-                narrative.Subject,
+                narrative.Titles.Running,
                 ComposeWorklogMessage(
-                    $"{narrative.Action}\n\nAmaç: {narrative.Reason}",
+                    WorklogCopy.RunningFallback,
                     evidence),
                 DesktopProgressKind.Started,
                 elapsed,
@@ -171,9 +167,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             Enqueue(
                 GetCurrentWorklogOperationId(),
                 current.ToolName,
-                current.Narrative.Subject,
+                current.Narrative.Titles.Running,
                 ComposeWorklogMessage(
-                    $"İşlem devam ediyor. Geçen süre: {FormatElapsed(elapsed)}.",
+                    WorklogCopy.RunningFallback,
                     current.Evidence),
                 DesktopProgressKind.Running,
                 elapsed,
@@ -200,23 +196,19 @@ internal sealed partial class TalvoraDesktopProgressNotifier
 
             if (kind == DesktopProgressKind.Failed)
             {
-                AddWorklogHistory(
-                    $"Hata: {ended.Narrative.Subject}");
                 _pendingFailure =
                     new PendingFailure(
                         ended.ToolName,
-                        ended.Narrative.Subject,
+                        title,
                         message,
                         evidence);
             }
             else if (kind == DesktopProgressKind.Cancelled)
             {
-                AddWorklogHistory(
-                    $"Durduruldu: {ended.Narrative.Subject}");
                 _pendingCancellation =
                     new PendingCancellation(
                         ended.ToolName,
-                        ended.Narrative.Subject,
+                        title,
                         message,
                         evidence);
             }
@@ -228,29 +220,12 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                         .MaxBy(static item => item.Sequence);
                 if (latest is not null)
                 {
-                    if (kind is not
-                            DesktopProgressKind.Failed and not
-                            DesktopProgressKind.Cancelled)
-                    {
-                        AddWorklogHistory(
-                            $"Tamamlandı: {ended.Narrative.Subject}");
-                    }
-
-                    var continuation = kind switch
-                    {
-                        DesktopProgressKind.Failed =>
-                            "Bir paralel adım tamamlanamadı; kalan aktif işlem devam ediyor.",
-                        DesktopProgressKind.Cancelled =>
-                            "Bir paralel adım durduruldu; kalan aktif işlem devam ediyor.",
-                        _ =>
-                            "Bir paralel adım tamamlandı; kalan aktif işlem devam ediyor.",
-                    };
                     Enqueue(
                         GetCurrentWorklogOperationId(),
                         latest.ToolName,
-                        latest.Narrative.Subject,
+                        latest.Narrative.Titles.Running,
                         ComposeWorklogMessage(
-                            continuation,
+                            WorklogCopy.RunningFallback,
                             latest.Evidence),
                         DesktopProgressKind.Running,
                         elapsed,
@@ -271,7 +246,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 Enqueue(
                     sharedOperationId,
                     pendingFailure.ToolName,
-                    pendingFailure.Subject,
+                    pendingFailure.Title,
                     ComposeWorklogMessage(
                         pendingFailure.Message,
                         pendingFailure.Evidence),
@@ -289,7 +264,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 Enqueue(
                     sharedOperationId,
                     pendingCancellation.ToolName,
-                    pendingCancellation.Subject,
+                    pendingCancellation.Title,
                     ComposeWorklogMessage(
                         pendingCancellation.Message,
                         pendingCancellation.Evidence),
@@ -319,109 +294,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         throw new InvalidOperationException(
             "Desktop worklog generation is not active.");
 
-    private void AddWorklogHistory(string update)
-    {
-        var cleaned =
-            string.Join(
-                " ",
-                update.Split(
-                    ['\r', '\n'],
-                    StringSplitOptions.RemoveEmptyEntries |
-                    StringSplitOptions.TrimEntries));
-        if (string.IsNullOrWhiteSpace(cleaned))
-        {
-            return;
-        }
-
-        if (string.Equals(
-                cleaned,
-                _lastWorklogHistory,
-                StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        _recentWorklogUpdates.Enqueue(cleaned);
-        _lastWorklogHistory = cleaned;
-        while (_recentWorklogUpdates.Count > 4)
-        {
-            _recentWorklogUpdates.Dequeue();
-        }
-    }
-
     private string ComposeWorklogMessage(
         string current,
-        DesktopProgressEvidence? evidence)
-    {
-        var sections = new List<string>
-        {
-            current.Trim(),
-        };
-
-        var evidenceText =
-            DescribeEvidenceForUser(evidence);
-        if (!string.IsNullOrWhiteSpace(evidenceText))
-        {
-            sections.Add(evidenceText);
-        }
-
-        if (_recentWorklogUpdates.Count > 0)
-        {
-            sections.Add(
-                "Son yaptıklarım:\n" +
-                string.Join(
-                    Environment.NewLine,
-                    _recentWorklogUpdates.Select(
-                        static item => $"• {item}")));
-        }
-
-        return string.Join(
-            Environment.NewLine + Environment.NewLine,
-            sections);
-    }
-
-    private static string? DescribeEvidenceForUser(
-        DesktopProgressEvidence? evidence)
-    {
-        if (evidence is null)
-        {
-            return null;
-        }
-
-        var details = new List<string>();
-        if (evidence.Files is { Count: > 0 })
-        {
-            var names =
-                evidence.Files
-                    .Take(4)
-                    .Select(Path.GetFileName)
-                    .Where(static name =>
-                        !string.IsNullOrWhiteSpace(name))
-                    .ToArray();
-            if (names.Length > 0)
-            {
-                details.Add(
-                    $"{evidence.Files.Count} dosyada çalışıyorum: {string.Join(", ", names)}" +
-                    (evidence.Files.Count > names.Length
-                        ? " ve diğerleri"
-                        : string.Empty));
-            }
-        }
-
-        if (evidence.AddedLines is > 0 ||
-            evidence.RemovedLines is > 0)
-        {
-            details.Add(
-                $"Gerçek kod değişikliği: +{evidence.AddedLines ?? 0} / -{evidence.RemovedLines ?? 0} satır.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(evidence.Result))
-        {
-            details.Add(evidence.Result);
-        }
-
-        return details.Count == 0
-            ? null
-            : string.Join(Environment.NewLine, details);
-    }
+        DesktopProgressEvidence? evidence) =>
+        current.Trim();
 }

@@ -71,7 +71,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D13 — Dependabot script prepares and verifies; Talvora tools commit (P-25 decided)
 - [x] D14 — Dependabot script runs detached, single-instance and observable (P-26 decided)
 - [x] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the rewritten DEP17 steps (after D14; step 2 = detached start + poll)
-- [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided)
+- [x] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
 - [ ] N3 — Worklog: real facts from results (P-11 decided)
 - [ ] N3b — Worklog: code terminal real, complete, persistent (P-11 decided)
@@ -124,6 +124,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-22 — N1 (executor: ChatGPT via Talvora): applied exact DESIGN-WORKLOG N1/P-4/P-10 copy and classifier; WorklogCopy.cs and WorklogFailureClassifier.cs byte-for-byte text matches the approved examples (normalized line endings). Protocol remains v3; no tray/layout change, no PNG required.
+  Source changes: terminal titles now distinguish running/succeeded/failed, typed plain-language reasons; inspection tools are silent; removed repeated history/evidence copy, generic "Amaç"/elapsed prose and parallel-step chatter; Codex/Claude outcomes now use approved Turkish text; Git subcommand uses shared GitArgumentParser.
+  Test-first RED: old inspection produced a worklog frame. GREEN: notification regressions including success/failure/timeout, tool-manifest copy guard, no duplicate text, and concurrent precedence. Updated superseded assertions in tests/ModernizationPolicyRegression.ps1 to N1 contract; regression green.
+  Signed-in MSI\tayla Full quality gate 55 checks / 0 errors, final line "Hepsi geçti." Context7: /dotnet/docs and /modelcontextprotocol/csharp-sdk with official vendor sources; `git diff --check` clean.
+  Delivery verification follows commit/push: GitHub windows-ci, current-HEAD Windows installer and /healthz.sourceCommit; next N2.
 - 2026-10-22 — DEP17 (executor: ChatGPT via Talvora): updated Microsoft.Extensions.AI.Abstractions 10.10.1 to 10.11.0 using approved detached runner (PID 8180); result READY DEP17; exactly one script start.
   Changed files: .context7/verification.json, Directory.Packages.props, THIRD-PARTY-NOTICES.md, docs/codex/STATUS.md, src/Talvora.Tray/packages.lock.json, src/Talvora/packages.lock.json, tests/Talvora.Notification.Regression/packages.lock.json, tests/Talvora.Smoke/packages.lock.json, tests/Talvora.SourceEdit.Regression/packages.lock.json.
   Test-first RED baseline version 10.10.1; GREEN 10.11.0. Signed-in MSI\tayla baseline Fast 13/0 and scripted Full 55/0; `Hepsi geçti.` Context7 `/websites/learn_microsoft_en-us_nuget` and `/dotnet/extensions` plus official vendor sources.
