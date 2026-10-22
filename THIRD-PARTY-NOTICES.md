@@ -42,7 +42,7 @@ The current locked package set includes:
 - `Microsoft.CodeAnalysis.Workspaces.MSBuild 5.9.0`
 - `Microsoft.Data.Sqlite 10.0.13`
 - `Microsoft.Data.Sqlite.Core 10.0.13`
-- `Microsoft.Extensions.AI.Abstractions 10.10.1`
+- `Microsoft.Extensions.AI.Abstractions 10.11.0`
 - `Microsoft.Extensions.Caching.Abstractions 10.0.13`
 - `Microsoft.Extensions.Configuration.Abstractions 10.0.13`
 - `Microsoft.Extensions.DependencyInjection.Abstractions 10.0.13`

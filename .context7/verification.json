@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-22T05:20:44Z",
-  "scope": "2026-10-22 D14 exact ROADMAP: copied docs/codex/reference/ci/Apply-DependabotPr.ps1 to scripts/Apply-DependabotPr.ps1 unchanged, normalized SHA-256 465380c5aeb18187af54a6e19374a53e521da5e190c00d5eb923bc62b9f7b33d and 0 PowerShell parse errors. The approved script adds exclusive file locking, a detailed execution log/result file, and named dirty-tree paths; delivery continues through Talvora tools.",
+  "verifiedAtUtc": "2026-10-22T13:17:05Z",
+  "scope": "DEP17: Microsoft.Extensions.AI.Abstractions 10.10.1 -> 10.11.0",
   "libraries": [
+    {
+      "libraryId": "/websites/learn_microsoft_en-us_nuget",
+      "verified": "2026-10-22 DEP17: NuGet package-reference lock-file guidance documents dotnet restore --force-evaluate to recompute the dependency graph and regenerate packages.lock.json, followed by --locked-mode for reproducible validation. The exact Claude-approved Dependabot script runs separate normal and locked restores for solution and installer."
+    },
+    {
+      "libraryId": "/dotnet/extensions",
+      "verified": "2026-10-22 DEP17: The official Microsoft.Extensions.AI.Abstractions README in dotnet/extensions documents the NuGet PackageReference and its core IChatClient/IEmbeddingGenerator exchange interfaces. The only approved package version change is 10.10.1 to 10.11.0 as reviewed in GitHub Dependabot PR #17; no API changes requested."
+    },
     {
       "libraryId": "/microsoftdocs/powershell-docs",
       "verified": "2026-10-22 D14: Official PowerShell 7.7 documentation confirms Add-Content -Encoding utf8 for logs, $LASTEXITCODE for native program failure detection, and finally blocks executing even when the script exits. The exact Claude-approved reference was copied without alterations and passed normalized-hash and parse checks."
@@ -205,6 +213,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-22 DEP17: NuGet package lock-file documentation https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files and warning NU1512 https://learn.microsoft.com/en-us/nuget/reference/errors-and-warnings/nu1512 ; official Microsoft.Extensions.AI.Abstractions package README https://github.com/dotnet/extensions/blob/main/src/Libraries/Microsoft.Extensions.AI.Abstractions/README.md and NuGet 10.11.0 https://www.nuget.org/packages/Microsoft.Extensions.AI.Abstractions/10.11.0 . Context7 /websites/learn_microsoft_en-us_nuget and /dotnet/extensions verified.",
     "2026-10-22 D14: Microsoft PowerShell 7.7 about_Error_Handling https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Error_Handling.md , about_Language_Keywords https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Language_Keywords.md and Add-Content https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Management/Add-Content.md ; .NET official FileShare.None usage https://github.com/dotnet/docs/blob/main/csharp/asynchronous-programming/snippets/file-access/Program.cs . Context7 verified; approved reference hash and parse GREEN.",
     "2026-10-21 D13: Official PowerShell 7.7 about_Error_Handling https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Error_Handling.md and about_Automatic_Variables https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Automatic_Variables.md ; Context7 /microsoftdocs/powershell-docs. Exact D13 reference verifies native child exit codes and retains lockstep/locked restore/Full gate without automatically committing, pushing or closing PRs.",
     "2026-10-21 D12: Microsoft C# string comparison https://github.com/dotnet/docs/blob/main/docs/csharp/fundamentals/strings/common-tasks/compare.md and Microsoft .NET best practices https://learn.microsoft.com/en-us/dotnet/standard/base-types/best-practices-strings ; Context7 /dotnet/docs. The D12 exact command comparison remains ordinal and culture independent.",

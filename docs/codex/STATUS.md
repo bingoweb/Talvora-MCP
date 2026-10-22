@@ -70,7 +70,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D12 — `git pull` uses the signed-in user's credentials (P-24 decided)
 - [x] D13 — Dependabot script prepares and verifies; Talvora tools commit (P-25 decided)
 - [x] D14 — Dependabot script runs detached, single-instance and observable (P-26 decided)
-- [ ] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the rewritten DEP17 steps (after D14; step 2 = detached start + poll)
+- [x] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the rewritten DEP17 steps (after D14; step 2 = detached start + poll)
 - [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
 - [ ] N3 — Worklog: real facts from results (P-11 decided)
@@ -124,6 +124,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-22 — DEP17 (executor: ChatGPT via Talvora): updated Microsoft.Extensions.AI.Abstractions 10.10.1 to 10.11.0 using approved detached runner (PID 8180); result READY DEP17; exactly one script start.
+  Changed files: .context7/verification.json, Directory.Packages.props, THIRD-PARTY-NOTICES.md, docs/codex/STATUS.md, src/Talvora.Tray/packages.lock.json, src/Talvora/packages.lock.json, tests/Talvora.Notification.Regression/packages.lock.json, tests/Talvora.Smoke/packages.lock.json, tests/Talvora.SourceEdit.Regression/packages.lock.json.
+  Test-first RED baseline version 10.10.1; GREEN 10.11.0. Signed-in MSI\tayla baseline Fast 13/0 and scripted Full 55/0; `Hepsi geçti.` Context7 `/websites/learn_microsoft_en-us_nuget` and `/dotnet/extensions` plus official vendor sources.
+  GitHub CI, closed PR and installed commit to be verified after delivery; next N1.
 - 2026-10-22 — D14 (executor: ChatGPT via Talvora): copied approved script verbatim; normalized SHA-256 465380c5aeb18187af54a6e19374a53e521da5e190c00d5eb923bc62b9f7b33d; parse 0 errors; exclusive lock, per-PR log/result and named dirty paths.
   Test-first RED: prior normalized hash 681cd1cd7b08c4096027b67f479f2e3739949325c4c0965b039d2b86c3879d3e; GREEN after copy.
   Signed-in MSI\tayla: baseline Fast 13/0 and Full 55/0, `Hepsi geçti.`; Context7 `/microsoftdocs/powershell-docs`, `/dotnet/docs` and official vendor sources refreshed.
