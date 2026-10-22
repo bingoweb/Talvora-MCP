@@ -13,7 +13,7 @@
 | Branch | `main` only. Do not create branches. Dependabot PRs: apply with scripts/Apply-DependabotPr.ps1 (DEP1), never merge on GitHub. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-22-08` = `a28f77b`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-22-09` = `f40e402`. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -71,7 +71,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D13 — Dependabot script prepares and verifies; Talvora tools commit (P-25 decided)
 - [x] D14 — Dependabot script runs detached, single-instance and observable (P-26 decided)
 - [x] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the rewritten DEP17 steps (after D14; step 2 = detached start + poll)
-- [x] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided)
+- [x] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided; pushed by Claude as f40e402 after the evidence-JSON unblock; CI 39800505820 green; installed f40e402)
+- [ ] D15 — Delivery-gate refusals reach the agent (audit 2026-10-22 (9))
+- [ ] D16 — Local evidence gates parse as strictly as the push gate (after D15)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
 - [ ] N3 — Worklog: real facts from results (P-11 decided)
 - [ ] N3b — Worklog: code terminal real, complete, persistent (P-11 decided)
@@ -124,6 +126,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-22 — Claude audit 9 of `a28f77b..f40e402` (D14, DEP17, N1) + unblock (user request "sen çöz"): agent was stuck pushing N1 — `.context7/verification.json` had 2 trailing commas; local PowerShell gates accept them, the C# push gate refuses with an SDK-hidden message. Claude removed the commas inside the unpushed N1 commit (→ f40e402), pushed via talvora_git_run to both remotes, CI 39800505820 green, built installer as MSI	ayla, deployed, /healthz = f40e402, NATIVE_INSTALLER_RUNTIME_GREEN. New cards D15 (McpException for gate refusals) and D16 (strict JSON in local gates), verified in a clone (Full 56/0). AGENTS Deploy row now includes the installer build. Queue: D15 → D16 → N2. Tag `audit/2026-10-22-09` = `f40e402`.
 - 2026-10-22 — N1 (executor: ChatGPT via Talvora): applied exact DESIGN-WORKLOG N1/P-4/P-10 copy and classifier; WorklogCopy.cs and WorklogFailureClassifier.cs byte-for-byte text matches the approved examples (normalized line endings). Protocol remains v3; no tray/layout change, no PNG required.
   Source changes: terminal titles now distinguish running/succeeded/failed, typed plain-language reasons; inspection tools are silent; removed repeated history/evidence copy, generic "Amaç"/elapsed prose and parallel-step chatter; Codex/Claude outcomes now use approved Turkish text; Git subcommand uses shared GitArgumentParser.
   Test-first RED: old inspection produced a worklog frame. GREEN: notification regressions including success/failure/timeout, tool-manifest copy guard, no duplicate text, and concurrent precedence. Updated superseded assertions in tests/ModernizationPolicyRegression.ps1 to N1 contract; regression green.

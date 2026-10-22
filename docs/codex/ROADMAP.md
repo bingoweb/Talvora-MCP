@@ -752,6 +752,108 @@ Card details (Files / Do / Don't / Acceptance) are in the design spec, section "
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-22 (9) · range `audit/2026-10-22-08 (a28f77b)..f40e402` · 3 card commits · executor: ChatGPT via Talvora · result: N1 delivered by Claude after unblocking; TWO FIXES (D15, D16)
+
+Delivered: D14 (`522e52b`), DEP17 (`c3f03ca`, PR #17 closed, installed), N1 (committed locally by the agent as `5fc56ed`, **not pushed** — the agent was stuck there).
+
+**Fidelity: exact.** D14 equals the reference script; DEP17 changed exactly the prescribed files (one notice line, five locks, props); N1: `WorklogCopy.cs` and `WorklogFailureClassifier.cs` are identical to the card blocks, every Step 2/5/6/7 string is present, every removal is done (`_recentWorklogUpdates`, `Son yaptıklarım`, `Amaç:`, `BuildPlainCompletion`, `DescribeEvidenceForUser`, `gitArgs[0]`), all 15 inspection tools are silent. `tests/ModernizationPolicyRegression.ps1` changes only replace assertions that N1 supersedes (logged). CI green: 522e52b, c3f03ca.
+
+**Why the agent was stuck (verified by Claude):** N1's `.context7/verification.json` had two trailing commas. `scripts/Validate-Context7Gate.ps1` and `scripts/Validate-ProjectDeliveryGate.ps1` read it with `ConvertFrom-Json`, which accepts them, so the Full gate was green (55/0). `talvora_git_run push` runs the C# `ProjectDeliveryGate` (System.Text.Json, strict) and refused — but it throws `InvalidOperationException`, whose text the MCP SDK hides: the agent only saw `An error occurred invoking 'talvora_git_run'.` and had nothing to act on. Live proof: `push --dry-run` returned exactly that text; `fetch` of a path outside the knowledge roots (a tool that throws `McpException`) returns its full reason.
+
+**Unblocked by Claude (user's explicit request "sen çöz", 2026-10-22):** removed the two trailing commas and folded the fix into the unpushed N1 commit (no second N1 commit; nothing pushed had to be rewritten) → `f40e402`; pushed to both remotes **through `talvora_git_run`** (delivery gate passed); GitHub windows-ci 39800505820 green; built the installer as `MSI\tayla` and deployed with `scripts/Deploy-Windows-Installer.ps1` via `talvora_run_powershell`; `/healthz.sourceCommit` = `f40e402`; `NATIVE_INSTALLER_RUNTIME_GREEN`.
+
+| # | Severity | Type | Where | Finding | Fix |
+|---|---|---|---|---|---|
+| 1 | HIGH | silent failure | `src/Talvora/SourceEditing/ProjectDeliveryGate.cs:211` | `Blocked()` returns `InvalidOperationException`; the SDK replaces its text, so every delivery refusal (push, publish) is opaque to the agent. | D15 |
+| 2 | MEDIUM | gate parity | `scripts/Validate-Context7Gate.ps1:58`, `scripts/Validate-ProjectDeliveryGate.ps1:8` | Local gates parse evidence leniently; the push gate parses strictly. Local green, push red. | D16 |
+| 3 | LOW | docs (Claude) | `AGENTS.md` mechanics table, "Deploy" row | Did not say the installer must be **built** first; `Deploy-Windows-Installer.ps1` alone reinstalls the last built artifact (Claude's first deploy reinstalled `c3f03ca`). Fixed by Claude in this audit. | — |
+
+Claude verified D15 + D16 before writing them, in a fresh clone of `f40e402` as `MSI\tayla`: `tests/StrictEvidenceJsonRegression.ps1` RED without D16 (`scripts/Validate-Context7Gate.ps1 must parse evidence strictly…`), `STRICT_EVIDENCE_JSON_GREEN` with it; with D15 + D16 applied the Full gate passes: `56 kontrol, 0 hata` (46 PowerShell tests, the new one included) / `Hepsi geçti.`; the gate-probe repo reproduces the opaque refusal on the installed `f40e402`, and `fetch` (which already throws `McpException`) shows that the SDK passes that exception's text.
+
+### D15 — Delivery-gate refusals reach the agent
+
+> Audit 2026-10-22 (9), finding 1. Run first.
+
+**Files:** `src/Talvora/SourceEditing/ProjectDeliveryGate.cs`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.QualityAudit.cs`.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — `ProjectDeliveryGate.cs`, replace
+
+```csharp
+    private static InvalidOperationException Blocked(string reason) =>
+        new($"TALVORA_DELIVERY_GATE_BLOCKED: {reason}");
+```
+
+with
+
+```csharp
+    // McpException: the MCP SDK passes its message to the client. Any other exception type is
+    // hidden behind "An error occurred invoking ...", so agents could not see why delivery stopped.
+    private static ModelContextProtocol.McpException Blocked(string reason) =>
+        new($"TALVORA_DELIVERY_GATE_BLOCKED: {reason}");
+```
+
+Step 2 — `SourceEditRegressionRunner.QualityAudit.cs`, in `ExpectBlocked` replace `catch (InvalidOperationException ex)` with `catch (ModelContextProtocol.McpException ex)` (the `when` filter stays). Then, directly above the line `            await WriteContextAsync(vendor: new string('X', 300 * 1024));` insert:
+
+```csharp
+            await WriteContextAsync();
+            await File.WriteAllTextAsync(
+                contextPath,
+                (await File.ReadAllTextAsync(contextPath)).TrimEnd()[..^1] + ",}");
+            ExpectBlocked(
+                () => ProjectDeliveryGate.EnsureSatisfied(root),
+                "trailing comma");
+
+```
+
+**Acceptance:** SourceEdit regression GREEN; Full gate `Hepsi geçti.` as the signed-in user; build installer + deploy (see AGENTS.md "Deploy" row); live, before and after deploy: create a throw-away git repo under `%TEMP%` (one commit, `origin` = `https://example.invalid/x.git`, no `.context7`) and call `talvora_git_run {repositoryPath: <that repo>, arguments: ["push","--dry-run","origin","main"]}`. Before D15 the text is only `An error occurred invoking 'talvora_git_run'.` (Claude reproduced this on `f40e402`); after D15 it must contain `TALVORA_DELIVERY_GATE_BLOCKED: Context7 evidence is mandatory and missing`. Paste both lines into the Log. GitHub CI green (10b).
+
+### D16 — Local evidence gates parse as strictly as the push gate
+
+> Audit 2026-10-22 (9), finding 2. Run after D15.
+
+**Files:** `scripts/Validate-Context7Gate.ps1`, `scripts/Validate-ProjectDeliveryGate.ps1`, `tests/StrictEvidenceJsonRegression.ps1` (new, verbatim copy).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — `scripts/Validate-Context7Gate.ps1`, replace the line
+
+```powershell
+    $evidence = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
+```
+
+with
+
+```powershell
+    $evidenceText = Get-Content -LiteralPath $evidencePath -Raw
+    # Same strict parser as ProjectDeliveryGate (System.Text.Json): ConvertFrom-Json accepts trailing
+    # commas, so this gate passed evidence that talvora_git_run push then refused (audit 2026-10-22 (9)).
+    try { [System.Text.Json.JsonDocument]::Parse($evidenceText).Dispose() }
+    catch { throw "Context7 evidence is not valid JSON (strict): $($_.Exception.InnerException.Message)" }
+    $evidence = $evidenceText | ConvertFrom-Json
+```
+
+Step 2 — `scripts/Validate-ProjectDeliveryGate.ps1`, in `Read-Evidence` replace the line
+
+```powershell
+    return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+```
+
+with
+
+```powershell
+    $text = Get-Content -LiteralPath $Path -Raw
+    # Same strict parser as ProjectDeliveryGate (System.Text.Json); ConvertFrom-Json accepts trailing commas.
+    try { [System.Text.Json.JsonDocument]::Parse($text).Dispose() }
+    catch { throw "$Name delivery evidence is not valid JSON (strict): $($_.Exception.InnerException.Message)" }
+    return $text | ConvertFrom-Json
+```
+
+Step 3 — copy `docs/codex/reference/ci/StrictEvidenceJsonRegression.ps1` → `tests/StrictEvidenceJsonRegression.ps1` (AGENTS.md rule 5 "Reference copies"; normalised hash `e2897d0b48df809e5cb8163aa6302131c691db3dccc0d8c332bf73fbc99a6d32`). The gate runs it automatically.
+
+**Acceptance:** test-first: the new regression is RED before Steps 1–2 and prints `STRICT_EVIDENCE_JSON_GREEN` after; Full gate `Hepsi geçti.` as the signed-in user; GitHub CI green (10b). Script-only: no deploy.
+
 ### Audit 2026-10-22 (8) · range `audit/2026-10-21-07 (eff0f85)..a28f77b` · 2 card commits · executor: ChatGPT via Talvora · result: ONE FIX (D14, caused by Claude's script design)
 
 Delivered: D12 (`56bce29`), D13 (`a28f77b`). Blocked: DEP17 (P-26) — decided now.

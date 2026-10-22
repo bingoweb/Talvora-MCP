@@ -27,7 +27,7 @@ These rules bind **every implementing agent** that changes this repository, iden
 | Build / tests / gate | Until A1 exists: `talvora_run_powershell` with `pwsh -NoProfile -File scripts/Invoke-QualityGate.ps1 -Scope Fast` (or the card's targeted command). After A1: `talvora_user_run` (runs as the signed-in user, so no SYSTEM-owned `obj/`, `bin/` or `.git/index`). |
 | Git status/diff/log | `talvora_git_status`, `talvora_git_diff`, `talvora_git_log` with small limits. |
 | Commit / push | `talvora_git_run` only (it enforces the delivery gate and, after A3, the work contract). Never commit or push through `talvora_run_powershell`/`talvora_run_process`. |
-| Deploy | `talvora_run_powershell` → `scripts/Deploy-Windows-Installer.ps1`, then poll `/healthz` with `talvora_http_request`. |
+| Deploy | First build the installer for the current HEAD as the signed-in user: `talvora_user_run` → `pwsh -NoProfile -File scripts/Build-Windows-Installer.ps1` (its last line's `SourceCommit` must equal HEAD). Then `talvora_run_powershell` → `scripts/Deploy-Windows-Installer.ps1` (it installs the last **built** artifact; its JSON `sourceCommit` must equal HEAD), then poll `/healthz` with `talvora_http_request` until `sourceCommit` = HEAD. |
 | Report to the user | Turkish, short (protocol step 11). |
 
 ChatGPT must not use Codex/Claude delegation tools (`talvora_codex_*`, `talvora_claude_*`) to do card work unless the user explicitly asks in that chat.
