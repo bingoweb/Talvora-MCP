@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-22T15:59:20Z",
-  "scope": "D16 strict JSON checks in local Context7 and delivery evidence gates, exactly matching the delivery push gate; approved StrictEvidenceJsonRegression reference copy.",
+  "verifiedAtUtc": "2026-10-22T16:54:46Z",
+  "scope": "N2 worklog protocol v4, bounded sessions and timeline, project/actor context through MCP filters, presenter window reuse, expected heartbeat intervals and terminal lifetimes.",
   "libraries": [
+    {
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-10-22 N2: Official MCP C# SDK documents McpServer.ClientInfo, request filters, stateless ConfigureSessionOptions and IHttpContextAccessor for obtaining the request surface path; these supply actor context without changing tool results."
+    },
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-22 N2: Official .NET documentation confirms SHA256.HashData for deterministic project/actor keys, DispatcherTimer as a dispatcher-queue timer, and cancellable Task.Delay for an inactivity window; N2 follows the Claude-approved 90-second and heartbeat values."
+    },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-22 D16: Official .NET documentation confirms System.Text.Json rejects trailing commas by default and JsonDocument implements IDisposable. Verified the prescribed JsonDocument.Parse(...).Dispose() strict validation before PowerShell JSON conversion."
@@ -233,6 +241,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-22 N2: MCP official C# SDK stateless sessions https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/stateless/stateless.md , HTTP request context https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/httpcontext/httpcontext.md and McpServer.ClientInfo https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Server/McpServer.cs ; .NET SHA256.HashData https://github.com/dotnet/docs/blob/main/docs/fundamentals/code-analysis/quality-rules/ca1850.md and DispatcherTimer https://github.com/dotnet/docs/blob/main/docs/standard/threading/timers.md ; Context7 /modelcontextprotocol/csharp-sdk and /dotnet/docs verified.",
     "2026-10-22 D16: Official .NET System.Text.Json trailing comma defaults https://github.com/dotnet/docs/blob/main/docs/standard/serialization/system-text-json/invalid-json.md and JsonDocument disposal https://github.com/dotnet/docs/blob/main/docs/standard/serialization/system-text-json/use-dom.md ; PowerShell 7.7 Test-Json strict behavior https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Utility/Test-Json.md and error handling https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Error_Handling.md ; Context7 /dotnet/docs and /microsoftdocs/powershell-docs verified.",
     "2026-10-22 N1: Official .NET GeneratedRegex source generator https://github.com/dotnet/docs/blob/main/docs/standard/base-types/regular-expression-source-generators.md and System.Text.Json DOM https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/use-dom ; MCP CallToolResult https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Protocol/CallToolResult.cs and official tools guide https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md ; Context7 /dotnet/docs and /modelcontextprotocol/csharp-sdk verified.",
     "2026-10-22 DEP17: NuGet package lock-file documentation https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files and warning NU1512 https://learn.microsoft.com/en-us/nuget/reference/errors-and-warnings/nu1512 ; official Microsoft.Extensions.AI.Abstractions package README https://github.com/dotnet/extensions/blob/main/src/Libraries/Microsoft.Extensions.AI.Abstractions/README.md and NuGet 10.11.0 https://www.nuget.org/packages/Microsoft.Extensions.AI.Abstractions/10.11.0 . Context7 /websites/learn_microsoft_en-us_nuget and /dotnet/extensions verified.",

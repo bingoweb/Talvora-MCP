@@ -26,40 +26,54 @@ internal sealed class DesktopProgressPresentationState
         DesktopProgressMessage message)
     {
         ArgumentNullException.ThrowIfNull(message);
+        var sessionId = message.WorklogFrame?.SessionId ?? message.OperationId;
 
-        if (_retiredOperationIds.Contains(message.OperationId))
+        if (_retiredOperationIds.Contains(sessionId))
         {
-            return DesktopProgressPresentationDecision.SuppressRetired;
+            if (message.WorklogFrame is not null &&
+                message.Kind == DesktopProgressKind.Started &&
+                message.WorklogFrame.Timeline.Count == 0 &&
+                (!_lastSequenceByOperation.TryGetValue(sessionId, out var previous) ||
+                 message.Sequence > previous))
+            {
+                _retiredOperationIds.Remove(sessionId);
+                _dismissedWorklogOperationIds.Remove(sessionId);
+            }
+            else
+            {
+                return DesktopProgressPresentationDecision.SuppressRetired;
+            }
         }
 
         if (message.Sequence > 0)
         {
             if (_lastSequenceByOperation.TryGetValue(
-                    message.OperationId,
+                    sessionId,
                     out var lastSequence) &&
                 message.Sequence <= lastSequence)
             {
                 return DesktopProgressPresentationDecision.SuppressOutOfOrder;
             }
 
-            _lastSequenceByOperation[message.OperationId] =
+            _lastSequenceByOperation[sessionId] =
                 message.Sequence;
         }
 
         if (message.Lane == DesktopProgressLane.Worklog &&
-            _dismissedWorklogOperationIds.Contains(message.OperationId))
+            _dismissedWorklogOperationIds.Contains(sessionId))
         {
-            if (IsTerminal(message.Kind))
+            if (message.SessionClosed || (message.WorklogFrame is null && IsTerminal(message.Kind)))
             {
-                Retire(message.OperationId);
+                Retire(sessionId);
             }
 
             return DesktopProgressPresentationDecision.SuppressDismissed;
         }
 
-        if (IsTerminal(message.Kind))
+        if (IsTerminal(message.Kind) &&
+            (message.WorklogFrame is null || message.SessionClosed))
         {
-            Retire(message.OperationId);
+            Retire(sessionId);
         }
 
         return DesktopProgressPresentationDecision.Accept;

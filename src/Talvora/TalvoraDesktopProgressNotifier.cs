@@ -50,6 +50,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     private readonly HashSet<string> _retiredProgressOperations =
         new(StringComparer.Ordinal);
     private readonly Queue<string> _retiredProgressOrder = new();
+    private readonly Dictionary<string, long> _terminalSequenceBySession =
+        new(StringComparer.Ordinal);
+    private readonly Queue<(string SessionId, long Sequence)> _terminalSequenceOrder = new();
 
     internal long DroppedProgressMessages =>
         Interlocked.Read(ref _droppedProgressMessages);
@@ -114,7 +117,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         string toolName,
         IDictionary<string, JsonElement>? arguments,
         Func<CancellationToken, ValueTask<T>> operation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? surfacePath = null,
+        string? clientName = null)
     {
         ArgumentNullException.ThrowIfNull(operation);
 
@@ -135,7 +140,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             canonicalToolName,
             narrative,
             initialEvidence,
-            stopwatch.Elapsed);
+            stopwatch.Elapsed,
+            arguments,
+            surfacePath,
+            clientName);
 
         using var heartbeatCts =
             CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -289,6 +297,11 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             return;
         }
 
+        var sequence = Interlocked.Increment(ref _deliverySequence);
+        var frame = CreateWorklogFrame(
+            operationId, kind, title, message, elapsed, evidence, sequence);
+        var sessionClosed = frame is not null &&
+            IsWorklogSessionClosed(operationId);
         var notification =
             new DesktopProgressMessage(
                 operationId,
@@ -300,7 +313,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 elapsed.TotalSeconds,
                 evidence,
                 DesktopProgressLane.Worklog,
-                Interlocked.Increment(ref _deliverySequence));
+                sequence,
+                frame,
+                sessionClosed);
 
         _deliveryObserver?.Invoke(notification);
 
@@ -315,7 +330,11 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         var writer = terminal
             ? _terminalDeliveryQueue.Writer
             : _progressDeliveryQueue.Writer;
-        if (terminal)
+        if (terminal && frame is not null)
+        {
+            RecordTerminalSequence(operationId, sequence);
+        }
+        else if (terminal)
         {
             RetireProgressOperation(operationId);
         }
@@ -419,6 +438,38 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         }
     }
 
+    private void RecordTerminalSequence(string sessionId, long sequence)
+    {
+        lock (_retiredProgressGate)
+        {
+            _terminalSequenceBySession[sessionId] = sequence;
+            _terminalSequenceOrder.Enqueue((sessionId, sequence));
+            while (_terminalSequenceOrder.Count > MaximumRetiredProgressOperations)
+            {
+                var removed = _terminalSequenceOrder.Dequeue();
+                if (_terminalSequenceBySession.TryGetValue(removed.SessionId, out var current) &&
+                    current == removed.Sequence)
+                {
+                    _terminalSequenceBySession.Remove(removed.SessionId);
+                }
+            }
+        }
+    }
+
+    private bool IsSupersededProgress(DesktopProgressMessage message)
+    {
+        if (message.WorklogFrame is null)
+        {
+            return false;
+        }
+        lock (_retiredProgressGate)
+        {
+            return _terminalSequenceBySession.TryGetValue(
+                message.WorklogFrame.SessionId, out var terminalSequence) &&
+                message.Sequence <= terminalSequence;
+        }
+    }
+
     private void SignalDeliveryWorker()
     {
         try
@@ -456,7 +507,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                         out var progressMessage))
                 {
                     if (!IsProgressRetired(
-                            progressMessage.OperationId))
+                            progressMessage.OperationId) &&
+                        !IsSupersededProgress(progressMessage))
                     {
                         await TryDeliverAsync(
                             progressMessage,

@@ -15,7 +15,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             OperationCategory.GenericExecution, WorklogCopy.Codex);
         TryBeginWorklog(
             "codex-" + jobId, "codex_background",
-            narrative, null, TimeSpan.Zero);
+            narrative, null, TimeSpan.Zero,
+            clientName: "Codex", projectOverride: workingDirectory);
     }
 
     internal void UpdateCodexJob(
@@ -32,8 +33,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             {
                 return;
             }
-            var latest = _activeWorklog.Values.MaxBy(
-                static active => active.Sequence);
+            var latest = _activeWorklog.Values
+                .Where(active => ReferenceEquals(active.Session, item.Session))
+                .MaxBy(static active => active.Sequence);
             if (latest?.Sequence != item.Sequence) { return; }
             var details = $"{commands} komut, {mcpCalls} araç çağrısı.";
             if (!string.IsNullOrWhiteSpace(activity))
@@ -42,7 +44,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                     FileLog.RedactSensitiveData(activity);
             }
             Enqueue(
-                GetCurrentWorklogOperationId(),
+                item.Session.Id,
                 item.ToolName,
                 item.Narrative.Titles.Running,
                 ComposeWorklogMessage(details, null),

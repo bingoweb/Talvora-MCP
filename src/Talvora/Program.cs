@@ -29,6 +29,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 builder.Host.UseWindowsService(options => options.ServiceName = "Talvora");
 builder.Configuration["AllowedHosts"] = "localhost;127.0.0.1;[::1]";
 builder.WebHost.ConfigureKestrel(options => options.ListenLocalhost(7676));
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<TalvoraDesktopProgressNotifier>();
 builder.Services.AddHostedService<TalvoraSystemStorageMaintenanceService>();
 
@@ -80,7 +81,10 @@ builder.Services
                     request.Params.Name,
                     request.Params.Arguments,
                     inner,
-                    token);
+                    token,
+                    request.Services?.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>()
+                        ?.HttpContext?.Request.Path.Value,
+                    request.Server.ClientInfo?.Name);
             }
 
             return ToolResultTextPolicy.Apply(await operation(cancellationToken));

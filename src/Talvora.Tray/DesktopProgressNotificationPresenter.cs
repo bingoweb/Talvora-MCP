@@ -116,7 +116,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                 ex);
 
             if (_windows.Remove(
-                    message.OperationId,
+                    message.WorklogFrame?.SessionId ?? message.OperationId,
                     out var failedWindow))
             {
                 try
@@ -138,8 +138,9 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             return;
         }
 
+        var sessionId = message.WorklogFrame?.SessionId ?? message.OperationId;
         if (!_windows.TryGetValue(
-                message.OperationId,
+                sessionId,
                 out var window))
         {
             _automaticScreenDeviceName ??=
@@ -158,19 +159,19 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                 if (window.WasManuallyClosed)
                 {
                     _presentationState.MarkManualDismissed(
-                        message.OperationId,
+                        sessionId,
                         window.LastLane,
                         window.IsTerminal);
                 }
 
-                _windows.Remove(message.OperationId);
+                _windows.Remove(sessionId);
                 if (_windows.Count == 0 && !_isPinned)
                 {
                     _automaticScreenDeviceName = null;
                 }
                 Reposition();
             };
-            _windows[message.OperationId] = window;
+            _windows[sessionId] = window;
         }
 
         if (!string.IsNullOrWhiteSpace(message.Evidence?.CodePreview))

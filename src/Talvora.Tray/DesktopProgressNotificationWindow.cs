@@ -26,8 +26,10 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
     private static readonly TimeSpan RunningLifetime =
         TimeSpan.FromMinutes(15);
     private static readonly TimeSpan CompletedLifetime =
-        TimeSpan.FromMinutes(2);
+        TimeSpan.FromMinutes(3);
     private static readonly TimeSpan FailureLifetime =
+        TimeSpan.FromMinutes(8);
+    private static readonly TimeSpan CancelledLifetime =
         TimeSpan.FromMinutes(5);
     private static readonly TimeSpan ActiveStaleThreshold =
         TimeSpan.FromSeconds(15);
@@ -98,6 +100,7 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
 
 
     public bool IsTerminal =>
+        (_lastMessage?.WorklogFrame is null || _lastMessage.SessionClosed) &&
         LastKind is
             DesktopProgressKind.Completed or
             DesktopProgressKind.Failed or
@@ -128,15 +131,15 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
     {
         CancelPendingAutomaticClose();
 
-        OperationId = message.OperationId;
+        OperationId = message.WorklogFrame?.SessionId ?? message.OperationId;
         LastUpdatedUtc = DateTimeOffset.UtcNow;
         _lastPayloadUpdatedUtc = LastUpdatedUtc;
         LastKind = message.Kind;
         LastLane = message.Lane;
         _isStale = false;
         _lastMessage = message;
-        _title.Text = message.Title;
-        _message.Text = message.Message;
+        _title.Text = message.WorklogFrame?.Current.Title ?? message.Title;
+        _message.Text = message.WorklogFrame?.Current.FactLine ?? message.Message;
         UpdateEvidence(message);
         ApplyStatusVisual(message);
 
@@ -147,7 +150,7 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
                 DesktopProgressKind.Running => RunningLifetime,
                 DesktopProgressKind.Completed => CompletedLifetime,
                 DesktopProgressKind.Failed => FailureLifetime,
-                DesktopProgressKind.Cancelled => FailureLifetime,
+                DesktopProgressKind.Cancelled => CancelledLifetime,
                 DesktopProgressKind.Warning => FailureLifetime,
                 DesktopProgressKind.Info => CompletedLifetime,
                 _ => StartedLifetime,
@@ -163,17 +166,26 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
         {
             return;
         }
+        if (_lastMessage?.WorklogFrame is not null &&
+            LastKind is DesktopProgressKind.Completed or DesktopProgressKind.Failed or
+                DesktopProgressKind.Cancelled)
+        {
+            return;
+        }
 
         var staleFor =
             DateTimeOffset.UtcNow - _lastPayloadUpdatedUtc;
-        if (staleFor < ActiveStaleThreshold ||
+        var staleThreshold = _lastMessage?.WorklogFrame is { } frame
+            ? TimeSpan.FromSeconds(2 * frame.ExpectedNextUpdateSeconds)
+            : ActiveStaleThreshold;
+        if (staleFor < staleThreshold ||
             _isStale)
         {
             return;
         }
 
         _isStale = true;
-        _title.Text = "Yeni durum bekliyorum";
+        _title.Text = "Yanıt bekleniyor";
         _message.Text =
             $"Bu işten {FormatElapsed(staleFor.TotalSeconds)} süredir yeni bilgi gelmedi.\n\n" +
             $"Son gerçek güncelleme: {_lastPayloadUpdatedUtc.ToLocalTime():HH:mm:ss}. " +

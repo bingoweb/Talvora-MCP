@@ -8,7 +8,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     {
         var narrative = new OperationNarrative(
             OperationCategory.GenericExecution, WorklogCopy.Claude);
-        TryBeginWorklog("claude-" + jobId, "claude_background", narrative, null, TimeSpan.Zero);
+        TryBeginWorklog("claude-" + jobId, "claude_background", narrative, null, TimeSpan.Zero,
+            clientName: "Claude");
     }
 
     internal void UpdateClaudeJob(string jobId, int toolCalls, TimeSpan elapsed)
@@ -16,8 +17,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         lock (_worklogGate)
         {
             if (!_activeWorklog.TryGetValue("claude-" + jobId, out var item)) { return; }
-            if (_activeWorklog.Values.MaxBy(static active => active.Sequence)?.Sequence != item.Sequence) { return; }
-            Enqueue(GetCurrentWorklogOperationId(), item.ToolName, item.Narrative.Titles.Running,
+            if (_activeWorklog.Values
+                    .Where(active => ReferenceEquals(active.Session, item.Session))
+                    .MaxBy(static active => active.Sequence)?.Sequence != item.Sequence) { return; }
+            Enqueue(item.Session.Id, item.ToolName, item.Narrative.Titles.Running,
                 ComposeWorklogMessage(
                     $"{toolCalls} geliştirme adımı.",
                     null), DesktopProgressKind.Running, elapsed);

@@ -22,6 +22,84 @@ public enum DesktopProgressLane
     Alert,
 }
 
+public enum WorklogStepCategory
+{
+    SourceEdit,
+    Verification,
+    PackageBuild,
+    Deployment,
+    VersionControl,
+    ServiceOperation,
+    PackageOperation,
+    FileMutation,
+    NetworkOperation,
+    ProcessOperation,
+    Inspection,
+    GenericExecution,
+}
+
+public enum WorklogStepState
+{
+    Running,
+    Succeeded,
+    Failed,
+    Cancelled,
+    Waiting,
+}
+
+public enum WorklogFailureKind
+{
+    InvalidArguments,
+    StaleRevision,
+    NotFound,
+    AccessDenied,
+    BuildErrors,
+    TestFailures,
+    Timeout,
+    DeliveryGate,
+    Other,
+}
+
+public enum WorklogCheckState
+{
+    Unknown,
+    Running,
+    Succeeded,
+    Failed,
+}
+
+public sealed record DesktopWorklogFrame(
+    string SessionId,
+    long Sequence,
+    DateTimeOffset TimestampUtc,
+    WorklogSessionHeader Header,
+    WorklogStep Current,
+    IReadOnlyList<WorklogTimelineEntry> Timeline,
+    WorklogTotals Totals,
+    DesktopProgressEvidence? Evidence,
+    int ExpectedNextUpdateSeconds,
+    DesktopProgressLane Lane = DesktopProgressLane.Worklog);
+
+public sealed record WorklogSessionHeader(string? ProjectName, string ActorName);
+
+public sealed record WorklogStep(
+    WorklogStepCategory Category,
+    WorklogStepState State,
+    string Title,
+    string? FactLine,
+    WorklogOutcome? Outcome,
+    double ElapsedSeconds);
+
+public sealed record WorklogOutcome(
+    WorklogFailureKind? FailureKind, string PlainReason, string? NextStep);
+
+public sealed record WorklogTimelineEntry(
+    DateTimeOffset TimestampUtc, WorklogStepState State, string Label);
+
+public sealed record WorklogTotals(
+    int Steps, double SessionSeconds, int FilesChanged,
+    WorklogCheckState LastBuild, WorklogCheckState LastTests);
+
 public sealed record DesktopProgressMessage(
     string OperationId,
     string ToolName,
@@ -32,7 +110,9 @@ public sealed record DesktopProgressMessage(
     double ElapsedSeconds,
     DesktopProgressEvidence? Evidence = null,
     DesktopProgressLane Lane = DesktopProgressLane.Worklog,
-    long Sequence = 0);
+    long Sequence = 0,
+    DesktopWorklogFrame? WorklogFrame = null,
+    bool SessionClosed = false);
 
 public sealed record DesktopProgressEvidence(
     string? Summary = null,
@@ -44,7 +124,7 @@ public sealed record DesktopProgressEvidence(
 
 public static class DesktopProgressProtocol
 {
-    public const int Version = 3;
+    public const int Version = 4;
     public const string PipeNamePrefix = "Talvora.DesktopProgress.";
     public const int MaximumFrameBytes = 4 * 1024 * 1024;
     public const int MaximumOperationIdCharacters = 160;
@@ -55,6 +135,10 @@ public static class DesktopProgressProtocol
     public const int MaximumEvidenceFileCharacters = 2 * 1024;
     public const int MaximumEvidenceTextCharacters = 8 * 1024;
     public const int MaximumCodeCharacters = 512 * 1024;
+    public const int MaximumSessionIdCharacters = 160;
+    public const int MaximumProjectNameCharacters = 180;
+    public const int MaximumActorNameCharacters = 80;
+    public const int MaximumTimelineEntries = 30;
 
     private const int FrameHeaderBytes = sizeof(int);
 
@@ -252,6 +336,55 @@ public static class DesktopProgressProtocol
         {
             throw new InvalidOperationException(
                 "Desktop progress framed protocol round-trip failed.");
+        }
+
+        var structured = original with
+        {
+            WorklogFrame = new DesktopWorklogFrame(
+                "session-v4", 42, DateTimeOffset.UtcNow,
+                new WorklogSessionHeader("Talvora-MCP", "ChatGPT · Dev"),
+                new WorklogStep(WorklogStepCategory.SourceEdit,
+                    WorklogStepState.Running, "Kod güncelleniyor", null, null, 1.25),
+                [new WorklogTimelineEntry(DateTimeOffset.UtcNow,
+                    WorklogStepState.Succeeded, "Dosya incelendi")],
+                new WorklogTotals(1, 1.25, 0,
+                    WorklogCheckState.Unknown, WorklogCheckState.Unknown),
+                null, 15),
+        };
+        if (!TryDeserialize(Serialize(structured), out var parsedV4) ||
+            parsedV4?.WorklogFrame?.SessionId != "session-v4" ||
+            parsedV4.WorklogFrame.Timeline.Count != 1 ||
+            parsedV4.WorklogFrame.ExpectedNextUpdateSeconds != 15)
+        {
+            throw new InvalidOperationException(
+                "Desktop progress v4 structured worklog round-trip failed.");
+        }
+        var oldVersion = Serialize(structured).Replace(
+            $"\"version\":{Version}", "\"version\":3",
+            StringComparison.Ordinal);
+        if (TryDeserialize(oldVersion, out _))
+        {
+            throw new InvalidOperationException(
+                "Desktop progress v4 accepted a v3 wire frame.");
+        }
+        var clippedV4 = structured with
+        {
+            WorklogFrame = structured.WorklogFrame with
+            {
+                Header = new WorklogSessionHeader(
+                    new string('x', MaximumProjectNameCharacters + 20), "Claude"),
+                Timeline = Enumerable.Range(0, 40).Select(_ =>
+                    new WorklogTimelineEntry(DateTimeOffset.UtcNow,
+                        WorklogStepState.Running, "İş sürüyor")).ToArray(),
+            },
+        };
+        if (!TryDeserialize(Serialize(clippedV4), out var clippedStructured) ||
+            clippedStructured?.WorklogFrame?.Header.ProjectName?.Length >
+                MaximumProjectNameCharacters ||
+            clippedStructured?.WorklogFrame?.Timeline.Count > MaximumTimelineEntries)
+        {
+            throw new InvalidOperationException(
+                "Desktop progress v4 failed to bound project or timeline fields.");
         }
 
         var incompatible = Serialize(original).Replace(
@@ -472,8 +605,47 @@ public static class DesktopProgressProtocol
                     MaximumMessageCharacters) ??
                 string.Empty,
             Evidence = evidence,
+            WorklogFrame = message.WorklogFrame is null
+                ? null
+                : NormalizeWorklogFrame(message.WorklogFrame),
         };
     }
+
+    private static DesktopWorklogFrame NormalizeWorklogFrame(
+        DesktopWorklogFrame frame) => frame with
+    {
+        SessionId = Clip(frame.SessionId, MaximumSessionIdCharacters) ?? string.Empty,
+        Header = frame.Header with
+        {
+            ProjectName = RedactAndClip(frame.Header.ProjectName, MaximumProjectNameCharacters),
+            ActorName = RedactAndClip(frame.Header.ActorName, MaximumActorNameCharacters) ?? string.Empty,
+        },
+        Current = frame.Current with
+        {
+            Title = RedactAndClip(frame.Current.Title, MaximumTitleCharacters) ?? string.Empty,
+            FactLine = RedactAndClip(frame.Current.FactLine, MaximumMessageCharacters),
+            Outcome = frame.Current.Outcome is null ? null : frame.Current.Outcome with
+            {
+                PlainReason = RedactAndClip(frame.Current.Outcome.PlainReason, MaximumMessageCharacters) ?? string.Empty,
+                NextStep = RedactAndClip(frame.Current.Outcome.NextStep, MaximumMessageCharacters),
+            },
+        },
+        Timeline = frame.Timeline
+            .Take(MaximumTimelineEntries)
+            .Select(entry => entry with
+            {
+                Label = RedactAndClip(entry.Label, MaximumTitleCharacters) ?? string.Empty,
+            })
+            .ToArray(),
+        Evidence = frame.Evidence is null ? null : new DesktopProgressEvidence(
+            Summary: RedactAndClip(frame.Evidence.Summary, MaximumEvidenceTextCharacters),
+            Files: frame.Evidence.Files?.Take(MaximumEvidenceFiles)
+                .Select(file => RedactAndClip(file, MaximumEvidenceFileCharacters) ?? string.Empty).ToArray(),
+            AddedLines: frame.Evidence.AddedLines,
+            RemovedLines: frame.Evidence.RemovedLines,
+            CodePreview: RedactAndClip(frame.Evidence.CodePreview, MaximumCodeCharacters),
+            Result: RedactAndClip(frame.Evidence.Result, MaximumEvidenceTextCharacters)),
+    };
 
     private static bool IsValidMessage(
         DesktopProgressMessage? message)
@@ -494,6 +666,50 @@ public static class DesktopProgressProtocol
             message.Message.Length > MaximumMessageCharacters)
         {
             return false;
+        }
+
+        if (message.WorklogFrame is { } frame)
+        {
+            if (string.IsNullOrWhiteSpace(frame.SessionId) ||
+                frame.SessionId.Length > MaximumSessionIdCharacters ||
+                frame.Sequence <= 0 ||
+                frame.Header is null ||
+                frame.Current is null ||
+                frame.Timeline is null ||
+                frame.Totals is null ||
+                frame.Header.ProjectName?.Length > MaximumProjectNameCharacters ||
+                string.IsNullOrWhiteSpace(frame.Header.ActorName) ||
+                frame.Header.ActorName.Length > MaximumActorNameCharacters ||
+                !Enum.IsDefined(frame.Current.Category) ||
+                !Enum.IsDefined(frame.Current.State) ||
+                !Enum.IsDefined(frame.Lane) ||
+                frame.Lane != message.Lane ||
+                string.IsNullOrWhiteSpace(frame.Current.Title) ||
+                frame.Current.Title.Length > MaximumTitleCharacters ||
+                frame.Current.FactLine?.Length > MaximumMessageCharacters ||
+                !double.IsFinite(frame.Current.ElapsedSeconds) ||
+                frame.Current.ElapsedSeconds < 0 ||
+                frame.ExpectedNextUpdateSeconds is < 1 or > 3600 ||
+                frame.Timeline.Count > MaximumTimelineEntries ||
+                frame.Timeline.Any(entry =>
+                    entry is null || !Enum.IsDefined(entry.State) ||
+                    string.IsNullOrWhiteSpace(entry.Label) ||
+                    entry.Label.Length > MaximumTitleCharacters) ||
+                frame.Totals.Steps < 0 ||
+                !double.IsFinite(frame.Totals.SessionSeconds) ||
+                frame.Totals.SessionSeconds < 0 ||
+                frame.Totals.FilesChanged < 0 ||
+                !Enum.IsDefined(frame.Totals.LastBuild) ||
+                !Enum.IsDefined(frame.Totals.LastTests) ||
+                (frame.Current.Outcome is { } outcome &&
+                 ((outcome.FailureKind is { } failureKind &&
+                   !Enum.IsDefined(failureKind)) ||
+                  outcome.PlainReason is null ||
+                  outcome.PlainReason.Length > MaximumMessageCharacters ||
+                  outcome.NextStep?.Length > MaximumMessageCharacters)))
+            {
+                return false;
+            }
         }
 
         if (message.Evidence is not { } evidence)

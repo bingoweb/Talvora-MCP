@@ -22,6 +22,7 @@ internal static class Program
         await AssertWorkVisibilityFilteringAsync();
         AssertN1ManifestCopy();
         await AssertN1WorklogCopyAsync();
+        await AssertN2ProjectSessionsAsync();
         await AssertDiffEvidenceCoverageAsync();
         await AssertSemanticMessagingAndCanonicalToolAsync();
         await AssertConcurrentCancellationTruthAsync();
@@ -439,6 +440,68 @@ internal static class Program
             throw new InvalidOperationException("N1 Git subcommand classification mismatch.");
     }
 
+    private static async Task AssertN2ProjectSessionsAsync()
+    {
+        var observed = new ConcurrentQueue<DesktopProgressMessage>();
+        var notifier = CreateNotifier(observed);
+        var project = Path.Combine(
+            Path.GetTempPath(), "Talvora-N2-project-" + Guid.NewGuid().ToString("N"));
+        var other = Path.Combine(
+            Path.GetTempPath(), "Talvora-N2-other-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(project);
+        Directory.CreateDirectory(other);
+        Directory.CreateDirectory(Path.Combine(project, ".git"));
+        Directory.CreateDirectory(Path.Combine(other, ".git"));
+        try
+        {
+            foreach (var root in new[] { project, project, other })
+            {
+                _ = await notifier.RunToolCallAsync(
+                    "notification_n2_session",
+                    new Dictionary<string, JsonElement>
+                    {
+                        ["workspaceRoot"] = JsonSerializer.SerializeToElement(root),
+                    },
+                    _ => ValueTask.FromResult(1),
+                    CancellationToken.None);
+            }
+
+            var terminals = observed.Where(message =>
+                message.Kind == DesktopProgressKind.Completed).ToArray();
+            if (terminals.Length != 3 ||
+                terminals[0].OperationId != terminals[1].OperationId ||
+                terminals[1].OperationId == terminals[2].OperationId ||
+                terminals[0].WorklogFrame?.Timeline.Count != 1 ||
+                terminals[1].WorklogFrame?.Timeline.Count != 2 ||
+                terminals[2].WorklogFrame?.Timeline.Count != 1 ||
+                terminals[0].WorklogFrame?.Header.ProjectName !=
+                    Path.GetFileName(project) ||
+                terminals[2].WorklogFrame?.Header.ProjectName !=
+                    Path.GetFileName(other))
+            {
+                throw new InvalidOperationException(
+                    "N2 worklog calls did not share a project session or isolate another project.");
+            }
+            notifier.BeginClaudeJob("n2-claude");
+            notifier.UpdateClaudeJob("n2-claude", 1, TimeSpan.FromSeconds(25));
+            var claude = observed.Last().WorklogFrame;
+            if (claude?.Header.ActorName != "Claude" ||
+                claude.ExpectedNextUpdateSeconds != 60 ||
+                claude.Current.State != WorklogStepState.Running)
+            {
+                throw new InvalidOperationException(
+                    "N2 Claude heartbeat did not carry its 60-second update expectation.");
+            }
+            notifier.EndClaudeJob("n2-claude", "completed", TimeSpan.FromSeconds(25));
+        }
+        finally
+        {
+            await notifier.DisposeAsync();
+            Directory.Delete(project, recursive: true);
+            Directory.Delete(other, recursive: true);
+        }
+    }
+
     private static async Task AssertConcurrentCancellationTruthAsync()
     {
         var observed =
@@ -519,13 +582,17 @@ internal static class Program
                 .Last();
             if (nextTerminal.Kind !=
                     DesktopProgressKind.Completed ||
-                string.Equals(
+                !string.Equals(
                     nextTerminal.OperationId,
                     cancelledGeneration,
-                    StringComparison.Ordinal))
+                    StringComparison.Ordinal) ||
+                nextTerminal.WorklogFrame is null ||
+                cancellationTerminal.WorklogFrame is null ||
+                nextTerminal.WorklogFrame.Timeline.Count <=
+                    cancellationTerminal.WorklogFrame.Timeline.Count)
             {
                 throw new InvalidOperationException(
-                    "A completed next worklog generation did not receive a fresh identity.");
+                    "Sequential worklog calls did not retain their session timeline.");
             }
         }
         finally
@@ -1214,6 +1281,121 @@ internal static class Program
                         {
                             throw new InvalidOperationException(
                                 "Returning code must re-expand vertically without widening the notification.");
+                        }
+
+                        var n2Frame = new DesktopWorklogFrame(
+                            "n2-session-a", 20, DateTimeOffset.UtcNow,
+                            new WorklogSessionHeader("Project A", "ChatGPT · Dev"),
+                            new WorklogStep(WorklogStepCategory.SourceEdit,
+                                WorklogStepState.Running, "Kod güncelleniyor", null, null, 1),
+                            [],
+                            new WorklogTotals(0, 1, 0,
+                                WorklogCheckState.Unknown, WorklogCheckState.Unknown),
+                            null, 15);
+                        var n2Message = new DesktopProgressMessage(
+                            "n2-call-a", "apply_patch", "Kod güncelleniyor", "Devam ediyor.",
+                            DesktopProgressKind.Started, DateTimeOffset.UtcNow, 1,
+                            Sequence: 20, WorklogFrame: n2Frame);
+                        presenter.Publish(n2Message);
+                        var sharedWindow = application.Windows
+                            .OfType<DesktopProgressNotificationWindow>()
+                            .Single(item => item.OperationId == "n2-session-a");
+                        var nextFrame = n2Frame with
+                        {
+                            Sequence = 21,
+                            Timeline =
+                            [
+                                new WorklogTimelineEntry(DateTimeOffset.UtcNow,
+                                    WorklogStepState.Succeeded, "Kod güncellendi"),
+                            ],
+                        };
+                        presenter.Publish(n2Message with
+                        {
+                            OperationId = "n2-call-b",
+                            Kind = DesktopProgressKind.Running,
+                            Sequence = 21,
+                            WorklogFrame = nextFrame,
+                        });
+                        var secondWindow = application.Windows
+                            .OfType<DesktopProgressNotificationWindow>()
+                            .Single(item => item.OperationId == "n2-session-a");
+                        if (!ReferenceEquals(sharedWindow, secondWindow) ||
+                            nextFrame.Timeline.Count <= n2Frame.Timeline.Count)
+                        {
+                            throw new InvalidOperationException(
+                                "N2 sequential calls created a second window or lost timeline history.");
+                        }
+
+                        var claudeFrame = nextFrame with
+                        {
+                            Sequence = 22,
+                            Header = new WorklogSessionHeader("Project A", "Claude"),
+                            ExpectedNextUpdateSeconds = 60,
+                        };
+                        presenter.Publish(n2Message with
+                        {
+                            Kind = DesktopProgressKind.Running,
+                            Sequence = 22,
+                            WorklogFrame = claudeFrame,
+                        });
+                        var lastUpdateField = typeof(DesktopProgressNotificationWindow)
+                            .GetField("_lastPayloadUpdatedUtc", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                        lastUpdateField.SetValue(sharedWindow,
+                            DateTimeOffset.UtcNow - TimeSpan.FromSeconds(25));
+                        typeof(DesktopProgressNotificationWindow)
+                            .GetMethod("CheckForStaleWork", BindingFlags.Instance | BindingFlags.NonPublic)!
+                            .Invoke(sharedWindow, null);
+                        var staleField = typeof(DesktopProgressNotificationWindow)
+                            .GetField("_isStale", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                        if ((bool)staleField.GetValue(sharedWindow)!)
+                        {
+                            throw new InvalidOperationException(
+                                "N2 Claude 25-second heartbeat falsely triggered stale display.");
+                        }
+
+                        var completedFrame = nextFrame with
+                        {
+                            Sequence = 23,
+                            Current = nextFrame.Current with
+                            {
+                                State = WorklogStepState.Succeeded,
+                                Title = "Kod güncellendi",
+                            },
+                        };
+                        presenter.Publish(n2Message with
+                        {
+                            Kind = DesktopProgressKind.Completed,
+                            Sequence = 23,
+                            WorklogFrame = completedFrame,
+                            SessionClosed = true,
+                        });
+                        var dismissField = typeof(DesktopProgressNotificationWindow)
+                            .GetField("_dismissAfter", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                        if ((TimeSpan)dismissField.GetValue(sharedWindow)! != TimeSpan.FromMinutes(3) ||
+                            !sharedWindow.IsTerminal)
+                        {
+                            throw new InvalidOperationException(
+                                "N2 successful session did not retain the three-minute close lifetime.");
+                        }
+                        var projectB = n2Frame with
+                        {
+                            SessionId = "n2-session-b",
+                            Sequence = 24,
+                            Header = new WorklogSessionHeader("Project B", "ChatGPT · Dev"),
+                        };
+                        presenter.Publish(n2Message with
+                        {
+                            OperationId = "n2-call-c",
+                            Sequence = 24,
+                            WorklogFrame = projectB,
+                        });
+                        if (application.Windows
+                            .OfType<DesktopProgressNotificationWindow>()
+                            .Any(item => item.OperationId == "n2-session-b" &&
+                                ReferenceEquals(item, sharedWindow)))
+                        {
+                            throw new InvalidOperationException(
+                                "N2 different projects shared the same window instance.");
                         }
                     }
                     catch (Exception ex)

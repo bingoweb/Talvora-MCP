@@ -74,7 +74,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided; pushed by Claude as f40e402 after the evidence-JSON unblock; CI 39800505820 green; installed f40e402)
 - [x] D15 — Delivery-gate refusals reach the agent (SourceEdit GREEN, signed-in Full 55/0; exact-commit delivery evidence follows)
 - [x] D16 — Local evidence gates parse as strictly as the push gate (signed-in Full 56/0; exact-commit GitHub CI check after push)
-- [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
+- [x] N2 — Worklog: protocol v4, sessions, project/actor context (P-11; signed-in Full 56/0; exact-commit CI and runtime evidence follow delivery)
 - [ ] N3 — Worklog: real facts from results (P-11 decided)
 - [ ] N3b — Worklog: code terminal real, complete, persistent (P-11 decided)
 - [ ] N4 — Worklog: agent jobs tell their story (+ Codex code terminal) (P-11 decided)
@@ -126,6 +126,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-22 — N2 (executor: ChatGPT via Talvora): protocol v4 worklog frames, bounded fields/timeline; project+actor session SHA-256, 90-second idle closure, MCP surface and clientInfo, background-job sessions, same-window presenter, heartbeat stale thresholds and 3/8/5-minute terminal lifetimes. No PNG (P-11: deferred to N5).
+  RED: sequential same-project calls opened separate generations. GREEN: DESKTOP_PROGRESS_BEHAVIOR_GREEN; structured v4 round-trip/rejection, same WPF window instance, distinct projects, Claude 25-second heartbeat and three-minute completion tested.
+  Updated superseded assertions in tests/ModernizationPolicyRegression.ps1 to the N2 contract, not guard removals; MODERNIZATION_POLICY_GREEN.
+  Signed-in MSI\tayla baseline Fast 13/0; Full 56 checks, 0 failures / 46 PowerShell regressions; last line "Hepsi geçti.". Context7: /modelcontextprotocol/csharp-sdk, /dotnet/docs and official vendor sources.
+  Supporting .context7/verification.json refreshed; full installer deployment, /healthz.sourceCommit, installed runtime smoke and exact-commit windows-ci follow commit/push; next N3.
 - 2026-10-22 — D16 (executor: ChatGPT via Talvora): applied exact strict System.Text.Json pre-parsing in Validate-Context7Gate.ps1 and Validate-ProjectDeliveryGate.ps1; preserved ConvertFrom-Json.
   Test-first RED: scripts/Validate-Context7Gate.ps1 lacked strict parsing. GREEN: STRICT_EVIDENCE_JSON_GREEN; approved test copy normalized SHA-256 e2897d0b48df809e5cb8163aa6302131c691db3dccc0d8c332bf73fbc99a6d32.
   Signed-in MSI\tayla baseline Fast 13/0; Full quality gate 56 controls, 0 failures (46 PowerShell regressions), last line "Hepsi geçti."; diff --check clean.
