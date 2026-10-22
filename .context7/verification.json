@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-22T14:18:54Z",
-  "scope": "N1 exact DESIGN-WORKLOG implementation: Turkish worklog copy, past-tense terminal titles, failure reasons, silent inspection calls, no repeated history, Codex/Claude job copy; protocol v3 unchanged.",
+  "verifiedAtUtc": "2026-10-22T15:38:42Z",
+  "scope": "D15 delivery-gate refusals propagate their MCP error messages; preserve exact block reasons and test rejection of trailing-comma Context7 JSON.",
   "libraries": [
+    {
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-10-22 D15: Official C# SDK tools/error-handling documentation confirms McpException messages are included in tool-error results, while other exceptions produce generic text. The exact prescribed D15 replacement preserves the delivery-gate reason."
+    },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-22 N1: Current official .NET regex source-generator guidance confirms [GeneratedRegex] on a partial method returning Regex; System.Text.Json DOM guidance verifies JsonElement.ValueKind and EnumerateObject. The approved N1 classifier uses these APIs exactly."

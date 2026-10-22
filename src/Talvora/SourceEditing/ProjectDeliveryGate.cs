@@ -208,6 +208,8 @@ internal static class ProjectDeliveryGate
                 !component.Contains('\\'));
     }
 
-    private static InvalidOperationException Blocked(string reason) =>
+    // McpException: the MCP SDK passes its message to the client. Any other exception type is
+    // hidden behind "An error occurred invoking ...", so agents could not see why delivery stopped.
+    private static ModelContextProtocol.McpException Blocked(string reason) =>
         new($"TALVORA_DELIVERY_GATE_BLOCKED: {reason}");
 }

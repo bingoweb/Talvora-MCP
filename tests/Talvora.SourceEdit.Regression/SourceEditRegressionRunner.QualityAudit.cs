@@ -70,7 +70,7 @@ internal static partial class SourceEditRegressionRunner
                 {
                     operation();
                 }
-                catch (InvalidOperationException ex)
+                catch (ModelContextProtocol.McpException ex)
                     when (ex.Message.StartsWith(
                         "TALVORA_DELIVERY_GATE_BLOCKED:",
                         StringComparison.Ordinal))
@@ -98,6 +98,14 @@ internal static partial class SourceEditRegressionRunner
             ExpectBlocked(
                 () => ProjectDeliveryGate.EnsureSatisfied(root),
                 "incomplete canonical library ID");
+
+            await WriteContextAsync();
+            await File.WriteAllTextAsync(
+                contextPath,
+                (await File.ReadAllTextAsync(contextPath)).TrimEnd()[..^1] + ",}");
+            ExpectBlocked(
+                () => ProjectDeliveryGate.EnsureSatisfied(root),
+                "trailing comma");
 
             await WriteContextAsync(vendor: new string('X', 300 * 1024));
             ExpectBlocked(

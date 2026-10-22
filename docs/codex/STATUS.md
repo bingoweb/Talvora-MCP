@@ -72,7 +72,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D14 — Dependabot script runs detached, single-instance and observable (P-26 decided)
 - [x] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the rewritten DEP17 steps (after D14; step 2 = detached start + poll)
 - [x] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided; pushed by Claude as f40e402 after the evidence-JSON unblock; CI 39800505820 green; installed f40e402)
-- [ ] D15 — Delivery-gate refusals reach the agent (audit 2026-10-22 (9))
+- [x] D15 — Delivery-gate refusals reach the agent (SourceEdit GREEN, signed-in Full 55/0; exact-commit delivery evidence follows)
 - [ ] D16 — Local evidence gates parse as strictly as the push gate (after D15)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
 - [ ] N3 — Worklog: real facts from results (P-11 decided)
@@ -126,6 +126,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-22 — D15 (executor: ChatGPT via Talvora): changed ProjectDeliveryGate.Blocked to ModelContextProtocol.McpException without altering reasons; updated QualityAudit exception catch and trailing-comma regression.
+  Before (installed f40e402, temporary probe): "An error occurred invoking 'talvora_git_run'."
+  After (expected live proof following install): "TALVORA_DELIVERY_GATE_BLOCKED: Context7 evidence is mandatory and missing"; verify with the same temporary probe after deployment.
+  Test-first live failure reproduced; SourceEdit regression GREEN. Signed-in MSI\tayla Fast 13/0 and Full 55/0, final line "Hepsi geçti." Context7: /modelcontextprotocol/csharp-sdk (official MCP tool-error handling).
+  Supporting .context7/verification.json evidence refreshed. Current-HEAD installer, healthz.sourceCommit and exact-commit windows-ci evidence follow delivery; next D16.
 - 2026-10-22 — Claude audit 9 of `a28f77b..f40e402` (D14, DEP17, N1) + unblock (user request "sen çöz"): agent was stuck pushing N1 — `.context7/verification.json` had 2 trailing commas; local PowerShell gates accept them, the C# push gate refuses with an SDK-hidden message. Claude removed the commas inside the unpushed N1 commit (→ f40e402), pushed via talvora_git_run to both remotes, CI 39800505820 green, built installer as MSI	ayla, deployed, /healthz = f40e402, NATIVE_INSTALLER_RUNTIME_GREEN. New cards D15 (McpException for gate refusals) and D16 (strict JSON in local gates), verified in a clone (Full 56/0). AGENTS Deploy row now includes the installer build. Queue: D15 → D16 → N2. Tag `audit/2026-10-22-09` = `f40e402`.
 - 2026-10-22 — N1 (executor: ChatGPT via Talvora): applied exact DESIGN-WORKLOG N1/P-4/P-10 copy and classifier; WorklogCopy.cs and WorklogFailureClassifier.cs byte-for-byte text matches the approved examples (normalized line endings). Protocol remains v3; no tray/layout change, no PNG required.
   Source changes: terminal titles now distinguish running/succeeded/failed, typed plain-language reasons; inspection tools are silent; removed repeated history/evidence copy, generic "Amaç"/elapsed prose and parallel-step chatter; Codex/Claude outcomes now use approved Turkish text; Git subcommand uses shared GitArgumentParser.
