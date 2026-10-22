@@ -752,6 +752,32 @@ Card details (Files / Do / Don't / Acceptance) are in the design spec, section "
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-22 (8) · range `audit/2026-10-21-07 (eff0f85)..a28f77b` · 2 card commits · executor: ChatGPT via Talvora · result: ONE FIX (D14, caused by Claude's script design)
+
+Delivered: D12 (`56bce29`), D13 (`a28f77b`). Blocked: DEP17 (P-26) — decided now.
+
+**Fidelity: exact.** D12 equals Claude's verified scratch diff line for line, including the renamed regression message; `scripts/Apply-DependabotPr.ps1` equals the D13 reference (normalised hash `681cd1cd…`); the policy paragraph equals the card text. GitHub `windows-ci` green for both commits. On DEP17 the agent stopped after three failures instead of weakening the guard, reverted completely and asked (P-26) — correct behaviour.
+
+| # | Severity | Type | Where | Finding | Fix |
+|---|---|---|---|---|---|
+| 1 | MEDIUM | process (Claude's script design) | `scripts/Apply-DependabotPr.ps1` run through `talvora_user_run` | The script needs ~6 minutes (two forced restores, Release build, Full gate). Run as one blocking tool call, it outlives the chat client's tool-call time limit; the client gives up or retries while the first run keeps working in the repository. The retry then sees the first run's files and fails in under a second — exactly P-26's symptom (dirty at 0.8 s, PR changes appearing afterwards, "another writer"). Two more gaps made it undiagnosable: the dirty-tree error did not name the files, and two runs could overlap. | D14 (P-26 option 1) |
+
+Claude verified D14 before writing it, in a fresh clone of `a28f77b` as `MSI\tayla`: dirty tree → `FAILED: … Unexpected: ?? stray.txt`; real run `-Pr 17` → `55 kontrol, 0 hata`, `READY DEP17` in `pr-17.result`, 38-line log; a **second start 20 s into that run** → exit 3, `this run changed nothing`, result still `RUNNING pid …`; finally the exact DEP17 path through the installed service: `talvora_user_process_start` (`MSI	ayla`, `visible: false`) with `-DryRun`, polled `pr-17.result` → `DRY RUN OK`, tree clean again.
+
+### D14 — Dependabot runs detached, single-instance and observable (decision P-26)
+
+> Audit 2026-10-22 (8), finding 1. Run before DEP17.
+
+**Files:** `scripts/Apply-DependabotPr.ps1` (verbatim copy).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — copy `docs/codex/reference/ci/Apply-DependabotPr.ps1` → `scripts/Apply-DependabotPr.ps1` (AGENTS.md rule 5 "Reference copies"; normalised hash `465380c5aeb18187af54a6e19374a53e521da5e190c00d5eb923bc62b9f7b33d`).
+
+What changed (for the Log; do not re-implement): an exclusive lock `artifacts/dependabot/apply.lock` (a second start prints `Another Apply-DependabotPr.ps1 run is already active; this run changed nothing.` and exits 3 without touching anything); `artifacts/dependabot/pr-<n>.log` (every command and its output) and `artifacts/dependabot/pr-<n>.result` (`RUNNING pid <pid>` → `READY DEP<n>: …` / `DRY RUN OK` / `FAILED: <reason>`); the dirty-tree error lists the unexpected files. `artifacts/` is git-ignored.
+
+**Acceptance:** normalised hash matches; PowerShell parse 0 errors; Full gate green as the signed-in user; GitHub CI green.
+
 ### Audit 2026-10-21 (7) · range `audit/2026-10-21-06 (5048232)..eff0f85` · 4 card commits · executor: ChatGPT via Talvora · result: TWO FIXES (D12, D13) — one caused by Claude
 
 Delivered: D9 (`5899995`), D11 (`a7bf0dd`), D5 (`61da387`), DEP1 (`eff0f85`); A1 ticked with the D9 signed-in gate. Blocked with proposals: P-24 (git pull identity), P-25 (DEP17) — both decided now.
@@ -1064,7 +1090,7 @@ Step 4 — apply PR #17: first add the queue/Log line for `DEP17` to STATUS (the
 #### Exact implementation — copy this, do not reinterpret
 
 1. `docs/codex/STATUS.md`: write `In progress: DEP17`. Refresh `.context7/verification.json` with `talvora_apply_patch` (scope `DEP17: Microsoft.Extensions.AI.Abstractions 10.10.1 -> 10.11.0`, Context7 `/websites/learn_microsoft_en-us_nuget` for lock-file regeneration and the package's own docs; `verifiedAtUtc` = now).
-2. `talvora_user_run` → `pwsh -NoProfile -File scripts/Apply-DependabotPr.ps1 -Pr 17` (workingDirectory = repo root). It must end with `READY DEP17: …`. Anything else → stop; restore with `talvora_git_run {args:["restore","--staged","--worktree","--",".",":!docs/codex/STATUS.md",":!.context7/verification.json"]}` and report.
+2. Start the script **once, detached** (amended by P-26, runs after D14): `talvora_user_process_start {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-File","scripts/Apply-DependabotPr.ps1","-Pr","17"], workingDirectory: "C:\Users\tayla\Talvora-MCP", visible: false}`. Then about every 60 s read line 1 of `artifacts/dependabot/pr-17.result` (`talvora_read_text_range`) until it no longer starts with `RUNNING` (limit 20 minutes; at the limit stop and report — never start a second run). Progress: `talvora_tail_text` on `artifacts/dependabot/pr-17.log`. `READY DEP17: …` → step 3. `FAILED: …` → paste that line into the Log, restore with `talvora_git_run {args:["restore","--staged","--worktree","--",".",":!docs/codex/STATUS.md",":!.context7/verification.json"]}` and stop. Exit 3 / "already active" means a run is still going: keep polling, do not restore.
 3. STATUS: tick DEP17 and add the Log entry (changed files line from step 2, gate last line).
 4. `talvora_git_run {args:["add","--","Directory.Packages.props","global.json","*packages.lock.json","THIRD-PARTY-NOTICES.md",".context7/verification.json","docs/codex/STATUS.md"]}`, then commit with subject `build(deps): apply Dependabot PR #17`, body `Microsoft.Extensions.AI.Abstractions 10.10.1 -> 10.11.0; all lock files regenerated with --force-evaluate.` and trailer `Card: DEP17`.
 5. `talvora_git_run` push `origin main`, then `github main`.

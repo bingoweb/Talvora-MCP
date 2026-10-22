@@ -13,7 +13,7 @@
 | Branch | `main` only. Do not create branches. Dependabot PRs: apply with scripts/Apply-DependabotPr.ps1 (DEP1), never merge on GitHub. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-21-07` = `eff0f85`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-22-08` = `a28f77b`. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -69,7 +69,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] DEP1 — Dependabot PR procedure installed on main (signed-in Full gate 55/0; GitHub CI 39614105176 green)
 - [x] D12 — `git pull` uses the signed-in user's credentials (P-24 decided)
 - [x] D13 — Dependabot script prepares and verifies; Talvora tools commit (P-25 decided)
-- [ ] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the rewritten DEP17 steps (after D13)
+- [ ] D14 — Dependabot script runs detached, single-instance and observable (P-26 decided)
+- [ ] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the rewritten DEP17 steps (after D14; step 2 = detached start + poll)
 - [ ] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
 - [ ] N3 — Worklog: real facts from results (P-11 decided)
@@ -123,6 +124,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-22 — Claude audit 8 of `eff0f85..a28f77b` (D12, D13): exact fidelity, CI green. P-26 decided: the long script outlived the chat tool-call limit and a retried call met the first run's files. New card D14 (lock, named dirty files, log/result files) and DEP17 step 2 = one detached start + polling; verified in a fresh clone (real run 55/0 READY, concurrent second start exit 3, detached start via the installed service DRY RUN OK). Queue: D14 → DEP17 → N1. Tag `audit/2026-10-22-08` = `a28f77b`.
+- 2026-10-22 — DEP17 blocked (executor: ChatGPT via Talvora): third failed invocation of the exact approved script; scripts/Apply-DependabotPr.ps1:29 reports unexpected dirty files even though signed-in Git status immediately beforehand listed only STATUS and Context7 changes. Subsequent diff again contained the PR's version/locks/notices, implying a concurrent or repeated writer (not yet identified).
+  Signed-in baseline Fast gate: 13 checks / 0 errors, `Hepsi geçti.`; existing GitHub CI 39632553300 green. The exact selective git restore removed all version/lock/notice changes; Context7 DEP17 draft reverted; no DEP17 commit, push, PR close or deployment.
+  Awaiting Claude decision P-26. No guards, scripts or package changes were altered. Last delivered commit remains a28f77b (D13).
 - 2026-10-21 — D13 (executor: ChatGPT via Talvora): copied exact approved Dependabot reference into scripts/Apply-DependabotPr.ps1; normalized SHA-256 681cd1cd7b08c4096027b67f479f2e3739949325c4c0965b039d2b86c3879d3e; 0 PowerShell parse errors. Updated one modernization-policy paragraph.
   Test-first RED: old reference hash 1c37620e0cce915a6af3ec5a906b2ff1ea2747c9e799467325e82eb1c8b9a4b2 != approved D13 hash; GREEN after copy. Context7 `/microsoftdocs/powershell-docs` and official PowerShell exit-code guidance verified; supporting evidence refreshed.
   Signed-in user MSI\\tayla: baseline Fast gate 13 checks / 0 errors, Full gate 55 checks / 0 errors, `Hepsi geçti.`.

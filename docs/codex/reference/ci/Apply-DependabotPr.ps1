@@ -9,24 +9,48 @@ param(
 # do this for transitively pinned packages → NU1004) and checked with the Full gate. It never
 # commits, pushes or closes: the agent does that with talvora_git_run / talvora_gh_run (P-25),
 # so the delivery gates of those tools apply. The PR is closed, never merged on GitHub.
+# Long run (~6 min): start it detached with talvora_user_process_start and poll
+# artifacts/dependabot/pr-<n>.result (RUNNING / READY / DRY RUN OK / FAILED) and pr-<n>.log (D14).
+# Only one run at a time: a second start exits 3 at once and changes nothing.
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $repository = 'bingoweb/Talvora-MCP'
 $versionFiles = @('Directory.Packages.props', 'global.json')
+$resultDirectory = Join-Path $repoRoot 'artifacts\dependabot'
+$logPath = Join-Path $resultDirectory "pr-$Pr.log"
+$resultPath = Join-Path $resultDirectory "pr-$Pr.result"
+
+function Write-Log {
+    param([string] $Text)
+    Write-Host $Text
+    Add-Content -LiteralPath $logPath -Value $Text -Encoding utf8
+}
 
 function Invoke-Checked {
     param([string] $Executable, [string[]] $Arguments)
-    & $Executable @Arguments
+    Write-Log "> $Executable $($Arguments -join ' ')"
+    & $Executable @Arguments 2>&1 | ForEach-Object { Write-Log "$_" }
     if ($LASTEXITCODE -ne 0) { throw "$Executable $($Arguments -join ' ') failed ($LASTEXITCODE)." }
+}
+
+New-Item -ItemType Directory -Force -Path $resultDirectory | Out-Null
+try {
+    $runLock = [IO.File]::Open((Join-Path $resultDirectory 'apply.lock'), 'OpenOrCreate', 'ReadWrite', 'None')
+}
+catch {
+    Write-Host 'Another Apply-DependabotPr.ps1 run is already active; this run changed nothing.'
+    exit 3
 }
 
 Push-Location $repoRoot
 try {
+    Set-Content -LiteralPath $logPath -Value "Apply-DependabotPr -Pr $Pr started $([DateTime]::UtcNow.ToString('u')) pid $PID" -Encoding utf8
+    Set-Content -LiteralPath $resultPath -Value "RUNNING pid $PID" -Encoding utf8
     # Only STATUS (queue/Log) and the refreshed Context7 evidence may be pre-edited; both go into the DEP commit.
     $allowed = @('docs/codex/STATUS.md', '.context7/verification.json')
     $dirty = @(& git status --porcelain | Where-Object { $allowed -notcontains $_.Substring(3) })
-    if ($dirty.Count -gt 0) { throw 'Working tree must be clean (except docs/codex/STATUS.md and .context7/verification.json) before applying a Dependabot PR.' }
+    if ($dirty.Count -gt 0) { throw "Working tree must be clean (except docs/codex/STATUS.md and .context7/verification.json) before applying a Dependabot PR. Unexpected: $($dirty -join '; ')" }
     if ((& git rev-parse --abbrev-ref HEAD).Trim() -ne 'main') { throw 'Run this on main.' }
 
     $info = & gh pr view $Pr --repo $repository --json state,author,headRefOid,title | ConvertFrom-Json
@@ -87,20 +111,29 @@ try {
     }
     if ($updated -ne $notice) { [IO.File]::WriteAllText($noticePath, $updated, [Text.UTF8Encoding]::new($hasBom)) }
 
-
     $changed = @(& git status --porcelain | ForEach-Object { $_.Substring(3) })
-    Write-Host ("Changed files: " + ($changed -join ', '))
+    Write-Log ("Changed files: " + ($changed -join ', '))
     if ($DryRun) {
-        Write-Host 'DRY RUN: reverting; nothing committed or pushed.'
+        Write-Log 'DRY RUN: reverting; nothing committed or pushed.'
         Invoke-Checked git @('restore', '--staged', '--worktree', '--', '.', ':!docs/codex/STATUS.md', ':!.context7/verification.json')
+        Set-Content -LiteralPath $resultPath -Value 'DRY RUN OK' -Encoding utf8
         exit 0
     }
 
     Invoke-Checked pwsh @('-NoProfile', '-File', 'scripts/Invoke-QualityGate.ps1', '-Scope', 'Full')
-    Write-Host "READY DEP$($Pr): commit these files with talvora_git_run (Card: DEP$Pr), push both remotes, then close PR #$Pr with talvora_gh_run."
+    $ready = "READY DEP$($Pr): commit these files with talvora_git_run (Card: DEP$Pr), push both remotes, then close PR #$Pr with talvora_gh_run."
+    Write-Log $ready
+    Set-Content -LiteralPath $resultPath -Value $ready -Encoding utf8
     exit 0
+}
+catch {
+    $failure = "FAILED: $($_.Exception.Message)"
+    Write-Log $failure
+    Set-Content -LiteralPath $resultPath -Value $failure -Encoding utf8
+    exit 1
 }
 finally {
     & git update-ref -d "refs/talvora/dependabot-pr-$Pr" 2>$null
     Pop-Location
+    $runLock.Dispose()
 }
