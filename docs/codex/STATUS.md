@@ -73,7 +73,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] DEP17 — Apply Dependabot PR #17 (Microsoft.Extensions.AI.Abstractions 10.11.0) with the rewritten DEP17 steps (after D14; step 2 = detached start + poll)
 - [x] N1 — Worklog: correct states, titles, reasons; no duplication (P-4, P-10 decided; pushed by Claude as f40e402 after the evidence-JSON unblock; CI 39800505820 green; installed f40e402)
 - [x] D15 — Delivery-gate refusals reach the agent (SourceEdit GREEN, signed-in Full 55/0; exact-commit delivery evidence follows)
-- [ ] D16 — Local evidence gates parse as strictly as the push gate (after D15)
+- [x] D16 — Local evidence gates parse as strictly as the push gate (signed-in Full 56/0; exact-commit GitHub CI check after push)
 - [ ] N2 — Worklog: protocol v4, sessions, project/actor context (P-11 decided)
 - [ ] N3 — Worklog: real facts from results (P-11 decided)
 - [ ] N3b — Worklog: code terminal real, complete, persistent (P-11 decided)
@@ -126,6 +126,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-22 — D16 (executor: ChatGPT via Talvora): applied exact strict System.Text.Json pre-parsing in Validate-Context7Gate.ps1 and Validate-ProjectDeliveryGate.ps1; preserved ConvertFrom-Json.
+  Test-first RED: scripts/Validate-Context7Gate.ps1 lacked strict parsing. GREEN: STRICT_EVIDENCE_JSON_GREEN; approved test copy normalized SHA-256 e2897d0b48df809e5cb8163aa6302131c691db3dccc0d8c332bf73fbc99a6d32.
+  Signed-in MSI\tayla baseline Fast 13/0; Full quality gate 56 controls, 0 failures (46 PowerShell regressions), last line "Hepsi geçti."; diff --check clean.
+  Context7 /dotnet/docs and /microsoftdocs/powershell-docs plus official vendor sources; supporting .context7/verification.json refreshed.
+  D15 previous windows-ci 39807715032 green, installed 4b080f5 with live MCP refusal and native runtime verified. D16 is script-only: no deploy; verify exact-commit GitHub CI after push; next N2.
 - 2026-10-22 — D15 (executor: ChatGPT via Talvora): changed ProjectDeliveryGate.Blocked to ModelContextProtocol.McpException without altering reasons; updated QualityAudit exception catch and trailing-comma regression.
   Before (installed f40e402, temporary probe): "An error occurred invoking 'talvora_git_run'."
   After (expected live proof following install): "TALVORA_DELIVERY_GATE_BLOCKED: Context7 evidence is mandatory and missing"; verify with the same temporary probe after deployment.

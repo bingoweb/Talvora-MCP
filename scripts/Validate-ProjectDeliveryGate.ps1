@@ -5,7 +5,11 @@ $awwwardsPath = Join-Path $root '.talvora\awwwards-verification.json'
 
 function Read-Evidence([string]$Path, [string]$Name) {
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw "$Name delivery evidence is missing: $Path" }
-    return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    $text = Get-Content -LiteralPath $Path -Raw
+    # Same strict parser as ProjectDeliveryGate (System.Text.Json); ConvertFrom-Json accepts trailing commas.
+    try { [System.Text.Json.JsonDocument]::Parse($text).Dispose() }
+    catch { throw "$Name delivery evidence is not valid JSON (strict): $($_.Exception.InnerException.Message)" }
+    return $text | ConvertFrom-Json
 }
 
 function Assert-Fresh([object]$Evidence, [string]$Name) {

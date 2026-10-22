@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-22T15:38:42Z",
-  "scope": "D15 delivery-gate refusals propagate their MCP error messages; preserve exact block reasons and test rejection of trailing-comma Context7 JSON.",
+  "verifiedAtUtc": "2026-10-22T15:59:20Z",
+  "scope": "D16 strict JSON checks in local Context7 and delivery evidence gates, exactly matching the delivery push gate; approved StrictEvidenceJsonRegression reference copy.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-22 D16: Official .NET documentation confirms System.Text.Json rejects trailing commas by default and JsonDocument implements IDisposable. Verified the prescribed JsonDocument.Parse(...).Dispose() strict validation before PowerShell JSON conversion."
+    },
+    {
+      "libraryId": "/microsoftdocs/powershell-docs",
+      "verified": "2026-10-22 D16: Official PowerShell 7.7 documentation describes Newtonsoft JSON extensions and PowerShell try/catch handling, supporting the exact approved strict pre-parse and existing ConvertFrom-Json behavior."
+    },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
       "verified": "2026-10-22 D15: Official C# SDK tools/error-handling documentation confirms McpException messages are included in tool-error results, while other exceptions produce generic text. The exact prescribed D15 replacement preserves the delivery-gate reason."
@@ -225,6 +233,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-22 D16: Official .NET System.Text.Json trailing comma defaults https://github.com/dotnet/docs/blob/main/docs/standard/serialization/system-text-json/invalid-json.md and JsonDocument disposal https://github.com/dotnet/docs/blob/main/docs/standard/serialization/system-text-json/use-dom.md ; PowerShell 7.7 Test-Json strict behavior https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Utility/Test-Json.md and error handling https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Error_Handling.md ; Context7 /dotnet/docs and /microsoftdocs/powershell-docs verified.",
     "2026-10-22 N1: Official .NET GeneratedRegex source generator https://github.com/dotnet/docs/blob/main/docs/standard/base-types/regular-expression-source-generators.md and System.Text.Json DOM https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/use-dom ; MCP CallToolResult https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Protocol/CallToolResult.cs and official tools guide https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md ; Context7 /dotnet/docs and /modelcontextprotocol/csharp-sdk verified.",
     "2026-10-22 DEP17: NuGet package lock-file documentation https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files and warning NU1512 https://learn.microsoft.com/en-us/nuget/reference/errors-and-warnings/nu1512 ; official Microsoft.Extensions.AI.Abstractions package README https://github.com/dotnet/extensions/blob/main/src/Libraries/Microsoft.Extensions.AI.Abstractions/README.md and NuGet 10.11.0 https://www.nuget.org/packages/Microsoft.Extensions.AI.Abstractions/10.11.0 . Context7 /websites/learn_microsoft_en-us_nuget and /dotnet/extensions verified.",
     "2026-10-22 D14: Microsoft PowerShell 7.7 about_Error_Handling https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Error_Handling.md , about_Language_Keywords https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Language_Keywords.md and Add-Content https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Management/Add-Content.md ; .NET official FileShare.None usage https://github.com/dotnet/docs/blob/main/csharp/asynchronous-programming/snippets/file-access/Program.cs . Context7 verified; approved reference hash and parse GREEN.",

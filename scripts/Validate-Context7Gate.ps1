@@ -55,7 +55,12 @@ try {
 
     $evidencePath = Join-Path $root '.context7\verification.json'
     if (-not (Test-Path -LiteralPath $evidencePath -PathType Leaf)) { throw "Context7 evidence file is missing: $evidencePath" }
-    $evidence = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
+    $evidenceText = Get-Content -LiteralPath $evidencePath -Raw
+    # Same strict parser as ProjectDeliveryGate (System.Text.Json): ConvertFrom-Json accepts trailing
+    # commas, so this gate passed evidence that talvora_git_run push then refused (audit 2026-10-22 (9)).
+    try { [System.Text.Json.JsonDocument]::Parse($evidenceText).Dispose() }
+    catch { throw "Context7 evidence is not valid JSON (strict): $($_.Exception.InnerException.Message)" }
+    $evidence = $evidenceText | ConvertFrom-Json
     if ([int]$evidence.schemaVersion -ne 1) { throw 'Context7 evidence schemaVersion must be 1.' }
     if ([string]::IsNullOrWhiteSpace([string]$evidence.scope)) { throw 'Context7 evidence must describe the development scope.' }
 
