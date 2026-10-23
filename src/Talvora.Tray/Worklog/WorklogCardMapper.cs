@@ -16,7 +16,8 @@ public static class WorklogCardMapper
         DesktopWorklogFrame frame,
         string machineName,
         bool stale,
-        DateTimeOffset? codeChangedUtc = null)
+        DateTimeOffset? codeChangedUtc = null,
+        WorklogDetails? details = null)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(frame);
@@ -69,6 +70,7 @@ public static class WorklogCardMapper
             .ToArray());
 
         model.Footer = FormatFooter(frame.Totals);
+        model.SetDetails(details is null ? [] : BuildDetailRows(details));
 
         var preview = frame.Evidence?.CodePreview;
         if (string.IsNullOrWhiteSpace(preview))
@@ -83,6 +85,43 @@ public static class WorklogCardMapper
                 files,
                 lines);
         }
+    }
+
+    /// <summary>
+    /// "ayrıntılar" rows (N6). The technical tool name appears only here, never in title, fact or timeline.
+    /// Values come from the received message, which the protocol has already redacted.
+    /// </summary>
+    public static IReadOnlyList<WorklogDetailRow> BuildDetailRows(WorklogDetails details)
+    {
+        var rows = new List<WorklogDetailRow>();
+        var technical = details.ToolName is "search" or "fetch" || details.ToolName.StartsWith("talvora_", StringComparison.Ordinal)
+            ? details.ToolName
+            : "talvora_" + details.ToolName;
+        var title = Talvora.Shared.TalvoraToolTitles.Get(technical);
+        rows.Add(new("adım", title is null ? technical : $"{title} ({technical})"));
+        if (!string.IsNullOrWhiteSpace(details.Result))
+        {
+            var result = details.Result.StartsWith("Sonuç: ", StringComparison.Ordinal) ? details.Result[7..] : details.Result;
+            rows.Add(new("sonuç", result.Replace("  //  ", " · ", StringComparison.Ordinal)));
+        }
+
+        if (details.Files.Count > 0)
+        {
+            var shown = string.Join(", ", details.Files.Take(8).Select(file => System.IO.Path.GetFileName(file.Replace('\\', '/'))));
+            rows.Add(new("dosyalar", details.Files.Count > 8 ? $"{shown} +{details.Files.Count - 8}" : shown));
+        }
+
+        rows.Add(new("süre", FormatDuration(details.ElapsedSeconds)));
+        rows.Add(new("oturum", $"{details.SessionId[..Math.Min(8, details.SessionId.Length)]} · #{details.Sequence}"));
+        return rows;
+    }
+
+    public static string FormatDuration(double seconds)
+    {
+        var value = Math.Max(0, seconds);
+        return value < 60
+            ? value.ToString("0.0", Turkish) + " sn"
+            : FormatClock(value);
     }
 
     public static string FormatFooter(WorklogTotals totals)

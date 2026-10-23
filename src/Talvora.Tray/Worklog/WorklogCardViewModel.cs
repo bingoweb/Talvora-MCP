@@ -73,6 +73,61 @@ public sealed record DiffLine(DiffLineKind Kind, string Number, string Text, int
     public string Suffix => EmphasisStart < 0 ? string.Empty : Text[(EmphasisStart + EmphasisLength)..];
 }
 
+/// <summary>One "ayrıntılar" row: faint label, technical value (N6, DESIGN-WORKLOG §3 expanded view).</summary>
+public sealed record WorklogDetailRow(string Label, string Value);
+
+/// <summary>
+/// Technical evidence of the current step, only from the received message (already redacted by the protocol):
+/// tool title + technical name, result line, files, real duration, session identity.
+/// </summary>
+public sealed record WorklogDetails(
+    string ToolName, string? Result, IReadOnlyList<string> Files, double ElapsedSeconds, string SessionId, long Sequence)
+{
+    public static WorklogDetails From(Talvora.Shared.DesktopProgressMessage message) =>
+        new(message.ToolName, message.Evidence?.Result, message.Evidence?.Files ?? [],
+            message.ElapsedSeconds, message.WorklogFrame?.SessionId ?? message.OperationId, message.Sequence);
+}
+
+/// <summary>Per-user memory of the "ayrıntılar" expander (N6). Best effort; never fails the card.</summary>
+public static class WorklogDetailsPreference
+{
+    private static readonly string FilePath = System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Talvora", "ControlCenter", "worklog-details-open.flag");
+
+    public static bool Load()
+    {
+        try
+        {
+            return System.IO.File.Exists(FilePath);
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    public static void Save(bool open)
+    {
+        try
+        {
+            if (open)
+            {
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(FilePath)!);
+                System.IO.File.WriteAllText(FilePath, "1");
+            }
+            else if (System.IO.File.Exists(FilePath))
+            {
+                System.IO.File.Delete(FilePath);
+            }
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            // The expander still works for this card; only the memory is lost.
+        }
+    }
+}
+
 /// <summary>"nerede" row: a changed file and the declarations its hunks touched (real, §6.2).</summary>
 public sealed record WorklogChangeRow(string File, string Places)
 {
@@ -105,6 +160,7 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
     private string codeHeader = string.Empty;
     private bool animationsEnabled = true;
     private bool hasDetails;
+    private bool isDetailsOpen;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -116,6 +172,9 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
 
     /// <summary>"nerede" rows, at most three; the rest is counted in <see cref="MoreChangedFiles"/>.</summary>
     public ObservableCollection<WorklogChangeRow> ChangeRows { get; } = [];
+
+    /// <summary>"ayrıntılar" rows (N6); empty hides the footer button.</summary>
+    public ObservableCollection<WorklogDetailRow> DetailRows { get; } = [];
 
     /// <summary>"talvora@MACHINE:~/Project" — machine and project are real values.</summary>
     public string Prompt { get => prompt; set => Set(ref prompt, value); }
@@ -227,6 +286,39 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
 
     /// <summary>Shows the "ayrıntılar ▸" button. Stays false until card N6 provides the evidence surface.</summary>
     public bool HasDetails { get => hasDetails; set => Set(ref hasDetails, value); }
+
+    /// <summary>Expander state; the window restores it from <see cref="WorklogDetailsPreference"/>.</summary>
+    public bool IsDetailsOpen
+    {
+        get => isDetailsOpen;
+        set
+        {
+            if (Set(ref isDetailsOpen, value))
+            {
+                OnPropertyChanged(nameof(DetailsToggleText));
+                OnPropertyChanged(nameof(ShowDetails));
+            }
+        }
+    }
+
+    public bool ShowDetails => HasDetails && IsDetailsOpen;
+
+    public string DetailsToggleText => IsDetailsOpen ? "ayrıntılar ▾" : "ayrıntılar ▸";
+
+    /// <summary>Plain-text copy of the rows (already redacted values only).</summary>
+    public string DetailsCopyText => string.Join(Environment.NewLine, DetailRows.Select(row => $"{row.Label,-9}{row.Value}"));
+
+    public void SetDetails(IReadOnlyList<WorklogDetailRow> rows)
+    {
+        DetailRows.Clear();
+        foreach (var row in rows)
+        {
+            DetailRows.Add(row);
+        }
+
+        HasDetails = DetailRows.Count > 0;
+        OnPropertyChanged(nameof(ShowDetails));
+    }
 
     /// <summary>Replaces the timeline with the newest rows (newest first), keeping the visible budget.</summary>
     public void SetTimeline(IReadOnlyList<WorklogTimelineRow> newestFirst)

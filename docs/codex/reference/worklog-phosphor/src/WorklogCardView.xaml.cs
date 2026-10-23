@@ -60,6 +60,9 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
 
     public event EventHandler? CopyRequested;
 
+    /// <summary>The user asked to copy the "ayrıntılar" rows (N6).</summary>
+    public event EventHandler? CopyDetailsRequested;
+
     /// <summary>Maximum height of the code terminal (set by the window from the work area / user size).</summary>
     public double CodeMaxHeight
     {
@@ -207,6 +210,8 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
     private void OnDetailsClick(object sender, RoutedEventArgs e) => DetailsRequested?.Invoke(this, EventArgs.Empty);
 
     private void OnCopyClick(object sender, RoutedEventArgs e) => CopyRequested?.Invoke(this, EventArgs.Empty);
+
+    private void OnCopyDetailsClick(object sender, RoutedEventArgs e) => CopyDetailsRequested?.Invoke(this, EventArgs.Empty);
 }
 
 /// <summary>null or empty string → Collapsed; anything else → Visible.</summary>

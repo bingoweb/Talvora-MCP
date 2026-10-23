@@ -84,7 +84,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] N4 — Agent job activity and Codex code terminal (installed e49151a, signed-in Full 57/0; GitHub CI 40012319673 green, no live Codex per P-28)
 - [x] D18 — Code terminal back on the Phosphor card + design polish (signed-in Full 57/0; source hashes 8/8, PNGs 9/9; installed 78fce40; live card attached to Gitea #9 comment 140; GitHub CI 40022688918 success)
 - [x] N5 — Phosphor card (D18 closes remaining acceptance: signed-in Full 57/0, PNGs 9/9, real desktop code terminal/nerede proof, installed 78fce40 and GitHub CI 40022688918 success)
-- [ ] N6 — Worklog evidence surface ("Ayrıntılar") (P-30 decided; exact steps + reference in worklog-phosphor-next, verified by Claude)
+- [~] N6 — Worklog evidence surface ("Ayrıntılar") (P-30 exact reference applied; signed-in Full 57/0; live pending: exact-commit install, expanded card and remembered preference, Gitea PNG and GitHub CI)
 - [x] S3 — ProgramData ACL + protected user-session InteractiveRuns (P-12; signed-in Full 56/0, privacy regression GREEN; installer/CI follow commit; live Codex exec deferred by U7/U8)
 - [ ] R1 — Agent job registry, persistence, orphan recovery, limits (P-13 decided; after S3)
 - [ ] R2 — Prompts via stdin (P-14 decided; after S3)
@@ -136,6 +136,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — N6 (executor: Codex): applied all ten P-30 steps exactly; six Phosphor source copies, presenter evidence wiring and prescribed redaction regression; promoted the reference/ten PNGs and removed worklog-phosphor-next. No design gaps filled; checksum guard unchanged.
+  RED: details-open preview absent before implementation. GREEN: DESKTOP_PROGRESS_BEHAVIOR_GREEN (includes real-protocol N6 secret/tool-name checks), MODERNIZATION_POLICY_GREEN; normalized source hashes 8/8 and rendered preview PNG hashes 10/10 identical. Before/after: artifacts/n6-before and artifacts/n6-after.
+  Signed-in MSI\tayla Full gate: 57 checks, 0 errors, exit 0, Hepsi geçti. (artifacts/n6-full.log/.exit). Baseline Fast 13/0; origin/main windows-ci 40025857688 success.
+  Context7 /dotnet/wpf and official Microsoft property-notification/Clipboard.SetText guidance verified; live Awwwards HTTP 200 is evidence only. Both evidence JSON files refreshed. Exact-commit installer, live expanded/reopened card, Gitea screenshot and GitHub CI remain pending and must pass before N6 is marked done.
 - 2026-10-24 — Claude audit 13 of `b8fd17a..78fce40` (D18): identical to the verified clone, CI green, installed 78fce40; live card shows the code terminal, `nerede › pair`, word highlight and state line. P-30 decided: Claude designed the 'ayrıntılar' panel in the Phosphor reference (worklog-phosphor-next), N6 rewritten (10 steps), verified on a clean clone: regression + policy green, tray renders 10/10 byte-identical, Full gate `57 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. Tag `audit/2026-10-24-13` = `78fce40`.
 - 2026-10-24 — N6 (executor: Codex): preserved the user-authorized local D18/N5 delivery closeout; checked current N6 against the authoritative Phosphor sources and recorded P-30 before product/test changes.
   Baseline as MSI\tayla: Fast 13 checks, 0 errors, Hepsi geçti. (artifacts/n6-baseline.log); origin/main 78fce40 windows-ci 40022688918 success. Production normalized source hashes 8/8; targeted ModernizationPolicyRegression returned MODERNIZATION_POLICY_GREEN.

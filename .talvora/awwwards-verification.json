@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T20:48:22Z",
+  "verifiedAtUtc": "2026-10-23T21:25:20Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "D18: DESIGN-WORKLOG 3, 3.1, 7 exact audit-12 Phosphor reference; nine prescribed PNG scenarios and installed code terminal. Awwwards homepage checked live on 2026-10-23; evidence only, no visual deviation.",
+  "scope": "N6: DESIGN-WORKLOG 3, 3.1, 7 and P-30 exact Phosphor evidence panel. Awwwards homepage checked live with HTTP 200 on 2026-10-23 UTC (2026-10-24 Istanbul), title Awwwards - Website Awards - Best Web Design Trends; evidence only.",
   "references": [
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
-    "DESIGN-WORKLOG §3: Worklog card anatomy follows the exact 'Phosphor' reference and maps N10 ne/nerede/fark/sonuç data without inventing rows.",
-    "DESIGN-WORKLOG §3.1: Vertical code terminal retains the specified reveal, height limits, multi-file tabs, scroll, gutter, continuation and word-level highlighting.",
-    "DESIGN-WORKLOG §7: D18 uses the approved Phosphor reference and its nine PNGs as the sole visual target; WorklogTheme.xaml stays unchanged and no Awwwards-inspired styling changes are introduced."
+    "DESIGN-WORKLOG §3 and N6 P-30: exact approved sunken mono technical panel, adım/sonuç/dosyalar/süre/oturum rows, redacted copy and persisted open/closed preference.",
+    "DESIGN-WORKLOG §3.1: the code terminal remains separate and always visible when real code evidence exists.",
+    "DESIGN-WORKLOG §7 and N6 P-30: promoted Claude reference and ten prescribed PNGs are the sole visual target; WorklogTheme.xaml remains unchanged. No design gaps filled."
   ]
 }

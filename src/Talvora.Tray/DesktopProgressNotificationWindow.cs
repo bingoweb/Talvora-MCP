@@ -36,6 +36,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
     private readonly TranslateTransform enterShift = new();
     private DesktopWorklogFrame? lastFrame;
     private DateTimeOffset? lastCodeChangedUtc;
+    private WorklogDetails? lastDetails;
     private DateTimeOffset lastFrameReceivedUtc;
     private TimeSpan dismissAfter = SucceededLifetime;
     private bool isPointerOver;
@@ -84,6 +85,13 @@ internal sealed class DesktopProgressNotificationWindow : Window
         };
         view.CloseRequested += (_, _) => BeginClose(userInitiated: true);
         view.CopyRequested += (_, _) => CopyCode();
+        model.IsDetailsOpen = WorklogDetailsPreference.Load();
+        view.DetailsRequested += (_, _) =>
+        {
+            model.IsDetailsOpen = !model.IsDetailsOpen;
+            WorklogDetailsPreference.Save(model.IsDetailsOpen);
+        };
+        view.CopyDetailsRequested += (_, _) => CopyText(model.DetailsCopyText, "Desktop worklog details could not be copied.");
         view.PreviewMouseLeftButtonDown += OnCardMouseLeftButtonDown;
         Content = view;
 
@@ -143,7 +151,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
         WorklogStepState.Succeeded or WorklogStepState.Failed or WorklogStepState.Cancelled;
 
     /// <summary>Shows a real frame. The only entry point for content.</summary>
-    public void Update(DesktopWorklogFrame frame, DateTimeOffset? codeChangedUtc = null)
+    public void Update(DesktopWorklogFrame frame, DateTimeOffset? codeChangedUtc = null, WorklogDetails? details = null)
     {
         ArgumentNullException.ThrowIfNull(frame);
         CancelPendingAutomaticClose();
@@ -154,7 +162,8 @@ internal sealed class DesktopProgressNotificationWindow : Window
         LastLane = frame.Lane;
         isStale = false;
         lastCodeChangedUtc = codeChangedUtc;
-        WorklogCardMapper.Apply(model, frame, Environment.MachineName, stale: false, codeChangedUtc);
+        lastDetails = details;
+        WorklogCardMapper.Apply(model, frame, Environment.MachineName, stale: false, codeChangedUtc, details);
         AutomationProperties.SetName(this, $"Talvora çalışma günlüğü: {frame.Current.Title}");
 
         dismissAfter = frame.Current.State switch
@@ -201,7 +210,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
         }
 
         isStale = true;
-        WorklogCardMapper.Apply(model, lastFrame, Environment.MachineName, stale: true, lastCodeChangedUtc);
+        WorklogCardMapper.Apply(model, lastFrame, Environment.MachineName, stale: true, lastCodeChangedUtc, lastDetails);
     }
 
     private void OnCardMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -260,13 +269,23 @@ internal sealed class DesktopProgressNotificationWindow : Window
             return;
         }
 
+        CopyText(text, "Desktop worklog code could not be copied.");
+    }
+
+    private static void CopyText(string text, string failureMessage)
+    {
+        if (text.Length == 0)
+        {
+            return;
+        }
+
         try
         {
             WpfClipboard.SetText(text);
         }
         catch (Exception ex) when (ex is ExternalException or InvalidOperationException)
         {
-            TrayLog.Write("Desktop worklog code could not be copied.", ex);
+            TrayLog.Write(failureMessage, ex);
         }
     }
 

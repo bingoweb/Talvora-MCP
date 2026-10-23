@@ -181,7 +181,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             window.ApplyPreferredSize(_preferredWidthDip, _preferredHeightDip);
         }
 
-        window.Update(message.WorklogFrame!, _codeState.CodeChangedUtc);
+        window.Update(message.WorklogFrame!, _codeState.CodeChangedUtc, Worklog.WorklogDetails.From(message));
 
         if (!window.IsVisible)
         {

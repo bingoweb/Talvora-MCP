@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T20:48:22Z",
-  "scope": "D18: restore committed code evidence into Phosphor frames, preserve code-change time, apply the exact audit-12 WPF reference, and verify nine deterministic previews and the installed card.",
+  "verifiedAtUtc": "2026-10-23T21:25:20Z",
+  "scope": "N6: exact P-30 Phosphor evidence panel, redacted details copy, per-user expanded-state preference, ten deterministic previews and installed-runtime acceptance.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-24 N6: Context7 verifies INotifyPropertyChanged-driven TextBlock layout updates, Visibility.Collapsed automation visibility and RenderTargetBitmap rendering a measured/arranged Visual. Microsoft Learn confirms property notifications for dependent bindings and Clipboard.SetText Unicode text on the WPF UI thread. Applied Claude P-30 reference exactly: detail rows and toggle/copy are bound to the received redacted message; the original separate code terminal and its theme are retained. Vendor checks: https://learn.microsoft.com/en-us/dotnet/desktop/wpf/data/how-to-implement-property-change-notification and https://learn.microsoft.com/en-us/dotnet/api/system.windows.clipboard.settext?view=windowsdesktop-10.0 ."
+    },
     {
       "libraryId": "/dotnet/wpf",
       "verified": "2026-10-23 D18: Context7 confirms inherited FrameworkElement.DataContext, TextBlock.Text measure/render invalidation and ItemsControl.ItemsSource binding refresh. Microsoft Learn confirms INotifyPropertyChanged notifications for each dependent binding property and Visibility.Collapsed excluding an element from layout. The exact approved Phosphor reference binds restored frame evidence and the original code-change time, collapses a one-row timeline and single-file tabs, and retains the existing theme without visual deviations."

@@ -26,6 +26,7 @@ internal static class WorklogPreviewScenarios
             ("07-from-real-frame", FromFrame(), false),
             ("08-high-contrast", RunningEdit(), true),
             ("09-one-step-receipt", OneStepReceipt(), false),
+            ("10-details-open", DetailsOpen(), false),
         ];
     }
 
@@ -281,6 +282,47 @@ internal static class WorklogPreviewScenarios
             ExpectedNextUpdateSeconds: 15);
         var model = new WorklogCardViewModel();
         WorklogCardMapper.Apply(model, frame, "MSI", stale: false, codeChangedUtc: changed);
+        return model;
+    }
+
+    /// <summary>N6: a failed build with "ayrıntılar" open — technical name, result, files, duration, session.</summary>
+    private static WorklogCardViewModel DetailsOpen()
+    {
+        var at = new DateTimeOffset(2026, 10, 24, 9, 12, 40, TimeSpan.Zero);
+        var frame = new Talvora.Shared.DesktopWorklogFrame(
+            SessionId: "3f9c2a71d0b84e55",
+            Sequence: 12,
+            TimestampUtc: at,
+            Header: new Talvora.Shared.WorklogSessionHeader("Talvora-MCP", "ChatGPT · Dev", "UI1 — Kontrol Merkezi başlığı ve tema"),
+            Current: new Talvora.Shared.WorklogStep(
+                Talvora.Shared.WorklogStepCategory.Verification,
+                Talvora.Shared.WorklogStepState.Failed,
+                "Derleme başarısız · Talvora.Tray.csproj · 3 hata",
+                "3 hata · ControlCenterWindow.cs, WorklogTheme.xaml",
+                new Talvora.Shared.WorklogOutcome(
+                    Talvora.Shared.WorklogFailureKind.BuildErrors,
+                    "Derleme hata verdi. Ajan hataları düzeltebilir; kodunuz kaydedildiği hâliyle duruyor.",
+                    null),
+                18.4),
+            Timeline:
+            [
+                new(at, Talvora.Shared.WorklogStepState.Failed, "Derleme başarısız · Talvora.Tray.csproj · 3 hata"),
+                new(at.AddMinutes(-1), Talvora.Shared.WorklogStepState.Succeeded, "Kod değişikliği uygulandı · ControlCenterWindow.cs"),
+            ],
+            Totals: new Talvora.Shared.WorklogTotals(2, 58, 1,
+                Talvora.Shared.WorklogCheckState.Failed, Talvora.Shared.WorklogCheckState.Unknown),
+            Evidence: null,
+            ExpectedNextUpdateSeconds: 15);
+        var message = new Talvora.Shared.DesktopProgressMessage(
+            frame.SessionId, "dotnet_build", frame.Current.Title, frame.Current.FactLine!,
+            Talvora.Shared.DesktopProgressKind.Failed, at, 18.4,
+            new Talvora.Shared.DesktopProgressEvidence(
+                Summary: frame.Current.FactLine,
+                Files: ["src/Talvora.Tray/ControlCenterWindow.cs", "src/Talvora.Tray/Worklog/WorklogTheme.xaml"],
+                Result: "Sonuç: tamamlanamadı  //  kod 1"),
+            Talvora.Shared.DesktopProgressLane.Worklog, 12, frame);
+        var model = new WorklogCardViewModel { IsDetailsOpen = true };
+        WorklogCardMapper.Apply(model, frame, "MSI", stale: false, details: WorklogDetails.From(message));
         return model;
     }
 

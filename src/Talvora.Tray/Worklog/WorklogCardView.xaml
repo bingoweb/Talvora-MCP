@@ -359,6 +359,45 @@
                     </Grid>
                 </Border>
 
+                <!-- "ayrıntılar" (N6): technical evidence only, sunken mono panel; never repeats code. -->
+                <Border x:Name="Details" Margin="0,10,0,0" Background="{DynamicResource Wl.Terminal}"
+                        BorderBrush="{DynamicResource Wl.Border}" BorderThickness="1" CornerRadius="6" Padding="10,7,8,8"
+                        Visibility="{Binding ShowDetails, Converter={StaticResource BoolToVisibility}}"
+                        AutomationProperties.Name="Ayrıntılar">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="── teknik kayıt" Style="{StaticResource Wl.TextBase}" FontSize="11"
+                                       TextWrapping="NoWrap" Foreground="{DynamicResource Wl.Faint}" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Style="{StaticResource Wl.LinkButton}" Click="OnCopyDetailsClick"
+                                    Content="kopyala" AutomationProperties.Name="Ayrıntıları kopyala" />
+                        </Grid>
+                        <ItemsControl Grid.Row="1" Margin="0,4,0,0" ItemsSource="{Binding DetailRows}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type wl:WorklogDetailRow}">
+                                    <Grid Margin="0,1,0,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="72" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Label}" Style="{StaticResource Wl.TextBase}" FontSize="11.5"
+                                                   TextWrapping="NoWrap" Foreground="{DynamicResource Wl.Faint}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Value}" Style="{StaticResource Wl.TextBase}"
+                                                   FontSize="11.5" Foreground="{DynamicResource Wl.Muted}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </Border>
+
                 <!-- Footer -->
                 <Grid Margin="0,10,0,0">
                     <Grid.ColumnDefinitions>
@@ -368,7 +407,7 @@
                     <TextBlock Text="{Binding Footer}" Style="{StaticResource Wl.TextBase}" FontSize="11"
                                Foreground="{DynamicResource Wl.Faint}" VerticalAlignment="Center" />
                     <Button Grid.Column="1" Style="{StaticResource Wl.LinkButton}" Click="OnDetailsClick"
-                            Content="ayrıntılar ▸" AutomationProperties.Name="Ayrıntılar"
+                            Content="{Binding DetailsToggleText}" AutomationProperties.Name="Ayrıntılar"
                             Visibility="{Binding HasDetails, Converter={StaticResource BoolToVisibility}}" />
                 </Grid>
             </StackPanel>
