@@ -6,6 +6,8 @@ using Microsoft.Extensions.Hosting.WindowsServices;
 using ModelContextProtocol.AspNetCore;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.Security.AccessControl;
+using System.Security.Principal;
 
 if (SemanticWorkerHost.IsWorkerCommand(
         args))
@@ -116,6 +118,41 @@ RemotionTools.DesktopNotifier =
 var isWindowsService =
     OperatingSystem.IsWindows() &&
     WindowsServiceHelpers.IsWindowsService();
+
+if (isWindowsService)
+{
+    try
+    {
+        var root = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "Talvora");
+        if (Directory.Exists(root))
+        {
+            var users = new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null);
+            var unsafeRights = FileSystemRights.WriteData |
+                FileSystemRights.AppendData |
+                FileSystemRights.WriteExtendedAttributes |
+                FileSystemRights.WriteAttributes;
+            var allowsWrite = new DirectoryInfo(root).GetAccessControl()
+                .GetAccessRules(includeExplicit: true, includeInherited: true,
+                    targetType: typeof(SecurityIdentifier))
+                .OfType<FileSystemAccessRule>()
+                .Any(rule => rule.AccessControlType == AccessControlType.Allow &&
+                    rule.IdentityReference.Equals(users) &&
+                    (rule.FileSystemRights & unsafeRights) != 0);
+            if (allowsWrite)
+            {
+                app.Logger.LogWarning(
+                    "Talvora klasör izinleri güncel değil. Kurulumu yeniden çalıştırın.");
+            }
+        }
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or
+        System.Security.SecurityException)
+    {
+        app.Logger.LogWarning(ex, "Talvora ProgramData ACL inspection could not complete.");
+    }
+}
 
 try
 {

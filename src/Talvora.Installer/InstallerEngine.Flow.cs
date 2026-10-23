@@ -107,6 +107,9 @@ public static async Task<HealthSnapshot> InstallAsync(
                 JsonSerializer.Serialize(runtimeMetadata, IndentedJsonOptions),
                 new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
                 cancellationToken);
+            ApplyProtectedProgramDataAcl(Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "Talvora"));
             progress.Report(new InstallProgress(34, "Çalışan Talvora kontrollü olarak değiştiriliyor..."));
             serviceSwitchStarted = true;
             await StopServiceForUpgradeAsync(ServiceName, cancellationToken);

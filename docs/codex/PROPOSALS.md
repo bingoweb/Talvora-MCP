@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-28 — N4 — Live Codex JSONL probe conflicts with the no-Codex user instruction
+- Date: 2026-10-23, HEAD 8f379adafffca6386f9a86f5def8b157e92a6c49
+- Card text: DESIGN-WORKLOG.md:266: "check with Context7 and a real `codex exec --json` run which events carry file changes and whether they include diff text"; N4 Do: "§5.4 and §5.4.1 (Codex code terminal)".
+- Problem: STATUS.md User queue U7/U8 explicitly defers live Codex execution under the user's "do not use Codex" instruction. AGENTS.md also prohibits agent delegation without explicit permission in the current chat. The user said only "devam et" in this chat. Context7 `/openai/codex` documents JSONL `item.completed`, while its app-server v2 diff types are not evidence for the CLI exec payload. A real live run cannot be performed without contradicting the existing user instruction, and skipping it silently changes the prescribed validation.
+- Options:
+  1. Amend N4 §5.4.1 to accept the documented CLI JSONL schema plus sanitised recorded fixtures and an explicit no-live-Codex limitation. Leave a separate optional live acceptance in User queue if Codex is later authorised.
+  2. Keep N4 unchanged and blocked until the user explicitly authorises an isolated live Codex JSONL probe in a disposable workspace (never use Codex to implement the card).
+- Partial work: reverted (yes; no N4 product or test files changed).
+- Decision (Claude): _pending_
 
 ## Decided
 

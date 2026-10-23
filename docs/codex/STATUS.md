@@ -80,10 +80,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] N10 — Worklog: task line, purpose, changed places (ne · nerede · fark, §6.2) + talvora_worklog_note; signed-in Full 56/0; exact-commit deployment, live accepted:true and CI evidence follow in Gitea #9.
 - [x] RM1 — Remotion animations: guide, detached runs, live card, automatic routing (Phase RM); signed-in Full 56/0; exact-commit installed runs, desktop card and CI evidence follow in Gitea #9.
 - [x] N3b — Worklog: code terminal real, complete, persistent (P-27; declaration context); signed-in Full 56/0; exact-commit installed/desktop/CI evidence follows in Gitea #9.
-- [ ] N4 — Worklog: agent jobs tell their story (+ Codex code terminal) (P-11 decided)
-- [ ] N5 — Worklog card visual redesign + preview harness (reference updated 2026-10-23 with §6.1–6.3; after N10)
-- [ ] N6 — Worklog evidence surface ("Ayrıntılar")
-- [ ] S3 — ProgramData ACL + interactive runs out of user-controlled paths (P-12 decided: log-only startup check)
+- [?] N4 — Worklog: agent jobs tell their story (+ Codex code terminal) (waiting for Claude: P-28; no live Codex authorisation)
+- [?] N5 — Worklog card visual redesign + preview harness (waiting for N4; P-11 requires agent-job acceptance previews)
+- [?] N6 — Worklog evidence surface ("Ayrıntılar") (waiting for N5)
+- [x] S3 — ProgramData ACL + protected user-session InteractiveRuns (P-12; signed-in Full 56/0, privacy regression GREEN; installer/CI follow commit; live Codex exec deferred by U7/U8)
 - [ ] R1 — Agent job registry, persistence, orphan recovery, limits (P-13 decided; after S3)
 - [ ] R2 — Prompts via stdin (P-14 decided; after S3)
 - [ ] R3 — Safe Reset-And-Install (P-15 decided: Secrets never touched)
@@ -132,6 +132,18 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-23 — S3 (executor: ChatGPT via Talvora): root ProgramData DACL now protects SYSTEM/Administrators FullControl; Penpot Users ReadAndExecute only. User-runner request, helper and output files moved to protected ProgramData/InteractiveRuns/<guid> with SYSTEM FullControl and target user Modify. Reparse-safe stale/per-run removal; logging-only startup ACL warning per P-12 (no UI notice, no Secrets file touched).
+  RED: installer ACL source absent in test-first compile. GREEN: shared/smoke/service Release builds, signed-in privacy-security-only fixture (root junction rejection, internal junction target survival, deleted normal run, explicit per-file ACE survives parent DACL change); final signed-in Fast baseline 13/0 and Full 56/0 (last line "Hepsi geçti."); Context7 /dotnet/docs confirms DirectoryInfo/FileInfo ACL APIs. Installer build uses canonical packaging script because direct standalone project lacks its generated Payload.zip.
+  ProgramData inventory for user-context access (verified source grep plus P-12 decision):
+
+  | User-context consumer | Required location | Effective access |
+  | --- | --- | --- |
+  | Tray ControlCenterLifecycleService.Penpot.cs | Talvora/Penpot/docker-compose.yaml | Users ReadAndExecute on Penpot |
+  | Tray ManagedMcpRecoveryDiscovery.cs | Talvora/Penpot/penpot-*/mcp | Users ReadAndExecute on Penpot |
+  | InteractiveUserProcessRunner.cs signed-in helper | Talvora/InteractiveRuns/<guid> | Target user SID Modify only; SYSTEM FullControl |
+  | Scripts and other shared user-context consumers | No other CommonApplicationData use found | No Users write anywhere |
+
+  P-28 blocks N4 because U7/U8 forbid live Codex; N5 and N6 depend on N4, so S3 was the next independent queue item. Post-commit canonical installer/deploy/healthz/CI evidence to be checked; never claim live Codex execution under the user restriction.
 - 2026-10-23 — N3b (executor: Codex via Talvora): real committed DiffPlex previews persist through receipts/WAL/replay; declaration-context hunk headers, source/structural/semantic and allowed workspace copy/move results; rejected/failed edits expose no new diff. P-27 legacy guard unchanged.
   Session-local CodeChangeId and tray cache preserve the latest pane through build/test; preview sent once per change. A 300 KB preview produced a maximum 2213-byte heartbeat, below 4 KB; actual two-file unified diffs include removed SQL comments and exact applied counts.
   RED: missing Build/CodeChangeId/cache, then the existing one-MB event-bound regression; GREEN: DESKTOP_PROGRESS_BEHAVIOR_GREEN, receipt/replay/legacy rejection/copy/move/privacy cases and real structural/semantic receipt checks. Existing Claude one-MB event and two-MB progress-file guards retained.

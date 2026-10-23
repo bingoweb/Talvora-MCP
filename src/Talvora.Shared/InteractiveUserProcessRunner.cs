@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 
@@ -74,28 +76,16 @@ Action<CodexCliEventResult>? onCodexProgress = null,
                     "The Windows user session identity changed before launch.");
             }
         }
-        var localAppData = context.Environment.TryGetValue(
-            "LOCALAPPDATA",
-            out var localValue)
-            ? localValue
-            : null;
-
-        if (string.IsNullOrWhiteSpace(localAppData))
+        var runsRoot = GetSecureRunsRoot();
+        Directory.CreateDirectory(runsRoot);
+        if (!TalvoraOwnedTempCleanup.IsDirectoryPathReparseSafe(
+                Path.GetDirectoryName(runsRoot)!, runsRoot))
         {
             throw new InvalidOperationException(
-                "Interactive user's LOCALAPPDATA could not be resolved.");
+                "Interactive run storage contains a reparse point.");
         }
-
-        var runsRoot = Path.Combine(
-            localAppData,
-            "Talvora",
-            "InteractiveRuns");
         CleanupStaleRunDirectories(runsRoot);
-
-        var runRoot = Path.Combine(
-            runsRoot,
-            Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(runRoot);
+        var runRoot = CreateProtectedRunDirectory(runsRoot, context.Sid);
 
         var leasePath = Path.Combine(runRoot, "active.lock");
         var requestPath = Path.Combine(runRoot, "request.json");
@@ -338,7 +328,8 @@ Action<CodexCliEventResult>? onCodexProgress = null,
 
             try
             {
-                Directory.Delete(runRoot, recursive: true);
+                TalvoraOwnedTempCleanup.TryDeleteStaleEntry(
+                    runsRoot, runRoot, DateTimeOffset.MaxValue, out _);
             }
             catch (Exception ex) when (
                 ex is IOException or UnauthorizedAccessException)
@@ -444,53 +435,58 @@ Action<CodexCliEventResult>? onCodexProgress = null,
         }
     }
 
+    private static string GetSecureRunsRoot() =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "Talvora", "InteractiveRuns");
+
+    private static string CreateProtectedRunDirectory(string runsRoot, string userSid)
+    {
+        if (!TalvoraOwnedTempCleanup.IsDirectoryPathReparseSafe(
+                runsRoot, runsRoot))
+        {
+            throw new InvalidOperationException(
+                "Interactive run root contains a reparse point.");
+        }
+        var runRoot = Path.Combine(runsRoot, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(runRoot);
+        var sec = new DirectorySecurity();
+        sec.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+        var inherit = InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit;
+        sec.AddAccessRule(new FileSystemAccessRule(
+            new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
+            FileSystemRights.FullControl, inherit, PropagationFlags.None,
+            AccessControlType.Allow));
+        sec.AddAccessRule(new FileSystemAccessRule(
+            new SecurityIdentifier(userSid),
+            FileSystemRights.Modify, inherit, PropagationFlags.None,
+            AccessControlType.Allow));
+        new DirectoryInfo(runRoot).SetAccessControl(sec);
+        return runRoot;
+    }
+
     private static void CleanupStaleRunDirectories(string runsRoot)
     {
         try
         {
-            if (!Directory.Exists(runsRoot))
-            {
-                return;
-            }
-
-            var cutoffUtc =
-                DateTime.UtcNow - StaleRunRetention;
-
-            foreach (var directory in
-                     Directory.EnumerateDirectories(runsRoot))
-            {
-                try
+            TalvoraOwnedTempCleanup.CleanupGuidDirectories(
+                runsRoot, DateTimeOffset.UtcNow - StaleRunRetention,
+                CancellationToken.None, candidateFilter: directory =>
                 {
-                    var leasePath =
-                        Path.Combine(directory, "active.lock");
-                    if (Directory.GetLastWriteTimeUtc(directory) > cutoffUtc)
+                    var lease = Path.Combine(directory, "active.lock");
+                    if (!File.Exists(lease)) { return true; }
+                    try
                     {
-                        continue;
+                        using var stream = new FileStream(
+                            lease, FileMode.Open, FileAccess.Read, FileShare.None);
+                        return true;
                     }
-
-                    if (File.Exists(leasePath))
+                    catch (Exception ex) when (ex is IOException or
+                        UnauthorizedAccessException)
                     {
-                        using (new FileStream(
-                                   leasePath,
-                                   FileMode.Open,
-                                   FileAccess.Read,
-                                   FileShare.None))
-                        {
-                        }
+                        return false;
                     }
-
-                    Directory.Delete(directory, recursive: true);
-                }
-                catch (Exception ex) when (
-                    ex is IOException or
-                    UnauthorizedAccessException or
-                    DirectoryNotFoundException or
-                    FileNotFoundException or
-                    ArgumentException or
-                    NotSupportedException)
-                {
-                }
-            }
+                });
         }
         catch (Exception ex) when (
             ex is IOException or
