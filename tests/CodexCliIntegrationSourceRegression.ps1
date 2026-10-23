@@ -106,7 +106,8 @@ $checks = [ordered]@{
         $jobTools.Contains('Name = "talvora_codex_status"') -and
         $jobTools.Contains('Name = "talvora_codex_list"') -and
         $jobTools.Contains('Name = "talvora_codex_cancel"') -and
-        $jobTools.Contains('job.Cancellation.Token') -and
+        $jobTools.Contains('entry.CancellationToken') -and
+        $jobTools.Contains('Registry.Cancel(job)') -and
         $runner.Contains('onCodexProgress') -and
         $liveJournal.Contains('class CodexCliStreamingProgress') -and
         $pump.Contains('codexProgressPath') -and

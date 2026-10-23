@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Talvora.Shared;
@@ -26,184 +25,128 @@ public sealed record TalvoraCodexJobListResponse(
     int Count,
     IReadOnlyList<TalvoraCodexJobResponse> Jobs);
 
-/// <summary>
-/// Asynchronous Codex job supervision independent of individual MCP requests.
-/// Jobs keep running through a client/tunnel disconnect while the Talvora
-/// Windows service remains alive. Cancellation terminates the helper tree.
-/// </summary>
+/// <summary>Codex MCP adapter for the shared persistent agent job registry.</summary>
 [McpServerToolType]
 public static class CodexBackgroundJobTools
 {
-    internal static TalvoraDesktopProgressNotifier? DesktopNotifier
-    {
-        get;
-        set;
-    }
+    internal static TalvoraDesktopProgressNotifier? DesktopNotifier { get; set; }
+    private static AgentJobRegistry Registry => AgentJobRegistry.Shared;
 
-    private static readonly ConcurrentDictionary<string, Job> Jobs =
-        new(StringComparer.OrdinalIgnoreCase);
-
-    private sealed class Job
+    private sealed class Runtime(AgentJobRegistry.Job job, string prompt)
     {
         private readonly object _gate = new();
-        private readonly string _prompt;
-        public Job(string workingDirectory, string prompt)
-        {
-            JobId = Guid.NewGuid().ToString("N");
-            WorkingDirectory = workingDirectory;
-            _prompt = prompt;
-            CreatedAtUtc = DateTime.UtcNow;
-        }
-        public string JobId { get; }
-        public string WorkingDirectory { get; }
-        public DateTime CreatedAtUtc { get; }
-        public CancellationTokenSource Cancellation { get; } = new();
-        public Task? ExecutionTask { get; set; }
-
-        private string _state = "queued";
-        private DateTime? _finishedAt;
-        private string? _sessionId;
-        private int _commands;
-        private int _failedCommands;
-        private int _mcpCalls;
         private string[] _activities = [];
         private string[] _changedFiles = [];
-        private string? _error;
         private TalvoraCodexCliExecResponse? _result;
-        private DateTime? _lastProgressAt;
         private DateTime _lastDesktopUpdate = DateTime.MinValue;
 
-        public bool SetRunning()
+        internal void OnProgress(CodexCliEventResult progress)
         {
-            lock (_gate)
-            {
-                if (_state != "queued") { return false; }
-                _state = "running";
-                return true;
-            }
-        }
-
-        public void OnProgress(CodexCliEventResult progress)
-        {
+            string[] changedFiles;
             int commands;
             int mcpCalls;
             string? activity;
-            string[] changedFiles;
             bool notify;
             lock (_gate)
             {
-                _sessionId = progress.SessionId ?? _sessionId;
-                _commands = Math.Max(_commands, progress.CompletedCommands);
-                _failedCommands = Math.Max(
-                    _failedCommands, progress.FailedCommands);
-                _mcpCalls = Math.Max(_mcpCalls, progress.McpToolCalls);
                 _activities = progress.RecentActivities
-                    .Select(text => CodexCliInvocationPolicy.SanitizeFinalAnswer(
-                        text, _prompt))
-                    .ToArray();
+                    .Select(value => CodexCliInvocationPolicy.SanitizeFinalAnswer(
+                        value, prompt)).ToArray();
                 _changedFiles = progress.ChangedFiles.Take(2000).ToArray();
-                _lastProgressAt = DateTime.UtcNow;
-                commands = _commands;
-                mcpCalls = _mcpCalls;
-                activity = _activities.LastOrDefault();
                 changedFiles = _changedFiles;
-                notify = DateTime.UtcNow - _lastDesktopUpdate >
-                    TimeSpan.FromSeconds(4);
-                if (notify) { _lastDesktopUpdate = DateTime.UtcNow; }
+                commands = progress.CompletedCommands;
+                mcpCalls = progress.McpToolCalls;
+                activity = _activities.LastOrDefault();
+                notify = DateTime.UtcNow - _lastDesktopUpdate > TimeSpan.FromSeconds(4);
+                if (notify) _lastDesktopUpdate = DateTime.UtcNow;
             }
+            Registry.Progress(job, sessionId: progress.SessionId,
+                completedCommands: progress.CompletedCommands,
+                failedCommands: progress.FailedCommands,
+                mcpToolCalls: progress.McpToolCalls);
             if (notify)
             {
-                DesktopNotifier?.UpdateCodexJob(
-                    JobId, commands, mcpCalls, activity,
-                    DateTime.UtcNow - CreatedAtUtc, changedFiles);
+                DesktopNotifier?.UpdateCodexJob(job.Metadata.JobId, commands, mcpCalls,
+                    activity, DateTime.UtcNow - job.Metadata.CreatedAtUtc, changedFiles);
             }
         }
 
-        public void Complete(TalvoraCodexCliExecResponse result)
+        internal void Complete(TalvoraCodexCliExecResponse result)
         {
-            string state;
             lock (_gate)
             {
                 _result = result;
-                _sessionId = result.SessionId ?? _sessionId;
-                _commands = Math.Max(_commands, result.CompletedCommands);
-                _failedCommands = Math.Max(
-                    _failedCommands, result.FailedCommands);
-                _mcpCalls = Math.Max(_mcpCalls, result.McpToolCalls);
-                if (result.RecentActivities is { Count: > 0 } &&
-                    !result.StandardOutputTruncated)
+                if (result.RecentActivities is { Count: > 0 } && !result.StandardOutputTruncated)
+                    _activities = result.RecentActivities.Select(value =>
+                        CodexCliInvocationPolicy.SanitizeFinalAnswer(value, prompt)).ToArray();
+            }
+            Registry.Progress(job, sessionId: result.SessionId,
+                completedCommands: result.CompletedCommands,
+                failedCommands: result.FailedCommands,
+                mcpToolCalls: result.McpToolCalls);
+            var state = job.CancellationToken.IsCancellationRequested ? "cancelled" :
+                result.TimedOut ? "timed_out" : result.ExitCode == 0 ? "completed" : "failed";
+            var error = state == "completed" ? null :
+                CodexCliInvocationPolicy.SanitizeFinalAnswer(
+                    result.ErrorDetail ?? result.StandardError, prompt);
+            Registry.Finish(job, state, error);
+        }
+
+        internal void Fail(Exception error)
+        {
+            var cancelled = error is OperationCanceledException ||
+                job.CancellationToken.IsCancellationRequested;
+            Registry.Finish(job, cancelled ? "cancelled" : "failed", cancelled
+                ? "Codex görevi iptal edildi."
+                : CodexCliInvocationPolicy.SanitizeFinalAnswer(error.Message, prompt));
+        }
+
+        internal void OnTerminal(AgentJobMetadata metadata)
+        {
+            try
+            {
+                TalvoraCodexCliExecResponse? result;
+                string[] changedFiles;
+                lock (_gate)
                 {
-                    _activities = result.RecentActivities.ToArray();
+                    result = _result;
+                    changedFiles = _changedFiles;
                 }
-                _lastProgressAt = DateTime.UtcNow;
-                _state = Cancellation.IsCancellationRequested
-                    ? "cancelled"
-                    : result.TimedOut
-                        ? "timed_out"
-                        : result.ExitCode == 0
-                            ? "completed"
-                            : "failed";
-                _finishedAt = DateTime.UtcNow;
-                _error = result.ExitCode == 0
-                    ? null
-                    : result.ErrorDetail ?? result.StandardError;
-                state = _state;
+                DesktopNotifier?.EndCodexJob(metadata.JobId, metadata.State,
+                    (metadata.FinishedAtUtc ?? DateTime.UtcNow) - metadata.CreatedAtUtc,
+                    metadata.CompletedCommands, metadata.McpToolCalls, changedFiles,
+                    result?.StandardOutput);
             }
-            DesktopNotifier?.EndCodexJob(
-                JobId, state, DateTime.UtcNow - CreatedAtUtc,
-                _commands, _mcpCalls, _changedFiles, result.StandardOutput);
-        }
-
-        public void Fail(Exception exception)
-        {
-            string state;
-            lock (_gate)
+            catch (Exception)
             {
-                _state = exception is OperationCanceledException ||
-                    Cancellation.IsCancellationRequested
-                    ? "cancelled"
-                    : "failed";
-                _finishedAt = DateTime.UtcNow;
-                _error = _state == "cancelled"
-                    ? "The Codex task was cancelled."
-                    : CodexCliInvocationPolicy.SanitizeFinalAnswer(
-                        exception.Message, _prompt);
-                state = _state;
+                // A desktop notification must not change the job's terminal state.
             }
-            DesktopNotifier?.EndCodexJob(
-                JobId, state, DateTime.UtcNow - CreatedAtUtc,
-                _commands, _mcpCalls, _changedFiles);
         }
 
-        public void Cancel()
-        {
-            var shouldCancel = false;
-            lock (_gate)
-            {
-                if (_state is "queued" or "running")
-                {
-                    _state = "cancelling";
-                    shouldCancel = true;
-                }
-            }
-            if (shouldCancel) { Cancellation.Cancel(); }
-        }
-
-        public TalvoraCodexJobResponse Snapshot(bool includeResult)
+        internal TalvoraCodexJobResponse Snapshot(bool includeResult)
         {
             lock (_gate)
             {
-                var end = _finishedAt ?? DateTime.UtcNow;
-                return new TalvoraCodexJobResponse(
-                    JobId, _state, WorkingDirectory, CreatedAtUtc,
-                    _finishedAt, (long)(end - CreatedAtUtc).TotalMilliseconds,
-                    _sessionId, _commands, _failedCommands, _mcpCalls,
-                    _activities.ToArray(), _error,
-                    includeResult ? _result : null,
-                    _lastProgressAt);
+                return FromMetadata(job.Metadata, includeResult ? _result : null, _activities);
             }
         }
     }
+
+    private static TalvoraCodexJobResponse FromMetadata(AgentJobMetadata metadata,
+        TalvoraCodexCliExecResponse? result, IReadOnlyList<string> activities) =>
+        new(metadata.JobId, metadata.State, metadata.WorkingDirectory,
+            metadata.CreatedAtUtc, metadata.FinishedAtUtc,
+            (long)((metadata.FinishedAtUtc ?? DateTime.UtcNow) -
+                metadata.CreatedAtUtc).TotalMilliseconds,
+            metadata.SessionId, metadata.CompletedCommands, metadata.FailedCommands,
+            metadata.McpToolCalls, activities, metadata.Error, result,
+            metadata.LastProgressAtUtc);
+
+    private static TalvoraCodexJobResponse Snapshot(
+        AgentJobRegistry.Job job, bool includeResult) =>
+        job.AdapterState is Runtime live
+            ? live.Snapshot(includeResult)
+            : FromMetadata(job.Metadata, null, []);
 
     [McpServerTool(
         Name = "talvora_codex_start",
@@ -227,40 +170,43 @@ public static class CodexBackgroundJobTools
         string[]? additionalWritableDirectories = null,
         bool allowNonGitWorkspace = true,
         bool allowFullAccess = false,
-        string windowsSandboxMode = "default")
+        string windowsSandboxMode = "default",
+        bool allowParallel = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workingDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
-        var job = new Job(Path.GetFullPath(workingDirectory), prompt);
-        if (!Jobs.TryAdd(job.JobId, job))
+        Runtime? runtime = null;
+        var entry = Registry.Create("codex", workingDirectory, allowParallel,
+            sessionId: resumeSessionId, onTerminal: metadata => runtime?.OnTerminal(metadata));
+        runtime = new Runtime(entry, prompt);
+        entry.AdapterState = runtime;
+        try
         {
-            throw new InvalidOperationException("Could not register Codex job.");
+            DesktopNotifier?.BeginCodexJob(entry.Metadata.JobId, entry.Metadata.WorkingDirectory);
         }
-        DesktopNotifier?.BeginCodexJob(job.JobId, job.WorkingDirectory);
-        job.ExecutionTask = Task.Run(async () =>
+        catch (Exception)
         {
-            if (!job.SetRunning())
-            {
-                job.Fail(new OperationCanceledException());
-                return;
-            }
+            // Desktop delivery cannot strand a registered agent job.
+        }
+        entry.ExecutionTask = Task.Run(async () =>
+        {
+            Registry.Start(entry);
+            if (entry.Metadata.State != "running") return;
             try
             {
                 var result = await CodexCliTools.ExecuteCore(
-                    job.WorkingDirectory, prompt, model, reasoningEffort,
+                    entry.Metadata.WorkingDirectory, prompt, model, reasoningEffort,
                     sandbox, timeoutSeconds, resumeSessionId, preserveSession,
                     networkAccess, approvalMode, additionalWritableDirectories,
                     allowNonGitWorkspace, allowFullAccess, windowsSandboxMode,
-                    job.Cancellation.Token, job.OnProgress).ConfigureAwait(false);
-                job.Complete(result);
+                    entry.CancellationToken, runtime.OnProgress,
+                    (pid, started) => Registry.RecordProcess(entry, pid, started))
+                    .ConfigureAwait(false);
+                runtime.Complete(result);
             }
-            catch (Exception ex)
-            {
-                job.Fail(ex);
-            }
+            catch (Exception ex) { runtime.Fail(ex); }
         });
-        PruneCompleted();
-        return job.Snapshot(includeResult: false);
+        return Snapshot(entry, false);
     }
 
     [McpServerTool(
@@ -269,10 +215,10 @@ public static class CodexBackgroundJobTools
         Idempotent = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraCodexJobResponse)),
-     Description("Read live Codex job status, session ID, elapsed time, completed shell/MCP calls and recent activities. Set includeResult=true to retrieve its completed final answer.")]
+     Description("Read Codex job status, persisted session ID, elapsed time and counters. Set includeResult=true to retrieve the completed result if available.")]
     public static TalvoraCodexJobResponse Status(
         string jobId, bool includeResult = false) =>
-        GetJob(jobId).Snapshot(includeResult);
+        Snapshot(Registry.Get("codex", jobId), includeResult);
 
     [McpServerTool(
         Name = "talvora_codex_list",
@@ -280,18 +226,11 @@ public static class CodexBackgroundJobTools
         Idempotent = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraCodexJobListResponse)),
-     Description("List recent Codex background jobs and their running/completed/cancelled states.")]
+     Description("List recent Codex background jobs, including orphaned jobs after restart.")]
     public static TalvoraCodexJobListResponse List(int maxResults = 50)
     {
-        if (maxResults is < 1 or > 200)
-        {
-            throw new ArgumentOutOfRangeException(nameof(maxResults));
-        }
-        var jobs = Jobs.Values
-            .OrderByDescending(job => job.CreatedAtUtc)
-            .Take(maxResults)
-            .Select(job => job.Snapshot(includeResult: false))
-            .ToArray();
+        var jobs = Registry.List("codex", maxResults)
+            .Select(job => Snapshot(job, false)).ToArray();
         return new TalvoraCodexJobListResponse(jobs.Length, jobs);
     }
 
@@ -301,31 +240,11 @@ public static class CodexBackgroundJobTools
         Idempotent = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraCodexJobResponse)),
-     Description("Request cancellation of a running Codex background job; the user process runner terminates its child process tree. Poll status until cancelled.")]
+     Description("Cancel a Codex background job, including an orphan with a verified PID and process start time.")]
     public static TalvoraCodexJobResponse Cancel(string jobId)
     {
-        var job = GetJob(jobId);
-        job.Cancel();
-        return job.Snapshot(includeResult: false);
-    }
-
-    private static Job GetJob(string jobId) =>
-        Jobs.TryGetValue(jobId, out var job)
-            ? job
-            : throw new KeyNotFoundException($"Codex job not found: {jobId}");
-
-    private static void PruneCompleted()
-    {
-        if (Jobs.Count <= 120) { return; }
-        foreach (var job in Jobs.Values
-            .Where(item => item.Snapshot(false).FinishedAtUtc is not null)
-            .OrderBy(item => item.CreatedAtUtc)
-            .Take(Math.Max(0, Jobs.Count - 100)))
-        {
-            if (Jobs.TryRemove(job.JobId, out var removed))
-            {
-                removed.Cancellation.Dispose();
-            }
-        }
+        var job = Registry.Get("codex", jobId);
+        Registry.Cancel(job);
+        return Snapshot(job, false);
     }
 }

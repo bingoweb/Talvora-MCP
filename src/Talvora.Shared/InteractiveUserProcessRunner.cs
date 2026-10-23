@@ -51,7 +51,8 @@ string? CodexProgressPath,
 Action<CodexCliEventResult>? onCodexProgress = null,
         Action<ClaudeCliProgress>? onClaudeProgress = null,
         bool closeStandardInput = false,
-        string? claudeWorkspaceRoot = null)
+        string? claudeWorkspaceRoot = null,
+        Action<int, DateTimeOffset>? onStarted = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
         ArgumentException.ThrowIfNullOrWhiteSpace(workingDirectory);
@@ -168,6 +169,17 @@ Action<CodexCliEventResult>? onCodexProgress = null,
                 expectedUserSid: interactiveUser?.Sid);
 
             using var process = Process.GetProcessById(launch.ProcessId);
+            try
+            {
+                onStarted?.Invoke(launch.ProcessId,
+                    new DateTimeOffset(process.StartTime).ToUniversalTime());
+            }
+            catch
+            {
+                TryKill(process);
+                await WaitForExitBestEffortAsync(process).ConfigureAwait(false);
+                throw;
+            }
             using var timeoutCts = timeoutSeconds > 0
                 ? new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds))
                 : new CancellationTokenSource();

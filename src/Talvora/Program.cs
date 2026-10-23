@@ -172,6 +172,15 @@ catch (Exception ex)
     app.Logger.LogError(ex, "Source Edit recovery encountered unresolved state during startup. Source mutations in affected workspaces will remain blocked until recovery can prove a safe state.");
 }
 
+try
+{
+    await AgentJobRegistry.Shared.RecoverAsync();
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Agent job recovery could not complete at startup.");
+}
+
 if (isWindowsService &&
     app.Services.GetService<IHostLifetime>() is WindowsServiceLifetime serviceLifetime)
 {

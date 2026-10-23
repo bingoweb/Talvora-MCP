@@ -168,7 +168,8 @@ public static class CodexCliTools
         bool allowFullAccess,
         string windowsSandboxMode,
         CancellationToken cancellationToken,
-        Action<CodexCliEventResult>? onProgress)
+        Action<CodexCliEventResult>? onProgress,
+        Action<int, DateTimeOffset>? onStarted = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
         if (prompt.Length > MaximumPromptCharacters)
@@ -264,7 +265,8 @@ public static class CodexCliTools
             maxCapturedCharactersPerStream: MaximumOutputCharacters,
             interactiveUser: context,
             discardStandardError: true,
-            onCodexProgress: onProgress);
+            onCodexProgress: onProgress,
+            onStarted: onStarted);
         // Extract final answer and task activity from Codex's JSONL output.
         var events = CodexCliEventSummary.Parse(result.StandardOutput);
         var finalAnswer = events.HasEvents

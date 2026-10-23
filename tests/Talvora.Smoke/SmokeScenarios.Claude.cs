@@ -4,6 +4,40 @@ using Talvora.Shared;
 
 internal static partial class SmokeScenarios
 {
+    internal static Task RunClaudeAgentJobRegistryAsync()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "Talvora-R1-Claude-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var registry = new Talvora.Tools.AgentJobRegistry(root);
+            var terminal = new List<string>();
+            var job = registry.Create("claude", root,
+                onTerminal: value => terminal.Add(value.State));
+            registry.Start(job);
+            registry.Progress(job, sessionId: "session-123", toolCalls: 8, failedTools: 2);
+            registry.Finish(job, "timed_out");
+            registry.Finish(job, "failed");
+            if (registry.Get("claude", job.Metadata.JobId).Metadata.State != "timed_out" ||
+                terminal.Count != 1 || terminal[0] != "timed_out")
+                throw new InvalidOperationException("Claude terminal state or worklog regressed.");
+            var restored = new Talvora.Tools.AgentJobRegistry(root);
+            restored.RecoverAsync().GetAwaiter().GetResult();
+            var persisted = restored.Get("claude", job.Metadata.JobId).Metadata;
+            if (persisted.SessionId != "session-123" || persisted.ToolCalls != 8 ||
+                persisted.FailedTools != 2 || restored.List("claude", 10).Count != 1)
+                throw new InvalidOperationException("Claude counters were lost across restart.");
+            var failed = registry.Create("claude", Path.Combine(root, "failed"),
+                onTerminal: value => terminal.Add(value.State));
+            registry.Start(failed);
+            registry.Finish(failed, "failed", "Test failure.");
+            if (terminal.Count != 2 || terminal[1] != "failed")
+                throw new InvalidOperationException("Failed worklog outcome missing.");
+        }
+        finally { Directory.Delete(root, recursive: true); }
+        return Task.CompletedTask;
+    }
+
     internal static async Task RunClaudeIntegrationPolicyAsync()
     {
         var arguments = ClaudeCliArguments.Create("--help", "sonnet", "high",
@@ -72,14 +106,21 @@ internal static partial class SmokeScenarios
             var pwsh = CommandResolver.Resolve(["pwsh.exe"], [@"C:\Program Files\PowerShell\7\pwsh.exe"])
                 ?? throw new InvalidOperationException("PowerShell unavailable.");
             ClaudeCliProgress? live = null;
+            var started = new List<(int Pid, DateTimeOffset At)>();
             var run = await InteractiveUserProcessRunner.RunAsync(pwsh, user.UserProfile!,
                 ["-NoProfile", "-NonInteractive", "-Command",
                     "[Console]::WriteLine('{" + "\"type\":\"result\",\"subtype\":\"success\",\"result\":\"USER_RUNNER_OK\"}')"],
                 timeoutSeconds: 30, interactiveUser: user,
-                onClaudeProgress: value => live = value, closeStandardInput: true);
+                onClaudeProgress: value => live = value, closeStandardInput: true,
+                onStarted: (pid, at) => started.Add((pid, at)));
             if (run.ExitCode != 0 || run.TimedOut || live?.FinalAnswer != "USER_RUNNER_OK")
             {
                 throw new InvalidOperationException("Claude user-session runner failed: " + run.StandardError);
+            }
+            if (started.Count != 1 || started[0].Pid != run.ProcessId ||
+                (DateTimeOffset.UtcNow - started[0].At).Duration() > TimeSpan.FromMinutes(2))
+            {
+                throw new InvalidOperationException("Agent runner did not publish launch PID and start time once.");
             }
             using var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             try

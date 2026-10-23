@@ -17,5 +17,7 @@
              Link="StructuredResultFailure.cs" />
     <Compile Include="..\..\src\Talvora\ToolArgumentValidator.cs"
              Link="ToolArgumentValidator.cs" />
+    <Compile Include="..\..\src\Talvora\Tools\AgentJobRegistry.cs"
+             Link="AgentJobRegistry.cs" />
   </ItemGroup>
 </Project>

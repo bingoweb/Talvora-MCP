@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T21:25:20Z",
-  "scope": "N6: exact P-30 Phosphor evidence panel, redacted details copy, per-user expanded-state preference, ten deterministic previews and installed-runtime acceptance.",
+  "verifiedAtUtc": "2026-10-23T22:13:32Z",
+  "scope": "R1: engine-agnostic persisted agent registry, Windows PID and process-start identity, cancellation of verified process trees, startup recovery and concurrency limits.",
   "libraries": [
+    {
+      "libraryId": "/websites/learn_microsoft_en-us_dotnet",
+      "verified": "2026-10-24 R1: Microsoft Learn .NET 10 Process.GetProcessById(int) returns the local process component and Process.Kill(entireProcessTree: true) terminates the process and descendants. System.Diagnostics.Process.StartTime is combined with the PID before a recovered orphan can be killed. Context7 source: https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process?view=net-10.0 . Engine-specific CLI arguments are unchanged; no package is added."
+    },
     {
       "libraryId": "/dotnet/wpf",
       "verified": "2026-10-24 N6: Context7 verifies INotifyPropertyChanged-driven TextBlock layout updates, Visibility.Collapsed automation visibility and RenderTargetBitmap rendering a measured/arranged Visual. Microsoft Learn confirms property notifications for dependent bindings and Clipboard.SetText Unicode text on the WPF UI thread. Applied Claude P-30 reference exactly: detail rows and toggle/copy are bound to the received redacted message; the original separate code terminal and its theme are retained. Vendor checks: https://learn.microsoft.com/en-us/dotnet/desktop/wpf/data/how-to-implement-property-change-notification and https://learn.microsoft.com/en-us/dotnet/api/system.windows.clipboard.settext?view=windowsdesktop-10.0 ."

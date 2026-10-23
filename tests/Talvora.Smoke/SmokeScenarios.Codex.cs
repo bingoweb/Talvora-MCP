@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using Talvora.Tools;
 using Talvora.Shared;
 
 internal static partial class SmokeScenarios
@@ -413,6 +415,116 @@ internal static partial class SmokeScenarios
         {
             Directory.Delete(temp, recursive: true);
         }
+        await RunAgentJobRegistryAsync();
+        await RunClaudeAgentJobRegistryAsync();
+    }
+
+    internal static async Task RunAgentJobRegistryAsync()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "Talvora-R1-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var registry = new AgentJobRegistry(root);
+            var work = Path.Combine(root, "workspace");
+            Directory.CreateDirectory(work);
+            var ended = new List<string>();
+            var first = registry.Create("codex", work,
+                onTerminal: value => ended.Add(value.State));
+            registry.Start(first);
+            if (registry.Get("codex", first.Metadata.JobId).Metadata.State != "running")
+                throw new InvalidOperationException("Agent registry did not start a job.");
+            try
+            {
+                registry.Create("claude", Path.Combine(work, "."));
+                throw new InvalidOperationException("Same-directory job was accepted.");
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("çalışma", StringComparison.OrdinalIgnoreCase)) { }
+
+            using var process = Process.Start(new ProcessStartInfo
+            {
+                FileName = "pwsh.exe",
+                ArgumentList = { "-NoProfile", "-NonInteractive", "-Command", "Start-Sleep -Seconds 45" },
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            }) ?? throw new InvalidOperationException("Test helper could not start.");
+            registry.RecordProcess(first, process.Id, process.StartTime.ToUniversalTime());
+            var recovered = new AgentJobRegistry(root);
+            await recovered.RecoverAsync();
+            var orphaned = recovered.Get("codex", first.Metadata.JobId);
+            if (orphaned.Metadata.State != "orphaned")
+                throw new InvalidOperationException("Restart did not identify the live orphan.");
+            recovered.Cancel(orphaned);
+            if (!process.WaitForExit(10000) || recovered.Get("codex", first.Metadata.JobId).Metadata.State != "cancelled")
+                throw new InvalidOperationException("Orphan cancellation did not kill the process.");
+
+            using var reused = Process.Start(new ProcessStartInfo
+            {
+                FileName = "pwsh.exe",
+                ArgumentList = { "-NoProfile", "-NonInteractive", "-Command", "Start-Sleep -Seconds 45" },
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            }) ?? throw new InvalidOperationException("PID identity test could not start.");
+            try
+            {
+                var other = registry.Create("claude", Path.Combine(root, "other"));
+                registry.Start(other);
+                registry.Progress(other, sessionId: "recover-this-session",
+                    toolCalls: 5, failedTools: 1);
+                registry.RecordProcess(other, reused.Id,
+                    reused.StartTime.ToUniversalTime().AddMinutes(-1));
+                var restarted = new AgentJobRegistry(root);
+                await restarted.RecoverAsync();
+                var stale = restarted.Get("claude", other.Metadata.JobId);
+                if (stale.Metadata.State != "failed" ||
+                    stale.Metadata.Error != AgentJobRegistry.InterruptedError ||
+                    stale.Metadata.SessionId != "recover-this-session" ||
+                    stale.Metadata.ToolCalls != 5)
+                    throw new InvalidOperationException("Reused PID was accepted.");
+                restarted.Cancel(stale);
+                if (reused.HasExited) throw new InvalidOperationException("Unrelated PID was killed.");
+            }
+            finally { if (!reused.HasExited) reused.Kill(entireProcessTree: true); }
+
+            var limits = new AgentJobRegistry(Path.Combine(root, "limits"));
+            for (var i = 0; i < 4; i++)
+            {
+                var job = limits.Create(i % 2 == 0 ? "codex" : "claude",
+                    Path.Combine(root, "unique-" + i));
+                limits.Start(job);
+            }
+            try
+            {
+                limits.Create("codex", Path.Combine(root, "unique-5"));
+                throw new InvalidOperationException("Fifth concurrent job was accepted.");
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("4", StringComparison.Ordinal)) { }
+            var parallel = registry.Create("claude", work, allowParallel: true);
+            registry.Start(parallel);
+            registry.Finish(parallel, "completed");
+            var cancelled = new List<string>();
+            var queued = registry.Create("codex", Path.Combine(root, "cancel-queued"),
+                onTerminal: value => cancelled.Add(value.State));
+            registry.Cancel(queued);
+            if (queued.Metadata.State != "cancelled")
+                throw new InvalidOperationException("Queued cancellation failed.");
+            var running = registry.Create("claude", Path.Combine(root, "cancel-running"),
+                onTerminal: value => cancelled.Add(value.State));
+            registry.Start(running);
+            registry.Cancel(running);
+            if (!running.CancellationToken.IsCancellationRequested)
+                throw new InvalidOperationException("Running cancellation token was not set.");
+            registry.Finish(running, "cancelled");
+            if (cancelled.Count != 2 || cancelled.Any(state => state != "cancelled"))
+                throw new InvalidOperationException("Cancelled desktop worklog hooks failed.");
+            registry.Finish(first, "completed");
+            if (ended.Count != 1 || ended[0] != "completed")
+                throw new InvalidOperationException("Terminal worklog hook was not fired exactly once.");
+            if (File.ReadAllText(Path.Combine(root, first.Metadata.JobId + ".json"))
+                    .Contains("prompt", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Registry persisted a prompt.");
+        }
+        finally { Directory.Delete(root, recursive: true); }
     }
 
     private sealed class BlockingTextReader(string firstChunk) : TextReader

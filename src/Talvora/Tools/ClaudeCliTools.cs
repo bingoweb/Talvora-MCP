@@ -73,7 +73,8 @@ public static class ClaudeCliTools
         string permissionMode, int timeoutSeconds, string? resumeSessionId,
         string[]? additionalDirectories, string[]? extraArguments,
         Dictionary<string, string?>? environment, CancellationToken token,
-        Action<ClaudeCliProgress>? progress)
+        Action<ClaudeCliProgress>? progress,
+        Action<int, DateTimeOffset>? onStarted = null)
     {
         var context = WindowsSessionLauncher.GetActiveInteractiveUser();
         var executable = Resolve(context) ?? throw new FileNotFoundException(
@@ -90,7 +91,8 @@ public static class ClaudeCliTools
                 latest = value;
                 progress?.Invoke(value);
             }, closeStandardInput: true,
-            claudeWorkspaceRoot: Talvora.SourceEditing.SourceWorkspaceClassifier.Classify(cwd).WorkspaceRoot).ConfigureAwait(false);
+            claudeWorkspaceRoot: Talvora.SourceEditing.SourceWorkspaceClassifier.Classify(cwd).WorkspaceRoot,
+            onStarted: onStarted).ConfigureAwait(false);
         var success = result.ExitCode == 0 && !result.TimedOut &&
             latest is { HasResult: true, IsError: false, PermissionDenials: 0 };
         var error = result.TimedOut ? "Claude Code reached the time limit." :

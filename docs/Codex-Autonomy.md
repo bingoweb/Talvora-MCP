@@ -27,9 +27,12 @@ Saatler suren islerde JSONL olaylari ayri ve sinirli bir ilerleme kanalindan
 izlenir, uzun cikti nedeniyle sayaclar donmaz. Masaustu bildirimi ise gorev
 baslangicindan gercek bitis/iptal anina kadar tek is kaydi olarak kalir.
 
-Talvora hizmeti yeniden baslarsa arka plan jobId kayitlari kaybolabilir.
-Codex oturumlari korundugundan onceki sessionId ile yeni bir is baslatip
-resumeSessionId kullanilabilir.
+Talvora hizmeti yeniden başlasa da görev kimlikleri, durumları ve sayaçları
+korunur. Aynı PID ve işlem başlangıç zamanı doğrulanan görevler `orphaned`
+olarak görüntülenir; doğrulanamayanlar `failed` olur. `orphaned` görevler
+işlem ağacı güvenle sonlandırılarak iptal edilebilir. İki motor birlikte en çok
+4 etkin görevi destekler; aynı klasörde paralel çalışma için `allowParallel=true`
+gereklidir. Codex oturumuna `resumeSessionId` ile devam edilebilir.
 
 Talvora, Windows'ta oturum acmis kullanicinin Codex CLI kurulumunu ve giris
 bilgilerini kullanir. Codex normal kullanici haklariyla calisir.

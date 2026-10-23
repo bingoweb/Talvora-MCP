@@ -53,6 +53,14 @@ if (args.Length == 1 && args[0] == "--claude-integration-policy-only")
     return;
 }
 
+if (args.Length == 1 && args[0] == "--agent-jobs-only")
+{
+    await SmokeScenarios.RunAgentJobRegistryAsync();
+    await SmokeScenarios.RunClaudeAgentJobRegistryAsync();
+    Console.WriteLine("TALVORA AGENT JOBS GREEN");
+    return;
+}
+
 if (args.Length == 1 &&
     string.Equals(args[0], "--codex-integration-policy-only",
         StringComparison.Ordinal))

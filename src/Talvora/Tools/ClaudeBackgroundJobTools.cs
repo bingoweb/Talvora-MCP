@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Talvora.Shared;
@@ -11,108 +10,109 @@ public sealed record TalvoraClaudeJobResponse(
     int ToolCalls, int FailedTools, int PermissionDenials,
     IReadOnlyList<string> RecentActivities, DateTime? LastProgressAtUtc,
     string? Error, TalvoraClaudeExecResponse? Result);
-public sealed record TalvoraClaudeJobListResponse(int Count, IReadOnlyList<TalvoraClaudeJobResponse> Jobs);
 
-/// <summary>In-memory service-lifetime jobs, independent of an MCP connection.</summary>
+public sealed record TalvoraClaudeJobListResponse(
+    int Count, IReadOnlyList<TalvoraClaudeJobResponse> Jobs);
+
+/// <summary>Claude MCP adapter for the shared persistent agent job registry.</summary>
 [McpServerToolType]
 public static class ClaudeBackgroundJobTools
 {
     internal static TalvoraDesktopProgressNotifier? DesktopNotifier { get; set; }
-    private static readonly ConcurrentDictionary<string, Job> Jobs = new(StringComparer.Ordinal);
+    private static AgentJobRegistry Registry => AgentJobRegistry.Shared;
 
-    private sealed class Job(string workingDirectory, string? resumeSessionId)
+    private sealed class Runtime(AgentJobRegistry.Job job)
     {
         private readonly object _gate = new();
-        internal string Id { get; } = Guid.NewGuid().ToString("N");
-        internal string WorkingDirectory { get; } = workingDirectory;
-        internal DateTime Created { get; } = DateTime.UtcNow;
-        internal CancellationTokenSource Cancellation { get; } = new();
-        private string _state = "queued";
-        private DateTime? _finished;
         private ClaudeCliProgress? _progress;
-        private string? _session = resumeSessionId;
-        private string? _error;
         private TalvoraClaudeExecResponse? _result;
-
         private string? _lastCodeResultId;
-        internal void Progress(ClaudeCliProgress progress)
+
+        internal void OnProgress(ClaudeCliProgress progress)
         {
-            ClaudeAppliedCodeResult? change = null;
+            ClaudeAppliedCodeResult? applied = null;
             lock (_gate)
             {
                 _progress = progress;
-                _session = progress.SessionId ?? _session;
-                if (progress.CodeChange is { } applied && applied.Id != _lastCodeResultId)
+                if (progress.CodeChange is { } change && change.Id != _lastCodeResultId)
                 {
-                    _lastCodeResultId = applied.Id;
-                    change = applied;
+                    _lastCodeResultId = change.Id;
+                    applied = change;
                 }
             }
-            if (change is not null)
-                Notify(() => DesktopNotifier?.ObserveClaudeCodeResult(Id, WorkingDirectory, change, DateTime.UtcNow - Created));
-        }
-
-        internal void Cancel()
-        {
-            lock (_gate)
+            Registry.Progress(job, sessionId: progress.SessionId,
+                toolCalls: progress.ToolCalls, failedTools: progress.FailedTools,
+                permissionDenials: progress.PermissionDenials);
+            if (applied is not null)
             {
-                if (_state is not ("queued" or "running")) { return; }
-                _state = "cancelling";
-                Cancellation.Cancel();
+                Notify(() => DesktopNotifier?.ObserveClaudeCodeResult(
+                    job.Metadata.JobId, job.Metadata.WorkingDirectory,
+                    applied, DateTime.UtcNow - job.Metadata.CreatedAtUtc));
             }
         }
 
-        internal async Task Execute(Func<CancellationToken, Action<ClaudeCliProgress>, Task<TalvoraClaudeExecResponse>> run)
+        internal async Task Execute(
+            Func<CancellationToken, Action<ClaudeCliProgress>, Task<TalvoraClaudeExecResponse>> run)
         {
+            Registry.Start(job);
+            if (job.Metadata.State != "running") return;
             using var heartbeatCancellation = new CancellationTokenSource();
             var heartbeat = Heartbeat(heartbeatCancellation.Token);
             try
             {
-                lock (_gate)
-                {
-                    Cancellation.Token.ThrowIfCancellationRequested();
-                    _state = "running";
-                }
-                var result = await run(Cancellation.Token, Progress).ConfigureAwait(false);
-                lock (_gate)
-                {
-                    _result = result;
-                    _session = result.SessionId ?? _session;
-                    _state = Cancellation.IsCancellationRequested ? "cancelled" :
-                        result.TimedOut ? "timed_out" : result.Success ? "completed" : "failed";
-                    _error = result.Success ? null : result.Error;
-                }
+                var result = await run(job.CancellationToken, OnProgress).ConfigureAwait(false);
+                lock (_gate) { _result = result; }
+                Registry.Progress(job, sessionId: result.SessionId,
+                    toolCalls: result.ToolCalls, failedTools: result.FailedTools,
+                    permissionDenials: result.PermissionDenials);
+                var state = job.CancellationToken.IsCancellationRequested ? "cancelled" :
+                    result.TimedOut ? "timed_out" : result.Success ? "completed" : "failed";
+                Registry.Finish(job, state, result.Success ? null : result.Error);
             }
             catch (Exception ex)
             {
-                lock (_gate)
-                {
-                    _state = Cancellation.IsCancellationRequested || ex is OperationCanceledException
-                        ? "cancelled" : "failed";
-                    // Exception details can include user-provided args/environment. Keep them out of logs.
-                    _error = _state == "cancelled" ? "Claude Code task cancelled." :
-                        "Claude Code task failed. Check installation, login, working directory and CLI options.";
-                }
+                var cancelled = job.CancellationToken.IsCancellationRequested ||
+                    ex is OperationCanceledException;
+                Registry.Finish(job, cancelled ? "cancelled" : "failed", cancelled
+                    ? "Claude Code task cancelled."
+                    : "Claude Code task failed. Check installation, login, working directory and CLI options.");
             }
             finally
             {
-                lock (_gate) { _finished = DateTime.UtcNow; }
                 heartbeatCancellation.Cancel();
-                try { await heartbeat.ConfigureAwait(false); } catch (OperationCanceledException) { }
-                var summary = Snapshot(false);
-                Notify(() => DesktopNotifier?.EndClaudeJob(Id, summary.State, DateTime.UtcNow - Created,
-                    summary.ToolCalls, summary.FailedTools, summary.PermissionDenials, _progress?.FinalAnswer));
+                try { await heartbeat.ConfigureAwait(false); }
+                catch (OperationCanceledException) { }
             }
         }
 
-        private async Task Heartbeat(CancellationToken token)
+        private async Task Heartbeat(CancellationToken cancellationToken)
         {
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(25));
-            while (await timer.WaitForNextTickAsync(token).ConfigureAwait(false))
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
             {
                 var snapshot = Snapshot(false);
-                Notify(() => DesktopNotifier?.UpdateClaudeJob(Id, snapshot.ToolCalls, DateTime.UtcNow - Created,
-                    snapshot.FailedTools, snapshot.PermissionDenials, snapshot.RecentActivities.LastOrDefault()));
+                Notify(() => DesktopNotifier?.UpdateClaudeJob(
+                    job.Metadata.JobId, snapshot.ToolCalls,
+                    DateTime.UtcNow - job.Metadata.CreatedAtUtc,
+                    snapshot.FailedTools, snapshot.PermissionDenials,
+                    snapshot.RecentActivities.LastOrDefault()));
+            }
+        }
+
+        internal void OnTerminal(AgentJobMetadata metadata)
+        {
+            try
+            {
+                ClaudeCliProgress? progress;
+                lock (_gate) { progress = _progress; }
+                DesktopNotifier?.EndClaudeJob(metadata.JobId, metadata.State,
+                    (metadata.FinishedAtUtc ?? DateTime.UtcNow) - metadata.CreatedAtUtc,
+                    metadata.ToolCalls, metadata.FailedTools,
+                    metadata.PermissionDenials, progress?.FinalAnswer);
+            }
+            catch (Exception)
+            {
+                // Failure to deliver desktop progress must not affect job execution.
             }
         }
 
@@ -120,84 +120,87 @@ public static class ClaudeBackgroundJobTools
         {
             lock (_gate)
             {
-                return new(Id, _state, WorkingDirectory, Created, _finished,
-                    (long)((_finished ?? DateTime.UtcNow) - Created).TotalMilliseconds,
-                    _session, _progress?.ToolCalls ?? 0, _progress?.FailedTools ?? 0,
-                    _progress?.PermissionDenials ?? 0, _progress?.RecentActivities ?? [],
-                    _progress?.LastProgressAtUtc, _error, includeResult ? _result : null);
+                return FromMetadata(job.Metadata, _progress?.RecentActivities ?? [],
+                    includeResult ? _result : null);
             }
         }
     }
 
+    private static TalvoraClaudeJobResponse FromMetadata(
+        AgentJobMetadata metadata, IReadOnlyList<string> activities,
+        TalvoraClaudeExecResponse? result) =>
+        new(metadata.JobId, metadata.State, metadata.WorkingDirectory,
+            metadata.CreatedAtUtc, metadata.FinishedAtUtc,
+            (long)((metadata.FinishedAtUtc ?? DateTime.UtcNow) -
+                metadata.CreatedAtUtc).TotalMilliseconds, metadata.SessionId,
+            metadata.ToolCalls, metadata.FailedTools, metadata.PermissionDenials,
+            activities, metadata.LastProgressAtUtc, metadata.Error, result);
+
+    private static TalvoraClaudeJobResponse Snapshot(
+        AgentJobRegistry.Job job, bool includeResult) =>
+        job.AdapterState is Runtime live
+            ? live.Snapshot(includeResult)
+            : FromMetadata(job.Metadata, [], null);
+
+    private static void Notify(Action action)
+    {
+        try { action(); }
+        catch (Exception) { /* Desktop delivery must never affect work. */ }
+    }
+
     [McpServerTool(Name = "talvora_claude_start", Destructive = true, Idempotent = false,
         OpenWorld = true, UseStructuredContent = true, OutputSchemaType = typeof(TalvoraClaudeJobResponse)),
-     Description("Start an optional Claude Code coding job and return immediately. Runs as the logged-on user, survives MCP disconnects within this service lifetime, supports saved session resume. Poll status or cancel. auto is the native unattended default; bypassPermissions is explicit opt-in.")]
+     Description("Start an optional Claude Code coding job and return immediately. Runs as the logged-on user, survives MCP disconnects, supports saved session resume. auto is the native unattended default; bypassPermissions is explicit opt-in.")]
     public static TalvoraClaudeJobResponse Start(
         string workingDirectory, string prompt, string? model = null, string? effort = null,
         string permissionMode = "auto", int timeoutSeconds = 7200, string? resumeSessionId = null,
         string[]? additionalDirectories = null, string[]? extraArguments = null,
-        Dictionary<string, string?>? environment = null)
+        Dictionary<string, string?>? environment = null, bool allowParallel = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workingDirectory);
-        // Validate synchronously so invalid jobs are never presented as accepted work.
         _ = ClaudeCliArguments.Create(prompt, model, effort, permissionMode,
             resumeSessionId, additionalDirectories, extraArguments);
-        if (timeoutSeconds is < 1 or > 43200) { throw new ArgumentOutOfRangeException(nameof(timeoutSeconds)); }
+        if (timeoutSeconds is < 1 or > 43200)
+            throw new ArgumentOutOfRangeException(nameof(timeoutSeconds));
         var cwd = Path.GetFullPath(workingDirectory);
-        if (!Directory.Exists(cwd)) { throw new DirectoryNotFoundException(cwd); }
-        var job = new Job(cwd, resumeSessionId);
-        Jobs[job.Id] = job;
-        Notify(() => DesktopNotifier?.BeginClaudeJob(job.Id, job.WorkingDirectory));
-        _ = Task.Run(() => job.Execute((token, progress) =>
-            ClaudeCliTools.ExecuteCore(cwd, prompt, model, effort, permissionMode, timeoutSeconds,
-                resumeSessionId, additionalDirectories, extraArguments, environment, token, progress)));
-        Prune();
-        return job.Snapshot(false);
+        if (!Directory.Exists(cwd)) throw new DirectoryNotFoundException(cwd);
+        Runtime? runtime = null;
+        var entry = Registry.Create("claude", cwd, allowParallel,
+            sessionId: resumeSessionId, onTerminal: metadata => runtime?.OnTerminal(metadata));
+        runtime = new Runtime(entry);
+        entry.AdapterState = runtime;
+        Notify(() => DesktopNotifier?.BeginClaudeJob(entry.Metadata.JobId, entry.Metadata.WorkingDirectory));
+        entry.ExecutionTask = Task.Run(() => runtime.Execute((token, progress) =>
+            ClaudeCliTools.ExecuteCore(cwd, prompt, model, effort, permissionMode,
+                timeoutSeconds, resumeSessionId, additionalDirectories, extraArguments,
+                environment, token, progress,
+                (pid, started) => Registry.RecordProcess(entry, pid, started))));
+        return Snapshot(entry, false);
     }
 
     [McpServerTool(Name = "talvora_claude_status", ReadOnly = true, Idempotent = true,
         UseStructuredContent = true, OutputSchemaType = typeof(TalvoraClaudeJobResponse)),
-     Description("Get Claude Code job state, session ID, real activity counters and failure details. includeResult retrieves the final answer. Jobs are retained only during this service lifetime.")]
+     Description("Get persisted Claude Code job state, session ID, counters and failure details. includeResult retrieves the result while the service is running.")]
     public static TalvoraClaudeJobResponse Status(string jobId, bool includeResult = false) =>
-        Get(jobId).Snapshot(includeResult);
+        Snapshot(Registry.Get("claude", jobId), includeResult);
 
     [McpServerTool(Name = "talvora_claude_list", ReadOnly = true, Idempotent = true,
         UseStructuredContent = true, OutputSchemaType = typeof(TalvoraClaudeJobListResponse)),
-     Description("List recent service-lifetime Claude Code jobs, newest first.")]
+     Description("List recent Claude Code jobs, including orphaned jobs after restart.")]
     public static TalvoraClaudeJobListResponse List(int maxResults = 50)
     {
-        if (maxResults is < 1 or > 200) { throw new ArgumentOutOfRangeException(nameof(maxResults)); }
-        var jobs = Jobs.Values.OrderByDescending(x => x.Created).Take(maxResults)
-            .Select(x => x.Snapshot(false)).ToArray();
+        var jobs = Registry.List("claude", maxResults).Select(job =>
+            Snapshot(job, false)).ToArray();
         return new(jobs.Length, jobs);
     }
 
     [McpServerTool(Name = "talvora_claude_cancel", Destructive = true, Idempotent = true,
         UseStructuredContent = true, OutputSchemaType = typeof(TalvoraClaudeJobResponse)),
-     Description("Cancel Claude Code work and terminate its user process tree. Poll until cancelled; already terminal jobs are unchanged.")]
+     Description("Cancel Claude Code work and safely terminate a verified orphan process tree.")]
     public static TalvoraClaudeJobResponse Cancel(string jobId)
     {
-        var job = Get(jobId);
-        job.Cancel();
-        return job.Snapshot(false);
-    }
-
-    private static Job Get(string id) => Jobs.TryGetValue(id, out var job) ? job :
-        throw new KeyNotFoundException("Claude Code job not found.");
-
-    private static void Notify(Action action)
-    {
-        try { action(); } catch (Exception) { /* Desktop delivery must never affect work. */ }
-    }
-
-    private static void Prune()
-    {
-        if (Jobs.Count <= 120) { return; }
-        foreach (var job in Jobs.Values.Where(x => x.Snapshot(false).FinishedAtUtc is not null)
-            .OrderBy(x => x.Created).Take(Math.Max(0, Jobs.Count - 100)))
-        {
-            // Keep cancellation sources alive for concurrent readers holding a Job reference.
-            Jobs.TryRemove(job.Id, out _);
-        }
+        var job = Registry.Get("claude", jobId);
+        Registry.Cancel(job);
+        return Snapshot(job, false);
     }
 }
