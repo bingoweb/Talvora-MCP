@@ -52,7 +52,11 @@ public sealed record DiffFileTab(string Name, int Added, int Removed)
     public string Counts => $"+{Added} −{Removed}";
 }
 
-public sealed record DiffLine(DiffLineKind Kind, string Number, string Text)
+/// <summary>
+/// One code-terminal row. EmphasisStart/EmphasisLength mark the characters that really changed between a
+/// removed line and its paired added line (word-level highlight, DESIGN-WORKLOG §6.3); -1 = no pair.
+/// </summary>
+public sealed record DiffLine(DiffLineKind Kind, string Number, string Text, int EmphasisStart = -1, int EmphasisLength = 0)
 {
     public string Marker => Kind switch
     {
@@ -61,6 +65,18 @@ public sealed record DiffLine(DiffLineKind Kind, string Number, string Text)
         DiffLineKind.File => "▌",
         _ => " ",
     };
+
+    public string Prefix => EmphasisStart < 0 ? Text : Text[..EmphasisStart];
+
+    public string Emphasis => EmphasisStart < 0 ? string.Empty : Text.Substring(EmphasisStart, EmphasisLength);
+
+    public string Suffix => EmphasisStart < 0 ? string.Empty : Text[(EmphasisStart + EmphasisLength)..];
+}
+
+/// <summary>"nerede" row: a changed file and the declarations its hunks touched (real, §6.2).</summary>
+public sealed record WorklogChangeRow(string File, string Places)
+{
+    public bool HasPlaces => Places.Length > 0;
 }
 
 /// <summary>
@@ -69,12 +85,19 @@ public sealed record DiffLine(DiffLineKind Kind, string Number, string Text)
 public sealed class WorklogCardViewModel : INotifyPropertyChanged
 {
     private const int VisibleTimelineRows = 5;
+    private const int VisibleChangeRows = 3;
 
     private WorklogVisualState state;
     private string prompt = string.Empty;
     private string actor = string.Empty;
     private string title = string.Empty;
     private string? factLine;
+    private string? taskNote;
+    private string? purpose;
+    private string? changeAdded;
+    private string? changeRemoved;
+    private string? changeFiles;
+    private string? moreChangedFiles;
     private string? outcomeReason;
     private string? outcomeNextStep;
     private string? moreSteps;
@@ -90,6 +113,9 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
     public ObservableCollection<DiffFileTab> CodeFiles { get; } = [];
 
     public ObservableCollection<DiffLine> CodeLines { get; } = [];
+
+    /// <summary>"nerede" rows, at most three; the rest is counted in <see cref="MoreChangedFiles"/>.</summary>
+    public ObservableCollection<WorklogChangeRow> ChangeRows { get; } = [];
 
     /// <summary>"talvora@MACHINE:~/Project" — machine and project are real values.</summary>
     public string Prompt { get => prompt; set => Set(ref prompt, value); }
@@ -121,9 +147,57 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
 
     public bool IsRunning => State == WorklogVisualState.Running;
 
-    public string Title { get => title; set => Set(ref title, value); }
+    public string Title
+    {
+        get => title;
+        set
+        {
+            if (Set(ref title, value))
+            {
+                OnPropertyChanged(nameof(TitleMain));
+                OnPropertyChanged(nameof(TitleDetail));
+            }
+        }
+    }
 
-    public string? FactLine { get => factLine; set => Set(ref factLine, value); }
+    /// <summary>"Kod değişikliği uygulandı" of "Kod değişikliği uygulandı · GitTools.cs" (semibold).</summary>
+    public string TitleMain => Title.Split(" · ", 2)[0];
+
+    /// <summary>" · GitTools.cs" (regular weight, muted) or empty.</summary>
+    public string TitleDetail => Title.Contains(" · ", StringComparison.Ordinal) ? " · " + Title.Split(" · ", 2)[1] : string.Empty;
+
+    public string? FactLine
+    {
+        get => factLine;
+        set
+        {
+            if (Set(ref factLine, value))
+            {
+                OnPropertyChanged(nameof(ResultLine));
+            }
+        }
+    }
+
+    /// <summary>"# görev" line: the agent's task for this session (talvora_worklog_note).</summary>
+    public string? TaskNote { get => taskNote; set => Set(ref taskNote, value); }
+
+    /// <summary>"ne" row: the agent's own words for what this step changes (apply_patch purpose).</summary>
+    public string? Purpose { get => purpose; set => Set(ref purpose, value); }
+
+    /// <summary>"sonuç" row: the real fact line, unless "nerede/fark" already show the change.</summary>
+    public string? ResultLine => HasChanges ? null : FactLine;
+
+    public bool HasChanges => ChangeRows.Count > 0;
+
+    /// <summary>"fark" row parts: "+12", "−3", "· 4 dosya".</summary>
+    public string? ChangeAdded { get => changeAdded; private set => Set(ref changeAdded, value); }
+
+    public string? ChangeRemoved { get => changeRemoved; private set => Set(ref changeRemoved, value); }
+
+    public string? ChangeFiles { get => changeFiles; private set => Set(ref changeFiles, value); }
+
+    /// <summary>"+2 dosya daha" or null.</summary>
+    public string? MoreChangedFiles { get => moreChangedFiles; private set => Set(ref moreChangedFiles, value); }
 
     public string? OutcomeReason { get => outcomeReason; set => Set(ref outcomeReason, value); }
 
@@ -159,6 +233,29 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
         var hidden = newestFirst.Count - Timeline.Count;
         MoreSteps = hidden > 0 ? $"+{hidden} adım daha" : null;
         OnPropertyChanged(nameof(HasTimeline));
+    }
+
+    /// <summary>Replaces "nerede/fark" with the real per-file changes of a committed edit; null hides both.</summary>
+    public void SetChanges(IReadOnlyList<(string File, int Added, int Removed, IReadOnlyList<string> Places)>? changes)
+    {
+        ChangeRows.Clear();
+        if (changes is { Count: > 0 })
+        {
+            foreach (var change in changes.Take(VisibleChangeRows))
+            {
+                ChangeRows.Add(new WorklogChangeRow(change.File, string.Join(", ", change.Places)));
+            }
+            ChangeAdded = "+" + changes.Sum(change => change.Added);
+            ChangeRemoved = " −" + changes.Sum(change => change.Removed);
+            ChangeFiles = $" · {changes.Count} dosya";
+            MoreChangedFiles = changes.Count > VisibleChangeRows ? $"+{changes.Count - VisibleChangeRows} dosya daha" : null;
+        }
+        else
+        {
+            ChangeAdded = ChangeRemoved = ChangeFiles = MoreChangedFiles = null;
+        }
+        OnPropertyChanged(nameof(HasChanges));
+        OnPropertyChanged(nameof(ResultLine));
     }
 
     /// <summary>Replaces the code terminal content. An empty list hides the terminal.</summary>

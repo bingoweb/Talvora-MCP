@@ -1,0 +1,4 @@
+# SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
+424c1e255f06e122dc08c394aa1f02c8e99167f5b2a3ae2584146f2a4b5044db  Program.RemotionWorklog.cs
+8b0ed2bd79f5daa930ae952c98f0479430d81f3de2cb6772537a24b6c4cf2e27  TalvoraDesktopRemotionWorklog.cs
+ef6ca148e756b2801c806de013fe3128bcb3d0a8a8fd5730de2c96adfcd35834  RemotionTools.cs

@@ -23,7 +23,8 @@ These rules bind **every implementing agent** that changes this repository, iden
 |---|---|
 | Start of every session | `talvora_agent_brief {workspaceRoot: "C:\\Users\\tayla\\Talvora-MCP"}` once A2 exists; until then `talvora_read_text_range` on `AGENTS.md` lines 1–140 and `talvora_run_powershell` → `pwsh -NoProfile -File scripts/Get-CodexContext.ps1` (workingDirectory = repo root). |
 | Reading code | `talvora_search_text` (narrow `root`, `maxMatches` ≤ 50) then `talvora_read_source` with a line window (≤ 120 lines). Never read whole large files. |
-| Editing source/docs | `talvora_apply_patch` only (read revisions first with `talvora_read_source`). Never `talvora_write_text`, `talvora_replace_text`, `talvora_append_text`, `talvora_write_bytes` or PowerShell `Set-Content` for repository files. |
+| Editing source/docs | `talvora_apply_patch` only (read revisions first with `talvora_read_source`). Never `talvora_write_text`, `talvora_replace_text`, `talvora_append_text`, `talvora_write_bytes` or PowerShell `Set-Content` for repository files. Once N10 is installed, every call passes `purpose`: one plain Turkish line saying what the change does and why (it is shown to the user as "ne"). |
+| Desktop task line | Once N10 is installed: right after writing "In progress" (step 5), `talvora_worklog_note {workspaceRoot, text: "<card id> — <the card's goal in plain Turkish>"}`. |
 | Build / tests / gate | Until A1 exists: `talvora_run_powershell` with `pwsh -NoProfile -File scripts/Invoke-QualityGate.ps1 -Scope Fast` (or the card's targeted command). After A1: `talvora_user_run` (runs as the signed-in user, so no SYSTEM-owned `obj/`, `bin/` or `.git/index`). |
 | Git status/diff/log | `talvora_git_status`, `talvora_git_diff`, `talvora_git_log` with small limits. |
 | Commit / push | `talvora_git_run` only (it enforces the delivery gate and, after A3, the work contract). Never commit or push through `talvora_run_powershell`/`talvora_run_process`. |

@@ -85,6 +85,22 @@
                 </StackPanel>
             </DataTemplate>
 
+            <DataTemplate x:Key="ChangeRowTemplate" DataType="{x:Type wl:WorklogChangeRow}">
+                <TextBlock Style="{StaticResource Wl.TextBase}" Margin="0,0,0,1" LineHeight="17"><Run Text="{Binding File, Mode=OneWay}" Foreground="{DynamicResource Wl.Cyan}" /><Run x:Name="Separator" Text=" › " Foreground="{DynamicResource Wl.Faint}" /><Run Text="{Binding Places, Mode=OneWay}" Foreground="{DynamicResource Wl.Text}" /></TextBlock>
+                <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding HasPlaces}" Value="False">
+                        <Setter TargetName="Separator" Property="Text" Value="" />
+                    </DataTrigger>
+                </DataTemplate.Triggers>
+            </DataTemplate>
+
+            <Style x:Key="AnswerLabel" TargetType="TextBlock" BasedOn="{StaticResource Wl.TextBase}">
+                <Setter Property="FontSize" Value="11.5" />
+                <Setter Property="TextWrapping" Value="NoWrap" />
+                <Setter Property="Foreground" Value="{DynamicResource Wl.Faint}" />
+                <Setter Property="Margin" Value="0,1,0,1" />
+            </Style>
+
             <DataTemplate x:Key="DiffLineTemplate" DataType="{x:Type wl:DiffLine}">
                 <Border x:Name="Row" Background="Transparent" Padding="0,0,6,0">
                     <Grid>
@@ -98,8 +114,8 @@
                                    Foreground="{DynamicResource Wl.Faint}" />
                         <TextBlock x:Name="Marker" Grid.Column="1" Text="{Binding Marker}" Style="{StaticResource Wl.TextBase}"
                                    TextWrapping="NoWrap" Foreground="{DynamicResource Wl.Faint}" />
-                        <TextBlock x:Name="Code" Grid.Column="2" Text="{Binding Text}" Style="{StaticResource Wl.TextBase}"
-                                   Foreground="{DynamicResource Wl.Muted}" LineHeight="17" />
+                        <TextBlock x:Name="Code" Grid.Column="2" Style="{StaticResource Wl.TextBase}"
+                                   Foreground="{DynamicResource Wl.Muted}" LineHeight="17"><Run Text="{Binding Prefix, Mode=OneWay}" /><Run x:Name="Emphasis" Text="{Binding Emphasis, Mode=OneWay}" FontWeight="Bold" /><Run Text="{Binding Suffix, Mode=OneWay}" /></TextBlock>
                     </Grid>
                 </Border>
                 <DataTemplate.Triggers>
@@ -107,11 +123,13 @@
                         <Setter TargetName="Row" Property="Background" Value="{DynamicResource Wl.AddedBg}" />
                         <Setter TargetName="Marker" Property="Foreground" Value="{DynamicResource Wl.Green}" />
                         <Setter TargetName="Code" Property="Foreground" Value="{DynamicResource Wl.Green}" />
+                        <Setter TargetName="Emphasis" Property="Background" Value="{DynamicResource Wl.AddedEmphasisBg}" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding Kind}" Value="Removed">
                         <Setter TargetName="Row" Property="Background" Value="{DynamicResource Wl.RemovedBg}" />
                         <Setter TargetName="Marker" Property="Foreground" Value="{DynamicResource Wl.Red}" />
                         <Setter TargetName="Code" Property="Foreground" Value="{DynamicResource Wl.Red}" />
+                        <Setter TargetName="Emphasis" Property="Background" Value="{DynamicResource Wl.RemovedEmphasisBg}" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding Kind}" Value="Hunk">
                         <Setter TargetName="Row" Property="Background" Value="{DynamicResource Wl.HunkBg}" />
@@ -197,15 +215,56 @@
                     </StackPanel>
                 </Grid>
 
+                <!-- Task line: the agent's task for this session (talvora_worklog_note, §6.2). -->
+                <TextBlock Margin="0,5,0,0" Style="{StaticResource Wl.TextBase}" FontSize="11.5" LineHeight="16"
+                           Visibility="{Binding TaskNote, Converter={StaticResource NullToCollapsed}}"><Run Text="# görev  " Foreground="{DynamicResource Wl.Faint}" /><Run Text="{Binding TaskNote, Mode=OneWay}" Foreground="{DynamicResource Wl.Cyan}" /></TextBlock>
+
                 <!-- Title line: "> Title▍" -->
                 <TextBlock x:Name="TitleText" Margin="0,8,0,0" Style="{StaticResource Wl.TextBase}" FontSize="14.5" FontWeight="SemiBold"
                            Foreground="{DynamicResource Wl.Text}" LineHeight="20">
                     
-                    <Run x:Name="PromptMark" Text="&gt; " Foreground="{DynamicResource Wl.Cyan}" /><Run Text="{Binding Title, Mode=OneWay}" /><Run x:Name="TypingCursor" Text="▍"><Run.Foreground><SolidColorBrush Color="#39FF88" /></Run.Foreground></Run>
+                    <Run x:Name="PromptMark" Text="&gt; " Foreground="{DynamicResource Wl.Cyan}" /><Run Text="{Binding TitleMain, Mode=OneWay}" /><Run Text="{Binding TitleDetail, Mode=OneWay}" FontWeight="Normal" Foreground="{DynamicResource Wl.Muted}" /><Run x:Name="TypingCursor" Text="▍"><Run.Foreground><SolidColorBrush Color="#39FF88" /></Run.Foreground></Run>
                 </TextBlock>
 
-                <TextBlock Margin="16,3,0,0" Text="{Binding FactLine}" Style="{StaticResource Wl.TextBase}"
-                           Visibility="{Binding FactLine, Converter={StaticResource NullToCollapsed}}" />
+                <!-- Answers (§6.2): ne = agent's purpose, nerede = files › places, fark = real totals, sonuç = real fact. -->
+                <Grid Margin="16,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="58" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="ne" Style="{StaticResource AnswerLabel}"
+                               Visibility="{Binding Purpose, Converter={StaticResource NullToCollapsed}}" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="0,1,0,1" Text="{Binding Purpose}" Style="{StaticResource Wl.TextBase}"
+                               Foreground="{DynamicResource Wl.Text}" LineHeight="17"
+                               Visibility="{Binding Purpose, Converter={StaticResource NullToCollapsed}}" />
+
+                    <TextBlock Grid.Row="1" Text="nerede" Style="{StaticResource AnswerLabel}"
+                               Visibility="{Binding HasChanges, Converter={StaticResource BoolToVisibility}}" />
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,1,0,1"
+                                Visibility="{Binding HasChanges, Converter={StaticResource BoolToVisibility}}">
+                        <ItemsControl ItemsSource="{Binding ChangeRows}" ItemTemplate="{StaticResource ChangeRowTemplate}" Focusable="False" />
+                        <TextBlock Text="{Binding MoreChangedFiles}" Style="{StaticResource Wl.TextBase}" FontSize="11"
+                                   Foreground="{DynamicResource Wl.Faint}"
+                                   Visibility="{Binding MoreChangedFiles, Converter={StaticResource NullToCollapsed}}" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="2" Text="fark" Style="{StaticResource AnswerLabel}"
+                               Visibility="{Binding HasChanges, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,1,0,1" Style="{StaticResource Wl.TextBase}" TextWrapping="NoWrap"
+                               Visibility="{Binding HasChanges, Converter={StaticResource BoolToVisibility}}"><Run Text="{Binding ChangeAdded, Mode=OneWay}" Foreground="{DynamicResource Wl.Green}" /><Run Text="{Binding ChangeRemoved, Mode=OneWay}" Foreground="{DynamicResource Wl.Red}" /><Run Text="{Binding ChangeFiles, Mode=OneWay}" Foreground="{DynamicResource Wl.Muted}" /></TextBlock>
+
+                    <TextBlock Grid.Row="3" Text="sonuç" Style="{StaticResource AnswerLabel}"
+                               Visibility="{Binding ResultLine, Converter={StaticResource NullToCollapsed}}" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,1,0,1" Text="{Binding ResultLine}" Style="{StaticResource Wl.TextBase}"
+                               LineHeight="17" Visibility="{Binding ResultLine, Converter={StaticResource NullToCollapsed}}" />
+                </Grid>
 
                 <StackPanel Margin="16,6,0,0" Visibility="{Binding OutcomeReason, Converter={StaticResource NullToCollapsed}}">
                     <TextBlock Style="{StaticResource Wl.TextBase}" Foreground="{DynamicResource Wl.Text}" LineHeight="17">

@@ -300,6 +300,62 @@ Message fallbacks while protocol v3 is still in use (decision P-4; only when the
 
 Timeline labels = Succeeded/Failed column + optional "· {kısa olgu}". Footer: `{n} adım · {süre} · {m} dosya değişti` (omit zero parts). Overline: `BU OTURUMDA`. Expander: `Ayrıntılar`. Copy button: `Kopyala`. Pin tooltip: `Konumu sabitle` / `Otomatik konuma dön`. Close: `Kapat`.
 
+### 6.1 Every step names what it works on (Claude, 2026-10-23 — user request "hangi işlem? ne tamamlandı?")
+
+The user's complaint, verbatim in spirit: *"İşlem yürütülüyor… hangi işlem? Düzeltme yapıldı… ne düzeltildi? İşlem tamamlandı… ne tamamlandı?"* A title that only names a category is not information. From N9 on, **every title carries its subject** — taken only from the call's real arguments, never a command line:
+
+| Step | Title (running → succeeded) | Subject source |
+|---|---|---|
+| quality gate (`Invoke-QualityGate.ps1`, any runner) | Kalite kontrolü çalışıyor · tam → Kalite kontrolü geçti · tam | script name; `-Scope Full` → "tam", Fast/none → "hızlı" |
+| installer build / deploy / Dependabot / CI / context scripts | Kurulum paketi hazırlanıyor, Yeni sürüm kuruluyor, Paket güncellemesi hazırlanıyor, GitHub denetimi okunuyor, Görev bağlamı hazırlanıyor (and their done/failed forms) | script name (`WorklogSubject.KnownScripts`) |
+| any other script | `Build-Foo.ps1 çalışıyor → bitti → hata ile bitti` | script file name |
+| `dotnet build/test/restore/publish` (tool or runner) | Derleniyor · Talvora.slnx → Derleme başarılı · Talvora.slnx | target/project file name |
+| npm/pnpm/yarn/bun/npx | `npm build çalışıyor → bitti` | program + script name |
+| node/python + file | `server.js çalışıyor` | file name |
+| other programs | `ffmpeg.exe çalışıyor` | executable file name |
+| source edit | Kod değişikliği uygulandı · GitTools.cs ve 1 dosya | first two file names + count |
+| git push / pull / fetch / other | Uzak depoya gönderildi · origin/main, Git işlemi tamamlandı · pull origin/main | remote/branch or subcommand |
+| service / package / file / network | … · `Talvora Dev`, … · `ripgrep`, … · `app.json`, … · `api.github.com` | service, package, file name, host |
+| anything else | **the tool's approved Turkish title** (`TalvoraToolTitles`), e.g. "Ortam değişkenini ayarla · tamamlandı" | `src/Talvora.Shared/TalvoraToolTitles.cs` |
+
+"İşlem yürütülüyor / tamamlandı" may only appear for a tool that has no approved title — a test fails if any manifest tool lacks one. The quality-gate summary line `N kontrol, M hata` becomes the fact `N kontrol · M hata`.
+
+`TalvoraToolTitles.cs` is the approved title table for **all** tools (Claude decided it; card Q1 later applies the same table to `tools/list` instead of generating a proposal table).
+
+### 6.2 The answer rows: ne · nerede · fark · sonuç
+
+Under the title the card answers the user's four questions in fixed rows (labels faint, 58 DIP column; values real):
+
+```
+# görev  D12 — git pull oturum kullanıcısıyla çalışsın        ← talvora_worklog_note (agent, once per task)
+> Kod değişikliği uygulandı · GitTools.cs ve 1 dosya
+  ne      git pull artık oturum kullanıcısının SSH anahtarını kullanıyor   ← apply_patch "purpose" (agent)
+  nerede  GitTools.cs › ShouldUseInteractiveUserForRemoteGitAsync        ← receipts + hunk headers (real)
+          GitSafeDirectoryRegression.ps1
+  fark    +5 −1 · 2 dosya                                                 ← receipts (real)
+```
+
+| Row | Source | Shown when |
+|---|---|---|
+| `# görev` | `talvora_worklog_note {workspaceRoot, text}` — Turkish, one line, ≤ 140 chars, redacted; per session until replaced or the session restarts | a note exists |
+| `ne` | optional `purpose` argument of `talvora_apply_patch` — the agent's own words, one line, ≤ 140 chars, redacted | the step has a purpose |
+| `nerede` | per committed file: file name › declarations its hunks touched (`DeclarationLine.PlaceName` of the hunk-header context: type, function/method, PowerShell function, Markdown heading). Max 3 rows + "+N dosya daha" | succeeded source edit with real receipt counts |
+| `fark` | `+added −removed · N dosya` summed from the engine receipts | same as `nerede` |
+| `sonuç` | the existing real fact line (build/test/git/gate/service/package/Remotion) | no `nerede` rows |
+
+Agent-written text (`görev`, `ne`) is labelled as such by its position, is never invented by Talvora, and is shown verbatim after redaction. If an agent does not send it, the rows are simply absent. AGENTS.md now requires both (CONTINUE PROTOCOL step 5 and the mechanics table).
+
+### 6.3 "Eskisi ile farkı ne?" — word-level highlight in the code terminal
+
+The code terminal (§3.1) already shows old lines red and new lines green. From N5 on (reference files updated by Claude) it also marks **exactly what changed inside a line**:
+
+- A block of removed lines followed by a block of added lines is paired line by line in order (max 8 pairs). For each pair the span between the common prefix and suffix, widened to whole words, gets a stronger tint (`Wl.AddedEmphasisBg` / `Wl.RemovedEmphasisBg`, 30 %) and bold text. `const limit = 5;` → `const limit = 50;` marks `5` and `50`. Pairs sharing less than half of the longer line are rewrites and stay unmarked.
+- Display only: the shared indentation of each hunk is removed so nested code does not wrap on its leading spaces; hunk headers are compacted to `@@ 790 · <context>` (one line, ≤ 52 chars). "kopyala" still copies the real preview.
+- High contrast: tints off, the changed span stays **bold**.
+- The title's subject (after the first " · ") is drawn in regular weight, muted, so the operation reads first.
+
+Target renders: `docs/codex/reference/worklog-phosphor/previews/01…08` (regenerated 2026-10-23); `06-small-change.png` is the showcase of §6.1–6.3.
+
 ## 7. Visual spec — "Phosphor" (hacker terminal), superseding the earlier table (Claude, 2026-10-20)
 
 **The authoritative design is code, not prose:** `docs/codex/reference/worklog-phosphor/src/*` — eight files written and **compiled by Claude** in a scratch WPF project with the same settings as `Talvora.Tray` (net10.0-windows, UseWPF + UseWindowsForms, TreatWarningsAsErrors, AssemblyName `Talvora.Tray`): 0 warnings, 0 errors. `docs/codex/reference/worklog-phosphor/previews/*.png` are the target renders (150 %), including a real window capture. Card N5 copies these files verbatim. Where any text in this document disagrees with those files, **the files win**.
@@ -567,12 +623,865 @@ No PNG for N1 (P-11).
 
 ### N3b — Code terminal: real, complete, persistent (protect the favourite feature)
 
+> **Amended by P-27 (Claude, 2026-10-23):** acceptance (4) becomes "`replace_text`/`json_set` on a workspace file are rejected by `SourceMutationPolicy` (unchanged) and produce **no** preview; inside a workspace only the source-edit family and `copy`/`move` produce diffs". The guard stays exactly as it is.
+> **Amended (Claude, 2026-10-23) — runs after N10:** every hunk header that `TextDiffBuilder` writes carries context: `@@ -a,b +c,d @@ <line>` where `<line>` is the nearest line **above** the hunk's first line in the *before* text for which `Talvora.WorklogDiff.DeclarationLine.PlaceName(line)` is not null, trimmed and cut to 80 characters (no context when none exists). This feeds the "nerede" row (§6.2). Add one regression case: a C# method edit produces a header ending with the method's declaration line.
+
 > **Amended by P-11 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
 
 **Files:** new `src/Talvora/WorklogDiff/TextDiffBuilder.cs`, `TalvoraDesktopProgressEvidence.cs`, source-edit committer (expose before/after text or the diff to the notifier without re-reading), mutator tools in `DeveloperTools.FileMutation.cs`, `ConfigFormatTools.*`, `StructuredConfigTools.*`, `ConfigAssetTools.Json.cs`, `FileTools.cs` (workspace writes only), `TalvoraDesktopWorklogState.cs` (session keeps latest code change), `DesktopProgressProtocol.cs` (send the preview once per change: `CodeChangeId` + preview; heartbeats carry only the id), notification regression + source-edit regression.
 **Do:** fix C1–C4 and C7 per §3.1, §5.4.1 (Claude part here; Codex part in N4), §5.5. Rejected/failed edits show no diff. The latest code change survives later non-code steps for the whole session.
 **Don't:** remove or shrink the vertical expansion; truncate silently; show diffs for files outside recognized workspaces (privacy) — those show "1 dosya değişti" only.
 **Acceptance (behaviour tests):** (1) patch → build → test sequence: the build and test frames still carry the same `CodeChangeId` and the tray keeps the pane; (2) stale-revision patch → no preview, muted "uygulanmadı" line; (3) `structural_edit` and `semantic_edit` rename produce real diffs from results; (4) `replace_text`/`json_set` inside a workspace produce diffs; (5) unified-diff patch with 2 files → 2 file headers, counts equal to the applied change; removed `-- comment` line counted; (6) heartbeat frames ≤ 4 KB while a 300 KB preview is active.
+
+### N9 — Every step names what it works on (§6.1)
+
+> Claude, 2026-10-23, user request: "İşlem yürütülüyor… hangi işlem? İşlem tamamlandı… ne tamamlandı?". Runs before N3b (P-27).
+
+**Why:** 206 of 214 tools have no title and every script/program run falls into "İşlem yürütülüyor / tamamlandı". The user cannot tell what ran.
+
+**Files:** new `src/Talvora/WorklogSubject.cs`, new `src/Talvora.Shared/TalvoraToolTitles.cs`, `src/Talvora/TalvoraDesktopProgressNarrative.cs`, `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `src/Talvora/TalvoraDesktopProgressFacts.cs`, `src/Talvora/WorklogCopy.cs`, `tests/Talvora.Notification.Regression/Program.cs`, new `tests/Talvora.Notification.Regression/Program.N9Subjects.cs`, `tests/ModernizationPolicyRegression.ps1` (one assertion follows the new call).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Claude replayed exactly these steps on a clean clone of `504fa7b` and verified them: Release build 0 errors, `DESKTOP_PROGRESS_BEHAVIOR_GREEN`, `MODERNIZATION_POLICY_GREEN`, and the full gate (see the Log). Apply them in order.
+
+Step 1 — copy `docs/codex/reference/n9/WorklogSubject.cs` → `src/Talvora/WorklogSubject.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `9184c42f3c434eeba298be3753c6189a56901bdcc2d2b37243f9700e79cef8a7`).
+
+Step 2 — copy `docs/codex/reference/n9/TalvoraToolTitles.cs` → `src/Talvora.Shared/TalvoraToolTitles.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `4906107a6b8d0195e33cf03a346ca74e1cfaab05235d293c8e1a930945864c3d`). This is the approved Turkish title of every tool; Q1 will apply the same table to tools/list.
+
+Step 3 — `src/Talvora/WorklogCopy.cs` — replace
+
+```csharp
+    internal static readonly WorklogTitles Restore =
+```
+
+with
+
+```csharp
+    internal static readonly WorklogTitles Publish = new("Yayın paketi hazırlanıyor", "Yayın paketi hazırlandı", "Yayın paketi hazırlanamadı");
+    internal static readonly WorklogTitles Restore =
+```
+
+Step 4 — `src/Talvora/TalvoraDesktopProgressNarrative.cs` — replace
+
+```csharp
+using ModelContextProtocol.Protocol;
+```
+
+with
+
+```csharp
+using ModelContextProtocol.Protocol;
+using Talvora.Shared;
+```
+
+Step 5 — `src/Talvora/TalvoraDesktopProgressNarrative.cs` — replace everything from the line `private sealed record OperationNarrative(` up to, **not including**, the line `private static bool TryBuildDeferredCompletion<T>(` with the content of `docs/codex/reference/n9/N9-BuildNarrative.cs.txt` (verbatim; normalised SHA-256 `2c692cbfb608e2ac3e67339d69eea631db680519c87fe112bb51339c7676d0fd`).
+
+Step 6 — `src/Talvora/TalvoraDesktopProgressNotifier.cs` — replace
+
+```csharp
+        var narrative = BuildNarrative(toolName, arguments);
+        var canonicalToolName = NormalizeToolName(toolName);
+        var initialEvidence =
+            BuildInitialEvidence(toolName, arguments);
+```
+
+with
+
+```csharp
+        var canonicalToolName = NormalizeToolName(toolName);
+        var initialEvidence =
+            BuildInitialEvidence(toolName, arguments);
+        var narrative = BuildNarrative(toolName, arguments, initialEvidence);
+```
+
+Step 7 — `src/Talvora/TalvoraDesktopProgressFacts.cs` — replace
+
+```csharp
+        var matches = FactNumber(json, "matchCount");
+```
+
+with
+
+```csharp
+        // Quality gate summary line (scripts/Invoke-QualityGate.ps1): "56 kontrol, 0 hata".
+        var gate = Regex.Match(output, @"(?m)^(?<checks>\d+) kontrol, (?<errors>\d+) hata\s*$");
+        if (gate.Success)
+            return gate.Groups["checks"].Value + " kontrol · " + gate.Groups["errors"].Value + " hata";
+        var matches = FactNumber(json, "matchCount");
+```
+
+Step 8 — `tests/ModernizationPolicyRegression.ps1` — replace
+
+```powershell
+Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'BuildNarrative\(toolName, arguments\)'
+```
+
+with
+
+```powershell
+Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'BuildNarrative\(toolName, arguments, initialEvidence\)'
+```
+
+Step 9 — copy `docs/codex/reference/n9/Program.N9Subjects.cs` → `tests/Talvora.Notification.Regression/Program.N9Subjects.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `5d8b0698cb1ca42a63cf5edde148d10228c7702ad75c7f59a11f6505eb4900e8`).
+
+Step 10 — `tests/Talvora.Notification.Regression/Program.cs` — replace
+
+```csharp
+        await AssertN3FactsAsync();
+```
+
+with
+
+```csharp
+        await AssertN3FactsAsync();
+        await AssertN9SubjectsAsync();
+```
+
+Step 11 — `tests/Talvora.Notification.Regression/Program.cs` — replace
+
+```csharp
+            var narrative = lookup.Invoke(null, [toolName, null]);
+```
+
+with
+
+```csharp
+            var narrative = lookup.Invoke(null, [toolName, null, null]);
+```
+
+Step 12 — `tests/Talvora.Notification.Regression/Program.cs` — replace
+
+```csharp
+            if (strings.Any(text =>
+                text.Contains(toolName, StringComparison.OrdinalIgnoreCase) ||
+                text.Contains(canonical, StringComparison.OrdinalIgnoreCase)))
+```
+
+with
+
+```csharp
+            // Whole words only (N9): "Klasörü listele" is Turkish, not the tool name "list".
+            var namePattern = new System.Text.RegularExpressions.Regex(
+                @"(?<![\p{L}\p{N}_])(" + System.Text.RegularExpressions.Regex.Escape(toolName) + "|" +
+                System.Text.RegularExpressions.Regex.Escape(canonical) + @")(?![\p{L}\p{N}_])",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (strings.Any(text => namePattern.IsMatch(text)))
+```
+
+Step 13 — `tests/Talvora.Notification.Regression/Program.cs` — replace
+
+```csharp
+        var classified = lookup.Invoke(null, ["talvora_git_run", args]);
+```
+
+with
+
+```csharp
+        var classified = lookup.Invoke(null, ["talvora_git_run", args, null]);
+```
+
+Step 14 — `tests/Talvora.Notification.Regression/Program.cs` — replace
+
+```csharp
+        if (values?.Succeeded != WorklogCopy.Push.Succeeded)
+```
+
+with
+
+```csharp
+        if (values?.Succeeded != WorklogCopy.Push.Succeeded + " · origin/main")
+```
+
+**Don't:** change any title text, the copy deck or the protocol; add subjects that are not in the call's arguments.
+
+**Acceptance:** test-first — `Program.N9Subjects.cs` fails before Steps 1–7; `DESKTOP_PROGRESS_BEHAVIOR_GREEN`; Full gate `Hepsi geçti.` as the signed-in user; build installer + deploy (AGENTS.md "Deploy" row); live: run `talvora_user_run` → `pwsh -NoProfile -File scripts/Invoke-QualityGate.ps1 -Scope Fast` and paste the card title from the desktop ("Kalite kontrolü geçti · hızlı") into the Log; GitHub CI green (10b).
+
+### N10 — Task line, purpose and changed places (§6.2)
+
+> Claude, 2026-10-23, user request: "Düzeltme yapıldı… ne düzeltildi? Eskisi ile aradaki fark ne?". After N9.
+
+**Why:** a finished edit shows only "3 dosya · +42 −7". The card must say what the change is for (agent's words), where it landed (file › method) and how much changed (real receipts).
+
+**Files:** `src/Talvora.Shared/DesktopProgressProtocol.cs`, new `src/Talvora.Shared/WorklogNote.cs`, new `src/Talvora/WorklogDiff/DeclarationLine.cs`, new `src/Talvora/WorklogPlaces.cs`, new `src/Talvora/Tools/WorklogNoteTools.cs` (new tool `talvora_worklog_note`), `src/Talvora/TalvoraDesktopProgressNarrative.cs`, `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `src/Talvora/TalvoraDesktopWorklogState.cs`, `src/Talvora/Tools/SourceEditTools.cs` (optional `purpose` argument), tool manifest / title table / metadata and surface counts, `tests/CodexCliIntegrationSourceRegression.ps1`, `tests/FocusedMcpSurfaceSourceRegression.ps1`, `tests/Talvora.Smoke/SmokeScenarios.SurfacePolicy.cs`, `README.md`, new `tests/Talvora.Notification.Regression/Program.N10Changes.cs`, `tests/Talvora.Notification.Regression/Program.cs`.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Verified by Claude on the same clean clone after N9 (build 0 errors, `DESKTOP_PROGRESS_BEHAVIOR_GREEN`, full gate). Apply in order.
+
+Step 1 — `src/Talvora.Shared/DesktopProgressProtocol.cs` — replace
+
+```csharp
+public sealed record WorklogSessionHeader(string? ProjectName, string ActorName);
+
+public sealed record WorklogStep(
+    WorklogStepCategory Category,
+    WorklogStepState State,
+    string Title,
+    string? FactLine,
+    WorklogOutcome? Outcome,
+    double ElapsedSeconds);
+```
+
+with
+
+```csharp
+/// <summary>TaskNote: the agent's one-line task for this session (talvora_worklog_note, §6.2).</summary>
+public sealed record WorklogSessionHeader(string? ProjectName, string ActorName, string? TaskNote = null);
+
+/// <summary>
+/// Purpose: the agent's own words for what this step changes (apply_patch "purpose", §6.2).
+/// Changes: real per-file counts and changed places of a committed source edit (§6.2).
+/// </summary>
+public sealed record WorklogStep(
+    WorklogStepCategory Category,
+    WorklogStepState State,
+    string Title,
+    string? FactLine,
+    WorklogOutcome? Outcome,
+    double ElapsedSeconds,
+    string? Purpose = null,
+    IReadOnlyList<WorklogFileChange>? Changes = null);
+
+/// <summary>One changed file: name, real added/removed line counts, declarations the hunks touched.</summary>
+public sealed record WorklogFileChange(string File, int Added, int Removed, IReadOnlyList<string> Places);
+```
+
+Step 2 — `src/Talvora.Shared/DesktopProgressProtocol.cs` — replace
+
+```csharp
+    public const int MaximumTimelineEntries = 30;
+```
+
+with
+
+```csharp
+    public const int MaximumTimelineEntries = 30;
+    public const int MaximumTaskNoteCharacters = 140;
+    public const int MaximumPurposeCharacters = 140;
+    public const int MaximumChangedFiles = 12;
+    public const int MaximumPlacesPerFile = 4;
+    public const int MaximumPlaceCharacters = 80;
+```
+
+Step 3 — `src/Talvora.Shared/DesktopProgressProtocol.cs` — replace
+
+```csharp
+            ActorName = RedactAndClip(frame.Header.ActorName, MaximumActorNameCharacters) ?? string.Empty,
+        },
+```
+
+with
+
+```csharp
+            ActorName = RedactAndClip(frame.Header.ActorName, MaximumActorNameCharacters) ?? string.Empty,
+            TaskNote = RedactAndClip(frame.Header.TaskNote, MaximumTaskNoteCharacters),
+        },
+```
+
+Step 4 — `src/Talvora.Shared/DesktopProgressProtocol.cs` — replace
+
+```csharp
+            FactLine = RedactAndClip(frame.Current.FactLine, MaximumMessageCharacters),
+            Outcome = frame.Current.Outcome is null
+```
+
+with
+
+```csharp
+            FactLine = RedactAndClip(frame.Current.FactLine, MaximumMessageCharacters),
+            Purpose = RedactAndClip(frame.Current.Purpose, MaximumPurposeCharacters),
+            Changes = frame.Current.Changes?
+                .Where(change => change is not null)
+                .Take(MaximumChangedFiles)
+                .Select(change => change with
+                {
+                    File = RedactAndClip(change.File, MaximumEvidenceFileCharacters) ?? string.Empty,
+                    Added = Math.Max(0, change.Added),
+                    Removed = Math.Max(0, change.Removed),
+                    Places = (change.Places ?? [])
+                        .Select(place => RedactAndClip(place, MaximumPlaceCharacters))
+                        .Where(place => !string.IsNullOrWhiteSpace(place))
+                        .Select(place => place!)
+                        .Take(MaximumPlacesPerFile)
+                        .ToArray(),
+                })
+                .ToArray(),
+            Outcome = frame.Current.Outcome is null
+```
+
+Step 5 — `src/Talvora.Shared/DesktopProgressProtocol.cs` — replace
+
+```csharp
+                frame.Current.FactLine?.Length > MaximumMessageCharacters ||
+```
+
+with
+
+```csharp
+                frame.Current.FactLine?.Length > MaximumMessageCharacters ||
+                frame.Header.TaskNote?.Length > MaximumTaskNoteCharacters ||
+                frame.Current.Purpose?.Length > MaximumPurposeCharacters ||
+                (frame.Current.Changes?.Count ?? 0) > MaximumChangedFiles ||
+                frame.Current.Changes?.Any(change =>
+                    change is null ||
+                    string.IsNullOrWhiteSpace(change.File) ||
+                    change.File.Length > MaximumEvidenceFileCharacters ||
+                    change.Added < 0 ||
+                    change.Removed < 0 ||
+                    change.Places is null ||
+                    change.Places.Count > MaximumPlacesPerFile ||
+                    change.Places.Any(place => place is null || place.Length > MaximumPlaceCharacters)) is true ||
+```
+
+Step 6 — copy `docs/codex/reference/n10/WorklogNote.cs` → `src/Talvora.Shared/WorklogNote.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `b98f17864e42be365e63259fb553d4555e745bfb746af3b8d37cc9c2092fb520`).
+
+Step 7 — copy `docs/codex/reference/n10/DeclarationLine.cs` → `src/Talvora/WorklogDiff/DeclarationLine.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `b8d806cbeee6ba80422229cf5eb3720b8e2af7d0af17db4faad1024c73c9b117`).
+
+Step 8 — copy `docs/codex/reference/n10/WorklogPlaces.cs` → `src/Talvora/WorklogPlaces.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `0751f54edfa3fc44704491543d6e511488eefa6fd30d839942264cd2e053b8a9`).
+
+Step 9 — copy `docs/codex/reference/n10/WorklogNoteTools.cs` → `src/Talvora/Tools/WorklogNoteTools.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `f8fb3080239fc9b6cb02c5b105eb9d67ee7c8321e887a4dad7a5edbc0d5a92b4`).
+
+Step 10 — `src/Talvora/TalvoraDesktopProgressNarrative.cs` — replace
+
+```csharp
+    private sealed record OperationNarrative(
+        OperationCategory Category,
+        WorklogTitles Titles,
+        string? Subject = null);
+```
+
+with
+
+```csharp
+    private sealed record OperationNarrative(
+        OperationCategory Category,
+        WorklogTitles Titles,
+        string? Subject = null,
+        string? Purpose = null);
+```
+
+Step 11 — `src/Talvora/TalvoraDesktopProgressNotifier.cs` — replace
+
+```csharp
+        ArgumentNullException.ThrowIfNull(operation);
+
+        if (!ShouldNotifyToolCall(toolName))
+```
+
+with
+
+```csharp
+        ArgumentNullException.ThrowIfNull(operation);
+
+        if (NormalizeToolName(toolName) == "worklog_note")
+        {
+            TrySetTaskNote(arguments, surfacePath, clientName);
+        }
+
+        if (!ShouldNotifyToolCall(toolName))
+```
+
+Step 12 — `src/Talvora/TalvoraDesktopProgressNotifier.cs` — replace
+
+```csharp
+        var narrative = BuildNarrative(toolName, arguments, initialEvidence);
+```
+
+with
+
+```csharp
+        var narrative = BuildNarrative(toolName, arguments, initialEvidence) with
+        {
+            Purpose = WorklogNote.Normalize(GetArgumentText(arguments, "purpose")),
+        };
+```
+
+Step 13 — `src/Talvora/TalvoraDesktopProgressNotifier.cs` — replace
+
+```csharp
+                        TryEndWorklog(
+                            operationId,
+                            DesktopProgressKind.Completed,
+                            narrative.Titles.Succeeded,
+                            WorklogCopy.SucceededFallback,
+                            terminalEvidence,
+                            stopwatch.Elapsed);
+                    }
+                }
+            }
+```
+
+with
+
+```csharp
+                        TryEndWorklog(
+                            operationId,
+                            DesktopProgressKind.Completed,
+                            narrative.Titles.Succeeded,
+                            WorklogCopy.SucceededFallback,
+                            terminalEvidence,
+                            stopwatch.Elapsed,
+                            IsSourceEditTool(canonicalToolName)
+                                ? BuildFileChanges(result, terminalEvidence)
+                                : null);
+                    }
+                }
+            }
+```
+
+Step 14 — `src/Talvora/TalvoraDesktopProgressNotifier.cs` — replace
+
+```csharp
+    private void Enqueue(
+        string operationId,
+```
+
+with
+
+```csharp
+    private static IReadOnlyList<WorklogFileChange>? BuildFileChanges<T>(
+        T result, DesktopProgressEvidence? evidence)
+    {
+        try
+        {
+            var json = result is CallToolResult callToolResult &&
+                callToolResult.StructuredContent is JsonElement structured
+                    ? structured : JsonSerializer.SerializeToElement(result);
+            return WorklogPlaces.Build(json, evidence?.CodePreview);
+        }
+        catch
+        {
+            return null; // best effort: the fact line still reports the real totals
+        }
+    }
+
+    private void Enqueue(
+        string operationId,
+```
+
+Step 15 — `src/Talvora/TalvoraDesktopProgressNotifier.cs` — replace
+
+```csharp
+            "http_request" => false,
+```
+
+with
+
+```csharp
+            "http_request" => false,
+            "worklog_note" => false,
+```
+
+Step 16 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+        public PendingFailure? Failure { get; set; }
+        public PendingCancellation? Cancellation { get; set; }
+    }
+```
+
+with
+
+```csharp
+        public PendingFailure? Failure { get; set; }
+        public PendingCancellation? Cancellation { get; set; }
+        public string? TaskNote { get; set; }
+        public string? Purpose { get; set; }
+        public IReadOnlyList<WorklogFileChange>? Changes { get; set; }
+    }
+```
+
+Step 17 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+    private void TryEndWorklog(
+        string operationId, DesktopProgressKind kind,
+        string title, string message,
+        DesktopProgressEvidence? evidence, TimeSpan elapsed)
+    {
+        try
+        {
+            EndWorklog(operationId, kind, title, message, evidence, elapsed);
+```
+
+with
+
+```csharp
+    private void TryEndWorklog(
+        string operationId, DesktopProgressKind kind,
+        string title, string message,
+        DesktopProgressEvidence? evidence, TimeSpan elapsed,
+        IReadOnlyList<WorklogFileChange>? changes = null)
+    {
+        try
+        {
+            EndWorklog(operationId, kind, title, message, evidence, elapsed, changes);
+```
+
+Step 18 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+            PublishSession(session, toolName, narrative.Titles.Running,
+                WorklogCopy.RunningFallback, DesktopProgressKind.Started,
+                elapsed, evidence);
+```
+
+with
+
+```csharp
+            PublishSession(session, toolName, narrative.Titles.Running,
+                WorklogCopy.RunningFallback, DesktopProgressKind.Started,
+                elapsed, evidence, narrative.Purpose);
+```
+
+Step 19 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+            PublishSession(current.Session, current.ToolName,
+                current.Narrative.Titles.Running,
+                WorklogCopy.RunningFallback,
+                DesktopProgressKind.Running, elapsed, current.Evidence);
+```
+
+with
+
+```csharp
+            PublishSession(current.Session, current.ToolName,
+                current.Narrative.Titles.Running,
+                WorklogCopy.RunningFallback,
+                DesktopProgressKind.Running, elapsed, current.Evidence,
+                current.Narrative.Purpose);
+```
+
+Step 20 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+    private void EndWorklog(
+        string operationId, DesktopProgressKind kind,
+        string title, string message,
+        DesktopProgressEvidence? evidence, TimeSpan elapsed)
+```
+
+with
+
+```csharp
+    private void EndWorklog(
+        string operationId, DesktopProgressKind kind,
+        string title, string message,
+        DesktopProgressEvidence? evidence, TimeSpan elapsed,
+        IReadOnlyList<WorklogFileChange>? changes = null)
+```
+
+Step 21 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+                PublishSession(session, latest.ToolName,
+                    latest.Narrative.Titles.Running,
+                    WorklogCopy.RunningFallback,
+                    DesktopProgressKind.Running, elapsed, latest.Evidence);
+```
+
+with
+
+```csharp
+                PublishSession(session, latest.ToolName,
+                    latest.Narrative.Titles.Running,
+                    WorklogCopy.RunningFallback,
+                    DesktopProgressKind.Running, elapsed, latest.Evidence,
+                    latest.Narrative.Purpose);
+```
+
+Step 22 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+                PublishSession(session, ended.ToolName, title,
+                    message, kind, elapsed, evidence);
+```
+
+with
+
+```csharp
+                PublishSession(session, ended.ToolName, title,
+                    message, kind, elapsed, evidence,
+                    ended.Narrative.Purpose, changes);
+```
+
+Step 23 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+    private void PublishSession(
+        WorklogSession session, string toolName, string title,
+        string message, DesktopProgressKind kind,
+        TimeSpan elapsed, DesktopProgressEvidence? evidence)
+    {
+        session.ToolName = toolName;
+```
+
+with
+
+```csharp
+    private void PublishSession(
+        WorklogSession session, string toolName, string title,
+        string message, DesktopProgressKind kind,
+        TimeSpan elapsed, DesktopProgressEvidence? evidence,
+        string? purpose = null, IReadOnlyList<WorklogFileChange>? changes = null)
+    {
+        session.Purpose = purpose;
+        session.Changes = changes;
+        session.ToolName = toolName;
+```
+
+Step 24 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+            session.Failure = null;
+            session.Cancellation = null;
+        }
+        return session;
+```
+
+with
+
+```csharp
+            session.Failure = null;
+            session.Cancellation = null;
+            session.TaskNote = null;
+        }
+        return session;
+```
+
+Step 25 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+                new WorklogSessionHeader(session.ProjectName, session.Actor),
+                new WorklogStep((WorklogStepCategory)session.Category,
+                    ToWorklogState(kind), title, isTerminal ? evidence?.Summary : null, outcome,
+                    Math.Max(0, elapsed.TotalSeconds)),
+```
+
+with
+
+```csharp
+                new WorklogSessionHeader(session.ProjectName, session.Actor, session.TaskNote),
+                new WorklogStep((WorklogStepCategory)session.Category,
+                    ToWorklogState(kind), title, isTerminal ? evidence?.Summary : null, outcome,
+                    Math.Max(0, elapsed.TotalSeconds),
+                    session.Purpose,
+                    kind == DesktopProgressKind.Completed ? session.Changes : null),
+```
+
+Step 26 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+    private static string ResolveActor(string? surfacePath, string? clientName)
+```
+
+with
+
+```csharp
+    /// <summary>talvora_worklog_note: set the session's task line and show it at once if a card is up.</summary>
+    private void TrySetTaskNote(
+        IDictionary<string, JsonElement>? arguments, string? surfacePath, string? clientName)
+    {
+        try
+        {
+            if (WorklogNote.Normalize(GetArgumentText(arguments, "text")) is not { } note)
+            {
+                return;
+            }
+            lock (_worklogGate)
+            {
+                var session = GetOrCreateSession(arguments, surfacePath, clientName, null);
+                session.TaskNote = note;
+                if (!string.IsNullOrEmpty(session.Title))
+                {
+                    Enqueue(session.Id, session.ToolName, session.Title,
+                        session.Message, session.Kind, session.Elapsed, session.Evidence);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex,
+                "Desktop worklog task note failed without affecting the tool operation.");
+        }
+    }
+
+    private static string ResolveActor(string? surfacePath, string? clientName)
+```
+
+Step 27 — `src/Talvora/Tools/SourceEditTools.cs` — replace
+
+```csharp
+        Dictionary<string, string>? expectedRevisions = null,
+        bool validateSyntax = true,
+        CancellationToken cancellationToken = default) =>
+        SourceEditRuntime.Engine.ApplyPatchAsync(
+```
+
+with
+
+```csharp
+        Dictionary<string, string>? expectedRevisions = null,
+        bool validateSyntax = true,
+        [Description("Optional, for the user's desktop worklog: one Turkish line saying what this change does and why (example: \"git pull artık oturum kullanıcısının SSH anahtarını kullanıyor\"). Not used by the edit itself.")]
+        string? purpose = null,
+        CancellationToken cancellationToken = default) =>
+        SourceEditRuntime.Engine.ApplyPatchAsync(
+```
+
+Step 28 — `src/Talvora.Shared/TalvoraToolManifest.cs` — replace
+
+```csharp
+        "talvora_user_run",
+```
+
+with
+
+```csharp
+        "talvora_user_run",
+        "talvora_worklog_note",
+```
+
+Step 29 — `src/Talvora.Shared/TalvoraToolTitles.cs` — replace
+
+```csharp
+        ["talvora_websocket_exchange"] = "WebSocket ile veri gönder",
+```
+
+with
+
+```csharp
+        ["talvora_websocket_exchange"] = "WebSocket ile veri gönder",
+        ["talvora_worklog_note"] = "Görev satırını ayarla",
+```
+
+Step 30 — `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs` — replace
+
+```csharp
+public const int ExpectedReviewedToolCount = 251;
+```
+
+with
+
+```csharp
+public const int ExpectedReviewedToolCount = 252;
+```
+
+Step 31 — `src/Talvora.Shared/TalvoraMcpToolSurfacePolicy.cs` — replace
+
+```csharp
+    public const int ExpectedFullToolCount = 251;
+    public const int ExpectedDevelopmentToolCount = 214;
+```
+
+with
+
+```csharp
+    public const int ExpectedFullToolCount = 252;
+    public const int ExpectedDevelopmentToolCount = 215;
+```
+
+Step 32 — `tests/CodexCliIntegrationSourceRegression.ps1` — replace
+
+```powershell
+ExpectedFullToolCount = 251') -and
+```
+
+with
+
+```powershell
+ExpectedFullToolCount = 252') -and
+```
+
+Step 33 — `tests/CodexCliIntegrationSourceRegression.ps1` — replace
+
+```powershell
+ExpectedDevelopmentToolCount = 214') -and
+```
+
+with
+
+```powershell
+ExpectedDevelopmentToolCount = 215') -and
+```
+
+Step 34 — `tests/FocusedMcpSurfaceSourceRegression.ps1` — replace
+
+```powershell
+ExpectedFullToolCount = 251') -and
+```
+
+with
+
+```powershell
+ExpectedFullToolCount = 252') -and
+```
+
+Step 35 — `tests/FocusedMcpSurfaceSourceRegression.ps1` — replace
+
+```powershell
+ExpectedDevelopmentToolCount = 214') -and
+```
+
+with
+
+```powershell
+ExpectedDevelopmentToolCount = 215') -and
+```
+
+Step 36 — `tests/Talvora.Smoke/SmokeScenarios.SurfacePolicy.cs` — replace
+
+```csharp
+            "talvora_user_run",
+            development: true,
+            administration: false);
+```
+
+with
+
+```csharp
+            "talvora_user_run",
+            development: true,
+            administration: false);
+        AssertSurface(
+            "talvora_worklog_note",
+            development: true,
+            administration: false);
+```
+
+Step 37 — `README.md` — replace
+
+```markdown
+- **Signed-in user execution:**
+```
+
+with
+
+```markdown
+- **Desktop worklog task line:** `talvora_worklog_note` sets the one-line task the desktop worklog card shows for the current project; `talvora_apply_patch` accepts an optional `purpose` line for the same card.
+- **Signed-in user execution:**
+```
+
+Step 38 — copy `docs/codex/reference/n10/Program.N10Changes.cs` → `tests/Talvora.Notification.Regression/Program.N10Changes.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `0d411ad310327e2564893841f5b1ac29e21d4a88a9107d6cab84ff993e293d50`).
+
+Step 39 — `tests/Talvora.Notification.Regression/Program.cs` — replace
+
+```csharp
+        await AssertN9SubjectsAsync();
+```
+
+with
+
+```csharp
+        await AssertN9SubjectsAsync();
+        await AssertN10ChangesAsync();
+```
+
+**Don't:** derive `ne` from anything but the `purpose` argument; show places that `DeclarationLine` does not recognise; send changes for rejected or failed edits.
+
+**Acceptance:** test-first — `Program.N10Changes.cs` fails before the protocol/service steps; `DESKTOP_PROGRESS_BEHAVIOR_GREEN`; Full gate `Hepsi geçti.`; installer + deploy; live: `talvora_worklog_note {workspaceRoot, text:"N10 — görev satırı"}` returns `accepted: true` (paste it into the Log); the new rows become visible with N5, the frame fields are proven by the regression; GitHub CI green (10b). From now on AGENTS.md requires `talvora_worklog_note` at card start and `purpose` on every `talvora_apply_patch` call.
 
 ### N4 — Agent jobs tell their story
 
@@ -593,6 +1502,8 @@ No PNG for N1 (P-11).
 **Acceptance:** preview PNGs for: running edit, success with timeline, **2-line change (small pane)**, **3-file 300-line change (tabs, scroll, colours, gutter, wrapped continuation)**, build failure after a code change (pane still open), inspection-failure row, Codex job running/completed, stale; contrast test on token pairs; mixed-DPI placement regression unchanged; reduced-motion render identical except animation.
 
 #### Exact implementation — "Phosphor" card (copy verified files, do not reinterpret)
+
+> **Reference updated by Claude, 2026-10-23 (§6.1–6.3):** `WorklogCardViewModel.cs`, `UnifiedDiffViewParser.cs`, `WorklogCardMapper.cs`, `WorklogCardView.xaml(.cs)`, `WorklogTheme.xaml` and `WorklogPreviewScenarios.cs` now render the `# görev` line, the ne/nerede/fark/sonuç rows, the muted title subject, per-hunk dedent, compact hunk headers and the word-level highlight; they bind the N10 protocol fields, so N5 runs **after N10**. Previews `01…08` were re-rendered (06 is the showcase); `09-live-window-150pct.png` was removed — step 3 below compares the live card with `06-small-change.png`. The scenarios now use the real enum members (`WorklogStepCategory.GenericExecution`, `WorklogCheckState.Succeeded`).
 
 All design and code for this card already exists and is **compiled and rendered by Claude**: `docs/codex/reference/worklog-phosphor/` (`src/` = 8 files, `previews/` = target PNGs, `SHA256SUMS.txt`). Your job is to place these files, remove the old card code, wire two small call sites and prove the renders are identical. You write almost no new code.
 
@@ -752,7 +1663,7 @@ finally
 Step 7 — prove it:
 1. build Tray + notification regression; run the regression;
 2. `Talvora.Tray.exe --worklog-preview <tmp>` (from the Release build output, as the signed-in user) and compare each PNG with `docs/codex/reference/worklog-phosphor/previews/` byte-for-byte (`Get-FileHash`). Same machine and fonts → identical. If any differs, attach both PNGs to the Gitea issue and stop with a proposal — do not "fix" the design;
-3. deploy; trigger one real `talvora_apply_patch` on a scratch file and capture the live card (crop to the card) into the Gitea issue next to `previews/09-live-window-150pct.png`.
+3. deploy; trigger one real `talvora_apply_patch` on a scratch file and capture the live card (crop to the card) into the Gitea issue next to `previews/06-small-change.png`.
 
 **Acceptance:** eight `IDENTICAL` lines (or Log-listed N2 name adaptations only); old files deleted; preview PNGs byte-identical to the references; regression green; live card captured. User step U6 follows.
 

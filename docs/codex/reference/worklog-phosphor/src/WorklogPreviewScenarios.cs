@@ -66,48 +66,46 @@ internal static class WorklogPreviewScenarios
 
     private static WorklogCardViewModel RunningEdit()
     {
-        var model = Base("Classroom", "codex", WorklogVisualState.Running, "Kod değişikliği uygulanıyor");
-        model.FactLine = "3 dosya · +41 −6 · kiosk-routes.js, kiosk-devices.js ve 1 dosya";
+        var model = Base("Classroom", "codex", WorklogVisualState.Running, "Kod değişikliği uygulanıyor · kiosk-routes.js, app.js ve 1 dosya");
+        model.TaskNote = "Kiosk eşleştirme kodu sınırını düzelt";
+        model.Purpose = "Bekleyen kod sınırı 5'ten 50'ye çıkıyor; sıra dolunca ekran 429 ile beklemeye alınıyor";
         model.SetTimeline(
         [
-            new(WorklogRowState.Running, "14:02", "Kod değişikliği uygulanıyor"),
+            new(WorklogRowState.Running, "14:02", "Kod değişikliği uygulanıyor · kiosk-routes.js, app.js ve 1 dosya"),
             new(WorklogRowState.Succeeded, "14:01", "Kaynaklar incelendi · 12 dosya"),
             new(WorklogRowState.Muted, "14:01", "Okuma başarısız · yanlış parametre"),
             new(WorklogRowState.Succeeded, "13:58", "Testler geçti · 1 837 test"),
         ]);
-        model.SetCode(
-            "diff · 14:02:11",
-            [new("kiosk-routes.js", 38, 5), new("kiosk-devices.js", 2, 0), new("app.js", 1, 1)],
-            [
-                new(DiffLineKind.File, string.Empty, "backend/routes/kiosk-routes.js"),
-                new(DiffLineKind.Hunk, string.Empty, "@@ -38,7 +38,9 @@ router.post('/pairing-codes'"),
-                new(DiffLineKind.Context, "38", "router.post('/pairing-codes', async (req, res) => {"),
-                new(DiffLineKind.Removed, "39", "  const limit = 5;"),
-                new(DiffLineKind.Added, "39", "  const limit = 50;"),
-                new(DiffLineKind.Added, "40", "  if (pending.size >= limit) {"),
-                new(DiffLineKind.Added, "41", "    return res.status(429).set('Retry-After', '120').json({ error: 'Şu anda çok fazla bekleyen ekran kodu var. Lütfen birkaç dakika sonra tekrar deneyin.' });"),
-                new(DiffLineKind.Context, "42", "  const code = createPairingCode();"),
-                new(DiffLineKind.File, string.Empty, "backend/app.js"),
-                new(DiffLineKind.Hunk, string.Empty, "@@ -12,3 +12,3 @@"),
-                new(DiffLineKind.Removed, "13", "app.disable('x-powered-by')"),
-                new(DiffLineKind.Added, "13", "app.disable('x-powered-by');"),
-            ]);
+        Code(model, "diff · 14:02:11",
+            "+++ b/backend/routes/kiosk-routes.js\n" +
+            "@@ -38,7 +38,9 @@ router.post('/pairing-codes'\n" +
+            " router.post('/pairing-codes', async (req, res) => {\n" +
+            "-  const limit = 5;\n" +
+            "+  const limit = 50;\n" +
+            "+  if (pending.size >= limit) {\n" +
+            "+    return res.status(429).set('Retry-After', '120').json({ error: 'Şu anda çok fazla bekleyen ekran kodu var. Lütfen birkaç dakika sonra tekrar deneyin.' });\n" +
+            "   const code = createPairingCode();\n" +
+            "+++ b/backend/app.js\n" +
+            "@@ -12,3 +12,3 @@\n" +
+            "-app.disable('x-powered-by')\n" +
+            "+app.disable('x-powered-by');\n");
         model.Footer = "7 adım · 03:41 · 3 dosya değişti";
         return model;
     }
 
     private static WorklogCardViewModel SuccessSession()
     {
-        var model = Base("Talvora-MCP", "chatgpt·dev", WorklogVisualState.Succeeded, "Testler geçti");
-        model.FactLine = "148 test geçti · Talvora.Notification.Regression";
+        var model = Base("Talvora-MCP", "chatgpt·dev", WorklogVisualState.Succeeded, "Kalite kontrolü geçti · tam");
+        model.TaskNote = "D12 — git pull oturum kullanıcısıyla çalışsın";
+        model.FactLine = "56 kontrol · 0 hata";
         model.SetTimeline(
         [
-            new(WorklogRowState.Succeeded, "16:21", "Testler geçti · 148 test"),
-            new(WorklogRowState.Succeeded, "16:20", "Derleme başarılı · 0 hata · 0 uyarı"),
-            new(WorklogRowState.Succeeded, "16:18", "Kod değişikliği uygulandı · 2 dosya"),
+            new(WorklogRowState.Succeeded, "16:21", "Kalite kontrolü geçti · tam"),
+            new(WorklogRowState.Succeeded, "16:20", "Derleme başarılı · Talvora.csproj"),
+            new(WorklogRowState.Succeeded, "16:18", "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya"),
             new(WorklogRowState.Failed, "16:17", "Kod değişikliği uygulanamadı · dosya değişmişti"),
-            new(WorklogRowState.Succeeded, "16:15", "Kaynaklar incelendi · 4 dosya"),
-            new(WorklogRowState.Succeeded, "16:14", "Kaynaklar incelendi · 9 dosya"),
+            new(WorklogRowState.Succeeded, "16:15", "Git işlemi tamamlandı · pull origin/main"),
+            new(WorklogRowState.Succeeded, "16:14", "Görev bağlamı hazır"),
             new(WorklogRowState.Succeeded, "16:12", "Paketler hazır"),
         ]);
         model.Footer = "12 adım · 09:05 · 2 dosya değişti";
@@ -116,26 +114,22 @@ internal static class WorklogPreviewScenarios
 
     private static WorklogCardViewModel BuildFailed()
     {
-        var model = Base("Talvora-MCP", "chatgpt·dev", WorklogVisualState.Failed, "Derleme başarısız");
-        model.FactLine = "3 hata · ControlCenterWindow.cs (2), WorklogTheme.xaml (1)";
-        model.OutcomeReason = "Derleme 3 hata verdi.";
-        model.OutcomeNextStep = "Ajan hataları düzeltebilir; kodunuz kaydedildiği hâliyle duruyor.";
+        var model = Base("Talvora-MCP", "chatgpt·dev", WorklogVisualState.Failed, "Derleme başarısız · Talvora.Tray.csproj · 3 hata");
+        model.TaskNote = "UI1 — Kontrol Merkezi başlığı ve tema";
+        model.FactLine = "3 hata · ControlCenterWindow.cs, WorklogTheme.xaml";
+        model.OutcomeReason = "Derleme hata verdi. Ajan hataları düzeltebilir; kodunuz kaydedildiği hâliyle duruyor.";
         model.SetTimeline(
         [
-            new(WorklogRowState.Failed, "17:44", "Derleme başarısız · 3 hata"),
-            new(WorklogRowState.Succeeded, "17:43", "Kod değişikliği uygulandı · 1 dosya"),
+            new(WorklogRowState.Failed, "17:44", "Derleme başarısız · Talvora.Tray.csproj · 3 hata"),
+            new(WorklogRowState.Succeeded, "17:43", "Kod değişikliği uygulandı · ControlCenterWindow.cs"),
         ]);
-        model.SetCode(
-            "diff · 17:43:02",
-            [new("ControlCenterWindow.cs", 4, 2)],
-            [
-                new(DiffLineKind.File, string.Empty, "src/Talvora.Tray/ControlCenterWindow.cs"),
-                new(DiffLineKind.Hunk, string.Empty, "@@ -126,6 +126,8 @@ public ControlCenterWindow(bool smokeMode = false)"),
-                new(DiffLineKind.Removed, "126", "        Title = \"Talvora Yönetim Merkezi\";"),
-                new(DiffLineKind.Added, "126", "        Title = \"Talvora Kontrol Merkezi\";"),
-                new(DiffLineKind.Context, "127", "        Width = 1220;"),
-                new(DiffLineKind.Note, string.Empty, "… 2 satır daha · tamamı Çalışma günlüğünde"),
-            ]);
+        Code(model, "diff · 17:43:02",
+            "+++ b/src/Talvora.Tray/ControlCenterWindow.cs\n" +
+            "@@ -126,6 +126,8 @@ public ControlCenterWindow(bool smokeMode = false)\n" +
+            "-        Title = \"Talvora Yönetim Merkezi\";\n" +
+            "+        Title = \"Talvora Kontrol Merkezi\";\n" +
+            "         Width = 1220;\n" +
+            "… 2 satır daha · tamamı Çalışma günlüğünde\n");
         model.Footer = "2 adım · 00:58 · 1 dosya değişti";
         return model;
     }
@@ -162,23 +156,44 @@ internal static class WorklogPreviewScenarios
         return model;
     }
 
+    /// <summary>The showcase of §6.2/§6.3: what, where, how much and the exact characters that changed.</summary>
     private static WorklogCardViewModel SmallChange()
     {
-        var model = Base("TahtaPilot", "chatgpt·dev", WorklogVisualState.Succeeded, "Kod değişikliği uygulandı");
-        model.FactLine = "1 dosya · +1 −1 · tahta.css";
-        model.SetCode(
-            "diff · 10:05:44",
-            [new("tahta.css", 1, 1)],
-            [
-                new(DiffLineKind.File, string.Empty, "public/css/tahta.css"),
-                new(DiffLineKind.Removed, "212", "  font-size: 12px;"),
-                new(DiffLineKind.Added, "212", "  font-size: 18px;"),
-            ]);
-        model.Footer = "1 adım · 00:02 · 1 dosya değişti";
+        var model = Base("Talvora-MCP", "chatgpt·dev", WorklogVisualState.Succeeded, "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya");
+        model.TaskNote = "D12 — git pull oturum kullanıcısıyla çalışsın";
+        model.Purpose = "git pull artık oturum kullanıcısının SSH anahtarını kullanıyor";
+        model.FactLine = "2 dosya · +5 −1 · GitTools.cs, GitSafeDirectoryRegression.ps1";
+        model.SetChanges(
+        [
+            ("GitTools.cs", 4, 0, ["ShouldUseInteractiveUserForRemoteGitAsync"]),
+            ("GitSafeDirectoryRegression.ps1", 1, 1, []),
+        ]);
+        Code(model, "diff · 16:18:07",
+            "+++ b/src/Talvora/Tools/GitTools.cs\n" +
+            "@@ -790,6 +790,10 @@ private static async Task<bool> ShouldUseInteractiveUserForRemoteGitAsync(\n" +
+            "                 string.Equals(\n" +
+            "                     arguments[index],\n" +
+            "                     \"fetch\",\n" +
+            "-                    StringComparison.OrdinalIgnoreCase))\n" +
+            "+                    StringComparison.OrdinalIgnoreCase) ||\n" +
+            "+                string.Equals(\n" +
+            "+                    arguments[index],\n" +
+            "+                    \"pull\",\n" +
+            "+                    StringComparison.OrdinalIgnoreCase))\n" +
+            "+++ b/tests/GitSafeDirectoryRegression.ps1\n" +
+            "@@ -36,1 +36,1 @@\n" +
+            "-    $text -match '\"push\"[\\s\\S]*?\"fetch\"' -and\n" +
+            "+    $text -match '\"push\"[\\s\\S]*?\"fetch\"[\\s\\S]*?\"pull\"' -and\n");
+        model.SetTimeline(
+        [
+            new(WorklogRowState.Succeeded, "16:18", "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya"),
+            new(WorklogRowState.Succeeded, "16:15", "Git işlemi tamamlandı · pull origin/main"),
+        ]);
+        model.Footer = "6 adım · 02:44 · 2 dosya değişti";
         return model;
     }
 
-    /// <summary>Exercises the real mapping path: protocol-v4 frame + unified diff preview → view model.</summary>
+    /// <summary>Exercises the real mapping path: protocol-v4 frame (with N10 fields) + unified diff → view model.</summary>
     private static WorklogCardViewModel FromFrame()
     {
         var at = new DateTimeOffset(2026, 10, 20, 11, 4, 30, TimeSpan.Zero);
@@ -186,17 +201,22 @@ internal static class WorklogPreviewScenarios
             SessionId: "preview",
             Sequence: 1,
             TimestampUtc: at,
-            Header: new Talvora.Shared.WorklogSessionHeader("Talvora-MCP", "ChatGPT · Dev"),
+            Header: new Talvora.Shared.WorklogSessionHeader("Talvora-MCP", "ChatGPT · Dev", "Q6 — araç argümanları çağrıdan önce denetlensin"),
             Current: new Talvora.Shared.WorklogStep(
-                Talvora.Shared.WorklogStepCategory.Generic,
+                Talvora.Shared.WorklogStepCategory.SourceEdit,
                 Talvora.Shared.WorklogStepState.Succeeded,
-                "Kod değişikliği uygulandı",
-                "2 dosya · +3 −1 · ToolArgumentValidator.cs, Program.cs",
+                "Kod değişikliği uygulandı · Program.cs ve 1 dosya",
+                "2 dosya · +5 −1 · Program.cs, ToolResultTextPolicy.cs",
                 null,
-                0.8),
+                0.8,
+                "Hatalı argümanlı çağrılar araç çalışmadan anlaşılır bir hatayla geri dönüyor",
+                [
+                    new("Program.cs", 4, 0, ["filters.AddCallToolFilter"]),
+                    new("ToolResultTextPolicy.cs", 1, 1, []),
+                ]),
             Timeline:
             [
-                new(at, Talvora.Shared.WorklogStepState.Succeeded, "Kod değişikliği uygulandı · 2 dosya"),
+                new(at, Talvora.Shared.WorklogStepState.Succeeded, "Kod değişikliği uygulandı · Program.cs ve 1 dosya"),
                 new(at.AddMinutes(-2), Talvora.Shared.WorklogStepState.Failed, "Kod değişikliği uygulanamadı · dosya değişmişti"),
             ],
             Totals: new Talvora.Shared.WorklogTotals(4, 151, 2,
@@ -221,6 +241,12 @@ internal static class WorklogPreviewScenarios
         var model = new WorklogCardViewModel();
         WorklogCardMapper.Apply(model, frame, "MSI", stale: false);
         return model;
+    }
+
+    private static void Code(WorklogCardViewModel model, string header, string preview)
+    {
+        var (files, lines) = UnifiedDiffViewParser.Parse(preview);
+        model.SetCode(header, files, lines);
     }
 
     private static WorklogCardViewModel Base(string project, string actor, WorklogVisualState state, string title) =>

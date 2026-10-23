@@ -1,0 +1,6 @@
+# SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
+0751f54edfa3fc44704491543d6e511488eefa6fd30d839942264cd2e053b8a9  WorklogPlaces.cs
+0d411ad310327e2564893841f5b1ac29e21d4a88a9107d6cab84ff993e293d50  Program.N10Changes.cs
+b8d806cbeee6ba80422229cf5eb3720b8e2af7d0af17db4faad1024c73c9b117  DeclarationLine.cs
+b98f17864e42be365e63259fb553d4555e745bfb746af3b8d37cc9c2092fb520  WorklogNote.cs
+f8fb3080239fc9b6cb02c5b105eb9d67ee7c8321e887a4dad7a5edbc0d5a92b4  WorklogNoteTools.cs

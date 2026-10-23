@@ -76,7 +76,7 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
         highContrastActive = highContrast;
         string[] surfaces = ["Wl.Bg", "Wl.Surface", "Wl.Raised", "Wl.Terminal"];
         string[] texts = ["Wl.Text", "Wl.Muted", "Wl.Green", "Wl.Cyan", "Wl.Amber", "Wl.Red", "Wl.Border", "Wl.BorderStrong"];
-        string[] tints = ["Wl.AddedBg", "Wl.RemovedBg", "Wl.HunkBg"];
+        string[] tints = ["Wl.AddedBg", "Wl.RemovedBg", "Wl.HunkBg", "Wl.AddedEmphasisBg", "Wl.RemovedEmphasisBg"];
         foreach (var key in surfaces.Concat(texts).Concat(tints).Append("Wl.Faint"))
         {
             Resources.Remove(key);

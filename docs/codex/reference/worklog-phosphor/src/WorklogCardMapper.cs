@@ -40,6 +40,11 @@ public static class WorklogCardMapper
         model.FactLine = stale
             ? $"{frame.Header.ActorName} {FormatAge(DateTimeOffset.UtcNow - frame.TimestampUtc)} yeni bilgi göndermedi · son: {frame.TimestampUtc.ToLocalTime():HH:mm:ss}"
             : frame.Current.FactLine;
+        model.TaskNote = frame.Header.TaskNote;
+        model.Purpose = stale ? null : frame.Current.Purpose;
+        model.SetChanges(stale || frame.Current.Changes is null
+            ? null
+            : frame.Current.Changes.Select(change => (change.File, change.Added, change.Removed, change.Places)).ToArray());
         model.OutcomeReason = stale ? null : frame.Current.Outcome?.PlainReason;
         model.OutcomeNextStep = stale ? null : frame.Current.Outcome?.NextStep;
 

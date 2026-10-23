@@ -32,6 +32,9 @@
     <SolidColorBrush x:Key="Wl.Red" Color="{StaticResource Wl.Red.Color}" />
     <SolidColorBrush x:Key="Wl.AddedBg" Color="#1A39FF88" />
     <SolidColorBrush x:Key="Wl.RemovedBg" Color="#1AFF4D6A" />
+    <!-- Word-level highlight of the characters that really changed (§6.3). -->
+    <SolidColorBrush x:Key="Wl.AddedEmphasisBg" Color="#4D39FF88" />
+    <SolidColorBrush x:Key="Wl.RemovedEmphasisBg" Color="#4DFF4D6A" />
     <SolidColorBrush x:Key="Wl.HunkBg" Color="#125BD8FF" />
 
     <LinearGradientBrush x:Key="Wl.LiveLine" StartPoint="0,0" EndPoint="1,0">

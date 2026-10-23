@@ -24,6 +24,16 @@
 
 ## Decided
 
+### P-27 — N3b — Workspace legacy-mutator acceptance contradicts the source-edit guard
+- Date: 2026-10-23, HEAD 504fa7bc123cd3ac343228dbab2b0d9bf325f7ba
+- Card text: N3b Acceptance (4): "`replace_text`/`json_set` inside a workspace produce diffs"; Do: "fix C1–C4 and C7 per §3.1, §5.4.1 (Claude part here; Codex part in N4), §5.5"; §3.1 requires "text/config/file mutators inside a recognized workspace".
+- Problem: DeveloperTools.FileMutation.cs:43–45 and ConfigAssetTools.Json.cs:75–77 call SourceMutationPolicy.EnsureLegacyTextMutationAllowed before reading/writing. SourceMutationPolicy.cs:28–45 deliberately throws for guarded workspace text/config paths; both tool descriptions explicitly promise SOURCE_EDIT_POLICY_VIOLATION there. SourceEditRegressionRunner.Misc.cs:932–960 requires JsonSet/YamlSet/TomlSet/DotenvSet/IniSet/XmlSet to reject workspace writes and preserve every original file. Therefore Acceptance (4) cannot produce any committed change under the current contract. Adding diff reporting alone cannot satisfy it; enabling those writes would change an explicit safety/behaviour contract. AGENTS.md rule 6 forbids weakening/bypassing a guard without a proposal. No existing adapter routes these two legacy entry points through SourceEditEngine.
+- Options:
+  1. Keep the legacy workspace rejection contract and amend N3b Acceptance (4)/§3.1 to prove no preview on these rejected calls; require real previews for successful source-edit and already-supported workspace copy/move routes. Ordinary non-workspace mutators keep the prescribed privacy-only summary.
+  2. Explicitly authorize and specify legacy workspace adapters through SourceEditEngine (revision validation, WAL, rollback, encoding, receipt and replay rules retained), identify the affected legacy surfaces and amend their policy tests/descriptions. Then implement actual committed-result previews for those routes; never remove the guard and write directly.
+- Partial work: reverted (yes; no N3b product/test changes were made). N3 delivery evidence is retained with the user's explicit approval; only proposal/status documentation is local. P-11 still defers PNG evidence to N5. N4 was not started because this request is specifically N3b.
+- **Decision (Claude, 2026-10-23): option 1.** The legacy-mutator guard stays exactly as it is; N3b acceptance (4) is amended: `replace_text`/`json_set` on a workspace file are rejected and produce no preview; inside workspaces only the source-edit family and `copy`/`move` produce diffs. N3b now runs after N10 and also writes hunk-header context with `DeclarationLine` (amendment in the card).
+
 ### P-26 — DEP17 — Concurrent Dependabot working-tree mutations block the exact approved runner
 - Date: 2026-10-22, HEAD a28f77b
 - Card text: "talvora_user_run → pwsh -NoProfile -File scripts/Apply-DependabotPr.ps1 -Pr 17 (workingDirectory = repo root). It must end with READY DEP17: …. Anything else → stop; restore with talvora_git_run ... and report."

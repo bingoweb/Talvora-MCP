@@ -23,7 +23,7 @@
 
 ## In progress
 
-(none)
+N3b — waiting for Claude: P-27; N3 delivery evidence retained with explicit user approval on 2026-10-23. Documentation only; no N3b product/test changes.
 
 ## Agent queue
 
@@ -75,10 +75,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D15 — Delivery-gate refusals reach the agent (SourceEdit GREEN, signed-in Full 55/0; exact-commit delivery evidence follows)
 - [x] D16 — Local evidence gates parse as strictly as the push gate (signed-in Full 56/0; exact-commit GitHub CI check after push)
 - [x] N2 — Worklog: protocol v4, sessions, project/actor context (P-11; signed-in Full 56/0; CI 39819719963 green; installed c56c7ee verified)
-- [~] N3 — Worklog: real facts from results (P-11; signed-in Full 56/0; CI pending, exact-commit deployment follows)
-- [ ] N3b — Worklog: code terminal real, complete, persistent (P-11 decided)
+- [x] N3 — Worklog: real facts from results (P-11; signed-in Full 56/0; CI 39827653752 green; installed 504fa7b verified)
+- [ ] N9 — Worklog: every step names what it works on + approved Turkish tool titles (§6.1)
+- [ ] N10 — Worklog: task line, purpose, changed places (ne · nerede · fark, §6.2) + talvora_worklog_note
+- [ ] RM1 — Remotion animations: guide, detached runs, live card, automatic routing (Phase RM)
+- [ ] N3b — Worklog: code terminal real, complete, persistent (P-27 decided; hunk context via DeclarationLine; after N10)
 - [ ] N4 — Worklog: agent jobs tell their story (+ Codex code terminal) (P-11 decided)
-- [ ] N5 — Worklog card visual redesign + preview harness (renders N1–N4 proof, P-11)
+- [ ] N5 — Worklog card visual redesign + preview harness (reference updated 2026-10-23 with §6.1–6.3; after N10)
 - [ ] N6 — Worklog evidence surface ("Ayrıntılar")
 - [ ] S3 — ProgramData ACL + interactive runs out of user-controlled paths (P-12 decided: log-only startup check)
 - [ ] R1 — Agent job registry, persistence, orphan recovery, limits (P-13 decided; after S3)
@@ -89,7 +92,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] Q2a — Toolchain info/run consolidation (P-16 decided; zero capability loss)
 - [ ] Q2b — Config get/set/delete consolidation (P-16 decided; zero capability loss)
 - [ ] Q2c — Legacy text mutators removed + manifest-driven README count test (P-16 decided)
-- [ ] Q1 — Tool titles (proposal table first), shorter descriptions, payload budget
+- [ ] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget
 - [ ] Q3 — Documentation diet (P-17 decided: after Q2c, `git mv` via talvora_git_run explicitAdmin)
 - [ ] UI2 — Shell, rail, title bar, command palette
 - [ ] N7 — "Çalışma günlüğü" history page
@@ -116,7 +119,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 
 
-(none — P-20, P-21, P-22 decided)
+- P-27 — N3b: keep legacy workspace mutation rejection and amend Acceptance (4), or explicitly specify safe SourceEditEngine adapters? See PROPOSALS.md.
 
 ## Findings for Claude
 
@@ -126,12 +129,18 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-23 — Claude design (user requests): (1) descriptive desktop messages — DESIGN-WORKLOG §6.1–6.3, cards N9 (subjects + approved Turkish title table for all tools) and N10 (görev line, purpose, nerede/fark); Phosphor reference updated (answer rows, word-level highlight, dedent, compact hunks) and previews 01–08 re-rendered. (2) Remotion — Phase RM / RM1 (guide, detached user runs, status, live card, server-instruction routing); runner verified end to end on this machine (create/compositions/MP4/still/failure). All three cards were replayed from their own text on a clean clone of 504fa7b: build 0 errors, DESKTOP_PROGRESS_BEHAVIOR_GREEN, Full gate 56/0 `Hepsi geçti.` as MSI\tayla. P-27 decided (option 1). Queue: N9 → N10 → RM1 → N3b → N4 → N5.
+- 2026-10-23 — N3b (executor: Codex via Talvora): blocked before product changes by P-27; legacy workspace replace_text/json_set rejection contradicts Acceptance (4), confirmed in SourceMutationPolicy and existing typed-config policy tests.
+  No guard, test or runtime behaviour changed; N3 delivery closeout retained with explicit user approval. N4 not started; awaiting Claude's decision.
+  Signed-in MSI\tayla Fast: 13 checks / 0 errors, exit 0, last line "Hepsi geçti."; source-edit and notification suites GREEN. Exact HEAD windows-ci 39827653752 success; diff --check clean.
+  Only STATUS.md/PROPOSALS.md are local; no N3b commit/push/deploy while Acceptance (4) is unresolved, preserving the single implementation commit rule.
 - 2026-10-22 — N3 (executor: Codex via Talvora): committed receipt AddedLines/RemovedLines persisted through WAL/replay; worklog facts use actual receipts, uncapped file totals, diagnostics/test summaries and Git results; requested counts are never reported as applied.
   RED: committed receipts lacked AddedLines; rejected patch claimed requested counts; repeated console diagnostics overcounted errors. GREEN: TALVORA RECEIPT COUNTS GREEN and DESKTOP_PROGRESS_BEHAVIOR_GREEN, including unified 2-file edits, 20-file totals, three-error build, three failing names and real commit hash.
   Signed-in MSI\tayla baseline Fast 13/0; Full 56 checks, 0 failures / 46 PowerShell regressions; exit 0, last line "Hepsi geçti.". Diff --check clean.
   Supporting files: SourceEditEngine/TransactionStore carry committed counts; shared TextDiffBuilder + DiffPlex 1.9.0, central pin/three lock graphs and Apache-2.0 notices implement the prescribed §5.5 counter; fact helper and runner registrations plumb existing results.
   Context7 /mmanela/diffplex and /dotnet/docs plus upstream/NuGet vendor checks recorded in .context7/verification.json. No layout change; PNG proof remains deferred to N5 under P-11.
-  User approved preserving N2 delivery evidence in this commit. Exact-commit GitHub CI, canonical installer build/deploy, installed sourceCommit and runtime smoke follow commit/push; next N3b.
+  User approved preserving N2 delivery evidence in commit 504fa7bc123cd3ac343228dbab2b0d9bf325f7ba, pushed to both remotes. Installer build/deploy exit 0; /healthz.sourceCommit = HEAD; signed-in NATIVE_INSTALLER_RUNTIME_GREEN; tray uses the same version in session 1.
+  Exact-commit windows-ci 39827653752 GREEN. Installed connector proof: add receipt +2/-0, stale revision rejected with no receipts, delete receipt +0/-2; temporary workspace removed. Delivery closeout stays local under one-card/one-commit; next N3b (not started).
 - 2026-10-22 — N2 (executor: ChatGPT via Talvora): protocol v4 worklog frames, bounded fields/timeline; project+actor session SHA-256, 90-second idle closure, MCP surface and clientInfo, background-job sessions, same-window presenter, heartbeat stale thresholds and 3/8/5-minute terminal lifetimes. No PNG (P-11: deferred to N5).
   RED: sequential same-project calls opened separate generations. GREEN: DESKTOP_PROGRESS_BEHAVIOR_GREEN; structured v4 round-trip/rejection, same WPF window instance, distinct projects, Claude 25-second heartbeat and three-minute completion tested.
   Updated superseded assertions in tests/ModernizationPolicyRegression.ps1 to the N2 contract, not guard removals; MODERNIZATION_POLICY_GREEN.

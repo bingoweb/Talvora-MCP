@@ -1,0 +1,5 @@
+# SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
+2c692cbfb608e2ac3e67339d69eea631db680519c87fe112bb51339c7676d0fd  N9-BuildNarrative.cs.txt
+4906107a6b8d0195e33cf03a346ca74e1cfaab05235d293c8e1a930945864c3d  TalvoraToolTitles.cs
+5d8b0698cb1ca42a63cf5edde148d10228c7702ad75c7f59a11f6505eb4900e8  Program.N9Subjects.cs
+9184c42f3c434eeba298be3753c6189a56901bdcc2d2b37243f9700e79cef8a7  WorklogSubject.cs

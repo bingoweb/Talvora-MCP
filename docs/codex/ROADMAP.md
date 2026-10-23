@@ -385,7 +385,7 @@ Use it in both places; verify the option list against `git help git` for the ins
 
 **Order rule:** while Q2 is not `[x]` in STATUS, treat Q1 as blocked (skip it like a `[?]` item) and take the next card; come back to Q1 right after Q2 is done (titles for tools that Q2 removes would be wasted).
 
-**Do:** Titles are user-visible copy, so Claude decides them: Codex first generates `docs/codex/proposals/tool-titles.md` — a table `tool name | one-line English purpose | proposed Turkish title (≤ 4 words, verb-first, e.g. "Kaynak dosya oku")` for every tool on `/mcp` — adds proposal P-n "Q1 tool titles", marks Q1 `[?]` and stops. After Claude approves (edits the table), apply the approved titles verbatim. Descriptions: ≤ 220 chars, English, first sentence = what it does, second = when to use another tool; move repeated policy text into the server instructions once. Add a smoke assertion: `tools/list` JSON for `/mcp/dev` ≤ 120 KB.
+**Do:** Titles are user-visible copy and **Claude has decided them** (2026-10-23): `src/Talvora.Shared/TalvoraToolTitles.cs` (added by N9, extended by N10/RM1) is the approved table. Set every tool's protocol `title` from it — in the existing list-tools wire policy, not by editing 250 attributes; where an attribute already has a `Title`, the table value wins. No proposal table. Tools that Q2 removes simply drop out of the table in the same Q2 card. Descriptions: ≤ 220 chars, English, first sentence = what it does, second = when to use another tool; move repeated policy text into the server instructions once. Add a smoke assertion: `tools/list` JSON for `/mcp/dev` ≤ 120 KB.
 
 **Acceptance:** smoke budget test green; no tool without title; annotations unchanged.
 
@@ -747,6 +747,346 @@ Specification, tokens, wireframes and sample XAML: **`docs/codex/DESIGN-CONTROL-
 Card details (Files / Do / Don't / Acceptance) are in the design spec, section "Implementation cards".
 
 ---
+
+## Phase RM — Animations with Remotion (user request 2026-10-23)
+
+> User: "Talvora'ya Remotion eklensin; animasyon istediğimde otomatik devreye girsin — nasıl olacağını sen düşün, ChatGPT eklesin, sen denetle."
+
+**Design (Claude).** Remotion (https://www.remotion.dev, v4.0.538, React → video) runs entirely as the **signed-in user**, never as LocalSystem: it downloads a 120 MB Chrome Headless Shell into the user profile, uses the user's Node/npm cache and must open the result in the user's player.
+
+| Piece | What it does |
+|---|---|
+| `talvora_remotion_guide` (read-only) | The playbook every agent follows: 6-step workflow, authoring rules (React/remotion APIs, determinism, `staticFile`, Turkish fonts, 1920×1080@30 default), default projects folder `%USERPROFILE%\Videos\Talvora`, license note. |
+| `talvora_remotion_run` | Starts **one** step detached as the user — `create` (`npx create-video@4.0.538 --yes --blank <name>`), `compositions`, `still` (PNG), `render` (mp4 = h264, webm = vp9, gif) — and returns a `runId` at once. Never blocks the caller (lesson of P-26). One running step per project. Props go to a JSON file (Remotion cannot take inline JSON on Windows shells). |
+| runner (`Invoke-TalvoraRemotion.ps1`, written by the service into `%LOCALAPPDATA%\Talvora\Remotion`) | Runs `npx`, mirrors every line into `runs\<runId>.log`, writes `runs\<runId>.json` (`running` → `succeeded`/`failed`), opens the finished file when `openWhenDone`. |
+| `talvora_remotion_status` | Reads those files: state, real frame counter (`Rendered/Encoded n/m`), output path and size, composition ids, the compiler error block (`diagnostics`, stack frames removed) and the last log lines. |
+| desktop worklog | The run gets one live card: "Animasyon oluşturuluyor · TalvoraIntro" with `45/90 kare`, then "Animasyon hazır · TalvoraIntro-…mp4 · 2.3 MB" or a plain failure reason. The tool calls themselves stay silent. |
+| automatic routing | `RemotionTools.ServerInstructions` is appended to the MCP server instructions every client receives: any request for an animation, motion graphic, intro/logo, explainer/promo video or GIF (also in Turkish) → call `talvora_remotion_guide` first. The guide's tool description repeats the trigger words. |
+
+**Verified by Claude on this machine (2026-10-23, as `MSI	ayla`)** with the exact runner script: `create` 83 s → project with `src/index.ts`/`Root.tsx`; a Turkish intro composition written per the guide; `compositions` 43 s (first run downloads Headless Shell) → `["TalvoraIntro"]`; `render` 10 s → 1920×1080 MP4 222 kB; `still` frame 100 → PNG with correct `çğıöşü`; a deliberately broken `Root.tsx` → `failed` + `diagnostics` starting with `Error: × Module build failed … Syntax Error`. The replayed card on a clean clone: build 0 errors, regression GREEN, full gate (Log).
+
+License: free for individuals, non-profits and companies up to 3 employees (Remotion LICENSE.md); the guide states it.
+
+### RM1 — Remotion animations: guide, detached runs, live card, automatic routing
+
+> After N10 (uses `WorklogSubject`, the N10 session fields and the title table).
+
+**Files:** new `src/Talvora/Tools/RemotionTools.cs`, new `src/Talvora/TalvoraDesktopRemotionWorklog.cs`, `src/Talvora/Program.cs`, `src/Talvora/WorklogCopy.cs`, `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `src/Talvora/TalvoraDesktopWorklogState.cs`, tool manifest / title table / metadata (+1 open-world) and surface counts, the two source-regression scripts, smoke surface/metadata scenarios, `README.md`, new `tests/Talvora.Notification.Regression/Program.RemotionWorklog.cs`, `tests/Talvora.Notification.Regression/Program.cs`.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Context7 first: `/remotion-dev/remotion` (CLI `render`/`still`/`compositions`, `create-video --yes --blank`, `--props` file on Windows); record it in `.context7/verification.json`. Do not change the pinned version `4.0.538` (a later DEP card updates it).
+
+Step 1 — copy `docs/codex/reference/remotion/RemotionTools.cs` → `src/Talvora/Tools/RemotionTools.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `ef6ca148e756b2801c806de013fe3128bcb3d0a8a8fd5730de2c96adfcd35834`).
+
+Step 2 — copy `docs/codex/reference/remotion/TalvoraDesktopRemotionWorklog.cs` → `src/Talvora/TalvoraDesktopRemotionWorklog.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `8b0ed2bd79f5daa930ae952c98f0479430d81f3de2cb6772537a24b6c4cf2e27`).
+
+Step 3 — `src/Talvora/Program.cs` — replace
+
+```csharp
+        options.ServerInstructions =
+            SourceEditRoutingContract.ServerInstructions;
+```
+
+with
+
+```csharp
+        options.ServerInstructions =
+            SourceEditRoutingContract.ServerInstructions + " " +
+            RemotionTools.ServerInstructions;
+```
+
+Step 4 — `src/Talvora/Program.cs` — replace
+
+```csharp
+CodexBackgroundJobTools.DesktopNotifier =
+    app.Services.GetRequiredService<TalvoraDesktopProgressNotifier>();
+```
+
+with
+
+```csharp
+CodexBackgroundJobTools.DesktopNotifier =
+    app.Services.GetRequiredService<TalvoraDesktopProgressNotifier>();
+RemotionTools.DesktopNotifier =
+    app.Services.GetRequiredService<TalvoraDesktopProgressNotifier>();
+```
+
+Step 5 — `src/Talvora/WorklogCopy.cs` — replace
+
+```csharp
+    internal static readonly WorklogTitles Generic =
+```
+
+with
+
+```csharp
+    internal static readonly WorklogTitles RemotionCreate = new("Animasyon projesi hazırlanıyor", "Animasyon projesi hazır", "Animasyon projesi hazırlanamadı");
+    internal static readonly WorklogTitles RemotionCheck = new("Animasyon denetleniyor", "Animasyon denetlendi", "Animasyon denetlenemedi");
+    internal static readonly WorklogTitles RemotionStill = new("Önizleme karesi hazırlanıyor", "Önizleme karesi hazır", "Önizleme karesi hazırlanamadı");
+    internal static readonly WorklogTitles RemotionRender = new("Animasyon oluşturuluyor", "Animasyon hazır", "Animasyon oluşturulamadı");
+    internal static readonly WorklogTitles Generic =
+```
+
+Step 6 — `src/Talvora/TalvoraDesktopProgressNotifier.cs` — replace
+
+```csharp
+            "worklog_note" => false,
+```
+
+with
+
+```csharp
+            "worklog_note" => false,
+            "remotion_guide" => false,
+            "remotion_run" => false,
+            "remotion_status" => false,
+```
+
+The background watch (RM2 part of this card) reports the run; the tool calls stay silent so the user sees one card, not two.
+
+Step 7 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+        public IReadOnlyList<WorklogFileChange>? Changes { get; set; }
+    }
+```
+
+with
+
+```csharp
+        public IReadOnlyList<WorklogFileChange>? Changes { get; set; }
+        /// <summary>Real progress counter of a running background step ("45/90 kare"); RM1 only.</summary>
+        public string? ProgressFact { get; set; }
+    }
+```
+
+Step 8 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+        session.Purpose = purpose;
+        session.Changes = changes;
+```
+
+with
+
+```csharp
+        session.Purpose = purpose;
+        session.Changes = changes;
+        session.ProgressFact = null;
+```
+
+Step 9 — `src/Talvora/TalvoraDesktopWorklogState.cs` — replace
+
+```csharp
+                    ToWorklogState(kind), title, isTerminal ? evidence?.Summary : null, outcome,
+```
+
+with
+
+```csharp
+                    ToWorklogState(kind), title, isTerminal ? evidence?.Summary : session.ProgressFact, outcome,
+```
+
+Step 10 — `src/Talvora.Shared/TalvoraToolManifest.cs` — replace
+
+```csharp
+        "talvora_worklog_note",
+```
+
+with
+
+```csharp
+        "talvora_worklog_note",
+        "talvora_remotion_guide",
+        "talvora_remotion_run",
+        "talvora_remotion_status",
+```
+
+Step 11 — `src/Talvora.Shared/TalvoraToolTitles.cs` — replace
+
+```csharp
+        ["talvora_registry_create_key"] =
+```
+
+with
+
+```csharp
+        ["talvora_remotion_guide"] = "Animasyon rehberini getir",
+        ["talvora_remotion_run"] = "Animasyon adımı başlat",
+        ["talvora_remotion_status"] = "Animasyon durumunu oku",
+        ["talvora_registry_create_key"] =
+```
+
+Step 12 — `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs` — replace
+
+```csharp
+public const int ExpectedReviewedToolCount = 252;
+```
+
+with
+
+```csharp
+public const int ExpectedReviewedToolCount = 255;
+```
+
+Step 13 — `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs` — replace
+
+```csharp
+public const int ExpectedOpenWorldToolCount = 85;
+```
+
+with
+
+```csharp
+public const int ExpectedOpenWorldToolCount = 86;
+```
+
+Step 14 — `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs` — replace
+
+```csharp
+            "talvora_python_venv_create",
+            "talvora_run_powershell",
+```
+
+with
+
+```csharp
+            "talvora_python_venv_create",
+            "talvora_remotion_run",
+            "talvora_run_powershell",
+```
+
+Step 15 — `src/Talvora.Shared/TalvoraMcpToolSurfacePolicy.cs` — replace
+
+```csharp
+    public const int ExpectedFullToolCount = 252;
+    public const int ExpectedDevelopmentToolCount = 215;
+```
+
+with
+
+```csharp
+    public const int ExpectedFullToolCount = 255;
+    public const int ExpectedDevelopmentToolCount = 218;
+```
+
+Step 16 — `tests/CodexCliIntegrationSourceRegression.ps1` — replace
+
+```powershell
+ExpectedFullToolCount = 252') -and
+```
+
+with
+
+```powershell
+ExpectedFullToolCount = 255') -and
+```
+
+Step 17 — `tests/CodexCliIntegrationSourceRegression.ps1` — replace
+
+```powershell
+ExpectedDevelopmentToolCount = 215') -and
+```
+
+with
+
+```powershell
+ExpectedDevelopmentToolCount = 218') -and
+```
+
+Step 18 — `tests/FocusedMcpSurfaceSourceRegression.ps1` — replace
+
+```powershell
+ExpectedFullToolCount = 252') -and
+```
+
+with
+
+```powershell
+ExpectedFullToolCount = 255') -and
+```
+
+Step 19 — `tests/FocusedMcpSurfaceSourceRegression.ps1` — replace
+
+```powershell
+ExpectedDevelopmentToolCount = 215') -and
+```
+
+with
+
+```powershell
+ExpectedDevelopmentToolCount = 218') -and
+```
+
+Step 20 — `tests/Talvora.Smoke/SmokeScenarios.SurfacePolicy.cs` — replace
+
+```csharp
+        AssertSurface(
+            "talvora_worklog_note",
+            development: true,
+            administration: false);
+```
+
+with
+
+```csharp
+        AssertSurface(
+            "talvora_worklog_note",
+            development: true,
+            administration: false);
+        foreach (var remotionTool in new[] { "talvora_remotion_guide", "talvora_remotion_run", "talvora_remotion_status" })
+        {
+            AssertSurface(remotionTool, development: true, administration: false);
+        }
+```
+
+Step 21 — `tests/Talvora.Smoke/SmokeScenarios.MetadataPolicy.cs` — replace
+
+```csharp
+        AssertWorldScope("talvora_user_run", true);
+```
+
+with
+
+```csharp
+        AssertWorldScope("talvora_user_run", true);
+        AssertWorldScope("talvora_remotion_run", true);
+        AssertWorldScope("talvora_remotion_guide", false);
+        AssertWorldScope("talvora_remotion_status", false);
+```
+
+Step 22 — `README.md` — replace
+
+```markdown
+- **Desktop worklog task line:**
+```
+
+with
+
+```markdown
+- **Animations with Remotion:** `talvora_remotion_guide`, `talvora_remotion_run` and `talvora_remotion_status` create Remotion projects, check compositions and render stills, MP4/WebM videos and GIFs as the signed-in user, detached, with live progress on the desktop worklog card. The server instructions route every animation request to the guide first.
+- **Desktop worklog task line:**
+```
+
+Step 23 — copy `docs/codex/reference/remotion/Program.RemotionWorklog.cs` → `tests/Talvora.Notification.Regression/Program.RemotionWorklog.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `424c1e255f06e122dc08c394aa1f02c8e99167f5b2a3ae2584146f2a4b5044db`).
+
+Step 24 — `tests/Talvora.Notification.Regression/Program.cs` — replace
+
+```csharp
+        await AssertN10ChangesAsync();
+```
+
+with
+
+```csharp
+        await AssertN10ChangesAsync();
+        await AssertRemotionWorklogAsync();
+```
+
+**Don't:** run Remotion as LocalSystem or through `talvora_run_powershell`; block a tool call until a render ends; add a Remotion MCP server (deprecated upstream — the guide replaces it); install global npm packages.
+
+**Acceptance:** `DESKTOP_PROGRESS_BEHAVIOR_GREEN` (includes the RM test); smoke surface/metadata green; Full gate `Hepsi geçti.`; installer + deploy; live through the installed service (signed-in session): `talvora_remotion_guide` → `defaultProjectsRoot` ends with `\Videos\Talvora`; `talvora_remotion_run {action:"create", name:"talvora-rm1-deneme"}` → poll status to `succeeded`; `compositions` → `["MyComp"]`; `render {compositionId:"MyComp", format:"gif", scale:0.25, openWhenDone:false}` → `succeeded`, output size > 0 (the blank template renders an empty 2 s clip); paste runIds, states and the output size into the Log; the desktop showed one card per step; GitHub CI green (10b).
 
 ## Audit fixes (external audits by Claude)
 
