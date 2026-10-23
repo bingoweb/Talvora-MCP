@@ -41,6 +41,33 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Length >= 2 &&
+            string.Equals(args[0], "--worklog-preview", StringComparison.OrdinalIgnoreCase))
+        {
+            var exitCode = 1;
+            var renderThread = new Thread(() =>
+            {
+                try
+                {
+                    _ = new System.Windows.Application { ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown };
+                    foreach (var path in Talvora.Tray.Worklog.WorklogPreviewScenarios.RenderAll(args[1]))
+                    {
+                        Console.WriteLine(path);
+                    }
+
+                    exitCode = 0;
+                }
+                catch (Exception ex)
+                {
+                    TrayLog.Write("Worklog preview render failed", ex);
+                }
+            });
+            renderThread.SetApartmentState(ApartmentState.STA);
+            renderThread.Start();
+            renderThread.Join();
+            return exitCode;
+        }
+
         if (args.Any(arg => string.Equals(arg, "--reconnect", StringComparison.OrdinalIgnoreCase)))
         {
             try

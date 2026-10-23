@@ -81,8 +81,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] N10 — Worklog: task line, purpose, changed places (ne · nerede · fark, §6.2) + talvora_worklog_note; signed-in Full 56/0; exact-commit deployment, live accepted:true and CI evidence follow in Gitea #9.
 - [x] RM1 — Remotion animations: guide, detached runs, live card, automatic routing (Phase RM); signed-in Full 56/0; exact-commit installed runs, desktop card and CI evidence follow in Gitea #9.
 - [x] N3b — Worklog: code terminal real, complete, persistent (P-27; declaration context); signed-in Full 56/0; exact-commit installed/desktop/CI evidence follows in Gitea #9.
-- [~] N4 — Agent job activity and Codex code terminal (signed-in Full 57/0; exact-commit install and GitHub CI pending; no live Codex run per P-28)
-- [ ] N5 — Worklog card visual redesign + preview harness (after N4; reference updated 2026-10-23)
+- [x] N4 — Agent job activity and Codex code terminal (installed e49151a, signed-in Full 57/0; GitHub CI 40012319673 green, no live Codex per P-28)
+- [~] N5 — Phosphor worklog card and preview harness (reference SHA 8/8, PNG byte match 8/8, desktop regression GREEN; live screenshot, GitHub CI and signed-in Full gate evidence pending)
 - [?] N6 — Worklog evidence surface ("Ayrıntılar") (waiting for N5)
 - [x] S3 — ProgramData ACL + protected user-session InteractiveRuns (P-12; signed-in Full 56/0, privacy regression GREEN; installer/CI follow commit; live Codex exec deferred by U7/U8)
 - [ ] R1 — Agent job registry, persistence, orphan recovery, limits (P-13 decided; after S3)
@@ -134,6 +134,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-23 — N5 (executor: ChatGPT via Talvora): installed all 8 Claude Phosphor sources verbatim; normalized SHA256SUMS 8/8 and all 8 generated preview PNG SHA256 8/8 byte-identical. Removed two old card files and Talvora.Notification palette entries; wired session window, preview CLI and prescribed size regression. No design gaps filled.
+  API compile adaptations: CS1503 DesktopProgressMessage→DesktopWorklogFrame at presenter.Update, CS1061 OperationId→SessionId in preserved placement tests; private stale/dismiss test fields renamed to reference's identifiers. Tray + notification build 0 errors; DESKTOP_PROGRESS_BEHAVIOR_GREEN.
+  Signed-in Full gate was invoked once as MSI\\tayla, but the detached process ended without a capturable exit/output (no unverified GREEN claim; not rerun without code changes). Live installed screenshot, Gitea preview attachment and exact-commit GitHub CI still pending. WPF Context7 /dotnet/wpf checked; Awwwards homepage researched only as evidence.
 - 2026-10-23 — N4 (executor: ChatGPT via Talvora): classify completed Codex JSONL and Claude stream events into Turkish activity lines with no raw command, track actual changed files and totals, and keep final summaries in technical evidence only. Codex code terminal uses a 2,000-file/64-MB pre-job SHA-256/text snapshot and DiffPlex; existing dirty files are not attributed to Codex.
   RED: N4-only compile (missing ChangedFiles); GREEN: sanitised Codex/Claude JSONL fixtures, Codex diff and counts, Claude denial/heartbeat, command privacy (N4_AGENT_EVENTS_GREEN); IntegrationPolicy legacy expectation updated, targeted Codex smoke GREEN. Signed-in Full gate 57/0 Hepsi geçti.; Context7 /openai/codex and /dotnet/docs, official Codex exec event schema and Awwwards spec evidence refreshed.
   No live Codex run (P-28, U7/U8); before/after agent-card PNG deferred to N5 (P-11). Exact-commit installer/deployment and GitHub windows-ci pending; W13 already uses Claude's 60-second producer interval and tray's doubled stale threshold.

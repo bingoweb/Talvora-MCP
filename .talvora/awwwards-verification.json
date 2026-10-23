@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T19:15:36Z",
+  "verifiedAtUtc": "2026-10-23T19:53:46Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "N4: DESIGN-WORKLOG 5.4 and 5.4.1 agent-event worklog behavior only; existing visual layout unchanged. Awwwards homepage checked live 2026-10-23 (Awwwards - Website Awards - Best Web Design Trends).",
+  "scope": "N5: DESIGN-WORKLOG 3, 3.1, 7 exact Phosphor card; eight approved reference PNG renders byte-identical on this machine. Awwwards homepage checked live on 2026-10-23; evidence only, no visual deviation.",
   "references": [
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
-    "DESIGN-WORKLOG 5.4: Codex/Claude jobs open or join the project's session; live activity lines are classified from real events, never from command lines.",
-    "DESIGN-WORKLOG 5.4.1: Codex applied changes use a lightweight snapshot at job start (SHA-256 plus bounded text, skipping .git/bin/obj/node_modules); pre-existing uncommitted edits are not attributed to Codex.",
-    "DESIGN-WORKLOG 5.2 and N4: Claude's 25-second heartbeat sets ExpectedNextUpdateSeconds to 60; the tray waits two such intervals. P-11 defers before/after PNG evidence to N5."
+    "DESIGN-WORKLOG §3: Worklog card anatomy follows the exact 'Phosphor' reference and maps N10 ne/nerede/fark/sonuç data without inventing rows.",
+    "DESIGN-WORKLOG §3.1: Vertical code terminal retains the specified reveal, height limits, multi-file tabs, scroll, gutter, continuation and word-level highlighting.",
+    "DESIGN-WORKLOG §7: Approved Phosphor theme replaces previous Talvora.Notification colour resources, and eight reference PNGs provide the sole visual target; no Awwwards-inspired styling changes."
   ]
 }

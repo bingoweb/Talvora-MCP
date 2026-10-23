@@ -17,7 +17,6 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
     private const int MaximumPlacementDocumentBytes = 16 * 1024;
     private const int ScreenMarginPixels = 18;
     private const int CardGapPixels = 10;
-    private const double DefaultCodeNotificationHeightDip = 240;
     private const int PlacementDocumentVersion = 2;
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoZOrder = 0x0004;
@@ -174,31 +173,12 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             _windows[sessionId] = window;
         }
 
-        if (!string.IsNullOrWhiteSpace(message.Evidence?.CodePreview))
+        if (_hasPreferredSize)
         {
-            if (_hasPreferredSize &&
-                (!window.IsVisible ||
-                 window.SizeToContent != System.Windows.SizeToContent.Manual))
-            {
-                window.ApplyPreferredSize(
-                    _preferredWidthDip,
-                    _preferredHeightDip);
-            }
-            else if (!_hasPreferredSize &&
-                     (!window.IsVisible ||
-                      window.SizeToContent != System.Windows.SizeToContent.Manual))
-            {
-                // First use stays compact; after a code-free shrink, freeze the current size.
-                var heightDip = window.IsVisible &&
-                                double.IsFinite(window.ActualHeight) &&
-                                window.ActualHeight > 0
-                    ? window.ActualHeight
-                    : DefaultCodeNotificationHeightDip;
-                window.ApplyPreferredSize(window.Width, heightDip);
-            }
+            window.ApplyPreferredSize(_preferredWidthDip, _preferredHeightDip);
         }
 
-        window.Update(message);
+        window.Update(message.WorklogFrame!);
 
         if (!window.IsVisible)
         {

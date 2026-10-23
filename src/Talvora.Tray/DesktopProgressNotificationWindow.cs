@@ -1,239 +1,210 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Automation;
-using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Shell;
 using System.Windows.Threading;
 using Talvora.Shared;
-using SymbolIcon = Wpf.Ui.Controls.SymbolIcon;
-using SymbolRegular = Wpf.Ui.Controls.SymbolRegular;
-using Brushes = System.Windows.Media.Brushes;
-using WpfButton = System.Windows.Controls.Button;
-using WpfButtonBase = System.Windows.Controls.Primitives.ButtonBase;
-using WpfScrollBar = System.Windows.Controls.Primitives.ScrollBar;
-using WpfTextBox = System.Windows.Controls.TextBox;
-using WpfTextBoxBase = System.Windows.Controls.Primitives.TextBoxBase;
+using Talvora.Tray.Worklog;
+using WpfClipboard = System.Windows.Clipboard;
 
 namespace Talvora.Tray;
 
-internal sealed partial class DesktopProgressNotificationWindow : Window
+/// <summary>
+/// Desktop worklog card window (DESIGN-WORKLOG §3, §3.1, §5, §7 "Phosphor").
+/// Hosts <see cref="WorklogCardView"/>; owns placement interaction, lifetimes and stale detection.
+/// </summary>
+internal sealed class DesktopProgressNotificationWindow : Window
 {
-    private static readonly TimeSpan StartedLifetime =
-        TimeSpan.FromMinutes(15);
-    private static readonly TimeSpan RunningLifetime =
-        TimeSpan.FromMinutes(15);
-    private static readonly TimeSpan CompletedLifetime =
-        TimeSpan.FromMinutes(3);
-    private static readonly TimeSpan FailureLifetime =
-        TimeSpan.FromMinutes(8);
-    private static readonly TimeSpan CancelledLifetime =
-        TimeSpan.FromMinutes(5);
-    private static readonly TimeSpan ActiveStaleThreshold =
-        TimeSpan.FromSeconds(15);
-    private static readonly TimeSpan StaleCheckInterval =
-        TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan SucceededLifetime = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan FailedLifetime = TimeSpan.FromMinutes(8);
+    private static readonly TimeSpan CancelledLifetime = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan StaleCheckInterval = TimeSpan.FromSeconds(5);
+    private const double DefaultWidth = 460;
+    private const double DefaultCodeMaxHeight = 420;
     private const int WmEnterSizeMove = 0x0231;
     private const int WmExitSizeMove = 0x0232;
 
-    private Border _root = null!;
-    private Border _accent = null!;
-    private Border _stateBadge = null!;
-    private SymbolIcon _stateIcon = null!;
-    private TextBlock _stateBadgeText = null!;
-    private TextBlock _traceLabel = null!;
-    private TextBlock _title = null!;
-    private TextBlock _message = null!;
-    private TextBlock _meta = null!;
-    private Border _diffPanel = null!;
-    private TextBlock _diffHeader = null!;
-    private RowDefinition _diffRow = null!;
-    private RowDefinition _diffContentRow = null!;
-    private WpfTextBox _codePreview = null!;
-    private WpfButton _pinButton = null!;
-    private WpfButton _closeButton = null!;
-    private WpfButton _copyDiffButton = null!;
-    private DispatcherTimer _dismissTimer = null!;
-    private DispatcherTimer _staleTimer = null!;
-    private readonly TranslateTransform _translateTransform = new();
-    private TimeSpan _dismissAfter = StartedLifetime;
-    private bool _isPointerOver;
-    private bool _isPinned;
-    private bool _isClosing;
-    private bool _manualClose;
-    private bool _isStale;
-    private bool _wasShowingCode;
-    private bool _autoDiffHeightExpanded;
-    private DateTimeOffset _lastPayloadUpdatedUtc;
-    private DesktopProgressMessage? _lastMessage;
-    private HwndSource? _windowSource;
-    private double _interactiveResizeStartWidth;
-    private double _interactiveResizeStartHeight;
+    private readonly WorklogCardView view;
+    private readonly WorklogCardViewModel model = new();
+    private readonly DispatcherTimer dismissTimer;
+    private readonly DispatcherTimer staleTimer;
+    private readonly TranslateTransform enterShift = new();
+    private DesktopWorklogFrame? lastFrame;
+    private DateTimeOffset lastFrameReceivedUtc;
+    private TimeSpan dismissAfter = SucceededLifetime;
+    private bool isPointerOver;
+    private bool isPinned;
+    private bool isClosing;
+    private bool manualClose;
+    private bool isStale;
+    private HwndSource? windowSource;
+    private double resizeStartWidth;
+    private double resizeStartHeight;
 
     public DesktopProgressNotificationWindow()
     {
-        ConfigureWindowShell();
-        BuildVisualTree();
-        ConfigureTimersAndInteraction();
-        ApplyEnvironmentPalette();
-        SystemParameters.StaticPropertyChanged +=
-            OnSystemParametersChanged;
+        Width = DefaultWidth;
+        MinWidth = 380;
+        MaxWidth = 720;
+        MinHeight = 120;
+        SizeToContent = SizeToContent.Height;
+        WindowStyle = WindowStyle.None;
+        ResizeMode = ResizeMode.CanResize;
+        ShowInTaskbar = false;
+        ShowActivated = false;
+        Topmost = true;
+        AllowsTransparency = false;
+        Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x09, 0x0E, 0x0C));
+        Opacity = 0;
+        RenderTransform = enterShift;
+        Title = "Talvora çalışma günlüğü";
+        WindowChrome.SetWindowChrome(this, new WindowChrome
+        {
+            CaptionHeight = 0,
+            ResizeBorderThickness = new Thickness(6),
+            GlassFrameThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(10),
+            UseAeroCaptionButtons = false,
+        });
+        AutomationProperties.SetName(this, "Talvora çalışma günlüğü");
+
+        view = new WorklogCardView { DataContext = model, CodeMaxHeight = DefaultCodeMaxHeight };
+        view.PinRequested += (_, _) =>
+        {
+            if (!isClosing)
+            {
+                PinStateChangeRequested?.Invoke(!isPinned);
+            }
+        };
+        view.CloseRequested += (_, _) => BeginClose(userInitiated: true);
+        view.CopyRequested += (_, _) => CopyCode();
+        view.PreviewMouseLeftButtonDown += OnCardMouseLeftButtonDown;
+        Content = view;
+
+        dismissTimer = new DispatcherTimer { Interval = dismissAfter };
+        dismissTimer.Tick += (_, _) =>
+        {
+            dismissTimer.Stop();
+            BeginClose();
+        };
+        staleTimer = new DispatcherTimer { Interval = StaleCheckInterval };
+        staleTimer.Tick += (_, _) => CheckForStaleWork();
+        staleTimer.Start();
+
+        MouseEnter += (_, _) =>
+        {
+            isPointerOver = true;
+            dismissTimer.Stop();
+        };
+        MouseLeave += (_, _) =>
+        {
+            isPointerOver = false;
+            RestartDismissTimer();
+        };
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Escape)
+            {
+                BeginClose(userInitiated: true);
+                e.Handled = true;
+            }
+        };
+        SourceInitialized += (_, _) => AttachNativeWindowHook();
+        Loaded += (_, _) => AnimateIn();
+        Closed += (_, _) =>
+        {
+            dismissTimer.Stop();
+            staleTimer.Stop();
+            DetachNativeWindowHook();
+        };
     }
+
     public event EventHandler? UserMoveCompleted;
 
     public event EventHandler? UserResizeCompleted;
 
     public event Action<bool>? PinStateChangeRequested;
 
-    public string OperationId { get; private set; } = string.Empty;
+    public string SessionId { get; private set; } = string.Empty;
 
     public DateTimeOffset LastUpdatedUtc { get; private set; }
 
-    public DesktopProgressKind LastKind { get; private set; }
+    public DesktopProgressLane LastLane { get; private set; } = DesktopProgressLane.Worklog;
 
-    public DesktopProgressLane LastLane { get; private set; } =
-        DesktopProgressLane.Worklog;
+    public bool WasManuallyClosed => manualClose;
 
-    public bool WasManuallyClosed => _manualClose;
+    public bool IsTerminal => lastFrame?.Current.State is
+        WorklogStepState.Succeeded or WorklogStepState.Failed or WorklogStepState.Cancelled;
 
-
-    public bool IsTerminal =>
-        (_lastMessage?.WorklogFrame is null || _lastMessage.SessionClosed) &&
-        LastKind is
-            DesktopProgressKind.Completed or
-            DesktopProgressKind.Failed or
-            DesktopProgressKind.Cancelled or
-            DesktopProgressKind.Info or
-            DesktopProgressKind.Warning;
-
-    public void ApplyPreferredSize(
-        double widthDip,
-        double heightDip)
+    /// <summary>Shows a real frame. The only entry point for content.</summary>
+    public void Update(DesktopWorklogFrame frame)
     {
-        if (!double.IsFinite(widthDip) ||
-            !double.IsFinite(heightDip) ||
-            widthDip <= 0 ||
-            heightDip <= 0)
-        {
-            return;
-        }
-
-        SizeToContent = SizeToContent.Manual;
-        Width = Math.Clamp(widthDip, MinWidth, MaxWidth);
-        Height = Math.Clamp(heightDip, MinHeight, MaxHeight);
-        EnableResponsiveSizing();
-        _initialSizeLocked = true;
-    }
-
-    public void Update(DesktopProgressMessage message)
-    {
+        ArgumentNullException.ThrowIfNull(frame);
         CancelPendingAutomaticClose();
+        lastFrame = frame;
+        lastFrameReceivedUtc = DateTimeOffset.UtcNow;
+        LastUpdatedUtc = lastFrameReceivedUtc;
+        SessionId = frame.SessionId;
+        LastLane = frame.Lane;
+        isStale = false;
+        WorklogCardMapper.Apply(model, frame, Environment.MachineName, stale: false);
+        AutomationProperties.SetName(this, $"Talvora çalışma günlüğü: {frame.Current.Title}");
 
-        OperationId = message.WorklogFrame?.SessionId ?? message.OperationId;
-        LastUpdatedUtc = DateTimeOffset.UtcNow;
-        _lastPayloadUpdatedUtc = LastUpdatedUtc;
-        LastKind = message.Kind;
-        LastLane = message.Lane;
-        _isStale = false;
-        _lastMessage = message;
-        _title.Text = message.WorklogFrame?.Current.Title ?? message.Title;
-        _message.Text = message.WorklogFrame?.Current.FactLine ?? message.Message;
-        UpdateEvidence(message);
-        ApplyStatusVisual(message);
-
-        _dismissAfter =
-            message.Kind switch
-            {
-                DesktopProgressKind.Started => StartedLifetime,
-                DesktopProgressKind.Running => RunningLifetime,
-                DesktopProgressKind.Completed => CompletedLifetime,
-                DesktopProgressKind.Failed => FailureLifetime,
-                DesktopProgressKind.Cancelled => CancelledLifetime,
-                DesktopProgressKind.Warning => FailureLifetime,
-                DesktopProgressKind.Info => CompletedLifetime,
-                _ => StartedLifetime,
-            };
+        dismissAfter = frame.Current.State switch
+        {
+            WorklogStepState.Failed => FailedLifetime,
+            WorklogStepState.Cancelled => CancelledLifetime,
+            _ => SucceededLifetime,
+        };
         RestartDismissTimer();
     }
 
-    private void CheckForStaleWork()
+    /// <summary>User-chosen width; the user's height becomes the code terminal's maximum (§3.1).</summary>
+    public void ApplyPreferredSize(double widthDip, double heightDip)
     {
-        if (_isClosing ||
-            IsTerminal ||
-            _lastPayloadUpdatedUtc == default)
-        {
-            return;
-        }
-        if (_lastMessage?.WorklogFrame is not null &&
-            LastKind is DesktopProgressKind.Completed or DesktopProgressKind.Failed or
-                DesktopProgressKind.Cancelled)
+        if (!double.IsFinite(widthDip) || !double.IsFinite(heightDip) || widthDip <= 0 || heightDip <= 0)
         {
             return;
         }
 
-        var staleFor =
-            DateTimeOffset.UtcNow - _lastPayloadUpdatedUtc;
-        var staleThreshold = _lastMessage?.WorklogFrame is { } frame
-            ? TimeSpan.FromSeconds(2 * frame.ExpectedNextUpdateSeconds)
-            : ActiveStaleThreshold;
-        if (staleFor < staleThreshold ||
-            _isStale)
-        {
-            return;
-        }
-
-        _isStale = true;
-        _title.Text = "Yanıt bekleniyor";
-        _message.Text =
-            $"Bu işten {FormatElapsed(staleFor.TotalSeconds)} süredir yeni bilgi gelmedi.\n\n" +
-            $"Son gerçek güncelleme: {_lastPayloadUpdatedUtc.ToLocalTime():HH:mm:ss}. " +
-            "Yeni veri gelir gelmez bu kart otomatik olarak devam edecek.";
-        ApplyStaleVisual();
+        SizeToContent = SizeToContent.Height;
+        Width = Math.Clamp(widthDip, MinWidth, MaxWidth);
+        view.CodeMaxHeight = Math.Clamp(heightDip - 240, 160, 900);
     }
 
     public void SetPinned(bool pinned)
     {
-        _isPinned = pinned;
-        _pinButton.Content = new SymbolIcon
+        isPinned = pinned;
+        view.SetPinned(pinned);
+    }
+
+    public void MarkInteracted() => LastUpdatedUtc = DateTimeOffset.UtcNow;
+
+    private void CheckForStaleWork()
+    {
+        if (isClosing || isStale || lastFrame is null || IsTerminal)
         {
-            Symbol = pinned
-                ? SymbolRegular.PinOff20
-                : SymbolRegular.Pin20,
-            FontSize = 16,
-        };
-        _pinButton.ToolTip = pinned
-            ? "Otomatik ekran konumuna dön"
-            : "Kartın mevcut konumunu sabitle";
-        _pinButton.Foreground = pinned
-            ? DesktopProgressVisualTheme.TraceBrush
-            : DesktopProgressVisualTheme.SecondaryTextBrush;
-        _pinButton.Background = pinned
-            ? DesktopProgressVisualTheme.TraceSoftBrush
-            : Brushes.Transparent;
-        _pinButton.BorderBrush = pinned
-            ? DesktopProgressVisualTheme.TraceBrush
-            : DesktopProgressVisualTheme.BorderBrush;
-        AutomationProperties.SetName(
-            _pinButton,
-            pinned
-                ? "Otomatik konuma dön"
-                : "Kart konumunu sabitle");
+            return;
+        }
+
+        var budget = TimeSpan.FromSeconds(Math.Max(10, lastFrame.ExpectedNextUpdateSeconds) * 2);
+        if (DateTimeOffset.UtcNow - lastFrameReceivedUtc < budget)
+        {
+            return;
+        }
+
+        isStale = true;
+        WorklogCardMapper.Apply(model, lastFrame, Environment.MachineName, stale: true);
     }
 
-    public void MarkInteracted()
+    private void OnCardMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        LastUpdatedUtc = DateTimeOffset.UtcNow;
-    }
-
-    private void OnCardMouseLeftButtonDown(
-        object sender,
-        MouseButtonEventArgs e)
-    {
-        if (_isClosing ||
-            e.ChangedButton != MouseButton.Left ||
-            e.LeftButton != MouseButtonState.Pressed ||
+        if (isClosing || e.ChangedButton != MouseButton.Left || e.LeftButton != MouseButtonState.Pressed ||
             IsInteractiveElement(e.OriginalSource as DependencyObject))
         {
             return;
@@ -248,266 +219,164 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
         }
         catch (InvalidOperationException ex)
         {
-            TrayLog.Write(
-                "Desktop progress card drag could not start.",
-                ex);
+            TrayLog.Write("Desktop worklog card drag could not start.", ex);
         }
     }
 
-    private static bool IsInteractiveElement(
-        DependencyObject? source)
+    private static bool IsInteractiveElement(DependencyObject? source)
     {
-        var current = source;
-        while (current is not null)
+        for (var current = source; current is not null; current = GetParent(current))
         {
-            if (current is WpfButtonBase or WpfScrollBar or WpfTextBoxBase)
+            if (current is System.Windows.Controls.Primitives.ButtonBase or System.Windows.Controls.Primitives.ScrollBar)
             {
                 return true;
             }
-
-            current =
-                VisualTreeHelper.GetParent(current);
         }
 
         return false;
     }
 
-    private void AnimateIn()
+    private static DependencyObject? GetParent(DependencyObject element) =>
+        element is Visual or System.Windows.Media.Media3D.Visual3D
+            ? VisualTreeHelper.GetParent(element)
+            : LogicalTreeHelper.GetParent(element);
+
+    private void CopyCode()
     {
-        if (!SystemParameters.ClientAreaAnimation)
+        var text = string.Join(
+            Environment.NewLine,
+            model.CodeLines.Select(line => line.Kind switch
+            {
+                DiffLineKind.File => "+++ " + line.Text,
+                DiffLineKind.Hunk or DiffLineKind.Note => line.Text,
+                DiffLineKind.Added => "+" + line.Text,
+                DiffLineKind.Removed => "-" + line.Text,
+                _ => " " + line.Text,
+            }));
+        if (text.Length == 0)
         {
-            Opacity = 1;
-            _translateTransform.Y = 0;
             return;
         }
 
-        Opacity = 1;
-        BeginAnimation(
-            OpacityProperty,
-            new DoubleAnimation(
-                fromValue: 0,
-                toValue: 1,
-                duration: TimeSpan.FromMilliseconds(180))
-            {
-                EasingFunction =
-                    new QuadraticEase
-                    {
-                        EasingMode = EasingMode.EaseOut,
-                    },
-                FillBehavior = FillBehavior.Stop,
-            });
+        try
+        {
+            WpfClipboard.SetText(text);
+        }
+        catch (Exception ex) when (ex is ExternalException or InvalidOperationException)
+        {
+            TrayLog.Write("Desktop worklog code could not be copied.", ex);
+        }
+    }
 
-        _translateTransform.Y = 0;
-        _translateTransform.BeginAnimation(
-            TranslateTransform.YProperty,
-            new DoubleAnimation(
-                fromValue: 14,
-                toValue: 0,
-                duration: TimeSpan.FromMilliseconds(220))
-            {
-                EasingFunction =
-                    new QuadraticEase
-                    {
-                        EasingMode = EasingMode.EaseOut,
-                    },
-                FillBehavior = FillBehavior.Stop,
-            });
+    private void AnimateIn()
+    {
+        Opacity = 1;
+        if (!SystemParameters.ClientAreaAnimation)
+        {
+            return;
+        }
+
+        var ease = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+        BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180))
+        {
+            EasingFunction = ease,
+            FillBehavior = FillBehavior.Stop,
+        });
+        enterShift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(220))
+        {
+            EasingFunction = ease,
+            FillBehavior = FillBehavior.Stop,
+        });
     }
 
     private void BeginClose(bool userInitiated = false)
     {
-        if (_isClosing)
+        if (isClosing)
         {
             return;
         }
 
-        _isClosing = true;
-        _manualClose = userInitiated;
-        _dismissTimer.Stop();
+        isClosing = true;
+        manualClose = userInitiated;
+        dismissTimer.Stop();
         if (!SystemParameters.ClientAreaAnimation)
         {
             Close();
             return;
         }
 
-        var animation = new DoubleAnimation(
-            fromValue: Opacity,
-            toValue: 0,
-            duration: TimeSpan.FromMilliseconds(160))
+        var fade = new DoubleAnimation(Opacity, 0, TimeSpan.FromMilliseconds(160))
         {
-            EasingFunction =
-                new QuadraticEase
-                {
-                    EasingMode = EasingMode.EaseIn,
-                },
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn },
         };
-        animation.Completed += (_, _) =>
+        fade.Completed += (_, _) =>
         {
-            if (_isClosing)
+            if (isClosing)
             {
                 Close();
             }
         };
-        BeginAnimation(OpacityProperty, animation);
+        BeginAnimation(OpacityProperty, fade);
     }
 
     private void CancelPendingAutomaticClose()
     {
-        if (!_isClosing || _manualClose)
+        if (!isClosing || manualClose)
         {
             return;
         }
 
         BeginAnimation(OpacityProperty, null);
         Opacity = 1;
-        _isClosing = false;
+        isClosing = false;
     }
 
     private void RestartDismissTimer()
     {
-        _dismissTimer.Stop();
-        if (_isPointerOver ||
-            _isClosing ||
-            !IsTerminal)
+        dismissTimer.Stop();
+        if (isPointerOver || isClosing || !IsTerminal)
         {
             return;
         }
 
-        _dismissTimer.Interval = _dismissAfter;
-        _dismissTimer.Start();
-    }
-
-    private static string FormatElapsed(double elapsedSeconds)
-    {
-        var elapsed =
-            TimeSpan.FromSeconds(Math.Max(0, elapsedSeconds));
-        if (elapsed.TotalMinutes >= 1)
-        {
-            return $"{(int)elapsed.TotalMinutes} dk {elapsed.Seconds} sn";
-        }
-
-        return $"{Math.Max(1, (int)elapsed.TotalSeconds)} sn";
-    }
-
-    private readonly DesktopProgressCodeState _codeState = new();
-
-    private void UpdateEvidence(DesktopProgressMessage message)
-    {
-        message = _codeState.Restore(message);
-        var evidence = message.Evidence;
-        var codePreview = evidence?.CodePreview ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(codePreview))
-        {
-            _diffPanel.Visibility = Visibility.Collapsed;
-            MinHeight = 150;
-            SetTextIfChanged(_codePreview, string.Empty);
-            if (_wasShowingCode)
-            {
-                // A code-free update may shrink; manual code sizing is restored on the next code update.
-                _wasShowingCode = false;
-                _autoDiffHeightExpanded = false;
-                SizeToContent = SizeToContent.Height;
-            }
-            return;
-        }
-
-        _wasShowingCode = true;
-        _diffPanel.Visibility = Visibility.Visible;
-        _diffHeader.Text = $"KOD DEĞİŞİKLİKLERİ · {_codeState.Title} · {_codeState.TimestampUtc.ToLocalTime():HH:mm:ss}  +{evidence?.AddedLines ?? 0}  −{evidence?.RemovedLines ?? 0}";
-        SetTextIfChanged(
-            _codePreview,
-            codePreview);
-        ExpandForCodeHeight();
-    }
-
-    private void ExpandForCodeHeight()
-    {
-        if (_autoDiffHeightExpanded)
-        {
-            return;
-        }
-
-        // Expand vertically for code, but never change the user's width.
-        var lineCount = _codePreview.Text.Count(c => c == '\n') + 1;
-        var targetHeight = Math.Min(
-            MaxHeight,
-            Math.Clamp(220 + lineCount * 17.0, 460, 720));
-        var currentHeight = double.IsFinite(Height)
-            ? Height
-            : Math.Max(ActualHeight, MinHeight);
-
-        SizeToContent = SizeToContent.Manual;
-        Height = Math.Min(MaxHeight, Math.Max(currentHeight, targetHeight));
-        EnableResponsiveSizing();
-        _initialSizeLocked = true;
-        _autoDiffHeightExpanded = true;
+        dismissTimer.Interval = dismissAfter;
+        dismissTimer.Start();
     }
 
     private void AttachNativeWindowHook()
     {
-        if (_windowSource is not null)
+        if (windowSource is not null)
         {
             return;
         }
 
         var handle = new WindowInteropHelper(this).Handle;
-        if (handle == IntPtr.Zero)
+        if (handle != IntPtr.Zero)
         {
-            return;
+            windowSource = HwndSource.FromHwnd(handle);
+            windowSource?.AddHook(WindowMessageHook);
         }
-
-        _windowSource = HwndSource.FromHwnd(handle);
-        _windowSource?.AddHook(WindowMessageHook);
     }
 
     private void DetachNativeWindowHook()
     {
-        if (_windowSource is null)
-        {
-            return;
-        }
-
-        _windowSource.RemoveHook(WindowMessageHook);
-        _windowSource = null;
+        windowSource?.RemoveHook(WindowMessageHook);
+        windowSource = null;
     }
 
-    private IntPtr WindowMessageHook(
-        IntPtr hwnd,
-        int message,
-        IntPtr wParam,
-        IntPtr lParam,
-        ref bool handled)
+    private IntPtr WindowMessageHook(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         if (message == WmEnterSizeMove)
         {
-            _interactiveResizeStartWidth = ActualWidth;
-            _interactiveResizeStartHeight = ActualHeight;
+            resizeStartWidth = ActualWidth;
+            resizeStartHeight = ActualHeight;
         }
-        else if (message == WmExitSizeMove)
+        else if (message == WmExitSizeMove &&
+                 (Math.Abs(ActualWidth - resizeStartWidth) > 0.5 || Math.Abs(ActualHeight - resizeStartHeight) > 0.5))
         {
-            var widthChanged = Math.Abs(
-                ActualWidth - _interactiveResizeStartWidth) > 0.5;
-            var heightChanged = Math.Abs(
-                ActualHeight - _interactiveResizeStartHeight) > 0.5;
-            if (widthChanged || heightChanged)
-            {
-                UserResizeCompleted?.Invoke(this, EventArgs.Empty);
-            }
+            UserResizeCompleted?.Invoke(this, EventArgs.Empty);
         }
 
         return IntPtr.Zero;
-    }
-
-    private static void SetTextIfChanged(
-        WpfTextBox target,
-        string value)
-    {
-        if (!string.Equals(
-                target.Text,
-                value,
-                StringComparison.Ordinal))
-        {
-            target.Text = value;
-        }
     }
 }

@@ -1151,158 +1151,41 @@ internal static partial class Program
                         var window = new DesktopProgressNotificationWindow();
                         try
                         {
-                            window.ApplyPreferredSize(420, 240);
-                            var code = string.Join('\n', Enumerable.Range(1, 1000).Select(index => $"+changed-{index}();"));
-                            var message = new DesktopProgressMessage(
-                                "resize-regression", "apply_patch", "Kod gÃ¼ncelleniyor", "GerÃ§ek kod deÄŸiÅŸiklikleri",
-                                DesktopProgressKind.Running, DateTimeOffset.UtcNow, 1,
-                                new DesktopProgressEvidence(AddedLines: 1000, CodePreview: code), Sequence: 1);
-                            window.Update(message);
+                            window.ApplyPreferredSize(560, 700);
+                            var code = "+++ b/big.cs\n@@ -1,1 +1,1000 @@\n" +
+                                string.Join('\n', Enumerable.Range(1, 1000).Select(index => $"+changed{index}();"));
+                            window.Update(WorklogTestFrames.Running("resize-regression", code));
                             window.Show();
                             window.UpdateLayout();
-                            if (Math.Abs(window.ActualWidth - 420) > 0.75 ||
-                                Math.Abs(window.ActualHeight - 720) > 0.75 ||
-                                window.SizeToContent != System.Windows.SizeToContent.Manual)
+                            if (Math.Abs(window.ActualWidth - 560) > 0.75)
                             {
-                                throw new InvalidOperationException(
-                                    "Code output must expand height while retaining the user's width.");
+                                throw new InvalidOperationException("The card must keep the user's width.");
                             }
-                            var width = window.ActualWidth;
-                            var height = window.ActualHeight;
-                            window.Update(message with
-                            {
-                                Kind = DesktopProgressKind.Completed,
-                                Sequence = 2,
-                            });
+
+                            var heightWithCode = window.ActualHeight;
+                            window.Update(WorklogTestFrames.Running("resize-regression", codePreview: null, sequence: 2));
                             window.UpdateLayout();
-                            if (Math.Abs(window.ActualWidth - width) > 0.75 ||
-                                Math.Abs(window.ActualHeight - height) > 0.75)
+                            if (window.ActualHeight >= heightWithCode || Math.Abs(window.ActualWidth - 560) > 0.75)
                             {
-                                throw new InvalidOperationException(
-                                    "Terminal code update changed the user-selected notification size.");
+                                throw new InvalidOperationException("A frame without code must shrink the card and keep its width.");
+                            }
+
+                            window.Update(WorklogTestFrames.Running("resize-regression", code, sequence: 3));
+                            window.UpdateLayout();
+                            if (Math.Abs(window.ActualHeight - heightWithCode) > 1)
+                            {
+                                throw new InvalidOperationException("Returning code must re-open the terminal to the same height.");
                             }
                         }
                         finally
                         {
                             window.Close();
                         }
+
                         using var presenter =
                             new DesktopProgressNotificationPresenter(
                                 application,
                                 placementPath);
-                        presenter.Publish(new DesktopProgressMessage(
-                            "compact-regression", "read_source", "Kaynaklar inceleniyor", "Ä°nceleme tamamlandÄ±.",
-                            DesktopProgressKind.Completed, DateTimeOffset.UtcNow, 1, Sequence: 1));
-                        var compactWindow = application.Windows.OfType<DesktopProgressNotificationWindow>().Single();
-                        compactWindow.UpdateLayout();
-                        if (compactWindow.ActualWidth > 501 || compactWindow.ActualHeight > 300)
-                        {
-                            throw new InvalidOperationException("A notification without code inherited oversized code geometry.");
-                        }
-                        var regressionCode = string.Join(
-                            '\n',
-                            Enumerable.Range(1, 1000)
-                                .Select(index => $"+changed-{index}();"));
-                        var savedCodeMessage = new DesktopProgressMessage(
-                            "saved-size-code",
-                            "apply_patch",
-                            "Kod değişiklikleri",
-                            "Kod önizlemesi",
-                            DesktopProgressKind.Running,
-                            DateTimeOffset.UtcNow,
-                            1,
-                            new DesktopProgressEvidence(
-                                AddedLines: 1000,
-                                CodePreview: regressionCode),
-                            Sequence: 1);
-                        presenter.Publish(savedCodeMessage);
-                        var savedCodeWindow = application.Windows
-                            .OfType<DesktopProgressNotificationWindow>()
-                            .Single(item => item.OperationId == "saved-size-code");
-                        savedCodeWindow.UpdateLayout();
-                        var expandedSavedHeight = Math.Min(
-                            720,
-                            savedCodeWindow.MaxHeight);
-                        if (Math.Abs(savedCodeWindow.ActualWidth - 598) > 0.75 ||
-                            Math.Abs(savedCodeWindow.ActualHeight - expandedSavedHeight) > 1)
-                        {
-                            throw new InvalidOperationException(
-                                $"Saved width was ignored or code height did not expand: " +
-                                $"width={savedCodeWindow.ActualWidth:F2}, height={savedCodeWindow.ActualHeight:F2}, " +
-                                $"expectedHeight={expandedSavedHeight:F2}.");
-                        }
-                        presenter.Publish(savedCodeMessage with
-                        {
-                            Evidence = null,
-                            Sequence = 2,
-                        });
-                        savedCodeWindow.UpdateLayout();
-                        if (savedCodeWindow.SizeToContent !=
-                            System.Windows.SizeToContent.Height)
-                        {
-                            throw new InvalidOperationException(
-                                "A notification without code did not return to compact height sizing.");
-                        }
-                        presenter.Publish(savedCodeMessage with
-                        {
-                            Sequence = 3,
-                        });
-                        savedCodeWindow.UpdateLayout();
-                        if (savedCodeWindow.SizeToContent != System.Windows.SizeToContent.Manual ||
-                            Math.Abs(savedCodeWindow.ActualWidth - 598) > 0.75 ||
-                            Math.Abs(savedCodeWindow.ActualHeight - expandedSavedHeight) > 1)
-                        {
-                            throw new InvalidOperationException(
-                                $"Code must restore vertical expansion without changing the user's width: mode={savedCodeWindow.SizeToContent}, width={savedCodeWindow.ActualWidth:F2}, height={savedCodeWindow.ActualHeight:F2}.");
-                        }
-
-                        using var defaultPresenter =
-                            new DesktopProgressNotificationPresenter(
-                                application,
-                                Path.Combine(root, "no-preference.json"));
-                        defaultPresenter.Publish(savedCodeMessage with
-                        {
-                            OperationId = "default-size-code",
-                        });
-                        var defaultCodeWindow = application.Windows
-                            .OfType<DesktopProgressNotificationWindow>()
-                            .Single(item => item.OperationId == "default-size-code");
-                        defaultCodeWindow.UpdateLayout();
-                        var expandedDefaultHeight = Math.Min(
-                            720,
-                            defaultCodeWindow.MaxHeight);
-                        if (Math.Abs(defaultCodeWindow.ActualWidth - 500) > 0.75 ||
-                            Math.Abs(defaultCodeWindow.ActualHeight - expandedDefaultHeight) > 1)
-                        {
-                            throw new InvalidOperationException(
-                                "Code notification must grow vertically without widening the default width.");
-                        }
-                        defaultPresenter.Publish(savedCodeMessage with
-                        {
-                            OperationId = "default-size-code",
-                            Evidence = null,
-                            Sequence = 2,
-                        });
-                        defaultCodeWindow.UpdateLayout();
-                        if (defaultCodeWindow.SizeToContent !=
-                            System.Windows.SizeToContent.Height)
-                        {
-                            throw new InvalidOperationException(
-                                "Unconfigured code-free notification did not shrink naturally.");
-                        }
-                        defaultPresenter.Publish(savedCodeMessage with
-                        {
-                            OperationId = "default-size-code",
-                            Sequence = 3,
-                        });
-                        defaultCodeWindow.UpdateLayout();
-                        if (defaultCodeWindow.SizeToContent != System.Windows.SizeToContent.Manual ||
-                            Math.Abs(defaultCodeWindow.ActualWidth - 500) > 0.75 ||
-                            Math.Abs(defaultCodeWindow.ActualHeight - expandedDefaultHeight) > 1)
-                        {
-                            throw new InvalidOperationException(
-                                "Returning code must re-expand vertically without widening the notification.");
-                        }
 
                         var n2Frame = new DesktopWorklogFrame(
                             "n2-session-a", 20, DateTimeOffset.UtcNow,
@@ -1320,7 +1203,7 @@ internal static partial class Program
                         presenter.Publish(n2Message);
                         var sharedWindow = application.Windows
                             .OfType<DesktopProgressNotificationWindow>()
-                            .Single(item => item.OperationId == "n2-session-a");
+                            .Single(item => item.SessionId == "n2-session-a");
                         var nextFrame = n2Frame with
                         {
                             Sequence = 21,
@@ -1339,7 +1222,7 @@ internal static partial class Program
                         });
                         var secondWindow = application.Windows
                             .OfType<DesktopProgressNotificationWindow>()
-                            .Single(item => item.OperationId == "n2-session-a");
+                            .Single(item => item.SessionId == "n2-session-a");
                         if (!ReferenceEquals(sharedWindow, secondWindow) ||
                             nextFrame.Timeline.Count <= n2Frame.Timeline.Count)
                         {
@@ -1360,14 +1243,14 @@ internal static partial class Program
                             WorklogFrame = claudeFrame,
                         });
                         var lastUpdateField = typeof(DesktopProgressNotificationWindow)
-                            .GetField("_lastPayloadUpdatedUtc", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                            .GetField("lastFrameReceivedUtc", BindingFlags.Instance | BindingFlags.NonPublic)!;
                         lastUpdateField.SetValue(sharedWindow,
                             DateTimeOffset.UtcNow - TimeSpan.FromSeconds(25));
                         typeof(DesktopProgressNotificationWindow)
                             .GetMethod("CheckForStaleWork", BindingFlags.Instance | BindingFlags.NonPublic)!
                             .Invoke(sharedWindow, null);
                         var staleField = typeof(DesktopProgressNotificationWindow)
-                            .GetField("_isStale", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                            .GetField("isStale", BindingFlags.Instance | BindingFlags.NonPublic)!;
                         if ((bool)staleField.GetValue(sharedWindow)!)
                         {
                             throw new InvalidOperationException(
@@ -1391,7 +1274,7 @@ internal static partial class Program
                             SessionClosed = true,
                         });
                         var dismissField = typeof(DesktopProgressNotificationWindow)
-                            .GetField("_dismissAfter", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                            .GetField("dismissAfter", BindingFlags.Instance | BindingFlags.NonPublic)!;
                         if ((TimeSpan)dismissField.GetValue(sharedWindow)! != TimeSpan.FromMinutes(3) ||
                             !sharedWindow.IsTerminal)
                         {
@@ -1412,7 +1295,7 @@ internal static partial class Program
                         });
                         if (application.Windows
                             .OfType<DesktopProgressNotificationWindow>()
-                            .Any(item => item.OperationId == "n2-session-b" &&
+                            .Any(item => item.SessionId == "n2-session-b" &&
                                 ReferenceEquals(item, sharedWindow)))
                         {
                             throw new InvalidOperationException(
@@ -1559,4 +1442,25 @@ internal static partial class Program
             int count) =>
             throw new NotSupportedException();
     }
+}
+
+internal static class WorklogTestFrames
+{
+    internal static DesktopWorklogFrame Running(string sessionId, string? codePreview, long sequence = 1) =>
+        new(
+            SessionId: sessionId,
+            Sequence: sequence,
+            TimestampUtc: DateTimeOffset.UtcNow,
+            Header: new WorklogSessionHeader("Talvora-MCP", "Codex"),
+            Current: new WorklogStep(
+                WorklogStepCategory.SourceEdit,
+                WorklogStepState.Running,
+                "Kod değişikliği uygulanıyor",
+                "1 dosya · +1000 −0 · big.cs",
+                null,
+                1),
+            Timeline: [],
+            Totals: new WorklogTotals(1, 1, 1, WorklogCheckState.Unknown, WorklogCheckState.Unknown),
+            Evidence: codePreview is null ? null : new DesktopProgressEvidence(CodePreview: codePreview),
+            ExpectedNextUpdateSeconds: 15);
 }
