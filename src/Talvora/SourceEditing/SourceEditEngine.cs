@@ -21,6 +21,9 @@ internal sealed class SourceEditEngine
     private readonly SourceEditAsyncKeyedLock transactionLocks =
         new(StringComparer.Ordinal);
 
+    /// <summary>Folder of this engine's journal and receipts (ProgramData for the service, a test root in regressions).</summary>
+    internal string StateRoot => store.StateRoot;
+
     public IReadOnlyList<SourceEditJournalQuarantine> LastRecoveryQuarantines
     {
         get;
@@ -1618,5 +1621,12 @@ internal sealed class SourceEditEngine
 
 internal static class SourceEditRuntime
 {
-    public static SourceEditEngine Engine { get; } = new();
+    /// <summary>
+    /// The service's engine (state under ProgramData\Talvora\SourceEdit). Regression runners call
+    /// <see cref="UseStateRootForTests"/> first, because S3 closes ProgramData to the signed-in user (P-29).
+    /// </summary>
+    public static SourceEditEngine Engine { get; private set; } = new();
+
+    internal static void UseStateRootForTests(string stateRoot) =>
+        Engine = new SourceEditEngine(new SourceEditEngineOptions { StateRoot = stateRoot });
 }

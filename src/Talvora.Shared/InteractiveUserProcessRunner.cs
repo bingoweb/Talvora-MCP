@@ -543,7 +543,8 @@ $sw = [Diagnostics.Stopwatch]::StartNew()
 $resultPath = Join-Path (Split-Path -Parent $RequestPath) 'result.json'
 try {
     $request = Get-Content -Raw -LiteralPath $RequestPath | ConvertFrom-Json
-    Remove-Item -LiteralPath $RequestPath -Force -ErrorAction SilentlyContinue
+    # .NET delete: Remove-Item also opens the parent folder, which the user may not read (S3).
+    try { [IO.File]::Delete($RequestPath) } catch { }
     [void][Reflection.Assembly]::LoadFrom(
         [string]$request.HelperAssemblyPath)
 

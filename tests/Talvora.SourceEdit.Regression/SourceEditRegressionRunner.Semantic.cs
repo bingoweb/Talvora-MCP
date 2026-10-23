@@ -149,7 +149,7 @@ internal static partial class SourceEditRegressionRunner
             "Semantic rename changed unrelated formatting/newlines in the reference document.");
 
         var durableStore =
-            new SourceEditTransactionStore();
+            new SourceEditTransactionStore(SourceEditRuntime.Engine.StateRoot);
         var durableReceiptPath =
             durableStore.GetReceiptPath(
                 transactionId);

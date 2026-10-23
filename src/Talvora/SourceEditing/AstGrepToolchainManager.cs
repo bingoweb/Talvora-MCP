@@ -22,6 +22,13 @@ internal static class AstGrepToolchainManager
     private const long MaxTarballBytes = 256L * 1024L * 1024L;
     private const int RetainedVersions = 3;
 
+    /// <summary>
+    /// Toolchain cache root. The service uses ProgramData\Talvora\Toolchains; regression runners set a
+    /// user-owned root because S3 closes ProgramData to the signed-in user (P-29).
+    /// </summary>
+    internal static string CacheRoot { get; set; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Talvora", "Toolchains");
+
     public static async Task<AstGrepToolchain> ResolveAsync(
         CancellationToken cancellationToken)
     {
@@ -38,9 +45,7 @@ internal static class AstGrepToolchainManager
             return vendored;
         }
 
-        var root = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "Talvora", "Toolchains", "ast-grep", ResolveArchitectureKey());
+        var root = Path.Combine(CacheRoot, "ast-grep", ResolveArchitectureKey());
         Directory.CreateDirectory(root);
 
         await Gate.WaitAsync(cancellationToken);

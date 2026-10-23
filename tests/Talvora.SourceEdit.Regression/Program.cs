@@ -1,3 +1,10 @@
+// S3 (P-29): the signed-in gate cannot write ProgramData\Talvora. Engine state and the ast-grep cache live in
+// a user-owned folder that persists between runs (so the pinned ast-grep download is cached, as before).
+var regressionState = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Talvora", "RegressionState");
+Talvora.SourceEditing.SourceEditRuntime.UseStateRootForTests(Path.Combine(regressionState, "SourceEdit"));
+Talvora.SourceEditing.AstGrepToolchainManager.CacheRoot = Path.Combine(regressionState, "Toolchains");
+
 if (args.Contains("--receipt-counts-only", StringComparer.OrdinalIgnoreCase))
 {
     await SourceEditRegressionRunner.RunReceiptCountsAsync();

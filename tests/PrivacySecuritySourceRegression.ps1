@@ -54,7 +54,7 @@ Assert-Contains $eventStore 'FileLog.RedactSensitiveData(detail)' 'structured ev
 Assert-Contains $interactive 'active.lock' 'interactive runs have an active lease marker'
 Assert-Contains $interactive 'FileShare.None' 'stale cleanup proves the run lease is not active'
 Assert-Contains $interactive 'CleanupStaleRunDirectories(runsRoot)' 'stale interactive runs are cleaned'
-Assert-Contains $interactive 'Remove-Item -LiteralPath $RequestPath -Force' 'interactive request document is removed after deserialization'
+Assert-Contains $interactive '[IO.File]::Delete($RequestPath)' 'interactive request document is removed after deserialization'
 Assert-Contains $gitIgnore '*.dpapi' 'DPAPI blobs are ignored'
 if ($dpapiSecretStore -notmatch 'MaximumCredentialFileBytes\s*=\s*64\s*\*\s*1024') {
     throw 'Privacy/security contract failed: DPAPI credential files have a hard byte ceiling'

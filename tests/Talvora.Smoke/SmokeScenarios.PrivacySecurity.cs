@@ -114,7 +114,7 @@ internal static partial class SmokeScenarios
             "Get-Content -Raw -LiteralPath $RequestPath",
             StringComparison.Ordinal);
         var requestDeleteIndex = runnerScript.IndexOf(
-            "Remove-Item -LiteralPath $RequestPath",
+            "[IO.File]::Delete($RequestPath)",
             StringComparison.Ordinal);
         var helperLoadIndex = runnerScript.IndexOf(
             "[void][Reflection.Assembly]::LoadFrom",
