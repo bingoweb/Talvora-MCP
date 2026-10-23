@@ -80,15 +80,25 @@ public sealed record DesktopWorklogFrame(
     int ExpectedNextUpdateSeconds,
     DesktopProgressLane Lane = DesktopProgressLane.Worklog);
 
-public sealed record WorklogSessionHeader(string? ProjectName, string ActorName);
+/// <summary>TaskNote: the agent's one-line task for this session (talvora_worklog_note, §6.2).</summary>
+public sealed record WorklogSessionHeader(string? ProjectName, string ActorName, string? TaskNote = null);
 
+/// <summary>
+/// Purpose: the agent's own words for what this step changes (apply_patch "purpose", §6.2).
+/// Changes: real per-file counts and changed places of a committed source edit (§6.2).
+/// </summary>
 public sealed record WorklogStep(
     WorklogStepCategory Category,
     WorklogStepState State,
     string Title,
     string? FactLine,
     WorklogOutcome? Outcome,
-    double ElapsedSeconds);
+    double ElapsedSeconds,
+    string? Purpose = null,
+    IReadOnlyList<WorklogFileChange>? Changes = null);
+
+/// <summary>One changed file: name, real added/removed line counts, declarations the hunks touched.</summary>
+public sealed record WorklogFileChange(string File, int Added, int Removed, IReadOnlyList<string> Places);
 
 public sealed record WorklogOutcome(
     WorklogFailureKind? FailureKind, string PlainReason, string? NextStep);
@@ -139,6 +149,11 @@ public static class DesktopProgressProtocol
     public const int MaximumProjectNameCharacters = 180;
     public const int MaximumActorNameCharacters = 80;
     public const int MaximumTimelineEntries = 30;
+    public const int MaximumTaskNoteCharacters = 140;
+    public const int MaximumPurposeCharacters = 140;
+    public const int MaximumChangedFiles = 12;
+    public const int MaximumPlacesPerFile = 4;
+    public const int MaximumPlaceCharacters = 80;
 
     private const int FrameHeaderBytes = sizeof(int);
 
@@ -619,11 +634,29 @@ public static class DesktopProgressProtocol
         {
             ProjectName = RedactAndClip(frame.Header.ProjectName, MaximumProjectNameCharacters),
             ActorName = RedactAndClip(frame.Header.ActorName, MaximumActorNameCharacters) ?? string.Empty,
+            TaskNote = RedactAndClip(frame.Header.TaskNote, MaximumTaskNoteCharacters),
         },
         Current = frame.Current with
         {
             Title = RedactAndClip(frame.Current.Title, MaximumTitleCharacters) ?? string.Empty,
             FactLine = RedactAndClip(frame.Current.FactLine, MaximumMessageCharacters),
+            Purpose = RedactAndClip(frame.Current.Purpose, MaximumPurposeCharacters),
+            Changes = frame.Current.Changes?
+                .Where(change => change is not null)
+                .Take(MaximumChangedFiles)
+                .Select(change => change with
+                {
+                    File = RedactAndClip(change.File, MaximumEvidenceFileCharacters) ?? string.Empty,
+                    Added = Math.Max(0, change.Added),
+                    Removed = Math.Max(0, change.Removed),
+                    Places = (change.Places ?? [])
+                        .Select(place => RedactAndClip(place, MaximumPlaceCharacters))
+                        .Where(place => !string.IsNullOrWhiteSpace(place))
+                        .Select(place => place!)
+                        .Take(MaximumPlacesPerFile)
+                        .ToArray(),
+                })
+                .ToArray(),
             Outcome = frame.Current.Outcome is null ? null : frame.Current.Outcome with
             {
                 PlainReason = RedactAndClip(frame.Current.Outcome.PlainReason, MaximumMessageCharacters) ?? string.Empty,
@@ -687,6 +720,18 @@ public static class DesktopProgressProtocol
                 string.IsNullOrWhiteSpace(frame.Current.Title) ||
                 frame.Current.Title.Length > MaximumTitleCharacters ||
                 frame.Current.FactLine?.Length > MaximumMessageCharacters ||
+                frame.Header.TaskNote?.Length > MaximumTaskNoteCharacters ||
+                frame.Current.Purpose?.Length > MaximumPurposeCharacters ||
+                (frame.Current.Changes?.Count ?? 0) > MaximumChangedFiles ||
+                frame.Current.Changes?.Any(change =>
+                    change is null ||
+                    string.IsNullOrWhiteSpace(change.File) ||
+                    change.File.Length > MaximumEvidenceFileCharacters ||
+                    change.Added < 0 ||
+                    change.Removed < 0 ||
+                    change.Places is null ||
+                    change.Places.Count > MaximumPlacesPerFile ||
+                    change.Places.Any(place => place is null || place.Length > MaximumPlaceCharacters)) is true ||
                 !double.IsFinite(frame.Current.ElapsedSeconds) ||
                 frame.Current.ElapsedSeconds < 0 ||
                 frame.ExpectedNextUpdateSeconds is < 1 or > 3600 ||

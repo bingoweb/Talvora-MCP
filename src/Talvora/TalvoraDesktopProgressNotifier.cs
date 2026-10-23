@@ -123,6 +123,11 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     {
         ArgumentNullException.ThrowIfNull(operation);
 
+        if (NormalizeToolName(toolName) == "worklog_note")
+        {
+            TrySetTaskNote(arguments, surfacePath, clientName);
+        }
+
         if (!ShouldNotifyToolCall(toolName))
         {
             return await operation(cancellationToken);
@@ -131,7 +136,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         var canonicalToolName = NormalizeToolName(toolName);
         var initialEvidence =
             BuildInitialEvidence(toolName, arguments);
-        var narrative = BuildNarrative(toolName, arguments, initialEvidence);
+        var narrative = BuildNarrative(toolName, arguments, initialEvidence) with
+        {
+            Purpose = WorklogNote.Normalize(GetArgumentText(arguments, "purpose")),
+        };
         var displayName = narrative.Titles.Running;
         var operationId = Guid.NewGuid().ToString("N");
         var stopwatch = Stopwatch.StartNew();
@@ -199,7 +207,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                             narrative.Titles.Succeeded,
                             WorklogCopy.SucceededFallback,
                             terminalEvidence,
-                            stopwatch.Elapsed);
+                            stopwatch.Elapsed,
+                            IsSourceEditTool(canonicalToolName)
+                                ? BuildFileChanges(result, terminalEvidence)
+                                : null);
                     }
                 }
             }
@@ -281,6 +292,22 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 operationId,
                 displayName,
                 stopwatch.Elapsed);
+        }
+    }
+
+    private static IReadOnlyList<WorklogFileChange>? BuildFileChanges<T>(
+        T result, DesktopProgressEvidence? evidence)
+    {
+        try
+        {
+            var json = result is CallToolResult callToolResult &&
+                callToolResult.StructuredContent is JsonElement structured
+                    ? structured : JsonSerializer.SerializeToElement(result);
+            return WorklogPlaces.Build(json, evidence?.CodePreview);
+        }
+        catch
+        {
+            return null; // best effort: the fact line still reports the real totals
         }
     }
 
@@ -789,6 +816,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             "file_hash" or
             "path_info" or
             "http_request" => false,
+            "worklog_note" => false,
             _ when
                 normalized.EndsWith(
                     "_status",

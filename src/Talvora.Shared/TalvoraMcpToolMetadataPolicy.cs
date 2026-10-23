@@ -9,7 +9,7 @@ namespace Talvora.Shared;
 /// </summary>
 public static class TalvoraMcpToolMetadataPolicy
 {
-    public const int ExpectedReviewedToolCount = 251;
+    public const int ExpectedReviewedToolCount = 252;
     public const int ExpectedOpenWorldToolCount = 85;
     public const int ExpectedDestructiveToolCount = 101;
     public const int PreferredMaxDescriptionCharacters = 650;

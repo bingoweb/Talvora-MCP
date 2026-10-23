@@ -77,7 +77,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] N2 — Worklog: protocol v4, sessions, project/actor context (P-11; signed-in Full 56/0; CI 39819719963 green; installed c56c7ee verified)
 - [x] N3 — Worklog: real facts from results (P-11; signed-in Full 56/0; CI 39827653752 green; installed 504fa7b verified)
 - [x] N9 — Worklog: every step names what it works on + approved Turkish tool titles (§6.1); signed-in Full 56/0; exact-commit deployment, desktop title and CI evidence follow in Gitea #9.
-- [ ] N10 — Worklog: task line, purpose, changed places (ne · nerede · fark, §6.2) + talvora_worklog_note
+- [x] N10 — Worklog: task line, purpose, changed places (ne · nerede · fark, §6.2) + talvora_worklog_note; signed-in Full 56/0; exact-commit deployment, live accepted:true and CI evidence follow in Gitea #9.
 - [ ] RM1 — Remotion animations: guide, detached runs, live card, automatic routing (Phase RM)
 - [ ] N3b — Worklog: code terminal real, complete, persistent (P-27 decided; hunk context via DeclarationLine; after N10)
 - [ ] N4 — Worklog: agent jobs tell their story (+ Codex code terminal) (P-11 decided)
@@ -131,6 +131,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-23 — N10 (executor: Codex via Talvora): exact 39-step implementation; task note/purpose fields, bounded redacted committed-file changes and recognised declarations; new development-surface worklog-note tool. Rows render in N5 as prescribed.
+  RED: approved test found missing frame fields, then "N10: task note missing or not one line"; GREEN: DESKTOP_PROGRESS_BEHAVIOR_GREEN. All five normalized reference hashes match SHA256SUMS.txt.
+  Signed-in MSI\tayla Full: 56 checks / 0 errors, exit 0, last line "Hepsi geçti."; Fast baseline 13/0; Release build clean. Full elapsed 206521 ms.
+  Context7 /dotnet/docs: record properties/with copies, JSON serialization and GeneratedRegex; /modelcontextprotocol/csharp-sdk: attributed tools, optional arguments and typed structured results. Official vendor sources checked.
+  Supporting changes: prescribed manifest/title/metadata/surface counts and existing source assertions, README tool entry, mandatory Context7/Awwwards evidence. No visual design changes or work on another card.
+  Post-commit delivery evidence goes to Gitea #9: build/deploy this exact card commit, healthz.sourceCommit and installed smoke, live talvora_worklog_note {workspaceRoot,text:"N10 — görev satırı"} accepted:true, and exact-commit windows-ci. These remain pending until verified there.
 - 2026-10-23 — N9 (executor: Codex via Talvora): exact approved subjects/title table and narrative copied; all four normalized reference hashes match; real quality-gate counts become facts.
   RED: approved test first failed with missing title table, then expected "Kalite kontrolü geçti · tam" but got "İşlem tamamlandı"; GREEN: DESKTOP_PROGRESS_BEHAVIOR_GREEN and MODERNIZATION_POLICY_GREEN.
   Signed-in MSI\tayla Full: 56 checks / 0 errors, exit 0, final line "Hepsi geçti."; Fast baseline 13/0; Release build clean. Detached logs retain identity and actual gate exit despite connector/launcher output limitations.

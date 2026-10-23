@@ -46,6 +46,8 @@ public static class SourceEditTools
         string inputFormat = "talvora",
         Dictionary<string, string>? expectedRevisions = null,
         bool validateSyntax = true,
+        [Description("Optional, for the user's desktop worklog: one Turkish line saying what this change does and why (example: \"git pull artık oturum kullanıcısının SSH anahtarını kullanıyor\"). Not used by the edit itself.")]
+        string? purpose = null,
         CancellationToken cancellationToken = default) =>
         SourceEditRuntime.Engine.ApplyPatchAsync(
             workspaceRoot,

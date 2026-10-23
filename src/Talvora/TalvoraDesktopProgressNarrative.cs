@@ -26,7 +26,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     private sealed record OperationNarrative(
         OperationCategory Category,
         WorklogTitles Titles,
-        string? Subject = null);
+        string? Subject = null,
+        string? Purpose = null);
 
     /// <summary>
     /// Category, tense-correct titles and the step's subject (DESIGN-WORKLOG §6.1). Every title names

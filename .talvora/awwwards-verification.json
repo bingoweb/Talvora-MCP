@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T14:20:00Z",
+  "verifiedAtUtc": "2026-10-23T15:01:18.176Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "N9: DESIGN-WORKLOG section 6.1 approved subject-bearing Turkish titles only. Awwwards homepage checked live (HTTP 200; title Awwwards - Website Awards - Best Web Design Trends).",
+  "scope": "N10: DESIGN-WORKLOG section 6.2 task/purpose/place/count frame fields; rows are rendered in N5. Awwwards homepage checked live (HTTP 200; title Awwwards - Website Awards - Best Web Design Trends).",
   "references": [
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
-    "DESIGN-WORKLOG section 6.1: every title carries its subject, taken only from the call's real arguments, never a command line.",
-    "DESIGN-WORKLOG section 6.1: use the approved TalvoraToolTitles Turkish title table for every manifest tool.",
-    "DESIGN-WORKLOG section 6.1: quality-gate summary N kontrol, M hata becomes the fact N kontrol · M hata."
+    "DESIGN-WORKLOG section 6.2: # görev comes from talvora_worklog_note; ne comes only from the agent's purpose argument.",
+    "DESIGN-WORKLOG section 6.2: nerede and fark come from committed file receipts and recognised hunk declarations; rejected or failed edits never send changes.",
+    "N10 Acceptance: the new rows become visible with N5; the frame fields are proven by the regression."
   ]
 }

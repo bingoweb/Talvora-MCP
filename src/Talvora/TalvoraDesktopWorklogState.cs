@@ -46,6 +46,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         public CancellationTokenSource? CloseDelay { get; set; }
         public PendingFailure? Failure { get; set; }
         public PendingCancellation? Cancellation { get; set; }
+        public string? TaskNote { get; set; }
+        public string? Purpose { get; set; }
+        public IReadOnlyList<WorklogFileChange>? Changes { get; set; }
     }
 
     private readonly object _worklogGate = new();
@@ -92,11 +95,12 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     private void TryEndWorklog(
         string operationId, DesktopProgressKind kind,
         string title, string message,
-        DesktopProgressEvidence? evidence, TimeSpan elapsed)
+        DesktopProgressEvidence? evidence, TimeSpan elapsed,
+        IReadOnlyList<WorklogFileChange>? changes = null)
     {
         try
         {
-            EndWorklog(operationId, kind, title, message, evidence, elapsed);
+            EndWorklog(operationId, kind, title, message, evidence, elapsed, changes);
         }
         catch (Exception ex)
         {
@@ -124,7 +128,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 toolName, narrative, evidence, ++_worklogSequence, session);
             PublishSession(session, toolName, narrative.Titles.Running,
                 WorklogCopy.RunningFallback, DesktopProgressKind.Started,
-                elapsed, evidence);
+                elapsed, evidence, narrative.Purpose);
         }
     }
 
@@ -147,14 +151,16 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             PublishSession(current.Session, current.ToolName,
                 current.Narrative.Titles.Running,
                 WorklogCopy.RunningFallback,
-                DesktopProgressKind.Running, elapsed, current.Evidence);
+                DesktopProgressKind.Running, elapsed, current.Evidence,
+                current.Narrative.Purpose);
         }
     }
 
     private void EndWorklog(
         string operationId, DesktopProgressKind kind,
         string title, string message,
-        DesktopProgressEvidence? evidence, TimeSpan elapsed)
+        DesktopProgressEvidence? evidence, TimeSpan elapsed,
+        IReadOnlyList<WorklogFileChange>? changes = null)
     {
         lock (_worklogGate)
         {
@@ -198,7 +204,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 PublishSession(session, latest.ToolName,
                     latest.Narrative.Titles.Running,
                     WorklogCopy.RunningFallback,
-                    DesktopProgressKind.Running, elapsed, latest.Evidence);
+                    DesktopProgressKind.Running, elapsed, latest.Evidence,
+                    latest.Narrative.Purpose);
                 return;
             }
 
@@ -218,7 +225,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             else
             {
                 PublishSession(session, ended.ToolName, title,
-                    message, kind, elapsed, evidence);
+                    message, kind, elapsed, evidence,
+                    ended.Narrative.Purpose, changes);
             }
             session.Failure = null;
             session.Cancellation = null;
@@ -229,8 +237,11 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     private void PublishSession(
         WorklogSession session, string toolName, string title,
         string message, DesktopProgressKind kind,
-        TimeSpan elapsed, DesktopProgressEvidence? evidence)
+        TimeSpan elapsed, DesktopProgressEvidence? evidence,
+        string? purpose = null, IReadOnlyList<WorklogFileChange>? changes = null)
     {
+        session.Purpose = purpose;
+        session.Changes = changes;
         session.ToolName = toolName;
         session.Title = title;
         session.Message = ComposeWorklogMessage(message, evidence);
@@ -302,8 +313,37 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             session.Steps = 0;
             session.Failure = null;
             session.Cancellation = null;
+            session.TaskNote = null;
         }
         return session;
+    }
+
+    /// <summary>talvora_worklog_note: set the session's task line and show it at once if a card is up.</summary>
+    private void TrySetTaskNote(
+        IDictionary<string, JsonElement>? arguments, string? surfacePath, string? clientName)
+    {
+        try
+        {
+            if (WorklogNote.Normalize(GetArgumentText(arguments, "text")) is not { } note)
+            {
+                return;
+            }
+            lock (_worklogGate)
+            {
+                var session = GetOrCreateSession(arguments, surfacePath, clientName, null);
+                session.TaskNote = note;
+                if (!string.IsNullOrEmpty(session.Title))
+                {
+                    Enqueue(session.Id, session.ToolName, session.Title,
+                        session.Message, session.Kind, session.Elapsed, session.Evidence);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex,
+                "Desktop worklog task note failed without affecting the tool operation.");
+        }
     }
 
     private static string ResolveActor(string? surfacePath, string? clientName)
@@ -406,10 +446,12 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 : null;
             return new DesktopWorklogFrame(
                 session.Id, sequence, DateTimeOffset.UtcNow,
-                new WorklogSessionHeader(session.ProjectName, session.Actor),
+                new WorklogSessionHeader(session.ProjectName, session.Actor, session.TaskNote),
                 new WorklogStep((WorklogStepCategory)session.Category,
                     ToWorklogState(kind), title, isTerminal ? evidence?.Summary : null, outcome,
-                    Math.Max(0, elapsed.TotalSeconds)),
+                    Math.Max(0, elapsed.TotalSeconds),
+                    session.Purpose,
+                    kind == DesktopProgressKind.Completed ? session.Changes : null),
                 session.Timeline.ToArray(),
                 new WorklogTotals(session.Steps,
                     Math.Max(0, (DateTimeOffset.UtcNow - session.BeganUtc).TotalSeconds),

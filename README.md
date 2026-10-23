@@ -54,6 +54,7 @@
 - **Honest service health:** intentionally stopped or on-demand MCPs are neutral, not red errors. Genuine outages and warnings remain visible.
 - **User-controlled notifications:** code output may expand the notification vertically without changing its user-set width; non-code updates return to a compact layout.
 - **Lean MCP surface:** **251 total**, **214 Dev**, **88 Admin**, with **51 explicitly shared** tools. The former automatic memory and embedding subsystem has been removed.
+- **Desktop worklog task line:** `talvora_worklog_note` sets the one-line task the desktop worklog card shows for the current project; `talvora_apply_patch` accepts an optional `purpose` line for the same card.
 - **Signed-in user execution:** `talvora_user_run` runs an executable as the signed-in Windows user (not LocalSystem) and returns an exit code and bounded output.
 - **Codex desktop bridge:** detect the already-installed Windows Codex CLI and use the interactive user's existing ChatGPT session with GPT-6.1 Sol / Medium, bounded workspace sandboxing and no duplicate installation.
 - **Separate MCP clients:** the installer limits only Codex CLI's registration to eight Talvora Dev tools; ChatGPT's Dev/Admin connectors retain their full tool surfaces.

@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T14:20:00Z",
-  "scope": "N9: copy the approved subject extraction and Turkish title table exactly; name scripts, programs, projects, files and remotes from real arguments and parse quality-gate result counts.",
+  "verifiedAtUtc": "2026-10-23T15:01:18.176Z",
+  "scope": "N10: exact approved task-note, purpose and changed-place protocol/service implementation; bounded redacted record fields, real receipt counts and declaration names, and one new structured worklog-note tool.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-23 N10: positional records synthesize public init-only properties; with expressions copy records with selected changes; System.Text.Json serializes those public properties; GeneratedRegex on partial methods emits cached Regex implementations. Verified the exact approved frame normalization and declaration-name references."
+    },
+    {
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-10-23 N10: McpServerTool attribute methods on McpServerToolType classes expose parameter Description metadata and typed structuredContent with UseStructuredContent=true. Verified the approved optional purpose argument and WorklogNoteTools structured response without changing SDK APIs."
+    },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-23 N9: official .NET Regex named groups are available through Match.Groups[name].Value; multiline anchors identify the real quality-gate summary. Verified the prescribed reference implementation without changing its text or algorithm."
@@ -253,6 +261,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-23 N10: official C# records and with expressions https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/record ; .NET generated Regex https://github.com/dotnet/docs/blob/main/docs/standard/base-types/regular-expression-source-generators.md ; official MCP C# SDK tools and structured content https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md ; Context7 /dotnet/docs and /modelcontextprotocol/csharp-sdk verified.",
     "2026-10-23 N9: official .NET grouping constructs https://learn.microsoft.com/en-us/dotnet/standard/base-types/grouping-constructs-in-regular-expressions and upstream https://github.com/dotnet/docs/blob/main/docs/standard/base-types/the-regular-expression-object-model.md ; Context7 /dotnet/docs confirmed named capture syntax and GroupCollection indexing.",
     "2026-10-22 N3: DiffPlex upstream API https://github.com/mmanela/diffplex/blob/master/README.md and DiffBlock fields https://github.com/mmanela/diffplex/blob/master/DiffPlex/Model/DiffBlock.cs ; stable version, target frameworks and Apache-2.0 license verified at https://www.nuget.org/packages/DiffPlex/1.9.0 ; .NET JSON DOM https://github.com/dotnet/docs/blob/main/docs/standard/serialization/system-text-json/use-dom.md . Context7 /mmanela/diffplex and /dotnet/docs verified.",
     "2026-10-22 N2: MCP official C# SDK stateless sessions https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/stateless/stateless.md , HTTP request context https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/httpcontext/httpcontext.md and McpServer.ClientInfo https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Server/McpServer.cs ; .NET SHA256.HashData https://github.com/dotnet/docs/blob/main/docs/fundamentals/code-analysis/quality-rules/ca1850.md and DispatcherTimer https://github.com/dotnet/docs/blob/main/docs/standard/threading/timers.md ; Context7 /modelcontextprotocol/csharp-sdk and /dotnet/docs verified.",
