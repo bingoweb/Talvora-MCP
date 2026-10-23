@@ -99,7 +99,9 @@ public static class ClaudeBackgroundJobTools
                 lock (_gate) { _finished = DateTime.UtcNow; }
                 heartbeatCancellation.Cancel();
                 try { await heartbeat.ConfigureAwait(false); } catch (OperationCanceledException) { }
-                Notify(() => DesktopNotifier?.EndClaudeJob(Id, Snapshot(false).State, DateTime.UtcNow - Created));
+                var summary = Snapshot(false);
+                Notify(() => DesktopNotifier?.EndClaudeJob(Id, summary.State, DateTime.UtcNow - Created,
+                    summary.ToolCalls, summary.FailedTools, summary.PermissionDenials, _progress?.FinalAnswer));
             }
         }
 
@@ -109,7 +111,8 @@ public static class ClaudeBackgroundJobTools
             while (await timer.WaitForNextTickAsync(token).ConfigureAwait(false))
             {
                 var snapshot = Snapshot(false);
-                Notify(() => DesktopNotifier?.UpdateClaudeJob(Id, snapshot.ToolCalls, DateTime.UtcNow - Created));
+                Notify(() => DesktopNotifier?.UpdateClaudeJob(Id, snapshot.ToolCalls, DateTime.UtcNow - Created,
+                    snapshot.FailedTools, snapshot.PermissionDenials, snapshot.RecentActivities.LastOrDefault()));
             }
         }
 

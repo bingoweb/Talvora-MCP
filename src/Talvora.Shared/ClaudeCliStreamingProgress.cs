@@ -130,7 +130,7 @@ public sealed class ClaudeCliStreamingProgress
                 {
                     _tools++;
                     // Never persist raw command text, arguments, reasoning or tool output.
-                    AddActivity("Claude bir geliştirme adımı üzerinde çalışıyor.");
+                    AddActivity(ClassifyToolUse(block));
                 }
                 if (Text(block, "type") == "tool_result" &&
                     block.TryGetProperty("is_error", out var failed) &&
@@ -144,6 +144,31 @@ public sealed class ClaudeCliStreamingProgress
     {
         if (_activities.Count >= 12) { _activities.Dequeue(); }
         _activities.Enqueue(value);
+    }
+
+    private static string ClassifyToolUse(JsonElement block)
+    {
+        var name = Text(block, "name") ?? "";
+        if (name is "Edit" or "MultiEdit" or "Write")
+        {
+            var input = block.TryGetProperty("input", out var value) && value.ValueKind == JsonValueKind.Object
+                ? value : default;
+            var path = input.ValueKind == JsonValueKind.Object
+                ? Text(input, "file_path") ?? Text(input, "path") : null;
+            var filename = Path.GetFileName(path?.Replace('\\', '/'));
+            return string.IsNullOrWhiteSpace(filename) ? "Dosya düzenliyor" :
+                "Dosya düzenliyor · " + (filename.Length > 80 ? filename[..80] : filename);
+        }
+        if (name is "Bash" or "Shell")
+        {
+            var input = block.TryGetProperty("input", out var value) && value.ValueKind == JsonValueKind.Object
+                ? value : default;
+            return CodexCliEventSummary.ClassifyCommand(input.ValueKind == JsonValueKind.Object
+                ? Text(input, "command") ?? "" : "");
+        }
+        if (name.StartsWith("mcp__", StringComparison.OrdinalIgnoreCase))
+            return "Talvora aracı kullanıyor · İnceleme";
+        return "Kaynakları inceliyor";
     }
 
     private static string Safe(string value)

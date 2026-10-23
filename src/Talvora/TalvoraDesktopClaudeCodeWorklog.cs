@@ -78,6 +78,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         lock (_worklogGate)
         {
             if (!_activeWorklog.TryGetValue("claude-" + jobId, out var item)) return;
+            if (evidence.Files is { } files) item.Session.ChangedFiles.UnionWith(files);
             Enqueue(item.Session.Id, item.ToolName, item.Narrative.Titles.Running,
                 WorklogCopy.RunningFallback, DesktopProgressKind.Running, elapsed, evidence);
         }

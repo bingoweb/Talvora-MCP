@@ -101,7 +101,8 @@ internal static partial class SmokeScenarios
             parsed.FinalAnswer != "Build and tests passed." ||
             parsed.CompletedCommands != 1 || parsed.FailedCommands != 0 ||
             parsed.McpToolCalls != 1 ||
-            !parsed.RecentActivities.Any(item => item.Contains("dotnet test",
+            !parsed.RecentActivities.Contains("Testleri çalıştırıyor") ||
+            parsed.RecentActivities.Any(item => item.Contains("dotnet test",
                 StringComparison.Ordinal)))
         {
             throw new InvalidOperationException(

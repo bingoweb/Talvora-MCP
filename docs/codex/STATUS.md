@@ -76,12 +76,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D16 — Local evidence gates parse as strictly as the push gate (signed-in Full 56/0; exact-commit GitHub CI check after push)
 - [x] N2 — Worklog: protocol v4, sessions, project/actor context (P-11; signed-in Full 56/0; CI 39819719963 green; installed c56c7ee verified)
 - [x] N3 — Worklog: real facts from results (P-11; signed-in Full 56/0; CI 39827653752 green; installed 504fa7b verified)
-- [~] D17 — `talvora_user_run` and signed-in gate under S3-protected ProgramData (live working; exact-commit deployment and GitHub CI pending)
+- [x] D17 — `talvora_user_run` and signed-in gate under S3-protected ProgramData (installed 866ec2a, signed-in Full 57/0, Fast 13/0; GitHub windows-ci 40006154352 green)
 - [x] N9 — Worklog: every step names what it works on + approved Turkish tool titles (§6.1); signed-in Full 56/0; exact-commit deployment, desktop title and CI evidence follow in Gitea #9.
 - [x] N10 — Worklog: task line, purpose, changed places (ne · nerede · fark, §6.2) + talvora_worklog_note; signed-in Full 56/0; exact-commit deployment, live accepted:true and CI evidence follow in Gitea #9.
 - [x] RM1 — Remotion animations: guide, detached runs, live card, automatic routing (Phase RM); signed-in Full 56/0; exact-commit installed runs, desktop card and CI evidence follow in Gitea #9.
 - [x] N3b — Worklog: code terminal real, complete, persistent (P-27; declaration context); signed-in Full 56/0; exact-commit installed/desktop/CI evidence follows in Gitea #9.
-- [ ] N4 — Worklog: agent jobs tell their story (+ Codex code terminal) (P-28 decided: documented JSONL + fixtures, no live Codex; after D17)
+- [~] N4 — Agent job activity and Codex code terminal (signed-in Full 57/0; exact-commit install and GitHub CI pending; no live Codex run per P-28)
 - [ ] N5 — Worklog card visual redesign + preview harness (after N4; reference updated 2026-10-23)
 - [?] N6 — Worklog evidence surface ("Ayrıntılar") (waiting for N5)
 - [x] S3 — ProgramData ACL + protected user-session InteractiveRuns (P-12; signed-in Full 56/0, privacy regression GREEN; installer/CI follow commit; live Codex exec deferred by U7/U8)
@@ -134,6 +134,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-23 — N4 (executor: ChatGPT via Talvora): classify completed Codex JSONL and Claude stream events into Turkish activity lines with no raw command, track actual changed files and totals, and keep final summaries in technical evidence only. Codex code terminal uses a 2,000-file/64-MB pre-job SHA-256/text snapshot and DiffPlex; existing dirty files are not attributed to Codex.
+  RED: N4-only compile (missing ChangedFiles); GREEN: sanitised Codex/Claude JSONL fixtures, Codex diff and counts, Claude denial/heartbeat, command privacy (N4_AGENT_EVENTS_GREEN); IntegrationPolicy legacy expectation updated, targeted Codex smoke GREEN. Signed-in Full gate 57/0 Hepsi geçti.; Context7 /openai/codex and /dotnet/docs, official Codex exec event schema and Awwwards spec evidence refreshed.
+  No live Codex run (P-28, U7/U8); before/after agent-card PNG deferred to N5 (P-11). Exact-commit installer/deployment and GitHub windows-ci pending; W13 already uses Claude's 60-second producer interval and tray's doubled stale threshold.
 - 2026-10-23 — D17 (executor: ChatGPT via Talvora): replaced PowerShell request deletion with [IO.File]::Delete; isolated SourceEdit/ast-grep regression state to signed-in LocalApplicationData, kept service ProgramData and S3 ACLs unchanged. Reference regression SHA256 636eba36c7a58ad89f64c4e2621d75a20c110cac15422eecbb4f9d2caeb2e6ee; test-first RED then INTERACTIVE_RUNNER_PARENT_ACCESS_GREEN.
   Signed-in Full gate 57/0 `Hepsi geçti.`; service bootstrap installed af6628-dirty-f306a9327053. Live `talvora_user_run whoami` exit 0 (`msi\tayla`); normal signed-in Fast gate 13/0 `Hepsi geçti.`. Context7 `/dotnet/docs` + official .NET File.Delete/I/O-error and LocalApplicationData guidance verified; evidence refreshed.
   Final clean-commit build/deploy, Gitea/GitHub push and GitHub exact-commit CI pending; do not mark [x] until verified. Audit 10 backfill: RM1 live compositions/GIF 60/60 and N10 worklog_note/purpose verified; N9 and N3b desktop-specific evidence remains in Gitea #9.

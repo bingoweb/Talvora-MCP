@@ -1,0 +1,9 @@
+{"type":"thread.started","thread_id":"test-thread"}
+{"type":"item.completed","item":{"type":"command_execution","command":"dotnet test SECRET_COMMAND_SENTINEL","exit_code":0,"status":"completed"}}
+{"type":"item.completed","item":{"type":"command_execution","command":"dotnet build demo.slnx","exit_code":0,"status":"completed"}}
+{"type":"item.completed","item":{"type":"command_execution","command":"git status --short","exit_code":0,"status":"completed"}}
+{"type":"item.completed","item":{"type":"mcp_tool_call","server":"talvora","tool":"talvora_search_text","status":"completed"}}
+{"type":"item.completed","item":{"type":"file_change","status":"failed","changes":[{"path":"Rejected.cs","kind":"update"}]}}
+{"type":"item.completed","item":{"type":"file_change","status":"completed","changes":[{"path":"Demo.cs","kind":"update"}]}}
+{"type":"item.completed","item":{"type":"agent_message","text":"Kod değişikliği ve testler tamamlandı."}}
+{"type":"turn.completed","usage":{"input_tokens":42,"output_tokens":21}}

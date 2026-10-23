@@ -67,6 +67,7 @@ public static class CodexBackgroundJobTools
         private int _failedCommands;
         private int _mcpCalls;
         private string[] _activities = [];
+        private string[] _changedFiles = [];
         private string? _error;
         private TalvoraCodexCliExecResponse? _result;
         private DateTime? _lastProgressAt;
@@ -87,6 +88,7 @@ public static class CodexBackgroundJobTools
             int commands;
             int mcpCalls;
             string? activity;
+            string[] changedFiles;
             bool notify;
             lock (_gate)
             {
@@ -99,10 +101,12 @@ public static class CodexBackgroundJobTools
                     .Select(text => CodexCliInvocationPolicy.SanitizeFinalAnswer(
                         text, _prompt))
                     .ToArray();
+                _changedFiles = progress.ChangedFiles.Take(2000).ToArray();
                 _lastProgressAt = DateTime.UtcNow;
                 commands = _commands;
                 mcpCalls = _mcpCalls;
                 activity = _activities.LastOrDefault();
+                changedFiles = _changedFiles;
                 notify = DateTime.UtcNow - _lastDesktopUpdate >
                     TimeSpan.FromSeconds(4);
                 if (notify) { _lastDesktopUpdate = DateTime.UtcNow; }
@@ -111,7 +115,7 @@ public static class CodexBackgroundJobTools
             {
                 DesktopNotifier?.UpdateCodexJob(
                     JobId, commands, mcpCalls, activity,
-                    DateTime.UtcNow - CreatedAtUtc);
+                    DateTime.UtcNow - CreatedAtUtc, changedFiles);
             }
         }
 
@@ -146,7 +150,8 @@ public static class CodexBackgroundJobTools
                 state = _state;
             }
             DesktopNotifier?.EndCodexJob(
-                JobId, state, DateTime.UtcNow - CreatedAtUtc);
+                JobId, state, DateTime.UtcNow - CreatedAtUtc,
+                _commands, _mcpCalls, _changedFiles, result.StandardOutput);
         }
 
         public void Fail(Exception exception)
@@ -166,7 +171,8 @@ public static class CodexBackgroundJobTools
                 state = _state;
             }
             DesktopNotifier?.EndCodexJob(
-                JobId, state, DateTime.UtcNow - CreatedAtUtc);
+                JobId, state, DateTime.UtcNow - CreatedAtUtc,
+                _commands, _mcpCalls, _changedFiles);
         }
 
         public void Cancel()

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Talvora.Shared;
 
@@ -14,7 +15,10 @@ public sealed record CodexCliEventResult(
     int McpToolCalls,
     IReadOnlyList<string> RecentActivities,
     string? LastError,
-    bool HasEvents);
+    bool HasEvents)
+{
+    public IReadOnlyList<string> ChangedFiles { get; init; } = [];
+}
 
 public static class CodexCliEventSummary
 {
@@ -28,6 +32,7 @@ public static class CodexCliEventSummary
         var mcpCalls = 0;
         var hasEvents = false;
         var activities = new Queue<string>();
+        var changedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         using var reader = new StringReader(output);
         while (reader.ReadLine() is { } line)
@@ -77,18 +82,26 @@ public static class CodexCliEventSummary
                                 {
                                     failedCommands++;
                                 }
-                                Enqueue(activities,
-                                    $"Shell: {Abbreviate(GetString(item, "command") ?? "command", 160)}" +
-                                    (exitCode is null ? "" : $" (exit {exitCode})"));
+                                Enqueue(activities, ClassifyCommand(GetString(item, "command") ?? ""));
                                 break;
                             case "mcp_tool_call":
                                 mcpCalls++;
-                                Enqueue(activities,
-                                    $"MCP: {Abbreviate(GetString(item, "server") ?? "server", 60)}/" +
-                                    Abbreviate(GetString(item, "tool") ?? "tool", 80));
+                                Enqueue(activities, ClassifyTool(GetString(item, "tool") ?? ""));
                                 break;
                             case "file_change":
-                                Enqueue(activities, "Workspace files edited");
+                                if (GetString(item, "status") is "failed" or "declined") break;
+                                if (!item.TryGetProperty("changes", out var changes) ||
+                                    changes.ValueKind != JsonValueKind.Array) break;
+                                foreach (var change in changes.EnumerateArray())
+                                {
+                                    if (change.ValueKind != JsonValueKind.Object ||
+                                        GetString(change, "path") is not { Length: > 0 and <= 1024 } path ||
+                                        changedFiles.Count >= 2000) continue;
+                                    changedFiles.Add(path);
+                                    var name = Path.GetFileName(path.Replace('\\', '/'));
+                                    if (!string.IsNullOrWhiteSpace(name))
+                                        Enqueue(activities, $"Dosya düzenliyor · {Abbreviate(name, 80)}");
+                                }
                                 break;
                         }
                         break;
@@ -108,8 +121,30 @@ public static class CodexCliEventSummary
             mcpCalls,
             activities.ToArray(),
             lastError,
-            hasEvents);
+            hasEvents)
+        {
+            ChangedFiles = changedFiles.ToArray(),
+        };
     }
+
+    internal static string ClassifyCommand(string command)
+    {
+        if (Regex.IsMatch(command, @"\b(dotnet\s+test|pytest|unittest|vitest|jest|npm\s+(run\s+)?test|pnpm\s+test)\b", RegexOptions.IgnoreCase))
+            return "Testleri çalıştırıyor";
+        if (Regex.IsMatch(command, @"\b(dotnet\s+(build|publish)|msbuild|cargo\s+build|npm\s+run\s+build|pnpm\s+build)\b", RegexOptions.IgnoreCase))
+            return "Derliyor";
+        if (Regex.IsMatch(command, @"\bgit\s+(add|commit|push|pull|fetch|status|diff|log|show)\b", RegexOptions.IgnoreCase))
+            return "Git işlemi yapıyor";
+        return "Kaynakları inceliyor";
+    }
+
+    private static string ClassifyTool(string tool) =>
+        tool.Contains("git", StringComparison.OrdinalIgnoreCase) ? "Talvora aracı kullanıyor · Git" :
+        tool.Contains("test", StringComparison.OrdinalIgnoreCase) ? "Talvora aracı kullanıyor · Test" :
+        tool.Contains("build", StringComparison.OrdinalIgnoreCase) ? "Talvora aracı kullanıyor · Derleme" :
+        tool.Contains("edit", StringComparison.OrdinalIgnoreCase) || tool.Contains("patch", StringComparison.OrdinalIgnoreCase)
+            ? "Talvora aracı kullanıyor · Kod değişikliği" :
+        "Talvora aracı kullanıyor · İnceleme";
 
     private static string? GetString(JsonElement element, string property) =>
         element.ValueKind == JsonValueKind.Object &&

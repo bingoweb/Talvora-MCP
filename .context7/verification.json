@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T18:35:17Z",
-  "scope": "D17: restore interactive request deletion under S3 protected folders, isolate signed-in regression SourceEdit state and ast-grep cache in LocalApplicationData while retaining service ProgramData ACLs (P-29).",
+  "verifiedAtUtc": "2026-10-23T19:15:36Z",
+  "scope": "N4: classify agent JSONL events, show source-backed worklog totals, and use in-memory Codex pre-job snapshots for applied code previews without running Codex live (P-28).",
   "libraries": [
+    {
+      "libraryId": "/openai/codex",
+      "verified": "2026-10-23 N4: official codex-rs/exec/src/exec_events.rs documents thread.started, item.completed, item types command_execution/mcp_tool_call/file_change/agent_message and the final text field; file_change paths are treated as applied only from completed-success events, no live Codex execution (P-28). App-server diff notification types are not assumed to exist in CLI JSONL. Sanitised checked-in fixtures verify Turkish activity labels, no raw command persistence, successful file paths and bounded in-memory pre-job diff snapshots."
+    },
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-23 N4: .NET official System.IO paths and FileInfo filesystem guidance validates user workspace snapshots, FileAttributes.ReparsePoint filtering and capped File.ReadAllBytes; SHA256.HashData and System.Text.Json DOM are used for bounded before-state identity and JSONL classification. No new dependency or unsupported reflection path added."
+    },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-23 D17: .NET official System.IO.File APIs and I/O error-handling guidance support direct request-file deletion with exception handling (dotnet/docs docs/standard/io/handling-io-errors.md). Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) with Path.Combine is documented in dotnet/docs docs/csharp/fundamentals/tutorials/snippets/system-commandline/TaskCli.cs, for a signed-in user's isolated test state. The protected service CommonApplicationData defaults remain intact; S3 ACL regressions and the exact closed-parent request test verify behavior."

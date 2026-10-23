@@ -14,6 +14,12 @@ internal static partial class Program
 {
     public static async Task<int> Main()
     {
+        if (Environment.GetCommandLineArgs().Contains("--n4-only", StringComparer.Ordinal))
+        {
+            await AssertN4AgentEventsAsync();
+            Console.WriteLine("N4_AGENT_EVENTS_GREEN");
+            return 0;
+        }
         await DesktopProgressProtocol.AssertContractAsync();
         DesktopProgressPresentationState.AssertContract();
         ManagedMcpAggregateHealthPolicy.AssertContract();
@@ -28,6 +34,7 @@ internal static partial class Program
         await AssertN10ChangesAsync();
         await AssertRemotionWorklogAsync();
         await AssertN3bCodeTerminalAsync();
+        await AssertN4AgentEventsAsync();
         await AssertDiffEvidenceCoverageAsync();
         await AssertSemanticMessagingAndCanonicalToolAsync();
         await AssertConcurrentCancellationTruthAsync();

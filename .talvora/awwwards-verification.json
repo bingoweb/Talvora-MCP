@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T16:24:08Z",
+  "verifiedAtUtc": "2026-10-23T19:15:36Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "N3b: DESIGN-WORKLOG code terminal behaviour only; no visual redesign. Awwwards homepage checked live (HTTP 200; title Awwwards - Website Awards - Best Web Design Trends).",
+  "scope": "N4: DESIGN-WORKLOG 5.4 and 5.4.1 agent-event worklog behavior only; existing visual layout unchanged. Awwwards homepage checked live 2026-10-23 (Awwwards - Website Awards - Best Web Design Trends).",
   "references": [
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
-    "DESIGN-WORKLOG 3.1: Only real, applied changes. The pane is filled from the result of the step; a rejected/failed edit never shows a diff.",
-    "DESIGN-WORKLOG 3.1: Stays visible for the whole session. The pane keeps the latest code change while later build/test/commit steps run; its header identifies the originating step and time.",
-    "DESIGN-WORKLOG 5.5 and N3b: shared DiffPlex builder, declaration context, redaction and explicit size limits; CodeChangeId replaces repeated previews. P-11 defers before/after PNG evidence to N5."
+    "DESIGN-WORKLOG 5.4: Codex/Claude jobs open or join the project's session; live activity lines are classified from real events, never from command lines.",
+    "DESIGN-WORKLOG 5.4.1: Codex applied changes use a lightweight snapshot at job start (SHA-256 plus bounded text, skipping .git/bin/obj/node_modules); pre-existing uncommitted edits are not attributed to Codex.",
+    "DESIGN-WORKLOG 5.2 and N4: Claude's 25-second heartbeat sets ExpectedNextUpdateSeconds to 60; the tray waits two such intervals. P-11 defers before/after PNG evidence to N5."
   ]
 }
