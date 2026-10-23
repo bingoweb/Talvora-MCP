@@ -79,7 +79,7 @@ $checks = [ordered]@{
         $policy.Contains('"--approve-for-me"') -and
         $policy.Contains('"-a", "never"') -and
         $policy.Contains('"--sandbox", sandbox') -and
-        $policy.Contains('"--", prompt') -and
+        $policy.Contains('"--", "-"') -and
         -not $source.Contains('dangerously-bypass-approvals-and-sandbox')
     )
     PersistentSessionsAndWorkSummary = (

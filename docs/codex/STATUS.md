@@ -86,8 +86,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] N5 — Phosphor card (D18 closes remaining acceptance: signed-in Full 57/0, PNGs 9/9, real desktop code terminal/nerede proof, installed 78fce40 and GitHub CI 40022688918 success)
 - [x] N6 — Worklog evidence surface ("Ayrıntılar") (installed b27cee0, signed-in Full 57/0, GitHub CI 40027301656 success; live details + reopened preference verified, real PNGs attached #144)
 - [x] S3 — ProgramData ACL + protected user-session InteractiveRuns (P-12; signed-in Full 56/0, privacy regression GREEN; installer/CI follow commit; live Codex exec deferred by U7/U8)
-- [~] R1 — Agent job registry, persistence, orphan recovery, limits (signed-in Full gate 57/0; live pending: exact-commit install, orphan recovery smoke and GitHub CI)
-- [ ] R2 — Prompts via stdin (P-14 decided; after S3)
+- [x] R1 — Agent job registry, persistence, orphan recovery, limits (installed 7aac8ce; Full 57/0; installed smoke 255 tools; GitHub CI 40033495884 success)
+- [~] R2 — Prompts via stdin (P-14; signed-in Full gate 58/0; live pending: exact-commit install, installed smoke and GitHub CI)
 - [ ] R3 — Safe Reset-And-Install (P-15 decided: Secrets never touched)
 - [ ] Q5 — Control Center smoke: structural checks, current theme PNG (P-18 decided)
 - [ ] UI1 — Tokens, theme manager (Sistem default, Gece fallback), typography; both-theme proof via Q5 smoke (P-18)
@@ -136,6 +136,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — R2 (executor: ChatGPT): Codex exec/resume stdin marker, Claude --print with no positional prompt; runner writes UTF-8/no-BOM stdin.txt within the protected S3 run directory, streams it to child stdin and immediately deletes it; no changes to CLI permissions.
+  RED: old CLI argument and child prompt-spool assertions failed. GREEN: 120,000-character Turkish UTF-8 hash matched fake child; Win32_Process.CommandLine excluded the prompt; spool deleted while child alive; both engine integration policies green.
+  Signed-in MSI\tayla Full gate 58 checks, 0 errors, exit 0, Hepsi geçti. (artifacts/r2-full-gate.log/.exit). Context7 /openai/codex and /websites/code_claude. Supporting files: CLI policy/source tests, new R2StdinRegression.ps1 and evidence JSON.
+  Delivery pending: exact-commit installer, installed runtime smoke and GitHub CI. R1 exact-commit windows-ci 40033495884 SUCCESS verified; R1 closed without a second R1 commit.
 - 2026-10-24 — R1 (executor: ChatGPT): shared persisted Codex/Claude AgentJobRegistry, four-job/same-root limits, per-job metadata without prompts/environment, PID+start-time orphan recovery and guarded tree cancellation; native CLI args unchanged.
   RED: registry type absent. GREEN: synthetic restart/orphan/kill/PID-reuse/limit/worklog scenarios, live-runner launch callback (SYSTEM-only), Codex source regression and signed-in Full gate 57 checks, 0 errors, exit 0, Hepsi geçti. Evidence: artifacts/r1-full-gate-final.log/.exit.
   Context7 /websites/learn_microsoft_en-us_dotnet (.NET 10 Process APIs); supporting files: CLI launch-callback forwarding, smoke project/runner wiring, obsolete Codex source-test expectation and evidence JSON.

@@ -15,10 +15,10 @@ internal static partial class SmokeScenarios
         {
             var arguments = CodexCliInvocationPolicy.CreateArguments(
                 @"C:\workspace", prompt, "gpt-6.1-sol", "medium", "read-only");
-            if (arguments[^2] != "--" || arguments[^1] != prompt ||
+            if (arguments[^2] != "--" || arguments[^1] != "-" ||
                 arguments[0] != "-a" || arguments[1] != "never" ||
                 !arguments.Contains("read-only") ||
-                arguments.Count(item => item == prompt) != 1)
+                arguments.Any(item => item.Contains(prompt, StringComparison.Ordinal)))
             {
                 throw new InvalidOperationException(
                     "Codex argument separation or sandbox/approval policy regressed.");

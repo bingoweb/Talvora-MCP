@@ -39,7 +39,7 @@ public static class ClaudeCliArguments
             if (!Directory.Exists(full)) { throw new DirectoryNotFoundException(full); }
             arguments.AddRange(["--add-dir", full]);
         }
-        arguments.AddRange(["--", prompt]);
+        // In --print mode, omitting the positional prompt reads UTF-8 text from stdin.
         return arguments.ToArray();
     }
 }

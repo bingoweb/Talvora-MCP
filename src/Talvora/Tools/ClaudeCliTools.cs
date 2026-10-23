@@ -92,7 +92,7 @@ public static class ClaudeCliTools
                 progress?.Invoke(value);
             }, closeStandardInput: true,
             claudeWorkspaceRoot: Talvora.SourceEditing.SourceWorkspaceClassifier.Classify(cwd).WorkspaceRoot,
-            onStarted: onStarted).ConfigureAwait(false);
+            onStarted: onStarted, standardInputText: prompt).ConfigureAwait(false);
         var success = result.ExitCode == 0 && !result.TimedOut &&
             latest is { HasResult: true, IsError: false, PermissionDenials: 0 };
         var error = result.TimedOut ? "Claude Code reached the time limit." :

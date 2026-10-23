@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T22:13:32Z",
-  "scope": "R1: engine-agnostic persisted agent registry, Windows PID and process-start identity, cancellation of verified process trees, startup recovery and concurrency limits.",
+  "verifiedAtUtc": "2026-10-23T22:37:43Z",
+  "scope": "R2: stdin-only Codex and Claude prompts, protected UTF-8 no-BOM prompt spool with immediate deletion, 120,000-character Turkish round trip and WMI command-line isolation.",
   "libraries": [
+    {
+      "libraryId": "/openai/codex",
+      "verified": "2026-10-24 R2: codex-rs/exec/src/cli.rs and exec/src/lib.rs document '-' as the stdin prompt token for both codex exec and codex exec resume <SESSION_ID> -; --json and existing workspace/sandbox options remain unchanged. Reference: https://github.com/openai/codex/blob/main/codex-rs/exec/src/cli.rs ."
+    },
+    {
+      "libraryId": "/websites/code_claude",
+      "verified": "2026-10-24 R2: Claude Code headless/CLI reference confirms claude --print without a positional prompt consumes piped plain-text stdin by default; --input-format stream-json is not used for plain text. Piped input is capped at 10 MB, above the current 100,000-character task limit. Reference: https://code.claude.com/docs/en/headless and https://code.claude.com/docs/en/cli-reference ."
+    },
     {
       "libraryId": "/websites/learn_microsoft_en-us_dotnet",
       "verified": "2026-10-24 R1: Microsoft Learn .NET 10 Process.GetProcessById(int) returns the local process component and Process.Kill(entireProcessTree: true) terminates the process and descendants. System.Diagnostics.Process.StartTime is combined with the PID before a recovered orphan can be killed. Context7 source: https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process?view=net-10.0 . Engine-specific CLI arguments are unchanged; no package is added."

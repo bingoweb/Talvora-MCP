@@ -253,7 +253,7 @@ public static class CodexCliTools
                 writableDirectories.Add(GetWorkingDirectory(directory, context));
             }
         }
-        // Keep task text after the command-line option terminator.
+        // The positional dash is an stdin marker; task text is never in argv.
         var arguments = CodexCliInvocationPolicy.CreateArguments(
             cwd, prompt, model, reasoningEffort, effectiveSandbox,
             resumeSessionId, preserveSession, networkAccess, approvalMode,
@@ -266,7 +266,9 @@ public static class CodexCliTools
             interactiveUser: context,
             discardStandardError: true,
             onCodexProgress: onProgress,
-            onStarted: onStarted);
+            onStarted: onStarted,
+            closeStandardInput: true,
+            standardInputText: prompt);
         // Extract final answer and task activity from Codex's JSONL output.
         var events = CodexCliEventSummary.Parse(result.StandardOutput);
         var finalAnswer = events.HasEvents

@@ -25,6 +25,7 @@ public static class InteractiveUserProcessRunner
 string? CodexProgressPath,
         string? ClaudeProgressPath,
         bool CloseStandardInput,
+        string? StandardInputPath,
         string? ClaudeWorkspaceRoot);
 
     private sealed record Result(
@@ -52,7 +53,8 @@ Action<CodexCliEventResult>? onCodexProgress = null,
         Action<ClaudeCliProgress>? onClaudeProgress = null,
         bool closeStandardInput = false,
         string? claudeWorkspaceRoot = null,
-        Action<int, DateTimeOffset>? onStarted = null)
+        Action<int, DateTimeOffset>? onStarted = null,
+        string? standardInputText = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
         ArgumentException.ThrowIfNullOrWhiteSpace(workingDirectory);
@@ -94,6 +96,8 @@ Action<CodexCliEventResult>? onCodexProgress = null,
         var stderrPath = Path.Combine(runRoot, "stderr.txt");
         var resultPath = Path.Combine(runRoot, "result.json");
         var scriptPath = Path.Combine(runRoot, "runner.ps1");
+        var stdinPath = standardInputText is null
+            ? null : Path.Combine(runRoot, "stdin.txt");
         var progressPath = onCodexProgress is null
             ? null
             : Path.Combine(runRoot, "codex-progress.json");
@@ -119,6 +123,7 @@ Action<CodexCliEventResult>? onCodexProgress = null,
             progressPath,
             claudeProgressPath,
             closeStandardInput,
+            stdinPath,
             claudeWorkspaceRoot);
 
         FileStream? runLease = null;
@@ -129,6 +134,15 @@ Action<CodexCliEventResult>? onCodexProgress = null,
                 FileMode.CreateNew,
                 FileAccess.ReadWrite,
                 FileShare.Read);
+
+            if (stdinPath is not null)
+            {
+                await File.WriteAllTextAsync(
+                    stdinPath,
+                    standardInputText!,
+                    new UTF8Encoding(false),
+                    cancellationToken).ConfigureAwait(false);
+            }
 
             await File.WriteAllTextAsync(
                 requestPath,
@@ -337,6 +351,12 @@ Action<CodexCliEventResult>? onCodexProgress = null,
         finally
         {
             runLease?.Dispose();
+
+            if (stdinPath is not null)
+            {
+                try { File.Delete(stdinPath); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            }
 
             try
             {
@@ -566,10 +586,15 @@ try {
     $psi.UseShellExecute = $false
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
-    $psi.RedirectStandardInput = [bool]$request.CloseStandardInput
+    $stdinPath = [string]$request.StandardInputPath
+    $psi.RedirectStandardInput = [bool]$request.CloseStandardInput -or
+        -not [string]::IsNullOrWhiteSpace($stdinPath)
     # Native Codex emits UTF-8, regardless of the Windows OEM code page.
     $psi.StandardOutputEncoding = [Text.UTF8Encoding]::new($false)
     $psi.StandardErrorEncoding = [Text.UTF8Encoding]::new($false)
+    if ($psi.RedirectStandardInput) {
+        $psi.StandardInputEncoding = [Text.UTF8Encoding]::new($false)
+    }
     $psi.CreateNoWindow = $true
 
     foreach($arg in @($request.Arguments)) {
@@ -590,7 +615,18 @@ try {
         throw "Failed to start interactive child process."
     }
 
-    if ($request.CloseStandardInput) { $process.StandardInput.Close() }
+    try {
+        if (-not [string]::IsNullOrWhiteSpace($stdinPath)) {
+            $inputText = [IO.File]::ReadAllText($stdinPath, [Text.UTF8Encoding]::new($false))
+            $process.StandardInput.Write($inputText)
+        }
+    }
+    finally {
+        if ($psi.RedirectStandardInput) { $process.StandardInput.Close() }
+        if (-not [string]::IsNullOrWhiteSpace($stdinPath)) {
+            [IO.File]::Delete($stdinPath)
+        }
+    }
     $pumpCts = [Threading.CancellationTokenSource]::new()
     $stdoutTask = [Talvora.Shared.ProcessOutputPump]::PumpToUtf8FileAsync(
         $process.StandardOutput,

@@ -43,7 +43,7 @@ internal static partial class SmokeScenarios
         var arguments = ClaudeCliArguments.Create("--help", "sonnet", "high",
             "bypassPermissions", "saved-session",
             extraArguments: ["--mcp-config", "{\"mcpServers\":{}}", "--plugin-dir", "example-plugin"]);
-        if (arguments[^2] != "--" || arguments[^1] != "--help" ||
+        if (arguments.Contains("--help") || arguments.Contains("--") ||
             !arguments.Contains("--resume") || !arguments.Contains("bypassPermissions") ||
             arguments.Contains("--tools") || arguments.Contains("--allowedTools") ||
             !ClaudeCliArguments.Create("work").Contains("auto"))

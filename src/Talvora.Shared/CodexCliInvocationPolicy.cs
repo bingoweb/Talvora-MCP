@@ -108,8 +108,8 @@ public static class CodexCliInvocationPolicy
         {
             args.Add(resumeSessionId);
         }
-        // A task beginning with --help must not be parsed as a CLI flag.
-        args.AddRange(["--", prompt]);
+        // A positional "-" reads the prompt from stdin without exposing it in argv.
+        args.AddRange(["--", "-"]);
         return args.ToArray();
     }
 
