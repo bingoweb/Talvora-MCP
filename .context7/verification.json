@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T19:53:46Z",
-  "scope": "N5: copy verified Phosphor WPF card sources, retain WPF STA window and RenderTargetBitmap preview, validate exact PNGs on the signed-in Windows desktop.",
+  "verifiedAtUtc": "2026-10-23T20:48:22Z",
+  "scope": "D18: restore committed code evidence into Phosphor frames, preserve code-change time, apply the exact audit-12 WPF reference, and verify nine deterministic previews and the installed card.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-23 D18: Context7 confirms inherited FrameworkElement.DataContext, TextBlock.Text measure/render invalidation and ItemsControl.ItemsSource binding refresh. Microsoft Learn confirms INotifyPropertyChanged notifications for each dependent binding property and Visibility.Collapsed excluding an element from layout. The exact approved Phosphor reference binds restored frame evidence and the original code-change time, collapses a one-row timeline and single-file tabs, and retains the existing theme without visual deviations."
+    },
     {
       "libraryId": "/dotnet/wpf",
       "verified": "2026-10-23 N5: WPF RenderTargetBitmap (Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Media/Imaging/RenderTargetBitmap.cs) renders a Visual on the STA thread using specified pixel dimensions and DPI; PngBitmapEncoder creates the deterministic preview PNGs. Window/SizeToContent and WPF Dispatcher are used exactly as in docs/codex/reference/worklog-phosphor; no alternative design or colour scheme invented. Target preview SHA-256 comparison 8/8 identical."
@@ -293,6 +297,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-23 D18: Microsoft WPF property-change notification https://learn.microsoft.com/en-us/dotnet/desktop/wpf/data/how-to-implement-property-change-notification ; Visibility.Collapsed layout contract https://learn.microsoft.com/en-us/dotnet/api/system.windows.visibility?view=windowsdesktop-10.0 ; Context7 /dotnet/wpf source guidance for FrameworkElement.DataContext, TextBlock.Text and ItemsControl.ItemsSource. Verified the prescribed reference implementation without inventing UI or changing the theme.",
     "2026-10-23 S3: Microsoft official Windows filesystem ACL how-to https://github.com/dotnet/docs/blob/main/docs/standard/io/how-to-add-or-remove-access-control-list-entries.md ; FileSystemAclExtensions reference https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemaclextensions?view=net-10.0 ; Context7 /dotnet/docs. Protected DACL, SID-scoped permissions and explicit file ACE preservation checked by signed-in Windows privacy regression.",
     "2026-10-23 RM1: official CLI docs https://www.remotion.dev/docs/cli/create-video , https://www.remotion.dev/docs/cli/compositions , https://www.remotion.dev/docs/cli/render and https://www.remotion.dev/docs/cli/still ; npm registry https://registry.npmjs.org/create-video/4.0.538 returned HTTP 200. Context7 /remotion-dev/remotion verified noninteractive blank creation, quiet composition IDs, output/codec/scale arguments and Windows props-file guidance.",
     "2026-10-23 N10: official C# records and with expressions https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/record ; .NET generated Regex https://github.com/dotnet/docs/blob/main/docs/standard/base-types/regular-expression-source-generators.md ; official MCP C# SDK tools and structured content https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md ; Context7 /dotnet/docs and /modelcontextprotocol/csharp-sdk verified.",

@@ -57,6 +57,8 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         new(StringComparer.Ordinal);
     private readonly DesktopProgressPresentationState _presentationState =
         new();
+    // N3b sends a code preview once per change; later frames carry only its id.
+    private readonly DesktopProgressCodeState _codeState = new();
     private Task _placementSaveTask = Task.CompletedTask;
     private bool _isPinned;
     private int _anchorLeftPixels;
@@ -131,6 +133,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
 
     private void PublishCore(DesktopProgressMessage message)
     {
+        message = _codeState.Restore(message);
         if (_presentationState.Evaluate(message) !=
             DesktopProgressPresentationDecision.Accept)
         {
@@ -178,7 +181,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             window.ApplyPreferredSize(_preferredWidthDip, _preferredHeightDip);
         }
 
-        window.Update(message.WorklogFrame!);
+        window.Update(message.WorklogFrame!, _codeState.CodeChangedUtc);
 
         if (!window.IsVisible)
         {

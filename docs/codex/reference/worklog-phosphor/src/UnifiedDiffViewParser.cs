@@ -20,6 +20,7 @@ public static partial class UnifiedDiffViewParser
 
         int? oldNumber = null;
         int? newNumber = null;
+        string? announcedFile = null;
 
         foreach (var raw in preview.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
         {
@@ -51,6 +52,16 @@ public static partial class UnifiedDiffViewParser
                     continue;
                 }
 
+                // "@@ FILE x" then "--- a/x" / "+++ b/x" describe the same file: one header, one tab.
+                if (raw.StartsWith("+++ ", StringComparison.Ordinal) &&
+                    string.Equals(announcedFile, filePath.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase))
+                {
+                    announcedFile = null;
+                    continue;
+                }
+
+                announcedFile = raw.StartsWith("@@ FILE ", StringComparison.Ordinal) ? filePath.Replace('\\', '/') : null;
+
                 files.Add((System.IO.Path.GetFileName(filePath), 0, 0));
                 lines.Add(new DiffLine(DiffLineKind.File, string.Empty, filePath.Replace('\\', '/')));
                 oldNumber = null;
@@ -60,6 +71,7 @@ public static partial class UnifiedDiffViewParser
 
             if (raw.StartsWith("@@", StringComparison.Ordinal))
             {
+                announcedFile = null;
                 var match = HunkHeader().Match(raw);
                 oldNumber = match.Success ? int.Parse(match.Groups["old"].Value, System.Globalization.CultureInfo.InvariantCulture) : null;
                 newNumber = match.Success ? int.Parse(match.Groups["new"].Value, System.Globalization.CultureInfo.InvariantCulture) : null;
@@ -102,7 +114,7 @@ public static partial class UnifiedDiffViewParser
         return (files.Select(f => new DiffFileTab(f.Name, f.Added, f.Removed)).ToArray(), lines);
     }
 
-    /// <summary>"@@ -790,6 +790,10 @@ private static … Name(" → "@@ 790 · private static … Name(" (max 52 chars, one line).</summary>
+    /// <summary>"@@ -790,6 +790,10 @@ private static … Name(" → "@@ 790 · private static … Name(" (max 48 chars, one line).</summary>
     private static string CompactHunk(string raw, Match match)
     {
         if (!match.Success)
@@ -112,7 +124,7 @@ public static partial class UnifiedDiffViewParser
 
         var context = raw[match.Length..].Trim();
         var text = "@@ " + match.Groups["new"].Value + (context.Length > 0 ? " · " + context : string.Empty);
-        return text.Length <= 52 ? text : text[..51] + "…";
+        return text.Length <= 48 ? text : text[..47] + "…";
     }
 
     /// <summary>

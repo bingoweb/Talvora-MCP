@@ -103,6 +103,7 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
         }
 
         Scanlines.Visibility = highContrast ? Visibility.Collapsed : Visibility.Visible;
+        StateLine.Opacity = highContrast ? 0 : 0.55;
         TitleText.Effect = highContrast
             ? null
             : new System.Windows.Media.Effects.DropShadowEffect

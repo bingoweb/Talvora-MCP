@@ -66,7 +66,8 @@ internal static class TextDiffBuilder
             var endNew = Math.Min(diff.PiecesNew.Count,
                 blocks[last].InsertStartB + blocks[last].InsertCountB + 3);
             string? declaration = null;
-            for (var line = startOld - 1; line >= 0; line--)
+            // Nearest declaration above the first changed line (the hunk's own context lines count).
+            for (var line = blocks[first].DeleteStartA - 1; line >= 0; line--)
             {
                 if (DeclarationLine.PlaceName(diff.PiecesOld[line]) is null) continue;
                 declaration = diff.PiecesOld[line].Trim();

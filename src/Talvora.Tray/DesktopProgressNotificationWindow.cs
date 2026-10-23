@@ -35,6 +35,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
     private readonly DispatcherTimer staleTimer;
     private readonly TranslateTransform enterShift = new();
     private DesktopWorklogFrame? lastFrame;
+    private DateTimeOffset? lastCodeChangedUtc;
     private DateTimeOffset lastFrameReceivedUtc;
     private TimeSpan dismissAfter = SucceededLifetime;
     private bool isPointerOver;
@@ -142,7 +143,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
         WorklogStepState.Succeeded or WorklogStepState.Failed or WorklogStepState.Cancelled;
 
     /// <summary>Shows a real frame. The only entry point for content.</summary>
-    public void Update(DesktopWorklogFrame frame)
+    public void Update(DesktopWorklogFrame frame, DateTimeOffset? codeChangedUtc = null)
     {
         ArgumentNullException.ThrowIfNull(frame);
         CancelPendingAutomaticClose();
@@ -152,7 +153,8 @@ internal sealed class DesktopProgressNotificationWindow : Window
         SessionId = frame.SessionId;
         LastLane = frame.Lane;
         isStale = false;
-        WorklogCardMapper.Apply(model, frame, Environment.MachineName, stale: false);
+        lastCodeChangedUtc = codeChangedUtc;
+        WorklogCardMapper.Apply(model, frame, Environment.MachineName, stale: false, codeChangedUtc);
         AutomationProperties.SetName(this, $"Talvora çalışma günlüğü: {frame.Current.Title}");
 
         dismissAfter = frame.Current.State switch
@@ -199,7 +201,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
         }
 
         isStale = true;
-        WorklogCardMapper.Apply(model, lastFrame, Environment.MachineName, stale: true);
+        WorklogCardMapper.Apply(model, lastFrame, Environment.MachineName, stale: true, lastCodeChangedUtc);
     }
 
     private void OnCardMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

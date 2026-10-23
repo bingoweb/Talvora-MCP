@@ -162,6 +162,27 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
+            <!-- State line: finished cards keep a quiet 2 px line in their state colour (audit 12 polish). -->
+            <Rectangle x:Name="StateLine" Grid.Row="0" Margin="10,0,10,0" Opacity="0.55"
+                       Visibility="{Binding IsFinished, Converter={StaticResource BoolToVisibility}}">
+                <Rectangle.Style>
+                    <Style TargetType="Rectangle">
+                        <Setter Property="Fill" Value="{DynamicResource Wl.Green}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding State}" Value="Failed">
+                                <Setter Property="Fill" Value="{DynamicResource Wl.Red}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding State}" Value="Cancelled">
+                                <Setter Property="Fill" Value="{DynamicResource Wl.Amber}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding State}" Value="Waiting">
+                                <Setter Property="Fill" Value="{DynamicResource Wl.Amber}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Rectangle.Style>
+            </Rectangle>
+
             <!-- Live line: only while running; a moving phosphor gradient. -->
             <Rectangle x:Name="LiveLine" Grid.Row="0" Margin="10,0,10,0"
                        Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}">
@@ -322,7 +343,8 @@
                             </Grid>
                         </Border>
                         <ItemsControl Grid.Row="1" Margin="9,6,9,2" ItemsSource="{Binding CodeFiles}"
-                                      ItemTemplate="{StaticResource FileTabTemplate}" Focusable="False">
+                                      ItemTemplate="{StaticResource FileTabTemplate}" Focusable="False"
+                                      Visibility="{Binding HasFileTabs, Converter={StaticResource BoolToVisibility}}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel />

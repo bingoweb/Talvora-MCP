@@ -15,7 +15,8 @@ public static class WorklogCardMapper
         WorklogCardViewModel model,
         DesktopWorklogFrame frame,
         string machineName,
-        bool stale)
+        bool stale,
+        DateTimeOffset? codeChangedUtc = null)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(frame);
@@ -48,7 +49,12 @@ public static class WorklogCardMapper
         model.OutcomeReason = stale ? null : frame.Current.Outcome?.PlainReason;
         model.OutcomeNextStep = stale ? null : frame.Current.Outcome?.NextStep;
 
-        model.SetTimeline(frame.Timeline
+        // A session of one step: the single timeline row would only repeat the title (§7 polish, audit 12).
+        var timeline = frame.Timeline.Count == 1 &&
+            string.Equals(frame.Timeline[0].Label, frame.Current.Title, StringComparison.Ordinal)
+                ? []
+                : frame.Timeline;
+        model.SetTimeline(timeline
             .Select(entry => new WorklogTimelineRow(
                 entry.State switch
                 {
@@ -73,7 +79,7 @@ public static class WorklogCardMapper
         {
             var (files, lines) = UnifiedDiffViewParser.Parse(preview);
             model.SetCode(
-                $"diff · {frame.TimestampUtc.ToLocalTime():HH:mm:ss}",
+                $"diff · {(codeChangedUtc ?? frame.TimestampUtc).ToLocalTime():HH:mm:ss}",
                 files,
                 lines);
         }

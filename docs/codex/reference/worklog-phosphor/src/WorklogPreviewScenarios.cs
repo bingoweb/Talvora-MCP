@@ -25,6 +25,7 @@ internal static class WorklogPreviewScenarios
             ("06-small-change", SmallChange(), false),
             ("07-from-real-frame", FromFrame(), false),
             ("08-high-contrast", RunningEdit(), true),
+            ("09-one-step-receipt", OneStepReceipt(), false),
         ];
     }
 
@@ -240,6 +241,46 @@ internal static class WorklogPreviewScenarios
             ExpectedNextUpdateSeconds: 15);
         var model = new WorklogCardViewModel();
         WorklogCardMapper.Apply(model, frame, "MSI", stale: false);
+        return model;
+    }
+
+    /// <summary>
+    /// A real one-step session exactly as installed N3b/N10 send it: receipt preview with "@@ FILE" and
+    /// "---/+++" headers, declaration context from the first changed line, the code time from the change.
+    /// </summary>
+    private static WorklogCardViewModel OneStepReceipt()
+    {
+        var changed = new DateTimeOffset(2026, 10, 23, 20, 30, 12, TimeSpan.Zero);
+        var frame = new Talvora.Shared.DesktopWorklogFrame(
+            SessionId: "preview-one-step",
+            Sequence: 3,
+            TimestampUtc: changed.AddSeconds(40),
+            Header: new Talvora.Shared.WorklogSessionHeader("d11live", "ChatGPT · Dev", "Tasarım denetimi — canlı kart örneği"),
+            Current: new Talvora.Shared.WorklogStep(
+                Talvora.Shared.WorklogStepCategory.SourceEdit,
+                Talvora.Shared.WorklogStepState.Succeeded,
+                "Kod değişikliği uygulandı · kiosk.js",
+                "1 dosya · +1 −1 · kiosk.js",
+                null,
+                0.4,
+                "Üst sınır 50 yerine 60 oldu",
+                [new("kiosk.js", 1, 1, ["pair"])]),
+            Timeline: [new(changed, Talvora.Shared.WorklogStepState.Succeeded, "Kod değişikliği uygulandı · kiosk.js")],
+            Totals: new Talvora.Shared.WorklogTotals(1, 6, 1,
+                Talvora.Shared.WorklogCheckState.Unknown, Talvora.Shared.WorklogCheckState.Unknown),
+            Evidence: new Talvora.Shared.DesktopProgressEvidence(CodePreview:
+                "@@ FILE kiosk.js\n" +
+                "--- a/kiosk.js\n" +
+                "+++ b/kiosk.js\n" +
+                "@@ -1,4 +1,4 @@ function pair(req) {\n" +
+                " const limit = 5;\n" +
+                " function pair(req) {\n" +
+                "-  return Math.min(limit * 10, 50);\n" +
+                "+  return Math.min(limit * 10, 60);\n" +
+                " }\n"),
+            ExpectedNextUpdateSeconds: 15);
+        var model = new WorklogCardViewModel();
+        WorklogCardMapper.Apply(model, frame, "MSI", stale: false, codeChangedUtc: changed);
         return model;
     }
 

@@ -45,7 +45,8 @@ internal static partial class Program
                 throw new InvalidOperationException("N3b: committed result preview was not published.");
             var codeId = completed.Evidence.CodeChangeId;
             var pane = new DesktopProgressCodeState();
-            pane.Restore(completed);
+            if (pane.Restore(completed).WorklogFrame?.Evidence?.CodePreview != preview || pane.CodeChangedUtc != completed.TimestampUtc)
+                throw new InvalidOperationException("N3b: the card frame lost the committed code pane or its change time.");
             await notifier.RunToolCallAsync<object>("talvora_dotnet_build", args,
                 async _ => { await Task.Delay(5500); return new { success = true, exitCode = 0 }; },
                 CancellationToken.None);
@@ -53,8 +54,10 @@ internal static partial class Program
                 _ => ValueTask.FromResult<object>(new { success = true, exitCode = 0 }), CancellationToken.None);
             foreach (var next in observed.Where(m => m.Sequence > completed.Sequence))
             {
+                var restored = pane.Restore(next);
                 if (next.Evidence?.CodeChangeId != codeId || next.Evidence.CodePreview is not null ||
-                    pane.Restore(next).Evidence?.CodePreview != preview)
+                    restored.Evidence?.CodePreview != preview ||
+                    (next.WorklogFrame is not null && restored.WorklogFrame?.Evidence?.CodePreview != preview))
                     throw new InvalidOperationException("N3b: build/test did not retain the applied code identity and pane.");
             }
             if (!observed.Any(m => m.Kind == DesktopProgressKind.Running))

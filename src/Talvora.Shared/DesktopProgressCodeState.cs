@@ -8,6 +8,9 @@ public sealed class DesktopProgressCodeState
     public string? Title { get; private set; }
     public DateTimeOffset TimestampUtc { get; private set; }
 
+    /// <summary>Time of the real code change shown in the pane, or null when the session has no code.</summary>
+    public DateTimeOffset? CodeChangedUtc => _latest is null ? null : TimestampUtc;
+
     public DesktopProgressMessage Restore(DesktopProgressMessage message)
     {
         var sessionId = message.WorklogFrame?.SessionId ?? message.OperationId;
@@ -36,6 +39,11 @@ public sealed class DesktopProgressCodeState
             _latest = null;
             Title = null;
         }
-        return message with { Evidence = evidence };
+        // The Phosphor card reads the frame: give it the same restored evidence (audit 2026-10-23 (12)).
+        return message with
+        {
+            Evidence = evidence,
+            WorklogFrame = message.WorklogFrame is null ? null : message.WorklogFrame with { Evidence = evidence },
+        };
     }
 }

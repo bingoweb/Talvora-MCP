@@ -132,6 +132,7 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
             {
                 OnPropertyChanged(nameof(StateLabel));
                 OnPropertyChanged(nameof(IsRunning));
+                OnPropertyChanged(nameof(IsFinished));
             }
         }
     }
@@ -146,6 +147,9 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
     };
 
     public bool IsRunning => State == WorklogVisualState.Running;
+
+    /// <summary>Any state but running: shows the quiet state line instead of the live line.</summary>
+    public bool IsFinished => State != WorklogVisualState.Running;
 
     public string Title
     {
@@ -214,6 +218,9 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
 
     public bool HasCode => CodeLines.Count > 0;
 
+    /// <summary>File tabs only help with two or more files; one file is already named by its header row.</summary>
+    public bool HasFileTabs => CodeFiles.Count > 1;
+
     public bool HasTimeline => Timeline.Count > 0;
 
     public bool AnimationsEnabled { get => animationsEnabled; set => Set(ref animationsEnabled, value); }
@@ -275,6 +282,7 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
         }
 
         OnPropertyChanged(nameof(HasCode));
+        OnPropertyChanged(nameof(HasFileTabs));
     }
 
     private bool Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
