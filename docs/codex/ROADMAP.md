@@ -1092,6 +1092,177 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-23 (12) · range `audit/2026-10-23-10 (8dfb855)..b8fd17a` · 4 card commits · executors: ChatGPT/Codex via Talvora · result: D18 (code pane lost on the Phosphor card + design polish), CI red
+
+Delivered: D17 `866ec2a`, N4 `e49151a`, N5 `e6a3391` + CI follow-up `b8fd17a`.
+
+**Fidelity.** D17: every file identical to Claude's verified replay. N5: all eight Phosphor files identical to the reference (normalised hashes); the old window code was removed. The rewrite of `tests/ModernizationPolicyRegression.ps1` in `b8fd17a` translates every retired assertion to the Phosphor card and adds the eight reference-hash checks — no check was weakened. N4: CI green, no live Codex (P-28).
+
+**CI is red** for `e6a3391` (ModernizationPolicy still asserted the removed window — the Full gate was not run before the commit; STATUS says so) and for `b8fd17a` (`Context7`: the follow-up changed a test without refreshing `.context7/verification.json`, `Validate-Context7Gate.ps1:53`). D18 refreshes the evidence and is N5's CI fix.
+
+**Design audit on the installed card (`e6a3391`), live:** Claude set a task note and made a real `talvora_apply_patch` with `purpose` on a scratch workspace and captured the desktop. The card itself reads well — `# görev`, title with subject, ne / nerede / fark, footer — but:
+
+| # | Severity | Where | Finding | Fix |
+|---|---|---|---|---|
+| 1 | **HIGH** (favourite feature) | `DesktopProgressNotificationPresenter.cs` → `window.Update(message.WorklogFrame!)`; `TalvoraDesktopWorklogState.CreateWorklogFrame` sends `evidence with { CodePreview = null }` | **The code terminal never opens.** N3b sends the preview once in `message.Evidence` and only the id in the frame; the old window restored it with `DesktopProgressCodeState`. The Phosphor window (Claude's reference, written before N3b) reads `frame.Evidence`, and nothing calls `DesktopProgressCodeState` any more. Proven: the committed receipt carries a full unified diff; `completed.WorklogFrame.Evidence.CodePreview` is empty (probe in the N3b test). No test looked at the frame. | D18 |
+| 2 | MEDIUM | `TextDiffBuilder.cs` hunk context | "nerede" shows `kiosk.js` without `› pair`: the declaration is searched above the hunk's **context** start, so small files and edits near the top never get a place. | D18: search above the first **changed** line |
+| 3 | LOW | `UnifiedDiffViewParser` | N3b previews carry `@@ FILE x` **and** `--- a/x` / `+++ b/x`; the parser made two file headers and two tabs (`x +0 −0`, `x +1 −1`). | D18 |
+| 4 | LOW | mapper | the diff header showed the **frame** time, which drifts with every later frame — not the time of the change (no fabricated telemetry). | D18: `DesktopProgressCodeState.CodeChangedUtc` |
+| 5 | polish | card | a one-step session repeated its title as the only timeline row; a single file showed both a tab and a file header; finished cards had no state cue at the top; long hunk headers wrapped one "…" onto a new line. | D18: hide single repeated row, tabs only for ≥ 2 files, quiet 2 px state line (green/red/amber, 55 %, off in high contrast), hunk header ≤ 48 chars |
+
+Claude verified D18 before writing it, on a clean clone of `b8fd17a`: Release build 0 errors; `DESKTOP_PROGRESS_BEHAVIOR_GREEN` (the N3b test now also asserts the frame keeps the pane and the change time); `MODERNIZATION_POLICY_GREEN`; the built `Talvora.Tray.exe --worklog-preview` renders **all nine PNGs byte-identical** to `docs/codex/reference/worklog-phosphor/previews/` (new `09-one-step-receipt.png` = the live case above, fixed); Full gate `57 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`.
+
+### D18 — The code terminal is back on the Phosphor card + audit-12 polish
+
+> Audit 2026-10-23 (12). **Run first;** it is also N5's CI fix (Context7 evidence) — commit body line `CI follow-up: 40018913570`.
+
+**Files:** the seven updated Phosphor files (`WorklogCardViewModel.cs`, `UnifiedDiffViewParser.cs`, `WorklogCardMapper.cs`, `WorklogCardView.xaml`, `WorklogCardView.xaml.cs`, `WorklogPreviewScenarios.cs`, `DesktopProgressNotificationWindow.cs`), `src/Talvora.Shared/DesktopProgressCodeState.cs`, `src/Talvora.Tray/DesktopProgressNotificationPresenter.cs`, `src/Talvora/WorklogDiff/TextDiffBuilder.cs`, `tests/Talvora.Notification.Regression/Program.N3bCode.cs`, `.context7/verification.json`.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — copy `docs/codex/reference/worklog-phosphor-next/src/WorklogCardViewModel.cs` → `src/Talvora.Tray/Worklog/WorklogCardViewModel.cs` (AGENTS.md rule 5 "Reference copies"; normalised hash in `docs/codex/reference/worklog-phosphor-next/SHA256SUMS.txt`).
+
+Step 2 — copy `docs/codex/reference/worklog-phosphor-next/src/UnifiedDiffViewParser.cs` → `src/Talvora.Tray/Worklog/UnifiedDiffViewParser.cs` (AGENTS.md rule 5 "Reference copies"; normalised hash in `docs/codex/reference/worklog-phosphor-next/SHA256SUMS.txt`).
+
+Step 3 — copy `docs/codex/reference/worklog-phosphor-next/src/WorklogCardMapper.cs` → `src/Talvora.Tray/Worklog/WorklogCardMapper.cs` (AGENTS.md rule 5 "Reference copies"; normalised hash in `docs/codex/reference/worklog-phosphor-next/SHA256SUMS.txt`).
+
+Step 4 — copy `docs/codex/reference/worklog-phosphor-next/src/WorklogCardView.xaml` → `src/Talvora.Tray/Worklog/WorklogCardView.xaml` (AGENTS.md rule 5 "Reference copies"; normalised hash in `docs/codex/reference/worklog-phosphor-next/SHA256SUMS.txt`).
+
+Step 5 — copy `docs/codex/reference/worklog-phosphor-next/src/WorklogCardView.xaml.cs` → `src/Talvora.Tray/Worklog/WorklogCardView.xaml.cs` (AGENTS.md rule 5 "Reference copies"; normalised hash in `docs/codex/reference/worklog-phosphor-next/SHA256SUMS.txt`).
+
+Step 6 — copy `docs/codex/reference/worklog-phosphor-next/src/WorklogPreviewScenarios.cs` → `src/Talvora.Tray/Worklog/WorklogPreviewScenarios.cs` (AGENTS.md rule 5 "Reference copies"; normalised hash in `docs/codex/reference/worklog-phosphor-next/SHA256SUMS.txt`).
+
+Step 7 — copy `docs/codex/reference/worklog-phosphor-next/src/DesktopProgressNotificationWindow.cs` → `src/Talvora.Tray/DesktopProgressNotificationWindow.cs` (AGENTS.md rule 5 "Reference copies"; normalised hash in `docs/codex/reference/worklog-phosphor-next/SHA256SUMS.txt`).
+
+Step 8 — `src/Talvora.Shared/DesktopProgressCodeState.cs` — replace
+
+```csharp
+    public string? Title { get; private set; }
+    public DateTimeOffset TimestampUtc { get; private set; }
+```
+
+with
+
+```csharp
+    public string? Title { get; private set; }
+    public DateTimeOffset TimestampUtc { get; private set; }
+
+    /// <summary>Time of the real code change shown in the pane, or null when the session has no code.</summary>
+    public DateTimeOffset? CodeChangedUtc => _latest is null ? null : TimestampUtc;
+```
+
+Step 9 — `src/Talvora.Shared/DesktopProgressCodeState.cs` — replace
+
+```csharp
+        return message with { Evidence = evidence };
+```
+
+with
+
+```csharp
+        // The Phosphor card reads the frame: give it the same restored evidence (audit 2026-10-23 (12)).
+        return message with
+        {
+            Evidence = evidence,
+            WorklogFrame = message.WorklogFrame is null ? null : message.WorklogFrame with { Evidence = evidence },
+        };
+```
+
+Step 10 — `src/Talvora.Tray/DesktopProgressNotificationPresenter.cs` — replace
+
+```csharp
+    private readonly DesktopProgressPresentationState _presentationState =
+        new();
+```
+
+with
+
+```csharp
+    private readonly DesktopProgressPresentationState _presentationState =
+        new();
+    // N3b sends a code preview once per change; later frames carry only its id.
+    private readonly DesktopProgressCodeState _codeState = new();
+```
+
+Step 11 — `src/Talvora.Tray/DesktopProgressNotificationPresenter.cs` — replace
+
+```csharp
+    private void PublishCore(DesktopProgressMessage message)
+    {
+        if (_presentationState.Evaluate(message) !=
+```
+
+with
+
+```csharp
+    private void PublishCore(DesktopProgressMessage message)
+    {
+        message = _codeState.Restore(message);
+        if (_presentationState.Evaluate(message) !=
+```
+
+Step 12 — `src/Talvora.Tray/DesktopProgressNotificationPresenter.cs` — replace
+
+```csharp
+        window.Update(message.WorklogFrame!);
+```
+
+with
+
+```csharp
+        window.Update(message.WorklogFrame!, _codeState.CodeChangedUtc);
+```
+
+Step 13 — `src/Talvora/WorklogDiff/TextDiffBuilder.cs` — replace
+
+```csharp
+            for (var line = startOld - 1; line >= 0; line--)
+```
+
+with
+
+```csharp
+            // Nearest declaration above the first changed line (the hunk's own context lines count).
+            for (var line = blocks[first].DeleteStartA - 1; line >= 0; line--)
+```
+
+Step 14 — `tests/Talvora.Notification.Regression/Program.N3bCode.cs` — replace
+
+```csharp
+                if (next.Evidence?.CodeChangeId != codeId || next.Evidence.CodePreview is not null ||
+                    pane.Restore(next).Evidence?.CodePreview != preview)
+```
+
+with
+
+```csharp
+                var restored = pane.Restore(next);
+                if (next.Evidence?.CodeChangeId != codeId || next.Evidence.CodePreview is not null ||
+                    restored.Evidence?.CodePreview != preview ||
+                    (next.WorklogFrame is not null && restored.WorklogFrame?.Evidence?.CodePreview != preview))
+```
+
+Step 15 — `tests/Talvora.Notification.Regression/Program.N3bCode.cs` — replace
+
+```csharp
+            var pane = new DesktopProgressCodeState();
+            pane.Restore(completed);
+```
+
+with
+
+```csharp
+            var pane = new DesktopProgressCodeState();
+            if (pane.Restore(completed).WorklogFrame?.Evidence?.CodePreview != preview || pane.CodeChangedUtc != completed.TimestampUtc)
+                throw new InvalidOperationException("N3b: the card frame lost the committed code pane or its change time.");
+```
+
+Step 16 — promote the reference in the same commit: replace `docs/codex/reference/worklog-phosphor/src/*`, `previews/*` and `SHA256SUMS.txt` with the files of `docs/codex/reference/worklog-phosphor-next/` (same names, adds `previews/09-one-step-receipt.png`), then delete the `worklog-phosphor-next` folder. Use `talvora_apply_patch` (Update/Add/Delete File) for the text files and `talvora_copy`/`talvora_delete` with `explicitAdmin: true` for the PNGs. `ModernizationPolicyRegression.ps1` checks the tray files against this reference, so it is green only after this step.
+
+**Don't:** change any colour, size or text beyond these files; send the preview twice from the service; touch `WorklogTheme.xaml` (unchanged).
+
+**Acceptance:** `DESKTOP_PROGRESS_BEHAVIOR_GREEN`; `MODERNIZATION_POLICY_GREEN`; `Talvora.Tray.exe --worklog-preview <tmp>` → all nine PNGs byte-identical to `docs/codex/reference/worklog-phosphor/previews/` after Step 16 (`Get-FileHash`); Full gate `Hepsi geçti.` (`talvora_user_run`); build installer + deploy; **live:** `talvora_worklog_note` + one `talvora_apply_patch` with `purpose` on a scratch file, then capture the card as the signed-in user with `talvora_user_run` → `pwsh -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms,System.Drawing; $b=[Windows.Forms.SystemInformation]::VirtualScreen; $i=New-Object Drawing.Bitmap $b.Width,$b.Height; [Drawing.Graphics]::FromImage($i).CopyFromScreen($b.X,$b.Y,0,0,$b.Size); $i.Save('artifacts/d18-live.png')"` — the card must show the code terminal with the diff, `nerede <file> › <method>` and no duplicated file tab; attach the PNG to Gitea #9; GitHub CI green (10b). Then N5 may be `[x]` (its live screenshot is this one).
+
 ### Audit 2026-10-23 (10) · range `audit/2026-10-22-09 (f40e402)..8dfb855` · 9 card commits · executors: ChatGPT/Codex via Talvora · result: ONE HIGH REGRESSION (D17), P-28 decided
 
 Delivered: D15 `4b080f5`, D16 `14a43eb`, N2 `c56c7ee`, N3 `504fa7b`, N9 `4b02102`, N10 `dff4627`, RM1 `319fa88`, N3b `8f379ad`, S3 `8dfb855`. Blocked: N4 (P-28, decided now), N5 (waits for N4).

@@ -13,7 +13,7 @@
 | Branch | `main` only. Do not create branches. Dependabot PRs: apply with scripts/Apply-DependabotPr.ps1 (DEP1), never merge on GitHub. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-23-10` = `8dfb855`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-23-12` = `b8fd17a`. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -82,6 +82,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] RM1 — Remotion animations: guide, detached runs, live card, automatic routing (Phase RM); signed-in Full 56/0; exact-commit installed runs, desktop card and CI evidence follow in Gitea #9.
 - [x] N3b — Worklog: code terminal real, complete, persistent (P-27; declaration context); signed-in Full 56/0; exact-commit installed/desktop/CI evidence follows in Gitea #9.
 - [x] N4 — Agent job activity and Codex code terminal (installed e49151a, signed-in Full 57/0; GitHub CI 40012319673 green, no live Codex per P-28)
+- [ ] D18 — Code terminal back on the Phosphor card + design polish (audit 2026-10-23 (12); also N5's CI fix)
 - [~] N5 — Phosphor card (source hashes 8/8, PNGs 8/8, desktop regression GREEN; CI follow-up run pending, real window screenshot and signed-in Full gate evidence pending)
 - [?] N6 — Worklog evidence surface ("Ayrıntılar") (waiting for N5)
 - [x] S3 — ProgramData ACL + protected user-session InteractiveRuns (P-12; signed-in Full 56/0, privacy regression GREEN; installer/CI follow commit; live Codex exec deferred by U7/U8)
@@ -135,6 +136,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-23 — Claude audit 12 of `8dfb855..b8fd17a` (D17, N4, N5): D17 identical to the verified replay, N5 sources identical to the reference, policy-test rewrite weakens nothing; CI red for N5 (Full gate skipped before commit; follow-up without Context7 evidence). Live design audit: the installed Phosphor card never shows the code terminal (preview restored only into message evidence, card reads the frame) and "nerede" misses the method. Card D18 (restore into the frame, change time, declaration above the first changed line, duplicate tab fix, quiet state line, single-row timeline hidden, tabs only for ≥ 2 files); verified on a clean clone: Full 57/0, tray previews 9/9 byte-identical. Tag `audit/2026-10-23-12` = `b8fd17a`.
 - 2026-10-23 — N5 CI follow-up (ChatGPT via Talvora, CI run 40016482397): the Full gate failed at check 32, PS:ModernizationPolicyRegression, because it still read deleted DesktopProgressNotificationWindow.Visual.cs. Replaced only obsolete assertions in tests/ModernizationPolicyRegression.ps1 with approved Phosphor SHA-256 manifest checks (all 8 files) and equivalent contrast, focus, resizing, terminal, stale and accessibility checks; no production UI change.
   Verified targeted original CI RED and corrected policy MODERNIZATION_POLICY_GREEN. One signed-in Full invocation ended without a capturable log; installed e6a3391 remained healthy, deploy exit 0, reference PNGs 8/8 identical. CI follow-up and live desktop PNG evidence remain pending; Phosphor exact sources unchanged.
 - 2026-10-23 — N5 (executor: ChatGPT via Talvora): installed all 8 Claude Phosphor sources verbatim; normalized SHA256SUMS 8/8 and all 8 generated preview PNG SHA256 8/8 byte-identical. Removed two old card files and Talvora.Notification palette entries; wired session window, preview CLI and prescribed size regression. No design gaps filled.

@@ -356,6 +356,8 @@ The code terminal (§3.1) already shows old lines red and new lines green. From 
 
 Target renders: `docs/codex/reference/worklog-phosphor/previews/01…08` (regenerated 2026-10-23); `06-small-change.png` is the showcase of §6.1–6.3.
 
+**Polish (audit 2026-10-23 (12), card D18):** finished cards keep a quiet 2 px line in their state colour where the live line runs while working (55 %, off in high contrast); a one-step session does not repeat its title as the only timeline row; file tabs appear only for two or more files; a `@@ FILE x` + `+++ b/x` pair is one file; hunk headers stay on one line (≤ 48 chars); the diff header shows the time of the code change, not of the latest frame; "nerede" names the declaration above the first changed line. Showcase of the live case: `previews/09-one-step-receipt.png`. Until D18 runs, the updated files and previews live in `docs/codex/reference/worklog-phosphor-next/`; D18 promotes them.
+
 ## 7. Visual spec — "Phosphor" (hacker terminal), superseding the earlier table (Claude, 2026-10-20)
 
 **The authoritative design is code, not prose:** `docs/codex/reference/worklog-phosphor/src/*` — eight files written and **compiled by Claude** in a scratch WPF project with the same settings as `Talvora.Tray` (net10.0-windows, UseWPF + UseWindowsForms, TreatWarningsAsErrors, AssemblyName `Talvora.Tray`): 0 warnings, 0 errors. `docs/codex/reference/worklog-phosphor/previews/*.png` are the target renders (150 %), including a real window capture. Card N5 copies these files verbatim. Where any text in this document disagrees with those files, **the files win**.
