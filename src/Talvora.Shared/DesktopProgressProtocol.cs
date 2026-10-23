@@ -130,7 +130,8 @@ public sealed record DesktopProgressEvidence(
     int? AddedLines = null,
     int? RemovedLines = null,
     string? CodePreview = null,
-    string? Result = null);
+    string? Result = null,
+    string? CodeChangeId = null);
 
 public static class DesktopProgressProtocol
 {
@@ -535,7 +536,8 @@ public static class DesktopProgressProtocol
                     2 * 1024),
                 Result: RedactAndClip(
                     normalized.Evidence.Result,
-                    2 * 1024));
+                    2 * 1024),
+                CodeChangeId: Clip(normalized.Evidence.CodeChangeId, 64));
         var reduced = normalized with
         {
             Message = RedactAndClip(normalized.Message, 4 * 1024) ?? string.Empty,
@@ -595,7 +597,8 @@ public static class DesktopProgressProtocol
                     MaximumCodeCharacters),
                 RedactAndClip(
                     message.Evidence.Result,
-                    MaximumEvidenceTextCharacters));
+                    MaximumEvidenceTextCharacters),
+                Clip(message.Evidence.CodeChangeId, 64));
 
         return message with
         {
@@ -677,7 +680,8 @@ public static class DesktopProgressProtocol
             AddedLines: frame.Evidence.AddedLines,
             RemovedLines: frame.Evidence.RemovedLines,
             CodePreview: RedactAndClip(frame.Evidence.CodePreview, MaximumCodeCharacters),
-            Result: RedactAndClip(frame.Evidence.Result, MaximumEvidenceTextCharacters)),
+            Result: RedactAndClip(frame.Evidence.Result, MaximumEvidenceTextCharacters),
+            CodeChangeId: Clip(frame.Evidence.CodeChangeId, 64)),
     };
 
     private static bool IsValidMessage(
@@ -768,6 +772,7 @@ public static class DesktopProgressProtocol
                 file.Length > MaximumEvidenceFileCharacters) is true ||
             evidence.Summary?.Length > MaximumEvidenceTextCharacters ||
             evidence.CodePreview?.Length > MaximumCodeCharacters ||
+            evidence.CodeChangeId?.Length > 64 ||
             evidence.Result?.Length > MaximumEvidenceTextCharacters)
         {
             return false;

@@ -79,7 +79,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] N9 — Worklog: every step names what it works on + approved Turkish tool titles (§6.1); signed-in Full 56/0; exact-commit deployment, desktop title and CI evidence follow in Gitea #9.
 - [x] N10 — Worklog: task line, purpose, changed places (ne · nerede · fark, §6.2) + talvora_worklog_note; signed-in Full 56/0; exact-commit deployment, live accepted:true and CI evidence follow in Gitea #9.
 - [x] RM1 — Remotion animations: guide, detached runs, live card, automatic routing (Phase RM); signed-in Full 56/0; exact-commit installed runs, desktop card and CI evidence follow in Gitea #9.
-- [ ] N3b — Worklog: code terminal real, complete, persistent (P-27 decided; hunk context via DeclarationLine; after N10)
+- [x] N3b — Worklog: code terminal real, complete, persistent (P-27; declaration context); signed-in Full 56/0; exact-commit installed/desktop/CI evidence follows in Gitea #9.
 - [ ] N4 — Worklog: agent jobs tell their story (+ Codex code terminal) (P-11 decided)
 - [ ] N5 — Worklog card visual redesign + preview harness (reference updated 2026-10-23 with §6.1–6.3; after N10)
 - [ ] N6 — Worklog evidence surface ("Ayrıntılar")
@@ -119,11 +119,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 
 
-- P-27 — N3b: keep legacy workspace mutation rejection and amend Acceptance (4), or explicitly specify safe SourceEditEngine adapters? See PROPOSALS.md.
 
 ## Findings for Claude
 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
+
+- tests/Talvora.Smoke/SmokeScenarios.MetadataPolicy.cs:237 — RM1 extra installed metadata check reported 109 destructive tools vs expected 101; the three Remotion tools are non-destructive and excluding them still gives 109. Gitea #9 comment 132 records the result; no unrelated metadata change in N3b.
 
 - src/Talvora/Tools/UserRunTools.cs:50 — A detached Start-Process child keeps output pipes open: the launcher returns failure after 5 seconds although the signed-in gate continues and exits 0; direct long connector calls also time out. Gate log/exit files independently verified; no runner change in N9.
 
@@ -131,6 +132,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-23 — N3b (executor: Codex via Talvora): real committed DiffPlex previews persist through receipts/WAL/replay; declaration-context hunk headers, source/structural/semantic and allowed workspace copy/move results; rejected/failed edits expose no new diff. P-27 legacy guard unchanged.
+  Session-local CodeChangeId and tray cache preserve the latest pane through build/test; preview sent once per change. A 300 KB preview produced a maximum 2213-byte heartbeat, below 4 KB; actual two-file unified diffs include removed SQL comments and exact applied counts.
+  RED: missing Build/CodeChangeId/cache, then the existing one-MB event-bound regression; GREEN: DESKTOP_PROGRESS_BEHAVIOR_GREEN, receipt/replay/legacy rejection/copy/move/privacy cases and real structural/semantic receipt checks. Existing Claude one-MB event and two-MB progress-file guards retained.
+  Final signed-in MSI\tayla Full: 56 checks / 0 errors, exit 0, last line "Hepsi geçti.", 261590 ms; Fast baseline 13/0. Full repeated only after the event-bound code correction.
+  Context7 /mmanela/diffplex, /dotnet/docs, /websites/code_claude_en_agent-sdk verified actual APIs/results; DiffPlex 1.9.0 Apache-2.0 was already pinned/locked/noticed. Supporting: receipt DTO/WAL transport, tray cache, acknowledged Claude output plumbing, fixture migration and mandatory evidence. No new packages/tools or layout redesign.
+  Claude Edit/MultiEdit/Write, failed/staged/outside events and redaction were tested offline; no Claude/Codex delegation. P-11 defers PNGs to N5. N4 not started.
+  Post-commit delivery Log continues in Gitea #9: exact-commit installer/deploy, healthz and installed smoke, live committed patch followed by a signed-in build with the same visible code pane, and exact-commit windows-ci. Pending until verified there.
 - 2026-10-23 — RM1 (executor: Codex via Talvora): exact 24-step implementation; pinned Remotion 4.0.538 guide-first routing, detached signed-in create/check/still/render runs and one live worklog card with real frame facts. All three normalized reference hashes match SHA256SUMS.txt.
   RED: approved test found missing RemotionTools/BeginRemotionRun, then no expected frame within 20 s; GREEN: DESKTOP_PROGRESS_BEHAVIOR_GREEN and MCP metadata/surface source policy smoke.
   Signed-in MSI\tayla Full: 56 checks / 0 errors, exit 0, last line "Hepsi geçti."; Fast baseline 13/0. Full elapsed 227435 ms.

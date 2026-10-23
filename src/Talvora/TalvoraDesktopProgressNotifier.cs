@@ -303,6 +303,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             var json = result is CallToolResult callToolResult &&
                 callToolResult.StructuredContent is JsonElement structured
                     ? structured : JsonSerializer.SerializeToElement(result);
+            if (TryGetPropertyIgnoreCase(json, "transaction", out var transaction) && transaction.ValueKind == JsonValueKind.Object)
+                json = transaction;
             return WorklogPlaces.Build(json, evidence?.CodePreview);
         }
         catch
@@ -325,6 +327,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             return;
         }
 
+        evidence = PrepareCodeEvidence(operationId, kind, evidence);
         var sequence = Interlocked.Increment(ref _deliverySequence);
         var frame = CreateWorklogFrame(
             operationId, kind, title, message, elapsed, evidence, sequence);

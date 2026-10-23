@@ -20,6 +20,8 @@ internal sealed record SourceEditJournalFilePlan(
 {
     public int? AddedLines { get; init; }
     public int? RemovedLines { get; init; }
+    public string? CodePreview { get; init; }
+    public string? ChangeSummary { get; init; }
 }
 
 internal sealed record SourceEditJournalPlan(
@@ -194,6 +196,8 @@ internal sealed class SourceEditTransactionStore
                 {
                     AddedLines = file.AddedLines,
                     RemovedLines = file.RemovedLines,
+                    CodePreview = file.CodePreview,
+                    ChangeSummary = file.ChangeSummary,
                 };
             })
             .ToArray();

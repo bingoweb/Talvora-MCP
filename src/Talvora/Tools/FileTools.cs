@@ -8,8 +8,10 @@ namespace Talvora.Tools;
 
 public sealed record TalvoraPathEntry(string Path, string Name, bool IsDirectory, long? Length, DateTime LastWriteTimeUtc);
 public sealed record TalvoraDirectoryCreateResponse(string Path, bool Created);
-public sealed record TalvoraCopyResponse(string Source, string Destination, string Kind, bool Changed, bool Overwrite, bool Recursive);
-public sealed record TalvoraMoveResponse(string Source, string Destination, string Kind, bool Changed, bool Overwrite);
+public sealed record TalvoraCopyResponse(string Source, string Destination, string Kind, bool Changed, bool Overwrite, bool Recursive,
+    DesktopProgressEvidence? CodeEvidence = null);
+public sealed record TalvoraMoveResponse(string Source, string Destination, string Kind, bool Changed, bool Overwrite,
+    DesktopProgressEvidence? CodeEvidence = null);
 
 [McpServerToolType]
 public static class FileTools
@@ -213,8 +215,10 @@ public static class FileTools
                 destinationPath,
                 "talvora_copy",
                 explicitAdmin);
+            var before = CaptureCodeFile(destinationPath);
             CopyFile(sourcePath, destinationPath, overwrite);
-            return new TalvoraCopyResponse(sourcePath, destinationPath, "file", true, overwrite, recursive);
+            return new TalvoraCopyResponse(sourcePath, destinationPath, "file", true, overwrite, recursive,
+                CodeFileEvidence(before, destinationPath, move: false));
         }
 
         if (!recursive)
@@ -354,6 +358,7 @@ public static class FileTools
                 explicitAdmin);
         }
 
+        var codeBefore = isDirectory ? null : CaptureCodeFile(sourcePath);
         if (TryGetAttributes(destinationPath, out var destinationAttributes))
         {
             if (!overwrite)
@@ -384,7 +389,49 @@ public static class FileTools
             destinationPath,
             isDirectory ? "directory" : "file",
             true,
-            overwrite);
+            overwrite,
+            isDirectory ? null : CodeFileEvidence(codeBefore, destinationPath, move: true));
+    }
+
+    private sealed record CodeFileSnapshot(string Path, string? Text, long Bytes, bool Binary, string? Encoding);
+
+    private static CodeFileSnapshot? CaptureCodeFile(string path)
+    {
+        try
+        {
+            var classification = SourceWorkspaceClassifier.Classify(path);
+            if (!classification.IsDevelopmentWorkspace) return null;
+            if (!File.Exists(path)) return new(path, "", 0, false, null);
+            var length = new FileInfo(path).Length;
+            if (length > 1024 * 1024) return new(path, null, length, false, null);
+            try
+            {
+                var document = SourceTextCodec.Decode(File.ReadAllBytes(path), path);
+                return new(path, document.Text, length, false, document.Encoding.Name);
+            }
+            catch (SourceEditDomainException) { return new(path, null, length, true, null); }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    private static DesktopProgressEvidence? CodeFileEvidence(CodeFileSnapshot? before, string destination, bool move)
+    {
+        var after = CaptureCodeFile(destination);
+        if (after is null) return new DesktopProgressEvidence(Summary: "1 dosya değişti");
+        var workspace = SourceWorkspaceClassifier.Classify(destination).WorkspaceRoot!;
+        var newName = Path.GetRelativePath(workspace, destination).Replace('\\', '/');
+        var oldName = move && before is not null
+            ? Path.GetRelativePath(workspace, before.Path).Replace('\\', '/')
+            : before?.Bytes > 0 ? newName : "";
+        if (after.Text is null && !after.Binary || before is { Text: null, Binary: false })
+            return new DesktopProgressEvidence(Summary: "1 dosya değişti", Files: [newName]);
+        var diff = WorklogDiff.TextDiffBuilder.Build(before?.Text ?? "", after.Text ?? "", oldName, newName,
+            before?.Bytes, after.Bytes, before?.Encoding != after.Encoding, after.Binary || before?.Binary == true);
+        return new DesktopProgressEvidence(diff.Summary ?? "1 dosya değişti", [newName],
+            diff.Added, diff.Removed, diff.Preview);
     }
 
     private static void CopyFile(string sourcePath, string destinationPath, bool overwrite)

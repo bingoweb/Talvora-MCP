@@ -222,7 +222,8 @@ public static class ProcessOutputPump
         int maximumCharacters = BoundedTextCapture.DefaultMaximumCharacters,
         CancellationToken cancellationToken = default,
 string? codexProgressPath = null,
-        string? claudeProgressPath = null)
+        string? claudeProgressPath = null,
+        string? claudeWorkspaceRoot = null)
     {
         ArgumentNullException.ThrowIfNull(reader);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -248,7 +249,7 @@ string? codexProgressPath = null,
             ? null
             : new CodexCliStreamingProgress();
         var claudeTracker = string.IsNullOrWhiteSpace(claudeProgressPath)
-            ? null : new ClaudeCliStreamingProgress();
+            ? null : new ClaudeCliStreamingProgress(claudeWorkspaceRoot);
 
         try
         {

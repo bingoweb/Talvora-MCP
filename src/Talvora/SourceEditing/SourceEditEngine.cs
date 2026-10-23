@@ -1500,7 +1500,9 @@ internal sealed class SourceEditEngine
                 file.BeforeBytes,
                 file.AfterBytes,
                 success ? file.AddedLines : null,
-                success ? file.RemovedLines : null);
+                success ? file.RemovedLines : null,
+                success ? file.CodePreview : null,
+                success ? file.ChangeSummary : null);
         }).ToArray();
 
         return new SourceEditTransactionResult(

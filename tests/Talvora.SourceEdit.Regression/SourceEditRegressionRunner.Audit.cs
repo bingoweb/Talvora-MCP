@@ -76,5 +76,7 @@ internal static partial class SourceEditRegressionRunner
         AssertEqual("value: bar\n", await File.ReadAllTextAsync(fixture.PathInWorkspace(".talvora-structural-rule.yml")), "User file collided with helper rule.");
         AssertEqual(rule, await File.ReadAllTextAsync(fixture.PathInWorkspace("rule.yml")), "Rule input was edited as source.");
         AssertEqual(2, result.Files.Count, "Control files leaked into the transformation.");
+        Assert(result.Files.All(file => file.CodePreview?.Contains("-value: foo") == true &&
+            file.CodePreview.Contains("+value: bar")), "N3b structural edit did not return actual committed diffs.");
     }
 }

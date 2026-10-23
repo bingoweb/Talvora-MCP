@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T15:29:29.268Z",
+  "verifiedAtUtc": "2026-10-23T16:24:08Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "RM1: ROADMAP Phase RM desktop worklog behaviour and approved Turkish titles only. Awwwards homepage checked live (HTTP 200; title Awwwards - Website Awards - Best Web Design Trends).",
+  "scope": "N3b: DESIGN-WORKLOG code terminal behaviour only; no visual redesign. Awwwards homepage checked live (HTTP 200; title Awwwards - Website Awards - Best Web Design Trends).",
   "references": [
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
-    "ROADMAP Phase RM desktop worklog: the run gets one live card with the real frame counter, then the real output file and size or a plain failure reason.",
-    "RM1 Step 6: the background watch reports the run; the tool calls stay silent so the user sees one card, not two.",
-    "RM1 Step 5 and reference TalvoraDesktopRemotionWorklog.cs define every Remotion title and fact; no layout or cosmetic choices are added."
+    "DESIGN-WORKLOG 3.1: Only real, applied changes. The pane is filled from the result of the step; a rejected/failed edit never shows a diff.",
+    "DESIGN-WORKLOG 3.1: Stays visible for the whole session. The pane keeps the latest code change while later build/test/commit steps run; its header identifies the originating step and time.",
+    "DESIGN-WORKLOG 5.5 and N3b: shared DiffPlex builder, declaration context, redaction and explicit size limits; CodeChangeId replaces repeated previews. P-11 defers before/after PNG evidence to N5."
   ]
 }

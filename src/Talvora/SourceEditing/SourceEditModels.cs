@@ -116,7 +116,9 @@ public sealed record SourceEditFileReceipt(
     long BeforeBytes,
     long AfterBytes,
     int? AddedLines = null,
-    int? RemovedLines = null);
+    int? RemovedLines = null,
+    string? CodePreview = null,
+    string? ChangeSummary = null);
 
 public sealed record SourceEditTransactionResult(
     bool Success,
@@ -270,6 +272,8 @@ internal sealed record SourceEditPreparedFile(
 {
     public int? AddedLines { get; init; }
     public int? RemovedLines { get; init; }
+    public string? CodePreview { get; init; }
+    public string? ChangeSummary { get; init; }
 }
 
 internal sealed record SourceEditDirectoryIdentity(

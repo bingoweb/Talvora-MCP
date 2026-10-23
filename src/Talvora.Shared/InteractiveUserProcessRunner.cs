@@ -22,7 +22,8 @@ public static class InteractiveUserProcessRunner
         bool DiscardStandardError,
 string? CodexProgressPath,
         string? ClaudeProgressPath,
-        bool CloseStandardInput);
+        bool CloseStandardInput,
+        string? ClaudeWorkspaceRoot);
 
     private sealed record Result(
         int ExitCode,
@@ -47,7 +48,8 @@ string? CodexProgressPath,
         Action<string>? onStandardOutputSnapshot = null,
 Action<CodexCliEventResult>? onCodexProgress = null,
         Action<ClaudeCliProgress>? onClaudeProgress = null,
-        bool closeStandardInput = false)
+        bool closeStandardInput = false,
+        string? claudeWorkspaceRoot = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
         ArgumentException.ThrowIfNullOrWhiteSpace(workingDirectory);
@@ -125,7 +127,8 @@ Action<CodexCliEventResult>? onCodexProgress = null,
             discardStandardError,
             progressPath,
             claudeProgressPath,
-            closeStandardInput);
+            closeStandardInput,
+            claudeWorkspaceRoot);
 
         FileStream? runLease = null;
         try
@@ -586,7 +589,8 @@ try {
         [int]$request.MaximumPersistedCharacters,
         $pumpCts.Token,
         $request.CodexProgressPath,
-        $request.ClaudeProgressPath)
+        $request.ClaudeProgressPath,
+        $request.ClaudeWorkspaceRoot)
     $stderrBudget = if($request.DiscardStandardError) {
         0
     } else {

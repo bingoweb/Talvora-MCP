@@ -40,6 +40,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         public string Title { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
         public DesktopProgressEvidence? Evidence { get; set; }
+        public DesktopProgressEvidence? LatestCodeEvidence { get; set; }
         public DesktopProgressKind Kind { get; set; } = DesktopProgressKind.Running;
         public TimeSpan Elapsed { get; set; }
         public bool Closed { get; set; }
@@ -317,6 +318,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             session.Failure = null;
             session.Cancellation = null;
             session.TaskNote = null;
+            session.LatestCodeEvidence = null;
         }
         return session;
     }
@@ -382,7 +384,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         {
             foreach (var key in new[]
                      {
-                         "workspaceRoot", "workingDirectory", "repositoryPath", "root", "path",
+                         "workspaceRoot", "workingDirectory", "repositoryPath", "root", "path", "destination", "source",
                      })
             {
                 if (arguments.TryGetValue(key, out var value) &&
@@ -428,6 +430,36 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         return (null, null);
     }
 
+    private DesktopProgressEvidence? PrepareCodeEvidence(
+        string sessionId, DesktopProgressKind kind, DesktopProgressEvidence? evidence)
+    {
+        lock (_worklogGate)
+        {
+            var session = _sessions.Values.FirstOrDefault(item => item.Id == sessionId);
+            if (session is null) return evidence;
+            if ((kind == DesktopProgressKind.Completed || evidence?.CodeChangeId is not null) &&
+                !string.IsNullOrEmpty(evidence?.CodePreview))
+            {
+                var id = evidence.CodeChangeId ??
+                    Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(evidence.CodePreview))).ToLowerInvariant();
+                if (id.Length > 64) id = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(id))).ToLowerInvariant();
+                var repeated = session.LatestCodeEvidence?.CodeChangeId == id;
+                evidence = evidence with { CodeChangeId = id };
+                session.LatestCodeEvidence = evidence;
+                if (repeated) evidence = evidence with { CodePreview = null };
+            }
+            else if (evidence?.CodeChangeId is not null)
+            {
+                session.LatestCodeEvidence = evidence;
+            }
+            else if (session.LatestCodeEvidence?.CodeChangeId is { } id)
+            {
+                evidence = (evidence ?? new DesktopProgressEvidence()) with { CodeChangeId = id, CodePreview = null };
+            }
+            return evidence;
+        }
+    }
+
     private DesktopWorklogFrame? CreateWorklogFrame(
         string sessionId, DesktopProgressKind kind, string title,
         string message, TimeSpan elapsed, DesktopProgressEvidence? evidence,
@@ -459,7 +491,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 new WorklogTotals(session.Steps,
                     Math.Max(0, (DateTimeOffset.UtcNow - session.BeganUtc).TotalSeconds),
                     session.ChangedFiles.Count, session.LastBuild, session.LastTests),
-                evidence,
+                evidence is null ? null : evidence with { CodePreview = null },
                 session.Actor switch
                 {
                     "Codex" => 20,

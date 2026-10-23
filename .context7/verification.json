@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T15:29:29.268Z",
-  "scope": "RM1: exact approved Remotion 4.0.538 guide, detached signed-in runs, real status/frame facts, one desktop card per step and automatic server-instruction routing.",
+  "verifiedAtUtc": "2026-10-23T16:24:08Z",
+  "scope": "N3b: committed-result DiffPlex previews, declaration context, WAL/replay, session code identity and tray cache, compact heartbeats, safe copy/move and acknowledged Claude file results. P-27 preserves legacy workspace rejection; P-11 defers PNGs to N5.",
   "libraries": [
+    {
+      "libraryId": "/websites/code_claude_en_agent-sdk",
+      "verified": "2026-10-23 N3b: official Agent SDK TypeScript/Python reference documents user.tool_use_result matched to tool_use_id, Edit originalFile/structuredPatch, Write content/type/originalFile, and staged edits that are not applied. Only successful acknowledged Edit/MultiEdit/Write file results inside the approved workspace enter the code preview; raw request arguments are not persisted. Offline event fixtures verify failure, staged, outside-workspace, actual result, Write and redaction. No Claude task was launched."
+    },
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-23 N3b: official documentation verifies PropertyNameCaseInsensitive for typed result decoding, record with-expression copies, and SHA256.HashData for immutable preview identity. The tray restores one session-local payload by CodeChangeId while later wire frames omit code text."
+    },
     {
       "libraryId": "/remotion-dev/remotion",
       "verified": "2026-10-23 RM1: create-video --yes --blank with a directory runs noninteractively; compositions --quiet prints space-separated IDs; render and still take entry/composition/output arguments; Windows props use a JSON file. Verified the prescribed CLI workflow and pinned create-video 4.0.538 availability without changing the pin."
@@ -21,7 +29,7 @@
     },
     {
       "libraryId": "/mmanela/diffplex",
-      "verified": "2026-10-22 N3: Differ.CreateCustomDiffs uses a supplied line chunker and returns DiffBlocks with InsertCountB/DeleteCountA. DiffPlex 1.9.0 is the current stable Apache-2.0 package; N3 uses the prescribed shared differ for exact committed receipt counts without a custom diff algorithm."
+      "verified": "2026-10-23 N3b: Context7 and official NuGet/GitHub sources verify Differ.CreateCustomDiffs with a line chunker, IReadOnlyList PiecesOld/PiecesNew and DiffBlocks DeleteStartA/InsertStartB/DeleteCountA/InsertCountB. DiffPlex 1.9.0 remains the current stable Apache-2.0 package and is already pinned, locked and noticed by N3. The shared service-side formatter uses those real edits; it adds hunk declaration context, a 400-changed-line disclosure and size/redaction guards without a custom diff algorithm."
     },
     {
       "libraryId": "/dotnet/docs",

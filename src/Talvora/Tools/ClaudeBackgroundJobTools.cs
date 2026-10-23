@@ -34,9 +34,22 @@ public static class ClaudeBackgroundJobTools
         private string? _error;
         private TalvoraClaudeExecResponse? _result;
 
+        private string? _lastCodeResultId;
         internal void Progress(ClaudeCliProgress progress)
         {
-            lock (_gate) { _progress = progress; _session = progress.SessionId ?? _session; }
+            ClaudeAppliedCodeResult? change = null;
+            lock (_gate)
+            {
+                _progress = progress;
+                _session = progress.SessionId ?? _session;
+                if (progress.CodeChange is { } applied && applied.Id != _lastCodeResultId)
+                {
+                    _lastCodeResultId = applied.Id;
+                    change = applied;
+                }
+            }
+            if (change is not null)
+                Notify(() => DesktopNotifier?.ObserveClaudeCodeResult(Id, WorkingDirectory, change, DateTime.UtcNow - Created));
         }
 
         internal void Cancel()
@@ -131,7 +144,7 @@ public static class ClaudeBackgroundJobTools
         if (!Directory.Exists(cwd)) { throw new DirectoryNotFoundException(cwd); }
         var job = new Job(cwd, resumeSessionId);
         Jobs[job.Id] = job;
-        Notify(() => DesktopNotifier?.BeginClaudeJob(job.Id));
+        Notify(() => DesktopNotifier?.BeginClaudeJob(job.Id, job.WorkingDirectory));
         _ = Task.Run(() => job.Execute((token, progress) =>
             ClaudeCliTools.ExecuteCore(cwd, prompt, model, effort, permissionMode, timeoutSeconds,
                 resumeSessionId, additionalDirectories, extraArguments, environment, token, progress)));

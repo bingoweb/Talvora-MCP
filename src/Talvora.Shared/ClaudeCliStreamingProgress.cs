@@ -6,7 +6,7 @@ namespace Talvora.Shared;
 public sealed record ClaudeCliProgress(
     string? SessionId, int ToolCalls, int FailedTools, int PermissionDenials,
     string[] RecentActivities, bool HasResult, bool IsError, string FinalAnswer,
-    string? Error, DateTime? LastProgressAtUtc);
+    string? Error, DateTime? LastProgressAtUtc, ClaudeAppliedCodeResult? CodeChange = null);
 
 /// <summary>Bounded JSONL observer independent of the retained stdout head/tail.</summary>
 public sealed class ClaudeCliStreamingProgress
@@ -23,9 +23,28 @@ public sealed class ClaudeCliStreamingProgress
     private DateTime? _lastProgress;
     private DateTime _lastPersisted;
 
+    private readonly string? _codeWorkspaceRoot;
+    private readonly Dictionary<string, string> _codeTools = new(StringComparer.Ordinal);
+    private ClaudeAppliedCodeResult? _codeChange;
+
+    public ClaudeCliStreamingProgress(string? codeWorkspaceRoot = null) => _codeWorkspaceRoot = codeWorkspaceRoot;
+
+    private void ObserveCodeResult(JsonElement root, JsonElement block)
+    {
+        var type = Text(block, "type");
+        if (type == "tool_use" && Text(block, "name") is "Edit" or "MultiEdit" or "Write" &&
+            Text(block, "id") is { Length: <= 160 } id && _codeTools.Count < 128)
+            _codeTools[id] = Text(block, "name")!;
+        if (type != "tool_result" || Text(block, "tool_use_id") is not { } resultId ||
+            !_codeTools.Remove(resultId, out var tool) ||
+            block.TryGetProperty("is_error", out var failed) && failed.ValueKind == JsonValueKind.True ||
+            !root.TryGetProperty("tool_use_result", out var actual)) return;
+        _codeChange = ClaudeCodeResultFilter.Capture(resultId, tool, actual, _codeWorkspaceRoot) ?? _codeChange;
+    }
+
     public ClaudeCliProgress Snapshot() => new(
         _sessionId, _tools, _failed, _denials, _activities.ToArray(),
-        _hasResult, _isError, _answer, _error, _lastProgress);
+        _hasResult, _isError, _answer, _error, _lastProgress, _codeChange);
 
     public async Task ObserveAsync(ReadOnlyMemory<char> chunk, string path, CancellationToken token)
     {
@@ -106,6 +125,7 @@ public sealed class ClaudeCliStreamingProgress
             foreach (var block in content.EnumerateArray())
             {
                 if (block.ValueKind != JsonValueKind.Object) { continue; }
+                ObserveCodeResult(root, block);
                 if (Text(block, "type") == "tool_use")
                 {
                     _tools++;

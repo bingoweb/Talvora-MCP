@@ -32,7 +32,7 @@ internal static partial class Program
                 success = true, status = "committed",
                 files = new object[]
                 {
-                    new { operation = "update", newPath = project + "\\src\\Talvora\\Tools\\GitTools.cs", addedLines = 4, removedLines = 0 },
+                    new { operation = "update", newPath = project + "\\src\\Talvora\\Tools\\GitTools.cs", addedLines = 4, removedLines = 0, codePreview = diff },
                     new { operation = "update", newPath = project + "\\docs\\README.md", addedLines = 1, removedLines = 0 },
                     new { operation = "update", newPath = project + "\\tests\\x.ps1", addedLines = 1, removedLines = 1 },
                 },

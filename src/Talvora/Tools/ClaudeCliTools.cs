@@ -16,7 +16,10 @@ public sealed record TalvoraClaudeExecResponse(
     string StandardOutput, string StandardError,
     bool StandardOutputTruncated, bool StandardErrorTruncated,
     string? SessionId, int ToolCalls, int FailedTools, int PermissionDenials,
-    IReadOnlyList<string> RecentActivities, string? Error);
+    IReadOnlyList<string> RecentActivities, string? Error)
+{
+    public DesktopProgressEvidence? CodeEvidence { get; init; }
+}
 
 [McpServerToolType]
 public static class ClaudeCliTools
@@ -86,7 +89,8 @@ public static class ClaudeCliTools
             {
                 latest = value;
                 progress?.Invoke(value);
-            }, closeStandardInput: true).ConfigureAwait(false);
+            }, closeStandardInput: true,
+            claudeWorkspaceRoot: Talvora.SourceEditing.SourceWorkspaceClassifier.Classify(cwd).WorkspaceRoot).ConfigureAwait(false);
         var success = result.ExitCode == 0 && !result.TimedOut &&
             latest is { HasResult: true, IsError: false, PermissionDenials: 0 };
         var error = result.TimedOut ? "Claude Code reached the time limit." :
@@ -100,7 +104,11 @@ public static class ClaudeCliTools
             Safe(result.StandardError, prompt, environment), result.StandardOutputTruncated,
             result.StandardErrorTruncated, latest?.SessionId ?? resumeSessionId,
             latest?.ToolCalls ?? 0, latest?.FailedTools ?? 0, latest?.PermissionDenials ?? 0,
-            latest?.RecentActivities ?? [], Safe(error, prompt, environment));
+            latest?.RecentActivities ?? [], Safe(error, prompt, environment))
+        {
+            CodeEvidence = latest?.CodeChange is { } change
+                ? TalvoraDesktopProgressNotifier.BuildClaudeCodeEvidence(change, cwd) : null,
+        };
     }
 
     [McpServerTool(Name = "talvora_claude_run", Destructive = true, Idempotent = false,

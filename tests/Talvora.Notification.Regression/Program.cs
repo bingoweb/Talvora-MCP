@@ -27,6 +27,7 @@ internal static partial class Program
         await AssertN9SubjectsAsync();
         await AssertN10ChangesAsync();
         await AssertRemotionWorklogAsync();
+        await AssertN3bCodeTerminalAsync();
         await AssertDiffEvidenceCoverageAsync();
         await AssertSemanticMessagingAndCanonicalToolAsync();
         await AssertConcurrentCancellationTruthAsync();
@@ -216,7 +217,8 @@ internal static partial class Program
                 _ => ValueTask.FromResult<object>(new
                 {
                     success = true, status = "committed",
-                    files = new[] { new { newPath = "src/Test.cs", addedLines = 1000, removedLines = 1000 } },
+                    files = new[] { new { newPath = "src/Test.cs", addedLines = 1000, removedLines = 1000,
+                        codePreview = Talvora.WorklogDiff.TextDiffBuilder.Build(oldBlock, newBlock, "src/Test.cs", "src/Test.cs").Preview } },
                 }),
                 CancellationToken.None);
 
@@ -230,10 +232,10 @@ internal static partial class Program
                     "@@ FILE src/Test.cs",
                     StringComparison.Ordinal) ||
                 !preview.Contains(
-                    "-old-1000();",
+                    "-old-400();",
                     StringComparison.Ordinal) ||
                 !preview.Contains(
-                    "+new-1000();",
+                    "… 1600 satır daha · tamamı Çalışma günlüğünde",
                     StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(

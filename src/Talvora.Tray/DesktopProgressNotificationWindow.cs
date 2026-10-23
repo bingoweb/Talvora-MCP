@@ -389,8 +389,11 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
         return $"{Math.Max(1, (int)elapsed.TotalSeconds)} sn";
     }
 
+    private readonly DesktopProgressCodeState _codeState = new();
+
     private void UpdateEvidence(DesktopProgressMessage message)
     {
+        message = _codeState.Restore(message);
         var evidence = message.Evidence;
         var codePreview = evidence?.CodePreview ?? string.Empty;
         if (string.IsNullOrWhiteSpace(codePreview))
@@ -410,7 +413,7 @@ internal sealed partial class DesktopProgressNotificationWindow : Window
 
         _wasShowingCode = true;
         _diffPanel.Visibility = Visibility.Visible;
-        _diffHeader.Text = $"KOD DEĞİŞİKLİKLERİ · {DesktopProgressVisualTheme.Describe(message.Kind).Label}  +{evidence?.AddedLines ?? 0}  −{evidence?.RemovedLines ?? 0}";
+        _diffHeader.Text = $"KOD DEĞİŞİKLİKLERİ · {_codeState.Title} · {_codeState.TimestampUtc.ToLocalTime():HH:mm:ss}  +{evidence?.AddedLines ?? 0}  −{evidence?.RemovedLines ?? 0}";
         SetTextIfChanged(
             _codePreview,
             codePreview);

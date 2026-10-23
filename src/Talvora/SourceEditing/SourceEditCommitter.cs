@@ -119,13 +119,20 @@ internal sealed class SourceEditCommitter
                         $".talvora-backup-{transactionKey}-{index:D4}.tmp");
                 }
 
-                var counts = change.Before?.Exists == true && change.Before.Document is null
-                    ? ((int? Added, int? Removed))(null, null)
-                    : WorklogDiff.TextDiffBuilder.Count(
-                        change.Before?.Document?.Text ?? string.Empty,
-                        change.Operation == SourceEditOperationKind.Move
-                            ? change.ProposedDocument?.Text ?? change.Before?.Document?.Text ?? string.Empty
-                            : change.ProposedDocument?.Text ?? string.Empty);
+                var beforeText = change.Before?.Document?.Text ?? string.Empty;
+                var afterText = change.Operation == SourceEditOperationKind.Move
+                    ? change.ProposedDocument?.Text ?? beforeText
+                    : change.ProposedDocument?.Text ?? string.Empty;
+                var oldPath = change.Operation == SourceEditOperationKind.Add ? string.Empty :
+                    Path.GetRelativePath(changeSet.WorkspaceRoot, change.FullPath).Replace('\\', '/');
+                var newPath = change.Operation == SourceEditOperationKind.Delete ? string.Empty :
+                    Path.GetRelativePath(changeSet.WorkspaceRoot, finalPath).Replace('\\', '/');
+                var counts = WorklogDiff.TextDiffBuilder.Build(beforeText, afterText, oldPath, newPath,
+                    change.Before?.Length, afterBytes,
+                    encodingChanged: change.Before?.Document is { } original && change.ProposedDocument is { } proposed &&
+                        original.Encoding.Name != proposed.Encoding.Name,
+                    binary: change.Before?.Exists == true && change.Before.Document is null);
+                var showCode = SourceWorkspaceClassifier.Classify(finalPath).IsDevelopmentWorkspace;
                 prepared.Add(
                     new SourceEditPreparedFile(
                         index,
@@ -138,6 +145,8 @@ internal sealed class SourceEditCommitter
                     {
                         AddedLines = counts.Added,
                         RemovedLines = counts.Removed,
+                        CodePreview = showCode ? counts.Preview : null,
+                        ChangeSummary = showCode ? counts.Summary : "1 dosya değişti",
                     });
             }
 
@@ -1123,6 +1132,8 @@ internal sealed class SourceEditCommitter
         {
             AddedLines = prepared.AddedLines,
             RemovedLines = prepared.RemovedLines,
+            CodePreview = prepared.CodePreview,
+            ChangeSummary = prepared.ChangeSummary,
         };
     }
 

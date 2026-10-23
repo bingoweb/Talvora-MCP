@@ -4,12 +4,12 @@ namespace Talvora;
 
 internal sealed partial class TalvoraDesktopProgressNotifier
 {
-    internal void BeginClaudeJob(string jobId)
+    internal void BeginClaudeJob(string jobId, string? workingDirectory = null)
     {
         var narrative = new OperationNarrative(
             OperationCategory.GenericExecution, WorklogCopy.Claude);
         TryBeginWorklog("claude-" + jobId, "claude_background", narrative, null, TimeSpan.Zero,
-            clientName: "Claude");
+            clientName: "Claude", projectOverride: workingDirectory);
     }
 
     internal void UpdateClaudeJob(string jobId, int toolCalls, TimeSpan elapsed)

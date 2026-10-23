@@ -15,20 +15,14 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         IDictionary<string, JsonElement>? arguments)
     {
         var normalized = NormalizeToolName(toolName);
+        // File targets may be named up front; requested text is never an applied preview.
         if (normalized == "apply_patch")
-        {
-            var patch = GetArgumentText(arguments, "patch");
-            var workspaceRoot = GetArgumentText(arguments, "workspaceRoot");
-            return BuildPatchEvidence(patch, workspaceRoot);
-        }
-
-        if (normalized is
-            "apply_edits" or
-            "structural_edit" or
-            "semantic_edit")
-        {
-            return BuildStructuredEditEvidence(arguments);
-        }
+            return BuildPatchEvidence(GetArgumentText(arguments, "patch"),
+                GetArgumentText(arguments, "workspaceRoot")) is { } patch
+                ? patch with { CodePreview = null } : null;
+        if (IsSourceEditTool(normalized))
+            return BuildStructuredEditEvidence(arguments) is { } edits
+                ? edits with { CodePreview = null } : null;
 
         if (normalized is "dotnet_build" or "dotnet_test")
         {
@@ -56,25 +50,36 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             var json = result is CallToolResult callToolResult &&
                 callToolResult.StructuredContent is JsonElement structured
                     ? structured : JsonSerializer.SerializeToElement(result);
+            if (IsSourceEditTool(toolName) && TryGetPropertyIgnoreCase(json, "transaction", out var transaction) &&
+                transaction.ValueKind == JsonValueKind.Object) json = transaction;
             var resultSummary = DescribeStructuredResult(json);
             var resultFiles = ExtractStructuredFiles(json);
             if (IsSourceEditTool(toolName))
             {
                 var committed = TryGetPropertyIgnoreCase(json, "success", out var success) &&
-                    success.ValueKind == JsonValueKind.True &&
+                    success.ValueKind == JsonValueKind.True && result is not CallToolResult { IsError: true } &&
                     string.Equals(FactText(json, "status"), "committed", StringComparison.Ordinal);
                 if (!committed)
                     return new DesktopProgressEvidence(
                         Summary: FactText(json, "status") == "rejected" ? "Değişiklik uygulanmadı" : null,
                         Result: resultSummary);
                 var counts = ReceiptCounts(json);
+                var notes = TryGetPropertyIgnoreCase(json, "files", out var receiptFiles) && receiptFiles.ValueKind == JsonValueKind.Array
+                    ? string.Join(" · ", receiptFiles.EnumerateArray().Select(file => FactText(file, "changeSummary")).Where(text => !string.IsNullOrEmpty(text)).Distinct()) : null;
                 var fact = $"{resultFiles.Count} dosya" +
                     (counts.Added is not null && counts.Removed is not null
                         ? $" · +{counts.Added} −{counts.Removed}" : "") +
-                    (resultFiles.Count > 0 ? " · " + DescribeFactFiles(resultFiles) : "");
+                    (resultFiles.Count > 0 ? " · " + DescribeFactFiles(resultFiles) : "") +
+                    (string.IsNullOrEmpty(notes) ? "" : " · " + notes);
                 return new DesktopProgressEvidence(fact, resultFiles,
-                    counts.Added, counts.Removed, initial?.CodePreview, resultSummary);
+                    counts.Added, counts.Removed, CommittedPreview(json), resultSummary,
+                    CodeChangeId: Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                        Encoding.UTF8.GetBytes(FactText(json, "transactionId") ?? fact))).ToLowerInvariant());
             }
+            if (!TryDescribeFailure(result) && TryGetPropertyIgnoreCase(json, "codeEvidence", out var codeEvidence) &&
+                codeEvidence.ValueKind == JsonValueKind.Object)
+                return JsonSerializer.Deserialize<DesktopProgressEvidence>(codeEvidence.GetRawText(),
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             var resultFact = DescribeResultFact(toolName, json);
             if (initial is null && resultSummary is null && resultFact is null && resultFiles.Count == 0)
                 return null;
@@ -86,6 +91,21 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             // Reporting remains best effort; never substitute requested counts for missing results.
             return null;
         }
+    }
+
+    private static string? CommittedPreview(JsonElement json)
+    {
+        if (!TryGetPropertyIgnoreCase(json, "files", out var files) ||
+            files.ValueKind != JsonValueKind.Array) return null;
+        var snippets = files.EnumerateArray()
+            .Select(file => FactText(file, "codePreview"))
+            .Where(text => !string.IsNullOrEmpty(text)).ToArray();
+        if (snippets.Length == 0) return null;
+        var preview = string.Join("\n", snippets);
+        if (preview.Length > MaximumPreviewCharacters)
+            preview = preview[..MaximumPreviewCharacters] +
+                "\n… (gösterim sınırı aşıldı; kalan kod bu kartta gösterilemiyor)";
+        return preview;
     }
 
     private static DesktopProgressEvidence? BuildPatchEvidence(

@@ -107,6 +107,9 @@ internal static partial class SourceEditRegressionRunner
             first.Transaction.Error is { } firstError
                 ? $"{firstError.Message} Path={firstError.Path ?? "<none>"}"
                 : "Solution-aware semantic rename failed.");
+        Assert(first.Transaction.Files.Count >= 2 && first.Transaction.Files.All(file =>
+            file.CodePreview?.Contains("RenamedWidget", StringComparison.Ordinal) == true),
+            "N3b semantic rename did not return real committed diffs for every changed document.");
         Assert(
             first.Symbol is not null &&
             first.Symbol.Name == "Widget" &&

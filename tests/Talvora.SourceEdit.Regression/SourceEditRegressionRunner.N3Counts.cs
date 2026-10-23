@@ -5,6 +5,7 @@ internal static partial class SourceEditRegressionRunner
 {
     public static async Task RunReceiptCountsAsync()
     {
+        await RunN3bCommittedDiffsAsync();
         await using var workspace = await TestWorkspace.CreateAsync();
         await workspace.WriteUtf8Async("one.txt", "old\nkeep\n");
         await workspace.WriteUtf8Async("two.txt", "left\n");
