@@ -1092,6 +1092,54 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-23 (10) · range `audit/2026-10-22-09 (f40e402)..8dfb855` · 9 card commits · executors: ChatGPT/Codex via Talvora · result: ONE HIGH REGRESSION (D17), P-28 decided
+
+Delivered: D15 `4b080f5`, D16 `14a43eb`, N2 `c56c7ee`, N3 `504fa7b`, N9 `4b02102`, N10 `dff4627`, RM1 `319fa88`, N3b `8f379ad`, S3 `8dfb855`. Blocked: N4 (P-28, decided now), N5 (waits for N4).
+
+**Fidelity: exact where a reference exists.** N9, N10 and RM1: every changed file is identical to Claude's verified replay of the cards (clean clone of `504fa7b`), only the mandatory `.context7`/`.talvora` evidence differs. D15 and D16: identical to Claude's verified scratch files. N3b uses `DeclarationLine.PlaceName` for hunk-header context as amended; S3's startup ACL check is log-only as P-12 decided. GitHub `windows-ci` green for all nine commits.
+
+Verified live by Claude on installed `8dfb855` (the agent ticked N9/N10/RM1/N3b with "live evidence pending in Gitea #9"; Claude ran it instead):
+- D15: `push --dry-run` in a repository without evidence → `TALVORA_DELIVERY_GATE_BLOCKED: Context7 evidence is mandatory and missing: …` (was an opaque message).
+- RM1: `talvora_remotion_guide` → root `C:\Users\tayla\Videos\Talvora`, 4.0.538; `create` → succeeded as `MSI\tayla`; `compositions` → `MyComp`; `render gif scale 0.25` → `60/60` frames, 2 699 bytes; the server instructions carry the Remotion routing sentence.
+- N10: `talvora_worklog_note` → `accepted: true`; `talvora_apply_patch` schema has `purpose`; `/mcp/dev` lists 218 tools.
+- S3: `C:\ProgramData\Talvora` = SYSTEM + Administrators only; `Penpot` adds Users RX.
+
+| # | Severity | Type | Where | Finding | Fix |
+|---|---|---|---|---|---|
+| 1 | **HIGH** | regression (S3) | `src/Talvora.Shared/InteractiveUserProcessRunner.cs` `RunnerScript`: `Remove-Item -LiteralPath $RequestPath -Force -ErrorAction SilentlyContinue` | Since S3 the run folder's parents (`C:\ProgramData\Talvora`, `…\InteractiveRuns`) are closed to the user. PowerShell's `Remove-Item` opens the parent folder, throws a terminating `Access to the path 'C:\ProgramData\Talvora\InteractiveRuns' is denied`, and the helper returns exit 1 before starting the program. **Every `talvora_user_run` fails on the installed runtime** (live: `whoami` → exit 1, that error) — the agent's quality-gate tool, and the same runner carries Codex/Claude jobs. The S3 privacy fixture never ran the real helper as a user, so the gate stayed green. | **D17** |
+| 2 | MEDIUM | process | STATUS N9/N10/RM1/N3b `[x]` | Cards were ticked while their live acceptance was still "pending in Gitea #9"; finding 1 slipped through exactly that gap (S3 also deferred installer/live checks). | D17 acceptance + AGENTS step 8 clarification below |
+| 3 | — | decision | P-28 | Live Codex run contradicts U7/U8 ("do not use Codex"). | P-28 option 1 |
+
+Claude verified D17 before writing it: the real `RunnerScript` executed as `MSI\tayla` in a run folder with exactly S3's permissions (prepared by the service) → current: `Error: Access to the path 'C:\ProgramData\Talvora\InteractiveRuns' is denied`, request file left behind; fixed: exit 0, stdout `msi\tayla`, request file deleted. The new `tests/InteractiveRunnerParentAccessRegression.ps1` (two closed parent levels in `%TEMP%`, no admin needed) reproduces the production error with the old line and prints `INTERACTIVE_RUNNER_PARENT_ACCESS_GREEN` with the fix; its static check also rejects any `Remove-Item` in the helper.
+
+### D17 — `talvora_user_run` works again under S3's protected run folders
+
+> Audit 2026-10-23 (10), finding 1. **Run first.** `talvora_user_run` is the broken tool itself, so this card uses the bootstrap below for its own gate and build.
+
+**Files:** `src/Talvora.Shared/InteractiveUserProcessRunner.cs`, `tests/InteractiveRunnerParentAccessRegression.ps1` (new, verbatim copy).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — `src/Talvora.Shared/InteractiveUserProcessRunner.cs`, inside `RunnerScript`, replace the line
+
+```powershell
+    Remove-Item -LiteralPath $RequestPath -Force -ErrorAction SilentlyContinue
+```
+
+with
+
+```powershell
+    # .NET delete: Remove-Item also opens the parent folder, which the user may not read (S3).
+    try { [IO.File]::Delete($RequestPath) } catch { }
+```
+
+Step 2 — copy `docs/codex/reference/ci/InteractiveRunnerParentAccessRegression.ps1` → `tests/InteractiveRunnerParentAccessRegression.ps1` (AGENTS.md rule 5 "Reference copies"; normalised hash `636eba36c7a58ad89f64c4e2621d75a20c110cac15422eecbb4f9d2caeb2e6ee`). The gate runs it after the build.
+
+**Bootstrap for this card only (because `talvora_user_run` is what is broken):** run the Fast/Full gate and the installer build as the signed-in user **detached**, then read the log:
+`talvora_user_process_start {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-Command","& ./scripts/Invoke-QualityGate.ps1 -Scope Full *> artifacts/d17-gate.log; exit $LASTEXITCODE"], workingDirectory: "C:\Users\tayla\Talvora-MCP", visible: false}`, then `talvora_tail_text` on `artifacts/d17-gate.log` every 60 s until it ends with `Hepsi geçti.` or `Kontrol başarısız`. Same pattern for `scripts/Build-Windows-Installer.ps1` (log `artifacts/d17-build.log`). Never fall back to LocalSystem for these.
+
+**Acceptance:** test-first — the new regression is RED before Step 1 (`must delete its request with [IO.File]::Delete`) and `INTERACTIVE_RUNNER_PARENT_ACCESS_GREEN` after; Full gate `Hepsi geçti.` (bootstrap); build installer + deploy; then **live through the installed service**: `talvora_user_run {executable:"whoami", arguments:[], workingDirectory:<repo>}` → exit 0 and `msi\tayla`; then one normal `talvora_user_run` Fast gate → `Hepsi geçti.`; paste both into the Log; GitHub CI green (10b). Then backfill the pending live evidence of N9/N10/RM1/N3b in the Log (Claude already verified RM1/N10 live in this audit — reference it).
+
 ### Audit 2026-10-22 (9) · range `audit/2026-10-22-08 (a28f77b)..f40e402` · 3 card commits · executor: ChatGPT via Talvora · result: N1 delivered by Claude after unblocking; TWO FIXES (D15, D16)
 
 Delivered: D14 (`522e52b`), DEP17 (`c3f03ca`, PR #17 closed, installed), N1 (committed locally by the agent as `5fc56ed`, **not pushed** — the agent was stuck there).

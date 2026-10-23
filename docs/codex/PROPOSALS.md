@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-28 — N4 — Live Codex JSONL probe conflicts with the no-Codex user instruction
 - Date: 2026-10-23, HEAD 8f379adafffca6386f9a86f5def8b157e92a6c49
 - Card text: DESIGN-WORKLOG.md:266: "check with Context7 and a real `codex exec --json` run which events carry file changes and whether they include diff text"; N4 Do: "§5.4 and §5.4.1 (Codex code terminal)".
@@ -28,9 +32,7 @@
   1. Amend N4 §5.4.1 to accept the documented CLI JSONL schema plus sanitised recorded fixtures and an explicit no-live-Codex limitation. Leave a separate optional live acceptance in User queue if Codex is later authorised.
   2. Keep N4 unchanged and blocked until the user explicitly authorises an isolated live Codex JSONL probe in a disposable workspace (never use Codex to implement the card).
 - Partial work: reverted (yes; no N4 product or test files changed).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-10-23): option 1.** The user's "do not use Codex" stands. N4 implements §5.4.1 from the documented CLI JSONL schema plus sanitised recorded fixtures, and records "no live Codex run" in the Log; an optional live probe is a User-queue item only. The N4 card carries the amendment.
 
 ### P-27 — N3b — Workspace legacy-mutator acceptance contradicts the source-edit guard
 - Date: 2026-10-23, HEAD 504fa7bc123cd3ac343228dbab2b0d9bf325f7ba

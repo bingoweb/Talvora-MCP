@@ -1488,6 +1488,8 @@ with
 > **Amended by P-11 (Claude, 2026-10-20)** — read the decision text in `docs/codex/PROPOSALS.md` → "Decided" before starting; where it differs from this card, the decision wins.
 
 **Files:** `TalvoraDesktopCodexWorklog.cs`, `TalvoraDesktopClaudeWorklog.cs`, `src/Talvora.Shared/CodexCliEventSummary.cs` (activity classification), `ClaudeCliStreamingProgress.cs`, regression tests.
+> **Amended by P-28 (Claude, 2026-10-23):** no live `codex exec --json` run (the user said "do not use Codex", U7/U8). §5.4.1 is implemented from the documented CLI JSONL schema (Context7 `/openai/codex`, `item.completed` with `file_change` items) plus sanitised recorded fixtures checked into the regression; the Log states the limitation "no live Codex run". A live probe stays optional in the User queue.
+
 **Do:** §5.4 and §5.4.1 (Codex code terminal); fix W10 (diacritics) and W13; completion totals and changed files; summary excerpt in evidence only.
 **Acceptance:** recorded JSONL fixtures (sanitised) → expected activity lines, never a raw command; completion card shows totals; texts pass a diacritics check (test: no "gelistir|dogrul|cagri|gecen sure" ASCII forms).
 
