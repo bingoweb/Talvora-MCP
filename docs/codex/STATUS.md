@@ -82,7 +82,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] RM1 — Remotion animations: guide, detached runs, live card, automatic routing (Phase RM); signed-in Full 56/0; exact-commit installed runs, desktop card and CI evidence follow in Gitea #9.
 - [x] N3b — Worklog: code terminal real, complete, persistent (P-27; declaration context); signed-in Full 56/0; exact-commit installed/desktop/CI evidence follows in Gitea #9.
 - [x] N4 — Agent job activity and Codex code terminal (installed e49151a, signed-in Full 57/0; GitHub CI 40012319673 green, no live Codex per P-28)
-- [~] N5 — Phosphor worklog card and preview harness (reference SHA 8/8, PNG byte match 8/8, desktop regression GREEN; live screenshot, GitHub CI and signed-in Full gate evidence pending)
+- [~] N5 — Phosphor card (source hashes 8/8, PNGs 8/8, desktop regression GREEN; CI follow-up run pending, real window screenshot and signed-in Full gate evidence pending)
 - [?] N6 — Worklog evidence surface ("Ayrıntılar") (waiting for N5)
 - [x] S3 — ProgramData ACL + protected user-session InteractiveRuns (P-12; signed-in Full 56/0, privacy regression GREEN; installer/CI follow commit; live Codex exec deferred by U7/U8)
 - [ ] R1 — Agent job registry, persistence, orphan recovery, limits (P-13 decided; after S3)
@@ -125,6 +125,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
+- src/Talvora.Tray/DesktopProgressNotificationPresenter.cs:181 — N5 passes message.WorklogFrame! to the reference window without checking null; legacy tray alerts can lack this frame, and installed live capture returned NO_CARD_WINDOW. Check protocol-v4 fallback/alert routing in Claude audit before changing approved UI code.
 - src/Talvora/SourceEditing/AstGrepToolchainManager.cs:44 — After S3, signed-in Fast gate cannot access protected ProgramData/Toolchains or SourceEdit journals; P-29 needs a safe test contract.
 - tests/Talvora.Smoke/SmokeScenarios.MetadataPolicy.cs:237 — RM1 extra installed metadata check reported 109 destructive tools vs expected 101; the three Remotion tools are non-destructive and excluding them still gives 109. Gitea #9 comment 132 records the result; no unrelated metadata change in N3b.
 
@@ -134,6 +135,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-23 — N5 CI follow-up (ChatGPT via Talvora, CI run 40016482397): the Full gate failed at check 32, PS:ModernizationPolicyRegression, because it still read deleted DesktopProgressNotificationWindow.Visual.cs. Replaced only obsolete assertions in tests/ModernizationPolicyRegression.ps1 with approved Phosphor SHA-256 manifest checks (all 8 files) and equivalent contrast, focus, resizing, terminal, stale and accessibility checks; no production UI change.
+  Verified targeted original CI RED and corrected policy MODERNIZATION_POLICY_GREEN. One signed-in Full invocation ended without a capturable log; installed e6a3391 remained healthy, deploy exit 0, reference PNGs 8/8 identical. CI follow-up and live desktop PNG evidence remain pending; Phosphor exact sources unchanged.
 - 2026-10-23 — N5 (executor: ChatGPT via Talvora): installed all 8 Claude Phosphor sources verbatim; normalized SHA256SUMS 8/8 and all 8 generated preview PNG SHA256 8/8 byte-identical. Removed two old card files and Talvora.Notification palette entries; wired session window, preview CLI and prescribed size regression. No design gaps filled.
   API compile adaptations: CS1503 DesktopProgressMessage→DesktopWorklogFrame at presenter.Update, CS1061 OperationId→SessionId in preserved placement tests; private stale/dismiss test fields renamed to reference's identifiers. Tray + notification build 0 errors; DESKTOP_PROGRESS_BEHAVIOR_GREEN.
   Signed-in Full gate was invoked once as MSI\\tayla, but the detached process ended without a capturable exit/output (no unverified GREEN claim; not rerun without code changes). Live installed screenshot, Gitea preview attachment and exact-commit GitHub CI still pending. WPF Context7 /dotnet/wpf checked; Awwwards homepage researched only as evidence.
