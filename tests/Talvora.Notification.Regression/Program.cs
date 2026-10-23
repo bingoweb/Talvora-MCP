@@ -26,6 +26,7 @@ internal static partial class Program
         await AssertN3FactsAsync();
         await AssertN9SubjectsAsync();
         await AssertN10ChangesAsync();
+        await AssertRemotionWorklogAsync();
         await AssertDiffEvidenceCoverageAsync();
         await AssertSemanticMessagingAndCanonicalToolAsync();
         await AssertConcurrentCancellationTruthAsync();

@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T15:01:18.176Z",
+  "verifiedAtUtc": "2026-10-23T15:29:29.268Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "N10: DESIGN-WORKLOG section 6.2 task/purpose/place/count frame fields; rows are rendered in N5. Awwwards homepage checked live (HTTP 200; title Awwwards - Website Awards - Best Web Design Trends).",
+  "scope": "RM1: ROADMAP Phase RM desktop worklog behaviour and approved Turkish titles only. Awwwards homepage checked live (HTTP 200; title Awwwards - Website Awards - Best Web Design Trends).",
   "references": [
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
-    "DESIGN-WORKLOG section 6.2: # görev comes from talvora_worklog_note; ne comes only from the agent's purpose argument.",
-    "DESIGN-WORKLOG section 6.2: nerede and fark come from committed file receipts and recognised hunk declarations; rejected or failed edits never send changes.",
-    "N10 Acceptance: the new rows become visible with N5; the frame fields are proven by the regression."
+    "ROADMAP Phase RM desktop worklog: the run gets one live card with the real frame counter, then the real output file and size or a plain failure reason.",
+    "RM1 Step 6: the background watch reports the run; the tool calls stay silent so the user sees one card, not two.",
+    "RM1 Step 5 and reference TalvoraDesktopRemotionWorklog.cs define every Remotion title and fact; no layout or cosmetic choices are added."
   ]
 }

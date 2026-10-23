@@ -9,8 +9,8 @@ namespace Talvora.Shared;
 /// </summary>
 public static class TalvoraMcpToolMetadataPolicy
 {
-    public const int ExpectedReviewedToolCount = 252;
-    public const int ExpectedOpenWorldToolCount = 85;
+    public const int ExpectedReviewedToolCount = 255;
+    public const int ExpectedOpenWorldToolCount = 86;
     public const int ExpectedDestructiveToolCount = 101;
     public const int PreferredMaxDescriptionCharacters = 650;
 
@@ -90,6 +90,7 @@ public static class TalvoraMcpToolMetadataPolicy
             "talvora_pnpm_run",
             "talvora_python_run",
             "talvora_python_venv_create",
+            "talvora_remotion_run",
             "talvora_run_powershell",
             "talvora_run_process",
             "talvora_user_run",

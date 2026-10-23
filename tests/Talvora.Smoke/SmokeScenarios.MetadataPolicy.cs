@@ -48,6 +48,9 @@ internal static partial class SmokeScenarios
         AssertWorldScope("talvora_git_run", true);
         AssertWorldScope("talvora_run_powershell", true);
         AssertWorldScope("talvora_user_run", true);
+        AssertWorldScope("talvora_remotion_run", true);
+        AssertWorldScope("talvora_remotion_guide", false);
+        AssertWorldScope("talvora_remotion_status", false);
         AssertWorldScope("talvora_npm_install", true);
         AssertWorldScope("talvora_tcp_exchange", true);
         AssertWorldScope("talvora_modal_info", true);

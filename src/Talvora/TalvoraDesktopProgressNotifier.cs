@@ -817,6 +817,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             "path_info" or
             "http_request" => false,
             "worklog_note" => false,
+            "remotion_guide" => false,
+            "remotion_run" => false,
+            "remotion_status" => false,
             _ when
                 normalized.EndsWith(
                     "_status",

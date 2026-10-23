@@ -27,5 +27,9 @@ internal static class WorklogCopy
     internal static readonly WorklogTitles Process = new("Program çalışıyor", "Program bitti", "Program hata ile bitti");
     internal static readonly WorklogTitles Codex = new("Codex çalışıyor", "Codex görevi tamamlandı", "Codex görevi tamamlanamadı");
     internal static readonly WorklogTitles Claude = new("Claude çalışıyor", "Claude görevi tamamlandı", "Claude görevi tamamlanamadı");
+    internal static readonly WorklogTitles RemotionCreate = new("Animasyon projesi hazırlanıyor", "Animasyon projesi hazır", "Animasyon projesi hazırlanamadı");
+    internal static readonly WorklogTitles RemotionCheck = new("Animasyon denetleniyor", "Animasyon denetlendi", "Animasyon denetlenemedi");
+    internal static readonly WorklogTitles RemotionStill = new("Önizleme karesi hazırlanıyor", "Önizleme karesi hazır", "Önizleme karesi hazırlanamadı");
+    internal static readonly WorklogTitles RemotionRender = new("Animasyon oluşturuluyor", "Animasyon hazır", "Animasyon oluşturulamadı");
     internal static readonly WorklogTitles Generic = new("İşlem yürütülüyor", "İşlem tamamlandı", "İşlem tamamlanamadı");
 }

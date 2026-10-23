@@ -49,6 +49,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         public string? TaskNote { get; set; }
         public string? Purpose { get; set; }
         public IReadOnlyList<WorklogFileChange>? Changes { get; set; }
+        /// <summary>Real progress counter of a running background step ("45/90 kare"); RM1 only.</summary>
+        public string? ProgressFact { get; set; }
     }
 
     private readonly object _worklogGate = new();
@@ -242,6 +244,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     {
         session.Purpose = purpose;
         session.Changes = changes;
+        session.ProgressFact = null;
         session.ToolName = toolName;
         session.Title = title;
         session.Message = ComposeWorklogMessage(message, evidence);
@@ -448,7 +451,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 session.Id, sequence, DateTimeOffset.UtcNow,
                 new WorklogSessionHeader(session.ProjectName, session.Actor, session.TaskNote),
                 new WorklogStep((WorklogStepCategory)session.Category,
-                    ToWorklogState(kind), title, isTerminal ? evidence?.Summary : null, outcome,
+                    ToWorklogState(kind), title, isTerminal ? evidence?.Summary : session.ProgressFact, outcome,
                     Math.Max(0, elapsed.TotalSeconds),
                     session.Purpose,
                     kind == DesktopProgressKind.Completed ? session.Changes : null),

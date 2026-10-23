@@ -101,6 +101,10 @@ internal static partial class SmokeScenarios
             "talvora_worklog_note",
             development: true,
             administration: false);
+        foreach (var remotionTool in new[] { "talvora_remotion_guide", "talvora_remotion_run", "talvora_remotion_status" })
+        {
+            AssertSurface(remotionTool, development: true, administration: false);
+        }
         AssertSurface(
             "talvora_dotnet_build",
             development: true,

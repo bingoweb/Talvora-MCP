@@ -23,7 +23,7 @@
 
 ## In progress
 
-(none)
+In progress: (none)
 
 ## Agent queue
 
@@ -78,7 +78,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] N3 — Worklog: real facts from results (P-11; signed-in Full 56/0; CI 39827653752 green; installed 504fa7b verified)
 - [x] N9 — Worklog: every step names what it works on + approved Turkish tool titles (§6.1); signed-in Full 56/0; exact-commit deployment, desktop title and CI evidence follow in Gitea #9.
 - [x] N10 — Worklog: task line, purpose, changed places (ne · nerede · fark, §6.2) + talvora_worklog_note; signed-in Full 56/0; exact-commit deployment, live accepted:true and CI evidence follow in Gitea #9.
-- [ ] RM1 — Remotion animations: guide, detached runs, live card, automatic routing (Phase RM)
+- [x] RM1 — Remotion animations: guide, detached runs, live card, automatic routing (Phase RM); signed-in Full 56/0; exact-commit installed runs, desktop card and CI evidence follow in Gitea #9.
 - [ ] N3b — Worklog: code terminal real, complete, persistent (P-27 decided; hunk context via DeclarationLine; after N10)
 - [ ] N4 — Worklog: agent jobs tell their story (+ Codex code terminal) (P-11 decided)
 - [ ] N5 — Worklog card visual redesign + preview harness (reference updated 2026-10-23 with §6.1–6.3; after N10)
@@ -131,6 +131,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-23 — RM1 (executor: Codex via Talvora): exact 24-step implementation; pinned Remotion 4.0.538 guide-first routing, detached signed-in create/check/still/render runs and one live worklog card with real frame facts. All three normalized reference hashes match SHA256SUMS.txt.
+  RED: approved test found missing RemotionTools/BeginRemotionRun, then no expected frame within 20 s; GREEN: DESKTOP_PROGRESS_BEHAVIOR_GREEN and MCP metadata/surface source policy smoke.
+  Signed-in MSI\tayla Full: 56 checks / 0 errors, exit 0, last line "Hepsi geçti."; Fast baseline 13/0. Full elapsed 227435 ms.
+  Context7 /remotion-dev/remotion and official CLI docs verified create-video --yes --blank, compositions --quiet, render/still, Windows props file and scale; pinned create-video@4.0.538 registry entry verified.
+  Supporting changes: prescribed manifest/title/metadata/surface counts and existing source assertions, README tool entry, mandatory Context7/Awwwards evidence. No visual design decisions or work on another card.
+  Post-commit delivery Log continues in Gitea #9: exact-commit installer/deploy and installed smoke; guide root, create/compositions/GIF runIds and terminal states, GIF output size, signed-in one-card desktop evidence and exact-commit windows-ci. Pending until verified there.
 - 2026-10-23 — N10 (executor: Codex via Talvora): exact 39-step implementation; task note/purpose fields, bounded redacted committed-file changes and recognised declarations; new development-surface worklog-note tool. Rows render in N5 as prescribed.
   RED: approved test found missing frame fields, then "N10: task note missing or not one line"; GREEN: DESKTOP_PROGRESS_BEHAVIOR_GREEN. All five normalized reference hashes match SHA256SUMS.txt.
   Signed-in MSI\tayla Full: 56 checks / 0 errors, exit 0, last line "Hepsi geçti."; Fast baseline 13/0; Release build clean. Full elapsed 206521 ms.

@@ -42,7 +42,8 @@ builder.Services
             Version = TalvoraRuntimeMetadata.InformationalVersion,
         };
         options.ServerInstructions =
-            SourceEditRoutingContract.ServerInstructions;
+            SourceEditRoutingContract.ServerInstructions + " " +
+            RemotionTools.ServerInstructions;
     })
     .WithHttpTransport(options =>
     {
@@ -109,6 +110,8 @@ app.UseLoopbackOriginGuard();
 ClaudeBackgroundJobTools.DesktopNotifier =
     app.Services.GetRequiredService<TalvoraDesktopProgressNotifier>();
 CodexBackgroundJobTools.DesktopNotifier =
+    app.Services.GetRequiredService<TalvoraDesktopProgressNotifier>();
+RemotionTools.DesktopNotifier =
     app.Services.GetRequiredService<TalvoraDesktopProgressNotifier>();
 var isWindowsService =
     OperatingSystem.IsWindows() &&
