@@ -1112,33 +1112,171 @@ Verified live by Claude on installed `8dfb855` (the agent ticked N9/N10/RM1/N3b 
 
 Claude verified D17 before writing it: the real `RunnerScript` executed as `MSI\tayla` in a run folder with exactly S3's permissions (prepared by the service) → current: `Error: Access to the path 'C:\ProgramData\Talvora\InteractiveRuns' is denied`, request file left behind; fixed: exit 0, stdout `msi\tayla`, request file deleted. The new `tests/InteractiveRunnerParentAccessRegression.ps1` (two closed parent levels in `%TEMP%`, no admin needed) reproduces the production error with the old line and prints `INTERACTIVE_RUNNER_PARENT_ACCESS_GREEN` with the fix; its static check also rejects any `Remove-Item` in the helper.
 
-### D17 — `talvora_user_run` works again under S3's protected run folders
+### D17 — `talvora_user_run` and the signed-in gate work under S3's protected ProgramData
 
-> Audit 2026-10-23 (10), finding 1. **Run first.** `talvora_user_run` is the broken tool itself, so this card uses the bootstrap below for its own gate and build.
+> Audit 2026-10-23 (10), finding 1; **extended by P-29 (Claude, 2026-10-23)**. **Run first.**
 
-**Files:** `src/Talvora.Shared/InteractiveUserProcessRunner.cs`, `tests/InteractiveRunnerParentAccessRegression.ps1` (new, verbatim copy).
+**Why:** S3 closed `C:\ProgramData\Talvora` to the signed-in user (correct). Two things still assumed access: (1) the interactive helper deleted its request with `Remove-Item`, which opens the closed parent, so every `talvora_user_run` fails; (2) five SourceEdit regressions used the service's ProgramData state (`SourceEdit`, `Toolchains`), so the signed-in gate is red (P-29). The service keeps its protected ProgramData paths; only the helper and the regression runner change.
+
+**Files:** `src/Talvora.Shared/InteractiveUserProcessRunner.cs`, `src/Talvora/SourceEditing/SourceEditEngine.cs`, `src/Talvora/SourceEditing/AstGrepToolchainManager.cs`, `tests/Talvora.SourceEdit.Regression/Program.cs`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Semantic.cs`, `tests/PrivacySecuritySourceRegression.ps1`, `tests/Talvora.Smoke/SmokeScenarios.PrivacySecurity.cs`, new `tests/InteractiveRunnerParentAccessRegression.ps1`.
 
 #### Exact implementation — copy this, do not reinterpret
 
-Step 1 — `src/Talvora.Shared/InteractiveUserProcessRunner.cs`, inside `RunnerScript`, replace the line
+Claude applied exactly these steps to a clean clone of `6cbb126` with S3's ACL installed and ran the Full gate **as `MSI\tayla`**: `57 kontrol, 0 hata` / `Hepsi geçti.` (47 PowerShell tests, the new one included). Without them the same gate fails at SourceEdit (P-29). Apply in order.
 
-```powershell
+Step 1 — `src/Talvora.Shared/InteractiveUserProcessRunner.cs` — replace
+
+```csharp
     Remove-Item -LiteralPath $RequestPath -Force -ErrorAction SilentlyContinue
 ```
 
 with
 
-```powershell
+```csharp
     # .NET delete: Remove-Item also opens the parent folder, which the user may not read (S3).
     try { [IO.File]::Delete($RequestPath) } catch { }
 ```
 
-Step 2 — copy `docs/codex/reference/ci/InteractiveRunnerParentAccessRegression.ps1` → `tests/InteractiveRunnerParentAccessRegression.ps1` (AGENTS.md rule 5 "Reference copies"; normalised hash `636eba36c7a58ad89f64c4e2621d75a20c110cac15422eecbb4f9d2caeb2e6ee`). The gate runs it after the build.
+Step 2 — `tests/PrivacySecuritySourceRegression.ps1` — replace
 
-**Bootstrap for this card only (because `talvora_user_run` is what is broken):** run the Fast/Full gate and the installer build as the signed-in user **detached**, then read the log:
-`talvora_user_process_start {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-Command","& ./scripts/Invoke-QualityGate.ps1 -Scope Full *> artifacts/d17-gate.log; exit $LASTEXITCODE"], workingDirectory: "C:\Users\tayla\Talvora-MCP", visible: false}`, then `talvora_tail_text` on `artifacts/d17-gate.log` every 60 s until it ends with `Hepsi geçti.` or `Kontrol başarısız`. Same pattern for `scripts/Build-Windows-Installer.ps1` (log `artifacts/d17-build.log`). Never fall back to LocalSystem for these.
+```powershell
+Assert-Contains $interactive 'Remove-Item -LiteralPath $RequestPath -Force' 'interactive request document is removed after deserialization'
+```
 
-**Acceptance:** test-first — the new regression is RED before Step 1 (`must delete its request with [IO.File]::Delete`) and `INTERACTIVE_RUNNER_PARENT_ACCESS_GREEN` after; Full gate `Hepsi geçti.` (bootstrap); build installer + deploy; then **live through the installed service**: `talvora_user_run {executable:"whoami", arguments:[], workingDirectory:<repo>}` → exit 0 and `msi\tayla`; then one normal `talvora_user_run` Fast gate → `Hepsi geçti.`; paste both into the Log; GitHub CI green (10b). Then backfill the pending live evidence of N9/N10/RM1/N3b in the Log (Claude already verified RM1/N10 live in this audit — reference it).
+with
+
+```powershell
+Assert-Contains $interactive '[IO.File]::Delete($RequestPath)' 'interactive request document is removed after deserialization'
+```
+
+Step 3 — `tests/Talvora.Smoke/SmokeScenarios.PrivacySecurity.cs` — replace
+
+```csharp
+        var requestDeleteIndex = runnerScript.IndexOf(
+            "Remove-Item -LiteralPath $RequestPath",
+            StringComparison.Ordinal);
+```
+
+with
+
+```csharp
+        var requestDeleteIndex = runnerScript.IndexOf(
+            "[IO.File]::Delete($RequestPath)",
+            StringComparison.Ordinal);
+```
+
+Step 4 — `src/Talvora/SourceEditing/SourceEditEngine.cs` — replace
+
+```csharp
+internal static class SourceEditRuntime
+{
+    public static SourceEditEngine Engine { get; } = new();
+}
+```
+
+with
+
+```csharp
+internal static class SourceEditRuntime
+{
+    /// <summary>
+    /// The service's engine (state under ProgramData\Talvora\SourceEdit). Regression runners call
+    /// <see cref="UseStateRootForTests"/> first, because S3 closes ProgramData to the signed-in user (P-29).
+    /// </summary>
+    public static SourceEditEngine Engine { get; private set; } = new();
+
+    internal static void UseStateRootForTests(string stateRoot) =>
+        Engine = new SourceEditEngine(new SourceEditEngineOptions { StateRoot = stateRoot });
+}
+```
+
+Step 5 — `src/Talvora/SourceEditing/SourceEditEngine.cs` — replace
+
+```csharp
+    public IReadOnlyList<SourceEditJournalQuarantine> LastRecoveryQuarantines
+```
+
+with
+
+```csharp
+    /// <summary>Folder of this engine's journal and receipts (ProgramData for the service, a test root in regressions).</summary>
+    internal string StateRoot => store.StateRoot;
+
+    public IReadOnlyList<SourceEditJournalQuarantine> LastRecoveryQuarantines
+```
+
+Step 6 — `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Semantic.cs` — replace
+
+```csharp
+            new SourceEditTransactionStore();
+```
+
+with
+
+```csharp
+            new SourceEditTransactionStore(SourceEditRuntime.Engine.StateRoot);
+```
+
+Step 7 — `src/Talvora/SourceEditing/AstGrepToolchainManager.cs` — replace
+
+```csharp
+        var root = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "Talvora", "Toolchains", "ast-grep", ResolveArchitectureKey());
+```
+
+with
+
+```csharp
+        var root = Path.Combine(CacheRoot, "ast-grep", ResolveArchitectureKey());
+```
+
+Step 8 — `src/Talvora/SourceEditing/AstGrepToolchainManager.cs` — replace
+
+```csharp
+    public static async Task<AstGrepToolchain> ResolveAsync(
+```
+
+with
+
+```csharp
+    /// <summary>
+    /// Toolchain cache root. The service uses ProgramData\Talvora\Toolchains; regression runners set a
+    /// user-owned root because S3 closes ProgramData to the signed-in user (P-29).
+    /// </summary>
+    internal static string CacheRoot { get; set; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Talvora", "Toolchains");
+
+    public static async Task<AstGrepToolchain> ResolveAsync(
+```
+
+Step 9 — `tests/Talvora.SourceEdit.Regression/Program.cs` — replace
+
+```csharp
+if (args.Contains("--receipt-counts-only", StringComparer.OrdinalIgnoreCase))
+```
+
+with
+
+```csharp
+// S3 (P-29): the signed-in gate cannot write ProgramData\Talvora. Engine state and the ast-grep cache live in
+// a user-owned folder that persists between runs (so the pinned ast-grep download is cached, as before).
+var regressionState = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Talvora", "RegressionState");
+Talvora.SourceEditing.SourceEditRuntime.UseStateRootForTests(Path.Combine(regressionState, "SourceEdit"));
+Talvora.SourceEditing.AstGrepToolchainManager.CacheRoot = Path.Combine(regressionState, "Toolchains");
+
+if (args.Contains("--receipt-counts-only", StringComparer.OrdinalIgnoreCase))
+```
+
+Step 10 — copy `docs/codex/reference/ci/InteractiveRunnerParentAccessRegression.ps1` → `tests/InteractiveRunnerParentAccessRegression.ps1` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `636eba36c7a58ad89f64c4e2621d75a20c110cac15422eecbb4f9d2caeb2e6ee`).
+
+**Don't:** open ProgramData folders to users, change S3's ACLs, or point the **service** at any other state folder; the overrides are only called by the regression runner.
+
+**Bootstrap for this card only (because `talvora_user_run` is what is broken):** run the Full gate and the installer build as the signed-in user **detached**, then read the log:
+`talvora_user_process_start {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-Command","& ./scripts/Invoke-QualityGate.ps1 -Scope Full *> artifacts/d17-gate.log; exit $LASTEXITCODE"], workingDirectory: "C:\Users\tayla\Talvora-MCP", visible: false}`, then `talvora_tail_text` on `artifacts/d17-gate.log` every 60 s until it ends with `Hepsi geçti.` or `Kontrol başarısız`. Same pattern for `scripts/Build-Windows-Installer.ps1` (log `artifacts/d17-build.log`). Claude verified this start path on the installed runtime (`msi\tayla`, repository as working directory). Never fall back to LocalSystem for these.
+
+**Acceptance:** test-first — the new regression is RED before Step 1 and `INTERACTIVE_RUNNER_PARENT_ACCESS_GREEN` after; Full gate `Hepsi geçti.` (bootstrap); build installer + deploy; then **live through the installed service**: `talvora_user_run {executable:"whoami", arguments:[], workingDirectory:<repo>}` → exit 0 and `msi\tayla`, then a normal `talvora_user_run` Fast gate → `Hepsi geçti.`; paste both into the Log; GitHub CI green (10b). Only then `[x]` (AGENTS step 8). Then backfill the pending live evidence of N9/N10/RM1/N3b in the Log (Claude verified RM1/N10 live in audit 10 — reference it).
 
 ### Audit 2026-10-22 (9) · range `audit/2026-10-22-08 (a28f77b)..f40e402` · 3 card commits · executor: ChatGPT via Talvora · result: N1 delivered by Claude after unblocking; TWO FIXES (D15, D16)
 

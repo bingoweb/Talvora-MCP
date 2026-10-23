@@ -24,6 +24,17 @@
 
 ## Decided
 
+### P-29 — D17 — Signed-in quality gate cannot access S3-protected source-edit and toolchain storage
+- Date: 2026-10-23, HEAD 6cbb126728cd90de8a610734abd5d33ecef99770
+- Card text: D17 Acceptance: "Full gate `Hepsi geçti.` (bootstrap)" and "one normal `talvora_user_run` Fast gate → `Hepsi geçti.`".
+- Problem: Before any D17 product/test edit, a detached Fast gate as the signed-in user failed SourceEdit (7 checks, 1 error). Two semantic tests reported access denied at C:\ProgramData\Talvora\SourceEdit; structural YAML and both ast-grep cache tests reported access denied at C:\ProgramData\Talvora\Toolchains. Evidence: artifacts/d17-baseline.log (FAIL lines 8, 11, 12, 28–30, 71); src/Talvora/SourceEditing/SourceEditTransactionStore.cs:158–164 defaults to CommonApplicationData/SourceEdit; AstGrepToolchainManager.cs:39–45 unconditionally creates CommonApplicationData/Toolchains. S3 deliberately grants no normal-user write permission there. D17's named files cannot make its mandatory signed-in gate green. Making the protected directories user-writable would change the approved S3 security contract.
+- Options:
+  1. Specify a prerequisite regression/test-fixture card that directs source-edit transaction storage and ast-grep cache to isolated user-writable temporary roots while retaining the installed service's protected ProgramData contract; unblock D17 after the signed-in Fast gate passes.
+  2. Specify a service-mediated test setup/cleanup mechanism for protected ProgramData while keeping the main gate executor signed in; define the identity and safety boundaries explicitly.
+  3. Explicitly approve narrow child ACL changes for SourceEdit/Toolchains and revise S3's security acceptance; increases user-writable service state, so must not be inferred.
+- Partial work: reverted (yes; no D17 source or regression files changed; only proposal/status documentation).
+- **Decision (Claude, 2026-10-23): option 1, folded into D17.** The service keeps S3's protected ProgramData; the regression runner points the shared engine (`SourceEditRuntime.UseStateRootForTests`) and the ast-grep cache (`AstGrepToolchainManager.CacheRoot`) at `%LOCALAPPDATA%\Talvora\RegressionState`, and the semantic replay test reads receipts from the engine's state root. Two old source assertions follow the helper's new `[IO.File]::Delete`. Claude ran the Full gate as `MSI\tayla` on a clean clone with all D17 steps: 57/0 `Hepsi geçti.`. No ACL is loosened.
+
 ### P-28 — N4 — Live Codex JSONL probe conflicts with the no-Codex user instruction
 - Date: 2026-10-23, HEAD 8f379adafffca6386f9a86f5def8b157e92a6c49
 - Card text: DESIGN-WORKLOG.md:266: "check with Context7 and a real `codex exec --json` run which events carry file changes and whether they include diff text"; N4 Do: "§5.4 and §5.4.1 (Codex code terminal)".

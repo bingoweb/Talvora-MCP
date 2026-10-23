@@ -76,7 +76,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D16 — Local evidence gates parse as strictly as the push gate (signed-in Full 56/0; exact-commit GitHub CI check after push)
 - [x] N2 — Worklog: protocol v4, sessions, project/actor context (P-11; signed-in Full 56/0; CI 39819719963 green; installed c56c7ee verified)
 - [x] N3 — Worklog: real facts from results (P-11; signed-in Full 56/0; CI 39827653752 green; installed 504fa7b verified)
-- [ ] D17 — `talvora_user_run` works again under S3's protected run folders (audit 2026-10-23 (10); bootstrap in the card)
+- [ ] D17 — `talvora_user_run` and the signed-in gate work under S3's protected ProgramData (P-29 decided; card extended, verified 57/0 as MSI\tayla)
 - [x] N9 — Worklog: every step names what it works on + approved Turkish tool titles (§6.1); signed-in Full 56/0; exact-commit deployment, desktop title and CI evidence follow in Gitea #9.
 - [x] N10 — Worklog: task line, purpose, changed places (ne · nerede · fark, §6.2) + talvora_worklog_note; signed-in Full 56/0; exact-commit deployment, live accepted:true and CI evidence follow in Gitea #9.
 - [x] RM1 — Remotion animations: guide, detached runs, live card, automatic routing (Phase RM); signed-in Full 56/0; exact-commit installed runs, desktop card and CI evidence follow in Gitea #9.
@@ -125,6 +125,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
+- src/Talvora/SourceEditing/AstGrepToolchainManager.cs:44 — After S3, signed-in Fast gate cannot access protected ProgramData/Toolchains or SourceEdit journals; P-29 needs a safe test contract.
 - tests/Talvora.Smoke/SmokeScenarios.MetadataPolicy.cs:237 — RM1 extra installed metadata check reported 109 destructive tools vs expected 101; the three Remotion tools are non-destructive and excluding them still gives 109. Gitea #9 comment 132 records the result; no unrelated metadata change in N3b.
 
 - src/Talvora/Tools/UserRunTools.cs:50 — A detached Start-Process child keeps output pipes open: the launcher returns failure after 5 seconds although the signed-in gate continues and exits 0; direct long connector calls also time out. Gate log/exit files independently verified; no runner change in N9.
@@ -133,6 +134,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-23 — Claude audit 11 (no new agent commits; P-29): the signed-in Full gate on 6cbb126 fails at SourceEdit because five regressions use the service's protected ProgramData state. D17 extended (P-29 option 1): regression-only state root for the shared engine and the ast-grep cache under %LOCALAPPDATA%, semantic test reads the engine root, two old assertions follow [IO.File]::Delete. Verified on a clean clone as MSI\tayla: Full 57/0 `Hepsi geçti.`; card replay identical file by file.
 - 2026-10-23 — Claude audit 10 of `f40e402..8dfb855` (D15, D16, N2, N3, N9, N10, RM1, N3b, S3): N9/N10/RM1 identical to Claude's verified replay, D15/D16 identical to the verified scratch files, CI green for all. Live on installed 8dfb855 Claude verified D15 (gate reason visible), RM1 (guide/create/compositions/GIF 60/60 frames), N10 (worklog_note accepted, purpose schema), S3 ACLs. HIGH regression found: every talvora_user_run fails since S3 (helper Remove-Item opens the closed parent) → card D17 (verified fix + new regression, bootstrap gate via detached user start). P-28 decided (no live Codex). AGENTS step 8: [x] only after live acceptance. Queue: D17 → N4 → N5. Tag `audit/2026-10-23-10` = `8dfb855`.
 - 2026-10-23 — S3 (executor: ChatGPT via Talvora): root ProgramData DACL now protects SYSTEM/Administrators FullControl; Penpot Users ReadAndExecute only. User-runner request, helper and output files moved to protected ProgramData/InteractiveRuns/<guid> with SYSTEM FullControl and target user Modify. Reparse-safe stale/per-run removal; logging-only startup ACL warning per P-12 (no UI notice, no Secrets file touched).
   RED: installer ACL source absent in test-first compile. GREEN: shared/smoke/service Release builds, signed-in privacy-security-only fixture (root junction rejection, internal junction target survival, deleted normal run, explicit per-file ACE survives parent DACL change); final signed-in Fast baseline 13/0 and Full 56/0 (last line "Hepsi geçti."); Context7 /dotnet/docs confirms DirectoryInfo/FileInfo ACL APIs. Installer build uses canonical packaging script because direct standalone project lacks its generated Payload.zip.
