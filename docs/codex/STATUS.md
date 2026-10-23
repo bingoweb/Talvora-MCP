@@ -23,7 +23,7 @@
 
 ## In progress
 
-N3b — waiting for Claude: P-27; N3 delivery evidence retained with explicit user approval on 2026-10-23. Documentation only; no N3b product/test changes.
+(none)
 
 ## Agent queue
 
@@ -76,7 +76,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D16 — Local evidence gates parse as strictly as the push gate (signed-in Full 56/0; exact-commit GitHub CI check after push)
 - [x] N2 — Worklog: protocol v4, sessions, project/actor context (P-11; signed-in Full 56/0; CI 39819719963 green; installed c56c7ee verified)
 - [x] N3 — Worklog: real facts from results (P-11; signed-in Full 56/0; CI 39827653752 green; installed 504fa7b verified)
-- [ ] N9 — Worklog: every step names what it works on + approved Turkish tool titles (§6.1)
+- [x] N9 — Worklog: every step names what it works on + approved Turkish tool titles (§6.1); signed-in Full 56/0; exact-commit deployment, desktop title and CI evidence follow in Gitea #9.
 - [ ] N10 — Worklog: task line, purpose, changed places (ne · nerede · fark, §6.2) + talvora_worklog_note
 - [ ] RM1 — Remotion animations: guide, detached runs, live card, automatic routing (Phase RM)
 - [ ] N3b — Worklog: code terminal real, complete, persistent (P-27 decided; hunk context via DeclarationLine; after N10)
@@ -125,10 +125,17 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
+- src/Talvora/Tools/UserRunTools.cs:50 — A detached Start-Process child keeps output pipes open: the launcher returns failure after 5 seconds although the signed-in gate continues and exits 0; direct long connector calls also time out. Gate log/exit files independently verified; no runner change in N9.
+
 - src/Talvora/Tools/GitTools.cs:787 - User requests a permanent Git/SSH project-rule fix: remote `fetch`/`push` use the signed-in identity but `pull` does not, so `git pull --ff-only origin main` runs as LocalSystem and cannot open the correctly ACL-protected user SSH key; see P-24. Preserve the key ACL.
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-23 — N9 (executor: Codex via Talvora): exact approved subjects/title table and narrative copied; all four normalized reference hashes match; real quality-gate counts become facts.
+  RED: approved test first failed with missing title table, then expected "Kalite kontrolü geçti · tam" but got "İşlem tamamlandı"; GREEN: DESKTOP_PROGRESS_BEHAVIOR_GREEN and MODERNIZATION_POLICY_GREEN.
+  Signed-in MSI\tayla Full: 56 checks / 0 errors, exit 0, final line "Hepsi geçti."; Fast baseline 13/0; Release build clean. Detached logs retain identity and actual gate exit despite connector/launcher output limitations.
+  Context7 /dotnet/docs verified named Regex captures/GroupCollection; vendor .NET documentation checked. Supporting changes: mandatory Context7/Awwwards evidence; prescribed existing source assertion updated.
+  Post-commit delivery evidence goes to Gitea #9: build/deploy this card's exact HEAD, verify healthz.sourceCommit and installed smoke, then observe the live Fast title "Kalite kontrolü geçti · hızlı" and exact-commit windows-ci. These remain pending until verified there.
 - 2026-10-23 — Claude design (user requests): (1) descriptive desktop messages — DESIGN-WORKLOG §6.1–6.3, cards N9 (subjects + approved Turkish title table for all tools) and N10 (görev line, purpose, nerede/fark); Phosphor reference updated (answer rows, word-level highlight, dedent, compact hunks) and previews 01–08 re-rendered. (2) Remotion — Phase RM / RM1 (guide, detached user runs, status, live card, server-instruction routing); runner verified end to end on this machine (create/compositions/MP4/still/failure). All three cards were replayed from their own text on a clean clone of 504fa7b: build 0 errors, DESKTOP_PROGRESS_BEHAVIOR_GREEN, Full gate 56/0 `Hepsi geçti.` as MSI\tayla. P-27 decided (option 1). Queue: N9 → N10 → RM1 → N3b → N4 → N5.
 - 2026-10-23 — N3b (executor: Codex via Talvora): blocked before product changes by P-27; legacy workspace replace_text/json_set rejection contradicts Acceptance (4), confirmed in SourceMutationPolicy and existing typed-config policy tests.
   No guard, test or runtime behaviour changed; N3 delivery closeout retained with explicit user approval. N4 not started; awaiting Claude's decision.

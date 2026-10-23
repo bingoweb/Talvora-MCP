@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-17T11:24:00Z",
+  "verifiedAtUtc": "2026-10-23T14:20:00Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "Optional Claude Code desktop progress: reuse the existing nonmodal single worklog card and full-text WPF layout. Homepage reviewed with HTTP 200; title: Awwwards - Website Awards - Best Web Design Trends. No layout or brand redesign.",
+  "scope": "N9: DESIGN-WORKLOG section 6.1 approved subject-bearing Turkish titles only. Awwwards homepage checked live (HTTP 200; title Awwwards - Website Awards - Best Web Design Trends).",
   "references": [
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
-    "Reuse the established accessible WPF worklog layout; this engine integration does not introduce a new visual design.",
-    "Use ordinary Turkish lifecycle messages, genuine elapsed duration and actual tool-call counts; show no fabricated telemetry or raw commands.",
-    "Keep existing full-text wrapping, scrollable content, user-owned placement and one visible worklog behavior."
+    "DESIGN-WORKLOG section 6.1: every title carries its subject, taken only from the call's real arguments, never a command line.",
+    "DESIGN-WORKLOG section 6.1: use the approved TalvoraToolTitles Turkish title table for every manifest tool.",
+    "DESIGN-WORKLOG section 6.1: quality-gate summary N kontrol, M hata becomes the fact N kontrol · M hata."
   ]
 }

@@ -24,6 +24,7 @@ internal static partial class Program
         await AssertN1WorklogCopyAsync();
         await AssertN2ProjectSessionsAsync();
         await AssertN3FactsAsync();
+        await AssertN9SubjectsAsync();
         await AssertDiffEvidenceCoverageAsync();
         await AssertSemanticMessagingAndCanonicalToolAsync();
         await AssertConcurrentCancellationTruthAsync();
@@ -421,7 +422,7 @@ internal static partial class Program
             ?? throw new InvalidOperationException("N1 missing narrative mapping.");
         foreach (var toolName in TalvoraToolManifest.Names)
         {
-            var narrative = lookup.Invoke(null, [toolName, null]);
+            var narrative = lookup.Invoke(null, [toolName, null, null]);
             var titlesProperty = narrative?.GetType().GetProperty("Titles");
             if (titlesProperty?.GetValue(narrative) is not WorklogTitles titles)
                 throw new InvalidOperationException("N1 missing copy category: " + toolName);
@@ -430,9 +431,12 @@ internal static partial class Program
                 ? toolName["talvora_".Length..] : toolName;
             var strings = new[] { titles.Running, titles.Succeeded, titles.Failed,
                 WorklogCopy.RunningFallback, WorklogCopy.SucceededFallback };
-            if (strings.Any(text =>
-                text.Contains(toolName, StringComparison.OrdinalIgnoreCase) ||
-                text.Contains(canonical, StringComparison.OrdinalIgnoreCase)))
+            // Whole words only (N9): "Klasörü listele" is Turkish, not the tool name "list".
+            var namePattern = new System.Text.RegularExpressions.Regex(
+                @"(?<![\p{L}\p{N}_])(" + System.Text.RegularExpressions.Regex.Escape(toolName) + "|" +
+                System.Text.RegularExpressions.Regex.Escape(canonical) + @")(?![\p{L}\p{N}_])",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (strings.Any(text => namePattern.IsMatch(text)))
                 throw new InvalidOperationException("N1 technical tool name visible: " + toolName);
         }
         var args = new Dictionary<string, JsonElement>
@@ -440,9 +444,9 @@ internal static partial class Program
             ["arguments"] = JsonSerializer.SerializeToElement(
                 new[] { "-c", "core.quotepath=false", "PUSH", "origin", "main" }),
         };
-        var classified = lookup.Invoke(null, ["talvora_git_run", args]);
+        var classified = lookup.Invoke(null, ["talvora_git_run", args, null]);
         var values = classified?.GetType().GetProperty("Titles")?.GetValue(classified) as WorklogTitles;
-        if (values?.Succeeded != WorklogCopy.Push.Succeeded)
+        if (values?.Succeeded != WorklogCopy.Push.Succeeded + " · origin/main")
             throw new InvalidOperationException("N1 Git subcommand classification mismatch.");
     }
 

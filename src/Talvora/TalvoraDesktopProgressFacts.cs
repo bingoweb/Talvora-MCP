@@ -143,6 +143,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 if (match.Success) return package + " " + match.Groups["version"].Value;
             }
         }
+        // Quality gate summary line (scripts/Invoke-QualityGate.ps1): "56 kontrol, 0 hata".
+        var gate = Regex.Match(output, @"(?m)^(?<checks>\d+) kontrol, (?<errors>\d+) hata\s*$");
+        if (gate.Success)
+            return gate.Groups["checks"].Value + " kontrol · " + gate.Groups["errors"].Value + " hata";
         var matches = FactNumber(json, "matchCount");
         var filesScanned = FactNumber(json, "filesScanned");
         return tool == "search_text" && matches is not null

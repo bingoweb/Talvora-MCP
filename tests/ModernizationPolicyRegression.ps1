@@ -94,7 +94,7 @@ Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'TryBuildDeferre
 Assert-NotContains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'Talvora işlemi:' 'Unknown tools must never leak raw technical tool names into the user-facing worklog.'
 Assert-NotContains 'src/Talvora/TalvoraDesktopProgressNarrative.cs' 'regresyon|derleme|kaynak kod|Git işlemi|repository işlemi|runtime kanıt|process veya job|tunnel işlemi|servis ve tray' 'User-facing desktop worklog language must not expose developer jargon; canonical technical identity belongs only in the compact metadata line.'
 Assert-Contains 'src/Talvora/Program.cs' 'request\.Params\.Arguments' 'Desktop progress may use tool arguments to create a meaningful user-facing work subject.'
-Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'BuildNarrative\(toolName, arguments\)' 'Desktop progress must translate technical tool calls into meaningful work subjects.'
+Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'BuildNarrative\(toolName, arguments, initialEvidence\)' 'Desktop progress must translate technical tool calls into meaningful work subjects.'
 Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' 'ShouldNotifyToolCall' 'Desktop progress must suppress low-value internal inspection chatter.'
 Assert-NotContains 'src/Talvora/TalvoraDesktopProgressNarrative.cs' 'new\(\s*OperationCategory\.Inspection' 'N1 inspection calls must not create worklog narrative cards.'
 Assert-Contains 'src/Talvora/TalvoraDesktopProgressNotifier.cs' '"read_source" or' 'N1 suppresses inspection calls from worklog, including failed reads.'

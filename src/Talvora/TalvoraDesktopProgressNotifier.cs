@@ -128,10 +128,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             return await operation(cancellationToken);
         }
 
-        var narrative = BuildNarrative(toolName, arguments);
         var canonicalToolName = NormalizeToolName(toolName);
         var initialEvidence =
             BuildInitialEvidence(toolName, arguments);
+        var narrative = BuildNarrative(toolName, arguments, initialEvidence);
         var displayName = narrative.Titles.Running;
         var operationId = Guid.NewGuid().ToString("N");
         var stopwatch = Stopwatch.StartNew();
