@@ -1,0 +1,9 @@
+# SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
+56c18e5e49021b4a3a860a222bbf523b5c0fa005b666a38959930a39f8e5a21e  src/WorklogCardViewModel.cs
+194236949f3714656ea9d93105f9db403fbe5379e466783bebc0c4c4bea35ea2  src/UnifiedDiffViewParser.cs
+81e9b4f0e5485adeeff1475db7e6ac63fa9c273bd4115e309d91f2fecbca0dcd  src/WorklogCardMapper.cs
+352d4f5a19cfd25ab5a6d6c72cd309839c16e8dd928b1c506f04eaa9bd427689  src/WorklogCardView.xaml
+5af2cdbbbfedd2794748e454df0a28de70e639f604af8269b66e35a40d4b933a  src/WorklogCardView.xaml.cs
+e8ae4d89fe825c85211134be550c5fe77fcbcb57e0351bac47a836e11d1ed516  src/WorklogPreviewScenarios.cs
+07673b7808f6434881b358c11a77b08a18627f70a83ec4e15069add241d8bf23  src/DesktopProgressNotificationWindow.cs
+e2bb7a044b0e60e5eb6aa60185631e9b4725b88a79aeb2e204a262cfecc56656  src/WorklogTheme.xaml

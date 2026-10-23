@@ -1092,6 +1092,16 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-24 (13) · range `audit/2026-10-23-12 (b8fd17a)..78fce40` · 1 card commit · executor: ChatGPT/Codex via Talvora · result: D18 delivered exactly and verified live; P-30 decided (N6 designed)
+
+Delivered: D18 `78fce40` (also N5's CI fix; N5 closed). Blocked: N6 (P-30) — decided now.
+
+**Fidelity: exact.** All eleven D18 files are identical to Claude's verified clone; the reference was promoted and `worklog-phosphor-next` removed in the same commit; CI green (`78fce40`), installed `78fce40`.
+
+**Live design check (installed 78fce40):** a real `talvora_apply_patch` with a task note and `purpose` → the card shows the code terminal with the diff, `nerede kiosk.js › pair`, the `60 → 70` word highlight, the change time in the diff header, the quiet green state line, and no repeated one-row timeline — exactly `previews/09-one-step-receipt.png`.
+
+**P-30** was a correct stop: N6's visual design was not in the reference and the checksum guard pins the card files. Claude designed and verified it (card N6 rewritten); no finding against the agent.
+
 ### Audit 2026-10-23 (12) · range `audit/2026-10-23-10 (8dfb855)..b8fd17a` · 4 card commits · executors: ChatGPT/Codex via Talvora · result: D18 (code pane lost on the Phosphor card + design polish), CI red
 
 Delivered: D17 `866ec2a`, N4 `e49151a`, N5 `e6a3391` + CI follow-up `b8fd17a`.

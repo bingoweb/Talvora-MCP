@@ -1673,9 +1673,60 @@ Step 7 — prove it:
 
 ### N6 — Evidence surface ("Ayrıntılar")
 
-**Files:** `Views/WorklogCard.xaml`, `Controls/EvidencePanel` (shared with Control Center UI4), redaction tests.
-**Do:** §3 expanded view; technical fields (tool name, transaction id, exit code, redacted raw error) live only here; copy (redacted text only); expander state persists per user. The code terminal (N3b/N5) is a separate, always-visible pane — do not merge it into this expander.
-**Acceptance:** secrets in a diff fixture never reach the rendered text or clipboard; tool name absent from all other text elements (UIA tree test).
+> **Rewritten by P-30 (Claude, 2026-10-24).** The design is code in `docs/codex/reference/worklog-phosphor-next/` (promoted by the last step). The old Files line (`Views/WorklogCard.xaml`, `Controls/EvidencePanel`) is void.
+
+**Design (§3 expanded view, Phosphor):** the footer link `ayrıntılar ▸` / `ayrıntılar ▾` opens a sunken mono panel `── teknik kayıt` between the code terminal and the footer, with a `kopyala` link and rows (faint 72 DIP label, muted value): **adım** = approved Turkish title + technical tool name in brackets (the only place the technical name appears), **sonuç** = the real result line (failure text already redacted by the protocol), **dosyalar** = up to 8 real file names (+N), **süre** = real step duration (`18,4 sn`), **oturum** = first 8 characters of the session id + `#sequence`. The open/closed state is remembered per user (`%LOCALAPPDATA%\Talvora\ControlCenter\worklog-details-open.flag`). The code terminal stays a separate, always-visible pane. Target render: `previews/10-details-open.png`.
+
+**Files:** the six updated Phosphor files (`WorklogCardViewModel.cs`, `WorklogCardMapper.cs`, `WorklogCardView.xaml`, `WorklogCardView.xaml.cs`, `WorklogPreviewScenarios.cs`, `DesktopProgressNotificationWindow.cs`), `src/Talvora.Tray/DesktopProgressNotificationPresenter.cs`, new `tests/Talvora.Notification.Regression/Program.N6Details.cs`, `tests/Talvora.Notification.Regression/Program.cs`, the reference folder promotion, `.context7/verification.json`, `.talvora/awwwards-verification.json`.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Claude replayed these steps on a clean clone of `78fce40`: Release build 0 errors; `DESKTOP_PROGRESS_BEHAVIOR_GREEN` (includes `AssertN6Details`: a secret in the result passes the real protocol and never reaches the rows or the copied text; the technical tool name appears only in the details rows); `MODERNIZATION_POLICY_GREEN`; the built `Talvora.Tray.exe --worklog-preview` renders **all ten PNGs byte-identical** to the reference; Full gate `57 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`.
+
+Step 1 — copy `docs/codex/reference/worklog-phosphor-next/src/WorklogCardViewModel.cs` → `src/Talvora.Tray/Worklog/WorklogCardViewModel.cs` (AGENTS.md rule 5 "Reference copies"; normalised hash in `docs/codex/reference/worklog-phosphor-next/SHA256SUMS.txt`).
+
+Step 2 — copy `docs/codex/reference/worklog-phosphor-next/src/WorklogCardMapper.cs` → `src/Talvora.Tray/Worklog/WorklogCardMapper.cs` (AGENTS.md rule 5 "Reference copies"; normalised hash in `docs/codex/reference/worklog-phosphor-next/SHA256SUMS.txt`).
+
+Step 3 — copy `docs/codex/reference/worklog-phosphor-next/src/WorklogCardView.xaml` → `src/Talvora.Tray/Worklog/WorklogCardView.xaml` (AGENTS.md rule 5 "Reference copies"; normalised hash in `docs/codex/reference/worklog-phosphor-next/SHA256SUMS.txt`).
+
+Step 4 — copy `docs/codex/reference/worklog-phosphor-next/src/WorklogCardView.xaml.cs` → `src/Talvora.Tray/Worklog/WorklogCardView.xaml.cs` (AGENTS.md rule 5 "Reference copies"; normalised hash in `docs/codex/reference/worklog-phosphor-next/SHA256SUMS.txt`).
+
+Step 5 — copy `docs/codex/reference/worklog-phosphor-next/src/WorklogPreviewScenarios.cs` → `src/Talvora.Tray/Worklog/WorklogPreviewScenarios.cs` (AGENTS.md rule 5 "Reference copies"; normalised hash in `docs/codex/reference/worklog-phosphor-next/SHA256SUMS.txt`).
+
+Step 6 — copy `docs/codex/reference/worklog-phosphor-next/src/DesktopProgressNotificationWindow.cs` → `src/Talvora.Tray/DesktopProgressNotificationWindow.cs` (AGENTS.md rule 5 "Reference copies"; normalised hash in `docs/codex/reference/worklog-phosphor-next/SHA256SUMS.txt`).
+
+Step 7 — `src/Talvora.Tray/DesktopProgressNotificationPresenter.cs` — replace
+
+```csharp
+        window.Update(message.WorklogFrame!, _codeState.CodeChangedUtc);
+```
+
+with
+
+```csharp
+        window.Update(message.WorklogFrame!, _codeState.CodeChangedUtc, Worklog.WorklogDetails.From(message));
+```
+
+Step 8 — copy `docs/codex/reference/worklog-phosphor-next/Program.N6Details.cs` → `tests/Talvora.Notification.Regression/Program.N6Details.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `ec7240d56ae5f2a40604d4bd5da7610cadf4beace2339d2bb040c28bbf3f299f`).
+
+Step 9 — `tests/Talvora.Notification.Regression/Program.cs` — replace
+
+```csharp
+        await AssertRemotionWorklogAsync();
+```
+
+with
+
+```csharp
+        await AssertRemotionWorklogAsync();
+        AssertN6Details();
+```
+
+Step 10 — promote the reference in the same commit: replace `docs/codex/reference/worklog-phosphor/src/*`, `previews/*` and `SHA256SUMS.txt` with the files of `docs/codex/reference/worklog-phosphor-next/` (adds `previews/10-details-open.png`), then delete the `worklog-phosphor-next` folder — `talvora_apply_patch` for text files, `talvora_copy`/`talvora_delete` with `explicitAdmin: true` for the PNGs. `ModernizationPolicyRegression.ps1` is green only after this step.
+
+**Don't:** change colours, spacing, wording or rows; show the technical tool name anywhere else; merge the code terminal into the panel.
+
+**Acceptance:** the checks above; installer + deploy; live: make one `talvora_apply_patch`, click `ayrıntılar ▸` on the desktop card, capture it as the signed-in user (D18's capture command, file `artifacts/n6-live.png`), close and reopen a new card — it opens expanded (preference remembered); attach the PNG to Gitea #9; GitHub CI green (10b).
 
 ### N7 — "Çalışma günlüğü" history in the Control Center
 
