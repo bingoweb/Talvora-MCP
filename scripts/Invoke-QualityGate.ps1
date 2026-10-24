@@ -188,6 +188,26 @@ try {
         }
     }
     if ($canContinue -and $Scope -eq 'Full') {
+        if ($availability.NativeInstallerRuntime -and [Environment]::UserInteractive) {
+            $canContinue = Invoke-QualityCheck 'ControlCenter' {
+                $previousPreview = $env:TALVORA_CONTROL_CENTER_PREVIEW_PNG
+                try {
+                    $env:TALVORA_CONTROL_CENTER_PREVIEW_PNG = Join-Path $script:GateCaptureRoot 'control-center.png'
+                    $tray = Join-Path $repoRoot 'src/Talvora.Tray/bin/Release/net10.0-windows/win-x64/Talvora.Tray.exe'
+                    $smoke = Start-Process -FilePath $tray -ArgumentList @('--control-center-smoke') -Wait -PassThru -WindowStyle Hidden
+                    if ($smoke.ExitCode -ne 0) { throw "Control Center smoke returned exit code $($smoke.ExitCode)." }
+                    foreach ($name in @('control-center.png', 'control-center-loaded.png')) {
+                        if (-not (Test-Path -LiteralPath (Join-Path $script:GateCaptureRoot $name) -PathType Leaf)) {
+                            throw "Control Center preview was not written: $name"
+                        }
+                    }
+                }
+                finally { $env:TALVORA_CONTROL_CENTER_PREVIEW_PNG = $previousPreview }
+            }
+        }
+        else { Write-Host 'SKIP ControlCenter: requires an installed service and signed-in interactive desktop.' }
+    }
+    if ($canContinue -and $Scope -eq 'Full') {
         $canContinue = Invoke-QualityCheck 'BusinessBootstrap' {
             $selfTest = Join-Path $repoRoot 'scripts/Configure-ChatGPT-Business.ps1'
             Invoke-ExternalChecked pwsh @('-NoLogo','-NoProfile','-NonInteractive','-File',$selfTest,'-SelfTest')

@@ -88,8 +88,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] S3 — ProgramData ACL + protected user-session InteractiveRuns (P-12; signed-in Full 56/0, privacy regression GREEN; installer/CI follow commit; live Codex exec deferred by U7/U8)
 - [x] R1 — Agent job registry, persistence, orphan recovery, limits (installed 7aac8ce; Full 57/0; installed smoke 255 tools; GitHub CI 40033495884 success)
 - [x] R2 — Prompts via stdin (P-14; signed-in Full gate 58/0; installed ef4c959, 255 tools, GitHub CI 40035301176 success)
-- [~] R3 — Safe Reset-And-Install (P-15; TEMP-only safety regression GREEN; signed-in Full 59/0; exact-commit CI pending; no real reset or runtime deployment required)
-- [ ] Q5 — Control Center smoke: structural checks, current theme PNG (P-18 decided)
+- [x] R3 — Safe Reset-And-Install (P-15; TEMP-only safety regression GREEN; signed-in Full 59/0; GitHub windows-ci 40071120158 success; no real reset or runtime deployment required)
+- [~] Q5 — Control Center smoke: structural checks, current theme PNG (P-18); signed-in Full 60/0 and source smoke GREEN; exact-commit installed smoke and CI pending. Gitea evidence access requires unavailable approval.
 - [ ] UI1 — Tokens, theme manager (Sistem default, Gece fallback), typography; both-theme proof via Q5 smoke (P-18)
 - [ ] Q2a — Toolchain info/run consolidation (P-16 decided; zero capability loss)
 - [ ] Q2b — Config get/set/delete consolidation (P-16 decided; zero capability loss)
@@ -136,6 +136,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — Q5 (executor: ChatGPT, P-18): replace light/dark pixel ratios with intensity variance >25; UI Automation validates navigation, header status, service row and positive application-control bounds (WPF template scroll geometry excluded). PNG is saved before assertions using TALVORA_CONTROL_CENTER_PREVIEW_PNG; no old-variable alias.
+  RED: installed ef4c959 smoke exit 1, WhiteRatio 68.2% / DarkRatio 17.3%. GREEN: signed-in current-source smoke exit 0, initial + loaded PNGs; full gate 60 checks, 0 errors, exit 0, Hepsi geçti. (artifacts/q5/full-gate.log/.exit).
+  Context7 /dotnet/wpf and Microsoft UI Automation tree docs verified names, visibility, bitmap rendering and logical controls. Supporting changes: .context7/verification.json; CI/local gate waits for the GUI process and checks both PNG paths. No product visuals changed; both-theme proof stays with UI1.
+  Delivery pending: exact-commit installer, installed smoke/PNGs and GitHub windows-ci. Gitea #9 read refused: approval required but approval policy is never; no tracker comment possible. Evidence remains under artifacts/q5. R3 windows-ci 40071120158 SUCCESS verified and R3 closed.
 - 2026-10-24 — R3 (executor: ChatGPT): Reset-And-Install now requires ConfirmReset, honors WhatIf, creates timestamped ProgramData/TalvoraBackups ZIP before deletions, removes only listed exact shortcuts and never visits Secrets. Default preserves Backups, Penpot*, ssh, tunnel state/DPAPI; IncludeUserData is explicit.
   RED: baseline reset lacked TestRoot/WhatIf and failed safe fixture. GREEN: TEMP-only default/opt-in/denied non-TEMP-root tests, ZIP includes removed files but no Secrets, personal Desktop notes survive; tests green in PowerShell 7 and Windows PowerShell 5.1. No actual reset run.
   Signed-in MSI\tayla Full gate: 59 checks, 0 errors, exit 0, Hepsi geçti. (artifacts/r3-full-gate.log/.exit). Context7 /websites/learn_microsoft_en-us_powershell and /dotnet/docs.

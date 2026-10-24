@@ -143,6 +143,17 @@ jobs:
           else {
             & ./tests/NativeInstallerRuntimeRegression.ps1
             if (-not $?) { throw 'Installed desktop runtime regression failed.' }
+            $service = Get-CimInstance Win32_Service -Filter "Name='Talvora'"
+            $versionRoot = Split-Path -Parent (Split-Path -Parent $service.PathName.Trim('"'))
+            $tray = Join-Path $versionRoot 'Tray/Talvora.Tray.exe'
+            $env:TALVORA_CONTROL_CENTER_PREVIEW_PNG = Join-Path $env:RUNNER_TEMP 'control-center.png'
+            $smoke = Start-Process -FilePath $tray -ArgumentList @('--control-center-smoke') -Wait -PassThru -WindowStyle Hidden
+            if ($smoke.ExitCode -ne 0) { throw "Installed Control Center smoke returned $($smoke.ExitCode)." }
+            foreach ($name in @('control-center.png', 'control-center-loaded.png')) {
+              if (-not (Test-Path -LiteralPath (Join-Path $env:RUNNER_TEMP $name) -PathType Leaf)) {
+                throw "Installed Control Center preview missing: $name"
+              }
+            }
           }
 
       - name: Clean service test

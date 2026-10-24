@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T06:35:22Z",
-  "scope": "R3: explicit reset confirmation, PowerShell WhatIf, Secrets permanently excluded, selectively protected user data, pre-deletion ZIP archive, literal shortcuts and TEMP-only fake-root tests.",
+  "verifiedAtUtc": "2026-10-24T06:50:00Z",
+  "scope": "Q5 / P-18: UI Automation names and positive bounds for navigation, header status and service rows; palette-neutral pixel variance; current-theme PNG before assertions; signed-in local desktop gate.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-24 Q5: Context7 verifies UIElementAutomationPeer exposes AutomationProperties names and collapsed controls are excluded from the automation Control view. RenderTargetBitmap uses a measured/arranged Visual with Pbgra32 at 96 DPI; CopyPixels supplies sampled intensities for palette-neutral variance. Microsoft WPF sources: src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Automation/Peers/UIElementAutomationPeer.cs and src/WindowsFormsIntegration/System/Windows/Integration/HostUtils.cs in https://github.com/dotnet/wpf . P-18 limits this card to the current theme; UI1 owns both-theme proof."
+    },
     {
       "libraryId": "/websites/learn_microsoft_en-us_powershell",
       "verified": "2026-10-24 R3: Microsoft PowerShell SupportsShouldProcess adds WhatIf and Confirm; PSCmdlet.ShouldProcess returns false without changing data under WhatIf. The explicit ConfirmReset switch is required for destructive execution. The signed-in native PowerShell 7 path is retained after UAC elevation to preserve Turkish UTF-8 strings. Source: https://learn.microsoft.com/en-us/powershell/scripting/learn/deep-dives/everything-about-shouldprocess ."

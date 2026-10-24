@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -39,17 +40,19 @@ internal static class ControlCenterSmoke
                         "Control Center window did not become visible.");
                 }
 
+                SaveVisualSnapshotIfRequested(window);
                 AssertFluentResources(application);
                 AssertWindowChrome(window);
                 AssertWindowHasVisibleContent(window);
                 AssertWindowDpi(window);
                 AssertRenderedSurfaceIsNotBlank(window);
                 AssertStitchNavigation(window);
-                SaveVisualSnapshotIfRequested(window);
-                AssertCompactDashboardLayout(window);
 
                 await window.RunSmokeScenarioAsync();
                 SaveVisualSnapshotIfRequested(window, "loaded");
+                AssertDashboardStructure(window);
+                AssertRenderedSurfaceIsNotBlank(window);
+                AssertCompactDashboardLayout(window);
 
                 window.Close();
                 if (window.IsVisible)
@@ -115,6 +118,7 @@ internal static class ControlCenterSmoke
         foreach (var name in new[] { "Genel Bakış", "MCP Hizmetleri", "Olaylar" })
         {
             var link = FindVisualChildByAutomationName(window, name);
+            AssertAutomationElement(link);
             if (!link.IsEnabled || link.ActualWidth < 80 || link.ActualHeight < 30)
             {
                 throw new InvalidOperationException(
@@ -128,7 +132,7 @@ internal static class ControlCenterSmoke
         string? variant = null)
     {
         var path = Environment.GetEnvironmentVariable(
-            "TALVORA_STITCH_PREVIEW_PNG");
+            "TALVORA_CONTROL_CENTER_PREVIEW_PNG");
         if (string.IsNullOrWhiteSpace(path))
         {
             return;
@@ -176,6 +180,84 @@ internal static class ControlCenterSmoke
         {
             throw new InvalidOperationException(
                 "Control Center title bar does not have a usable drag surface.");
+        }
+    }
+
+    private static void AssertDashboardStructure(ControlCenterWindow window)
+    {
+        window.UpdateLayout();
+        var root = (Grid)window.Content;
+        var header = root.Children.OfType<Border>().Single(element =>
+            Grid.GetRow(element) == 1 && Grid.GetColumn(element) == 1);
+        var statusCard = ((Grid)header.Child).Children.OfType<Border>().Single();
+        var status = FindVisualChild<System.Windows.Controls.TextBlock>(statusCard)
+            ?? throw new InvalidOperationException(
+                "Kontrol Merkezi durum başlığı görüntülenmedi.");
+        AssertAutomationElement(status);
+
+        var serviceRows = EnumerateVisualElements(window)
+            .OfType<Border>()
+            .Where(element => element.Tag is string &&
+                !string.IsNullOrWhiteSpace(AutomationProperties.GetName(element)))
+            .ToArray();
+        if (serviceRows.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "Kontrol Merkezi hiçbir hizmet satırı görüntülemedi.");
+        }
+        AssertAutomationElement(serviceRows[0]);
+
+        foreach (var element in EnumerateVisualElements(window))
+        {
+            // Inspect application controls, not WPF template geometry such as zero-length scroll tracks.
+            if (!element.IsVisible || element.TemplatedParent is not null)
+            {
+                continue;
+            }
+            var peer = UIElementAutomationPeer.CreatePeerForElement(element);
+            if (peer is not null && peer.IsControlElement() && !peer.IsOffscreen())
+            {
+                AssertAutomationBounds(peer);
+            }
+        }
+    }
+
+    private static void AssertAutomationElement(FrameworkElement element)
+    {
+        var peer = UIElementAutomationPeer.CreatePeerForElement(element)
+            ?? new FrameworkElementAutomationPeer(element);
+        if (!element.IsVisible || element.ActualWidth <= 0 || element.ActualHeight <= 0 ||
+            string.IsNullOrWhiteSpace(peer.GetName()))
+        {
+            throw new InvalidOperationException(
+                "Kontrol Merkezi öğesinin erişilebilir adı veya görünür boyutu eksik.");
+        }
+        AssertAutomationBounds(peer);
+    }
+
+    private static void AssertAutomationBounds(AutomationPeer peer)
+    {
+        var bounds = peer.GetBoundingRectangle();
+        if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Kontrol Merkezi öğesinin boyutu sıfır: {peer.GetName()} ({peer.GetClassName()}, {peer.GetAutomationControlType()}, {bounds}).");
+        }
+    }
+
+    private static IEnumerable<FrameworkElement> EnumerateVisualElements(DependencyObject root)
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = VisualTreeHelper.GetChild(root, index);
+            if (child is FrameworkElement element)
+            {
+                yield return element;
+            }
+            foreach (var descendant in EnumerateVisualElements(child))
+            {
+                yield return descendant;
+            }
         }
     }
 
@@ -337,8 +419,8 @@ internal static class ControlCenterSmoke
         bitmap.CopyPixels(pixels, stride, 0);
 
         long sampled = 0;
-        long nearWhite = 0;
-        long dark = 0;
+        double sum = 0;
+        double sumSquares = 0;
 
         var step = Math.Max(1, Math.Min(width, height) / 160);
         for (var y = 0; y < height; y += step)
@@ -358,15 +440,9 @@ internal static class ControlCenterSmoke
 
                 sampled++;
 
-                if (red >= 245 && green >= 245 && blue >= 245)
-                {
-                    nearWhite++;
-                }
-
-                if (red <= 70 && green <= 80 && blue <= 95)
-                {
-                    dark++;
-                }
+                var intensity = (red + green + blue) / 3.0;
+                sum += intensity;
+                sumSquares += intensity * intensity;
             }
         }
 
@@ -376,13 +452,12 @@ internal static class ControlCenterSmoke
                 "Control Center render produced no visible pixels.");
         }
 
-        var whiteRatio = nearWhite / (double)sampled;
-        var darkRatio = dark / (double)sampled;
-
-        if (whiteRatio > 0.70 || darkRatio < 0.20)
+        var mean = sum / sampled;
+        var variance = Math.Max(0, sumSquares / sampled - mean * mean);
+        if (variance <= 25)
         {
             throw new InvalidOperationException(
-                $"Control Center render looks blank/light. WhiteRatio={whiteRatio:P1}; DarkRatio={darkRatio:P1}.");
+                $"Kontrol Merkezi görüntüsü tek renk veya boş. Piksel varyansı={variance:F2}.");
         }
     }
 }
