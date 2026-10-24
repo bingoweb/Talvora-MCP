@@ -87,8 +87,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] N6 — Worklog evidence surface ("Ayrıntılar") (installed b27cee0, signed-in Full 57/0, GitHub CI 40027301656 success; live details + reopened preference verified, real PNGs attached #144)
 - [x] S3 — ProgramData ACL + protected user-session InteractiveRuns (P-12; signed-in Full 56/0, privacy regression GREEN; installer/CI follow commit; live Codex exec deferred by U7/U8)
 - [x] R1 — Agent job registry, persistence, orphan recovery, limits (installed 7aac8ce; Full 57/0; installed smoke 255 tools; GitHub CI 40033495884 success)
-- [~] R2 — Prompts via stdin (P-14; signed-in Full gate 58/0; live pending: exact-commit install, installed smoke and GitHub CI)
-- [ ] R3 — Safe Reset-And-Install (P-15 decided: Secrets never touched)
+- [x] R2 — Prompts via stdin (P-14; signed-in Full gate 58/0; installed ef4c959, 255 tools, GitHub CI 40035301176 success)
+- [~] R3 — Safe Reset-And-Install (P-15; TEMP-only safety regression GREEN; signed-in Full 59/0; exact-commit CI pending; no real reset or runtime deployment required)
 - [ ] Q5 — Control Center smoke: structural checks, current theme PNG (P-18 decided)
 - [ ] UI1 — Tokens, theme manager (Sistem default, Gece fallback), typography; both-theme proof via Q5 smoke (P-18)
 - [ ] Q2a — Toolchain info/run consolidation (P-16 decided; zero capability loss)
@@ -136,6 +136,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — R3 (executor: ChatGPT): Reset-And-Install now requires ConfirmReset, honors WhatIf, creates timestamped ProgramData/TalvoraBackups ZIP before deletions, removes only listed exact shortcuts and never visits Secrets. Default preserves Backups, Penpot*, ssh, tunnel state/DPAPI; IncludeUserData is explicit.
+  RED: baseline reset lacked TestRoot/WhatIf and failed safe fixture. GREEN: TEMP-only default/opt-in/denied non-TEMP-root tests, ZIP includes removed files but no Secrets, personal Desktop notes survive; tests green in PowerShell 7 and Windows PowerShell 5.1. No actual reset run.
+  Signed-in MSI\tayla Full gate: 59 checks, 0 errors, exit 0, Hepsi geçti. (artifacts/r3-full-gate.log/.exit). Context7 /websites/learn_microsoft_en-us_powershell and /dotnet/docs.
+  Supporting changes: README + docs/DEVELOPMENT-ENVIRONMENT.md + .context7/verification.json. No installed-runtime change; exact-commit GitHub windows-ci pending. R2 installed ef4c959 and GitHub CI 40035301176 SUCCESS verified.
 - 2026-10-24 — R2 (executor: ChatGPT): Codex exec/resume stdin marker, Claude --print with no positional prompt; runner writes UTF-8/no-BOM stdin.txt within the protected S3 run directory, streams it to child stdin and immediately deletes it; no changes to CLI permissions.
   RED: old CLI argument and child prompt-spool assertions failed. GREEN: 120,000-character Turkish UTF-8 hash matched fake child; Win32_Process.CommandLine excluded the prompt; spool deleted while child alive; both engine integration policies green.
   Signed-in MSI\tayla Full gate 58 checks, 0 errors, exit 0, Hepsi geçti. (artifacts/r2-full-gate.log/.exit). Context7 /openai/codex and /websites/code_claude. Supporting files: CLI policy/source tests, new R2StdinRegression.ps1 and evidence JSON.

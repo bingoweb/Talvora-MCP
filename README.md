@@ -304,6 +304,12 @@ cd Talvora-MCP
 
 The canonical installer publishes the runtime, installs the Windows Service, updates the Tray/Control Center and verifies the deployed MCP surface.
 
+### Safe reset (optional, destructive)
+
+`scripts/Reset-And-Install.ps1` is **not** the normal update path. Inspect its plan with `pwsh -File scripts/Reset-And-Install.ps1 -WhatIf`; no files, archives or system settings change during this preview. A real reset requires `-ConfirmReset` and administrator rights. `-IncludeUserData` is an additional explicit opt-in for otherwise preserved data.
+
+Before any reset deletion, an archive is completed and its location printed under `%ProgramData%\TalvoraBackups\`, outside `%ProgramData%\Talvora\`. The `Secrets` directory is **never opened, copied, archived or deleted**, including with `-IncludeUserData`. By default `Backups`, `Penpot*`, `ssh`, tunnel `state` and DPAPI files also remain intact. Only `Talvora.lnk`, `Talvora Control Center.lnk`, `Talvora Tray.lnk` and `Talvora MCP.lnk` may be removed from the exact Desktop/Start Menu roots; personal folders and other similarly named files are untouched. The canonical installation path is unchanged.
+
 Health endpoint:
 
 ~~~text

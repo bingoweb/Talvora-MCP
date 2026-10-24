@@ -96,6 +96,12 @@ After either feature is enabled, Windows must be restarted before treating Docke
 
 Talvora runs as a Windows service and inherits its process environment at service start. Installing a new SDK or changing the machine PATH does not retroactively update the already-running Talvora process. Restart Talvora, or reinstall/switch the runtime through the native installer when appropriate, before interpreting a missing command as a missing installation.
 
+## Safe reset regression
+
+Normal updates use the canonical installer; the destructive `scripts/Reset-And-Install.ps1` is a separate operation requiring `-ConfirmReset`. Run `pwsh -File scripts/Reset-And-Install.ps1 -WhatIf` to preview the exact targets without changing anything. It creates a timestamped `%ProgramData%\TalvoraBackups\` archive before deleting files or registration state. `Secrets` is permanently out of scope. Other protected data (`Backups`, `Penpot*`, `ssh`, tunnel `state`/DPAPI) requires the explicit `-IncludeUserData` opt-in to be included in reset.
+
+`pwsh -File tests/ResetAndInstallSafetyRegression.ps1` exercises the hidden TEMP-only `-TestRoot` fixture without touching real Windows services, registry, installations or credentials. It checks WhatIf, mandatory confirmation, archive separation, protected paths, opt-in behavior and exact-name shortcut deletion. Do not execute an actual reset to verify the test.
+
 ## Validation principle
 
 Do not rerun the complete Talvora regression matrix merely because an external SDK was installed. Validate the affected toolchain directly (version, compiler/runtime invocation, and a small smoke build/run where useful), then run Talvora's broad regression suites only when Talvora source changes justify them.

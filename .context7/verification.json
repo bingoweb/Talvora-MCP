@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T22:37:43Z",
-  "scope": "R2: stdin-only Codex and Claude prompts, protected UTF-8 no-BOM prompt spool with immediate deletion, 120,000-character Turkish round trip and WMI command-line isolation.",
+  "verifiedAtUtc": "2026-10-24T06:35:22Z",
+  "scope": "R3: explicit reset confirmation, PowerShell WhatIf, Secrets permanently excluded, selectively protected user data, pre-deletion ZIP archive, literal shortcuts and TEMP-only fake-root tests.",
   "libraries": [
+    {
+      "libraryId": "/websites/learn_microsoft_en-us_powershell",
+      "verified": "2026-10-24 R3: Microsoft PowerShell SupportsShouldProcess adds WhatIf and Confirm; PSCmdlet.ShouldProcess returns false without changing data under WhatIf. The explicit ConfirmReset switch is required for destructive execution. The signed-in native PowerShell 7 path is retained after UAC elevation to preserve Turkish UTF-8 strings. Source: https://learn.microsoft.com/en-us/powershell/scripting/learn/deep-dives/everything-about-shouldprocess ."
+    },
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-24 R3: .NET System.IO.Compression.ZipArchive Create mode with disposal enables a completed archive before deletions; entries are selected individually without following filesystem reparse points, and protected Secrets entries are never traversed. PowerShell 5.1 requires loading System.IO.Compression and System.IO.Compression.FileSystem explicitly. Source: https://learn.microsoft.com/en-us/dotnet/standard/io/zip-tar-best-practices ."
+    },
     {
       "libraryId": "/openai/codex",
       "verified": "2026-10-24 R2: codex-rs/exec/src/cli.rs and exec/src/lib.rs document '-' as the stdin prompt token for both codex exec and codex exec resume <SESSION_ID> -; --json and existing workspace/sandbox options remain unchanged. Reference: https://github.com/openai/codex/blob/main/codex-rs/exec/src/cli.rs ."
