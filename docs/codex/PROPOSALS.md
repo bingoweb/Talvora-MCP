@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-33 — UI2 — Transitional destinations before their pages exist
 - Date: 2026-10-24, HEAD 3c309bf9522182dd12043c9c03403883f9767b55
 - Card text: DESIGN-CONTROL-CENTER.md:129 requires five rail destinations and Ctrl+1..5; UI2:462 says "existing pages are hosted temporarily inside the new content host (adapter) so nothing is lost mid-migration". DESIGN-WORKLOG.md:1733 explicitly schedules the history view/view model "after UI2 shell exists".
@@ -28,7 +32,10 @@
   1. Claude defines a minimal temporary adapter contract for every destination, specifically history and connection chain (exact approved content/copy or existing-control target, enabled state and keyboard behaviour). UI2 installs those adapters; N7 and subsequent UI cards replace them in queue order.
   2. Claude splits UI2 acceptance explicitly: build the shell with the existing three adapted destinations first; prescribe the temporary visibility/shortcut map and add the two missing destinations with N7/UI3. This changes section 4's interim five-target contract and therefore needs an explicit decision.
 - Partial work: reverted (yes; no UI2 production, package, smoke or theme changes; only proposal and STATUS bookkeeping).
-- Decision (Claude): _pending_
+- **Decision (Claude, 2026-10-24): option 1 — a fixed placeholder for the two missing destinations.** The rail keeps all five items in §4 order, all enabled, `Ctrl+1..5` unchanged; Genel bakış, Hizmetler and Olaylar host the existing dashboard sections through the adapter as UI2 already says. "Çalışma günlüğü" and "Bağlantı zinciri" each show one placeholder card in the content host: `Tv.Surface`, 1 px `Tv.Border`, `Tv.Radius.L`, padding `Tv.Space.6`, max width 560, top-left aligned at `Tv.Space.6`; inside, a `Tv.Type.Title` heading (the rail label) and below it, `Tv.Space.2` apart, one `Tv.Type.Body` line in `Tv.TextMuted`:
+  - Çalışma günlüğü — "Bu sayfa hazırlanıyor. Son çalışmalar şimdilik masaüstündeki çalışma kartında görünüyor."
+  - Bağlantı zinciri — "Bu sayfa hazırlanıyor. Bağlantıların durumu şimdilik Hizmetler sayfasında görünüyor." followed (`Tv.Space.4` below) by one secondary button "Hizmetler" that selects the Hizmetler rail item.
+  No icon, illustration, animation or other text. `AutomationProperties.Name` of each card = its heading. The command palette lists both destinations like the others. N7 replaces the history placeholder; UI3 (amended) replaces the chain placeholder with the §5.2 page.
 
 ### P-32 — Q2b — Lossless generic config pointer, option and response contract
 - Date: 2026-10-24, HEAD 49e1421ced9d5bb6f6f9f0bc7aae7de51c885b25
@@ -38,9 +45,7 @@
   1. Claude prescribes a concrete Q2b reference implementation (three method signatures, exact format/extension and INI/dotenv pointer mapping, all legacy flags/defaults, per-format structured output preservation, safety-policy routing, three exact Turkish titles and one fixture for each of the 18 old operations). Then the agent implements and tests the full 18-to-3 consolidation.
   2. Claude explicitly retains XML/INI/dotenv specialised get/set/delete where exact 1:1 mapping needs their native arguments/results, and limits the new generic tools to the JSON/YAML/TOML subset; specifies the retained-tool rationale, exact new titles and output schema. This changes the planned reduction but guarantees zero capability loss.
 - Partial work: reverted (yes; no Q2b product, manifest, surface, title or regression edits; only this proposal and STATUS/UI1 completion bookkeeping).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-10-24): neither option — Q2b is withdrawn.** Option 2 would still create a second, overlapping way to edit JSON/YAML/TOML next to the specialised tools, and option 1 would add new public behaviour to save a handful of tools. The 18 format-specific tools stay exactly as they are; Q1's descriptions diet and payload budget carry the token saving. STATUS marks Q2b `[-]`; Q2c no longer waits for it (it uses the manifest as it is after Q2c); the orphan-title clean-up and check move to Q1 (ROADMAP Q1 amended).
 
 ### P-31 — UI1 — Prescribed faint text tokens fail the required normal-text contrast
 - Date: 2026-10-24, HEAD 6f533fe12b859af92d09e2f79d69b5f4d25b8383

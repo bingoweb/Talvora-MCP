@@ -13,7 +13,7 @@
 | Branch | `main` only. Do not create branches. Dependabot PRs: apply with scripts/Apply-DependabotPr.ps1 (DEP1), never merge on GitHub. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-24-14` = `830bb67`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-24-15` = `fce75d5`. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -98,12 +98,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] T4 — CI: documentation-only pushes run the changed-scope gate (Phase T; GitHub CI 40086071865 success; real docs-only CI 40089591627 ran Changed 10/0 without build/restore)
 - [x] UI1 — Tokens, theme manager and typography; P-18/P-31; installed 49e1421, Gece/Gün installed smokes and PNGs passed, GitHub CI 40088645152 success; visual review awaits Claude audit.
 - [x] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; Claude audit 14 verified GitHub CI 830bb67 success, installed 830bb67 counts 250/213/88 and live toolchain_info. Specialized selectors/probes retained by the hard rule.
-- [?] Q2b — Config get/set/delete consolidation (P-16; waiting for Claude: P-32 lossless pointer/options/results and Turkish titles)
-- [?] Q2c — Legacy text mutators removed + manifest-driven README count test (P-16; waiting for Q2b final surface counts)
-- [?] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget (waiting for Q2c)
-- [?] Q3 — Documentation diet (P-17; waiting for Q2c manifest-driven README counts)
-- [?] UI2 — Shell, rail, title bar, command palette (waiting for Claude: P-33 transitional history/connection-chain destination contract)
-- [?] N7 — "Çalışma günlüğü" history page (waiting for UI2 shell, DESIGN-WORKLOG.md:1733)
+- [ ] D21 — Worklog card: hanging indents, one text edge, no imitation window buttons (audit 2026-10-24 (15))
+- [-] Q2b — Config get/set/delete consolidation (withdrawn by P-32; the 18 format tools stay)
+- [ ] Q2c — Legacy text mutators removed + manifest-driven README count test (P-16; Q2b withdrawn by P-32 — use the manifest as it is after Q2c)
+- [ ] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (after Q2c; amended by P-32)
+- [ ] Q3 — Documentation diet (P-17; after Q2c)
+- [ ] UI2 — Shell, rail, title bar, command palette (P-33 decided: placeholder contract for Çalışma günlüğü and Bağlantı zinciri)
+- [ ] N7 — "Çalışma günlüğü" history page (after UI2; replaces the P-33 placeholder)
 - [ ] UI3 — Overview: Nabız ring + chain strip
 - [ ] UI4 — Services list + detail
 - [ ] UI5 — Events + raw log
@@ -142,6 +143,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — Claude deep audit 15 of `830bb67..fce75d5` (D19, D20, T1–T4, UI1 + proposals P-32/P-33): D20 and T1–T4 identical to the verified clones; D19 one equivalent regex escape (LOW); docs-only CI now 21–27 s; UI1 tokens equal the spec in both themes, live switch proven. D21 (worklog polish: hanging indents, one text edge, no imitation window dots) verified on a clean clone: previews 10/10 byte-identical, Full `66 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. P-32: Q2b withdrawn, orphan titles → Q1. P-33: placeholder contract, UI3 builds §5.2. UI8: loaded-snapshot race. Tag `audit/2026-10-24-15` = `fce75d5`.
 
 - 2026-10-24 — UI2 (executor: ChatGPT): stopped before implementation under EXECUTION MANDATE rules 6/8; P-33 requests the interim history/connection-chain adapter contract. N7 explicitly needs the UI2 shell and is marked waiting for it.
   No product/package/test changes. All six prescribed WPF-UI 4.3.0 symbols exist; Context7 /lepoco/wpfui confirms the native title-bar/Mica APIs. Baseline signed-in Changed 8/0, Hepsi geçti.; exact-head GitHub windows-ci 40089591627 success.

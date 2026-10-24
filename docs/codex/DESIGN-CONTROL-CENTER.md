@@ -466,7 +466,7 @@ Each card = one commit, Awwwards evidence refreshed (cite pages actually reviewe
 ### UI3 — Overview with Nabız ring and chain strip
 
 **Files:** `Views/OverviewView.xaml`, `ViewModels/OverviewViewModel.cs`, `Controls/PulseRing.cs`, `Controls/ChainView.*`, status-sentence builder `ViewModels/StatusNarrator.cs` (+ unit tests with snapshot fixtures).
-**Do:** §5.1, §6, §7.3–7.5, §9 strings; data only from existing services.
+**Do:** §5.1, §6, §7.3–7.5, §9 strings; data only from existing services. **Amended by P-33 (Claude, 2026-10-24):** also build the §5.2 full page (`Views/ChainView.xaml`, same `ChainView` control at full size, side sheet, legend) and replace UI2's "Bağlantı zinciri" placeholder with it.
 **Acceptance:** narrator tests for: all ready, optional off, one attention, several, unreachable; PNGs both themes; idle CPU measurement logged.
 
 ### UI4 — Services list and service detail
@@ -494,6 +494,8 @@ Each card = one commit, Awwwards evidence refreshed (cite pages actually reviewe
 **Acceptance:** icon renders crisp at 16/20/24/32 px (PNG proof), notification regression suite green.
 
 ### UI8 — Polish, accessibility, cleanup, proof
+
+> **Amended (Claude, audit 2026-10-24 (15)):** the Control Center smoke must take `*-loaded.png` only after the first real status arrived (the summary no longer shows the loading text); on a cold start it was captured too early.
 
 **Do:** motion pass + reduced motion + high contrast; DPI matrix; accessibility audit (Accessibility Insights or UIA test listing names/roles); delete dead imperative builders (`ControlCenterWindow*.cs` parts no longer used) and obsolete UI regex tests; refresh `docs/media/control-center.png` (both themes) and README screenshots.
 **Acceptance:** Q5 smoke green in both themes; no unused UI code (build with analyzers for unused private members); README shows the new design.

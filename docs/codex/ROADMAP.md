@@ -383,7 +383,7 @@ Use it in both places; verify the option list against `git help git` for the ins
 
 **Files:** all `[McpServerTool]` attributes in `src/Talvora/Tools/*.cs`, `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`, `src/Talvora/McpToolMetadataWirePolicy.cs`, smoke `SmokeScenarios.MetadataPolicy.cs`.
 
-**Order rule:** while Q2 is not `[x]` in STATUS, treat Q1 as blocked (skip it like a `[?]` item) and take the next card; come back to Q1 right after Q2 is done (titles for tools that Q2 removes would be wasted).
+**Order rule:** while Q2 is not `[x]` in STATUS, treat Q1 as blocked (skip it like a `[?]` item) and take the next card; come back to Q1 right after Q2 is done (titles for tools that Q2 removes would be wasted). **Amended by P-32 (Claude, 2026-10-24):** Q2b is withdrawn, so Q2 is done when Q2c is `[x]`. Q1 also deletes from `src/Talvora.Shared/TalvoraToolTitles.cs` every title whose tool no longer exists (today: `talvora_bun_info`, `talvora_cmake_info`, `talvora_cmake_run`, `talvora_ninja_info`, `talvora_ninja_run`, `talvora_pnpm_info`, `talvora_yarn_info`, plus whatever Q2c removes) and adds to `Program.N9Subjects.cs` the check `TalvoraToolTitles.All.Keys` ⊆ `TalvoraToolManifest.Names` (no orphan titles).
 
 **Do:** Titles are user-visible copy and **Claude has decided them** (2026-10-23): `src/Talvora.Shared/TalvoraToolTitles.cs` (added by N9, extended by N10/RM1) is the approved table. Set every tool's protocol `title` from it — in the existing list-tools wire policy, not by editing 250 attributes; where an attribute already has a `Title`, the table value wins. No proposal table. Tools that Q2 removes simply drop out of the table in the same Q2 card. Descriptions: ≤ 220 chars, English, first sentence = what it does, second = when to use another tool; move repeated policy text into the server instructions once. Add a smoke assertion: `tools/list` JSON for `/mcp/dev` ≤ 120 KB.
 
@@ -416,9 +416,7 @@ Implement only the **Q2a** bullet of card Q2 above, with Q2's hard rule (zero ca
 
 ### Q2b — Config get/set/delete consolidation (split of Q2, decision P-16)
 
-Implement only the **Q2b** bullet of card Q2 above, same rules as Q2a. One commit.
-
-> **Amended (Claude, audit 2026-10-24 (14)):** also delete from `src/Talvora.Shared/TalvoraToolTitles.cs` the titles of tools removed by Q2a (`talvora_bun_info`, `talvora_cmake_info`, `talvora_cmake_run`, `talvora_ninja_info`, `talvora_ninja_run`, `talvora_pnpm_info`, `talvora_yarn_info`) and of the tools Q2b removes, add titles for the tools it adds, and add to `Program.N9Subjects.cs` the check `TalvoraToolTitles.All.Keys` ⊆ `TalvoraToolManifest.Names` (no orphan titles).
+> **Withdrawn by P-32 (Claude, 2026-10-24).** The 18 format-specific config tools stay unchanged: INI/dotenv/XML need their native inputs and results, and merging them would add new public behaviour or lose options. Do not implement. The orphan-title clean-up that was added here moves to Q1.
 
 ### Q2c — Remove legacy text mutators; manifest-driven counts (split of Q2, decision P-16)
 
@@ -1093,6 +1091,43 @@ with
 ## Audit fixes (external audits by Claude)
 
 D-cards go to the top of the agent queue. Newest audit first.
+
+### Audit 2026-10-24 (15, deep) · range `audit/2026-10-24-14 (830bb67)..fce75d5` · 8 card commits · result: all exact; worklog polish card D21; P-32 and P-33 decided
+
+Delivered: D19 `b17c6f7`, D20 `fbe7542`, T1 `5877647`, T2 `b559640`, T3 `3844440`, T4 `47f8613`, UI1 `49e1421`. Stopped correctly with proposals: Q2b (P-32), UI2 (P-33).
+
+**Fidelity.** D20 and T1–T4: every file identical to Claude's verified clones (WorklogTheme, gate, three new regressions, workflow, SourceEdit runner). D19: identical except one character — the regex `[\\/\"]` instead of the card's `[\\/"]`; in a single-quoted PowerShell string both mean the same character class (the regression proves the cases), so no fix card (LOW, noted for literalness).
+
+**Phase T is live.** GitHub CI for the two docs-only pushes (`3c309bf`, `fce75d5`) took **21 s and 27 s** instead of 5–6 min; code pushes ≈ 4 min. Local signed-in Full ≈ 1 min 50 s, `-Scope Changed` 4–40 s.
+
+**UI1 review (installed 49e1421).** All 17 colour tokens per theme equal §3.1/§3.2 including the P-31 `TextFaint` values; rendered surfaces sample exactly `Tv.Bg`/`Tv.Surface`/`Tv.SurfaceRaised` in both themes; WPF-UI theme follows the palette (no Light/Dark mismatch); live switch and persisted preference are proven in the smoke; layout untouched, worklog untouched. Observation (LOW): on a cold start the smoke's `*-loaded.png` was captured while the summary still said "Durum kontrol ediliyor…" (2 of 6 runs) — `RunSmokeScenarioAsync` does not wait for the first status. Added to UI8.
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| 1 | design (Claude's own) | Worklog card: a wrapped title and a wrapped `!` notice restart at the left edge instead of hanging under their first word; the title text sits ≈ 2.7 DIP right of the answer column; the code-terminal header imitates macOS window buttons (three coloured dots) — decorative chrome that looks clickable and is foreign on Windows. | **D21** |
+| 2 | — | P-32: the 18 format-specific config tools cannot be merged into three without new public behaviour or lost options. | **Q2b withdrawn** (`[-]`); the orphan-title clean-up moves to Q1 |
+| 3 | — | P-33: UI2 needs content for "Çalışma günlüğü" and "Bağlantı zinciri" before N7 / the chain page exist. | P-33 decided (placeholder contract below); UI3 amended to build the §5.2 page |
+| 4 | LOW | UI1 smoke loaded-snapshot race (above). | UI8 amended |
+
+### D21 — Worklog card: hanging indents, one text edge, no imitation window buttons
+
+> Audit 2026-10-24 (15). User request: "masaüstü bildirim kartını kozmetik profesyonellik açısından yeniden ele al". The updated view and all ten previews are in `docs/codex/reference/worklog-phosphor-next/`.
+
+**What changes (visible):** the `>` prompt and the `!` mark each sit in a 16 DIP gutter, so a long title (`Kod değişikliği uygulanıyor · kiosk-routes.js, app.js ve 1 dosya`) and a long reason wrap under their first word, and the title text now starts on the same 16 DIP edge as `ne / nerede / fark / sonuç` and the notice; the code-terminal header loses the three red/amber/green dots and reads `diff · 14:02:11` from its left padding. Colours, sizes, copy, state line, spinner, cursor, code terminal and details panel are unchanged; high contrast unchanged.
+
+**Files:** `src/Talvora.Tray/Worklog/WorklogCardView.xaml`, the reference promotion, `.context7/verification.json`, `.talvora/awwwards-verification.json` (`designDecisions`: "DESIGN-WORKLOG §3 Phosphor card — audit 15 polish: hanging indents, single text edge, no imitation window buttons").
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — copy `docs/codex/reference/worklog-phosphor-next/src/WorklogCardView.xaml` → `src/Talvora.Tray/Worklog/WorklogCardView.xaml` (AGENTS.md rule 5 "Reference copies"; the only changed file: the title prompt and the `!` notice each get a 16 DIP gutter so wrapped lines hang at the shared text edge, and the three imitation window dots leave the code-terminal header).
+
+Step 2 — promote the reference in the same commit: replace `docs/codex/reference/worklog-phosphor/src/WorklogCardView.xaml`, all ten `previews/*.png` and `SHA256SUMS.txt` with the files of `docs/codex/reference/worklog-phosphor-next/`, then delete that folder (`talvora_apply_patch` for text, `talvora_copy`/`talvora_delete` with `explicitAdmin: true` for PNGs). `ModernizationPolicyRegression.ps1` is green only after this step.
+
+**Don't:** change anything else in the card; re-add decorative window chrome; change `WorklogCardView.xaml.cs` (it still finds `TitleText`, `PromptMark` and `TypingCursor` by name — `TitleText` is now the title grid, its glow effect applies to both parts).
+
+**Acceptance:** `MODERNIZATION_POLICY_GREEN` (after Step 2); `DESKTOP_PROGRESS_BEHAVIOR_GREEN`; `Talvora.Tray.exe --worklog-preview <tmp>` → all ten PNGs byte-identical to the promoted reference; Full gate `Hepsi geçti.`; installer + deploy; live: one real `talvora_apply_patch` with a long `purpose`, capture the desktop card as the signed-in user (D18 capture command, `artifacts/d21-live.png`), attach to Gitea #9; GitHub CI green.
+
+Claude's verification (clean clone of `fce75d5`): build 0 errors; policy green after promotion; the built tray renders 10/10 previews byte-identical to `worklog-phosphor-next`; Full gate `66 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`.
 
 ### Audit 2026-10-24 (14, deep) · range `audit/2026-10-24-13 (78fce40)..830bb67` · 6 card commits · result: TWO FIX CARDS (D19 reset safety, D20 worklog contrast), P-31 decided
 
