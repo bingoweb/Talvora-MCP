@@ -1,7 +1,10 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Fast','Full')]
-    [string] $Scope = 'Full'
+    [ValidateSet('Fast','Full','Changed')]
+    [string] $Scope = 'Full',
+    # T3, -Scope Changed: compare the working tree (plus untracked files) with this revision; default HEAD,
+    # i.e. exactly the uncommitted card work. CI passes the previous pushed commit.
+    [string] $Base = ''
 )
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
@@ -159,6 +162,42 @@ function Assert-PackageManagerPolicy {
     if ($code -notin 0,1) { throw "Package manager scan returned $code." }
     if ($hits.Count) { $hits | ForEach-Object { Write-Output $_ }; throw 'Forbidden package manager found.' }
 }
+# T3: the files that differ from the base revision, with forward slashes.
+function Get-ChangedFiles {
+    param([string] $Base)
+    $gitSafe = 'safe.directory=' + $repoRoot.Replace([char]92,[char]47)
+    $revision = if ([string]::IsNullOrWhiteSpace($Base)) { 'HEAD' } else { $Base }
+    $tracked = @(& git -c $gitSafe diff --name-only --no-renames $revision --)
+    if ($LASTEXITCODE -ne 0) { throw "git diff against $revision failed." }
+    $untracked = @(& git -c $gitSafe ls-files --others --exclude-standard)
+    if ($LASTEXITCODE -ne 0) { throw 'git ls-files failed.' }
+    @($tracked + $untracked | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)
+}
+# T3: which suites and regressions a change can affect. A dependency or SDK change selects everything; a
+# regression runs when it is always-on, when it changed itself, or when its text names a changed file.
+function Get-ChangedScopePlan {
+    param([string[]] $ChangedFiles, [IO.FileInfo[]] $Tests)
+    $files = @($ChangedFiles | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Replace([char]92, [char]47) })
+    $any = { param([string] $Pattern) @($files | Where-Object { $_ -match $Pattern }).Count -gt 0 }
+    $everything = & $any '(^|/)(Directory\.[^/]+\.(props|targets)|global\.json|NuGet\.config|Talvora\.slnx|packages\.lock\.json)$'
+    $build = $everything -or (& $any '^(src/|tests/[^/]+/)')
+    $suites = [Collections.Generic.List[string]]::new()
+    if ($everything -or (& $any '^(src/Talvora/SourceEditing/|tests/Talvora\.SourceEdit\.Regression/)')) { $suites.Add('SourceEditSemantic') }
+    if ($everything -or (& $any '^(src/Talvora/|src/Talvora\.Shared/|tests/Talvora\.SourceEdit\.Regression/)')) { $suites.Add('SourceEdit') }
+    if ($everything -or (& $any '^(src/Talvora/|src/Talvora\.Shared/|src/Talvora\.Tray/|tests/Talvora\.Notification\.Regression/)')) { $suites.Add('Notification') }
+    if ($build) { $suites.Add('IntegrationPolicy') }
+    $always = @('InstallerRollbackStateRegression.ps1','ModernizationPolicyRegression.ps1',
+        'QualityGateRegression.ps1','ThirdPartyNoticesSourceRegression.ps1')
+    $names = @($files | ForEach-Object { [IO.Path]::GetFileName($_) } | Where-Object { $_ } | Sort-Object -Unique)
+    $regressions = foreach ($test in $Tests) {
+        if ($everything -or $test.Name -in $always -or $files -contains ('tests/' + $test.Name)) { $test; continue }
+        $text = [IO.File]::ReadAllText($test.FullName)
+        foreach ($name in $names) {
+            if ($text.IndexOf($name, [StringComparison]::OrdinalIgnoreCase) -ge 0) { $test; break }
+        }
+    }
+    [pscustomobject]@{ Files = $files; Build = $build; Suites = $suites.ToArray(); Regressions = @($regressions) }
+}
 # These regressions build the tray or restore/publish fixture projects; they must not run while other suites
 # execute the same build output, so they run after the parallel phase.
 $serialRegressions = @(
@@ -168,13 +207,21 @@ $serviceRegressions = @('HealthHandleRegression.ps1', 'NativeInstallerRuntimeReg
 $canContinue = $true
 Push-Location -LiteralPath $repoRoot
 try {
-    if ($canContinue) {
+    $plan = $null
+    if ($Scope -eq 'Changed') {
+        $plan = Get-ChangedScopePlan -ChangedFiles (Get-ChangedFiles -Base $Base) -Tests @(
+            Get-ChildItem -LiteralPath (Join-Path $repoRoot 'tests') -File -Filter '*.ps1' | Sort-Object Name)
+        Write-Host ("Değişen dosya: {0} · derleme: {1} · paketler: {2} · PS testleri: {3}" -f $plan.Files.Count,
+            $(if ($plan.Build) { 'evet' } else { 'hayır' }),
+            $(if ($plan.Suites.Count) { $plan.Suites -join ', ' } else { '-' }), $plan.Regressions.Count)
+    }
+    if ($canContinue -and ($null -eq $plan -or $plan.Build)) {
         $canContinue = Invoke-QualityCheck 'Restore' {
             Invoke-ExternalChecked dotnet @('restore','Talvora.slnx','--locked-mode','--nologo','--verbosity','quiet')
             Invoke-ExternalChecked dotnet @('restore','src/Talvora.Installer/Talvora.Installer.csproj','--locked-mode','--nologo','--verbosity','quiet')
         }
     }
-    if ($canContinue) {
+    if ($canContinue -and ($null -eq $plan -or $plan.Build)) {
         $canContinue = Invoke-QualityCheck 'Build' {
             Invoke-ExternalChecked dotnet @('build','Talvora.slnx','-c','Release','--no-restore','--nologo','--verbosity','quiet')
         }
@@ -191,7 +238,10 @@ try {
             Invoke-ExternalChecked pwsh @('-NoLogo','-NoProfile','-NonInteractive','-File',(Join-Path $repoRoot 'scripts/Validate-ProjectDeliveryGate.ps1'))
         }
     }
-    $selected = if ($Scope -eq 'Full') {
+    $selected = if ($null -ne $plan) {
+        $plan.Regressions
+    }
+    elseif ($Scope -eq 'Full') {
         @(Get-ChildItem -LiteralPath (Join-Path $repoRoot 'tests') -File -Filter '*.ps1' | Sort-Object Name)
     }
     else {
@@ -208,6 +258,7 @@ try {
             @{ Name = 'SourceEdit'; Project = 'tests/Talvora.SourceEdit.Regression/Talvora.SourceEdit.Regression.csproj'; Arguments = @('--without-semantic') },
             @{ Name = 'Notification'; Project = 'tests/Talvora.Notification.Regression/Talvora.Notification.Regression.csproj'; Arguments = @() },
             @{ Name = 'IntegrationPolicy'; Project = 'tests/Talvora.Smoke/Talvora.Smoke.csproj'; Arguments = @('--codex-integration-policy-only') })) {
+            if ($null -ne $plan -and $suite.Name -notin $plan.Suites) { continue }
             $runArguments = @('run','--project',$suite.Project,'-c','Release','--no-build')
             if ($suite.Arguments.Count -gt 0) { $runArguments += @('--') + $suite.Arguments }
             $parallel.Add([pscustomobject]@{ Name = $suite.Name; Executable = 'dotnet'; Arguments = $runArguments; Quiet = $false })
@@ -222,7 +273,7 @@ try {
             })
             $regressions++
         }
-        $canContinue = Invoke-ParallelQualityChecks -Checks $parallel.ToArray()
+        if ($parallel.Count -gt 0) { $canContinue = Invoke-ParallelQualityChecks -Checks $parallel.ToArray() }
     }
     if ($canContinue) {
         $availability = if ($Scope -eq 'Full') {

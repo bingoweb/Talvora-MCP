@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T09:56:00Z",
-  "scope": "T2: install the exact approved PowerShell parallel quality gate and regression reference; preserve serial prerequisites and deterministic reporting, run independent SourceEdit semantic/core, notification, integration and PowerShell regressions with thread jobs.",
+  "verifiedAtUtc": "2026-10-24T10:10:00Z",
+  "scope": "T3: copy the exact approved PowerShell quality gate and changed-scope regression; -Scope Changed detects staged, unstaged, committed-range and untracked files, selects affected suites and PowerShell tests while retaining always-on checks, without changing Fast or Full behavior.",
   "libraries": [
+    {
+      "libraryId": "/microsoftdocs/powershell-docs",
+      "verified": "2026-10-24 T3: official PowerShell 7.7 documentation confirms the call operator & invokes native git CLI and $LASTEXITCODE must be checked for native-command failures; invoking a .ps1 with pwsh -File propagates explicit exit codes. The exact approved Get-ChangedFiles/Get-ChangedScopePlan reference handles staged, unstaged, committed and untracked files; no custom SDK or library change. Context7 sources https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Error_Handling.md and https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Automatic_Variables.md ."
+    },
     {
       "libraryId": "/microsoftdocs/powershell-docs",
       "verified": "2026-10-24 T2: official PowerShell 7.7 Start-ThreadJob documentation confirms Microsoft.PowerShell.ThreadJob creates in-process concurrent jobs, -ThrottleLimit bounds concurrency, and Wait-Job/Receive-Job obtain results but do not guarantee order; the approved gate collects and prints in the declared sequence. Context7 sources: https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.ThreadJob/Start-ThreadJob.md and https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Thread_Jobs.md. Signed-in PowerShell 7.6.7 has Start-ThreadJob available."

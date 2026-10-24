@@ -93,8 +93,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D19 — Reset stops Talvora's own programs only (audit 2026-10-24 (14))
 - [x] D20 — Worklog faint text meets 4.5 : 1 (installed fbe7542, previews 10/10, live card Gitea #9 comment 149, GitHub CI 40081837206 success)
 - [x] T1 — SourceEdit regression: Roslyn scenarios selectable on their own (Phase T; GitHub CI 40083209363 success)
-- [~] T2 — Quality gate runs independent suites in parallel (Phase T; exact-commit GitHub CI pending)
-- [ ] T3 — `-Scope Changed`: run only what the change can affect (Phase T)
+- [x] T2 — Quality gate runs independent suites in parallel (Phase T; GitHub CI 40084239875 success)
+- [~] T3 — `-Scope Changed`: run only what the change can affect (Phase T; exact-commit GitHub CI pending)
 - [ ] T4 — CI: documentation-only pushes run the changed-scope gate (Phase T)
 - [ ] UI1 — Tokens, theme manager and typography; P-31 decided: Tv.TextFaint Gece #7C899E, Gün #5D6A81.
 - [x] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; Claude audit 14 verified GitHub CI 830bb67 success, installed 830bb67 counts 250/213/88 and live toolchain_info. Specialized selectors/probes retained by the hard rule.
@@ -142,6 +142,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — T3 (executor: ChatGPT): exact approved Changed-scope quality gate and new behavioral regression; normalized SHA-256 15c896d0 and bd108435; Fast and Full preserved.
+  RED: Get-ChangedFiles missing before copy. GREEN: QUALITY_GATE_CHANGED_GREEN, QUALITY_GATE_PARALLEL_GREEN, QUALITY_GATE_REGRESSION_GREEN; reference files hash-identical.
+  Signed-in Changed gate 4 files, no build, 9 PS regressions, 13 checks/0 errors, 11.35 s; Full gate 64 checks/0 errors, ParallelPhase 51, 103.05 s, last line Hepsi geçti.
+  Context7 /microsoftdocs/powershell-docs for native git exit handling. Script-only: installed runtime unchanged; exact-commit GitHub CI to check after push.
 - 2026-10-24 — T2 (executor: ChatGPT): copied approved Invoke-QualityGate.ps1 and QualityGateParallelRegression.ps1 exactly (normalized SHA-256 7ddf8f8b, 158cc78e); serial prerequisites retained, parallel independent suites, deterministic output.
   RED before copy: missing Invoke-ParallelQualityChecks; GREEN QUALITY_GATE_PARALLEL_GREEN (overlap/ordered output/all 3 failures), QUALITY_GATE_REGRESSION_GREEN; baseline signed-in Fast 13/0.
   Signed-in Full gate twice: 63 checks/0 errors, PASS ParallelPhase (50 checks), last line Hepsi geçti.; durations 104.44 s and 105.26 s.
