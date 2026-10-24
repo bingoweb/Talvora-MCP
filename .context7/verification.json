@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T14:46:29Z",
-  "scope": "UI3: Control Center Overview Nabiz ring, live component health constellation and full chain page per DESIGN-CONTROL-CENTER 5.1/5.2, 6, 7.3-7.5, 9 and P-33. Existing WPF/WPF-UI 4.3 controls and CommunityToolkit observable properties; no new packages.",
+  "verifiedAtUtc": "2026-10-24T16:12:05Z",
+  "scope": "UI4: service list/detail, five-state StatusPill, reusable ServiceRow and bounded EvidencePanel; existing lifecycle/repair services and confirmation, with source and real installed UI acceptance under DESIGN-CONTROL-CENTER §5.1, §5.3 and §6. WPF/WPF-UI 4.3, no added packages.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-24 UI4: Context7 official .NET WPF ContentPresenter.ChooseTemplate confirms ContentControl's Content and DataTemplate binding; ICommandSource and ListBox selected-item/enter navigation preserve UI event routing. Native TabControl, read-only TextBox (Mode=OneWay) and DispatcherTimer/Stopwatch expose the three tabs and measured operation banner. Official: https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/Controls/ContentPresenter.cs ."
+    },
+    {
+      "libraryId": "/lepoco/wpfui",
+      "verified": "2026-10-24 UI4: Context7 WPF-UI 4.3 MessageBox.ShowDialogAsync(showAsDialog:true,cancellationToken) returns MessageBoxResult and retains the old ConfirmStopAsync semantics. Wpf.Ui.Controls.Button Appearance=Secondary and theme resource keys are verified in the official implementation guide; UI4 reuses existing TalvoraSecondaryButtonStyle/Ghost and dynamic Tv brushes. Sources: https://github.com/lepoco/wpfui/blob/main/src/Wpf.Ui/Controls/MessageBox/MessageBox.cs and https://github.com/lepoco/wpfui/blob/main/docs/architecture/IMPLEMENTATION-GUIDE.md ."
+    },
     {
       "libraryId": "/dotnet/wpf",
       "verified": "2026-10-24 UI3: Context7 /dotnet/wpf checked FrameworkElement.OnRender, DrawingContext.DrawGeometry and WPF Canvas/ItemsControl rendering, PathGeometry, dependency-property AffectsRender and UI render invalidation. The approved PulseRing uses the spec's OnRender arcs; ChainView uses Canvas nodes, Path stroke dashes and paused storyboard triggers on inactive/minimized windows or reduced-motion/high contrast. Microsoft source: https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/UIElement.cs and https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Media/DrawingContext.cs ."

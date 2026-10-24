@@ -14,6 +14,11 @@ internal static partial class Program
 {
     public static async Task<int> Main()
     {
+        if (Environment.GetCommandLineArgs().Contains("--ui4-only", StringComparer.Ordinal))
+        {
+            AssertUi4ServiceDetails();
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--ui3-only", StringComparer.Ordinal))
         {
             AssertUi3StatusNarrator();
@@ -46,6 +51,7 @@ internal static partial class Program
         AssertN6Details();
         AssertN7History();
         AssertUi3StatusNarrator();
+        AssertUi4ServiceDetails();
         AssertTrayIconArt();
         await AssertShellCommandsAsync();
         await AssertN3bCodeTerminalAsync();

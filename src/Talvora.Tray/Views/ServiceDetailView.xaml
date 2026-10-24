@@ -1,0 +1,154 @@
+<UserControl x:Class="Talvora.Tray.Views.ServiceDetailView" x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:controls="clr-namespace:Talvora.Tray.Controls"
+             Background="{DynamicResource Tv.Bg}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="DetailBool"/>
+        <Style x:Key="ActionButton" TargetType="{x:Type ui:Button}"
+               BasedOn="{StaticResource TalvoraSecondaryButtonStyle}">
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="MinWidth" Value="88"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  Padding="24">
+        <Grid MaxWidth="1360">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <ui:Button x:Name="BackButton" Content="← Hizmetler" Click="OnBack"
+                    Style="{StaticResource TalvoraGhostButtonStyle}"
+                    HorizontalAlignment="Left" MinHeight="32"
+                    AutomationProperties.Name="Hizmetler listesine dön"/>
+            <Border Grid.Row="1" Margin="0,16,0,16" Padding="24"
+                    BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
+                    Background="{DynamicResource Tv.Surface}"
+                    CornerRadius="{StaticResource Tv.Radius.L}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="56"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Image x:Name="ServiceLogo" Width="40" Height="40" Stretch="Uniform"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}" Style="{StaticResource Tv.Type.Title}"/>
+                            <TextBlock Style="{StaticResource Tv.Type.Body}"
+                                       Foreground="{DynamicResource Tv.TextMuted}"
+                                       TextWrapping="Wrap" Margin="0,4,0,0">
+                                <Run Text="{Binding Description, Mode=OneWay}"/>
+                                <Run Text=" · "/>
+                                <Run Text="{Binding Role, Mode=OneWay}"/>
+                            </TextBlock>
+                        </StackPanel>
+                        <controls:StatusPill Grid.Column="2" State="{Binding State}"
+                                             VerticalAlignment="Center"/>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="56,16,0,0">
+                        <ui:Button x:Name="RepairButton" Content="Onar" Click="OnRepair"
+                                Style="{StaticResource ActionButton}"
+                                IsEnabled="{Binding CanRepair}"
+                                AutomationProperties.Name="Hizmeti onar"/>
+                        <ui:Button x:Name="StartButton" Content="Başlat" Click="OnStart"
+                                Style="{StaticResource ActionButton}"
+                                IsEnabled="{Binding CanStart}"
+                                AutomationProperties.Name="Hizmeti başlat"/>
+                        <ui:Button x:Name="RestartButton" Content="Yeniden başlat" Click="OnRestart"
+                                Style="{StaticResource ActionButton}"
+                                IsEnabled="{Binding CanRestart}"
+                                AutomationProperties.Name="Hizmeti yeniden başlat"/>
+                        <ui:Button x:Name="StopButton" Content="Durdur" Click="OnStop"
+                                Style="{StaticResource ActionButton}"
+                                IsEnabled="{Binding CanStop}"
+                                AutomationProperties.Name="Hizmeti durdur"/>
+                    </StackPanel>
+                    <Border Margin="56,16,0,0" Padding="12"
+                            Background="{DynamicResource Tv.Repairing.Soft}"
+                            BorderBrush="{DynamicResource Tv.Repairing}" BorderThickness="1"
+                            CornerRadius="{StaticResource Tv.Radius.M}"
+                            Visibility="{Binding HasOperationBanner, Converter={StaticResource DetailBool}}">
+                        <DockPanel>
+                            <TextBlock Text="{Binding OperationName}" Style="{StaticResource Tv.Type.BodyStrong}"
+                                       DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding OperationElapsed}" Style="{StaticResource Tv.Type.Mono}"
+                                       DockPanel.Dock="Right" HorizontalAlignment="Right"/>
+                            <TextBlock Text="{Binding OperationResult}" Style="{StaticResource Tv.Type.Body}"
+                                       TextWrapping="Wrap" Margin="12,0,0,0"/>
+                        </DockPanel>
+                    </Border>
+                    <Border Margin="56,16,0,0" Padding="12"
+                            Background="{DynamicResource Tv.Neutral.Soft}"
+                            CornerRadius="{StaticResource Tv.Radius.M}"
+                            Visibility="{Binding HasManualStop, Converter={StaticResource DetailBool}}">
+                        <TextBlock Text="{Binding ManualStopMessage}" Style="{StaticResource Tv.Type.Body}"
+                                   TextWrapping="Wrap"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+            <TabControl x:Name="DetailTabs" Grid.Row="2" SelectionChanged="OnTabChanged"
+                        Background="{DynamicResource Tv.Surface}"
+                        BorderBrush="{DynamicResource Tv.Border}"
+                        AutomationProperties.Name="Hizmet ayrıntısı sekmeleri">
+                <TabItem Header="Durum">
+                    <ScrollViewer Padding="24" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="Bu hizmetin zinciri:" Style="{StaticResource Tv.Type.Subtitle}"
+                                       Margin="0,0,0,12"/>
+                            <ItemsControl ItemsSource="{Binding Components}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                            <controls:StatusPill State="{Binding State}"/>
+                                            <StackPanel Margin="12,0,0,0">
+                                                <TextBlock Text="{Binding Name}" Style="{StaticResource Tv.Type.BodyStrong}"/>
+                                                <TextBlock Text="{Binding Detail}" Style="{StaticResource Tv.Type.Body}"
+                                                           Foreground="{DynamicResource Tv.TextMuted}" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="Ne oldu?" Style="{StaticResource Tv.Type.Subtitle}"
+                                       Margin="0,16,0,8"/>
+                            <TextBlock Text="{Binding StatusDetail}" Style="{StaticResource Tv.Type.Body}"
+                                       TextWrapping="Wrap" MaxWidth="850" HorizontalAlignment="Left"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
+                                <TextBlock Text="{Binding LastChecked}" Style="{StaticResource Tv.Type.Caption}"/>
+                                <TextBlock Text=" · " Style="{StaticResource Tv.Type.Caption}"/>
+                                <TextBlock Text="{Binding LastSuccess}" Style="{StaticResource Tv.Type.Caption}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="Olaylar">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24">
+                        <ItemsControl ItemsSource="{Binding Events}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,16">
+                                        <TextBlock Text="{Binding Time}" Style="{StaticResource Tv.Type.Mono}"/>
+                                        <TextBlock Text="{Binding Title}" Style="{StaticResource Tv.Type.BodyStrong}"/>
+                                        <TextBlock Text="{Binding Detail}" Style="{StaticResource Tv.Type.Body}"
+                                                   Foreground="{DynamicResource Tv.TextMuted}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="Teknik kanıt">
+                    <ScrollViewer Padding="24" VerticalScrollBarVisibility="Auto">
+                        <controls:EvidencePanel Text="{Binding EvidenceText}"
+                                                AutomationProperties.Name="Hizmete ait teknik kanıt"/>
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

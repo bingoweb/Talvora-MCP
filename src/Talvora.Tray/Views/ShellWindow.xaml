@@ -91,6 +91,8 @@
                 <ContentControl x:Name="LegacyContentHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
                 <ContentControl x:Name="OverviewContentHost" Visibility="Collapsed"
                                 HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                <ContentControl x:Name="ServicesContentHost" Visibility="Collapsed"
+                                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
                 <ContentControl x:Name="HistoryContentHost" Visibility="Collapsed"
                                 HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
                 <ContentControl x:Name="ChainContentHost" Visibility="Collapsed"

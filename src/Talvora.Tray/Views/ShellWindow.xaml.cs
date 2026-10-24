@@ -88,14 +88,20 @@ internal sealed partial class ShellWindow
             items[index].IsChecked = index == _shellModel.SelectedIndex;
         _syncingShellNavigation = false;
         var selected = _shellModel.SelectedIndex;
-        LegacyContentHost.Visibility = selected is 0 or 2 or 3 ? Visibility.Collapsed : Visibility.Visible;
+        LegacyContentHost.Visibility = selected is 0 or 1 or 2 or 3 ? Visibility.Collapsed : Visibility.Visible;
         OverviewContentHost.Visibility = selected == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ServicesContentHost.Visibility = selected == 1 ? Visibility.Visible : Visibility.Collapsed;
         HistoryContentHost.Visibility = selected == 2 ? Visibility.Visible : Visibility.Collapsed;
         ChainContentHost.Visibility = selected == 3 ? Visibility.Visible : Visibility.Collapsed;
         PlaceholderCard.Visibility = Visibility.Collapsed;
         if (selected is 0 or 3)
         {
             EnsureUi3Page(selected);
+            return;
+        }
+        if (selected == 1)
+        {
+            EnsureUi4Page();
             return;
         }
         if (selected == 2)
@@ -107,7 +113,6 @@ internal sealed partial class ShellWindow
         }
         switch (selected)
         {
-            case 1: _navServicesButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); break;
             case 4: _navEventsButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); break;
             case 5:
                 ShowDashboard();
@@ -157,21 +162,18 @@ internal sealed partial class ShellWindow
             _shellModel.AttentionCount = snapshot.AttentionCount + snapshot.OfflineCount;
             foreach (var state in snapshot.Mcps)
             {
-                commands.Add(new ShellCommand(state.Registration.DisplayName + " — ayrıntılar", async () =>
+                commands.Add(new ShellCommand(state.Registration.DisplayName + " — ayrıntılar", () =>
                 {
-                    _shellModel.SelectPage(1);
-                    ApplyShellRoute();
-                    await ShowDetailAsync(state);
+                    OpenUi4Detail(state);
+                    return Task.CompletedTask;
                 }));
             }
             var admin = snapshot.Mcps.FirstOrDefault(state => state.Registration.Id == "talvora-admin");
             if (admin is not null)
                 commands.Add(new ShellCommand("Talvora Admin'i yeniden başlat", async () =>
                 {
-                    _shellModel.SelectPage(1);
-                    ApplyShellRoute();
-                    await ShowDetailAsync(admin);
-                    await ExecuteDetailLifecycleOperationAsync(ManagedMcpLifecycleOperation.Restart);
+                    OpenUi4Detail(admin);
+                    await RunUi4OperationAsync(admin, Controls.Ui4ServiceAction.Restart);
                 }));
         }
         _shellModel.SetServiceCommands(commands);
@@ -205,7 +207,7 @@ internal sealed partial class ShellWindow
                 if (_shellModel.SelectedIndex == 4) { _eventSearchBox.Focus(); _eventSearchBox.SelectAll(); }
                 else if (_shellModel.SelectedIndex == 2) _historyView?.FocusSearch();
                 else if (_shellModel.SelectedIndex == 0) _overviewView?.FocusSearch();
-                else if (_shellModel.SelectedIndex == 1) { _searchBox.Focus(); _searchBox.SelectAll(); }
+                else if (_shellModel.SelectedIndex == 1) _servicesView?.FocusSearch();
                 e.Handled = true;
                 return;
             }
@@ -218,6 +220,12 @@ internal sealed partial class ShellWindow
         else if (e.Key == Key.Escape && Palette.IsOpen)
         {
             Palette.IsOpen = false;
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Left && Keyboard.Modifiers == ModifierKeys.Alt &&
+                 _shellModel.SelectedIndex == 1 && _servicesView?.IsDetailOpen == true)
+        {
+            _servicesView.BackToList();
             e.Handled = true;
         }
         else if (e.Key == Key.Left && Keyboard.Modifiers == ModifierKeys.Alt &&

@@ -106,8 +106,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [?] Q3 — Documentation diet (P-17; waiting for Q2c)
 - [~] UI2 — Shell, rail, title bar, command palette (P-33 implemented; signed-in Full 66/0 and both source themes green; exact-commit delivery evidence artifacts/ui2-delivery.json; U5 mixed-DPI placement and Claude visual audit pending)
 - [x] N7 — "Çalışma günlüğü" history page (7d/2,000/20MB, terminal-only, session filters/details; installed 94e4079 smoke success; GitHub CI 40101364855 attempt 2 success)
-- [~] UI3 — Overview: Nabız ring + chain strip (signed-in Full 66/0; both-theme source smoke and direct node click passed; exact-commit installer, installed smoke and CI pending)
-- [ ] UI4 — Services list + detail
+- [x] UI3 — Overview: Nabız ring + chain strip (installed 6d12e65, 250 tools, full source and installed smoke/Gece/Gun PNGs; signed-in Full 66/0; GitHub windows-ci 40104570857 success; remaining idle CPU polish tracked under UI8)
+- [~] UI4 — Services list + detail (signed-in Full 66/0, safe test MCP UI start/stop/restart/repair GREEN, 4 source-theme PNGs; exact-commit Windows installer, installed smoke and GitHub CI follow commit)
 - [ ] UI5 — Events + raw log
 - [ ] UI6 — Settings + setup stepper (+ deferred S3 ACL notice, to be specified)
 - [ ] N8 — Notification settings
@@ -150,6 +150,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-24 — UI4 (executor: ChatGPT via Talvora): replaced the legacy Services route with MVVM ServicesView/ServiceDetailView; reusable five-state StatusPill, 56px ServiceRow, redacted bounded EvidencePanel, search/filter, three tabs, operation banner with real Stopwatch elapsed time and exact manual-stop text. Kept legacy service/detail handlers only where still used by Events/Settings and existing smoke; UI4 routes through the approved lifecycle, repair, stop-confirmation and event APIs.
+  RED first: missing list/detail types; GREEN targeted UI4 model/filter/manual-stop/elapsed/redaction test. Added separate RED/GREEN log-source-isolation regression; only own log hints and matching MCP lines show. Real WPF smoke drives a harmless test MCP via UI: decline stop, confirm stop, start, restart, repair GREEN; never alters Talvora Core/Dev/Admin/Gitea. Two themes and four source PNGs artifacts/ui4-source-ui4-{services,detail}-{initial,alternate}.png; UI3 before artifacts/ui3-preview-loaded.png / ui3-preview-ui3-overview-*.png.
+  Signed-in Full 66 checks, zero failures, exit 0, Hepsi geçti.; .NET 10 WPF and WPF-UI 4.3 Context7 official ContentPresenter/MessageBox and theme docs checked; Awwwards services/detail pages researched for evidence only. Minor layout gaps use existing Tv typography/space/radius and native WPF-UI button themes. Exact-commit installation, installed smoke and GitHub windows-ci proof follow this one commit.
+
 
 - 2026-10-24 — UI3 (executor: ChatGPT via Talvora): replaced UI2 overview and P-33 chain placeholder with the spec's 112px native Nabız ring, real health-backed five-state constellation, full chain and 360px component detail sheet.
   Data remains routed through existing dashboard/component health, repair, event store and service-detail adapters; no new packages or unsafe repair APIs. Keyboard focus and direct node-click selected the correct component; test-first StatusNarrator six cases GREEN.

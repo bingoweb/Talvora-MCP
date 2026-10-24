@@ -1,0 +1,103 @@
+<UserControl x:Class="Talvora.Tray.Views.ServicesView" x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:controls="clr-namespace:Talvora.Tray.Controls"
+             Background="{DynamicResource Tv.Bg}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="ServicesBool"/>
+        <Style x:Key="ServiceListItem" TargetType="ListBoxItem">
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+    </UserControl.Resources>
+    <Grid>
+        <Grid x:Name="ListRegion" Margin="24" MaxWidth="1360">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <DockPanel LastChildFill="False" Margin="0,0,0,24">
+                <TextBlock Text="Hizmetler" Style="{StaticResource Tv.Type.Title}"
+                           VerticalAlignment="Center"/>
+                <ui:Button Content="Yenile" MinHeight="32" MinWidth="80" DockPanel.Dock="Right"
+                        Style="{StaticResource TalvoraSecondaryButtonStyle}"
+                        HorizontalAlignment="Right" Click="OnRefresh"
+                        AutomationProperties.Name="Hizmetleri yenile"/>
+            </DockPanel>
+            <Grid Grid.Row="1" Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="160"/>
+                </Grid.ColumnDefinitions>
+                <Grid Margin="0,0,12,0">
+                    <TextBox x:Name="SearchBox" MinHeight="32" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="Hizmetlerde ara"/>
+                    <TextBlock Text="Bileşen ara…" IsHitTestVisible="False"
+                               Margin="12,0,0,0" VerticalAlignment="Center"
+                               Foreground="{DynamicResource Tv.TextMuted}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.Caption}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SearchText}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+                <ComboBox Grid.Column="1" ItemsSource="{Binding Filters}"
+                          SelectedItem="{Binding StateFilter}" MinHeight="32"
+                          AutomationProperties.Name="Hizmet durum filtresi"/>
+            </Grid>
+            <Grid Grid.Row="2">
+                <ListBox x:Name="ServiceList" ItemsSource="{Binding FilteredRows}"
+                         ItemContainerStyle="{StaticResource ServiceListItem}"
+                         PreviewMouseLeftButtonUp="OnListMouseUp"
+                         KeyDown="OnListKeyDown"
+                         ScrollViewer.CanContentScroll="True"
+                         VirtualizingPanel.IsVirtualizing="True"
+                         VirtualizingPanel.VirtualizationMode="Recycling"
+                         BorderThickness="0" Background="Transparent"
+                         AutomationProperties.Name="Hizmet listesi">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <controls:ServiceRow ActionRequested="OnRowActionRequested"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock Text="Arama veya filtreyle eşleşen hizmet yok."
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           IsHitTestVisible="False">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.Body}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasRows}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <StackPanel Background="{DynamicResource Tv.Bg}"
+                            Visibility="{Binding IsLoading, Converter={StaticResource ServicesBool}}"
+                            IsHitTestVisible="False">
+                    <Border Background="{DynamicResource Tv.SurfaceRaised}"
+                            CornerRadius="{StaticResource Tv.Radius.M}" Height="56" Margin="0,0,0,8"/>
+                    <Border Background="{DynamicResource Tv.SurfaceRaised}"
+                            CornerRadius="{StaticResource Tv.Radius.M}" Height="56" Margin="0,0,0,8"/>
+                    <Border Background="{DynamicResource Tv.SurfaceRaised}"
+                            CornerRadius="{StaticResource Tv.Radius.M}" Height="56"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+        <ContentControl x:Name="DetailHost" Visibility="Collapsed"
+                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+    </Grid>
+</UserControl>

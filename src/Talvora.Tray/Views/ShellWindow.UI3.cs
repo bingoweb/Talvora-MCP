@@ -136,9 +136,9 @@ internal sealed partial class ShellWindow
         }
     }
 
-    private async Task OpenUi3DetailsAsync(ManagedMcpDashboardState state)
+    private Task OpenUi3DetailsAsync(ManagedMcpDashboardState state)
     {
-        _shellModel?.SelectPage(1);
-        await ShowDetailAsync(state);
+        OpenUi4Detail(state);
+        return Task.CompletedTask;
     }
 }

@@ -736,6 +736,7 @@ internal sealed partial class ShellWindow : FluentWindow
                 _lifetimeCts.Token);
             _snapshot = snapshot;
             UpdateUi3Snapshot(snapshot);
+            UpdateUi4Snapshot(snapshot);
             await RefreshEmbeddedMcpIntegrationsAsync(_lifetimeCts.Token);
             _lastSuccessfulDashboardRefresh = DateTimeOffset.Now;
 

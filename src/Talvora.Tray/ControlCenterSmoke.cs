@@ -48,6 +48,7 @@ internal static partial class ControlCenterSmoke
                 AssertRenderedSurfaceIsNotBlank(window);
                 AssertStitchNavigation(window);
                 AssertUi3VisualFixture(window, "initial");
+                AssertUi4VisualFixture(window, "initial");
 
                 // UI1: swap the running window's real palette and restore it, without reopening.
                 var initialPreference = TalvoraThemeManager.Preference;
@@ -60,6 +61,7 @@ internal static partial class ControlCenterSmoke
                 if (((SolidColorBrush)contentRoot.Background).Color == initialBackground)
                     throw new InvalidOperationException("Control Center theme did not change live.");
                 AssertUi3VisualFixture(window, "alternate");
+                AssertUi4VisualFixture(window, "alternate");
                 window.ShellModel.SelectPage(2);
                 AssertWorklogHistorySelection(window, "worklog-session-alternate");
                 window.ShellModel.SelectPage(0);
@@ -84,8 +86,10 @@ internal static partial class ControlCenterSmoke
                     throw new InvalidOperationException("Control Center theme did not restore live.");
 
                 await window.RunSmokeScenarioAsync();
+                await AssertUi4LifecycleSmokeAsync(window);
                 SaveVisualSnapshotIfRequested(window, "loaded");
-                window.ShellModel.SelectPage(1);
+                // UI4 owns Services; the legacy dashboard stays under Events/Settings until UI5/6.
+                window.ShellModel.SelectPage(4);
                 AssertDashboardStructure(window);
                 AssertRenderedSurfaceIsNotBlank(window);
                 AssertCompactDashboardLayout(window);
@@ -175,6 +179,13 @@ internal static partial class ControlCenterSmoke
                     window.OverviewContentHost.Content is not Views.OverviewView ||
                     window.LegacyContentHost.Visibility != Visibility.Collapsed)
                     throw new InvalidOperationException("UI3 overview did not open its view.");
+            }
+            else if (index == 1)
+            {
+                if (window.ServicesContentHost.Visibility != Visibility.Visible ||
+                    window.ServicesContentHost.Content is not Views.ServicesView ||
+                    window.LegacyContentHost.Visibility != Visibility.Collapsed)
+                    throw new InvalidOperationException("UI4 services route did not open its view.");
             }
             else if (index == 2)
             {

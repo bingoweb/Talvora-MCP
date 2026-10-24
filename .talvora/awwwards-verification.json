@@ -1,15 +1,19 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T14:46:29Z",
-  "sourceUrl": "https://www.awwwards.com/inspiration/data-visualization-renxa-recruit-site",
-  "scope": "UI3: Awwwards data-visualization inspiration checked for evidence only; all rendering, text, status states, colors and navigation follow approved DESIGN-CONTROL-CENTER 5.1, 5.2, 6, 7.3-7.5, 9 and P-33, not external design decisions.",
+  "verifiedAtUtc": "2026-10-24T16:12:05Z",
+  "sourceUrl": "https://www.awwwards.com/inspiration/services-layout-wkndhrs",
+  "scope": "UI4: Awwwards Services Layout from WKNDHRS reviewed for research evidence only. All service lists, technical evidence tabs, wording, operation safety, typography, theme, spacing and component states follow the approved DESIGN-CONTROL-CENTER §5.1, §5.3 and §6 without copying external UI.",
   "references": [
+    "https://www.awwwards.com/inspiration/services-layout-wkndhrs",
+    "https://www.awwwards.com/inspiration/project-details-page-desktop-sai-narayanan-portfolio",
     "https://www.awwwards.com/inspiration/data-visualization-renxa-recruit-site",
     "https://www.awwwards.com/inspiration_search/data-visualization/",
     "https://www.awwwards.com/inspiration/archive-prague-quadrennial-pq-2023",
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
+    "UI4: Awwwards Services Layout from WKNDHRS and the Project Details Page - Desktop from Sai Narayanan were reviewed as inspiration only; no new user-facing controls or design patterns were imported. Live data/actions and WPF UI visuals remain grounded in DESIGN-CONTROL-CENTER §5.3.",
+    "UI4: DESIGN-CONTROL-CENTER §5.1 requires 56px rows with name/role/relative check time/overflow and §6 defines StatusPill/ServiceRow/EvidencePanel. §5.3 defines the 40px logo, Repair/Restart/Stop actions, live elapsed banner, status/events/technical evidence tabs and explicit manual-stop warning; only Tv token scales are used in unspecified minor layout gaps.",
     "UI3: Awwwards Renxa Recruit Site data visualization and Awwwards data-visualization inspiration were reviewed as research only; no external shapes, palettes, timing or interaction patterns were copied.",
     "UI3: DESIGN-CONTROL-CENTER 5.1 and 7.3 supply the 112px pulse arcs and snapshot-derived Turkish headline, chain strip, 56px service rows and metrics; 5.2 plus P-33 require the real full chain page with a 360px side sheet and the exact five-state legend. Only existing Tv tokens and the approved chain-node/flow model were used; UI8 owns the remaining idle CPU optimization.",
     "N7: Awwwards Prague Quadrennial archive inspiration page has the archive/history/timeline tags and a related interactive timeline. This is qualitative reference only; the actual WPF UI keeps the approved Control Center typography, Tv token palette, session list plus details and native platform controls. No external animation or new imagery is imported.",

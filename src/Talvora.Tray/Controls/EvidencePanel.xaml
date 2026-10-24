@@ -1,0 +1,39 @@
+<UserControl x:Class="Talvora.Tray.Controls.EvidencePanel" x:ClassModifier="internal" x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             Background="Transparent">
+    <Border BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
+            CornerRadius="{StaticResource Tv.Radius.L}" Background="{DynamicResource Tv.SurfaceSunken}"
+            Padding="16">
+        <DockPanel>
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Right"
+                        Margin="0,0,0,12">
+                <CheckBox x:Name="WrapToggle" Content="Satırları kaydır"
+                          VerticalAlignment="Center" Margin="0,0,16,0"
+                          AutomationProperties.Name="Satırları kaydır"/>
+                <ui:Button Content="Kopyala" Click="OnCopy" MinHeight="32"
+                        Style="{StaticResource TalvoraSecondaryButtonStyle}"
+                        AutomationProperties.Name="Teknik kanıtı kopyala"/>
+            </StackPanel>
+            <TextBox x:Name="EvidenceTextBox" Text="{Binding Text, ElementName=Root, Mode=OneWay}"
+                     FontFamily="Cascadia Mono,Consolas" FontSize="12.5"
+                     Foreground="{DynamicResource Tv.Text}"
+                     Background="Transparent" BorderThickness="0"
+                     AcceptsReturn="True" IsReadOnly="True"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                     MaxHeight="360" MinHeight="80" AutomationProperties.Name="Teknik kanıt metni">
+                <TextBox.Style>
+                    <Style TargetType="TextBox">
+                        <Setter Property="TextWrapping" Value="NoWrap"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsChecked, ElementName=WrapToggle}" Value="True">
+                                <Setter Property="TextWrapping" Value="Wrap"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
+        </DockPanel>
+    </Border>
+</UserControl>
