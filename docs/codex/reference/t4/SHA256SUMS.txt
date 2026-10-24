@@ -1,0 +1,2 @@
+# SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
+b419dfd38ac7abdbec9f5e2d1a019582f9daeb8c2d03be155d7a23ba9f623885  CiDocsOnlyRegression.ps1

@@ -92,6 +92,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] Q5 — Control Center smoke: structural checks, current theme PNG (P-18); signed-in Full 60/0, installed 6f533fe smoke/PNGs and GitHub windows-ci 40072555807 success; artifacts/q5/delivery.json. Gitea evidence access requires unavailable approval.
 - [x] D19 — Reset stops Talvora's own programs only (audit 2026-10-24 (14))
 - [ ] D20 — Worklog faint text meets 4.5 : 1 (audit 2026-10-24 (14))
+- [ ] T1 — SourceEdit regression: Roslyn scenarios selectable on their own (Phase T)
+- [ ] T2 — Quality gate runs independent suites in parallel (Phase T)
+- [ ] T3 — `-Scope Changed`: run only what the change can affect (Phase T)
+- [ ] T4 — CI: documentation-only pushes run the changed-scope gate (Phase T)
 - [ ] UI1 — Tokens, theme manager and typography; P-31 decided: Tv.TextFaint Gece #7C899E, Gün #5D6A81.
 - [x] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; Claude audit 14 verified GitHub CI 830bb67 success, installed 830bb67 counts 250/213/88 and live toolchain_info. Specialized selectors/probes retained by the hard rule.
 - [ ] Q2b — Config get/set/delete consolidation (P-16 decided; zero capability loss)
@@ -138,6 +142,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — Claude: Phase T (user: CI and full re-tests take too long). Measured local Full ≈ 3 min 30 s, Fast ≈ 2 min 30 s, CI 4–6 min + queue. Cards T1–T4 (Roslyn split, parallel gate, `-Scope Changed`, docs-only CI path) replayed on a clean clone: Full 1 min 41 s (green ×3), Changed 4–39 s, all new regressions red→green, final Full `65 kontrol, 0 hata` / `Hepsi geçti.` in 1 min 49 s as `MSI\tayla`. Queued after D20; AGENTS.md: baseline/inner loop use `-Scope Changed` once T3 is in main; never wait for a pending CI run.
 - 2026-10-24 — D19 (executor: ChatGPT; audit 14): reset stops Talvora-named executables or dotnet hosting Talvora(.Tray).dll only; editors, shells and agents mentioning the repository are excluded.
   RED approved regression failed without Test-TalvoraProcess; GREEN RESET_PROCESS_FILTER_GREEN and R3_SAFE_RESET_GREEN. Verbatim reference test normalized SHA-256 d042c78b63fbd12bcfd3d3bd88f57595d4d9421a09b8360ff361a74347fe75aa.
   Signed-in Full gate 61 checks, 0 errors (50 PowerShell regressions), last line Hepsi geçti. Context7 /microsoftdocs/powershell-docs and official comparison operator docs; required .context7/verification.json updated. Script-only: no live reset or deployment. Exact-commit GitHub windows-ci to be checked after push.

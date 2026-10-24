@@ -2061,6 +2061,302 @@ with exactly:
 
 **Acceptance:** `pwsh -NoProfile -File tests/QualityGateRegression.ps1` passes; the Fast gate ends with `Hepsi geçti.`; one commit `test(quality): exempt exact-implementation blocks from the context budget` with trailer `Card: D8`. Then continue with D7 (unchanged card) — P-19 is decided.
 
+## Phase T — Faster feedback (user request 2026-10-24)
+
+**Why.** The user: GitHub CI takes very long and every small change re-runs the full test set. Claude measured (installed `b17c6f7`, signed-in, 12 cores):
+
+| What | Before | After T1–T4 (Claude's clean-clone replay) |
+|---|---|---|
+| Local Full gate | ≈ 3 min 30 s, every suite one after another (SourceEdit 69 s, of which the 13 Roslyn `semantic-*` scenarios 50 s; 48 PowerShell regressions 56 s, mostly process start-up; Notification 25 s) | **1 min 41 s** (`ParallelPhase` 70 s, bounded by the semantic scenarios); green three times in a row |
+| `-Scope Fast` (baseline, inner loop) | ≈ 2 min 30 s — it still ran SourceEdit, Notification and IntegrationPolicy | `-Scope Changed`: docs-only **4 s**, a script change **5 s**, a tray change **39 s** (Notification + IntegrationPolicy only) |
+| GitHub CI, docs-only push (every Claude audit, STATUS-only commits) | 5–6 min of runner time (full gate, installer, install) | the changed-scope gate only (≈ 1 min including checkout) |
+| GitHub CI, code push | 4–5 min runner time (gate 2.8–3.9 min) + queue wait up to 10 min | gate shortened by T1/T2; queue wait is GitHub's and cannot be changed by the repository |
+
+Nothing is weakened: every code push still runs the complete Full gate, installer, install and installed-runtime checks in CI; the agent still runs Full once per card before committing; dependency/SDK changes select everything in `-Scope Changed`; anything CI cannot classify runs the full pipeline.
+
+**Order:** T1 → T2 → T3 → T4 (each builds on the previous one). One commit per card. All four are scripts/tests only: no deploy; acceptance = the named regressions + Full gate `Hepsi geçti.` as the signed-in user + GitHub CI green (10b).
+
+### T1 — SourceEdit regression: Roslyn scenarios selectable on their own
+
+> Phase T. Lets T2 run the 13 `semantic-*` scenarios (≈ 50 s) in a process of their own next to the other 86. Each process keeps its own engine state folder (`RegressionState\SourceEdit` / `RegressionState\SourceEdit-Semantic`), so they never share a WAL. Without an argument the runner behaves exactly as before.
+
+**Files:** `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs`, `tests/Talvora.SourceEdit.Regression/Program.cs`, `.context7/verification.json`.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs` — replace
+
+```csharp
+    public static async Task RunAllAsync()
+    {
+```
+
+with
+
+```csharp
+    // T1: the Roslyn workspace scenarios are the slowest part of the suite; the gate runs them in their own
+    // process next to the other scenarios.
+    public static bool IsSemanticScenario(string name) =>
+        name.StartsWith("semantic-", StringComparison.Ordinal);
+
+    public static async Task RunAllAsync(Func<string, bool>? include = null)
+    {
+```
+
+Step 2 — `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs` — replace
+
+```csharp
+        foreach (var test in tests)
+        {
+```
+
+with
+
+```csharp
+        foreach (var test in tests.Where(test => include?.Invoke(test.Name) ?? true))
+        {
+```
+
+Step 3 — `tests/Talvora.SourceEdit.Regression/Program.cs` — replace
+
+```csharp
+Talvora.SourceEditing.SourceEditRuntime.UseStateRootForTests(Path.Combine(regressionState, "SourceEdit"));
+```
+
+with
+
+```csharp
+// T1: the semantic scenarios run in a parallel process of their own, so they keep their own engine state.
+var semanticOnly = args.Contains("--semantic-only", StringComparer.OrdinalIgnoreCase);
+Talvora.SourceEditing.SourceEditRuntime.UseStateRootForTests(
+    Path.Combine(regressionState, semanticOnly ? "SourceEdit-Semantic" : "SourceEdit"));
+```
+
+Step 4 — `tests/Talvora.SourceEdit.Regression/Program.cs` — replace
+
+```csharp
+await SourceEditRegressionRunner.RunAllAsync();
+Console.WriteLine("TALVORA SOURCE EDIT REGRESSION GREEN");
+```
+
+with
+
+```csharp
+if (semanticOnly)
+{
+    await SourceEditRegressionRunner.RunAllAsync(SourceEditRegressionRunner.IsSemanticScenario);
+    Console.WriteLine("TALVORA SOURCE EDIT SEMANTIC REGRESSION GREEN");
+    return;
+}
+if (args.Contains("--without-semantic", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunAllAsync(name => !SourceEditRegressionRunner.IsSemanticScenario(name));
+    Console.WriteLine("TALVORA SOURCE EDIT CORE REGRESSION GREEN");
+    return;
+}
+await SourceEditRegressionRunner.RunAllAsync();
+Console.WriteLine("TALVORA SOURCE EDIT REGRESSION GREEN");
+```
+
+**Acceptance:** run both at the same time — `dotnet run --project tests/Talvora.SourceEdit.Regression/Talvora.SourceEdit.Regression.csproj -c Release --no-build -- --semantic-only` prints `TALVORA SOURCE EDIT SEMANTIC REGRESSION GREEN` (13 PASS) and `... -- --without-semantic` prints `TALVORA SOURCE EDIT CORE REGRESSION GREEN` (86 PASS; signed in, the same 4 SKIPs as before); without arguments still `TALVORA SOURCE EDIT REGRESSION GREEN`; Full gate `Hepsi geçti.`; CI green.
+
+### T2 — Quality gate runs independent suites in parallel
+
+> Phase T, after T1. The cheap checks (Restore, Build, PowerShellParse, PackageManager, Context7, Delivery) stay first and serial. Then `Invoke-ParallelQualityChecks` starts SourceEditSemantic, SourceEdit, Notification, IntegrationPolicy and every PowerShell regression as thread jobs (`Start-ThreadJob`, PowerShell 7's `Microsoft.PowerShell.ThreadJob`, throttle = processor count, minimum 2); each keeps its own numbered log, and the results are printed in the listed order with the 60-line failure tail. The three regressions that rebuild the tray or restore/publish fixtures (`GiteaProtocolReadiness`, `GiteaStopChain`, `InstallerDependencyProvenance`) and the two installed-service checks run serially afterwards, then ControlCenter and BusinessBootstrap as before. A failure in the parallel phase reports **every** failing check (count in `N kontrol, M hata`). `Invoke-QualityCheck` and `Get-InstalledRuntimeAvailability` are unchanged (`QualityGateRegression.ps1` extracts them).
+
+**Files:** `scripts/Invoke-QualityGate.ps1` (whole file from the reference), new `tests/QualityGateParallelRegression.ps1`, `.context7/verification.json` (Context7: PowerShell `Start-ThreadJob`).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — copy `docs/codex/reference/t2/Invoke-QualityGate.ps1` → `scripts/Invoke-QualityGate.ps1` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `7ddf8f8b54da7342c2281cc1290d9e3c46c8b38b0d8ee59db79ca9e7bb28cc77`). Replaces the whole file (it was 233 lines): the cheap serial checks stay first, then the independent suites run in parallel thread jobs, then the checks that rebuild the tray or need the installed service run serially.
+
+Step 2 — copy `docs/codex/reference/t2/QualityGateParallelRegression.ps1` → `tests/QualityGateParallelRegression.ps1` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `158cc78e213bdd41b286d039520bdba4c081fbfa3b30f6e0a6f30a6d5c5e8ee6`).
+
+**Acceptance:** `QUALITY_`65 kontrol, 0 hata` / `Hepsi geçti.` in 1 min 49 s as `MSI\tayla`_PARALLEL_GREEN` (RED before Step 1: `must run independent suites with Invoke-ParallelQualityChecks`; the test also proves overlap, listed-order reporting, a missing program counted as a failure, and all three failures counted); `QUALITY_`65 kontrol, 0 hata` / `Hepsi geçti.` in 1 min 49 s as `MSI\tayla`_REGRESSION_GREEN`; Full gate as the signed-in user shows `PASS ParallelPhase (50 checks)` and `Hepsi geçti.` — run it **twice** (stability) and write both durations into the Log; CI green.
+
+### T3 — `-Scope Changed`: run only what the change can affect
+
+> Phase T, after T2. `-Scope Changed [-Base <rev>]` lists the files that differ from `-Base` (default `HEAD`, i.e. the uncommitted card work) plus untracked files, then: Restore/Build only when something under `src/` or a test project changed; SourceEditSemantic for `src/Talvora/SourceEditing/**`; SourceEdit for `src/Talvora/**`, `src/Talvora.Shared/**`; Notification for those plus `src/Talvora.Tray/**`; IntegrationPolicy whenever it builds; a dependency/SDK file (`Directory.*.props|targets`, `global.json`, `NuGet.config`, `Talvora.slnx`, any `packages.lock.json`) selects everything. PowerShell regressions: the four always-on policy tests, any changed test, and every test whose text names a changed file. The always-cheap checks (PowerShellParse, PackageManager, Context7, Delivery) always run. It prints one line: `Değişen dosya: N · derleme: evet/hayır · paketler: … · PS testleri: M`. `-Scope Fast` and `-Scope Full` are unchanged.
+
+**Files:** `scripts/Invoke-QualityGate.ps1` (whole file from the reference), new `tests/QualityGateChangedRegression.ps1`, `.context7/verification.json`. `AGENTS.md` already tells the agent to use `-Scope Changed` for the baseline and inner loop once T3 is in `main` (Claude, 2026-10-24).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — copy `docs/codex/reference/t3/Invoke-QualityGate.ps1` → `scripts/Invoke-QualityGate.ps1` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `15c896d0ed434af6ae440a01c4885852d7022274a18bec52727fd448c0d7640f`). Replaces the whole file again (T2 version + `-Scope Changed` and `-Base`).
+
+Step 2 — copy `docs/codex/reference/t3/QualityGateChangedRegression.ps1` → `tests/QualityGateChangedRegression.ps1` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `bd1084356bbaa679e8385e078bca7a0bbbe675b8c96947ca6cbb4d89a13cdfb9`).
+
+**Acceptance:** `QUALITY_`65 kontrol, 0 hata` / `Hepsi geçti.` in 1 min 49 s as `MSI\tayla`_CHANGED_GREEN` (RED before Step 1); `QUALITY_`65 kontrol, 0 hata` / `Hepsi geçti.` in 1 min 49 s as `MSI\tayla`_PARALLEL_GREEN`, `QUALITY_`65 kontrol, 0 hata` / `Hepsi geçti.` in 1 min 49 s as `MSI\tayla`_REGRESSION_GREEN`; with this card's own uncommitted files `-Scope Changed` selects no build and only the gate regressions and finishes `Hepsi geçti.`; Full gate `Hepsi geçti.`; CI green. Log the `-Scope Changed` duration.
+
+### T4 — CI: documentation-only pushes run the changed-scope gate
+
+> Phase T, after T3. A new step `Classify the change` (id `changes`) reads the push/PR range; when **every** changed file is Markdown under `docs/` and none is under `docs/codex/reference/`, the job runs `Invoke-QualityGate.ps1 -Scope Changed -Base <previous commit>` and skips setup-dotnet, the full gate, the installer, the install and the installed-runtime checks. Everything else — including a new branch or an unreadable range, `README.md`, `AGENTS.md` and any reference copy — runs the unchanged full pipeline. The SDK-lock step is untouched (`ModernizationPolicyRegression.ps1` executes it with fixtures).
+
+**Files:** `.github/workflows/windows-ci.yml`, new `tests/CiDocsOnlyRegression.ps1`, `.context7/verification.json` (Context7/vendor: GitHub Actions `steps.<id>.outputs`, `GITHUB_OUTPUT`, step `if`).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — `.github/workflows/windows-ci.yml` — replace
+
+```yaml
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+```
+
+with
+
+```yaml
+      - name: Classify the change
+        id: changes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $event = Get-Content -LiteralPath $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
+          if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
+            $headRef = [string]$event.pull_request.head.sha
+            $baseRef = [string](& git merge-base ([string]$event.pull_request.base.sha) $headRef)
+          }
+          else {
+            $headRef = [string]$event.after
+            $baseRef = [string]$event.before
+          }
+          # T4: a change made only of Markdown documents under docs/ (reference copies excluded) cannot change
+          # the build or the runtime; it runs the changed-scope gate instead of the full build and install.
+          # Anything that cannot be classified (a new branch, an unreadable range) runs the full pipeline.
+          $docsOnly = $false
+          if ($baseRef -match '^[0-9a-f]{40}$' -and $baseRef -notmatch '^0{40}$') {
+            $changedFiles = @(& git diff --name-only --no-renames $baseRef $headRef)
+            if ($LASTEXITCODE -ne 0) { throw 'CI could not read the change set.' }
+            $docsOnly = $changedFiles.Count -gt 0 -and
+              @($changedFiles | Where-Object { $_ -notmatch '^docs/.+\.md$' -or $_ -match '^docs/codex/reference/' }).Count -eq 0
+          }
+          "docs_only=$($docsOnly.ToString().ToLowerInvariant())" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "base_ref=$baseRef" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Validate documentation-only change
+        if: steps.changes.outputs.docs_only == 'true'
+        shell: pwsh
+        env:
+          TALVORA_CI_BASE: ${{ steps.changes.outputs.base_ref }}
+        run: |
+          & ./scripts/Invoke-QualityGate.ps1 -Scope Changed -Base $env:TALVORA_CI_BASE
+          if ($LASTEXITCODE -ne 0) { throw 'Changed-scope quality gate failed.' }
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        if: steps.changes.outputs.docs_only != 'true'
+        with:
+```
+
+Step 2 — `.github/workflows/windows-ci.yml` — replace
+
+```yaml
+      - name: Validate build and all test suites (including SourceEdit)
+        shell: pwsh
+```
+
+with
+
+```yaml
+      - name: Validate build and all test suites (including SourceEdit)
+        if: steps.changes.outputs.docs_only != 'true'
+        shell: pwsh
+```
+
+Step 3 — `.github/workflows/windows-ci.yml` — replace
+
+```yaml
+      - name: Start and verify current MCP surface
+        shell: pwsh
+```
+
+with
+
+```yaml
+      - name: Start and verify current MCP surface
+        if: steps.changes.outputs.docs_only != 'true'
+        shell: pwsh
+```
+
+Step 4 — `.github/workflows/windows-ci.yml` — replace
+
+```yaml
+      - name: Build canonical native installer
+        shell: pwsh
+```
+
+with
+
+```yaml
+      - name: Build canonical native installer
+        if: steps.changes.outputs.docs_only != 'true'
+        shell: pwsh
+```
+
+Step 5 — `.github/workflows/windows-ci.yml` — replace
+
+```yaml
+      - name: Install and verify canonical runtime
+        shell: pwsh
+```
+
+with
+
+```yaml
+      - name: Install and verify canonical runtime
+        if: steps.changes.outputs.docs_only != 'true'
+        shell: pwsh
+```
+
+Step 6 — `.github/workflows/windows-ci.yml` — replace
+
+```yaml
+      - name: Validate installed health handle stability
+        shell: pwsh
+```
+
+with
+
+```yaml
+      - name: Validate installed health handle stability
+        if: steps.changes.outputs.docs_only != 'true'
+        shell: pwsh
+```
+
+Step 7 — `.github/workflows/windows-ci.yml` — replace
+
+```yaml
+      - name: Validate optional signed-in desktop installation
+        shell: pwsh
+```
+
+with
+
+```yaml
+      - name: Validate optional signed-in desktop installation
+        if: steps.changes.outputs.docs_only != 'true'
+        shell: pwsh
+```
+
+Step 8 — `.github/workflows/windows-ci.yml` — replace
+
+```yaml
+      - name: Clean service test
+        if: always()
+```
+
+with
+
+```yaml
+      - name: Clean service test
+        if: always() && steps.changes.outputs.docs_only != 'true'
+```
+
+Step 9 — copy `docs/codex/reference/t4/CiDocsOnlyRegression.ps1` → `tests/CiDocsOnlyRegression.ps1` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `b419dfd38ac7abdbec9f5e2d1a019582f9daeb8c2d03be155d7a23ba9f623885`).
+
+**Acceptance:** `CI_DOCS_ONLY_GREEN` (RED before Step 1), `MODERNIZATION_POLICY_GREEN`, `QUALITY_`65 kontrol, 0 hata` / `Hepsi geçti.` in 1 min 49 s as `MSI\tayla`_REGRESSION_GREEN`; Full gate `Hepsi geçti.`; this card's own push runs the **full** CI (it changes the workflow) and is green; the next docs-only push (e.g. the STATUS update of the next card, or Claude's next audit) shows `Validate documentation-only change` run and the build/install steps skipped — record that run id in the Log (if the next push is not docs-only, mark `[~] live pending: docs-only CI run` and check it at the next docs-only push).
+
+**Claude's verification (all four, clean clone of `b17c6f7`, signed-in `MSI\tayla`):** T1 halves green concurrently (55 s instead of 69 s); T2 test RED before / green after; parallel Full gate green three times (1 min 41 s, `ParallelPhase` 69–71 s; before ≈ 3 min 30 s); T3 test RED before / green after; `-Scope Changed`: workflow change 4.7 s, docs-only `-Base HEAD~1` 4.4 s, tray change 39 s and it correctly failed on the tray file's pinned reference checksum; T4 test RED on the old workflow, green after; final Full gate with T1–T4: `65 kontrol, 0 hata` / `Hepsi geçti.` in 1 min 49 s as `MSI\tayla`.
+
 ## Phase CI — Stop the recurring GitHub failures (root cause, Claude 2026-10-20)
 
 **Verified by Claude from the GitHub logs:** every `windows-ci` run since `edcef4f` (S6, 20 Oct) failed at the same place — `FAIL SourceEdit … knowledge-s6-scoped-fetch: Win32Exception (1314) WTSQueryUserToken failed`. The test only passes as LocalSystem; the runner is a normal administrator. Locally the agent ran the gate through `talvora_run_powershell` **as LocalSystem**, so it never saw the failure, and nothing in the protocol made it look at CI after pushing. Two more independent failure classes exist: a timing-flaky test (`directory-identity-external-reader: External directory handle never became ready`, run `39239571794`) and Dependabot PR #16 (`NU1109 Detected package downgrade … from 10.0.13 to centrally defined 10.0.12`: Dependabot bumped some .NET platform packages, central transitive pinning kept the rest at 10.0.12).
