@@ -48,6 +48,36 @@ internal static class ControlCenterSmoke
                 AssertRenderedSurfaceIsNotBlank(window);
                 AssertStitchNavigation(window);
 
+                // UI1: swap the running window's real palette and restore it, without reopening.
+                var initialPreference = TalvoraThemeManager.Preference;
+                var contentRoot = (Grid)window.Content;
+                var initialBackground = ((SolidColorBrush)contentRoot.Background).Color;
+                var alternatePreference = initialBackground ==
+                    System.Windows.Media.Color.FromRgb(0x0A, 0x0E, 0x15)
+                    ? TalvoraThemePreference.Gun : TalvoraThemePreference.Gece;
+                await TalvoraThemeManager.SetPreferenceAsync(alternatePreference, persist: true);
+                if (((SolidColorBrush)contentRoot.Background).Color == initialBackground)
+                    throw new InvalidOperationException("Control Center theme did not change live.");
+                var smokePreferencePath = TalvoraThemeManager.SmokePreferencePath
+                    ?? throw new InvalidOperationException("Theme smoke has no isolated preference path.");
+                try
+                {
+                    if (!File.Exists(smokePreferencePath))
+                        throw new InvalidOperationException("Theme preference was not persisted.");
+                    using var saved = System.Text.Json.JsonDocument.Parse(File.ReadAllText(smokePreferencePath));
+                    var name = saved.RootElement.GetProperty("preference").GetString();
+                    if (name != alternatePreference.ToString())
+                        throw new InvalidOperationException("Persisted theme preference does not match the selected theme.");
+                }
+                finally
+                {
+                    var folder = Path.GetDirectoryName(smokePreferencePath)!;
+                    if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
+                }
+                await TalvoraThemeManager.SetPreferenceAsync(initialPreference, persist: false);
+                if (((SolidColorBrush)contentRoot.Background).Color != initialBackground)
+                    throw new InvalidOperationException("Control Center theme did not restore live.");
+
                 await window.RunSmokeScenarioAsync();
                 SaveVisualSnapshotIfRequested(window, "loaded");
                 AssertDashboardStructure(window);

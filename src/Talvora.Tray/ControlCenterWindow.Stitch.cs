@@ -54,7 +54,7 @@ internal sealed partial class ControlCenterWindow
                 Text = "T",
                 FontSize = 24,
                 FontWeight = FontWeights.Bold,
-                Foreground = Brushes.White,
+                Foreground = AccentInkBrush,
                 HorizontalAlignment = HAlign.Center,
                 VerticalAlignment = VerticalAlignment.Center,
             },
@@ -69,7 +69,7 @@ internal sealed partial class ControlCenterWindow
             Text = "TALVORA",
             FontSize = 15,
             FontWeight = FontWeights.Bold,
-            Foreground = Brushes.White,
+            Foreground = PrimaryTextBrush,
         });
         brandCopy.Children.Add(new TextBlock
         {
@@ -166,7 +166,7 @@ internal sealed partial class ControlCenterWindow
         {
             Text = "Kontrol ediliyor",
             FontSize = 12,
-            Foreground = Brushes.White,
+            Foreground = PrimaryTextBrush,
             TextTrimming = TextTrimming.CharacterEllipsis,
         };
         stateRow.Children.Add(_sidebarHealthText);
@@ -228,7 +228,7 @@ internal sealed partial class ControlCenterWindow
 
             var active = ReferenceEquals(button, selected);
             button.Background = active ? SidebarHoverBrush : SidebarBrush;
-            button.Foreground = active ? Brushes.White : SidebarSecondaryBrush;
+            button.Foreground = active ? PrimaryTextBrush : SidebarSecondaryBrush;
             button.FontWeight = active ? FontWeights.SemiBold : FontWeights.Normal;
         }
     }

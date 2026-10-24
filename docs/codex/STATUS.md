@@ -95,8 +95,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] T1 — SourceEdit regression: Roslyn scenarios selectable on their own (Phase T; GitHub CI 40083209363 success)
 - [x] T2 — Quality gate runs independent suites in parallel (Phase T; GitHub CI 40084239875 success)
 - [x] T3 — `-Scope Changed`: run only what the change can affect (Phase T; GitHub CI 40085066720 success)
-- [~] T4 — CI: documentation-only pushes run the changed-scope gate (Phase T; exact-commit CI pending; docs-only CI live evidence pending)
-- [ ] UI1 — Tokens, theme manager and typography; P-31 decided: Tv.TextFaint Gece #7C899E, Gün #5D6A81.
+- [~] T4 — CI: documentation-only pushes run the changed-scope gate (Phase T; GitHub CI 40086071865 success; docs-only CI live evidence pending)
+- [~] UI1 — Tokens, theme manager and typography; P-18/P-31; installed two-theme smoke, CI and visual audit pending
 - [x] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; Claude audit 14 verified GitHub CI 830bb67 success, installed 830bb67 counts 250/213/88 and live toolchain_info. Specialized selectors/probes retained by the hard rule.
 - [ ] Q2b — Config get/set/delete consolidation (P-16 decided; zero capability loss)
 - [ ] Q2c — Legacy text mutators removed + manifest-driven README count test (P-16 decided)
@@ -142,6 +142,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — UI1 (executor: ChatGPT): P-18/P-31 approved Gece/Gun tokens, Typography/Controls and system/live WPF-UI theme manager; saved preference beside window placement. Layout and desktop Worklog untouched.
+  RED missing Gece token dictionary; GREEN WCAG contrast pairs, both Q5 smoke themes, same-window switch/restore and isolated preference persistence; before fbe7542 and both after PNGs in artifacts/ui1.
+  Obsolete Light-only source assertions replaced by the behavioural contrast regression; WPF compiler sys:Double/namespace fixes used with no changed spec values.
+  Signed-in Changed gate 18 checks/0 errors; Full 66 checks/0 errors, ParallelPhase 53, 109.34 s; last line Hepsi geçti.; build 0 warnings/0 errors.
+  Context7 /lepoco/wpfui and /dotnet/wpf, Awwwards evidence; exact-commit install, installed PNGs and GitHub CI to be verified after push.
 - 2026-10-24 — T4 (executor: ChatGPT): exact approved windows-ci.yml docs-only classification and conditional build/runtime skip; SDK lock step untouched. Added CiDocsOnlyRegression.ps1 (normalized reference SHA-256 b419dfd3).
   RED before change: missing $docsOnly classification. GREEN: CI_DOCS_ONLY_GREEN, MODERNIZATION_POLICY_GREEN, QUALITY_GATE_REGRESSION_GREEN; test copy hash-identical.
   Signed-in Changed gate: 4 files, no build, 9 PS tests, 13 checks/0 errors, 5.27 s; Full gate: 65 checks/0 errors, 52 parallel, 104.74 s; last line Hepsi geçti.

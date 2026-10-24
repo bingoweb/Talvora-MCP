@@ -22,32 +22,77 @@ namespace Talvora.Tray;
 
 internal sealed partial class ControlCenterWindow : FluentWindow
 {
-    // Stitch-derived "Kontrol Merkezi Desktop" palette: calm light workspace.
-    private static readonly SolidColorBrush BackgroundBrush = CreateBrush(247, 249, 255);
-    private static readonly SolidColorBrush SurfaceBrush = CreateBrush(255, 255, 255);
-    private static readonly SolidColorBrush RaisedSurfaceBrush = CreateBrush(240, 244, 251);
-    private static readonly SolidColorBrush HoverSurfaceBrush = CreateBrush(235, 240, 252);
-    private static readonly SolidColorBrush CardBorderBrush = CreateBrush(229, 233, 240);
-    private static readonly SolidColorBrush StrongBorderBrush = CreateBrush(199, 208, 223);
-    private static readonly SolidColorBrush PrimaryTextBrush = CreateBrush(23, 35, 51);
-    private static readonly SolidColorBrush SecondaryTextBrush = CreateBrush(87, 101, 121);
-    private static readonly SolidColorBrush TertiaryTextBrush = CreateBrush(117, 131, 152);
-    private static readonly SolidColorBrush AccentBrush = CreateBrush(56, 78, 192);
-    private static readonly SolidColorBrush AccentSoftBrush = CreateBrush(234, 240, 255);
-    private static readonly SolidColorBrush ReadyBrush = CreateBrush(22, 118, 83);
-    private static readonly SolidColorBrush AttentionBrush = CreateBrush(151, 99, 19);
-    private static readonly SolidColorBrush OfflineBrush = CreateBrush(190, 63, 82);
-    private static readonly SolidColorBrush CheckingBrush = CreateBrush(79, 103, 207);
-    private static readonly SolidColorBrush ReadySoftBrush = CreateBrush(230, 246, 237);
-    private static readonly SolidColorBrush AttentionSoftBrush = CreateBrush(255, 242, 217);
-    private static readonly SolidColorBrush OfflineSoftBrush = CreateBrush(252, 232, 237);
-    private static readonly SolidColorBrush CheckingSoftBrush = CreateBrush(235, 240, 255);
-    private static readonly SolidColorBrush IdleBrush = CreateBrush(99, 112, 131);
-    private static readonly SolidColorBrush IdleSoftBrush = CreateBrush(241, 243, 247);
-    private static readonly SolidColorBrush SidebarBrush = CreateBrush(16, 24, 39);
-    private static readonly SolidColorBrush SidebarSecondaryBrush = CreateBrush(174, 189, 210);
-    private static readonly SolidColorBrush SidebarAccentBrush = CreateBrush(170, 189, 255);
-    private static readonly SolidColorBrush SidebarHoverBrush = CreateBrush(32, 43, 64);
+    // The existing Control Center keeps these brushes until its views are migrated to XAML.
+    // The shared instances refresh in place when the approved token dictionary changes.
+    private static readonly SolidColorBrush BackgroundBrush = ThemeBrush("Tv.Bg");
+    private static readonly SolidColorBrush SurfaceBrush = ThemeBrush("Tv.Surface");
+    private static readonly SolidColorBrush RaisedSurfaceBrush = ThemeBrush("Tv.SurfaceRaised");
+    private static readonly SolidColorBrush HoverSurfaceBrush = ThemeBrush("Tv.SurfaceRaised");
+    private static readonly SolidColorBrush CardBorderBrush = ThemeBrush("Tv.Border");
+    private static readonly SolidColorBrush StrongBorderBrush = ThemeBrush("Tv.BorderStrong");
+    private static readonly SolidColorBrush PrimaryTextBrush = ThemeBrush("Tv.Text");
+    private static readonly SolidColorBrush SecondaryTextBrush = ThemeBrush("Tv.TextMuted");
+    private static readonly SolidColorBrush TertiaryTextBrush = ThemeBrush("Tv.TextFaint");
+    private static readonly SolidColorBrush AccentBrush = ThemeBrush("Tv.Accent");
+    private static readonly SolidColorBrush AccentInkBrush = ThemeBrush("Tv.AccentInk");
+    private static readonly SolidColorBrush AccentSoftBrush = ThemeBrush("Tv.AccentSoft");
+    private static readonly SolidColorBrush ReadyBrush = ThemeBrush("Tv.Ready");
+    private static readonly SolidColorBrush AttentionBrush = ThemeBrush("Tv.Attention");
+    private static readonly SolidColorBrush OfflineBrush = ThemeBrush("Tv.Offline");
+    private static readonly SolidColorBrush CheckingBrush = ThemeBrush("Tv.Repairing");
+    private static readonly SolidColorBrush ReadySoftBrush = ThemeBrush("Tv.Ready.Soft");
+    private static readonly SolidColorBrush AttentionSoftBrush = ThemeBrush("Tv.Attention.Soft");
+    private static readonly SolidColorBrush OfflineSoftBrush = ThemeBrush("Tv.Offline.Soft");
+    private static readonly SolidColorBrush CheckingSoftBrush = ThemeBrush("Tv.Repairing.Soft");
+    private static readonly SolidColorBrush IdleBrush = ThemeBrush("Tv.Neutral");
+    private static readonly SolidColorBrush IdleSoftBrush = ThemeBrush("Tv.Neutral.Soft");
+    private static readonly SolidColorBrush SidebarBrush = ThemeBrush("Tv.Surface");
+    private static readonly SolidColorBrush SidebarSecondaryBrush = ThemeBrush("Tv.TextMuted");
+    private static readonly SolidColorBrush SidebarAccentBrush = ThemeBrush("Tv.Accent");
+    private static readonly SolidColorBrush SidebarHoverBrush = ThemeBrush("Tv.SurfaceRaised");
+
+    private static SolidColorBrush ThemeBrush(string key) =>
+        (System.Windows.Application.Current.TryFindResource(key) as SolidColorBrush)?.CloneCurrentValue()
+        ?? throw new InvalidOperationException($"Control Center theme token {key} is not available.");
+
+    internal static void RefreshThemePalette(System.Windows.Application application)
+    {
+        Refresh(BackgroundBrush, "Tv.Bg");
+        Refresh(SurfaceBrush, "Tv.Surface");
+        Refresh(RaisedSurfaceBrush, "Tv.SurfaceRaised");
+        Refresh(HoverSurfaceBrush, "Tv.SurfaceRaised");
+        Refresh(CardBorderBrush, "Tv.Border");
+        Refresh(StrongBorderBrush, "Tv.BorderStrong");
+        Refresh(PrimaryTextBrush, "Tv.Text");
+        Refresh(SecondaryTextBrush, "Tv.TextMuted");
+        Refresh(TertiaryTextBrush, "Tv.TextFaint");
+        Refresh(AccentBrush, "Tv.Accent");
+        Refresh(AccentInkBrush, "Tv.AccentInk");
+        Refresh(AccentSoftBrush, "Tv.AccentSoft");
+        Refresh(ReadyBrush, "Tv.Ready");
+        Refresh(AttentionBrush, "Tv.Attention");
+        Refresh(OfflineBrush, "Tv.Offline");
+        Refresh(CheckingBrush, "Tv.Repairing");
+        Refresh(ReadySoftBrush, "Tv.Ready.Soft");
+        Refresh(AttentionSoftBrush, "Tv.Attention.Soft");
+        Refresh(OfflineSoftBrush, "Tv.Offline.Soft");
+        Refresh(CheckingSoftBrush, "Tv.Repairing.Soft");
+        Refresh(IdleBrush, "Tv.Neutral");
+        Refresh(IdleSoftBrush, "Tv.Neutral.Soft");
+        Refresh(SidebarBrush, "Tv.Surface");
+        Refresh(SidebarSecondaryBrush, "Tv.TextMuted");
+        Refresh(SidebarAccentBrush, "Tv.Accent");
+        Refresh(SidebarHoverBrush, "Tv.SurfaceRaised");
+        BackgroundBrush.Opacity = TalvoraThemeManager.GetBackdrop() == WindowBackdropType.Mica ? 0.85 : 1;
+
+        void Refresh(SolidColorBrush target, string key)
+        {
+            if (application.TryFindResource(key) is not SolidColorBrush brush)
+                throw new InvalidOperationException($"Control Center theme token {key} is not available.");
+            target.Color = brush.Color;
+            target.Opacity = brush.Opacity;
+        }
+    }
 
     private readonly DispatcherTimer _refreshTimer;
     private readonly bool _smokeMode;
@@ -139,7 +184,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             ShowActivated = false;
         }
         WindowCornerPreference = WindowCornerPreference.Round;
-        WindowBackdropType = WindowBackdropType.None;
+        WindowBackdropType = TalvoraThemeManager.GetBackdrop();
         ExtendsContentIntoTitleBar = true;
         ResizeMode = ResizeMode.CanResize;
         Background = BackgroundBrush;

@@ -1,0 +1,134 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ui:ControlsDictionary />
+    </ResourceDictionary.MergedDictionaries>
+    <!-- Existing Control Center control measurements retained; brushes follow approved Tv tokens. -->
+    <!-- WPF-UI 4.3.0 Primary buttons resolve these DynamicResource keys
+         from the control template. Override that exact surface so Talvora
+         owns normal, hover, pressed and foreground states consistently. -->
+    <SolidColorBrush x:Key="AccentButtonBackground" Color="{DynamicResource Tv.Accent.Color}" />
+    <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="{DynamicResource Tv.Accent.Color}" />
+    <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="{DynamicResource Tv.Accent.Color}" />
+    <SolidColorBrush x:Key="AccentButtonForeground" Color="{DynamicResource Tv.AccentInk.Color}" />
+    <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="{DynamicResource Tv.AccentInk.Color}" />
+    <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="{DynamicResource Tv.AccentInk.Color}" />
+
+    <Style x:Key="TalvoraCardStyle" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="{DynamicResource Tv.Surface}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Tv.Border}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Padding" Value="20" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <Style x:Key="TalvoraSubtleCardStyle" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="{DynamicResource Tv.SurfaceRaised}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Tv.Border}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <!-- Stitch navigation rail: a calm dark workspace, true actions only. -->
+    <Style
+        x:Key="TalvoraSidebarButtonStyle"
+        TargetType="{x:Type ui:Button}"
+        BasedOn="{StaticResource {x:Type ui:Button}}">
+        <Setter Property="Appearance" Value="Transparent" />
+        <Setter Property="Background" Value="{DynamicResource Tv.Surface}" />
+        <Setter Property="Foreground" Value="{DynamicResource Tv.TextMuted}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="MinHeight" Value="47" />
+        <Setter Property="Padding" Value="13,9" />
+        <Setter Property="CornerRadius" Value="11" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="13.5" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style
+        x:Key="TalvoraSecondaryButtonStyle"
+        TargetType="{x:Type ui:Button}"
+        BasedOn="{StaticResource {x:Type ui:Button}}">
+        <Setter Property="Appearance" Value="Secondary" />
+        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="Padding" Value="14,7" />
+        <Setter Property="CornerRadius" Value="9" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style
+        x:Key="TalvoraPrimaryButtonStyle"
+        TargetType="{x:Type ui:Button}"
+        BasedOn="{StaticResource {x:Type ui:Button}}">
+        <Setter Property="Appearance" Value="Primary" />
+        <Setter Property="Background" Value="{DynamicResource Tv.Accent}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Tv.Accent}" />
+        <Setter Property="Foreground" Value="{DynamicResource Tv.AccentInk}" />
+        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="Padding" Value="15,7" />
+        <Setter Property="CornerRadius" Value="9" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style
+        x:Key="TalvoraGhostButtonStyle"
+        TargetType="{x:Type ui:Button}"
+        BasedOn="{StaticResource {x:Type ui:Button}}">
+        <Setter Property="Appearance" Value="Transparent" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="CornerRadius" Value="9" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style
+        x:Key="TalvoraSearchBoxStyle"
+        TargetType="{x:Type ui:TextBox}"
+        BasedOn="{StaticResource {x:Type ui:TextBox}}">
+        <Setter Property="MinWidth" Value="300" />
+        <Setter Property="MinHeight" Value="42" />
+        <Setter Property="Padding" Value="12,7" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Background" Value="{DynamicResource Tv.SurfaceRaised}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Tv.BorderStrong}" />
+        <Setter Property="Foreground" Value="{DynamicResource Tv.Text}" />
+    </Style>
+
+    <Style
+        x:Key="TalvoraFilterComboBoxStyle"
+        TargetType="{x:Type ComboBox}"
+        BasedOn="{StaticResource {x:Type ComboBox}}">
+        <Setter Property="MinWidth" Value="184" />
+        <Setter Property="MinHeight" Value="42" />
+        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Background" Value="{DynamicResource Tv.SurfaceRaised}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Tv.BorderStrong}" />
+        <Setter Property="Foreground" Value="{DynamicResource Tv.Text}" />
+    </Style>
+
+    <Style x:Key="TalvoraSectionLabelStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="{DynamicResource Tv.TextMuted}" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+    </Style>
+</ResourceDictionary>

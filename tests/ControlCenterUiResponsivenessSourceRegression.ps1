@@ -46,7 +46,6 @@ $componentHealth = Read-RepoText 'src\Talvora.Tray\ControlCenterComponentHealthS
 $versionService = Read-RepoText 'src\Talvora.Tray\ControlCenterVersionService.cs'
 $smoke = Read-RepoText 'src\Talvora.Tray\ControlCenterSmoke.cs'
 $stitchWindow = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.Stitch.cs'
-$theme = Read-RepoText 'src\Talvora.Tray\ControlCenterTheme.xaml'
 
 Assert-Contains $eventStore 'ReadRecentAsync' 'event history exposes an async WPF-safe read boundary'
 Assert-Contains $eventStore 'MaximumEventDocumentBytes\s*=\s*8\s*\*\s*1024\s*\*\s*1024' 'structured event history has an explicit 8 MiB persisted-document ceiling'
@@ -107,8 +106,9 @@ Assert-Contains $stitchWindow 'ManagedMcpAggregateHealthPolicy\.IsIgnored' 'Opti
 Assert-Contains $mainWindow 'var cards = new StackPanel' 'Managed MCP cards must use a gap-free full-width service list.'
 Assert-NotContains $mainWindow 'var cards = new WrapPanel' 'Old multi-column service tiles must not regress.'
 Assert-Contains $mainWindow 'intentionallyInactive' 'MCP status badge must distinguish expected offline from real failure.'
-Assert-Contains $theme '<ui:ThemesDictionary Theme="Light"' 'Stitch light-surface resource theme must be active.'
-Assert-Contains $theme 'Talvora\.Background\.Color' 'Stitch UI must retain a product-owned surface palette.'
+# UI1 replaces the obsolete Light-only assertion with behavioural palette validation.
+# The Control Center visual smoke also runs with the real Gece and Gun styles and a live switch.
+& (Join-Path $PSScriptRoot 'ControlCenterThemeContrastRegression.ps1') | Out-Null
 Assert-Contains $smoke 'AssertStitchNavigation' 'Visible sidebar navigation must be tested in WPF smoke.'
 Assert-Contains $smoke 'SaveVisualSnapshotIfRequested' 'WPF design must allow opt-in real rendered screenshot validation.'
 

@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T09:13:36Z",
+  "verifiedAtUtc": "2026-10-24T10:57:05Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "D20: DESIGN-WORKLOG §7 and ROADMAP D20 exact Phosphor contrast fix; Awwwards homepage checked live with HTTP 200 on 2026-10-24 UTC, title Awwwards - Website Awards - Best Web Design Trends; evidence only.",
+  "scope": "UI1: DESIGN-CONTROL-CENTER sections 3, 7.1-7.2 and P-18/P-31 theme-only modernization. Awwwards homepage checked live with HTTP 200 on 2026-10-24 UTC, title Awwwards - Website Awards - Best Web Design Trends; evidence only, no new design choices.",
   "references": [
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
-    "DESIGN-WORKLOG §7 and ROADMAP D20: only Claude-approved Wl.Faint.Color changes from #557363 to #688B78, with the exact approval comment; all other theme tokens and controls stay unchanged.",
-    "ROADMAP D20: promote the approved worklog-phosphor-next reference and ten prescribed PNGs, leaving the code terminal and details surface as previously approved.",
-    "ROADMAP D20: measured Wl.Faint normal-text contrast on Bg 5.311, Surface 5.143, Raised 4.864 and Terminal 5.405; no new design choices or gaps filled."
+    "DESIGN-CONTROL-CENTER §3 and P-31: approved Tv token colours in both themes including TextFaint Gece #7C899E and Gun #5D6A81; small-text 4.5:1 checks on every listed background.",
+    "DESIGN-CONTROL-CENTER §7.1-7.2: exact theme manager roles, system tracking, WPF-UI theme alignment, Gece/Gun resource replacement, and Windows 11 Mica; existing layout retained.",
+    "P-18 and UI1 Acceptance: produce before screenshot and two Q5 smoke PNGs showing genuine Gece and Gun; no change to the separately approved desktop worklog."
   ]
 }

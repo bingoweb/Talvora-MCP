@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T10:23:17Z",
-  "scope": "T4: use the exact approved GitHub Actions workflow steps to classify documentation-only pushes or pull requests and run the Changed quality gate without skipping the mandatory SDK lock policy. Non-documentation changes retain the full CI and installed-runtime checks.",
+  "verifiedAtUtc": "2026-10-24T10:57:05Z",
+  "scope": "UI1: approved P-18/P-31 Control Center Gece/Gun palette, WPF-UI theme synchronization and Mica, live in-place token replacement, WCAG 2.2 normal-text contrast; preserves the Worklog and existing layout.",
   "libraries": [
+    {
+      "libraryId": "/lepoco/wpfui",
+      "verified": "2026-10-24 UI1: official WPF-UI documentation and implementation confirm ApplicationThemeManager.GetSystemTheme, Apply(theme, WindowBackdropType.Mica, updateAccent), Changed event and SystemThemeWatcher.Watch/UnWatch(window) used by UI1 manager; WPF-UI 4.3 resource dictionaries need native controls and themes loaded before BasedOn styles. Sources: https://github.com/lepoco/wpfui/blob/main/docs/documentation/themes.md and https://github.com/lepoco/wpfui/blob/main/docs/documentation/system-theme-watcher.md and https://github.com/lepoco/wpfui/blob/main/src/Wpf.Ui/Appearance/ApplicationThemeManager.cs."
+    },
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-24 UI1: WPF XAML ResourceDictionary merged tokens and Style, DynamicResource, System sys:Double and CornerRadius, and live property refresh are supported. Contrast fixture uses WCAG 2.2 relative luminance and 4.5:1 cutoff with P-31 Tv.TextFaint #7C899E/#5D6A81. Sources: https://github.com/dotnet/wpf/blob/main/Documentation/docs/using-fluent.md and https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html."
+    },
     {
       "libraryId": "/websites/github_en_actions",
       "verified": "2026-10-24 T4: official GitHub Actions docs confirm step id outputs are written to GITHUB_OUTPUT and referenced as steps.<id>.outputs.<name>, and jobs.<job_id>.steps[*].if accepts expressions without the [object Object] wrapper. The prescribed workflow uses these supported mechanisms for its docs-only conditional and retains always() on the cleanup step for other pushes. Sources: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands and https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions and https://docs.github.com/en/actions/reference/workflows-and-actions/expressions."

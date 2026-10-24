@@ -17,6 +17,8 @@ internal sealed class ControlCenterApplication : WpfApplication
         _smokeTest = smokeTest;
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+        TalvoraThemeManager.Initialize(this, smokeTest);
+
         Resources.MergedDictionaries.Add(
             new ResourceDictionary
             {
@@ -24,11 +26,6 @@ internal sealed class ControlCenterApplication : WpfApplication
                     "pack://application:,,,/Talvora.Tray;component/ControlCenterTheme.xaml",
                     UriKind.Absolute),
             });
-
-        ApplicationThemeManager.Apply(
-            ApplicationTheme.Dark,
-            WindowBackdropType.None,
-            updateAccent: false);
 
         DispatcherUnhandledException += OnDispatcherUnhandledException;
     }
@@ -48,10 +45,15 @@ internal sealed class ControlCenterApplication : WpfApplication
 
         if (_window is null)
         {
-            _window = new ControlCenterWindow(_smokeTest);
-
-            _window.Closed += (_, _) => _window = null;
-            MainWindow = _window;
+            var window = new ControlCenterWindow(_smokeTest);
+            _window = window;
+            window.Loaded += (_, _) => TalvoraThemeManager.Watch(window);
+            window.Closed += (_, _) =>
+            {
+                TalvoraThemeManager.UnWatch(window);
+                if (_window == window) _window = null;
+            };
+            MainWindow = window;
         }
 
         _window.BringToForeground();
