@@ -48,7 +48,7 @@ All tokens live in XAML resource dictionaries (`Themes/Tokens.Gece.xaml`, `Theme
 | `Tv.BorderStrong` | `#2C3B52` | focusable outlines |
 | `Tv.Text` | `#E9EEF6` | primary text |
 | `Tv.TextMuted` | `#A3B0C4` | secondary text |
-| `Tv.TextFaint` | `#6F7D94` | captions, timestamps |
+| `Tv.TextFaint` | `#7C899E` | captions, timestamps (P-31: ≥ 4.6 : 1 on Bg, Surface, SurfaceRaised, SurfaceSunken) |
 | `Tv.Accent` | `#5BD8FF` | Talvora turquoise (same as worklog `Trace`) — focus ring, links, selection bar |
 | `Tv.AccentInk` | `#04121A` | text on accent fills |
 | `Tv.AccentSoft` | `#0F2B38` | selected nav background |
@@ -71,7 +71,7 @@ All tokens live in XAML resource dictionaries (`Themes/Tokens.Gece.xaml`, `Theme
 | `Tv.BorderStrong` | `#B9C3D3` |
 | `Tv.Text` | `#0E1625` |
 | `Tv.TextMuted` | `#46546C` |
-| `Tv.TextFaint` | `#66748C` |
+| `Tv.TextFaint` | `#5D6A81` |
 | `Tv.Accent` | `#0779A8` (darker turquoise for contrast on white) |
 | `Tv.AccentInk` | `#FFFFFF` |
 | `Tv.AccentSoft` | `#E1F3FA` |

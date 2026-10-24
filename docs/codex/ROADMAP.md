@@ -418,6 +418,8 @@ Implement only the **Q2a** bullet of card Q2 above, with Q2's hard rule (zero ca
 
 Implement only the **Q2b** bullet of card Q2 above, same rules as Q2a. One commit.
 
+> **Amended (Claude, audit 2026-10-24 (14)):** also delete from `src/Talvora.Shared/TalvoraToolTitles.cs` the titles of tools removed by Q2a (`talvora_bun_info`, `talvora_cmake_info`, `talvora_cmake_run`, `talvora_ninja_info`, `talvora_ninja_run`, `talvora_pnpm_info`, `talvora_yarn_info`) and of the tools Q2b removes, add titles for the tools it adds, and add to `Program.N9Subjects.cs` the check `TalvoraToolTitles.All.Keys` ⊆ `TalvoraToolManifest.Names` (no orphan titles).
+
 ### Q2c — Remove legacy text mutators; manifest-driven counts (split of Q2, decision P-16)
 
 Implement only the **Q2c** bullet of card Q2 above, same rules as Q2a, plus the README/ARCHITECTURE count test generated from the manifest and the final surface targets of Q2 (Full ≤ 150, Dev ≤ 115, Admin ≤ 70, Dev `tools/list` ≤ 120 KB). User step U4 follows. One commit.
@@ -1091,6 +1093,98 @@ with
 ## Audit fixes (external audits by Claude)
 
 D-cards go to the top of the agent queue. Newest audit first.
+
+### Audit 2026-10-24 (14, deep) · range `audit/2026-10-24-13 (78fce40)..830bb67` · 6 card commits · result: TWO FIX CARDS (D19 reset safety, D20 worklog contrast), P-31 decided
+
+Delivered: N6 `b27cee0`, R1 `7aac8ce`, R2 `ef4c959`, R3 `7cf3d33`, Q5 `6f533fe`, Q2a `830bb67` (agent marked `[~]`; Claude verified the open items: GitHub CI green, installed counts `/mcp` 250, `/mcp/dev` 213, `/mcp/admin` 88 = code). Blocked: UI1 (P-31) — decided now.
+
+**Fidelity and deep review.**
+- N6: all 17 files identical to Claude's verified clone.
+- R3 (`Reset-And-Install.ps1`): `Secrets` is skipped **before** the walk enters it at any depth, reparse points are skipped, directories are removed only when empty (non-recursive) so `Secrets` and its parents survive; backup zip before any deletion; `-TestRoot` only under `%TEMP%` (P-15). Correct.
+- R2: the prompt goes through `stdin.txt` inside the protected per-run folder and is deleted with `[IO.File]::Delete` right after reading (D17-safe); no task text in argv.
+- R1: persisted job records hold only operational metadata (no prompt, arguments or environment); stored under the service-only `ProgramData\Talvora\AgentJobs`.
+- Q5: CI and the Full gate run the installed/built Control Center smoke and check both PNGs.
+- Q2a: 7 wrappers → `toolchain_info`/`toolchain_run`, each case calls the unchanged original method (lossless). Live: `toolchain_info {tool:"cmake"}` returns the same fields; the removed tool is gone.
+
+**Live (installed 830bb67):** `talvora_user_run whoami` → `msi\tayla`; tool lists: `/mcp` 250 tools **338 KB**, `/mcp/dev` 213 tools **302 KB**, 242/250 without protocol `title` (Q1 will apply `TalvoraToolTitles` and the 120 KB budget).
+
+| # | Severity | Where | Finding | Fix |
+|---|---|---|---|---|
+| 1 | **MEDIUM** (pre-existing, not R3's scope) | `scripts/Reset-And-Install.ps1` process stop | Stops **every** process whose command line contains `Talvora-MCP` or whose path contains `\Talvora-MCP\` — the user's editor, shells, Claude/ChatGPT/Codex sessions working in the repository, test runners. Test mode skips this block, so no test saw it. | **D19** |
+| 2 | **MEDIUM** (Claude's design) | `Worklog/WorklogTheme.xaml` `Wl.Faint #557363` | Faint text (labels ne/nerede/fark, times, line numbers, footer) has only **3.5–3.9 : 1** on the card surfaces — below WCAG 1.4.3 (4.5 : 1, normal text). The same class as P-31. | **D20**: `#688B78` (4.86–5.41 : 1 on every surface incl. diff rows; still distinct from Muted) |
+| 3 | LOW | `TalvoraToolTitles.cs` | 7 titles of tools Q2a removed remain (orphans). | Q2b amended (remove + test) |
+| 4 | — | P-31 | Control Center `Tv.TextFaint` fails 4.5 : 1 on some surfaces in both themes (agent computed correctly). | P-31: Gece `#7C899E`, Gün `#5D6A81` (≥ 4.6 : 1 on all four surfaces) |
+
+Claude verified D19 and D20 on a clean clone of `830bb67`: `ResetProcessFilterRegression.ps1` RED before D19 (`must select processes with Test-TalvoraProcess`), `RESET_PROCESS_FILTER_GREEN` after (editor, pwsh, Claude, repository test runner not matched; installed Talvora/Tray and `dotnet Talvora.dll` matched); `R3_SAFE_RESET_GREEN` unchanged; the built tray renders 10/10 previews byte-identical to the updated reference; Full gate `61 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`.
+
+### D19 — Reset stops Talvora's own programs only
+
+> Audit 2026-10-24 (14), finding 1. **Run first.**
+
+**Files:** `scripts/Reset-And-Install.ps1`, new `tests/ResetProcessFilterRegression.ps1` (verbatim copy).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — `scripts/Reset-And-Install.ps1` — replace
+
+```powershell
+function Test-ResetProtectedItem {
+```
+
+with
+
+```powershell
+# Only Talvora's own programs are stopped (audit 2026-10-24 (14)): never an editor, shell or agent whose
+# command line merely mentions the repository folder.
+function Test-TalvoraProcess {
+    param([string] $ExecutablePath, [string] $CommandLine)
+    $name = if ([string]::IsNullOrWhiteSpace($ExecutablePath)) { '' } else { [IO.Path]::GetFileName($ExecutablePath) }
+    if (@('Talvora.exe', 'Talvora.Tray.exe', 'Talvora.Gateway.exe', 'Talvora.SystemBroker.exe', 'Talvora.Service.exe') -contains $name) {
+        return $true
+    }
+    return ($name -ieq 'dotnet.exe') -and ($CommandLine -match '(?i)[\\/"]Talvora(?:\.Tray)?\.dll\b')
+}
+
+function Test-ResetProtectedItem {
+```
+
+Step 2 — `scripts/Reset-And-Install.ps1` — replace
+
+```powershell
+    Get-CimInstance Win32_Process | Where-Object {
+        $_.ProcessId -ne $PID -and (
+            ([string]$_.ExecutablePath -match '(?i)\\Talvora(?:-MCP)?\\') -or
+            ([string]$_.CommandLine -match '(?i)Talvora(?:\.Gateway|\.SystemBroker|\.Service|\.dll|\.exe|-MCP)')
+        )
+    } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+```
+
+with
+
+```powershell
+    Get-CimInstance Win32_Process | Where-Object {
+        $_.ProcessId -ne $PID -and
+        (Test-TalvoraProcess -ExecutablePath ([string]$_.ExecutablePath) -CommandLine ([string]$_.CommandLine))
+    } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+```
+
+Step 3 — copy `docs/codex/reference/ci/ResetProcessFilterRegression.ps1` → `tests/ResetProcessFilterRegression.ps1` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `d042c78b63fbd12bcfd3d3bd88f57595d4d9421a09b8360ff361a74347fe75aa`).
+
+**Acceptance:** `RESET_PROCESS_FILTER_GREEN` (RED before Step 1), `R3_SAFE_RESET_GREEN`; Full gate `Hepsi geçti.`; GitHub CI green. Script-only: no deploy, never run a real reset.
+
+### D20 — Worklog faint text meets 4.5 : 1
+
+> Audit 2026-10-24 (14), finding 2. After D19. The updated theme and all previews are in `docs/codex/reference/worklog-phosphor-next/`.
+
+**Files:** `src/Talvora.Tray/Worklog/WorklogTheme.xaml`, the reference promotion, `.context7`/`.talvora` evidence.
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — copy `docs/codex/reference/worklog-phosphor-next/src/WorklogTheme.xaml` → `src/Talvora.Tray/Worklog/WorklogTheme.xaml` (AGENTS.md rule 5 "Reference copies"; the only changed file: `Wl.Faint.Color` `#557363` → `#688B78`, with its comment).
+
+Step 2 — promote the reference in the same commit: replace `docs/codex/reference/worklog-phosphor/src/WorklogTheme.xaml`, all ten `previews/*.png` and `SHA256SUMS.txt` with the files of `docs/codex/reference/worklog-phosphor-next/`, then delete that folder (`talvora_apply_patch` for text, `talvora_copy`/`talvora_delete` with `explicitAdmin: true` for PNGs). `ModernizationPolicyRegression.ps1` is green only after this step.
+
+**Acceptance:** `MODERNIZATION_POLICY_GREEN`; `Talvora.Tray.exe --worklog-preview <tmp>` → all ten PNGs byte-identical to the promoted reference; Full gate `Hepsi geçti.`; installer + deploy; live card capture (D18 command, `artifacts/d20-live.png`) attached to Gitea #9; GitHub CI green.
 
 ### Audit 2026-10-24 (13) · range `audit/2026-10-23-12 (b8fd17a)..78fce40` · 1 card commit · executor: ChatGPT/Codex via Talvora · result: D18 delivered exactly and verified live; P-30 decided (N6 designed)
 

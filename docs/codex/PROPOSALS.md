@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-31 — UI1 — Prescribed faint text tokens fail the required normal-text contrast
 - Date: 2026-10-24, HEAD 6f533fe12b859af92d09e2f79d69b5f4d25b8383
 - Card text: UI1 Acceptance requires "contrast checks pass for text tokens"; DESIGN-CONTROL-CENTER.md:51 assigns Tv.TextFaint #6F7D94 to "captions, timestamps", line 74 prescribes #66748C for Gun, line 85 requires body text >=4.5:1 on its surface, and lines 89-102 prescribe 12 px regular captions/timestamps.
@@ -28,9 +32,7 @@
   1. Claude supplies revised Tv.TextFaint values for each theme that pass 4.5:1 on every intended metadata surface; keep the caption/timestamp mapping and contrast acceptance.
   2. Keep the prescribed palette but explicitly assign small captions/timestamps to Tv.TextMuted; restrict Tv.TextFaint to approved non-body/large-text uses or enumerate the allowed background pairs and update the spec/test matrix accordingly.
 - Partial work: reverted (yes; no UI1 product or test files changed; only this proposal and STATUS bookkeeping).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-10-24): option 1.** New `Tv.TextFaint`: Gece `#7C899E` (Bg 5.46, Surface 5.08, SurfaceRaised 4.62, SurfaceSunken 5.59 : 1), Gün `#5D6A81` (Bg 5.05, Surface 5.46, SurfaceRaised 4.82, SurfaceSunken 4.60 : 1) — same hue, minimal shift toward Text, still distinct from Muted. The caption/timestamp mapping and the contrast acceptance stay. DESIGN-CONTROL-CENTER.md updated; UI1 continues unchanged otherwise. The worklog card had the same flaw (D20).
 
 ### P-30 — N6 — Evidence panel needs an approved extension of the immutable Phosphor reference
 - Date: 2026-10-24, HEAD 78fce407e4d42c9e58c641cd8c06786d9a0f8402

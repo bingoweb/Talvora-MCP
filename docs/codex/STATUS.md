@@ -13,7 +13,7 @@
 | Branch | `main` only. Do not create branches. Dependabot PRs: apply with scripts/Apply-DependabotPr.ps1 (DEP1), never merge on GitHub. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-24-13` = `78fce40`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-24-14` = `830bb67`. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -90,8 +90,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] R2 — Prompts via stdin (P-14; signed-in Full gate 58/0; installed ef4c959, 255 tools, GitHub CI 40035301176 success)
 - [x] R3 — Safe Reset-And-Install (P-15; TEMP-only safety regression GREEN; signed-in Full 59/0; GitHub windows-ci 40071120158 success; no real reset or runtime deployment required)
 - [x] Q5 — Control Center smoke: structural checks, current theme PNG (P-18); signed-in Full 60/0, installed 6f533fe smoke/PNGs and GitHub windows-ci 40072555807 success; artifacts/q5/delivery.json. Gitea evidence access requires unavailable approval.
-- [?] UI1 — Tokens, theme manager and typography; waiting for Claude: P-31 (prescribed faint text colours fail normal-text contrast on required surfaces).
-- [~] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; exact-commit installed counts/calls and CI pending. Specialized selectors/probes retained by the hard rule.
+- [ ] D19 — Reset stops Talvora's own programs only (audit 2026-10-24 (14))
+- [ ] D20 — Worklog faint text meets 4.5 : 1 (audit 2026-10-24 (14))
+- [ ] UI1 — Tokens, theme manager and typography; P-31 decided: Tv.TextFaint Gece #7C899E, Gün #5D6A81.
+- [x] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; Claude audit 14 verified GitHub CI 830bb67 success, installed 830bb67 counts 250/213/88 and live toolchain_info. Specialized selectors/probes retained by the hard rule.
 - [ ] Q2b — Config get/set/delete consolidation (P-16 decided; zero capability loss)
 - [ ] Q2c — Legacy text mutators removed + manifest-driven README count test (P-16 decided)
 - [ ] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget
@@ -136,6 +138,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — Claude deep audit 14 of `78fce40..830bb67` (N6, R1, R2, R3, Q5, Q2a): N6 identical to the verified clone; R3 never enters or deletes Secrets; R2 prompt via deleted stdin file; R1 records hold no prompts; Q2a lossless; Q2a open items verified (CI green, installed 250/213/88). Findings: reset stops any process mentioning the repo (D19), worklog faint text 3.5–3.9:1 (D20), 7 orphan titles (Q2b amended). P-31 decided (new TextFaint). Verified on a clean clone: D19 red→green, R3 green, tray 10/10, Full `61 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. Tag `audit/2026-10-24-14` = `830bb67`.
 - 2026-10-24 — Q2a (executor: ChatGPT, P-16): seven wrappers replaced by two common tools; original backend methods/fields preserved. RED missing replacement type; GREEN all seven behavioral cases (real CMake/Ninja argv, environment, working directory and file effect). Signed-in Full gate 60/0, exit 0, Hepsi geçti. (artifacts/q2a/full-gate.log/.exit); Context7 /modelcontextprotocol/csharp-sdk.
   | Removed MCP tools | Replacement (same tool selector, respectively) |
   |---|---|
