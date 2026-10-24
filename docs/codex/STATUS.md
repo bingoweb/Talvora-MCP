@@ -105,8 +105,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [?] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (waiting for Q2c; amended by P-32)
 - [?] Q3 — Documentation diet (P-17; waiting for Q2c)
 - [~] UI2 — Shell, rail, title bar, command palette (P-33 implemented; signed-in Full 66/0 and both source themes green; exact-commit delivery evidence artifacts/ui2-delivery.json; U5 mixed-DPI placement and Claude visual audit pending)
-- [x] N7 — "Çalışma günlüğü" history page (7d/2,000/20MB, terminal-only, session filters/details; signed-in Full 66/0, Gece/Gün history PNGs; exact-commit deployment/CI follow the commit)
-- [ ] UI3 — Overview: Nabız ring + chain strip
+- [x] N7 — "Çalışma günlüğü" history page (7d/2,000/20MB, terminal-only, session filters/details; installed 94e4079 smoke success; GitHub CI 40101364855 attempt 2 success)
+- [~] UI3 — Overview: Nabız ring + chain strip (signed-in Full 66/0; both-theme source smoke and direct node click passed; exact-commit installer, installed smoke and CI pending)
 - [ ] UI4 — Services list + detail
 - [ ] UI5 — Events + raw log
 - [ ] UI6 — Settings + setup stepper (+ deferred S3 ACL notice, to be specified)
@@ -138,6 +138,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
+- src/Talvora.Tray/ControlCenterSmoke.UI3.cs:102 — The 3-second overview idle CPU sample after 2.5 seconds of warm-up was 7.33%, above the UI8 <1% target. Keep motion controls and the measurement; assign CPU rendering optimization to UI8/Claude visual audit, not unapproved UI3 changes.
+
 - src/Talvora.Tray/DesktopProgressNotificationPresenter.cs:181 — N5 passes message.WorklogFrame! to the reference window without checking null; legacy tray alerts can lack this frame, and installed live capture returned NO_CARD_WINDOW. Check protocol-v4 fallback/alert routing in Claude audit before changing approved UI code.
 - src/Talvora/SourceEditing/AstGrepToolchainManager.cs:44 — After S3, signed-in Fast gate cannot access protected ProgramData/Toolchains or SourceEdit journals; P-29 needs a safe test contract.
 - tests/Talvora.Smoke/SmokeScenarios.MetadataPolicy.cs:237 — RM1 extra installed metadata check reported 109 destructive tools vs expected 101; the three Remotion tools are non-destructive and excluding them still gives 109. Gitea #9 comment 132 records the result; no unrelated metadata change in N3b.
@@ -148,6 +150,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-24 — UI3 (executor: ChatGPT via Talvora): replaced UI2 overview and P-33 chain placeholder with the spec's 112px native Nabız ring, real health-backed five-state constellation, full chain and 360px component detail sheet.
+  Data remains routed through existing dashboard/component health, repair, event store and service-detail adapters; no new packages or unsafe repair APIs. Keyboard focus and direct node-click selected the correct component; test-first StatusNarrator six cases GREEN.
+  Signed-in Full gate 66 checks/0 failures, exit 0, Hepsi geçti.; targeted UI3 narrator GREEN; Gece/Gun WPF screenshots for overview and chain under artifacts/ui3-preview-ui3-*; UI2 before artifacts/ui2-*-chain.png and ui2-*-loaded.png.
+  Measured inactive motion and warm idle CPU 7.33%, filed for UI8 threshold review, not falsely marked green. Design gaps filled from existing Tv space/radius/typography, no new palettes or imagery.
+  Context7 /dotnet/wpf and /lepoco/wpfui verified drawing, Canvas/Path and theme controls; Awwwards data visualization evidence only. Installer, installed runtime and exact-commit CI follow commit.
 
 - 2026-10-24 — N7 (executor: ChatGPT via Talvora): replaced UI2 history placeholder with a searchable, filterable session list and selected timeline/redacted evidence panel; desktop-card body clicks route to that session, preserving the immutable Phosphor card and its drag behavior.
   Terminal-only JSONL snapshots rotate at 7 days/2,000 sessions/20 MB; code evidence is UTF-8-capped at 8 KB. Supporting changes: desktop presenter, Control Center application/shell route, visual smoke, Notification regression runner, Context7/Awwwards evidence.

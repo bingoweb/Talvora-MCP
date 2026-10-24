@@ -43,7 +43,11 @@ internal sealed partial class ShellWindow
         UpdateShellRailWidth();
         SynchronizeShellThemeChoice();
         PreviewKeyDown += OnShellPreviewKeyDown;
-        SizeChanged += (_, _) => _shellModel.UpdateViewportWidth(ActualWidth);
+        SizeChanged += (_, _) =>
+        {
+            _shellModel.UpdateViewportWidth(ActualWidth);
+            if (_overviewView is not null) _overviewView.Model.IsWide = ActualWidth >= 1360;
+        };
         Loaded += (_, _) => ApplyShellRoute();
         ContentRendered += (_, _) =>
         {
@@ -84,10 +88,16 @@ internal sealed partial class ShellWindow
             items[index].IsChecked = index == _shellModel.SelectedIndex;
         _syncingShellNavigation = false;
         var selected = _shellModel.SelectedIndex;
-        var placeholder = selected == 3;
-        LegacyContentHost.Visibility = selected is 2 or 3 ? Visibility.Collapsed : Visibility.Visible;
+        LegacyContentHost.Visibility = selected is 0 or 2 or 3 ? Visibility.Collapsed : Visibility.Visible;
+        OverviewContentHost.Visibility = selected == 0 ? Visibility.Visible : Visibility.Collapsed;
         HistoryContentHost.Visibility = selected == 2 ? Visibility.Visible : Visibility.Collapsed;
-        PlaceholderCard.Visibility = placeholder ? Visibility.Visible : Visibility.Collapsed;
+        ChainContentHost.Visibility = selected == 3 ? Visibility.Visible : Visibility.Collapsed;
+        PlaceholderCard.Visibility = Visibility.Collapsed;
+        if (selected is 0 or 3)
+        {
+            EnsureUi3Page(selected);
+            return;
+        }
         if (selected == 2)
         {
             _historyView ??= new WorklogHistoryView(new WorklogHistoryStore());
@@ -95,16 +105,8 @@ internal sealed partial class ShellWindow
             _historyView.Reload();
             return;
         }
-        if (placeholder)
-        {
-            PlaceholderMessage.Text = "Bu sayfa hazırlanıyor. Bağlantıların durumu şimdilik Hizmetler sayfasında görünüyor.";
-            PlaceholderServices.Visibility = Visibility.Visible;
-            return;
-        }
-
         switch (selected)
         {
-            case 0: _navOverviewButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); break;
             case 1: _navServicesButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); break;
             case 4: _navEventsButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); break;
             case 5:
@@ -202,7 +204,8 @@ internal sealed partial class ShellWindow
             {
                 if (_shellModel.SelectedIndex == 4) { _eventSearchBox.Focus(); _eventSearchBox.SelectAll(); }
                 else if (_shellModel.SelectedIndex == 2) _historyView?.FocusSearch();
-                else if (_shellModel.SelectedIndex is 0 or 1) { _searchBox.Focus(); _searchBox.SelectAll(); }
+                else if (_shellModel.SelectedIndex == 0) _overviewView?.FocusSearch();
+                else if (_shellModel.SelectedIndex == 1) { _searchBox.Focus(); _searchBox.SelectAll(); }
                 e.Handled = true;
                 return;
             }

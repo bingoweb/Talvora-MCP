@@ -1,0 +1,289 @@
+<UserControl x:Class="Talvora.Tray.Views.OverviewView" x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Talvora.Tray.Controls"
+             Background="{DynamicResource Tv.Bg}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="OverviewBool"/>
+        <Style x:Key="OverviewFocus" TargetType="Control">
+            <Setter Property="FocusVisualStyle">
+                <Setter.Value>
+                    <Style TargetType="Control">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate>
+                                    <Border BorderBrush="{DynamicResource Tv.Accent}"
+                                            BorderThickness="2" CornerRadius="{DynamicResource Tv.Radius.S}"
+                                            Margin="-2"/>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="OverviewStatusPill" TargetType="Border">
+            <Setter Property="CornerRadius" Value="{StaticResource Tv.Radius.S}"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="Background" Value="{DynamicResource Tv.Neutral.Soft}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="Ready">
+                    <Setter Property="Background" Value="{DynamicResource Tv.Ready.Soft}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Attention">
+                    <Setter Property="Background" Value="{DynamicResource Tv.Attention.Soft}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Offline">
+                    <Setter Property="Background" Value="{DynamicResource Tv.Offline.Soft}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Repairing">
+                    <Setter Property="Background" Value="{DynamicResource Tv.Repairing.Soft}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="OverviewStateText" TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.Caption}">
+            <Setter Property="Foreground" Value="{DynamicResource Tv.Neutral}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="Ready">
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.Ready}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Attention">
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.Attention}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Offline">
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.Offline}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Repairing">
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.Repairing}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="OverviewRow" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="FocusVisualStyle">
+                <Setter.Value>
+                    <Style TargetType="Control">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate>
+                                    <Border BorderBrush="{DynamicResource Tv.Accent}" BorderThickness="2" Margin="-2"/>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  Padding="24" Background="{DynamicResource Tv.Bg}">
+        <Grid MaxWidth="1360">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <!-- §5.1 hero band: pulse, a plain sentence, existing actions. -->
+            <Border Grid.Row="0" Background="{DynamicResource Tv.Surface}"
+                    BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
+                    CornerRadius="{StaticResource Tv.Radius.XL}" Padding="24">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="136"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid Width="112" Height="112" HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <controls:PulseRing Segments="{Binding Segments}"
+                                            AutomationProperties.Name="{Binding Title}"/>
+                        <TextBlock Text="{Binding ReadyFraction}" Style="{StaticResource Tv.Type.Title}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" Style="{StaticResource Tv.Type.Title}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Description}" Style="{StaticResource Tv.Type.Body}"
+                                   Foreground="{DynamicResource Tv.TextMuted}" TextWrapping="Wrap"
+                                   Margin="0,8,0,0"/>
+                        <TextBlock Text="{Binding StatusLine}" Style="{StaticResource Tv.Type.Caption}"
+                                   Margin="0,8,0,0"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" VerticalAlignment="Top" Margin="16,0,0,0">
+                        <Button Content="Yenile" Click="OnRefresh" MinHeight="32" MinWidth="80"
+                                AutomationProperties.Name="Yenile"/>
+                        <Button Content="Sorunu onar" Click="OnRepair" MinHeight="32" Margin="0,12,0,0"
+                                AutomationProperties.Name="Sorunu onar"
+                                Visibility="{Binding CanRepair, Converter={StaticResource OverviewBool}}"/>
+                        <Button Content="Ayrıntılar" Click="OnDetails" MinHeight="32" Margin="0,12,0,0"
+                                AutomationProperties.Name="Ayrıntılar"
+                                Visibility="{Binding CanRepair, Converter={StaticResource OverviewBool}}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- The same constellation control also powers the full chain page. -->
+            <Border Grid.Row="1" Background="{DynamicResource Tv.Surface}"
+                    BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
+                    CornerRadius="{StaticResource Tv.Radius.L}" Padding="16" Margin="0,16,0,0">
+                <StackPanel>
+                    <DockPanel LastChildFill="False">
+                        <TextBlock Text="BAĞLANTI ZİNCİRİ" Style="{StaticResource Tv.Type.Overline}"
+                                   DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                        <Button DockPanel.Dock="Right" Content="Tümünü göster →"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource Tv.Accent}"
+                                MinHeight="32" AutomationProperties.Name="Bağlantı zincirinin tümünü göster"
+                                Click="OnShowChain"/>
+                    </DockPanel>
+                    <controls:ChainView x:Name="OverviewChain" Height="188" Margin="0,12,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="2" Margin="0,16,0,0"
+                    Background="{DynamicResource Tv.Surface}"
+                    BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
+                    CornerRadius="{StaticResource Tv.Radius.L}" Padding="16">
+                <WrapPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                        <TextBlock Text="Hazır" Style="{StaticResource Tv.Type.Body}"/>
+                        <TextBlock Text="{Binding ReadyCount}" Style="{StaticResource Tv.Type.BodyStrong}" Margin="8,0,0,0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                        <TextBlock Text="Dikkat" Style="{StaticResource Tv.Type.Body}"/>
+                        <TextBlock Text="{Binding AttentionCount}" Style="{StaticResource Tv.Type.BodyStrong}" Margin="8,0,0,0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                        <TextBlock Text="Kapalı" Style="{StaticResource Tv.Type.Body}"/>
+                        <TextBlock Text="{Binding OptionalCount}" Style="{StaticResource Tv.Type.BodyStrong}" Margin="8,0,0,0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal"
+                                Visibility="{Binding HasRecovery, Converter={StaticResource OverviewBool}}">
+                        <TextBlock Text="Son 24 saatte" Style="{StaticResource Tv.Type.Body}"/>
+                        <TextBlock Text="{Binding RecoveryCount}" Style="{StaticResource Tv.Type.BodyStrong}" Margin="8,0,0,0"/>
+                        <TextBlock Text="otomatik onarım" Style="{StaticResource Tv.Type.Body}" Margin="8,0,0,0"/>
+                    </StackPanel>
+                </WrapPanel>
+            </Border>
+            <Grid Grid.Row="3" Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Background="{DynamicResource Tv.Surface}"
+                        CornerRadius="{StaticResource Tv.Radius.L}"
+                        BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1" Padding="16">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,16">
+                            <TextBlock Text="HİZMETLER" Style="{StaticResource Tv.Type.Overline}"
+                                       DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                            <ComboBox DockPanel.Dock="Right" Width="148" MinHeight="32" ItemsSource="{Binding Filters}"
+                                      SelectedItem="{Binding StateFilter}" AutomationProperties.Name="Durum filtresi"/>
+                            <Grid DockPanel.Dock="Right" Width="190" Margin="12,0,12,0">
+                                <TextBox x:Name="ServiceSearch" MinHeight="32"
+                                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         AutomationProperties.Name="Bileşen ara"/>
+                                <TextBlock Text="Bileşen ara…" IsHitTestVisible="False"
+                                           Margin="12,0,0,0" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource Tv.TextMuted}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.Caption}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SearchText}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </DockPanel>
+                        <ListBox x:Name="ServicesList" ItemsSource="{Binding FilteredServices}"
+                                 ItemContainerStyle="{StaticResource OverviewRow}"
+                                 BorderThickness="0" Background="Transparent"
+                                 ScrollViewer.CanContentScroll="True"
+                                 VirtualizingPanel.IsVirtualizing="True"
+                                 PreviewMouseLeftButtonUp="OnServiceSelected"
+                                 KeyDown="OnServiceKeyDown"
+                                 AutomationProperties.Name="Hizmetler">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource Tv.SurfaceRaised}"
+                                            BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
+                                            CornerRadius="{StaticResource Tv.Radius.M}" MinHeight="56" Padding="8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="48"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="76"/>
+                                                <ColumnDefinition Width="36"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Image Source="{Binding Logo}" Width="32" Height="32" Stretch="Uniform"
+                                                   VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" Style="{StaticResource Tv.Type.BodyStrong}"/>
+                                                <Border Background="{DynamicResource Tv.SurfaceRaised}" HorizontalAlignment="Left"
+                                                        CornerRadius="{StaticResource Tv.Radius.S}" Padding="8,3">
+                                                    <TextBlock Text="{Binding Role}" Style="{StaticResource Tv.Type.Caption}"/>
+                                                </Border>
+                                            </StackPanel>
+                                            <Border Grid.Column="2" VerticalAlignment="Center"
+                                                    Style="{StaticResource OverviewStatusPill}">
+                                                <TextBlock Text="{Binding StateLabel}"
+                                                           Style="{StaticResource OverviewStateText}"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="3" Text="{Binding LastChecked}"
+                                                       ToolTip="{Binding CheckedTooltip}"
+                                                       Style="{StaticResource Tv.Type.Caption}"
+                                                       VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                            <Button Grid.Column="4" Content="⋯" MinWidth="32" MinHeight="32"
+                                                    Tag="{Binding}" Click="OnServiceMore" VerticalAlignment="Center"
+                                                    AutomationProperties.Name="Hizmet ayrıntıları"
+                                                    Background="Transparent" BorderThickness="0"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Width="270" Margin="16,0,0,0" Padding="16"
+                        Background="{DynamicResource Tv.Surface}"
+                        BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
+                        CornerRadius="{StaticResource Tv.Radius.L}"
+                        Visibility="{Binding IsWide, Converter={StaticResource OverviewBool}}">
+                    <StackPanel>
+                        <TextBlock Text="Son olaylar" Style="{StaticResource Tv.Type.Subtitle}" Margin="0,0,0,16"/>
+                        <ItemsControl ItemsSource="{Binding RecentEvents}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,12">
+                                        <TextBlock Text="{Binding Time}" Style="{StaticResource Tv.Type.Mono}"/>
+                                        <TextBlock Text="{Binding Title}" Style="{StaticResource Tv.Type.Body}"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </Grid>
+            <Border Grid.RowSpan="4" Background="{DynamicResource Tv.Bg}"
+                    Visibility="{Binding IsLoading, Converter={StaticResource OverviewBool}}"
+                    IsHitTestVisible="False">
+                <StackPanel Margin="24">
+                    <Border Background="{DynamicResource Tv.SurfaceRaised}"
+                            CornerRadius="{StaticResource Tv.Radius.XL}" Height="160"/>
+                    <Border Background="{DynamicResource Tv.SurfaceRaised}"
+                            CornerRadius="{StaticResource Tv.Radius.L}" Height="172" Margin="0,16,0,0"/>
+                    <Border Background="{DynamicResource Tv.SurfaceRaised}"
+                            CornerRadius="{StaticResource Tv.Radius.L}" Height="56" Margin="0,16,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

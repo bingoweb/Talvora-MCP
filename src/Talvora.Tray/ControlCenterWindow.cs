@@ -735,6 +735,7 @@ internal sealed partial class ShellWindow : FluentWindow
             var snapshot = await ControlCenterDashboardService.GetSnapshotAsync(
                 _lifetimeCts.Token);
             _snapshot = snapshot;
+            UpdateUi3Snapshot(snapshot);
             await RefreshEmbeddedMcpIntegrationsAsync(_lifetimeCts.Token);
             _lastSuccessfulDashboardRefresh = DateTimeOffset.Now;
 
@@ -787,6 +788,7 @@ internal sealed partial class ShellWindow : FluentWindow
         catch (Exception ex)
         {
             TrayLog.Write("Control Center dashboard refresh failed", ex);
+            if (_snapshot is null) _overviewView?.Model.MarkUnavailable();
             var hasLastKnownSnapshot =
                 _snapshot is not null;
 

@@ -10,7 +10,7 @@ using Wpf.Ui.Controls;
 
 namespace Talvora.Tray;
 
-internal static class ControlCenterSmoke
+internal static partial class ControlCenterSmoke
 {
     public static int Run()
     {
@@ -47,6 +47,7 @@ internal static class ControlCenterSmoke
                 AssertWindowDpi(window);
                 AssertRenderedSurfaceIsNotBlank(window);
                 AssertStitchNavigation(window);
+                AssertUi3VisualFixture(window, "initial");
 
                 // UI1: swap the running window's real palette and restore it, without reopening.
                 var initialPreference = TalvoraThemeManager.Preference;
@@ -58,6 +59,7 @@ internal static class ControlCenterSmoke
                 await TalvoraThemeManager.SetPreferenceAsync(alternatePreference, persist: true);
                 if (((SolidColorBrush)contentRoot.Background).Color == initialBackground)
                     throw new InvalidOperationException("Control Center theme did not change live.");
+                AssertUi3VisualFixture(window, "alternate");
                 window.ShellModel.SelectPage(2);
                 AssertWorklogHistorySelection(window, "worklog-session-alternate");
                 window.ShellModel.SelectPage(0);
@@ -83,9 +85,12 @@ internal static class ControlCenterSmoke
 
                 await window.RunSmokeScenarioAsync();
                 SaveVisualSnapshotIfRequested(window, "loaded");
+                window.ShellModel.SelectPage(1);
                 AssertDashboardStructure(window);
                 AssertRenderedSurfaceIsNotBlank(window);
                 AssertCompactDashboardLayout(window);
+                window.ShellModel.SelectPage(0);
+                await MeasureUi3IdleCpuAsync(window);
 
                 window.Close();
                 if (window.IsVisible)
@@ -164,7 +169,14 @@ internal static class ControlCenterSmoke
             window.UpdateLayout();
             if (window.ShellModel.SelectedIndex != index)
                 throw new InvalidOperationException("Shell shortcut selected a different route.");
-            if (index == 2)
+            if (index == 0)
+            {
+                if (window.OverviewContentHost.Visibility != Visibility.Visible ||
+                    window.OverviewContentHost.Content is not Views.OverviewView ||
+                    window.LegacyContentHost.Visibility != Visibility.Collapsed)
+                    throw new InvalidOperationException("UI3 overview did not open its view.");
+            }
+            else if (index == 2)
             {
                 if (window.HistoryContentHost.Visibility != Visibility.Visible ||
                     window.HistoryContentHost.Content is not Views.WorklogHistoryView ||
@@ -175,16 +187,16 @@ internal static class ControlCenterSmoke
             }
             else if (index == 3)
             {
-                if (window.PlaceholderCard.Visibility != Visibility.Visible ||
-                    AutomationProperties.GetName(window.PlaceholderCard) != names[index])
-                    throw new InvalidOperationException("The approved chain placeholder is not accessible.");
+                if (window.ChainContentHost.Visibility != Visibility.Visible ||
+                    window.ChainContentHost.Content is not Views.ChainView ||
+                    window.PlaceholderCard.Visibility != Visibility.Collapsed)
+                    throw new InvalidOperationException("UI3 chain did not replace its placeholder.");
                 SaveVisualSnapshotIfRequested(window, "chain");
             }
         }
-        window.HandleShellNavigationKey(System.Windows.Input.Key.D4, System.Windows.Input.ModifierKeys.Control);
-        window.PlaceholderServices.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+        window.ShellModel.SelectPage(1);
         if (window.ShellModel.SelectedIndex != 1)
-            throw new InvalidOperationException("The chain placeholder must select Services.");
+            throw new InvalidOperationException("Service navigation failed after the chain.");
         window.ShellModel.SelectPage(0);
         window.PaletteButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
         window.Palette.Child.UpdateLayout();

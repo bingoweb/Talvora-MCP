@@ -1,13 +1,17 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T13:57:50Z",
-  "sourceUrl": "https://www.awwwards.com/inspiration/archive-prague-quadrennial-pq-2023",
-  "scope": "N7: Awwwards inspiration research for a project/session history with a timeline; all actual text, placement, theme and data behavior follow approved DESIGN-WORKLOG §8 and DESIGN-CONTROL-CENTER §4, not a new visual direction.",
+  "verifiedAtUtc": "2026-10-24T14:46:29Z",
+  "sourceUrl": "https://www.awwwards.com/inspiration/data-visualization-renxa-recruit-site",
+  "scope": "UI3: Awwwards data-visualization inspiration checked for evidence only; all rendering, text, status states, colors and navigation follow approved DESIGN-CONTROL-CENTER 5.1, 5.2, 6, 7.3-7.5, 9 and P-33, not external design decisions.",
   "references": [
+    "https://www.awwwards.com/inspiration/data-visualization-renxa-recruit-site",
+    "https://www.awwwards.com/inspiration_search/data-visualization/",
     "https://www.awwwards.com/inspiration/archive-prague-quadrennial-pq-2023",
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
+    "UI3: Awwwards Renxa Recruit Site data visualization and Awwwards data-visualization inspiration were reviewed as research only; no external shapes, palettes, timing or interaction patterns were copied.",
+    "UI3: DESIGN-CONTROL-CENTER 5.1 and 7.3 supply the 112px pulse arcs and snapshot-derived Turkish headline, chain strip, 56px service rows and metrics; 5.2 plus P-33 require the real full chain page with a 360px side sheet and the exact five-state legend. Only existing Tv tokens and the approved chain-node/flow model were used; UI8 owns the remaining idle CPU optimization.",
     "N7: Awwwards Prague Quadrennial archive inspiration page has the archive/history/timeline tags and a related interactive timeline. This is qualitative reference only; the actual WPF UI keeps the approved Control Center typography, Tv token palette, session list plus details and native platform controls. No external animation or new imagery is imported.",
     "N7: the original UI2 history placeholder is replaced with accessible project, actor and outcome filters; cards show start/end/step/file/outcome and matching timeline/evidence, as specified in DESIGN-WORKLOG §8. Empty state uses the exact approved Turkish sentence.",
     "DESIGN-CONTROL-CENTER §4 Shell: 48 px native title bar, 72/232 px rail, exact Turkish labels/SymbolRegular icons, AccentSoft selection and 3 px Accent edge, maximum 1440 content host, native window buttons and theme choice.",

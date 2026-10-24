@@ -89,7 +89,11 @@
             </Border>
             <Grid Grid.Column="1" MaxWidth="1440">
                 <ContentControl x:Name="LegacyContentHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                <ContentControl x:Name="OverviewContentHost" Visibility="Collapsed"
+                                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
                 <ContentControl x:Name="HistoryContentHost" Visibility="Collapsed"
+                                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                <ContentControl x:Name="ChainContentHost" Visibility="Collapsed"
                                 HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
                 <Border x:Name="PlaceholderCard" Background="{DynamicResource Tv.Surface}"
                         BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1" CornerRadius="{DynamicResource Tv.Radius.L}"

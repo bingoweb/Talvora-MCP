@@ -1,0 +1,63 @@
+<UserControl x:Class="Talvora.Tray.Views.ChainView"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Talvora.Tray.Controls"
+             Background="{DynamicResource Tv.Bg}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="ChainBool"/>
+    </UserControl.Resources>
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Text="Bağlantı zinciri" Style="{StaticResource Tv.Type.Title}"
+                   Margin="0,0,0,24"/>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Border Background="{DynamicResource Tv.Surface}"
+                    BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
+                    CornerRadius="{StaticResource Tv.Radius.L}" Padding="24">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <controls:ChainView x:Name="FullChain"
+                                        MinHeight="260"/>
+                </ScrollViewer>
+            </Border>
+            <Border Grid.Column="1" x:Name="DetailsSheet"
+                    Width="360" Margin="16,0,0,0" Padding="24"
+                    Background="{DynamicResource Tv.Surface}"
+                    BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
+                    CornerRadius="{StaticResource Tv.Radius.L}"
+                    Visibility="Collapsed" AutomationProperties.Name="Bağlantı katmanı ayrıntıları">
+                <StackPanel>
+                    <TextBlock x:Name="SelectedName" Style="{StaticResource Tv.Type.Subtitle}"
+                               TextWrapping="Wrap"/>
+                    <TextBlock x:Name="SelectedStatus" Style="{StaticResource Tv.Type.BodyStrong}"
+                               Foreground="{DynamicResource Tv.Accent}" Margin="0,16,0,0"/>
+                    <TextBlock x:Name="SelectedDetail" Style="{StaticResource Tv.Type.Body}"
+                               Foreground="{DynamicResource Tv.TextMuted}"
+                               TextWrapping="Wrap" Margin="0,12,0,0"/>
+                    <TextBlock x:Name="SelectedChecked" Style="{StaticResource Tv.Type.Caption}"
+                               Margin="0,16,0,0"/>
+                    <Button x:Name="RepairLayer" Content="Bu katmanı onar" MinHeight="32"
+                            AutomationProperties.Name="Bu katmanı onar"
+                            Margin="0,24,0,0" HorizontalAlignment="Left"
+                            Visibility="Collapsed"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,16,0,0">
+            <TextBlock Text="● hazır" Style="{StaticResource Tv.Type.Caption}" Margin="0,0,24,0"/>
+            <TextBlock Text="▲ dikkat" Style="{StaticResource Tv.Type.Caption}" Margin="0,0,24,0"/>
+            <TextBlock Text="✕ ulaşılamıyor" Style="{StaticResource Tv.Type.Caption}" Margin="0,0,24,0"/>
+            <TextBlock Text="○ isteğe bağlı" Style="{StaticResource Tv.Type.Caption}" Margin="0,0,24,0"/>
+            <TextBlock Text="↻ onarılıyor" Style="{StaticResource Tv.Type.Caption}"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

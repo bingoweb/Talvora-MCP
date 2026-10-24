@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T13:57:50Z",
-  "scope": "N7: terminal desktop worklog session JSONL retention and Control Center history page; WPF-UI 4.3 theme tokens, WPF ListBox binding/virtualization and existing frame protocol. No new packages.",
+  "verifiedAtUtc": "2026-10-24T14:46:29Z",
+  "scope": "UI3: Control Center Overview Nabiz ring, live component health constellation and full chain page per DESIGN-CONTROL-CENTER 5.1/5.2, 6, 7.3-7.5, 9 and P-33. Existing WPF/WPF-UI 4.3 controls and CommunityToolkit observable properties; no new packages.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-24 UI3: Context7 /dotnet/wpf checked FrameworkElement.OnRender, DrawingContext.DrawGeometry and WPF Canvas/ItemsControl rendering, PathGeometry, dependency-property AffectsRender and UI render invalidation. The approved PulseRing uses the spec's OnRender arcs; ChainView uses Canvas nodes, Path stroke dashes and paused storyboard triggers on inactive/minimized windows or reduced-motion/high contrast. Microsoft source: https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/UIElement.cs and https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Media/DrawingContext.cs ."
+    },
+    {
+      "libraryId": "/lepoco/wpfui",
+      "verified": "2026-10-24 UI3: Context7 official WPF-UI 4.3 implementation guide verifies theme-aware templates using DynamicResource brushes, focus resource tokens and native control usage inside existing FluentWindow shell; the new views share UI1 Tv.* tokens and retain the UI2 shell and its theme switch. Source: https://github.com/lepoco/wpfui/blob/main/docs/architecture/IMPLEMENTATION-GUIDE.md ."
+    },
     {
       "libraryId": "/lepoco/wpfui",
       "verified": "2026-10-24 N7: Context7 official WPF-UI implementation guide confirms theme-aware control styles use DynamicResource brushes and template-linked foreground/background for selected and disabled states; N7 history uses existing Tv theme tokens inside the UI2 FluentWindow rather than inventing a separate palette. Official source: https://github.com/lepoco/wpfui/blob/main/docs/architecture/IMPLEMENTATION-GUIDE.md ."
