@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T12:26:28Z",
+  "verifiedAtUtc": "2026-10-24T13:11:08Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "TI1 exact Claude-designed Altigen-T tray mark; Awwwards homepage checked live, HTTP 200 and current page title. Evidence only; visual decisions are copied from the approved reference.",
+  "scope": "UI2: Awwwards homepage checked live with HTTP 200 and its current title; evidence only. All visible decisions follow DESIGN-CONTROL-CENTER and approved P-33.",
   "references": [
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
-    "DESIGN-CONTROL-CENTER §11 TI1 Altıgen-T tray mark",
-    "ROADMAP TI1 exact implementation: copy reference geometry/token colours, quiet Ready mark, shaped attention/offline badges and two-second appearance timer without visual changes.",
-    "ROADMAP TI1 Acceptance: compare all 25 rendered PNGs byte-for-byte before and after canonical installation; retain the exact user visual-review request."
+    "DESIGN-CONTROL-CENTER §4 Shell: 48 px native title bar, 72/232 px rail, exact Turkish labels/SymbolRegular icons, AccentSoft selection and 3 px Accent edge, maximum 1440 content host, native window buttons and theme choice.",
+    "DESIGN-CONTROL-CENTER §6 CommandPalette and §8 architecture: Popup/TextBox/ListBox subsequence search, CommunityToolkit.Mvvm and adapters to the existing actions, retaining their confirmation/guard paths.",
+    "P-33 approved placeholders: exact headings/body/button, Surface/Border/Radius.L, Space.6 padding/inset, Space.2 body gap, Space.4 button gap, 560 maximum width; no extra text or illustrations.",
+    "DESIGN-CONTROL-CENTER §3/§10: use the existing token scales for rail/popup spacing and focus, real before/after Gece and Gun PNGs, accessible Turkish names and first-paint measurement; existing worklog is unchanged."
   ]
 }

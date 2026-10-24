@@ -1,0 +1,47 @@
+<Popup x:Class="Talvora.Tray.Controls.CommandPalette" x:ClassModifier="internal"
+       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+       Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="None"
+       Opened="OnPaletteOpened" Closed="OnPaletteClosed">
+    <Popup.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Talvora.Tray;component/Controls/NavRailItem.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Popup.Resources>
+    <Border Background="{DynamicResource Tv.SurfaceRaised}" BorderBrush="{DynamicResource Tv.Border}"
+            BorderThickness="1" CornerRadius="{DynamicResource Tv.Radius.L}" Padding="16"
+            Margin="24" PreviewKeyDown="OnPaletteKeyDown">
+        <Border.Effect><DropShadowEffect BlurRadius="{DynamicResource Tv.Elevation.Blur}"
+                                        Opacity="{DynamicResource Tv.Elevation.Opacity}" ShadowDepth="0" /></Border.Effect>
+        <StackPanel>
+            <ui:TextBox x:Name="SearchBox" MinHeight="32" PlaceholderText="Ara veya komut çalıştır…"
+                        FocusVisualStyle="{StaticResource ShellFocusVisual}"
+                        Text="{Binding PaletteQuery, UpdateSourceTrigger=PropertyChanged}"
+                        AutomationProperties.Name="Ara veya komut çalıştır…" TextChanged="OnSearchChanged" />
+            <ListBox x:Name="Results" ItemsSource="{Binding PaletteResults}" Margin="0,8,0,0"
+                     FocusVisualStyle="{StaticResource ShellFocusVisual}"
+                     Background="Transparent" BorderThickness="0" Foreground="{DynamicResource Tv.Text}"
+                     AutomationProperties.Name="Ara veya komut çalıştır…" MouseLeftButtonUp="OnExecuteSelection">
+                <ListBox.ItemTemplate><DataTemplate>
+                    <TextBlock Text="{Binding Label}" Style="{StaticResource Tv.Type.Body}" Margin="8"
+                               TextWrapping="Wrap" />
+                </DataTemplate></ListBox.ItemTemplate>
+                <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem">
+                    <Setter Property="MinHeight" Value="32" />
+                    <Setter Property="FocusVisualStyle" Value="{StaticResource ShellFocusVisual}" />
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="AutomationProperties.Name" Value="{Binding Label}" />
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource Tv.AccentSoft}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Tv.Text}" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style></ListBox.ItemContainerStyle>
+            </ListBox>
+        </StackPanel>
+    </Border>
+</Popup>

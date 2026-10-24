@@ -8,7 +8,7 @@ using Talvora.Shared;
 
 namespace Talvora.Tray;
 
-internal sealed partial class ControlCenterWindow
+internal sealed partial class ShellWindow
 {
     private const int MaximumWindowPlacementBytes =
         64 * 1024;
@@ -325,6 +325,7 @@ internal sealed partial class ControlCenterWindow
 
     private async void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
+        if (e.Handled) return;
         if (e.Key == Key.F5 ||
             (e.Key == Key.R && Keyboard.Modifiers.HasFlag(ModifierKeys.Control)))
         {

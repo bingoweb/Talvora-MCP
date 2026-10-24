@@ -104,7 +104,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [?] Q2c — Legacy text mutators removed + manifest-driven README count test (waiting for Claude: P-34 permitted three-tool change cannot meet the required surface targets)
 - [?] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (waiting for Q2c; amended by P-32)
 - [?] Q3 — Documentation diet (P-17; waiting for Q2c)
-- [ ] UI2 — Shell, rail, title bar, command palette (P-33 decided: placeholder contract for Çalışma günlüğü and Bağlantı zinciri)
+- [~] UI2 — Shell, rail, title bar, command palette (P-33 implemented; signed-in Full 66/0 and both source themes green; exact-commit delivery evidence artifacts/ui2-delivery.json; U5 mixed-DPI placement and Claude visual audit pending)
 - [ ] N7 — "Çalışma günlüğü" history page (after UI2; replaces the P-33 placeholder)
 - [ ] UI3 — Overview: Nabız ring + chain strip
 - [ ] UI4 — Services list + detail
@@ -148,6 +148,14 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-24 — UI2 (executor: ChatGPT): implemented the §4 XAML shell, six Turkish rail destinations, native title bar/theme picker, fuzzy command palette and P-33 placeholders; existing pages/lifecycle/placement stay behind adapters.
+  Supporting changes: renamed the legacy window partial type and app/theme/tray/smoke references to ShellWindow; kept builders until UI8; added CommunityToolkit.Mvvm 8.4.2, notices, two required locks and Notification runner registration.
+  RED missing shell types and palette background clicks; GREEN async refresh/navigation/fuzzy-action behaviour, real six-name UI Automation, Ctrl+1..5, Enter/Esc, placeholders, theme persistence/live switching, compact layout and hide/reopen. No guard weakened.
+  Design gaps filled from token scales: rail margin 12/4, icon-label gap 16; title inset 16, palette padding 16/shadow margin 24 and available-window bounds; shared 2 px Accent focus ring with 2 px offset.
+  Signed-in Full 66 checks/0 errors, exit 0, Hepsi geçti.; source Gece/Gun smokes exit 0, build 0 warnings/0 errors. Initial refresh now queues at Background so first paint improved from 605.8/552.5 ms to 278.0/259.3 ms.
+  Context7 /lepoco/wpfui, /dotnet/wpf and /websites/learn_microsoft_en-us_dotnet_communitytoolkit_mvvm verified; before artifacts/ui2-before*.png, both-theme after/palette/P-33 PNGs artifacts/ui2-*.png; Awwwards evidence only.
+  Exact-commit installer, installed Gece/Gun smoke and GitHub CI follow commit in artifacts/ui2-delivery.json; UI2 remains [~] for U5 mixed-DPI placement check and Claude visual audit. Gitea evidence mirror is blocked by unavailable connector approval; Q2c/P-34 stays blocked.
 
 - 2026-10-24 — Q2c (executor: ChatGPT): stopped before implementation under EXECUTION MANDATE rule 6; P-34 documents incompatible scope/targets after P-32. No production/tool/manifest/test/README changes.
   Installed d3925fb wire counts Full/Dev/Admin 250/213/88, bytes 338673/302167/90833; all three named legacy mutators already absent from Dev. Three permitted removals cannot reach 150/115/70; new write_file is absent.

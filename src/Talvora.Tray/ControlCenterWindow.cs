@@ -20,7 +20,7 @@ using WpfCursors = System.Windows.Input.Cursors;
 
 namespace Talvora.Tray;
 
-internal sealed partial class ControlCenterWindow : FluentWindow
+internal sealed partial class ShellWindow : FluentWindow
 {
     // The existing Control Center keeps these brushes until its views are migrated to XAML.
     // The shared instances refresh in place when the approved token dictionary changes.
@@ -84,6 +84,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         Refresh(SidebarAccentBrush, "Tv.Accent");
         Refresh(SidebarHoverBrush, "Tv.SurfaceRaised");
         BackgroundBrush.Opacity = TalvoraThemeManager.GetBackdrop() == WindowBackdropType.Mica ? 0.85 : 1;
+        if (application.MainWindow is ShellWindow shell) shell.SynchronizeShellThemeChoice();
 
         void Refresh(SolidColorBrush target, string key)
         {
@@ -164,10 +165,10 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     private bool _detailOperationInProgress;
     private bool _applicationExitRequested;
 
-    public ControlCenterWindow(bool smokeMode = false)
+    public ShellWindow(bool smokeMode = false)
     {
         _smokeMode = smokeMode;
-        Title = "Talvora Yönetim Merkezi";
+        Title = "Talvora Kontrol Merkezi";
         Width = 1220;
         Height = 790;
         MinWidth = 720;
@@ -192,7 +193,9 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         FontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Text");
         UseLayoutRounding = true;
         SnapsToDevicePixels = true;
-        Content = BuildContent();
+        var legacyContent = (Grid)BuildContent();
+        InitializeComponent();
+        InitializeShell(legacyContent);
         InitializeWindowPlacementPersistence();
 
         PreviewKeyDown += OnPreviewKeyDown;
@@ -248,6 +251,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
     {
         if (!IsVisible)
         {
+            if (_smokeMode && FirstPaintMilliseconds is null) _shellFirstPaint = System.Diagnostics.Stopwatch.StartNew();
             Show();
         }
 
@@ -261,7 +265,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         Topmost = false;
         Focus();
 
-        _ = RefreshDashboardAsync();
+        _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() => _ = RefreshDashboardAsync()));
     }
 
     public async Task PrepareForApplicationExitAsync()
@@ -741,6 +745,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
             _headerStatusCard.BorderBrush = CardBorderBrush;
             _technicalSummaryText.Text = snapshot.TechnicalSummary;
             RefreshOverviewMetrics(snapshot);
+            UpdateShellCommands();
             _dashboardSectionMeta.Text =
                 $"{snapshot.Mcps.Count} bileşen • {snapshot.ReadyCount} hazır";
             _lastRefreshText.Text =
@@ -1395,7 +1400,7 @@ internal sealed partial class ControlCenterWindow : FluentWindow
         if (IsVisible)
         {
             _refreshTimer.Start();
-            _ = RefreshDashboardAsync();
+            _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() => _ = RefreshDashboardAsync()));
             UpdateRawLogTimerState();
         }
         else

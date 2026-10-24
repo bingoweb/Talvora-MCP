@@ -355,6 +355,7 @@
       "talvora.tray": {
         "type": "Project",
         "dependencies": {
+          "CommunityToolkit.Mvvm": "[8.4.2, )",
           "Microsoft.Extensions.AI.Abstractions": "[10.11.0, )",
           "Microsoft.Extensions.Caching.Abstractions": "[10.0.13, )",
           "Microsoft.Extensions.Hosting.Abstractions": "[10.0.13, )",
@@ -363,6 +364,12 @@
           "Talvora.Shared": "[3.0.0-dev, )",
           "WPF-UI": "[4.3.0, )"
         }
+      },
+      "CommunityToolkit.Mvvm": {
+        "type": "CentralTransitive",
+        "requested": "[8.4.2, )",
+        "resolved": "8.4.2",
+        "contentHash": "WadCzGEc2U+3e20avRLng4qNtt4zoOGWrdUISqJWrHe3/FSnrYjuM5Sb4yQb09LhkBXrrI4Zt3dLKgRMbItsrg=="
       },
       "Humanizer.Core": {
         "type": "CentralTransitive",

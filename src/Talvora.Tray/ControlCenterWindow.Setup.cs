@@ -10,7 +10,7 @@ using WpfCursors = System.Windows.Input.Cursors;
 
 namespace Talvora.Tray;
 
-internal sealed partial class ControlCenterWindow
+internal sealed partial class ShellWindow
 {
     private Border BuildSetupCard()
     {

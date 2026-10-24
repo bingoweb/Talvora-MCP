@@ -262,7 +262,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 dedupKey: "system:control-center-startup");
 
             var setupState = ControlCenterSetupService.Evaluate(registry);
-            if (!ControlCenterWindow.HasSavedWindowPlacement ||
+            if (!ShellWindow.HasSavedWindowPlacement ||
                 !setupState.IsComplete)
             {
                 _controlCenterApplication.ShowControlCenter();

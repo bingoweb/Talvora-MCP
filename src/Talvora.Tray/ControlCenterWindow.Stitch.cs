@@ -14,7 +14,7 @@ namespace Talvora.Tray;
 
 // Native WPF translation of the Google Stitch "Kontrol Merkezi Desktop" direction.
 // All navigation routes into existing live dashboard, lifecycle and event workflows.
-internal sealed partial class ControlCenterWindow
+internal sealed partial class ShellWindow
 {
     private UiButton _navOverviewButton = null!;
     private UiButton _navServicesButton = null!;

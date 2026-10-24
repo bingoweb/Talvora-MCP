@@ -97,6 +97,18 @@ Upstream:
 
 Upstream: https://github.com/modelcontextprotocol/csharp-sdk
 
+### .NET Community Toolkit MVVM
+
+**Upstream / attribution:** .NET Foundation and Contributors
+
+**License:** MIT
+
+**Relationship:** bundled in the native Control Center / Tray UI.
+
+- `CommunityToolkit.Mvvm 8.4.2`
+
+Upstream: https://github.com/CommunityToolkit/dotnet
+
 ### WPF UI
 
 **Upstream / attribution:** Leszek Pomianowski and WPF UI Contributors  

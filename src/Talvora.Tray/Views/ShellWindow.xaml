@@ -1,0 +1,109 @@
+<ui:FluentWindow x:Class="Talvora.Tray.ShellWindow" x:ClassModifier="internal"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:controls="clr-namespace:Talvora.Tray.Controls"
+                 Title="Talvora Kontrol Merkezi" AutomationProperties.Name="Talvora Kontrol Merkezi">
+    <ui:FluentWindow.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Talvora.Tray;component/Controls/NavRailItem.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="ShellBool" />
+        </ResourceDictionary>
+    </ui:FluentWindow.Resources>
+    <Grid x:Name="ShellRoot">
+        <Grid.RowDefinitions><RowDefinition Height="48" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+        <ui:TitleBar x:Name="ShellTitleBar" Height="48" Title="Talvora Kontrol Merkezi"
+                     Background="{DynamicResource Tv.Surface}" Foreground="{DynamicResource Tv.Text}"
+                     ButtonsForeground="{DynamicResource Tv.Text}" ShowHelp="False"
+                     CloseWindowByDoubleClickOnIcon="False" ForceShutdown="False">
+            <ui:TitleBar.Header>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0">
+                    <TextBlock Text="T" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource Tv.Aurora}"
+                               FontFamily="Segoe UI Variable Display" VerticalAlignment="Center" />
+                    <TextBlock Text="Talvora  ›" Style="{StaticResource Tv.Type.BodyStrong}" Margin="12,0,8,0" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding SelectedLabel}" Style="{StaticResource Tv.Type.Body}" VerticalAlignment="Center" />
+                </StackPanel>
+            </ui:TitleBar.Header>
+            <ui:TitleBar.CenterContent>
+                <ui:Button x:Name="PaletteButton" Appearance="Secondary" Click="OnOpenPalette"
+                           FocusVisualStyle="{StaticResource ShellFocusVisual}"
+                           MinHeight="32" Padding="12,4" AutomationProperties.Name="Ara veya komut çalıştır…"
+                           Content="Ara veya komut çalıştır…  Ctrl+K" />
+            </ui:TitleBar.CenterContent>
+            <ui:TitleBar.TrailingContent>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                    <TextBlock Text="◐" Style="{StaticResource Tv.Type.Body}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ComboBox x:Name="ThemeChoice" MinHeight="32" MinWidth="96" SelectionChanged="OnShellThemeChanged"
+                              FocusVisualStyle="{StaticResource ShellFocusVisual}"
+                              AutomationProperties.Name="Tema">
+                        <ComboBox.ItemContainerStyle><Style TargetType="ComboBoxItem">
+                            <Setter Property="MinHeight" Value="32" />
+                            <Setter Property="FocusVisualStyle" Value="{StaticResource ShellFocusVisual}" />
+                        </Style></ComboBox.ItemContainerStyle>
+                        <ComboBoxItem Content="Sistem" /><ComboBoxItem Content="Gece" /><ComboBoxItem Content="Gün" />
+                    </ComboBox>
+                </StackPanel>
+            </ui:TitleBar.TrailingContent>
+        </ui:TitleBar>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions><ColumnDefinition x:Name="RailColumn" Width="72" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <Border Background="{DynamicResource Tv.Surface}" BorderBrush="{DynamicResource Tv.Border}" BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <ui:Button x:Name="RailLogo" Content="T" Foreground="{DynamicResource Tv.Aurora}" FontSize="20"
+                               FocusVisualStyle="{StaticResource ShellFocusVisual}"
+                               Appearance="Transparent" Margin="12,8" MinHeight="48" AutomationProperties.Name="Talvora"
+                               Command="{Binding ToggleRailCommand}" />
+                    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="ÇALIŞMA ALANI" Style="{StaticResource Tv.Type.Overline}" Margin="24,8,0,8"
+                                       Visibility="{Binding IsRailExpanded, Converter={StaticResource ShellBool}}" />
+                            <controls:NavRailItem x:Name="NavOverview" Tag="0" Label="Genel bakış" Symbol="Home24" IsExpanded="{Binding IsRailExpanded}" Checked="OnRailChecked" />
+                            <controls:NavRailItem x:Name="NavServices" Tag="1" Label="Hizmetler" Symbol="Server24" IsExpanded="{Binding IsRailExpanded}" Checked="OnRailChecked" />
+                            <controls:NavRailItem x:Name="NavWorklog" Tag="2" Label="Çalışma günlüğü" Symbol="Notebook24" IsExpanded="{Binding IsRailExpanded}" Checked="OnRailChecked" />
+                            <controls:NavRailItem x:Name="NavChain" Tag="3" Label="Bağlantı zinciri" Symbol="Organization24" IsExpanded="{Binding IsRailExpanded}" Checked="OnRailChecked" />
+                            <controls:NavRailItem x:Name="NavEvents" Tag="4" Label="Olaylar" Symbol="TextBulletListLtr24" IsExpanded="{Binding IsRailExpanded}" Checked="OnRailChecked" />
+                        </StackPanel>
+                    </ScrollViewer>
+                    <StackPanel Grid.Row="2">
+                        <TextBlock Text="SİSTEM" Style="{StaticResource Tv.Type.Overline}" Margin="24,8,0,8"
+                                   Visibility="{Binding IsRailExpanded, Converter={StaticResource ShellBool}}" />
+                        <controls:NavRailItem x:Name="NavSettings" Tag="5" Label="Ayarlar ve kurulum" Symbol="Settings24" IsExpanded="{Binding IsRailExpanded}" Checked="OnRailChecked" />
+                        <StackPanel Orientation="Horizontal" Margin="24,8,12,16" AutomationProperties.Name="Nabız">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center">
+                                <Ellipse.Style><Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{DynamicResource Tv.Neutral}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasHealth}" Value="True"><Setter Property="Fill" Value="{DynamicResource Tv.Ready}" /></DataTrigger>
+                                        <DataTrigger Binding="{Binding HasAttention}" Value="True"><Setter Property="Fill" Value="{DynamicResource Tv.Attention}" /></DataTrigger>
+                                    </Style.Triggers>
+                                </Style></Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Text="{Binding AttentionCount}" Style="{StaticResource Tv.Type.Caption}" Margin="8,0,0,0"
+                                       Visibility="{Binding HasHealth, Converter={StaticResource ShellBool}}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            <Grid Grid.Column="1" MaxWidth="1440">
+                <ContentControl x:Name="LegacyContentHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                <Border x:Name="PlaceholderCard" Background="{DynamicResource Tv.Surface}"
+                        BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1" CornerRadius="{DynamicResource Tv.Radius.L}"
+                        Margin="24" Padding="24" MaxWidth="560" HorizontalAlignment="Left" VerticalAlignment="Top"
+                        Visibility="Collapsed" AutomationProperties.Name="{Binding SelectedLabel}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SelectedLabel}" Style="{StaticResource Tv.Type.Title}" />
+                        <TextBlock x:Name="PlaceholderMessage" Style="{StaticResource Tv.Type.Body}" Margin="0,8,0,0"
+                                   Foreground="{DynamicResource Tv.TextMuted}" TextWrapping="Wrap" />
+                        <ui:Button x:Name="PlaceholderServices" Content="Hizmetler" Appearance="Secondary" HorizontalAlignment="Left"
+                                   FocusVisualStyle="{StaticResource ShellFocusVisual}"
+                                   Margin="0,16,0,0" MinHeight="32" AutomationProperties.Name="Hizmetler" Click="OnPlaceholderServices" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+        <controls:CommandPalette x:Name="Palette" />
+    </Grid>
+</ui:FluentWindow>

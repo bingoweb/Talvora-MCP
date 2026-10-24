@@ -9,7 +9,7 @@ namespace Talvora.Tray;
 internal sealed class ControlCenterApplication : WpfApplication
 {
     private readonly bool _smokeTest;
-    private ControlCenterWindow? _window;
+    private ShellWindow? _window;
     private bool _exitRequested;
 
     public ControlCenterApplication(bool smokeTest = false)
@@ -45,7 +45,7 @@ internal sealed class ControlCenterApplication : WpfApplication
 
         if (_window is null)
         {
-            var window = new ControlCenterWindow(_smokeTest);
+            var window = new ShellWindow(_smokeTest);
             _window = window;
             window.Loaded += (_, _) => TalvoraThemeManager.Watch(window);
             window.Closed += (_, _) =>

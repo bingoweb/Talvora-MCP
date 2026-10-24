@@ -108,7 +108,7 @@ internal static class TalvoraThemeManager
             dictionaries.Insert(0, new ResourceDictionary { Source = dark ? UiGeceUri : UiGunUri });
         ApplicationThemeManager.Apply(theme, GetBackdrop(), updateAccent: false);
         SwapTokens(app, dark);
-        ControlCenterWindow.RefreshThemePalette(app);
+        ShellWindow.RefreshThemePalette(app);
 
         if (_watchedWindow is not null)
         {
@@ -163,7 +163,7 @@ internal static class TalvoraThemeManager
             _ => true,
         };
         SwapTokens(_application, dark);
-        ControlCenterWindow.RefreshThemePalette(_application);
+        ShellWindow.RefreshThemePalette(_application);
     }
 
     private static void SwapTokens(Application app, bool dark)

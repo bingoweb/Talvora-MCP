@@ -8,7 +8,7 @@ using TextBlock = System.Windows.Controls.TextBlock;
 
 namespace Talvora.Tray;
 
-internal sealed partial class ControlCenterWindow
+internal sealed partial class ShellWindow
 {
     private sealed record EmbeddedMcpIntegrationEnvelope(
         int SchemaVersion,

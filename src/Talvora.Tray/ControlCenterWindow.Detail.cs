@@ -7,7 +7,7 @@ using UiButton = Wpf.Ui.Controls.Button;
 
 namespace Talvora.Tray;
 
-internal sealed partial class ControlCenterWindow
+internal sealed partial class ShellWindow
 {
     private UIElement BuildDetailView()
     {

@@ -28,7 +28,7 @@ internal static class ControlCenterSmoke
 
             try
             {
-                if (application.MainWindow is not ControlCenterWindow window)
+                if (application.MainWindow is not ShellWindow window)
                 {
                     throw new InvalidOperationException(
                         "Control Center main window was not created.");
@@ -143,23 +143,73 @@ internal static class ControlCenterSmoke
         }
     }
 
-    private static void AssertStitchNavigation(ControlCenterWindow window)
+    private static void AssertStitchNavigation(ShellWindow window)
     {
-        foreach (var name in new[] { "Genel Bakış", "MCP Hizmetleri", "Olaylar" })
+        var names = new[] { "Genel bakış", "Hizmetler", "Çalışma günlüğü", "Bağlantı zinciri", "Olaylar", "Ayarlar ve kurulum" };
+        foreach (var name in names)
         {
             var link = FindVisualChildByAutomationName(window, name);
             AssertAutomationElement(link);
-            if (!link.IsEnabled || link.ActualWidth < 80 || link.ActualHeight < 30)
+            if (!link.IsEnabled || link.ActualWidth < 32 || link.ActualHeight < 32)
+                throw new InvalidOperationException($"Shell navigation item '{name}' is not usable.");
+        }
+        for (var index = 0; index < 5; index++)
+        {
+            if (!window.HandleShellNavigationKey((System.Windows.Input.Key)((int)System.Windows.Input.Key.D1 + index),
+                    System.Windows.Input.ModifierKeys.Control))
+                throw new InvalidOperationException("Shell navigation shortcut was not handled.");
+            window.UpdateLayout();
+            if (window.ShellModel.SelectedIndex != index)
+                throw new InvalidOperationException("Shell shortcut selected a different route.");
+            if (index is 2 or 3)
             {
-                throw new InvalidOperationException(
-                    $"Stitch navigation item '{name}' is not usable.");
+                if (window.PlaceholderCard.Visibility != Visibility.Visible ||
+                    AutomationProperties.GetName(window.PlaceholderCard) != names[index])
+                    throw new InvalidOperationException("The approved placeholder is not accessible.");
+                SaveVisualSnapshotIfRequested(window, index == 2 ? "worklog" : "chain");
             }
         }
+        window.HandleShellNavigationKey(System.Windows.Input.Key.D4, System.Windows.Input.ModifierKeys.Control);
+        window.PlaceholderServices.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+        if (window.ShellModel.SelectedIndex != 1)
+            throw new InvalidOperationException("The chain placeholder must select Services.");
+        window.ShellModel.SelectPage(0);
+        window.PaletteButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+        window.Palette.Child.UpdateLayout();
+        if (!window.Palette.IsOpen || window.Palette.Results.Items.Count < 6)
+            throw new InvalidOperationException("The command palette must open with every destination.");
+        var backgroundClick = new System.Windows.Input.MouseButtonEventArgs(
+            System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, System.Windows.Input.MouseButton.Left)
+            { RoutedEvent = UIElement.MouseLeftButtonUpEvent };
+        window.Palette.Results.RaiseEvent(backgroundClick);
+        if (!window.Palette.IsOpen || window.ShellModel.SelectedIndex != 0)
+            throw new InvalidOperationException("Clicking palette background must not execute a command.");
+        var popupRoot = PresentationSource.FromVisual((Visual)window.Palette.Child)?.RootVisual as FrameworkElement;
+        SaveVisualSnapshotIfRequested(window, "palette", popupRoot ?? (FrameworkElement)window.Palette.Child);
+        window.ShellModel.PaletteQuery = "hzmt";
+        window.Palette.Results.SelectedIndex = 0;
+        var enter = new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
+            PresentationSource.FromVisual((Visual)window.Palette.Child), Environment.TickCount, System.Windows.Input.Key.Enter)
+            { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent };
+        window.Palette.Child.RaiseEvent(enter);
+        if (window.Palette.IsOpen || window.ShellModel.SelectedIndex != 1)
+            throw new InvalidOperationException("Enter must execute the selected palette destination and close it.");
+        window.PaletteButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+        var escape = new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
+            PresentationSource.FromVisual((Visual)window.Palette.Child), Environment.TickCount, System.Windows.Input.Key.Escape)
+            { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent };
+        window.Palette.Child.RaiseEvent(escape);
+        if (window.Palette.IsOpen) throw new InvalidOperationException("Esc must close the palette.");
+        if (window.FirstPaintMilliseconds is null)
+            throw new InvalidOperationException("The shell first-paint measurement was not recorded.");
+        window.ShellModel.SelectPage(0);
+        window.UpdateLayout();
     }
 
     private static void SaveVisualSnapshotIfRequested(
-        ControlCenterWindow window,
-        string? variant = null)
+        ShellWindow window,
+        string? variant = null,
+        FrameworkElement? surface = null)
     {
         var path = Environment.GetEnvironmentVariable(
             "TALVORA_CONTROL_CENTER_PREVIEW_PNG");
@@ -168,12 +218,13 @@ internal static class ControlCenterSmoke
             return;
         }
 
-        window.UpdateLayout();
+        var visual = surface ?? window;
+        visual.UpdateLayout();
         var bitmap = new RenderTargetBitmap(
-            Math.Max(1, (int)Math.Round(window.ActualWidth)),
-            Math.Max(1, (int)Math.Round(window.ActualHeight)),
+            Math.Max(1, (int)Math.Round(visual.ActualWidth)),
+            Math.Max(1, (int)Math.Round(visual.ActualHeight)),
             96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(window);
+        bitmap.Render(visual);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         var output = Path.GetFullPath(path);
@@ -190,7 +241,7 @@ internal static class ControlCenterSmoke
         encoder.Save(file);
     }
 
-    private static void AssertWindowChrome(ControlCenterWindow window)
+    private static void AssertWindowChrome(ShellWindow window)
     {
         var titleBar = FindVisualChild<TitleBar>(window)
             ?? throw new InvalidOperationException(
@@ -213,10 +264,10 @@ internal static class ControlCenterSmoke
         }
     }
 
-    private static void AssertDashboardStructure(ControlCenterWindow window)
+    private static void AssertDashboardStructure(ShellWindow window)
     {
         window.UpdateLayout();
-        var root = (Grid)window.Content;
+        var root = (Grid)window.LegacyContentHost.Content;
         var header = root.Children.OfType<Border>().Single(element =>
             Grid.GetRow(element) == 1 && Grid.GetColumn(element) == 1);
         var statusCard = ((Grid)header.Child).Children.OfType<Border>().Single();
@@ -247,7 +298,15 @@ internal static class ControlCenterSmoke
             var peer = UIElementAutomationPeer.CreatePeerForElement(element);
             if (peer is not null && peer.IsControlElement() && !peer.IsOffscreen())
             {
-                AssertAutomationBounds(peer);
+                try { AssertAutomationBounds(peer); }
+                catch (InvalidOperationException exception)
+                {
+                    var field = typeof(ShellWindow).GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                        .FirstOrDefault(candidate => ReferenceEquals(candidate.GetValue(window), element));
+                    var parent = VisualTreeHelper.GetParent(element);
+                    var parentName = parent is null ? string.Empty : AutomationProperties.GetName(parent);
+                    throw new InvalidOperationException($"Shell automation bounds: field={field?.Name}, name={element.Name}, type={element.GetType().Name}, parent={parent?.GetType().Name}/{parentName}, text='{(element as System.Windows.Controls.TextBlock)?.Text}'.", exception);
+                }
             }
         }
     }
@@ -291,7 +350,7 @@ internal static class ControlCenterSmoke
         }
     }
 
-    private static void AssertWindowDpi(ControlCenterWindow window)
+    private static void AssertWindowDpi(ShellWindow window)
     {
         var dpi = VisualTreeHelper.GetDpi(window);
         if (dpi.DpiScaleX <= 0 ||
@@ -304,7 +363,7 @@ internal static class ControlCenterSmoke
     }
 
     private static void AssertCompactDashboardLayout(
-        ControlCenterWindow window)
+        ShellWindow window)
     {
         var originalWidth = window.Width;
         try
@@ -376,7 +435,7 @@ internal static class ControlCenterSmoke
     }
 
     private static void AssertElementFitsHorizontally(
-        ControlCenterWindow window,
+        ShellWindow window,
         FrameworkElement element)
     {
         var origin = element
@@ -412,7 +471,7 @@ internal static class ControlCenterSmoke
         return null;
     }
 
-    private static void AssertWindowHasVisibleContent(ControlCenterWindow window)
+    private static void AssertWindowHasVisibleContent(ShellWindow window)
     {
         window.UpdateLayout();
 
@@ -430,7 +489,7 @@ internal static class ControlCenterSmoke
     }
 
     private static void AssertRenderedSurfaceIsNotBlank(
-        ControlCenterWindow window)
+        ShellWindow window)
     {
         var width = Math.Max(1, (int)Math.Round(window.ActualWidth));
         var height = Math.Max(1, (int)Math.Round(window.ActualHeight));

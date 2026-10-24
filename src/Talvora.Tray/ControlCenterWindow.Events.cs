@@ -13,7 +13,7 @@ using WpfCursors = System.Windows.Input.Cursors;
 
 namespace Talvora.Tray;
 
-internal sealed partial class ControlCenterWindow
+internal sealed partial class ShellWindow
 {
     private CardExpander _eventsExpander = null!;
     private TextBlock _eventsSummaryText = null!;

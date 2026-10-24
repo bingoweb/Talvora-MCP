@@ -1,8 +1,20 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T12:26:28Z",
-  "scope": "TI1: exact Altigen-T tray art/factory references, real-size transparent Bitmap drawing, native icon ownership, taskbar theme/contrast appearance and the prescribed two-second WinForms timer.",
+  "verifiedAtUtc": "2026-10-24T13:11:08Z",
+  "scope": "UI2: approved shell/rail/title bar/command palette and P-33 fixed placeholders; WPF-UI 4.3 native chrome, CommunityToolkit.Mvvm 8.4.2 commands and existing page/lifecycle adapters.",
   "libraries": [
+    {
+      "libraryId": "/lepoco/wpfui",
+      "verified": "2026-10-24 UI2: Context7 and the pinned WPF-UI 4.3 XML/API/source confirm FluentWindow, TitleBar Header/CenterContent/TrailingContent, ExtendsContentIntoTitleBar and all six prescribed SymbolRegular names. The existing Mica/theme watcher and placement logic stay on the renamed ShellWindow partial class. Source: https://github.com/lepoco/wpfui/blob/main/src/Wpf.Ui/Controls/TitleBar/TitleBar.cs and https://github.com/lepoco/wpfui/blob/main/src/Wpf.Ui/Controls/TitleBar/TitleBar.xaml."
+    },
+    {
+      "libraryId": "/websites/learn_microsoft_en-us_dotnet_communitytoolkit_mvvm",
+      "verified": "2026-10-24 UI2: official MVVM Toolkit docs verify ObservableObject.SetProperty, RelayCommand and AsyncRelayCommand async delegates/ExecutionTask/IsRunning; NuGet absoluteLatest confirms stable 8.4.2, MIT, compatible with .NET 10. Sources: https://learn.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/relaycommand and https://learn.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/asyncrelaycommand and https://www.nuget.org/packages/CommunityToolkit.Mvvm/absoluteLatest. Existing service I/O delegates and their guards are preserved."
+    },
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-24 UI2: Microsoft Popup documentation confirms separate-window Child content, IsOpen/Opened/Closed, StaysOpen=false and direct child effects; Grid/RadioButton grouping, keyboard routed events and UI Automation peers support the approved shell. Source: https://learn.microsoft.com/en-us/dotnet/desktop/wpf/controls/popup and https://learn.microsoft.com/en-us/dotnet/desktop/wpf/controls/panel. Dispatcher.BeginInvoke at Background priority lets render/input finish before initial snapshot refresh; ItemsControl.ContainerFromElement excludes palette background/scrollbar clicks from command execution. Real smoke verifies the six Turkish accessible rail items, Ctrl+1..5, chain-to-Services action, palette Enter/Esc, both themes, hide/reopen and compact layout."
+    },
     {
       "libraryId": "/dotnet/winforms",
       "verified": "2026-10-24 TI1: Context7 and current Microsoft .NET desktop documentation verify Bitmap/Graphics drawing, GetHicon/FromHandle and native DestroyIcon ownership, SystemInformation.SmallIconSize pixel dimensions, high contrast and the WinForms UI-thread Timer lifecycle. The exact reference reads the prescribed HKCU Personalize SystemUsesLightTheme value with Registry.CurrentUser.OpenSubKey/GetValue and a false fallback. Official sources checked: https://learn.microsoft.com/en-us/dotnet/api/system.drawing.bitmap.gethicon?view=windowsdesktop-10.0 and https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.systeminformation.smalliconsize?view=windowsdesktop-10.0; Context7 source https://github.com/dotnet/winforms/blob/main/src/System.Windows.Forms/System/Windows/Forms/Application.ThreadContext.cs. No geometry, colour, string or timer choice deviates from ROADMAP TI1."
