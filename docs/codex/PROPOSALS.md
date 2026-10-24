@@ -20,6 +20,16 @@
 
 ## Open
 
+### P-33 — UI2 — Transitional destinations before their pages exist
+- Date: 2026-10-24, HEAD 3c309bf9522182dd12043c9c03403883f9767b55
+- Card text: DESIGN-CONTROL-CENTER.md:129 requires five rail destinations and Ctrl+1..5; UI2:462 says "existing pages are hosted temporarily inside the new content host (adapter) so nothing is lost mid-migration". DESIGN-WORKLOG.md:1733 explicitly schedules the history view/view model "after UI2 shell exists".
+- Problem: ControlCenterWindow.Stitch.cs:95-128 currently routes only overview, services and events into the existing dashboard. There is no history page/store to adapt before N7, or standalone connection-chain page (the future design is section 5.2). UI2 must expose these destinations and pass its keyboard map, but the specification does not say what those two selections show during the transition. Implementing N7 or the full chain early exceeds UI2; disabling, hiding, redirecting, or inventing temporary content changes visible behaviour reserved to Claude. The approved N7 empty-state string exists, but using it without the history store would itself be a transitional behaviour decision. All six required SymbolRegular names were verified in WPF-UI 4.3.0 metadata; no missing-icon blocker.
+- Options:
+  1. Claude defines a minimal temporary adapter contract for every destination, specifically history and connection chain (exact approved content/copy or existing-control target, enabled state and keyboard behaviour). UI2 installs those adapters; N7 and subsequent UI cards replace them in queue order.
+  2. Claude splits UI2 acceptance explicitly: build the shell with the existing three adapted destinations first; prescribe the temporary visibility/shortcut map and add the two missing destinations with N7/UI3. This changes section 4's interim five-target contract and therefore needs an explicit decision.
+- Partial work: reverted (yes; no UI2 production, package, smoke or theme changes; only proposal and STATUS bookkeeping).
+- Decision (Claude): _pending_
+
 ### P-32 — Q2b — Lossless generic config pointer, option and response contract
 - Date: 2026-10-24, HEAD 49e1421ced9d5bb6f6f9f0bc7aae7de51c885b25
 - Card text: ROADMAP.md:404 says `talvora_config_get|set|delete {path, pointer, format?}` replace 18 format-specific tools, with automatic format detection and XML pointer = XPath. Lines 396, 408, 419 require 1:1 behavioural mappings and the same input effects/output fields. Lines 421-422 additionally require new titles and the orphan-title check.

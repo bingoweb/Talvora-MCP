@@ -95,15 +95,15 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] T1 — SourceEdit regression: Roslyn scenarios selectable on their own (Phase T; GitHub CI 40083209363 success)
 - [x] T2 — Quality gate runs independent suites in parallel (Phase T; GitHub CI 40084239875 success)
 - [x] T3 — `-Scope Changed`: run only what the change can affect (Phase T; GitHub CI 40085066720 success)
-- [~] T4 — CI: documentation-only pushes run the changed-scope gate (Phase T; GitHub CI 40086071865 success; docs-only CI live evidence pending)
+- [x] T4 — CI: documentation-only pushes run the changed-scope gate (Phase T; GitHub CI 40086071865 success; real docs-only CI 40089591627 ran Changed 10/0 without build/restore)
 - [x] UI1 — Tokens, theme manager and typography; P-18/P-31; installed 49e1421, Gece/Gün installed smokes and PNGs passed, GitHub CI 40088645152 success; visual review awaits Claude audit.
 - [x] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; Claude audit 14 verified GitHub CI 830bb67 success, installed 830bb67 counts 250/213/88 and live toolchain_info. Specialized selectors/probes retained by the hard rule.
 - [?] Q2b — Config get/set/delete consolidation (P-16; waiting for Claude: P-32 lossless pointer/options/results and Turkish titles)
 - [?] Q2c — Legacy text mutators removed + manifest-driven README count test (P-16; waiting for Q2b final surface counts)
 - [?] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget (waiting for Q2c)
 - [?] Q3 — Documentation diet (P-17; waiting for Q2c manifest-driven README counts)
-- [ ] UI2 — Shell, rail, title bar, command palette
-- [ ] N7 — "Çalışma günlüğü" history page
+- [?] UI2 — Shell, rail, title bar, command palette (waiting for Claude: P-33 transitional history/connection-chain destination contract)
+- [?] N7 — "Çalışma günlüğü" history page (waiting for UI2 shell, DESIGN-WORKLOG.md:1733)
 - [ ] UI3 — Overview: Nabız ring + chain strip
 - [ ] UI4 — Services list + detail
 - [ ] UI5 — Events + raw log
@@ -142,6 +142,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-24 — UI2 (executor: ChatGPT): stopped before implementation under EXECUTION MANDATE rules 6/8; P-33 requests the interim history/connection-chain adapter contract. N7 explicitly needs the UI2 shell and is marked waiting for it.
+  No product/package/test changes. All six prescribed WPF-UI 4.3.0 symbols exist; Context7 /lepoco/wpfui confirms the native title-bar/Mica APIs. Baseline signed-in Changed 8/0, Hepsi geçti.; exact-head GitHub windows-ci 40089591627 success.
+  T4 live acceptance closed from that real docs-only run: changed files 2, build/restore skipped, Changed gate 10/0, Hepsi geçti. Final signed-in documentation gate: 10/0, Hepsi geçti.; no runtime deployment required. Gitea list/update unavailable: connector requires approval but this session's approval policy is never. Exact-commit CI will be checked after push.
 - 2026-10-24 — Q2b (executor: ChatGPT): stopped before implementation under EXECUTION MANDATE rule 6. P-32 asks Claude to define lossless cross-format pointer/flags/results and approved Turkish titles. No Q2b production/test changes; the baseline signed-in Changed gate 8/0 `Hepsi geçti.`, exact-head GitHub CI 40088645152 success. UI1 installed 49e1421 and both installed theme PNGs verified; its STATUS entry closed.
 - 2026-10-24 — UI1 (executor: ChatGPT): P-18/P-31 approved Gece/Gun tokens, Typography/Controls and system/live WPF-UI theme manager; saved preference beside window placement. Layout and desktop Worklog untouched.
   RED missing Gece token dictionary; GREEN WCAG contrast pairs, both Q5 smoke themes, same-window switch/restore and isolated preference persistence; before fbe7542 and both after PNGs in artifacts/ui1.
