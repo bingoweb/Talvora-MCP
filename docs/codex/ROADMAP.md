@@ -2392,6 +2392,217 @@ Step 9 — copy `docs/codex/reference/t4/CiDocsOnlyRegression.ps1` → `tests/Ci
 
 **Claude's verification (all four, clean clone of `b17c6f7`, signed-in `MSI\tayla`):** T1 halves green concurrently (55 s instead of 69 s); T2 test RED before / green after; parallel Full gate green three times (1 min 41 s, `ParallelPhase` 69–71 s; before ≈ 3 min 30 s); T3 test RED before / green after; `-Scope Changed`: workflow change 4.7 s, docs-only `-Base HEAD~1` 4.4 s, tray change 39 s and it correctly failed on the tray file's pinned reference checksum; T4 test RED on the old workflow, green after; final Full gate with T1–T4: `65 kontrol, 0 hata` / `Hepsi geçti.` in 1 min 49 s as `MSI\tayla`.
 
+## Tray icon (user request 2026-10-24)
+
+### TI1 — Tray icon "Altıgen-T" (Claude's design, user request 2026-10-24)
+
+> User: "talvora tray ikon için bir kozmetik yaratıcılık sergile". This card is **complete and literal**: every pixel decision is in the reference code. It replaces the tray-icon part of UI7 (DESIGN-CONTROL-CENTER UI7 amended). Executor rule: apply the steps exactly; there is **nothing** to design, choose, tune or improve.
+
+**Why.** Today the tray shows the 32 px executable icon (dark rounded plate, gradient hexagon, T) shrunk by Windows to 16 px — soft, heavy on a dark taskbar, a dark square on a light one — with a 10.5 px status disc covering a third of the mark, and a green disc even when everything is fine.
+
+**Design (what the user will see).**
+- The brand mark alone, no plate: the **notched hexagon** (the brand's gap at the top vertex) as a 1.55-unit ring and the **T** with bevelled bar ends, drawn as vector art at the tray's **real pixel size** (16 px at 100 %, 20 / 24 / 32 at 125 / 150 / 200 %), so it is crisp at every scale.
+- Colours are the Control Center tokens of the **taskbar** theme: dark taskbar → ring `#5BD8FF`, T `#E9EEF6`; light taskbar → ring `#0779A8`, T `#0E1625`. High contrast → ring and T pure white (dark) / black (light).
+- **Hazır** = the quiet mark, **no badge** (state is in the tooltip and menu). **Dikkat** (LocalOnly) = an amber triangle (`#F5B84B` / `#9A5B00`), **Ulaşılamıyor** (Offline) = a red disc (`#FF6B81` / `#C2324A`), 5.4 units, bottom-right, inside a transparent 7.2-unit cut-out that cuts the ring but never the T. Shape + colour, never colour alone.
+- It follows the taskbar live: a 2 s UI-thread timer compares `TrayIconAppearance.Current()` (size, light taskbar, high contrast) and redraws only when it changed.
+- Proof sheet: `docs/codex/reference/tray-icon/previews/tray-sheet.png` (3 states × 4 sizes × both taskbars, 8×) and the 24 single PNGs.
+
+**Files:** new `src/Talvora.Tray/TrayIconArt.cs`; `src/Talvora.Tray/TrayIconFactory.cs` (whole file from the reference); `src/Talvora.Tray/Program.cs` (`--tray-icon-preview`); `src/Talvora.Tray/TrayApplicationContext.cs` (field, timer, icon creation, stop/dispose); new `tests/Talvora.Notification.Regression/Program.TrayIcon.cs`; `tests/Talvora.Notification.Regression/Program.cs` (one call); `tests/NativeInstallerSourceRegression.ps1` (the old "shrink the exe icon" contract becomes the TI1 contract); `.context7/verification.json` (System.Drawing `Graphics`/`Bitmap.GetHicon`, `SystemInformation.SmallIconSize`, registry `SystemUsesLightTheme`); `.talvora/awwwards-verification.json` (`designDecisions`: "DESIGN-CONTROL-CENTER §11 TI1 Altıgen-T tray mark").
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — copy `docs/codex/reference/tray-icon/TrayIconArt.cs` → `src/Talvora.Tray/TrayIconArt.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `fe8dfe96eaed822b0a552499875c847474f30610f05b3e6f4bc7d513545b55ed`). New file: the whole drawing (geometry on a 16-unit grid, token colours, badge shapes, PNG preview writer).
+
+Step 2 — copy `docs/codex/reference/tray-icon/TrayIconFactory.cs` → `src/Talvora.Tray/TrayIconFactory.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `3ba4462117229b1dfeb06f942cdcf1ac120215f24bb85de54122c766096e35b8`). Replaces the whole file: `CreateStatusIcon` now takes a `TrayIconAppearance` and draws with `TrayIconArt`; `DrawBrandFallback` and `DrawStatusBadge` are gone; `CreateGiteaStatusIcon` is unchanged.
+
+Step 3 — `src/Talvora.Tray/Program.cs` — replace
+
+```csharp
+    private static int Main(string[] args)
+    {
+```
+
+with
+
+```csharp
+    private static int Main(string[] args)
+    {
+        if (args.Length >= 2 &&
+            string.Equals(args[0], "--tray-icon-preview", StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var path in Talvora.Tray.TrayIconArt.RenderPreviews(args[1]))
+            {
+                Console.WriteLine(path);
+            }
+
+            return 0;
+        }
+```
+
+Step 4 — `src/Talvora.Tray/TrayApplicationContext.cs` — replace
+
+```csharp
+    private Icon? _statusIcon;
+```
+
+with
+
+```csharp
+    private Icon? _statusIcon;
+    private TrayIconAppearance _iconAppearance;
+    private readonly System.Windows.Forms.Timer _iconAppearanceTimer;
+```
+
+Step 5 — `src/Talvora.Tray/TrayApplicationContext.cs` — replace
+
+```csharp
+        UpdateAggregateTrayState();
+
+        _talvoraTimer = new System.Windows.Forms.Timer
+```
+
+with
+
+```csharp
+        UpdateAggregateTrayState();
+
+        // Redraw the tray mark when the taskbar theme, high contrast or the tray icon size changes.
+        _iconAppearanceTimer = new System.Windows.Forms.Timer
+        {
+            Interval = 2_000,
+            Enabled = true,
+        };
+        _iconAppearanceTimer.Tick += (_, _) =>
+        {
+            if (TrayIconAppearance.Current() != _iconAppearance)
+            {
+                UpdateAggregateTrayState();
+            }
+        };
+
+        _talvoraTimer = new System.Windows.Forms.Timer
+```
+
+Step 6 — `src/Talvora.Tray/TrayApplicationContext.cs` — replace
+
+```csharp
+        var color = aggregateState switch
+        {
+            TalvoraConnectionState.Ready => Color.FromArgb(49, 196, 112),
+            TalvoraConnectionState.LocalOnly => Color.FromArgb(240, 178, 52),
+            _ => Color.FromArgb(220, 72, 72),
+        };
+
+        var previous = _statusIcon;
+        _statusIcon = TrayIconFactory.CreateStatusIcon(
+            aggregateState,
+            color);
+```
+
+with
+
+```csharp
+        var previous = _statusIcon;
+        _iconAppearance = TrayIconAppearance.Current();
+        _statusIcon = TrayIconFactory.CreateStatusIcon(
+            aggregateState,
+            _iconAppearance);
+```
+
+Step 7 — `src/Talvora.Tray/TrayApplicationContext.cs` — replace
+
+```csharp
+        _shutdownTimer.Stop();
+        _lifetimeCts.Cancel();
+        _notifyIcon.Visible = false;
+```
+
+with
+
+```csharp
+        _shutdownTimer.Stop();
+        _iconAppearanceTimer.Stop();
+        _lifetimeCts.Cancel();
+        _notifyIcon.Visible = false;
+```
+
+Step 8 — `src/Talvora.Tray/TrayApplicationContext.cs` — replace
+
+```csharp
+            _shutdownTimer.Stop();
+            _talvoraTimer.Dispose();
+```
+
+with
+
+```csharp
+            _shutdownTimer.Stop();
+            _iconAppearanceTimer.Stop();
+            _talvoraTimer.Dispose();
+```
+
+Step 9 — `src/Talvora.Tray/TrayApplicationContext.cs` — replace
+
+```csharp
+            _shutdownTimer.Dispose();
+```
+
+with
+
+```csharp
+            _shutdownTimer.Dispose();
+            _iconAppearanceTimer.Dispose();
+```
+
+Step 10 — `tests/NativeInstallerSourceRegression.ps1` — replace
+
+```powershell
+    TrayUsesEmbeddedBrandIcon = (
+        $trayProgram -match 'Icon\.ExtractAssociatedIcon\(Application\.ExecutablePath\)' -and
+        $trayProgram -match 'DrawStatusBadge' -and
+        $trayProgram -match 'TalvoraConnectionState\.Ready'
+    )
+```
+
+with
+
+```powershell
+    # TI1: the tray draws the brand mark as vector art at the real tray size instead of shrinking the exe icon.
+    TrayUsesBrandMarkArt = (
+        $trayProgram -match 'TrayIconArt\.Render\(' -and
+        $trayProgram -match 'TrayIconAppearance\.Current\(\)' -and
+        $trayProgram -match 'TalvoraConnectionState\.Ready' -and
+        $trayProgram -notmatch 'Icon\.ExtractAssociatedIcon\(Application\.ExecutablePath\)'
+    )
+```
+
+Step 11 — copy `docs/codex/reference/tray-icon/Program.TrayIcon.cs` → `tests/Talvora.Notification.Regression/Program.TrayIcon.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `3808bb28f43c644f4c2d4a969fed80e757ce0a44d42c6c39d89386458222c70b`).
+
+Step 12 — `tests/Talvora.Notification.Regression/Program.cs` — replace
+
+```csharp
+        AssertN6Details();
+```
+
+with
+
+```csharp
+        AssertN6Details();
+        AssertTrayIconArt();
+```
+
+**Don't (each of these is a violation → D-card):**
+- change any coordinate, size, stroke width, notch fraction, colour, badge shape, badge position, timer interval, identifier, comment or string in the reference code;
+- add a background plate, gradient, glow, shadow, outline, animation, blinking, extra badge, or a badge for Ready;
+- draw the tray icon from `Talvora.ico`, `Talvora.png` or `Icon.ExtractAssociatedIcon`;
+- use `SystemEvents` or another notification mechanism instead of the 2 s timer;
+- change `CreateGiteaStatusIcon`, the tray menu, the tooltip text, the state evaluation or any file not listed in **Files**;
+- "fix" a preview pixel by hand — if a PNG differs, stop with a proposal that attaches both images.
+
+**Acceptance:** `DESKTOP_PROGRESS_BEHAVIOR_GREEN` (includes `AssertTrayIconArt`; RED before the steps = compile error, the types do not exist); `Talvora.Tray.exe --tray-icon-preview <tmp>` writes 25 PNGs, **all byte-identical** to `docs/codex/reference/tray-icon/previews/`; Full gate `Hepsi geçti.`; installer + deploy; installed `Talvora.Tray.exe --tray-icon-preview` also byte-identical; GitHub CI green. Then add the User queue line "U9 — Tepsideki yeni Talvora ikonuna bakın (açık ve koyu görev çubuğunda); beğenmezseniz Claude'a söyleyin." and mark TI1 `[~]` until the user answers.
+
+Claude's verification (clean clone of `64c95b4`): solution build 0 errors; `DESKTOP_PROGRESS_BEHAVIOR_GREEN`; the built tray writes 25/25 PNGs byte-identical to the reference; Full gate `66 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`.
+
 ## Phase CI — Stop the recurring GitHub failures (root cause, Claude 2026-10-20)
 
 **Verified by Claude from the GitHub logs:** every `windows-ci` run since `edcef4f` (S6, 20 Oct) failed at the same place — `FAIL SourceEdit … knowledge-s6-scoped-fetch: Win32Exception (1314) WTSQueryUserToken failed`. The test only passes as LocalSystem; the runner is a normal administrator. Locally the agent ran the gate through `talvora_run_powershell` **as LocalSystem**, so it never saw the failure, and nothing in the protocol made it look at CI after pushing. Two more independent failure classes exist: a timing-flaky test (`directory-identity-external-reader: External directory handle never became ready`, run `39239571794`) and Dependabot PR #16 (`NU1109 Detected package downgrade … from 10.0.13 to centrally defined 10.0.12`: Dependabot bumped some .NET platform packages, central transitive pinning kept the rest at 10.0.12).

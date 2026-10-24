@@ -1,0 +1,4 @@
+# SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
+3808bb28f43c644f4c2d4a969fed80e757ce0a44d42c6c39d89386458222c70b  Program.TrayIcon.cs
+3ba4462117229b1dfeb06f942cdcf1ac120215f24bb85de54122c766096e35b8  TrayIconFactory.cs
+fe8dfe96eaed822b0a552499875c847474f30610f05b3e6f4bc7d513545b55ed  TrayIconArt.cs

@@ -99,6 +99,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI1 — Tokens, theme manager and typography; P-18/P-31; installed 49e1421, Gece/Gün installed smokes and PNGs passed, GitHub CI 40088645152 success; visual review awaits Claude audit.
 - [x] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; Claude audit 14 verified GitHub CI 830bb67 success, installed 830bb67 counts 250/213/88 and live toolchain_info. Specialized selectors/probes retained by the hard rule.
 - [ ] D21 — Worklog card: hanging indents, one text edge, no imitation window buttons (audit 2026-10-24 (15))
+- [ ] TI1 — Tray icon "Altıgen-T" (Claude design; exact reference code in docs/codex/reference/tray-icon)
 - [-] Q2b — Config get/set/delete consolidation (withdrawn by P-32; the 18 format tools stay)
 - [ ] Q2c — Legacy text mutators removed + manifest-driven README count test (P-16; Q2b withdrawn by P-32 — use the manifest as it is after Q2c)
 - [ ] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (after Q2c; amended by P-32)
@@ -143,6 +144,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — Claude: TI1 tray icon "Altıgen-T" (user request). Notched hexagon + T as vector art at the real tray size, taskbar-theme token colours, quiet Ready, amber triangle / red disc badges in a cut-out, live redraw on theme/size change. Replayed on a clean clone: build 0 errors, notification regression green (new AssertTrayIconArt), 25/25 preview PNGs byte-identical, Full `66 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. Queued after D21; UI7 amended.
 - 2026-10-24 — Claude deep audit 15 of `830bb67..fce75d5` (D19, D20, T1–T4, UI1 + proposals P-32/P-33): D20 and T1–T4 identical to the verified clones; D19 one equivalent regex escape (LOW); docs-only CI now 21–27 s; UI1 tokens equal the spec in both themes, live switch proven. D21 (worklog polish: hanging indents, one text edge, no imitation window dots) verified on a clean clone: previews 10/10 byte-identical, Full `66 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. P-32: Q2b withdrawn, orphan titles → Q1. P-33: placeholder contract, UI3 builds §5.2. UI8: loaded-snapshot race. Tag `audit/2026-10-24-15` = `fce75d5`.
 
 - 2026-10-24 — UI2 (executor: ChatGPT): stopped before implementation under EXECUTION MANDATE rules 6/8; P-33 requests the interim history/connection-chain adapter contract. N7 explicitly needs the UI2 shell and is marked waiting for it.

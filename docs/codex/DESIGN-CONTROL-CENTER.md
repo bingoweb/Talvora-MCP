@@ -489,6 +489,8 @@ Each card = one commit, Awwwards evidence refreshed (cite pages actually reviewe
 
 ### UI7 — Tray icon, tray menu, worklog colour alignment, About
 
+> **Amended by TI1 (Claude, 2026-10-24):** the tray icon itself is delivered by TI1 (`TrayIconArt`). UI7 must not change `TrayIconArt.cs`, `TrayIconFactory.CreateStatusIcon` or the icon timer; the "single-colour silhouette" and "state dot" sentences below are void. UI7 keeps the menu, tooltip, worklog colour alignment and About.
+
 **Files:** `TrayIconFactory.cs`, `TrayApplicationContext.cs` (menu), `DesktopProgressVisualTheme.cs` (colour mapping only), Settings "Hakkında".
 **Do:** tray icon = the existing Talvora "T" mark from `assets/Talvora.png`/`Talvora.ico`, rendered as a single-colour silhouette: `#FFFFFF` when the taskbar is dark, `#1A1A1A` when light (`HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize\SystemUsesLightTheme`, live). State dot: circle, diameter 37.5 % of the icon size, bottom-right, 1 px ring in the taskbar colour; colours Ready `#3DDC97`, Attention `#F5B84B`, Offline `#FF6B81`; Neutral/unknown = no dot. Tray menu items in this order: "Kontrol Merkezini aç" (bold, default), "Durum: {§9 status sentence}" (disabled text), separator, "Yenile", separator, "Çıkış". Tooltip: "Talvora Kontrol Merkezi — {§9 status sentence}". The same "T" mark is the 16 px glyph in the worklog header (DESIGN-WORKLOG §7). No change to the worklog card here.
 **Acceptance:** icon renders crisp at 16/20/24/32 px (PNG proof), notification regression suite green.
