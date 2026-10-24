@@ -73,9 +73,11 @@ internal sealed partial class ShellWindow
         _ui3ComponentCancellation?.Dispose();
         _ui3ComponentCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCts.Token);
         _ui3RequestedComponentSnapshot = snapshot;
+        // Captured outside the try: a newer refresh replaces _ui3ComponentCancellation, and this refresh's own
+        // cancellation must stay quiet instead of being logged as "unavailable" (audit 17).
+        var token = _ui3ComponentCancellation.Token;
         try
         {
-            var token = _ui3ComponentCancellation.Token;
             var tasks = snapshot.Mcps.Select(async state =>
             {
                 try
@@ -102,8 +104,7 @@ internal sealed partial class ShellWindow
             _overviewView?.ApplyComponents(snapshot, _ui3Components);
             _chainView?.ApplySnapshot(snapshot, _ui3Components);
         }
-        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested ||
-            _ui3ComponentCancellation?.IsCancellationRequested == true)
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
         }
         catch (Exception ex)

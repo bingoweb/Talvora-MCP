@@ -13,7 +13,7 @@
 | Branch | `main` only. Do not create branches. Dependabot PRs: apply with scripts/Apply-DependabotPr.ps1 (DEP1), never merge on GitHub. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-24-16` = `355af6d`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-24-17` = `e5d4738`. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -101,6 +101,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D21 — Worklog card: hanging indents, one text edge, no imitation window buttons (installed 5b57960, previews 10/10, live capture, CI 40093271827; Gitea attachment waived — connector approval unavailable, audit 16)
 - [~] TI1 — Tray icon "Altıgen-T" (reference hashes 3/3, source and installed previews 25/25, Full 66/0; installed d3925fb and CI 40094172485 success verified; only user visual answer under U9 pending)
 - [-] Q2b — Config get/set/delete consolidation (withdrawn by P-32; the 18 format tools stay)
+- [ ] D22 — Atomic publish survives a simultaneous writer (audit 2026-10-24 (17); after UI5)
 - [ ] Q2c — Legacy text mutators removed where 1:1 + manifest-driven README count test (P-34 decided: no numeric ceilings; 120 KB budget moves to Q1)
 - [?] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (waiting for Q2c; amended by P-32)
 - [?] Q3 — Documentation diet (P-17; waiting for Q2c)
@@ -142,16 +143,17 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - src/Talvora.Tray/ControlCenterSmoke.UI3.cs:102 — The 3-second overview idle CPU sample after 2.5 seconds of warm-up was 7.33%, above the UI8 <1% target. Keep motion controls and the measurement; assign CPU rendering optimization to UI8/Claude visual audit, not unapproved UI3 changes.
 
-- src/Talvora.Tray/DesktopProgressNotificationPresenter.cs:181 — N5 passes message.WorklogFrame! to the reference window without checking null; legacy tray alerts can lack this frame, and installed live capture returned NO_CARD_WINDOW. Check protocol-v4 fallback/alert routing in Claude audit before changing approved UI code.
-- src/Talvora/SourceEditing/AstGrepToolchainManager.cs:44 — After S3, signed-in Fast gate cannot access protected ProgramData/Toolchains or SourceEdit journals; P-29 needs a safe test contract.
-- tests/Talvora.Smoke/SmokeScenarios.MetadataPolicy.cs:237 — RM1 extra installed metadata check reported 109 destructive tools vs expected 101; the three Remotion tools are non-destructive and excluding them still gives 109. Gitea #9 comment 132 records the result; no unrelated metadata change in N3b.
+- (resolved → audit 17 fix) src/Talvora.Tray/DesktopProgressNotificationPresenter.cs:181 — N5 passes message.WorklogFrame! to the reference window without checking null; legacy tray alerts can lack this frame, and installed live capture returned NO_CARD_WINDOW. Check protocol-v4 fallback/alert routing in Claude audit before changing approved UI code.
+- (resolved → D17) src/Talvora/SourceEditing/AstGrepToolchainManager.cs:44 — After S3, signed-in Fast gate cannot access protected ProgramData/Toolchains or SourceEdit journals; P-29 needs a safe test contract.
+- (resolved → audit 14 counts) tests/Talvora.Smoke/SmokeScenarios.MetadataPolicy.cs:237 — RM1 extra installed metadata check reported 109 destructive tools vs expected 101; the three Remotion tools are non-destructive and excluding them still gives 109. Gitea #9 comment 132 records the result; no unrelated metadata change in N3b.
 
-- src/Talvora/Tools/UserRunTools.cs:50 — A detached Start-Process child keeps output pipes open: the launcher returns failure after 5 seconds although the signed-in gate continues and exits 0; direct long connector calls also time out. Gate log/exit files independently verified; no runner change in N9.
+- (resolved → P-26/D14) src/Talvora/Tools/UserRunTools.cs:50 — A detached Start-Process child keeps output pipes open: the launcher returns failure after 5 seconds although the signed-in gate continues and exits 0; direct long connector calls also time out. Gate log/exit files independently verified; no runner change in N9.
 
-- src/Talvora/Tools/GitTools.cs:787 - User requests a permanent Git/SSH project-rule fix: remote `fetch`/`push` use the signed-in identity but `pull` does not, so `git pull --ff-only origin main` runs as LocalSystem and cannot open the correctly ACL-protected user SSH key; see P-24. Preserve the key ACL.
+- (resolved → P-24/D12) src/Talvora/Tools/GitTools.cs:787 - User requests a permanent Git/SSH project-rule fix: remote `fetch`/`push` use the signed-in identity but `pull` does not, so `git pull --ff-only origin main` runs as LocalSystem and cannot open the correctly ACL-protected user SSH key; see P-24. Preserve the key ACL.
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — Claude system-wide audit 17 (no new card commits): AtomicFile publish race reproduced (RED 3/3, real tray.log hit) → D22 with exact code, GREEN 8/8; Claude fixed the UI3 cancellation false alarm and the frameless-message NullReference; overview idle CPU 7–10 % is a smoke artefact (real tray 0.1 % closed) → UI8 amended; no secrets in tree/history, 0 warnings; 5 stale findings resolved; §8 legacy-builder deletion amended for UI5. Verified on a clean clone: Full `66 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. Tag `audit/2026-10-24-17` = `e5d4738`.
 - 2026-10-24 — Claude deep audit 16 of `fce75d5..355af6d` (D21, TI1, UI2, N7, UI3, UI4): D21 and TI1 exact; spec cards reviewed on installed renders. Claude fixed six small defects directly: chain links anchored at the dot centre, labels/hollow ring no longer crossed by links, legend shapes on chain nodes, detail sentence said once, dangling ‘·’ removed, N7 timing (P-35) and Q2a yarn CI flake stabilised. Verified on a clean clone: build 0 errors, notification + Q2a suites green, both-theme smoke, Full `66 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. P-34: Q2c without numeric ceilings, 120 KB budget in Q1. D21 closed. Tag `audit/2026-10-24-16` = `355af6d`.
 
 - 2026-10-24 — UI4 (executor: ChatGPT via Talvora): replaced the legacy Services route with MVVM ServicesView/ServiceDetailView; reusable five-state StatusPill, 56px ServiceRow, redacted bounded EvidencePanel, search/filter, three tabs, operation banner with real Stopwatch elapsed time and exact manual-stop text. Kept legacy service/detail handlers only where still used by Events/Settings and existing smoke; UI4 routes through the approved lifecycle, repair, stop-confirmation and event APIs.

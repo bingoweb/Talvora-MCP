@@ -1094,6 +1094,116 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-24 (17, system-wide) · no new card commits since `e5d4738` (UI5 still uncommitted, P-35 answered) · result: one robustness card (D22), two small fixes by Claude, UI8 amended
+
+The user asked for a line-by-line audit ("derin derin denetle, didik didik et"). With nothing new delivered, Claude audited the running system instead: the installed runtime (`355af6d`) and its logs, secrets in the public repository and its history, build hygiene, the open findings list, and the uncommitted UI5 work.
+
+| # | Severity | Finding | Evidence | Action |
+|---|---|---|---|---|
+| 1 | **MEDIUM** | `AtomicFile.PublishDurable` races when two writers publish the same file at the same moment: the existence check and the move are not one step, so the second writer fails ("Durable file publication failed"); a simultaneous `File.Replace` collides too. Hit in real life: `tray.log` 19:50 — the Control Center dashboard refresh failed writing `managed-mcp-recovery\v2-….json` while a second `Talvora.Tray.exe` (the gate's Control Center smoke) wrote the same manifest. | New regression `atomic-publish-concurrent-first-writers` (4 writers × 150 files) is RED on `e5d4738` in 3/3 runs, GREEN 8/8 with the fix. | **D22** (shared infrastructure → card with exact code) |
+| 2 | LOW | "UI3 component health unavailable :: TaskCanceledException" logged 6× — a newer refresh cancels the older one, but the filter checked the *new* token. | `ShellWindow.UI3.cs` | Fixed by Claude: the refresh's own token is captured before the `try`. |
+| 3 | LOW | A frameless desktop-progress message would be accepted and then throw `NullReferenceException` in `window.Update(message.WorklogFrame!, …)` (STATUS finding of N5, still open). No frameless sender exists today. | `DesktopProgressNotificationPresenter.cs` | Fixed by Claude: frameless messages are ignored after evaluation; finding resolved. |
+| 4 | LOW | Control Center smoke reports overview idle CPU 7–10 % of the machine (≈ one core); §10 asks < 1 %. Not the chain animation (same at 1 fps), not rendering (same minimised, same on other pages); the installed tray with the window closed uses 0.1 %. The smoke process's own start-up work dominates the sample, so the number does not yet measure the real window. | per-thread sampling, `tray.log` | UI8 amended: measure the real window (installed tray, window open, 30 s after load) and fix the cause if it is ≥ 1 %. |
+| 5 | info | 68 "Desktop progress IPC client timed out" lines in `tray.log` come from the notification regression's own listener (fake session ids) writing to the shared `TrayLog`, not from the real tray. | reproduced by running the suite | none (log noise only) |
+| 6 | ok | No secret in the tree or history (`sk-proj-`, `github_pat_`, `AKIA`, private keys: only fixtures/patterns); `Directory.Build.props` keeps `TreatWarningsAsErrors`, rebuild has 0 warnings, no TODO/FIXME/HACK in `src`. UI5 (uncommitted) redacts titles, details and the raw log and stops its 2 s timer when hidden/minimised. | — | — |
+| 7 | — | Findings list: N5 null frame (fixed above), P-29 ast-grep state (D17), RM1 destructive count (audit 14 counts verified), detached user process (P-26/D14), `git pull` as LocalSystem (P-24/D12) — all resolved. | STATUS | marked resolved |
+| 8 | — | UI5 deletes the replaced legacy Events builder (`ControlCenterWindow.Events.cs`) although §8 says "only in UI8". | working tree | §8 amended: a card may delete the legacy builder of the screen it replaces once nothing references it. |
+
+### D22 — Atomic publish survives a simultaneous writer
+
+> Audit 2026-10-24 (17), finding 1. After UI5. Shared infrastructure: every JSON store (registry, recovery manifests, preferences, history) uses this path.
+
+**Files:** `src/Talvora.Shared/AtomicFile.cs`, new `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.AtomicRace.cs` (verbatim copy), `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs` (one list entry), `.context7/verification.json` (.NET `File.Replace`, Win32 `MoveFileEx`).
+
+#### Exact implementation — copy this, do not reinterpret
+
+Step 1 — `src/Talvora.Shared/AtomicFile.cs` — replace
+
+```csharp
+    private static string? PublishDurable(
+        string sourcePath,
+        string destinationPath,
+        string? backupPath)
+    {
+        if (File.Exists(destinationPath))
+        {
+            File.Replace(
+                sourcePath,
+                destinationPath,
+                backupPath,
+                ignoreMetadataErrors: false);
+            return backupPath;
+        }
+
+        MoveDurable(
+            sourcePath,
+            destinationPath,
+            replaceExisting: false);
+        return null;
+    }
+```
+
+with
+
+```csharp
+    // Bounded retries when another writer publishes or replaces the same file at the same moment (two
+    // Talvora.Tray processes, or parallel refreshes): the first attempt that wins publishes (D22).
+    private const int PublishAttempts = 8;
+
+    private static string? PublishDurable(
+        string sourcePath,
+        string destinationPath,
+        string? backupPath)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                if (File.Exists(destinationPath))
+                {
+                    File.Replace(
+                        sourcePath,
+                        destinationPath,
+                        backupPath,
+                        ignoreMetadataErrors: false);
+                    return backupPath;
+                }
+
+                MoveDurable(
+                    sourcePath,
+                    destinationPath,
+                    replaceExisting: false);
+                return null;
+            }
+            catch (IOException) when (attempt < PublishAttempts && File.Exists(sourcePath))
+            {
+                Thread.Sleep(10 * attempt);
+            }
+        }
+    }
+```
+
+Step 2 — copy `docs/codex/reference/d22/SourceEditRegressionRunner.AtomicRace.cs` → `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.AtomicRace.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `0037718d34bed436921431844d8b9887072d15e8b50eb510b0729d70985aff18`).
+
+Step 3 — `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs` — replace
+
+```csharp
+            ("exact-patch-success", ExactPatchSuccessAsync),
+```
+
+with
+
+```csharp
+            ("exact-patch-success", ExactPatchSuccessAsync),
+            ("atomic-publish-concurrent-first-writers", AtomicPublishConcurrentFirstWritersAsync),
+```
+
+**Don't:** change `MoveDurable`, `WriteDurableTextAsync`, the temp-file naming or the backup behaviour; retry anything other than `IOException`; add asynchronous delays or a lock file.
+
+**Acceptance:** the new scenario is RED before Step 1 (run `--without-semantic` three times; at least one `FAIL atomic-publish-concurrent-first-writers`) and GREEN after in five consecutive runs; `TALVORA SOURCE EDIT CORE REGRESSION GREEN`; Full gate `Hepsi geçti.`; installer + deploy (shared runtime library); GitHub CI green.
+
+Claude's verification (clean clone of `e5d4738` with this audit's two small fixes): RED 3/3 before, GREEN 8/8 after; Full gate `66 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`.
+
 ### Audit 2026-10-24 (16, deep) · range `audit/2026-10-24-15 (fce75d5)..355af6d` · 7 card commits · result: exact where literal; Claude fixed six small defects directly (user: "çok küçük düzeltmeleri sen yap"); P-34 and P-35 decided
 
 Delivered: D21 `5b57960`, TI1 `d3925fb`, UI2 `f4fab29`, N7 `94e4079`, UI3 `6d12e65`, UI4 `355af6d`; proposals P-34 (Q2c) and P-35 (UI5, work left uncommitted in the working tree, not audited). Installed `355af6d`; CI green for every commit.

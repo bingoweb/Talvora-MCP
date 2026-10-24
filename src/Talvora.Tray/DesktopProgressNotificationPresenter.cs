@@ -152,7 +152,14 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             return;
         }
 
-        var sessionId = message.WorklogFrame?.SessionId ?? message.OperationId;
+        // Every card is drawn from a worklog frame; a frameless (legacy alert) message has nothing to show and
+        // used to end in a NullReferenceException inside Update (audit 2026-10-24 (17)).
+        if (message.WorklogFrame is not { } frame)
+        {
+            return;
+        }
+
+        var sessionId = frame.SessionId;
         if (!_windows.TryGetValue(
                 sessionId,
                 out var window))
@@ -207,7 +214,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             window.ApplyPreferredSize(_preferredWidthDip, _preferredHeightDip);
         }
 
-        window.Update(message.WorklogFrame!, _codeState.CodeChangedUtc, Worklog.WorklogDetails.From(message));
+        window.Update(frame, _codeState.CodeChangedUtc, Worklog.WorklogDetails.From(message));
 
         if (!window.IsVisible)
         {

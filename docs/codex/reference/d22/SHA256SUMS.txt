@@ -1,0 +1,2 @@
+# SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
+0037718d34bed436921431844d8b9887072d15e8b50eb510b0729d70985aff18  SourceEditRegressionRunner.AtomicRace.cs

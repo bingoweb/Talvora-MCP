@@ -405,7 +405,7 @@ The centre text ("4/5", `Title` style) and the breathing animation are XAML on t
 - Move views to XAML: `Views/ShellWindow.xaml`, `Views/OverviewView.xaml`, `Views/ServicesView.xaml`, `Views/ServiceDetailView.xaml`, `Views/ChainView.xaml`, `Views/EventsView.xaml`, `Views/SettingsView.xaml`; components under `Controls/`; styles under `Themes/`.
 - ViewModels: thin, testable, no WPF types except `ICommand`; they wrap the existing services (do not change service behaviour). Use **CommunityToolkit.Mvvm** (MIT) for `ObservableObject`/`RelayCommand`/source generators — take the current stable version from Context7/NuGet, add it to `Directory.Packages.props`, lock files and `THIRD-PARTY-NOTICES.md`. If it cannot be used (licence, .NET 10 incompatibility, analyzer conflict with `TreatWarningsAsErrors`), stop with a proposal — no hand-written replacement without Claude's decision.
 - Keep: UI-thread responsiveness guarantees (all I/O off the dispatcher; existing tests in `ControlCenterUiResponsivenessSourceRegression.ps1` must be re-expressed as behaviour tests on ViewModels — e.g., "refresh does not run on the dispatcher thread").
-- Delete the old imperative builders only in UI8, after every screen is replaced.
+- Delete the old imperative builders only in UI8, after every screen is replaced. **Amended (Claude, audit 2026-10-24 (17)):** a card may delete the legacy builder of the screen it replaces once no code references it (UI5 → `ControlCenterWindow.Events.cs`); UI8 removes whatever remains.
 - Desktop worklog card (`DesktopProgressNotificationWindow*`): its layout and behaviour are owned by `docs/codex/DESIGN-WORKLOG.md` (cards N1–N8). UI cards never change it; UI7 only checks that the worklog uses the shared Gece token values listed in DESIGN-WORKLOG §7.
 
 ## 9. Copy deck (authoritative Turkish strings)
@@ -498,6 +498,8 @@ Each card = one commit, Awwwards evidence refreshed (cite pages actually reviewe
 ### UI8 — Polish, accessibility, cleanup, proof
 
 > **Amended (Claude, audit 2026-10-24 (15)):** the Control Center smoke must take `*-loaded.png` only after the first real status arrived (the summary no longer shows the loading text); on a cold start it was captured too early.
+>
+> **Amended (Claude, audit 2026-10-24 (17)):** idle CPU (§10, < 1 %) must be measured on the **installed tray with the Control Center window open** on Genel bakış, sampled over 10 s starting 30 s after the window loaded — not inside the smoke process, whose own start-up work showed 7–10 %. If the real window is ≥ 1 %, find the cause (profile) and fix it in this card.
 
 **Do:** motion pass + reduced motion + high contrast; DPI matrix; accessibility audit (Accessibility Insights or UIA test listing names/roles); delete dead imperative builders (`ControlCenterWindow*.cs` parts no longer used) and obsolete UI regex tests; refresh `docs/media/control-center.png` (both themes) and README screenshots.
 **Acceptance:** Q5 smoke green in both themes; no unused UI code (build with analyzers for unused private members); README shows the new design.
