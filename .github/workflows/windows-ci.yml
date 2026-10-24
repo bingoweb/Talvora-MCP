@@ -53,19 +53,58 @@ jobs:
             throw 'global.json changed without updated NuGet lock files. Install the exact SDK from global.json, run dotnet restore Talvora.slnx --force-evaluate and dotnet restore src/Talvora.Installer/Talvora.Installer.csproj --force-evaluate without environment overrides, and include the changed packages.lock.json files in the same PR (including Dependabot SDK PRs).'
           }
 
+      - name: Classify the change
+        id: changes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $event = Get-Content -LiteralPath $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
+          if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
+            $headRef = [string]$event.pull_request.head.sha
+            $baseRef = [string](& git merge-base ([string]$event.pull_request.base.sha) $headRef)
+          }
+          else {
+            $headRef = [string]$event.after
+            $baseRef = [string]$event.before
+          }
+          # T4: a change made only of Markdown documents under docs/ (reference copies excluded) cannot change
+          # the build or the runtime; it runs the changed-scope gate instead of the full build and install.
+          # Anything that cannot be classified (a new branch, an unreadable range) runs the full pipeline.
+          $docsOnly = $false
+          if ($baseRef -match '^[0-9a-f]{40}$' -and $baseRef -notmatch '^0{40}$') {
+            $changedFiles = @(& git diff --name-only --no-renames $baseRef $headRef)
+            if ($LASTEXITCODE -ne 0) { throw 'CI could not read the change set.' }
+            $docsOnly = $changedFiles.Count -gt 0 -and
+              @($changedFiles | Where-Object { $_ -notmatch '^docs/.+\.md$' -or $_ -match '^docs/codex/reference/' }).Count -eq 0
+          }
+          "docs_only=$($docsOnly.ToString().ToLowerInvariant())" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "base_ref=$baseRef" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Validate documentation-only change
+        if: steps.changes.outputs.docs_only == 'true'
+        shell: pwsh
+        env:
+          TALVORA_CI_BASE: ${{ steps.changes.outputs.base_ref }}
+        run: |
+          & ./scripts/Invoke-QualityGate.ps1 -Scope Changed -Base $env:TALVORA_CI_BASE
+          if ($LASTEXITCODE -ne 0) { throw 'Changed-scope quality gate failed.' }
+
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        if: steps.changes.outputs.docs_only != 'true'
         with:
           global-json-file: global.json
           cache: true
           cache-dependency-path: '**/packages.lock.json'
 
       - name: Validate build and all test suites (including SourceEdit)
+        if: steps.changes.outputs.docs_only != 'true'
         shell: pwsh
         run: |
           & ./scripts/Invoke-QualityGate.ps1 -Scope Full
           if ($LASTEXITCODE -ne 0) { throw 'Unified quality gate failed.' }
 
       - name: Start and verify current MCP surface
+        if: steps.changes.outputs.docs_only != 'true'
         shell: pwsh
         run: |
           $process = Start-Process dotnet -ArgumentList @('run','--project','src/Talvora/Talvora.csproj','-c','Release','--no-build') -PassThru -WindowStyle Hidden
@@ -93,6 +132,7 @@ jobs:
           }
 
       - name: Build canonical native installer
+        if: steps.changes.outputs.docs_only != 'true'
         shell: pwsh
         run: |
           & ./scripts/Build-Windows-Installer.ps1
@@ -100,6 +140,7 @@ jobs:
           if (-not (Test-Path './artifacts/installer/Talvora-Setup.exe')) { throw 'Talvora-Setup.exe was not produced.' }
 
       - name: Install and verify canonical runtime
+        if: steps.changes.outputs.docs_only != 'true'
         shell: pwsh
         run: |
           & ./scripts/Install.ps1 -RepoRoot $PWD.Path -SkipBuild
@@ -126,12 +167,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Installed MCP surface smoke failed.' }
 
       - name: Validate installed health handle stability
+        if: steps.changes.outputs.docs_only != 'true'
         shell: pwsh
         run: |
           & ./tests/HealthHandleRegression.ps1
           if (-not $?) { throw 'Installed service health-handle regression failed.' }
 
       - name: Validate optional signed-in desktop installation
+        if: steps.changes.outputs.docs_only != 'true'
         shell: pwsh
         run: |
           # This integration fixture needs a real interactive Windows logon.
@@ -157,7 +200,7 @@ jobs:
           }
 
       - name: Clean service test
-        if: always()
+        if: always() && steps.changes.outputs.docs_only != 'true'
         shell: pwsh
         run: |
           Get-Process Talvora.Tray -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue

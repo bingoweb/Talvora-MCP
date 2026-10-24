@@ -94,8 +94,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D20 — Worklog faint text meets 4.5 : 1 (installed fbe7542, previews 10/10, live card Gitea #9 comment 149, GitHub CI 40081837206 success)
 - [x] T1 — SourceEdit regression: Roslyn scenarios selectable on their own (Phase T; GitHub CI 40083209363 success)
 - [x] T2 — Quality gate runs independent suites in parallel (Phase T; GitHub CI 40084239875 success)
-- [~] T3 — `-Scope Changed`: run only what the change can affect (Phase T; exact-commit GitHub CI pending)
-- [ ] T4 — CI: documentation-only pushes run the changed-scope gate (Phase T)
+- [x] T3 — `-Scope Changed`: run only what the change can affect (Phase T; GitHub CI 40085066720 success)
+- [~] T4 — CI: documentation-only pushes run the changed-scope gate (Phase T; exact-commit CI pending; docs-only CI live evidence pending)
 - [ ] UI1 — Tokens, theme manager and typography; P-31 decided: Tv.TextFaint Gece #7C899E, Gün #5D6A81.
 - [x] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; Claude audit 14 verified GitHub CI 830bb67 success, installed 830bb67 counts 250/213/88 and live toolchain_info. Specialized selectors/probes retained by the hard rule.
 - [ ] Q2b — Config get/set/delete consolidation (P-16 decided; zero capability loss)
@@ -142,6 +142,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — T4 (executor: ChatGPT): exact approved windows-ci.yml docs-only classification and conditional build/runtime skip; SDK lock step untouched. Added CiDocsOnlyRegression.ps1 (normalized reference SHA-256 b419dfd3).
+  RED before change: missing $docsOnly classification. GREEN: CI_DOCS_ONLY_GREEN, MODERNIZATION_POLICY_GREEN, QUALITY_GATE_REGRESSION_GREEN; test copy hash-identical.
+  Signed-in Changed gate: 4 files, no build, 9 PS tests, 13 checks/0 errors, 5.27 s; Full gate: 65 checks/0 errors, 52 parallel, 104.74 s; last line Hepsi geçti.
+  Context7 /websites/github_en_actions verified GITHUB_OUTPUT/steps outputs/if. No installed-runtime change; own full CI and future docs-only CI live evidence pending.
 - 2026-10-24 — T3 (executor: ChatGPT): exact approved Changed-scope quality gate and new behavioral regression; normalized SHA-256 15c896d0 and bd108435; Fast and Full preserved.
   RED: Get-ChangedFiles missing before copy. GREEN: QUALITY_GATE_CHANGED_GREEN, QUALITY_GATE_PARALLEL_GREEN, QUALITY_GATE_REGRESSION_GREEN; reference files hash-identical.
   Signed-in Changed gate 4 files, no build, 9 PS regressions, 13 checks/0 errors, 11.35 s; Full gate 64 checks/0 errors, ParallelPhase 51, 103.05 s, last line Hepsi geçti.

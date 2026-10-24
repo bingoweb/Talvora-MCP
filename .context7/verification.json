@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T10:10:00Z",
-  "scope": "T3: copy the exact approved PowerShell quality gate and changed-scope regression; -Scope Changed detects staged, unstaged, committed-range and untracked files, selects affected suites and PowerShell tests while retaining always-on checks, without changing Fast or Full behavior.",
+  "verifiedAtUtc": "2026-10-24T10:23:17Z",
+  "scope": "T4: use the exact approved GitHub Actions workflow steps to classify documentation-only pushes or pull requests and run the Changed quality gate without skipping the mandatory SDK lock policy. Non-documentation changes retain the full CI and installed-runtime checks.",
   "libraries": [
+    {
+      "libraryId": "/websites/github_en_actions",
+      "verified": "2026-10-24 T4: official GitHub Actions docs confirm step id outputs are written to GITHUB_OUTPUT and referenced as steps.<id>.outputs.<name>, and jobs.<job_id>.steps[*].if accepts expressions without the [object Object] wrapper. The prescribed workflow uses these supported mechanisms for its docs-only conditional and retains always() on the cleanup step for other pushes. Sources: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands and https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions and https://docs.github.com/en/actions/reference/workflows-and-actions/expressions."
+    },
     {
       "libraryId": "/microsoftdocs/powershell-docs",
       "verified": "2026-10-24 T3: official PowerShell 7.7 documentation confirms the call operator & invokes native git CLI and $LASTEXITCODE must be checked for native-command failures; invoking a .ps1 with pwsh -File propagates explicit exit codes. The exact approved Get-ChangedFiles/Get-ChangedScopePlan reference handles staged, unstaged, committed and untracked files; no custom SDK or library change. Context7 sources https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Error_Handling.md and https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Automatic_Variables.md ."
