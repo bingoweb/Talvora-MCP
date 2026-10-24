@@ -11,7 +11,8 @@
     <Color x:Key="Wl.BorderStrong.Color">#2A4536</Color>
     <Color x:Key="Wl.Text.Color">#D8FFE7</Color>
     <Color x:Key="Wl.Muted.Color">#8CB9A0</Color>
-    <Color x:Key="Wl.Faint.Color">#557363</Color>
+    <!-- Faint: ≥ 4.8:1 on every card surface (WCAG 1.4.3 normal text; audit 2026-10-24 (14)). -->
+    <Color x:Key="Wl.Faint.Color">#688B78</Color>
     <Color x:Key="Wl.Green.Color">#39FF88</Color>
     <Color x:Key="Wl.Cyan.Color">#5BD8FF</Color>
     <Color x:Key="Wl.Amber.Color">#FFB547</Color>

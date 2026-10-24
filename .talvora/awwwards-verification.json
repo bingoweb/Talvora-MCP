@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-23T21:25:20Z",
+  "verifiedAtUtc": "2026-10-24T09:13:36Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "N6: DESIGN-WORKLOG 3, 3.1, 7 and P-30 exact Phosphor evidence panel. Awwwards homepage checked live with HTTP 200 on 2026-10-23 UTC (2026-10-24 Istanbul), title Awwwards - Website Awards - Best Web Design Trends; evidence only.",
+  "scope": "D20: DESIGN-WORKLOG §7 and ROADMAP D20 exact Phosphor contrast fix; Awwwards homepage checked live with HTTP 200 on 2026-10-24 UTC, title Awwwards - Website Awards - Best Web Design Trends; evidence only.",
   "references": [
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
-    "DESIGN-WORKLOG §3 and N6 P-30: exact approved sunken mono technical panel, adım/sonuç/dosyalar/süre/oturum rows, redacted copy and persisted open/closed preference.",
-    "DESIGN-WORKLOG §3.1: the code terminal remains separate and always visible when real code evidence exists.",
-    "DESIGN-WORKLOG §7 and N6 P-30: promoted Claude reference and ten prescribed PNGs are the sole visual target; WorklogTheme.xaml remains unchanged. No design gaps filled."
+    "DESIGN-WORKLOG §7 and ROADMAP D20: only Claude-approved Wl.Faint.Color changes from #557363 to #688B78, with the exact approval comment; all other theme tokens and controls stay unchanged.",
+    "ROADMAP D20: promote the approved worklog-phosphor-next reference and ten prescribed PNGs, leaving the code terminal and details surface as previously approved.",
+    "ROADMAP D20: measured Wl.Faint normal-text contrast on Bg 5.311, Surface 5.143, Raised 4.864 and Terminal 5.405; no new design choices or gaps filled."
   ]
 }
