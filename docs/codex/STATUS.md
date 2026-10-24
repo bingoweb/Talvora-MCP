@@ -91,8 +91,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] R3 — Safe Reset-And-Install (P-15; TEMP-only safety regression GREEN; signed-in Full 59/0; GitHub windows-ci 40071120158 success; no real reset or runtime deployment required)
 - [x] Q5 — Control Center smoke: structural checks, current theme PNG (P-18); signed-in Full 60/0, installed 6f533fe smoke/PNGs and GitHub windows-ci 40072555807 success; artifacts/q5/delivery.json. Gitea evidence access requires unavailable approval.
 - [x] D19 — Reset stops Talvora's own programs only (audit 2026-10-24 (14))
-- [~] D20 — Worklog faint text meets 4.5 : 1 (audit 2026-10-24 (14); installer/live capture/exact-commit CI follow)
-- [ ] T1 — SourceEdit regression: Roslyn scenarios selectable on their own (Phase T)
+- [x] D20 — Worklog faint text meets 4.5 : 1 (installed fbe7542, previews 10/10, live card Gitea #9 comment 149, GitHub CI 40081837206 success)
+- [~] T1 — SourceEdit regression: Roslyn scenarios selectable on their own (Phase T; exact-commit GitHub CI pending)
 - [ ] T2 — Quality gate runs independent suites in parallel (Phase T)
 - [ ] T3 — `-Scope Changed`: run only what the change can affect (Phase T)
 - [ ] T4 — CI: documentation-only pushes run the changed-scope gate (Phase T)
@@ -142,6 +142,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — T1 (executor: ChatGPT): exact Phase T semantic/core SourceEdit split with isolated SourceEdit-Semantic state; default mode preserved.
+  RED: old --semantic-only ran 99 PASS without semantic marker; GREEN: semantic 13 PASS/0 FAIL; core 86 PASS/4 SKIP; default 99 PASS/4 SKIP.
+  Signed-in Full gate: 61 checks/0 errors, last line Hepsi geçti.; Context7 /dotnet/docs C# ordinal prefix and LINQ Where; no runtime deploy required.
+  Exact-commit GitHub windows-ci evidence to be checked after push.
 - 2026-10-24 — D20 (executor: ChatGPT): copied approved Wl.Faint.Color #688B78 and comment; promoted Phosphor theme, SHA256SUMS and 10 PNGs; removed superseded next reference.
   Contrast RED 3.520:1 on Raised → GREEN 4.864:1 (all surfaces 4.864–5.405); normalized theme SHA e6a131fa; rendered previews 10/10 byte-identical.
   MODERNIZATION_POLICY_GREEN, CONTEXT7_QUALITY_GATE_GREEN, PROJECT_DELIVERY_GATE_GREEN; signed-in Full gate 61 checks/0 errors, last line Hepsi geçti. (captured log/exit after live runner transport failed).

@@ -3,7 +3,12 @@ using Talvora.SourceEditing;
 
 internal static partial class SourceEditRegressionRunner
 {
-    public static async Task RunAllAsync()
+    // T1: the Roslyn workspace scenarios are the slowest part of the suite; the gate runs them in their own
+    // process next to the other scenarios.
+    public static bool IsSemanticScenario(string name) =>
+        name.StartsWith("semantic-", StringComparison.Ordinal);
+
+    public static async Task RunAllAsync(Func<string, bool>? include = null)
     {
         var tests = new (string Name, Func<Task> Run)[]
         {
@@ -83,7 +88,7 @@ internal static partial class SourceEditRegressionRunner
         };
 
         var failures = new List<string>();
-        foreach (var test in tests)
+        foreach (var test in tests.Where(test => include?.Invoke(test.Name) ?? true))
         {
             try
             {

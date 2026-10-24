@@ -2,7 +2,10 @@
 // a user-owned folder that persists between runs (so the pinned ast-grep download is cached, as before).
 var regressionState = Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Talvora", "RegressionState");
-Talvora.SourceEditing.SourceEditRuntime.UseStateRootForTests(Path.Combine(regressionState, "SourceEdit"));
+// T1: the semantic scenarios run in a parallel process of their own, so they keep their own engine state.
+var semanticOnly = args.Contains("--semantic-only", StringComparer.OrdinalIgnoreCase);
+Talvora.SourceEditing.SourceEditRuntime.UseStateRootForTests(
+    Path.Combine(regressionState, semanticOnly ? "SourceEdit-Semantic" : "SourceEdit"));
 Talvora.SourceEditing.AstGrepToolchainManager.CacheRoot = Path.Combine(regressionState, "Toolchains");
 
 if (args.Contains("--toolchain-q2a-only", StringComparer.OrdinalIgnoreCase))
@@ -162,6 +165,18 @@ if (args.Contains("--ownership-only", StringComparer.OrdinalIgnoreCase))
 {
     await SourceEditRegressionRunner.RunOwnershipContractsAsync();
     Console.WriteLine("TALVORA FILE OWNERSHIP REGRESSION GREEN");
+    return;
+}
+if (semanticOnly)
+{
+    await SourceEditRegressionRunner.RunAllAsync(SourceEditRegressionRunner.IsSemanticScenario);
+    Console.WriteLine("TALVORA SOURCE EDIT SEMANTIC REGRESSION GREEN");
+    return;
+}
+if (args.Contains("--without-semantic", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunAllAsync(name => !SourceEditRegressionRunner.IsSemanticScenario(name));
+    Console.WriteLine("TALVORA SOURCE EDIT CORE REGRESSION GREEN");
     return;
 }
 await SourceEditRegressionRunner.RunAllAsync();

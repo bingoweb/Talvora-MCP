@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T09:13:36Z",
-  "scope": "D20: promote the exact approved Phosphor WorklogTheme.xaml and ten PNG references; Wl.Faint.Color #688B78 achieves at least 4.5:1 on the card surfaces, without changing other controls or visual tokens.",
+  "verifiedAtUtc": "2026-10-24T09:37:30Z",
+  "scope": "T1: split SourceEdit regression execution into semantic-only and without-semantic scenarios using the exact Phase T card, preserving the default all-scenarios path and separating SourceEdit-Semantic test state.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-24 T1: Microsoft .NET C# documentation confirms String.StartsWith with StringComparison.Ordinal performs non-linguistic prefix matching; Enumerable.Where filters a sequence using a Func predicate. Existing args.Contains(value, StringComparer.OrdinalIgnoreCase) follows the established Program.cs CLI convention. Exact approved T1 implementation uses these APIs to select semantic-* scenarios without altering default behavior. Official sources: https://github.com/dotnet/docs/blob/main/docs/csharp/fundamentals/strings/common-tasks/search.md and https://github.com/dotnet/docs/blob/main/docs/csharp/delegates-patterns.md and https://github.com/dotnet/docs/blob/main/docs/fundamentals/code-analysis/quality-rules/ca1309.md."
+    },
     {
       "libraryId": "/dotnet/wpf",
       "verified": "2026-10-24 D20: official WPF Fluent-theme documentation uses SolidColorBrush Color={StaticResource ...} from a resource dictionary, confirming the existing Wl.Faint brush consumes the copied Color token without a WPF API change. Context7 source https://github.com/dotnet/wpf/blob/main/Documentation/docs/using-fluent.md . W3C WCAG 2.2 SC 1.4.3 normal-text minimum is 4.5:1 without rounding (https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html); measured Wl.Faint #688B78 ratios: Bg 5.311, Surface 5.143, Raised 4.864, Terminal 5.405."
