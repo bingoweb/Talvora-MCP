@@ -92,8 +92,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] Q5 — Control Center smoke: structural checks, current theme PNG (P-18); signed-in Full 60/0, installed 6f533fe smoke/PNGs and GitHub windows-ci 40072555807 success; artifacts/q5/delivery.json. Gitea evidence access requires unavailable approval.
 - [x] D19 — Reset stops Talvora's own programs only (audit 2026-10-24 (14))
 - [x] D20 — Worklog faint text meets 4.5 : 1 (installed fbe7542, previews 10/10, live card Gitea #9 comment 149, GitHub CI 40081837206 success)
-- [~] T1 — SourceEdit regression: Roslyn scenarios selectable on their own (Phase T; exact-commit GitHub CI pending)
-- [ ] T2 — Quality gate runs independent suites in parallel (Phase T)
+- [x] T1 — SourceEdit regression: Roslyn scenarios selectable on their own (Phase T; GitHub CI 40083209363 success)
+- [~] T2 — Quality gate runs independent suites in parallel (Phase T; exact-commit GitHub CI pending)
 - [ ] T3 — `-Scope Changed`: run only what the change can affect (Phase T)
 - [ ] T4 — CI: documentation-only pushes run the changed-scope gate (Phase T)
 - [ ] UI1 — Tokens, theme manager and typography; P-31 decided: Tv.TextFaint Gece #7C899E, Gün #5D6A81.
@@ -142,6 +142,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — T2 (executor: ChatGPT): copied approved Invoke-QualityGate.ps1 and QualityGateParallelRegression.ps1 exactly (normalized SHA-256 7ddf8f8b, 158cc78e); serial prerequisites retained, parallel independent suites, deterministic output.
+  RED before copy: missing Invoke-ParallelQualityChecks; GREEN QUALITY_GATE_PARALLEL_GREEN (overlap/ordered output/all 3 failures), QUALITY_GATE_REGRESSION_GREEN; baseline signed-in Fast 13/0.
+  Signed-in Full gate twice: 63 checks/0 errors, PASS ParallelPhase (50 checks), last line Hepsi geçti.; durations 104.44 s and 105.26 s.
+  Context7 /microsoftdocs/powershell-docs Start-ThreadJob/Wait-Job/Receive-Job; no installed-runtime change or deployment. Exact-commit GitHub CI to be checked after push.
 - 2026-10-24 — T1 (executor: ChatGPT): exact Phase T semantic/core SourceEdit split with isolated SourceEdit-Semantic state; default mode preserved.
   RED: old --semantic-only ran 99 PASS without semantic marker; GREEN: semantic 13 PASS/0 FAIL; core 86 PASS/4 SKIP; default 99 PASS/4 SKIP.
   Signed-in Full gate: 61 checks/0 errors, last line Hepsi geçti.; Context7 /dotnet/docs C# ordinal prefix and LINQ Where; no runtime deploy required.

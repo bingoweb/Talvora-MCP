@@ -10,6 +10,7 @@ Set-StrictMode -Version Latest
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $script:GateChecks = 0
 $script:GateFailure = $null
+$script:GateFailureCount = 0
 $script:GateVerbose = $PSBoundParameters.ContainsKey('Verbose')
 $script:GateCaptureRoot = Join-Path ([IO.Path]::GetTempPath()) ('TalvoraQualityGate-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $script:GateCaptureRoot -Force | Out-Null
@@ -44,6 +45,64 @@ function Invoke-QualityCheck {
         Write-Host ("Reason: " + $_.Exception.Message)
         return $false
     }
+}
+# T2: independent suites are separate processes that share no state, so they run side by side. Each check
+# still gets its own numbered log, its own PASS/FAIL line (in the order listed) and the 60-line failure tail.
+function Invoke-ParallelQualityChecks {
+    param(
+        [Parameter(Mandatory)][object[]] $Checks,
+        [int] $ThrottleLimit = [Math]::Max(2, [Environment]::ProcessorCount)
+    )
+    $timer = [Diagnostics.Stopwatch]::StartNew()
+    $running = foreach ($check in $Checks) {
+        $script:GateChecks++
+        $logPath = Join-Path $script:GateCaptureRoot ([string]$script:GateChecks + '.log')
+        $job = Start-ThreadJob -ThrottleLimit $ThrottleLimit -ArgumentList @(
+            $check.Executable, $check.Arguments, $logPath, $repoRoot) -ScriptBlock {
+            param([string] $Executable, [string[]] $Arguments, [string] $LogPath, [string] $Root)
+            $ErrorActionPreference = 'Stop'
+            $PSNativeCommandUseErrorActionPreference = $false
+            Set-Location -LiteralPath $Root
+            $watch = [Diagnostics.Stopwatch]::StartNew()
+            & $Executable @Arguments *> $LogPath
+            [pscustomobject]@{ ExitCode = $LASTEXITCODE; Seconds = $watch.Elapsed.TotalSeconds }
+        }
+        [pscustomobject]@{ Check = $check; LogPath = $logPath; Job = $job }
+    }
+    $null = Wait-Job -Job @($running | ForEach-Object Job)
+    $allPassed = $true
+    foreach ($entry in $running) {
+        $reason = $null
+        $seconds = 0.0
+        try {
+            $result = @(Receive-Job -Job $entry.Job -ErrorAction Stop) | Select-Object -Last 1
+            if ($null -eq $result) { $reason = 'The check returned no result.' }
+            else {
+                $seconds = [double]$result.Seconds
+                if ($null -eq $result.ExitCode -or [int]$result.ExitCode -ne 0) { $reason = "$($entry.Check.Executable) returned exit code $($result.ExitCode)." }
+            }
+        }
+        catch { $reason = $_.Exception.Message }
+        finally { Remove-Job -Job $entry.Job -Force }
+        if ($null -eq $reason) {
+            if ($script:GateVerbose) { Get-Content -LiteralPath $entry.LogPath | ForEach-Object { Write-Host $_ } }
+            if (-not $entry.Check.Quiet) { Write-Host ("PASS {0} {1:0.0} sn" -f $entry.Check.Name, $seconds) }
+            continue
+        }
+        $allPassed = $false
+        if ($null -eq $script:GateFailure) { $script:GateFailure = $entry.Check.Name }
+        $script:GateFailureCount++
+        Write-Host "FAIL $($entry.Check.Name)"
+        if (Test-Path -LiteralPath $entry.LogPath) {
+            Get-Content -LiteralPath $entry.LogPath -Tail 60 | ForEach-Object { Write-Host $_ }
+        }
+        Write-Host ("Reason: " + $reason)
+    }
+    $timer.Stop()
+    if ($allPassed) {
+        Write-Host ("PASS ParallelPhase ({0} checks) {1:0.0} sn" -f $Checks.Count, $timer.Elapsed.TotalSeconds)
+    }
+    return $allPassed
 }
 function Invoke-ExternalChecked {
     param([Parameter(Mandatory)][string] $Executable, [Parameter(Mandatory)][string[]] $Arguments)
@@ -100,6 +159,12 @@ function Assert-PackageManagerPolicy {
     if ($code -notin 0,1) { throw "Package manager scan returned $code." }
     if ($hits.Count) { $hits | ForEach-Object { Write-Output $_ }; throw 'Forbidden package manager found.' }
 }
+# These regressions build the tray or restore/publish fixture projects; they must not run while other suites
+# execute the same build output, so they run after the parallel phase.
+$serialRegressions = @(
+    'GiteaProtocolReadinessRegression.ps1', 'GiteaStopChainRegression.ps1',
+    'InstallerDependencyProvenanceRegression.ps1')
+$serviceRegressions = @('HealthHandleRegression.ps1', 'NativeInstallerRuntimeRegression.ps1')
 $canContinue = $true
 Push-Location -LiteralPath $repoRoot
 try {
@@ -126,21 +191,6 @@ try {
             Invoke-ExternalChecked pwsh @('-NoLogo','-NoProfile','-NonInteractive','-File',(Join-Path $repoRoot 'scripts/Validate-ProjectDeliveryGate.ps1'))
         }
     }
-    if ($canContinue) {
-        $canContinue = Invoke-QualityCheck 'SourceEdit' {
-            Invoke-ExternalChecked dotnet @('run','--project','tests/Talvora.SourceEdit.Regression/Talvora.SourceEdit.Regression.csproj','-c','Release','--no-build')
-        }
-    }
-    if ($canContinue) {
-        $canContinue = Invoke-QualityCheck 'Notification' {
-            Invoke-ExternalChecked dotnet @('run','--project','tests/Talvora.Notification.Regression/Talvora.Notification.Regression.csproj','-c','Release','--no-build')
-        }
-    }
-    if ($canContinue) {
-        $canContinue = Invoke-QualityCheck 'IntegrationPolicy' {
-            Invoke-ExternalChecked dotnet @('run','--project','tests/Talvora.Smoke/Talvora.Smoke.csproj','-c','Release','--no-build','--','--codex-integration-policy-only')
-        }
-    }
     $selected = if ($Scope -eq 'Full') {
         @(Get-ChildItem -LiteralPath (Join-Path $repoRoot 'tests') -File -Filter '*.ps1' | Sort-Object Name)
     }
@@ -149,6 +199,31 @@ try {
           'QualityGateRegression.ps1','ThirdPartyNoticesSourceRegression.ps1') |
             ForEach-Object { Get-Item -LiteralPath (Join-Path $repoRoot ('tests/' + $_)) }
     }
+    $regressions = 0
+    if ($canContinue) {
+        # The slowest checks are listed first so they start first.
+        $parallel = [Collections.Generic.List[object]]::new()
+        foreach ($suite in @(
+            @{ Name = 'SourceEditSemantic'; Project = 'tests/Talvora.SourceEdit.Regression/Talvora.SourceEdit.Regression.csproj'; Arguments = @('--semantic-only') },
+            @{ Name = 'SourceEdit'; Project = 'tests/Talvora.SourceEdit.Regression/Talvora.SourceEdit.Regression.csproj'; Arguments = @('--without-semantic') },
+            @{ Name = 'Notification'; Project = 'tests/Talvora.Notification.Regression/Talvora.Notification.Regression.csproj'; Arguments = @() },
+            @{ Name = 'IntegrationPolicy'; Project = 'tests/Talvora.Smoke/Talvora.Smoke.csproj'; Arguments = @('--codex-integration-policy-only') })) {
+            $runArguments = @('run','--project',$suite.Project,'-c','Release','--no-build')
+            if ($suite.Arguments.Count -gt 0) { $runArguments += @('--') + $suite.Arguments }
+            $parallel.Add([pscustomobject]@{ Name = $suite.Name; Executable = 'dotnet'; Arguments = $runArguments; Quiet = $false })
+        }
+        foreach ($test in $selected) {
+            if ($test.Name -in $serialRegressions -or $test.Name -in $serviceRegressions) { continue }
+            $parallel.Add([pscustomobject]@{
+                Name = 'PS:' + $test.BaseName
+                Executable = 'pwsh'
+                Arguments = @('-NoLogo','-NoProfile','-NonInteractive','-File',$test.FullName)
+                Quiet = $true
+            })
+            $regressions++
+        }
+        $canContinue = Invoke-ParallelQualityChecks -Checks $parallel.ToArray()
+    }
     if ($canContinue) {
         $availability = if ($Scope -eq 'Full') {
             Get-InstalledRuntimeAvailability
@@ -156,9 +231,9 @@ try {
         else {
             [pscustomobject]@{ HealthHandle = $false; NativeInstallerRuntime = $false }
         }
-        $regressions = 0
         $regressionTimer = [Diagnostics.Stopwatch]::StartNew()
         foreach ($test in $selected) {
+            if ($test.Name -notin $serialRegressions -and $test.Name -notin $serviceRegressions) { continue }
             if ($test.Name -eq 'HealthHandleRegression.ps1' -and
                 -not $availability.HealthHandle) {
                 Write-Host 'SKIP HealthHandle: requires an installed, running Talvora service.'
@@ -170,8 +245,7 @@ try {
                 continue
             }
             $path = $test.FullName
-            $serviceDependent = $test.Name -in @(
-                'HealthHandleRegression.ps1', 'NativeInstallerRuntimeRegression.ps1')
+            $serviceDependent = $test.Name -in $serviceRegressions
             $checkName = if ($serviceDependent) {
                 $test.BaseName.Replace('Regression','')
             } else { 'PS:' + $test.BaseName }
@@ -183,7 +257,7 @@ try {
         }
         $regressionTimer.Stop()
         if ($canContinue -and $regressions -gt 0) {
-            Write-Host ("PASS PowerShellRegressions ({0} tests) {1:0.0} sn" -f
+            Write-Host ("PASS PowerShellRegressions ({0} tests) serial part {1:0.0} sn" -f
                 $regressions, $regressionTimer.Elapsed.TotalSeconds)
         }
     }
@@ -217,14 +291,18 @@ try {
     }
 }
 catch {
-    if (-not $script:GateFailure) { $script:GateFailure = 'Runner'; Write-Host ("Reason: " + $_.Exception.Message) }
+    if (-not $script:GateFailure) {
+        $script:GateFailure = 'Runner'
+        Write-Host ("Reason: " + $_.Exception.Message)
+    }
 }
 finally {
     Pop-Location
     Remove-Item -LiteralPath $script:GateCaptureRoot -Force -Recurse -ErrorAction SilentlyContinue
 }
 if ($script:GateFailure) {
-    Write-Host "$($script:GateChecks) kontrol, 1 hata"
+    # A serial failure stops the gate; only the parallel phase can report several failures.
+    Write-Host "$($script:GateChecks) kontrol, $([Math]::Max(1, $script:GateFailureCount)) hata"
     Write-Host "Kontrol başarısız: $($script:GateFailure)"
     exit 1
 }

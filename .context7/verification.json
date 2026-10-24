@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T09:37:30Z",
-  "scope": "T1: split SourceEdit regression execution into semantic-only and without-semantic scenarios using the exact Phase T card, preserving the default all-scenarios path and separating SourceEdit-Semantic test state.",
+  "verifiedAtUtc": "2026-10-24T09:56:00Z",
+  "scope": "T2: install the exact approved PowerShell parallel quality gate and regression reference; preserve serial prerequisites and deterministic reporting, run independent SourceEdit semantic/core, notification, integration and PowerShell regressions with thread jobs.",
   "libraries": [
+    {
+      "libraryId": "/microsoftdocs/powershell-docs",
+      "verified": "2026-10-24 T2: official PowerShell 7.7 Start-ThreadJob documentation confirms Microsoft.PowerShell.ThreadJob creates in-process concurrent jobs, -ThrottleLimit bounds concurrency, and Wait-Job/Receive-Job obtain results but do not guarantee order; the approved gate collects and prints in the declared sequence. Context7 sources: https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.ThreadJob/Start-ThreadJob.md and https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Thread_Jobs.md. Signed-in PowerShell 7.6.7 has Start-ThreadJob available."
+    },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-24 T1: Microsoft .NET C# documentation confirms String.StartsWith with StringComparison.Ordinal performs non-linguistic prefix matching; Enumerable.Where filters a sequence using a Func predicate. Existing args.Contains(value, StringComparer.OrdinalIgnoreCase) follows the established Program.cs CLI convention. Exact approved T1 implementation uses these APIs to select semantic-* scenarios without altering default behavior. Official sources: https://github.com/dotnet/docs/blob/main/docs/csharp/fundamentals/strings/common-tasks/search.md and https://github.com/dotnet/docs/blob/main/docs/csharp/delegates-patterns.md and https://github.com/dotnet/docs/blob/main/docs/fundamentals/code-analysis/quality-rules/ca1309.md."
