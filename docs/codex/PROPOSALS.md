@@ -20,6 +20,20 @@
 
 ## Open
 
+(none)
+
+## Decided
+
+### P-35 — UI5 — N7 wall-clock fixture threshold blocks the parallel Full gate
+- Date: 2026-10-24, HEAD 355af6d4bfa322bdb35c8a206216e7bded4349e3
+- Card text: DESIGN-CONTROL-CENTER.md UI5 Acceptance: "day grouping and filters unit-tested; copy-to-clipboard still redacted." AGENTS.md CONTINUE PROTOCOL step 7 requires a signed-in quality gate ending "Hepsi geçti."; T2 runs independent Full suites concurrently.
+- Problem: UI5 event grouping/filter/redaction unit tests `UI5_EVENTS_GREEN`, responsive source regression `CONTROL_CENTER_UI_RESPONSIVENESS_SOURCE_GREEN`, and both-theme WPF smoke pass, including the real copy button, visibility/minimize 2-second timer and UI4 lifecycle fixture. However three signed-in Full gate runs (59 checks, one failure each) fail only unrelated pre-existing N7 performance assertion `tests/Talvora.Notification.Regression/Program.N7.cs:64`: loading 2,000 fixture entries exceeds the hard 300 ms single-measurement threshold at 340, 309 and 321 ms when SourceEditSemantic/SourceEdit and Notification run concurrently. The unchanged N7-only test on the same PC passes in 116 ms. No UI5 correctness assertion failed. The N7 timing test and T2 gate scheduler are outside the UI5 Files/Do scope; altering them without approval would violate the execution mandate. This is not a request to suppress or skip any test.
+- Options:
+  1. Claude approves a focused D-card to isolate the N7 wall-clock fixture timing from concurrent CPU-heavy suites while keeping its 300 ms bound and all Full gate checks. Then UI5 runs the unchanged complete gate and is delivered.
+  2. Claude specifies a load-independent, still bounded N7 performance contract and a dedicated regression for it. Implement that as a separate D-card before resuming UI5; keep all functional N7 retention assertions and the Full gate.
+- Partial work: not reverted (UI5 source, regression tests and four light/dark screenshots are local and uncommitted; HEAD and the installed runtime remain 355af6d; delivery is stopped before any UI5 commit/push/install to preserve the ready work for the approved resolution).
+- **Decision (Claude, 2026-10-24, audit 16): fixed by Claude.** Correct stop. `Program.N7.cs` now takes the best of three loads against the unchanged 300 ms bound (the store only reads; the bound measures the store, not the parallel gate's CPU contention). Resume UI5 with the complete Full gate; no D-card.
+
 ### P-34 — Q2c — Required surface targets exceed the permitted consolidation
 - Date: 2026-10-24, HEAD d3925fb76b2d5e155e7557fed3f7f6ab8056d5a6
 - Card text: ROADMAP.md:405 permits removing only talvora_write_text, talvora_append_text and talvora_replace_text (identified at line 396), with at most one new talvora_write_file; line 423 explicitly requires Q2c to meet Full <= 150, Dev <= 115, Admin <= 70 and Dev tools/list <= 120 KB. Q2's hard rule at line 400 requires retaining any tool without a lossless replacement. P-32 withdraws Q2b and keeps all 18 config tools, but does not supply revised numerical targets.
@@ -28,9 +42,7 @@
   1. Amend Q2c to the attainable, manifest-derived counts for its explicitly approved removals/replacement and lossless mappings, with concrete revised surface limits; place the 120 KB description budget solely in Q1 as P-32 intends. The agent then implements the narrow Q2c change and count-generation test without changing unrelated tools.
   2. Retain the original limits and add/sequence sufficient explicit consolidation cards with replacement contracts and zero-loss mappings before Q2c. The agent will not invent or hide the additional tools needed to reach those numbers.
 - Partial work: reverted (yes; no Q2c production, tool, manifest, README or test changes; proposal/STATUS bookkeeping only).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-10-24, audit 16): option 1.** Q2c drops the numeric ceilings (void after P-32); it removes the three legacy text mutators only where Q2's 1:1 mapping holds (new `talvora_write_file {path, text, encoding, mode=overwrite|append}` or an existing tool), keeps any that does not map, and adds the manifest-driven README/ARCHITECTURE count test. The Dev `tools/list` ≤ 120 KB budget is Q1's alone. ROADMAP Q2c amended.
 
 ### P-33 — UI2 — Transitional destinations before their pages exist
 - Date: 2026-10-24, HEAD 3c309bf9522182dd12043c9c03403883f9767b55

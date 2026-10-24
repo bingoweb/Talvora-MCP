@@ -213,8 +213,8 @@ internal sealed partial class ChainView : System.Windows.Controls.UserControl
             // Gitea branches from the core; the technical layers branch from the tunnel.
             var prior = Nodes[index == 5 ? 1 : index == 6 ? 5 :
                 _isFull && index >= 7 ? 3 : index - 1];
-            var start = new Point(prior.X + 66, prior.Y + 7);
-            var end = new Point(node.X + 66, node.Y + 7);
+            var start = new Point(prior.X + 68, prior.Y + 7);
+            var end = new Point(node.X + 68, node.Y + 7);
             var figure = new PathFigure { StartPoint = start, IsClosed = false };
             figure.Segments.Add(new LineSegment(end, true));
             var geometry = new PathGeometry([figure]);

@@ -420,7 +420,9 @@ Implement only the **Q2a** bullet of card Q2 above, with Q2's hard rule (zero ca
 
 ### Q2c — Remove legacy text mutators; manifest-driven counts (split of Q2, decision P-16)
 
-Implement only the **Q2c** bullet of card Q2 above, same rules as Q2a, plus the README/ARCHITECTURE count test generated from the manifest and the final surface targets of Q2 (Full ≤ 150, Dev ≤ 115, Admin ≤ 70, Dev `tools/list` ≤ 120 KB). User step U4 follows. One commit.
+Implement only the **Q2c** bullet of card Q2 above, same rules as Q2a, plus the README/ARCHITECTURE count test generated from the manifest. User step U4 follows. One commit.
+
+> **Amended by P-34 (Claude, 2026-10-24):** no numeric surface ceilings in Q2c — the Q2 targets (Full ≤ 150, Dev ≤ 115, Admin ≤ 70) are void after P-32. Remove each of `talvora_write_text`, `talvora_append_text`, `talvora_replace_text` only where its behaviour maps 1:1 to `talvora_write_file {path, text, encoding, mode=overwrite|append}` (new) or an existing tool, with Q2's behavioural test per removed tool; keep any that does not map and say why in the Log. Acceptance = mapping table, manifest-driven README/ARCHITECTURE count test, installed `tools/list` counts equal README. The Dev `tools/list` ≤ 120 KB budget belongs to Q1 only.
 
 ### Q6c — Translate tool exceptions into redacted, categorised errors (decision P-9)
 
@@ -1091,6 +1093,29 @@ with
 ## Audit fixes (external audits by Claude)
 
 D-cards go to the top of the agent queue. Newest audit first.
+
+### Audit 2026-10-24 (16, deep) · range `audit/2026-10-24-15 (fce75d5)..355af6d` · 7 card commits · result: exact where literal; Claude fixed six small defects directly (user: "çok küçük düzeltmeleri sen yap"); P-34 and P-35 decided
+
+Delivered: D21 `5b57960`, TI1 `d3925fb`, UI2 `f4fab29`, N7 `94e4079`, UI3 `6d12e65`, UI4 `355af6d`; proposals P-34 (Q2c) and P-35 (UI5, work left uncommitted in the working tree, not audited). Installed `355af6d`; CI green for every commit.
+
+**Fidelity.** D21: `WorklogCardView.xaml` identical to Claude's verified clone, reference promoted, `-next` removed. TI1: `TrayIconArt.cs`, `TrayIconFactory.cs`, `Program.TrayIcon.cs` hash-identical to the reference; the four edits match the card line for line. UI2/N7/UI3/UI4 (spec cards, no literal code): reviewed on the agent's installed both-theme PNGs and on Claude's own renders — shell, rail, palette, theme switch, Nabız ring with the §9 sentence, history list/detail, services list with pills and role chips, detail with tabs and action buttons follow the spec.
+
+**CI.** Two first attempts failed (`94e4079`, `355af6d`) with the same flake — `toolchain-q2a-zero-capability-loss: yarn info changed found` — and passed on re-run. Cause: the Q2a test reads the legacy and the new yarn probe once each; on the runner the first Corepack shim call can provision or time out, so `found` differs between the two calls.
+
+**Fixed by Claude in this commit (small, verified on a clean clone of `355af6d`):**
+
+| # | Where | Defect | Fix |
+|---|---|---|---|
+| 1 | `Controls/ChainView.xaml(.cs)` | Links were anchored at `X+66, Y+7`, but the node button grew with padding and centred its content, so every link ran ≈ 9 px above the dots and diagonals missed them. | Node = fixed 136 × 56 box, `Padding 0`, content top-centred; links anchored at `X+68, Y+7` (the dot centre). |
+| 2 | same | Branch links ran through the labels "Talvora çekirdeği" / "Güvenli tüneller"; a link showed inside the hollow optional ring. | Label hugs its text on a `Tv.Surface` background (`MaxWidth 136`, padding 4); optional ring filled with `Tv.Surface`. |
+| 3 | same | The §5.2 legend shows ▲ dikkat, ✕ ulaşılamıyor, ↻ onarılıyor, but every node was a dot (state by colour only, against §3 "never colour-only"). | Nodes draw the legend shapes: triangle (`Tv.Attention`), cross (`Tv.Offline`), Fluent `ArrowSync` (`Tv.Repairing`); dot otherwise, hollow when optional. Overview strip and full page both use it. |
+| 4 | `ViewModels/ServiceDetailViewModel.cs` | "Ne oldu?" said "Yanıt gecikiyor. — Yanıt gecikiyor." when the detail repeats the status. | Say it once when the detail is empty or equal. |
+| 5 | `Views/ServiceDetailView.xaml` | "Son kontrol 19:29:38 ·" — a dangling separator when there is no last-success time. | The separator collapses when `LastSuccess` is empty. |
+| 6 | tests: `Program.N7.cs`, `SourceEditRegressionRunner.ToolchainConsolidation.cs` | P-35 (N7 300 ms bound measured one load under the parallel gate's CPU load: 309–340 ms) and the Q2a CI flake above. | N7: best of three loads, same 300 ms bound (`LoadRecent` only reads). Q2a: on a mismatch, compare one fresh back-to-back pair; any real difference still fails. |
+
+Verification: Release build 0 errors; `DESKTOP_PROGRESS_BEHAVIOR_GREEN` (N7 113 ms, UI3/UI4 suites green), `TALVORA TOOLCHAIN Q2A GREEN`; Control Center smoke both themes exit 0 with the chain and detail renders checked by eye; Full gate `66 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`.
+
+**Status bookkeeping.** D21 → `[x]` (installed, live capture and CI verified by the agent; the Gitea attachment was blocked only by the connector's approval policy). UI2 visual approved by Claude; only the user's mixed-DPI check U5 remains. TI1 waits for the user's look (U9).
 
 ### Audit 2026-10-24 (15, deep) · range `audit/2026-10-24-14 (830bb67)..fce75d5` · 8 card commits · result: all exact; worklog polish card D21; P-32 and P-33 decided
 

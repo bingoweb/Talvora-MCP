@@ -120,7 +120,17 @@
                                        TextWrapping="Wrap" MaxWidth="850" HorizontalAlignment="Left"/>
                             <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
                                 <TextBlock Text="{Binding LastChecked}" Style="{StaticResource Tv.Type.Caption}"/>
-                                <TextBlock Text=" · " Style="{StaticResource Tv.Type.Caption}"/>
+                                <TextBlock Text=" · ">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.Caption}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding LastSuccess}" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                                 <TextBlock Text="{Binding LastSuccess}" Style="{StaticResource Tv.Type.Caption}"/>
                             </StackPanel>
                         </StackPanel>

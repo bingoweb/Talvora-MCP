@@ -37,8 +37,59 @@
                     <Setter Property="Stroke" Value="{DynamicResource Tv.Repairing}"/>
                     <Setter Property="Fill" Value="{DynamicResource Tv.Repairing}"/>
                 </DataTrigger>
+                <!-- Optional nodes stay hollow; the surface fill keeps a link from showing through the ring. -->
                 <DataTrigger Binding="{Binding IsOptional}" Value="True">
-                    <Setter Property="Fill" Value="Transparent"/>
+                    <Setter Property="Fill" Value="{DynamicResource Tv.Surface}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <!-- §5.2 legend shapes on the nodes themselves (never colour alone, audit 16): ▲ dikkat, ✕ ulaşılamıyor,
+             ↻ onarılıyor; every other state keeps the dot (hollow when optional). -->
+        <Style x:Key="ChainNodeOnlyDot" TargetType="Ellipse" BasedOn="{StaticResource ChainNodeDot}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="Attention">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Offline">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="Repairing">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="ChainNodeTriangle" TargetType="Path">
+            <Setter Property="Data" Value="M7,0.5 L13.6,13 L0.4,13 Z"/>
+            <Setter Property="Fill" Value="{DynamicResource Tv.Attention}"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="Attention">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="ChainNodeCross" TargetType="Path">
+            <Setter Property="Data" Value="M2,2 L12,12 M12,2 L2,12"/>
+            <Setter Property="Stroke" Value="{DynamicResource Tv.Offline}"/>
+            <Setter Property="StrokeThickness" Value="2.6"/>
+            <Setter Property="StrokeStartLineCap" Value="Round"/>
+            <Setter Property="StrokeEndLineCap" Value="Round"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="Offline">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="ChainNodeRepairing" TargetType="TextBlock">
+            <Setter Property="Text" Value="&#xE895;"/>
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource Tv.Repairing}"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="Repairing">
+                    <Setter Property="Visibility" Value="Visible"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -88,15 +139,27 @@
                           ItemContainerStyle="{StaticResource ChainPlacedNode}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Button MinWidth="132" MinHeight="56" Tag="{Binding}" Click="OnNodeClick"
+                        <!-- Fixed 136 x 56 box, no padding, content at the top: the dot centre is always at
+                             (68, 7) from the node origin, where ChainView.xaml.cs anchors the links (audit 16). -->
+                        <Button Width="136" Height="56" Padding="0" Tag="{Binding}" Click="OnNodeClick"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Top"
                                 AutomationProperties.Name="{Binding Name}"
                                 ToolTip="{Binding StatusLabel}" FocusVisualStyle="{StaticResource ChainFocus}"
                                 Background="Transparent" BorderThickness="0">
                             <StackPanel HorizontalAlignment="Center">
-                                <Ellipse Style="{StaticResource ChainNodeDot}" HorizontalAlignment="Center"/>
+                                <Grid Width="14" Height="14" HorizontalAlignment="Center">
+                                    <Ellipse Style="{StaticResource ChainNodeOnlyDot}"/>
+                                    <Path Style="{StaticResource ChainNodeTriangle}"/>
+                                    <Path Style="{StaticResource ChainNodeCross}"/>
+                                    <TextBlock Style="{StaticResource ChainNodeRepairing}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                                <!-- The label hugs its text on the card surface, so a branch link passing
+                                     behind it never runs through the words (audit 16). -->
                                 <TextBlock Text="{Binding Name}" Style="{StaticResource Tv.Type.Caption}"
                                            HorizontalAlignment="Center" TextAlignment="Center"
-                                           TextWrapping="Wrap" Margin="0,8,0,0" Width="136" />
+                                           TextWrapping="Wrap" Margin="0,8,0,0" MaxWidth="136" Padding="4,0"
+                                           Background="{DynamicResource Tv.Surface}" />
                             </StackPanel>
                         </Button>
                     </DataTemplate>

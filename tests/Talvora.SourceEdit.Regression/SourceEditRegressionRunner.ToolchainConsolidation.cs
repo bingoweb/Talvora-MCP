@@ -24,6 +24,14 @@ internal static partial class SourceEditRegressionRunner
             var expected = JsonSerializer.SerializeToElement(await probe.Read(), jsonOptions);
             var task = (Task<Dictionary<string, JsonElement>>)info.Invoke(null, [probe.Tool, CancellationToken.None])!;
             var actual = JsonSerializer.SerializeToElement(await task, jsonOptions);
+            if (expected.GetRawText() != actual.GetRawText())
+            {
+                // The first call of a shim (Corepack yarn/pnpm on CI) may provision the tool or time out under load and
+                // change "found" between the two probes (audit 16); compare one fresh pair taken back to back.
+                expected = JsonSerializer.SerializeToElement(await probe.Read(), jsonOptions);
+                task = (Task<Dictionary<string, JsonElement>>)info.Invoke(null, [probe.Tool, CancellationToken.None])!;
+                actual = JsonSerializer.SerializeToElement(await task, jsonOptions);
+            }
             var expectedNames = expected.EnumerateObject().Select(property => property.Name).Order().ToArray();
             Q2aCheck(expectedNames.SequenceEqual(actual.EnumerateObject().Select(property => property.Name).Order()),
                 probe.Tool + " info changed its output fields.");

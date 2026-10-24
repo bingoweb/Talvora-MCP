@@ -13,7 +13,7 @@
 | Branch | `main` only. Do not create branches. Dependabot PRs: apply with scripts/Apply-DependabotPr.ps1 (DEP1), never merge on GitHub. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-24-15` = `fce75d5`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-24-16` = `355af6d`. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -23,7 +23,7 @@
 
 ## In progress
 
-In progress: (none)
+In progress: UI5 — implementation uncommitted; P-35 decided (Claude fixed the N7 timing test in audit 16) — run the complete Full gate and deliver
 
 ## Agent queue
 
@@ -98,17 +98,17 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] T4 — CI: documentation-only pushes run the changed-scope gate (Phase T; GitHub CI 40086071865 success; real docs-only CI 40089591627 ran Changed 10/0 without build/restore)
 - [x] UI1 — Tokens, theme manager and typography; P-18/P-31; installed 49e1421, Gece/Gün installed smokes and PNGs passed, GitHub CI 40088645152 success; visual review awaits Claude audit.
 - [x] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; Claude audit 14 verified GitHub CI 830bb67 success, installed 830bb67 counts 250/213/88 and live toolchain_info. Specialized selectors/probes retained by the hard rule.
-- [~] D21 — Worklog card: hanging indents, one text edge, no imitation window buttons (audit 15; Full 66/0; previews 10/10; installed 5b57960, live capture and CI 40093271827 success verified; only Gitea attachment pending under U10)
+- [x] D21 — Worklog card: hanging indents, one text edge, no imitation window buttons (installed 5b57960, previews 10/10, live capture, CI 40093271827; Gitea attachment waived — connector approval unavailable, audit 16)
 - [~] TI1 — Tray icon "Altıgen-T" (reference hashes 3/3, source and installed previews 25/25, Full 66/0; installed d3925fb and CI 40094172485 success verified; only user visual answer under U9 pending)
 - [-] Q2b — Config get/set/delete consolidation (withdrawn by P-32; the 18 format tools stay)
-- [?] Q2c — Legacy text mutators removed + manifest-driven README count test (waiting for Claude: P-34 permitted three-tool change cannot meet the required surface targets)
+- [ ] Q2c — Legacy text mutators removed where 1:1 + manifest-driven README count test (P-34 decided: no numeric ceilings; 120 KB budget moves to Q1)
 - [?] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (waiting for Q2c; amended by P-32)
 - [?] Q3 — Documentation diet (P-17; waiting for Q2c)
 - [~] UI2 — Shell, rail, title bar, command palette (P-33 implemented; signed-in Full 66/0 and both source themes green; exact-commit delivery evidence artifacts/ui2-delivery.json; U5 mixed-DPI placement and Claude visual audit pending)
 - [x] N7 — "Çalışma günlüğü" history page (7d/2,000/20MB, terminal-only, session filters/details; installed 94e4079 smoke success; GitHub CI 40101364855 attempt 2 success)
 - [x] UI3 — Overview: Nabız ring + chain strip (installed 6d12e65, 250 tools, full source and installed smoke/Gece/Gun PNGs; signed-in Full 66/0; GitHub windows-ci 40104570857 success; remaining idle CPU polish tracked under UI8)
-- [~] UI4 — Services list + detail (signed-in Full 66/0, safe test MCP UI start/stop/restart/repair GREEN, 4 source-theme PNGs; exact-commit Windows installer, installed smoke and GitHub CI follow commit)
-- [ ] UI5 — Events + raw log
+- [x] UI4 — Services list + detail (installed 355af6d, 250 tools, installed smoke and four theme PNGs green; Full 66/0; GitHub windows-ci 40111604160 attempt 2 success)
+- [?] UI5 — Events + raw log (UI5 unit and WPF source smoke/Gece/Gun PNGs green; signed-in Full gate blocked by unrelated N7 300 ms fixture threshold, waiting for Claude: P-35; no UI5 commit/deploy)
 - [ ] UI6 — Settings + setup stepper (+ deferred S3 ACL notice, to be specified)
 - [ ] N8 — Notification settings
 - [ ] UI7 — Tray icon/menu, worklog colour alignment, About
@@ -138,6 +138,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
+- tests/Talvora.Notification.Regression/Program.N7.cs:64 — N7 2,000-entry loading perf guard passes isolated in 116 ms, but fails when independent Full suites compete (340, 309, 321 ms against 300 ms); see P-35. No N7 changes made during UI5.
+
 - src/Talvora.Tray/ControlCenterSmoke.UI3.cs:102 — The 3-second overview idle CPU sample after 2.5 seconds of warm-up was 7.33%, above the UI8 <1% target. Keep motion controls and the measurement; assign CPU rendering optimization to UI8/Claude visual audit, not unapproved UI3 changes.
 
 - src/Talvora.Tray/DesktopProgressNotificationPresenter.cs:181 — N5 passes message.WorklogFrame! to the reference window without checking null; legacy tray alerts can lack this frame, and installed live capture returned NO_CARD_WINDOW. Check protocol-v4 fallback/alert routing in Claude audit before changing approved UI code.
@@ -150,6 +152,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — Claude deep audit 16 of `fce75d5..355af6d` (D21, TI1, UI2, N7, UI3, UI4): D21 and TI1 exact; spec cards reviewed on installed renders. Claude fixed six small defects directly: chain links anchored at the dot centre, labels/hollow ring no longer crossed by links, legend shapes on chain nodes, detail sentence said once, dangling ‘·’ removed, N7 timing (P-35) and Q2a yarn CI flake stabilised. Verified on a clean clone: build 0 errors, notification + Q2a suites green, both-theme smoke, Full `66 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. P-34: Q2c without numeric ceilings, 120 KB budget in Q1. D21 closed. Tag `audit/2026-10-24-16` = `355af6d`.
 
 - 2026-10-24 — UI4 (executor: ChatGPT via Talvora): replaced the legacy Services route with MVVM ServicesView/ServiceDetailView; reusable five-state StatusPill, 56px ServiceRow, redacted bounded EvidencePanel, search/filter, three tabs, operation banner with real Stopwatch elapsed time and exact manual-stop text. Kept legacy service/detail handlers only where still used by Events/Settings and existing smoke; UI4 routes through the approved lifecycle, repair, stop-confirmation and event APIs.
   RED first: missing list/detail types; GREEN targeted UI4 model/filter/manual-stop/elapsed/redaction test. Added separate RED/GREEN log-source-isolation regression; only own log hints and matching MCP lines show. Real WPF smoke drives a harmless test MCP via UI: decline stop, confirm stop, start, restart, repair GREEN; never alters Talvora Core/Dev/Admin/Gitea. Two themes and four source PNGs artifacts/ui4-source-ui4-{services,detail}-{initial,alternate}.png; UI3 before artifacts/ui3-preview-loaded.png / ui3-preview-ui3-overview-*.png.

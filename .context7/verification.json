@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T16:12:05Z",
-  "scope": "UI4: service list/detail, five-state StatusPill, reusable ServiceRow and bounded EvidencePanel; existing lifecycle/repair services and confirmation, with source and real installed UI acceptance under DESIGN-CONTROL-CENTER §5.1, §5.3 and §6. WPF/WPF-UI 4.3, no added packages.",
+  "verifiedAtUtc": "2026-10-24T16:58:15Z",
+  "scope": "UI5: day-grouped EventsView with category, service and search filters, redacted EvidencePanel copy and visibility-scoped 2-second raw log polling, as required by DESIGN-CONTROL-CENTER §5.4 and §6; existing .NET 10 WPF/WPF-UI 4.3 and no new packages.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-24 UI5: Context7 official WPF Expander.xaml confirms a HeaderSite ToggleButton bound to IsExpanded and content collapsed when closed; ItemCollection sources confirm ObservableCollection change notification and refreshing item templates. DispatcherTimer Start/Stop and IsEnabled semantics verified against official Microsoft WindowsDesktop 10 documentation: https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/Themes/XAML/Expander.xaml and https://learn.microsoft.com/en-us/dotnet/api/system.windows.threading.dispatchertimer.isenabled?view=windowsdesktop-10.0 . Source reads use existing asynchronous bounded event store and log service."
+    },
+    {
+      "libraryId": "/lepoco/wpfui",
+      "verified": "2026-10-24 UI5: existing WPF-UI 4.3 Talvora resource dictionary and Context7 official theme implementation guide confirm dynamic theme token brushes with native WPF ControlTemplate triggers; WPF-UI TextBox is reused with its existing PlaceholderText/ClearButtonEnabled contract. Source: https://github.com/lepoco/wpfui/blob/main/docs/architecture/IMPLEMENTATION-GUIDE.md ."
+    },
     {
       "libraryId": "/dotnet/wpf",
       "verified": "2026-10-24 UI4: Context7 official .NET WPF ContentPresenter.ChooseTemplate confirms ContentControl's Content and DataTemplate binding; ICommandSource and ListBox selected-item/enter navigation preserve UI event routing. Native TabControl, read-only TextBox (Mode=OneWay) and DispatcherTimer/Stopwatch expose the three tabs and measured operation banner. Official: https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/Controls/ContentPresenter.cs ."

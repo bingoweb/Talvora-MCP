@@ -77,7 +77,12 @@ internal sealed class ServiceDetailViewModel : ObservableObject
         State = OverviewViewModel.VisualState(source.Health,
             ManagedMcpAggregateHealthPolicy.IsIgnored(source.Registration, source.Health, manuallyStopped));
         StatusLabel = OverviewViewModel.Word(State);
-        StatusDetail = FileLog.RedactSensitiveData(source.StatusText + " — " + source.Detail);
+        // Say it once when the detail only repeats the status ("Yanıt gecikiyor. — Yanıt gecikiyor.", audit 16).
+        var detail = string.IsNullOrWhiteSpace(source.Detail) ||
+            string.Equals(source.Detail.Trim(), source.StatusText.Trim(), StringComparison.Ordinal)
+                ? source.StatusText
+                : source.StatusText + " — " + source.Detail;
+        StatusDetail = FileLog.RedactSensitiveData(detail);
         LastChecked = "Son kontrol " + checkedAt.ToLocalTime().ToString("HH:mm:ss",
             System.Globalization.CultureInfo.GetCultureInfo("tr-TR"));
         ManualStopMessage = manuallyStopped
