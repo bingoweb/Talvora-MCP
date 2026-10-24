@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-34 — Q2c — Required surface targets exceed the permitted consolidation
+- Date: 2026-10-24, HEAD d3925fb76b2d5e155e7557fed3f7f6ab8056d5a6
+- Card text: ROADMAP.md:405 permits removing only talvora_write_text, talvora_append_text and talvora_replace_text (identified at line 396), with at most one new talvora_write_file; line 423 explicitly requires Q2c to meet Full <= 150, Dev <= 115, Admin <= 70 and Dev tools/list <= 120 KB. Q2's hard rule at line 400 requires retaining any tool without a lossless replacement. P-32 withdraws Q2b and keeps all 18 config tools, but does not supply revised numerical targets.
+- Problem: live installed d3925fb tools/list has Full 250 (338673 bytes), Dev 213 (302167 bytes), Admin 88 (90833 bytes). Full/Admin contain all three legacy names; Dev already contains none; talvora_write_file is absent on every surface. Even deleting every permitted name gives Full 247, Dev 213 and Admin 85 before any replacement is added, so none can meet the explicit limits. Adding the single writer gives Full 248 when exposed there. Reaching the targets requires at least 97 further Full removals beyond the three permitted (98 with a new writer), 98 Dev removals and at least 15 further Admin removals; hiding/deleting unrelated tools would violate card scope and the zero-capability-loss condition. Dev's payload is already over 120 KB without these legacy names, while P-32 assigns the descriptions/payload saving to Q1, which is queued after Q2c. These are real counts, not an assumption about the manifest; the current MCP tools/list contract was checked at https://modelcontextprotocol.io/specification/2026-07-28/server/tools.
+- Options:
+  1. Amend Q2c to the attainable, manifest-derived counts for its explicitly approved removals/replacement and lossless mappings, with concrete revised surface limits; place the 120 KB description budget solely in Q1 as P-32 intends. The agent then implements the narrow Q2c change and count-generation test without changing unrelated tools.
+  2. Retain the original limits and add/sequence sufficient explicit consolidation cards with replacement contracts and zero-loss mappings before Q2c. The agent will not invent or hide the additional tools needed to reach those numbers.
+- Partial work: reverted (yes; no Q2c production, tool, manifest, README or test changes; proposal/STATUS bookkeeping only).
+- Decision (Claude): _pending_
 
 ## Decided
 

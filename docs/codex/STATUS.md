@@ -99,11 +99,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI1 — Tokens, theme manager and typography; P-18/P-31; installed 49e1421, Gece/Gün installed smokes and PNGs passed, GitHub CI 40088645152 success; visual review awaits Claude audit.
 - [x] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; Claude audit 14 verified GitHub CI 830bb67 success, installed 830bb67 counts 250/213/88 and live toolchain_info. Specialized selectors/probes retained by the hard rule.
 - [~] D21 — Worklog card: hanging indents, one text edge, no imitation window buttons (audit 15; Full 66/0; previews 10/10; installed 5b57960, live capture and CI 40093271827 success verified; only Gitea attachment pending under U10)
-- [~] TI1 — Tray icon "Altıgen-T" (exact reference hashes 3/3, source previews 25/25, signed-in Full 66/0; exact-commit install/installed previews/CI follow; user visual answer required under U9)
+- [~] TI1 — Tray icon "Altıgen-T" (reference hashes 3/3, source and installed previews 25/25, Full 66/0; installed d3925fb and CI 40094172485 success verified; only user visual answer under U9 pending)
 - [-] Q2b — Config get/set/delete consolidation (withdrawn by P-32; the 18 format tools stay)
-- [ ] Q2c — Legacy text mutators removed + manifest-driven README count test (P-16; Q2b withdrawn by P-32 — use the manifest as it is after Q2c)
-- [ ] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (after Q2c; amended by P-32)
-- [ ] Q3 — Documentation diet (P-17; after Q2c)
+- [?] Q2c — Legacy text mutators removed + manifest-driven README count test (waiting for Claude: P-34 permitted three-tool change cannot meet the required surface targets)
+- [?] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (waiting for Q2c; amended by P-32)
+- [?] Q3 — Documentation diet (P-17; waiting for Q2c)
 - [ ] UI2 — Shell, rail, title bar, command palette (P-33 decided: placeholder contract for Çalışma günlüğü and Bağlantı zinciri)
 - [ ] N7 — "Çalışma günlüğü" history page (after UI2; replaces the P-33 placeholder)
 - [ ] UI3 — Overview: Nabız ring + chain strip
@@ -148,6 +148,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-24 — Q2c (executor: ChatGPT): stopped before implementation under EXECUTION MANDATE rule 6; P-34 documents incompatible scope/targets after P-32. No production/tool/manifest/test/README changes.
+  Installed d3925fb wire counts Full/Dev/Admin 250/213/88, bytes 338673/302167/90833; all three named legacy mutators already absent from Dev. Three permitted removals cannot reach 150/115/70; new write_file is absent.
+  Baseline signed-in Changed 8/0; final signed-in documentation gate 10/0, Hepsi geçti.; exact-head GitHub CI 40094172485 success. TI1 installed previews 25/25 and runtime green recorded in artifacts/ti1-delivery.json; only U9 visual answer remains. Q1/Q3 wait for Q2c; next independent item is UI2. No runtime deployment required; exact-commit documentation CI follows push.
 
 - 2026-10-24 — TI1 (executor: ChatGPT): copied exact TrayIconArt/TrayIconFactory/Program.TrayIcon references (normalised hashes fe8dfe96, 3ba44621, 3808bb28); applied literal CLI/timer/native-source test steps. No geometry, colours, Gitea icon or tooltip changes.
   RED before production: 16 compile errors for missing TrayIconArt/Appearance/State; GREEN build 0 warnings/0 errors, Notification including AssertTrayIconArt passed. Source preview outputs 25/25 byte-identical (24 icons + tray-sheet.png; reference-only strip.png is documentation).
