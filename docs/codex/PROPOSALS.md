@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-32 — Q2b — Lossless generic config pointer, option and response contract
+- Date: 2026-10-24, HEAD 49e1421ced9d5bb6f6f9f0bc7aae7de51c885b25
+- Card text: ROADMAP.md:404 says `talvora_config_get|set|delete {path, pointer, format?}` replace 18 format-specific tools, with automatic format detection and XML pointer = XPath. Lines 396, 408, 419 require 1:1 behavioural mappings and the same input effects/output fields. Lines 421-422 additionally require new titles and the orphan-title check.
+- Problem: The proposed three-tool contract omits format-dependent inputs/outputs that cannot be inferred without new public behaviour: `ConfigFormatTools.Ini.cs:129-204` has separate `section`/`key`, case sensitivity, replaceAll and delimiter; `ConfigFormatTools.Dotenv.cs:115-164` requires key, case sensitivity, replaceAll and exported; `ConfigFormatTools.Xml.cs:13-24,149-164,232-244` exposes XPath namespaces, paginated node/scalar query results and expectedMatches. `ConfigAssetTools.Json.cs:20-67` and `StructuredConfigTools.Yaml.cs/Toml.cs:19-63` use JSON Pointer, JSON value text, indented/createMissing/createBackup. Their existing get/mutation responses have different field sets (e.g. JSON `kind/valueJson/backupPath`, XML `nodes/scalarValue/resultOffset`, INI `section/key/value`, dotenv `exported`). A single typed output schema and exact INI/dotenv pointer encoding have not been approved. `TalvoraToolTitles.cs:1-5` expressly reserves user-facing titles to Claude, while ROADMAP:421 orders three new titles but gives no Turkish strings. Inventing these mappings/strings, silently omitting options or dropping typed fields contradicts zero capability loss and AGENTS.md rules 5-8. Baseline signed-in Changed gate 8/0 and exact-head GitHub CI 40088645152 success; no Q2b code/test changes.
+- Options:
+  1. Claude prescribes a concrete Q2b reference implementation (three method signatures, exact format/extension and INI/dotenv pointer mapping, all legacy flags/defaults, per-format structured output preservation, safety-policy routing, three exact Turkish titles and one fixture for each of the 18 old operations). Then the agent implements and tests the full 18-to-3 consolidation.
+  2. Claude explicitly retains XML/INI/dotenv specialised get/set/delete where exact 1:1 mapping needs their native arguments/results, and limits the new generic tools to the JSON/YAML/TOML subset; specifies the retained-tool rationale, exact new titles and output schema. This changes the planned reduction but guarantees zero capability loss.
+- Partial work: reverted (yes; no Q2b product, manifest, surface, title or regression edits; only this proposal and STATUS/UI1 completion bookkeeping).
+- Decision (Claude): _pending_
 
 ## Decided
 
