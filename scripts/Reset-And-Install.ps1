@@ -103,6 +103,17 @@ $shortcutNames = @(
     'Talvora MCP.lnk'
 )
 
+# Only Talvora's own programs are stopped (audit 2026-10-24 (14)): never an editor, shell or agent whose
+# command line merely mentions the repository folder.
+function Test-TalvoraProcess {
+    param([string] $ExecutablePath, [string] $CommandLine)
+    $name = if ([string]::IsNullOrWhiteSpace($ExecutablePath)) { '' } else { [IO.Path]::GetFileName($ExecutablePath) }
+    if (@('Talvora.exe', 'Talvora.Tray.exe', 'Talvora.Gateway.exe', 'Talvora.SystemBroker.exe', 'Talvora.Service.exe') -contains $name) {
+        return $true
+    }
+    return ($name -ieq 'dotnet.exe') -and ($CommandLine -match '(?i)[\\/\"]Talvora(?:\.Tray)?\.dll\b')
+}
+
 function Test-ResetProtectedItem {
     param([IO.FileSystemInfo] $Item, [bool] $IncludeData)
     # Secrets are never entered, read, copied, archived, or removed.
@@ -288,10 +299,8 @@ if (-not $testing) {
     }
 
     Get-CimInstance Win32_Process | Where-Object {
-        $_.ProcessId -ne $PID -and (
-            ([string]$_.ExecutablePath -match '(?i)\\Talvora(?:-MCP)?\\') -or
-            ([string]$_.CommandLine -match '(?i)Talvora(?:\.Gateway|\.SystemBroker|\.Service|\.dll|\.exe|-MCP)')
-        )
+        $_.ProcessId -ne $PID -and
+        (Test-TalvoraProcess -ExecutablePath ([string]$_.ExecutablePath) -CommandLine ([string]$_.CommandLine))
     } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 
     Get-NetFirewallRule -ErrorAction SilentlyContinue | Where-Object {

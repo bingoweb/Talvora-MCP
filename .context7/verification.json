@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T07:31:57Z",
-  "scope": "Q2a / P-16: consolidate only losslessly mappable info/run wrappers; preserve discovery, JSON fields, arbitrary argv, working directory, environment and timeout; retain executable/SDK/session selectors and structured probes.",
+  "verifiedAtUtc": "2026-10-24T08:12:23Z",
+  "scope": "D19: filter reset process termination to Talvora executable names and hosted Talvora DLLs only; preserve editor, shell and agent processes referencing the repository.",
   "libraries": [
+    {
+      "libraryId": "/microsoftdocs/powershell-docs",
+      "verified": "2026-10-24 D19: official PowerShell 7.7 comparison-operator guidance confirms -contains and -ieq are case-insensitive and -match evaluates a regular expression; Where-Object script blocks filter objects using the current pipeline item. The card's exact process matcher only permits named Talvora executables or dotnet hosting Talvora(.Tray).dll; eight regression cases exclude editors, shells and agents mentioning the repository."
+    },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
       "verified": "2026-10-24 Q2a: official SDK tool documentation confirms UseStructuredContent advertises the output schema and serializes returned objects directly; ToolAnnotations preserves readOnlyHint/destructiveHint/idempotentHint/openWorldHint. Dictionary<string, JsonElement> preserves each original probe's exact camel-case fields rather than introducing a wrapper. Existing CMake/Ninja process runners and five original probes are reused unchanged. Behaviour tests verify all removed calls before removal, including real argv, environment and filesystem effects."
@@ -329,6 +333,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-24 D19: Microsoft official PowerShell 7.7 comparison operators https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Comparison_Operators.md and Where-Object https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/Where-Object.md ; Context7 /microsoftdocs/powershell-docs verified the exact prescribed process-filter operators. Test copied verbatim from docs/codex/reference/ci and verified at normalized SHA-256 d042c78b63fbd12bcfd3d3bd88f57595d4d9421a09b8360ff361a74347fe75aa.",
     "2026-10-23 D18: Microsoft WPF property-change notification https://learn.microsoft.com/en-us/dotnet/desktop/wpf/data/how-to-implement-property-change-notification ; Visibility.Collapsed layout contract https://learn.microsoft.com/en-us/dotnet/api/system.windows.visibility?view=windowsdesktop-10.0 ; Context7 /dotnet/wpf source guidance for FrameworkElement.DataContext, TextBlock.Text and ItemsControl.ItemsSource. Verified the prescribed reference implementation without inventing UI or changing the theme.",
     "2026-10-23 S3: Microsoft official Windows filesystem ACL how-to https://github.com/dotnet/docs/blob/main/docs/standard/io/how-to-add-or-remove-access-control-list-entries.md ; FileSystemAclExtensions reference https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemaclextensions?view=net-10.0 ; Context7 /dotnet/docs. Protected DACL, SID-scoped permissions and explicit file ACE preservation checked by signed-in Windows privacy regression.",
     "2026-10-23 RM1: official CLI docs https://www.remotion.dev/docs/cli/create-video , https://www.remotion.dev/docs/cli/compositions , https://www.remotion.dev/docs/cli/render and https://www.remotion.dev/docs/cli/still ; npm registry https://registry.npmjs.org/create-video/4.0.538 returned HTTP 200. Context7 /remotion-dev/remotion verified noninteractive blank creation, quiet composition IDs, output/codec/scale arguments and Windows props-file guidance.",
