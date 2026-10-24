@@ -1,6 +1,8 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using Talvora.Shared;
@@ -59,6 +61,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         new();
     // N3b sends a code preview once per change; later frames carry only its id.
     private readonly DesktopProgressCodeState _codeState = new();
+    private readonly WorklogHistoryStore _historyStore = new();
     private Task _placementSaveTask = Task.CompletedTask;
     private bool _isPinned;
     private int _anchorLeftPixels;
@@ -134,6 +137,15 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
     private void PublishCore(DesktopProgressMessage message)
     {
         message = _codeState.Restore(message);
+        try
+        {
+            _historyStore.AppendTerminal(message);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or
+            System.Text.Json.JsonException or InvalidDataException)
+        {
+            TrayLog.Write("Worklog history persistence failed", ex);
+        }
         if (_presentationState.Evaluate(message) !=
             DesktopProgressPresentationDecision.Accept)
         {
@@ -149,9 +161,23 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                 FormsScreen.FromPoint(
                     FormsCursor.Position).DeviceName;
             window = new DesktopProgressNotificationWindow();
+            // Keep the approved desktop card reference unchanged. Distinguish a
+            // body click from the existing window drag using its move-completed event.
+            var pointerDown = FormsCursor.Position;
+            window.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
+                new MouseButtonEventHandler((_, _) => pointerDown = FormsCursor.Position),
+                handledEventsToo: true);
             window.SetPinned(_isPinned);
             window.UserMoveCompleted +=
-                (_, _) => HandleUserMoveCompleted(window);
+                (_, _) =>
+                {
+                    var pointerUp = FormsCursor.Position;
+                    if (Math.Abs(pointerUp.X - pointerDown.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                        Math.Abs(pointerUp.Y - pointerDown.Y) < SystemParameters.MinimumVerticalDragDistance)
+                        _application.ShowWorklogSession(window.SessionId);
+                    else
+                        HandleUserMoveCompleted(window);
+                };
             window.UserResizeCompleted +=
                 (_, _) => HandleUserResizeCompleted(window);
             window.PinStateChangeRequested +=

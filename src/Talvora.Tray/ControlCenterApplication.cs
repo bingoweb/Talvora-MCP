@@ -59,6 +59,18 @@ internal sealed class ControlCenterApplication : WpfApplication
         _window.BringToForeground();
     }
 
+    public void ShowWorklogSession(string sessionId)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(() => ShowWorklogSession(sessionId));
+            return;
+        }
+
+        ShowControlCenter();
+        _window?.OpenWorklogSession(sessionId);
+    }
+
     public void ExitFromTray()
     {
         if (!Dispatcher.CheckAccess())

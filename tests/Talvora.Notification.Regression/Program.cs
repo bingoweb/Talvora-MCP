@@ -14,6 +14,11 @@ internal static partial class Program
 {
     public static async Task<int> Main()
     {
+        if (Environment.GetCommandLineArgs().Contains("--n7-only", StringComparer.Ordinal))
+        {
+            AssertN7History();
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--n4-only", StringComparer.Ordinal))
         {
             await AssertN4AgentEventsAsync();
@@ -34,6 +39,7 @@ internal static partial class Program
         await AssertN10ChangesAsync();
         await AssertRemotionWorklogAsync();
         AssertN6Details();
+        AssertN7History();
         AssertTrayIconArt();
         await AssertShellCommandsAsync();
         await AssertN3bCodeTerminalAsync();

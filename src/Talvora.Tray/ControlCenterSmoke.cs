@@ -58,6 +58,9 @@ internal static class ControlCenterSmoke
                 await TalvoraThemeManager.SetPreferenceAsync(alternatePreference, persist: true);
                 if (((SolidColorBrush)contentRoot.Background).Color == initialBackground)
                     throw new InvalidOperationException("Control Center theme did not change live.");
+                window.ShellModel.SelectPage(2);
+                AssertWorklogHistorySelection(window, "worklog-session-alternate");
+                window.ShellModel.SelectPage(0);
                 var smokePreferencePath = TalvoraThemeManager.SmokePreferencePath
                     ?? throw new InvalidOperationException("Theme smoke has no isolated preference path.");
                 try
@@ -161,12 +164,21 @@ internal static class ControlCenterSmoke
             window.UpdateLayout();
             if (window.ShellModel.SelectedIndex != index)
                 throw new InvalidOperationException("Shell shortcut selected a different route.");
-            if (index is 2 or 3)
+            if (index == 2)
+            {
+                if (window.HistoryContentHost.Visibility != Visibility.Visible ||
+                    window.HistoryContentHost.Content is not Views.WorklogHistoryView ||
+                    window.PlaceholderCard.Visibility != Visibility.Collapsed)
+                    throw new InvalidOperationException("The worklog history route did not open its view.");
+                SaveVisualSnapshotIfRequested(window, "worklog");
+                AssertWorklogHistorySelection(window);
+            }
+            else if (index == 3)
             {
                 if (window.PlaceholderCard.Visibility != Visibility.Visible ||
                     AutomationProperties.GetName(window.PlaceholderCard) != names[index])
-                    throw new InvalidOperationException("The approved placeholder is not accessible.");
-                SaveVisualSnapshotIfRequested(window, index == 2 ? "worklog" : "chain");
+                    throw new InvalidOperationException("The approved chain placeholder is not accessible.");
+                SaveVisualSnapshotIfRequested(window, "chain");
             }
         }
         window.HandleShellNavigationKey(System.Windows.Input.Key.D4, System.Windows.Input.ModifierKeys.Control);
@@ -204,6 +216,59 @@ internal static class ControlCenterSmoke
             throw new InvalidOperationException("The shell first-paint measurement was not recorded.");
         window.ShellModel.SelectPage(0);
         window.UpdateLayout();
+    }
+
+    private static void AssertWorklogHistorySelection(
+        ShellWindow window, string snapshot = "worklog-session")
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "talvora-n7-smoke-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var previous = window.HistoryContentHost.Content;
+        try
+        {
+            var store = new WorklogHistoryStore(Path.Combine(directory, "worklog-sessions.jsonl"));
+            var now = DateTimeOffset.UtcNow;
+            foreach (var id in new[] { "n7-first", "n7-second" })
+            {
+                var frame = new Talvora.Shared.DesktopWorklogFrame(
+                    id, 2, now,
+                    new Talvora.Shared.WorklogSessionHeader("Talvora-MCP", "ChatGPT · Dev"),
+                    new Talvora.Shared.WorklogStep(Talvora.Shared.WorklogStepCategory.SourceEdit,
+                        Talvora.Shared.WorklogStepState.Succeeded, "Düzenleme tamamlandı.",
+                        "1 dosya değişti", null, 3),
+                    [new Talvora.Shared.WorklogTimelineEntry(now.AddSeconds(-3),
+                        Talvora.Shared.WorklogStepState.Running, "Düzenleme başladı."),
+                     new Talvora.Shared.WorklogTimelineEntry(now,
+                        Talvora.Shared.WorklogStepState.Succeeded, "Düzenleme tamamlandı.")],
+                    new Talvora.Shared.WorklogTotals(2, 3, 1,
+                        Talvora.Shared.WorklogCheckState.Succeeded, Talvora.Shared.WorklogCheckState.Succeeded),
+                    null, 15);
+                store.AppendTerminal(new Talvora.Shared.DesktopProgressMessage(
+                    id, "talvora_apply_patch", "Düzenleme tamamlandı.", "",
+                    Talvora.Shared.DesktopProgressKind.Completed, now, 3,
+                    new Talvora.Shared.DesktopProgressEvidence(Summary: "1 dosya değişti",
+                        Files: ["src/Talvora.Tray/WorklogHistoryStore.cs"]),
+                    WorklogFrame: frame, SessionClosed: true));
+            }
+            var page = new Views.WorklogHistoryView(store);
+            page.Reload();
+            window.HistoryContentHost.Content = page;
+            window.UpdateLayout();
+            var rows = FindVisualChild<System.Windows.Controls.ListBox>(page)
+                ?? throw new InvalidOperationException("Worklog history session list is missing.");
+            var matching = page.Model.Sessions.Single(session => session.SessionId == "n7-second");
+            rows.SelectedItem = matching; // The same selection binding a clicked card uses.
+            if (page.Model.SelectedSession?.SessionId != "n7-second" ||
+                page.Model.SelectedSession?.Timeline.Count != 2)
+                throw new InvalidOperationException("A clicked worklog card opened another session.");
+            SaveVisualSnapshotIfRequested(window, snapshot);
+        }
+        finally
+        {
+            window.HistoryContentHost.Content = previous;
+            window.UpdateLayout();
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     private static void SaveVisualSnapshotIfRequested(

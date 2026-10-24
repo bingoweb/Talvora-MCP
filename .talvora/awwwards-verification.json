@@ -1,12 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T13:11:08Z",
-  "sourceUrl": "https://www.awwwards.com/",
-  "scope": "UI2: Awwwards homepage checked live with HTTP 200 and its current title; evidence only. All visible decisions follow DESIGN-CONTROL-CENTER and approved P-33.",
+  "verifiedAtUtc": "2026-10-24T13:57:50Z",
+  "sourceUrl": "https://www.awwwards.com/inspiration/archive-prague-quadrennial-pq-2023",
+  "scope": "N7: Awwwards inspiration research for a project/session history with a timeline; all actual text, placement, theme and data behavior follow approved DESIGN-WORKLOG §8 and DESIGN-CONTROL-CENTER §4, not a new visual direction.",
   "references": [
+    "https://www.awwwards.com/inspiration/archive-prague-quadrennial-pq-2023",
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
+    "N7: Awwwards Prague Quadrennial archive inspiration page has the archive/history/timeline tags and a related interactive timeline. This is qualitative reference only; the actual WPF UI keeps the approved Control Center typography, Tv token palette, session list plus details and native platform controls. No external animation or new imagery is imported.",
+    "N7: the original UI2 history placeholder is replaced with accessible project, actor and outcome filters; cards show start/end/step/file/outcome and matching timeline/evidence, as specified in DESIGN-WORKLOG §8. Empty state uses the exact approved Turkish sentence.",
     "DESIGN-CONTROL-CENTER §4 Shell: 48 px native title bar, 72/232 px rail, exact Turkish labels/SymbolRegular icons, AccentSoft selection and 3 px Accent edge, maximum 1440 content host, native window buttons and theme choice.",
     "DESIGN-CONTROL-CENTER §6 CommandPalette and §8 architecture: Popup/TextBox/ListBox subsequence search, CommunityToolkit.Mvvm and adapters to the existing actions, retaining their confirmation/guard paths.",
     "P-33 approved placeholders: exact headings/body/button, Surface/Border/Radius.L, Space.6 padding/inset, Space.2 body gap, Space.4 button gap, 560 maximum width; no extra text or illustrations.",

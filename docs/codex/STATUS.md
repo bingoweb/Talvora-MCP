@@ -105,7 +105,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [?] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (waiting for Q2c; amended by P-32)
 - [?] Q3 — Documentation diet (P-17; waiting for Q2c)
 - [~] UI2 — Shell, rail, title bar, command palette (P-33 implemented; signed-in Full 66/0 and both source themes green; exact-commit delivery evidence artifacts/ui2-delivery.json; U5 mixed-DPI placement and Claude visual audit pending)
-- [ ] N7 — "Çalışma günlüğü" history page (after UI2; replaces the P-33 placeholder)
+- [x] N7 — "Çalışma günlüğü" history page (7d/2,000/20MB, terminal-only, session filters/details; signed-in Full 66/0, Gece/Gün history PNGs; exact-commit deployment/CI follow the commit)
 - [ ] UI3 — Overview: Nabız ring + chain strip
 - [ ] UI4 — Services list + detail
 - [ ] UI5 — Events + raw log
@@ -148,6 +148,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-24 — N7 (executor: ChatGPT via Talvora): replaced UI2 history placeholder with a searchable, filterable session list and selected timeline/redacted evidence panel; desktop-card body clicks route to that session, preserving the immutable Phosphor card and its drag behavior.
+  Terminal-only JSONL snapshots rotate at 7 days/2,000 sessions/20 MB; code evidence is UTF-8-capped at 8 KB. Supporting changes: desktop presenter, Control Center application/shell route, visual smoke, Notification regression runner, Context7/Awwwards evidence.
+  RED first: missing store/view-model types; GREEN N7 fixture (2,110 rows, latest-first, dedup/expiry/byte cap, preview cap, filters and selected timeline). Under load initial 437 ms; bounded parallel parse 124 ms in isolation, Full Notification test passed the 300 ms limit.
+  Signed-in Full 66 checks/0 errors, exit 0, Hepsi geçti.; real WPF smoke with two isolated sessions selects the matching card and survives theme switch. Before: artifacts/ui2-gece-worklog.png, ui2-gun-worklog.png; after: artifacts/n7-preview-worklog-session.png and n7-preview-worklog-session-alternate.png.
+  Design gaps filled using existing Tv spacing/type/radius tokens for list/detail margins and surface borders; no new images, colours, strings or packages. Context7 /dotnet/wpf, /lepoco/wpfui; official WPF ListBox virtualisation source; Awwwards archive/history timeline evidence only.
+  Installer, installed-runtime smoke and exact-commit GitHub windows-ci evidence follow this commit; mirror to Gitea #9 where permitted.
 
 - 2026-10-24 — UI2 (executor: ChatGPT): implemented the §4 XAML shell, six Turkish rail destinations, native title bar/theme picker, fuzzy command palette and P-33 placeholders; existing pages/lifecycle/placement stay behind adapters.
   Supporting changes: renamed the legacy window partial type and app/theme/tray/smoke references to ShellWindow; kept builders until UI8; added CommunityToolkit.Mvvm 8.4.2, notices, two required locks and Notification runner registration.

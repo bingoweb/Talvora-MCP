@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T13:11:08Z",
-  "scope": "UI2: approved shell/rail/title bar/command palette and P-33 fixed placeholders; WPF-UI 4.3 native chrome, CommunityToolkit.Mvvm 8.4.2 commands and existing page/lifecycle adapters.",
+  "verifiedAtUtc": "2026-10-24T13:57:50Z",
+  "scope": "N7: terminal desktop worklog session JSONL retention and Control Center history page; WPF-UI 4.3 theme tokens, WPF ListBox binding/virtualization and existing frame protocol. No new packages.",
   "libraries": [
+    {
+      "libraryId": "/lepoco/wpfui",
+      "verified": "2026-10-24 N7: Context7 official WPF-UI implementation guide confirms theme-aware control styles use DynamicResource brushes and template-linked foreground/background for selected and disabled states; N7 history uses existing Tv theme tokens inside the UI2 FluentWindow rather than inventing a separate palette. Official source: https://github.com/lepoco/wpfui/blob/main/docs/architecture/IMPLEMENTATION-GUIDE.md ."
+    },
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-24 N7: Context7 Microsoft WPF Fluent ListBox source confirms ItemsSource list containers, VirtualizingPanel.IsVirtualizing, recycling and ScrollViewer.CanContentScroll=true for a bounded list; the existing WPF DataContext and two-way SelectedItem binding open a matching session detail. An isolated on-screen smoke generated two terminal sessions and verified selected id, timeline and theme-aware screenshot. Official source: https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/Themes/PresentationFramework.Fluent/Styles/ListBox.xaml ."
+    },
     {
       "libraryId": "/lepoco/wpfui",
       "verified": "2026-10-24 UI2: Context7 and the pinned WPF-UI 4.3 XML/API/source confirm FluentWindow, TitleBar Header/CenterContent/TrailingContent, ExtendsContentIntoTitleBar and all six prescribed SymbolRegular names. The existing Mica/theme watcher and placement logic stay on the renamed ShellWindow partial class. Source: https://github.com/lepoco/wpfui/blob/main/src/Wpf.Ui/Controls/TitleBar/TitleBar.cs and https://github.com/lepoco/wpfui/blob/main/src/Wpf.Ui/Controls/TitleBar/TitleBar.xaml."

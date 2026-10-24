@@ -5,6 +5,7 @@ using ButtonBase = System.Windows.Controls.Primitives.ButtonBase;
 using System.Windows.Input;
 using Talvora.Tray.Controls;
 using Talvora.Tray.ViewModels;
+using Talvora.Tray.Views;
 
 namespace Talvora.Tray;
 
@@ -12,6 +13,7 @@ namespace Talvora.Tray;
 internal sealed partial class ShellWindow
 {
     private ShellViewModel? _shellModel;
+    private WorklogHistoryView? _historyView;
     private bool _syncingShellNavigation;
     private bool _syncingShellTheme;
     private System.Diagnostics.Stopwatch? _shellFirstPaint;
@@ -82,15 +84,21 @@ internal sealed partial class ShellWindow
             items[index].IsChecked = index == _shellModel.SelectedIndex;
         _syncingShellNavigation = false;
         var selected = _shellModel.SelectedIndex;
-        var placeholder = selected is 2 or 3;
-        LegacyContentHost.Visibility = placeholder ? Visibility.Collapsed : Visibility.Visible;
+        var placeholder = selected == 3;
+        LegacyContentHost.Visibility = selected is 2 or 3 ? Visibility.Collapsed : Visibility.Visible;
+        HistoryContentHost.Visibility = selected == 2 ? Visibility.Visible : Visibility.Collapsed;
         PlaceholderCard.Visibility = placeholder ? Visibility.Visible : Visibility.Collapsed;
+        if (selected == 2)
+        {
+            _historyView ??= new WorklogHistoryView(new WorklogHistoryStore());
+            HistoryContentHost.Content = _historyView;
+            _historyView.Reload();
+            return;
+        }
         if (placeholder)
         {
-            PlaceholderMessage.Text = selected == 2
-                ? "Bu sayfa hazırlanıyor. Son çalışmalar şimdilik masaüstündeki çalışma kartında görünüyor."
-                : "Bu sayfa hazırlanıyor. Bağlantıların durumu şimdilik Hizmetler sayfasında görünüyor.";
-            PlaceholderServices.Visibility = selected == 3 ? Visibility.Visible : Visibility.Collapsed;
+            PlaceholderMessage.Text = "Bu sayfa hazırlanıyor. Bağlantıların durumu şimdilik Hizmetler sayfasında görünüyor.";
+            PlaceholderServices.Visibility = Visibility.Visible;
             return;
         }
 
@@ -107,6 +115,13 @@ internal sealed partial class ShellWindow
     }
 
     private void OnPlaceholderServices(object sender, RoutedEventArgs e) => _shellModel?.SelectPage(1);
+
+    internal void OpenWorklogSession(string sessionId)
+    {
+        if (_shellModel?.SelectedIndex != 2) _shellModel?.SelectPage(2);
+        else _historyView?.Reload();
+        _historyView?.Model.SelectSession(sessionId);
+    }
 
     private void OnOpenPalette(object sender, RoutedEventArgs e)
     {
@@ -186,6 +201,7 @@ internal sealed partial class ShellWindow
             if (e.Key == Key.F)
             {
                 if (_shellModel.SelectedIndex == 4) { _eventSearchBox.Focus(); _eventSearchBox.SelectAll(); }
+                else if (_shellModel.SelectedIndex == 2) _historyView?.FocusSearch();
                 else if (_shellModel.SelectedIndex is 0 or 1) { _searchBox.Focus(); _searchBox.SelectAll(); }
                 e.Handled = true;
                 return;
