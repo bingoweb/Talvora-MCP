@@ -117,7 +117,9 @@
                                         <DataTrigger Binding="{Binding IsFlowing}" Value="True">
                                             <DataTrigger.EnterActions>
                                                 <BeginStoryboard x:Name="Flow">
-                                                    <Storyboard RepeatBehavior="Forever">
+                                                    <!-- 20 fps: the dashes move 10 px/s, so this is still smooth
+                                                         at a third of the render cost of 60 fps. -->
+                                                    <Storyboard RepeatBehavior="Forever" Timeline.DesiredFrameRate="20">
                                                         <DoubleAnimation Storyboard.TargetProperty="StrokeDashOffset"
                                                             From="0" To="-16" Duration="0:0:1.6"/>
                                                     </Storyboard>

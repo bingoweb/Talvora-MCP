@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T18:51:02Z",
+  "verifiedAtUtc": "2026-10-24T19:36:54Z",
   "scope": "UI5: day-grouped EventsView with category, service and search filters, redacted EvidencePanel copy and visibility-scoped 2-second raw log polling, as required by DESIGN-CONTROL-CENTER §5.4 and §6; existing .NET 10 WPF/WPF-UI 4.3 and no new packages.",
   "libraries": [
     {

@@ -14,6 +14,11 @@ internal sealed partial class ShellWindow
     private ControlCenterDashboardSnapshot? _ui3RequestedComponentSnapshot;
     private IReadOnlyList<(ManagedMcpRegistration Owner, ManagedMcpComponentState State)> _ui3Components = [];
     private CancellationTokenSource? _ui3ComponentCancellation;
+    // Component probes start PowerShell and tunnel-client processes; the 8 s dashboard refresh must not repeat
+    // them. They run at most once a minute, or at once after "Yenile" / "Sorunu onar" (research 2026-10-24).
+    private static readonly TimeSpan Ui3ComponentProbeInterval = TimeSpan.FromSeconds(60);
+    private DateTimeOffset _ui3ComponentsRequestedAt = DateTimeOffset.MinValue;
+    private bool _ui3ForceComponents;
 
     private void EnsureUi3Page(int selected)
     {
@@ -22,7 +27,11 @@ internal sealed partial class ShellWindow
             if (_overviewView is null)
             {
                 _overviewView = new OverviewView();
-                _overviewView.RefreshRequested += () => _ = RefreshDashboardAsync();
+                _overviewView.RefreshRequested += () =>
+                {
+                    _ui3ForceComponents = true;
+                    _ = RefreshDashboardAsync();
+                };
                 _overviewView.RepairRequested += () => _ = RepairUi3Async();
                 _overviewView.DetailsRequested += () =>
                 {
@@ -58,12 +67,15 @@ internal sealed partial class ShellWindow
         {
             var events = ControlCenterEventStore.ReadRecent(TimeSpan.FromHours(24), maxRecords: 100);
             _overviewView.ApplySnapshot(snapshot, DateTimeOffset.Now, events);
+            if (_ui3Components.Count > 0)
+                _overviewView.ApplyComponents(snapshot, _ui3Components);
         }
+        // The last probed components stay on screen with their real check time until the next probe.
         if (_chainView is not null)
-            _chainView.ApplySnapshot(snapshot,
-                ReferenceEquals(_ui3LoadedComponentSnapshot, snapshot) ? _ui3Components : []);
+            _chainView.ApplySnapshot(snapshot, _ui3Components);
         if (_shellModel?.SelectedIndex is 0 or 3 &&
-            !ReferenceEquals(_ui3RequestedComponentSnapshot, snapshot))
+            !ReferenceEquals(_ui3RequestedComponentSnapshot, snapshot) &&
+            (_ui3ForceComponents || DateTimeOffset.UtcNow - _ui3ComponentsRequestedAt >= Ui3ComponentProbeInterval))
             _ = LoadUi3ComponentHealthAsync(snapshot);
     }
 
@@ -73,6 +85,8 @@ internal sealed partial class ShellWindow
         _ui3ComponentCancellation?.Dispose();
         _ui3ComponentCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCts.Token);
         _ui3RequestedComponentSnapshot = snapshot;
+        _ui3ComponentsRequestedAt = DateTimeOffset.UtcNow;
+        _ui3ForceComponents = false;
         // Captured outside the try: a newer refresh replaces _ui3ComponentCancellation, and this refresh's own
         // cancellation must stay quiet instead of being logged as "unavailable" (audit 17).
         var token = _ui3ComponentCancellation.Token;
@@ -122,6 +136,7 @@ internal sealed partial class ShellWindow
             var repaired = await ControlCenterRepairService.RepairAsync(
                 state.Registration, state, _lifetimeCts.Token);
             RecordRepairSuccess(state.Registration, repaired);
+            _ui3ForceComponents = true;
             await RefreshDashboardAsync();
         }
         catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
