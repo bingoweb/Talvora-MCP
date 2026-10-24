@@ -240,12 +240,18 @@
                 <TextBlock Margin="0,5,0,0" Style="{StaticResource Wl.TextBase}" FontSize="11.5" LineHeight="16"
                            Visibility="{Binding TaskNote, Converter={StaticResource NullToCollapsed}}"><Run Text="# görev  " Foreground="{DynamicResource Wl.Faint}" /><Run Text="{Binding TaskNote, Mode=OneWay}" Foreground="{DynamicResource Wl.Cyan}" /></TextBlock>
 
-                <!-- Title line: "> Title▍" -->
-                <TextBlock x:Name="TitleText" Margin="0,8,0,0" Style="{StaticResource Wl.TextBase}" FontSize="14.5" FontWeight="SemiBold"
-                           Foreground="{DynamicResource Wl.Text}" LineHeight="20">
-                    
-                    <Run x:Name="PromptMark" Text="&gt; " Foreground="{DynamicResource Wl.Cyan}" /><Run Text="{Binding TitleMain, Mode=OneWay}" /><Run Text="{Binding TitleDetail, Mode=OneWay}" FontWeight="Normal" Foreground="{DynamicResource Wl.Muted}" /><Run x:Name="TypingCursor" Text="▍"><Run.Foreground><SolidColorBrush Color="#39FF88" /></Run.Foreground></Run>
-                </TextBlock>
+                <!-- Title line: "> Title▍". The prompt sits in a 16 DIP gutter, so a wrapped title hangs at the
+                     same text edge as the answers and the notice below (audit 2026-10-24 (15) polish). -->
+                <Grid x:Name="TitleText" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource Wl.TextBase}" FontSize="14.5" FontWeight="SemiBold" LineHeight="20"
+                               TextWrapping="NoWrap"><Run x:Name="PromptMark" Text="&gt;" Foreground="{DynamicResource Wl.Cyan}" /></TextBlock>
+                    <TextBlock Grid.Column="1" Style="{StaticResource Wl.TextBase}" FontSize="14.5" FontWeight="SemiBold"
+                               Foreground="{DynamicResource Wl.Text}" LineHeight="20"><Run Text="{Binding TitleMain, Mode=OneWay}" /><Run Text="{Binding TitleDetail, Mode=OneWay}" FontWeight="Normal" Foreground="{DynamicResource Wl.Muted}" /><Run x:Name="TypingCursor" Text="▍"><Run.Foreground><SolidColorBrush Color="#39FF88" /></Run.Foreground></Run></TextBlock>
+                </Grid>
 
                 <!-- Answers (§6.2): ne = agent's purpose, nerede = files › places, fark = real totals, sonuç = real fact. -->
                 <Grid Margin="16,4,0,0">
@@ -288,9 +294,17 @@
                 </Grid>
 
                 <StackPanel Margin="16,6,0,0" Visibility="{Binding OutcomeReason, Converter={StaticResource NullToCollapsed}}">
-                    <TextBlock Style="{StaticResource Wl.TextBase}" Foreground="{DynamicResource Wl.Text}" LineHeight="17">
-                        <Run Text="! " Foreground="{DynamicResource Wl.Red}" FontWeight="Bold" /><Run Text="{Binding OutcomeReason, Mode=OneWay}" />
-                    </TextBlock>
+                    <!-- "!" in its own 16 DIP gutter: the reason's wrapped lines hang under its first word. -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="!" Style="{StaticResource Wl.TextBase}" Foreground="{DynamicResource Wl.Red}" FontWeight="Bold"
+                                   LineHeight="17" TextWrapping="NoWrap" />
+                        <TextBlock Grid.Column="1" Text="{Binding OutcomeReason}" Style="{StaticResource Wl.TextBase}"
+                                   Foreground="{DynamicResource Wl.Text}" LineHeight="17" />
+                    </Grid>
                     <TextBlock Margin="16,2,0,0" Text="{Binding OutcomeNextStep}" Style="{StaticResource Wl.TextBase}"
                                Visibility="{Binding OutcomeNextStep, Converter={StaticResource NullToCollapsed}}" />
                 </StackPanel>
@@ -330,12 +344,8 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Ellipse Width="7" Height="7" Fill="{DynamicResource Wl.Red}" Opacity="0.85" />
-                                    <Ellipse Width="7" Height="7" Margin="4,0,0,0" Fill="{DynamicResource Wl.Amber}" Opacity="0.85" />
-                                    <Ellipse Width="7" Height="7" Margin="4,0,0,0" Fill="{DynamicResource Wl.Green}" Opacity="0.85" />
-                                </StackPanel>
-                                <TextBlock Grid.Column="1" Margin="10,0,0,0" Text="{Binding CodeHeader}"
+                                <!-- No imitation window buttons: the header is a label, not a second window (audit 15). -->
+                                <TextBlock Grid.Column="1" Text="{Binding CodeHeader}"
                                            Style="{StaticResource Wl.TextBase}" FontSize="11" TextWrapping="NoWrap"
                                            Foreground="{DynamicResource Wl.Faint}" VerticalAlignment="Center" />
                                 <Button Grid.Column="2" Style="{StaticResource Wl.LinkButton}" Click="OnCopyClick"

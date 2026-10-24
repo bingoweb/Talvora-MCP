@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T10:57:05Z",
+  "verifiedAtUtc": "2026-10-24T12:12:34Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "UI1: DESIGN-CONTROL-CENTER sections 3, 7.1-7.2 and P-18/P-31 theme-only modernization. Awwwards homepage checked live with HTTP 200 on 2026-10-24 UTC, title Awwwards - Website Awards - Best Web Design Trends; evidence only, no new design choices.",
+  "scope": "D21 audit-15 exact Phosphor polish. Awwwards homepage checked live with HTTP 200 and its page title; evidence only, no design choices beyond the approved reference.",
   "references": [
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
-    "DESIGN-CONTROL-CENTER §3 and P-31: approved Tv token colours in both themes including TextFaint Gece #7C899E and Gun #5D6A81; small-text 4.5:1 checks on every listed background.",
-    "DESIGN-CONTROL-CENTER §7.1-7.2: exact theme manager roles, system tracking, WPF-UI theme alignment, Gece/Gun resource replacement, and Windows 11 Mica; existing layout retained.",
-    "P-18 and UI1 Acceptance: produce before screenshot and two Q5 smoke PNGs showing genuine Gece and Gun; no change to the separately approved desktop worklog."
+    "DESIGN-WORKLOG §3 Phosphor card — audit 15 polish: hanging indents, single text edge, no imitation window buttons",
+    "ROADMAP D21 exact implementation: copy approved WorklogCardView.xaml and promote its normalized SHA256SUMS and ten preview PNGs; keep colours, sizes, copy, state line, spinner, cursor, terminal and details panel unchanged.",
+    "ROADMAP D21 Acceptance: compare all ten rendered preview PNGs byte-for-byte and verify one installed real edit with a long purpose on the signed-in desktop."
   ]
 }

@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T10:57:05Z",
-  "scope": "UI1: approved P-18/P-31 Control Center Gece/Gun palette, WPF-UI theme synchronization and Mica, live in-place token replacement, WCAG 2.2 normal-text contrast; preserves the Worklog and existing layout.",
+  "verifiedAtUtc": "2026-10-24T12:12:34Z",
+  "scope": "D21: exact audit-15 Phosphor XAML reference; fixed 16 DIP gutters for title/notice wrapping, shared text edge and removal of imitation terminal window dots; no copy, palette or behaviour changes.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-24 D21: Context7 confirms Grid ColumnDefinitions with fixed and star widths constrain child measure, and TextBlock TextWrapping wraps data-bound text to the remaining width. Official Microsoft Panel/Grid guidance was checked live; the approved reference keeps TitleText/PromptMark/TypingCursor named elements and applies the glow to the new title Grid. Sources: https://learn.microsoft.com/en-us/dotnet/desktop/wpf/controls/panel and https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/Controls/Grid.cs and https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/Controls/TextBlock.cs."
+    },
     {
       "libraryId": "/lepoco/wpfui",
       "verified": "2026-10-24 UI1: official WPF-UI documentation and implementation confirm ApplicationThemeManager.GetSystemTheme, Apply(theme, WindowBackdropType.Mica, updateAccent), Changed event and SystemThemeWatcher.Watch/UnWatch(window) used by UI1 manager; WPF-UI 4.3 resource dictionaries need native controls and themes loaded before BasedOn styles. Sources: https://github.com/lepoco/wpfui/blob/main/docs/documentation/themes.md and https://github.com/lepoco/wpfui/blob/main/docs/documentation/system-theme-watcher.md and https://github.com/lepoco/wpfui/blob/main/src/Wpf.Ui/Appearance/ApplicationThemeManager.cs."
