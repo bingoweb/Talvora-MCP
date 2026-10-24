@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T06:50:00Z",
-  "scope": "Q5 / P-18: UI Automation names and positive bounds for navigation, header status and service rows; palette-neutral pixel variance; current-theme PNG before assertions; signed-in local desktop gate.",
+  "verifiedAtUtc": "2026-10-24T07:31:57Z",
+  "scope": "Q2a / P-16: consolidate only losslessly mappable info/run wrappers; preserve discovery, JSON fields, arbitrary argv, working directory, environment and timeout; retain executable/SDK/session selectors and structured probes.",
   "libraries": [
+    {
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-10-24 Q2a: official SDK tool documentation confirms UseStructuredContent advertises the output schema and serializes returned objects directly; ToolAnnotations preserves readOnlyHint/destructiveHint/idempotentHint/openWorldHint. Dictionary<string, JsonElement> preserves each original probe's exact camel-case fields rather than introducing a wrapper. Existing CMake/Ninja process runners and five original probes are reused unchanged. Behaviour tests verify all removed calls before removal, including real argv, environment and filesystem effects."
+    },
     {
       "libraryId": "/dotnet/wpf",
       "verified": "2026-10-24 Q5: Context7 verifies UIElementAutomationPeer exposes AutomationProperties names and collapsed controls are excluded from the automation Control view. RenderTargetBitmap uses a measured/arranged Visual with Pbgra32 at 96 DPI; CopyPixels supplies sampled intensities for palette-neutral variance. Microsoft WPF sources: src/Microsoft.DotNet.Wpf/src/PresentationCore/System/Windows/Automation/Peers/UIElementAutomationPeer.cs and src/WindowsFormsIntegration/System/Windows/Integration/HostUtils.cs in https://github.com/dotnet/wpf . P-18 limits this card to the current theme; UI1 owns both-theme proof."

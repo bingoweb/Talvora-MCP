@@ -30,6 +30,7 @@ $sharedConstants = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Shar
 $runtimeTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'RuntimeTools*.cs'
 $networkDiagnosticTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'NetworkDiagnosticTools*.cs'
 $windowsToolchainTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'WindowsToolchainTools*.cs'
+$toolchainTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\ToolchainTools.cs'))
 $httpMockTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'HttpMockTools*.cs'
 $configFormatTools = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora\Tools') 'ConfigFormatTools*.cs'
 $sqliteTools = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora\Tools\SqliteTools.cs'))
@@ -330,10 +331,12 @@ $result = [pscustomobject]@{
         $windowsToolchainTools -match 'talvora_msbuild_info' -and
         $windowsToolchainTools -match 'talvora_msbuild_run' -and
         $windowsToolchainTools -match 'talvora_windows_sdk_info' -and
-        $windowsToolchainTools -match 'talvora_cmake_info' -and
-        $windowsToolchainTools -match 'talvora_cmake_run' -and
-        $windowsToolchainTools -match 'talvora_ninja_info' -and
-        $windowsToolchainTools -match 'talvora_ninja_run' -and
+        $toolchainTools -match 'talvora_toolchain_info' -and
+        $toolchainTools -match 'talvora_toolchain_run' -and
+        $windowsToolchainTools -match 'CMakeInfo' -and
+        $windowsToolchainTools -match 'CMakeRun' -and
+        $windowsToolchainTools -match 'NinjaInfo' -and
+        $windowsToolchainTools -match 'NinjaRun' -and
         $windowsToolchainTools -match 'talvora_pe_info' -and
         $windowsToolchainTools -match 'talvora_file_version_info'
     )
@@ -344,16 +347,18 @@ $result = [pscustomobject]@{
         $windowsToolchainTools -match 'talvora_msbuild_info' -and
         $windowsToolchainTools -match 'talvora_msbuild_run' -and
         $windowsToolchainTools -match 'talvora_windows_sdk_info' -and
-        $windowsToolchainTools -match 'talvora_cmake_info' -and
-        $windowsToolchainTools -match 'talvora_cmake_run' -and
-        $windowsToolchainTools -match 'talvora_ninja_info' -and
-        $windowsToolchainTools -match 'talvora_ninja_run' -and
+        $toolchainTools -match 'talvora_toolchain_info' -and
+        $toolchainTools -match 'talvora_toolchain_run' -and
+        $windowsToolchainTools -match 'CMakeInfo' -and
+        $windowsToolchainTools -match 'CMakeRun' -and
+        $windowsToolchainTools -match 'NinjaInfo' -and
+        $windowsToolchainTools -match 'NinjaRun' -and
         $windowsToolchainTools -match 'talvora_pe_info' -and
         $windowsToolchainTools -match 'talvora_file_version_info' -and
         $windowsToolchainTools -match 'VsDevCmd\.bat' -and
         $windowsToolchainTools -match 'dotnet msbuild' -and
         $windowsToolchainTools -match 'No target/property/project/option allowlist or denylist' -and
-        $windowsToolchainTools -match 'No generator/preset/source/build-directory/option allowlist or denylist'
+        $toolchainTools -match 'arbitrary argv'
     )
     ConfigFormatToolContract = (
         $configFormatTools -match 'talvora_dotenv_list' -and

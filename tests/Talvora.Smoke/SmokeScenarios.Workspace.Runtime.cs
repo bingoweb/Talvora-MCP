@@ -242,15 +242,16 @@ internal static partial class SmokeScenarios
                 }
                 
                 
-                var cmakeInfoResult = await EnsureSuccess(byName["talvora_cmake_info"], new());
+                var cmakeInfoResult = await EnsureSuccess(byName["talvora_toolchain_info"], new() { ["tool"] = "cmake" });
                 if (cmakeInfoResult.StructuredContent is not { } cmakeInfoJson)
                 {
                     throw new InvalidOperationException("cmake_info did not return structured content.");
                 }
                 if (cmakeInfoJson.GetProperty("found").GetBoolean())
                 {
-                    var cmakeRunResult = await EnsureSuccess(byName["talvora_cmake_run"], new()
+                    var cmakeRunResult = await EnsureSuccess(byName["talvora_toolchain_run"], new()
                     {
+                        ["tool"] = "cmake",
                         ["workingDirectory"] = root,
                         ["arguments"] = new[] { "--version" },
                         ["timeoutSeconds"] = 30,
@@ -263,15 +264,16 @@ internal static partial class SmokeScenarios
                     }
                 }
                 
-                var ninjaInfoResult = await EnsureSuccess(byName["talvora_ninja_info"], new());
+                var ninjaInfoResult = await EnsureSuccess(byName["talvora_toolchain_info"], new() { ["tool"] = "ninja" });
                 if (ninjaInfoResult.StructuredContent is not { } ninjaInfoJson)
                 {
                     throw new InvalidOperationException("ninja_info did not return structured content.");
                 }
                 if (ninjaInfoJson.GetProperty("found").GetBoolean())
                 {
-                    var ninjaRunResult = await EnsureSuccess(byName["talvora_ninja_run"], new()
+                    var ninjaRunResult = await EnsureSuccess(byName["talvora_toolchain_run"], new()
                     {
+                        ["tool"] = "ninja",
                         ["workingDirectory"] = root,
                         ["arguments"] = new[] { "--version" },
                         ["timeoutSeconds"] = 30,

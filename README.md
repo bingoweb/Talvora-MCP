@@ -17,7 +17,7 @@
   <a href="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml"><img alt="Windows CI" src="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml/badge.svg?branch=main"></a>
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0B65C2?logo=windows11&logoColor=white">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white">
-  <img alt="MCP 251 tools" src="https://img.shields.io/badge/MCP-251%20tools-198754">
+  <img alt="MCP 250 tools" src="https://img.shields.io/badge/MCP-250%20tools-198754">
   <img alt="Active development" src="https://img.shields.io/badge/status-active%20development-6C757D">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2EA44F"></a>
 </p>
@@ -53,7 +53,7 @@
 - **Rebuilt desktop experience:** a Stitch-inspired, native WPF Control Center with clear sidebar navigation, live status cards, full-width MCP service rows and a collapsible setup panel.
 - **Honest service health:** intentionally stopped or on-demand MCPs are neutral, not red errors. Genuine outages and warnings remain visible.
 - **User-controlled notifications:** code output may expand the notification vertically without changing its user-set width; non-code updates return to a compact layout.
-- **Lean MCP surface:** **251 total**, **214 Dev**, **88 Admin**, with **51 explicitly shared** tools. The former automatic memory and embedding subsystem has been removed.
+- **Lean MCP surface:** **250 total**, **213 Dev**, **88 Admin**, with **51 explicitly shared** tools. The former automatic memory and embedding subsystem has been removed.
 - **Animations with Remotion:** `talvora_remotion_guide`, `talvora_remotion_run` and `talvora_remotion_status` create Remotion projects, check compositions and render stills, MP4/WebM videos and GIFs as the signed-in user, detached, with live progress on the desktop worklog card. The server instructions route every animation request to the guide first.
 - **Desktop worklog task line:** `talvora_worklog_note` sets the one-line task the desktop worklog card shows for the current project; `talvora_apply_patch` accepts an optional `purpose` line for the same card.
 - **Signed-in user execution:** `talvora_user_run` runs an executable as the signed-in Windows user (not LocalSystem) and returns an exit code and bounded output.
@@ -98,7 +98,7 @@ The project is deliberately opinionated:
                           ChatGPT Business
                          /                \
                  Talvora Dev          Talvora Admin
-                   214 tools             88 tools
+                   213 tools             88 tools
                          \              /
                           Secure MCP Tunnel
                                  |
@@ -109,7 +109,7 @@ Local MCP clients ------>  Talvora Windows Service
                   +--------------+--------------+
                   |              |              |
               /mcp           /mcp/dev       /mcp/admin
-            251 tools        214 tools        88 tools
+            250 tools        213 tools        88 tools
                   |
         +----------------+----------------+----------------+
         |                |                |                |
@@ -130,11 +130,13 @@ Talvora exposes three local endpoints:
 
 | Endpoint | Purpose | Tools |
 | --- | --- | ---: |
-| <code>/mcp</code> | Complete capability surface | **251** |
-| <code>/mcp/dev</code> | Development, source editing, builds, Git, jobs, Penpot and Modal workflows | **214** |
+| <code>/mcp</code> | Complete capability surface | **250** |
+| <code>/mcp/dev</code> | Development, source editing, builds, Git, jobs, Penpot and Modal workflows | **213** |
 | <code>/mcp/admin</code> | Windows administration, services, registry, environment and machine management | **88** |
 
 Dev and Admin share **51 reviewed tools** for diagnostics and common fallback operations. The overlap is explicit and regression-tested; it is not accidental duplication.
+
+`talvora_toolchain_info {tool}` replaces the pnpm, Yarn, Bun, CMake and Ninja info wrappers with their original output fields. `talvora_toolchain_run {tool, arguments, workingDirectory, environment, timeoutSeconds}` replaces the CMake and Ninja runners. Dedicated runners retain executable, SDK/architecture, launcher and interactive-user selection; structured and administration probes remain available. No capability is removed.
 
 Examples of intentional role separation:
 

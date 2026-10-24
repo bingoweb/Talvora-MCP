@@ -12,13 +12,6 @@ public sealed record TalvoraJavascriptToolInfoResponse(
 
 public static partial class BuildRunnerTools
 {
-    [McpServerTool(
-        Name = "talvora_pnpm_info",
-        ReadOnly = true,
-        OpenWorld = true,
-        UseStructuredContent = true,
-        OutputSchemaType = typeof(TalvoraJavascriptToolInfoResponse)),
-     Description("Resolve the modern pnpm CLI and report its executable path and version. Missing pnpm is reported structurally.")]
     public static Task<TalvoraJavascriptToolInfoResponse> PnpmInfo(
         CancellationToken cancellationToken = default) =>
         JavascriptToolInfo(
@@ -58,13 +51,6 @@ public static partial class BuildRunnerTools
             cancellationToken);
     }
 
-    [McpServerTool(
-        Name = "talvora_yarn_info",
-        ReadOnly = true,
-        OpenWorld = true,
-        UseStructuredContent = true,
-        OutputSchemaType = typeof(TalvoraJavascriptToolInfoResponse)),
-     Description("Resolve Yarn Modern and report its executable path and version. Missing Yarn Modern is reported structurally.")]
     public static Task<TalvoraJavascriptToolInfoResponse> YarnInfo(
         CancellationToken cancellationToken = default) =>
         JavascriptToolInfo(
@@ -104,13 +90,6 @@ public static partial class BuildRunnerTools
             cancellationToken);
     }
 
-    [McpServerTool(
-        Name = "talvora_bun_info",
-        ReadOnly = true,
-        OpenWorld = true,
-        UseStructuredContent = true,
-        OutputSchemaType = typeof(TalvoraJavascriptToolInfoResponse)),
-     Description("Resolve the Bun runtime/toolkit and report its executable path and version. Missing Bun is reported structurally.")]
     public static Task<TalvoraJavascriptToolInfoResponse> BunInfo(
         CancellationToken cancellationToken = default) =>
         JavascriptToolInfo(

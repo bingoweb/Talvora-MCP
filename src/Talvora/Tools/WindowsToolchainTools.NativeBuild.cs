@@ -10,13 +10,6 @@ namespace Talvora.Tools;
 
 public static partial class WindowsToolchainTools
 {
-[McpServerTool(
-        Name = "talvora_cmake_info",
-        ReadOnly = true,
-        OpenWorld = true,
-        UseStructuredContent = true,
-        OutputSchemaType = typeof(TalvoraToolInfoResponse)),
-     Description("Resolve CMake from PATH or common install locations and report version. Missing CMake is reported structurally.")]
     public static async Task<TalvoraToolInfoResponse> CMakeInfo(
         CancellationToken cancellationToken = default)
     {
@@ -30,13 +23,6 @@ public static partial class WindowsToolchainTools
         return await ReadToolInfoAsync(executable, ["--version"], "cmake", cancellationToken);
     }
 
-    [McpServerTool(
-        Name = "talvora_ninja_info",
-        ReadOnly = true,
-        OpenWorld = true,
-        UseStructuredContent = true,
-        OutputSchemaType = typeof(TalvoraToolInfoResponse)),
-     Description("Resolve Ninja from PATH or common Chocolatey locations and report version. Missing Ninja is reported structurally.")]
     public static async Task<TalvoraToolInfoResponse> NinjaInfo(
         CancellationToken cancellationToken = default)
     {
@@ -47,14 +33,6 @@ public static partial class WindowsToolchainTools
         return await ReadToolInfoAsync(executable, ["--version"], "ninja", cancellationToken);
     }
 
-    [McpServerTool(
-        Name = "talvora_cmake_run",
-        Destructive = true,
-        Idempotent = false,
-        OpenWorld = true,
-        UseStructuredContent = true,
-        OutputSchemaType = typeof(TalvoraCliCommandResponse)),
-     Description("Run CMake with an arbitrary argument vector, working directory, and environment overrides. No generator/preset/source/build-directory/option allowlist or denylist is applied.")]
     public static Task<TalvoraCliCommandResponse> CMakeRun(
         string workingDirectory,
         string[] arguments,
@@ -80,14 +58,6 @@ public static partial class WindowsToolchainTools
             cancellationToken);
     }
 
-    [McpServerTool(
-        Name = "talvora_ninja_run",
-        Destructive = true,
-        Idempotent = false,
-        OpenWorld = true,
-        UseStructuredContent = true,
-        OutputSchemaType = typeof(TalvoraCliCommandResponse)),
-     Description("Run Ninja with an arbitrary argument vector, working directory, and environment overrides. No target/build-directory/option allowlist or denylist is applied.")]
     public static Task<TalvoraCliCommandResponse> NinjaRun(
         string workingDirectory,
         string[] arguments,

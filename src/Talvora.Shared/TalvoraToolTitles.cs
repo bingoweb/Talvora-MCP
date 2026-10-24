@@ -190,6 +190,8 @@ public static class TalvoraToolTitles
         ["talvora_registry_set"] = "Kayıt değerini ayarla",
         ["talvora_replace_text"] = "Metni değiştir",
         ["talvora_resolve_command"] = "Komut yolunu bul",
+        ["talvora_toolchain_info"] = "Derleme araçları bilgisi",
+        ["talvora_toolchain_run"] = "Program çalıştır",
         ["talvora_run_powershell"] = "PowerShell çalıştır",
         ["talvora_run_process"] = "Program çalıştır",
         ["talvora_rust_info"] = "Rust bilgisi",

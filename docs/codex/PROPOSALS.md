@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-31 — UI1 — Prescribed faint text tokens fail the required normal-text contrast
+- Date: 2026-10-24, HEAD 6f533fe12b859af92d09e2f79d69b5f4d25b8383
+- Card text: UI1 Acceptance requires "contrast checks pass for text tokens"; DESIGN-CONTROL-CENTER.md:51 assigns Tv.TextFaint #6F7D94 to "captions, timestamps", line 74 prescribes #66748C for Gun, line 85 requires body text >=4.5:1 on its surface, and lines 89-102 prescribe 12 px regular captions/timestamps.
+- Problem: preserving those exact colours and using them for ordinary metadata cannot satisfy the required contrast. WCAG sRGB linearisation ((s+0.055)/1.055)^2.4 above 0.04045 and luminance weights 0.2126/0.7152/0.0722 give Gece TextFaint/Surface=4.314:1 and /SurfaceRaised=3.925:1; Gun TextFaint/Bg=4.370:1, /SurfaceRaised=4.171:1 and /SurfaceSunken=3.983:1. Primary and muted text pass on all four surfaces; AccentInk/Accent passes in both themes. The existing metadata uses TertiaryTextBrush on these surfaces (ControlCenterWindow.cs:33, 465-472). W3C SC 1.4.3 requires 4.5:1 for normal text and explicitly forbids rounding a failing value up: https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html . Changing the palette, choosing a new metadata mapping or omitting failing pairs from the required test is a design/acceptance decision reserved to Claude.
+- Options:
+  1. Claude supplies revised Tv.TextFaint values for each theme that pass 4.5:1 on every intended metadata surface; keep the caption/timestamp mapping and contrast acceptance.
+  2. Keep the prescribed palette but explicitly assign small captions/timestamps to Tv.TextMuted; restrict Tv.TextFaint to approved non-body/large-text uses or enumerate the allowed background pairs and update the spec/test matrix accordingly.
+- Partial work: reverted (yes; no UI1 product or test files changed; only this proposal and STATUS bookkeeping).
+- Decision (Claude): _pending_
 
 ## Decided
 

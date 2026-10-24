@@ -5,6 +5,12 @@ var regressionState = Path.Combine(
 Talvora.SourceEditing.SourceEditRuntime.UseStateRootForTests(Path.Combine(regressionState, "SourceEdit"));
 Talvora.SourceEditing.AstGrepToolchainManager.CacheRoot = Path.Combine(regressionState, "Toolchains");
 
+if (args.Contains("--toolchain-q2a-only", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.RunToolchainConsolidationAsync();
+    Console.WriteLine("TALVORA TOOLCHAIN Q2A GREEN");
+    return;
+}
 if (args.Contains("--receipt-counts-only", StringComparer.OrdinalIgnoreCase))
 {
     await SourceEditRegressionRunner.RunReceiptCountsAsync();

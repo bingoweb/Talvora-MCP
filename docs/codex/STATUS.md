@@ -89,9 +89,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] R1 — Agent job registry, persistence, orphan recovery, limits (installed 7aac8ce; Full 57/0; installed smoke 255 tools; GitHub CI 40033495884 success)
 - [x] R2 — Prompts via stdin (P-14; signed-in Full gate 58/0; installed ef4c959, 255 tools, GitHub CI 40035301176 success)
 - [x] R3 — Safe Reset-And-Install (P-15; TEMP-only safety regression GREEN; signed-in Full 59/0; GitHub windows-ci 40071120158 success; no real reset or runtime deployment required)
-- [~] Q5 — Control Center smoke: structural checks, current theme PNG (P-18); signed-in Full 60/0 and source smoke GREEN; exact-commit installed smoke and CI pending. Gitea evidence access requires unavailable approval.
-- [ ] UI1 — Tokens, theme manager (Sistem default, Gece fallback), typography; both-theme proof via Q5 smoke (P-18)
-- [ ] Q2a — Toolchain info/run consolidation (P-16 decided; zero capability loss)
+- [x] Q5 — Control Center smoke: structural checks, current theme PNG (P-18); signed-in Full 60/0, installed 6f533fe smoke/PNGs and GitHub windows-ci 40072555807 success; artifacts/q5/delivery.json. Gitea evidence access requires unavailable approval.
+- [?] UI1 — Tokens, theme manager and typography; waiting for Claude: P-31 (prescribed faint text colours fail normal-text contrast on required surfaces).
+- [~] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; exact-commit installed counts/calls and CI pending. Specialized selectors/probes retained by the hard rule.
 - [ ] Q2b — Config get/set/delete consolidation (P-16 decided; zero capability loss)
 - [ ] Q2c — Legacy text mutators removed + manifest-driven README count test (P-16 decided)
 - [ ] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget
@@ -112,7 +112,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - U7 — E1: optional live Codex MCP get and scratch read/patch verification is deferred by the user's "do not use Codex" instruction; no action is needed unless Codex use is reauthorized. Installer registration and ChatGPT connectors are verified independently.
 - U2 — Claude Code is installed but **not logged in** (HANDOFF 2026-10-17). If you want the optional Claude engine: run `& "$env:USERPROFILE\.local\bin\claude.exe" auth login` in your own terminal.
 - U3 — After S5 ships: if the Control Center asks for the OpenAI Admin key again during setup, enter it once (it will no longer be stored).
-- U4 — After Q2 ships: refresh the Talvora Dev/Admin connectors in ChatGPT Business so the new tool list is picked up.
+- U4 — After each Q2 split ships (starting Q2a): refresh the Talvora Dev/Admin connectors in ChatGPT Business so the renamed tool list is picked up.
 - U5 — After UI2: check window placement on your multi-monitor setup (drag between monitors, restart tray).
 - U6 — After N5: look at the worklog preview PNGs on the Gitea issue and say "beğendim" or what to change.
 - U9 — S7 RDP acceptance: when an RDP session is the only active interactive user session, trigger a Talvora tool and verify its desktop progress appears in that session's tray. Console/foreign-pipe regressions passed; this RDP-specific manual step is still open.
@@ -136,6 +136,14 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-24 — Q2a (executor: ChatGPT, P-16): seven wrappers replaced by two common tools; original backend methods/fields preserved. RED missing replacement type; GREEN all seven behavioral cases (real CMake/Ninja argv, environment, working directory and file effect). Signed-in Full gate 60/0, exit 0, Hepsi geçti. (artifacts/q2a/full-gate.log/.exit); Context7 /modelcontextprotocol/csharp-sdk.
+  | Removed MCP tools | Replacement (same tool selector, respectively) |
+  |---|---|
+  | `talvora_{pnpm,yarn,bun,cmake,ninja}_info` | `talvora_toolchain_info {tool: pnpm,yarn,bun,cmake,ninja}`; exact original fields |
+  | `talvora_{cmake,ninja}_run` | `talvora_toolchain_run {tool: cmake,ninja, arguments, workingDirectory, environment, timeoutSeconds}` |
+  Retained by the hard rule: go/cargo/rustc/rustup/java/javac/maven/gradle/dart/flutter/adb/emulator/android_cli/msbuild/bun/pnpm/yarn/pip/python/gh runners expose executable/launcher/session selection; SDK signtool/makeappx/makepri/rc/mt expose sdkVersion/architecture; Modal retains Python/venv selection; Chocolatey retains its Admin mutation scope. Rich Go/Rust/Java/Python/Flutter/MSBuild/Modal/GitHub probes and Gradle/Maven wrapper discovery remain dedicated. These cannot be mapped losslessly to the prescribed common input fields; dotnet/npm/docker/git structured tools are untouched.
+  Support: manifest/metadata/surface counts and smoke/source fixtures, README/ARCHITECTURE, regression runner and evidence JSON. New titles reuse the approved phrases "Derleme araçları bilgisi" and "Program çalıştır" unchanged. Q5 installed 6f533fe + CI 40072555807 verified; UI1 blocked by measured contrast proposal P-31 (no UI1 product edits).
+  Delivery pending: exact-commit installer, installed tools/list Full 250 / Dev 213 / Admin 88 (Shared 51), seven wire calls and GitHub windows-ci. Gitea evidence access remains blocked by unavailable approval; delivery receipt will be artifacts/q2a/delivery.json. U4 requires connector refresh.
 - 2026-10-24 — Q5 (executor: ChatGPT, P-18): replace light/dark pixel ratios with intensity variance >25; UI Automation validates navigation, header status, service row and positive application-control bounds (WPF template scroll geometry excluded). PNG is saved before assertions using TALVORA_CONTROL_CENTER_PREVIEW_PNG; no old-variable alias.
   RED: installed ef4c959 smoke exit 1, WhiteRatio 68.2% / DarkRatio 17.3%. GREEN: signed-in current-source smoke exit 0, initial + loaded PNGs; full gate 60 checks, 0 errors, exit 0, Hepsi geçti. (artifacts/q5/full-gate.log/.exit).
   Context7 /dotnet/wpf and Microsoft UI Automation tree docs verified names, visibility, bitmap rendering and logical controls. Supporting changes: .context7/verification.json; CI/local gate waits for the GUI process and checks both PNG paths. No product visuals changed; both-theme proof stays with UI1.

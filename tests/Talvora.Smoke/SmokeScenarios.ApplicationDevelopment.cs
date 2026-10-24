@@ -242,7 +242,7 @@ internal static partial class SmokeScenarios
             });
         }
 
-        var pnpm = await EnsureSuccess(byName["talvora_pnpm_info"], new());
+        var pnpm = await EnsureSuccess(byName["talvora_toolchain_info"], new() { ["tool"] = "pnpm" });
         if (GetBoolean(pnpm, "found"))
         {
             await EnsureSuccess(byName["talvora_pnpm_run"], new()
@@ -253,7 +253,7 @@ internal static partial class SmokeScenarios
             });
         }
 
-        var yarn = await EnsureSuccess(byName["talvora_yarn_info"], new());
+        var yarn = await EnsureSuccess(byName["talvora_toolchain_info"], new() { ["tool"] = "yarn" });
         if (GetBoolean(yarn, "found"))
         {
             await EnsureSuccess(byName["talvora_yarn_run"], new()
@@ -264,7 +264,7 @@ internal static partial class SmokeScenarios
             });
         }
 
-        var bun = await EnsureSuccess(byName["talvora_bun_info"], new());
+        var bun = await EnsureSuccess(byName["talvora_toolchain_info"], new() { ["tool"] = "bun" });
         if (GetBoolean(bun, "found"))
         {
             await EnsureSuccess(byName["talvora_bun_run"], new()

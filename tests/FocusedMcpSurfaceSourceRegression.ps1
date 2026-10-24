@@ -63,8 +63,8 @@ $checks = [ordered]@{
         $program.Contains('ConfigureSessionOptions')
     )
     SurfaceCountsArePinned = (
-        $surfacePolicy.Contains('ExpectedFullToolCount = 255') -and
-        $surfacePolicy.Contains('ExpectedDevelopmentToolCount = 218') -and
+        $surfacePolicy.Contains('ExpectedFullToolCount = 250') -and
+        $surfacePolicy.Contains('ExpectedDevelopmentToolCount = 213') -and
         $surfacePolicy.Contains('ExpectedAdministrationToolCount = 88') -and
         $surfacePolicy.Contains('ExpectedSharedToolCount = 51')
     )

@@ -7,6 +7,7 @@ internal static partial class SourceEditRegressionRunner
     {
         var tests = new (string Name, Func<Task> Run)[]
         {
+            ("toolchain-q2a-zero-capability-loss", RunToolchainConsolidationAsync),
             ("exact-patch-success", ExactPatchSuccessAsync),
             ("receipt-real-line-counts", RunReceiptCountsAsync),
             ("ownership-preservation", RunOwnershipContractsAsync),
