@@ -98,8 +98,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] T4 — CI: documentation-only pushes run the changed-scope gate (Phase T; GitHub CI 40086071865 success; real docs-only CI 40089591627 ran Changed 10/0 without build/restore)
 - [x] UI1 — Tokens, theme manager and typography; P-18/P-31; installed 49e1421, Gece/Gün installed smokes and PNGs passed, GitHub CI 40088645152 success; visual review awaits Claude audit.
 - [x] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; Claude audit 14 verified GitHub CI 830bb67 success, installed 830bb67 counts 250/213/88 and live toolchain_info. Specialized selectors/probes retained by the hard rule.
-- [~] D21 — Worklog card: hanging indents, one text edge, no imitation window buttons (audit 15; Full 66/0; previews 10/10; exact-commit deployment, live capture, Gitea attachment and CI evidence pending)
-- [ ] TI1 — Tray icon "Altıgen-T" (Claude design; exact reference code in docs/codex/reference/tray-icon)
+- [~] D21 — Worklog card: hanging indents, one text edge, no imitation window buttons (audit 15; Full 66/0; previews 10/10; installed 5b57960, live capture and CI 40093271827 success verified; only Gitea attachment pending under U10)
+- [~] TI1 — Tray icon "Altıgen-T" (exact reference hashes 3/3, source previews 25/25, signed-in Full 66/0; exact-commit install/installed previews/CI follow; user visual answer required under U9)
 - [-] Q2b — Config get/set/delete consolidation (withdrawn by P-32; the 18 format tools stay)
 - [ ] Q2c — Legacy text mutators removed + manifest-driven README count test (P-16; Q2b withdrawn by P-32 — use the manifest as it is after Q2c)
 - [ ] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (after Q2c; amended by P-32)
@@ -116,7 +116,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## User queue
 
-- U10 — D21: Gitea #9 needs the live PNG at artifacts/d21-live.png. The Gitea connector requires approval unavailable under this session's never policy; deployment and capture remain agent work.
+- U9 — Tepsideki yeni Talvora ikonuna bakın (açık ve koyu görev çubuğunda); beğenmezseniz Claude'a söyleyin.
+
+- U10 — D21: attach artifacts/d21-live.png to Gitea #9 when connector approval is available (this session requires approval but policy is never). Deployment, live capture and exact-commit CI are complete; artifacts/d21-delivery.json records the evidence.
 
 - U8 — E2: live Codex MCP round-trip intentionally deferred under "do not use Codex". Unit, installed wire smoke and ChatGPT Dev connector will be checked without running Codex; nothing to do unless Codex use is reauthorized.
 - U7 — E1: optional live Codex MCP get and scratch read/patch verification is deferred by the user's "do not use Codex" instruction; no action is needed unless Codex use is reauthorized. Installer registration and ChatGPT connectors are verified independently.
@@ -146,6 +148,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-24 — TI1 (executor: ChatGPT): copied exact TrayIconArt/TrayIconFactory/Program.TrayIcon references (normalised hashes fe8dfe96, 3ba44621, 3808bb28); applied literal CLI/timer/native-source test steps. No geometry, colours, Gitea icon or tooltip changes.
+  RED before production: 16 compile errors for missing TrayIconArt/Appearance/State; GREEN build 0 warnings/0 errors, Notification including AssertTrayIconArt passed. Source preview outputs 25/25 byte-identical (24 icons + tray-sheet.png; reference-only strip.png is documentation).
+  Signed-in Full 66 checks/0 errors, exit 0, Hepsi geçti. Context7 /dotnet/winforms and current Microsoft Bitmap.GetHicon/SmallIconSize docs verified; Awwwards HTTP 200 evidence refreshed. Before desktop: artifacts/ti1-before.png; proof sheet: artifacts/ti1-previews/tray-sheet.png.
+  Exact-commit installer/deploy, installed previews and CI follow this commit; keep TI1 live/user pending until those checks and U9 visual answer. D21 installed 5b57960/live capture and GitHub CI 40093271827 success verified; only its Gitea attachment remains under U10.
 
 - 2026-10-24 — D21 (executor: ChatGPT): applied the exact audit-15 XAML reference; promoted its source/hash and ten PNGs; deleted worklog-phosphor-next. Code-behind, colours, copy and behaviour unchanged.
   Reference RED 352d4f5a -> GREEN 1f711c09; MODERNIZATION_POLICY_GREEN; build 0 warnings/0 errors; all ten rendered PNGs byte-identical, including high contrast. Before: artifacts/d21-before.png; after: artifacts/d21-previews/.

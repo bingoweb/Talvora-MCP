@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T12:12:34Z",
+  "verifiedAtUtc": "2026-10-24T12:26:28Z",
   "sourceUrl": "https://www.awwwards.com/",
-  "scope": "D21 audit-15 exact Phosphor polish. Awwwards homepage checked live with HTTP 200 and its page title; evidence only, no design choices beyond the approved reference.",
+  "scope": "TI1 exact Claude-designed Altigen-T tray mark; Awwwards homepage checked live, HTTP 200 and current page title. Evidence only; visual decisions are copied from the approved reference.",
   "references": [
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
-    "DESIGN-WORKLOG §3 Phosphor card — audit 15 polish: hanging indents, single text edge, no imitation window buttons",
-    "ROADMAP D21 exact implementation: copy approved WorklogCardView.xaml and promote its normalized SHA256SUMS and ten preview PNGs; keep colours, sizes, copy, state line, spinner, cursor, terminal and details panel unchanged.",
-    "ROADMAP D21 Acceptance: compare all ten rendered preview PNGs byte-for-byte and verify one installed real edit with a long purpose on the signed-in desktop."
+    "DESIGN-CONTROL-CENTER §11 TI1 Altıgen-T tray mark",
+    "ROADMAP TI1 exact implementation: copy reference geometry/token colours, quiet Ready mark, shaped attention/offline badges and two-second appearance timer without visual changes.",
+    "ROADMAP TI1 Acceptance: compare all 25 rendered PNGs byte-for-byte before and after canonical installation; retain the exact user visual-review request."
   ]
 }

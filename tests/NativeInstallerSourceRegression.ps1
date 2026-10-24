@@ -633,10 +633,12 @@ $result = [pscustomobject]@{
         $iconBytes.Length -gt 10000 -and
         $iconFrameCount -ge 9
     )
-    TrayUsesEmbeddedBrandIcon = (
-        $trayProgram -match 'Icon\.ExtractAssociatedIcon\(Application\.ExecutablePath\)' -and
-        $trayProgram -match 'DrawStatusBadge' -and
-        $trayProgram -match 'TalvoraConnectionState\.Ready'
+    # TI1: the tray draws the brand mark as vector art at the real tray size instead of shrinking the exe icon.
+    TrayUsesBrandMarkArt = (
+        $trayProgram -match 'TrayIconArt\.Render\(' -and
+        $trayProgram -match 'TrayIconAppearance\.Current\(\)' -and
+        $trayProgram -match 'TalvoraConnectionState\.Ready' -and
+        $trayProgram -notmatch 'Icon\.ExtractAssociatedIcon\(Application\.ExecutablePath\)'
     )
     TrayIsWinExe = ($trayProject -match '<OutputType>WinExe</OutputType>')
     TrayUsesNotifyIcon = ($trayProgram -match '\bNotifyIcon\b')

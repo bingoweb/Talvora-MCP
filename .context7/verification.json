@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T12:12:34Z",
-  "scope": "D21: exact audit-15 Phosphor XAML reference; fixed 16 DIP gutters for title/notice wrapping, shared text edge and removal of imitation terminal window dots; no copy, palette or behaviour changes.",
+  "verifiedAtUtc": "2026-10-24T12:26:28Z",
+  "scope": "TI1: exact Altigen-T tray art/factory references, real-size transparent Bitmap drawing, native icon ownership, taskbar theme/contrast appearance and the prescribed two-second WinForms timer.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/winforms",
+      "verified": "2026-10-24 TI1: Context7 and current Microsoft .NET desktop documentation verify Bitmap/Graphics drawing, GetHicon/FromHandle and native DestroyIcon ownership, SystemInformation.SmallIconSize pixel dimensions, high contrast and the WinForms UI-thread Timer lifecycle. The exact reference reads the prescribed HKCU Personalize SystemUsesLightTheme value with Registry.CurrentUser.OpenSubKey/GetValue and a false fallback. Official sources checked: https://learn.microsoft.com/en-us/dotnet/api/system.drawing.bitmap.gethicon?view=windowsdesktop-10.0 and https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.systeminformation.smalliconsize?view=windowsdesktop-10.0; Context7 source https://github.com/dotnet/winforms/blob/main/src/System.Windows.Forms/System/Windows/Forms/Application.ThreadContext.cs. No geometry, colour, string or timer choice deviates from ROADMAP TI1."
+    },
     {
       "libraryId": "/dotnet/wpf",
       "verified": "2026-10-24 D21: Context7 confirms Grid ColumnDefinitions with fixed and star widths constrain child measure, and TextBlock TextWrapping wraps data-bound text to the remaining width. Official Microsoft Panel/Grid guidance was checked live; the approved reference keeps TitleText/PromptMark/TypingCursor named elements and applies the glow to the new title Grid. Sources: https://learn.microsoft.com/en-us/dotnet/desktop/wpf/controls/panel and https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/Controls/Grid.cs and https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/Controls/TextBlock.cs."

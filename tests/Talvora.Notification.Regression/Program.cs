@@ -34,6 +34,7 @@ internal static partial class Program
         await AssertN10ChangesAsync();
         await AssertRemotionWorklogAsync();
         AssertN6Details();
+        AssertTrayIconArt();
         await AssertN3bCodeTerminalAsync();
         await AssertN4AgentEventsAsync();
         await AssertDiffEvidenceCoverageAsync();

@@ -42,6 +42,16 @@ internal static class Program
     private static int Main(string[] args)
     {
         if (args.Length >= 2 &&
+            string.Equals(args[0], "--tray-icon-preview", StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var path in Talvora.Tray.TrayIconArt.RenderPreviews(args[1]))
+            {
+                Console.WriteLine(path);
+            }
+
+            return 0;
+        }
+        if (args.Length >= 2 &&
             string.Equals(args[0], "--worklog-preview", StringComparison.OrdinalIgnoreCase))
         {
             var exitCode = 1;

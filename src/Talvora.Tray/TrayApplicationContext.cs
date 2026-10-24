@@ -40,6 +40,8 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
     private readonly SemaphoreSlim _genericMcpOperationGate = new(1, 1);
 
     private Icon? _statusIcon;
+    private TrayIconAppearance _iconAppearance;
+    private readonly System.Windows.Forms.Timer _iconAppearanceTimer;
     private bool _disposed;
     private readonly ManagedMcpRecoveryState _talvoraRecoveryState = new("talvora");
     private readonly ManagedMcpRecoveryState _giteaRecoveryState = new("gitea");
@@ -150,6 +152,20 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
         };
 
         UpdateAggregateTrayState();
+
+        // Redraw the tray mark when the taskbar theme, high contrast or the tray icon size changes.
+        _iconAppearanceTimer = new System.Windows.Forms.Timer
+        {
+            Interval = 2_000,
+            Enabled = true,
+        };
+        _iconAppearanceTimer.Tick += (_, _) =>
+        {
+            if (TrayIconAppearance.Current() != _iconAppearance)
+            {
+                UpdateAggregateTrayState();
+            }
+        };
 
         _talvoraTimer = new System.Windows.Forms.Timer
         {
@@ -1400,17 +1416,11 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             ? tooltip
             : tooltip[..63];
 
-        var color = aggregateState switch
-        {
-            TalvoraConnectionState.Ready => Color.FromArgb(49, 196, 112),
-            TalvoraConnectionState.LocalOnly => Color.FromArgb(240, 178, 52),
-            _ => Color.FromArgb(220, 72, 72),
-        };
-
         var previous = _statusIcon;
+        _iconAppearance = TrayIconAppearance.Current();
         _statusIcon = TrayIconFactory.CreateStatusIcon(
             aggregateState,
-            color);
+            _iconAppearance);
         _notifyIcon.Icon = _statusIcon;
         previous?.Dispose();
     }
@@ -1599,6 +1609,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
         _genericMcpTimer.Stop();
         StopStorageMaintenanceTimer();
         _shutdownTimer.Stop();
+        _iconAppearanceTimer.Stop();
         _lifetimeCts.Cancel();
         _notifyIcon.Visible = false;
         _controlCenterApplication.ExitFromTray();
@@ -1615,11 +1626,13 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             _genericMcpTimer.Stop();
             StopStorageMaintenanceTimer();
             _shutdownTimer.Stop();
+            _iconAppearanceTimer.Stop();
             _talvoraTimer.Dispose();
             _giteaTimer.Dispose();
             _genericMcpTimer.Dispose();
             DisposeStorageMaintenanceTimer();
             _shutdownTimer.Dispose();
+            _iconAppearanceTimer.Dispose();
             _shutdownEvent.Dispose();
             _desktopProgressListener.Dispose();
             _desktopProgressPresenter.Dispose();
