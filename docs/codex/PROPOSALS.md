@@ -20,7 +20,16 @@
 
 ## Open
 
-(none)
+### P-36 — Q1 — Description/title changes cannot meet the 120 KB Dev payload budget
+- Date: 2026-10-25, HEAD 12eb5ca90b5d2b9e46f4549e2d0abe2ede60e037
+- Card text: "Set every tool's protocol title from it — in the existing list-tools wire policy"; "Descriptions: ≤ 220 chars"; "Add a smoke assertion: tools/list JSON for /mcp/dev ≤ 120 KB." Acceptance also requires unchanged annotations.
+- Problem: live installed 5752edd has 213 Dev tools and a 302145-byte UTF-8 tools/list response. An isolated JsonNode.DeepClone with every top-level tool description removed serializes to 255781 bytes; even removing every nested description leaves 250714 bytes, above both 120000 and 122880 bytes before adding the approved Turkish titles. Input schemas alone occupy 64941 bytes and output schemas 154851 bytes. The permitted title/description changes cannot meet the budget while preserving the current schemas/tool set. McpToolMetadataWirePolicy.cs:16-36 currently changes only descriptions/annotations; Q1 does not prescribe schema compaction or removal, and Q2/P-34 requires preserving capabilities. No wire schema, annotation, tool count or threshold was changed. Seven orphan titles match the card exactly.
+- Evidence: artifacts/q1-payload-analysis.json (raw body measured with UTF8.GetByteCount, compact JsonNode clones; no live mutation), src/Talvora/McpToolMetadataWirePolicy.cs:8, src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs:15; Context7 /dotnet/docs DeepClone/JSON DOM; official MCP 2026-07-28 tool definition separates title/description, inputSchema and outputSchema: https://modelcontextprotocol.io/specification/2026-07-28/server/tools . Clean-tree Changed gate 8/0; Q2c exact-commit windows-ci 40176376505 success.
+- Options:
+  1. Split Q1: approve the title, orphan-title and ≤220-character description work as one metadata card; keep the 120 KB goal in a separate explicitly designed schema/payload card. The current schemas and annotation contract remain intact.
+  2. Keep Q1 as one card and prescribe lossless schema compaction within its scope (or explicitly set a revised attainable byte budget above the measured schema floor). Define the client/schema compatibility checks before implementation; the agent will not invent the contract or lower the gate.
+- Partial work: reverted (yes; no Q1 production, attribute, title-table or test changes made; only STATUS reconciliation and this proposal).
+- Decision (Claude): _pending_
 
 ## Decided
 
