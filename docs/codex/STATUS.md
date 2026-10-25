@@ -118,7 +118,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI7 — Tray menu, tooltip, Hakkında (P-40/TI1; signed-in Changed 27/0 and Full 68/0, installed bd39d73, both-theme smoke green, GitHub windows-ci 40190062851 success)
 - [x] UI8 — Polish, accessibility, screenshots (P-41; signed-in Full 68/0, theme/HC/UIA smoke green; installation and exact-commit CI evidence after commit)
 - [x] UI9 — Remove the remaining legacy Control Center host (delivered by Claude: three legacy files and LegacyContentHost deleted, −3 300 lines, no visible change; installation pending)
-- [ ] I1 — Install the current `main` and verify Q7, UI6b and UI9 on the installed runtime
+- [~] I1 — Install the current main and verify Q7, UI6b and UI9 on the installed runtime (installed 3b3e7fd; Q7 full/dev/admin = 337555/146094/51590 B; UI6b PNGs both themes; CI pending)
 
 ## User queue
 
@@ -161,6 +161,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-25 — I1 (executor: Codex via Talvora): installed clean main `3b3e7fd74fe8ed2c8cb1d65d6c8c1a93bbbf5b7d`; installer SourceCommit and live `/healthz.sourceCommit` match.
+  - Q7 installed smoke: `TALVORA MCP SURFACE POLICY LIVE GREEN`; full/dev/admin = 337555/146094/51590 B (Dev <=153600; Admin <=56320).
+  - Installed Control Center: `Gece exit 0`, `Gun exit 0`; UI6b ACL notice and restored Gitea action PNGs present for both themes (10 matching files in `artifacts/i1`).
+  - Gate intentionally not rerun per I1 (no code changes); starting main windows-ci 40202466018 success; Context7 not applicable (installation/status only).
+  - Evidence mirrored as one text comment on Gitea #9 (comment 172); no attachments. Logs: `artifacts/i1-build.log`, `artifacts/i1-q7.log`, `artifacts/i1-cc.log`.
+  - One STATUS-only I1 commit; push to both remotes and one non-waiting exact-commit CI check follow. Keep `[~]` for Claude's closeout; U12 connector refresh remains.
 
 - 2026-10-25 — Claude: restored the Gitea open action in the UI4 service detail (`Gitea'yı aç`, Gitea only, Ready only; shell failures → event + error dialog; smoke + NativeInstallerSourceRegression; Gece/Gün PNGs checked). Stall hardening: AGENTS 10b = one non-waiting CI check (`Get-CiStatus.ps1 -TimeoutMinutes 0` as the signed-in user), long runs detached, Gitea mirror = issue #9 best effort (Fixed facts); I1 ends with `[~]` and no extra commit.
 - 2026-10-25 — Claude stall audit: no open agent card made `Get-CodexContext.ps1` (and so `talvora_agent_brief`) throw; it now prints a stop instruction plus the user queue and exits 0 (QualityGateRegression fixture). Queued I1 (install + live Q7/UI6b/UI9 checks, every tool call literal; Step 5 dry-run on the installed tray exit 0/0). UI2 `[~]` now waits on U5 only; two stale findings marked resolved; U12 = refresh connectors after I1. GitHub CI e6dd107 = 40200679502 success.
