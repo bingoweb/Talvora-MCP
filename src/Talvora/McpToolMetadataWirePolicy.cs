@@ -10,9 +10,11 @@ internal static class McpToolMetadataWirePolicy
         foreach (var tool in result.Tools)
         {
             var declared = tool.Annotations;
+            var title = TalvoraToolTitles.Get(tool.Name);
             var readOnly =
                 declared?.ReadOnlyHint == true;
 
+            tool.Title = title ?? tool.Title;
             tool.Description =
                 TalvoraMcpToolMetadataPolicy.NormalizeDescription(
                     tool.Name,
@@ -20,7 +22,7 @@ internal static class McpToolMetadataWirePolicy
 
             tool.Annotations = new ToolAnnotations
             {
-                Title = declared?.Title,
+                Title = title ?? declared?.Title,
                 ReadOnlyHint = readOnly,
                 DestructiveHint =
                     TalvoraMcpToolMetadataPolicy.ResolveDestructive(

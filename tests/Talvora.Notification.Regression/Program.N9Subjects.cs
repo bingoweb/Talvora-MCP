@@ -68,6 +68,11 @@ internal static partial class Program
         if (untitled.Length > 0)
             throw new InvalidOperationException("N9: tools without an approved Turkish title: " + string.Join(", ", untitled));
 
+        var orphanTitles = TalvoraToolTitles.All.Keys
+            .Except(TalvoraToolManifest.Names, StringComparer.Ordinal).ToArray();
+        if (orphanTitles.Length > 0)
+            throw new InvalidOperationException("N9: orphan tool titles: " + string.Join(", ", orphanTitles));
+
         foreach (var message in new[] { failed })
         {
             var text = message.WorklogFrame!.Current.Title;

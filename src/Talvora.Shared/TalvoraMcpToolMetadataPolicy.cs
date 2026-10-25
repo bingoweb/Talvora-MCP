@@ -12,7 +12,7 @@ public static class TalvoraMcpToolMetadataPolicy
     public const int ExpectedReviewedToolCount = 250;
     public const int ExpectedOpenWorldToolCount = 85;
     public const int ExpectedDestructiveToolCount = 100;
-    public const int PreferredMaxDescriptionCharacters = 650;
+    public const int PreferredMaxDescriptionCharacters = 220;
 
     private static readonly HashSet<string> OpenWorldTools =
         new(StringComparer.Ordinal)
@@ -123,46 +123,38 @@ public static class TalvoraMcpToolMetadataPolicy
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["talvora_apply_patch"] =
-                "Primary editor for ordinary development-workspace code, config, and repository-document changes across one or many files. " +
-                "Supports add/update/delete/move and unified diffs with revision-checked atomic application. Use talvora_structural_edit for broad AST-shaped transformations, " +
-                "talvora_semantic_edit for C# symbol-aware operations, and talvora_apply_edits for precomputed exact ranges.",
+                "Primary editor for ordinary development-workspace source, config and document changes. " +
+                "Use talvora_structural_edit for syntax-wide edits or talvora_semantic_edit for symbol-aware C#.",
             ["talvora_read_source"] =
-                "Read a bounded source/config/repository-document window with its SHA-256 revision, encoding, newline policy, and continuation metadata. " +
-                "Use it before ordinary talvora_apply_patch changes and before revision-sensitive specialist edits.",
+                "Read a bounded source/config text window with its SHA-256 revision and encoding details. " +
+                "Use it before talvora_apply_patch or other revision-sensitive edits.",
             ["talvora_structural_edit"] =
-                "Specialist editor for broad or repetitive syntax-shaped transformations where AST structure matters. " +
-                "Use talvora_apply_patch for ordinary edits. Supports pattern-based rewrites and an advanced workspace-relative rule-file mode, " +
-                "then applies the proposal through Talvora's revision-checked source transaction.",
+                "Rewrite broad or repetitive source patterns using syntax structure and revision-checked transactions. " +
+                "Use talvora_apply_patch for ordinary edits.",
             ["talvora_semantic_edit"] =
-                "Specialist C# editor for operations that require solution/project semantic identity, currently symbol-aware rename from a revisioned source position. " +
-                "Use talvora_apply_patch for ordinary C# edits and talvora_structural_edit for broad repetitive syntax rewrites.",
+                "SPECIALIST Roslyn C# symbol rename from a revisioned source position. " +
+                "Use talvora_apply_patch (PRIMARY/default) for ordinary edits or talvora_structural_edit for repetitive syntax changes.",
             ["talvora_run_powershell"] =
-                "Execute a multiline PowerShell script under the Talvora Windows service for local development and administration. " +
-                "This is a general administration tool, not the normal source editor. For development-workspace source changes, " +
-                "use talvora_apply_patch; use talvora_apply_edits only when exact ranges are already available.",
+                "Execute a multiline PowerShell script under the Talvora Windows service for administration. " +
+                "Use talvora_apply_patch for ordinary development-workspace source edits.",
             ["talvora_run_process"] =
-                "Execute a program available to the Talvora Windows service with caller-supplied arguments for local development and administration. " +
-                "This is not the normal source editor. For development-workspace source changes, use talvora_apply_patch; " +
-                "use talvora_apply_edits only when exact ranges are already available.",
+                "Execute a program with caller-supplied arguments under the Talvora Windows service. " +
+                "Use talvora_apply_patch for ordinary development-workspace source edits.",
             ["talvora_git_run"] =
-                "Run Git with caller-supplied arguments in an accessible repository or working directory. " +
-                "Known working-tree mutation commands in recognized development workspaces route to talvora_apply_patch by default; " +
-                "explicitAdmin=true selects direct Git administration. Read/status/history/fetch/push workflows remain available. " +
-                "SSH fetch/push and GitHub HTTPS fetch/push use the logged-on Windows user's credential context.",
+                "Run Git with caller-supplied arguments in an accessible repository. " +
+                "Use talvora_apply_patch for source edits; explicitAdmin=true selects direct Git administration.",
             ["talvora_http_request"] =
-                "Send an HTTP request to a requested URI for application development, integration testing, and service diagnostics. " +
-                "Supports caller-supplied method, headers, text or base64 request bodies, redirect control, an optional certificate-validation override " +
-                "for development diagnostics, and text/base64/none response modes. maxResponseBytes=0 requests the finite server capture maximum.",
+                "Send an HTTP request with caller-supplied method, headers and text or base64 body. " +
+                "Use talvora_http_download when a response must be saved to a file.",
             ["talvora_user_process_start"] =
-                "Start an executable inside a logged-on Windows user's interactive session. If sessionId is omitted, Talvora selects an active logged-on session. " +
-                "Supports caller-supplied arguments, working directory, and environment overrides.",
+                "Start a process in the logged-on user's interactive Windows session. " +
+                "Use talvora_user_run for a bounded command with captured output.",
             ["talvora_job_start"] =
-                "Start an executable as a long-running background development job under the Talvora Windows service. " +
-                "Supports caller-supplied arguments, working directory, environment overrides, and incremental stdout/stderr reading.",
+                "Start a long-running development job under the Talvora Windows service. " +
+                "Use talvora_user_run for bounded commands in the signed-in user context.",
             ["talvora_http_mock_start"] =
-                "Start an in-process HTTP mock/webhook listener on caller-supplied HttpListener prefixes for integration testing. " +
-                "Supports automatic or manual replies, caller-supplied response headers/body, and bounded capture/concurrency/pending-request resources. " +
-                "A zero resource limit selects Talvora's high emergency ceiling.",
+                "Start an in-process HTTP mock/webhook listener for integration testing. " +
+                "Use talvora_http_mock_reply to answer captured requests manually.",
         };
 
     private static readonly Regex LegacyWorkspaceRoutingBlock = new(
@@ -229,7 +221,7 @@ public static class TalvoraMcpToolMetadataPolicy
                 toolName,
                 out var descriptionOverride))
         {
-            return descriptionOverride;
+            description = descriptionOverride;
         }
 
         if (string.IsNullOrWhiteSpace(description))
@@ -301,6 +293,22 @@ public static class TalvoraMcpToolMetadataPolicy
         normalized = RepeatedWhitespace.Replace(
             normalized,
             " ").Trim();
+
+        if (normalized.Length > PreferredMaxDescriptionCharacters)
+        {
+            // Keep complete capability summaries; detailed routing already lives
+            // in the MCP server instructions and the tool parameter schemas.
+            var sentenceEnd = normalized.IndexOf(". ", StringComparison.Ordinal);
+            if (sentenceEnd >= 0 && sentenceEnd + 1 <= PreferredMaxDescriptionCharacters)
+            {
+                return normalized[..(sentenceEnd + 1)];
+            }
+
+            var limit = PreferredMaxDescriptionCharacters - 1;
+            var wordEnd = normalized.LastIndexOf(' ', limit);
+            return normalized[..(wordEnd > 0 ? wordEnd : limit)]
+                .TrimEnd(' ', ',', ';', '.') + ".";
+        }
 
         return normalized;
     }

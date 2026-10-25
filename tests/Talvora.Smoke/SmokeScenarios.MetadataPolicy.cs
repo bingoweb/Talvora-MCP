@@ -147,6 +147,16 @@ internal static partial class SmokeScenarios
                 ?? throw new InvalidOperationException(
                     $"Live tool has no annotations: {tool.Name}");
 
+            var approvedTitle = TalvoraToolTitles.Get(tool.Name)
+                ?? throw new InvalidOperationException(
+                    $"Live tool has no approved Turkish title: {tool.Name}");
+            if (tool.ProtocolTool.Title != approvedTitle ||
+                annotations.Title != approvedTitle)
+            {
+                throw new InvalidOperationException(
+                    $"Live tool title does not match approved copy: {tool.Name}");
+            }
+
             if (annotations.ReadOnlyHint is null ||
                 annotations.DestructiveHint is null ||
                 annotations.IdempotentHint is null ||

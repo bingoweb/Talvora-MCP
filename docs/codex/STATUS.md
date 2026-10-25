@@ -105,7 +105,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] Q2c — Legacy text mutators removed where 1:1 + manifest-driven README count test (P-34: all three retained without a 1:1 contract; signed-in Full 67/0; installed 250/213/88 match README; exact-commit GitHub CI 40176376505 success; artifacts/q2c-delivery.json)
 - [?] Q7 — Dev tools/list payload budget (waiting for Claude: design after the output-schema decision, P-36)
 - [?] UI6b — S3 ProgramData ACL notice in the Control Center (waiting for Claude: route and placement, P-37)
-- [ ] Q1 — Tool titles, ≤ 220-character descriptions, orphan titles + manifest check; payload size recorded only (P-36; P-38 fixed by Claude)
+- [x] Q1 — Tool titles, ≤ 220-character descriptions, orphan titles + manifest check; payload size recorded only (P-36; P-38 fixed by Claude)
 - [x] Q3 — Documentation diet (P-17; root 119650 bytes, 13-line HANDOFF, five byte-identical archives, links/counts green; signed-in Full 68/0; exact-commit GitHub CI 40178792915 success; artifacts/q3-delivery.json)
 - [~] UI2 — Shell, rail, title bar, command palette (P-33 implemented; signed-in Full 66/0 and both source themes green; exact-commit delivery evidence artifacts/ui2-delivery.json; U5 mixed-DPI placement and Claude visual audit pending)
 - [x] N7 — "Çalışma günlüğü" history page (7d/2,000/20MB, terminal-only, session filters/details; installed 94e4079 smoke success; GitHub CI 40101364855 attempt 2 success)
@@ -157,6 +157,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-25 — Q1 (executor: ChatGPT via Talvora; P-36/P-38): published approved Turkish Tool.Title and annotation titles; capped host descriptions at 220 chars without editing tool schemas or capability hints.
+  - Test first RED (N9: seven orphan titles), then removed all seven; manifest subset and all live title contracts added to regression.
+  - Signed-in Changed 16/0 and Full 68/0, Hepsi geçti.; Context7 /modelcontextprotocol/csharp-sdk Tool/ListToolsResult/ToolAnnotations verified.
+  - Before delivery: raw Full 338673 bytes / 250 tools; Dev 302167 bytes / 213; Admin 90833 bytes / 88. All three post-install byte counts, safety hashes and installed source commit to be checked after delivery.
+  - Installer, live tools/list smoke, origin/github pushes and exact-commit GitHub windows-ci follow this commit.
 - 2026-10-25 — Claude audit 20 of `6e6e9f9..2aa7825` (UI6 + P-38/P-39/P-40): UI6 matches the P-37 contract in both themes. Claude fixed the Nabız dot showing "0" and the N7 parallel-gate bound (best-of-three < 1 s; 300 ms stays standalone). P-39: manual Sessiz mod, exact Bildirimler labels/defaults, agent predicate ActorName Codex/Claude. P-40: UI7 = menu, tooltip, Hakkında. Full `68 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. Tag `audit/2026-10-25-20` = `2aa7825`.
 - 2026-10-25 — UI6 verification: user confirmed "çalışıyor"; exact-commit GitHub windows-ci 40183484149 success, installed /healthz.sourceCommit=914f15a, installed WPF smoke and Gece/Gün PNGs green. U11 accepted without recording any credentials.
 - 2026-10-25 — N8/UI7 design blockers: P-39 requests quiet-hours, agent-job and Turkish UI contract; P-40 requests absent worklog theme-mapping integration/ownership decision. No N8/UI7 production changes; UI8 remains dependent.

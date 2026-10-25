@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-25T10:24:02Z",
-  "scope": "UI6/P-37: replace the legacy setup banner with the approved three-step Settings page; persist theme, motion and rail choices per user; retain the transient S5 admin key behavior and create both-theme WPF smoke PNG evidence.",
+  "verifiedAtUtc": "2026-10-25T10:33:00Z",
+  "scope": "Q1/P-36: publish the approved Turkish MCP tool titles, shorten descriptions to at most 220 characters without changing tool schemas or safety annotations, and verify manifest/title consistency.",
   "libraries": [
+    {
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-10-25 Q1: Context7 official C# MCP SDK Tool.cs and ListToolsResult.cs confirm that tools/list serializes each Tool's protocol title and annotations. AIFunctionMcpServerTool sets ToolAnnotations.Title from the registered title and preserves readOnlyHint, destructiveHint, idempotentHint and openWorldHint. The Q1 wire filter sets the approved title on Tool.Title and ToolAnnotations.Title without changing the four safety hints. Sources: https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Protocol/Tool.cs and https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Server/AIFunctionMcpServerTool.cs ."
+    },
     {
       "libraryId": "/dotnet/wpf",
       "verified": "2026-10-25 UI6: Context7 official FrameworkElement.DataContextProperty is inheritable and has OnDataContextChanged callbacks; WPF UserControl XAML DataContext bindings update the approved three-step states on ObservableObject notifications, while collapsed elements drop out of UI Automation. Source: https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/FrameworkElement.cs ."
@@ -437,6 +441,7 @@
     }
   ],
   "vendorSources": [
+    "2026-10-25 Q1: official MCP Tool specification distinguishes human-readable title and description from inputSchema/outputSchema and tool annotations: https://modelcontextprotocol.io/specification/2026-07-28/server/tools . Context7 /modelcontextprotocol/csharp-sdk confirms ListToolsResult tools array and ToolAnnotations title/hints; Q1 changes only the wire-facing metadata, retaining schemas and hint values.",
     "2026-10-25 D22: official Microsoft .NET 10 File.Replace source/destination/backup and IOException contract https://learn.microsoft.com/en-us/dotnet/api/system.io.file.replace?view=net-10.0 ; Win32 MoveFileExW flags and failure return https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-movefileexw ; Context7 /dotnet/docs confirms sharing/file-exists errors and catch filters. Applied the literal card retry without changing MoveDurable, staged file names, backup behavior or flush calls.",
     "2026-10-24 D19: Microsoft official PowerShell 7.7 comparison operators https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/About/about_Comparison_Operators.md and Where-Object https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Core/Where-Object.md ; Context7 /microsoftdocs/powershell-docs verified the exact prescribed process-filter operators. Test copied verbatim from docs/codex/reference/ci and verified at normalized SHA-256 d042c78b63fbd12bcfd3d3bd88f57595d4d9421a09b8360ff361a74347fe75aa.",
     "2026-10-23 D18: Microsoft WPF property-change notification https://learn.microsoft.com/en-us/dotnet/desktop/wpf/data/how-to-implement-property-change-notification ; Visibility.Collapsed layout contract https://learn.microsoft.com/en-us/dotnet/api/system.windows.visibility?view=windowsdesktop-10.0 ; Context7 /dotnet/wpf source guidance for FrameworkElement.DataContext, TextBlock.Text and ItemsControl.ItemsSource. Verified the prescribed reference implementation without inventing UI or changing the theme.",
