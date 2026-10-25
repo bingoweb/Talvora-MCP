@@ -67,6 +67,11 @@
                                 Style="{StaticResource ActionButton}"
                                 IsEnabled="{Binding CanStop}"
                                 AutomationProperties.Name="Hizmeti durdur"/>
+                        <ui:Button x:Name="OpenWebButton" Content="Gitea'yı aç" Click="OnOpenWeb"
+                                Style="{StaticResource ActionButton}"
+                                IsEnabled="{Binding CanOpenWeb}"
+                                Visibility="{Binding ShowOpenWeb, Converter={StaticResource DetailBool}}"
+                                AutomationProperties.Name="Gitea web arayüzünü tarayıcıda aç"/>
                     </StackPanel>
                     <Border Margin="56,16,0,0" Padding="12"
                             Background="{DynamicResource Tv.Repairing.Soft}"

@@ -71,6 +71,7 @@ internal sealed partial class ServiceDetailView : System.Windows.Controls.UserCo
     private void OnStop(object sender, RoutedEventArgs args) => ActionRequested?.Invoke(Ui4ServiceAction.Stop);
     private void OnRestart(object sender, RoutedEventArgs args) => ActionRequested?.Invoke(Ui4ServiceAction.Restart);
     private void OnRepair(object sender, RoutedEventArgs args) => ActionRequested?.Invoke(Ui4ServiceAction.Repair);
+    private void OnOpenWeb(object sender, RoutedEventArgs args) => ActionRequested?.Invoke(Ui4ServiceAction.OpenWeb);
 
     private void OnTabChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {

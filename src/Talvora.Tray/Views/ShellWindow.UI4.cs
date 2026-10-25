@@ -113,11 +113,37 @@ internal sealed partial class ShellWindow
         }
     }
 
+    private async Task OpenUi4GiteaAsync(ManagedMcpDashboardState state)
+    {
+        try
+        {
+            using var launched = System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo(TrayApplicationContext.GiteaUrl)
+                {
+                    UseShellExecute = true,
+                });
+        }
+        catch (Exception ex) when (
+            ex is InvalidOperationException or
+            System.ComponentModel.Win32Exception)
+        {
+            TrayLog.Write("Gitea detay sayfasından açılamadı", ex);
+            var friendly = GetFriendlyOperationError(ex);
+            RecordOperationFailure(state.Registration, "Gitea açılamadı", friendly);
+            await ShowOperationErrorAsync("Gitea açılamadı", friendly);
+        }
+    }
+
     /// <summary>Identical service APIs and confirmation semantics as the legacy detail.</summary>
     private async Task RunUi4OperationAsync(ManagedMcpDashboardState state, Ui4ServiceAction action)
     {
         if (_ui4OperationInProgress || _servicesView is null ||
             action == Ui4ServiceAction.Details) return;
+        if (action == Ui4ServiceAction.OpenWeb)
+        {
+            await OpenUi4GiteaAsync(state);
+            return;
+        }
 
         var testFixture = _smokeMode && state.Registration.Id.StartsWith(
             "ui4-smoke-", StringComparison.Ordinal);

@@ -63,6 +63,14 @@ internal static partial class ControlCenterSmoke
             services.Detail.DetailTabs.Items.Count != 3)
             throw new InvalidOperationException("UI4 detail did not load approved actions/tabs.");
         SaveVisualSnapshotIfRequested(window, "ui4-detail-" + variant);
+        if (detail.OpenWebButton.IsVisible)
+            throw new InvalidOperationException("UI4 shows the Gitea open action on another service.");
+        detail.Model.ApplyState(State(Registration("gitea", "Gitea MCP"), ControlCenterHealthState.Ready, "Hazır"),
+            DateTimeOffset.Now, manuallyStopped: false);
+        window.UpdateLayout();
+        if (!detail.OpenWebButton.IsVisible || !detail.Model.CanOpenWeb)
+            throw new InvalidOperationException("UI4 Gitea detail lost its open-in-browser action.");
+        SaveVisualSnapshotIfRequested(window, "ui4-detail-gitea-" + variant);
         services.BackToList();
         window.ShellModel.SelectPage(0);
     }

@@ -33,6 +33,8 @@ internal sealed class ServiceDetailViewModel : ObservableObject
     private bool _canStop;
     private bool _canRestart;
     private bool _canRepair;
+    private bool _showOpenWeb;
+    private bool _canOpenWeb;
     private bool _isLoading;
 
     public ObservableCollection<ServiceDetailEvent> Events { get; } = [];
@@ -63,6 +65,9 @@ internal sealed class ServiceDetailViewModel : ObservableObject
     public bool CanStop { get => _canStop; private set => SetProperty(ref _canStop, value); }
     public bool CanRestart { get => _canRestart; private set => SetProperty(ref _canRestart, value); }
     public bool CanRepair { get => _canRepair; private set => SetProperty(ref _canRepair, value); }
+    // The Gitea web interface opens from its own detail only (legacy detail action restored after UI9).
+    public bool ShowOpenWeb { get => _showOpenWeb; private set => SetProperty(ref _showOpenWeb, value); }
+    public bool CanOpenWeb { get => _canOpenWeb; private set => SetProperty(ref _canOpenWeb, value); }
     public bool IsLoading { get => _isLoading; set => SetProperty(ref _isLoading, value); }
 
     public void ApplyState(ManagedMcpDashboardState source, DateTimeOffset checkedAt, bool manuallyStopped)
@@ -184,5 +189,7 @@ internal sealed class ServiceDetailViewModel : ObservableObject
         CanRestart = available && !stopped;
         CanRepair = available && !HasManualStop &&
             _source?.Health is ControlCenterHealthState.Attention or ControlCenterHealthState.Offline;
+        ShowOpenWeb = string.Equals(_source?.Registration.Id, "gitea", StringComparison.OrdinalIgnoreCase);
+        CanOpenWeb = available && ShowOpenWeb && _source?.Health == ControlCenterHealthState.Ready;
     }
 }

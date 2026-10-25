@@ -53,6 +53,7 @@ $managedMcpSessionState = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvo
 $controlCenterWindow = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterWindow.cs'))
 $controlCenterWindowChrome = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterWindow.Chrome.cs'))
 $controlCenterActions = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ControlCenterWindow.Actions.cs'))
+$controlCenterUi4 = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Views\ShellWindow.UI4.cs'))
 
 $registryCoordinator = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpRegistryCoordinator.cs'))
 $ownershipManifestStore = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\ManagedMcpOwnershipManifestStore.cs'))
@@ -693,6 +694,12 @@ $result = [pscustomobject]@{
         $controlCenterWindowChrome -match '_windowPlacementSaveGate\.Release\(\)'
     )
     # UI9 removed the legacy Control Center detail panel and its Gitea launch; the tray launch stays checked.
+    ControlCenterDetailGiteaOpenHandlesShellFailure = (
+        $controlCenterUi4 -match 'Gitea detay sayfasından açılamadı' -and
+        $controlCenterUi4 -match 'ex is InvalidOperationException or\s+System\.ComponentModel\.Win32Exception' -and
+        $controlCenterUi4 -match 'await ShowOperationErrorAsync\("Gitea açılamadı"' -and
+        $controlCenterUi4 -match 'using var launched = System\.Diagnostics\.Process\.Start\('
+    )
     GiteaBrowserLaunchDisposesProcessHandles = (
         $trayApplicationContext -match 'using var launched = Process\.Start\('
     )

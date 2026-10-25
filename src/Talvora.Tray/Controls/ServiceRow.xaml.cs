@@ -3,7 +3,7 @@ using Talvora.Tray.ViewModels;
 
 namespace Talvora.Tray.Controls;
 
-internal enum Ui4ServiceAction { Details, Start, Stop, Restart, Repair }
+internal enum Ui4ServiceAction { Details, Start, Stop, Restart, Repair, OpenWeb }
 
 internal sealed partial class ServiceRow : System.Windows.Controls.UserControl
 {

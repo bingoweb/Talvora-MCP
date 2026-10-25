@@ -201,6 +201,7 @@ The same constellation, full size, laid out left→right per chain with real per
 
 - "Teknik kanıt" tab = today's technical details + raw log for this service, in `Tv.SurfaceSunken`, `Mono`, with copy button; content passes the existing redaction (unchanged services).
 - Manual stop intent is shown explicitly: "Bu hizmeti siz durdurdunuz; Talvora otomatik başlatmayacak."
+- **Gitea only (Claude, 2026-10-25):** a fifth action button `Gitea'yı aç` (same `ActionButton` style, after `Durdur`), UIA name "Gitea web arayüzünü tarayıcıda aç". Collapsed for every other service; enabled only while Gitea is Ready and no operation runs. It opens `http://127.0.0.1:3000/` in the default browser; a shell failure is logged, recorded as an event "Gitea açılamadı" and shown with the existing operation-error dialog.
 
 ### 5.4 Olaylar (Events)
 
@@ -521,7 +522,7 @@ Each card = one commit, Awwwards evidence refreshed (cite pages actually reviewe
 > - **Legacy builders are not deleted in UI8** — they are still constructed (`LegacyContentHost`) and used by detail actions. Only provably unreferenced private members go (analyzer). Their migration is **UI9**, designed by Claude.
 > - Idle CPU is already proven: 0.416 % (P-41); re-measure once at the end and log it. U5 (mixed-DPI) stays a user check.
 
-> **UI9 (delivered by Claude, 2026-10-25):** the hidden legacy host is gone — `ControlCenterWindow.Detail.cs`, `.EmbeddedIntegrations.cs`, `.Stitch.cs`, `LegacyContentHost` and the imperative dashboard/header builders were deleted; every page is a XAML view. No visible change. The legacy detail's "Gitea web arayüzünü aç" action had already been unreachable since UI4/UI7 (the new design has no entry point for it); bringing it back needs a design decision.
+> **UI9 (delivered by Claude, 2026-10-25):** the hidden legacy host is gone — `ControlCenterWindow.Detail.cs`, `.EmbeddedIntegrations.cs`, `.Stitch.cs`, `LegacyContentHost` and the imperative dashboard/header builders were deleted; every page is a XAML view. No visible change. The legacy detail's Gitea open action (unreachable since UI4/UI7) is restored in §5.3 below.
 
 **Do:** motion pass + reduced motion + high contrast; DPI matrix; accessibility audit (Accessibility Insights or UIA test listing names/roles); delete dead imperative builders (`ControlCenterWindow*.cs` parts no longer used) and obsolete UI regex tests; refresh `docs/media/control-center.png` (both themes) and README screenshots.
 **Acceptance:** Q5 smoke green in both themes; no unused UI code (build with analyzers for unused private members); README shows the new design.
