@@ -1,9 +1,10 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-24T16:12:05Z",
-  "sourceUrl": "https://www.awwwards.com/inspiration/services-layout-wkndhrs",
-  "scope": "UI4: Awwwards Services Layout from WKNDHRS reviewed for research evidence only. All service lists, technical evidence tabs, wording, operation safety, typography, theme, spacing and component states follow the approved DESIGN-CONTROL-CENTER §5.1, §5.3 and §6 without copying external UI.",
+  "verifiedAtUtc": "2026-10-24T16:58:15Z",
+  "sourceUrl": "https://www.awwwards.com/inspiration/archive-prague-quadrennial-pq-2023",
+  "scope": "UI5: Awwwards Prague Quadrennial archive/timeline and Just Nice Events pages checked as qualitative research only; the exact grouping, event fields, categories, service selector and raw log toggle are defined by DESIGN-CONTROL-CENTER §5.4 and §6, not derived from external sites.",
   "references": [
+    "https://www.awwwards.com/inspiration/events",
     "https://www.awwwards.com/inspiration/services-layout-wkndhrs",
     "https://www.awwwards.com/inspiration/project-details-page-desktop-sai-narayanan-portfolio",
     "https://www.awwwards.com/inspiration/data-visualization-renxa-recruit-site",
@@ -12,6 +13,8 @@
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
+    "UI5: Prague Quadrennial archive/timeline and Just Nice Events were consulted as research, without copying art, motion or components. DESIGN-CONTROL-CENTER §5.4 alone determines chronological day headings, severity/time/summary/service and expandable detail, filters Tümü/Sorunlar/Onarımlar/Yaşam döngüsü, and Ham günlüğü göster.",
+    "UI5: DESIGN-CONTROL-CENTER §5.4 requires the existing 2-second raw tail only while its panel is visible and §6 reuses the redacted bounded EvidencePanel. The selected UI uses existing Tv.Surface/SurfaceRaised/SurfaceSunken, Tv.Border, Tv.AccentSoft, Tv.Radius and Tv.Type tokens for minor gaps, without new colours, fonts, icons or animation.",
     "UI4: Awwwards Services Layout from WKNDHRS and the Project Details Page - Desktop from Sai Narayanan were reviewed as inspiration only; no new user-facing controls or design patterns were imported. Live data/actions and WPF UI visuals remain grounded in DESIGN-CONTROL-CENTER §5.3.",
     "UI4: DESIGN-CONTROL-CENTER §5.1 requires 56px rows with name/role/relative check time/overflow and §6 defines StatusPill/ServiceRow/EvidencePanel. §5.3 defines the 40px logo, Repair/Restart/Stop actions, live elapsed banner, status/events/technical evidence tabs and explicit manual-stop warning; only Tv token scales are used in unspecified minor layout gaps.",
     "UI3: Awwwards Renxa Recruit Site data visualization and Awwwards data-visualization inspiration were reviewed as research only; no external shapes, palettes, timing or interaction patterns were copied.",

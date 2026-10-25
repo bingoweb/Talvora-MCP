@@ -802,26 +802,6 @@ internal sealed partial class ShellWindow
                 "Control Center could not return to the dashboard.");
         }
 
-        _eventsExpander.IsExpanded = true;
-        await RefreshEventsPanelAsync();
-        if (string.IsNullOrWhiteSpace(_eventsSummaryText.Text) ||
-            _eventsList.Children.Count == 0)
-        {
-            throw new InvalidOperationException(
-                "Control Center event summary panel did not render.");
-        }
-
-        _rawLogExpander.IsExpanded = true;
-        await RefreshRawLogViewAsync();
-        if (!_rawLogTextBox.IsReadOnly ||
-            string.IsNullOrWhiteSpace(_rawLogMetaText.Text))
-        {
-            throw new InvalidOperationException(
-                "Control Center raw log viewer did not initialize.");
-        }
-
-        _rawLogExpander.IsExpanded = false;
-        _eventsExpander.IsExpanded = false;
     }
 
     private void ShowDashboard()
@@ -845,7 +825,6 @@ internal sealed partial class ShellWindow
                     () => _ = RefreshDashboardAsync());
             }
         }
-        UpdateRawLogTimerState();
     }
 
     private static string GetComponentKindLabel(string kind) =>

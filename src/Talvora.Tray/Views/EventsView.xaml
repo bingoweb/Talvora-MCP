@@ -1,0 +1,188 @@
+<UserControl x:Class="Talvora.Tray.Views.EventsView" x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:controls="clr-namespace:Talvora.Tray.Controls"
+             Background="{DynamicResource Tv.Bg}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="EventBool"/>
+        <Style x:Key="RawLogSecondaryToggle" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="{DynamicResource Tv.Text}"/>
+            <Setter Property="Background" Value="{DynamicResource Tv.SurfaceRaised}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Tv.Border}"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="ToggleBorder" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                                CornerRadius="{StaticResource Tv.Radius.M}" Padding="{TemplateBinding Padding}"
+                                TextElement.Foreground="{TemplateBinding Foreground}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ToggleBorder" Property="Background" Value="{DynamicResource Tv.AccentSoft}"/>
+                                <Setter TargetName="ToggleBorder" Property="BorderBrush" Value="{DynamicResource Tv.Accent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="EventFilterChip" TargetType="RadioButton">
+            <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource Tv.TextMuted}"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Chip" Background="{DynamicResource Tv.SurfaceRaised}"
+                                BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
+                                CornerRadius="{StaticResource Tv.Radius.S}" Padding="12,8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Chip" Property="Background" Value="{DynamicResource Tv.AccentSoft}"/>
+                                <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource Tv.Accent}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Tv.Text}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="EventGlyph" TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.BodyStrong}">
+            <Setter Property="Foreground" Value="{DynamicResource Tv.Ready}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.Attention}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Severity}" Value="Error">
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.Offline}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    <Grid Margin="24" MaxWidth="1360">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <DockPanel Grid.Row="0" LastChildFill="False" Margin="0,0,0,24">
+            <TextBlock Text="Olaylar" Style="{StaticResource Tv.Type.Title}"
+                       DockPanel.Dock="Left" VerticalAlignment="Center"/>
+            <ToggleButton x:Name="RawLogToggle" DockPanel.Dock="Right"
+                          Content="Ham günlüğü göster" IsChecked="{Binding RawLogVisible, Mode=TwoWay}"
+                          MinHeight="36" MinWidth="168" Cursor="Hand"
+                          Style="{StaticResource RawLogSecondaryToggle}"
+                          AutomationProperties.Name="Ham günlüğü göster"/>
+        </DockPanel>
+        <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="200"/>
+            </Grid.ColumnDefinitions>
+            <WrapPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,16">
+                <RadioButton Content="Tümü" Tag="Tümü" GroupName="EventsCategory"
+                             Style="{StaticResource EventFilterChip}" IsChecked="True"
+                             Checked="OnCategoryChecked"/>
+                <RadioButton Content="Sorunlar" Tag="Sorunlar" GroupName="EventsCategory"
+                             Style="{StaticResource EventFilterChip}" Checked="OnCategoryChecked"/>
+                <RadioButton Content="Onarımlar" Tag="Onarımlar" GroupName="EventsCategory"
+                             Style="{StaticResource EventFilterChip}" Checked="OnCategoryChecked"/>
+                <RadioButton Content="Yaşam döngüsü" Tag="Yaşam döngüsü" GroupName="EventsCategory"
+                             Style="{StaticResource EventFilterChip}" Checked="OnCategoryChecked"/>
+            </WrapPanel>
+            <ui:TextBox x:Name="EventSearchBox" Grid.Row="1" Grid.Column="0" MinHeight="36" Margin="0,0,12,0"
+                        PlaceholderText="Olaylarda ara" ClearButtonEnabled="True"
+                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                        AutomationProperties.Name="Olaylarda ara"/>
+            <ComboBox x:Name="ServiceFilterBox" Grid.Row="1" Grid.Column="1" MinHeight="36"
+                      ItemsSource="{Binding ServiceOptions}" DisplayMemberPath="Name"
+                      SelectedItem="{Binding SelectedServiceOption, Mode=TwoWay}"
+                      AutomationProperties.Name="Hizmet filtresi"/>
+        </Grid>
+        <Border Grid.Row="2" Margin="0,0,0,16"
+                Visibility="{Binding RawLogVisible, Converter={StaticResource EventBool}}">
+            <controls:EvidencePanel x:Name="LiveEvidence"
+                                    Text="{Binding RawLogText, Mode=OneWay}"
+                                    AutomationProperties.Name="Canlı ham günlük"/>
+        </Border>
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <Grid>
+                <ItemsControl ItemsSource="{Binding Groups}" HorizontalAlignment="Stretch">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,0,0,24">
+                                <TextBlock Text="{Binding Title}"
+                                           Style="{StaticResource Tv.Type.Subtitle}"
+                                           Margin="0,0,0,12"/>
+                                <ItemsControl ItemsSource="{Binding Items}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Expander Margin="0,0,0,8" Background="{DynamicResource Tv.Surface}"
+                                                      BorderBrush="{DynamicResource Tv.Border}"
+                                                      BorderThickness="1"
+                                                      AutomationProperties.Name="{Binding Title}">
+                                                <Expander.Header>
+                                                    <Grid MinHeight="48">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="64"/>
+                                                            <ColumnDefinition Width="32"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding Time}"
+                                                                   Style="{StaticResource Tv.Type.Mono}"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Glyph}"
+                                                                   Style="{StaticResource EventGlyph}"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2" Text="{Binding Title}"
+                                                                   Style="{StaticResource Tv.Type.BodyStrong}"
+                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                        <Border Grid.Column="3"
+                                                                Visibility="{Binding HasService, Converter={StaticResource EventBool}}"
+                                                                Background="{DynamicResource Tv.SurfaceRaised}"
+                                                                CornerRadius="{StaticResource Tv.Radius.S}"
+                                                                Padding="8,3" Margin="12,0,0,0"
+                                                                VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding ServiceName}"
+                                                                       Style="{StaticResource Tv.Type.Caption}"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Expander.Header>
+                                                <Border Background="{DynamicResource Tv.SurfaceSunken}"
+                                                        Padding="12">
+                                                    <TextBlock Text="{Binding Detail}"
+                                                               Style="{StaticResource Tv.Type.Body}"
+                                                               TextWrapping="Wrap"/>
+                                                </Border>
+                                            </Expander>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock x:Name="EmptyStateText" Text="{Binding EmptyStateText}"
+                           HorizontalAlignment="Center" VerticalAlignment="Top"
+                           Style="{StaticResource Tv.Type.Body}"
+                           Foreground="{DynamicResource Tv.TextMuted}"
+                           Visibility="{Binding ShowEmptyState, Converter={StaticResource EventBool}}"/>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

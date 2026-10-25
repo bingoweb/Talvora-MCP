@@ -12,11 +12,11 @@
                 <CheckBox x:Name="WrapToggle" Content="Satırları kaydır"
                           VerticalAlignment="Center" Margin="0,0,16,0"
                           AutomationProperties.Name="Satırları kaydır"/>
-                <ui:Button Content="Kopyala" Click="OnCopy" MinHeight="32"
+                <ui:Button x:Name="CopyButton" Content="Kopyala" Click="OnCopy" MinHeight="32"
                         Style="{StaticResource TalvoraSecondaryButtonStyle}"
                         AutomationProperties.Name="Teknik kanıtı kopyala"/>
             </StackPanel>
-            <TextBox x:Name="EvidenceTextBox" Text="{Binding Text, ElementName=Root, Mode=OneWay}"
+            <TextBox x:Name="EvidenceTextBox" Text="{Binding SafeText, ElementName=Root, Mode=OneWay}"
                      FontFamily="Cascadia Mono,Consolas" FontSize="12.5"
                      Foreground="{DynamicResource Tv.Text}"
                      Background="Transparent" BorderThickness="0"

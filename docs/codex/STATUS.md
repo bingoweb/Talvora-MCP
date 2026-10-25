@@ -23,7 +23,7 @@
 
 ## In progress
 
-In progress: UI5 — implementation uncommitted; P-35 decided (Claude fixed the N7 timing test in audit 16) — run the complete Full gate and deliver
+In progress: (none)
 
 ## Agent queue
 
@@ -109,7 +109,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] N7 — "Çalışma günlüğü" history page (7d/2,000/20MB, terminal-only, session filters/details; installed 94e4079 smoke success; GitHub CI 40101364855 attempt 2 success)
 - [x] UI3 — Overview: Nabız ring + chain strip (installed 6d12e65, 250 tools, full source and installed smoke/Gece/Gun PNGs; signed-in Full 66/0; GitHub windows-ci 40104570857 success; remaining idle CPU polish tracked under UI8)
 - [x] UI4 — Services list + detail (installed 355af6d, 250 tools, installed smoke and four theme PNGs green; Full 66/0; GitHub windows-ci 40111604160 attempt 2 success)
-- [?] UI5 — Events + raw log (UI5 unit and WPF source smoke/Gece/Gun PNGs green; signed-in Full gate blocked by unrelated N7 300 ms fixture threshold, waiting for Claude: P-35; no UI5 commit/deploy)
+- [~] UI5 — Events + raw log (audit 18 amendments implemented; UI5 RED-to-GREEN, signed-in Full 66/0 including both-theme WPF smoke; live pending: exact-commit installer, installed smoke/PNGs and GitHub CI; delivery evidence artifacts/ui5-delivery.json)
 - [ ] UI6 — Settings + setup stepper (+ deferred S3 ACL notice, to be specified)
 - [ ] N8 — Notification settings
 - [ ] UI7 — Tray icon/menu, worklog colour alignment, About
@@ -153,6 +153,14 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-25 — UI5 (executor: ChatGPT via Talvora): replaced the legacy event panel with the §5.4 day-grouped timeline, category/service/search filters and visible-only 2-second raw-log tail.
+  - Audit 18 amendments: no empty result during loading; approved seven-day/filtered empty copy; service-free events have no pill; lifecycle includes operation and startup. EvidencePanel displays/copies redacted text.
+  - Validation: lifecycle regression RED before fix, UI5_EVENTS_GREEN after; signed-in Full gate as MSI\tayla: 66 checks, 0 failures, last line "Hepsi geçti."; WPF tests exercise both themes, real clipboard copy and hide/minimize timer lifecycle.
+  - Context7: /dotnet/wpf property precedence, data triggers and bindings verified on 2026-10-25; existing /lepoco/wpfui evidence retained. P-35 is decided and the unchanged complete gate passed.
+  - Supporting changes: shell/legacy routing, smoke registration, EvidencePanel safe text, source responsiveness assertions and evidence JSONs; no new package, endpoint or tool. Design gaps filled: existing Tv spacing/type/brush/radius scales for §5.4 layout.
+  - Delivery: commit first, then exact-HEAD installer/deploy, installed smoke and theme PNGs; artifacts/ui5-delivery.json records final identities and CI. Keep [~] until exact-commit CI is verified; next card D22.
+  - Gitea #9 evidence access could not proceed: connector requires approval but this session's approval policy is never; local evidence retained.
 - 2026-10-25 — Claude audit 18 (no new card commits): uncommitted UI5 built and rendered on a clean clone — matches §5.4, redaction and timer rules hold; four gaps written into the UI5 card (empty-state copy/24 h vs 7 days/loading, empty service pill, Yaşam döngüsü + startup, raw-log `]]`). Claude fixed FileLog redaction: not idempotent (`[REDACTED]]`) and a secret containing `]` leaked its tail; new gate scenario redaction-is-idempotent RED→GREEN; Full 66/0 on a clean clone. Tag `audit/2026-10-25-18` = `4c94a77`.
 - 2026-10-24 — Claude research ("araştır"): overview idle cost traced — every 8 s refresh re-ran the UI3 component probes (26 child processes in 37 s: pwsh Get-ScheduledTask + tunnel-client status) and the chain animation ran at 60 fps. Fixed: probes at most once per 60 s (or after Yenile/Sorunu onar), last components kept on screen, animation 20 fps. After: 6 child processes in 37 s (no PowerShell), ≈180 ms/s in-process (was ≈380). Full 66/0 on a clean clone. Remaining cost = legacy 8 s refresh, UI8 measures the real window.
 - 2026-10-24 — Claude system-wide audit 17 (no new card commits): AtomicFile publish race reproduced (RED 3/3, real tray.log hit) → D22 with exact code, GREEN 8/8; Claude fixed the UI3 cancellation false alarm and the frameless-message NullReference; overview idle CPU 7–10 % is a smoke artefact (real tray 0.1 % closed) → UI8 amended; no secrets in tree/history, 0 warnings; 5 stale findings resolved; §8 legacy-builder deletion amended for UI5. Verified on a clean clone: Full `66 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. Tag `audit/2026-10-24-17` = `e5d4738`.

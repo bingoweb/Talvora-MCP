@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-25T07:06:05Z",
+  "verifiedAtUtc": "2026-10-25T07:21:31Z",
   "scope": "UI5: day-grouped EventsView with category, service and search filters, redacted EvidencePanel copy and visibility-scoped 2-second raw log polling, as required by DESIGN-CONTROL-CENTER §5.4 and §6; existing .NET 10 WPF/WPF-UI 4.3 and no new packages.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-25 UI5 audit 18 amendments: Context7 verified WPF local dependency-property precedence over StyleTrigger (EffectiveValueEntry.cs), data-bound MultiDataTrigger conditions and inherited TextElement.Foreground. Empty-state visibility must therefore be a binding without a conflicting local Collapsed value; computed view-model state raises PropertyChanged for loading and filter changes. Service-pill visibility uses the existing BooleanToVisibilityConverter. Sources: https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/WindowsBase/System/Windows/EffectiveValueEntry.cs and https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/Themes/XAML/HyperLink.xaml ."
+    },
     {
       "libraryId": "/dotnet/wpf",
       "verified": "2026-10-24 UI5: Context7 official WPF Expander.xaml confirms a HeaderSite ToggleButton bound to IsExpanded and content collapsed when closed; ItemCollection sources confirm ObservableCollection change notification and refreshing item templates. DispatcherTimer Start/Stop and IsEnabled semantics verified against official Microsoft WindowsDesktop 10 documentation: https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/Themes/XAML/Expander.xaml and https://learn.microsoft.com/en-us/dotnet/api/system.windows.threading.dispatchertimer.isenabled?view=windowsdesktop-10.0 . Source reads use existing asynchronous bounded event store and log service."

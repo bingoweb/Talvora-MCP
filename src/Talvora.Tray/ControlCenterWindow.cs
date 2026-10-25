@@ -273,7 +273,6 @@ internal sealed partial class ShellWindow : FluentWindow
         _applicationExitRequested = true;
         _refreshTimer.Stop();
         _windowPlacementSaveTimer.Stop();
-        _rawLogRefreshTimer?.Stop();
         _dashboardFilterDebounceTimer.Stop();
 
         try
@@ -313,10 +312,6 @@ internal sealed partial class ShellWindow : FluentWindow
         _refreshTimer.Tick -= OnRefreshTimerTick;
         _dashboardFilterDebounceTimer.Tick -= OnDashboardFilterDebounceTick;
         _windowPlacementSaveTimer.Tick -= OnWindowPlacementSaveTimerTick;
-        if (_rawLogRefreshTimer is not null)
-        {
-            _rawLogRefreshTimer.Tick -= OnRawLogRefreshTimerTick;
-        }
     }
 
     private UIElement BuildContent()
@@ -703,8 +698,6 @@ internal sealed partial class ShellWindow : FluentWindow
         _cardsPanel = new StackPanel();
         content.Children.Add(_cardsPanel);
 
-        content.Children.Add(BuildEventsPanel());
-
         return content;
     }
 
@@ -737,6 +730,7 @@ internal sealed partial class ShellWindow : FluentWindow
             _snapshot = snapshot;
             UpdateUi3Snapshot(snapshot);
             UpdateUi4Snapshot(snapshot);
+            UpdateUi5Snapshot(snapshot);
             await RefreshEmbeddedMcpIntegrationsAsync(_lifetimeCts.Token);
             _lastSuccessfulDashboardRefresh = DateTimeOffset.Now;
 
@@ -762,7 +756,6 @@ internal sealed partial class ShellWindow : FluentWindow
             {
                 ApplyDashboardFilter();
                 RefreshSetupCard();
-                await RefreshEventsPanelAsync();
             }
 
             if (_selectedMcp is not null &&
@@ -1404,12 +1397,10 @@ internal sealed partial class ShellWindow : FluentWindow
         {
             _refreshTimer.Start();
             _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() => _ = RefreshDashboardAsync()));
-            UpdateRawLogTimerState();
         }
         else
         {
             _refreshTimer.Stop();
-            UpdateRawLogTimerState();
         }
     }
 

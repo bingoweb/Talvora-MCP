@@ -117,10 +117,7 @@ internal sealed partial class ShellWindow
             SymbolRegular.History20,
             () =>
             {
-                ShowDashboard();
-                SelectNavigation(_navEventsButton);
-                _eventsExpander.IsExpanded = true;
-                _eventsExpander.BringIntoView();
+                _shellModel?.SelectPage(4);
             });
         navigation.Children.Add(_navOverviewButton);
         navigation.Children.Add(_navServicesButton);

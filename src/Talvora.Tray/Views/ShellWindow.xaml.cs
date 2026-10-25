@@ -88,11 +88,12 @@ internal sealed partial class ShellWindow
             items[index].IsChecked = index == _shellModel.SelectedIndex;
         _syncingShellNavigation = false;
         var selected = _shellModel.SelectedIndex;
-        LegacyContentHost.Visibility = selected is 0 or 1 or 2 or 3 ? Visibility.Collapsed : Visibility.Visible;
+        LegacyContentHost.Visibility = selected is 0 or 1 or 2 or 3 or 4 ? Visibility.Collapsed : Visibility.Visible;
         OverviewContentHost.Visibility = selected == 0 ? Visibility.Visible : Visibility.Collapsed;
         ServicesContentHost.Visibility = selected == 1 ? Visibility.Visible : Visibility.Collapsed;
         HistoryContentHost.Visibility = selected == 2 ? Visibility.Visible : Visibility.Collapsed;
         ChainContentHost.Visibility = selected == 3 ? Visibility.Visible : Visibility.Collapsed;
+        EventsContentHost.Visibility = selected == 4 ? Visibility.Visible : Visibility.Collapsed;
         PlaceholderCard.Visibility = Visibility.Collapsed;
         if (selected is 0 or 3)
         {
@@ -104,6 +105,11 @@ internal sealed partial class ShellWindow
             EnsureUi4Page();
             return;
         }
+        if (selected == 4)
+        {
+            EnsureUi5Page();
+            return;
+        }
         if (selected == 2)
         {
             _historyView ??= new WorklogHistoryView(new WorklogHistoryStore());
@@ -113,7 +119,6 @@ internal sealed partial class ShellWindow
         }
         switch (selected)
         {
-            case 4: _navEventsButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); break;
             case 5:
                 ShowDashboard();
                 if (_setupCard.Visibility == Visibility.Visible) _setupCard.BringIntoView();
@@ -150,10 +155,7 @@ internal sealed partial class ShellWindow
             new("Ham günlüğü aç", () =>
             {
                 _shellModel.SelectPage(4);
-                ApplyShellRoute();
-                _eventsExpander.IsExpanded = true;
-                _rawLogExpander.IsExpanded = true;
-                _rawLogExpander.BringIntoView();
+                _eventsView?.OpenRawLog();
                 return Task.CompletedTask;
             }),
         };
@@ -204,7 +206,7 @@ internal sealed partial class ShellWindow
             }
             if (e.Key == Key.F)
             {
-                if (_shellModel.SelectedIndex == 4) { _eventSearchBox.Focus(); _eventSearchBox.SelectAll(); }
+                if (_shellModel.SelectedIndex == 4) _eventsView?.FocusSearch();
                 else if (_shellModel.SelectedIndex == 2) _historyView?.FocusSearch();
                 else if (_shellModel.SelectedIndex == 0) _overviewView?.FocusSearch();
                 else if (_shellModel.SelectedIndex == 1) _servicesView?.FocusSearch();
