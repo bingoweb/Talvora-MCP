@@ -481,6 +481,8 @@ Each card = one commit, Awwwards evidence refreshed (cite pages actually reviewe
 **Do:** §5.4; raw log tail timer runs only while the panel is visible.
 **Acceptance:** day grouping and filters unit-tested; copy-to-clipboard still redacted.
 
+> **Amended (Claude, audit 2026-10-25 (18)) — apply before committing UI5:** (1) empty state only after the first read finished (`IsLoading == false`): with no search text, category `Tümü` and service `Tümü` show "Son 7 günde kaydedilmiş olay yok."; otherwise show "Bu filtrelerle eşleşen olay yok." (both `Tv.Type.Body`, `Tv.TextMuted`, centred at the top as now). (2) The service pill is collapsed when the event has no service name. (3) "Yaşam döngüsü" matches categories `operation` **and** `startup`. Extend the UI5 unit test for all three.
+
 ### UI6 — Settings and setup stepper
 
 **Files:** `Views/SettingsView.xaml`, `Controls/StepperCard`, ViewModel; `ControlCenterWindow.Setup.cs` replaced.

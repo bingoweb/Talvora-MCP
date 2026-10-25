@@ -10,7 +10,7 @@ public static class FileLog
     private static readonly UTF8Encoding Utf8NoBom =
         new(encoderShouldEmitUTF8Identifier: false);
     private static readonly Regex NamedSecretRegex = new(
-        @"\b(?<name>authorization|proxy-authorization|api[-_ ]?key|access[-_ ]?token|refresh[-_ ]?token|id[-_ ]?token|client[-_ ]?secret|password|passwd|pwd|secret|credential)\b(?<separator>\s*[:=]\s*)(?:""[^""]*""|'[^']*'|[^\s,;}\]]+)",
+        @"\b(?<name>authorization|proxy-authorization|api[-_ ]?key|access[-_ ]?token|refresh[-_ ]?token|id[-_ ]?token|client[-_ ]?secret|password|passwd|pwd|secret|credential)\b(?<separator>\s*[:=]\s*)(?!\[REDACTED\](?:[\s,;}\]]|$))(?:""[^""]*""|'[^']*'|(?:[^\s,;}\]]|\](?=[^\s,;}\]]))+)",
         RegexOptions.Compiled |
         RegexOptions.CultureInvariant |
         RegexOptions.IgnoreCase);

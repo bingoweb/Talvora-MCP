@@ -1094,6 +1094,19 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-25 (18) · no new card commits since `4c94a77` · scope: the uncommitted UI5 work (applied to a clean clone, not committed) · result: redaction defect fixed by Claude; UI5 amended before delivery
+
+**UI5 (working tree, built and rendered by Claude on a clean clone of `4c94a77`).** Builds with 0 errors; both-theme smoke renders the day-grouped timeline (Bugün / Dün), chips, search, service filter, the `Ham günlüğü göster` toggle and the sunken raw-log panel per §5.4; titles, details and the raw log pass `FileLog.RedactSensitiveData`; the 2 s tail runs only while the panel is visible and the window is not minimised. Four gaps, written into the UI5 card as an amendment so the agent fixes them before committing (no D-card):
+1. The empty text says "Son 24 saatte kaydedilmiş olay yok." although the view reads **7 days**, shows it while the first read is still loading, and says it when only the filters exclude everything.
+2. An event without a service draws an empty service pill.
+3. "Yaşam döngüsü" matches only category `operation`; the store also writes `startup` lifecycle events (8 of 88 on this PC), which then appear only under "Tümü".
+4. The raw-log fixture rendered "Authorization: [REDACTED]] [REDACTED]" — see the redaction fix below.
+
+**Redaction fixed by Claude (security, shared).** `FileLog.RedactSensitiveData` was not idempotent and cut values at the first `]`:
+- re-redacting already redacted text produced `api_key=[REDACTED]]` / `Authorization: [REDACTED]] [REDACTED]` (text is redacted twice wherever the protocol and a view both redact);
+- **a secret containing `]` leaked its tail**: `password=Ab]c9xyz` → `password=[REDACTED]]c9xyz`.
+The named-secret value now (a) skips a value that is exactly the placeholder followed by a delimiter, and (b) keeps a `]` inside the value when more value characters follow; a closing bracket after the value stays outside (`[password=x] ok` → `[password=[REDACTED]] ok`). New gate scenario `redaction-is-idempotent` (twice = once, never `[REDACTED]]`, a value that only starts with the placeholder is still hidden, a `]` inside a secret is hidden to its end, a structural `]` is kept): RED before, GREEN after. Full gate `66 kontrol, 0 hata` / `Hepsi geçti.` on a clean clone.
+
 ### Audit 2026-10-24 (17, system-wide) · no new card commits since `e5d4738` (UI5 still uncommitted, P-35 answered) · result: one robustness card (D22), two small fixes by Claude, UI8 amended
 
 The user asked for a line-by-line audit ("derin derin denetle, didik didik et"). With nothing new delivered, Claude audited the running system instead: the installed runtime (`355af6d`) and its logs, secrets in the public repository and its history, build hygiene, the open findings list, and the uncommitted UI5 work.

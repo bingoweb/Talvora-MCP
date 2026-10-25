@@ -14,6 +14,7 @@ internal static partial class SourceEditRegressionRunner
         {
             ("toolchain-q2a-zero-capability-loss", RunToolchainConsolidationAsync),
             ("exact-patch-success", ExactPatchSuccessAsync),
+            ("redaction-is-idempotent", RedactionIsIdempotentAsync),
             ("receipt-real-line-counts", RunReceiptCountsAsync),
             ("ownership-preservation", RunOwnershipContractsAsync),
             ("git-work-contract", RunWorkContractAsync),
