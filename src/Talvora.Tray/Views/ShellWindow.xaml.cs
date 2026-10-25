@@ -52,6 +52,8 @@ internal sealed partial class ShellWindow
             if (_overviewView is not null) _overviewView.Model.IsWide = ActualWidth >= 1360;
         };
         Loaded += (_, _) => ApplyShellRoute();
+        ShellTitleBar.Loaded += (_, _) => UpdateTitleBarAccessibilityNames();
+        StateChanged += (_, _) => UpdateTitleBarAccessibilityNames();
         ContentRendered += (_, _) =>
         {
             if (_shellFirstPaint?.IsRunning == true)
@@ -62,6 +64,36 @@ internal sealed partial class ShellWindow
             }
         };
         UpdateShellCommands();
+    }
+
+    // P-41: give the upstream WPF-UI title-bar buttons Windows' Turkish UIA names.
+    private void UpdateTitleBarAccessibilityNames()
+    {
+        ShellTitleBar.ApplyTemplate();
+        UpdateNames(ShellTitleBar);
+
+        void UpdateNames(DependencyObject parent)
+        {
+            for (var index = 0; index < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); index++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, index);
+                if (child is ButtonBase button)
+                {
+                    var automationId = System.Windows.Automation.AutomationProperties.GetAutomationId(button);
+                    var label = automationId switch
+                    {
+                        "TitleBarMinimizeButton" => "Simge Durumuna Küçült",
+                        "TitleBarMaximizeButton" => WindowState == WindowState.Maximized
+                            ? "Önceki Boyutuna Getir" : "Ekranı Kapla",
+                        "TitleBarCloseButton" => "Kapat",
+                        _ => null,
+                    };
+                    if (label is not null)
+                        System.Windows.Automation.AutomationProperties.SetName(button, label);
+                }
+                UpdateNames(child);
+            }
+        }
     }
 
     private void OnShellModelChanged(object? sender, PropertyChangedEventArgs e)

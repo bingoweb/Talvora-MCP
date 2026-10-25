@@ -115,7 +115,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI6 — Settings and setup stepper (P-37; installed 914f15a, Full 68/0, installed Gece/Gün smoke PNGs; exact-commit GitHub CI 40183484149 success; user U11 confirmed working on 2026-10-25)
 - [x] N8 — Notification settings (P-39; signed-in Full 68/0, installed 26af2c0 with native runtime and Control Center smoke green, exact-commit GitHub CI 40187365501 success)
 - [x] UI7 — Tray menu, tooltip, Hakkında (P-40/TI1; signed-in Changed 27/0 and Full 68/0, installed bd39d73, both-theme smoke green, GitHub windows-ci 40190062851 success)
-- [ ] UI8 — Polish, accessibility, screenshots (P-41 decided: HC table, UIA names, two screenshots; legacy host stays)
+- [x] UI8 — Polish, accessibility, screenshots (P-41; signed-in Full 68/0, theme/HC/UIA smoke green; installation and exact-commit CI evidence after commit)
 - [?] UI9 — Migrate the remaining legacy Control Center host (waiting for Claude: design, P-41)
 
 ## User queue
@@ -158,6 +158,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-25 — UI8 (executor: ChatGPT via Talvora; P-41): exact Windows SystemColors high-contrast token mapping, reversible overrides and WPF-UI title-bar Turkish automation names; existing LegacyContentHost and approved motion preserved.
+  - Test-first RED: missing UI8 test helpers; GREEN Gece/Gun real WPF smoke, 13 named interactive UIA controls, HC mapping/restore and window-state labels; focused build and analyzer build 0 warnings/0 errors.
+  - Signed-in Full gate: 68 checks, 0 errors, last line "Hepsi geçti."; source screenshots captured after real status loaded, 1220x790 both themes and README aligned 49% row.
+  - Context7: /dotnet/wpf and /lepoco/wpfui; Awwwards evidence only; design gaps filled: none. Source/installed proof in artifacts/ui8 and docs/media.
+  - P-41 records real-window idle CPU 0.416% before this card; installed recheck, exact-commit deployment and CI evidence to follow delivery. Mixed-DPI manual check remains U5; UI9 legacy migration awaits design.
 - 2026-10-25 — Claude audit 21 of `2aa7825..bd39d73` (Q1, N8, UI7 + P-41): Q1 live 250/213/88 all titled, descriptions ≤ 220 on full sentences; UI7 menu/tooltip/Hakkında as specified; real-window idle CPU 0.416 %. Claude fixed N8 dropping updates of an already visible card under Sessiz mod / filter and stripping its code on the next update (test RED→GREEN), and the 63-character tooltip cut (127 on .NET 10). P-41: UI8 contracts, UI9 for the legacy host. Full `68 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. Tag `audit/2026-10-25-21` = `bd39d73`.
 - 2026-10-25 — UI8 P-41 proposal (executor: ChatGPT via Talvora): UI7 exact-commit GitHub CI 40190062851 green; N8/UI7 dependencies resolved. Baseline Changed 8/0, Hepsi geçti. Installed bd39d73 overview CPU 0.416% over 10 s after 30 s warm-up, below the <1% limit (12 logical CPUs); earlier 2.056% sample included an active worklog card. UIA audit: 37 interactive elements, 5 unlabeled WPF-UI titlebar/scroll controls. Context7 /dotnet/wpf and /lepoco/wpfui verified. UI8 cannot safely delete still-live BuildContent or choose undefined HC mapping and second README screenshot layout; no UI8 source changes. Waiting for Claude P-41, without invoking Codex/Claude.
 - 2026-10-25 — UI7 (executor: ChatGPT via Talvora; P-40/TI1): approved four-action tray menu with a disabled §9 StatusNarrator sentence, refresh, and Windows-length-bounded tooltip; Settings Hakkında shows R5 assembly version, short commit and README/SECURITY links. No tray icon drawing, worklog card, colour mapping or theme changes.

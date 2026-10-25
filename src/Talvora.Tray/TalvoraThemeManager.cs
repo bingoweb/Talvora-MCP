@@ -7,6 +7,8 @@ using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 using Application = System.Windows.Application;
 using Color = System.Windows.Media.Color;
+using Brush = System.Windows.Media.Brush;
+using SystemColors = System.Windows.SystemColors;
 
 namespace Talvora.Tray;
 
@@ -24,6 +26,7 @@ internal static class TalvoraThemeManager
     private static Window? _watchedWindow;
     private static bool _watching;
     private static string? _smokePreferencePath;
+    private static readonly HashSet<string> HighContrastOverrideKeys = new(StringComparer.Ordinal);
 
     private sealed record ThemePreferenceDocument(string Preference);
 
@@ -42,6 +45,8 @@ internal static class TalvoraThemeManager
             : null;
         ApplicationThemeManager.Changed -= OnApplicationThemeChanged;
         ApplicationThemeManager.Changed += OnApplicationThemeChanged;
+        SystemParameters.StaticPropertyChanged -= OnHighContrastChanged;
+        SystemParameters.StaticPropertyChanged += OnHighContrastChanged;
         var preference = smokeTest
             ? ParsePreference(Environment.GetEnvironmentVariable("TALVORA_CONTROL_CENTER_SMOKE_THEME"))
             : ReadPreference();
@@ -108,6 +113,7 @@ internal static class TalvoraThemeManager
             dictionaries.Insert(0, new ResourceDictionary { Source = dark ? UiGeceUri : UiGunUri });
         ApplicationThemeManager.Apply(theme, GetBackdrop(), updateAccent: false);
         SwapTokens(app, dark);
+        SetHighContrastTokens(app, highContrast);
         ShellWindow.RefreshThemePalette(app);
 
         if (_watchedWindow is not null)
@@ -163,7 +169,49 @@ internal static class TalvoraThemeManager
             _ => true,
         };
         SwapTokens(_application, dark);
+        SetHighContrastTokens(_application, SystemParameters.HighContrast);
         ShellWindow.RefreshThemePalette(_application);
+    }
+
+    private static void OnHighContrastChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SystemParameters.HighContrast) && _application is not null)
+            Apply(_application, _preference);
+    }
+
+    // P-41: WPF-UI owns its HC templates; these are the approved application token overrides.
+    internal static void SetHighContrastTokens(Application app, bool enabled)
+    {
+        foreach (var key in HighContrastOverrideKeys)
+            app.Resources.Remove(key);
+        HighContrastOverrideKeys.Clear();
+        if (!enabled) return;
+
+        var brushes = new (Brush Brush, string[] Keys)[]
+        {
+            (SystemColors.WindowBrush, ["Tv.Bg", "Tv.Surface", "Tv.SurfaceSunken"]),
+            (SystemColors.ControlBrush, ["Tv.SurfaceRaised", "Tv.AccentSoft"]),
+            (SystemColors.WindowTextBrush, ["Tv.Border", "Tv.BorderStrong", "Tv.Text", "Tv.TextMuted", "Tv.Ready", "Tv.Attention", "Tv.Offline", "Tv.Neutral", "Tv.Repairing", "Tv.Aurora"]),
+            (SystemColors.GrayTextBrush, ["Tv.TextFaint"]),
+            (SystemColors.HighlightBrush, ["Tv.Accent"]),
+            (SystemColors.HighlightTextBrush, ["Tv.AccentInk"]),
+        };
+        foreach (var (brush, keys) in brushes)
+            foreach (var key in keys)
+            {
+                app.Resources[key] = brush;
+                HighContrastOverrideKeys.Add(key);
+            }
+
+        var tokenDictionary = app.Resources.MergedDictionaries
+            .FirstOrDefault(dictionary => dictionary.Source == GeceUri || dictionary.Source == GunUri)
+            ?? throw new InvalidOperationException("Control Center token dictionary is not loaded.");
+        foreach (var key in tokenDictionary.Keys.OfType<string>()
+                     .Where(key => key.EndsWith(".Soft", StringComparison.Ordinal)))
+        {
+            app.Resources[key] = SystemColors.WindowBrush;
+            HighContrastOverrideKeys.Add(key);
+        }
     }
 
     private static void SwapTokens(Application app, bool dark)

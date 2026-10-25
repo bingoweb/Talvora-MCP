@@ -19,7 +19,8 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/control-center.png" alt="Native Talvora Control Center with navigation, health cards and MCP services" width="100%" />
+  <img src="docs/media/control-center.png" alt="Talvora Kontrol Merkezi — Gece" width="49%" />
+  <img src="docs/media/control-center-gun.png" alt="Talvora Kontrol Merkezi — Gün" width="49%" />
 </p>
 
 ## Why Talvora exists

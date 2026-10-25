@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-25T13:04:16Z",
-  "scope": "UI7/P-40/TI1: use the exact approved tray menu and StatusNarrator copy, retain the existing tray art, and add the Settings Hakkında version and links without touching the desktop worklog.",
+  "verifiedAtUtc": "2026-10-25T13:21:00Z",
+  "scope": "UI8/P-41: apply the exact WPF high-contrast SystemColors token table, set approved Turkish title-bar UIA names, verify both-theme visual smoke and preserve the live legacy host.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-25 UI8: WPF uses SystemColors brushes and DynamicResource system keys for accessible high-contrast window, control, text, grey and highlight colours. P-41 specifies the exact Tv.* mapping; direct Application.Resources overrides are removed on exit to reveal the original merged token dictionary. Source: https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/Themes/XAML/TreeViewItem.xaml ."
+    },
+    {
+      "libraryId": "/lepoco/wpfui",
+      "verified": "2026-10-25 UI8: WPF-UI TitleBar.xaml exposes PART_CloseButton and AutomationProperties.AutomationId=TitleBarCloseButton, with the usual WPF template-part lifecycle. The existing FluentWindow and HighContrast theme are preserved; P-41 alone supplies the Turkish UIA names and SystemColors overrides. Sources: https://github.com/lepoco/wpfui/blob/main/src/Wpf.Ui/Controls/TitleBar/TitleBar.xaml and https://github.com/lepoco/wpfui/blob/main/docs/architecture/views/logical-architecture.md ."
+    },
     {
       "libraryId": "/dotnet/winforms",
       "verified": "2026-10-25 UI7: Context7 official WinForms ToolStripMenuItem and ToolStripItem APIs confirm menu items, click handlers, enabled state and Font support. ContextMenuStrip has no DefaultItem in the pinned WinForms assembly (CS1061), so its first bold action is selected on Opening; existing NotifyIcon code enforces a 63-character Windows tooltip limit. Sources: https://github.com/dotnet/winforms/blob/main/src/System.Windows.Forms/PublicAPI.Shipped.txt ."

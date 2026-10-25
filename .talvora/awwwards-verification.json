@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-25T11:23:22Z",
+  "verifiedAtUtc": "2026-10-25T13:21:00Z",
   "sourceUrl": "https://www.awwwards.com/inspiration/project-details-page-desktop-sai-narayanan-portfolio",
-  "scope": "UI7: Awwwards Services Layout (WKNDHRS) and Project Details Page — Desktop (Sai Narayanan) inspected for qualitative reference only; DESIGN-CONTROL-CENTER §5.5 and the UI7/P-40/TI1 amendments alone specify tray menu order, tooltip, About information, links and unchanged icon/worklog.",
+  "scope": "UI8: Awwwards Renxa data visualization and WKNDHRS Services Layout reviewed as research only. DESIGN-CONTROL-CENTER §3.4, §10, UI8/P-41 alone specify motion, system high contrast, accessibility names, the two screenshot files and retained legacy host.",
   "references": [
     "https://www.awwwards.com/inspiration/events",
     "https://www.awwwards.com/inspiration/services-layout-wkndhrs",
@@ -13,6 +13,7 @@
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
+    "UI8: DESIGN-CONTROL-CENTER §10 and P-41 specify SystemColors brushes, exact Turkish title-bar accessibility names, Gece/Gün screenshot filenames and README arrangement. §3.4 already controls reduced motion and chain animations; no visual style or interaction was copied from Awwwards.",
     "UI7: DESIGN-CONTROL-CENTER §5.5 supplies Hakkında with R5 version, short source commit and README/SECURITY links; UI7/P-40 supplies the exact native tray menu order, Turkish labels, default action and §9 status sentence. P-40 and TI1 preserve worklog card appearance and existing TrayIconArt; no design decisions were imported from Awwwards.",
     "UI5: Prague Quadrennial archive/timeline and Just Nice Events were consulted as research, without copying art, motion or components. DESIGN-CONTROL-CENTER §5.4 alone determines chronological day headings, severity/time/summary/service and expandable detail, filters Tümü/Sorunlar/Onarımlar/Yaşam döngüsü, and Ham günlüğü göster.",
     "UI5: DESIGN-CONTROL-CENTER §5.4 requires the existing 2-second raw tail only while its panel is visible and §6 reuses the redacted bounded EvidencePanel. The selected UI uses existing Tv.Surface/SurfaceRaised/SurfaceSunken, Tv.Border, Tv.AccentSoft, Tv.Radius and Tv.Type tokens for minor gaps, without new colours, fonts, icons or animation.",

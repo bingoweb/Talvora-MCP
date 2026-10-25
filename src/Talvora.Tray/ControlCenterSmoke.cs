@@ -42,7 +42,10 @@ internal static partial class ControlCenterSmoke
 
                 SaveVisualSnapshotIfRequested(window);
                 AssertFluentResources(application);
+                AssertHighContrastTokenMapping(application);
                 AssertWindowChrome(window);
+                AssertTitleBarAutomationNames(window);
+                AssertUi8AccessibilityAudit(window);
                 AssertWindowHasVisibleContent(window);
                 AssertWindowDpi(window);
                 AssertRenderedSurfaceIsNotBlank(window);
@@ -92,6 +95,7 @@ internal static partial class ControlCenterSmoke
                 await window.RunSmokeScenarioAsync();
                 await AssertUi4LifecycleSmokeAsync(window);
                 SaveVisualSnapshotIfRequested(window, "loaded");
+                if (SystemParameters.HighContrast) SaveVisualSnapshotIfRequested(window, "hc");
                 window.ShellModel.SelectPage(5);
                 AssertUi6VisualFixture(window, "loaded");
                 window.ShellModel.SelectPage(0);
