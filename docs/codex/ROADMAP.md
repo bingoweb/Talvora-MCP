@@ -1096,6 +1096,18 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-25 (20) · range `audit/2026-10-25-19 (6e6e9f9)..2aa7825` · 1 card commit + 3 proposals · result: UI6 exact; two small fixes by Claude; P-38, P-39, P-40 decided
+
+Delivered: UI6 `914f15a` (installed, CI green). Stopped correctly: Q1 (P-38), N8 (P-39), UI7 (P-40).
+
+**UI6** follows the P-37 contract exactly: the three step names and sentences, completion from `talvora` health / `MissingTunnelRegistrationIds` + `RuntimeFoundationMissing` / `NeedsAdminCredential`, `●` Tamam / `▲` Sırada / `○` Bekliyor with only the "Sırada" step expanded, the collapsed `●` "Kurulum tamam." line, and the Görünüm group (Tema, Hareket, Kenar çubuğu) persisted beside the window placement; "Hareket: Azalt" also stops the chain flow animation (supporting change in `ChainView.xaml.cs`). Both themes checked on Claude's renders of the installed build. "Yeniden denetle" predates UI6 (legacy setup copy), not invented.
+
+**Fixed by Claude:**
+1. The rail's Nabız dot printed "0" beside a calm dot; the count now appears only when something needs attention (`HasAttention`).
+2. P-38: the N7 load benchmark failed again under the parallel gate even as best-of-three (335 ms; 92 ms standalone), reverting Q1's finished work a second time. A wall-clock bound in a parallel run cannot be tight; the gate bound is now 1 s (still catches a 10× regression), the 300 ms target stays the N7 standalone acceptance.
+
+Verification on a clean clone of `2aa7825`: Full gate `68 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`.
+
 ### Audit 2026-10-25 (19, deep) · range `audit/2026-10-25-18 (4c94a77)..6e6e9f9` · 4 card commits + 2 proposals · result: code exact; Q3 overreached in README (fixed by Claude); P-36 and P-37 decided
 
 Delivered: UI5 `12d26e2`, D22 `5752edd`, Q2c `12eb5ca`, Q3 `3c1b866`; proposals P-36 (Q1) and P-37 (UI6). Installed `5752edd`; GitHub CI green for every commit.

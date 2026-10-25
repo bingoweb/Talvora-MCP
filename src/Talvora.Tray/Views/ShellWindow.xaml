@@ -81,8 +81,9 @@
                                     </Style.Triggers>
                                 </Style></Ellipse.Style>
                             </Ellipse>
+                            <!-- The count appears only when something needs attention; a calm "0" is noise (audit 20). -->
                             <TextBlock Text="{Binding AttentionCount}" Style="{StaticResource Tv.Type.Caption}" Margin="8,0,0,0"
-                                       Visibility="{Binding HasHealth, Converter={StaticResource ShellBool}}" />
+                                       Visibility="{Binding HasAttention, Converter={StaticResource ShellBool}}" />
                         </StackPanel>
                     </StackPanel>
                 </Grid>

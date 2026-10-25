@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-25T10:01:39Z",
+  "verifiedAtUtc": "2026-10-25T10:24:02Z",
   "scope": "UI6/P-37: replace the legacy setup banner with the approved three-step Settings page; persist theme, motion and rail choices per user; retain the transient S5 admin key behavior and create both-theme WPF smoke PNG evidence.",
   "libraries": [
     {

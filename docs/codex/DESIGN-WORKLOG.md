@@ -1732,9 +1732,18 @@ Step 10 — promote the reference in the same commit: replace `docs/codex/refere
 
 **Files:** new `src/Talvora.Tray/WorklogHistoryStore.cs`, Control Center view + view model (after UI2 shell exists), card click → open session.
 **Do:** §8 storage and page; bounded rotation; filters; empty state "Henüz kayıtlı çalışma yok."
-**Acceptance:** 2 000+ sessions fixture stays within limits and loads < 300 ms; clicking a card opens the matching session.
+**Acceptance:** 2 000+ sessions fixture stays within limits and loads < 300 ms standalone (the parallel Full gate asserts best-of-three < 1 s, P-38); clicking a card opens the matching session.
 
 ### N8 — Notification settings
+
+> **Amended by P-39 (Claude, 2026-10-25) — exact contract:**
+> - Ayarlar gets a third group **"Bildirimler"** below "Görünüm", same card style, three WPF-UI `ToggleSwitch` rows (label left, switch right), persisted in the same settings store:
+>   1. "Kod önizlemesini kartta göster" — default **on**. Off: the card shows no code terminal (as if `HasCode == false`); evidence still reaches history.
+>   2. "Yalnızca hatalar ve ajan işleri için kart göster" — default **off**. On: a message opens/updates a card only if `Kind == Failed` or its `WorklogFrame.Header.ActorName` is `"Codex"` or `"Claude"` (the actors of `talvora_codex_*` / `talvora_claude_*` jobs; a Claude client session counts as an agent too).
+>   3. "Sessiz mod" with the helper line "Kart gösterilmez; çalışmalar yalnızca Çalışma günlüğüne kaydedilir." (`Tv.Type.Caption`, `Tv.TextMuted`) — default **off**. A manual switch, no clock schedule. On: no new card opens.
+> - Toggling never closes or changes a card that is already visible; it applies to the next message.
+> - History (`WorklogHistoryStore.AppendTerminal`) runs before and independently of all three switches.
+> - Tests: presenter behaviour test per switch (default on/off/off; each switch on and off), and history still written while quiet/failure-only suppress the card.
 
 **Files:** Settings view (UI6), `DesktopProgressNotificationPresenter.cs`, settings store.
 **Do:** §8 settings (code preview default, failure-only mode, quiet hours) — they only change presentation, never delivery to history.

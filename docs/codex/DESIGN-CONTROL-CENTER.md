@@ -498,6 +498,8 @@ Each card = one commit, Awwwards evidence refreshed (cite pages actually reviewe
 
 ### UI7 — Tray icon, tray menu, worklog colour alignment, About
 
+> **Amended by P-40 (Claude, 2026-10-25):** the worklog colour alignment and header identity are already satisfied by the Phosphor reference (N5/D18, D20, D21) and TI1 — `DesktopProgressVisualTheme.cs` does not exist and must not be created; the worklog card is not touched. UI7 = the tray menu (order and texts below), the tooltip, and Settings "Hakkında" only.
+
 > **Amended by TI1 (Claude, 2026-10-24):** the tray icon itself is delivered by TI1 (`TrayIconArt`). UI7 must not change `TrayIconArt.cs`, `TrayIconFactory.CreateStatusIcon` or the icon timer; the "single-colour silhouette" and "state dot" sentences below are void. UI7 keeps the menu, tooltip, worklog colour alignment and About.
 
 **Files:** `TrayIconFactory.cs`, `TrayApplicationContext.cs` (menu), `DesktopProgressVisualTheme.cs` (colour mapping only), Settings "Hakkında".

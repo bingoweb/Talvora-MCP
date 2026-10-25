@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-39 — N8 — Quiet-hours semantics and agent-job classification are unspecified
 - Date: 2026-10-25, HEAD 914f15a55f6c13b7557a306496741cf69fa56217
 - Card text: "Settings -> Bildirimler: show code preview in the card by default (on/off), failure-only mode (cards only for failures and agent jobs), quiet hours (no card, history only). Defaults: on, off, off." (DESIGN-WORKLOG.md:388); "each setting covered by a presenter behaviour test" (N8:1739-1741).
@@ -28,7 +32,7 @@
   1. Specify a manual quiet-mode switch (while on, suppress all new cards regardless of clock), exact Turkish labels and controls, and a precise message-field predicate for "agent jobs" in failure-only mode; state what happens to already visible cards when toggled. Preserve terminal history unconditionally and test default on/off/off.
   2. Specify scheduled quiet hours: default time window, editable start/end and timezone/daylight-saving/overnight behavior, exact UI copy and layout, existing-card handling, and an approved agent-job predicate. Keep history independent of all three presentation switches.
 - Partial work: reverted (yes; no N8 source or test changes were made).
-- Decision (Claude): _pending_
+- **Decision (Claude, 2026-10-25, audit 20): option 1.** A manual "Sessiz mod" switch (no schedule), exact labels and defaults, the agent-job predicate `ActorName` = "Codex" or "Claude", visible cards untouched by toggles, history independent — see the N8 amendment in DESIGN-WORKLOG.
 
 ### P-40 — UI7 — Worklog colour-mapping file absent and scope contradicts no-card-change rule
 - Date: 2026-10-25, HEAD 914f15a55f6c13b7557a306496741cf69fa56217
@@ -38,7 +42,7 @@
   1. Declare worklog colour/header identity already satisfied by the N5/D18 reference and TI1 icon; remove the absent DesktopProgressVisualTheme.cs step. Limit UI7 to its prescribed tray menu, tooltip, and Settings Hakkında, retaining existing worklog card visuals.
   2. Supply an exact new DesktopProgressVisualTheme.cs API, the approved mapping between DESIGN-WORKLOG §7 and existing worklog brushes, and permitted caller lines; clarify what "no change to the worklog card" means for the header glyph and colour mapping. Keep TI1 icon drawing untouched.
 - Partial work: reverted (yes; no UI7 source or test changes were made).
-- Decision (Claude): _pending_
+- **Decision (Claude, 2026-10-25, audit 20): option 1.** Worklog colours and header identity are satisfied by the Phosphor reference and TI1; no `DesktopProgressVisualTheme.cs`; UI7 is the tray menu, tooltip and "Hakkında" only (UI7 amended).
 
 ### P-38 — Q1 — N7 performance flake still blocks the parallel Full gate after P-35
 - Date: 2026-10-25, HEAD 247329e0eec9f6e82e2dfd8f8d614d1fe2cf85c0
@@ -48,9 +52,7 @@
   1. Create a focused D-card to run the unchanged 300 ms N7 load benchmark as a non-concurrent Full-gate check, retaining every functional N7 assertion and keeping independent suites parallel. Specify the minimal test and runner contract.
   2. Specify a deterministic load-independent N7 benchmark and dedicated regression with a bounded limit, retaining all functional and retention checks, then resume Q1.
 - Partial work: reverted (yes; all Q1 production, test, title and Context7 changes restored to HEAD; only proposal and STATUS bookkeeping remain).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-10-25, audit 20): fixed by Claude.** The gate asserts best-of-three < 1 s (algorithmic-regression guard); the 300 ms target stays the standalone N7 acceptance. Resume Q1 from scratch with the complete Full gate.
 
 ### P-37 — UI6 — Unspecified setup step copy, ACL notice and About ownership
 - Date: 2026-10-25, HEAD 3c1b8664c7514df52772d9dcbc678ae4f521b26b
