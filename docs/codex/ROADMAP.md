@@ -1096,6 +1096,14 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-25 (22) · range `audit/2026-10-25-21 (bd39d73)..bc1a1f9` · 1 card commit · result: UI8 exact; agent queue empty — Q7, UI6b, UI9 wait for Claude's design
+
+Delivered: UI8 `bc1a1f9` (installed, CI green on the first attempt).
+
+**Fidelity to the P-41 contract:** the high-contrast table is applied verbatim in `TalvoraThemeManager.SetHighContrastTokens` (overrides in `Application.Resources`, every `*.Soft` key from the token dictionary, removed again when HC turns off, re-applied after each theme swap and on `SystemParameters.HighContrast` changes); the WPF-UI title-bar buttons get "Simge Durumuna Küçült", "Ekranı Kapla" / "Önceki Boyutuna Getir", "Kapat" (refreshed on `StateChanged`); `docs/media/control-center.png` (Gece) and the new `control-center-gun.png` show the loaded new design with the §9 sentences, side by side in README at 49 %; the legacy host is kept for UI9. No findings.
+
+**Queue:** no agent card is open. Waiting for Claude: Q7 (payload budget, after the output-schema decision), UI6b (S3 ACL notice route), UI9 (legacy host migration). Bookkeeping: the duplicate user-queue id U9 (tray icon look) is renamed U11.
+
 ### Audit 2026-10-25 (21) · range `audit/2026-10-25-20 (2aa7825)..bd39d73` · 3 card commits + P-41 · result: Q1 and UI7 right; N8 broke its "visible card untouched" rule (fixed by Claude); tooltip limit fixed; P-41 decided
 
 Delivered: Q1 `4f6127f`, N8 `26af2c0`, UI7 `bd39d73`; all CI green on the first attempt (the audit-19/20 flake fixes hold). Installed `bd39d73`. UI8 stopped with P-41 (uncommitted proposal included in this commit).

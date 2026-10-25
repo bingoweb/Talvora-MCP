@@ -13,7 +13,7 @@
 | Branch | `main` only. Do not create branches. Dependabot PRs: apply with scripts/Apply-DependabotPr.ps1 (DEP1), never merge on GitHub. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-25-21` = `bd39d73`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-25-22` = `bc1a1f9`. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -99,7 +99,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI1 — Tokens, theme manager and typography; P-18/P-31; installed 49e1421, Gece/Gün installed smokes and PNGs passed, GitHub CI 40088645152 success; visual review awaits Claude audit.
 - [x] Q2a — Seven losslessly mappable wrappers consolidated into toolchain_info/run (P-16); seven behavioral cases GREEN, signed-in Full 60/0; Claude audit 14 verified GitHub CI 830bb67 success, installed 830bb67 counts 250/213/88 and live toolchain_info. Specialized selectors/probes retained by the hard rule.
 - [x] D21 — Worklog card: hanging indents, one text edge, no imitation window buttons (installed 5b57960, previews 10/10, live capture, CI 40093271827; Gitea attachment waived — connector approval unavailable, audit 16)
-- [~] TI1 — Tray icon "Altıgen-T" (reference hashes 3/3, source and installed previews 25/25, Full 66/0; installed d3925fb and CI 40094172485 success verified; only user visual answer under U9 pending)
+- [~] TI1 — Tray icon "Altıgen-T" (reference hashes 3/3, source and installed previews 25/25, Full 66/0; installed d3925fb and CI 40094172485 success verified; only user visual answer under U11 pending)
 - [-] Q2b — Config get/set/delete consolidation (withdrawn by P-32; the 18 format tools stay)
 - [x] D22 — Atomic publish survives a simultaneous writer (installed 5752edd, native smoke green; RED 3/3, GREEN 5/5, signed-in Full 66/0; exact-commit GitHub windows-ci 40173901424 attempt 2 success; artifacts/d22-delivery.json)
 - [x] Q2c — Legacy text mutators removed where 1:1 + manifest-driven README count test (P-34: all three retained without a 1:1 contract; signed-in Full 67/0; installed 250/213/88 match README; exact-commit GitHub CI 40176376505 success; artifacts/q2c-delivery.json)
@@ -120,7 +120,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## User queue
 
-- U9 — Tepsideki yeni Talvora ikonuna bakın (açık ve koyu görev çubuğunda); beğenmezseniz Claude'a söyleyin.
+- U11 — Tepsideki yeni Talvora ikonuna bakın (açık ve koyu görev çubuğunda); beğenmezseniz Claude'a söyleyin.
 
 - U10 — D21: attach artifacts/d21-live.png to Gitea #9 when connector approval is available (this session requires approval but policy is never). Deployment, live capture and exact-commit CI are complete; artifacts/d21-delivery.json records the evidence.
 
@@ -158,6 +158,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-25 — Claude audit 22 of `bd39d73..bc1a1f9` (UI8): HC token table, Turkish title-bar UIA names, both-theme README screenshots and the kept legacy host match P-41 exactly; no findings. Agent queue empty; Q7, UI6b, UI9 wait for Claude's design. Duplicate user-queue U9 renamed U11. Tag `audit/2026-10-25-22` = `bc1a1f9`.
 - 2026-10-25 — UI8 (executor: ChatGPT via Talvora; P-41): exact Windows SystemColors high-contrast token mapping, reversible overrides and WPF-UI title-bar Turkish automation names; existing LegacyContentHost and approved motion preserved.
   - Test-first RED: missing UI8 test helpers; GREEN Gece/Gun real WPF smoke, 13 named interactive UIA controls, HC mapping/restore and window-state labels; focused build and analyzer build 0 warnings/0 errors.
   - Signed-in Full gate: 68 checks, 0 errors, last line "Hepsi geçti."; source screenshots captured after real status loaded, 1220x790 both themes and README aligned 49% row.
