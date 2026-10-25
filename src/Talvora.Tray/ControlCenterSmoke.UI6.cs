@@ -10,8 +10,7 @@ internal static partial class ControlCenterSmoke
         window.ShellModel.SelectPage(5);
         window.UpdateLayout();
         if (window.SettingsContentHost.Content is not Views.SettingsView settings ||
-            window.SettingsContentHost.Visibility != Visibility.Visible ||
-            window.LegacyContentHost.Visibility != Visibility.Collapsed)
+            window.SettingsContentHost.Visibility != Visibility.Visible)
             throw new InvalidOperationException("UI6 settings route did not open its XAML view.");
 
         var model = settings.Model;
@@ -59,5 +58,17 @@ internal static partial class ControlCenterSmoke
         aboutCommit.BringIntoView();
         window.UpdateLayout();
         SaveVisualSnapshotIfRequested(window, "ui7-about-" + theme);
+
+        // UI6b: render the folder-permission notice once (fixture value; the real check runs with each refresh).
+        var aclBefore = model.ShowAclNotice;
+        model.ShowAclNotice = true;
+        window.UpdateLayout();
+        if (settings.FindName("AclNotice") is not FrameworkElement notice || !notice.IsVisible ||
+            AutomationProperties.GetName(notice) != ProgramDataAclCheck.NoticeText)
+            throw new InvalidOperationException("UI6b folder-permission notice contract failed.");
+        notice.BringIntoView();
+        window.UpdateLayout();
+        SaveVisualSnapshotIfRequested(window, "ui6b-acl-notice-" + theme);
+        model.ShowAclNotice = aclBefore;
     }
 }

@@ -39,6 +39,7 @@ internal sealed partial class ShellWindow
             string.Equals(state.Registration.Id, "talvora", StringComparison.OrdinalIgnoreCase) &&
             state.Health == ControlCenterHealthState.Ready);
         _settingsModel.UpdateSetup(coreReady, setup);
+        _settingsModel.ShowAclNotice = ProgramDataAclCheck.IsStale(ProgramDataAclCheck.DefaultRoot);
         _setupCard.Details.Text = setup.Detail;
         _setupCard.Visibility = Visibility.Visible;
 

@@ -3,10 +3,30 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              Background="{DynamicResource Tv.Bg}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="SettingsBool" />
+    </UserControl.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="24" MaxWidth="1360">
             <TextBlock Text="Ayarlar ve kurulum" Style="{StaticResource Tv.Type.Title}"
                        Margin="0,0,0,24" />
+            <!-- UI6b: S3 folder-permission notice; visible only while the check finds broad write access. -->
+            <Border x:Name="AclNotice" Background="{DynamicResource Tv.Attention.Soft}"
+                    BorderBrush="{DynamicResource Tv.Attention}" BorderThickness="1"
+                    CornerRadius="{StaticResource Tv.Radius.L}" Padding="16,12" Margin="0,0,0,24"
+                    AutomationProperties.Name="{Binding AclNoticeText}"
+                    Visibility="{Binding ShowAclNotice, Converter={StaticResource SettingsBool}}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="▲" Style="{StaticResource Tv.Type.BodyStrong}"
+                               Foreground="{DynamicResource Tv.Attention}" Margin="0,0,8,0" />
+                    <TextBlock Grid.Column="1" Text="{Binding AclNoticeText}" Style="{StaticResource Tv.Type.Body}"
+                               Foreground="{DynamicResource Tv.Text}" TextWrapping="Wrap" />
+                </Grid>
+            </Border>
             <TextBlock Text="Kurulum" Style="{StaticResource Tv.Type.BodyStrong}"
                        Margin="0,0,0,12" />
             <ContentControl x:Name="SetupHost" HorizontalContentAlignment="Stretch"

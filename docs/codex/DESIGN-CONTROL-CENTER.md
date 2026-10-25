@@ -492,6 +492,8 @@ Each card = one commit, Awwwards evidence refreshed (cite pages actually reviewe
 > - When all three are complete the card collapses to one line: `●` "Kurulum tamam."
 > - The S3 ProgramData ACL notice is **not** part of UI6 (moved to UI6b). "Hakkında" is **not** part of UI6 (UI7 owns it). S2 rotate button rule unchanged.
 
+> **UI6b (delivered by Claude, 2026-10-25):** the S3 notice is a read-only check in the tray (`ProgramDataAclCheck.IsStale(C:\ProgramData\Talvora)`), refreshed with the setup card — no IPC. It is visible only while the root ACL grants an Allow write right to BUILTIN\Users, Authenticated Users, Everyone or INTERACTIVE; a missing or unreadable root (the normal protected case for the signed-in user) shows nothing. Placement: directly below the "Ayarlar ve kurulum" title, `Tv.Attention.Soft` background, 1 px `Tv.Attention` border, `Tv.Radius.L`, padding 16,12, `▲` (`Tv.Type.BodyStrong`, `Tv.Attention`) + the P-12 sentence (`Tv.Type.Body`, `Tv.Text`), UIA name = the sentence. No dismiss control: it disappears once the installer has been re-run.
+
 **Files:** `Views/SettingsView.xaml`, `Controls/StepperCard`, ViewModel; `ControlCenterWindow.Setup.cs` replaced.
 **Do:** §5.5; implements S5 copy; theme/motion/rail preferences persisted; S2 rotate button only if S2 is done (otherwise hidden).
 **Acceptance:** setup can be completed end-to-end (user step with real tunnel IDs listed in STATUS); jargon only inside the expander.
@@ -518,6 +520,8 @@ Each card = one commit, Awwwards evidence refreshed (cite pages actually reviewe
 > - **Screenshots:** `docs/media/control-center.png` = installed smoke Genel bakış in Gece (loaded); new `docs/media/control-center-gun.png` = the same in Gün. README replaces its single image with one centred row: both images, `width="49%"`, Gece first, alt texts "Talvora Kontrol Merkezi — Gece" / "… — Gün".
 > - **Legacy builders are not deleted in UI8** — they are still constructed (`LegacyContentHost`) and used by detail actions. Only provably unreferenced private members go (analyzer). Their migration is **UI9**, designed by Claude.
 > - Idle CPU is already proven: 0.416 % (P-41); re-measure once at the end and log it. U5 (mixed-DPI) stays a user check.
+
+> **UI9 (delivered by Claude, 2026-10-25):** the hidden legacy host is gone — `ControlCenterWindow.Detail.cs`, `.EmbeddedIntegrations.cs`, `.Stitch.cs`, `LegacyContentHost` and the imperative dashboard/header builders were deleted; every page is a XAML view. No visible change. The legacy detail's "Gitea web arayüzünü aç" action had already been unreachable since UI4/UI7 (the new design has no entry point for it); bringing it back needs a design decision.
 
 **Do:** motion pass + reduced motion + high contrast; DPI matrix; accessibility audit (Accessibility Insights or UIA test listing names/roles); delete dead imperative builders (`ControlCenterWindow*.cs` parts no longer used) and obsolete UI regex tests; refresh `docs/media/control-center.png` (both themes) and README screenshots.
 **Acceptance:** Q5 smoke green in both themes; no unused UI code (build with analyzers for unused private members); README shows the new design.

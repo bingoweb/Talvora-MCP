@@ -35,7 +35,7 @@ function Assert-NotContains {
 }
 
 $repair = Read-RepoText 'src\Talvora.Tray\ControlCenterRepairService.cs'
-$actions = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.Actions.cs'
+$actions = Read-RepoText 'src\Talvora.Tray\Views\ShellWindow.UI4.cs'
 $tray = Read-RepoText 'src\Talvora.Tray\TrayApplicationContext.cs'
 $gitea = Read-RepoText 'src\Talvora.Tray\GiteaTrayClient.cs'
 $program = Read-RepoText 'src\Talvora.Tray\Program.cs'

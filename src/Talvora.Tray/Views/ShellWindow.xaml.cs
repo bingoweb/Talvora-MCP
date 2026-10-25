@@ -9,7 +9,6 @@ using Talvora.Tray.Views;
 
 namespace Talvora.Tray;
 
-// UI2 keeps the existing page builders and lifecycle handlers as a temporary adapter until UI3-UI8.
 internal sealed partial class ShellWindow
 {
     private ShellViewModel? _shellModel;
@@ -24,18 +23,8 @@ internal sealed partial class ShellWindow
     internal ShellViewModel ShellModel => _shellModel
         ?? throw new InvalidOperationException("The shell has not been initialized.");
 
-    private void InitializeShell(Grid legacy)
+    private void InitializeShell()
     {
-        foreach (UIElement child in legacy.Children)
-        {
-            if (Grid.GetRow(child) is 0 or 3 || Grid.GetColumn(child) == 0 && Grid.GetRow(child) == 1)
-                child.Visibility = Visibility.Collapsed;
-        }
-        legacy.ColumnDefinitions[0].Width = new GridLength(0);
-        legacy.RowDefinitions[0].Height = new GridLength(0);
-        legacy.RowDefinitions[3].Height = new GridLength(0);
-        legacy.DataContext = null;
-        LegacyContentHost.Content = legacy;
         ShellRoot.Background = BackgroundBrush;
         _windowTitleBar = ShellTitleBar;
         _shellModel = new ShellViewModel(RefreshDashboardAsync);
@@ -123,7 +112,6 @@ internal sealed partial class ShellWindow
             items[index].IsChecked = index == _shellModel.SelectedIndex;
         _syncingShellNavigation = false;
         var selected = _shellModel.SelectedIndex;
-        LegacyContentHost.Visibility = Visibility.Collapsed;
         OverviewContentHost.Visibility = selected == 0 ? Visibility.Visible : Visibility.Collapsed;
         ServicesContentHost.Visibility = selected == 1 ? Visibility.Visible : Visibility.Collapsed;
         HistoryContentHost.Visibility = selected == 2 ? Visibility.Visible : Visibility.Collapsed;
@@ -268,13 +256,6 @@ internal sealed partial class ShellWindow
                  _shellModel.SelectedIndex == 1 && _servicesView?.IsDetailOpen == true)
         {
             _servicesView.BackToList();
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Left && Keyboard.Modifiers == ModifierKeys.Alt &&
-                 _detailScroller.Visibility == Visibility.Visible)
-        {
-            ShowDashboard();
-            _shellModel.SelectPage(1);
             e.Handled = true;
         }
     }

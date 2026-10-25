@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-25T13:21:00Z",
+  "verifiedAtUtc": "2026-10-25T14:05:05Z",
   "sourceUrl": "https://www.awwwards.com/inspiration/project-details-page-desktop-sai-narayanan-portfolio",
-  "scope": "UI8: Awwwards Renxa data visualization and WKNDHRS Services Layout reviewed as research only. DESIGN-CONTROL-CENTER §3.4, §10, UI8/P-41 alone specify motion, system high contrast, accessibility names, the two screenshot files and retained legacy host.",
+  "scope": "UI6b/UI9: no new visual design. DESIGN-CONTROL-CENTER §S3 notice (P-12 text) placed below the Settings title with Tv.Attention tokens; UI9 removes the hidden legacy host only. Awwwards references are research only.",
   "references": [
     "https://www.awwwards.com/inspiration/events",
     "https://www.awwwards.com/inspiration/services-layout-wkndhrs",
@@ -13,6 +13,7 @@
     "https://www.awwwards.com/"
   ],
   "designDecisions": [
+    "UI6b/UI9: DESIGN-CONTROL-CENTER §5.5 S3 notice with the approved P-12 sentence, placed below the Settings title on Tv.Attention.Soft with a Tv.Attention border and the ▲ state glyph; UI9 deletes the hidden legacy host without visible change. Nothing taken from Awwwards.",
     "UI8: DESIGN-CONTROL-CENTER §10 and P-41 specify SystemColors brushes, exact Turkish title-bar accessibility names, Gece/Gün screenshot filenames and README arrangement. §3.4 already controls reduced motion and chain animations; no visual style or interaction was copied from Awwwards.",
     "UI7: DESIGN-CONTROL-CENTER §5.5 supplies Hakkında with R5 version, short source commit and README/SECURITY links; UI7/P-40 supplies the exact native tray menu order, Turkish labels, default action and §9 status sentence. P-40 and TI1 preserve worklog card appearance and existing TrayIconArt; no design decisions were imported from Awwwards.",
     "UI5: Prague Quadrennial archive/timeline and Just Nice Events were consulted as research, without copying art, motion or components. DESIGN-CONTROL-CENTER §5.4 alone determines chronological day headings, severity/time/summary/service and expandable detail, filters Tümü/Sorunlar/Onarımlar/Yaşam döngüsü, and Ham günlüğü göster.",

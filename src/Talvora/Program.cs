@@ -101,7 +101,11 @@ builder.Services
                 await next(
                     request,
                     cancellationToken);
-            McpToolMetadataWirePolicy.Apply(result);
+            McpToolMetadataWirePolicy.Apply(
+                result,
+                Talvora.Shared.TalvoraMcpToolSurfacePolicy.ResolvePath(
+                    request.Services?.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>()
+                        ?.HttpContext?.Request.Path.Value));
             return result;
         });
     })

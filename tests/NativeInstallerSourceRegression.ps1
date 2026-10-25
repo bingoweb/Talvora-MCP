@@ -684,11 +684,6 @@ $result = [pscustomobject]@{
         $controlCenterWindow -match '_lifetimeCts\.Cancel\(\);' -and
         $controlCenterWindow -notmatch 'SaveWindowPlacementAsync\(\)\.GetAwaiter\(\)\.GetResult\(\)'
     )
-    ControlCenterDetailGiteaOpenHandlesShellFailure = (
-        $controlCenterActions -match 'Gitea detay sayfasından açılamadı' -and
-        $controlCenterActions -match 'ex is InvalidOperationException or\s+System\.ComponentModel\.Win32Exception' -and
-        $controlCenterActions -match 'await ShowOperationErrorAsync\('
-    )
     ControlCenterWindowPlacementSaveLatestWins = (
         $controlCenterWindow -match 'SemaphoreSlim _windowPlacementSaveGate = new\(1, 1\)' -and
         $controlCenterWindow -match 'long _windowPlacementSaveVersion' -and
@@ -697,8 +692,8 @@ $result = [pscustomobject]@{
         $controlCenterWindowChrome -match 'saveVersion != Volatile\.Read\(\s*ref _windowPlacementSaveVersion\)' -and
         $controlCenterWindowChrome -match '_windowPlacementSaveGate\.Release\(\)'
     )
+    # UI9 removed the legacy Control Center detail panel and its Gitea launch; the tray launch stays checked.
     GiteaBrowserLaunchDisposesProcessHandles = (
-        $controlCenterActions -match 'using var launched = Process\.Start\(' -and
         $trayApplicationContext -match 'using var launched = Process\.Start\('
     )
     TrayAutoReconnectsAfterStartup = (

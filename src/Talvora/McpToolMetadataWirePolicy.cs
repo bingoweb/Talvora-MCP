@@ -5,7 +5,7 @@ namespace Talvora;
 
 internal static class McpToolMetadataWirePolicy
 {
-    public static void Apply(ListToolsResult result)
+    public static void Apply(ListToolsResult result, TalvoraMcpToolSurface surface)
     {
         foreach (var tool in result.Tools)
         {
@@ -38,5 +38,26 @@ internal static class McpToolMetadataWirePolicy
                         tool.Name),
             };
         }
+
+        // Q7: output schemas are 155 KB of the 304 KB /mcp/dev list. Focused surfaces omit them (MCP makes
+        // outputSchema optional; results still carry structuredContent); the full /mcp surface keeps them.
+        if (surface != TalvoraMcpToolSurface.Full)
+        {
+            // Copy, never mutate: in stateless mode the Tool objects are shared by every surface's request.
+            result.Tools = result.Tools.Select(WithoutOutputSchema).ToList();
+        }
     }
+
+    // Copies every settable property of ModelContextProtocol.Protocol.Tool (SDK 2.2.0) except OutputSchema; the
+    // payload smoke fails if the SDK adds a property, so a new field can never be dropped silently.
+    private static Tool WithoutOutputSchema(Tool tool) => new()
+    {
+        Name = tool.Name,
+        Title = tool.Title,
+        Description = tool.Description,
+        InputSchema = tool.InputSchema,
+        Annotations = tool.Annotations,
+        Icons = tool.Icons,
+        Meta = tool.Meta,
+    };
 }

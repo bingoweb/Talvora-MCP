@@ -389,6 +389,8 @@ internal static partial class SmokeScenarios
             administrationClient,
             "talvora_job_start",
             "Administration");
+
+        await RunPayloadBudgetLiveAsync(root);
     }
 
     private static async Task<McpClient> CreateClientAsync(
@@ -505,20 +507,11 @@ internal static partial class SmokeScenarios
                 $"Focused surface changed input schema: {name}");
         }
 
-        var firstOutputSchema =
-            first.ProtocolTool.OutputSchema;
-        var secondOutputSchema =
-            second.ProtocolTool.OutputSchema;
-        if (firstOutputSchema.HasValue !=
-            secondOutputSchema.HasValue ||
-            firstOutputSchema.HasValue &&
-            !string.Equals(
-                firstOutputSchema.Value.GetRawText(),
-                secondOutputSchema!.Value.GetRawText(),
-                StringComparison.Ordinal))
+        // Q7: the focused surface (second) never sends an output schema; the full surface keeps its own.
+        if (second.ProtocolTool.OutputSchema.HasValue)
         {
             throw new InvalidOperationException(
-                $"Focused surface changed output schema: {name}");
+                $"Focused surface sent an output schema: {name}");
         }
 
         var firstAnnotations =

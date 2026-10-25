@@ -39,7 +39,6 @@ $health = Read-RepoText 'src\Talvora.Tray\ManagedMcpTunnelHealthService.cs'
 $componentHealth = Read-RepoText 'src\Talvora.Tray\ControlCenterComponentHealthService.cs'
 $repair = Read-RepoText 'src\Talvora.Tray\ControlCenterRepairService.cs'
 $program = Read-RepoText 'src\Talvora.Tray\Program.cs'
-$detail = Read-RepoText 'src\Talvora.Tray\ControlCenterWindow.Detail.cs'
 
 Assert-Contains $provisioning 'HealthDetailsUrl' 'structured runtime status must retain the v0.0.16 aggregate health URL'
 Assert-Contains $provisioning 'McpHealthUrl' 'structured runtime status must retain the v0.0.16 MCP health URL'
@@ -69,7 +68,6 @@ Assert-Contains $componentHealth '"Yanıt teslimi"' 'Control Center must expose 
 Assert-Contains $componentHealth '"İstek kuyruğu"' 'Control Center must expose queue health'
 Assert-Contains $componentHealth '"İş dağıtıcı"' 'Control Center must expose dispatcher health'
 Assert-Contains $componentHealth '"Tünel MCP gözlemi"' 'Control Center must expose tunnel-side MCP observations'
-Assert-Contains $detail '"tunnel-health" => "Tünel tanısı"' 'detail UI must label v0.0.16 health rows in user language'
 
 Assert-Contains $repair 'tunnelHealth is { RequiresRuntimeRenewal: true }' 'repair must renew the runtime only for actionable response-delivery degradation'
 Assert-Contains $repair 'tunnel-client already owns retry and' 'repair must document why control-plane network faults are left to tunnel-client backoff'

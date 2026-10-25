@@ -181,15 +181,13 @@ internal static partial class ControlCenterSmoke
             if (index == 0)
             {
                 if (window.OverviewContentHost.Visibility != Visibility.Visible ||
-                    window.OverviewContentHost.Content is not Views.OverviewView ||
-                    window.LegacyContentHost.Visibility != Visibility.Collapsed)
+                    window.OverviewContentHost.Content is not Views.OverviewView)
                     throw new InvalidOperationException("UI3 overview did not open its view.");
             }
             else if (index == 1)
             {
                 if (window.ServicesContentHost.Visibility != Visibility.Visible ||
-                    window.ServicesContentHost.Content is not Views.ServicesView ||
-                    window.LegacyContentHost.Visibility != Visibility.Collapsed)
+                    window.ServicesContentHost.Content is not Views.ServicesView)
                     throw new InvalidOperationException("UI4 services route did not open its view.");
             }
             else if (index == 2)
@@ -357,53 +355,6 @@ internal static partial class ControlCenterSmoke
         }
     }
 
-    private static void AssertDashboardStructure(ShellWindow window)
-    {
-        window.UpdateLayout();
-        var root = (Grid)window.LegacyContentHost.Content;
-        var header = root.Children.OfType<Border>().Single(element =>
-            Grid.GetRow(element) == 1 && Grid.GetColumn(element) == 1);
-        var statusCard = ((Grid)header.Child).Children.OfType<Border>().Single();
-        var status = FindVisualChild<System.Windows.Controls.TextBlock>(statusCard)
-            ?? throw new InvalidOperationException(
-                "Kontrol Merkezi durum başlığı görüntülenmedi.");
-        AssertAutomationElement(status);
-
-        var serviceRows = EnumerateVisualElements(window)
-            .OfType<Border>()
-            .Where(element => element.Tag is string &&
-                !string.IsNullOrWhiteSpace(AutomationProperties.GetName(element)))
-            .ToArray();
-        if (serviceRows.Length == 0)
-        {
-            throw new InvalidOperationException(
-                "Kontrol Merkezi hiçbir hizmet satırı görüntülemedi.");
-        }
-        AssertAutomationElement(serviceRows[0]);
-
-        foreach (var element in EnumerateVisualElements(window))
-        {
-            // Inspect application controls, not WPF template geometry such as zero-length scroll tracks.
-            if (!element.IsVisible || element.TemplatedParent is not null)
-            {
-                continue;
-            }
-            var peer = UIElementAutomationPeer.CreatePeerForElement(element);
-            if (peer is not null && peer.IsControlElement() && !peer.IsOffscreen())
-            {
-                try { AssertAutomationBounds(peer); }
-                catch (InvalidOperationException exception)
-                {
-                    var field = typeof(ShellWindow).GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-                        .FirstOrDefault(candidate => ReferenceEquals(candidate.GetValue(window), element));
-                    var parent = VisualTreeHelper.GetParent(element);
-                    var parentName = parent is null ? string.Empty : AutomationProperties.GetName(parent);
-                    throw new InvalidOperationException($"Shell automation bounds: field={field?.Name}, name={element.Name}, type={element.GetType().Name}, parent={parent?.GetType().Name}/{parentName}, text='{(element as System.Windows.Controls.TextBlock)?.Text}'.", exception);
-                }
-            }
-        }
-    }
-
     private static void AssertAutomationElement(FrameworkElement element)
     {
         var peer = UIElementAutomationPeer.CreatePeerForElement(element)
@@ -455,46 +406,6 @@ internal static partial class ControlCenterSmoke
         }
     }
 
-    private static void AssertCompactDashboardLayout(
-        ShellWindow window)
-    {
-        var originalWidth = window.Width;
-        try
-        {
-            window.Width = window.MinWidth;
-            window.UpdateLayout();
-
-            var search = FindVisualChildByAutomationName(
-                window,
-                "Yönetilen bileşenlerde ara");
-            var refresh = FindVisualChildByAutomationName(
-                window,
-                "Bileşen durumlarını yenile");
-
-            AssertElementFitsHorizontally(window, search);
-            AssertElementFitsHorizontally(window, refresh);
-
-            var searchOrigin = search
-                .TransformToAncestor(window)
-                .Transform(new System.Windows.Point(0, 0));
-            var refreshOrigin = refresh
-                .TransformToAncestor(window)
-                .Transform(new System.Windows.Point(0, 0));
-            if (searchOrigin.Y >= refreshOrigin.Y)
-            {
-                throw new InvalidOperationException(
-                    "Compact dashboard toolbar did not move its actions below the search field.");
-            }
-
-            AssertRenderedSurfaceIsNotBlank(window);
-        }
-        finally
-        {
-            window.Width = originalWidth;
-            window.UpdateLayout();
-        }
-    }
-
     private static FrameworkElement FindVisualChildByAutomationName(
         DependencyObject root,
         string automationName)
@@ -525,21 +436,6 @@ internal static partial class ControlCenterSmoke
 
         throw new InvalidOperationException(
             $"Control Center element with automation name '{automationName}' was not rendered.");
-    }
-
-    private static void AssertElementFitsHorizontally(
-        ShellWindow window,
-        FrameworkElement element)
-    {
-        var origin = element
-            .TransformToAncestor(window)
-            .Transform(new System.Windows.Point(0, 0));
-        if (origin.X < -1 ||
-            origin.X + element.ActualWidth > window.ActualWidth + 1)
-        {
-            throw new InvalidOperationException(
-                $"Control Center compact layout clips '{AutomationProperties.GetName(element)}'.");
-        }
     }
 
     private static T? FindVisualChild<T>(DependencyObject root)

@@ -1,8 +1,20 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-25T13:21:00Z",
-  "scope": "UI8/P-41: apply the exact WPF high-contrast SystemColors token table, set approved Turkish title-bar UIA names, verify both-theme visual smoke and preserve the live legacy host.",
+  "verifiedAtUtc": "2026-10-25T14:05:05Z",
+  "scope": "Q7/UI6b/UI9 (delivered by Claude): focused MCP surfaces omit tool output schemas with a byte budget, the Control Center shows the S3 ProgramData folder-permission notice, and the legacy imperative Control Center host is removed.",
   "libraries": [
+    {
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-10-25 Q7: ModelContextProtocol 2.2.0 list-tools filters may replace ListToolsResult.Tools; Tool.OutputSchema is optional in the MCP tools/list schema (2025-06-18 spec, outputSchema optional). Stateless HTTP shares Tool instances across requests, so focused surfaces receive copies without OutputSchema; a smoke guard pins the settable Tool properties. Sources: https://github.com/modelcontextprotocol/csharp-sdk and https://modelcontextprotocol.io/specification/2025-06-18/server/tools ."
+    },
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-10-25 UI6b: System.Security.AccessControl DirectorySecurity.GetAccessRules(true, true, typeof(SecurityIdentifier)) with FileSystemAccessRule.FileSystemRights/AccessControlType checks for Allow write rights granted to well-known broad SIDs; an unreadable or missing root yields no notice. Context7 was not available in this Claude session; vendor source: https://learn.microsoft.com/dotnet/api/system.security.accesscontrol.directorysecurity ."
+    },
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-25 UI9: the shell hosts only XAML views; BooleanToVisibilityConverter drives the UI6b notice; window placement and theme refresh unchanged. Source: https://learn.microsoft.com/dotnet/api/system.windows.controls.booleantovisibilityconverter ."
+    },
     {
       "libraryId": "/dotnet/wpf",
       "verified": "2026-10-25 UI8: WPF uses SystemColors brushes and DynamicResource system keys for accessible high-contrast window, control, text, grey and highlight colours. P-41 specifies the exact Tv.* mapping; direct Application.Resources overrides are removed on exit to reveal the original merged token dictionary. Source: https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/Themes/XAML/TreeViewItem.xaml ."

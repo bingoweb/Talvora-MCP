@@ -75,6 +75,7 @@ internal static partial class Program
         AssertUi4ServiceDetails();
         AssertUi5EventGroupingAndFilters();
         AssertTrayIconArt();
+        AssertUi6bAclNotice();
         await AssertShellCommandsAsync();
         await AssertN3bCodeTerminalAsync();
         await AssertN4AgentEventsAsync();

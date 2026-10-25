@@ -55,6 +55,11 @@ internal sealed class SettingsViewModel : ObservableObject
     }
     public bool ShowSteps => !AllComplete;
 
+    // UI6b: S3 folder-permission notice (approved P-12 text), refreshed with the setup card.
+    private bool _showAclNotice;
+    public bool ShowAclNotice { get => _showAclNotice; set => SetProperty(ref _showAclNotice, value); }
+    public string AclNoticeText => ProgramDataAclCheck.NoticeText;
+
     public SettingsPreferences Preferences
     {
         get => _preferences;

@@ -1096,6 +1096,13 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Delivered by Claude 2026-10-25 · Q7, UI6b, UI9 (no agent card; user decision: Claude commits its own verified changes)
+
+- **Q7 decision:** output schemas stay only on the full `/mcp` surface; `/mcp/dev` and `/mcp/admin` get copies of each `Tool` without `OutputSchema` (`McpToolMetadataWirePolicy.Apply(result, surface)`; copy, never mutate — stateless mode shares Tool objects). Budgets asserted by `SmokeScenarios.PayloadBudget.cs`: dev ≤ 153 600 B, admin ≤ 56 320 B; a guard fails if the SDK adds a settable Tool property the copy would drop. Measured: dev 304 216 → 146 094 B, admin 85 675 → 51 590 B, full 337 555 B unchanged.
+- **UI6b decision:** no IPC — the tray reads the ACL of `C:\ProgramData\Talvora` itself (`ProgramDataAclCheck`); notice only on an Allow write right for Users/Authenticated Users/Everyone/INTERACTIVE; unreadable/missing root → no notice. Placement and tokens in DESIGN-CONTROL-CENTER (UI6b note).
+- **UI9:** the legacy imperative host is deleted (three files, `LegacyContentHost`, header/dashboard builders, legacy smoke asserts); source regressions now check the XAML views and the absence of the legacy files.
+- Evidence: clean-clone Full `68 kontrol, 0 hata` / `Hepsi geçti.` as the signed-in user; installation on the next deploy.
+
 ### Audit 2026-10-25 (22) · range `audit/2026-10-25-21 (bd39d73)..bc1a1f9` · 1 card commit · result: UI8 exact; agent queue empty — Q7, UI6b, UI9 wait for Claude's design
 
 Delivered: UI8 `bc1a1f9` (installed, CI green on the first attempt).

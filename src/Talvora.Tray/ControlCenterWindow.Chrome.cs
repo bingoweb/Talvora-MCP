@@ -1,8 +1,6 @@
 using System.IO;
 using System.Text.Json;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Threading;
 using Talvora.Shared;
 
@@ -231,87 +229,6 @@ internal sealed partial class ShellWindow
         Top = workArea.Top + Math.Max(0, (workArea.Height - Height) / 2);
     }
 
-    private void UpdateHeaderLayout()
-    {
-        if (_headerGrid is null ||
-            _headerStatusCard is null ||
-            _headerStatusStack is null)
-        {
-            return;
-        }
-
-        var compact = ActualWidth > 0 && ActualWidth < 900;
-
-        if (compact)
-        {
-            Grid.SetRow(_headerStatusCard, 1);
-            Grid.SetColumn(_headerStatusCard, 0);
-            Grid.SetColumnSpan(_headerStatusCard, 2);
-            _headerStatusCard.Margin = new Thickness(0, 16, 0, 0);
-            _headerStatusCard.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
-            _headerStatusStack.MinWidth = 0;
-
-            if (_dashboardSectionMeta is not null)
-            {
-                _dashboardSectionMeta.Visibility = Visibility.Collapsed;
-            }
-        }
-        else
-        {
-            Grid.SetRow(_headerStatusCard, 0);
-            Grid.SetColumn(_headerStatusCard, 1);
-            Grid.SetColumnSpan(_headerStatusCard, 1);
-            _headerStatusCard.Margin = new Thickness(24, 0, 0, 0);
-            _headerStatusCard.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
-            _headerStatusStack.MinWidth = 250;
-
-            if (_dashboardSectionMeta is not null)
-            {
-                _dashboardSectionMeta.Visibility = Visibility.Visible;
-            }
-        }
-
-        UpdateDashboardControlsLayout(compact);
-    }
-
-    private void UpdateDashboardControlsLayout(bool compact)
-    {
-        if (_dashboardControlsGrid is null ||
-            _dashboardSearchStack is null)
-        {
-            return;
-        }
-
-        Grid.SetRow(_dashboardSearchStack, 0);
-        Grid.SetColumn(_dashboardSearchStack, 0);
-        Grid.SetRow(_filterBox, compact ? 1 : 0);
-        Grid.SetRow(_refreshButton, compact ? 1 : 0);
-
-        if (compact)
-        {
-            Grid.SetColumnSpan(_dashboardSearchStack, 3);
-            _dashboardSearchStack.Margin = new Thickness(0, 0, 0, 10);
-
-            Grid.SetColumn(_filterBox, 0);
-            _filterBox.Margin = new Thickness(0);
-            _filterBox.HorizontalAlignment =
-                System.Windows.HorizontalAlignment.Left;
-
-            Grid.SetColumn(_refreshButton, 2);
-            _refreshButton.Margin = new Thickness(12, 0, 0, 0);
-            return;
-        }
-
-        Grid.SetColumnSpan(_dashboardSearchStack, 1);
-        _dashboardSearchStack.Margin = new Thickness(0);
-        Grid.SetColumn(_filterBox, 1);
-        _filterBox.Margin = new Thickness(12, 0, 0, 0);
-        _filterBox.HorizontalAlignment =
-            System.Windows.HorizontalAlignment.Stretch;
-        Grid.SetColumn(_refreshButton, 2);
-        _refreshButton.Margin = new Thickness(12, 0, 0, 0);
-    }
-
     private void UpdateWindowStateVisuals()
     {
         if (_windowTitleBar is null)
@@ -321,44 +238,5 @@ internal sealed partial class ShellWindow
 
         _windowTitleBar.CanMaximize = ResizeMode is ResizeMode.CanResize
             or ResizeMode.CanResizeWithGrip;
-    }
-
-    private async void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-    {
-        if (e.Handled) return;
-        if (e.Key == Key.F5 ||
-            (e.Key == Key.R && Keyboard.Modifiers.HasFlag(ModifierKeys.Control)))
-        {
-            e.Handled = true;
-            await RefreshDashboardAsync();
-            return;
-        }
-
-        if (e.Key == Key.F &&
-            Keyboard.Modifiers.HasFlag(ModifierKeys.Control) &&
-            _dashboardScroller.Visibility == Visibility.Visible)
-        {
-            e.Handled = true;
-            _searchBox.Focus();
-            _searchBox.SelectAll();
-            return;
-        }
-
-        if ((e.Key == Key.Escape ||
-             (e.Key == Key.Left && Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))) &&
-            _detailScroller.Visibility == Visibility.Visible)
-        {
-            e.Handled = true;
-            ShowDashboard();
-            return;
-        }
-
-
-        if (e.Key == Key.Escape &&
-            _dashboardScroller.Visibility == Visibility.Visible)
-        {
-            e.Handled = true;
-            Hide();
-        }
     }
 }
