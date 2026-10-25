@@ -107,7 +107,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI6b — S3 ProgramData ACL notice in the Control Center (delivered by Claude: tray-side read-only ACL check, notice below the Settings title, both-theme render; installation pending)
 - [x] Q1 — Tool titles, ≤ 220-character descriptions, orphan titles + manifest check; payload size recorded only (P-36; P-38 fixed by Claude)
 - [x] Q3 — Documentation diet (P-17; root 119650 bytes, 13-line HANDOFF, five byte-identical archives, links/counts green; signed-in Full 68/0; exact-commit GitHub CI 40178792915 success; artifacts/q3-delivery.json)
-- [~] UI2 — Shell, rail, title bar, command palette (P-33 implemented; signed-in Full 66/0 and both source themes green; exact-commit delivery evidence artifacts/ui2-delivery.json; U5 mixed-DPI placement and Claude visual audit pending)
+- [~] UI2 — Shell, rail, title bar, command palette (P-33 implemented; signed-in Full 66/0 and both source themes green; exact-commit delivery evidence artifacts/ui2-delivery.json; Claude visual audit done in audits 18–22; only user check U5 mixed-DPI placement remains)
 - [x] N7 — "Çalışma günlüğü" history page (7d/2,000/20MB, terminal-only, session filters/details; installed 94e4079 smoke success; GitHub CI 40101364855 attempt 2 success)
 - [x] UI3 — Overview: Nabız ring + chain strip (installed 6d12e65, 250 tools, full source and installed smoke/Gece/Gun PNGs; signed-in Full 66/0; GitHub windows-ci 40104570857 success; remaining idle CPU polish tracked under UI8)
 - [x] UI4 — Services list + detail (installed 355af6d, 250 tools, installed smoke and four theme PNGs green; Full 66/0; GitHub windows-ci 40111604160 attempt 2 success)
@@ -117,9 +117,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI7 — Tray menu, tooltip, Hakkında (P-40/TI1; signed-in Changed 27/0 and Full 68/0, installed bd39d73, both-theme smoke green, GitHub windows-ci 40190062851 success)
 - [x] UI8 — Polish, accessibility, screenshots (P-41; signed-in Full 68/0, theme/HC/UIA smoke green; installation and exact-commit CI evidence after commit)
 - [x] UI9 — Remove the remaining legacy Control Center host (delivered by Claude: three legacy files and LegacyContentHost deleted, −3 300 lines, no visible change; installation pending)
+- [ ] I1 — Install the current `main` and verify Q7, UI6b and UI9 on the installed runtime
 
 ## User queue
 
+- U12 — I1 kurulduktan sonra ChatGPT Business'ta Talvora Dev ve Admin bağlayıcılarını yenileyin; araç listesi küçüldü (Q7).
 - U11 — Tepsideki yeni Talvora ikonuna bakın (açık ve koyu görev çubuğunda); beğenmezseniz Claude'a söyleyin.
 
 - U10 — D21: attach artifacts/d21-live.png to Gitea #9 when connector approval is available (this session requires approval but policy is never). Deployment, live capture and exact-commit CI are complete; artifacts/d21-delivery.json records the evidence.
@@ -144,9 +146,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - (resolved -> Q3) docs/codex/ROADMAP.md:601 — README was already in the card's Files list; compacting it within the documented diet scope brings root Markdown to 119650 bytes including the new HANDOFF. No additional archive or product scope required.
 
-- tests/Talvora.Notification.Regression/Program.N7.cs:64 — N7 2,000-entry loading perf guard passes isolated in 116 ms, but fails when independent Full suites compete (340, 309, 321 ms against 300 ms); see P-35. No N7 changes made during UI5.
+- (resolved → P-35/P-38) tests/Talvora.Notification.Regression/Program.N7.cs:64 — N7 2,000-entry loading perf guard passes isolated in 116 ms, but fails when independent Full suites compete (340, 309, 321 ms against 300 ms); see P-35. No N7 changes made during UI5.
 
-- src/Talvora.Tray/ControlCenterSmoke.UI3.cs:102 — The 3-second overview idle CPU sample after 2.5 seconds of warm-up was 7.33%, above the UI8 <1% target. Keep motion controls and the measurement; assign CPU rendering optimization to UI8/Claude visual audit, not unapproved UI3 changes.
+- (resolved → P-41: real-window idle CPU 0.416 %) src/Talvora.Tray/ControlCenterSmoke.UI3.cs:102 — The 3-second overview idle CPU sample after 2.5 seconds of warm-up was 7.33%, above the UI8 <1% target. Keep motion controls and the measurement; assign CPU rendering optimization to UI8/Claude visual audit, not unapproved UI3 changes.
 
 - (resolved → audit 17 fix) src/Talvora.Tray/DesktopProgressNotificationPresenter.cs:181 — N5 passes message.WorklogFrame! to the reference window without checking null; legacy tray alerts can lack this frame, and installed live capture returned NO_CARD_WINDOW. Check protocol-v4 fallback/alert routing in Claude audit before changing approved UI code.
 - (resolved → D17) src/Talvora/SourceEditing/AstGrepToolchainManager.cs:44 — After S3, signed-in Fast gate cannot access protected ProgramData/Toolchains or SourceEdit journals; P-29 needs a safe test contract.
@@ -159,6 +161,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-25 — Claude stall audit: no open agent card made `Get-CodexContext.ps1` (and so `talvora_agent_brief`) throw; it now prints a stop instruction plus the user queue and exits 0 (QualityGateRegression fixture). Queued I1 (install + live Q7/UI6b/UI9 checks, every tool call literal; Step 5 dry-run on the installed tray exit 0/0). UI2 `[~]` now waits on U5 only; two stale findings marked resolved; U12 = refresh connectors after I1. GitHub CI e6dd107 = 40200679502 success.
 - 2026-10-25 — Claude delivered Q7, UI6b and UI9 directly (user: no agent re-implementation). Q7: focused surfaces receive Tool copies without OutputSchema (stateless Tool objects are shared); live scratch smoke /mcp/dev 146 094 B, /mcp/admin 51 590 B, /mcp 337 555 B with schemas. UI6b: `ProgramDataAclCheck` + Settings notice, UI6B_ACL_NOTICE_GREEN, Gece/Gün render. UI9: legacy Detail/EmbeddedIntegrations/Stitch and LegacyContentHost removed; regressions repointed to the XAML views. Clean-clone Full `68 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. Not installed yet. Finding: "Gitea web arayüzünü aç" has had no entry point since UI4/UI7.
 - 2026-10-25 — Claude audit 22 of `bd39d73..bc1a1f9` (UI8): HC token table, Turkish title-bar UIA names, both-theme README screenshots and the kept legacy host match P-41 exactly; no findings. Agent queue empty; Q7, UI6b, UI9 wait for Claude's design. Duplicate user-queue U9 renamed U11. Tag `audit/2026-10-25-22` = `bc1a1f9`.
 - 2026-10-25 — UI8 (executor: ChatGPT via Talvora; P-41): exact Windows SystemColors high-contrast token mapping, reversible overrides and WPF-UI title-bar Turkish automation names; existing LegacyContentHost and approved motion preserved.

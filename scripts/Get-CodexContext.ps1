@@ -24,7 +24,16 @@ if ([string]::IsNullOrWhiteSpace($Card)) {
         $queue = [regex]::Match($statusHeader, '(?ms)^## Agent queue[^\r\n]*\r?\n(.*?)(?=^## )')
         if (-not $queue.Success) { throw 'STATUS.md has no Agent queue.' }
         $next = [regex]::Match($queue.Groups[1].Value, '(?m)^- \[ \] (?<id>[A-Z]+[0-9]+[a-z]?)\b')
-        if (-not $next.Success) { throw 'Agent queue has no actionable unchecked card.' }
+        if (-not $next.Success) {
+            # An empty queue is the protocol's normal stop condition, not a failure: say so plainly (exit 0).
+            $userQueue = [regex]::Match($statusHeader, '(?ms)^## User queue[^\r\n]*\r?\n(.*?)(?=^## |\z)')
+            Write-Output 'AGENT QUEUE EMPTY - STOP (AGENTS.md -> Stop conditions).'
+            Write-Output 'Do not start, invent or look ahead for work. Report to the user in Turkish that the agent queue is empty and list the user queue below. Wait for Claude to add cards.'
+            Write-Output ''
+            Write-Output '## User queue'
+            if ($userQueue.Success) { Write-Output $userQueue.Groups[1].Value.Trim() }
+            exit 0
+        }
         $Card = $next.Groups['id'].Value
     }
 }

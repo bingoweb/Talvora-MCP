@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-25T14:05:05Z",
-  "scope": "Q7/UI6b/UI9 (delivered by Claude): focused MCP surfaces omit tool output schemas with a byte budget, the Control Center shows the S3 ProgramData folder-permission notice, and the legacy imperative Control Center host is removed.",
+  "verifiedAtUtc": "2026-10-25T14:14:18Z",
+  "scope": "Agent-flow hardening: Get-CodexContext.ps1 prints a stop instruction and the user queue (exit 0) when the agent queue is empty, so talvora_agent_brief no longer fails; I1 install card. Builds on Q7/UI6b/UI9.",
   "libraries": [
+    {
+      "libraryId": "/powershell/powershell",
+      "verified": "2026-10-25 Get-CodexContext: Write-Output plus exit 0 ends a pwsh -File script with exit code 0, which InteractiveUserProcessRunner treats as success; regex sections are read with .NET Regex Multiline/Singleline. Source: https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_language_keywords#exit ."
+    },
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
       "verified": "2026-10-25 Q7: ModelContextProtocol 2.2.0 list-tools filters may replace ListToolsResult.Tools; Tool.OutputSchema is optional in the MCP tools/list schema (2025-06-18 spec, outputSchema optional). Stateless HTTP shares Tool instances across requests, so focused surfaces receive copies without OutputSchema; a smoke guard pins the settable Tool properties. Sources: https://github.com/modelcontextprotocol/csharp-sdk and https://modelcontextprotocol.io/specification/2025-06-18/server/tools ."

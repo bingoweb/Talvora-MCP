@@ -209,6 +209,16 @@ PRIVATE_PROPOSAL_BODY_MUST_NOT_APPEAR
         }
         if (($out -split '\r?\n').Count -gt 250) { throw "Oversized fixture context for $($spec.Card)." }
     }
+    $emptyStatus = Join-Path $fixtureDocs 'STATUS.md'
+    $queuedStatus = [IO.File]::ReadAllText($emptyStatus)
+    $queuedStatus.Replace('- [ ] N1', '- [x] N1').Replace('- [ ] UI1', '- [x] UI1').Replace("## User queue`r`n(none)", "## User queue`r`n- U1 — USER_QUEUE_SENTINEL").Replace("## User queue`n(none)", "## User queue`n- U1 — USER_QUEUE_SENTINEL") |
+        Set-Content -LiteralPath $emptyStatus -Encoding utf8 -NoNewline
+    $emptyOut = @(& $fixtureHelper | Out-String) -join ''
+    if ($LASTEXITCODE -ne 0 -or -not $emptyOut.Contains('AGENT QUEUE EMPTY - STOP') -or
+        -not $emptyOut.Contains('USER_QUEUE_SENTINEL') -or $emptyOut.Contains('NEWEST_LOG_ONLY')) {
+        throw 'An empty agent queue must print the stop instruction and the user queue, and exit 0.'
+    }
+    [IO.File]::WriteAllText($emptyStatus, $queuedStatus)
     @'
 ## D2 — two-hash card
 D2 BODY

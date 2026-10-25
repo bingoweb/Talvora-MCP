@@ -1103,6 +1103,33 @@ D-cards go to the top of the agent queue. Newest audit first.
 - **UI9:** the legacy imperative host is deleted (three files, `LegacyContentHost`, header/dashboard builders, legacy smoke asserts); source regressions now check the XAML views and the absence of the legacy files.
 - Evidence: clean-clone Full `68 kontrol, 0 hata` / `Hepsi geçti.` as the signed-in user; installation on the next deploy.
 
+### I1 — Install the current `main` and verify Q7, UI6b and UI9 on the installed runtime
+
+**Why:** Q7, UI6b and UI9 were delivered by Claude in `e6dd107` (Full gate and exact-commit GitHub CI 40200679502 green) but are not installed. The ChatGPT connectors still receive the old 304 KB `/mcp/dev` list until the installed service runs this code.
+
+**Files:** `docs/codex/STATUS.md` only. No source, test, script or evidence file changes. If any step below fails, do **not** fix code: write the failing step and the last 20 log lines into STATUS → "Findings for Claude", mark I1 `[~] live pending: <step>`, commit STATUS with `Card: I1`, push, and stop.
+
+**Do (exactly, in this order; repository = `C:\Users\tayla\Talvora-MCP`; the tree must be clean and `HEAD` = `origin/main`):**
+
+Step 1 — build the installer as the signed-in user, detached:
+`talvora_user_process_start {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-Command","& ./scripts/Build-Windows-Installer.ps1 *> artifacts/i1-build.log; exit $LASTEXITCODE"], workingDirectory: "C:\Users\tayla\Talvora-MCP", visible: false}`, then `talvora_tail_text {path: "C:\Users\tayla\Talvora-MCP\artifacts\i1-build.log", lineCount: 20}` every 60 s until the process has exited. Pass: the log contains `SourceCommit` equal to `git rev-parse HEAD` (no `-dirty-` suffix).
+
+Step 2 — deploy: `talvora_run_powershell {script: "pwsh -NoProfile -File scripts/Deploy-Windows-Installer.ps1", workingDirectory: "C:\Users\tayla\Talvora-MCP", timeoutSeconds: 1200, maxCapturedCharactersPerStream: 8000}`. Pass: its JSON `sourceCommit` = HEAD.
+
+Step 3 — `talvora_http_request {method: "GET", url: "http://127.0.0.1:7676/healthz"}` every 10 s (at most 30 tries) until `sourceCommit` = HEAD.
+
+Step 4 — Q7 on the installed service, as the signed-in user, detached:
+`talvora_user_process_start {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-Command","dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release -- --surface-policy-live http://127.0.0.1:7676 *> artifacts/i1-q7.log; exit $LASTEXITCODE"], workingDirectory: "C:\Users\tayla\Talvora-MCP", visible: false}`, then `talvora_tail_text {path: "C:\Users\tayla\Talvora-MCP\artifacts\i1-q7.log", lineCount: 20}` every 30 s until the process has exited. Pass: the log contains `TALVORA MCP SURFACE POLICY LIVE GREEN` and a line `Q7 tools/list bytes: full=… dev=… admin=…`; copy the three numbers into the Log entry.
+
+Step 5 — UI6b/UI9 on the installed tray, both themes, as the signed-in user, detached:
+`talvora_user_process_start {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-Command","& { $svc = Get-CimInstance Win32_Service | Where-Object Name -eq 'Talvora'; $tray = Join-Path (Split-Path -Parent (Split-Path -Parent $svc.PathName.Trim([char]34))) 'Tray/Talvora.Tray.exe'; $out = New-Item -ItemType Directory -Force -Path artifacts/i1; foreach ($theme in 'Gece','Gun') { $env:TALVORA_CONTROL_CENTER_SMOKE_THEME = $theme; $env:TALVORA_CONTROL_CENTER_PREVIEW_PNG = Join-Path $out.FullName ('cc-' + $theme + '.png'); $p = Start-Process $tray -ArgumentList '--control-center-smoke' -Wait -PassThru -WindowStyle Hidden; $theme + ' exit ' + $p.ExitCode } } *> artifacts/i1-cc.log"], workingDirectory: "C:\Users\tayla\Talvora-MCP", visible: false}`, then `talvora_tail_text {path: "C:\Users\tayla\Talvora-MCP\artifacts\i1-cc.log", lineCount: 20}` every 30 s until it has two lines. Pass: `Gece exit 0` and `Gun exit 0`, and `talvora_find_files {root: "C:\Users\tayla\Talvora-MCP\artifacts\i1", patterns: ["*ui6b-acl-notice*"], maxResults: 10}` returns at least one file for each theme.
+
+Step 6 — record: in STATUS tick `- [x] I1 — …` with the installed commit and the three Q7 numbers; Log entry (≤ 8 lines, executor = ChatGPT); "In progress: (none)". Commit with `talvora_git_run`: subject `chore(release): install Q7, UI6b and UI9`, trailer `Card: I1`. Push to `origin` and `github`. Check the exact-commit `windows-ci` run (CONTINUE PROTOCOL 10b).
+
+**Don't:** run the quality gate (no code changes), touch `C:\ProgramData\Talvora\Secrets`, run `scripts/Reset-And-Install.ps1`, stop the service by hand, edit any file other than STATUS, or attach PNGs anywhere (Claude reviews `artifacts/i1` locally).
+
+**Acceptance:** installed `/healthz.sourceCommit` = HEAD; Step 4 GREEN with `dev ≤ 153600` and `admin ≤ 56320`; Step 5 both themes exit 0 with the UI6b PNGs; I1 commit pushed; its `windows-ci` run green.
+
 ### Audit 2026-10-25 (22) · range `audit/2026-10-25-21 (bd39d73)..bc1a1f9` · 1 card commit · result: UI8 exact; agent queue empty — Q7, UI6b, UI9 wait for Claude's design
 
 Delivered: UI8 `bc1a1f9` (installed, CI green on the first attempt).
