@@ -1,31 +1,31 @@
-# Talvora Codex: Esnek gelistirme modu
+# Talvora Codex: Esnek geliştirme modu
 
-## Guvenilir gelistirici profili
+## Güvenilir geliştirici profili
 
-Talvora varsayilanda dengeli (balanced) profili kullanir. Isteyen kullanici
-talvora_codex_configure aracini defaultProfile=trusted ile bir kez calistirir.
-Sonraki Codex cagrilarinda sandbox=auto bu tercihe uyar. Trusted profilde
-Codex, oturum acmis Windows kullanicisinin sahip oldugu dosya ve ag
-izinlerini dogrudan kullanir. LocalSystem ya da yonetici yetkisi kazanmaz.
-talvora_codex_preferences araci aktif profili gosterir; defaultProfile=balanced
-ile onceki moda donulebilir. Secim kullanicinin LocalAppData altinda saklanir.
+Talvora varsayılanda dengeli (balanced) profili kullanır. İsteyen kullanıcı
+talvora_codex_configure aracını defaultProfile=trusted ile bir kez çalıştırır.
+Sonraki Codex çağrılarında sandbox=auto bu tercihe uyar. Trusted profilde
+Codex, oturum açmış Windows kullanıcısının sahip olduğu dosya ve ağ
+izinlerini dogrudan kullanır. LocalSystem ya da yönetici yetkisi kazanmaz.
+talvora_codex_preferences aracı aktif profili gösterir; defaultProfile=balanced
+ile önceki moda dönülebilir. Seçim kullanıcının LocalAppData altinda saklanır.
 
-NuGet gercek kabul testinde normal Codex sandbox'inda Schannel
-SEC_E_NO_CREDENTIALS goruldu; trusted modda HTTP 200 saglandi. Codex temiz
-yerel onbellege Newtonsoft.Json 13.0.3 indirip .NET 10 uygulamasini sifir
-hata ve sifir uyariyla derledi. Ayrica ripgrep 15.2.0 yüklendi ve Codex
-icinde rg komutunun calistigi goruldu.
+NuGet gerçek kabul testinde normal Codex sandbox'ında Schannel
+SEC_E_NO_CREDENTIALS görüldü; trusted modda HTTP 200 sağlandı. Codex temiz
+yerel önbelleğe Newtonsoft.Json 13.0.3 indirip .NET 10 uygulamasini sıfır
+hata ve sıfır uyarıyla derledi. Ayrıca ripgrep 15.2.0 yüklendi ve Codex
+içinde rg komutunun çalıştığı görüldü.
 
-## Arka plan gorevleri
+## Arka plan görevleri
 
-talvora_codex_start uzun gorevi baslatip hemen jobId dondurur. Baglanti
-kesildiginde, Talvora servisi calismaya devam ettikce gorev surer.
-talvora_codex_status ilerlemeyi, sessionId'yi, gecen sureyi, komut ve MCP
-araci sayilarini gosterir. Sonuc icin includeResult=true secilir.
-talvora_codex_list isleri listeler; talvora_codex_cancel islemi iptal eder.
-Saatler suren islerde JSONL olaylari ayri ve sinirli bir ilerleme kanalindan
-izlenir, uzun cikti nedeniyle sayaclar donmaz. Masaustu bildirimi ise gorev
-baslangicindan gercek bitis/iptal anina kadar tek is kaydi olarak kalir.
+talvora_codex_start uzun görevi başlatıp hemen jobId döndürür. Bağlantı
+kesildiğinde, Talvora servisi çalışmaya devam ettikçe görev sürer.
+talvora_codex_status ilerlemeyi, sessionId'yi, geçen süreyi, komut ve MCP
+aracı sayılarını gösterir. Sonuç için includeResult=true seçilir.
+talvora_codex_list işleri listeler; talvora_codex_cancel işlemi iptal eder.
+Saatler süren işlerde JSONL olayları ayrı ve sınırlı bir ilerleme kanalından
+izlenir, uzun çıktı nedeniyle sayaçlar donmaz. Masaüstü bildirimi ise görev
+başlangıcından gerçek bitiş/iptal anına kadar tek iş kaydı olarak kalır.
 
 Talvora hizmeti yeniden başlasa da görev kimlikleri, durumları ve sayaçları
 korunur. Aynı PID ve işlem başlangıç zamanı doğrulanan görevler `orphaned`
@@ -34,42 +34,42 @@ işlem ağacı güvenle sonlandırılarak iptal edilebilir. İki motor birlikte 
 4 etkin görevi destekler; aynı klasörde paralel çalışma için `allowParallel=true`
 gereklidir. Codex oturumuna `resumeSessionId` ile devam edilebilir.
 
-Talvora, Windows'ta oturum acmis kullanicinin Codex CLI kurulumunu ve giris
-bilgilerini kullanir. Codex normal kullanici haklariyla calisir.
+Talvora, Windows'ta oturum açmış kullanıcının Codex CLI kurulumunu ve giriş
+bilgilerini kullanır. Codex normal kullanıcı haklarıyla çalışır.
 
-## Varsayilan
+## Varsayılan
 
-- Model: gpt-6.1-sol; dusunme: medium.
-- sandbox=workspace-write: proje icinde kod yazar, test ve derleme yapar.
+- Model: gpt-6.1-sol; düşünme: medium.
+- sandbox=workspace-write: proje içinde kod yazar, test ve derleme yapar.
 - approvalMode=automatic: Codex --approve-for-me otomatik onay incelemesi.
-- networkAccess=true: workspace-write icin ag erisimi talep edilir.
-- preserveSession=true: oturum gecmisi korunur; sessionId yanitta doner.
-- allowNonGitWorkspace=true: Git deposu olmayan klasorlerde de calisir.
-- Tamamlanan komut ve MCP araci sayilari ile son calisma ozeti sunulur.
+- networkAccess=true: workspace-write için ağ erişimi talep edilir.
+- preserveSession=true: oturum geçmişi korunur; sessionId yanıtta döner.
+- allowNonGitWorkspace=true: Git deposu olmayan klasörlerde de çalışır.
+- Tamamlanan komut ve MCP aracı sayilari ile son çalışma özeti sunulur.
 
-## Bir goreve devam
+## Bir göreve devam
 
-Ilk cevabin sessionId degerini sonraki cagrida resumeSessionId olarak verin.
-Ayni workingDirectory kullanin. preserveSession=true olmali.
+İlk cevabın sessionId değerini sonraki çağrıda resumeSessionId olarak verin.
+Aynı workingDirectory kullanın. preserveSession=true olmalı.
 
-## Ek klasor ve genis yetki
+## Ek klasör ve geniş yetki
 
-additionalWritableDirectories listesine mutlak dizinler yazin.
-Bu parametre ilk oturumda gecerlidir, exec resume ile desteklenmez.
+additionalWritableDirectories listesine mutlak dizinler yazın.
+Bu parametre ilk oturumda geçerlidir, exec resume ile desteklenmez.
 
-Yalnizca istege bagli tek bir gorev icin sandbox=danger-full-access ve
-allowFullAccess=true secilebilir. Bu durumda Codex sandbox'i kalkar;
-Windows kullanicisi SYSTEM olmaz. Varsayilan mod daha kontrolludur.
+Yalnızca isteğe bağlı tek bir görev için sandbox=danger-full-access ve
+allowFullAccess=true seçilebilir. Bu durumda Codex sandbox'i kalkar;
+Windows kullanıcısı SYSTEM olmaz. Varsayılan mod daha kontrollüdür.
 
-## Daraltma secenekleri
+## Daraltma seçenekleri
 
-- sandbox=read-only: yalniz inceleme.
-- approvalMode=never: otomatik onayi kapat.
-- networkAccess=false: ag erisim istegini kapat.
+- sandbox=read-only: yalnız inceleme.
+- approvalMode=never: otomatik onayı kapat.
+- networkAccess=false: ağ erişim isteğini kapat.
 - preserveSession=false: tek seferlik, kaydedilmeyen oturum.
 
-## Test edilmis gelistirme davranisi
+## Test edilmiş geliştirme davranışı
 
-Gorev durumu, canli JSONL ilerlemesi ve iptal icin Talvora araclari
-bulunur. Balanced modda bazi Windows cache erisimlerinde sorun varsa
-trusted profil normal kullanici izinleriyle calismayi saglar.
+Görev durumu, canlı JSONL ilerlemesi ve iptal için Talvora araçları
+bulunur. Balanced modda bazı Windows cache erişimlerinde sorun varsa
+trusted profil normal kullanıcı izinleriyle çalışmayı sağlar.

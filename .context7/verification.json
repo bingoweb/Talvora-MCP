@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-25T08:12:42Z",
-  "scope": "Q2c/P-34: retain all three legacy text mutators because the approved replacement contracts do not preserve their options/output fields 1:1; add compiled-manifest validation of all README/ARCHITECTURE counts. No tool, surface, dependency or runtime behavior changed.",
+  "verifiedAtUtc": "2026-10-25T08:53:18Z",
+  "scope": "Q3/P-17: archive five historical Markdown files byte-identically, compact README and HANDOFF within the root 120000-byte budget, correct Turkish diacritics without sentence changes, and add an active-document local-link checker to the quality gate. No runtime or tool-catalog change.",
   "libraries": [
+    {
+      "libraryId": "/microsoftdocs/powershell-docs",
+      "verified": "2026-10-25 Q3: Context7 confirms Get-ChildItem -LiteralPath with -File/-Filter/-Recurse and Test-Path -LiteralPath avoid wildcard interpretation. Official Git git-mv documentation confirms index updates for renames; P-17 approves exactly four git mv operations, with the additional wildcard-matching audit TODO moved by canonical revision-checked patch. Official System.Uri.UnescapeDataString decodes local Markdown targets. Sources: https://git-scm.com/docs/git-mv ; https://learn.microsoft.com/en-us/dotnet/api/system.uri.unescapedatastring?view=net-10.0 ; https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Management/Get-ChildItem.md . New test checks root bytes and current HANDOFF length, then active Markdown inline/reference/image/HTML local links; frozen byte-identical archives retain historical relative-link context. RED root budget and four broken-link fixtures, GREEN real documents and five archive SHA-256 matches verified."
+    },
     {
       "libraryId": "/microsoftdocs/powershell-docs",
       "verified": "2026-10-25 Q2c: Context7 verifies Add-Type -Path loads an existing assembly and exposes its .NET types, while throw terminates a failing script. The regression compiles the exact canonical TalvoraToolManifest.cs and TalvoraMcpToolSurfacePolicy.cs using Add-Type -Path plus temporary global usings and /nullable:enable, then derives Full/Dev/Admin/Shared counts and validates Markdown count blocks with Regex.Matches. Official Add-Type documentation for PowerShell 7.6 and .NET 10 Regex.Matches were checked: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/add-type?view=powershell-7.6 and https://learn.microsoft.com/en-us/dotnet/api/system.text.regularexpressions.regex.matches?view=net-10.0 . Context7 /dotnet/docs UTF8Encoding guidance also verified the write_text mapping analysis; write_bytes exposes fileLength rather than the old length field, append_text additionally preserves encoding/newlines, and replace_text retains matching/backup results. Existing runtime contracts remain unchanged."
