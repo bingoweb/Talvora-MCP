@@ -122,10 +122,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## User queue
 
-- U12 — I1 kurulduktan sonra ChatGPT Business'ta Talvora Dev ve Admin bağlayıcılarını yenileyin; araç listesi küçüldü (Q7).
 - U11 — Tepsideki yeni Talvora ikonuna bakın (açık ve koyu görev çubuğunda); beğenmezseniz Claude'a söyleyin.
-
-- U10 — D21: attach artifacts/d21-live.png to Gitea #9 when connector approval is available (this session requires approval but policy is never). Deployment, live capture and exact-commit CI are complete; artifacts/d21-delivery.json records the evidence.
 
 - U8 — E2: live Codex MCP round-trip intentionally deferred under "do not use Codex". Unit, installed wire smoke and ChatGPT Dev connector will be checked without running Codex; nothing to do unless Codex use is reauthorized.
 - U7 — E1: optional live Codex MCP get and scratch read/patch verification is deferred by the user's "do not use Codex" instruction; no action is needed unless Codex use is reauthorized. Installer registration and ChatGPT connectors are verified independently.
@@ -161,6 +158,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-25 — U10 (executor: Codex; user explicitly asked to choose and continue a remaining item): attached preserved `artifacts/d21-live.png` to Gitea #9 comment 173; verified the published attachment and thumbnail in Chrome.
+  - Attachment: 938775 bytes; SHA-256 `3a085a994bbe6a158dac40b581c5a48c253434eb11f5f534728301a9e75766d2`; URL `http://127.0.0.1:3000/attachments/86d39c13-3337-415a-955d-59efdb0e3e3e`. Existing D21 deployment/CI evidence preserved.
+  - U12: user confirmed both ChatGPT Business Talvora connectors refreshed; removed completed U10/U12 reminders. No product, runtime or design changes.
+  - Signed-in Changed gate: 10 checks, 0 errors, last line "Hepsi geçti."; Context7 not applicable (evidence/status only).
+  - I1 predecessor `b8ecbf8` windows-ci 40203947659 success reverified; I1 remains `[~]` for Claude per its card. One STATUS-only U10 commit; both pushes and one exact-commit CI check follow.
 
 - 2026-10-25 — I1 (executor: Codex via Talvora): installed clean main `3b3e7fd74fe8ed2c8cb1d65d6c8c1a93bbbf5b7d`; installer SourceCommit and live `/healthz.sourceCommit` match.
   - Q7 installed smoke: `TALVORA MCP SURFACE POLICY LIVE GREEN`; full/dev/admin = 337555/146094/51590 B (Dev <=153600; Admin <=56320).
