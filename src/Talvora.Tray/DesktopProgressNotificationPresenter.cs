@@ -61,7 +61,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         new();
     // N3b sends a code preview once per change; later frames carry only its id.
     private readonly DesktopProgressCodeState _codeState = new();
-    private readonly WorklogHistoryStore _historyStore = new();
+    private readonly WorklogHistoryStore _historyStore;
     private Task _placementSaveTask = Task.CompletedTask;
     private bool _isPinned;
     private int _anchorLeftPixels;
@@ -74,9 +74,11 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
 
     public DesktopProgressNotificationPresenter(
         ControlCenterApplication application,
-        string? placementPath = null)
+        string? placementPath = null,
+        WorklogHistoryStore? historyStore = null)
     {
         _application = application;
+        _historyStore = historyStore ?? new WorklogHistoryStore();
         _placementPath = string.IsNullOrWhiteSpace(placementPath)
             ? PlacementPath
             : Path.GetFullPath(placementPath);
@@ -146,6 +148,16 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         {
             TrayLog.Write("Worklog history persistence failed", ex);
         }
+
+        var preferences = SettingsPreferencesStore.Current;
+        if (preferences.QuietMode ||
+            (preferences.FailureAndAgentOnly &&
+             message.Kind != DesktopProgressKind.Failed &&
+             message.WorklogFrame?.Header.ActorName is not ("Codex" or "Claude")))
+        {
+            return;
+        }
+
         if (_presentationState.Evaluate(message) !=
             DesktopProgressPresentationDecision.Accept)
         {
@@ -214,7 +226,16 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             window.ApplyPreferredSize(_preferredWidthDip, _preferredHeightDip);
         }
 
-        window.Update(frame, _codeState.CodeChangedUtc, Worklog.WorklogDetails.From(message));
+        var displayFrame = preferences.ShowCodePreview ? frame :
+            frame with
+            {
+                Evidence = frame.Evidence is { } evidence
+                    ? evidence with { CodePreview = null }
+                    : null,
+            };
+        window.Update(displayFrame,
+            preferences.ShowCodePreview ? _codeState.CodeChangedUtc : null,
+            Worklog.WorklogDetails.From(message));
 
         if (!window.IsVisible)
         {

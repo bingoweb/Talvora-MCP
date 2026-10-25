@@ -68,6 +68,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
     public TrayApplicationContext(ControlCenterApplication controlCenterApplication)
     {
         _controlCenterApplication = controlCenterApplication;
+        SettingsPreferencesStore.Initialize(smokeMode: false);
         _desktopProgressPresenter =
             new DesktopProgressNotificationPresenter(
                 _controlCenterApplication);

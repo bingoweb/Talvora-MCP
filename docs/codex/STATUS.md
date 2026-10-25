@@ -113,7 +113,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI4 — Services list + detail (installed 355af6d, 250 tools, installed smoke and four theme PNGs green; Full 66/0; GitHub windows-ci 40111604160 attempt 2 success)
 - [x] UI5 — Events + raw log (installed 12d26e2, signed-in Full 66/0, installed smoke and both-theme PNGs green; exact-commit GitHub windows-ci 40172535096 success; Gitea #9 comment 161; artifacts/ui5-delivery.json)
 - [x] UI6 — Settings and setup stepper (P-37; installed 914f15a, Full 68/0, installed Gece/Gün smoke PNGs; exact-commit GitHub CI 40183484149 success; user U11 confirmed working on 2026-10-25)
-- [ ] N8 — Notification settings (P-39 decided: exact Bildirimler contract in DESIGN-WORKLOG N8)
+- [~] N8 — Notification settings (P-39, signed-in Full 68/0 and both-theme smoke passed; exact-commit install and GitHub CI verification pending)
 - [ ] UI7 — Tray menu, tooltip, Hakkında (P-40 decided: worklog identity already satisfied; no visual-theme file)
 - [?] UI8 — Polish, accessibility, cleanup, screenshots (waiting for N8 and UI7)
 
@@ -157,6 +157,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-25 — N8 (executor: ChatGPT via Talvora; P-39): approved Bildirimler card and three persisted toggles (defaults on/off/off); history always precedes display filtering, and existing visible cards are untouched until the next message.
+  - Test first RED: missing N8 preference properties and presenter injection; isolated real STA presenter regression GREEN for all three toggles, Codex/Claude/failure-only and suppressed terminal history.
+  - Signed-in Changed 27/0 and Full 68/0, Hepsi geçti.; Context7 /lepoco/wpfui and /dotnet/wpf.
+  - Source Gece/Gun/settings N8 PNGs under artifacts/n8; Control Center smoke GREEN.
+  - Supporting files: tray startup loads stored settings; UI6 smoke captures N8 controls; test runs isolated because WPF permits only one Application per process.
+  - Installer deployment, live checks and exact-commit GitHub windows-ci follow commit.
 - 2026-10-25 — Q1 (executor: ChatGPT via Talvora; P-36/P-38): published approved Turkish Tool.Title and annotation titles; capped host descriptions at 220 chars without editing tool schemas or capability hints.
   - Test first RED (N9: seven orphan titles), then removed all seven; manifest subset and all live title contracts added to regression.
   - Signed-in Changed 16/0 and Full 68/0, Hepsi geçti.; Context7 /modelcontextprotocol/csharp-sdk Tool/ListToolsResult/ToolAnnotations verified.

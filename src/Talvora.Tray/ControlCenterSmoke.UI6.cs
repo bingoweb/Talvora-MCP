@@ -28,5 +28,22 @@ internal static partial class ControlCenterSmoke
             throw new InvalidOperationException("UI6 setup inputs are not accessible.");
 
         SaveVisualSnapshotIfRequested(window, "ui6-settings-" + theme);
+
+        var approved = new[]
+        {
+            ("CodePreviewSetting", "Kod önizlemesini kartta göster", true),
+            ("FailureAgentSetting", "Yalnızca hatalar ve ajan işleri için kart göster", false),
+            ("QuietModeSetting", "Sessiz mod", false),
+        };
+        foreach (var (name, label, expected) in approved)
+        {
+            if (settings.FindName(name) is not Wpf.Ui.Controls.ToggleSwitch toggle ||
+                toggle.IsChecked != expected ||
+                AutomationProperties.GetName(toggle) != label)
+                throw new InvalidOperationException("N8 notification control contract failed: " + name);
+        }
+        ((FrameworkElement)settings.FindName("QuietModeSetting")).BringIntoView();
+        window.UpdateLayout();
+        SaveVisualSnapshotIfRequested(window, "n8-notifications-" + theme);
     }
 }

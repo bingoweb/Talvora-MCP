@@ -45,6 +45,9 @@ internal sealed partial class SettingsView : System.Windows.Controls.UserControl
         _syncingSelections = true;
         MotionSetting.SelectedIndex = (int)Model.Preferences.Motion;
         RailSetting.SelectedIndex = (int)Model.Preferences.Rail;
+        CodePreviewSetting.IsChecked = Model.Preferences.ShowCodePreview;
+        FailureAgentSetting.IsChecked = Model.Preferences.FailureAndAgentOnly;
+        QuietModeSetting.IsChecked = Model.Preferences.QuietMode;
         _syncingSelections = false;
     }
 
@@ -68,5 +71,20 @@ internal sealed partial class SettingsView : System.Windows.Controls.UserControl
         await SettingsPreferencesStore.SetAsync(next);
         Model.Preferences = next;
         if (ReferenceEquals(source, RailSetting)) _applyRail(next.Rail);
+    }
+
+    private async void OnNotificationToggleChanged(object sender, RoutedEventArgs e)
+    {
+        if (_syncingSelections || sender is not Wpf.Ui.Controls.ToggleSwitch source)
+            return;
+
+        var current = SettingsPreferencesStore.Current;
+        var next = ReferenceEquals(source, CodePreviewSetting)
+            ? current with { ShowCodePreview = source.IsChecked == true }
+            : ReferenceEquals(source, FailureAgentSetting)
+                ? current with { FailureAndAgentOnly = source.IsChecked == true }
+                : current with { QuietMode = source.IsChecked == true };
+        await SettingsPreferencesStore.SetAsync(next);
+        Model.Preferences = next;
     }
 }

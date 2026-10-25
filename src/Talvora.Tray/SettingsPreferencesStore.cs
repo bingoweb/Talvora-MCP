@@ -9,6 +9,10 @@ internal enum SettingsRailPreference { Automatic, Collapsed, Expanded }
 
 internal sealed record SettingsPreferences(SettingsMotionPreference Motion, SettingsRailPreference Rail)
 {
+    public bool ShowCodePreview { get; init; } = true;
+    public bool FailureAndAgentOnly { get; init; }
+    public bool QuietMode { get; init; }
+
     public static SettingsPreferences Default { get; } =
         new(SettingsMotionPreference.System, SettingsRailPreference.Automatic);
 }

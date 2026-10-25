@@ -14,6 +14,11 @@ internal static partial class Program
 {
     public static async Task<int> Main()
     {
+        if (Environment.GetCommandLineArgs().Contains("--n8-only", StringComparer.Ordinal))
+        {
+            await AssertN8NotificationsAsync();
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--ui6-only", StringComparer.Ordinal))
         {
             await AssertUi6SettingsAsync();
@@ -56,6 +61,7 @@ internal static partial class Program
         await AssertN2ProjectSessionsAsync();
         await AssertN3FactsAsync();
         await AssertN9SubjectsAsync();
+        await AssertN8NotificationsInChildAsync();
         await AssertN10ChangesAsync();
         await AssertRemotionWorklogAsync();
         AssertN6Details();
