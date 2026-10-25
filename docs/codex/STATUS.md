@@ -104,16 +104,16 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D22 — Atomic publish survives a simultaneous writer (installed 5752edd, native smoke green; RED 3/3, GREEN 5/5, signed-in Full 66/0; exact-commit GitHub windows-ci 40173901424 attempt 2 success; artifacts/d22-delivery.json)
 - [x] Q2c — Legacy text mutators removed where 1:1 + manifest-driven README count test (P-34: all three retained without a 1:1 contract; signed-in Full 67/0; installed 250/213/88 match README; exact-commit GitHub CI 40176376505 success; artifacts/q2c-delivery.json)
 - [?] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (waiting for Claude: P-36; 255781 bytes without tool descriptions exceeds 120 KB)
-- [~] Q3 — Documentation diet (P-17; root 119650 bytes, 13-line HANDOFF, five byte-identical archives, links/counts green; signed-in Full 68/0; exact-commit CI pending; artifacts/q3-delivery.json)
+- [x] Q3 — Documentation diet (P-17; root 119650 bytes, 13-line HANDOFF, five byte-identical archives, links/counts green; signed-in Full 68/0; exact-commit GitHub CI 40178792915 success; artifacts/q3-delivery.json)
 - [~] UI2 — Shell, rail, title bar, command palette (P-33 implemented; signed-in Full 66/0 and both source themes green; exact-commit delivery evidence artifacts/ui2-delivery.json; U5 mixed-DPI placement and Claude visual audit pending)
 - [x] N7 — "Çalışma günlüğü" history page (7d/2,000/20MB, terminal-only, session filters/details; installed 94e4079 smoke success; GitHub CI 40101364855 attempt 2 success)
 - [x] UI3 — Overview: Nabız ring + chain strip (installed 6d12e65, 250 tools, full source and installed smoke/Gece/Gun PNGs; signed-in Full 66/0; GitHub windows-ci 40104570857 success; remaining idle CPU polish tracked under UI8)
 - [x] UI4 — Services list + detail (installed 355af6d, 250 tools, installed smoke and four theme PNGs green; Full 66/0; GitHub windows-ci 40111604160 attempt 2 success)
 - [x] UI5 — Events + raw log (installed 12d26e2, signed-in Full 66/0, installed smoke and both-theme PNGs green; exact-commit GitHub windows-ci 40172535096 success; Gitea #9 comment 161; artifacts/ui5-delivery.json)
-- [ ] UI6 — Settings + setup stepper (+ deferred S3 ACL notice, to be specified)
-- [ ] N8 — Notification settings
-- [ ] UI7 — Tray icon/menu, worklog colour alignment, About
-- [ ] UI8 — Polish, accessibility, cleanup, screenshots
+- [?] UI6 — Settings + setup stepper (+ deferred S3 ACL notice, to be specified; waiting for Claude: P-37)
+- [?] N8 — Notification settings (waiting for UI6 Settings view)
+- [?] UI7 — Tray icon/menu, worklog colour alignment, About (waiting for UI6 Settings view)
+- [?] UI8 — Polish, accessibility, cleanup, screenshots (waiting for UI6, N8 and UI7)
 
 ## User queue
 
@@ -155,6 +155,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-25 — UI6 (executor: ChatGPT via Talvora): no production change; P-37 asks Claude for missing stepper copy/state, S3 ACL notice behavior and About ownership.
+  - N8/UI7/UI8 depend on UI6 Settings; marked waiting without implementing later cards.
+  - Signed-in baseline Changed gate: 8 checks, 0 failures, Hepsi geçti. Q3 exact-commit GitHub windows-ci 40178792915 success.
+  - Installer/runtime unchanged. Resume UI6 after Claude decides P-37.
 
 - 2026-10-25 — Q3 (executor: ChatGPT via Talvora, P-17): archived the historical handoff, bug audit, Control Center TODO and both 2026-10-09 audit files unchanged; short current-state HANDOFF points to STATUS.
   - Five archive SHA-256 hashes match originals. Four git mv operations use the explicit P-17 exception; the additional wildcard-matching audit TODO uses canonical revision-checked patch move. Git recorded 100% rename similarity before the new handoff was added.

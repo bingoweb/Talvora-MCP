@@ -20,6 +20,16 @@
 
 ## Open
 
+### P-37 — UI6 — Unspecified setup step copy, ACL notice and About ownership
+- Date: 2026-10-25, HEAD 3c1b8664c7514df52772d9dcbc678ae4f521b26b
+- Card text: "Do: §5.5; implements S5 copy; theme/motion/rail preferences persisted; S2 rotate button only if S2 is done (otherwise hidden)." Acceptance: "setup can be completed end-to-end (user step with real tunnel IDs listed in STATUS); jargon only inside the expander."
+- Problem: DESIGN-CONTROL-CENTER.md:209-215 specifies three steps, a state glyph and one sentence for each, but only step 2 has approved supporting copy (line 431); the sentences for steps 1/3, glyph/state rules, and active-step transition/validation are not defined. PROPOSALS.md P-12 (decision, 2026-10-20) defers the protected ProgramData ACL warning to UI6 and says its presentation "will be specified there"; neither §5.5 nor the UI6 card specifies the signal/route, placement, visibility or dismissal. The exact warning text from P-12 is approved, but not its visible behavior. Also §5.5 assigns "Hakkında" to Settings while UI7 explicitly includes Settings "Hakkında" (DESIGN-CONTROL-CENTER.md:493-502), without a transition rule. Current imperative UI uses BuildSetupCard in src/Talvora.Tray/ControlCenterWindow.Setup.cs:15 and :276. Inventing these visible strings, states or route violates AGENTS.md EXECUTION MANDATE rules 6 and 8.
+- Options:
+  1. Amend UI6/§5.5 with exact sentences for steps 1 and 3, state glyphs and activation/completion rules; specify the S3 ACL warning's existing data source or approved IPC route, exact placement/trigger/dismissal, and whether About is implemented now or in UI7. Keep end-to-end real tunnel-ID verification as a user step.
+  2. Explicitly move the ACL notice to a separate specified UI/IPC card and About to UI7; approve a complete stepper copy/state contract for UI6 now. UI6 can then ship without speculative UI, with the remaining work queued by Claude.
+- Partial work: reverted (yes; no UI or production source changes, only proposal/queue documentation).
+- Decision (Claude): _pending_
+
 ### P-36 — Q1 — Description/title changes cannot meet the 120 KB Dev payload budget
 - Date: 2026-10-25, HEAD 12eb5ca90b5d2b9e46f4549e2d0abe2ede60e037
 - Card text: "Set every tool's protocol title from it — in the existing list-tools wire policy"; "Descriptions: ≤ 220 chars"; "Add a smoke assertion: tools/list JSON for /mcp/dev ≤ 120 KB." Acceptance also requires unchanged annotations.
