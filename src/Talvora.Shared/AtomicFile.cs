@@ -173,26 +173,40 @@ public static class AtomicFile
         stream.Flush(flushToDisk: true);
     }
 
+    // Bounded retries when another writer publishes or replaces the same file at the same moment (two
+    // Talvora.Tray processes, or parallel refreshes): the first attempt that wins publishes (D22).
+    private const int PublishAttempts = 8;
+
     private static string? PublishDurable(
         string sourcePath,
         string destinationPath,
         string? backupPath)
     {
-        if (File.Exists(destinationPath))
+        for (var attempt = 1; ; attempt++)
         {
-            File.Replace(
-                sourcePath,
-                destinationPath,
-                backupPath,
-                ignoreMetadataErrors: false);
-            return backupPath;
-        }
+            try
+            {
+                if (File.Exists(destinationPath))
+                {
+                    File.Replace(
+                        sourcePath,
+                        destinationPath,
+                        backupPath,
+                        ignoreMetadataErrors: false);
+                    return backupPath;
+                }
 
-        MoveDurable(
-            sourcePath,
-            destinationPath,
-            replaceExisting: false);
-        return null;
+                MoveDurable(
+                    sourcePath,
+                    destinationPath,
+                    replaceExisting: false);
+                return null;
+            }
+            catch (IOException) when (attempt < PublishAttempts && File.Exists(sourcePath))
+            {
+                Thread.Sleep(10 * attempt);
+            }
+        }
     }
 
     private static void MoveDurable(

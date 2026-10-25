@@ -101,7 +101,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D21 — Worklog card: hanging indents, one text edge, no imitation window buttons (installed 5b57960, previews 10/10, live capture, CI 40093271827; Gitea attachment waived — connector approval unavailable, audit 16)
 - [~] TI1 — Tray icon "Altıgen-T" (reference hashes 3/3, source and installed previews 25/25, Full 66/0; installed d3925fb and CI 40094172485 success verified; only user visual answer under U9 pending)
 - [-] Q2b — Config get/set/delete consolidation (withdrawn by P-32; the 18 format tools stay)
-- [ ] D22 — Atomic publish survives a simultaneous writer (audit 2026-10-24 (17); after UI5)
+- [~] D22 — Atomic publish survives a simultaneous writer (exact code/reference; RED 3/3, GREEN 5/5, signed-in Full 66/0; live pending: exact-commit installer/deploy, installed smoke and GitHub CI; artifacts/d22-delivery.json)
 - [ ] Q2c — Legacy text mutators removed where 1:1 + manifest-driven README count test (P-34 decided: no numeric ceilings; 120 KB budget moves to Q1)
 - [?] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (waiting for Q2c; amended by P-32)
 - [?] Q3 — Documentation diet (P-17; waiting for Q2c)
@@ -109,7 +109,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] N7 — "Çalışma günlüğü" history page (7d/2,000/20MB, terminal-only, session filters/details; installed 94e4079 smoke success; GitHub CI 40101364855 attempt 2 success)
 - [x] UI3 — Overview: Nabız ring + chain strip (installed 6d12e65, 250 tools, full source and installed smoke/Gece/Gun PNGs; signed-in Full 66/0; GitHub windows-ci 40104570857 success; remaining idle CPU polish tracked under UI8)
 - [x] UI4 — Services list + detail (installed 355af6d, 250 tools, installed smoke and four theme PNGs green; Full 66/0; GitHub windows-ci 40111604160 attempt 2 success)
-- [~] UI5 — Events + raw log (audit 18 amendments implemented; UI5 RED-to-GREEN, signed-in Full 66/0 including both-theme WPF smoke; live pending: exact-commit installer, installed smoke/PNGs and GitHub CI; delivery evidence artifacts/ui5-delivery.json)
+- [x] UI5 — Events + raw log (installed 12d26e2, signed-in Full 66/0, installed smoke and both-theme PNGs green; exact-commit GitHub windows-ci 40172535096 success; Gitea #9 comment 161; artifacts/ui5-delivery.json)
 - [ ] UI6 — Settings + setup stepper (+ deferred S3 ACL notice, to be specified)
 - [ ] N8 — Notification settings
 - [ ] UI7 — Tray icon/menu, worklog colour alignment, About
@@ -153,6 +153,15 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-25 — D22 (executor: ChatGPT via Talvora): applied the literal eight-attempt IOException retry to AtomicFile.PublishDurable; MoveDurable, staged names, flush and backup behavior unchanged.
+  - Test first: --without-semantic RED 3/3 at atomic-publish-concurrent-first-writers; after the fix GREEN 5/5 with TALVORA SOURCE EDIT CORE REGRESSION GREEN. Each scenario exercises 150 rounds with four writers.
+  - Verbatim reference normalized SHA-256: 0037718d34bed436921431844d8b9887072d15e8b50eb510b0729d70985aff18.
+  - Signed-in Full gate as MSI\tayla: 66 checks, 0 failures, exit 0, final line "Hepsi geçti."; artifacts/d22-full.log and d22-{red,green}-summary.json.
+  - Context7 /dotnet/docs plus official .NET 10 File.Replace and Win32 MoveFileExW documentation verified; no dependencies, public API or UI changes.
+  - Supporting STATUS reconciliation: UI5 installed 12d26e2, smoke/themes complete, exact-commit CI 40172535096 success and Gitea #9 comment 161 verified.
+  - Delivery follows this single commit: exact-HEAD installer/deploy, installed-runtime smoke and GitHub windows-ci; keep [~] until verified. Final evidence: artifacts/d22-delivery.json and Gitea #9.
+
 
 - 2026-10-25 — UI5 (executor: ChatGPT via Talvora): replaced the legacy event panel with the §5.4 day-grouped timeline, category/service/search filters and visible-only 2-second raw-log tail.
   - Audit 18 amendments: no empty result during loading; approved seven-day/filtered empty copy; service-free events have no pill; lifecycle includes operation and startup. EvidencePanel displays/copies redacted text.
