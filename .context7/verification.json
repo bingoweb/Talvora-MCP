@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-25T09:18:49Z",
-  "scope": "Q3/P-17: archive five historical Markdown files byte-identically, compact README and HANDOFF within the root 120000-byte budget, correct Turkish diacritics without sentence changes, and add an active-document local-link checker to the quality gate. No runtime or tool-catalog change.",
+  "verifiedAtUtc": "2026-10-25T10:01:39Z",
+  "scope": "UI6/P-37: replace the legacy setup banner with the approved three-step Settings page; persist theme, motion and rail choices per user; retain the transient S5 admin key behavior and create both-theme WPF smoke PNG evidence.",
   "libraries": [
+    {
+      "libraryId": "/dotnet/wpf",
+      "verified": "2026-10-25 UI6: Context7 official FrameworkElement.DataContextProperty is inheritable and has OnDataContextChanged callbacks; WPF UserControl XAML DataContext bindings update the approved three-step states on ObservableObject notifications, while collapsed elements drop out of UI Automation. Source: https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/FrameworkElement.cs ."
+    },
+    {
+      "libraryId": "/websites/learn_microsoft_en-us_dotnet_communitytoolkit_mvvm",
+      "verified": "2026-10-25 UI6: official CommunityToolkit.Mvvm ObservableObject.SetProperty raises PropertyChanged, and OnPropertyChanged(nameof(...)) updates derived binding properties. The thin SettingsViewModel follows these APIs, without WPF types. Source: https://learn.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/observableobject ."
+    },
     {
       "libraryId": "/microsoftdocs/powershell-docs",
       "verified": "2026-10-25 Q3: Context7 confirms Get-ChildItem -LiteralPath with -File/-Filter/-Recurse and Test-Path -LiteralPath avoid wildcard interpretation. Official Git git-mv documentation confirms index updates for renames; P-17 approves exactly four git mv operations, with the additional wildcard-matching audit TODO moved by canonical revision-checked patch. Official System.Uri.UnescapeDataString decodes local Markdown targets. Sources: https://git-scm.com/docs/git-mv ; https://learn.microsoft.com/en-us/dotnet/api/system.uri.unescapedatastring?view=net-10.0 ; https://github.com/microsoftdocs/powershell-docs/blob/main/reference/7.7/Microsoft.PowerShell.Management/Get-ChildItem.md . New test checks root bytes and current HANDOFF length, then active Markdown inline/reference/image/HTML local links; frozen byte-identical archives retain historical relative-link context. RED root budget and four broken-link fixtures, GREEN real documents and five archive SHA-256 matches verified."

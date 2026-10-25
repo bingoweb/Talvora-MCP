@@ -112,12 +112,14 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI3 — Overview: Nabız ring + chain strip (installed 6d12e65, 250 tools, full source and installed smoke/Gece/Gun PNGs; signed-in Full 66/0; GitHub windows-ci 40104570857 success; remaining idle CPU polish tracked under UI8)
 - [x] UI4 — Services list + detail (installed 355af6d, 250 tools, installed smoke and four theme PNGs green; Full 66/0; GitHub windows-ci 40111604160 attempt 2 success)
 - [x] UI5 — Events + raw log (installed 12d26e2, signed-in Full 66/0, installed smoke and both-theme PNGs green; exact-commit GitHub windows-ci 40172535096 success; Gitea #9 comment 161; artifacts/ui5-delivery.json)
-- [ ] UI6 — Settings and setup stepper (P-37 decided: exact stepper contract; ACL notice → UI6b; Hakkında → UI7)
+- [~] UI6 — Settings and setup stepper (P-37 implemented; signed-in Changed 29/0 and Full 68/0; Gece/Gün source smoke PNGs; exact-commit install/CI and U11 real-ID acceptance pending)
 - [?] N8 — Notification settings (waiting for UI6 Settings view)
 - [?] UI7 — Tray icon/menu, worklog colour alignment, About (waiting for UI6 Settings view)
 - [?] UI8 — Polish, accessibility, cleanup, screenshots (waiting for UI6, N8 and UI7)
 
 ## User queue
+
+- U11 — UI6: In Ayarlar ve kurulum, verify the three-step flow with the real tunnel registration IDs for talvora-dev and talvora-admin, completing any missing tunnel IDs and checking that the card ends with "Kurulum tamam." Do not record or share an Admin API key.
 
 - U9 — Tepsideki yeni Talvora ikonuna bakın (açık ve koyu görev çubuğunda); beğenmezseniz Claude'a söyleyin.
 
@@ -157,6 +159,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-25 — UI6 (executor: ChatGPT via Talvora, P-37): SettingsView/StepperCard XAML and thin ViewModel replace the legacy setup banner; active-only tunnel/admin inputs, transient S5 key, 3 exact step states; no UI6b ACL notice or UI7 About.
+  - Test first RED (missing UI6 model), then UI6_SETTINGS_GREEN; signed-in Changed 29/0 and Full 68/0, Hepsi geçti.; Control Center WPF smoke GREEN.
+  - Theme, motion and rail preferences persisted per user; live rail and chain-motion bindings; existing setup service and secure key clearing preserved.
+  - Source Gece/Gün PNGs: artifacts/ui6/preview-ui6-settings-initial.png and preview-ui6-settings-alternate.png; earlier baseline artifacts/ui2-before.png retained.
+  - Context7 /dotnet/wpf and /websites/learn_microsoft_en-us_dotnet_communitytoolkit_mvvm; design gaps filled: none (approved tokens only).
+  - Supporting files: shell routing, ChainView motion, settings store, smoke and UI6 regression; exact-commit installed runtime, CI and user U11 real-ID acceptance await delivery.
+
 - 2026-10-25 — Q1 (executor: ChatGPT via Talvora): blocked by P-38, unrelated N7 Full-gate parallel timing; no Q1 source or test change committed.
   - Test-first RED: apply_patch description 387 > 220; temporarily prepared 250 descriptions (mean 133, max 217), approved tool titles and seven orphan removals; signed-in Changed 16/0, Hepsi geçti.
   - Signed-in Full: 61 checks, 1 failure (Notification N7 best-of-three 335 ms vs 300 ms, concurrent SourceEditSemantic 82.2 s); isolated N7 92 ms GREEN.

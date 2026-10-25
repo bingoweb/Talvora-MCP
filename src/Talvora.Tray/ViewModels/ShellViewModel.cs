@@ -25,6 +25,7 @@ internal sealed class ShellViewModel : ObservableObject
     private int _selectedIndex;
     private bool _isRailExpanded;
     private bool? _manualExpanded;
+    private double _viewportWidth;
     private string _paletteQuery = string.Empty;
     private int? _attentionCount;
     private IReadOnlyList<ShellCommand> _serviceCommands = [];
@@ -113,8 +114,22 @@ internal sealed class ShellViewModel : ObservableObject
         return true;
     }
 
-    public void UpdateViewportWidth(double width) =>
+    public void UpdateViewportWidth(double width)
+    {
+        _viewportWidth = width;
         IsRailExpanded = _manualExpanded ?? width >= 1360;
+    }
+
+    internal void SetRailPreference(SettingsRailPreference preference)
+    {
+        _manualExpanded = preference switch
+        {
+            SettingsRailPreference.Collapsed => false,
+            SettingsRailPreference.Expanded => true,
+            _ => null,
+        };
+        UpdateViewportWidth(_viewportWidth);
+    }
 
     public void SetServiceCommands(IEnumerable<ShellCommand> commands)
     {

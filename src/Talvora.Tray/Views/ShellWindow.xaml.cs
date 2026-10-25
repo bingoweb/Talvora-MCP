@@ -14,6 +14,8 @@ internal sealed partial class ShellWindow
 {
     private ShellViewModel? _shellModel;
     private WorklogHistoryView? _historyView;
+    private SettingsView? _settingsView;
+    private SettingsViewModel? _settingsModel;
     private bool _syncingShellNavigation;
     private bool _syncingShellTheme;
     private System.Diagnostics.Stopwatch? _shellFirstPaint;
@@ -37,6 +39,7 @@ internal sealed partial class ShellWindow
         ShellRoot.Background = BackgroundBrush;
         _windowTitleBar = ShellTitleBar;
         _shellModel = new ShellViewModel(RefreshDashboardAsync);
+        _shellModel.SetRailPreference(SettingsPreferencesStore.Current.Rail);
         DataContext = _shellModel;
         _shellModel.PropertyChanged += OnShellModelChanged;
         _shellModel.UpdateViewportWidth(Width);
@@ -88,12 +91,13 @@ internal sealed partial class ShellWindow
             items[index].IsChecked = index == _shellModel.SelectedIndex;
         _syncingShellNavigation = false;
         var selected = _shellModel.SelectedIndex;
-        LegacyContentHost.Visibility = selected is 0 or 1 or 2 or 3 or 4 ? Visibility.Collapsed : Visibility.Visible;
+        LegacyContentHost.Visibility = Visibility.Collapsed;
         OverviewContentHost.Visibility = selected == 0 ? Visibility.Visible : Visibility.Collapsed;
         ServicesContentHost.Visibility = selected == 1 ? Visibility.Visible : Visibility.Collapsed;
         HistoryContentHost.Visibility = selected == 2 ? Visibility.Visible : Visibility.Collapsed;
         ChainContentHost.Visibility = selected == 3 ? Visibility.Visible : Visibility.Collapsed;
         EventsContentHost.Visibility = selected == 4 ? Visibility.Visible : Visibility.Collapsed;
+        SettingsContentHost.Visibility = selected == 5 ? Visibility.Visible : Visibility.Collapsed;
         PlaceholderCard.Visibility = Visibility.Collapsed;
         if (selected is 0 or 3)
         {
@@ -120,8 +124,12 @@ internal sealed partial class ShellWindow
         switch (selected)
         {
             case 5:
-                ShowDashboard();
-                if (_setupCard.Visibility == Visibility.Visible) _setupCard.BringIntoView();
+                _settingsView ??= new SettingsView(_settingsModel!, _setupCard,
+                    preference => _shellModel.SetRailPreference(preference),
+                    SynchronizeShellThemeChoice);
+                SettingsContentHost.Content = _settingsView;
+                _settingsView.SynchronizeTheme();
+                RefreshSetupCard();
                 break;
         }
     }
@@ -251,5 +259,6 @@ internal sealed partial class ShellWindow
     {
         if (_syncingShellTheme || _shellModel is null || ThemeChoice.SelectedIndex < 0) return;
         await TalvoraThemeManager.SetPreferenceAsync((TalvoraThemePreference)ThemeChoice.SelectedIndex);
+        _settingsView?.SynchronizeTheme();
     }
 }

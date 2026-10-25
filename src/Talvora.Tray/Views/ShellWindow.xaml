@@ -99,6 +99,8 @@
                                 HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
                 <ContentControl x:Name="EventsContentHost" Visibility="Collapsed"
                                 HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                <ContentControl x:Name="SettingsContentHost" Visibility="Collapsed"
+                                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
                 <Border x:Name="PlaceholderCard" Background="{DynamicResource Tv.Surface}"
                         BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1" CornerRadius="{DynamicResource Tv.Radius.L}"
                         Margin="24" Padding="24" MaxWidth="560" HorizontalAlignment="Left" VerticalAlignment="Top"

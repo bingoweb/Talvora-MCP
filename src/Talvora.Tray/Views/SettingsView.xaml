@@ -1,0 +1,67 @@
+<UserControl x:Class="Talvora.Tray.Views.SettingsView" x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{DynamicResource Tv.Bg}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="24" MaxWidth="1360">
+            <TextBlock Text="Ayarlar ve kurulum" Style="{StaticResource Tv.Type.Title}"
+                       Margin="0,0,0,24" />
+            <TextBlock Text="Kurulum" Style="{StaticResource Tv.Type.BodyStrong}"
+                       Margin="0,0,0,12" />
+            <ContentControl x:Name="SetupHost" HorizontalContentAlignment="Stretch"
+                            Margin="0,0,0,24" />
+            <Border Background="{DynamicResource Tv.Surface}"
+                    BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
+                    CornerRadius="{StaticResource Tv.Radius.L}" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="Görünüm" Style="{StaticResource Tv.Type.BodyStrong}"
+                               Margin="0,0,0,16" />
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="220" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Tema" Style="{StaticResource Tv.Type.Body}"
+                                   VerticalAlignment="Center"/>
+                        <ComboBox x:Name="ThemeSetting" Grid.Column="1" MinHeight="32"
+                                  AutomationProperties.Name="Tema"
+                                  SelectionChanged="OnChoiceChanged">
+                            <ComboBoxItem Content="Sistem" />
+                            <ComboBoxItem Content="Gece" />
+                            <ComboBoxItem Content="Gün" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="220" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Hareket" Style="{StaticResource Tv.Type.Body}"
+                                   VerticalAlignment="Center"/>
+                        <ComboBox x:Name="MotionSetting" Grid.Column="1" MinHeight="32"
+                                  AutomationProperties.Name="Hareket"
+                                  SelectionChanged="OnChoiceChanged">
+                            <ComboBoxItem Content="Sistem ayarını izle" />
+                            <ComboBoxItem Content="Azalt" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="220" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Kenar çubuğu" Style="{StaticResource Tv.Type.Body}"
+                                   VerticalAlignment="Center"/>
+                        <ComboBox x:Name="RailSetting" Grid.Column="1" MinHeight="32"
+                                  AutomationProperties.Name="Kenar çubuğu"
+                                  SelectionChanged="OnChoiceChanged">
+                            <ComboBoxItem Content="Otomatik" />
+                            <ComboBoxItem Content="Daralt" />
+                            <ComboBoxItem Content="Genişlet" />
+                        </ComboBox>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

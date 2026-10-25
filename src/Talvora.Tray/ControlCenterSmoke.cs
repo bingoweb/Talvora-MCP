@@ -50,6 +50,7 @@ internal static partial class ControlCenterSmoke
                 AssertUi3VisualFixture(window, "initial");
                 AssertUi4VisualFixture(window, "initial");
                 await AssertUi5VisualFixtureAsync(window, "initial");
+                AssertUi6VisualFixture(window, "initial");
 
                 // UI1: swap the running window's real palette and restore it, without reopening.
                 var initialPreference = TalvoraThemeManager.Preference;
@@ -64,6 +65,7 @@ internal static partial class ControlCenterSmoke
                 AssertUi3VisualFixture(window, "alternate");
                 AssertUi4VisualFixture(window, "alternate");
                 await AssertUi5VisualFixtureAsync(window, "alternate");
+                AssertUi6VisualFixture(window, "alternate");
                 window.ShellModel.SelectPage(2);
                 AssertWorklogHistorySelection(window, "worklog-session-alternate");
                 window.ShellModel.SelectPage(0);
@@ -90,11 +92,8 @@ internal static partial class ControlCenterSmoke
                 await window.RunSmokeScenarioAsync();
                 await AssertUi4LifecycleSmokeAsync(window);
                 SaveVisualSnapshotIfRequested(window, "loaded");
-                // UI5 owns Events; the legacy setup/dashboard stays under Settings until UI6.
                 window.ShellModel.SelectPage(5);
-                AssertDashboardStructure(window);
-                AssertRenderedSurfaceIsNotBlank(window);
-                AssertCompactDashboardLayout(window);
+                AssertUi6VisualFixture(window, "loaded");
                 window.ShellModel.SelectPage(0);
                 await MeasureUi3IdleCpuAsync(window);
 

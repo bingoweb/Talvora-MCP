@@ -14,6 +14,11 @@ internal static partial class Program
 {
     public static async Task<int> Main()
     {
+        if (Environment.GetCommandLineArgs().Contains("--ui6-only", StringComparer.Ordinal))
+        {
+            await AssertUi6SettingsAsync();
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--ui5-only", StringComparer.Ordinal))
         {
             AssertUi5EventGroupingAndFilters();

@@ -1,0 +1,163 @@
+<UserControl x:Class="Talvora.Tray.Controls.StepperCard" x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             Background="Transparent">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="StepVisible" />
+        <Style x:Key="StepGlyph" TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.BodyStrong}">
+            <Setter Property="Foreground" Value="{DynamicResource Tv.Neutral}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StateText}" Value="Tamam">
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.Ready}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StateText}" Value="Sırada">
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.Attention}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="StepStatus" TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.Caption}">
+            <Setter Property="Foreground" Value="{DynamicResource Tv.Neutral}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StateText}" Value="Tamam">
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.Ready}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StateText}" Value="Sırada">
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.Attention}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    <Border Background="{DynamicResource Tv.Surface}" BorderBrush="{DynamicResource Tv.Border}"
+            BorderThickness="1" CornerRadius="{StaticResource Tv.Radius.L}"
+            Padding="20">
+        <StackPanel>
+            <TextBlock Text="● Kurulum tamam."
+                       Foreground="{DynamicResource Tv.Ready}"
+                       AutomationProperties.Name="Kurulum tamam.">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.BodyStrong}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding AllComplete}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <StackPanel>
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding AllComplete}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <StackPanel DataContext="{Binding StepOne}">
+                    <DockPanel LastChildFill="True">
+                        <TextBlock Text="{Binding Glyph}" Style="{StaticResource StepGlyph}" DockPanel.Dock="Left"
+                                   Margin="0,0,12,0" AutomationProperties.Name="{Binding StateText}" />
+                        <TextBlock Text="{Binding StateText}" Style="{StaticResource StepStatus}"
+                                   DockPanel.Dock="Right" VerticalAlignment="Center" />
+                        <TextBlock Text="1 Talvora çekirdeği" Style="{StaticResource Tv.Type.BodyStrong}"
+                                   VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding Sentence}" Style="{StaticResource Tv.Type.Body}"
+                               Foreground="{DynamicResource Tv.TextMuted}" Margin="24,8,0,0"
+                               TextWrapping="Wrap"/>
+                    <StackPanel Margin="24,12,0,0"
+                                Visibility="{Binding IsActive, Converter={StaticResource StepVisible}}">
+                        <ui:Button x:Name="RetryCoreButton" Content="Yeniden denetle"
+                                   Click="OnRetryCore" HorizontalAlignment="Left"
+                                   MinHeight="32" Style="{StaticResource TalvoraSecondaryButtonStyle}"
+                                   AutomationProperties.Name="Talvora çekirdeğini yeniden denetle"/>
+                    </StackPanel>
+                </StackPanel>
+                <Border Background="{DynamicResource Tv.Border}" Margin="7,8,0,8"
+                        Width="1" Height="24" HorizontalAlignment="Left" />
+                <StackPanel DataContext="{Binding StepTwo}">
+                    <DockPanel LastChildFill="True">
+                        <TextBlock Text="{Binding Glyph}" Style="{StaticResource StepGlyph}" DockPanel.Dock="Left"
+                                   Margin="0,0,12,0" AutomationProperties.Name="{Binding StateText}" />
+                        <TextBlock Text="{Binding StateText}" Style="{StaticResource StepStatus}"
+                                   DockPanel.Dock="Right" VerticalAlignment="Center" />
+                        <TextBlock Text="2 Güvenli tüneller" Style="{StaticResource Tv.Type.BodyStrong}"
+                                   VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding Sentence}" Style="{StaticResource Tv.Type.Body}"
+                               Foreground="{DynamicResource Tv.TextMuted}" Margin="24,8,0,0"
+                               TextWrapping="Wrap"/>
+                    <StackPanel Margin="24,12,0,0"
+                                Visibility="{Binding IsActive, Converter={StaticResource StepVisible}}">
+                        <Expander Header="Teknik ayrıntılar" IsExpanded="True"
+                                  Foreground="{DynamicResource Tv.Text}">
+                            <StackPanel Margin="0,8,0,0">
+                                <TextBlock x:Name="TechnicalDetailText"
+                                           Style="{StaticResource Tv.Type.Caption}"
+                                           Foreground="{DynamicResource Tv.TextMuted}"
+                                           TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                <TextBlock x:Name="DevTunnelLabel" Text="Talvora Dev tunnel ID"
+                                           Style="{StaticResource Tv.Type.Caption}" Margin="0,8,0,4"/>
+                                <ui:TextBox x:Name="DevTunnelInput" MinHeight="36" MaxLength="39"
+                                            PlaceholderText="tunnel_..."
+                                            AutomationProperties.Name="Talvora Dev tunnel ID"/>
+                                <TextBlock x:Name="AdminTunnelLabel" Text="Talvora Admin tunnel ID"
+                                           Style="{StaticResource Tv.Type.Caption}" Margin="0,8,0,4"/>
+                                <ui:TextBox x:Name="AdminTunnelInput" MinHeight="36" MaxLength="39"
+                                            PlaceholderText="tunnel_..."
+                                            AutomationProperties.Name="Talvora Admin tunnel ID"/>
+                                <TextBlock Text="Tunnel OpenAI tarafında zaten oluşturulduysa ID'yi buraya yapıştırın."
+                                           Style="{StaticResource Tv.Type.Caption}"
+                                           TextWrapping="Wrap" Foreground="{DynamicResource Tv.TextMuted}"
+                                           Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </Expander>
+                        <ui:Button x:Name="TunnelSubmitButton" Content="Tünelleri bağla / kurulumu tamamla"
+                                   MinHeight="32" HorizontalAlignment="Left" Margin="0,12,0,0"
+                                   Style="{StaticResource TalvoraPrimaryButtonStyle}"
+                                   Click="OnSubmit" AutomationProperties.Name="Güvenli tünel kurulumunu tamamla"/>
+                    </StackPanel>
+                </StackPanel>
+                <Border Background="{DynamicResource Tv.Border}" Margin="7,8,0,8"
+                        Width="1" Height="24" HorizontalAlignment="Left" />
+                <StackPanel DataContext="{Binding StepThree}">
+                    <DockPanel LastChildFill="True">
+                        <TextBlock Text="{Binding Glyph}" Style="{StaticResource StepGlyph}" DockPanel.Dock="Left"
+                                   Margin="0,0,12,0" AutomationProperties.Name="{Binding StateText}" />
+                        <TextBlock Text="{Binding StateText}" Style="{StaticResource StepStatus}"
+                                   DockPanel.Dock="Right" VerticalAlignment="Center"/>
+                        <TextBlock Text="3 ChatGPT Business bağlantısı" Style="{StaticResource Tv.Type.BodyStrong}"
+                                   VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding Sentence}" Style="{StaticResource Tv.Type.Body}"
+                               Foreground="{DynamicResource Tv.TextMuted}" Margin="24,8,0,0"
+                               TextWrapping="Wrap"/>
+                    <StackPanel Margin="24,12,0,0"
+                                Visibility="{Binding IsActive, Converter={StaticResource StepVisible}}">
+                        <TextBlock Text="Bu anahtar yalnızca kurulum sırasında kullanılır ve saklanmaz."
+                                   Style="{StaticResource Tv.Type.Body}" Foreground="{DynamicResource Tv.TextMuted}"
+                                   TextWrapping="Wrap"/>
+                        <Expander Header="Teknik ayrıntılar" IsExpanded="True"
+                                  Foreground="{DynamicResource Tv.Text}" Margin="0,8,0,0">
+                            <StackPanel Margin="0,8,0,0">
+                                <TextBlock Text="OpenAI Admin API key" Style="{StaticResource Tv.Type.Caption}"
+                                           Margin="0,0,0,4"/>
+                                <ui:PasswordBox x:Name="AdminKeyInput" MinHeight="36"
+                                                PasswordChar="●" PlaceholderText="Admin API key"
+                                                AutomationProperties.Name="OpenAI Admin API key"/>
+                            </StackPanel>
+                        </Expander>
+                        <ui:Button x:Name="AdminSubmitButton" Content="Kaydet ve kurulumu tamamla"
+                                   MinHeight="32" HorizontalAlignment="Left" Margin="0,12,0,0"
+                                   Style="{StaticResource TalvoraPrimaryButtonStyle}"
+                                   Click="OnSubmit" AutomationProperties.Name="ChatGPT Business bağlantısını tamamla"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

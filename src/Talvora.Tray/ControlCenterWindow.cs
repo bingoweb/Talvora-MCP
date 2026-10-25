@@ -106,8 +106,7 @@ internal sealed partial class ShellWindow : FluentWindow
     private StackPanel _headerStatusStack = null!;
     private Border _headerStatusCard = null!;
     private TextBlock _dashboardSectionMeta = null!;
-    private Border _setupCard = null!;
-    private TextBlock _setupTitleText = null!;
+    private Talvora.Tray.Controls.StepperCard _setupCard = null!;
     private TextBlock _setupDetailText = null!;
     private UiTextBox _setupDevTunnelIdBox = null!;
     private UiTextBox _setupAdminTunnelIdBox = null!;
@@ -168,6 +167,7 @@ internal sealed partial class ShellWindow : FluentWindow
     public ShellWindow(bool smokeMode = false)
     {
         _smokeMode = smokeMode;
+        SettingsPreferencesStore.Initialize(smokeMode);
         Title = "Talvora Kontrol Merkezi";
         Width = 1220;
         Height = 790;
@@ -548,7 +548,6 @@ internal sealed partial class ShellWindow : FluentWindow
         };
 
         _setupCard = BuildSetupCard();
-        content.Children.Add(_setupCard);
         content.Children.Add(BuildOverviewMetrics());
 
         var sectionHeader = new Grid
@@ -731,6 +730,7 @@ internal sealed partial class ShellWindow : FluentWindow
             UpdateUi3Snapshot(snapshot);
             UpdateUi4Snapshot(snapshot);
             UpdateUi5Snapshot(snapshot);
+            RefreshSetupCard();
             await RefreshEmbeddedMcpIntegrationsAsync(_lifetimeCts.Token);
             _lastSuccessfulDashboardRefresh = DateTimeOffset.Now;
 

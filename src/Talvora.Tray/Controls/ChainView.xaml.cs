@@ -75,10 +75,13 @@ internal sealed partial class ChainView : System.Windows.Controls.UserControl
                 }
             }
             _windowActive = window is { IsActive: true, WindowState: not WindowState.Minimized };
+            SettingsPreferencesStore.Changed -= OnSettingsPreferencesChanged;
+            SettingsPreferencesStore.Changed += OnSettingsPreferencesChanged;
             UpdateMotion();
         };
         Unloaded += (_, _) =>
         {
+            SettingsPreferencesStore.Changed -= OnSettingsPreferencesChanged;
             _windowActive = false;
             UpdateMotion();
         };
@@ -228,10 +231,13 @@ internal sealed partial class ChainView : System.Windows.Controls.UserControl
     private void UpdateMotion()
     {
         var allowed = _windowActive && IsVisible &&
-            SystemParameters.ClientAreaAnimation && !SystemParameters.HighContrast;
+            SystemParameters.ClientAreaAnimation && !SystemParameters.HighContrast &&
+            SettingsPreferencesStore.Current.Motion != SettingsMotionPreference.Reduced;
         foreach (var link in Links)
             link.IsFlowing = allowed && link.BothReady;
     }
+
+    private void OnSettingsPreferencesChanged(object? sender, EventArgs e) => UpdateMotion();
 
     private void OnWindowActivated(object? sender, EventArgs e)
     {
