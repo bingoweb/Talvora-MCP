@@ -18,7 +18,27 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2EA44F"></a>
 </p>
 
-[Control Center preview](docs/media/control-center.png)
+<p align="center">
+  <img src="docs/media/control-center.png" alt="Native Talvora Control Center with navigation, health cards and MCP services" width="100%" />
+</p>
+
+## Why Talvora exists
+
+Talvora started from a practical problem: I wanted an AI coding client to work on a real Windows workstation as a development machine, not as a thin command wrapper and not as a pretend Linux sandbox.
+
+That means dealing with the things Windows development actually involves: services, interactive user sessions, long-running processes, source edits, Git, SDKs, package managers, Event Log, registry, installers, local databases, desktop applications and repairable background infrastructure.
+
+Talvora packages those workflows behind MCP without turning every operation into an opaque shell command. Common tasks have structured tools. Unusual tasks still have an escape hatch. The local runtime stays on loopback.
+
+The project is deliberately opinionated:
+
+- Windows is a first-class platform.
+- One canonical Windows Service owns the runtime.
+- One canonical installer owns deployment.
+- Chocolatey is the Windows package manager.
+- Structured tools improve reliability; they are not the capability ceiling.
+- A change is not finished until the installed runtime is verified.
+
 ## Current state
 
 [HANDOFF.md](HANDOFF.md) is the short entry point; [STATUS](docs/codex/STATUS.md) is the live queue. Agent rules and approved cards are in [AGENTS.md](AGENTS.md). Historical audits are in [docs/archive](docs/archive).
@@ -153,9 +173,36 @@ Original code and documentation use the [MIT License](LICENSE): commercial use a
 
 Third parties retain their own licenses, copyrights and trademarks. [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) is the complete versioned inventory of locked NuGet runtime packages, self-contained .NET runtime packs and managed companions. Upstream notices remain authoritative.
 
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| <code>src/Talvora</code> | MCP host and application/development tool implementations |
+| <code>src/Talvora.Shared</code> | shared contracts, focused-surface policy and canonical tool manifest |
+| <code>src/Talvora.Tray</code> | Tray, Control Center, repair/recovery and desktop UX |
+| <code>src/Talvora.Installer</code> | canonical native Windows installer |
+| <code>tests/Talvora.Smoke</code> | MCP surface and installed-runtime smoke validation |
+| <code>tests/Talvora.SourceEdit.Regression</code> | transactional source-edit regression suite |
+| <code>scripts</code> | installer, bootstrap, verification and operational scripts |
+| <code>docs</code> | architecture, development environment, engineering policy and source-edit architecture |
+| <code>docs/codex</code> | live agent queue, cards and decisions |
+| <code>docs/archive</code> | historical handoff and audits |
+
+## Design decisions
+
+A few project choices are deliberate and unlikely to change casually:
+
+- **Windows-native over cross-platform abstraction.**
+- **One service over a collection of hidden helper daemons.**
+- **Local-first over public ingress.**
+- **Chocolatey over multiple Windows package-manager paths.**
+- **Structured operations first, general execution still available.**
+- **Minimal repair before restart.**
+- **Exact installed-runtime verification before calling work complete.**
+
 ## Documentation
 
 - [Current state](HANDOFF.md) · [Live queue](docs/codex/STATUS.md) · [Architecture](docs/ARCHITECTURE.md)
 - [Development environment](docs/DEVELOPMENT-ENVIRONMENT.md) · [Engineering policy](docs/MODERNIZATION-POLICY.md)
-- [Application roadmap](APPLICATION-DEVELOPMENT-ROADMAP.md) · [Source-edit architecture](SOURCE-EDIT-ENGINE-ARCHITECTURE.md)
+- [Application roadmap](APPLICATION-DEVELOPMENT-ROADMAP.md) · [Source-edit architecture](docs/SOURCE-EDIT-ENGINE-ARCHITECTURE.md)
 - [Historical handoff](docs/archive/HANDOFF.md) · [Historical audit](docs/archive/BUG-AUDIT.md)

@@ -1344,8 +1344,10 @@ internal static partial class Program
 
             try
             {
+                // 90 s: the parallel gate shares the 4-core CI runner with the Roslyn suites; a real hang still
+                // never completes (audit 2026-10-25 (19), CI 40173901424 attempt 1 failed at 30 s).
                 await completed.Task.WaitAsync(
-                    TimeSpan.FromSeconds(30));
+                    TimeSpan.FromSeconds(90));
             }
             catch (TimeoutException ex)
             {

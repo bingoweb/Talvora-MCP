@@ -75,7 +75,7 @@ Every file read, command output, MCP tool schema and screenshot costs tokens. Th
 2. **STATUS without history:** read `docs/codex/STATUS.md` up to `## Log` plus the newest Log entry only.
 3. **AGENTS.md once per session.** Do not re-read it between steps of the same card.
 4. **Locate, then read a window.** `git grep -n "<symbol>"` / `rg -n` (ChatGPT: `talvora_search_text`), then read ±40 lines. Read a whole file only if it is < 250 lines or the card rewrites most of it.
-5. **Never open in full:** `packages.lock.json`, `BUG-AUDIT.md`, `HANDOFF.md`, `MCP-CONTROL-CENTER-TODO.md`, `SOURCE-EDIT-ENGINE-ARCHITECTURE.md`, `docs/archive/**`, `THIRD-PARTY-NOTICES.md`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Misc.cs` (2 500+ lines), `src/Talvora/SourceEditing/RoslynSemanticEditEngine.cs` (2 200+ lines), `src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs` (1 800+ lines), images, `bin/`, `obj/`, `artifacts/`. Grep them.
+5. **Never open in full:** `packages.lock.json`, `BUG-AUDIT.md`, `HANDOFF.md`, `MCP-CONTROL-CENTER-TODO.md`, `docs/SOURCE-EDIT-ENGINE-ARCHITECTURE.md`, `docs/archive/**`, `THIRD-PARTY-NOTICES.md`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Misc.cs` (2 500+ lines), `src/Talvora/SourceEditing/RoslynSemanticEditEngine.cs` (2 200+ lines), `src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs` (1 800+ lines), images, `bin/`, `obj/`, `artifacts/`. Grep them.
 6. **Do not re-read a file you just edited** to check it; re-read only the hunk if a build/test fails there.
 7. **Talvora MCP calls:** always pass small limits (`maxMatches`, `maxResults`, `lineCount`, `maxCommits`) and the narrowest `root`; never list/search the whole repo or a drive root.
 

@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-37 — UI6 — Unspecified setup step copy, ACL notice and About ownership
 - Date: 2026-10-25, HEAD 3c1b8664c7514df52772d9dcbc678ae4f521b26b
 - Card text: "Do: §5.5; implements S5 copy; theme/motion/rail preferences persisted; S2 rotate button only if S2 is done (otherwise hidden)." Acceptance: "setup can be completed end-to-end (user step with real tunnel IDs listed in STATUS); jargon only inside the expander."
@@ -28,7 +32,7 @@
   1. Amend UI6/§5.5 with exact sentences for steps 1 and 3, state glyphs and activation/completion rules; specify the S3 ACL warning's existing data source or approved IPC route, exact placement/trigger/dismissal, and whether About is implemented now or in UI7. Keep end-to-end real tunnel-ID verification as a user step.
   2. Explicitly move the ACL notice to a separate specified UI/IPC card and About to UI7; approve a complete stepper copy/state contract for UI6 now. UI6 can then ship without speculative UI, with the remaining work queued by Claude.
 - Partial work: reverted (yes; no UI or production source changes, only proposal/queue documentation).
-- Decision (Claude): _pending_
+- **Decision (Claude, 2026-10-25, audit 19): option 2 with a complete contract.** UI6 gets the exact stepper contract (sentences for steps 1 and 3, completion rules from existing data, glyph/word states, single expanded step, collapsed "Kurulum tamam." line) — see the UI6 amendment. The S3 ACL notice moves to a new card UI6b, which Claude designs (data source, IPC route, placement, dismissal) before it enters the queue. "Hakkında" belongs to UI7 only.
 
 ### P-36 — Q1 — Description/title changes cannot meet the 120 KB Dev payload budget
 - Date: 2026-10-25, HEAD 12eb5ca90b5d2b9e46f4549e2d0abe2ede60e037
@@ -39,9 +43,7 @@
   1. Split Q1: approve the title, orphan-title and ≤220-character description work as one metadata card; keep the 120 KB goal in a separate explicitly designed schema/payload card. The current schemas and annotation contract remain intact.
   2. Keep Q1 as one card and prescribe lossless schema compaction within its scope (or explicitly set a revised attainable byte budget above the measured schema floor). Define the client/schema compatibility checks before implementation; the agent will not invent the contract or lower the gate.
 - Partial work: reverted (yes; no Q1 production, attribute, title-table or test changes made; only STATUS reconciliation and this proposal).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-10-25, audit 19): option 1.** Q1 ships titles, ≤ 220-character descriptions, orphan-title removal and the manifest check, and records the measured byte size of all three surfaces; it does not assert 120 KB. The payload budget becomes Q7, designed by Claude after deciding whether output schemas (155 KB of 302 KB) stay on the wire for each client.
 
 ### P-35 — UI5 — N7 wall-clock fixture threshold blocks the parallel Full gate
 - Date: 2026-10-24, HEAD 355af6d4bfa322bdb35c8a206216e7bded4349e3

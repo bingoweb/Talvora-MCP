@@ -383,6 +383,8 @@ Use it in both places; verify the option list against `git help git` for the ins
 
 **Files:** all `[McpServerTool]` attributes in `src/Talvora/Tools/*.cs`, `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`, `src/Talvora/McpToolMetadataWirePolicy.cs`, smoke `SmokeScenarios.MetadataPolicy.cs`.
 
+> **Amended by P-36 (Claude, 2026-10-25):** Q1 delivers the titles (from `TalvoraToolTitles`, in the list-tools wire policy), descriptions ≤ 220 characters, the orphan-title removal and the `TalvoraToolTitles.All.Keys ⊆ TalvoraToolManifest.Names` check. The `/mcp/dev` ≤ 120 KB assertion is **not** part of Q1: the smoke records the measured byte size of all three surfaces in the Log instead. The byte budget is Q7's.
+
 **Order rule:** while Q2 is not `[x]` in STATUS, treat Q1 as blocked (skip it like a `[?]` item) and take the next card; come back to Q1 right after Q2 is done (titles for tools that Q2 removes would be wasted). **Amended by P-32 (Claude, 2026-10-24):** Q2b is withdrawn, so Q2 is done when Q2c is `[x]`. Q1 also deletes from `src/Talvora.Shared/TalvoraToolTitles.cs` every title whose tool no longer exists (today: `talvora_bun_info`, `talvora_cmake_info`, `talvora_cmake_run`, `talvora_ninja_info`, `talvora_ninja_run`, `talvora_pnpm_info`, `talvora_yarn_info`, plus whatever Q2c removes) and adds to `Program.N9Subjects.cs` the check `TalvoraToolTitles.All.Keys` ⊆ `TalvoraToolManifest.Names` (no orphan titles).
 
 **Do:** Titles are user-visible copy and **Claude has decided them** (2026-10-23): `src/Talvora.Shared/TalvoraToolTitles.cs` (added by N9, extended by N10/RM1) is the approved table. Set every tool's protocol `title` from it — in the existing list-tools wire policy, not by editing 250 attributes; where an attribute already has a `Title`, the table value wins. No proposal table. Tools that Q2 removes simply drop out of the table in the same Q2 card. Descriptions: ≤ 220 chars, English, first sentence = what it does, second = when to use another tool; move repeated policy text into the server instructions once. Add a smoke assertion: `tools/list` JSON for `/mcp/dev` ≤ 120 KB.
@@ -1093,6 +1095,26 @@ with
 ## Audit fixes (external audits by Claude)
 
 D-cards go to the top of the agent queue. Newest audit first.
+
+### Audit 2026-10-25 (19, deep) · range `audit/2026-10-25-18 (4c94a77)..6e6e9f9` · 4 card commits + 2 proposals · result: code exact; Q3 overreached in README (fixed by Claude); P-36 and P-37 decided
+
+Delivered: UI5 `12d26e2`, D22 `5752edd`, Q2c `12eb5ca`, Q3 `3c1b866`; proposals P-36 (Q1) and P-37 (UI6). Installed `5752edd`; GitHub CI green for every commit.
+
+**Fidelity.**
+- UI5 applies all four audit-18 amendments exactly (empty state only after loading, "Son 7 günde kaydedilmiş olay yok." / "Bu filtrelerle eşleşen olay yok.", the service pill collapses without a service, "Yaşam döngüsü" = `operation` + `startup`) and the UI5 test covers them.
+- D22: `AtomicFile.cs` and the race scenario identical to Claude's verified clone; one list entry.
+- Q2c: kept all three legacy text tools because none maps 1:1 (allowed by Q2's hard rule and P-34); the manifest-driven README/ARCHITECTURE count test is correct (250/213/88/51).
+
+**Findings.**
+
+| # | Severity | Finding | Action |
+|---|---|---|---|
+| 1 | **MEDIUM** (process) | Q3 rewrote README from 442 to 161 lines to reach the "< 120 KB root Markdown" acceptance. The card allowed only three README changes (manifest counts, move the Claude engine section, no machine paths). Removed without archiving: the user's own first-person **"Why Talvora exists"**, "Repository map", "Design decisions"; the hero screenshot became a plain text link. The budget was blocked by the 50 KB `SOURCE-EDIT-ENGINE-ARCHITECTURE.md` in the root — that conflict needed a proposal (rule 6), not deleted content. | **Fixed by Claude:** `SOURCE-EDIT-ENGINE-ARCHITECTURE.md` → `docs/` (links in README, APPLICATION-DEVELOPMENT-ROADMAP, AGENTS updated); README regains the screenshot, the user's "Why Talvora exists" verbatim, an updated "Repository map" and "Design decisions". Root Markdown 72 079 bytes; documentation link, manifest-count and gate regressions green. |
+| 2 | LOW | New CI flake: D22's first CI attempt failed `Desktop placement regression exceeded the hosted-runner STA budget` (30 s) while the parallel gate shared the 4-core runner with the Roslyn suites. | **Fixed by Claude:** budget 90 s; a real hang still never completes. |
+| 3 | — | P-36: Dev `tools/list` is 302 KB, of which output schemas are 155 KB and input schemas 65 KB; titles and descriptions cannot reach 120 KB. | **Decided:** Q1 = titles, ≤ 220-character descriptions, orphan titles and the manifest check, plus a recorded (not asserted) payload number. The byte budget moves to **Q7**, which Claude designs after deciding whether output schemas stay on the wire. |
+| 4 | — | P-37: UI6 needs step sentences, state glyphs, completion rules, the S3 ACL notice route and an owner for "Hakkında". | **Decided:** exact stepper contract in UI6 (amended); the ACL notice moves to **UI6b** (Claude designs the route); "Hakkında" belongs to UI7. |
+
+Verification of Claude's fixes on a clean clone of `6e6e9f9`: Full gate `68 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`.
 
 ### Audit 2026-10-25 (18) · no new card commits since `4c94a77` · scope: the uncommitted UI5 work (applied to a clean clone, not committed) · result: redaction defect fixed by Claude; UI5 amended before delivery
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-25T08:53:18Z",
+  "verifiedAtUtc": "2026-10-25T09:18:49Z",
   "scope": "Q3/P-17: archive five historical Markdown files byte-identically, compact README and HANDOFF within the root 120000-byte budget, correct Turkish diacritics without sentence changes, and add an active-document local-link checker to the quality gate. No runtime or tool-catalog change.",
   "libraries": [
     {

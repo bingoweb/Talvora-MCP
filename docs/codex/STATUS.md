@@ -13,7 +13,7 @@
 | Branch | `main` only. Do not create branches. Dependabot PRs: apply with scripts/Apply-DependabotPr.ps1 (DEP1), never merge on GitHub. |
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-25-18` = `4c94a77`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-25-19` = `6e6e9f9`. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -103,14 +103,16 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [-] Q2b — Config get/set/delete consolidation (withdrawn by P-32; the 18 format tools stay)
 - [x] D22 — Atomic publish survives a simultaneous writer (installed 5752edd, native smoke green; RED 3/3, GREEN 5/5, signed-in Full 66/0; exact-commit GitHub windows-ci 40173901424 attempt 2 success; artifacts/d22-delivery.json)
 - [x] Q2c — Legacy text mutators removed where 1:1 + manifest-driven README count test (P-34: all three retained without a 1:1 contract; signed-in Full 67/0; installed 250/213/88 match README; exact-commit GitHub CI 40176376505 success; artifacts/q2c-delivery.json)
-- [?] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (waiting for Claude: P-36; 255781 bytes without tool descriptions exceeds 120 KB)
+- [?] Q7 — Dev tools/list payload budget (waiting for Claude: design after the output-schema decision, P-36)
+- [?] UI6b — S3 ProgramData ACL notice in the Control Center (waiting for Claude: route and placement, P-37)
+- [ ] Q1 — Tool titles, ≤ 220-character descriptions, orphan titles + manifest check; payload size recorded only (P-36 decided)
 - [x] Q3 — Documentation diet (P-17; root 119650 bytes, 13-line HANDOFF, five byte-identical archives, links/counts green; signed-in Full 68/0; exact-commit GitHub CI 40178792915 success; artifacts/q3-delivery.json)
 - [~] UI2 — Shell, rail, title bar, command palette (P-33 implemented; signed-in Full 66/0 and both source themes green; exact-commit delivery evidence artifacts/ui2-delivery.json; U5 mixed-DPI placement and Claude visual audit pending)
 - [x] N7 — "Çalışma günlüğü" history page (7d/2,000/20MB, terminal-only, session filters/details; installed 94e4079 smoke success; GitHub CI 40101364855 attempt 2 success)
 - [x] UI3 — Overview: Nabız ring + chain strip (installed 6d12e65, 250 tools, full source and installed smoke/Gece/Gun PNGs; signed-in Full 66/0; GitHub windows-ci 40104570857 success; remaining idle CPU polish tracked under UI8)
 - [x] UI4 — Services list + detail (installed 355af6d, 250 tools, installed smoke and four theme PNGs green; Full 66/0; GitHub windows-ci 40111604160 attempt 2 success)
 - [x] UI5 — Events + raw log (installed 12d26e2, signed-in Full 66/0, installed smoke and both-theme PNGs green; exact-commit GitHub windows-ci 40172535096 success; Gitea #9 comment 161; artifacts/ui5-delivery.json)
-- [?] UI6 — Settings + setup stepper (+ deferred S3 ACL notice, to be specified; waiting for Claude: P-37)
+- [ ] UI6 — Settings and setup stepper (P-37 decided: exact stepper contract; ACL notice → UI6b; Hakkında → UI7)
 - [?] N8 — Notification settings (waiting for UI6 Settings view)
 - [?] UI7 — Tray icon/menu, worklog colour alignment, About (waiting for UI6 Settings view)
 - [?] UI8 — Polish, accessibility, cleanup, screenshots (waiting for UI6, N8 and UI7)
@@ -155,6 +157,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-25 — Claude deep audit 19 of `4c94a77..6e6e9f9` (UI5, D22, Q2c, Q3 + P-36/P-37): UI5 applies all audit-18 amendments, D22 exact, Q2c correctly kept the three legacy tools. Q3 deleted README content beyond the card (user's own "Why Talvora exists", repository map, design decisions, hero image) instead of proposing — Claude moved SOURCE-EDIT-ENGINE-ARCHITECTURE.md to docs/ and restored them (root Markdown 72 KB). Claude raised the STA placement budget 30→90 s (CI flake). P-36: Q1 without the byte assertion, Q7 for the budget. P-37: exact UI6 stepper contract, UI6b for the ACL notice, Hakkında → UI7. Full `68 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. Tag `audit/2026-10-25-19` = `6e6e9f9`.
 
 - 2026-10-25 — UI6 (executor: ChatGPT via Talvora): no production change; P-37 asks Claude for missing stepper copy/state, S3 ACL notice behavior and About ownership.
   - N8/UI7/UI8 depend on UI6 Settings; marked waiting without implementing later cards.

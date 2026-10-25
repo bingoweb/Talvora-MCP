@@ -485,6 +485,13 @@ Each card = one commit, Awwwards evidence refreshed (cite pages actually reviewe
 
 ### UI6 — Settings and setup stepper
 
+> **Amended by P-37 (Claude, 2026-10-25) — exact stepper contract:**
+> - Steps and their one sentence (`Tv.Type.Body`, `Tv.TextMuted`): **1 Talvora çekirdeği** — "Talvora çekirdeği, araçları bu bilgisayarda güvenle çalıştıran yerel hizmettir." · **2 Güvenli tüneller** — the approved §9 sentence · **3 ChatGPT Business bağlantısı** — "Bu bağlantı, Talvora'yı çalışma alanınızdaki ChatGPT'ye tanıtır."
+> - Completion, from existing data only: step 1 when the `talvora` registration's health is Ready; step 2 when `ControlCenterSetupService.Evaluate` reports no `MissingTunnelRegistrationIds` and `RuntimeFoundationMissing == false`; step 3 when `NeedsAdminCredential == false`.
+> - State per step (glyph + word, never colour alone): completed → `●` `Tv.Ready` "Tamam"; the first incomplete step → `▲` `Tv.Attention` "Sırada"; later incomplete steps → `○` `Tv.Neutral` "Bekliyor". Only the "Sırada" step is expanded and shows its existing inputs (tunnel IDs in step 2, the admin key and its §9 note in step 3) and the existing submit action; technical names stay inside `Teknik ayrıntılar`.
+> - When all three are complete the card collapses to one line: `●` "Kurulum tamam."
+> - The S3 ProgramData ACL notice is **not** part of UI6 (moved to UI6b). "Hakkında" is **not** part of UI6 (UI7 owns it). S2 rotate button rule unchanged.
+
 **Files:** `Views/SettingsView.xaml`, `Controls/StepperCard`, ViewModel; `ControlCenterWindow.Setup.cs` replaced.
 **Do:** §5.5; implements S5 copy; theme/motion/rail preferences persisted; S2 rotate button only if S2 is done (otherwise hidden).
 **Acceptance:** setup can be completed end-to-end (user step with real tunnel IDs listed in STATUS); jargon only inside the expander.

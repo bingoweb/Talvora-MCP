@@ -31,7 +31,7 @@ Turn Talvora into a first-class Windows-native software/application development 
 
 ## Canonical source-edit routing contract (Faz 14 — CORE + STRUCTURAL + SEMANTIC IMPLEMENTED)
 
-Detailed architecture contract: `SOURCE-EDIT-ENGINE-ARCHITECTURE.md`.
+Detailed architecture contract: `docs/SOURCE-EDIT-ENGINE-ARCHITECTURE.md`.
 
 - Inside recognized development workspaces, normal text/source/doc/config mutation will use the canonical Source Edit Engine rather than legacy whole-file/regex/shell write paths.
 - PRIMARY/default for ordinary agent-authored code/doc/config changes -> `talvora_apply_patch`, whether one file or many; add/update/delete/move and unified-diff compatibility all stay on this tool.
