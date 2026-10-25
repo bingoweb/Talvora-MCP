@@ -101,8 +101,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D21 — Worklog card: hanging indents, one text edge, no imitation window buttons (installed 5b57960, previews 10/10, live capture, CI 40093271827; Gitea attachment waived — connector approval unavailable, audit 16)
 - [~] TI1 — Tray icon "Altıgen-T" (reference hashes 3/3, source and installed previews 25/25, Full 66/0; installed d3925fb and CI 40094172485 success verified; only user visual answer under U9 pending)
 - [-] Q2b — Config get/set/delete consolidation (withdrawn by P-32; the 18 format tools stay)
-- [~] D22 — Atomic publish survives a simultaneous writer (exact code/reference; RED 3/3, GREEN 5/5, signed-in Full 66/0; live pending: exact-commit installer/deploy, installed smoke and GitHub CI; artifacts/d22-delivery.json)
-- [ ] Q2c — Legacy text mutators removed where 1:1 + manifest-driven README count test (P-34 decided: no numeric ceilings; 120 KB budget moves to Q1)
+- [x] D22 — Atomic publish survives a simultaneous writer (installed 5752edd, native smoke green; RED 3/3, GREEN 5/5, signed-in Full 66/0; exact-commit GitHub windows-ci 40173901424 attempt 2 success; artifacts/d22-delivery.json)
+- [~] Q2c — Legacy text mutators removed where 1:1 + manifest-driven README count test (P-34: all three retained without a 1:1 contract; signed-in Full 67/0; installed 250/213/88 match README; exact-commit CI pending; artifacts/q2c-delivery.json)
 - [?] Q1 — Tool titles from the approved TalvoraToolTitles table, shorter descriptions, payload budget, orphan titles removed (waiting for Q2c; amended by P-32)
 - [?] Q3 — Documentation diet (P-17; waiting for Q2c)
 - [~] UI2 — Shell, rail, title bar, command palette (P-33 implemented; signed-in Full 66/0 and both source themes green; exact-commit delivery evidence artifacts/ui2-delivery.json; U5 mixed-DPI placement and Claude visual audit pending)
@@ -153,6 +153,16 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-25 — Q2c (executor: ChatGPT via Talvora, P-34): added manifest-driven count validation for every README/ARCHITECTURE badge, summary, diagram, table and prose count; no tool was removed without a 1:1 contract.
+  | Legacy tool | Mapping decision | Capability/output preserved by retention |
+  | --- | --- | --- |
+  | talvora_write_text | Kept: write_bytes has fileLength/bytesWritten, not the legacy length result; write_file has no approved equivalent response contract. | BOM-less UTF-8 overwrite and path/length. |
+  | talvora_append_text | Kept: the generic writer contract has no appendNewLine or matching result fields. | Existing encoding/BOM, detected newline style and charactersAppended/fileLength. |
+  | talvora_replace_text | Kept: overwrite/append cannot express guarded literal/regex replacement. | caseSensitive, replaceAll, expectedMatches, backup and match/replacement results. |
+  - Validation: 15 stale-document fixtures RED; real documents GREEN; clean docs-only checkout RED before source compilation and GREEN after; signed-in final Full 67/0, exit 0, Hepsi geçti. Installed 5752edd tools/list Full/Dev/Admin = 250/213/88, matching manifest and README; Shared=51.
+  - Context7 /microsoftdocs/powershell-docs and /dotnet/docs + official Add-Type/Regex.Matches checked. Test/docs-only change: no runtime deployment or connector rename. D22 CI 40173901424 attempt 2 success verified. Q2c exact-commit CI follows; evidence artifacts/q2c-delivery.json and Gitea #9.
+
 
 - 2026-10-25 — D22 (executor: ChatGPT via Talvora): applied the literal eight-attempt IOException retry to AtomicFile.PublishDurable; MoveDurable, staged names, flush and backup behavior unchanged.
   - Test first: --without-semantic RED 3/3 at atomic-publish-concurrent-first-writers; after the fix GREEN 5/5 with TALVORA SOURCE EDIT CORE REGRESSION GREEN. Each scenario exercises 150 rounds with four writers.

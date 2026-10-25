@@ -12,6 +12,8 @@ Focused surfaces are per-request views over the same canonical tool implementati
 
 The focused policy has a first-class **Shared** contract: Dev and Admin overlap on exactly 51 reviewed tools for diagnostics, inspection, common filesystem/config work and deliberate general-purpose process/PowerShell fallback. Outside that set, tools have one primary focused role. Development owns source editing, build/test, Git/GitHub, language/toolchain, long-running development jobs and product-development integrations. Administration owns Windows service/registry/event-log/session workflows plus package mutation, persistent environment mutation and arbitrary PID termination. This is a discovery and tool-selection boundary, not a privilege sandbox; both endpoints still execute through the same LocalSystem Talvora Core and the unrestricted full surface remains available.
 
+Tool counts in this document and the README are validated from the compiled manifest and focused policy by `tests/ToolManifestDocumentationRegression.ps1`; count drift fails the quality gate.
+
 ## Capability model
 
 The service account is the capability boundary. Talvora does not implement command block lists or filesystem restriction lists for its primitive capability surface. Six primitive tools expose system information, filesystem read/write/delete/list, and caller-supplied executable execution. Higher-level Windows capabilities are composed from these primitives until a dedicated tool materially improves reliability or ergonomics.

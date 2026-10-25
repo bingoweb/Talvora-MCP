@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-25T07:36:00Z",
-  "scope": "D22: apply the exact bounded IOException retry around AtomicFile.PublishDurable, preserving File.Replace backup behavior, MoveFileExW write-through and temporary-file naming; register the verbatim concurrent-first-writers regression. No packages or public interfaces changed.",
+  "verifiedAtUtc": "2026-10-25T08:12:42Z",
+  "scope": "Q2c/P-34: retain all three legacy text mutators because the approved replacement contracts do not preserve their options/output fields 1:1; add compiled-manifest validation of all README/ARCHITECTURE counts. No tool, surface, dependency or runtime behavior changed.",
   "libraries": [
+    {
+      "libraryId": "/microsoftdocs/powershell-docs",
+      "verified": "2026-10-25 Q2c: Context7 verifies Add-Type -Path loads an existing assembly and exposes its .NET types, while throw terminates a failing script. The regression compiles the exact canonical TalvoraToolManifest.cs and TalvoraMcpToolSurfacePolicy.cs using Add-Type -Path plus temporary global usings and /nullable:enable, then derives Full/Dev/Admin/Shared counts and validates Markdown count blocks with Regex.Matches. Official Add-Type documentation for PowerShell 7.6 and .NET 10 Regex.Matches were checked: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/add-type?view=powershell-7.6 and https://learn.microsoft.com/en-us/dotnet/api/system.text.regularexpressions.regex.matches?view=net-10.0 . Context7 /dotnet/docs UTF8Encoding guidance also verified the write_text mapping analysis; write_bytes exposes fileLength rather than the old length field, append_text additionally preserves encoding/newlines, and replace_text retains matching/backup results. Existing runtime contracts remain unchanged."
+    },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-25 D22: Context7 handling-io-errors confirms IOException wraps Win32 sharing violation (32), file exists (80) and already exists (183), and catch filters can handle those failures. Microsoft .NET 10 File.Replace documentation confirms source/destination/optional backup and ignoreMetadataErrors=false preserve metadata-error reporting; missing files and I/O errors are documented. Win32 MoveFileExW documents MOVEFILE_REPLACE_EXISTING=1 and MOVEFILE_WRITE_THROUGH=8, zero on failure and GetLastError. The exact card retries IOException only, at most 8 attempts while the staged source still exists, with Thread.Sleep(10 * attempt); no lock or lower-level move change. Sources: https://github.com/dotnet/docs/blob/main/docs/standard/io/handling-io-errors.md ; https://learn.microsoft.com/en-us/dotnet/api/system.io.file.replace?view=net-10.0 ; https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-movefileexw ."

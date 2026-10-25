@@ -136,6 +136,8 @@ Talvora exposes three local endpoints:
 
 Dev and Admin share **51 reviewed tools** for diagnostics and common fallback operations. The overlap is explicit and regression-tested; it is not accidental duplication.
 
+The counts in the badge, summary, diagrams and table are validated from the compiled manifest by `pwsh -NoProfile -File tests/ToolManifestDocumentationRegression.ps1`. The same check validates `docs/ARCHITECTURE.md` and runs in the quality gate.
+
 `talvora_toolchain_info {tool}` replaces the pnpm, Yarn, Bun, CMake and Ninja info wrappers with their original output fields. `talvora_toolchain_run {tool, arguments, workingDirectory, environment, timeoutSeconds}` replaces the CMake and Ninja runners. Dedicated runners retain executable, SDK/architecture, launcher and interactive-user selection; structured and administration probes remain available. No capability is removed.
 
 Examples of intentional role separation:
