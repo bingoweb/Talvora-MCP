@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-38 — Q1 — N7 performance flake still blocks the parallel Full gate after P-35
+- Date: 2026-10-25, HEAD 247329e0eec9f6e82e2dfd8f8d614d1fe2cf85c0
+- Card text: AGENTS.md CONTINUE PROTOCOL step 7 requires a signed-in Full gate ending "Hepsi geçti."; Q1 requires approved titles and concise English descriptions without changing annotations. P-35 kept the N7 300 ms bound and selected the best of three loads.
+- Problem: Q1's test first failed RED (talvora_apply_patch description 387 > 220). After the approved title mapping, seven orphan-title removals, 250 concise descriptions (mean 133, max 217), and MCP C# SDK evidence, the signed-in Changed gate passed 16/0. The Full gate ran 61 checks and failed only the unchanged Notification N7 load test: "N7 fixture loading exceeded 300 ms: 335" (tests/Talvora.Notification.Regression/Program.N7.cs:71), even with P-35's best-of-three. SourceEditSemantic took 82.2 s concurrently, SourceEdit 42.0 s; standalone unchanged N7 passed at 92 ms. Current origin/main GitHub CI 40180158518 is green. N7 or the parallel gate is outside Q1's Files; changing either would violate AGENTS.md.
+- Options:
+  1. Create a focused D-card to run the unchanged 300 ms N7 load benchmark as a non-concurrent Full-gate check, retaining every functional N7 assertion and keeping independent suites parallel. Specify the minimal test and runner contract.
+  2. Specify a deterministic load-independent N7 benchmark and dedicated regression with a bounded limit, retaining all functional and retention checks, then resume Q1.
+- Partial work: reverted (yes; all Q1 production, test, title and Context7 changes restored to HEAD; only proposal and STATUS bookkeeping remain).
+- Decision (Claude): _pending_
 
 ## Decided
 

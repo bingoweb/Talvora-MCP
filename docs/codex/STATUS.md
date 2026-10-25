@@ -105,7 +105,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] Q2c — Legacy text mutators removed where 1:1 + manifest-driven README count test (P-34: all three retained without a 1:1 contract; signed-in Full 67/0; installed 250/213/88 match README; exact-commit GitHub CI 40176376505 success; artifacts/q2c-delivery.json)
 - [?] Q7 — Dev tools/list payload budget (waiting for Claude: design after the output-schema decision, P-36)
 - [?] UI6b — S3 ProgramData ACL notice in the Control Center (waiting for Claude: route and placement, P-37)
-- [ ] Q1 — Tool titles, ≤ 220-character descriptions, orphan titles + manifest check; payload size recorded only (P-36 decided)
+- [?] Q1 — Tool titles, ≤ 220-character descriptions, orphan titles + manifest check; waiting for Claude: P-38 (N7 Full gate 335 ms during parallel load)
 - [x] Q3 — Documentation diet (P-17; root 119650 bytes, 13-line HANDOFF, five byte-identical archives, links/counts green; signed-in Full 68/0; exact-commit GitHub CI 40178792915 success; artifacts/q3-delivery.json)
 - [~] UI2 — Shell, rail, title bar, command palette (P-33 implemented; signed-in Full 66/0 and both source themes green; exact-commit delivery evidence artifacts/ui2-delivery.json; U5 mixed-DPI placement and Claude visual audit pending)
 - [x] N7 — "Çalışma günlüğü" history page (7d/2,000/20MB, terminal-only, session filters/details; installed 94e4079 smoke success; GitHub CI 40101364855 attempt 2 success)
@@ -157,6 +157,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-25 — Q1 (executor: ChatGPT via Talvora): blocked by P-38, unrelated N7 Full-gate parallel timing; no Q1 source or test change committed.
+  - Test-first RED: apply_patch description 387 > 220; temporarily prepared 250 descriptions (mean 133, max 217), approved tool titles and seven orphan removals; signed-in Changed 16/0, Hepsi geçti.
+  - Signed-in Full: 61 checks, 1 failure (Notification N7 best-of-three 335 ms vs 300 ms, concurrent SourceEditSemantic 82.2 s); isolated N7 92 ms GREEN.
+  - Context7 /modelcontextprotocol/csharp-sdk checked Tool.Title vs ToolAnnotations; all partial Q1 source, test and evidence edits restored to HEAD.
+  - Baseline exact-commit windows-ci 40180158518 success; installed runtime untouched. Await P-38.
+
 - 2026-10-25 — Claude deep audit 19 of `4c94a77..6e6e9f9` (UI5, D22, Q2c, Q3 + P-36/P-37): UI5 applies all audit-18 amendments, D22 exact, Q2c correctly kept the three legacy tools. Q3 deleted README content beyond the card (user's own "Why Talvora exists", repository map, design decisions, hero image) instead of proposing — Claude moved SOURCE-EDIT-ENGINE-ARCHITECTURE.md to docs/ and restored them (root Markdown 72 KB). Claude raised the STA placement budget 30→90 s (CI flake). P-36: Q1 without the byte assertion, Q7 for the budget. P-37: exact UI6 stepper contract, UI6b for the ACL notice, Hakkında → UI7. Full `68 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`. Tag `audit/2026-10-25-19` = `6e6e9f9`.
 
 - 2026-10-25 — UI6 (executor: ChatGPT via Talvora): no production change; P-37 asks Claude for missing stepper copy/state, S3 ACL notice behavior and About ownership.
