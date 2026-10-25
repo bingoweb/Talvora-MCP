@@ -53,7 +53,7 @@ internal static partial class Program
                         .GetField("lastFrame", BindingFlags.Instance | BindingFlags.NonPublic)!
                         .GetValue(w);
                 DesktopProgressMessage Message(string id, string actor, DesktopProgressKind kind,
-                    bool terminal = false)
+                    bool terminal = false, long sequence = 1)
                 {
                     var frame = WorklogTestFrames.Running(id, "+keep this code();") with
                     {
@@ -68,7 +68,7 @@ internal static partial class Program
                     };
                     return new DesktopProgressMessage(id, "talvora_apply_patch", frame.Current.Title,
                         "N8 test", kind, DateTimeOffset.UtcNow, 1,
-                        Evidence: frame.Evidence, Sequence: 1, WorklogFrame: frame, SessionClosed: terminal);
+                        Evidence: frame.Evidence, Sequence: sequence, WorklogFrame: frame, SessionClosed: terminal);
                 }
                 void Set(SettingsPreferences value) =>
                     SettingsPreferencesStore.SetAsync(value).GetAwaiter().GetResult();
@@ -82,6 +82,10 @@ internal static partial class Program
                 Set(defaults with { ShowCodePreview = false });
                 if (Frame(first)?.Evidence?.CodePreview is null)
                     throw new InvalidOperationException("N8: toggle altered an already visible card.");
+                // Audit 21: the next update of an already visible card keeps the preview choice it opened with.
+                presenter.Publish(Message("default-code", "ChatGPT", DesktopProgressKind.Running, sequence: 2));
+                if (Frame(first)?.Evidence?.CodePreview is null)
+                    throw new InvalidOperationException("N8: preview toggle stripped code from a visible card's update.");
                 presenter.Publish(Message("no-code", "ChatGPT", DesktopProgressKind.Started));
                 if (Window("no-code") is not { } hidden ||
                     Frame(hidden)?.Evidence?.CodePreview is not null)
@@ -121,6 +125,10 @@ internal static partial class Program
                 Set(defaults with { QuietMode = true, ShowCodePreview = false });
                 if (!visible.IsVisible)
                     throw new InvalidOperationException("N8: quiet toggle closed an existing card.");
+                // Audit 21: a card that is already visible still receives its own completion while quiet.
+                presenter.Publish(Message("normal", "ChatGPT", DesktopProgressKind.Completed, terminal: true, sequence: 2));
+                if (Frame(visible)?.Current.State != WorklogStepState.Succeeded)
+                    throw new InvalidOperationException("N8: quiet mode froze an already visible card.");
                 presenter.Publish(Message("quiet", "Claude", DesktopProgressKind.Failed, terminal: true));
                 if (Window("quiet") is not null || !visible.IsVisible ||
                     history.LoadRecent().SingleOrDefault(x => x.SessionId == "quiet")?.Evidence?.CodePreview is null)

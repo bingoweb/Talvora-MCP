@@ -1444,8 +1444,12 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
     internal static string BuildUi7Tooltip(string statusSentence)
     {
         var text = "Talvora Kontrol Merkezi — " + statusSentence;
-        // Windows Forms NotifyIcon enforces a 63-character text limit.
-        return text.Length <= 63 ? text : text[..63];
+        // .NET 10 NotifyIcon accepts 127 characters (63 was the .NET Framework limit, which cut the §9 sentence
+        // mid-word); anything longer ends at a word with an ellipsis (audit 2026-10-25 (21)).
+        const int maximum = 127;
+        if (text.Length <= maximum) return text;
+        var wordEnd = text.LastIndexOf(' ', maximum - 2);
+        return text[..(wordEnd > 0 ? wordEnd : maximum - 1)].TrimEnd() + "…";
     }
 
     private string BuildUi7StatusSentence()

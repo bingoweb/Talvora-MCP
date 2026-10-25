@@ -33,6 +33,13 @@ internal static partial class Program
         exit.PerformClick();
         if (opened != 1 || refreshed != 1 || exited != 1)
             throw new InvalidOperationException("UI7 tray menu actions are not reachable.");
+        // Audit 21: the full §9 sentence fits; only text beyond 127 characters ends at a word with "…".
+        var attention = TrayApplicationContext.BuildUi7Tooltip("Talvora Admin dikkat istiyor: Yanıt gecikiyor.");
+        if (attention != "Talvora Kontrol Merkezi — Talvora Admin dikkat istiyor: Yanıt gecikiyor.")
+            throw new InvalidOperationException("UI7 tooltip cut the status sentence: " + attention);
+        var longTip = TrayApplicationContext.BuildUi7Tooltip(string.Join(' ', Enumerable.Repeat("bileşen", 30)));
+        if (longTip.Length > 127 || !longTip.EndsWith("…", StringComparison.Ordinal) || longTip.Contains("bileş…", StringComparison.Ordinal))
+            throw new InvalidOperationException("UI7 tooltip must end at a word within 127 characters: " + longTip);
         if (TrayApplicationContext.BuildUi7Tooltip("Her şey yolunda.") !=
             "Talvora Kontrol Merkezi — Her şey yolunda.")
             throw new InvalidOperationException("UI7 tray tooltip must use the approved status text.");

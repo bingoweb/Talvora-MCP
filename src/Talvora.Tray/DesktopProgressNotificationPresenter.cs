@@ -136,6 +136,9 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         }
     }
 
+    // The code-preview choice a card opened with (N8); kept for its later updates.
+    private readonly Dictionary<string, bool> _previewBySession = new(StringComparer.Ordinal);
+
     private void PublishCore(DesktopProgressMessage message)
     {
         message = _codeState.Restore(message);
@@ -150,10 +153,14 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         }
 
         var preferences = SettingsPreferencesStore.Current;
-        if (preferences.QuietMode ||
-            (preferences.FailureAndAgentOnly &&
-             message.Kind != DesktopProgressKind.Failed &&
-             message.WorklogFrame?.Header.ActorName is not ("Codex" or "Claude")))
+        // N8 switches decide whether a *new* card opens; a card already on screen keeps receiving its own
+        // updates (P-39: toggling never closes or changes a visible card; audit 2026-10-25 (21)).
+        var hasVisibleCard = _windows.ContainsKey(message.WorklogFrame?.SessionId ?? message.OperationId);
+        if (!hasVisibleCard &&
+            (preferences.QuietMode ||
+             (preferences.FailureAndAgentOnly &&
+              message.Kind != DesktopProgressKind.Failed &&
+              message.WorklogFrame?.Header.ActorName is not ("Codex" or "Claude"))))
         {
             return;
         }
@@ -212,6 +219,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                 }
 
                 _windows.Remove(sessionId);
+                _previewBySession.Remove(sessionId);
                 if (_windows.Count == 0 && !_isPinned)
                 {
                     _automaticScreenDeviceName = null;
@@ -219,6 +227,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                 Reposition();
             };
             _windows[sessionId] = window;
+            _previewBySession[sessionId] = preferences.ShowCodePreview;
         }
 
         if (_hasPreferredSize)
@@ -226,7 +235,10 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             window.ApplyPreferredSize(_preferredWidthDip, _preferredHeightDip);
         }
 
-        var displayFrame = preferences.ShowCodePreview ? frame :
+        var showPreview = _previewBySession.TryGetValue(sessionId, out var openedWithPreview)
+            ? openedWithPreview
+            : preferences.ShowCodePreview;
+        var displayFrame = showPreview ? frame :
             frame with
             {
                 Evidence = frame.Evidence is { } evidence
@@ -234,7 +246,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                     : null,
             };
         window.Update(displayFrame,
-            preferences.ShowCodePreview ? _codeState.CodeChangedUtc : null,
+            showPreview ? _codeState.CodeChangedUtc : null,
             Worklog.WorklogDetails.From(message));
 
         if (!window.IsVisible)

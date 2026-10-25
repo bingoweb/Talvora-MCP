@@ -1096,6 +1096,24 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-25 (21) · range `audit/2026-10-25-20 (2aa7825)..bd39d73` · 3 card commits + P-41 · result: Q1 and UI7 right; N8 broke its "visible card untouched" rule (fixed by Claude); tooltip limit fixed; P-41 decided
+
+Delivered: Q1 `4f6127f`, N8 `26af2c0`, UI7 `bd39d73`; all CI green on the first attempt (the audit-19/20 flake fixes hold). Installed `bd39d73`. UI8 stopped with P-41 (uncommitted proposal included in this commit).
+
+**Q1, live on installed `bd39d73`:** 250/213/88 tools, every tool has its Turkish title, no description over 220 characters (mean 124, max 217), every shortened description ends on a full sentence, annotations untouched, the seven orphan titles removed and the manifest check added. Payload (recorded, Q7's job): `/mcp` 337 578 B, `/mcp/dev` 304 216 B, `/mcp/admin` 85 675 B.
+
+**UI7:** menu order and texts exactly as specified ("Kontrol Merkezini aç" bold/default, disabled "Durum: …", separator, "Yenile", separator, "Çıkış"), §9 status sentence, "Hakkında" in Ayarlar. The old per-MCP submenus left the tray menu as the spec's list requires; those actions remain in the Control Center.
+
+**P-41 measurement:** installed tray, Genel bakış, 30 s warm-up, 10 s sample: **0.416 %** of the machine — §10's < 1 % idle limit is met (after the audit-17 probe throttle).
+
+| # | Severity | Finding | Action |
+|---|---|---|---|
+| 1 | **MEDIUM** | N8 broke P-39's "toggling never closes or changes a card that is already visible": with Sessiz mod or the failure/agent filter on, the presenter also dropped the **updates of a card already on screen** (a running card would never receive its completion and stay "ÇALIŞIYOR"); and switching the code preview off stripped the code from the next update of a visible card. N8's test only checked that the card stayed visible. | **Fixed by Claude:** the switches only decide whether a *new* card opens; a visible card keeps its updates and the preview choice it opened with. N8 test extended (update of a visible card under both switches): RED on `bd39d73`, GREEN after. |
+| 2 | LOW | UI7 cut the tooltip at 63 characters (the .NET Framework limit): "Talvora Kontrol Merkezi — " leaves 37, so "Talvora Admin dikkat istiyor: Yanıt gecikiyor." was cut mid-word. .NET 10 `NotifyIcon.Text` accepts 127 (measured). | **Fixed by Claude:** 127, and anything longer ends at a word with "…"; UI7 test extended. |
+| 3 | — | P-41: the legacy builder is still live (constructed in `LegacyContentHost`, used by detail actions); HC tokens, UIA names and the second screenshot are unspecified. | **Decided:** option 1 — UI8 gets the exact contracts below; the legacy migration becomes **UI9** (Claude designs it). |
+
+Verification on a clean clone of `bd39d73`: Full gate `68 kontrol, 0 hata` / `Hepsi geçti.` as `MSI\tayla`.
+
 ### Audit 2026-10-25 (20) · range `audit/2026-10-25-19 (6e6e9f9)..2aa7825` · 1 card commit + 3 proposals · result: UI6 exact; two small fixes by Claude; P-38, P-39, P-40 decided
 
 Delivered: UI6 `914f15a` (installed, CI green). Stopped correctly: Q1 (P-38), N8 (P-39), UI7 (P-40).
