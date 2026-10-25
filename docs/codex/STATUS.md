@@ -112,14 +112,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI3 — Overview: Nabız ring + chain strip (installed 6d12e65, 250 tools, full source and installed smoke/Gece/Gun PNGs; signed-in Full 66/0; GitHub windows-ci 40104570857 success; remaining idle CPU polish tracked under UI8)
 - [x] UI4 — Services list + detail (installed 355af6d, 250 tools, installed smoke and four theme PNGs green; Full 66/0; GitHub windows-ci 40111604160 attempt 2 success)
 - [x] UI5 — Events + raw log (installed 12d26e2, signed-in Full 66/0, installed smoke and both-theme PNGs green; exact-commit GitHub windows-ci 40172535096 success; Gitea #9 comment 161; artifacts/ui5-delivery.json)
-- [~] UI6 — Settings and setup stepper (P-37 implemented; signed-in Changed 29/0 and Full 68/0; Gece/Gün source smoke PNGs; exact-commit install/CI and U11 real-ID acceptance pending)
-- [?] N8 — Notification settings (waiting for UI6 Settings view)
-- [?] UI7 — Tray icon/menu, worklog colour alignment, About (waiting for UI6 Settings view)
-- [?] UI8 — Polish, accessibility, cleanup, screenshots (waiting for UI6, N8 and UI7)
+- [x] UI6 — Settings and setup stepper (P-37; installed 914f15a, Full 68/0, installed Gece/Gün smoke PNGs; exact-commit GitHub CI 40183484149 success; user U11 confirmed working on 2026-10-25)
+- [?] N8 — Notification settings (waiting for Claude: P-39, quiet-hours and agent-job behavior / exact UI copy)
+- [?] UI7 — Tray menu, worklog colour alignment, About (waiting for Claude: P-40, absent visual-theme mapping and protected card contract)
+- [?] UI8 — Polish, accessibility, cleanup, screenshots (waiting for N8 and UI7)
 
 ## User queue
-
-- U11 — UI6: In Ayarlar ve kurulum, verify the three-step flow with the real tunnel registration IDs for talvora-dev and talvora-admin, completing any missing tunnel IDs and checking that the card ends with "Kurulum tamam." Do not record or share an Admin API key.
 
 - U9 — Tepsideki yeni Talvora ikonuna bakın (açık ve koyu görev çubuğunda); beğenmezseniz Claude'a söyleyin.
 
@@ -159,6 +157,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-25 — UI6 verification: user confirmed "çalışıyor"; exact-commit GitHub windows-ci 40183484149 success, installed /healthz.sourceCommit=914f15a, installed WPF smoke and Gece/Gün PNGs green. U11 accepted without recording any credentials.
+- 2026-10-25 — N8/UI7 design blockers: P-39 requests quiet-hours, agent-job and Turkish UI contract; P-40 requests absent worklog theme-mapping integration/ownership decision. No N8/UI7 production changes; UI8 remains dependent.
+
 - 2026-10-25 — UI6 (executor: ChatGPT via Talvora, P-37): SettingsView/StepperCard XAML and thin ViewModel replace the legacy setup banner; active-only tunnel/admin inputs, transient S5 key, 3 exact step states; no UI6b ACL notice or UI7 About.
   - Test first RED (missing UI6 model), then UI6_SETTINGS_GREEN; signed-in Changed 29/0 and Full 68/0, Hepsi geçti.; Control Center WPF smoke GREEN.
   - Theme, motion and rail preferences persisted per user; live rail and chain-motion bindings; existing setup service and secure key clearing preserved.

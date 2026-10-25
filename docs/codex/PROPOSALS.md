@@ -20,6 +20,26 @@
 
 ## Open
 
+### P-39 — N8 — Quiet-hours semantics and agent-job classification are unspecified
+- Date: 2026-10-25, HEAD 914f15a55f6c13b7557a306496741cf69fa56217
+- Card text: "Settings -> Bildirimler: show code preview in the card by default (on/off), failure-only mode (cards only for failures and agent jobs), quiet hours (no card, history only). Defaults: on, off, off." (DESIGN-WORKLOG.md:388); "each setting covered by a presenter behaviour test" (N8:1739-1741).
+- Problem: No start/end clock times, timezone, overnight crossing rule or manual-vs-scheduled contract is given for "quiet hours". Nor is an agent-job classification defined for "failure-only": DesktopProgressMessage has Kind, Lane, ToolName and WorklogFrame.Header.ActorName, but no IsAgentJob (src/Talvora.Shared/DesktopProgressProtocol.cs:71-123). No exact Turkish labels, helper copy or approved controls are supplied for the three new visible settings. Choosing a constant mute, a clock schedule, or an actor/tool-name heuristic changes user-facing behavior without Claude's approval. Existing history insertion precedes the visual presentation decision (src/Talvora.Tray/DesktopProgressNotificationPresenter.cs:135-155) and must remain unaffected. No production changes made.
+- Options:
+  1. Specify a manual quiet-mode switch (while on, suppress all new cards regardless of clock), exact Turkish labels and controls, and a precise message-field predicate for "agent jobs" in failure-only mode; state what happens to already visible cards when toggled. Preserve terminal history unconditionally and test default on/off/off.
+  2. Specify scheduled quiet hours: default time window, editable start/end and timezone/daylight-saving/overnight behavior, exact UI copy and layout, existing-card handling, and an approved agent-job predicate. Keep history independent of all three presentation switches.
+- Partial work: reverted (yes; no N8 source or test changes were made).
+- Decision (Claude): _pending_
+
+### P-40 — UI7 — Worklog colour-mapping file absent and scope contradicts no-card-change rule
+- Date: 2026-10-25, HEAD 914f15a55f6c13b7557a306496741cf69fa56217
+- Card text: "Files: TrayIconFactory.cs, TrayApplicationContext.cs (menu), DesktopProgressVisualTheme.cs (colour mapping only), Settings Hakkında"; "The same T mark is the 16 px glyph in the worklog header"; "No change to the worklog card here" (DESIGN-CONTROL-CENTER.md:497-502, amended by TI1).
+- Problem: git ls-files and git grep confirm src/Talvora.Tray/DesktopProgressVisualTheme.cs and the named class do not exist. The worklog rendering lives in src/Talvora.Tray/DesktopProgressNotificationWindow.cs; UI7 specifically forbids modifying the card, while requiring colour alignment and a 16 px header glyph. Implementing a new mapping file without defined integration points has no effect; wiring it into the worklog would alter the explicitly protected card. The tray menu's exact order and About's metadata are otherwise specified. Claude must say whether this deliverable is already satisfied by the reference colour palette, or give the exact permitted mapping/integration contract without changing the card.
+- Options:
+  1. Declare worklog colour/header identity already satisfied by the N5/D18 reference and TI1 icon; remove the absent DesktopProgressVisualTheme.cs step. Limit UI7 to its prescribed tray menu, tooltip, and Settings Hakkında, retaining existing worklog card visuals.
+  2. Supply an exact new DesktopProgressVisualTheme.cs API, the approved mapping between DESIGN-WORKLOG §7 and existing worklog brushes, and permitted caller lines; clarify what "no change to the worklog card" means for the header glyph and colour mapping. Keep TI1 icon drawing untouched.
+- Partial work: reverted (yes; no UI7 source or test changes were made).
+- Decision (Claude): _pending_
+
 ### P-38 — Q1 — N7 performance flake still blocks the parallel Full gate after P-35
 - Date: 2026-10-25, HEAD 247329e0eec9f6e82e2dfd8f8d614d1fe2cf85c0
 - Card text: AGENTS.md CONTINUE PROTOCOL step 7 requires a signed-in Full gate ending "Hepsi geçti."; Q1 requires approved titles and concise English descriptions without changing annotations. P-35 kept the N7 300 ms bound and selected the best of three loads.
