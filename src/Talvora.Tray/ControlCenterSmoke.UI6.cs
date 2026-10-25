@@ -45,5 +45,19 @@ internal static partial class ControlCenterSmoke
         ((FrameworkElement)settings.FindName("QuietModeSetting")).BringIntoView();
         window.UpdateLayout();
         SaveVisualSnapshotIfRequested(window, "n8-notifications-" + theme);
+
+        if (settings.FindName("AboutVersion") is not System.Windows.Controls.TextBlock aboutVersion ||
+            settings.FindName("AboutCommit") is not System.Windows.Controls.TextBlock aboutCommit ||
+            settings.FindName("ReadmeLink") is not Wpf.Ui.Controls.Anchor readme ||
+            settings.FindName("SecurityLink") is not Wpf.Ui.Controls.Anchor security ||
+            string.IsNullOrWhiteSpace(aboutVersion.Text) ||
+            string.IsNullOrWhiteSpace(aboutCommit.Text) ||
+            readme.NavigateUri?.ToString() != Views.SettingsView.ReadmeUrl ||
+            security.NavigateUri?.ToString() != Views.SettingsView.SecurityUrl)
+            throw new InvalidOperationException("UI7 Hakkında must show build metadata and working README/SECURITY links.");
+
+        aboutCommit.BringIntoView();
+        window.UpdateLayout();
+        SaveVisualSnapshotIfRequested(window, "ui7-about-" + theme);
     }
 }

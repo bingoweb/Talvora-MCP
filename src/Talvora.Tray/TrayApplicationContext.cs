@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using Talvora.Shared;
+using Talvora.Tray.ViewModels;
 
 namespace Talvora.Tray;
 
@@ -80,12 +81,12 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 _desktopProgressPresenter.Publish);
         _desktopProgressListener.Start();
 
-        _statusItem = new ToolStripMenuItem("Yönetilen MCP durumları kontrol ediliyor...")
+        _statusItem = new ToolStripMenuItem("Durum: " + BuildUi7StatusSentence())
         {
             Enabled = false,
         };
 
-        var openControlCenterItem = new ToolStripMenuItem("Talvora Control Center'ı Aç");
+        var openControlCenterItem = new ToolStripMenuItem("Kontrol Merkezini aç");
         openControlCenterItem.Click += (_, _) =>
             _controlCenterApplication.ShowControlCenter();
 
@@ -124,22 +125,18 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
         giteaMenu.DropDownItems.Add(_restartGiteaItem);
         giteaMenu.DropDownItems.Add(_refreshGiteaItem);
 
-        var exitItem = new ToolStripMenuItem("Talvora'dan Çık");
+        var refreshItem = new ToolStripMenuItem("Yenile");
+        refreshItem.Click += async (_, _) => await RefreshUi7Async();
+
+        var exitItem = new ToolStripMenuItem("Çıkış");
         exitItem.Click += (_, _) => ExitTray();
 
-        _menu = new ContextMenuStrip();
-        _menu.Items.Add(_statusItem);
-        _menu.Items.Add(openControlCenterItem);
-        _menu.Items.Add(new ToolStripSeparator());
-        _menu.Items.Add(talvoraMenu);
-        _menu.Items.Add(giteaMenu);
-        _menu.Items.Add(new ToolStripSeparator());
-        _menu.Items.Add(exitItem);
+        _menu = BuildUi7Menu(openControlCenterItem, _statusItem, refreshItem, exitItem);
 
         _notifyIcon = new NotifyIcon
         {
             ContextMenuStrip = _menu,
-            Text = "Talvora",
+            Text = BuildUi7Tooltip(BuildUi7StatusSentence()),
             Visible = true,
         };
         _notifyIcon.DoubleClick += (_, _) =>
@@ -1408,14 +1405,13 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
         };
         var detail = BuildAggregateDetail();
 
-        _statusItem.Text = summary;
+        var statusSentence = BuildUi7StatusSentence();
+        _statusItem.Text = "Durum: " + statusSentence;
 
         var tooltip = detail.Length == 0
             ? summary
             : $"{summary} - {detail}";
-        _notifyIcon.Text = tooltip.Length <= 63
-            ? tooltip
-            : tooltip[..63];
+        _notifyIcon.Text = BuildUi7Tooltip(statusSentence);
 
         var previous = _statusIcon;
         _iconAppearance = TrayIconAppearance.Current();
@@ -1424,6 +1420,98 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             _iconAppearance);
         _notifyIcon.Icon = _statusIcon;
         previous?.Dispose();
+    }
+
+    internal static ContextMenuStrip BuildUi7Menu(
+        ToolStripMenuItem open,
+        ToolStripMenuItem status,
+        ToolStripMenuItem refresh,
+        ToolStripMenuItem exit)
+    {
+        open.Font = new Font(SystemFonts.MenuFont ?? Control.DefaultFont, FontStyle.Bold);
+        status.Enabled = false;
+        var menu = new ContextMenuStrip();
+        menu.Items.Add(open);
+        menu.Items.Add(status);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(refresh);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(exit);
+        menu.Opening += (_, _) => open.Select();
+        return menu;
+    }
+
+    internal static string BuildUi7Tooltip(string statusSentence)
+    {
+        var text = "Talvora Kontrol Merkezi — " + statusSentence;
+        // Windows Forms NotifyIcon enforces a 63-character text limit.
+        return text.Length <= 63 ? text : text[..63];
+    }
+
+    private string BuildUi7StatusSentence()
+    {
+        var ignoreGitea = ManagedMcpSessionState.IsManuallyStopped("gitea") ||
+            (_giteaRegistration is { AutoStart: false } &&
+             _giteaStatus.State != GiteaConnectionState.Running);
+        var entries = new List<StatusNarratorEntry>
+        {
+            new("Talvora Çekirdeği", _talvoraStatus.State switch
+                {
+                    TalvoraConnectionState.Ready => ComponentVisualState.Ready,
+                    TalvoraConnectionState.Offline => ComponentVisualState.Offline,
+                    _ => ComponentVisualState.Attention,
+                }, PlainReason: _talvoraStatus.Summary),
+            new("Gitea", ignoreGitea ? ComponentVisualState.Neutral :
+                _giteaStatus.State switch
+                {
+                    GiteaConnectionState.Running => ComponentVisualState.Ready,
+                    GiteaConnectionState.Offline => ComponentVisualState.Offline,
+                    GiteaConnectionState.Restarting => ComponentVisualState.Repairing,
+                    _ => ComponentVisualState.Attention,
+                }, ignoreGitea, _giteaStatus.Summary),
+        };
+        foreach (var registration in _genericRegistrations)
+        {
+            _genericDashboardStates.TryGetValue(registration.Id, out var state);
+            var optional = ManagedMcpAggregateHealthPolicy.IsIgnored(
+                registration, state?.Health,
+                ManagedMcpSessionState.IsManuallyStopped(registration.Id));
+            var visual = optional && state?.Health != ControlCenterHealthState.Ready
+                ? ComponentVisualState.Neutral
+                : state?.Health switch
+                {
+                    ControlCenterHealthState.Ready => ComponentVisualState.Ready,
+                    ControlCenterHealthState.Offline => ComponentVisualState.Offline,
+                    ControlCenterHealthState.Attention => ComponentVisualState.Attention,
+                    _ => ComponentVisualState.Attention,
+                };
+            entries.Add(new StatusNarratorEntry(
+                registration.DisplayName, visual, optional, state?.StatusText ?? ""));
+        }
+        return StatusNarrator.Build(entries, DateTimeOffset.UtcNow).Title;
+    }
+
+    private async Task RefreshUi7Async()
+    {
+        await RefreshTalvoraStatusAsync(showNotification: false);
+        await RefreshGiteaStatusAsync(showNotification: false);
+        try
+        {
+            var snapshot = await ControlCenterDashboardService.GetSnapshotAsync(
+                _lifetimeCts.Token);
+            foreach (var state in snapshot.Mcps)
+                if (state.Registration.Id is not ("talvora" or "gitea"))
+                    _genericDashboardStates[state.Registration.Id] = state;
+        }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            TrayLog.Write("Tray refresh could not read all components", ex);
+        }
+        UpdateAggregateTrayState();
     }
 
     private string BuildAggregateDetail()

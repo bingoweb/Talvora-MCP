@@ -113,8 +113,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI4 — Services list + detail (installed 355af6d, 250 tools, installed smoke and four theme PNGs green; Full 66/0; GitHub windows-ci 40111604160 attempt 2 success)
 - [x] UI5 — Events + raw log (installed 12d26e2, signed-in Full 66/0, installed smoke and both-theme PNGs green; exact-commit GitHub windows-ci 40172535096 success; Gitea #9 comment 161; artifacts/ui5-delivery.json)
 - [x] UI6 — Settings and setup stepper (P-37; installed 914f15a, Full 68/0, installed Gece/Gün smoke PNGs; exact-commit GitHub CI 40183484149 success; user U11 confirmed working on 2026-10-25)
-- [~] N8 — Notification settings (P-39, signed-in Full 68/0 and both-theme smoke passed; exact-commit install and GitHub CI verification pending)
-- [ ] UI7 — Tray menu, tooltip, Hakkında (P-40 decided: worklog identity already satisfied; no visual-theme file)
+- [x] N8 — Notification settings (P-39; signed-in Full 68/0, installed 26af2c0 with native runtime and Control Center smoke green, exact-commit GitHub CI 40187365501 success)
+- [~] UI7 — Tray menu, tooltip, Hakkında (P-40/TI1; signed-in Changed 27/0 and Full 68/0, both-theme smoke green; installed source and exact-commit GitHub CI pending)
 - [?] UI8 — Polish, accessibility, cleanup, screenshots (waiting for N8 and UI7)
 
 ## User queue
@@ -157,6 +157,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+- 2026-10-25 — UI7 (executor: ChatGPT via Talvora; P-40/TI1): approved four-action tray menu with a disabled §9 StatusNarrator sentence, refresh, and Windows-length-bounded tooltip; Settings Hakkında shows R5 assembly version, short commit and README/SECURITY links. No tray icon drawing, worklog card, colour mapping or theme changes.
+  - Test first RED (missing menu/tooltip/About APIs), targeted UI7_TRAY_ABOUT_GREEN, signed-in Changed 27/0 — Hepsi geçti. A WinForms menu test previously ran before legacy WPF regressions and stalled; placing it last restored the unchanged full notification regression. Original hung test was terminated without modifying any service.
+  - UI7 screenshots artifacts/ui7/source-ui7-about-loaded.png and source-ui7-about-alternate.png; 16/20/24/32 icons in artifacts/ui7/icons/ and tray-sheet.png, existing TI1 art verified unchanged.
+  - Context7 /dotnet/winforms and /lepoco/wpfui; Awwwards WKNDHRS and Sai Narayanan reference pages checked as evidence only.
+  - Design gaps filled: used existing UI6/N8 Surface, Border, Radius.L, Type.Body/Mono, 20px card padding, 24px card gap and 16px row/link gap; no new visual tokens. Existing NotifyIcon 63-character platform limit retained.
+  - Signed-in Full 68/0 — Hepsi geçti. Installer build/deploy, installed UI smoke, origin/github push and exact-commit windows-ci to be verified.
 - 2026-10-25 — N8 (executor: ChatGPT via Talvora; P-39): approved Bildirimler card and three persisted toggles (defaults on/off/off); history always precedes display filtering, and existing visible cards are untouched until the next message.
   - Test first RED: missing N8 preference properties and presenter injection; isolated real STA presenter regression GREEN for all three toggles, Codex/Claude/failure-only and suppressed terminal history.
   - Signed-in Changed 27/0 and Full 68/0, Hepsi geçti.; Context7 /lepoco/wpfui and /dotnet/wpf.

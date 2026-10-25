@@ -115,6 +115,43 @@
                     </Grid>
                 </StackPanel>
             </Border>
+            <Border Margin="0,24,0,0" Background="{DynamicResource Tv.Surface}"
+                    BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
+                    CornerRadius="{StaticResource Tv.Radius.L}" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="Hakkında" Style="{StaticResource Tv.Type.BodyStrong}"
+                               Margin="0,0,0,16" />
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="220" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Sürüm" Style="{StaticResource Tv.Type.Body}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="AboutVersion" Grid.Column="1"
+                                   TextWrapping="Wrap" Style="{StaticResource Tv.Type.Body}"
+                                   AutomationProperties.Name="Sürüm" />
+                    </Grid>
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="220" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Kaynak sürüm" Style="{StaticResource Tv.Type.Body}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="AboutCommit" Grid.Column="1"
+                                   Style="{StaticResource Tv.Type.Mono}"
+                                   AutomationProperties.Name="Kaynak sürüm" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Anchor x:Name="ReadmeLink" Content="README"
+                                   NavigateUri="https://github.com/bingoweb/Talvora-MCP/blob/main/README.md"
+                                   Margin="0,0,16,0" />
+                        <ui:Anchor x:Name="SecurityLink" Content="SECURITY"
+                                   NavigateUri="https://github.com/bingoweb/Talvora-MCP/blob/main/SECURITY.md" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

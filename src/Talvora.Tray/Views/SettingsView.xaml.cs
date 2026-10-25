@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Reflection;
 using Talvora.Tray.Controls;
 using Talvora.Tray.ViewModels;
 
@@ -27,10 +28,28 @@ internal sealed partial class SettingsView : System.Windows.Controls.UserControl
         Model.Preferences = SettingsPreferencesStore.Current;
         SynchronizeTheme();
         SynchronizeAppearance();
+        var about = GetUi7AboutMetadata(typeof(SettingsView).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion);
+        AboutVersion.Text = about.Version;
+        AboutCommit.Text = about.ShortCommit;
     }
 
     internal SettingsViewModel Model { get; }
     internal StepperCard SetupCard => (StepperCard)SetupHost.Content;
+
+    internal const string ReadmeUrl =
+        "https://github.com/bingoweb/Talvora-MCP/blob/main/README.md";
+    internal const string SecurityUrl =
+        "https://github.com/bingoweb/Talvora-MCP/blob/main/SECURITY.md";
+
+    internal static (string Version, string ShortCommit) GetUi7AboutMetadata(string? informationalVersion)
+    {
+        var version = string.IsNullOrWhiteSpace(informationalVersion)
+            ? "Bilinmiyor" : informationalVersion;
+        var separator = version.IndexOf('+');
+        var commit = separator >= 0 ? version[(separator + 1)..] : string.Empty;
+        return (version, commit.Length >= 7 ? commit[..7] : "—");
+    }
 
     internal void SynchronizeTheme()
     {

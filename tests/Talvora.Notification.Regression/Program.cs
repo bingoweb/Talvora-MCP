@@ -14,6 +14,11 @@ internal static partial class Program
 {
     public static async Task<int> Main()
     {
+        if (Environment.GetCommandLineArgs().Contains("--ui7-only", StringComparer.Ordinal))
+        {
+            AssertUi7TrayAndAbout();
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--n8-only", StringComparer.Ordinal))
         {
             await AssertN8NotificationsAsync();
@@ -86,6 +91,7 @@ internal static partial class Program
         await AssertInstalledTrayPipeIsTrustedWhenRunningAsync();
         await AssertPipeReadTimeoutRecoveryAsync();
         await AssertOffScreenPinnedPlacementIsNormalizedAsync();
+        AssertUi7TrayAndAbout();
 
         Console.WriteLine(
             "DESKTOP_PROGRESS_BEHAVIOR_GREEN");
