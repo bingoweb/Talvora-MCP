@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-25-22` = `bc1a1f9`. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-27-24` = this audit commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -118,7 +118,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI7 — Tray menu, tooltip, Hakkında (P-40/TI1; signed-in Changed 27/0 and Full 68/0, installed bd39d73, both-theme smoke green, GitHub windows-ci 40190062851 success)
 - [x] UI8 — Polish, accessibility, screenshots (P-41; signed-in Full 68/0, theme/HC/UIA smoke green; installation and exact-commit CI evidence after commit)
 - [x] UI9 — Remove the remaining legacy Control Center host (delivered by Claude: three legacy files and LegacyContentHost deleted, −3 300 lines, no visible change; installation pending)
-- [~] I1 — Install the current main and verify Q7, UI6b and UI9 on the installed runtime (installed 3b3e7fd; Q7 full/dev/admin = 337555/146094/51590 B; UI6b PNGs both themes; CI pending)
+- [x] I1 — Install the current main and verify Q7, UI6b and UI9 on the installed runtime (installed 3b3e7fd; Q7 full/dev/admin = 337555/146094/51590 B; UI6b PNGs both themes; GitHub CI 40203947659 success; verified by Claude audit 24)
+- [ ] AP1 — Output schemas never require members that can be null (audit 24)
+- [ ] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24)
 
 ## User queue
 
@@ -159,6 +161,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-27 — Claude audit 24 (talvora_apply_patch): I1 verified (CI 40203947659). Live probes found 8 failure modes; the worst: rejected results violate their own output schema (164/239 tools), so strict clients hide every error. Queued AP1 (schema) and AP2 (OpenAI envelope, End of File, blank context, actionable messages, parameter grammar). No product code changed by Claude.
 - 2026-10-25 — U10 (executor: Codex; user explicitly asked to choose and continue a remaining item): attached preserved `artifacts/d21-live.png` to Gitea #9 comment 173; verified the published attachment and thumbnail in Chrome.
   - Attachment: 938775 bytes; SHA-256 `3a085a994bbe6a158dac40b581c5a48c253434eb11f5f534728301a9e75766d2`; URL `http://127.0.0.1:3000/attachments/86d39c13-3337-415a-955d-59efdb0e3e3e`. Existing D21 deployment/CI evidence preserved.
   - U12: user confirmed both ChatGPT Business Talvora connectors refreshed; removed completed U10/U12 reminders. No product, runtime or design changes.

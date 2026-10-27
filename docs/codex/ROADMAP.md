@@ -1096,6 +1096,481 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-27 (24) · `talvora_apply_patch` reliability · result: two cards (AP1, AP2)
+
+Claude called the installed `talvora_apply_patch` directly with the mistakes agents typically make (2026-10-27, `3b3e7fd`):
+
+| # | Input | Result | Root cause |
+|---|---|---|---|
+| 1 | Any rejected patch through a strict MCP client (Claude Code) | The client discards the whole result: "Structured content does not match the tool's output schema: data/error must have required property 'path', 'details'". The agent never sees the real error. | The SDK omits null members from `structuredContent`, but the generated output schema marks them `required`. **164 of 239** tools on `/mcp` have this defect. |
+| 2 | `*** Begin Patch` … `*** End Patch` (OpenAI/Codex envelope) | `PATCH_PARSE_ERROR` | Only `*** Begin Talvora Patch` is accepted, and the grammar is documented nowhere the model can see: the wire description is 2 generic sentences, and the parameters have no descriptions. |
+| 3 | Update without `*** Revision:` | `PATCH_PARSE_ERROR` "requires a Revision directive" | Correct rule; the message does not say how to fix it. |
+| 4 | Blank context line sent as an empty line (no leading space) | `PATCH_PARSE_ERROR` | Too strict. Models and editors strip the trailing space. |
+| 5 | `*** End of File` | `PATCH_PARSE_ERROR` | OpenAI apply_patch marker that is not recognised. |
+| 6 | Context with trailing spaces or a different indentation | `PATCH_CONTEXT_NOT_FOUND` "Exact patch context was not found." | Correct rejection; there is no hint which line differs. |
+| 7 | Absolute path inside the workspace | `SOURCE_EDIT_PATH_OUTSIDE_WORKSPACE` | Correct rejection; no relative-path suggestion. |
+| 8 | Unprefixed hunk line | `PATCH_PARSE_ERROR` | The message does not quote the line. |
+
+These worked correctly: `@@ -1,3 +1,3 @@` headers, CRLF files, UTF-8 BOM, Turkish characters, and `unified-diff` with `expectedRevisions`. A mismatched revision already reports `currentRevision`, but that was hidden by #1.
+
+**Decisions (Claude):**
+- Exact matching, mandatory revisions and the path guard stay as they are; there is no fuzzy application.
+- Fix #1 globally (AP1).
+- Accept the OpenAI envelope, `*** End of File` and stripped blank context lines as pure syntax aliases.
+- Document the grammar in the parameter descriptions.
+- Make every rejection say what to change (AP2).
+
+### AP1 — Output schemas never require members that can be null
+
+**Why:** Audit 24 #1. Strict MCP clients drop every result whose null member is omitted, so agents see a schema error instead of Talvora's message.
+
+**Files:** `src/Talvora/McpToolMetadataWirePolicy.cs`, `tests/Talvora.Smoke/SmokeScenarios.PayloadBudget.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+#### Exact implementation
+
+Step 1 — `src/Talvora/McpToolMetadataWirePolicy.cs`: replace the `using` block at the top with:
+
+```csharp
+using System.Collections.Concurrent;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using ModelContextProtocol.Protocol;
+using Talvora.Shared;
+```
+
+Step 2 — same file, replace
+
+```csharp
+        if (surface != TalvoraMcpToolSurface.Full)
+        {
+            // Copy, never mutate: in stateless mode the Tool objects are shared by every surface's request.
+            result.Tools = result.Tools.Select(WithoutOutputSchema).ToList();
+        }
+    }
+```
+
+with
+
+```csharp
+        if (surface != TalvoraMcpToolSurface.Full)
+        {
+            // Copy, never mutate: in stateless mode the Tool objects are shared by every surface's request.
+            result.Tools = result.Tools.Select(WithoutOutputSchema).ToList();
+        }
+        else
+        {
+            // AP1: the SDK omits null members from structuredContent, so a member whose schema allows null must
+            // not be required; strict clients otherwise reject the whole result, including its error message.
+            result.Tools = result.Tools.Select(WithOptionalNullableOutput).ToList();
+        }
+    }
+
+    private static readonly ConcurrentDictionary<string, JsonElement> RelaxedOutputSchemas =
+        new(StringComparer.Ordinal);
+
+    private static Tool WithOptionalNullableOutput(Tool tool)
+    {
+        if (tool.OutputSchema is not JsonElement schema)
+        {
+            return tool;
+        }
+
+        var relaxed = RelaxedOutputSchemas.GetOrAdd(tool.Name, _ =>
+        {
+            var node = JsonNode.Parse(schema.GetRawText());
+            RelaxNullableRequired(node);
+            return JsonSerializer.SerializeToElement(node);
+        });
+        return new Tool
+        {
+            Name = tool.Name,
+            Title = tool.Title,
+            Description = tool.Description,
+            InputSchema = tool.InputSchema,
+            OutputSchema = relaxed,
+            Annotations = tool.Annotations,
+            Icons = tool.Icons,
+            Meta = tool.Meta,
+        };
+    }
+
+    internal static void RelaxNullableRequired(JsonNode? node)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                if (obj["properties"] is JsonObject properties && obj["required"] is JsonArray required)
+                {
+                    for (var index = required.Count - 1; index >= 0; index--)
+                    {
+                        if (required[index] is JsonValue name &&
+                            name.TryGetValue<string>(out var propertyName) &&
+                            properties[propertyName] is JsonObject property &&
+                            AllowsNull(property))
+                        {
+                            required.RemoveAt(index);
+                        }
+                    }
+                }
+
+                foreach (var child in obj.Select(pair => pair.Value).ToList())
+                {
+                    RelaxNullableRequired(child);
+                }
+
+                break;
+            case JsonArray array:
+                foreach (var child in array.ToList())
+                {
+                    RelaxNullableRequired(child);
+                }
+
+                break;
+        }
+    }
+
+    private static bool AllowsNull(JsonObject property) => property["type"] switch
+    {
+        JsonValue value => value.TryGetValue<string>(out var type) && type == "null",
+        JsonArray types => types.Any(type =>
+            type is JsonValue value && value.TryGetValue<string>(out var name) && name == "null"),
+        _ => false,
+    };
+```
+
+Step 3 — `tests/Talvora.Smoke/SmokeScenarios.PayloadBudget.cs`: directly after the line `throw new InvalidOperationException("Q7: the full /mcp surface must keep its output schemas.");` insert
+
+```csharp
+        var requiredNullable = new List<string>();
+        foreach (var tool in full.Tools.EnumerateArray())
+        {
+            if (tool.TryGetProperty("outputSchema", out var schema))
+            {
+                CollectRequiredNullable(schema, tool.GetProperty("name").GetString() ?? "?", requiredNullable);
+            }
+        }
+        if (requiredNullable.Count != 0)
+            throw new InvalidOperationException(
+                $"AP1: {requiredNullable.Count} output members can be null but are required, e.g. " +
+                string.Join(", ", requiredNullable.Take(5)));
+```
+
+and add this method directly above `private static int CountOutputSchemas(JsonElement tools) =>`:
+
+```csharp
+    private static void CollectRequiredNullable(JsonElement schema, string path, List<string> violations)
+    {
+        if (schema.ValueKind == JsonValueKind.Object)
+        {
+            if (schema.TryGetProperty("properties", out var properties) &&
+                properties.ValueKind == JsonValueKind.Object &&
+                schema.TryGetProperty("required", out var required) &&
+                required.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var name in required.EnumerateArray())
+                {
+                    if (name.GetString() is string member &&
+                        properties.TryGetProperty(member, out var property) &&
+                        property.ValueKind == JsonValueKind.Object &&
+                        property.TryGetProperty("type", out var type) &&
+                        (type.ValueKind == JsonValueKind.String && type.GetString() == "null" ||
+                         type.ValueKind == JsonValueKind.Array &&
+                         type.EnumerateArray().Any(item => item.GetString() == "null")))
+                    {
+                        violations.Add(path + "/" + member);
+                    }
+                }
+            }
+
+            foreach (var child in schema.EnumerateObject())
+            {
+                CollectRequiredNullable(child.Value, path + "/" + child.Name, violations);
+            }
+        }
+        else if (schema.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in schema.EnumerateArray())
+            {
+                CollectRequiredNullable(item, path, violations);
+            }
+        }
+    }
+```
+
+**Don't:** change any tool's result types or serializer options, touch the dev/admin path (they already send no schemas), or add tools.
+
+**Acceptance:**
+- **Red before Step 2:** run `dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release -- --surface-policy-live http://127.0.0.1:7676` against the installed service, detached as in AGENTS (log `artifacts/ap1-red.log`). It fails with "AP1: … output members can be null but are required".
+- **Green after Step 2:** Full gate `Hepsi geçti.`; build the installer and deploy; the same smoke against the installed service prints `TALVORA MCP SURFACE POLICY LIVE GREEN` (log `artifacts/ap1-live.log`).
+- **Live probe:** `talvora_apply_patch` on the repository with patch `*** Begin Talvora Patch\n*** End Talvora Patch` and a new transactionId returns `PATCH_PARSE_ERROR` as a normal result.
+- CI checked once (AGENTS 10b).
+
+### AP2 — `talvora_apply_patch` speaks the agents' dialect and every rejection says what to fix
+
+**Why:** Audit 24 #2–#8. Matching stays exact; only syntax aliases, documentation and messages change.
+
+**Files:** `src/Talvora/SourceEditing/TalvoraPatchParser.cs`, `src/Talvora/SourceEditing/SourceEditNormalizer.cs`, `src/Talvora/SourceEditing/SourceWorkspaceClassifier.cs`, `src/Talvora/Tools/SourceEditTools.cs`, new `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.AP2.cs`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+#### Exact implementation
+
+Step 1 — `TalvoraPatchParser.cs`, in `Parse`: directly **before** the line `if (lines.Count < 2 ||` insert
+
+```csharp
+        if (lines.Count >= 2 &&
+            string.Equals(lines[0], "*** Begin Patch", StringComparison.Ordinal) &&
+            string.Equals(lines[^1], "*** End Patch", StringComparison.Ordinal))
+        {
+            // AP2: the OpenAI/Codex apply_patch envelope is the same grammar with different markers.
+            lines[0] = BeginMarker;
+            lines[^1] = EndMarker;
+        }
+```
+
+and change the message on the next `throw ParseError(` to
+
+```csharp
+                $"Patch must start with '{BeginMarker}' and end with '{EndMarker}' ('*** Begin Patch' / '*** End Patch' are accepted too).");
+```
+
+Step 2 — same file: replace the message `$"Update block for '{path}' requires a Revision directive.",` with
+
+```csharp
+                $"Update block for '{path}' needs '*** Revision: <revision>' on the line after '*** Update File: {path}'. Call talvora_read_source on '{path}' and copy its revision value (sha256:...).",
+```
+
+and `$"Delete block for '{path}' requires a Revision directive.",` with
+
+```csharp
+                $"Delete block for '{path}' needs '*** Revision: <revision>' on the line after '*** Delete File: {path}'. Call talvora_read_source on '{path}' and copy its revision value (sha256:...).",
+```
+
+Step 3 — same file, in the hunk loop: replace
+
+```csharp
+            if (line.Length == 0)
+            {
+                throw ParseError(
+                    "Patch hunk lines require an explicit prefix: space, '-', or '+'. Use a single prefix character to represent an empty line.",
+                    index);
+            }
+
+            var kind = line[0] switch
+            {
+                ' ' => SourcePatchLineKind.Context,
+                '-' => SourcePatchLineKind.Delete,
+                '+' => SourcePatchLineKind.Add,
+                _ => throw ParseError(
+                    "Patch hunk lines must start with space, '-', or '+'.",
+                    index),
+            };
+```
+
+with
+
+```csharp
+            if (string.Equals(line, "*** End of File", StringComparison.Ordinal))
+            {
+                // AP2: OpenAI apply_patch anchor; exact, unique context matching already fixes the position.
+                index++;
+                continue;
+            }
+
+            if (line.Length == 0)
+            {
+                // AP2: a blank context line whose leading space was stripped. Empty lines that only separate
+                // hunks or blocks are skipped. Matching stays exact.
+                var next = index + 1;
+                while (next < lines.Count - 1 && lines[next].Length == 0)
+                {
+                    next++;
+                }
+
+                var atBoundary = next >= lines.Count - 1 ||
+                    lines[next].StartsWith("@@", StringComparison.Ordinal) ||
+                    IsBlockStart(lines[next]) ||
+                    lines[next] == EndMarker ||
+                    lines[next] == "*** End of File";
+                if (!atBoundary)
+                {
+                    items.Add(new SourcePatchHunkLine(SourcePatchLineKind.Context, string.Empty));
+                    oldSideCount++;
+                }
+
+                index++;
+                continue;
+            }
+
+            var kind = line[0] switch
+            {
+                ' ' => SourcePatchLineKind.Context,
+                '-' => SourcePatchLineKind.Delete,
+                '+' => SourcePatchLineKind.Add,
+                _ => throw ParseError(
+                    $"Patch hunk line {index + 1} must start with ' ' (unchanged context), '-' (removed) or '+' (added); got '{(line.Length > 120 ? line[..120] + "…" : line)}'.",
+                    index),
+            };
+```
+
+Step 4 — `SourceEditNormalizer.cs`: in the hunk-matching loop, change the throw that has `"Exact patch context was not found.",` (around line 517) from `details: HunkDetails(hunk));` to `details: ContextNotFoundDetails(hunk, lines, oldSide));`. Then add this method directly above `private static IReadOnlyDictionary<string, string>? HunkDetails(`:
+
+```csharp
+    // AP2: tell the agent which line differs; the patch is still rejected (no fuzzy application).
+    private static IReadOnlyDictionary<string, string> ContextNotFoundDetails(
+        SourcePatchHunk hunk,
+        IReadOnlyList<SourceTextLine> lines,
+        IReadOnlyList<string> oldSide)
+    {
+        var details = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (hunk.Label is not null)
+        {
+            details["hunk"] = hunk.Label;
+        }
+
+        foreach (var expected in oldSide)
+        {
+            var wanted = expected.Trim();
+            if (wanted.Length == 0)
+            {
+                continue;
+            }
+
+            for (var index = 0; index < lines.Count; index++)
+            {
+                if (string.Equals(lines[index].Content.Trim(), wanted, StringComparison.Ordinal) &&
+                    !string.Equals(lines[index].Content, expected, StringComparison.Ordinal))
+                {
+                    details["hint"] = "Only whitespace differs: copy the line exactly from talvora_read_source (indentation, tabs, trailing spaces).";
+                    details["patchLine"] = expected;
+                    details["fileLine"] = lines[index].Content;
+                    details["fileLineNumber"] = (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    return details;
+                }
+            }
+        }
+
+        details["hint"] = "Context and '-' lines must match the current file exactly and occur once. Re-read the file with talvora_read_source and copy them.";
+        return details;
+    }
+```
+
+Step 5 — `SourceWorkspaceClassifier.cs`, `ResolveWorkspacePath`: replace
+
+```csharp
+            throw new SourceEditDomainException(
+                SourceEditCodes.PathOutsideWorkspace,
+                "Source-edit paths must be workspace-relative regular paths without drive/device/ADS syntax.",
+                relativePath);
+```
+
+(the first throw in that method) with
+
+```csharp
+            var suggestion =
+                Path.IsPathRooted(relativePath) &&
+                relativePath.IndexOf('\0') < 0 &&
+                relativePath.IndexOf(':', 2) < 0 &&
+                IsContainedPath(Path.GetFullPath(relativePath), workspaceRoot)
+                    ? $" Use '{GetRelativePath(workspaceRoot, Path.GetFullPath(relativePath))}' instead."
+                    : string.Empty;
+            throw new SourceEditDomainException(
+                SourceEditCodes.PathOutsideWorkspace,
+                "Source-edit paths must be workspace-relative regular paths without drive/device/ADS syntax." + suggestion,
+                relativePath);
+```
+
+Step 6 — `SourceEditTools.cs`, `ApplyPatch` parameters: put these attributes directly before the parameters (keep names, types and defaults):
+
+```csharp
+        [Description("Absolute repository root, for example C:\\Users\\tayla\\Talvora-MCP. Paths inside the patch are relative to it.")]
+        string workspaceRoot,
+        [Description("A new unique id for every attempt, for example 'fix-login-1'. Reusing an id with a different patch is rejected; retry with a new id.")]
+        string transactionId,
+        [Description("Talvora patch (inputFormat 'talvora'):\n*** Begin Talvora Patch\n*** Update File: src/App.cs\n*** Revision: sha256:<64 hex from talvora_read_source>\n@@\n unchanged line (leading space)\n-removed line\n+added line\n*** Add File: docs/New.md\n+every line starts with +\n*** Delete File: old.txt\n*** Revision: sha256:<...>\n*** End Talvora Patch\nContext and '-' lines must equal the file exactly (whitespace included) and match one place; add context if ambiguous. '*** Begin Patch'/'*** End Patch' and '*** End of File' are accepted.")]
+        string patch,
+        [Description("'talvora' (default) or 'unified-diff' (git diff; then also pass expectedRevisions).")]
+        string inputFormat = "talvora",
+        [Description("unified-diff only: {\"<relative path>\": \"sha256:<revision from talvora_read_source>\"} for every existing file the diff changes.")]
+        Dictionary<string, string>? expectedRevisions = null,
+```
+
+Step 7 — create `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.AP2.cs`:
+
+```csharp
+using Talvora.SourceEditing;
+
+internal static partial class SourceEditRegressionRunner
+{
+    // AP2: the agent dialect is accepted and every rejection says what to fix; matching itself stays exact.
+    private static async Task Ap2AgentPatchToleranceAsync()
+    {
+        await using var fixture = await TestWorkspace.CreateAsync();
+        await fixture.WriteUtf8Async("a.txt", "one\n\n    two\nthree\n");
+        var engine = fixture.CreateEngine();
+        var path = fixture.PathInWorkspace("a.txt");
+
+        var revision = await RevisionAsync(engine, path);
+        var result = await engine.ApplyPatchAsync(fixture.Root, NewTransactionId(), string.Join("\n",
+            "*** Begin Patch", "*** Update File: a.txt", $"*** Revision: {revision}", "@@",
+            " one", "", "-    two", "+    TWO", " three", "*** End of File", "", "*** End Patch"),
+            true, CancellationToken.None);
+        Assert(result.Success, result.Error?.Message ?? "AP2 OpenAI envelope, blank context or End of File rejected.");
+        AssertEqual("one\n\n    TWO\nthree\n", await File.ReadAllTextAsync(path), "AP2 patch applied wrongly.");
+
+        revision = await RevisionAsync(engine, path);
+        result = await engine.ApplyPatchAsync(fixture.Root, NewTransactionId(), string.Join("\n",
+            "*** Begin Talvora Patch", "*** Update File: a.txt", $"*** Revision: {revision}", "@@",
+            " one", " ", "-  TWO", "+  2", "*** End Talvora Patch"), true, CancellationToken.None);
+        AssertError(result, SourceEditCodes.PatchContextNotFound);
+        AssertEqual("    TWO", result.Error!.Details?["fileLine"], "AP2 whitespace hint missing.");
+        AssertEqual("3", result.Error.Details?["fileLineNumber"], "AP2 whitespace hint line number missing.");
+
+        result = await engine.ApplyPatchAsync(fixture.Root, NewTransactionId(), string.Join("\n",
+            "*** Begin Talvora Patch", "*** Update File: a.txt", "@@", "-one", "+1", "*** End Talvora Patch"),
+            true, CancellationToken.None);
+        AssertError(result, SourceEditCodes.PatchParseError);
+        Assert(result.Error!.Message.Contains("talvora_read_source", StringComparison.Ordinal),
+            "AP2 missing-revision message does not say how to fix it.");
+
+        result = await engine.ApplyPatchAsync(fixture.Root, NewTransactionId(), string.Join("\n",
+            "*** Begin Talvora Patch", "*** Update File: a.txt", $"*** Revision: {revision}", "@@",
+            "one", "-three", "*** End Talvora Patch"), true, CancellationToken.None);
+        AssertError(result, SourceEditCodes.PatchParseError);
+        Assert(result.Error!.Message.Contains("'one'", StringComparison.Ordinal),
+            "AP2 hunk-prefix message does not quote the line.");
+
+        result = await engine.ApplyPatchAsync(fixture.Root, NewTransactionId(), string.Join("\n",
+            "*** Begin Talvora Patch", "*** Update File: " + path, $"*** Revision: {revision}", "@@",
+            "-one", "+1", "*** End Talvora Patch"), true, CancellationToken.None);
+        AssertError(result, SourceEditCodes.PathOutsideWorkspace);
+        Assert(result.Error!.Message.Contains("'a.txt'", StringComparison.Ordinal),
+            "AP2 absolute-path message does not suggest the relative path.");
+        AssertEqual("one\n\n    TWO\nthree\n", await File.ReadAllTextAsync(path), "AP2 a rejected patch changed the file.");
+    }
+}
+```
+
+Step 8 — `SourceEditRegressionRunner.cs`, `RunAllAsync`: directly after the line `("exact-patch-success", ExactPatchSuccessAsync),` insert `("ap2-agent-patch-dialect", Ap2AgentPatchToleranceAsync),`.
+
+**Permitted deviations (no proposal needed, list them in the Log):**
+- In Step 4, if `lines`/`oldSide` have a different collection type, adapt only the parameter types.
+- If an existing regression asserts the old blank-line rejection or the old message texts, update only that expectation to the new behaviour.
+
+**Don't:**
+- Do not add fuzzy or whitespace-insensitive matching, and do not make revisions optional.
+- Do not accept absolute paths.
+- Do not change `UnifiedDiffParser.cs`, the tool's name or description, or `TalvoraMcpToolMetadataPolicy`.
+
+**Acceptance:**
+- Step 7 is RED before Steps 1–6 and GREEN after them (`dotnet run --project tests/Talvora.SourceEdit.Regression -c Release`, detached; it prints `PASS ap2-agent-patch-dialect`).
+- Full gate `Hepsi geçti.`.
+- Installer built and deployed; `/healthz.sourceCommit` = HEAD.
+- **Live check on the installed service:** call `talvora_apply_patch {workspaceRoot: "C:\Users\tayla\Talvora-MCP", transactionId: "ap2-live-1", patch: "*** Begin Patch
+*** Add File: artifacts/ap2-probe.txt
++ok
+*** End Patch"}`. It succeeds. `artifacts/` is git-ignored; leave the file there.
+- `/mcp/dev` stays ≤ 153 600 B (`--surface-policy-live` GREEN).
+- CI checked once (AGENTS 10b).
+
 ### Delivered by Claude 2026-10-25 · Q7, UI6b, UI9 (no agent card; user decision: Claude commits its own verified changes)
 
 - **Q7 decision:** output schemas stay only on the full `/mcp` surface; `/mcp/dev` and `/mcp/admin` get copies of each `Tool` without `OutputSchema` (`McpToolMetadataWirePolicy.Apply(result, surface)`; copy, never mutate — stateless mode shares Tool objects). Budgets asserted by `SmokeScenarios.PayloadBudget.cs`: dev ≤ 153 600 B, admin ≤ 56 320 B; a guard fails if the SDK adds a settable Tool property the copy would drop. Measured: dev 304 216 → 146 094 B, admin 85 675 → 51 590 B, full 337 555 B unchanged.
