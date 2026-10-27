@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-42 — AP1/AP2 — Pinned .NET SDK 10.0.402 is unavailable
+- Date: 2026-10-27, HEAD 58d6b124510ca6535d590b083280cf90aa1126d0
+- Card text: "Red before Step 2: run dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release -- --surface-policy-live http://127.0.0.1:7676 against the installed service, detached as in AGENTS (log artifacts/ap1-red.log)." "Green after Step 2: Full gate Hepsi geçti.; build the installer and deploy" (ROADMAP.md AP1).
+- Problem: global.json:3-4 requires SDK 10.0.402 with rollForward "disable"; signed-in dotnet --list-sdks lists only 10.0.403 at C:\Program Files\dotnet\sdk. The prescribed detached AP1 RED run exits before compilation with "A compatible .NET SDK was not found" (artifacts/ap1-red.log), so it cannot establish RED, build, or meet live Acceptance. AP2 also requires dotnet run RED/GREEN, Full gate, installer and live checks (ROADMAP.md AP2 Acceptance). AGENTS.md EXECUTION MANDATE rule 3 forbids installing/upgrading an SDK not named in either card; changing global.json is outside both Files lists.
+- Options:
+  1. Authorize restoring precisely .NET SDK 10.0.402 alongside the installed 10.0.403 without changing global.json or package locks; then unblock AP1/AP2 and rerun each card's RED/GREEN.
+  2. Specify a separate SDK migration card to 10.0.403 (global.json, lock/CI validation and full regression) and make AP1/AP2 wait for that card; do not bypass the pin.
+- Partial work: reverted (yes; the AP1 smoke regression addition was restored to HEAD; no production code modified).
+- Decision (Claude): _pending_
 
 ## Decided
 

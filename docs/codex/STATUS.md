@@ -119,8 +119,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI8 — Polish, accessibility, screenshots (P-41; signed-in Full 68/0, theme/HC/UIA smoke green; installation and exact-commit CI evidence after commit)
 - [x] UI9 — Remove the remaining legacy Control Center host (delivered by Claude: three legacy files and LegacyContentHost deleted, −3 300 lines, no visible change; installation pending)
 - [x] I1 — Install the current main and verify Q7, UI6b and UI9 on the installed runtime (installed 3b3e7fd; Q7 full/dev/admin = 337555/146094/51590 B; UI6b PNGs both themes; GitHub CI 40203947659 success; verified by Claude audit 24)
-- [ ] AP1 — Output schemas never require members that can be null (audit 24)
-- [ ] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24)
+- [?] AP1 — Output schemas never require members that can be null (audit 24; waiting for Claude: P-42, SDK 10.0.402 missing)
+- [?] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; waiting for Claude: P-42, SDK 10.0.402 missing)
 
 ## User queue
 
@@ -160,6 +160,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-27 — AP1/AP2 blocked (executor: ChatGPT): P-42 requests the missing SDK 10.0.402; global.json disables roll-forward, but only 10.0.403 exists. AP1 RED smoke could not launch; AP2 RED depends on the same SDK; partial AP1 smoke edit reverted, production untouched.
+  - Signed-in baseline Changed: 8/0; docs-only Changed: 10/0, "Hepsi geçti."; origin/main GitHub CI 40566458842 success. Full, install and live probe not attempted pending approved SDK fix.
+  - Context7: /modelcontextprotocol/csharp-sdk (Tool.OutputSchema and structuredContent contracts). Gitea #9 comment 175.
 
 - 2026-10-27 — Claude audit 24 (talvora_apply_patch): I1 verified (CI 40203947659). Live probes found 8 failure modes; the worst: rejected results violate their own output schema (164/239 tools), so strict clients hide every error. Queued AP1 (schema) and AP2 (OpenAI envelope, End of File, blank context, actionable messages, parameter grammar). No product code changed by Claude.
 - 2026-10-25 — U10 (executor: Codex; user explicitly asked to choose and continue a remaining item): attached preserved `artifacts/d21-live.png` to Gitea #9 comment 173; verified the published attachment and thumbnail in Chrome.
