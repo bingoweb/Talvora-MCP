@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-27-25` = the P-44 decision commit. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-28-26` = the audit 26 commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -120,7 +120,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI9 — Remove the remaining legacy Control Center host (delivered by Claude: three legacy files and LegacyContentHost deleted, −3 300 lines, no visible change; installation pending)
 - [x] I1 — Install the current main and verify Q7, UI6b and UI9 on the installed runtime (installed 3b3e7fd; Q7 full/dev/admin = 337555/146094/51590 B; UI6b PNGs both themes; GitHub CI 40203947659 success; verified by Claude audit 24)
 - [x] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42/P-43/P-44; Full 68/0, installed d12e96f, live surface GREEN; GitHub CI 40581210398 success)
-- [?] AP1 — Output schemas never require members that can be null (audit 24; waiting for Claude: P-45, midnight UI5 visual smoke)
+- [ ] D23 — UI5 smoke fixture clock anchored at local noon (P-45, audit 26)
+- [ ] AP1 — Output schemas never require members that can be null (audit 24; rerun unchanged after D23)
 - [ ] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; Step 6b; after SDK2)
 - [ ] H1 — Tool guides: parameter descriptions and failure hints from one source (audit 25; after AP1)
 - [ ] H2a — Tool guides for tools a–f (audit 25)
@@ -166,6 +167,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-28 — Claude audit 26: SDK2 exact (installed d12e96f, CI 40581210398/40583906644 success; P-44 hang did not recur). P-45 decided: D23 anchors the UI5 fixture at local noon, before AP1.
 - 2026-10-28 — AP1 blocked (executor: ChatGPT): RED smoke found 507 nullable-required output members, exact AP1 fix compiled 0 warnings/errors; signed-in Full gate 67/1, failing only at ControlCenter.
   - UI5 smoke at 00:01 local fails its "Bugün"/"Dün" fixture: now-5m and now-28m both cross midnight (ControlCenterSmoke.UI5.cs:16-67); P-45 requests a deterministic test-only repair.
   - All partial AP1 source/test/Context7 edits reverted, no AP1 install or commit; proposal-only Changed 10/0, "Hepsi geçti."; SDK2 GitHub CI 40581210398 success, Context7 /websites/modelcontextprotocol_io_specification_2026-07-28. Gitea #9 comment 181.

@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-45 — AP1 — Control Center UI5 smoke fixture crosses the local midnight boundary
 - Date: 2026-10-28, HEAD d12e96f633047acd249d7989378d5575c4fd1f94
 - Card text: "Acceptance: Green after Step 2: Full gate Hepsi geçti.; build the installer and deploy; the same smoke against the installed service prints TALVORA MCP SURFACE POLICY LIVE GREEN" (ROADMAP.md AP1).
@@ -28,9 +32,7 @@
   1. Create a focused prerequisite D-card to make UI5's fixture clock deterministic and safely anchored within a day (e.g. local noon), preserving the real "Bugün"/"Dün" assertions and the existing UI5 behavior; verify the midnight-boundary case, then unblock and rerun AP1 exactly.
   2. Amend AP1 Files and exact steps with a precisely prescribed, test-only UI5 fixture date normalization and a targeted boundary regression, preserving the existing visual assertions; authorize AP1 Full gate only once after that repair.
 - Partial work: reverted (yes; the AP1 production metadata policy, red-first test addition and Context7 edits restored to HEAD; no AP1 commit or installer deployment).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-10-28): option 1 as a one-line card D23 before AP1.** Correct diagnosis: `ApplyEvents(fixture, now, …)` groups by `now.Date`, and the fixture places "today" events 5 and 28 minutes before `DateTimeOffset.Now`, so between 00:00 and 00:28 they fall on yesterday. D23 anchors the fixture clock at local noon of the current day; the "Bugün"/"Dün" assertions stay. AP1 then reruns unchanged.
 
 ### P-44 — SDK2 — Control Center visual smoke does not finish in the Full gate
 - Date: 2026-10-27, HEAD e22ba602bd10e874b79e631a0bddbe7164d52803
