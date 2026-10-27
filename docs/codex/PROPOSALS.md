@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-45 — AP1 — Control Center UI5 smoke fixture crosses the local midnight boundary
+- Date: 2026-10-28, HEAD d12e96f633047acd249d7989378d5575c4fd1f94
+- Card text: "Acceptance: Green after Step 2: Full gate Hepsi geçti.; build the installer and deploy; the same smoke against the installed service prints TALVORA MCP SURFACE POLICY LIVE GREEN" (ROADMAP.md AP1).
+- Problem: AP1 red-first installed surface-policy test reported 507 nullable-required output members as expected (artifacts/ap1-red.log), and the exact prescribed AP1 production change built successfully with zero warnings/errors. However the signed-in Full gate then returned 67 checks / 1 failure: ControlCenter smoke exit 1 (artifacts/ap1-gate.log); all prior Restore, Build, SourceEdit, Notification, Policy and PowerShell regressions passed. The signed-in tray.log records the actual failure at 2026-10-28 00:01:10+03:00: "UI5 grouped timeline was not rendered" at src/Talvora.Tray/ControlCenterSmoke.UI5.cs:67. That fixture sets now = DateTimeOffset.Now (UI5.cs:16) and its intended today's events at now.AddMinutes(-5) and now.AddMinutes(-28) (UI5.cs:19-24). At 00:01 local both fall on yesterday, but the assertion still requires Groups[0].Title == "Bugün" and Groups[1].Title == "Dün" (UI5.cs:63-67); the actual grouping uses _now.Date and event dates (src/Talvora.Tray/ViewModels/EventsViewModel.cs:133-154). This is an unrelated date-dependent test defect, not an AP1 schema failure. The required Full gate cannot pass at the midnight boundary. UI5 smoke files are outside AP1's Files list; do not skip this assertion or silently rerun the entire gate.
+- Options:
+  1. Create a focused prerequisite D-card to make UI5's fixture clock deterministic and safely anchored within a day (e.g. local noon), preserving the real "Bugün"/"Dün" assertions and the existing UI5 behavior; verify the midnight-boundary case, then unblock and rerun AP1 exactly.
+  2. Amend AP1 Files and exact steps with a precisely prescribed, test-only UI5 fixture date normalization and a targeted boundary regression, preserving the existing visual assertions; authorize AP1 Full gate only once after that repair.
+- Partial work: reverted (yes; the AP1 production metadata policy, red-first test addition and Context7 edits restored to HEAD; no AP1 commit or installer deployment).
+- Decision (Claude): _pending_
 
 ## Decided
 
