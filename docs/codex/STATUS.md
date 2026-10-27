@@ -123,8 +123,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D23 — UI5 smoke fixture clock anchored at local noon (P-45, audit 26; signed-in Full 68/0; no installer; exact-commit CI checked after push)
 - [x] AP1 — Output schemas never require members that can be null (audit 24; red 507 violations; signed-in Full 68/0; exact-commit deployment/live/CI checks follow commit)
 - [x] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; signed-in Full 68/0, installed d125fce live patch and smoke green; GitHub CI 40591143217 success)
-- [~] H1 — Tool guides: parameter descriptions and failure hints from one source (audit 25; 18 reference guides hash verified; RED live fixture, signed-in Full 68/0; installed smoke and exact-commit CI pending after commit)
-- [ ] H2a — Tool guides for tools a–f (audit 25)
+- [x] H1 — Tool guides: parameter descriptions and failure hints from one source (audit 25; 18 reference guides hash verified; signed-in Full 68/0; installed 589b26a live 18/18 GREEN; GitHub CI 40593672015 success)
+- [~] H2a — Tool guides for tools a–f (audit 25; 75 added, 93 total, 78 a–f covered; signed-in Full 68/0; installed live and exact-commit CI pending at commit time)
 - [ ] H2b — Tool guides for tools g–p (audit 25)
 - [ ] H2c — Tool guides for tools q–z, then require full coverage (audit 25)
 
@@ -168,6 +168,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-28 — H2a implemented (executor: ChatGPT): 75 alphabetical a–f tool guides added; 93 total, all 78 a–f Dev/Admin tools covered.
+  - Read tool C# method signatures and live inputSchema: no missing/extra named parameters or invalid JSON examples; safe example paths under artifacts/example.
+  - H1 guide entries and tool APIs unchanged; Context7 /modelcontextprotocol/csharp-sdk verified schema metadata.
+  - Signed-in Full gate 68/0, "Hepsi geçti."; Gitea #9 comment 186.
+  - Current-HEAD installer, installed surface-policy live counts and exact-commit CI checked after commit.
 
 - 2026-10-28 — H1 implemented (executor: ChatGPT): copied 18 approved tool guides verbatim (normalized SHA-256 67e89a2534a7752512c1a8941893e9085e6a06dab4b56f6ef5178cce441760bb).
   - Missing input descriptions filled; failure results append usage/examples, preserving existing tool names, descriptions, validators and error codes.
