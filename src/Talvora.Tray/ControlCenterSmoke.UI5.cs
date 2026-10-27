@@ -16,7 +16,9 @@ internal static partial class ControlCenterSmoke
         if (eventsView.ServiceFilterBox.SelectedItem is not
             ViewModels.EventServiceFilter { Id: null })
             throw new InvalidOperationException("UI5 must default the service filter to Tümü.");
-        var now = DateTimeOffset.Now;
+        // D23: anchor the fixture at local noon so "Bugün"/"Dün" never depend on the time the gate runs.
+        var current = DateTimeOffset.Now;
+        var now = new DateTimeOffset(current.Date.AddHours(12), current.Offset);
         ControlCenterEventRecord[] fixture =
         [
             Entry(now.AddMinutes(-5), ControlCenterEventSeverity.Warning,

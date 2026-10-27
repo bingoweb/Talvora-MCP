@@ -1,8 +1,9 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-27T20:37:37Z",
-  "scope": "SDK2 (P-42/P-43/P-44): exactly pin .NET SDK 10.0.403, refresh the 17 platform packages at 10.0.14 and matching lock graph, synchronize third-party notices and bound Control Center smoke diagnostics.",
+  "verifiedAtUtc": "2026-10-27T21:13:39Z",
+  "scope": "D23 (P-45): anchor the UI5 visual-smoke fixture at local noon so today/yesterday grouping does not vary around midnight.",
   "libraries": [
+    { "libraryId": "/dotnet/docs", "verified": "2026-10-28 D23: DateTimeOffset(DateTime, TimeSpan) preserves the specified local time and UTC offset; DateTime.Date.AddHours(12) anchors fixture events at local noon. Source: https://github.com/dotnet/docs/blob/main/docs/standard/datetime/instantiating-a-datetimeoffset-object.md ." },
     {
       "libraryId": "/dotnet/docs",
       "verified": "2026-10-27 SDK2: Microsoft .NET docs confirm global.json rollForward disable requires the exact SDK and that servicing updates can change NuGet lock dependency graphs. The approved SDK2 updater regenerated the 17 platform versions at 10.0.14; the approved P-43 updater modified 20 existing third-party notice version lines only. P-44 uses a bounded Process.WaitForExit(300000) with stage logs to diagnose Control Center smoke. Sources: https://github.com/dotnet/docs/blob/main/core/tools/global-json.md ; https://github.com/dotnet/docs/blob/main/docs/core/install/upgrade.md ."

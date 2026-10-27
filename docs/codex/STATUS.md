@@ -120,7 +120,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI9 — Remove the remaining legacy Control Center host (delivered by Claude: three legacy files and LegacyContentHost deleted, −3 300 lines, no visible change; installation pending)
 - [x] I1 — Install the current main and verify Q7, UI6b and UI9 on the installed runtime (installed 3b3e7fd; Q7 full/dev/admin = 337555/146094/51590 B; UI6b PNGs both themes; GitHub CI 40203947659 success; verified by Claude audit 24)
 - [x] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42/P-43/P-44; Full 68/0, installed d12e96f, live surface GREEN; GitHub CI 40581210398 success)
-- [ ] D23 — UI5 smoke fixture clock anchored at local noon (P-45, audit 26)
+- [x] D23 — UI5 smoke fixture clock anchored at local noon (P-45, audit 26; signed-in Full 68/0; no installer; exact-commit CI checked after push)
 - [ ] AP1 — Output schemas never require members that can be null (audit 24; rerun unchanged after D23)
 - [ ] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; Step 6b; after SDK2)
 - [ ] H1 — Tool guides: parameter descriptions and failure hints from one source (audit 25; after AP1)
@@ -166,6 +166,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-28 — D23 completed (executor: ChatGPT): anchored the UI5 visual-smoke fixture at local noon exactly per P-45; deterministic 00:10 RED → GREEN.
+  - Signed-in Changed 15/0 and Full 68/0, "Hepsi geçti."; no installer (test-only).
+  - Context7 /dotnet/docs DateTimeOffset(DateTime, TimeSpan) evidence added because the delivery gate required refresh; Gitea #9 comment 183.
+  - Exact-commit GitHub CI checked once after push, per CI1.
 
 - 2026-10-28 — Claude audit 26: SDK2 exact (installed d12e96f, CI 40581210398/40583906644 success; P-44 hang did not recur). P-45 decided: D23 anchors the UI5 fixture at local noon, before AP1.
 - 2026-10-28 — AP1 blocked (executor: ChatGPT): RED smoke found 507 nullable-required output members, exact AP1 fix compiled 0 warnings/errors; signed-in Full gate 67/1, failing only at ControlCenter.
