@@ -121,7 +121,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] I1 — Install the current main and verify Q7, UI6b and UI9 on the installed runtime (installed 3b3e7fd; Q7 full/dev/admin = 337555/146094/51590 B; UI6b PNGs both themes; GitHub CI 40203947659 success; verified by Claude audit 24)
 - [x] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42/P-43/P-44; Full 68/0, installed d12e96f, live surface GREEN; GitHub CI 40581210398 success)
 - [x] D23 — UI5 smoke fixture clock anchored at local noon (P-45, audit 26; signed-in Full 68/0; no installer; exact-commit CI checked after push)
-- [ ] AP1 — Output schemas never require members that can be null (audit 24; rerun unchanged after D23)
+- [x] AP1 — Output schemas never require members that can be null (audit 24; red 507 violations; signed-in Full 68/0; exact-commit deployment/live/CI checks follow commit)
 - [ ] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; Step 6b; after SDK2)
 - [ ] H1 — Tool guides: parameter descriptions and failure hints from one source (audit 25; after AP1)
 - [ ] H2a — Tool guides for tools a–f (audit 25)
@@ -166,6 +166,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-28 — AP1 implemented (executor: ChatGPT): full tools/list relaxes required nullable output members only; focused surfaces unchanged.
+  - Installed baseline RED 507 nullable-required members; signed-in Changed 16/0 and Full 68/0, "Hepsi geçti.".
+  - Empty-patch live probe returned PATCH_PARSE_ERROR as a normal result. Context7 /modelcontextprotocol/csharp-sdk and /modelcontextprotocol/modelcontextprotocol/2026-07-28.
+  - Current-HEAD installer, installed surface-policy smoke and exact-commit GitHub CI checked after commit.
+  - Gitea mirror skipped: connector security control denied comment submission.
 
 - 2026-10-28 — D23 completed (executor: ChatGPT): anchored the UI5 visual-smoke fixture at local noon exactly per P-45; deterministic 00:10 RED → GREEN.
   - Signed-in Changed 15/0 and Full 68/0, "Hepsi geçti."; no installer (test-only).

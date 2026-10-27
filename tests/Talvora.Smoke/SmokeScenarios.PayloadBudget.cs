@@ -30,6 +30,18 @@ internal static partial class SmokeScenarios
 
         if (CountOutputSchemas(full.Tools) == 0)
             throw new InvalidOperationException("Q7: the full /mcp surface must keep its output schemas.");
+        var requiredNullable = new List<string>();
+        foreach (var tool in full.Tools.EnumerateArray())
+        {
+            if (tool.TryGetProperty("outputSchema", out var schema))
+            {
+                CollectRequiredNullable(schema, tool.GetProperty("name").GetString() ?? "?", requiredNullable);
+            }
+        }
+        if (requiredNullable.Count != 0)
+            throw new InvalidOperationException(
+                $"AP1: {requiredNullable.Count} output members can be null but are required, e.g. " +
+                string.Join(", ", requiredNullable.Take(5)));
         if (CountOutputSchemas(development.Tools) != 0 || CountOutputSchemas(administration.Tools) != 0)
             throw new InvalidOperationException("Q7: focused surfaces must not send output schemas.");
         if (development.Bytes > DevelopmentToolsListBudgetBytes)
@@ -41,6 +53,44 @@ internal static partial class SmokeScenarios
 
         Console.WriteLine(
             $"Q7 tools/list bytes: full={full.Bytes} dev={development.Bytes} admin={administration.Bytes}");
+    }
+
+    private static void CollectRequiredNullable(JsonElement schema, string path, List<string> violations)
+    {
+        if (schema.ValueKind == JsonValueKind.Object)
+        {
+            if (schema.TryGetProperty("properties", out var properties) &&
+                properties.ValueKind == JsonValueKind.Object &&
+                schema.TryGetProperty("required", out var required) &&
+                required.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var name in required.EnumerateArray())
+                {
+                    if (name.GetString() is string member &&
+                        properties.TryGetProperty(member, out var property) &&
+                        property.ValueKind == JsonValueKind.Object &&
+                        property.TryGetProperty("type", out var type) &&
+                        (type.ValueKind == JsonValueKind.String && type.GetString() == "null" ||
+                         type.ValueKind == JsonValueKind.Array &&
+                         type.EnumerateArray().Any(item => item.GetString() == "null")))
+                    {
+                        violations.Add(path + "/" + member);
+                    }
+                }
+            }
+
+            foreach (var child in schema.EnumerateObject())
+            {
+                CollectRequiredNullable(child.Value, path + "/" + child.Name, violations);
+            }
+        }
+        else if (schema.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in schema.EnumerateArray())
+            {
+                CollectRequiredNullable(item, path, violations);
+            }
+        }
     }
 
     private static int CountOutputSchemas(JsonElement tools) =>
