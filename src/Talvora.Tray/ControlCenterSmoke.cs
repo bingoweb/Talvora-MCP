@@ -69,6 +69,7 @@ internal static partial class ControlCenterSmoke
                 AssertUi4VisualFixture(window, "alternate");
                 await AssertUi5VisualFixtureAsync(window, "alternate");
                 AssertUi6VisualFixture(window, "alternate");
+                TrayLog.Write("Control Center smoke stage: worklog history");
                 window.ShellModel.SelectPage(2);
                 AssertWorklogHistorySelection(window, "worklog-session-alternate");
                 window.ShellModel.SelectPage(0);
@@ -92,7 +93,9 @@ internal static partial class ControlCenterSmoke
                 if (((SolidColorBrush)contentRoot.Background).Color != initialBackground)
                     throw new InvalidOperationException("Control Center theme did not restore live.");
 
+                TrayLog.Write("Control Center smoke stage: live snapshot");
                 await window.RunSmokeScenarioAsync();
+                TrayLog.Write("Control Center smoke stage: UI4 lifecycle");
                 await AssertUi4LifecycleSmokeAsync(window);
                 SaveVisualSnapshotIfRequested(window, "loaded");
                 if (SystemParameters.HighContrast) SaveVisualSnapshotIfRequested(window, "hc");

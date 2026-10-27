@@ -319,7 +319,13 @@ try {
                 try {
                     $env:TALVORA_CONTROL_CENTER_PREVIEW_PNG = Join-Path $script:GateCaptureRoot 'control-center.png'
                     $tray = Join-Path $repoRoot 'src/Talvora.Tray/bin/Release/net10.0-windows/win-x64/Talvora.Tray.exe'
-                    $smoke = Start-Process -FilePath $tray -ArgumentList @('--control-center-smoke') -Wait -PassThru -WindowStyle Hidden
+                    $smoke = Start-Process -FilePath $tray -ArgumentList @('--control-center-smoke') -PassThru -WindowStyle Hidden
+                    if (-not $smoke.WaitForExit(300000)) {
+                        Stop-Process -Id $smoke.Id -Force
+                        $trayLog = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Talvora\Tray\tray.log'
+                        $stage = if (Test-Path -LiteralPath $trayLog) { Get-Content -LiteralPath $trayLog -Tail 300 | Where-Object { $_ -match 'Control Center smoke stage:' } | Select-Object -Last 1 } else { '' }
+                        throw "Control Center smoke timed out after 300 s. Last stage: $stage"
+                    }
                     if ($smoke.ExitCode -ne 0) { throw "Control Center smoke returned exit code $($smoke.ExitCode)." }
                     foreach ($name in @('control-center.png', 'control-center-loaded.png')) {
                         if (-not (Test-Path -LiteralPath (Join-Path $script:GateCaptureRoot $name) -PathType Leaf)) {

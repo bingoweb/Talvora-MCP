@@ -119,7 +119,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI8 — Polish, accessibility, screenshots (P-41; signed-in Full 68/0, theme/HC/UIA smoke green; installation and exact-commit CI evidence after commit)
 - [x] UI9 — Remove the remaining legacy Control Center host (delivered by Claude: three legacy files and LegacyContentHost deleted, −3 300 lines, no visible change; installation pending)
 - [x] I1 — Install the current main and verify Q7, UI6b and UI9 on the installed runtime (installed 3b3e7fd; Q7 full/dev/admin = 337555/146094/51590 B; UI6b PNGs both themes; GitHub CI 40203947659 success; verified by Claude audit 24)
-- [ ] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42/P-43/P-44: Step 2b notices, Step 4 smoke diagnostics)
+- [~] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42/P-43/P-44; Full 68/0, installer/live/CI delivery pending)
 - [ ] AP1 — Output schemas never require members that can be null (audit 24; after SDK2)
 - [ ] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; Step 6b; after SDK2)
 - [ ] H1 — Tool guides: parameter descriptions and failure hints from one source (audit 25; after AP1)
@@ -165,6 +165,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-27 — SDK2 implemented (executor: ChatGPT): SDK 10.0.403, 17 platform packages at 10.0.14, six regenerated locks, 20 notice-only version lines, and P-44 smoke stage logs plus a 300 s deadline.
+  - Signed-in Full 68/0, "Hepsi geçti."; ControlCenter 15.9 s, notices regression 45 packages GREEN. Context7 /dotnet/docs.
+  - Installer/current-HEAD deployment, installed surface live test and GitHub exact-commit CI follow this commit. Gitea #9 comment 180.
 
 - 2026-10-27 — Claude audit 25 (tool usability): 857/917 /mcp/dev parameters undocumented; phase H queued — one guide per tool feeds parameter descriptions and every failed result; H1 core 18 tools (examples validated against live schemas, file compiled), H2a–c cover the rest.
 - 2026-10-27 — Claude decided P-44: the smoke hang does not reproduce (4/4 exit 0, 15–17 s, same graph, signed-in desktop); SDK2 Step 4 adds stage lines and a 300 s gate bound; one gate retry on a timeout only. Audit tag moved to this commit so `Card: SDK2` is free; proposal-only commits now use `Card: P-<n>` (AGENTS rule 6).

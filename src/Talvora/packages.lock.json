@@ -50,11 +50,11 @@
       },
       "Microsoft.Data.Sqlite": {
         "type": "Direct",
-        "requested": "[10.0.13, )",
-        "resolved": "10.0.13",
-        "contentHash": "w37nz3WFmDtRfXxWEwIXX2OgqDRiwhD1JGbFwfpFCF8GkCrV/yO6Y2JF5058J2RGoI2sCcdn02wrk0yEcekWcw==",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "muyroan6rKrf0omZL8UF7Kw5uOGp/yBg1L/XWvkFN3WhKaNtK2IWqRZw93nIwVqjhTVDO0l4CEGhHIh+mb+sKg==",
         "dependencies": {
-          "Microsoft.Data.Sqlite.Core": "10.0.13",
+          "Microsoft.Data.Sqlite.Core": "10.0.14",
           "SQLitePCLRaw.bundle_e_sqlite3": "2.1.13",
           "SQLitePCLRaw.core": "2.1.13"
         }
@@ -67,11 +67,11 @@
       },
       "Microsoft.Extensions.Hosting.WindowsServices": {
         "type": "Direct",
-        "requested": "[10.0.13, )",
-        "resolved": "10.0.13",
-        "contentHash": "sk3VNcYEmgwYGPF4ze/112jpaeDKSsKGhmEZ8IlhOR8F6JT+1DYaZUb14jobVXiKhuXWIKcYXV7mkSPeA4dc3g==",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "IQSOKNkh06e2eskQ6ltSBZmtQqdu7/0A634/XSmXrtrlDwPbMFbTNEJs1bySQFOxH3xlCAnYNbf+Hh4Fp3nQ5Q==",
         "dependencies": {
-          "System.ServiceProcess.ServiceController": "10.0.13"
+          "System.ServiceProcess.ServiceController": "10.0.14"
         }
       },
       "ModelContextProtocol.AspNetCore": {
@@ -135,8 +135,8 @@
       },
       "Microsoft.Data.Sqlite.Core": {
         "type": "Transitive",
-        "resolved": "10.0.13",
-        "contentHash": "Gge8XsSCOwcbkbdmt2UDAe6kIv9Q0vA6yb3wsTStjjexaMFLTWfc/1gH4kbhJ+zWiXRTRA4lG2sOQNVfir204w==",
+        "resolved": "10.0.14",
+        "contentHash": "1p9rO3Q2X/L/9YrYog3vaDzi8u+WZfJCOkDYoHqmofqYP0DLPLPyZcS2Rnh/79JXAodgbs1AgsaNwLpIvC3Xew==",
         "dependencies": {
           "SQLitePCLRaw.core": "2.1.13"
         }
@@ -182,8 +182,8 @@
       },
       "System.ServiceProcess.ServiceController": {
         "type": "Transitive",
-        "resolved": "10.0.13",
-        "contentHash": "0Zh/U/1+hy1MCxx1BTikJi4L5o1Ys6VhB8PKlTNOB4/n2d6ua2+TuoD6T7xN9RV0uiOGod575pQrUSTXg+aYGQ=="
+        "resolved": "10.0.14",
+        "contentHash": "riMCsgbGKGonluQzaRRrx5ney0QNkEmepNTrHD3QpqU/ICZpCJsyAWNi6JESTxqYkc+9kNQ55aZaH/n3xOjSlg=="
       },
       "talvora.shared": {
         "type": "Project"
@@ -211,56 +211,56 @@
       },
       "System.Composition": {
         "type": "CentralTransitive",
-        "requested": "[10.0.13, )",
-        "resolved": "10.0.13",
-        "contentHash": "KkDvzJttw5MdrLcGG0xjWQcRUauMgBy+BYM9hyzSFK7dGRnaNSd9UFWB06hL8dTZ6Col1NzqP8aHCx9FjvbmLw==",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "dbUXHpzuyMDuS7n7M8x35NgB4dBlhlTrkoWnY9uFU/87XCRnRs5Tco/8QPH1kALL+aouADkBku9ggieFqjLMpQ==",
         "dependencies": {
-          "System.Composition.AttributedModel": "10.0.13",
-          "System.Composition.Convention": "10.0.13",
-          "System.Composition.Hosting": "10.0.13",
-          "System.Composition.Runtime": "10.0.13",
-          "System.Composition.TypedParts": "10.0.13"
+          "System.Composition.AttributedModel": "10.0.14",
+          "System.Composition.Convention": "10.0.14",
+          "System.Composition.Hosting": "10.0.14",
+          "System.Composition.Runtime": "10.0.14",
+          "System.Composition.TypedParts": "10.0.14"
         }
       },
       "System.Composition.AttributedModel": {
         "type": "CentralTransitive",
-        "requested": "[10.0.13, )",
-        "resolved": "10.0.13",
-        "contentHash": "DIearfoN1CG+CZFqAk3a6Nsq+PrtjpCzOArL3+6qW7kYjNuYIyHgU56rJAX7p2paOTA6wUzxjkcRcT/jPhFLaw=="
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "4Ncs1bXuDV7LCCN0Vpy6zgltYnxleYbaB4LpfPjAT3WJZhle84nUlEW/bhNYtH03ZyULEaOY4s7B+oySLMkj+Q=="
       },
       "System.Composition.Convention": {
         "type": "CentralTransitive",
-        "requested": "[10.0.13, )",
-        "resolved": "10.0.13",
-        "contentHash": "ywSHs2HHGJlYCKJ2l9jkv8HITr2PX6bixruDpL8VtO0On/O+cy5k2gN0ugXMz+7psgNBhM7B3vBGpcBl8+SG4Q==",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "B77/S9rJIu2LvwJZavuXVFa8kTWyu1YYTQ8tjRWZBiF5EYXr3az6BJ6z2a2WLW5dL05rctp3HxuY4Yg+7sjtXw==",
         "dependencies": {
-          "System.Composition.AttributedModel": "10.0.13"
+          "System.Composition.AttributedModel": "10.0.14"
         }
       },
       "System.Composition.Hosting": {
         "type": "CentralTransitive",
-        "requested": "[10.0.13, )",
-        "resolved": "10.0.13",
-        "contentHash": "qtcQaU/3muM0JqLUL6QUPCpoA+HZIOh06zvuGirT4yLdVDskKO0nO3rk3tZ5pR5nK5SIPMrm5a1aLNvPmWG6dw==",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "sSMaKTvh/JfCCsy7ISJYo8gvSW77vwULQRxoPNiqmSs96rmf/bIBRG9CZMjkytuL2qYE7OnMDwtfgIl/5OG8Bw==",
         "dependencies": {
-          "System.Composition.Runtime": "10.0.13"
+          "System.Composition.Runtime": "10.0.14"
         }
       },
       "System.Composition.Runtime": {
         "type": "CentralTransitive",
-        "requested": "[10.0.13, )",
-        "resolved": "10.0.13",
-        "contentHash": "xsStwJQECRMx/D2oZaPXk33uA+tRxnAIErw+XOcofdPuX/bnsU2Kxr3aQK5Z9ZKALMbnc3aJLQGLUVXU2xiv+w=="
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "S5LSH51xDENJc12O4ZtMdZnzv5OFFuCX8foc0km6GJX1zsw4Ky7Sy49rMl1M//j6VcRjNl6eyNwv+766Xsinvw=="
       },
       "System.Composition.TypedParts": {
         "type": "CentralTransitive",
-        "requested": "[10.0.13, )",
-        "resolved": "10.0.13",
-        "contentHash": "gnoRJ/sPdGzTMA6dh8bqr7lC5YuZjj1qsFxsNh7Qk6SOqOuX5m+twhoN4psrMhAt9+8YGPKD3RQ7GGjABizUqQ==",
+        "requested": "[10.0.14, )",
+        "resolved": "10.0.14",
+        "contentHash": "N5QHxqn64lgUr4HwEegh673B6/9lVHFd3tA1bGdoBzEqya71Iuyr35gWI2Qa/hejTLeqo9Nm+5tKaSdNeWEdag==",
         "dependencies": {
-          "System.Composition.AttributedModel": "10.0.13",
-          "System.Composition.Hosting": "10.0.13",
-          "System.Composition.Runtime": "10.0.13"
+          "System.Composition.AttributedModel": "10.0.14",
+          "System.Composition.Hosting": "10.0.14",
+          "System.Composition.Runtime": "10.0.14"
         }
       }
     }
