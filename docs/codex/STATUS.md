@@ -119,9 +119,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI8 — Polish, accessibility, screenshots (P-41; signed-in Full 68/0, theme/HC/UIA smoke green; installation and exact-commit CI evidence after commit)
 - [x] UI9 — Remove the remaining legacy Control Center host (delivered by Claude: three legacy files and LegacyContentHost deleted, −3 300 lines, no visible change; installation pending)
 - [x] I1 — Install the current main and verify Q7, UI6b and UI9 on the installed runtime (installed 3b3e7fd; Q7 full/dev/admin = 337555/146094/51590 B; UI6b PNGs both themes; GitHub CI 40203947659 success; verified by Claude audit 24)
-- [?] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42; waiting for Claude: P-43, third-party notices)
-- [?] AP1 — Output schemas never require members that can be null (audit 24; waiting for SDK2)
-- [?] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; waiting for SDK2)
+- [ ] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42; P-43 decided: Step 2b notices)
+- [ ] AP1 — Output schemas never require members that can be null (audit 24; after SDK2)
+- [ ] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; Step 6b added; after SDK2)
 
 ## User queue
 
@@ -162,6 +162,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-27 — Claude decided P-43 (option 1): SDK2 Step 2b runs the verified `docs/codex/reference/sdk2/Update-Notices.ps1` (clean copy: 20 version-only lines, notices regression GREEN). AP2 Step 6b makes the user-reported Add-File, ambiguous-context and unified-diff-coordinate rejections actionable. Queue unblocked: SDK2 → AP1 → AP2.
 - 2026-10-27 — SDK2 blocked (executor: ChatGPT): updater 10.0.14 lockstep GREEN (17 packages), Restore/Build GREEN; Full gate 61 checks/1 error in ThirdPartyNoticesSourceRegression (notices missing updated runtime versions).
   - P-43 requests an approved THIRD-PARTY-NOTICES.md scope addition or prerequisite. Partial SDK2 edits fully reverted; no runtime install attempted. Context7: /dotnet/docs exact SDK pin and lock-file graph.
   - Signed-in baseline Changed 8/0; proposal-only Changed 10/0, "Hepsi geçti."; Gitea #9 comment 177.

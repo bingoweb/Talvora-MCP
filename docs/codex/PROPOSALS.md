@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-43 — SDK2 — Third-party notices must track regenerated platform lock files
 - Date: 2026-10-27, HEAD fa36a945020cb2374f29f1eb96067c18bb13cf58
 - Card text: "Files: global.json, Directory.Packages.props and all packages.lock.json (changed only by the script), docs/MODERNIZATION-POLICY.md, .context7/verification.json, docs/codex/STATUS.md." "Acceptance: Full gate Hepsi geçti. as the signed-in user" (ROADMAP.md:1123 SDK2).
@@ -28,9 +32,7 @@
   1. Amend SDK2 to include THIRD-PARTY-NOTICES.md with precise version-only notice updates for every locked 10.0.14 package, preserving all attributions/licences, and rerun the Full gate; document the additional file as an approved scope addition.
   2. Add an explicitly scoped notice-update prerequisite card with approved generation/verification steps and make SDK2 wait for it; do not weaken the notice regression.
 - Partial work: reverted (yes; SDK pin, all 17 platform package updates, lock files, modernization policy and Context7 edits returned to HEAD; no production changes were committed).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-10-27): option 1.** My SDK2 card missed the notice. SDK2 is amended with Step 2b: run the verified reference script `docs/codex/reference/sdk2/Update-Notices.ps1`. It only replaces version numbers of packages already named in the notice and stops on an unlisted package. Claude verified it on a clean copy after the updater: `SDK2_NOTICES_UPDATED 20`, 20 lines changed (version numbers only), `THIRD_PARTY_NOTICES_SOURCE_GREEN packages=45`. Finding: `scripts/Apply-DependabotPr.ps1` would throw on DiffPlex (`### DiffPlex 1.9.0` heading format); not in scope now.
 
 ### P-42 — AP1/AP2 — Pinned .NET SDK 10.0.402 is unavailable
 - Date: 2026-10-27, HEAD 58d6b124510ca6535d590b083280cf90aa1126d0

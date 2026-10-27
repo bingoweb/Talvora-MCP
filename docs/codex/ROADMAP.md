@@ -1133,6 +1133,8 @@ Step 1 — `global.json`: change `"version": "10.0.402"` to `"version": "10.0.40
 Step 2 — run as the signed-in user, detached:
 `talvora_user_process_start {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-Command","& ./scripts/Update-DotnetPlatformPackages.ps1 -Version 10.0.14 *> artifacts/sdk2-update.log; exit $LASTEXITCODE"], workingDirectory: "C:\Users\tayla\Talvora-MCP", visible: false}`, then `talvora_tail_text {path: "C:\Users\tayla\Talvora-MCP\artifacts\sdk2-update.log", lineCount: 20}` every 30 s until the log has a line `PLATFORM_PACKAGE_LOCKSTEP_GREEN 10.0.14 (17 packages)`. Expected diff: 8 files (Claude's clean-copy run).
 
+Step 2b (P-43) — still in the repository root, run once as the signed-in user: `talvora_user_run {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-File","docs/codex/reference/sdk2/Update-Notices.ps1"], workingDirectory: "C:\Users\tayla\Talvora-MCP"}`. Pass: output `SDK2_NOTICES_UPDATED 20`; `THIRD-PARTY-NOTICES.md` shows 20 changed lines, version numbers only. Do not copy the script into `scripts/`. Add `THIRD-PARTY-NOTICES.md` to this card's Files.
+
 Step 3 — `docs/MODERNIZATION-POLICY.md` line 9: replace `10.0.402` with `10.0.403`. In STATUS → Fixed facts → Toolchain, replace `.NET SDK 10.0.402 exact pin` with `.NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14)`.
 
 **Don't:**
@@ -1519,6 +1521,21 @@ Step 6 — `SourceEditTools.cs`, `ApplyPatch` parameters: put these attributes d
         [Description("unified-diff only: {\"<relative path>\": \"sha256:<revision from talvora_read_source>\"} for every existing file the diff changes.")]
         Dictionary<string, string>? expectedRevisions = null,
 ```
+
+Step 6b (user-reported errors, 2026-10-27) — make three more rejections actionable:
+- `TalvoraPatchParser.cs`: replace the message `"Add-file content lines must start with '+'.",` with
+  `$"Add File line {index + 1} must start with '+' (every line of a new file; a blank line is a single '+'); got '{(line.Length > 120 ? line[..120] + "…" : line)}'.",`
+- `SourceEditNormalizer.cs`: in the `PatchContextAmbiguous` throw ("Exact patch context matched more than once. Add more exact context."), replace `details: HunkDetails(hunk));` with
+```csharp
+                    details: new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        ["matchLines"] = string.Join(", ", candidates.Select(start =>
+                            (start + 1).ToString(System.Globalization.CultureInfo.InvariantCulture))),
+                        ["hint"] = "Add unchanged lines above or below the change until the context occurs only once.",
+                    });
+```
+- `SourceEditNormalizer.UnifiedDiff.cs`: append ` Use inputFormat 'talvora' (no line numbers; the exact context decides the position) or take the line numbers from talvora_read_source.` to the end of the two messages "Unified diff hunk old-file coordinates are outside the current source." and "Unified diff hunk does not exactly match the declared old-file coordinates. Offset/fuzzy application is not permitted." (inside the string literal). Add `SourceEditNormalizer.UnifiedDiff.cs` to this card's Files.
+- In Step 6 the `inputFormat` description becomes: `[Description("'talvora' (default, recommended: no line numbers) or 'unified-diff' (git diff with exact @@ line numbers; then also pass expectedRevisions).")]`.
 
 Step 7 — create `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.AP2.cs`:
 
