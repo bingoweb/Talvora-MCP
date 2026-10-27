@@ -23,6 +23,14 @@ internal static class McpToolMetadataWirePolicy
                     tool.Name,
                     tool.Description);
 
+            if (TalvoraToolGuides.All.TryGetValue(tool.Name, out var guide))
+            {
+                // H1: the schema is identical for every request, so the described copy is computed once per tool.
+                var source = tool.InputSchema;
+                tool.InputSchema = DescribedInputSchemas.GetOrAdd(
+                    tool.Name, _ => WithParameterDescriptions(source, guide.Parameters));
+            }
+
             tool.Annotations = new ToolAnnotations
             {
                 Title = title ?? declared?.Title,
@@ -128,6 +136,29 @@ internal static class McpToolMetadataWirePolicy
             type is JsonValue value && value.TryGetValue<string>(out var name) && name == "null"),
         _ => false,
     };
+
+    private static readonly ConcurrentDictionary<string, JsonElement> DescribedInputSchemas =
+        new(StringComparer.Ordinal);
+
+    // H1: parameters without a description get the guide's line; an existing [Description] always wins.
+    private static JsonElement WithParameterDescriptions(
+        JsonElement schema,
+        IReadOnlyDictionary<string, string> parameters)
+    {
+        var node = JsonNode.Parse(schema.GetRawText());
+        if (node?["properties"] is JsonObject properties)
+        {
+            foreach (var (name, text) in parameters)
+            {
+                if (properties[name] is JsonObject property && property["description"] is null)
+                {
+                    property["description"] = text;
+                }
+            }
+        }
+
+        return JsonSerializer.SerializeToElement(node);
+    }
 
     // Copies every settable property of ModelContextProtocol.Protocol.Tool (SDK 2.2.0) except OutputSchema; the
     // payload smoke fails if the SDK adds a property, so a new field can never be dropped silently.

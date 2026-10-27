@@ -391,6 +391,7 @@ internal static partial class SmokeScenarios
             "Administration");
 
         await RunPayloadBudgetLiveAsync(root);
+        await RunToolGuidesLiveAsync(root);
     }
 
     private static async Task<McpClient> CreateClientAsync(

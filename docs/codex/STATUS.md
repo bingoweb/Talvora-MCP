@@ -122,13 +122,15 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42/P-43/P-44; Full 68/0, installed d12e96f, live surface GREEN; GitHub CI 40581210398 success)
 - [x] D23 — UI5 smoke fixture clock anchored at local noon (P-45, audit 26; signed-in Full 68/0; no installer; exact-commit CI checked after push)
 - [x] AP1 — Output schemas never require members that can be null (audit 24; red 507 violations; signed-in Full 68/0; exact-commit deployment/live/CI checks follow commit)
-- [~] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; RED then GREEN agent dialect, signed-in Full 68/0; live installed commit and exact-commit CI pending at commit time)
-- [ ] H1 — Tool guides: parameter descriptions and failure hints from one source (audit 25; after AP1)
+- [x] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; signed-in Full 68/0, installed d125fce live patch and smoke green; GitHub CI 40591143217 success)
+- [~] H1 — Tool guides: parameter descriptions and failure hints from one source (audit 25; 18 reference guides hash verified; RED live fixture, signed-in Full 68/0; installed smoke and exact-commit CI pending after commit)
 - [ ] H2a — Tool guides for tools a–f (audit 25)
 - [ ] H2b — Tool guides for tools g–p (audit 25)
 - [ ] H2c — Tool guides for tools q–z, then require full coverage (audit 25)
 
 ## User queue
+
+- U13 — H1 kurulduktan sonra ChatGPT Business'ta Talvora Dev ve Admin bağlayıcılarını yenileyin.
 
 - U11 — Tepsideki yeni Talvora ikonuna bakın (açık ve koyu görev çubuğunda); beğenmezseniz Claude'a söyleyin.
 
@@ -166,6 +168,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-28 — H1 implemented (executor: ChatGPT): copied 18 approved tool guides verbatim (normalized SHA-256 67e89a2534a7752512c1a8941893e9085e6a06dab4b56f6ef5178cce441760bb).
+  - Missing input descriptions filled; failure results append usage/examples, preserving existing tool names, descriptions, validators and error codes.
+  - Installed baseline RED: H1 missing talvora_agent_brief.workspaceRoot description; signed-in Full 68/0, "Hepsi geçti.".
+  - Context7 /modelcontextprotocol/csharp-sdk verified CallToolResult and call-tool filters; no permitted deviations needed. Gitea #9 comment 185.
+  - Current-HEAD installer, installed H1 live smoke, dev/admin byte budget and exact-commit CI checked after commit.
 
 - 2026-10-28 — AP2 implemented (executor: ChatGPT): OpenAI patch envelope, blank-context anchor and exact mismatch diagnostics; no fuzzy matching or revision bypass.
   - RED agent dialect failure then GREEN PASS ap2-agent-patch-dialect; signed-in Full 68/0, "Hepsi geçti.".

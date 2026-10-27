@@ -45,7 +45,8 @@ builder.Services
         };
         options.ServerInstructions =
             SourceEditRoutingContract.ServerInstructions + " " +
-            RemotionTools.ServerInstructions;
+            RemotionTools.ServerInstructions + " " +
+            "When a Talvora tool call fails, its result ends with 'How to call <tool>' and example arguments; correct the next call exactly as shown.";
     })
     .WithHttpTransport(options =>
     {
@@ -70,7 +71,7 @@ builder.Services
         {
             if (ToolArgumentValidator.TryCreateError(request) is { } invalidArguments)
             {
-                return invalidArguments;
+                return ToolFailureGuidance.Apply(request.Params?.Name, invalidArguments);
             }
 
             var notifier =
@@ -90,7 +91,7 @@ builder.Services
                     request.Server.ClientInfo?.Name);
             }
 
-            return ToolResultTextPolicy.Apply(await operation(cancellationToken));
+            return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(await operation(cancellationToken)));
         });
 
         filters.AddListToolsFilter(next => async (

@@ -5,8 +5,8 @@ using System.Text.Json;
 internal static partial class SmokeScenarios
 {
     // Q7: focused surfaces omit output schemas (structuredContent is still returned); the full /mcp keeps them.
-    // Measured 2026-10-25: dev 146 094 B, admin 51 590 B; budgets = 150 KiB and 55 KiB.
-    internal const int DevelopmentToolsListBudgetBytes = 153_600;
+    // Measured 2026-10-25: dev 146 094 B, admin 51 590 B. H1 (2026-10-27) raises dev to 165 KiB for tool guides.
+    internal const int DevelopmentToolsListBudgetBytes = 168_960;
     internal const int AdministrationToolsListBudgetBytes = 56_320;
 
     internal static async Task RunPayloadBudgetLiveAsync(string serverRoot)
