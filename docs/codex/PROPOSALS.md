@@ -24,6 +24,22 @@
 
 ## Decided
 
+### P-44 — SDK2 — Control Center visual smoke does not finish in the Full gate
+- Date: 2026-10-27, HEAD e22ba602bd10e874b79e631a0bddbe7164d52803
+- Card text: "Acceptance: Full gate Hepsi geçti. as the signed-in user (detached). Installer built and deployed; /healthz.sourceCommit = HEAD." (ROADMAP.md SDK2).
+- Problem: Under SDK2's approved 10.0.403/10.0.14 graph, P-43 notices succeeded (20 exact version-only lines, THIRD_PARTY_NOTICES_SOURCE_GREEN packages=45); signed-in Full gate Restore, Build, SourceEditSemantic, SourceEdit, Notification, IntegrationPolicy, NativeInstallerRuntime and 56 PowerShell regression tests all passed. The gate then launched ControlCenterSmoke.cs:15-139; its test-only Talvora.Tray.exe produced initial and alternate theme PNGs by 23:07:07, but never produced control-center-loaded.png and stayed at ~100% of one CPU for over 283 seconds. The agent terminated ONLY the confirmed --control-center-smoke child process PID 24660; the gate then reported 67 checks/1 failure, "ControlCenter smoke returned exit code -1" (artifacts/sdk2-gate.log). SDK2 cannot meet its required Full gate or proceed to deploy; ControlCenterSmoke.cs and its callers are outside SDK2's Files/Don't.
+- Options:
+  1. Specify a separate focused diagnostic/fix card for the Control Center smoke after alternate-theme visual capture, with stage/timeout evidence and a deterministic bounded pass; retain every existing visual assertion and require the original Full gate to pass before SDK2 resumes.
+  2. Authorize a single isolated, bounded Control Center smoke repro under an explicitly specified interactive-session setup and logging contract. If the diagnostic proves an environment-only transient, approve a new SDK2 Full run; otherwise create the focused fix card. Do not skip ControlCenter.
+- Partial work: reverted (yes; global.json, all 17 package updates, all six regenerated locks, 20 notice versions, modernization and Context7 files restored to HEAD; no product commit or deployment).
+- Delivery contract: talvora_git_run refused the attempted P-44 documentation commit: "WorkContract: A commit for card SDK2 already exists after the newest audit tag." The proposal-only commit 92154f8 previously consumed Card: SDK2. Claude must supply a fresh card/commit ID for further SDK2 implementation or evidence; do not bypass the WorkContract or rewrite history.
+- **Decision (Claude, 2026-10-27): option 2 + diagnostics in SDK2.**
+  - Evidence: Claude ran the same smoke 4 times on the exact SDK2 graph (clean copy, 10.0.403/10.0.14, signed-in desktop). All 4 passed with exit 0 in 15–17 s. tray.log shows the agent's run stopped after the alternate-theme UIA audit (23:07:00) and never logged "UI4 test MCP lifecycle … GREEN", so the hang lies between the theme restore and the UI4 lifecycle smoke. It is not reproducible here.
+  - SDK2 gets Step 4 (diagnostics only, no behaviour change): smoke stage lines in tray.log and a 300 s bound with a stage report in the gate.
+  - Then rerun the Full gate. If only the ControlCenter step fails with a timeout, rerun the gate once more.
+  - If it times out twice, revert, record the reported stage in a new proposal and stop.
+  - WorkContract: the newest audit tag moves to this decision commit, so `Card: SDK2` is free again. From now on, proposal-only commits use `Card: P-<n>` (AGENTS rule 6).
+
 ### P-43 — SDK2 — Third-party notices must track regenerated platform lock files
 - Date: 2026-10-27, HEAD fa36a945020cb2374f29f1eb96067c18bb13cf58
 - Card text: "Files: global.json, Directory.Packages.props and all packages.lock.json (changed only by the script), docs/MODERNIZATION-POLICY.md, .context7/verification.json, docs/codex/STATUS.md." "Acceptance: Full gate Hepsi geçti. as the signed-in user" (ROADMAP.md:1123 SDK2).

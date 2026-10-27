@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-27-24` = this audit commit. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-27-25` = the P-44 decision commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -119,9 +119,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI8 — Polish, accessibility, screenshots (P-41; signed-in Full 68/0, theme/HC/UIA smoke green; installation and exact-commit CI evidence after commit)
 - [x] UI9 — Remove the remaining legacy Control Center host (delivered by Claude: three legacy files and LegacyContentHost deleted, −3 300 lines, no visible change; installation pending)
 - [x] I1 — Install the current main and verify Q7, UI6b and UI9 on the installed runtime (installed 3b3e7fd; Q7 full/dev/admin = 337555/146094/51590 B; UI6b PNGs both themes; GitHub CI 40203947659 success; verified by Claude audit 24)
-- [ ] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42; P-43 decided: Step 2b notices)
+- [ ] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42/P-43/P-44: Step 2b notices, Step 4 smoke diagnostics)
 - [ ] AP1 — Output schemas never require members that can be null (audit 24; after SDK2)
-- [ ] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; Step 6b added; after SDK2)
+- [ ] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; Step 6b; after SDK2)
+- [ ] H1 — Tool guides: parameter descriptions and failure hints from one source (audit 25; after AP1)
+- [ ] H2a — Tool guides for tools a–f (audit 25)
+- [ ] H2b — Tool guides for tools g–p (audit 25)
+- [ ] H2c — Tool guides for tools q–z, then require full coverage (audit 25)
 
 ## User queue
 
@@ -161,6 +165,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-27 — Claude audit 25 (tool usability): 857/917 /mcp/dev parameters undocumented; phase H queued — one guide per tool feeds parameter descriptions and every failed result; H1 core 18 tools (examples validated against live schemas, file compiled), H2a–c cover the rest.
+- 2026-10-27 — Claude decided P-44: the smoke hang does not reproduce (4/4 exit 0, 15–17 s, same graph, signed-in desktop); SDK2 Step 4 adds stage lines and a 300 s gate bound; one gate retry on a timeout only. Audit tag moved to this commit so `Card: SDK2` is free; proposal-only commits now use `Card: P-<n>` (AGENTS rule 6).
+- 2026-10-27 — SDK2 blocked (executor: ChatGPT): 17 platform packages and 20 notice-version lines succeeded (notices regression 45 packages GREEN); signed-in Full 67/1 due to unbounded ControlCenter smoke after alternate PNGs.
+  - P-44 requests an approved isolated visual-smoke diagnostic/fix; test-only process stopped after >283 s, source/locks/notices fully reverted. No deployment; baseline Changed 8/0, Context7 /dotnet/docs.
+  - Gitea #9 comment 179; proposal-only Changed 10/0, "Hepsi geçti."
+  - Delivery blocked: WorkContract rejects a second Card: SDK2 commit (previous proposal-only 92154f8). Claude must assign a new card ID; no bypass or history rewrite.
 
 - 2026-10-27 — Claude decided P-43 (option 1): SDK2 Step 2b runs the verified `docs/codex/reference/sdk2/Update-Notices.ps1` (clean copy: 20 version-only lines, notices regression GREEN). AP2 Step 6b makes the user-reported Add-File, ambiguous-context and unified-diff-coordinate rejections actionable. Queue unblocked: SDK2 → AP1 → AP2.
 - 2026-10-27 — SDK2 blocked (executor: ChatGPT): updater 10.0.14 lockstep GREEN (17 packages), Restore/Build GREEN; Full gate 61 checks/1 error in ThirdPartyNoticesSourceRegression (notices missing updated runtime versions).

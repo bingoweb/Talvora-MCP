@@ -1096,6 +1096,269 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-27 (25) · Models do not know how to call Talvora tools · result: phase H (H1, H2a–H2c)
+
+**Measured on `/mcp/dev` (installed `3b3e7fd`):**
+- 857 of 917 parameters (93 %) have **no description**; only 12 of 213 tools are fully described.
+- Tool descriptions are capped at 220 characters (Q1) and carry no examples.
+- Nothing tells a model how to recover after a failed call.
+
+Typical results, reported by the user from ChatGPT and OpenCode:
+- missing `*** Revision:`, stale revisions, Add-File lines without `+`;
+- ambiguous context, unified-diff line numbers;
+- PowerShell used where `talvora_user_run` belongs.
+
+**Decision (Claude): one source of truth per tool — a guide.** `Talvora.Shared.TalvoraToolGuides` holds, per tool:
+- **Usage:** when to use it, and what to use instead;
+- **Parameters:** one line each;
+- **Example:** valid JSON arguments.
+
+It feeds two things automatically:
+1. `/mcp`, `/mcp/dev` and `/mcp/admin` parameter descriptions (only where the schema has none);
+2. the end of **every failed result** of that tool ("How to call X: … Example arguments: …").
+
+The live smoke validates every example against the tool's real input schema with Talvora's own argument validator, so a guide can never drift from the code. H1 builds the mechanism plus 18 core tools (written by Claude). H2a–H2c cover every remaining tool. Budgets: dev 165 KiB in H1, then measured + 5 % after H2c.
+
+### H1 — Tool guides: parameter descriptions and failure hints from one source
+
+**Why:** audit 25. Models guess parameters and formats, and a failed call does not tell them how to call the tool correctly.
+
+**Depends on:** AP1 (this card edits `McpToolMetadataWirePolicy.cs` after AP1's `using` lines exist).
+
+**Files:**
+- `src/Talvora.Shared/TalvoraToolGuides.cs` (new, reference copy)
+- `src/Talvora/ToolFailureGuidance.cs` (new)
+- `src/Talvora/Program.cs`
+- `src/Talvora/McpToolMetadataWirePolicy.cs`
+- `tests/Talvora.Smoke/SmokeScenarios.ToolGuides.cs` (new)
+- `tests/Talvora.Smoke/SmokeScenarios.SurfacePolicy.cs`
+- `tests/Talvora.Smoke/SmokeScenarios.PayloadBudget.cs`
+- `.context7/verification.json`
+- `docs/codex/STATUS.md`
+
+#### Exact implementation
+
+Step 1 — copy `docs/codex/reference/h1/TalvoraToolGuides.cs` → `src/Talvora.Shared/TalvoraToolGuides.cs` and verify the normalised hash against `docs/codex/reference/h1/SHA256SUMS.txt` (AGENTS rule 5, Reference copies).
+
+Step 2 — create `src/Talvora/ToolFailureGuidance.cs`:
+
+```csharp
+using ModelContextProtocol.Protocol;
+using Talvora.Shared;
+
+namespace Talvora;
+
+// H1: a failed call ends with the exact usage of its tool, so the model can correct the next call itself.
+internal static class ToolFailureGuidance
+{
+    internal static CallToolResult Apply(string? toolName, CallToolResult result)
+    {
+        if (toolName is null || TalvoraToolGuides.FailureHint(toolName) is not { } hint)
+        {
+            return result;
+        }
+
+        var failed = result.IsError is true ||
+            result.StructuredContent is { } structured && StructuredResultFailure.IsFailure(structured);
+        if (!failed)
+        {
+            return result;
+        }
+
+        result.Content = [.. result.Content, new TextContentBlock { Text = hint }];
+        return result;
+    }
+}
+```
+
+Step 3 — `src/Talvora/Program.cs`, inside `AddCallToolFilter`:
+- replace `return invalidArguments;` with `return ToolFailureGuidance.Apply(request.Params?.Name, invalidArguments);`
+- replace `return ToolResultTextPolicy.Apply(await operation(cancellationToken));` with `return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(await operation(cancellationToken)));`
+- replace
+```csharp
+        options.ServerInstructions =
+            SourceEditRoutingContract.ServerInstructions + " " +
+            RemotionTools.ServerInstructions;
+```
+with
+```csharp
+        options.ServerInstructions =
+            SourceEditRoutingContract.ServerInstructions + " " +
+            RemotionTools.ServerInstructions + " " +
+            "When a Talvora tool call fails, its result ends with 'How to call <tool>' and example arguments; correct the next call exactly as shown.";
+```
+
+Step 4 — `src/Talvora/McpToolMetadataWirePolicy.cs`. Inside the `foreach (var tool in result.Tools)` loop, directly after the statement that assigns `tool.Description = …NormalizeDescription(…);`, insert
+
+```csharp
+            if (TalvoraToolGuides.All.TryGetValue(tool.Name, out var guide))
+            {
+                // H1: the schema is identical for every request, so the described copy is computed once per tool.
+                var source = tool.InputSchema;
+                tool.InputSchema = DescribedInputSchemas.GetOrAdd(
+                    tool.Name, _ => WithParameterDescriptions(source, guide.Parameters));
+            }
+```
+
+and add these members directly above `private static Tool WithoutOutputSchema(Tool tool) => new()`:
+
+```csharp
+    private static readonly ConcurrentDictionary<string, JsonElement> DescribedInputSchemas =
+        new(StringComparer.Ordinal);
+
+    // H1: parameters without a description get the guide's line; an existing [Description] always wins.
+    private static JsonElement WithParameterDescriptions(
+        JsonElement schema,
+        IReadOnlyDictionary<string, string> parameters)
+    {
+        var node = JsonNode.Parse(schema.GetRawText());
+        if (node?["properties"] is JsonObject properties)
+        {
+            foreach (var (name, text) in parameters)
+            {
+                if (properties[name] is JsonObject property && property["description"] is null)
+                {
+                    property["description"] = text;
+                }
+            }
+        }
+
+        return JsonSerializer.SerializeToElement(node);
+    }
+```
+
+Step 5 — create `tests/Talvora.Smoke/SmokeScenarios.ToolGuides.cs`:
+
+```csharp
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+
+internal static partial class SmokeScenarios
+{
+    // H1: every guide matches the live schema, its example passes Talvora's own argument validator, its parameter
+    // lines reach the wire, and a failed call carries the guide.
+    internal static async Task RunToolGuidesLiveAsync(string serverRoot)
+    {
+        var root = serverRoot.TrimEnd('/');
+        using var http = new HttpClient(new HttpClientHandler { UseProxy = false });
+        var full = await ReadToolsListAsync(http, root + "/mcp");
+        var tools = full.Tools.EnumerateArray().ToDictionary(
+            tool => tool.GetProperty("name").GetString()!, tool => tool, StringComparer.Ordinal);
+        foreach (var (name, guide) in Talvora.Shared.TalvoraToolGuides.All)
+        {
+            if (!tools.TryGetValue(name, out var tool))
+                throw new InvalidOperationException($"H1: guide for {name}, but /mcp has no such tool.");
+            var schema = tool.GetProperty("inputSchema");
+            var properties = schema.GetProperty("properties");
+            foreach (var parameter in guide.Parameters.Keys)
+            {
+                if (!properties.TryGetProperty(parameter, out var property))
+                    throw new InvalidOperationException($"H1: {name} has no parameter {parameter}.");
+                if (!property.TryGetProperty("description", out _))
+                    throw new InvalidOperationException($"H1: {name}.{parameter} reached /mcp without a description.");
+            }
+
+            using var example = JsonDocument.Parse(guide.Example);
+            var arguments = example.RootElement.EnumerateObject().ToDictionary(
+                pair => pair.Name, pair => pair.Value.Clone(), StringComparer.Ordinal);
+            if (Talvora.ToolArgumentValidator.Validate(schema, arguments) is { } problem)
+                throw new InvalidOperationException($"H1: the {name} example is invalid: {problem}");
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, root + "/mcp/dev")
+        {
+            Content = new StringContent(
+                """{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"talvora_read_source","arguments":{}}}""",
+                Encoding.UTF8,
+                "application/json"),
+        };
+        request.Headers.Accept.ParseAdd("application/json");
+        request.Headers.Accept.ParseAdd("text/event-stream");
+        using var response = await http.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        if (!body.Contains("How to call talvora_read_source", StringComparison.Ordinal))
+            throw new InvalidOperationException("H1: a failed call does not carry its tool guide.");
+        Console.WriteLine($"H1 tool guides: {Talvora.Shared.TalvoraToolGuides.All.Count} verified");
+    }
+}
+```
+
+Step 6 — `tests/Talvora.Smoke/SmokeScenarios.SurfacePolicy.cs`: directly after the line `await RunPayloadBudgetLiveAsync(root);` insert `await RunToolGuidesLiveAsync(root);`.
+
+Step 7 — `tests/Talvora.Smoke/SmokeScenarios.PayloadBudget.cs`:
+- replace `internal const int DevelopmentToolsListBudgetBytes = 153_600;` with `internal const int DevelopmentToolsListBudgetBytes = 168_960;`
+- replace the comment line `// Measured 2026-10-25: dev 146 094 B, admin 51 590 B; budgets = 150 KiB and 55 KiB.` with `// Measured 2026-10-25: dev 146 094 B, admin 51 590 B. H1 (2026-10-27) raises dev to 165 KiB for tool guides.`
+
+**Permitted deviations (list them in the Log):**
+- If `StructuredContent` is not a `JsonElement?` in the pinned SDK, adapt only the `is { } structured` test (compile error = API detail, rule 5a).
+- If the `tool.Description = …` statement spans several lines, insert after its final line.
+
+**Don't:**
+- Do not edit the guide texts (they are Claude's).
+- Do not change tool names, descriptions, the 220-character policy, argument validation or error codes.
+- Do not add a new tool.
+
+**Acceptance:**
+- **Red:** with Steps 5–7 only, `--surface-policy-live http://127.0.0.1:7676` (detached, `artifacts/h1-red.log`) fails with "H1: …".
+- **Green:** after all steps, Full gate `Hepsi geçti.`.
+- Installer built and deployed; `/healthz.sourceCommit` = HEAD.
+- `--surface-policy-live` GREEN with `H1 tool guides: 18 verified` (`artifacts/h1-live.log`). Log the new dev/admin byte counts.
+- CI checked once.
+- Add user-queue line U13: "H1 kurulduktan sonra ChatGPT Business'ta Talvora Dev ve Admin bağlayıcılarını yenileyin."
+
+### H2a — Tool guides for tools `talvora_a…` to `talvora_f…`
+
+**Why:** audit 25. Every remaining tool gets the same guidance as the H1 core set.
+
+**Files:**
+- `src/Talvora.Shared/TalvoraToolGuides.cs` (add entries only)
+- `.context7/verification.json`
+- `docs/codex/STATUS.md`
+
+**Do:**
+1. Take the tools on `/mcp/dev` **and** `/mcp/admin` whose name after `talvora_` starts with `a`–`f` and that have no guide yet.
+2. For each tool, read its C# method (parameters, defaults, what it does) with `talvora_search_text` + `talvora_read_source` and add one entry to `All`, alphabetically after the existing entries. Use the exact shape of the H1 entries:
+   - **Usage:** English, at most 300 characters. One sentence on what it does, plus one sentence "Use X instead when …" if a better tool exists for a common case.
+   - **Parameters:** **every** input parameter of the tool except `purpose`. One line, at most 100 characters, saying what the value means and its unit or format. Use "Absolute …" for paths.
+   - **Example:** minimal valid JSON with every required parameter and realistic values under `C:\\Users\\tayla\\Talvora-MCP`.
+     - Never use a value that deletes, stops, kills or overwrites anything outside `artifacts/` — the example is shown to models.
+     - For destructive tools, use a path under `artifacts/example/`.
+3. Run `--surface-policy-live` against the **source build** service only if a local scratch service is available. Otherwise rely on the installed run in Acceptance.
+
+**Don't:**
+- Do not change H1 entries, tool code, descriptions or schemas.
+- Do not invent parameters (the smoke rejects unknown names).
+- Do not copy secrets, tokens or personal paths other than the repository path.
+
+**Acceptance:**
+- Full gate `Hepsi geçti.`.
+- Installer built and deployed.
+- `--surface-policy-live` GREEN; its `H1 tool guides: <n> verified` count grows by the number of tools added (record it).
+- CI checked once.
+
+### H2b — Tool guides for tools `talvora_g…` to `talvora_p…`
+
+Same as H2a for names starting `g`–`p`.
+
+### H2c — Tool guides for tools `talvora_q…` to `talvora_z…`, then require full coverage
+
+Same as H2a for names starting `q`–`z`, plus:
+- `tests/Talvora.Smoke/SmokeScenarios.ToolGuides.cs`: directly before the line `using var request = new HttpRequestMessage(HttpMethod.Post, root + "/mcp/dev")`, insert
+```csharp
+        var focusedDevelopment = await ReadToolsListAsync(http, root + "/mcp/dev");
+        var administration = await ReadToolsListAsync(http, root + "/mcp/admin");
+        var unguided = focusedDevelopment.Tools.EnumerateArray().Select(tool => tool.GetProperty("name").GetString()!)
+            .Concat(administration.Tools.EnumerateArray().Select(tool => tool.GetProperty("name").GetString()!))
+            .Distinct(StringComparer.Ordinal)
+            .Where(name => !Talvora.Shared.TalvoraToolGuides.All.ContainsKey(name))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        if (unguided.Length != 0)
+            throw new InvalidOperationException("H2: tools without a guide: " + string.Join(", ", unguided));
+```
+- `SmokeScenarios.PayloadBudget.cs`: set both budgets to the measured `/mcp/dev` and `/mcp/admin` bytes + 5 %, rounded **up** to a multiple of 1024. Update the comment with the measured numbers and the date. Add this file to the card's Files.
+
 ### Audit 2026-10-27 (24) · `talvora_apply_patch` reliability · result: two cards (AP1, AP2)
 
 Claude called the installed `talvora_apply_patch` directly with the mistakes agents typically make (2026-10-27, `3b3e7fd`):
@@ -1135,7 +1398,21 @@ Step 2 — run as the signed-in user, detached:
 
 Step 2b (P-43) — still in the repository root, run once as the signed-in user: `talvora_user_run {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-File","docs/codex/reference/sdk2/Update-Notices.ps1"], workingDirectory: "C:\Users\tayla\Talvora-MCP"}`. Pass: output `SDK2_NOTICES_UPDATED 20`; `THIRD-PARTY-NOTICES.md` shows 20 changed lines, version numbers only. Do not copy the script into `scripts/`. Add `THIRD-PARTY-NOTICES.md` to this card's Files.
 
-Step 3 — `docs/MODERNIZATION-POLICY.md` line 9: replace `10.0.402` with `10.0.403`. In STATUS → Fixed facts → Toolchain, replace `.NET SDK 10.0.402 exact pin` with `.NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14)`.
+Step 3 — `docs/MODERNIZATION-POLICY.md` line 9: replace `10.0.402` with `10.0.403`.
+
+Step 4 (P-44, diagnostics only) — add `src/Talvora.Tray/ControlCenterSmoke.cs` and `scripts/Invoke-QualityGate.ps1` to Files.
+- `ControlCenterSmoke.cs`: insert `TrayLog.Write("Control Center smoke stage: worklog history");` directly before `window.ShellModel.SelectPage(2);` (the one followed by `AssertWorklogHistorySelection(window, "worklog-session-alternate");`), `TrayLog.Write("Control Center smoke stage: live snapshot");` directly before `await window.RunSmokeScenarioAsync();`, and `TrayLog.Write("Control Center smoke stage: UI4 lifecycle");` directly before `await AssertUi4LifecycleSmokeAsync(window);`.
+- `Invoke-QualityGate.ps1`: replace the line `$smoke = Start-Process -FilePath $tray -ArgumentList @('--control-center-smoke') -Wait -PassThru -WindowStyle Hidden` with
+```powershell
+                    $smoke = Start-Process -FilePath $tray -ArgumentList @('--control-center-smoke') -PassThru -WindowStyle Hidden
+                    if (-not $smoke.WaitForExit(300000)) {
+                        Stop-Process -Id $smoke.Id -Force
+                        $trayLog = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Talvora\Tray\tray.log'
+                        $stage = if (Test-Path -LiteralPath $trayLog) { Get-Content -LiteralPath $trayLog -Tail 300 | Where-Object { $_ -match 'Control Center smoke stage:' } | Select-Object -Last 1 } else { '' }
+                        throw "Control Center smoke timed out after 300 s. Last stage: $stage"
+                    }
+```
+- Gate rule for this card: if the Full gate fails **only** in ControlCenter with "timed out", run the Full gate once more. If it times out twice, revert everything, write a proposal quoting the "Last stage" line, mark SDK2 `[?]` and stop. In STATUS → Fixed facts → Toolchain, replace `.NET SDK 10.0.402 exact pin` with `.NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14)`.
 
 **Don't:**
 - Do not install or uninstall any SDK.
