@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-42 — AP1/AP2 — Pinned .NET SDK 10.0.402 is unavailable
 - Date: 2026-10-27, HEAD 58d6b124510ca6535d590b083280cf90aa1126d0
 - Card text: "Red before Step 2: run dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release -- --surface-policy-live http://127.0.0.1:7676 against the installed service, detached as in AGENTS (log artifacts/ap1-red.log)." "Green after Step 2: Full gate Hepsi geçti.; build the installer and deploy" (ROADMAP.md AP1).
@@ -28,9 +32,7 @@
   1. Authorize restoring precisely .NET SDK 10.0.402 alongside the installed 10.0.403 without changing global.json or package locks; then unblock AP1/AP2 and rerun each card's RED/GREEN.
   2. Specify a separate SDK migration card to 10.0.403 (global.json, lock/CI validation and full regression) and make AP1/AP2 wait for that card; do not bypass the pin.
 - Partial work: reverted (yes; the AP1 smoke regression addition was restored to HEAD; no production code modified).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-10-27): option 2.** The machine moved to SDK 10.0.403 / runtime 10.0.14 by itself (servicing update); 10.0.402 is not reinstalled. New card **SDK2** moves `global.json` to 10.0.403 and the 17 platform packages to 10.0.14 with the existing CI2 updater (Claude verified it on a clean copy of `8644706`: `PLATFORM_PACKAGE_LOCKSTEP_GREEN 10.0.14 (17 packages)`, 8 files, `Talvora.slnx` Release build 0 errors). AP1 and AP2 go back to `[ ]` after SDK2; their text is unchanged.
 
 ### P-41 — UI8 — Live legacy builders and unspecified high-contrast/screenshot contracts
 - Date: 2026-10-25, HEAD bd39d7329050303f2e60309b91c068a2983a30cd

@@ -119,8 +119,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI8 — Polish, accessibility, screenshots (P-41; signed-in Full 68/0, theme/HC/UIA smoke green; installation and exact-commit CI evidence after commit)
 - [x] UI9 — Remove the remaining legacy Control Center host (delivered by Claude: three legacy files and LegacyContentHost deleted, −3 300 lines, no visible change; installation pending)
 - [x] I1 — Install the current main and verify Q7, UI6b and UI9 on the installed runtime (installed 3b3e7fd; Q7 full/dev/admin = 337555/146094/51590 B; UI6b PNGs both themes; GitHub CI 40203947659 success; verified by Claude audit 24)
-- [?] AP1 — Output schemas never require members that can be null (audit 24; waiting for Claude: P-42, SDK 10.0.402 missing)
-- [?] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; waiting for Claude: P-42, SDK 10.0.402 missing)
+- [ ] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42)
+- [ ] AP1 — Output schemas never require members that can be null (audit 24; unblocked by SDK2)
+- [ ] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; unblocked by SDK2)
 
 ## User queue
 
@@ -161,6 +162,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-27 — Claude decided P-42 (option 2): the machine was serviced to SDK 10.0.403 / runtime 10.0.14; new card SDK2 moves the pin and the 17 platform packages (verified on a clean copy, Release build 0 errors). AP1/AP2 unblocked after SDK2. User-reported patch errors (missing Revision on STATUS.md, stale revision) are the cases AP2 makes self-explanatory.
 - 2026-10-27 — AP1/AP2 blocked (executor: ChatGPT): P-42 requests the missing SDK 10.0.402; global.json disables roll-forward, but only 10.0.403 exists. AP1 RED smoke could not launch; AP2 RED depends on the same SDK; partial AP1 smoke edit reverted, production untouched.
   - Signed-in baseline Changed: 8/0; docs-only Changed: 10/0, "Hepsi geçti."; origin/main GitHub CI 40566458842 success. Full, install and live probe not attempted pending approved SDK fix.
   - Context7: /modelcontextprotocol/csharp-sdk (Tool.OutputSchema and structuredContent contracts). Gitea #9 comment 175.

@@ -1120,6 +1120,33 @@ These worked correctly: `@@ -1,3 +1,3 @@` headers, CRLF files, UTF-8 BOM, Turkis
 - Document the grammar in the parameter descriptions.
 - Make every rejection say what to change (AP2).
 
+### SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42)
+
+**Why:** this machine's .NET was serviced to SDK 10.0.403 / runtime 10.0.14, and the pin `10.0.402` (`rollForward: disable`) now stops every local build. Per MODERNIZATION-POLICY, an SDK patch moves together with the lock graph.
+
+**Files:** `global.json`, `Directory.Packages.props` and all `packages.lock.json` (changed only by the script), `docs/MODERNIZATION-POLICY.md`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+#### Exact implementation
+
+Step 1 — `global.json`: change `"version": "10.0.402"` to `"version": "10.0.403"`. Leave `rollForward: "disable"` and `allowPrerelease: false` unchanged.
+
+Step 2 — run as the signed-in user, detached:
+`talvora_user_process_start {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-Command","& ./scripts/Update-DotnetPlatformPackages.ps1 -Version 10.0.14 *> artifacts/sdk2-update.log; exit $LASTEXITCODE"], workingDirectory: "C:\Users\tayla\Talvora-MCP", visible: false}`, then `talvora_tail_text {path: "C:\Users\tayla\Talvora-MCP\artifacts\sdk2-update.log", lineCount: 20}` every 30 s until the log has a line `PLATFORM_PACKAGE_LOCKSTEP_GREEN 10.0.14 (17 packages)`. Expected diff: 8 files (Claude's clean-copy run).
+
+Step 3 — `docs/MODERNIZATION-POLICY.md` line 9: replace `10.0.402` with `10.0.403`. In STATUS → Fixed facts → Toolchain, replace `.NET SDK 10.0.402 exact pin` with `.NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14)`.
+
+**Don't:**
+- Do not install or uninstall any SDK.
+- Do not change `rollForward`, `Microsoft.Extensions.AI.Abstractions` or `Microsoft.Build.Framework`.
+- Do not hand-edit lock files.
+- Do not touch AP1/AP2 files.
+
+**Acceptance:**
+- Full gate `Hepsi geçti.` as the signed-in user (detached).
+- Installer built and deployed; `/healthz.sourceCommit` = HEAD.
+- `--surface-policy-live http://127.0.0.1:7676` GREEN (detached, `artifacts/sdk2-live.log`).
+- One commit with `Card: SDK2`, pushed; CI checked once (AGENTS 10b). GitHub CI installs 10.0.403 from `global.json`.
+
 ### AP1 — Output schemas never require members that can be null
 
 **Why:** Audit 24 #1. Strict MCP clients drop every result whose null member is omitted, so agents see a schema error instead of Talvora's message.
