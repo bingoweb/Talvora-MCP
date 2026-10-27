@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-43 — SDK2 — Third-party notices must track regenerated platform lock files
+- Date: 2026-10-27, HEAD fa36a945020cb2374f29f1eb96067c18bb13cf58
+- Card text: "Files: global.json, Directory.Packages.props and all packages.lock.json (changed only by the script), docs/MODERNIZATION-POLICY.md, .context7/verification.json, docs/codex/STATUS.md." "Acceptance: Full gate Hepsi geçti. as the signed-in user" (ROADMAP.md:1123 SDK2).
+- Problem: SDK2's approved updater printed "PLATFORM_PACKAGE_LOCKSTEP_GREEN 10.0.14 (17 packages)" and Release build passed. The signed-in Full gate nevertheless failed at tests/ThirdPartyNoticesSourceRegression.ps1:61: THIRD-PARTY-NOTICES.md omits 10.0.14 for 21 locked runtime package IDs, including Microsoft.Data.Sqlite, Microsoft.NET.ILLink.Tasks and System.ServiceProcess.ServiceController; 61 checks, 1 failure (artifacts/sdk2-gate.log). The card's Files and exact steps omit the notice. AGENTS.md TOKEN ECONOMY D.3 forbids regenerating notices unless the card says so. scripts/Apply-DependabotPr.ps1:80-110 has version-only notice replacement logic, but its complete PR script is not an SDK2 action.
+- Options:
+  1. Amend SDK2 to include THIRD-PARTY-NOTICES.md with precise version-only notice updates for every locked 10.0.14 package, preserving all attributions/licences, and rerun the Full gate; document the additional file as an approved scope addition.
+  2. Add an explicitly scoped notice-update prerequisite card with approved generation/verification steps and make SDK2 wait for it; do not weaken the notice regression.
+- Partial work: reverted (yes; SDK pin, all 17 platform package updates, lock files, modernization policy and Context7 edits returned to HEAD; no production changes were committed).
+- Decision (Claude): _pending_
 
 ## Decided
 

@@ -17,7 +17,7 @@
 | Audit baseline | Newest Claude audit tag `audit/2026-10-27-24` = this audit commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
-| Toolchain | .NET SDK 10.0.402 exact pin with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
+| Toolchain | .NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
 | Install path | `scripts/Deploy-Windows-Installer.ps1` (SYSTEM task; when called from inside Talvora it does not wait — poll `/healthz.sourceCommit`). Never run `Reset-And-Install.ps1` (destructive until R3). |
 | Secrets | `C:\ProgramData\Talvora\Secrets\*` belong to the user's other projects. Never read, move, print or delete them. Listing names/ACLs is allowed. |
 | User preferences | Personal single-user workstation: no local MCP token (Q1). Cosmetics matter a lot: every visible change needs before/after PNGs. The worklog's vertical **code terminal** is the user's favourite feature — never break or shrink it. |
@@ -119,9 +119,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI8 — Polish, accessibility, screenshots (P-41; signed-in Full 68/0, theme/HC/UIA smoke green; installation and exact-commit CI evidence after commit)
 - [x] UI9 — Remove the remaining legacy Control Center host (delivered by Claude: three legacy files and LegacyContentHost deleted, −3 300 lines, no visible change; installation pending)
 - [x] I1 — Install the current main and verify Q7, UI6b and UI9 on the installed runtime (installed 3b3e7fd; Q7 full/dev/admin = 337555/146094/51590 B; UI6b PNGs both themes; GitHub CI 40203947659 success; verified by Claude audit 24)
-- [ ] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42)
-- [ ] AP1 — Output schemas never require members that can be null (audit 24; unblocked by SDK2)
-- [ ] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; unblocked by SDK2)
+- [?] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42; waiting for Claude: P-43, third-party notices)
+- [?] AP1 — Output schemas never require members that can be null (audit 24; waiting for SDK2)
+- [?] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; waiting for SDK2)
 
 ## User queue
 
@@ -161,6 +161,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-27 — SDK2 blocked (executor: ChatGPT): updater 10.0.14 lockstep GREEN (17 packages), Restore/Build GREEN; Full gate 61 checks/1 error in ThirdPartyNoticesSourceRegression (notices missing updated runtime versions).
+  - P-43 requests an approved THIRD-PARTY-NOTICES.md scope addition or prerequisite. Partial SDK2 edits fully reverted; no runtime install attempted. Context7: /dotnet/docs exact SDK pin and lock-file graph.
+  - Signed-in baseline Changed 8/0; proposal-only Changed 10/0, "Hepsi geçti."; Gitea #9 comment 177.
 
 - 2026-10-27 — Claude decided P-42 (option 2): the machine was serviced to SDK 10.0.403 / runtime 10.0.14; new card SDK2 moves the pin and the 17 platform packages (verified on a clean copy, Release build 0 errors). AP1/AP2 unblocked after SDK2. User-reported patch errors (missing Revision on STATUS.md, stale revision) are the cases AP2 makes self-explanatory.
 - 2026-10-27 — AP1/AP2 blocked (executor: ChatGPT): P-42 requests the missing SDK 10.0.402; global.json disables roll-forward, but only 10.0.403 exists. AP1 RED smoke could not launch; AP2 RED depends on the same SDK; partial AP1 smoke edit reverted, production untouched.
