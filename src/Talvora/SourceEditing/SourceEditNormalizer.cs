@@ -516,7 +516,7 @@ internal static partial class SourceEditNormalizer
                 throw new SourceEditDomainException(
                     SourceEditCodes.PatchContextNotFound,
                     "Exact patch context was not found.",
-                    details: HunkDetails(hunk));
+                    details: ContextNotFoundDetails(hunk, lines, oldSide));
             }
 
             if (candidates.Count > 1)
@@ -524,7 +524,12 @@ internal static partial class SourceEditNormalizer
                 throw new SourceEditDomainException(
                     SourceEditCodes.PatchContextAmbiguous,
                     "Exact patch context matched more than once. Add more exact context.",
-                    details: HunkDetails(hunk));
+                    details: new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        ["matchLines"] = string.Join(", ", candidates.Select(start =>
+                            (start + 1).ToString(System.Globalization.CultureInfo.InvariantCulture))),
+                        ["hint"] = "Add unchanged lines above or below the change until the context occurs only once.",
+                    });
             }
 
             var startIndex = candidates[0];
@@ -755,6 +760,44 @@ internal static partial class SourceEditNormalizer
         {
             lines[^1] = last with { Terminator = string.Empty };
         }
+    }
+
+    // AP2: tell the agent which line differs; the patch is still rejected (no fuzzy application).
+    private static IReadOnlyDictionary<string, string> ContextNotFoundDetails(
+        SourcePatchHunk hunk,
+        IReadOnlyList<SourceTextLine> lines,
+        IReadOnlyList<string> oldSide)
+    {
+        var details = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (hunk.Label is not null)
+        {
+            details["hunk"] = hunk.Label;
+        }
+
+        foreach (var expected in oldSide)
+        {
+            var wanted = expected.Trim();
+            if (wanted.Length == 0)
+            {
+                continue;
+            }
+
+            for (var index = 0; index < lines.Count; index++)
+            {
+                if (string.Equals(lines[index].Content.Trim(), wanted, StringComparison.Ordinal) &&
+                    !string.Equals(lines[index].Content, expected, StringComparison.Ordinal))
+                {
+                    details["hint"] = "Only whitespace differs: copy the line exactly from talvora_read_source (indentation, tabs, trailing spaces).";
+                    details["patchLine"] = expected;
+                    details["fileLine"] = lines[index].Content;
+                    details["fileLineNumber"] = (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    return details;
+                }
+            }
+        }
+
+        details["hint"] = "Context and '-' lines must match the current file exactly and occur once. Re-read the file with talvora_read_source and copy them.";
+        return details;
     }
 
     private static IReadOnlyDictionary<string, string>? HunkDetails(

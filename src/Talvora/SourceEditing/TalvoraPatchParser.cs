@@ -66,12 +66,21 @@ internal static class TalvoraPatchParser
             lines.RemoveAt(lines.Count - 1);
         }
 
+        if (lines.Count >= 2 &&
+            string.Equals(lines[0], "*** Begin Patch", StringComparison.Ordinal) &&
+            string.Equals(lines[^1], "*** End Patch", StringComparison.Ordinal))
+        {
+            // AP2: the OpenAI/Codex apply_patch envelope is the same grammar with different markers.
+            lines[0] = BeginMarker;
+            lines[^1] = EndMarker;
+        }
+
         if (lines.Count < 2 ||
             !string.Equals(lines[0], BeginMarker, StringComparison.Ordinal) ||
             !string.Equals(lines[^1], EndMarker, StringComparison.Ordinal))
         {
             throw ParseError(
-                $"Patch must start with '{BeginMarker}' and end with '{EndMarker}'.");
+                $"Patch must start with '{BeginMarker}' and end with '{EndMarker}' ('*** Begin Patch' / '*** End Patch' are accepted too).");
         }
 
         var blocks = new List<SourcePatchFileBlock>();
@@ -194,7 +203,7 @@ internal static class TalvoraPatchParser
         if (revision is null)
         {
             throw ParseError(
-                $"Update block for '{path}' requires a Revision directive.",
+                $"Update block for '{path}' needs '*** Revision: <revision>' on the line after '*** Update File: {path}'. Call talvora_read_source on '{path}' and copy its revision value (sha256:...).",
                 headerLine);
         }
 
@@ -303,7 +312,7 @@ internal static class TalvoraPatchParser
             }
 
             throw ParseError(
-                "Add-file content lines must start with '+'.",
+                $"Add File line {index + 1} must start with '+' (every line of a new file; a blank line is a single '+'); got '{(line.Length > 120 ? line[..120] + "…" : line)}'.",
                 index);
         }
 
@@ -362,7 +371,7 @@ internal static class TalvoraPatchParser
         if (revision is null)
         {
             throw ParseError(
-                $"Delete block for '{path}' requires a Revision directive.",
+                $"Delete block for '{path}' needs '*** Revision: <revision>' on the line after '*** Delete File: {path}'. Call talvora_read_source on '{path}' and copy its revision value (sha256:...).",
                 headerLine);
         }
 
@@ -406,11 +415,36 @@ internal static class TalvoraPatchParser
                 break;
             }
 
+            if (string.Equals(line, "*** End of File", StringComparison.Ordinal))
+            {
+                // AP2: OpenAI apply_patch anchor; exact, unique context matching already fixes the position.
+                index++;
+                continue;
+            }
+
             if (line.Length == 0)
             {
-                throw ParseError(
-                    "Patch hunk lines require an explicit prefix: space, '-', or '+'. Use a single prefix character to represent an empty line.",
-                    index);
+                // AP2: a blank context line whose leading space was stripped. Empty lines that only separate
+                // hunks or blocks are skipped. Matching stays exact.
+                var next = index + 1;
+                while (next < lines.Count - 1 && lines[next].Length == 0)
+                {
+                    next++;
+                }
+
+                var atBoundary = next >= lines.Count - 1 ||
+                    lines[next].StartsWith("@@", StringComparison.Ordinal) ||
+                    IsBlockStart(lines[next]) ||
+                    lines[next] == EndMarker ||
+                    lines[next] == "*** End of File";
+                if (!atBoundary)
+                {
+                    items.Add(new SourcePatchHunkLine(SourcePatchLineKind.Context, string.Empty));
+                    oldSideCount++;
+                }
+
+                index++;
+                continue;
             }
 
             var kind = line[0] switch
@@ -419,7 +453,7 @@ internal static class TalvoraPatchParser
                 '-' => SourcePatchLineKind.Delete,
                 '+' => SourcePatchLineKind.Add,
                 _ => throw ParseError(
-                    "Patch hunk lines must start with space, '-', or '+'.",
+                    $"Patch hunk line {index + 1} must start with ' ' (unchanged context), '-' (removed) or '+' (added); got '{(line.Length > 120 ? line[..120] + "…" : line)}'.",
                     index),
             };
 

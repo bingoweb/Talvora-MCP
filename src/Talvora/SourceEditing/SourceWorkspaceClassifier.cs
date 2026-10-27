@@ -265,9 +265,16 @@ internal static class SourceWorkspaceClassifier
             relativePath.Contains(':', StringComparison.Ordinal) ||
             relativePath.IndexOf('\0') >= 0)
         {
+            var suggestion =
+                Path.IsPathRooted(relativePath) &&
+                relativePath.IndexOf('\0') < 0 &&
+                relativePath.IndexOf(':', 2) < 0 &&
+                IsContainedPath(Path.GetFullPath(relativePath), workspaceRoot)
+                    ? $" Use '{GetRelativePath(workspaceRoot, Path.GetFullPath(relativePath))}' instead."
+                    : string.Empty;
             throw new SourceEditDomainException(
                 SourceEditCodes.PathOutsideWorkspace,
-                "Source-edit paths must be workspace-relative regular paths without drive/device/ADS syntax.",
+                "Source-edit paths must be workspace-relative regular paths without drive/device/ADS syntax." + suggestion,
                 relativePath);
         }
 

@@ -441,7 +441,7 @@ internal static partial class SourceEditNormalizer
             {
                 throw new SourceEditDomainException(
                     SourceEditCodes.PatchContextNotFound,
-                    "Unified diff hunk old-file coordinates are outside the current source.",
+                    "Unified diff hunk old-file coordinates are outside the current source. Use inputFormat 'talvora' (no line numbers; the exact context decides the position) or take the line numbers from talvora_read_source.",
                     fullPath,
                     HunkLineDetails(hunk));
             }
@@ -457,7 +457,7 @@ internal static partial class SourceEditNormalizer
                 {
                     throw new SourceEditDomainException(
                         SourceEditCodes.PatchContextNotFound,
-                        "Unified diff hunk does not exactly match the declared old-file coordinates. Offset/fuzzy application is not permitted.",
+                        "Unified diff hunk does not exactly match the declared old-file coordinates. Offset/fuzzy application is not permitted. Use inputFormat 'talvora' (no line numbers; the exact context decides the position) or take the line numbers from talvora_read_source.",
                         fullPath,
                         HunkLineDetails(hunk));
                 }

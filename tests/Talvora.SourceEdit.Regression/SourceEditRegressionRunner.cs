@@ -14,6 +14,7 @@ internal static partial class SourceEditRegressionRunner
         {
             ("toolchain-q2a-zero-capability-loss", RunToolchainConsolidationAsync),
             ("exact-patch-success", ExactPatchSuccessAsync),
+            ("ap2-agent-patch-dialect", Ap2AgentPatchToleranceAsync),
             ("atomic-publish-concurrent-first-writers", AtomicPublishConcurrentFirstWritersAsync),
             ("redaction-is-idempotent", RedactionIsIdempotentAsync),
             ("receipt-real-line-counts", RunReceiptCountsAsync),

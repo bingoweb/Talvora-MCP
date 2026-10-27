@@ -40,10 +40,15 @@ public static class SourceEditTools
         OutputSchemaType = typeof(SourceEditTransactionResult)),
      Description(SourceEditRoutingContract.ApplyPatchDescription)]
     public static Task<SourceEditTransactionResult> ApplyPatch(
+        [Description("Absolute repository root, for example C:\\Users\\tayla\\Talvora-MCP. Paths inside the patch are relative to it.")]
         string workspaceRoot,
+        [Description("A new unique id for every attempt, for example 'fix-login-1'. Reusing an id with a different patch is rejected; retry with a new id.")]
         string transactionId,
+        [Description("Talvora patch (inputFormat 'talvora'):\n*** Begin Talvora Patch\n*** Update File: src/App.cs\n*** Revision: sha256:<64 hex from talvora_read_source>\n@@\n unchanged line (leading space)\n-removed line\n+added line\n*** Add File: docs/New.md\n+every line starts with +\n*** Delete File: old.txt\n*** Revision: sha256:<...>\n*** End Talvora Patch\nContext and '-' lines must equal the file exactly (whitespace included) and match one place; add context if ambiguous. '*** Begin Patch'/'*** End Patch' and '*** End of File' are accepted.")]
         string patch,
+        [Description("'talvora' (default, recommended: no line numbers) or 'unified-diff' (git diff with exact @@ line numbers; then also pass expectedRevisions).")]
         string inputFormat = "talvora",
+        [Description("unified-diff only: {\"<relative path>\": \"sha256:<revision from talvora_read_source>\"} for every existing file the diff changes.")]
         Dictionary<string, string>? expectedRevisions = null,
         bool validateSyntax = true,
         [Description("Optional, for the user's desktop worklog: one Turkish line saying what this change does and why (example: \"git pull artık oturum kullanıcısının SSH anahtarını kullanıyor\"). Not used by the edit itself.")]
