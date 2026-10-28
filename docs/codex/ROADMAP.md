@@ -1096,6 +1096,126 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-28 (32) · H6, CI2 verified; every patch takes 13 s · result: R4
+
+- **H6 (`bfaeed1`)** matches its card; CI 40734561809 success; installed bfaeed1. Live: `-c alias.s=status s` and `--config-env=alias.p=X p` are `isError` with the H6 message, and `status --short` still works.
+- **CI2 (`06f0532`)** matches its card. `Get-CiStatus.ps1 -Commit 06f0532 -TimeoutMinutes 0` prints `CI başarılı` (run 40737107002), so Claude marked it `[x]`.
+- **Bug (high): every `talvora_apply_patch` call takes about 13 s, and the cost grows with history.** Measured on the installed runtime:
+  - a one-line patch in a 6-file scratch repository: 13.7 / 13.1 / 12.9 s (validateSyntax off);
+  - Add, then Delete of `artifacts/*.md` in this repository: 12.8 s each;
+  - even a patch that fails to parse: 8.9 s.
+
+  Cause:
+  - `SourceEditEngine.RecoverWorkspaceLockedAsync` calls `store.EnumerateStatesAsync`, which opens the journal of every retained transaction (`C:\ProgramData\Talvora\SourceEdit\transactions`: 4 118 directories, 40 MB).
+  - After each commit, `CleanupCompletedAsync` deserializes every receipt (7 453 files) and sizes every directory.
+  - Retention is 30 days or 10 000 transactions, so the delay keeps growing toward about 30 s per edit, close to connector timeouts.
+  - The startup purge must be bounded: `RecoverAllPendingAsync` runs before `app.Run`, so an unbounded first cleanup could exceed the Windows service start timeout.
+- Also checked, fine: CRLF line endings and Turkish UTF-8 content survive patches byte for byte.
+
+### R4 — Keep source-edit history small so every patch is fast (audit 32)
+
+**Why:** audit 32. Each patch scans every retained transaction. Keep only recent history, and delete a bounded amount per cleanup run so neither the service start nor a patch call stalls.
+
+**Files:**
+- `src/Talvora/SourceEditing/SourceEditTransactionStore.cs`
+- `tests/StorageMaintenanceSourceRegression.ps1`
+- `.context7/verification.json`
+
+**Context7:** verify in `/dotnet/docs` that `Directory.EnumerateFiles` / `EnumerateDirectories` enumerate lazily and that deleting entries while enumerating a different directory is safe.
+
+#### Exact implementation
+
+Step 1 (red first). In `tests/StorageMaintenanceSourceRegression.ps1`, insert directly before the last line `Write-Output 'STORAGE_MAINTENANCE_SOURCE_GREEN'`:
+
+```powershell
+$sourceEditStore = Read-RepoText 'src\Talvora\SourceEditing\SourceEditTransactionStore.cs'
+Assert-Contains $sourceEditStore 'MaximumCompletedTransactions = 300;' 'R4: completed source-edit history stays small enough to scan on every patch'
+Assert-Contains $sourceEditStore 'MaximumCleanupDeletionsPerRun = 1_000;' 'R4: one cleanup run deletes a bounded number of entries'
+Assert-Contains $sourceEditStore ': TimeSpan.FromDays(3);' 'R4: committed source-edit receipts are kept three days'
+```
+
+Run `pwsh -NoProfile -File tests/StorageMaintenanceSourceRegression.ps1` and quote the red line in the Log.
+
+Step 2. In `SourceEditTransactionStore.cs`, replace
+
+```csharp
+    private const int MaximumCompletedTransactions = 10_000;
+```
+
+with
+
+```csharp
+    // R4: every patch scans the retained journals, so history stays small and each cleanup run is bounded.
+    private const int MaximumCompletedTransactions = 300;
+    private const int MaximumCleanupDeletionsPerRun = 1_000;
+```
+
+Step 3. In `CleanupCompletedAsync`:
+- (a) Replace `        var completed = new List<CompletedEntry>();` with
+
+  ```csharp
+          var completed = new List<CompletedEntry>();
+          var deletions = 0;
+  ```
+
+- (b) Replace
+
+  ```csharp
+                      ? TimeSpan.FromDays(7)
+                      : TimeSpan.FromDays(30);
+
+              if (now - info.LastWriteTimeUtc > retention)
+              {
+  ```
+
+  with
+
+  ```csharp
+                      ? TimeSpan.FromDays(2)
+                      : TimeSpan.FromDays(3);
+
+              if (now - info.LastWriteTimeUtc > retention &&
+                  deletions < MaximumCleanupDeletionsPerRun)
+              {
+                  deletions++;
+  ```
+
+- (c) Replace
+
+  ```csharp
+                  totalBytes > MaximumCompletedStateBytes) &&
+                 index < completed.Count)
+          {
+  ```
+
+  with
+
+  ```csharp
+                  totalBytes > MaximumCompletedStateBytes) &&
+                 index < completed.Count &&
+                 deletions < MaximumCleanupDeletionsPerRun)
+          {
+              deletions++;
+  ```
+
+Step 4. Refresh `.context7/verification.json` for this change.
+
+**Don't:**
+- change `EnumerateStatesAsync`, the journal format, tombstones, recovery or the receipt replay logic;
+- keep `recovery-required` receipts out of their current exemption;
+- add a timer or background cleanup.
+
+**Acceptance:**
+- Step 1 red, then green.
+- The SourceEdit regression is green.
+- Full gate `Hepsi geçti.` as the signed-in user.
+- Deploy; `/healthz.sourceCommit` = HEAD; the service starts normally.
+- Live, on the installed runtime:
+  - Run at most 10 probe pairs (Add, then Delete of `artifacts/r4-probe.md` with `talvora_apply_patch`).
+  - Then count `C:\ProgramData\Talvora\SourceEdit\receipts` and `transactions` (read-only, through `talvora_run_powershell`): each must be ≤ 400.
+  - Then time three one-line probe patches; each must be < 2 s. Record the counts and timings in the Log.
+- Push; CI once.
+
 ### Audit 2026-10-28 (31) · G1 and H4 verified · no new cards
 
 - **G1 (`455551f`)** matches its card.
