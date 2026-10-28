@@ -136,8 +136,6 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## User queue
 
-- U13 — H1 kurulduktan sonra ChatGPT Business'ta Talvora Dev ve Admin bağlayıcılarını yenileyin.
-
 - U11 — Tepsideki yeni Talvora ikonuna bakın (açık ve koyu görev çubuğunda); beğenmezseniz Claude'a söyleyin.
 
 - U8 — E2: live Codex MCP round-trip intentionally deferred under "do not use Codex". Unit, installed wire smoke and ChatGPT Dev connector will be checked without running Codex; nothing to do unless Codex use is reauthorized.
@@ -175,6 +173,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-28 — User confirmed U13: the Talvora Dev and Admin connectors in ChatGPT Business were refreshed after H1–H6 (recorded by Claude). U13 removed from the user queue.
 - 2026-10-28 — Claude audit 34: R6 matches its card exactly; installed 144c8dd; CI 40747815417 success. Live on the installed runtime: 252 transaction directories and 300 receipts (was 4 107 / 7 437); six probe patches 0.89–1.02 s (was 12.8–13.7 s). R6 marked [x]. Agent queue has no open card. Tag `audit/2026-10-28-34`.
 - 2026-10-28 — R6 implemented (executor: ChatGPT): completed source-edit state capped at 300, three-day receipt retention, at most 1,000 cleanup deletions per pass; recovery-required exemption unchanged.
   - RED StorageMaintenanceSourceRegression: "Storage maintenance contract failed: R6: completed source-edit history stays small enough to scan on every patch"; GREEN after exact card changes.
