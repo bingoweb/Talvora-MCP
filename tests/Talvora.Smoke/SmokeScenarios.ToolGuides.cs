@@ -34,6 +34,17 @@ internal static partial class SmokeScenarios
                 throw new InvalidOperationException($"H1: the {name} example is invalid: {problem}");
         }
 
+        var focusedDevelopment = await ReadToolsListAsync(http, root + "/mcp/dev");
+        var administration = await ReadToolsListAsync(http, root + "/mcp/admin");
+        var unguided = focusedDevelopment.Tools.EnumerateArray().Select(tool => tool.GetProperty("name").GetString()!)
+            .Concat(administration.Tools.EnumerateArray().Select(tool => tool.GetProperty("name").GetString()!))
+            .Distinct(StringComparer.Ordinal)
+            .Where(name => !Talvora.Shared.TalvoraToolGuides.All.ContainsKey(name))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        if (unguided.Length != 0)
+            throw new InvalidOperationException("H2: tools without a guide: " + string.Join(", ", unguided));
+
         using var request = new HttpRequestMessage(HttpMethod.Post, root + "/mcp/dev")
         {
             Content = new StringContent(

@@ -126,7 +126,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] H1 — Tool guides: parameter descriptions and failure hints from one source (audit 25; 18 reference guides hash verified; signed-in Full 68/0; installed 589b26a live 18/18 GREEN; GitHub CI 40593672015 success)
 - [~] H2a — Tool guides for tools a–f (audit 25; 75 added, 93 total, 78 a–f covered; signed-in Full 68/0; installed live and exact-commit CI pending at commit time)
 - [x] H2b — Tool guides for tools g–p (audit 25; signed-in Full 68/0; exact-commit installed/CI evidence follows)
-- [ ] H2c — Tool guides for tools q–z, then require full coverage (audit 25)
+- [x] H2c — Tool guides for tools q–z, then require full coverage (audit 25; signed-in Full 68/0; installed/live/CI evidence follows commit)
 
 ## User queue
 
@@ -168,6 +168,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-28 — H2c implemented (executor: ChatGPT): 89 guides added (87 q–z plus fetch/search), 250 total; exact Dev/Admin full-coverage smoke added.
+  - RED coverage smoke found 89 unguided; C# method signatures and live inputSchemas checked; H1/H2a/H2b and tool APIs unchanged.
+  - Q7 payload limits raised to source-derived 2026-10-28 dev 193826 + 5% -> 203776 B; admin 67617 + 5% -> 71680 B, each rounded up to KiB.
+  - H2b GitHub CI 40635695831 failure traced to the old Q7 dev budget; H2c updates only the card-approved limits.
+  - Context7 /modelcontextprotocol/csharp-sdk; signed-in Changed 16/0 and Full 68/0, "Hepsi geçti."; Gitea #9 comment 189.
+  - Exact-HEAD installer, installed live surface smoke, measured bytes and GitHub CI checked after commit.
 
 - 2026-10-28 — H2b implemented (executor: ChatGPT): 68 alphabetic g–p tool guides added; 161 total, all g–p Dev/Admin tools covered.
   - Checked C# method signatures and live inputSchemas; all 68 examples use safe values and match required/known fields.
