@@ -1096,6 +1096,21 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-28 (31) · G1 and H4 verified · no new cards
+
+- **G1 (`455551f`)** matches its card.
+  - Every card code line is present.
+  - `git grep -i awwwards -- src scripts tests .github` shows only the two guard lines.
+  - `.context7/verification.json` holds one G1-only entry.
+  - Installed before push; CI 40694613475 success.
+- **H4 (`87695b0`)** matches its card. Red recorded on 455551f; installed 87695b0; CI 40706924110 success. Live probes on the installed runtime:
+  - `run_process cmd /c exit 3` returns `isError: true` with `exitCode: 3` and no usage guide.
+  - A successful `run_process` returns no `isError` and the structured summary.
+  - `user_run exit 2` returns `isError` without a guide.
+  - A missing-file `read_source` still carries its guide.
+- **H6** was uncommitted "In progress" at audit time. Its working-tree diff matches the card character for character. Claude did not touch it, and STATUS was left to the agent; this record lives here only. Pre-H6 live: `git_run ["-c","alias.s=status","s"]` still runs, as expected until H6 is installed.
+- **Finding (low, not carded):** `WorkContractGate` picks the newest audit tag with `--sort=-refname`. That is a string sort, so a one-digit audit number on the same day as a two-digit one would be ordered wrongly. Today's tags are all two-digit.
+
 ### Audit 2026-10-28 (30) · deep bug analysis of the installed 481a916 · result: H4, H6, CI2
 
 No commits since audit 29; G1 is still open. The probes ran on the installed runtime, at `127.0.0.1:7676`.
