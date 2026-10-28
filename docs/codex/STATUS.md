@@ -127,7 +127,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] H2a — Tool guides for tools a–f (audit 25; 75 added; signed-in Full 68/0; GitHub CI 40598665836 success; installed 7148ff8; verified by Claude audit 27)
 - [x] H2b — Tool guides for tools g–p (audit 25; signed-in Full 68/0; GitHub CI 40635695831 failed on the dev payload budget (Claude card defect), fixed by H2c; verified by Claude audit 27)
 - [x] H2c — Tool guides for tools q–z, then require full coverage (audit 25; 250/250; signed-in Full 68/0; installed 7148ff8; GitHub CI 40637780291 success; verified by Claude audit 27)
-- [ ] H3 — Thrown tool errors carry their reason and guide; failures are isError; core guide gaps (audit 27)
+- [~] H3 — Thrown tool errors carry their reason and guide; failures are isError; core guide gaps (audit 27) (live pending: exact-HEAD installer, installed smoke/manual probe, and CI)
 
 ## User queue
 
@@ -169,6 +169,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-28 — H3 implemented (executor: ChatGPT): thrown call-tool errors now include redacted reason and per-tool guide; structured failures are isError; 11 core parameter guide gaps filled.
+  - RED --surface-policy-live against installed 7148ff8: H3 error/guide assertion; signed-in Changed 27/0 and Full 68/0, last line "Hepsi geçti.".
+  - Context7 /modelcontextprotocol/csharp-sdk: AddCallToolFilter catch + exception-to-CallToolResult, preserving protocol errors and caller cancellation.
+  - Gitea #9 comment 190; exact-HEAD installer, installed smoke/manual missing-file probe and exact-commit GitHub CI await post-commit verification.
 
 - 2026-10-28 — Claude audit 27: D23, AP1, AP2, H1, H2a–c match their cards; installed 7148ff8; CI green except H2b 40635695831 (budget, Claude card defect, fixed by H2c). Live: 0 nullable-required, 250/250 guides, 11 undescribed dev params. Found thrown tool errors reach models as a bare "An error occurred invoking" → H3. Process: `[x]` was set before evidence, and red CI was skipped before the next card.
 - 2026-10-28 — H2c implemented (executor: ChatGPT): 89 guides added (87 q–z plus fetch/search), 250 total; exact Dev/Admin full-coverage smoke added.

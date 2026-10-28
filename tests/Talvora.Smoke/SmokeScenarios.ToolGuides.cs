@@ -58,6 +58,22 @@ internal static partial class SmokeScenarios
         var body = await response.Content.ReadAsStringAsync();
         if (!body.Contains("How to call talvora_read_source", StringComparison.Ordinal))
             throw new InvalidOperationException("H1: a failed call does not carry its tool guide.");
+
+        using var thrown = new HttpRequestMessage(HttpMethod.Post, root + "/mcp/dev")
+        {
+            Content = new StringContent(
+                """{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"talvora_read_source","arguments":{"path":"C:\\Windows\\Temp\\talvora-h3-missing-file.txt"}}}""",
+                Encoding.UTF8,
+                "application/json"),
+        };
+        thrown.Headers.Accept.ParseAdd("application/json");
+        thrown.Headers.Accept.ParseAdd("text/event-stream");
+        using var thrownResponse = await http.SendAsync(thrown);
+        var thrownBody = await thrownResponse.Content.ReadAsStringAsync();
+        if (thrownBody.Contains("An error occurred invoking", StringComparison.Ordinal) ||
+            !thrownBody.Contains("talvora_read_source failed (", StringComparison.Ordinal) ||
+            !thrownBody.Contains("How to call talvora_read_source", StringComparison.Ordinal))
+            throw new InvalidOperationException("H3: a thrown tool error reaches the model without its reason and guide: " + thrownBody);
         Console.WriteLine($"H1 tool guides: {Talvora.Shared.TalvoraToolGuides.All.Count} verified");
     }
 }

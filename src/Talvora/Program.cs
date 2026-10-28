@@ -91,7 +91,20 @@ builder.Services
                     request.Server.ClientInfo?.Name);
             }
 
-            return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(await operation(cancellationToken)));
+            CallToolResult result;
+            try
+            {
+                result = await operation(cancellationToken);
+            }
+            catch (Exception exception) when (
+                exception is not ModelContextProtocol.McpProtocolException &&
+                (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested))
+            {
+                // H3: the SDK would answer with only "An error occurred invoking '<tool>'."; the model needs the reason.
+                result = ToolFailureGuidance.FromException(request.Params?.Name, exception);
+            }
+
+            return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(result));
         });
 
         filters.AddListToolsFilter(next => async (
