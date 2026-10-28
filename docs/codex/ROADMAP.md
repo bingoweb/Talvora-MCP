@@ -1096,6 +1096,301 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-28 (30) · deep bug analysis of the installed 481a916 · result: H4, H6, CI2
+
+No commits since audit 29; G1 is still open. The probes ran on the installed runtime, at `127.0.0.1:7676`.
+
+**Confirmed bugs**
+1. **A command's own non-zero exit gets the "How to call" guide** (live). Example: `talvora_user_run` with `pwsh -Command "exit 2"` returns `isError: true` plus "How to call talvora_user_run …".
+   - The example in that guide is the exact `Get-CiStatus.ps1` call that legitimately exits 2 ("CI pending").
+   - The guide therefore tells the agent its correct call was wrong, which invites retry loops. The same happens for a failed quality gate, failing tests and `git grep` with no match.
+   - The command ran, and its exit code and stderr already explain the failure.
+2. **`talvora_run_process` reports a non-zero exit as success** (live). `cmd /c exit 3` returns `isError` absent and no `structuredContent`; the exit code is only inside a text block.
+   - The cause is that `talvora_run_process` is the only process tool without `UseStructuredContent = true` (11 of 250 tools lack an output schema).
+   - Neither `ToolFailureGuidance` nor the desktop worklog sees `exitCode: 3`, so the worklog card says "completed". This breaks the AGENTS rule that a nonzero command outcome is never reported as successful.
+   - Dev and admin strip output schemas, so their payload budgets are unaffected; `/mcp` grows by about 0.7 KB.
+3. **The worklog fallback turns a failure into success.** In `TalvoraDesktopProgressNotifier.RunToolCallAsync`, if building the failure card throws (`EnrichTerminalTitle` or `WorklogFailureClassifier.Describe`), the catch block always ends the card as `Completed` / `Succeeded`, even when the result had already been classified as failed.
+4. **A command-line alias bypasses every git_run guard.** `talvora_git_run ["-c","alias.p=push","p","origin","main"]` makes `GitArgumentParser.GetSubcommand` return `p`. That skips the push delivery gate (`IsPush`), the WorkContract (`commit`) and the working-tree mutation policy (`reset`, `restore`, …).
+5. **`Get-CiStatus.ps1` calls a superseded run a failure.** `windows-ci.yml` has `cancel-in-progress: true` and runs on every push, including Claude's docs-only audit pushes.
+   - When a card's run is cancelled by a newer push, the script prints "CI başarısız (cancelled)" and exits 1.
+   - CONTINUE PROTOCOL 10b then orders a CI fix for a failure that does not exist.
+   - It is latent: the last 40 runs had none cancelled.
+
+**Checked, not carded (low)**
+- `TextDiffBuilder.Build` runs DiffPlex before its 1 MB / 20 000-line limit check. A full rewrite of a very large file pays the whole diff cost on the commit path.
+- `TryDescribeFailure` serializes the whole `CallToolResult` when no structured content exists (images included).
+- Repository-level aliases in `.git/config` are not covered by H6. Only an explicit admin Git call could add one.
+- `InteractiveUserProcessRunner`: `dotnet build` through `talvora_user_run` returns in 1.2 s with no pipe hang (build-server nodes do not hold the pipes).
+
+Order: G1 first (it changes the Context7 rule these cards follow), then H4, H6, CI2.
+
+### H4 — Failures are never shown as success, and a command's own exit code gets no usage guide (audit 30)
+
+**Why:** audit 30 bugs 1–3.
+
+**Files:**
+- `src/Talvora/Tools/ProcessTools.cs`
+- `src/Talvora/ToolFailureGuidance.cs`
+- `src/Talvora/TalvoraDesktopProgressNotifier.cs`
+- `tests/Talvora.Smoke/SmokeScenarios.ToolGuides.cs`
+- `.context7/verification.json`
+
+**Context7:** verify in `/modelcontextprotocol/csharp-sdk` that `McpServerToolAttribute.UseStructuredContent` makes a typed return value appear as `structuredContent` (with a JSON text block) and that the result's `StructuredContent` is a `JsonElement?`.
+
+#### Exact implementation
+
+Step 1 (red first). In `tests/Talvora.Smoke/SmokeScenarios.ToolGuides.cs`, insert before the line `        Console.WriteLine($"H1 tool guides: {Talvora.Shared.TalvoraToolGuides.All.Count} verified");`:
+
+```csharp
+        using var exited = new HttpRequestMessage(HttpMethod.Post, root + "/mcp/dev")
+        {
+            Content = new StringContent(
+                """{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"talvora_run_process","arguments":{"executable":"cmd.exe","arguments":["/d","/c","exit 3"],"timeoutSeconds":30}}}""",
+                Encoding.UTF8,
+                "application/json"),
+        };
+        exited.Headers.Accept.ParseAdd("application/json");
+        exited.Headers.Accept.ParseAdd("text/event-stream");
+        using var exitedResponse = await http.SendAsync(exited);
+        var exitedBody = await exitedResponse.Content.ReadAsStringAsync();
+        if (!exitedBody.Contains("\"isError\":true", StringComparison.Ordinal) ||
+            !exitedBody.Contains("\"exitCode\":3", StringComparison.Ordinal) ||
+            exitedBody.Contains("How to call talvora_run_process", StringComparison.Ordinal))
+            throw new InvalidOperationException("H4: a command's own non-zero exit must be isError with its exit code and without the usage guide: " + exitedBody);
+```
+
+Run `dotnet run --project tests/Talvora.Smoke -c Release -- --surface-policy-live` against the installed 481a916 (it defaults to `http://127.0.0.1:7676`) and record the red `H4:` line in the Log.
+
+Step 2. In `src/Talvora/Tools/ProcessTools.cs`, change `[McpServerTool(Name = "talvora_run_process", Destructive = true, OpenWorld = true), Description(` to `[McpServerTool(Name = "talvora_run_process", Destructive = true, OpenWorld = true, UseStructuredContent = true), Description(`. Change nothing else on that line.
+
+Step 3. Replace the whole content of `src/Talvora/ToolFailureGuidance.cs` with:
+
+```csharp
+using System.Text.Json;
+using ModelContextProtocol.Protocol;
+using Talvora.Shared;
+
+namespace Talvora;
+
+// H1: a failed call ends with the exact usage of its tool, so the model can correct the next call itself.
+internal static class ToolFailureGuidance
+{
+    internal static CallToolResult Apply(string? toolName, CallToolResult result)
+    {
+        var failed = result.IsError is true ||
+            result.StructuredContent is { } structured && StructuredResultFailure.IsFailure(structured);
+        if (!failed)
+        {
+            return result;
+        }
+
+        // H3: a structured failure is an error result too, so no client mistakes it for success.
+        result.IsError = true;
+        if (toolName is not null && !RanWithOwnExitCode(result) && TalvoraToolGuides.FailureHint(toolName) is { } hint)
+        {
+            result.Content = [.. result.Content, new TextContentBlock { Text = hint }];
+        }
+
+        return result;
+    }
+
+    // H3: a thrown exception becomes a readable error result; the message passes the canonical redaction first.
+    internal static CallToolResult FromException(string? toolName, Exception exception)
+    {
+        var reason = exception is AggregateException { InnerException: { } inner } ? inner : exception;
+        return new CallToolResult
+        {
+            IsError = true,
+            Content =
+            [
+                new TextContentBlock
+                {
+                    Text = $"{toolName ?? "The tool"} failed ({reason.GetType().Name}): {FileLog.RedactSensitiveData(reason.Message)}",
+                },
+            ],
+        };
+    }
+
+    // H4: the command ran and returned its own non-zero exit code, so the call was right and its usage would mislead.
+    private static bool RanWithOwnExitCode(CallToolResult result) =>
+        result.StructuredContent is { ValueKind: JsonValueKind.Object } structured &&
+        StructuredResultFailure.Describe(structured) != StructuredResultFailure.TimedOut &&
+        structured.TryGetProperty("exitCode", out var exitCode) &&
+        exitCode.ValueKind == JsonValueKind.Number &&
+        exitCode.TryGetInt32(out var code) &&
+        code != 0;
+}
+```
+
+Step 4. In `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `RunToolCallAsync`:
+- (a) Replace
+
+  ```csharp
+              try
+              {
+                  if (TryDescribeFailure(result))
+                  {
+  ```
+
+  with
+
+  ```csharp
+              var failed = TryDescribeFailure(result);
+              try
+              {
+                  if (failed)
+                  {
+  ```
+
+- (b) In the `catch (Exception ex)` block that logs `"Desktop worklog result classification failed without affecting the tool result."`, replace its `TryEndWorklog(...)` call with:
+
+  ```csharp
+                  TryEndWorklog(
+                      operationId,
+                      failed ? DesktopProgressKind.Failed : DesktopProgressKind.Completed,
+                      failed ? narrative.Titles.Failed : narrative.Titles.Succeeded,
+                      failed ? "Bu adım tamamlanamadı." : WorklogCopy.SucceededFallback,
+                      initialEvidence,
+                      stopwatch.Elapsed);
+  ```
+
+Step 5. Refresh `.context7/verification.json` for this change (the G1 rules: this change only, at most 12 entries).
+
+**Don't:**
+- add `UseStructuredContent` to any other tool;
+- change `StructuredResultFailure`;
+- change any guide text;
+- remove the hint for timeouts or for calls rejected by validation.
+
+**Acceptance:**
+- Step 1 red on 481a916.
+- `dotnet build` of `src/Talvora` has 0 errors and 0 warnings.
+- Full gate as the signed-in user ends `Hepsi geçti.`.
+- Deploy; `/healthz.sourceCommit` = HEAD.
+- The tool-guides smoke is green on the installed runtime.
+- Live checks on the installed runtime:
+  - `talvora_user_run pwsh -NoProfile -Command "exit 2"` is `isError: true` without "How to call".
+  - A missing-file `talvora_read_source` still carries its guide.
+- Push; CI once (10b).
+
+### H6 — talvora_git_run refuses command-line aliases (audit 30)
+
+**Why:** audit 30 bug 4. An alias hides `push`, `commit` and `reset` from the delivery gate, the WorkContract and the source policy.
+
+**Files:**
+- `src/Talvora/Tools/GitArgumentParser.cs`
+- `src/Talvora/Tools/GitTools.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.WorkContract.cs`
+- `.context7/verification.json`
+
+**Context7:** verify in the Git documentation (`git` command, `-c <name>=<value>` and `--config-env=<name>=<envvar>`) that both forms set configuration for one invocation, aliases included.
+
+#### Exact implementation
+
+Step 1 (red first). In `SourceEditRegressionRunner.WorkContract.cs`, `RunGitArgumentClassificationAsync`, insert directly before `        await using var fixture = await TestWorkspace.CreateAsync();`:
+
+```csharp
+        foreach (var aliased in new string[][]
+        {
+            ["-c", "alias.p=push", "p", "origin", "main"],
+            ["-c", "ALIAS.c=commit", "c", "-m", "x"],
+            ["--config-env", "alias.p=TALVORA_ALIAS", "p"],
+            ["--config-env=alias.p=TALVORA_ALIAS", "p"],
+        })
+            Assert(GitArgumentParser.DefinesAlias(aliased), $"Git alias not detected: {string.Join(' ', aliased)}");
+        Assert(!GitArgumentParser.DefinesAlias(["-c", "core.quotepath=false", "status"]), "A plain -c setting is not an alias.");
+```
+
+The red state is the compile error that `DefinesAlias` does not exist; quote it in the Log.
+
+Step 2. In `src/Talvora/Tools/GitArgumentParser.cs`, add after the `GetSubcommand` method, inside the class:
+
+```csharp
+    // H6: a command-line alias would hide push/commit/reset from the delivery gate, the work contract and the source policy.
+    public static bool DefinesAlias(IReadOnlyList<string> args)
+    {
+        for (var i = 0; i < args.Count; i++)
+        {
+            var a = args[i];
+            if ((a == "-c" || a == "--config-env") && i + 1 < args.Count &&
+                args[i + 1].TrimStart().StartsWith("alias.", StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (a.StartsWith("--config-env=alias.", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+```
+
+Step 3. In `src/Talvora/Tools/GitTools.cs`, `Run`, insert directly after the `if (arguments is null) { throw new ArgumentNullException(nameof(arguments)); }` block:
+
+```csharp
+        if (GitArgumentParser.DefinesAlias(arguments))
+        {
+            throw new ArgumentException(
+                "talvora_git_run does not accept -c alias.* or --config-env alias.*; call the Git command by its own name.",
+                nameof(arguments));
+        }
+```
+
+Step 4. Refresh `.context7/verification.json` for this change.
+
+**Don't:**
+- change `GetSubcommand`;
+- read or block `.git/config` aliases;
+- exempt `explicitAdmin` from the check.
+
+**Acceptance:**
+- Step 1 red.
+- The SourceEdit regression is green.
+- Full gate `Hepsi geçti.` as the signed-in user.
+- Deploy; `/healthz` = HEAD.
+- Live: `talvora_git_run ["-c","alias.s=status","s"]` is `isError: true` with the H6 message, and `["status","--short"]` still works.
+- Push; CI once.
+
+### CI2 — Get-CiStatus follows a cancelled run to the run that replaced it (audit 30)
+
+**Why:** audit 30 bug 5. `cancel-in-progress: true` cancels a commit's run when a newer push arrives. The newest non-cancelled run that contains the commit is the real verdict.
+
+**Files:**
+- `scripts/Get-CiStatus.ps1`
+- `.context7/verification.json`
+
+**Context7:** verify in the GitHub CLI manual (`gh run list`) the flags `--branch`, `--workflow`, `--json` and the JSON fields `databaseId`, `headSha`, `status`, `conclusion`, `url`.
+
+#### Exact implementation
+
+Step 1. In `scripts/Get-CiStatus.ps1`, insert directly after the line that starts with `if ($run.status -ne 'completed') { Write-Host "CI: süre doldu`:
+
+```powershell
+if ($run.conclusion -eq 'cancelled') {
+    # A newer push cancels this run (cancel-in-progress); the newest run that contains this commit decides.
+    $runs = @(& gh run list --repo $repository --workflow windows-ci.yml --branch main `
+        --json databaseId,headSha,status,conclusion,url --limit 10 | ConvertFrom-Json)
+    if ($LASTEXITCODE -ne 0) { throw 'gh run list failed (is gh signed in for this user?).' }
+    $run = $runs | Where-Object { $_.conclusion -ne 'cancelled' } | Where-Object {
+        & git -C $repoRoot merge-base --is-ancestor $sha $_.headSha 2>$null; $LASTEXITCODE -eq 0 } | Select-Object -First 1
+    if (-not $run) { Write-Host "CI: $($sha.Substring(0, 7)) çalışması iptal edildi; onu içeren yeni bir çalışma yok."; exit 2 }
+    if ($run.status -ne 'completed') { Write-Host "CI: çalışma iptal edildi, onu içeren yeni çalışma hâlâ '$($run.status)': $($run.url)"; exit 2 }
+}
+```
+
+Step 2. Change the header comment line `# Exit codes: 0 = success, 1 = failure (prints the failing lines), 2 = no run / timeout.` to `# Exit codes: 0 = success, 1 = failure (prints the failing lines), 2 = no run / timeout / cancelled with no finished successor.`
+
+Step 3. Refresh `.context7/verification.json` for this change.
+
+**Don't:**
+- change the workflow's `concurrency` block;
+- add waiting or polling for `-TimeoutMinutes 0`;
+- treat `cancelled` as success when no successor contains the commit.
+
+**Acceptance:**
+- `[System.Management.Automation.Language.Parser]::ParseFile('scripts/Get-CiStatus.ps1', [ref]$null, [ref]$e)` gives 0 errors.
+- `pwsh -NoProfile -File scripts/Get-CiStatus.ps1 -Commit <H4 commit> -TimeoutMinutes 0` still prints its normal verdict.
+- Full gate `Hepsi geçti.`.
+- Push; CI once on the CI2 commit itself.
+- No deploy (script only).
+
 ### Audit 2026-10-28 (29) · Context7 and Awwwards gate review · result: G1 (user decision 2026-10-28)
 
 **Context7: useful, but the bookkeeping costs more than the check.**
