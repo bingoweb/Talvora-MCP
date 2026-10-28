@@ -389,7 +389,7 @@ The worklog never follows the light theme (terminal identity per AGENTS.md). The
 
 ## 9. Implementation cards
 
-Each card: test first; `Talvora.Notification.Regression` extended with behaviour tests (not source regexes); Context7 for WPF/WPF-UI/MCP SDK APIs; Awwwards evidence for N5–N7; before/after PNG of real cards (use a deterministic preview harness: `Talvora.Tray.exe --worklog-preview <scenario> --out <png>` added in N5) attached to the Gitea issue; installed-runtime check that a real `talvora_apply_patch` and a real failing `dotnet build` produce the expected cards.
+Each card: test first; `Talvora.Notification.Regression` extended with behaviour tests (not source regexes); Context7 for WPF/WPF-UI/MCP SDK APIs; before/after PNG of real cards (use a deterministic preview harness: `Talvora.Tray.exe --worklog-preview <scenario> --out <png>` added in N5) attached to the Gitea issue; installed-runtime check that a real `talvora_apply_patch` and a real failing `dotnet build` produce the expected cards.
 
 ### N1 — Correct states, titles and reasons; remove duplication
 

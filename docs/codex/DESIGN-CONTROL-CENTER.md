@@ -30,7 +30,7 @@ Two signature elements, used sparingly:
 
 Everything else is restrained: flat surfaces, 1 px borders, generous spacing, one accent.
 
-Awwwards evidence (required by the delivery gate) is **evidence only** — it never changes this spec (AGENTS.md → EXECUTION MANDATE rule 9). For each UI card, review Awwwards *Dashboard/Data*, *Technology* and *Dark* collections, record 3–5 concrete page URLs in `.talvora/awwwards-verification.json` `references`, and fill `designDecisions` with the spec sections implemented by that card (e.g. "DESIGN-CONTROL-CENTER §5.1 overview hero band"). If a reference suggests a change you think is better, write a proposal; do not implement it.
+There is no Awwwards research step (removed in audit 29, user decision 2026-10-28). This spec alone decides the look; if you think a change would be better, write a proposal; do not implement it.
 
 ## 3. Design tokens
 
@@ -446,7 +446,7 @@ Rules: no "MCP", "tunnel-client", "runtime", "control plane" in main surfaces �
 
 ## 11. Implementation cards
 
-Each card = one commit, Awwwards evidence refreshed (cite pages actually reviewed), Context7 IDs for WPF-UI/WPF/CommunityToolkit used, before/after PNGs of **both themes** (Q5 smoke) attached to the Gitea issue, `Invoke-QualityGate.ps1` green, installed-runtime check of the tray.
+Each card = one commit, Context7 IDs for WPF-UI/WPF/CommunityToolkit used, before/after PNGs of **both themes** (Q5 smoke) attached to the Gitea issue, `Invoke-QualityGate.ps1` green, installed-runtime check of the tray.
 
 ### UI1 — Tokens, theme manager, typography
 

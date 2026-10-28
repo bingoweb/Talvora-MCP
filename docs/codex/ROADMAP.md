@@ -1096,6 +1096,178 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-28 (29) · Context7 and Awwwards gate review · result: G1 (user decision 2026-10-28)
+
+**Context7: useful, but the bookkeeping costs more than the check.**
+- The validator (`scripts/Validate-Context7Gate.ps1`, `ProjectDeliveryGate.cs`) only checks the format:
+  - the evidence file changed in the same diff;
+  - the timestamp is at most 14 days old;
+  - the strings are not empty.
+
+  It cannot tell whether Context7 was actually queried or whether an entry relates to the change.
+- `.context7/verification.json` is append-only:
+  - 126 KB with 130 entries but only 30 distinct library ids (`/dotnet/docs` alone appears 35 times);
+  - entries average 490 characters;
+  - 120 of the 178 commits since 2026-10-01 had to edit it;
+  - every proposal reverts it.
+- It stalled work at least once (P-25: Dependabot blocked) and failed on a future timestamp.
+- Real value appears when a card names the SDK point to verify, as in H3. No proposal was ever raised because Context7 contradicted a card.
+
+Decision:
+- keep the rule and the push gate;
+- the evidence file holds only the current change (at most 12 entries);
+- test-only changes are exempt;
+- cards name the point to verify.
+
+**Awwwards: no value for Talvora.**
+- EXECUTION MANDATE rule 10 forbids it from changing the spec. Each of the 25 evidence refreshes records "nothing taken from Awwwards".
+- It is still a hard push and publish gate for **every** repository pushed through Talvora, including non-UI projects.
+- The current evidence (2026-10-25T14:27Z) expires on **2026-11-08 14:27 UTC**. After that, every push and every Full gate would stop.
+
+Decision (user): remove Awwwards from the delivery gate, the quality gate, AGENTS.md and the design specs.
+
+### G1 — Context7 evidence per change only; remove the Awwwards gate (audit 29)
+
+**Why:** audit 29. This keeps the useful part of Context7, removes the ceremony, and prevents the 2026-11-08 push stop.
+
+**Files:**
+- `src/Talvora/SourceEditing/ProjectDeliveryGate.cs`
+- `scripts/Validate-ProjectDeliveryGate.ps1`
+- `scripts/Validate-Context7Gate.ps1`
+- `tests/Context7ScopeRegression.ps1`
+- `tests/ModernizationPolicyRegression.ps1`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.QualityAudit.cs`
+- `AGENTS.md`
+- `.context7/verification.json` (replaced)
+- `.talvora/awwwards-verification.json` (deleted)
+- `docs/codex/STATUS.md`
+
+#### Exact implementation
+
+Step 1 (red first) — `tests/Context7ScopeRegression.ps1`: replace
+
+```powershell
+            'src/Talvora/PenpotAiPlugin/index.html',
+            'tests/OnlyPowerShellRegression.ps1'
+        )) {
+            Assert-Context7GateScenario -RelativePath $path -RequiresEvidence $true
+        }
+        Assert-Context7GateScenario -RelativePath 'docs/research.md' -RequiresEvidence $false
+```
+
+with
+
+```powershell
+            'src/Talvora/PenpotAiPlugin/index.html',
+            'scripts/OnlyPowerShellHelper.ps1'
+        )) {
+            Assert-Context7GateScenario -RelativePath $path -RequiresEvidence $true
+        }
+        Assert-Context7GateScenario -RelativePath 'docs/research.md' -RequiresEvidence $false
+        # G1: test-only changes need no Context7 evidence.
+        Assert-Context7GateScenario -RelativePath 'tests/OnlyPowerShellRegression.ps1' -RequiresEvidence $false
+        Assert-Context7GateScenario -RelativePath 'tests/Fixture/Only.Tests.cs' -RequiresEvidence $false
+```
+
+Run it with `pwsh -NoProfile -File tests/Context7ScopeRegression.ps1`. It must fail before Step 2.
+
+Step 2 — `scripts/Validate-Context7Gate.ps1`:
+- Delete the two lines `        '^tests/.+\.(cs|csproj)$',` and `        '^tests/.+\.ps1$',`.
+- Directly after the line `    if ($libraries.Count -eq 0) { throw 'At least one Context7 library verification is required for development-scope changes.' }` insert:
+
+```powershell
+    if ($libraries.Count -gt 12) { throw 'Context7 evidence must list only this change (at most 12 libraries): replace the file instead of appending; older evidence stays in git history.' }
+```
+
+- Directly after the line `    if (@($evidence.vendorSources).Count -eq 0) { throw 'At least one official/vendor source check must accompany Context7 evidence.' }` insert:
+
+```powershell
+    if (@($evidence.vendorSources).Count -gt 12) { throw 'Context7 evidence must list only this change (at most 12 vendor sources): replace the file instead of appending.' }
+```
+
+Step 3 — `src/Talvora/SourceEditing/ProjectDeliveryGate.cs`:
+- Delete the line `    private const string AwwwardsEvidence = ".talvora/awwwards-verification.json";`.
+- Delete the line `        ValidateAwwwards(root);`.
+- Delete the whole method `private static void ValidateAwwwards(string root)` (from its signature through its closing brace) and the blank line after it.
+- Delete the whole method `private static bool IsAwwwardsUrl(string? value) =>` (five lines, ending with `"www.awwwards.com", StringComparison.OrdinalIgnoreCase));`) and the blank line after it.
+
+Nothing else changes; the Context7 checks and `Blocked` stay as they are.
+
+Step 4 — `scripts/Validate-ProjectDeliveryGate.ps1`:
+- Delete the line `$awwwardsPath = Join-Path $root '.talvora\awwwards-verification.json'`.
+- Delete the five lines that start with `$awwwards = Read-Evidence`, `Assert-Fresh $awwwards`, `if ([string]$awwwards.sourceUrl`, `if (@($awwwards.references` and `if (@($awwwards.designDecisions`, plus the blank line after them.
+- Replace the line that starts with `if ($gateSource -notmatch 'TALVORA_DELIVERY_GATE_BLOCKED'` with:
+
+```powershell
+if ($gateSource -notmatch 'TALVORA_DELIVERY_GATE_BLOCKED' -or $gateSource -notmatch '\.context7/verification\.json') { throw 'Project delivery gate no longer fails closed on mandatory Context7 evidence.' }
+if ($gateSource -match '(?i)awwwards') { throw 'Awwwards was removed from the delivery gate (audit 29); do not reintroduce it.' }
+```
+
+Step 5 — `tests/ModernizationPolicyRegression.ps1`:
+- Replace the line `Assert-Contains 'AGENTS.md' 'Awwwards is the mandatory design delivery reference' 'Awwwards must remain an explicit design delivery gate.'` with:
+
+```powershell
+Assert-NotContains 'AGENTS.md' 'Awwwards is the mandatory design delivery reference' 'Awwwards was removed from the delivery gate (audit 29).'
+```
+
+- In the line that ends with `'The shared quality gate must enforce the Context7 and Awwwards project delivery gate.'`, replace that message with `'The shared quality gate must enforce the Context7 project delivery gate.'`.
+
+Step 6 — `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.QualityAudit.cs`, in `VerifyDeliveryEvidenceAsync`:
+- delete the lines `        Directory.CreateDirectory(Path.Combine(root, ".talvora"));` and `        var designPath = Path.Combine(root, ".talvora", "awwwards-verification.json");`;
+- delete the whole statement `await File.WriteAllTextAsync(designPath, JsonSerializer.Serialize(new { schemaVersion = 1, … designDecisions = new[] { "No UI changes in this fixture." }, }));` (11 lines, starting at `            await File.WriteAllTextAsync(` directly after `var timestamp = …`).
+
+The existing cases now prove that the gate passes with Context7 evidence alone.
+
+Step 7 — `AGENTS.md`:
+- Replace the whole "## Context7 quality gate" section body (the five bullets) with:
+
+```markdown
+- Query Context7 before relying on third-party framework, SDK, library, protocol, CLI or package-manager behaviour that the change depends on. When it matters, Claude's card names the library and the exact point to verify; verify that point, not a generic topic.
+- Context7 is mandatory for changes under `src/`, `scripts/`, `.github/workflows/`, `Directory.*.props` and `global.json` (the CI gate enforces it). Test-only and documentation-only changes are exempt.
+- `.context7/verification.json` holds **only the current change**: replace `verifiedAtUtc`, `scope`, `libraries` (at most 12) and `vendorSources` (at most 12) each time; never append. Earlier evidence lives in git history.
+- Record the Context7 library ID(s) and the verified point in the card's STATUS Log entry (Gitea mirror best effort).
+- If Context7 has no suitable source, record that gap and use the vendor's primary documentation. Never substitute memory or an old code example for current documentation.
+```
+
+- In "## Mandatory project delivery gates":
+  - delete the bullet that starts with `- Awwwards is the mandatory design delivery reference`;
+  - replace `These gates are fail-closed.` with `The gate is fail-closed.`;
+  - replace `when either evidence contract is missing` with `when the Context7 evidence contract is missing`;
+  - replace `never satisfies these gates.` with `never satisfies the gate.`;
+  - append the bullet `- Awwwards evidence was removed (audit 29, user decision 2026-10-28): the look comes only from Claude's design specs. Do not reintroduce \`.talvora/awwwards-verification.json\`.`
+- Replace rule 10 of the EXECUTION MANDATE (the line starting `10. Awwwards research is **evidence only**.`) with `10. There is no Awwwards research step (removed in audit 29). Visual references come only from the design specs.`
+
+Step 8 — evidence files:
+- Delete `.talvora/awwwards-verification.json` (one `*** Delete File` patch).
+- Replace `.context7/verification.json`: one patch with `*** Delete File` (revision from `talvora_read_source`), then a second patch with `*** Add File`. The new file contains only G1:
+  - `schemaVersion` 1;
+  - current `verifiedAtUtc`;
+  - `scope` `"G1: Context7 evidence per change only; Awwwards gate removed."`;
+  - one `/microsoftdocs/powershell-docs` entry for the `-gt` checks and the script edits you verified;
+  - one Microsoft Learn vendor source.
+
+**Order (prevents a push stop):** the installed service still runs the old push gate, which requires the Awwwards file this commit deletes.
+1. Commit.
+2. Build the installer of that commit and deploy it.
+3. Confirm `/healthz.sourceCommit` = HEAD.
+4. Only then push with `talvora_git_run`.
+
+If the push is still blocked, do not restore the Awwwards file. Write a proposal.
+
+**Don't:**
+- Do not weaken the Context7 push gate (`ValidateContext7`, the 14-day freshness, the strict JSON parse, the 256 KB bound).
+- Do not touch `.talvora/work-contract.json`.
+- Do not edit historical cards, STATUS Log entries or the archive.
+
+**Acceptance:**
+- Step 1 is red before Step 2.
+- `tests/Context7ScopeRegression.ps1`, `tests/ModernizationPolicyRegression.ps1`, `tests/StrictEvidenceJsonRegression.ps1` and `scripts/Validate-ProjectDeliveryGate.ps1` are green.
+- `git grep -i awwwards -- src scripts tests .github` shows only the two new guard lines (Steps 4 and 5).
+- Full gate `Hepsi geçti.`.
+- Installed `/healthz.sourceCommit` = HEAD.
+- The push succeeded through `talvora_git_run`.
+- CI checked once (exit 0 before `[x]`).
+
 ### Audit 2026-10-28 (27) · range `audit/2026-10-28-26..7148ff8` · D23, AP1, AP2, H1, H2a–c exact · result: H3
 
 **Code vs cards:** every Exact-implementation line of D23, AP1, AP2 (incl. Step 6b) and H1 is in the tree verbatim (script check); H1 reference copy hash-verified by the agent. Installed `7148ff8`. Claude live probes on the installed runtime:
