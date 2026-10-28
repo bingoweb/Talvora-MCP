@@ -74,6 +74,21 @@ internal static partial class SmokeScenarios
             !thrownBody.Contains("talvora_read_source failed (", StringComparison.Ordinal) ||
             !thrownBody.Contains("How to call talvora_read_source", StringComparison.Ordinal))
             throw new InvalidOperationException("H3: a thrown tool error reaches the model without its reason and guide: " + thrownBody);
+        using var exited = new HttpRequestMessage(HttpMethod.Post, root + "/mcp/dev")
+        {
+            Content = new StringContent(
+                """{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"talvora_run_process","arguments":{"executable":"cmd.exe","arguments":["/d","/c","exit 3"],"timeoutSeconds":30}}}""",
+                Encoding.UTF8,
+                "application/json"),
+        };
+        exited.Headers.Accept.ParseAdd("application/json");
+        exited.Headers.Accept.ParseAdd("text/event-stream");
+        using var exitedResponse = await http.SendAsync(exited);
+        var exitedBody = await exitedResponse.Content.ReadAsStringAsync();
+        if (!exitedBody.Contains("\"isError\":true", StringComparison.Ordinal) ||
+            !exitedBody.Contains("\"exitCode\":3", StringComparison.Ordinal) ||
+            exitedBody.Contains("How to call talvora_run_process", StringComparison.Ordinal))
+            throw new InvalidOperationException("H4: a command's own non-zero exit must be isError with its exit code and without the usage guide: " + exitedBody);
         Console.WriteLine($"H1 tool guides: {Talvora.Shared.TalvoraToolGuides.All.Count} verified");
     }
 }

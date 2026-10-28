@@ -45,7 +45,7 @@ internal static class ToolOutputCompactor
 [McpServerToolType]
 public static class ProcessTools
 {
-    [McpServerTool(Name = "talvora_run_process", Destructive = true, OpenWorld = true), Description("Run any executable available to the Talvora LocalSystem service with explicit arguments. " + SourceEditRoutingContract.EscapeHatchRouting + " No command deny-list is applied. Set maxOutputCharacters=<n> for a longer captured output.")]
+    [McpServerTool(Name = "talvora_run_process", Destructive = true, OpenWorld = true, UseStructuredContent = true), Description("Run any executable available to the Talvora LocalSystem service with explicit arguments. " + SourceEditRoutingContract.EscapeHatchRouting + " No command deny-list is applied. Set maxOutputCharacters=<n> for a longer captured output.")]
     public static async Task<TalvoraProcessResult> RunProcess(
         string executable,
         string[]? arguments = null,

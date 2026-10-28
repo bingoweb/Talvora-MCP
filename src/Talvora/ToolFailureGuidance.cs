@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ModelContextProtocol.Protocol;
 using Talvora.Shared;
 
@@ -17,7 +18,7 @@ internal static class ToolFailureGuidance
 
         // H3: a structured failure is an error result too, so no client mistakes it for success.
         result.IsError = true;
-        if (toolName is not null && TalvoraToolGuides.FailureHint(toolName) is { } hint)
+        if (toolName is not null && !RanWithOwnExitCode(result) && TalvoraToolGuides.FailureHint(toolName) is { } hint)
         {
             result.Content = [.. result.Content, new TextContentBlock { Text = hint }];
         }
@@ -41,4 +42,13 @@ internal static class ToolFailureGuidance
             ],
         };
     }
+
+    // H4: the command ran and returned its own non-zero exit code, so the call was right and its usage would mislead.
+    private static bool RanWithOwnExitCode(CallToolResult result) =>
+        result.StructuredContent is { ValueKind: JsonValueKind.Object } structured &&
+        StructuredResultFailure.Describe(structured) != StructuredResultFailure.TimedOut &&
+        structured.TryGetProperty("exitCode", out var exitCode) &&
+        exitCode.ValueKind == JsonValueKind.Number &&
+        exitCode.TryGetInt32(out var code) &&
+        code != 0;
 }

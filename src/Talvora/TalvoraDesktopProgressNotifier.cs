@@ -171,9 +171,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                     result,
                     canonicalToolName);
 
+            var failed = TryDescribeFailure(result);
             try
             {
-                if (TryDescribeFailure(result))
+                if (failed)
                 {
                     TryEndWorklog(
                         operationId,
@@ -221,9 +222,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                     "Desktop worklog result classification failed without affecting the tool result.");
                 TryEndWorklog(
                     operationId,
-                    DesktopProgressKind.Completed,
-                    narrative.Titles.Succeeded,
-                    WorklogCopy.SucceededFallback,
+                    failed ? DesktopProgressKind.Failed : DesktopProgressKind.Completed,
+                    failed ? narrative.Titles.Failed : narrative.Titles.Succeeded,
+                    failed ? "Bu adım tamamlanamadı." : WorklogCopy.SucceededFallback,
                     initialEvidence,
                     stopwatch.Elapsed);
             }

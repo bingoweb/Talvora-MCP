@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-28T13:02:47.891Z",
-  "scope": "G1: Context7 evidence per change only; Awwwards gate removed.",
+  "verifiedAtUtc": "2026-10-28T14:20:49.279Z",
+  "scope": "H4: mark nonzero process exits as structured errors without incorrect usage hints, and preserve failure worklog state.",
   "libraries": [
     {
-      "libraryId": "/microsoftdocs/powershell-docs",
-      "verified": "G1: PowerShell arrays expose Count as their element count, and -gt compares a scalar count with 12; documented array checks support the evidence upper bounds in Validate-Context7Gate.ps1."
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "H4: McpServerToolAttribute.UseStructuredContent = true advertises an output schema and serializes typed results into CallToolResult.StructuredContent (JsonElement?); other non-string results are also serialized into a JSON text Content block. CallToolResult.IsError is nullable bool, set to true for classified non-zero exit failures."
     }
   ],
   "vendorSources": [
-    "Microsoft Learn: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays?view=powershell-7.6"
+    "Official MCP C# SDK: https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md",
+    "Official SDK result contract: https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Protocol/CallToolResult.cs"
   ]
 }

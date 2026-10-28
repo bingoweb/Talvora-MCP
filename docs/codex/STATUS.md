@@ -128,8 +128,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] H2b — Tool guides for tools g–p (audit 25; signed-in Full 68/0; GitHub CI 40635695831 failed on the dev payload budget (Claude card defect), fixed by H2c; verified by Claude audit 27)
 - [x] H2c — Tool guides for tools q–z, then require full coverage (audit 25; 250/250; signed-in Full 68/0; installed 7148ff8; GitHub CI 40637780291 success; verified by Claude audit 27)
 - [x] H3 — Thrown tool errors carry their reason and guide; failures are isError; core guide gaps (audit 27; signed-in Full 68/0; installed 481a916; live missing-file probe returns reason + guide; GitHub CI 40673298596 success; verified by Claude audit 28)
-- [~] G1 — Context7 evidence per change only; remove the Awwwards gate (audit 29; Full 68/0; live pending: commit, installation, push and exact-commit CI)
-- [ ] H4 — Failures are never shown as success, and a command's own exit code gets no usage guide (audit 30)
+- [x] G1 — Context7 evidence per change only; remove the Awwwards gate (audit 29; Full 68/0; installed 455551f and exact-commit GitHub CI 40694613475 success)
+- [~] H4 — Failures are never shown as success, and a command's own exit code gets no usage guide (audit 30; Full 68/0; live pending: deploy, installed smoke, push, CI)
 - [ ] H6 — talvora_git_run refuses command-line aliases (audit 30)
 - [ ] CI2 — Get-CiStatus follows a cancelled run to the run that replaced it (audit 30)
 
@@ -174,6 +174,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-28 — H4 implemented (executor: ChatGPT): talvora_run_process typed structured content; nonzero command exits yield isError without usage guides; worklog fallback keeps failure state.
+  - RED H4 smoke on installed 455551f (G1 baseline retains the 481a916 bug): cmd.exe exit 3 had no isError; expected H4 failure observed.
+  - Context7 /modelcontextprotocol/csharp-sdk: UseStructuredContent, CallToolResult.StructuredContent JsonElement? and IsError checked against SDK docs/source.
+  - Talvora build 0 errors/0 warnings; signed-in Full gate 68 checks/0 failures, last line "Hepsi geçti.".
+  - Gitea #9 comment 193; deploy, installed smoke, live checks, push and exact-commit CI pending.
 - 2026-10-28 — G1 implemented (executor: ChatGPT): test-only Context7 scope exempt, <=12 library/vendor entries; Awwwards gate and old evidence removed.
   - RED Context7ScopeRegression: test-only changes incorrectly required evidence; GREEN Context7Scope, ModernizationPolicy, StrictEvidenceJson and Validate-ProjectDeliveryGate.
   - Git grep awwwards: only two new guard lines. Context7 /microsoftdocs/powershell-docs: PowerShell Array.Count and -gt comparisons verified against Microsoft Learn.
