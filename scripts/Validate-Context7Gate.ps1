@@ -33,8 +33,6 @@ try {
     $meaningfulPatterns = @(
         '^src/.+\.(cs|csproj)$',
         '^src/.+\.(xaml|json|js|html)$',
-        '^tests/.+\.(cs|csproj)$',
-        '^tests/.+\.ps1$',
         '^scripts/.+\.ps1$',
         '^Directory\.(Build|Packages)\.props$',
         '^global\.json$',
@@ -79,11 +77,13 @@ try {
 
     $libraries = @($evidence.libraries)
     if ($libraries.Count -eq 0) { throw 'At least one Context7 library verification is required for development-scope changes.' }
+    if ($libraries.Count -gt 12) { throw 'Context7 evidence must list only this change (at most 12 libraries): replace the file instead of appending; older evidence stays in git history.' }
     foreach ($library in $libraries) {
         if ([string]::IsNullOrWhiteSpace([string]$library.libraryId) -or -not ([string]$library.libraryId).StartsWith('/')) { throw 'Each Context7 evidence entry must contain a canonical /org/project-style libraryId.' }
         if ([string]::IsNullOrWhiteSpace([string]$library.verified)) { throw "Context7 evidence is missing the verified guidance for $($library.libraryId)." }
     }
     if (@($evidence.vendorSources).Count -eq 0) { throw 'At least one official/vendor source check must accompany Context7 evidence.' }
+    if (@($evidence.vendorSources).Count -gt 12) { throw 'Context7 evidence must list only this change (at most 12 vendor sources): replace the file instead of appending.' }
 
     Write-Host 'CONTEXT7_QUALITY_GATE_GREEN'
 }

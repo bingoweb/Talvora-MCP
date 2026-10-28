@@ -7,7 +7,6 @@ namespace Talvora.SourceEditing;
 internal static class ProjectDeliveryGate
 {
     private const string Context7Evidence = ".context7/verification.json";
-    private const string AwwwardsEvidence = ".talvora/awwwards-verification.json";
     private const int MaximumEvidenceFileBytes = 256 * 1024;
     private static readonly TimeSpan MaximumEvidenceAge = TimeSpan.FromDays(14);
     private static readonly TimeSpan MaximumFutureSkew = TimeSpan.FromMinutes(15);
@@ -16,7 +15,6 @@ internal static class ProjectDeliveryGate
     {
         var root = ResolveProjectRoot(workingDirectory);
         ValidateContext7(root);
-        ValidateAwwwards(root);
     }
 
     private static string ResolveProjectRoot(string workingDirectory)
@@ -85,42 +83,6 @@ internal static class ProjectDeliveryGate
         }
     }
 
-    private static void ValidateAwwwards(string root)
-    {
-        var path = Path.Combine(root, AwwwardsEvidence.Replace('/', Path.DirectorySeparatorChar));
-        using var document = ReadEvidence(path, "Awwwards");
-        var evidence = document.RootElement;
-        if (evidence.ValueKind != JsonValueKind.Object)
-        {
-            throw Blocked("Awwwards evidence must be a JSON object.");
-        }
-        RequireSchemaVersion(evidence, "Awwwards");
-        RequireFreshTimestamp(evidence, "Awwwards");
-        var sourceUrl = evidence.TryGetProperty("sourceUrl", out var source) && source.ValueKind == JsonValueKind.String ? source.GetString() : null;
-        if (!IsAwwwardsUrl(sourceUrl))
-        {
-            throw Blocked("Awwwards evidence sourceUrl must point to https://www.awwwards.com/.");
-        }
-        if (!evidence.TryGetProperty("references", out var references) ||
-            references.ValueKind != JsonValueKind.Array ||
-            references.GetArrayLength() == 0 ||
-            !references.EnumerateArray().Any(reference =>
-                reference.ValueKind == JsonValueKind.String &&
-                IsAwwwardsUrl(reference.GetString())))
-        {
-            throw Blocked("Awwwards delivery evidence must include at least one reviewed Awwwards reference.");
-        }
-        if (!evidence.TryGetProperty("designDecisions", out var decisions) ||
-            decisions.ValueKind != JsonValueKind.Array ||
-            decisions.GetArrayLength() == 0 ||
-            !decisions.EnumerateArray().Any(decision =>
-                decision.ValueKind == JsonValueKind.String &&
-                !string.IsNullOrWhiteSpace(decision.GetString())))
-        {
-            throw Blocked("Awwwards delivery evidence must record at least one concrete design decision or explicit non-UI applicability decision.");
-        }
-    }
-
     private static JsonDocument ReadEvidence(string path, string gate)
     {
         if (!File.Exists(path))
@@ -184,12 +146,6 @@ internal static class ProjectDeliveryGate
             throw Blocked($"{gate} evidence is older than 14 days and must be refreshed before delivery.");
         }
     }
-
-    private static bool IsAwwwardsUrl(string? value) =>
-        Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
-        uri.Scheme == Uri.UriSchemeHttps &&
-        (string.Equals(uri.Host, "awwwards.com", StringComparison.OrdinalIgnoreCase) ||
-         string.Equals(uri.Host, "www.awwwards.com", StringComparison.OrdinalIgnoreCase));
 
     private static bool IsCanonicalLibraryId(string? id)
     {

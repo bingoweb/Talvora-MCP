@@ -128,7 +128,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] H2b — Tool guides for tools g–p (audit 25; signed-in Full 68/0; GitHub CI 40635695831 failed on the dev payload budget (Claude card defect), fixed by H2c; verified by Claude audit 27)
 - [x] H2c — Tool guides for tools q–z, then require full coverage (audit 25; 250/250; signed-in Full 68/0; installed 7148ff8; GitHub CI 40637780291 success; verified by Claude audit 27)
 - [x] H3 — Thrown tool errors carry their reason and guide; failures are isError; core guide gaps (audit 27; signed-in Full 68/0; installed 481a916; live missing-file probe returns reason + guide; GitHub CI 40673298596 success; verified by Claude audit 28)
-- [ ] G1 — Context7 evidence per change only; remove the Awwwards gate (audit 29, user decision; must land before 2026-11-08)
+- [~] G1 — Context7 evidence per change only; remove the Awwwards gate (audit 29; Full 68/0; live pending: commit, installation, push and exact-commit CI)
 - [ ] H4 — Failures are never shown as success, and a command's own exit code gets no usage guide (audit 30)
 - [ ] H6 — talvora_git_run refuses command-line aliases (audit 30)
 - [ ] CI2 — Get-CiStatus follows a cancelled run to the run that replaced it (audit 30)
@@ -174,6 +174,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-28 — G1 implemented (executor: ChatGPT): test-only Context7 scope exempt, <=12 library/vendor entries; Awwwards gate and old evidence removed.
+  - RED Context7ScopeRegression: test-only changes incorrectly required evidence; GREEN Context7Scope, ModernizationPolicy, StrictEvidenceJson and Validate-ProjectDeliveryGate.
+  - Git grep awwwards: only two new guard lines. Context7 /microsoftdocs/powershell-docs: PowerShell Array.Count and -gt comparisons verified against Microsoft Learn.
+  - Signed-in Full quality gate: 68 checks, 0 failures; last line "Hepsi geçti.".
+  - Gitea #9 comment 191; install current G1 commit before pushing; exact-commit GitHub CI to be checked once after push.
 - 2026-10-28 — Claude audit 30 (deep bug analysis, installed 481a916, no new commits): live-confirmed that a command's own non-zero exit gets a misleading "How to call" guide and that talvora_run_process (no structured content) reports exit 3 as success; the worklog fallback turns a failure into success; `-c alias.*` bypasses the push gate, WorkContract and source policy; Get-CiStatus calls a cancelled (superseded) run a failure. Cards H4, H6, CI2 queued after G1. Tag `audit/2026-10-28-30`.
 - 2026-10-28 — Claude audit 29: Context7 gate kept but slimmed: evidence per change only, at most 12 entries, test-only changes exempt. Awwwards gate removed (user decision): it never influenced a design, and its evidence would block every push after 2026-11-08 14:27 UTC. Card G1 queued; design specs updated by Claude.
 - 2026-10-28 — Claude audit 28: H3 matches its card exactly. Installed 481a916; CI 40673298596 success. Live probe: a thrown read_source failure returns "talvora_read_source failed (FileNotFoundException): …" plus its guide, a rejected patch is isError with the guide, and a successful call has no hint. The agent used `[~]` correctly this time. Context7/Awwwards gate review reported to the user; their decision is pending.

@@ -27,23 +27,10 @@ internal static partial class SourceEditRegressionRunner
             "Talvora-Delivery-Audit-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(root, ".git"));
         Directory.CreateDirectory(Path.Combine(root, ".context7"));
-        Directory.CreateDirectory(Path.Combine(root, ".talvora"));
         var contextPath = Path.Combine(root, ".context7", "verification.json");
-        var designPath = Path.Combine(root, ".talvora", "awwwards-verification.json");
         try
         {
             var timestamp = DateTimeOffset.UtcNow.ToString("O");
-            await File.WriteAllTextAsync(
-                designPath,
-                JsonSerializer.Serialize(new
-                {
-                    schemaVersion = 1,
-                    verifiedAtUtc = timestamp,
-                    sourceUrl = "https://www.awwwards.com/",
-                    references = new[] { "https://www.awwwards.com/" },
-                    designDecisions = new[] { "No UI changes in this fixture." },
-                }));
-
             async Task WriteContextAsync(
                 string id = "/dotnet/docs",
                 string? vendor = "Microsoft Learn .NET documentation checked.")

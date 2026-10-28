@@ -61,7 +61,7 @@ The user decided (2026-10-18): the agent does **only** what Claude's cards say, 
 **Design and cosmetics (zero autonomy)**
 8. Everything visible — layout, colours, fonts, sizes, spacing, radii, shadows, icons, glyphs, motion, timing, wording/Turkish copy, tooltips, empty/loading/error states, tool titles — comes **only** from `docs/codex/DESIGN-CONTROL-CENTER.md`, `docs/codex/DESIGN-WORKLOG.md` or an approved proposal. Never invent a colour, icon, animation, string, visual element or behaviour.
 9. Where the spec is silent about a **minor layout detail** (an alignment or a gap inside an element the spec defines), use only values from the spec's token scales (`Tv.Space.*`, `Tv.Radius.*`, `Tv.Type.*`, colour tokens) and list each such choice in the Log under "Design gaps filled" so Claude can audit it. Anything else that is visible and not specified (a new element, text, icon, colour, state, animation) → proposal (rule 6), never a guess.
-10. Awwwards research is **evidence only**. It must not change the spec. In `.talvora/awwwards-verification.json`, `designDecisions` must quote the spec sections being implemented (e.g. "DESIGN-WORKLOG §3.1 code terminal"), not new ideas.
+10. There is no Awwwards research step (removed in audit 29). Visual references come only from the design specs.
 11. Every UI/worklog card ends with the before/after PNGs required by its Acceptance; Claude approves the look in the next audit.
 
 Violations found in Claude's audits become D-cards that revert the unrequested change.
@@ -130,18 +130,18 @@ When the user says "Talvora'ya devam et", "Talvora devam", "sıradaki adım" or 
 
 ## Context7 quality gate
 
-- Before implementing or changing behavior that depends on a third-party framework, SDK, library, protocol SDK, CLI, or package manager, query Context7 for the current official/upstream documentation.
-- Context7 is mandatory for every meaningful project-development change. Even when a change is mostly internal, verify the current platform/framework contract that the change relies on instead of relying on model memory.
-- Refresh .context7/verification.json in the same change. CI checks that development-scope changes carry fresh Context7 evidence, canonical library IDs, verified guidance, and at least one official/vendor source check.
-- Record the Context7 library ID(s) and the verified API/migration point in the active Gitea issue or pull request as the human-readable audit trail. A phase may not be closed without that evidence.
+- Query Context7 before relying on third-party framework, SDK, library, protocol, CLI or package-manager behaviour that the change depends on. When it matters, Claude's card names the library and the exact point to verify; verify that point, not a generic topic.
+- Context7 is mandatory for changes under `src/`, `scripts/`, `.github/workflows/`, `Directory.*.props` and `global.json` (the CI gate enforces it). Test-only and documentation-only changes are exempt.
+- `.context7/verification.json` holds **only the current change**: replace `verifiedAtUtc`, `scope`, `libraries` (at most 12) and `vendorSources` (at most 12) each time; never append. Earlier evidence lives in git history.
+- Record the Context7 library ID(s) and the verified point in the card's STATUS Log entry (Gitea mirror best effort).
 - If Context7 has no suitable source, record that gap and use the vendor's primary documentation. Never substitute memory or an old code example for current documentation.
 
 ## Mandatory project delivery gates
 
 - Context7 is a release/delivery gate enforced by Talvora code, not a prompt convention. Talvora must reject project delivery when fresh, valid .context7/verification.json evidence is missing.
-- Awwwards is the mandatory design delivery reference for every project developed with Talvora. Creative/UI work must review https://www.awwwards.com/ and record fresh machine-readable evidence in .talvora/awwwards-verification.json.
-- These gates are fail-closed. talvora_git_run push and talvora_dotnet_publish must refuse to continue when either evidence contract is missing, stale, malformed, or incomplete.
-- Handoff text, model memory, issue prose, or a verbal claim never satisfies these gates. Only the machine-readable evidence accepted by ProjectDeliveryGate permits delivery.
+- The gate is fail-closed. talvora_git_run push and talvora_dotnet_publish must refuse to continue when the Context7 evidence contract is missing, stale, malformed, or incomplete.
+- Handoff text, model memory, issue prose, or a verbal claim never satisfies the gate. Only the machine-readable evidence accepted by ProjectDeliveryGate permits delivery.
+- Awwwards evidence was removed (audit 29, user decision 2026-10-28): the look comes only from Claude's design specs. Do not reintroduce `.talvora/awwwards-verification.json`.
 
 ## Mandatory Windows desktop progress reporting
 

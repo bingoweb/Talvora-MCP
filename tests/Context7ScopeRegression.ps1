@@ -65,11 +65,14 @@ try {
             'src/Talvora/Assets/manifest.json',
             'src/Talvora/PenpotAiPlugin/static.js',
             'src/Talvora/PenpotAiPlugin/index.html',
-            'tests/OnlyPowerShellRegression.ps1'
+            'scripts/OnlyPowerShellHelper.ps1'
         )) {
             Assert-Context7GateScenario -RelativePath $path -RequiresEvidence $true
         }
         Assert-Context7GateScenario -RelativePath 'docs/research.md' -RequiresEvidence $false
+        # G1: test-only changes need no Context7 evidence.
+        Assert-Context7GateScenario -RelativePath 'tests/OnlyPowerShellRegression.ps1' -RequiresEvidence $false
+        Assert-Context7GateScenario -RelativePath 'tests/Fixture/Only.Tests.cs' -RequiresEvidence $false
     }
     finally {
         Pop-Location
