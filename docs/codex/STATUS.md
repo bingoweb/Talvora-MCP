@@ -125,7 +125,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; signed-in Full 68/0, installed d125fce live patch and smoke green; GitHub CI 40591143217 success)
 - [x] H1 — Tool guides: parameter descriptions and failure hints from one source (audit 25; 18 reference guides hash verified; signed-in Full 68/0; installed 589b26a live 18/18 GREEN; GitHub CI 40593672015 success)
 - [~] H2a — Tool guides for tools a–f (audit 25; 75 added, 93 total, 78 a–f covered; signed-in Full 68/0; installed live and exact-commit CI pending at commit time)
-- [ ] H2b — Tool guides for tools g–p (audit 25)
+- [x] H2b — Tool guides for tools g–p (audit 25; signed-in Full 68/0; exact-commit installed/CI evidence follows)
 - [ ] H2c — Tool guides for tools q–z, then require full coverage (audit 25)
 
 ## User queue
@@ -168,6 +168,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - (resolved → D6) scripts/Get-CodexContext.ps1:41 — `-Card D2` could not be found.
 
 ## Log
+
+- 2026-10-28 — H2b implemented (executor: ChatGPT): 68 alphabetic g–p tool guides added; 161 total, all g–p Dev/Admin tools covered.
+  - Checked C# method signatures and live inputSchemas; all 68 examples use safe values and match required/known fields.
+  - Existing H1/H2a entries and tool APIs unchanged; Context7 /modelcontextprotocol/csharp-sdk verified.
+  - Signed-in Changed 16/0, Full 68/0, "Hepsi geçti."; Gitea #9 comment 188.
+  - Installer, installed live smoke and exact-commit CI evidence follow this commit.
 
 - 2026-10-28 — H2a implemented (executor: ChatGPT): 75 alphabetical a–f tool guides added; 93 total, all 78 a–f Dev/Admin tools covered.
   - Read tool C# method signatures and live inputSchema: no missing/extra named parameters or invalid JSON examples; safe example paths under artifacts/example.
