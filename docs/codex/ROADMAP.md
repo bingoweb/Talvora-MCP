@@ -1096,6 +1096,215 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-28 (27) · range `audit/2026-10-28-26..7148ff8` · D23, AP1, AP2, H1, H2a–c exact · result: H3
+
+**Code vs cards:** every Exact-implementation line of D23, AP1, AP2 (incl. Step 6b) and H1 is in the tree verbatim (script check); H1 reference copy hash-verified by the agent. Installed `7148ff8`. Claude live probes on the installed runtime:
+- AP1: 0 required-nullable output members on `/mcp` (239 output schemas).
+- H1/H2: 250/250 tools have a guide; undescribed `/mcp/dev` parameters 857 → 11.
+- AP2: the OpenAI envelope and the missing-revision message work.
+- Destructive examples use only `artifacts/example/` or ids that do not exist.
+
+**CI:**
+- D23 40585708282, AP1 40588175249, AP2 40591143217, H1 40593672015, H2a 40598665836 and H2c 40637780291 succeeded.
+- **H2b 40635695831 failed** (`/mcp/dev` tools/list 173 925 B > 168 960 B budget). That is a Claude card defect: H2a/H2b grew the payload while only H2c raised the budget. H2c's budget change fixed it.
+
+**Process findings (agent):**
+1. D23, AP1, H2b and H2c were ticked `[x]` with "evidence follows". AGENTS step 8 requires `[~]` until deploy, live and CI checks are done.
+2. The red H2b CI was not handled before H2c (step 10b).
+3. The H2b and H2c commits have `Card:` in the body paragraph without a blank line before it, so `git log --format=%(trailers)` does not see it. AGENTS C.2 now says so.
+
+Audit 27 records the missing evidence above.
+
+**Root-cause finding (product) → H3:**
+- A tool that **throws** (457 `throw` sites in `src/Talvora/Tools`) reaches the model as only `An error occurred invoking 'talvora_read_source'.`, with no reason and no guide. The exception leaves the H1 call filter, and the SDK masks it afterwards. Probe: `talvora_read_source` on a missing file.
+- Structured failures (`success:false`) are sent without `isError`.
+- 13 parameters of H1 core tools have no guide line.
+- The `talvora_git_run` example pushes to `main`.
+
+**Cost note:** guides grew `/mcp/dev` tools/list from 146 KB to 194 KB (+33 %) and admin from 52 KB to 68 KB, the trade-off decided in audit 25.
+
+### H3 — Thrown tool errors carry their reason and guide; failures are isError; core guide gaps (audit 27)
+
+**Why:** with today's runtime, most failed calls tell the model nothing beyond "An error occurred invoking '<tool>'". That is the main reason models retry blindly.
+
+**Files:** `src/Talvora/Program.cs`, `src/Talvora/ToolFailureGuidance.cs`, `src/Talvora.Shared/TalvoraToolGuides.cs`, `tests/Talvora.Smoke/SmokeScenarios.ToolGuides.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+#### Exact implementation
+
+Step 1 — `src/Talvora/Program.cs`: replace the line
+
+```csharp
+            return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(await operation(cancellationToken)));
+```
+
+with
+
+```csharp
+            CallToolResult result;
+            try
+            {
+                result = await operation(cancellationToken);
+            }
+            catch (Exception exception) when (
+                exception is not ModelContextProtocol.McpProtocolException &&
+                (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested))
+            {
+                // H3: the SDK would answer with only "An error occurred invoking '<tool>'."; the model needs the reason.
+                result = ToolFailureGuidance.FromException(request.Params?.Name, exception);
+            }
+
+            return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(result));
+```
+
+Step 2 — replace the whole content of `src/Talvora/ToolFailureGuidance.cs` with
+
+```csharp
+using ModelContextProtocol.Protocol;
+using Talvora.Shared;
+
+namespace Talvora;
+
+// H1: a failed call ends with the exact usage of its tool, so the model can correct the next call itself.
+internal static class ToolFailureGuidance
+{
+    internal static CallToolResult Apply(string? toolName, CallToolResult result)
+    {
+        var failed = result.IsError is true ||
+            result.StructuredContent is { } structured && StructuredResultFailure.IsFailure(structured);
+        if (!failed)
+        {
+            return result;
+        }
+
+        // H3: a structured failure is an error result too, so no client mistakes it for success.
+        result.IsError = true;
+        if (toolName is not null && TalvoraToolGuides.FailureHint(toolName) is { } hint)
+        {
+            result.Content = [.. result.Content, new TextContentBlock { Text = hint }];
+        }
+
+        return result;
+    }
+
+    // H3: a thrown exception becomes a readable error result; the message passes the canonical redaction first.
+    internal static CallToolResult FromException(string? toolName, Exception exception)
+    {
+        var reason = exception is AggregateException { InnerException: { } inner } ? inner : exception;
+        return new CallToolResult
+        {
+            IsError = true,
+            Content =
+            [
+                new TextContentBlock
+                {
+                    Text = $"{toolName ?? "The tool"} failed ({reason.GetType().Name}): {FileLog.RedactSensitiveData(reason.Message)}",
+                },
+            ],
+        };
+    }
+}
+```
+
+Step 3 — `src/Talvora.Shared/TalvoraToolGuides.cs`, replace each left line (each occurs once) with the right lines:
+
+```csharp
+                  ("matchOffset", "Skip this many matches (paging).")),
+```
+→
+```csharp
+                  ("matchOffset", "Skip this many matches (paging)."),
+                  ("maxFileBytes", "Skip files larger than this many bytes; 0 = server maximum."),
+                  ("maxLineChars", "Maximum characters returned per matching line; 0 = server maximum."),
+                  ("followReparsePoints", "Follow symbolic links and junctions (default false).")),
+```
+
+```csharp
+                  ("resultOffset", "Skip this many entries (paging).")),
+```
+→
+```csharp
+                  ("resultOffset", "Skip this many entries (paging)."),
+                  ("includeDirectories", "Also list matching folders (default false)."),
+                  ("followReparsePoints", "Follow symbolic links and junctions (default false)."),
+                  ("detail", "compact (default) or full (adds size and timestamps).")),
+```
+
+```csharp
+                  ("maxCapturedCharactersPerStream", "Capture bound per stream; keep 8000 for long tools.")),
+```
+→
+```csharp
+                  ("maxCapturedCharactersPerStream", "Capture bound per stream; keep 8000 for long tools."),
+                  ("engine", "auto (default), pwsh or windows-powershell.")),
+```
+
+```csharp
+                  ("all", "Include all refs.")),
+```
+→
+```csharp
+                  ("all", "Include all refs."),
+                  ("detail", "compact (default) or full.")),
+```
+
+```csharp
+                  ("maxResponseBytes", "Upper bound of the captured response.")),
+```
+→
+```csharp
+                  ("maxResponseBytes", "Upper bound of the captured response."),
+                  ("bodyBase64", "Binary body as base64; use instead of body."),
+                  ("allowAutoRedirect", "Follow redirects (default true)."),
+                  ("ignoreTlsErrors", "Accept invalid TLS certificates; local tests only (default false).")),
+```
+
+```csharp
+                  ("timeoutSeconds", "Kill gh after this many seconds.")),
+```
+→
+```csharp
+                  ("timeoutSeconds", "Kill gh after this many seconds."),
+                  ("environment", "Extra environment variables {\"NAME\":\"value\"}."),
+                  ("ghExecutable", "Absolute path of gh.exe; omit to use the installed one.")),
+```
+
+and in the `talvora_git_run` example replace `"arguments":["push","origin","main"]` with `"arguments":["status","--short"]`.
+
+Step 4 — `tests/Talvora.Smoke/SmokeScenarios.ToolGuides.cs`: directly before the line `Console.WriteLine($"H1 tool guides: {Talvora.Shared.TalvoraToolGuides.All.Count} verified");` insert
+
+```csharp
+        using var thrown = new HttpRequestMessage(HttpMethod.Post, root + "/mcp/dev")
+        {
+            Content = new StringContent(
+                """{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"talvora_read_source","arguments":{"path":"C:\\Windows\\Temp\\talvora-h3-missing-file.txt"}}}""",
+                Encoding.UTF8,
+                "application/json"),
+        };
+        thrown.Headers.Accept.ParseAdd("application/json");
+        thrown.Headers.Accept.ParseAdd("text/event-stream");
+        using var thrownResponse = await http.SendAsync(thrown);
+        var thrownBody = await thrownResponse.Content.ReadAsStringAsync();
+        if (thrownBody.Contains("An error occurred invoking", StringComparison.Ordinal) ||
+            !thrownBody.Contains("talvora_read_source failed (", StringComparison.Ordinal) ||
+            !thrownBody.Contains("How to call talvora_read_source", StringComparison.Ordinal))
+            throw new InvalidOperationException("H3: a thrown tool error reaches the model without its reason and guide: " + thrownBody);
+```
+
+**Don't:**
+- Do not catch or convert `McpProtocolException`, and do not convert caller cancellation.
+- Do not add stack traces, inner-exception chains or unredacted text.
+- Do not change the desktop progress notifier: it already reports the failure before the exception reaches the new catch.
+- Do not raise the payload budgets. Step 3 adds about 1.3 KB, under the H2c budget. If a budget is still exceeded, write a proposal.
+
+**Acceptance:**
+- Red first: `--surface-policy-live` against the installed `7148ff8` fails with "H3: …".
+- Context7 `/modelcontextprotocol/csharp-sdk` entry: call-tool filter and exception-to-result behaviour.
+- Full gate `Hepsi geçti.`.
+- Installer built and deployed; `/healthz.sourceCommit` = HEAD.
+- `--surface-policy-live` GREEN on the installed runtime.
+- One manual probe recorded in the Log: `talvora_read_source` on a missing file returns the reason and the guide.
+- CI checked once (exit 0 before `[x]`).
+
 ### Audit 2026-10-28 (26) · range `audit/2026-10-27-25..8ef3dee` · SDK2 exact · result: D23
 
 **SDK2 (`d12e96f`):** the diff matches the card exactly:

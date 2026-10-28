@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-28-26` = the audit 26 commit. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-28-27` = the audit 27 commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -120,13 +120,14 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI9 — Remove the remaining legacy Control Center host (delivered by Claude: three legacy files and LegacyContentHost deleted, −3 300 lines, no visible change; installation pending)
 - [x] I1 — Install the current main and verify Q7, UI6b and UI9 on the installed runtime (installed 3b3e7fd; Q7 full/dev/admin = 337555/146094/51590 B; UI6b PNGs both themes; GitHub CI 40203947659 success; verified by Claude audit 24)
 - [x] SDK2 — Move the SDK pin to 10.0.403 and the platform packages to 10.0.14 (P-42/P-43/P-44; Full 68/0, installed d12e96f, live surface GREEN; GitHub CI 40581210398 success)
-- [x] D23 — UI5 smoke fixture clock anchored at local noon (P-45, audit 26; signed-in Full 68/0; no installer; exact-commit CI checked after push)
-- [x] AP1 — Output schemas never require members that can be null (audit 24; red 507 violations; signed-in Full 68/0; exact-commit deployment/live/CI checks follow commit)
+- [x] D23 — UI5 smoke fixture clock anchored at local noon (P-45, audit 26; signed-in Full 68/0; GitHub CI 40585708282 success; verified by Claude audit 27)
+- [x] AP1 — Output schemas never require members that can be null (audit 24; signed-in Full 68/0; installed 7148ff8 live 0 nullable-required; GitHub CI 40588175249 success; verified by Claude audit 27)
 - [x] AP2 — talvora_apply_patch speaks the agents' dialect; every rejection says what to fix (audit 24; signed-in Full 68/0, installed d125fce live patch and smoke green; GitHub CI 40591143217 success)
 - [x] H1 — Tool guides: parameter descriptions and failure hints from one source (audit 25; 18 reference guides hash verified; signed-in Full 68/0; installed 589b26a live 18/18 GREEN; GitHub CI 40593672015 success)
-- [~] H2a — Tool guides for tools a–f (audit 25; 75 added, 93 total, 78 a–f covered; signed-in Full 68/0; installed live and exact-commit CI pending at commit time)
-- [x] H2b — Tool guides for tools g–p (audit 25; signed-in Full 68/0; exact-commit installed/CI evidence follows)
-- [x] H2c — Tool guides for tools q–z, then require full coverage (audit 25; signed-in Full 68/0; installed/live/CI evidence follows commit)
+- [x] H2a — Tool guides for tools a–f (audit 25; 75 added; signed-in Full 68/0; GitHub CI 40598665836 success; installed 7148ff8; verified by Claude audit 27)
+- [x] H2b — Tool guides for tools g–p (audit 25; signed-in Full 68/0; GitHub CI 40635695831 failed on the dev payload budget (Claude card defect), fixed by H2c; verified by Claude audit 27)
+- [x] H2c — Tool guides for tools q–z, then require full coverage (audit 25; 250/250; signed-in Full 68/0; installed 7148ff8; GitHub CI 40637780291 success; verified by Claude audit 27)
+- [ ] H3 — Thrown tool errors carry their reason and guide; failures are isError; core guide gaps (audit 27)
 
 ## User queue
 
@@ -169,6 +170,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-28 — Claude audit 27: D23, AP1, AP2, H1, H2a–c match their cards; installed 7148ff8; CI green except H2b 40635695831 (budget, Claude card defect, fixed by H2c). Live: 0 nullable-required, 250/250 guides, 11 undescribed dev params. Found thrown tool errors reach models as a bare "An error occurred invoking" → H3. Process: `[x]` was set before evidence, and red CI was skipped before the next card.
 - 2026-10-28 — H2c implemented (executor: ChatGPT): 89 guides added (87 q–z plus fetch/search), 250 total; exact Dev/Admin full-coverage smoke added.
   - RED coverage smoke found 89 unguided; C# method signatures and live inputSchemas checked; H1/H2a/H2b and tool APIs unchanged.
   - Q7 payload limits raised to source-derived 2026-10-28 dev 193826 + 5% -> 203776 B; admin 67617 + 5% -> 71680 B, each rounded up to KiB.
