@@ -134,7 +134,9 @@ internal sealed record SourceEditJournalEnumeration(
 internal sealed class SourceEditTransactionStore
 {
     private const long MaximumCompletedStateBytes = 512L * 1024 * 1024;
-    private const int MaximumCompletedTransactions = 10_000;
+    // R6: every patch scans the retained journals, so history stays small and each cleanup run is bounded.
+    private const int MaximumCompletedTransactions = 300;
+    private const int MaximumCleanupDeletionsPerRun = 1_000;
 
     private static readonly JsonSerializerOptions JsonOptions =
         new(JsonSerializerDefaults.Web)
@@ -728,6 +730,7 @@ internal sealed class SourceEditTransactionStore
 
         var now = DateTime.UtcNow;
         var completed = new List<CompletedEntry>();
+        var deletions = 0;
 
         foreach (var receiptPath in Directory.EnumerateFiles(
                      receiptsRoot,
@@ -766,11 +769,13 @@ internal sealed class SourceEditTransactionStore
                     receipt.Status,
                     "rolled-back",
                     StringComparison.OrdinalIgnoreCase)
-                    ? TimeSpan.FromDays(7)
-                    : TimeSpan.FromDays(30);
+                    ? TimeSpan.FromDays(2)
+                    : TimeSpan.FromDays(3);
 
-            if (now - info.LastWriteTimeUtc > retention)
+            if (now - info.LastWriteTimeUtc > retention &&
+                deletions < MaximumCleanupDeletionsPerRun)
             {
+                deletions++;
                 await PersistTombstoneAsync(
                     receipt,
                     cancellationToken);
@@ -800,8 +805,10 @@ internal sealed class SourceEditTransactionStore
         var index = 0;
         while ((completed.Count - index > MaximumCompletedTransactions ||
                 totalBytes > MaximumCompletedStateBytes) &&
-               index < completed.Count)
+               index < completed.Count &&
+               deletions < MaximumCleanupDeletionsPerRun)
         {
+            deletions++;
             cancellationToken.ThrowIfCancellationRequested();
             var entry = completed[index++];
             totalBytes -= entry.Size;

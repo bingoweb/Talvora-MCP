@@ -293,4 +293,9 @@ Assert-Contains $systemMaintenance 'logger.LogWarning' 'recoverable SYSTEM maint
 Assert-Contains $program 'TalvoraStorageMaintenanceService.AssertPolicyContract();' 'runtime self-test protects the maintenance policy'
 Assert-Contains $program '"--storage-maintenance"' 'operators have a deterministic maintenance command for acceptance'
 
+$sourceEditStore = Read-RepoText 'src\Talvora\SourceEditing\SourceEditTransactionStore.cs'
+Assert-Contains $sourceEditStore 'MaximumCompletedTransactions = 300;' 'R6: completed source-edit history stays small enough to scan on every patch'
+Assert-Contains $sourceEditStore 'MaximumCleanupDeletionsPerRun = 1_000;' 'R6: one cleanup run deletes a bounded number of entries'
+Assert-Contains $sourceEditStore ': TimeSpan.FromDays(3);' 'R6: committed source-edit receipts are kept three days'
+
 Write-Output 'STORAGE_MAINTENANCE_SOURCE_GREEN'

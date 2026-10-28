@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-28T17:28:48.543Z",
-  "scope": "CI2: follow cancelled GitHub Actions workflow runs to the newest non-cancelled descendant on main.",
+  "verifiedAtUtc": "2026-10-28T18:29:46.830Z",
+  "scope": "R6: bounded source-edit transaction retention and cleanup.",
   "libraries": [
     {
-      "libraryId": "/websites/cli_github_manual",
-      "verified": "CI2: the official gh run list manual confirms --branch, --workflow, --json, --limit and --repo, and the requested JSON fields databaseId, headSha, status, conclusion and url. These provide the required successors for a cancelled windows-ci run."
+      "libraryId": "/dotnet/docs",
+      "verified": "R6: Directory.EnumerateFiles and EnumerateDirectories return lazily enumerated names without preloading a whole directory. The transaction cleanup enumerates receipts separately from deleted transaction directories and limits per-run deletions."
     }
   ],
   "vendorSources": [
-    "Official GitHub CLI run list manual: https://cli.github.com/manual/gh_run_list"
+    "Microsoft .NET guidance: https://github.com/dotnet/docs/blob/main/docs/standard/io/how-to-enumerate-directories-and-files.md",
+    "Microsoft .NET enumeration performance: https://github.com/dotnet/docs/blob/main/docs/standard/parallel-programming/how-to-iterate-file-directories-with-plinq.md"
   ]
 }

@@ -132,7 +132,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] H4 — Failures are never shown as success, and a command's own exit code gets no usage guide (audit 30; Full 68/0; installed 87695b0, live smoke and failure probes green; GitHub CI 40706924110 success)
 - [x] H6 — talvora_git_run refuses command-line aliases (audit 30; Full 68/0; installed bfaeed1, live alias refusal and ordinary Git status verified; GitHub CI 40734561809 success)
 - [x] CI2 — Get-CiStatus follows a cancelled run to the run that replaced it (audit 30; Full 68/0; no deploy; GitHub CI 40737107002 success; verified by Claude audit 32)
-- [ ] R6 — Keep source-edit history small so every patch is fast (audit 32; renamed from R4 by P-46; every patch takes ~13 s today)
+- [~] R6 — Keep source-edit history small so every patch is fast (audit 32; signed-in Full 68/0; live pending: deploy, <=400 receipts/transactions, three <2s probes, push, CI)
 
 ## User queue
 
@@ -175,6 +175,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-28 — R6 implemented (executor: ChatGPT): completed source-edit state capped at 300, three-day receipt retention, at most 1,000 cleanup deletions per pass; recovery-required exemption unchanged.
+  - RED StorageMaintenanceSourceRegression: "Storage maintenance contract failed: R6: completed source-edit history stays small enough to scan on every patch"; GREEN after exact card changes.
+  - Context7 /dotnet/docs: lazy Directory.EnumerateFiles / EnumerateDirectories and independent per-directory cleanup confirmed.
+  - Source baseline: 7,437 receipts, 4,107 transaction dirs; targeted Release build 0 errors/0 warnings.
+  - Signed-in Full gate: 68 checks, 0 failures; last line "Hepsi geçti.".
+  - Install, live cleanup counts/latencies, push and exact-commit CI pending; no maintenance data manually removed.
 - 2026-10-28 — Claude audit 33: P-46 decided (option 1). The audit 32 card reused the completed id R4 (Claude card defect); it is now R6 with no other change. ChatGPT correctly stopped instead of guessing. No new code commits; installed bfaeed1. Tag `audit/2026-10-28-33`.
 - 2026-10-28 — P-46 proposal (executor: ChatGPT): audit 32 source-edit history R4 duplicates the completed upstream-recovery R4; agent brief selects the wrong card and commit 03c2e85 already uses Card: R4.
   - Proposed a unique new card ID before implementation; source and test files unchanged.
