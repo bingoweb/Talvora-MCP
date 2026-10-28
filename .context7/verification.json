@@ -1,15 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-28T14:46:32.380Z",
-  "scope": "H6: reject per-command Git alias configurations that conceal restricted Git commands from delivery and source-edit policy.",
+  "verifiedAtUtc": "2026-10-28T17:28:48.543Z",
+  "scope": "CI2: follow cancelled GitHub Actions workflow runs to the newest non-cancelled descendant on main.",
   "libraries": [
     {
-      "libraryId": "/websites/git-scm",
-      "verified": "H6: official git(1) docs confirm -c name=value passes command-scoped config, and --config-env=name=envvar likewise sets command configuration from an environment variable. Official git-config docs confirm alias.* defines Git command aliases (including commit, push, reset aliases). These forms must be refused by talvora_git_run before policy gates."
+      "libraryId": "/websites/cli_github_manual",
+      "verified": "CI2: the official gh run list manual confirms --branch, --workflow, --json, --limit and --repo, and the requested JSON fields databaseId, headSha, status, conclusion and url. These provide the required successors for a cancelled windows-ci run."
     }
   ],
   "vendorSources": [
-    "Official Git manual: https://git-scm.com/docs/git",
-    "Official git-config manual: https://git-scm.com/docs/git-config"
+    "Official GitHub CLI run list manual: https://cli.github.com/manual/gh_run_list"
   ]
 }

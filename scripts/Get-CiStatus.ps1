@@ -5,7 +5,7 @@ param(
     [int] $PollSeconds = 30
 )
 # Waits for the windows-ci run of a commit and prints a short, readable verdict.
-# Exit codes: 0 = success, 1 = failure (prints the failing lines), 2 = no run / timeout.
+# Exit codes: 0 = success, 1 = failure (prints the failing lines), 2 = no run / timeout / cancelled with no finished successor.
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -27,6 +27,16 @@ while ($true) {
 
 if (-not $run) { Write-Host "CI: $($sha.Substring(0, 7)) için windows-ci çalışması bulunamadı."; exit 2 }
 if ($run.status -ne 'completed') { Write-Host "CI: süre doldu, çalışma hâlâ '$($run.status)': $($run.url)"; exit 2 }
+if ($run.conclusion -eq 'cancelled') {
+    # A newer push cancels this run (cancel-in-progress); the newest run that contains this commit decides.
+    $runs = @(& gh run list --repo $repository --workflow windows-ci.yml --branch main `
+        --json databaseId,headSha,status,conclusion,url --limit 10 | ConvertFrom-Json)
+    if ($LASTEXITCODE -ne 0) { throw 'gh run list failed (is gh signed in for this user?).' }
+    $run = $runs | Where-Object { $_.conclusion -ne 'cancelled' } | Where-Object {
+        & git -C $repoRoot merge-base --is-ancestor $sha $_.headSha 2>$null; $LASTEXITCODE -eq 0 } | Select-Object -First 1
+    if (-not $run) { Write-Host "CI: $($sha.Substring(0, 7)) çalışması iptal edildi; onu içeren yeni bir çalışma yok."; exit 2 }
+    if ($run.status -ne 'completed') { Write-Host "CI: çalışma iptal edildi, onu içeren yeni çalışma hâlâ '$($run.status)': $($run.url)"; exit 2 }
+}
 if ($run.conclusion -eq 'success') { Write-Host "CI başarılı: $($run.url)"; exit 0 }
 
 Write-Host "CI başarısız ($($run.conclusion)): $($run.url)"

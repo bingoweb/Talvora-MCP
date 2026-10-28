@@ -130,8 +130,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] H3 — Thrown tool errors carry their reason and guide; failures are isError; core guide gaps (audit 27; signed-in Full 68/0; installed 481a916; live missing-file probe returns reason + guide; GitHub CI 40673298596 success; verified by Claude audit 28)
 - [x] G1 — Context7 evidence per change only; remove the Awwwards gate (audit 29; Full 68/0; installed 455551f and exact-commit GitHub CI 40694613475 success)
 - [x] H4 — Failures are never shown as success, and a command's own exit code gets no usage guide (audit 30; Full 68/0; installed 87695b0, live smoke and failure probes green; GitHub CI 40706924110 success)
-- [~] H6 — talvora_git_run refuses command-line aliases (audit 30; signed-in Full 68/0; live pending: install, Git alias refusal/status probes and exact-commit CI)
-- [ ] CI2 — Get-CiStatus follows a cancelled run to the run that replaced it (audit 30)
+- [x] H6 — talvora_git_run refuses command-line aliases (audit 30; Full 68/0; installed bfaeed1, live alias refusal and ordinary Git status verified; GitHub CI 40734561809 success)
+- [~] CI2 — Get-CiStatus follows a cancelled run to the run that replaced it (audit 30; Full 68/0; exact-commit GitHub CI pending; no deploy)
 
 ## User queue
 
@@ -174,6 +174,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-28 — CI2 implemented (executor: ChatGPT): Get-CiStatus resolves cancelled windows-ci runs to the newest non-cancelled run containing the commit, without polling at timeout zero.
+  - PowerShell Parser 0 errors; H4 87695b0 still returns CI success (40706924110); cancelled a5c8939 resolves to descendant success (40734561809).
+  - Context7 /websites/cli_github_manual: gh run list --branch/--workflow/--json and databaseId/headSha/status/conclusion/url verified.
+  - Signed-in Full quality gate: 68 checks, 0 failures; last line "Hepsi geçti.".
+  - Gitea #9 comment 197; script-only card, no deploy; push and exact-commit GitHub CI pending.
 - 2026-10-28 — H6 implemented (executor: ChatGPT): reject Git -c/--config-env alias.* before delivery, work-contract and source-edit policies; direct Git commands stay available.
   - RED SourceEdit regression build CS0117: GitArgumentParser has no DefinesAlias definition (2 occurrences); GREEN Changed 19/0 and Full 68/0 as signed-in user.
   - Context7 /websites/git-scm: git(1) -c/--config-env and git-config alias.* verified against official Git manuals.
