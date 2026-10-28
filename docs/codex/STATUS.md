@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-28-33` = the audit 33 commit. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-28-34` = the audit 34 commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -132,7 +132,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] H4 — Failures are never shown as success, and a command's own exit code gets no usage guide (audit 30; Full 68/0; installed 87695b0, live smoke and failure probes green; GitHub CI 40706924110 success)
 - [x] H6 — talvora_git_run refuses command-line aliases (audit 30; Full 68/0; installed bfaeed1, live alias refusal and ordinary Git status verified; GitHub CI 40734561809 success)
 - [x] CI2 — Get-CiStatus follows a cancelled run to the run that replaced it (audit 30; Full 68/0; no deploy; GitHub CI 40737107002 success; verified by Claude audit 32)
-- [~] R6 — Keep source-edit history small so every patch is fast (audit 32; signed-in Full 68/0; live pending: deploy, <=400 receipts/transactions, three <2s probes, push, CI)
+- [x] R6 — Keep source-edit history small so every patch is fast (audit 32; signed-in Full 68/0; installed 144c8dd; live 252 transactions / 300 receipts, probe patches 0.89–1.02 s; GitHub CI 40747815417 success; verified by Claude audit 34)
 
 ## User queue
 
@@ -175,6 +175,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-28 — Claude audit 34: R6 matches its card exactly; installed 144c8dd; CI 40747815417 success. Live on the installed runtime: 252 transaction directories and 300 receipts (was 4 107 / 7 437); six probe patches 0.89–1.02 s (was 12.8–13.7 s). R6 marked [x]. Agent queue has no open card. Tag `audit/2026-10-28-34`.
 - 2026-10-28 — R6 implemented (executor: ChatGPT): completed source-edit state capped at 300, three-day receipt retention, at most 1,000 cleanup deletions per pass; recovery-required exemption unchanged.
   - RED StorageMaintenanceSourceRegression: "Storage maintenance contract failed: R6: completed source-edit history stays small enough to scan on every patch"; GREEN after exact card changes.
   - Context7 /dotnet/docs: lazy Directory.EnumerateFiles / EnumerateDirectories and independent per-directory cleanup confirmed.

@@ -1096,6 +1096,16 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-10-28 (34) · R6 verified · no new cards
+
+- **R6 (`144c8dd`)** matches its card: every exact line is present, and the red test was recorded before the change.
+- Installed 144c8dd; CI 40747815417 success.
+- Live:
+  - `SourceEdit	ransactions` 4 107 → 252;
+  - `receipts` 7 437 → 300;
+  - Add/Delete probe patches in `artifacts/` take 0.89–1.02 s (were 12.8–13.7 s);
+  - the service started normally after the first bounded cleanup.
+
 ### Audit 2026-10-28 (32) · H6, CI2 verified; every patch takes 13 s · result: R6 (renamed from R4 by P-46)
 
 - **H6 (`bfaeed1`)** matches its card; CI 40734561809 success; installed bfaeed1. Live: `-c alias.s=status s` and `--config-env=alias.p=X p` are `isError` with the H6 message, and `status --short` still works.
