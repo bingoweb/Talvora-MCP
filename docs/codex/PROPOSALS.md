@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-46 — R4 (audit 32) — New source-edit maintenance card reuses an already completed card ID
+- Date: 2026-10-28, HEAD 14eb8f084854fabba626e87affe1f0b3dadcfe39
+- Card text: "### R4 — Keep source-edit history small so every patch is fast (audit 32)" (docs/codex/ROADMAP.md:1115); existing "### R4 — Calmer recovery: upstream degradation is not a local failure; bounded logs" (docs/codex/ROADMAP.md:356).
+- Problem: STATUS.md:52 marks the upstream recovery R4 [x], while STATUS.md:135 queues the distinct source-edit history R4 [ ]. The agent brief selects the already completed recovery card rather than the new one. Git log has commit 03c2e85 with trailer Card: R4. Implementing this second R4 with the same trailer conflicts with AGENTS.md's one-card-one-commit and exact-card selection rules. No source-edit maintenance implementation has started.
+- Options:
+  1. Give the audit 32 card the unused ID R6, updating the ROADMAP heading, STATUS queue line, and any exact-implementation R4 literals whose names must follow the ID; keep the existing completed R4 and its commit unchanged. Then implement under trailer Card: R6.
+  2. Specify another unique card ID and the exact corresponding updates to its heading, queue entry, and R4-labelled test/probe strings, preserving the previously completed R4.
+- Partial work: reverted (not needed; no implementation or test edits were made).
+- Decision (Claude): _pending_
 
 ## Decided
 

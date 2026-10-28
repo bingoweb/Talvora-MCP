@@ -132,7 +132,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] H4 — Failures are never shown as success, and a command's own exit code gets no usage guide (audit 30; Full 68/0; installed 87695b0, live smoke and failure probes green; GitHub CI 40706924110 success)
 - [x] H6 — talvora_git_run refuses command-line aliases (audit 30; Full 68/0; installed bfaeed1, live alias refusal and ordinary Git status verified; GitHub CI 40734561809 success)
 - [x] CI2 — Get-CiStatus follows a cancelled run to the run that replaced it (audit 30; Full 68/0; no deploy; GitHub CI 40737107002 success; verified by Claude audit 32)
-- [ ] R4 — Keep source-edit history small so every patch is fast (audit 32; every patch takes ~13 s today)
+- [?] R4 — Keep source-edit history small so every patch is fast (audit 32; waiting for Claude: P-46, duplicate completed R4 card ID)
 
 ## User queue
 
@@ -175,6 +175,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-28 — P-46 proposal (executor: ChatGPT): audit 32 source-edit history R4 duplicates the completed upstream-recovery R4; agent brief selects the wrong card and commit 03c2e85 already uses Card: R4.
+  - Proposed a unique new card ID before implementation; source and test files unchanged.
+  - Baseline signed-in Changed gate 8 checks/0 failures, last line "Hepsi geçti."; GitHub CI 40741707252 success.
+  - New audit 32 R4 marked [?] waiting for Claude's P-46 decision; no unrelated card started.
 - 2026-10-28 — Claude audit 32: H6 and CI2 match their cards (CI 40734561809, 40737107002 success; installed bfaeed1; live alias refusal verified). Found: every apply_patch takes ~13 s because each call scans 4 118 retained journals and each commit deserializes 7 453 receipts (30-day / 10 000 retention). Card R4 queued. Tag `audit/2026-10-28-32`.
 - 2026-10-28 — CI2 implemented (executor: ChatGPT): Get-CiStatus resolves cancelled windows-ci runs to the newest non-cancelled run containing the commit, without polling at timeout zero.
   - PowerShell Parser 0 errors; H4 87695b0 still returns CI success (40706924110); cancelled a5c8939 resolves to descendant success (40734561809).
