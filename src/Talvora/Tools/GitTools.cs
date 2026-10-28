@@ -571,6 +571,13 @@ public static class GitTools
             throw new ArgumentNullException(nameof(arguments));
         }
 
+        if (GitArgumentParser.DefinesAlias(arguments))
+        {
+            throw new ArgumentException(
+                "talvora_git_run does not accept -c alias.* or --config-env alias.*; call the Git command by its own name.",
+                nameof(arguments));
+        }
+
         var normalizedRepositoryPath =
             NormalizeRepositoryPath(repositoryPath);
         SourceMutationPolicy.EnsureGitWorkingTreeMutationAllowed(

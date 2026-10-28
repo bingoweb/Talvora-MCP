@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-28T14:20:49.279Z",
-  "scope": "H4: mark nonzero process exits as structured errors without incorrect usage hints, and preserve failure worklog state.",
+  "verifiedAtUtc": "2026-10-28T14:46:32.380Z",
+  "scope": "H6: reject per-command Git alias configurations that conceal restricted Git commands from delivery and source-edit policy.",
   "libraries": [
     {
-      "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "H4: McpServerToolAttribute.UseStructuredContent = true advertises an output schema and serializes typed results into CallToolResult.StructuredContent (JsonElement?); other non-string results are also serialized into a JSON text Content block. CallToolResult.IsError is nullable bool, set to true for classified non-zero exit failures."
+      "libraryId": "/websites/git-scm",
+      "verified": "H6: official git(1) docs confirm -c name=value passes command-scoped config, and --config-env=name=envvar likewise sets command configuration from an environment variable. Official git-config docs confirm alias.* defines Git command aliases (including commit, push, reset aliases). These forms must be refused by talvora_git_run before policy gates."
     }
   ],
   "vendorSources": [
-    "Official MCP C# SDK: https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md",
-    "Official SDK result contract: https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Protocol/CallToolResult.cs"
+    "Official Git manual: https://git-scm.com/docs/git",
+    "Official git-config manual: https://git-scm.com/docs/git-config"
   ]
 }

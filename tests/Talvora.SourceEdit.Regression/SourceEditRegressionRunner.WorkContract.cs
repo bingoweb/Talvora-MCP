@@ -32,6 +32,16 @@ internal static partial class SourceEditRegressionRunner
                 $"Git delivery gate incorrectly classified {name}.");
         }
 
+        foreach (var aliased in new string[][]
+        {
+            ["-c", "alias.p=push", "p", "origin", "main"],
+            ["-c", "ALIAS.c=commit", "c", "-m", "x"],
+            ["--config-env", "alias.p=TALVORA_ALIAS", "p"],
+            ["--config-env=alias.p=TALVORA_ALIAS", "p"],
+        })
+            Assert(GitArgumentParser.DefinesAlias(aliased), $"Git alias not detected: {string.Join(' ', aliased)}");
+        Assert(!GitArgumentParser.DefinesAlias(["-c", "core.quotepath=false", "status"]), "A plain -c setting is not an alias.");
+
         await using var fixture = await TestWorkspace.CreateAsync();
         foreach (var arguments in new string[][]
         {

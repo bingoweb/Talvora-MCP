@@ -19,4 +19,19 @@ internal static class GitArgumentParser
         }
         return null;
     }
+
+    // H6: a command-line alias would hide push/commit/reset from the delivery gate, the work contract and the source policy.
+    public static bool DefinesAlias(IReadOnlyList<string> args)
+    {
+        for (var i = 0; i < args.Count; i++)
+        {
+            var a = args[i];
+            if ((a == "-c" || a == "--config-env") && i + 1 < args.Count &&
+                args[i + 1].TrimStart().StartsWith("alias.", StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (a.StartsWith("--config-env=alias.", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
 }
