@@ -20,6 +20,8 @@
 
 ## Open
 
+## Decided
+
 ### P-46 — R4 (audit 32) — New source-edit maintenance card reuses an already completed card ID
 - Date: 2026-10-28, HEAD 14eb8f084854fabba626e87affe1f0b3dadcfe39
 - Card text: "### R4 — Keep source-edit history small so every patch is fast (audit 32)" (docs/codex/ROADMAP.md:1115); existing "### R4 — Calmer recovery: upstream degradation is not a local failure; bounded logs" (docs/codex/ROADMAP.md:356).
@@ -28,9 +30,7 @@
   1. Give the audit 32 card the unused ID R6, updating the ROADMAP heading, STATUS queue line, and any exact-implementation R4 literals whose names must follow the ID; keep the existing completed R4 and its commit unchanged. Then implement under trailer Card: R6.
   2. Specify another unique card ID and the exact corresponding updates to its heading, queue entry, and R4-labelled test/probe strings, preserving the previously completed R4.
 - Partial work: reverted (not needed; no implementation or test edits were made).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-10-28): option 1 — the card is R6.** Claude's card defect (R4 was already used by the completed upstream-recovery card, commit 03c2e85). ROADMAP heading, the `R6:` test messages and the code comment, and the STATUS queue line are renamed; the card is otherwise unchanged. Implement with trailer `Card: R6`.
 
 ### P-45 — AP1 — Control Center UI5 smoke fixture crosses the local midnight boundary
 - Date: 2026-10-28, HEAD d12e96f633047acd249d7989378d5575c4fd1f94

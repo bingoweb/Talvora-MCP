@@ -1096,7 +1096,7 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-10-28 (32) · H6, CI2 verified; every patch takes 13 s · result: R4
+### Audit 2026-10-28 (32) · H6, CI2 verified; every patch takes 13 s · result: R6 (renamed from R4 by P-46)
 
 - **H6 (`bfaeed1`)** matches its card; CI 40734561809 success; installed bfaeed1. Live: `-c alias.s=status s` and `--config-env=alias.p=X p` are `isError` with the H6 message, and `status --short` still works.
 - **CI2 (`06f0532`)** matches its card. `Get-CiStatus.ps1 -Commit 06f0532 -TimeoutMinutes 0` prints `CI başarılı` (run 40737107002), so Claude marked it `[x]`.
@@ -1112,7 +1112,7 @@ D-cards go to the top of the agent queue. Newest audit first.
   - The startup purge must be bounded: `RecoverAllPendingAsync` runs before `app.Run`, so an unbounded first cleanup could exceed the Windows service start timeout.
 - Also checked, fine: CRLF line endings and Turkish UTF-8 content survive patches byte for byte.
 
-### R4 — Keep source-edit history small so every patch is fast (audit 32)
+### R6 — Keep source-edit history small so every patch is fast (audit 32; renamed from R4 by P-46)
 
 **Why:** audit 32. Each patch scans every retained transaction. Keep only recent history, and delete a bounded amount per cleanup run so neither the service start nor a patch call stalls.
 
@@ -1129,9 +1129,9 @@ Step 1 (red first). In `tests/StorageMaintenanceSourceRegression.ps1`, insert di
 
 ```powershell
 $sourceEditStore = Read-RepoText 'src\Talvora\SourceEditing\SourceEditTransactionStore.cs'
-Assert-Contains $sourceEditStore 'MaximumCompletedTransactions = 300;' 'R4: completed source-edit history stays small enough to scan on every patch'
-Assert-Contains $sourceEditStore 'MaximumCleanupDeletionsPerRun = 1_000;' 'R4: one cleanup run deletes a bounded number of entries'
-Assert-Contains $sourceEditStore ': TimeSpan.FromDays(3);' 'R4: committed source-edit receipts are kept three days'
+Assert-Contains $sourceEditStore 'MaximumCompletedTransactions = 300;' 'R6: completed source-edit history stays small enough to scan on every patch'
+Assert-Contains $sourceEditStore 'MaximumCleanupDeletionsPerRun = 1_000;' 'R6: one cleanup run deletes a bounded number of entries'
+Assert-Contains $sourceEditStore ': TimeSpan.FromDays(3);' 'R6: committed source-edit receipts are kept three days'
 ```
 
 Run `pwsh -NoProfile -File tests/StorageMaintenanceSourceRegression.ps1` and quote the red line in the Log.
@@ -1145,7 +1145,7 @@ Step 2. In `SourceEditTransactionStore.cs`, replace
 with
 
 ```csharp
-    // R4: every patch scans the retained journals, so history stays small and each cleanup run is bounded.
+    // R6: every patch scans the retained journals, so history stays small and each cleanup run is bounded.
     private const int MaximumCompletedTransactions = 300;
     private const int MaximumCleanupDeletionsPerRun = 1_000;
 ```

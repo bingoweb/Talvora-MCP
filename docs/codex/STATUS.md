@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-10-28-32` = the audit 32 commit. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-10-28-33` = the audit 33 commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -132,7 +132,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] H4 — Failures are never shown as success, and a command's own exit code gets no usage guide (audit 30; Full 68/0; installed 87695b0, live smoke and failure probes green; GitHub CI 40706924110 success)
 - [x] H6 — talvora_git_run refuses command-line aliases (audit 30; Full 68/0; installed bfaeed1, live alias refusal and ordinary Git status verified; GitHub CI 40734561809 success)
 - [x] CI2 — Get-CiStatus follows a cancelled run to the run that replaced it (audit 30; Full 68/0; no deploy; GitHub CI 40737107002 success; verified by Claude audit 32)
-- [?] R4 — Keep source-edit history small so every patch is fast (audit 32; waiting for Claude: P-46, duplicate completed R4 card ID)
+- [ ] R6 — Keep source-edit history small so every patch is fast (audit 32; renamed from R4 by P-46; every patch takes ~13 s today)
 
 ## User queue
 
@@ -175,6 +175,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-10-28 — Claude audit 33: P-46 decided (option 1). The audit 32 card reused the completed id R4 (Claude card defect); it is now R6 with no other change. ChatGPT correctly stopped instead of guessing. No new code commits; installed bfaeed1. Tag `audit/2026-10-28-33`.
 - 2026-10-28 — P-46 proposal (executor: ChatGPT): audit 32 source-edit history R4 duplicates the completed upstream-recovery R4; agent brief selects the wrong card and commit 03c2e85 already uses Card: R4.
   - Proposed a unique new card ID before implementation; source and test files unchanged.
   - Baseline signed-in Changed gate 8 checks/0 failures, last line "Hepsi geçti."; GitHub CI 40741707252 success.
