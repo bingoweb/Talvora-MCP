@@ -68,6 +68,16 @@ The user decided (2026-10-18): the agent does **only** what Claude's cards say, 
 
 Violations found in Claude's audits become D-cards that revert the unrequested change.
 
+### QUALITY CRAFT — how the agent builds what Claude designed (user decision 2026-10-30, part of the EXECUTION MANDATE)
+
+The user wants every product to look original, move beautifully and speak flawless Turkish, and every quality check to cover cosmetics and usability, not only security. Claude decides the design; the agent builds it with the same care and checks its own work. Nothing here gives design freedom: rules 6 and 9–10 still apply.
+
+1. **No generic AI look.** Never introduce on your own: purple/indigo/pink gradients, glowing blobs or orbs, glassmorphism cards, the "centred hero + two buttons + three icon cards" layout, emoji or icon-library icons as decoration, a default system/Inter font where the card names another, everything centred in identical white rounded cards. If a card's values seem to produce such a look or leave a visible detail open, write a finding or a proposal; do not "improve" it.
+2. **Motion and graphics exactly as specified.** Implement durations, easing, delays, sequences and frame budgets from the card literally; animate `transform`/`opacity` (or the canvas the card names) rather than layout properties; honour reduced motion exactly as the card says; remove every timer, listener and animation frame on teardown. Use only the libraries this project allows (`Directory.Packages.props` and the card; WPF visuals only from the design specs).
+3. **Turkish quality gate.** Copy every UI string character for character from the card into the resource file the card names. Before committing, reread each new or changed string for missing diacritics (ç ğ ı İ ö ş ü), apostrophes after proper nouns and abbreviations, `de/da`, `ki`, `mi` spelling, Turkish quotation marks and Turkish-locale casing and sorting (`tr-TR`). A doubt is a finding; never reword a string yourself.
+4. **Self-review before done.** After the gate passes and before ticking the card, check four lenses and write them as one short "Self-review" block (at most four lines) in the card's log entry: **cosmetics** (matches the card's values; loading, empty and error states built as specified), **usability** (the main task path works end to end, every action gives feedback, targets and focus as the card says), **Turkish** (item 3), **correctness and security** (tests, limits, errors handled). Anything wrong outside the card's files goes to "Findings for Claude"; never fix outside the card.
+5. Cards that change what users see still end with `[~] visual check pending (Claude)`: Claude looks at the real screens at the next audit.
+
 ## TOKEN ECONOMY (work cheaply, never at the cost of correctness)
 
 Every file read, command output, MCP tool schema and screenshot costs tokens. These rules never override a card's Acceptance: if a rule would skip required evidence, the card wins. ChatGPT applies them through the Talvora tools listed in "WHO MUST FOLLOW THESE RULES".
