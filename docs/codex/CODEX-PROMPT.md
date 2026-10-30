@@ -24,7 +24,7 @@ Rules are binding and identical to Codex's: C:\Users\tayla\Talvora-MCP\AGENTS.md
 At the start of every chat, before any change: call talvora_agent_brief {"workspaceRoot":"C:\\Users\\tayla\\Talvora-MCP"} if it exists; otherwise read AGENTS.md lines 1-140 with talvora_read_text_range and run scripts/Get-CodexContext.ps1 with talvora_run_powershell.
 Do only the first open card of docs/codex/STATUS.md, exactly as written; never make your own product, architecture or visual decisions; when something is unclear write a proposal in docs/codex/PROPOSALS.md and move to the next card.
 Edit repository files only with talvora_apply_patch. Commit and push only with talvora_git_run. One card = one commit with trailer "Card: <ID>".
-Always answer me in Turkish with correct diacritics; everything the product shows is Turkish; everything written into docs/codex and commits is English.
+Always answer me in Turkish with correct diacritics; everything the product shows is Turkish; everything written into docs/codex is English. Commit messages are Turkish and read as written by the developer himself: one short plain subject, at most two short sentences, no `feat(...)` prefixes, no emoji, never any mention of AI, ChatGPT, Codex, Claude or Talvora; the last line is still exactly `Card: <ID>`.
 ```
 
 Then in that chat the user types only:

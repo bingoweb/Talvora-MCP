@@ -35,7 +35,9 @@ ChatGPT must not use Codex/Claude delegation tools (`talvora_codex_*`, `talvora_
 
 ## Language policy
 
-- Agent-facing documents (`docs/codex/*`, this file, code comments, commit messages, tool descriptions) are **English**.
+- Agent-facing documents (`docs/codex/*`, this file, code comments, tool descriptions) are **English**.
+- **Commit messages and everything published on GitHub are Turkish** and read as written by the developer himself (user decision 2026-10-29, shared by all projects since 2026-10-30): one short plain subject (≤ 72 characters), at most two short sentences of body, no `feat(...)` prefixes, no bullet lists, no test counts, no emoji, never `Co-Authored-By`, `Generated with` or any AI/tool name (Claude, ChatGPT, Codex, Talvora); the last line is still exactly `Card: <ID>`.
+- **Claude writes no code at all** (user decision 2026-10-25, confirmed for every project 2026-10-30): every change, including audit fixes, is a card the agent implements.
 - Everything Talvora shows to people — Control Center, tray, desktop worklog, user-facing error messages, MCP tool **titles** — is **ordinary Turkish** with correct diacritics.
 - The agent always reports to the user in **Turkish**, with correct diacritics (also in STATUS gate lines such as `Hepsi geçti.`).
 
@@ -89,7 +91,7 @@ Every file read, command output, MCP tool schema and screenshot costs tokens. Th
 
 **C. Write cheaply**
 1. **STATUS Log entry ≤ 8 lines:** what changed, gate last line + counts, measured numbers, installed commit, anything open. No pasted code or command output.
-2. **Commit message:** subject + ≤ 6 body lines + one blank line + `Card: <ID>` as the last line (its own paragraph, so git reads it as a trailer).
+2. **Commit message:** Turkish subject + at most two short sentences + one blank line + `Card: <ID>` as the last line (its own paragraph, so git reads it as a trailer).
 3. **Report to the user (Turkish):** the protocol step 11 items in short sentences; `git diff --stat`, never the full diff.
 4. **Do not echo** large files, JSON or logs into chat, STATUS or Gitea; summarise in one line with the key numbers.
 
@@ -114,7 +116,7 @@ When the user says "Talvora'ya devam et", "Talvora devam", "sıradaki adım" or 
 6. **Implement:** follow the card's **Why / Files / Do / Don't / Acceptance** exactly (`docs/codex/ROADMAP.md`; N cards in `docs/codex/DESIGN-WORKLOG.md`; UI cards in `docs/codex/DESIGN-CONTROL-CENTER.md`; decisions in `docs/codex/PROPOSALS.md`). Test first (red), then code (green). If it cannot work as written, write a proposal (EXECUTION MANDATE rule 6) — do not improvise. Context7 before relying on any framework/SDK/CLI behaviour.
 7. **Verify:** quality gate → last line **`Hepsi geçti.`**, run **as the signed-in user** (Codex: its own shell; ChatGPT: `talvora_user_run` once A1 exists — until then run it through `talvora_run_powershell` and write "gate run as LocalSystem" in the Log, because LocalSystem hides user-context failures); runtime-affecting cards also deploy with `scripts/Deploy-Windows-Installer.ps1` and verify `/healthz.sourceCommit` + installed smoke; UI cards attach both-theme PNGs.
 8. **Record:** tick the item (never `[x]` with "evidence follows" or "pending"; `[x]` only when **every** Acceptance step — including deploy and the live checks on the installed runtime — is done in this message; otherwise `[~] live pending: <what>` and do those checks first in the next message before any other card; `[~]` + a "User queue" line when user evidence is needed), add a Log entry (English, newest on top: what changed, tests, Context7 IDs, installed commit, executor = Codex or ChatGPT), reset "In progress" to `(none)`; mirror the evidence to the Gitea issue named in STATUS → Fixed facts → "Gitea tracker" (best effort: never stop or ask because of it).
-9. **Commit:** exactly one commit per item: `<type>(<area>): <summary>` + body + trailer `Card: <ID>`.
+9. **Commit:** exactly one commit per item: a plain Turkish subject (Language policy) + optional short body + trailer `Card: <ID>`.
 10. **Push:** only while STATUS "Fixed facts" says `Push: Authorized`; then `git push origin main` and `git push github main`, never force. On failure retry once, then report.
 10b. **CI is part of done (root-cause rule, 2026-10-20).** After the GitHub push, check the `windows-ci` run of that exact commit **once, without waiting**: Codex `pwsh -NoProfile -File scripts/Get-CiStatus.ps1 -TimeoutMinutes 0`; ChatGPT `talvora_user_run {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-File","scripts/Get-CiStatus.ps1","-TimeoutMinutes","0"], workingDirectory: "C:\Users\tayla\Talvora-MCP"}` (signed-in user, where `gh` is logged in; this replaces the older 60-second `talvora_gh_run` loop in ROADMAP → CI1). Exit 0 = green, 1 = red (it prints the failing lines), 2 = no run yet or still running. Green → the card may be `[x]`. Red → do **not** start another card; the next task is the CI fix, committed once with trailer `Card: <same ID>` and body line `CI follow-up: <run id>`. Not finished yet (exit 2) → mark `[~] CI pending`, report and stop; never wait or poll for it inside the message; check it first thing in the next message and turn the line into `[x]` (with the run id) inside that message's card commit — or, when the queue has no further card, leave the `[~]` line for Claude instead of making a STATUS-only commit. A local gate run as LocalSystem never replaces this check: identity-dependent code passes there and fails on GitHub.
 11. **Report to the user in Turkish, short:** item done · changed files · gate last line · deploy/installed commit · push status · next item · what the user must do (if anything).
