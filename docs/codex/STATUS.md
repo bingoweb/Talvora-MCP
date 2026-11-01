@@ -24,7 +24,7 @@
 
 ## In progress
 
-In progress: (none)
+In progress: WL1 + [C] UI12 — Claude implements both (one-off user exception 2026-11-01); the agent waits and takes W1 only after this line is reset
 
 ## Agent queue
 
@@ -133,7 +133,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] H6 — talvora_git_run refuses command-line aliases (audit 30; Full 68/0; installed bfaeed1, live alias refusal and ordinary Git status verified; GitHub CI 40734561809 success)
 - [x] CI2 — Get-CiStatus follows a cancelled run to the run that replaced it (audit 30; Full 68/0; no deploy; GitHub CI 40737107002 success; verified by Claude audit 32)
 - [x] R6 — Keep source-edit history small so every patch is fast (audit 32; signed-in Full 68/0; installed 144c8dd; live 252 transactions / 300 receipts, probe patches 0.89–1.02 s; GitHub CI 40747815417 success; verified by Claude audit 34)
-- [ ] WL1 — Every finished step carries its real measured duration (data for the UI12 redesign)
+- [C] WL1 — Every finished step carries its real measured duration (data for the UI12 redesign) — Claude implements (one-off user exception 2026-11-01)
 - [C] UI12 — "tmux" redesign of the desktop worklog card (DESIGN-WORKLOG §7b) — Claude builds it after WL1 is installed; the agent skips this line and does not touch src/Talvora.Tray/Worklog/
 - [ ] W1 — Console output keeps Turkish text (UTF-8, otherwise the OEM code page) (audit 35)
 - [ ] W2 — Git reports Turkish paths as text, not octal escapes (audit 35)
