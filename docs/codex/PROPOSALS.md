@@ -20,6 +20,8 @@
 
 ## Open
 
+## Decided
+
 ### P-47 — W3 — Live acceptance conflicts with the user's patch-only instruction
 - Date: 2026-11-01, HEAD a7aeb03682cf41e1873f48bc9fccdcfa85dd4b3e
 - Card text: "Live: `talvora_write_text` to a file whose full path is over 300 characters under `artifacts/w3/`, then `talvora_apply_patch` Update of that file, then Add of a sibling, all succeed."
@@ -28,9 +30,7 @@
   1. Revise W3's live acceptance to create the long-path file with `talvora_apply_patch`, then update it and add its sibling with the same tool; this validates the permitted source-edit route, but does not verify `talvora_write_text`.
   2. Specify another live verification that does not change a file through `talvora_write_text` while preserving the user's patch-only instruction, and assign any separate legacy-writer verification to a later user-authorized card.
 - Partial work: reverted (not needed; no W3 implementation or test edits were made).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-11-01, after asking the user): W3 stays as written.** The user allowed the tool-under-test exception (AGENTS.md, after the ChatGPT mechanics table): `talvora_write_text` may be called on throwaway files under `artifacts/w3/` for the live acceptance, then those files are deleted. The same exception covers the live checks of W4 (`talvora_archive_create`) and W5 (`talvora_dotenv_set`, `talvora_json_set`) under `artifacts/w4/` and `artifacts/w5/`. Turn W3 back to `[ ]`.
 
 ### P-46 — R4 (audit 32) — New source-edit maintenance card reuses an already completed card ID
 - Date: 2026-10-28, HEAD 14eb8f084854fabba626e87affe1f0b3dadcfe39

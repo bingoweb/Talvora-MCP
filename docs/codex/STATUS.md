@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-11-01-35` = the audit 35 commit. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-11-01-36` = the audit 36 commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -137,11 +137,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI12 — "tmux" redesign of the desktop worklog card (DESIGN-WORKLOG §7b) — built by Claude; signed-in Full 68/0; previews of every state reviewed; installed d09d456; GitHub CI 41329732404 success
 - [x] UI12b — Session signal strip and ANSI frame for the worklog card (DESIGN-WORKLOG §7b, user asked for the measurable parts of concepts B and C) — built by Claude; signed-in Full 68/0; installed a7a7194; GitHub CI 41330417287 success
 - [x] D24 — Worklog card motion and signal-axis fixes from Claude's own deep check (DESIGN-WORKLOG §7b D24) — fixed by Claude (one-off user exception 2026-11-01); signed-in Full 68/0; installed d62a818; GitHub CI 41331187830 success
-- [~] UI12c — Session time ruler replaces the signal strip (DESIGN-WORKLOG §7b UI12c, user chose concept A) — built by Claude; signed-in Full 68/0; live pending: install and CI of the pushed commit (Claude checks them in the same turn)
+- [x] UI12c — Session time ruler replaces the signal strip (DESIGN-WORKLOG §7b UI12c, user chose concept A) — built by Claude; installed 8ff7c9a; GitHub CI success; live real-data check in audit 36 matched measured 2.46/1.56/9.47 s
+- [C] UI12d — Time ruler polish (audit 36): the legend counts finished steps like the status bar and names a running one separately ("3 adım · 1 sürüyor"); totals round to the nearest value instead of flooring ("iş 14 sn" for 13.7 s); end labels show seconds when both ends fall in the same minute ("22:12:01 … 22:12:16") — Claude builds it; the agent skips this line
 - [x] D25 — A restarted worklog session no longer shows the previous session's files, build and test facts — found in Claude's live real-data check, fixed by Claude (one-off user exception 2026-11-01); signed-in Full 68/0
 - [x] W1 — Console output keeps Turkish text (UTF-8, otherwise the OEM code page) (installed e83bf6f, user-run smoke and Turkish output probes green; GitHub CI 41337913647 success)
 - [x] W2 — Git reports Turkish paths as text, not octal escapes (installed a7aeb03; live Turkish Git status and surface smoke green; GitHub CI 41339489645 success)
-- [?] W3 — Paths longer than 260 characters work for writes and source edits (audit 35; waiting for Claude: P-47)
+- [ ] W3 — Paths longer than 260 characters work for writes and source edits (audit 35; P-47 decided in audit 36: tool-under-test exception)
 - [ ] W4 — Archives made by the service are readable by the user (audit 35)
 - [ ] W5 — Config writers keep the file's BOM and readable non-ASCII text (audit 35)
 - [ ] W6 — Case-insensitive search treats I, ı, İ and i as one letter (audit 35)
@@ -192,6 +193,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-01 — Claude audit 36: W1 and W2 match their cards (CI 41337913647, 41339489645 success); live on the installed a7aeb03: dir/echo/PowerShell output and dotnet's Turkish message read correctly in service and user context, git_status shows "Sınıf Öğrenci.cs" and a Turkish root. UI12c checked on the real desktop with a timed session: segments 2,4/1,5/9,5 sn vs measured 2.46/1.56/9.47 s, live running segment, gap "ara 1,6 sn"; three small inconsistencies queued as [C] UI12d. P-47 decided with the user: tool-under-test exception (AGENTS.md). Tag `audit/2026-11-01-36`.
 - 2026-11-01 — W2 closeout: installed a7aeb03 /healthz matched HEAD; live git_status returned root `artifacts/w2 ğüş` and untracked `Sınıf Öğrenci.cs`; installed surface smoke GREEN; GitHub windows-ci 41339489645 success. W3 blocked by P-47 because its live write_text acceptance conflicts with the user's patch-only file mutation instruction; no W3 implementation started.
 - 2026-11-01 — W2, executor ChatGPT via Talvora: prefix Git calls with core.quotepath=false while preserving safe.directory. RED: W2 argument assertion failed; SourceEdit core regression GREEN. Signed-in Full: 68 kontrol, 0 hata; Hepsi geçti. Context7 /git/git and Git's official config documentation confirm non-ASCII bytes remain unquoted while control characters retain escaping. Context7 map candidate: Git 2.55.0.windows.5 → /git/git. Exact-commit deployment, installed smoke, live Git status and CI pending. Gitea mirror skipped: Talvora connector exposes no authenticated Gitea comment tool.
 - 2026-11-01 — W1 closeout: installed e83bf6f /healthz matched HEAD; user-run live smoke GREEN; both process runners returned `düz arşiv.txt`, and dotnet's missing-project output contained `dosyası`; GitHub windows-ci 41337913647 success.

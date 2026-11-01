@@ -31,6 +31,8 @@ These rules bind **every implementing agent** that changes this repository, iden
 | Deploy | First build the installer for the current HEAD as the signed-in user, detached (same pattern as the Full gate above, command `& ./scripts/Build-Windows-Installer.ps1 *> artifacts/<card>-build.log; exit $LASTEXITCODE`; the log's `SourceCommit` must equal HEAD, without `-dirty-`). Then `talvora_run_powershell` → `scripts/Deploy-Windows-Installer.ps1` (it installs the last **built** artifact; its JSON `sourceCommit` must equal HEAD), then poll `/healthz` with `talvora_http_request` until `sourceCommit` = HEAD. |
 | Report to the user | Turkish, short (protocol step 11). |
 
+**Tool-under-test exception (user decision 2026-11-01, P-47):** repository files change only through `talvora_apply_patch`. When a card's live acceptance must exercise the tool the card fixes (for example `talvora_write_text`, `talvora_archive_create`, `talvora_dotenv_set`, `talvora_json_set`), call that tool only on throwaway files under `artifacts/<card>/` and delete them afterwards; never on tracked repository files.
+
 ChatGPT must not use Codex/Claude delegation tools (`talvora_codex_*`, `talvora_claude_*`) to do card work unless the user explicitly asks in that chat.
 
 ## Language policy
