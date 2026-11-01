@@ -149,7 +149,23 @@ public static partial class ConfigAssetTools
                 level,
                 includeBaseDirectory);
 
-            File.Move(temp, destination, overwrite);
+            // W4: a file moved out of the service's temp folder keeps its SYSTEM-only permissions; a copy created next
+            // to the destination inherits the destination folder's permissions instead.
+            var sibling = Path.Combine(
+                Path.GetDirectoryName(destination)!,
+                "." + Path.GetFileName(destination) + "." + Guid.NewGuid().ToString("N") + ".tmp");
+            try
+            {
+                File.Copy(temp, sibling);
+                File.Move(sibling, destination, overwrite);
+            }
+            finally
+            {
+                if (File.Exists(sibling))
+                {
+                    try { File.Delete(sibling); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+                }
+            }
 
             using var archive = ZipFile.OpenRead(destination);
             return new TalvoraArchiveCreateResponse(

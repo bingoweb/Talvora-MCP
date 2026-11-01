@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-01T19:23:49.000Z",
-  "scope": "W3: support long paths in Win32 file calls.",
+  "verifiedAtUtc": "2026-11-01T19:36:38.000Z",
+  "scope": "W4: publish archives with destination-directory permissions.",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-01 W3: the Windows extended device path syntax uses \\\\?\\ and UNC paths use \\\\?\\UNC\\; .NET handles long paths implicitly while device paths skip normalization (query: \"Win32 long path \\\\?\\ prefix MAX_PATH CreateFileW MoveFileExW\"). The vendor Win32 long-path documentation confirms the extended form for Unicode APIs."
+      "verified": "2026-11-01 W4: Context7 returned unrelated ACL guidance for the requested copy and move security descriptor facts (queries: \"File.Copy security descriptor inherited from destination directory; File.Move keeps the security descriptor\" and \"System.IO.File.Copy destination inherited access control permissions Windows\"). Vendor CopyFile documents copied security resource attributes; MoveFileEx documents destination security inheritance when moving across volumes. Destination inheritance for this scenario is checked live with the signed-in user."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation"
+    "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-copyfile",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-movefileexw"
   ]
 }
