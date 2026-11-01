@@ -2008,6 +2008,104 @@ Step 3. Refresh `.context7/verification.json`.
 - Live: `talvora_run_process` with `executable: "npm"`, `arguments: ["--version"]` prints the npm version.
 - Push; CI once.
 
+### W8 — git_run allows the protocol's fast-forward pull without explicitAdmin (TahtaPilot P-30)
+
+**Why:** CONTINUE PROTOCOL step 2 in every project tells the agent to run `git pull --ff-only origin main`. `SourceMutationPolicy.EnsureGitWorkingTreeMutationAllowed` (`src/Talvora/SourceEditing/SourceMutationPolicy.cs:180`) lists `pull` in `GitWorkingTreeMutationCommands` (line 17) and refuses it in every development workspace unless `explicitAdmin` is true; ChatGPT's `explicitAdmin` call is then blocked by OpenAI's connector safety check (TahtaPilot P-30, 2026-11-01). So the sync step cannot run through `talvora_git_run` at all. A pull with `--ff-only` can only move the branch to commits that already exist upstream: Claude checked with Git 2.55 that it refuses diverged history and leaves `HEAD` unchanged even with `pull.rebase=true`, and fast-forwards otherwise. Only that plain shape is allowed; every other pull, and every other working-tree command, stays behind the policy.
+
+**Files:**
+- `src/Talvora/SourceEditing/SourceMutationPolicy.cs`
+- `src/Talvora/Tools/GitTools.cs` (the `talvora_git_run` description string only)
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.WorkContract.cs`
+- `.context7/verification.json`
+
+**Context7:** `/websites/git-scm`: "git pull --ff-only with pull.rebase=true on diverged history" (vendor: https://git-scm.com/docs/git-pull, options `--ff-only` and `pull.rebase`). Context7 map candidate: Git → `/websites/git-scm`.
+
+#### Exact implementation
+
+Step 1 (red first). In `RunGitArgumentClassificationAsync`, insert directly before the last statement (`SourceMutationPolicy.EnsureGitWorkingTreeMutationAllowed(fixture.Root, ["status"], …)`):
+
+```csharp
+        // W8: only the plain fast-forward pull passes without explicitAdmin.
+        foreach (var arguments in new string[][]
+        {
+            ["pull", "--ff-only"],
+            ["pull", "--ff-only", "origin"],
+            ["pull", "--ff-only", "origin", "main"],
+        })
+            SourceMutationPolicy.EnsureGitWorkingTreeMutationAllowed(
+                fixture.Root, arguments, "talvora_git_run",
+                explicitAdmin: false);
+        foreach (var arguments in new string[][]
+        {
+            ["pull"],
+            ["pull", "origin", "main"],
+            ["pull", "--rebase"],
+            ["pull", "--ff-only", "--rebase"],
+            ["pull", "origin", "main", "--ff-only"],
+            ["pull", "--ff-only", "origin", "main:other"],
+            ["pull", "--ff-only", "https://example.invalid/r.git"],
+            ["pull", "--ff-only", "origin", "main", "extra"],
+            ["-C", "x", "pull", "--ff-only"],
+            ["merge", "--ff-only", "origin/main"],
+        })
+            ExpectPolicyViolation(() =>
+                SourceMutationPolicy.EnsureGitWorkingTreeMutationAllowed(
+                    fixture.Root, arguments, "talvora_git_run",
+                    explicitAdmin: false));
+```
+
+Run the suite: the first loop must fail (red) before Step 2.
+
+Step 2. In `SourceMutationPolicy.cs`, inside `EnsureGitWorkingTreeMutationAllowed`, insert directly after the `if (explicitAdmin) { return; }` block:
+
+```csharp
+        if (IsPlainFastForwardPull(arguments))
+        {
+            return;
+        }
+```
+
+and add this method directly before `private static void ThrowPolicyViolation(`:
+
+```csharp
+    // W8: a fast-forward-only pull can only move the branch to commits that already exist upstream
+    // (Git refuses diverged history even with pull.rebase=true), so the CONTINUE PROTOCOL sync step
+    // needs no explicitAdmin. Only the plain shape passes: no global options, no other flags, no refspec or URL.
+    private static bool IsPlainFastForwardPull(IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count < 2 || arguments.Count > 4 ||
+            !string.Equals(arguments[0], "pull", StringComparison.Ordinal) ||
+            !string.Equals(arguments[1], "--ff-only", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        for (var index = 2; index < arguments.Count; index++)
+        {
+            var value = arguments[index];
+            if (string.IsNullOrWhiteSpace(value) ||
+                value.StartsWith('-') ||
+                value.Contains(':'))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+```
+
+Step 3. In `GitTools.cs`, in the `talvora_git_run` description, replace exactly `Known working-tree mutation commands in recognized development workspaces route to talvora_apply_patch by default;` with `Known working-tree mutation commands in recognized development workspaces route to talvora_apply_patch by default, except a plain pull --ff-only [<remote> [<branch>]] (no other options) for the sync step;`. Nothing else in the description changes.
+
+**Don't:** remove `pull` from `GitWorkingTreeMutationCommands`; allow `merge`, `--rebase`, `--autostash`, refspecs, URLs or global options; change `explicitAdmin`, the work contract, the delivery gate or the interactive-user routing of remote verbs.
+
+**Acceptance:**
+- Red, then green (`RunGitArgumentClassificationAsync`).
+- Full gate `Hepsi geçti.`.
+- Deploy.
+- Live: `talvora_git_run {repositoryPath: "C:\\Users\\tayla\\Talvora-MCP", arguments: ["pull", "--ff-only", "origin", "main"]}` without `explicitAdmin` returns exit 0 (`Already up to date.` or a fast-forward); `arguments: ["pull", "origin", "main"]` still returns `SOURCE_EDIT_POLICY_VIOLATION`.
+- Push; CI once.
+
 ### L1 — Legacy Windows-1254 text files can be read and edited, keeping their encoding (audit 35)
 
 **Why:** audit 35 defect 8 (user decision 2026-11-01: read and edit, keep the encoding).

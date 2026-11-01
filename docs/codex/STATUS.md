@@ -144,6 +144,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] W2 — Git reports Turkish paths as text, not octal escapes (installed a7aeb03; live Turkish Git status and surface smoke green; GitHub CI 41339489645 success)
 - [x] W3 — Paths longer than 260 characters work for writes and source edits (installed e12f736; 337-character live write, update and add green; installed surface smoke green; GitHub CI 41342201505 success)
 - [~] W4 — Archives made by the service are readable by the user (live pending: deploy, signed-in archive read and installed smoke; CI pending)
+- [ ] W8 — git_run allows the protocol's fast-forward pull without explicitAdmin (TahtaPilot P-30)
 - [ ] W5 — Config writers keep the file's BOM and readable non-ASCII text (audit 35)
 - [ ] W6 — Case-insensitive search treats I, ı, İ and i as one letter (audit 35)
 - [ ] W7 — run_process resolves bare command names through PATH and PATHEXT (audit 35)
@@ -193,6 +194,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-01 — Claude: W8 card written and queued after W4. Cause of TahtaPilot P-30's refused sync: `pull` is in `SourceMutationPolicy.GitWorkingTreeMutationCommands`, so `talvora_git_run` refuses `git pull --ff-only` in every development workspace without `explicitAdmin`, and ChatGPT's `explicitAdmin` call is blocked by OpenAI's connector check. W8 lets only the plain `pull --ff-only [<remote> [<branch>]]` through; Claude verified with Git 2.55 in a scratch repository that `--ff-only` refuses diverged history with `pull.rebase=true` and leaves HEAD unchanged. Git added to the Context7 map (`/websites/git-scm`).
 - 2026-11-01 — W4, executor ChatGPT via Talvora: publish service-created archives via a destination-directory sibling copy before moving into place. RED: installed e12f736 created a ZIP that the signed-in user could not read (access denied). Signed-in Full: 68 kontrol, 0 hata; Hepsi geçti. Context7 /dotnet/docs returned unrelated ACL guidance; Microsoft CopyFile and MoveFileEx documentation checked, with actual destination permissions to be verified live. Exact-commit deployment, signed-in archive read and CI pending. Gitea mirror skipped: Talvora connector exposes no authenticated Gitea comment tool.
 - 2026-11-01 — W3 closeout: installed e12f736 /healthz matched HEAD; write_text, apply_patch update and add succeeded at a 337-character path under artifacts/w3, and test files were deleted; installed surface smoke GREEN; GitHub windows-ci 41342201505 success.
 - 2026-11-01 — W3, executor ChatGPT via Talvora: extended Win32 path syntax for durable moves, source-edit guards and knowledge path probes. RED: long-path write failed with "Durable file publication failed"; SourceEdit core including W3 and PathGuard regressions GREEN. Signed-in Full: 68 kontrol, 0 hata; Hepsi geçti. Context7 /dotnet/docs and Microsoft Win32 maximum-path documentation confirm extended device and UNC paths. Exact-commit deployment, live probes and CI pending. Gitea mirror skipped: Talvora connector exposes no authenticated Gitea comment tool.

@@ -15,3 +15,4 @@ Maintained by Claude (CONTEXT7 PROTOCOL in AGENTS.md). Every id below was checke
 | TOML | `Tomlyn` 2.10.1 | `/xoofx/tomlyn/2.10.1` | https://github.com/xoofx/Tomlyn |
 | YAML | `YamlDotNet` 18.1.0 | `/aaubry/yamldotnet/v16.3.0` — **gap** | https://github.com/aaubry/YamlDotNet/wiki |
 | Diffs | `DiffPlex` | `/mmanela/diffplex` | https://github.com/mmanela/diffplex |
+| Git CLI | Git for Windows 2.55 | `/websites/git-scm` | https://git-scm.com/docs |
