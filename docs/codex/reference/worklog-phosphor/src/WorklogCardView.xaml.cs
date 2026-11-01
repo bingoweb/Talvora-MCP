@@ -370,8 +370,11 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
 
         var startText = startLocal.ToString("HH:mm", CultureInfo.InvariantCulture);
         var endText = startLocal.AddSeconds(span).ToString("HH:mm", CultureInfo.InvariantCulture);
-        var startWidth = AddClockLabel(startText, 0, top);
-        var endWidth = AddClockLabel(endText, null, top);
+        // UI12d: both ends in the same minute would read "22:12 … 22:12"; show their seconds instead.
+        var sameMinute = startText == endText;
+        var startWidth = AddClockLabel(sameMinute ? startLocal.ToString("HH:mm:ss", CultureInfo.InvariantCulture) : startText, 0, top);
+        var endWidth = AddClockLabel(
+            sameMinute ? startLocal.AddSeconds(span).ToString("HH:mm:ss", CultureInfo.InvariantCulture) : endText, null, top);
 
         var step = span <= 600 ? 60 : span <= 3600 ? 300 : 900;
         var stepTicks = TimeSpan.FromSeconds(step).Ticks;

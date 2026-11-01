@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-01T18:52:42.000Z",
-  "scope": "W2: Git emits non-ASCII paths as text.",
+  "verifiedAtUtc": "2026-11-01T19:16:26.000Z",
+  "scope": "[C] UI12d: time ruler polish (finished-step count with running named separately, nearest-second rounding, same-minute end labels).",
   "libraries": [
     {
-      "libraryId": "/git/git",
-      "verified": "2026-11-01 W2: core.quotePath=false stops treating bytes above 0x80 as unusual in path output; control characters, quotes and backslashes remain escaped (query: \"core.quotePath false git status porcelain non-ASCII paths\")."
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-01 UI12d: Math.Round(value, MidpointRounding.AwayFromZero) rounds to the nearest integer with halves away from zero, used so 13.7 s prints as 14 sn. Context7 returned no Math.Round snippet (query: \"Math.Round MidpointRounding.AwayFromZero nearest integer\"); confirmed on the vendor API page."
     }
   ],
   "vendorSources": [
-    "https://git-scm.com/docs/git-config"
+    "https://learn.microsoft.com/dotnet/api/system.math.round"
   ]
 }

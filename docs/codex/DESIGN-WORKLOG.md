@@ -439,7 +439,9 @@ Steps without a measurement are not drawn; with no measured step the ruler is hi
 in from its left edge (260 ms, cubic ease-out); off under reduced motion, high contrast or when hidden. The preview harness
 builds each fixture as a protocol frame and draws it with the mapper's own functions.
 
-Built by Claude on 2026-11-01 (WL1 + UI12 + UI12b + D24 + UI12c). The preview harness (`Talvora.Tray.exe --worklog-preview <dir>`) renders every state; fixture durations there are labelled design fixtures, while the live card reads only WL1 measurements.
+**UI12d (audit 36 polish):** the ruler legend counts finished steps like the status bar and names a running step separately ("2 adım · 1 sürüyor"); all measured seconds round to the nearest value ("14 sn" for 13.7 s, "1:00" for 59.6 s); when both ends of the ruler fall in the same minute the end labels show seconds ("22:12:01 … 22:12:16").
+
+Built by Claude on 2026-11-01 (WL1 + UI12 + UI12b + D24 + UI12c + UI12d). The preview harness (`Talvora.Tray.exe --worklog-preview <dir>`) renders every state; fixture durations there are labelled design fixtures, while the live card reads only WL1 measurements.
 
 ## 8. Control Center integration
 

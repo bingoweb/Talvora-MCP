@@ -84,12 +84,14 @@ public static class WorklogMeasure
             return value.ToString("0.0", Turkish) + " sn";
         }
 
-        if (value < 60)
+        // UI12d: round to the nearest second (13.7 s → "14 sn"); flooring understated real work.
+        var rounded = Math.Round(value, MidpointRounding.AwayFromZero);
+        if (rounded < 60)
         {
-            return Math.Floor(value).ToString("0", Turkish) + " sn";
+            return rounded.ToString("0", Turkish) + " sn";
         }
 
-        var span = TimeSpan.FromSeconds(Math.Floor(value));
+        var span = TimeSpan.FromSeconds(rounded);
         return span.TotalHours >= 1
             ? span.ToString(@"h\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture)
             : span.ToString(@"m\:ss", System.Globalization.CultureInfo.InvariantCulture);

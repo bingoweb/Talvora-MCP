@@ -154,10 +154,13 @@ public static class WorklogCardMapper
         }
 
         var failures = intervals.Count(interval => interval.State == WorklogRowState.Failed);
+        // UI12d: count finished steps like the status bar; a running step is named separately.
+        var running = intervals.Count(interval => interval.State == WorklogRowState.Running);
+        var finished = intervals.Length - running;
         var complete = frame.Timeline.All(entry => entry.DurationSeconds is not null || entry.State == WorklogStepState.Running);
         return new SignalLegend(
             start.ToLocalTime().DateTime,
-            $"iş {WorklogMeasure.Format(work)} · {intervals.Length} adım",
+            $"iş {WorklogMeasure.Format(work)} · {finished} adım" + (running > 0 ? $" · {running} sürüyor" : string.Empty),
             failures > 0 ? $"{failures} hata" : null,
             complete && span > 0 ? $"ara {WorklogMeasure.Format(Math.Max(0, span - work))}" : null);
     }
