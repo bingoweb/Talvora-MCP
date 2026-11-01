@@ -1096,6 +1096,993 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-11-01 (35) · whole-project deep audit: tools, Windows compatibility, screens · result: W1–W7, L1, UX1, UI11
+
+There were no agent commits since audit 34 (queue empty, installed 144c8dd). Claude probed the installed runtime tool by tool with these inputs:
+- Turkish and space-containing paths;
+- paths longer than 260 characters;
+- UTF-8, BOM, UTF-16 and Windows-1254 files;
+- the Turkish console code page (857).
+
+Claude also checked Origin/Host/CORS defences and rendered every Control Center screen in both themes. Mechanisms marked "verified" were run in a scratch .NET 10 program outside the repository.
+
+**Correct and unchanged**
+- Origin, DNS-rebinding and no-preflight requests are refused with 403/400.
+- Zip-slip entries are refused, and extraction keeps the destination's permissions.
+- CRLF line endings and UTF-16 survive `replace_text` and `apply_patch`.
+- Turkish file names work in `apply_patch`, `read_text`, `find_files` and `list`.
+- Case-only renames work.
+- Long-path reads work.
+- All screens use correct Turkish.
+
+**Defects (each has its card below)**
+1. **W1 — console output is mojibake.**
+   - `talvora_run_process`, `talvora_run_powershell` and every toolchain runner leave `StandardOutputEncoding` unset. The service has no console, so output is decoded as Latin-1/1252: `dir` prints `arŸiv.zip`/`d\x81z metin.txt`, and dotnet's Turkish UTF-8 message `Proje dosyası yok` becomes `Proje dosyasÄ± yok`.
+   - `talvora_user_run` and jobs decode as UTF-8, so OEM output becomes `ar�iv.zip`.
+   - Every Turkish file name, compiler message and Windows tool message reaches the agent broken.
+2. **W2 — Git paths are quoted octal.** `git status` reports `"S\304\261n\304\261f \303\226\304\237renci.cs"` because `core.quotepath` defaults to true.
+3. **W3 — paths over 260 characters fail on write.** `LongPathsEnabled` is 0 on this machine, and the P/Invoke calls (`AtomicFile.MoveFileExW`, `SourceEditPathGuard.CreateFileW`, `KnowledgeTools.FindFirstFileW/CreateFileW`) do not get .NET's automatic long-path handling.
+   - `talvora_write_text` fails with "Durable file publication failed".
+   - `talvora_apply_patch` fails with the misleading "Klasörün kimliği doğrulanamadı… kilitlemiş olabilir".
+   - Reads of the same paths work.
+4. **W4 — the user cannot open a zip made by `talvora_archive_create`** ("Erişim engellendi"). The archive is built in the service's temp folder and moved. A moved file keeps its SYSTEM/Administrators-only permissions, while files copied or created in place inherit the folder's permissions.
+5. **W5 — config writers corrupt the file's text form.**
+   - `talvora_ini_set` and `talvora_dotenv_set` add a UTF-8 BOM to a BOM-less file: the reader passes `Encoding.UTF8`, which has a preamble, so `CurrentEncoding` keeps it. With a BOM, `.env` parsers read the first key as `\uFEFFKEY`.
+   - `talvora_json_set` rewrites `şehir` as `\u015Fehir`, because the default `JavaScriptEncoder` escapes non-ASCII.
+6. **W6 — Turkish case-insensitive search misses matches.** `izmir` does not find `İzmir`, `SATIR` does not find `satır`, and `ŞEHİR` does not find `şehir` (OrdinalIgnoreCase). User decision: I, ı, İ and i count as one letter.
+7. **W7 — bare command names fail in `talvora_run_process`.**
+   - `npm` fails with Win32Exception, because `Process.Start` ignores PATHEXT.
+   - `npm.cmd` runs the shim with a wrong `%~dp0` ("Cannot find module").
+   - `talvora_npm_run` works.
+8. **L1 — legacy Windows-1254 files cannot be read or edited.** `read_text`, `read_source`, `replace_text` and `apply_patch` all fail on them ("not valid in its detected text encoding"). User decision: read and edit them, keeping the encoding.
+9. **UX1 — Talvora has no Start menu entry.** The Control Center opens only from the hidden tray icon, and a second start of `Talvora.Tray.exe` exits silently. User decision: add a "Talvora Kontrol Merkezi" shortcut that opens the Control Center.
+10. **UI11 — two cosmetic defects.**
+    - Penpot has an empty logo slot and Gitea shows Windows' blank program icon. User decision: an initial-letter badge.
+    - About shows `3.0.0-dev+144c8ddb7c…` wrapped over three lines, next to a separate `Kaynak sürüm 144c8dd` row.
+
+**Design ideas for later (not cards yet)**
+- Overview chain card: half of its height is empty, and the node labels are about 10 px grey text.
+- Worklog: the selected card has a square highlight behind a rounded card.
+- Worklog: a same-day range repeats the date (`01.11.2026 19:24 → 01.11.2026 19:24`).
+
+Order: W1 first, because the later cards' live checks read process output. Then W2, W3, W4, W5, W6, W7, L1, UX1, UI11.
+
+Tests: new test methods go into a new file `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Windows.cs`, which starts with:
+
+```csharp
+using System.Text;
+using Talvora.Shared;
+using Talvora.SourceEditing;
+using Talvora.Tools;
+
+internal static partial class SourceEditRegressionRunner
+{
+}
+```
+
+Each card adds its methods inside that class and registers each method in the scenario list in `SourceEditRegressionRunner.cs` directly after `("git-argument-classification", RunGitArgumentClassificationAsync),` (registering is a supporting change). The first card that needs the file creates it.
+
+### W1 — Console output keeps Turkish text (UTF-8, otherwise the OEM code page) (audit 35)
+
+**Why:** audit 35 defect 1.
+
+**Files:**
+- `src/Talvora.Shared/ConsoleOutputEncoding.cs` (new)
+- `src/Talvora.Shared/ProcessRunner.cs`
+- `src/Talvora.Shared/InteractiveUserProcessRunner.cs`
+- `src/Talvora/Tools/JobTools.Lifecycle.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Windows.cs` (new)
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs`
+- `.context7/verification.json`
+
+**Context7:** `/dotnet/docs`. Verify:
+- `Encoding.GetEncoding(int, EncoderFallback, DecoderFallback)`, `DecoderFallbackBuffer.Fallback(byte[], int)`, and `CodePagesEncodingProvider.Instance` (query: "DecoderFallback custom DecoderFallbackBuffer Fallback bytesUnknown .NET 10").
+- `ProcessStartInfo.StandardOutputEncoding` (query: "ProcessStartInfo StandardOutputEncoding default when null .NET 10").
+
+#### Exact implementation
+
+Step 1 (red first). Create the Windows test file (header above) and add, inside the class:
+
+```csharp
+    // W1: console output is read as UTF-8 when it is valid UTF-8, otherwise through the OEM code page.
+    public static Task RunConsoleOutputEncodingAsync()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var console = ConsoleOutputEncoding.Create(857);
+        AssertEqual("arşiv düz ğİıÇÖÜ", console.GetString(Encoding.GetEncoding(857).GetBytes("arşiv düz ğİıÇÖÜ")),
+            "W1: OEM 857 console output must read as Turkish.");
+        AssertEqual("Proje dosyası yok", console.GetString(Encoding.UTF8.GetBytes("Proje dosyası yok")),
+            "W1: UTF-8 console output must stay UTF-8.");
+        var mixed = Encoding.GetEncoding(857).GetBytes("dir: arşiv\r\n").Concat(Encoding.UTF8.GetBytes("utf8: ğüş\r\n")).ToArray();
+        using var reader = new StreamReader(new MemoryStream(mixed), console, detectEncodingFromByteOrderMarks: false, bufferSize: 1);
+        AssertEqual("dir: arşiv\r\nutf8: ğüş\r\n", reader.ReadToEnd(), "W1: streamed mixed output must decode per byte run.");
+        return Task.CompletedTask;
+    }
+```
+
+Register `("w1-console-output-encoding", RunConsoleOutputEncodingAsync),`. The red state is the compile error (`ConsoleOutputEncoding` missing); quote it in the Log.
+
+Step 2. Create `src/Talvora.Shared/ConsoleOutputEncoding.cs`:
+
+```csharp
+using System.Runtime.InteropServices;
+using System.Text;
+
+namespace Talvora.Shared;
+
+// W1: console programs write the OEM code page (857 on Turkish Windows) unless they choose UTF-8 themselves.
+// Valid UTF-8 stays UTF-8; every byte that is not valid UTF-8 is read through the OEM code page.
+public static class ConsoleOutputEncoding
+{
+    public static Encoding Instance { get; } = Create((int)GetOEMCP());
+
+    public static Encoding Create(int oemCodePage)
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        return Encoding.GetEncoding(
+            65001,
+            EncoderFallback.ReplacementFallback,
+            new OemDecoderFallback(Encoding.GetEncoding(oemCodePage)));
+    }
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetOEMCP();
+
+    private sealed class OemDecoderFallback(Encoding oem) : DecoderFallback
+    {
+        public override int MaxCharCount => 4;
+
+        public override DecoderFallbackBuffer CreateFallbackBuffer() => new OemDecoderFallbackBuffer(oem);
+    }
+
+    private sealed class OemDecoderFallbackBuffer(Encoding oem) : DecoderFallbackBuffer
+    {
+        private string _chars = string.Empty;
+        private int _index;
+
+        public override int Remaining => _chars.Length - _index;
+
+        public override bool Fallback(byte[] bytesUnknown, int index)
+        {
+            _chars = oem.GetString(bytesUnknown);
+            _index = 0;
+            return _chars.Length > 0;
+        }
+
+        public override char GetNextChar() => _index < _chars.Length ? _chars[_index++] : '\0';
+
+        public override bool MovePrevious()
+        {
+            if (_index == 0)
+            {
+                return false;
+            }
+
+            _index--;
+            return true;
+        }
+
+        public override void Reset()
+        {
+            _chars = string.Empty;
+            _index = 0;
+        }
+    }
+}
+```
+
+Step 3. In `ProcessRunner.CreateStartInfo`, in **both** `ProcessStartInfo` initializers (`direct` and `script`), insert directly after the line `RedirectStandardError = true,`:
+
+```csharp
+                StandardOutputEncoding = ConsoleOutputEncoding.Instance,
+                StandardErrorEncoding = ConsoleOutputEncoding.Instance,
+```
+
+Step 4. In the helper script inside `InteractiveUserProcessRunner.cs`, replace the two lines
+
+```powershell
+    $psi.StandardOutputEncoding = [Text.UTF8Encoding]::new($false)
+    $psi.StandardErrorEncoding = [Text.UTF8Encoding]::new($false)
+```
+
+with
+
+```powershell
+    $psi.StandardOutputEncoding = [Talvora.Shared.ConsoleOutputEncoding]::Instance
+    $psi.StandardErrorEncoding = [Talvora.Shared.ConsoleOutputEncoding]::Instance
+```
+
+Change the comment line directly above them, `# Native Codex emits UTF-8, regardless of the Windows OEM code page.`, to `# W1: UTF-8 output (Codex) stays UTF-8; anything else is read through the OEM code page.`
+
+Step 5. In `JobTools.Lifecycle.cs`, replace `StandardOutputEncoding = Encoding.UTF8,` with `StandardOutputEncoding = ConsoleOutputEncoding.Instance,`, and `StandardErrorEncoding = Encoding.UTF8,` with `StandardErrorEncoding = ConsoleOutputEncoding.Instance,`. Add `using Talvora.Shared;` only if the file lacks it.
+
+Step 6. Refresh `.context7/verification.json` for this change.
+
+**Don't:**
+- set the child's code page (`chcp`, `PYTHONIOENCODING` and so on);
+- change `BoundedTextCapture`;
+- change how standard input is encoded.
+
+**Acceptance:**
+- Step 1 red, then green.
+- SourceEdit regression green.
+- Full gate `Hepsi geçti.` as the signed-in user.
+- Deploy; `/healthz.sourceCommit` = HEAD.
+- Live, in a scratch folder named `artifacts/w1 ğüş` containing a file `düz arşiv.txt`:
+  - `talvora_run_process cmd.exe /c dir /b` and `talvora_user_run cmd.exe /c dir /b` both print `düz arşiv.txt`;
+  - `talvora_run_process dotnet build nope.csproj` shows `dosyası` correctly.
+- Push; CI once.
+
+### W2 — Git reports Turkish paths as text, not octal escapes (audit 35)
+
+**Why:** audit 35 defect 2. Do it after W1, which makes the UTF-8 readable.
+
+**Files:**
+- `src/Talvora/Tools/GitTools.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Windows.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs`
+- `.context7/verification.json`
+
+**Context7:** Git documentation (`/git/git` if the map lacks it; add the map-candidate line): `core.quotePath`, query "core.quotePath false git status porcelain non-ASCII paths".
+
+#### Exact implementation
+
+Step 1 (red first). Add to the Windows test file:
+
+```csharp
+    // W2: every Git call Talvora makes turns off octal quoting of non-ASCII paths.
+    public static Task RunGitQuotePathAsync()
+    {
+        var method = typeof(GitTools).GetMethod("AddSafeDirectoryArgument",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            ?? throw new InvalidOperationException("GitTools.AddSafeDirectoryArgument is missing.");
+        foreach (var directory in new[] { Path.GetTempPath(), Directory.GetCurrentDirectory() })
+        {
+            var result = (string[])(method.Invoke(null, [directory, new[] { "status" }])
+                ?? throw new InvalidOperationException("No Git arguments returned."));
+            Assert(result.Length >= 3 && result[0] == "-c" && result[1] == "core.quotepath=false",
+                "W2: Git arguments must start with -c core.quotepath=false.");
+        }
+        return Task.CompletedTask;
+    }
+```
+
+Register `("w2-git-quote-path", RunGitQuotePathAsync),`.
+
+Step 2. In `GitTools.AddSafeDirectoryArgument`:
+- (a) Replace
+
+  ```csharp
+          if (safeDirectory is null)
+          {
+              return requestedArguments;
+          }
+  ```
+
+  with
+
+  ```csharp
+          if (safeDirectory is null)
+          {
+              // W2: Turkish and other non-ASCII paths come back as text instead of "\304\261" escapes.
+              return ["-c", "core.quotepath=false", .. requestedArguments];
+          }
+  ```
+
+- (b) In the final `return [...]`, insert `"-c",` and `"core.quotepath=false",` as the first two elements, before the existing `"-c",` that precedes `safe.directory`.
+
+Step 3. Refresh `.context7/verification.json`.
+
+**Don't:**
+- add `-z` or change any parser;
+- change `safe.directory`.
+
+**Acceptance:**
+- Red, then green.
+- Full gate `Hepsi geçti.`.
+- Deploy.
+- Live: in a scratch git repository `artifacts/w2 ğüş` containing an untracked `Sınıf Öğrenci.cs`, `talvora_git_status` lists `Sınıf Öğrenci.cs` and the root path is correct Turkish.
+- Push; CI once.
+
+### W3 — Paths longer than 260 characters work for writes and source edits (audit 35)
+
+**Why:** audit 35 defect 3.
+
+**Files:**
+- `src/Talvora.Shared/Win32Path.cs` (new)
+- `src/Talvora.Shared/AtomicFile.cs`
+- `src/Talvora/SourceEditing/SourceEditPathGuard.cs`
+- `src/Talvora/Tools/KnowledgeTools.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Windows.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs`
+- `.context7/verification.json`
+
+**Context7:** `/dotnet/docs`: "Win32 long path \\?\ prefix MAX_PATH CreateFileW MoveFileExW" (vendor: the "Maximum Path Length Limitation" page on learn.microsoft.com).
+
+#### Exact implementation
+
+Step 1 (red first). Add to the Windows test file:
+
+```csharp
+    // W3: durable writes work beyond MAX_PATH even when LongPathsEnabled is off.
+    public static async Task RunLongPathWriteAsync()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "talvora-w3-" + Guid.NewGuid().ToString("N"));
+        var deep = root;
+        while (deep.Length < 300)
+        {
+            deep = Path.Combine(deep, "uzun_klasör_" + new string('x', 40));
+        }
+        Directory.CreateDirectory(deep);
+        try
+        {
+            var target = Path.Combine(deep, "dosya ğ.txt");
+            await AtomicFile.WriteAllTextAsync(target, "içerik", new UTF8Encoding(false), createBackup: false, CancellationToken.None);
+            AssertEqual("içerik", await File.ReadAllTextAsync(target), "W3: AtomicFile must write beyond MAX_PATH.");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+```
+
+Register `("w3-long-path-write", RunLongPathWriteAsync),`. Record the red line (`Durable file publication failed`).
+
+Step 2. Create `src/Talvora.Shared/Win32Path.cs`:
+
+```csharp
+namespace Talvora.Shared;
+
+// W3: Win32 calls made through P/Invoke do not get .NET's automatic long-path handling; the \\?\ form lifts MAX_PATH.
+public static class Win32Path
+{
+    public static string Extended(string path)
+    {
+        if (path.StartsWith(@"\\?\", StringComparison.Ordinal) ||
+            path.StartsWith(@"\\.\", StringComparison.Ordinal))
+        {
+            return path;
+        }
+
+        var full = Path.GetFullPath(path);
+        return full.StartsWith(@"\\", StringComparison.Ordinal)
+            ? @"\\?\UNC\" + full[2..]
+            : @"\\?\" + full;
+    }
+}
+```
+
+Step 3. Pass every path argument of these P/Invoke calls through `Win32Path.Extended(...)`, changing only the argument expression:
+- `AtomicFile.cs`: `MoveFileExW(sourcePath, destinationPath, flags)` becomes `MoveFileExW(Win32Path.Extended(sourcePath), Win32Path.Extended(destinationPath), flags)`. The exception message keeps the plain paths.
+- `SourceEditPathGuard.cs`: the first argument `path` of both `CreateFileW(` calls (in `OpenMutationFile` and `OpenDirectory`) becomes `Win32Path.Extended(path)`. Add `using Talvora.Shared;` if missing.
+- `KnowledgeTools.cs`:
+  - `FindFirstFileW(path, out var found)` becomes `FindFirstFileW(Win32Path.Extended(path), out var found)`;
+  - the first argument `normalized` of `CreateFileW(` becomes `Win32Path.Extended(normalized)`.
+
+Step 4. Refresh `.context7/verification.json`.
+
+**Don't:**
+- change the `FILE_RENAME_INFO` rename (it is handle-relative);
+- change error texts;
+- enable `LongPathsEnabled` or add an application manifest.
+
+**Acceptance:**
+- Red, then green.
+- SourceEdit and PathGuard regressions green.
+- Full gate `Hepsi geçti.`.
+- Deploy.
+- Live: `talvora_write_text` to a file whose full path is over 300 characters under `artifacts/w3/`, then `talvora_apply_patch` Update of that file, then Add of a sibling, all succeed.
+- Push; CI once.
+
+### W4 — Archives made by the service are readable by the user (audit 35)
+
+**Why:** audit 35 defect 4.
+
+**Files:**
+- `src/Talvora/Tools/ConfigAssetTools.Archive.cs`
+- `.context7/verification.json`
+
+**Context7:** `/dotnet/docs`: "File.Copy security descriptor inherited from destination directory; File.Move keeps the security descriptor" (vendor: the CopyFile and MoveFileEx pages on learn.microsoft.com).
+
+#### Exact implementation
+
+Step 1. In `ArchiveCreate`, replace the single line `File.Move(temp, destination, overwrite);` with:
+
+```csharp
+            // W4: a file moved out of the service's temp folder keeps its SYSTEM-only permissions; a copy created next
+            // to the destination inherits the destination folder's permissions instead.
+            var sibling = Path.Combine(
+                Path.GetDirectoryName(destination)!,
+                "." + Path.GetFileName(destination) + "." + Guid.NewGuid().ToString("N") + ".tmp");
+            try
+            {
+                File.Copy(temp, sibling);
+                File.Move(sibling, destination, overwrite);
+            }
+            finally
+            {
+                if (File.Exists(sibling))
+                {
+                    try { File.Delete(sibling); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+                }
+            }
+```
+
+Step 2. Refresh `.context7/verification.json`.
+
+**Don't:**
+- stage the archive inside the source tree;
+- change extraction.
+
+**Acceptance:**
+- Full gate `Hepsi geçti.`.
+- Deploy.
+- Live: `talvora_archive_create` into `artifacts/w4/`, then `talvora_user_run pwsh -NoProfile -Command "[IO.File]::ReadAllBytes('<zip>').Length"` prints the size (exit 0).
+- Push; CI once.
+
+### W5 — Config writers keep the file's BOM and readable non-ASCII text (audit 35)
+
+**Why:** audit 35 defect 5.
+
+**Files:**
+- `src/Talvora/Tools/ConfigFormatTools.cs`
+- `src/Talvora/Tools/ConfigAssetTools.Json.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Windows.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs`
+- `.context7/verification.json`
+
+**Context7:** `/dotnet/docs`:
+- "StreamReader detectEncodingFromByteOrderMarks CurrentEncoding UTF8Encoding without BOM";
+- "JavaScriptEncoder.UnsafeRelaxedJsonEscaping JsonSerializerOptions.Encoder non-ASCII".
+
+#### Exact implementation
+
+Step 1 (red first). Add to the Windows test file:
+
+```csharp
+    // W5: ini/dotenv edits never add a BOM; json edits keep Turkish text unescaped.
+    public static async Task RunConfigWritersKeepTextAsync()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "talvora-w5-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var ini = Path.Combine(root, "ayar.ini");
+            await File.WriteAllTextAsync(ini, "[Bölüm]\r\nŞehir=İzmir\r\n", new UTF8Encoding(false));
+            await ConfigFormatTools.IniSet(ini, "Bölüm", "İlçe", "Bornova");
+            Assert((await File.ReadAllBytesAsync(ini))[0] == (byte)'[', "W5: ini_set must not add a BOM.");
+            var env = Path.Combine(root, ".env");
+            await File.WriteAllTextAsync(env, "ŞEHİR=İzmir\n", new UTF8Encoding(false));
+            await ConfigFormatTools.DotenvSet(env, "YENİ", "değer");
+            Assert((await File.ReadAllBytesAsync(env))[0] == 0xC5, "W5: dotenv_set must not add a BOM.");
+            var json = Path.Combine(root, "ayar.json");
+            await File.WriteAllTextAsync(json, "{\"şehir\":\"İzmir\"}", new UTF8Encoding(false));
+            await ConfigAssetTools.JsonSet(json, "/ilçe", "\"Karşıyaka\"");
+            var text = await File.ReadAllTextAsync(json);
+            Assert(text.Contains("\"şehir\"", StringComparison.Ordinal) && text.Contains("\"Karşıyaka\"", StringComparison.Ordinal),
+                "W5: json_set must keep non-ASCII text unescaped.");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+```
+
+Register `("w5-config-writers-keep-text", RunConfigWritersKeepTextAsync),`.
+
+Step 2. In `ConfigFormatTools.ReadTextDocumentCoreAsync`, inside the `new StreamReader(` call, replace the argument line `Encoding.UTF8,` with `new UTF8Encoding(false),`. A BOM still switches `CurrentEncoding` to UTF-8 with BOM, so files with a BOM keep it.
+
+Step 3. In `ConfigAssetTools.Json.cs`:
+- (a) Replace
+
+  ```csharp
+  private static readonly JsonSerializerOptions IndentedJsonOptions =
+          new(JsonSerializerOptions.Default) { WriteIndented = true };
+  ```
+
+  with
+
+  ```csharp
+  // W5: JSON files keep Turkish and other non-ASCII text readable instead of \uXXXX escapes.
+  private static readonly JsonSerializerOptions IndentedJsonOptions =
+          new(JsonSerializerOptions.Default) { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+  private static readonly JsonSerializerOptions CompactJsonOptions =
+          new(JsonSerializerOptions.Default) { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+  ```
+
+- (b) In `ToJson`, replace `indented ? IndentedJsonOptions : JsonSerializerOptions.Default)` with `indented ? IndentedJsonOptions : CompactJsonOptions)`.
+- (c) Add `using System.Text.Encodings.Web;`.
+
+Step 4. Refresh `.context7/verification.json`.
+
+**Don't:**
+- change newline handling;
+- change YAML or TOML writers;
+- change the response JSON of any other tool.
+
+**Acceptance:**
+- Red, then green.
+- Full gate `Hepsi geçti.`.
+- Deploy.
+- Live: in `artifacts/w5/`, a BOM-less `.env` stays BOM-less after `talvora_dotenv_set`, and `talvora_json_set` writes `"ilçe": "Karşıyaka"` literally.
+- Push; CI once.
+
+### W6 — Case-insensitive search treats I, ı, İ and i as one letter (audit 35)
+
+**Why:** audit 35 defect 6 (user decision 2026-11-01: forgiving rule).
+
+**Files:**
+- `src/Talvora/Tools/DeveloperTools.FileSearch.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Windows.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs`
+- `.context7/verification.json`
+
+**Context7:** `/dotnet/docs`: "string.Create SpanAction char.ToLowerInvariant Turkish dotted dotless i".
+
+#### Exact implementation
+
+Step 1 (red first). Add to the Windows test file:
+
+```csharp
+    // W6: Turkish case-insensitive literal search.
+    public static async Task RunTurkishSearchAsync()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "talvora-w6-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(root, "a.txt"), "İzmir\nsatır\nşehir\nfile\n", new UTF8Encoding(false));
+            foreach (var (query, line) in new[] { ("izmir", 1), ("SATIR", 2), ("ŞEHİR", 3), ("FILE", 4), ("IZMIR", 1) })
+            {
+                var result = await DeveloperTools.SearchText(root, query);
+                Assert(result.MatchCount == 1 && result.Matches[0].LineNumber == line,
+                    $"W6: '{query}' must match line {line} once.");
+            }
+            var exact = await DeveloperTools.SearchText(root, "izmir", caseSensitive: true);
+            Assert(exact.MatchCount == 0, "W6: case-sensitive search stays exact.");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+```
+
+Register `("w6-turkish-search", RunTurkishSearchAsync),`. If the record's member names differ (`Matches`, `LineNumber`), use the existing names and quote the compiler message in the Log (permitted deviation a).
+
+Step 2. In `SearchText`, replace the whole literal `else` branch (from `var comparison = caseSensitive` through the end of its `while` loop) with:
+
+```csharp
+                        // W6: case-insensitive search treats I, ı, İ and i as one letter (user decision 2026-11-01).
+                        var haystack = caseSensitive ? line : TurkishTolerantFold(line);
+                        var needle = caseSensitive ? query : TurkishTolerantFold(query);
+                        var searchFrom = 0;
+                        while (searchFrom <= haystack.Length - needle.Length)
+                        {
+                            var index = haystack.IndexOf(needle, searchFrom, StringComparison.Ordinal);
+                            if (index < 0)
+                            {
+                                break;
+                            }
+
+                            if (!TryAddMatch(
+                                    file.FullName,
+                                    lineNumber,
+                                    index + 1,
+                                    line.Substring(index, needle.Length),
+                                    line))
+                            {
+                                break;
+                            }
+
+                            searchFrom = index + Math.Max(1, needle.Length);
+                        }
+```
+
+Step 3. Add to the same partial class:
+
+```csharp
+    // W6: one lower-case letter for I, ı, İ and i; every other character uses invariant lower case.
+    // One char in, one char out, so match positions in the folded line are positions in the original line.
+    internal static string TurkishTolerantFold(string value) =>
+        string.Create(value.Length, value, static (span, source) =>
+        {
+            for (var i = 0; i < source.Length; i++)
+            {
+                var c = source[i];
+                span[i] = c is 'I' or 'ı' or 'İ' ? 'i' : char.ToLowerInvariant(c);
+            }
+        });
+```
+
+Step 4. Refresh `.context7/verification.json`.
+
+**Don't:**
+- change the regex path;
+- change `CountOccurrences`;
+- change `find_files`.
+
+**Acceptance:**
+- Red, then green.
+- Full gate `Hepsi geçti.`.
+- Deploy.
+- Live: `talvora_search_text` for `izmir` in `artifacts/w6/` finds `İzmir`.
+- Push; CI once.
+
+### W7 — run_process resolves bare command names through PATH and PATHEXT (audit 35)
+
+**Why:** audit 35 defect 7.
+
+**Files:**
+- `src/Talvora.Shared/ProcessRunner.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Windows.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs`
+- `.context7/verification.json`
+
+**Context7:** `/dotnet/docs`: "ProcessStartInfo FileName UseShellExecute false PATHEXT .cmd resolution" (vendor: the CreateProcess page on learn.microsoft.com, search order).
+
+#### Exact implementation
+
+Step 1 (red first). Add to the Windows test file:
+
+```csharp
+    // W7: a bare name finds a .cmd on PATH, never a same-named script in the working directory.
+    public static async Task RunBareCommandResolutionAsync()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "talvora-w7-" + Guid.NewGuid().ToString("N"));
+        var bin = Path.Combine(root, "bin");
+        var work = Path.Combine(root, "iş");
+        Directory.CreateDirectory(bin);
+        Directory.CreateDirectory(work);
+        var name = "talvora-w7-" + Guid.NewGuid().ToString("N")[..8];
+        await File.WriteAllTextAsync(Path.Combine(bin, name + ".cmd"), "@echo path-ok\r\n");
+        await File.WriteAllTextAsync(Path.Combine(work, name + ".cmd"), "@echo cwd-hijack\r\n");
+        var previous = Environment.GetEnvironmentVariable("PATH");
+        Environment.SetEnvironmentVariable("PATH", bin + ";" + previous);
+        try
+        {
+            var result = await ProcessRunner.RunAsync(name, work, [], timeoutSeconds: 30, cancellationToken: CancellationToken.None);
+            AssertEqual("path-ok", result.StandardOutput.Trim(), "W7: bare names resolve through PATH and PATHEXT, not the working directory.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", previous);
+            Directory.Delete(root, recursive: true);
+        }
+    }
+```
+
+Register `("w7-bare-command-resolution", RunBareCommandResolutionAsync),`.
+
+Step 2. In `ProcessRunner.RunAsync`, insert directly before `var requestedArguments = arguments?.ToArray() ?? [];`:
+
+```csharp
+        // W7: Process.Start ignores PATHEXT, so "npm" (npm.cmd) failed and a bare "npm.cmd" broke the shim's %~dp0.
+        // Only PATH directories are searched; a same-named file in the working directory is never chosen.
+        if (OperatingSystem.IsWindows() &&
+            !Path.IsPathRooted(executable) &&
+            executable.IndexOfAny(['\\', '/']) < 0 &&
+            CommandResolver.ResolveAll([executable], workingDirectory: cwd)
+                .FirstOrDefault(path =>
+                    !string.Equals(Path.GetDirectoryName(path), cwd, StringComparison.OrdinalIgnoreCase) &&
+                    CommandResolver.GetExecutableExtensions().Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+            is { } resolvedExecutable)
+        {
+            executable = resolvedExecutable;
+        }
+```
+
+If `executable` is not assignable (a parameter declared `in`, or captured), introduce `var executableToStart = executable;` and use it in this block and in the `CreateStartInfo(` call that follows. That is permitted deviation (a); quote the compiler message.
+
+Step 3. Refresh `.context7/verification.json`.
+
+**Don't:**
+- change `CommandResolver`;
+- resolve names that contain a directory separator;
+- search the working directory.
+
+**Acceptance:**
+- Red, then green.
+- Full gate `Hepsi geçti.`.
+- Deploy.
+- Live: `talvora_run_process` with `executable: "npm"`, `arguments: ["--version"]` prints the npm version.
+- Push; CI once.
+
+### L1 — Legacy Windows-1254 text files can be read and edited, keeping their encoding (audit 35)
+
+**Why:** audit 35 defect 8 (user decision 2026-11-01: read and edit, keep the encoding).
+
+**Files:**
+- `src/Talvora/SourceEditing/SourceTextCodec.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Windows.cs`
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs`
+- `.context7/verification.json`
+
+**Context7:** `/dotnet/docs`: "System.Text.Unicode.Utf8.ToUtf16 isFinalBlock OperationStatus NeedMoreData"; "Encoding.GetEncoding 1254 CodePagesEncodingProvider ExceptionFallback".
+
+#### Exact implementation
+
+Step 1 (red first). Add to the Windows test file:
+
+```csharp
+    // L1: BOM-less non-UTF-8 text is Windows-1254 and is written back as Windows-1254.
+    public static Task RunLegacyTurkishEncodingAsync()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var legacy = Encoding.GetEncoding(1254).GetBytes("echo Türkçe ğüşİ\r\n");
+        var document = SourceTextCodec.Decode(legacy);
+        AssertEqual("echo Türkçe ğüşİ\r\n", document.Text, "L1: Windows-1254 text must decode.");
+        AssertEqual("windows-1254", document.Encoding.Name, "L1: the encoding must be reported as windows-1254.");
+        var edited = SourceTextCodec.Encode(document with { Text = "echo Türkçe değişti\r\n" });
+        AssertEqual("echo Türkçe değişti\r\n", Encoding.GetEncoding(1254).GetString(edited), "L1: edits must be written as Windows-1254.");
+        var utf8 = SourceTextCodec.Decode(Encoding.UTF8.GetBytes("ğüş"));
+        AssertEqual("utf-8", utf8.Encoding.Name, "L1: valid UTF-8 stays UTF-8.");
+        return Task.CompletedTask;
+    }
+```
+
+Register `("l1-legacy-turkish-encoding", RunLegacyTurkishEncodingAsync),`. If `SourceTextDocument` is not a record with `Text` / `Encoding.Name`, use its existing members and quote the compiler message.
+
+Step 2. In `SourceTextCodec.cs`:
+- (a) Add `using System.Buffers;`.
+- (b) After the `Utf32BeBom` field, add:
+
+  ```csharp
+      // L1: legacy Turkish Windows text (ANSI code page 1254) is read and written back in the same encoding.
+      private static readonly SourceTextEncodingDescriptor Windows1254 =
+          new("windows-1254", CreateWindows1254(), []);
+
+      private static Encoding CreateWindows1254()
+      {
+          Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+          return Encoding.GetEncoding(1254, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
+      }
+  ```
+
+- (c) In `DetectEncoding`, replace the final two lines
+
+  ```csharp
+          preambleLength = 0;
+          return Utf8;
+  ```
+
+  with
+
+  ```csharp
+          preambleLength = 0;
+          return IsValidUtf8Prefix(bytes) ? Utf8 : Windows1254;
+  ```
+
+  and add below `DetectEncoding`:
+
+  ```csharp
+      // L1: a sample cut inside a UTF-8 character must not count as invalid, so only complete sequences decide.
+      private static bool IsValidUtf8Prefix(ReadOnlySpan<byte> bytes)
+      {
+          var status = System.Text.Unicode.Utf8.ToUtf16(
+              bytes, new char[bytes.Length], out _, out _, replaceInvalidSequences: false, isFinalBlock: false);
+          return status is OperationStatus.Done or OperationStatus.NeedMoreData;
+      }
+  ```
+
+- (d) In `ParseEncoding`, add the arm `"windows-1254" or "cp1254" => Windows1254,` before the `_ =>` arm.
+- (e) In `CreateWriterEncoding`, add before the `_ =>` arm:
+
+  ```csharp
+              "windows-1254" =>
+                  Encoding.GetEncoding(1254, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback),
+  ```
+
+  `CodePagesEncodingProvider` is already registered by the static `Windows1254` field.
+
+Step 3. Refresh `.context7/verification.json`.
+
+**Don't:**
+- change the BOM, UTF-16 or NUL-byte rules;
+- convert legacy files to UTF-8;
+- detect any other code page.
+
+**Acceptance:**
+- Red, then green.
+- SourceEdit regression green: all existing encoding scenarios unchanged.
+- Full gate `Hepsi geçti.`.
+- Deploy.
+- Live: in a scratch git workspace `artifacts/l1/` with `P.csproj` and a Windows-1254 `eski.bat`:
+  - `talvora_read_source` reports `windows-1254`;
+  - an `apply_patch` update leaves the file valid Windows-1254, with no UTF-8 bytes.
+- Push; CI once.
+
+### UX1 — Start menu entry "Talvora Kontrol Merkezi" opens the Control Center (audit 35)
+
+**Why:** audit 35 defect 9 (user decision 2026-11-01).
+
+**Files:**
+- `src/Talvora.Tray/Program.cs`
+- `src/Talvora.Installer/InstallerEngine.UserTray.cs`
+- `src/Talvora.Installer/InstallerEngine.Flow.cs`
+- `.context7/verification.json`
+
+**Context7:** `/dotnet/docs`:
+- "EventWaitHandle named Local\\ ThreadPool.RegisterWaitForSingleObject";
+- "Environment.SpecialFolder.CommonPrograms".
+
+Vendor: the WScript.Shell `CreateShortcut` page on learn.microsoft.com.
+
+#### Exact implementation
+
+Step 1. In `src/Talvora.Tray/Program.cs`:
+- (a) Directly after the `var replaceExisting = args.Any(...);` statement, add:
+
+  ```csharp
+          // UX1: a second start (the Start menu entry) asks the running tray to open the Control Center.
+          var openControlCenter = args.Any(arg =>
+              string.Equals(arg, "--open-control-center", StringComparison.OrdinalIgnoreCase));
+          using var openRequest = new EventWaitHandle(
+              false, EventResetMode.AutoReset, @"Local\Talvora.Tray.OpenControlCenter");
+  ```
+
+- (b) Inside `if (!ownsMutex) { ... }`, insert before its `TrayLog.Write(` line:
+
+  ```csharp
+              if (openControlCenter)
+              {
+                  openRequest.Set();
+              }
+  ```
+
+- (c) Directly after `using var trayContext = new TrayApplicationContext(controlCenterApplication);`, add:
+
+  ```csharp
+              var openRegistration = ThreadPool.RegisterWaitForSingleObject(
+                  openRequest,
+                  (_, _) => controlCenterApplication.Dispatcher.InvokeAsync(controlCenterApplication.ShowControlCenter),
+                  null,
+                  Timeout.Infinite,
+                  executeOnlyOnce: false);
+              if (openControlCenter)
+              {
+                  controlCenterApplication.Dispatcher.InvokeAsync(controlCenterApplication.ShowControlCenter);
+              }
+  ```
+
+  Directly after `var exitCode = controlCenterApplication.Run();`, add `openRegistration.Unregister(null);`.
+
+Step 2. In `InstallerEngine.UserTray.cs`, add after `RegisterTrayStartup`:
+
+```csharp
+    // UX1: Start menu entry for every user; it opens the Control Center and starts the tray if it is not running.
+    private static void RegisterStartMenuShortcut(string trayExecutable)
+    {
+        var shortcutPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),
+            "Talvora Kontrol Merkezi.lnk");
+        var shellType = Type.GetTypeFromProgID("WScript.Shell")
+            ?? throw new InvalidOperationException("WScript.Shell is not available.");
+        dynamic shell = Activator.CreateInstance(shellType)!;
+        try
+        {
+            dynamic shortcut = shell.CreateShortcut(shortcutPath);
+            try
+            {
+                shortcut.TargetPath = trayExecutable;
+                shortcut.Arguments = "--open-control-center";
+                shortcut.WorkingDirectory = Path.GetDirectoryName(trayExecutable);
+                shortcut.IconLocation = trayExecutable + ",0";
+                shortcut.Description = "Talvora Kontrol Merkezi";
+                shortcut.Save();
+            }
+            finally
+            {
+                System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shortcut);
+            }
+        }
+        finally
+        {
+            System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shell);
+        }
+    }
+```
+
+Step 3. In `InstallerEngine.Flow.cs`, directly after `RegisterTrayStartup(trayExecutable, installUser);`, add:
+
+```csharp
+            try
+            {
+                RegisterStartMenuShortcut(trayExecutable);
+            }
+            catch (Exception ex) when (ex is COMException or IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                InstallerLog.Write("Start menu shortcut could not be written; installation continues.", ex);
+            }
+```
+
+Add `using System.Runtime.InteropServices;` to `InstallerEngine.Flow.cs` if missing.
+
+Step 4. Refresh `.context7/verification.json`.
+
+**Don't:**
+- add an uninstall path, a desktop shortcut or a per-user shortcut;
+- change the `Run` key or the mutex name;
+- open the Control Center on a normal start without the argument.
+
+**Acceptance:**
+- Full gate `Hepsi geçti.`.
+- Build the installer and deploy.
+- `C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Talvora Kontrol Merkezi.lnk` exists, with target = the installed `Talvora.Tray.exe` and argument `--open-control-center`.
+- Live, with the tray running: `talvora_user_run` of that exe with `--open-control-center` exits 0, and the tray log records the Control Center being shown (or a window titled Talvora becomes visible).
+- Mark `[~] visual check pending (Claude)`.
+- Push; CI once.
+
+### UI11 — Initial-letter badge for services without a logo; plain version in About (audit 35)
+
+**Why:** audit 35 defect 10 (user decision 2026-11-01: initial-letter badge).
+
+**Files:**
+- `src/Talvora.Tray/McpLogoResolver.cs`
+- `src/Talvora.Tray/ViewModels/ServicesViewModel.cs`
+- `src/Talvora.Tray/ViewModels/OverviewViewModel.cs`
+- `src/Talvora.Tray/Controls/ServiceRow.xaml`
+- `src/Talvora.Tray/Views/OverviewView.xaml`
+- `src/Talvora.Tray/Views/SettingsView.xaml.cs`
+- `tests/Talvora.Notification.Regression/Program.UI7.cs`
+- `.context7/verification.json`
+
+**Context7:** `/dotnet/docs`: "WPF Grid overlapping children Image Source null renders nothing"; "TextInfo.ToUpper tr-TR".
+
+#### Exact implementation
+
+Step 1 (red first). In `tests/Talvora.Notification.Regression/Program.UI7.cs`, change `about.Version != "3.0.0-dev+1234567890abcdef"` to `about.Version != "3.0.0-dev"`. Run the Notification regression and record the red line.
+
+Step 2. In `SettingsView.GetUi7AboutMetadata`, replace `return (version, commit.Length >= 7 ? commit[..7] : "—");` with `return (separator >= 0 ? version[..separator] : version, commit.Length >= 7 ? commit[..7] : "—");`.
+
+Step 3. In `McpLogoResolver.TryResolve`, delete the `"gitea" => Path.Combine(...)` arm (four lines). Gitea's executable has no icon of its own, so Windows' blank program icon appeared.
+
+Step 4. Add to **both** records, `ServiceRowViewModel` (in `ServicesViewModel.cs`) and `OverviewServiceItem` (in `OverviewViewModel.cs`), these two body members. If a record has no body, replace its closing `);` with `)` followed by `{ ... }`:
+
+```csharp
+    // UI11: shown when no logo exists — the service's first letter in Turkish upper case.
+    public string Monogram => Name.Length == 0
+        ? string.Empty
+        : Name[..1].ToUpper(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"));
+    public System.Windows.Visibility MonogramVisibility =>
+        Logo is null ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+```
+
+Step 5. In `Controls/ServiceRow.xaml` and in `Views/OverviewView.xaml`, wrap the existing logo `<Image Source="{Binding Logo}" .../>` (keep its attributes) like this. The badge shows only when there is no logo:
+
+```xml
+<Grid Width="32" Height="32" VerticalAlignment="Center" HorizontalAlignment="Left">
+    <Border Background="{DynamicResource Tv.SurfaceRaised}" BorderBrush="{DynamicResource Tv.Border}"
+            BorderThickness="1" CornerRadius="{StaticResource Tv.Radius.S}"
+            Visibility="{Binding MonogramVisibility}">
+        <TextBlock Text="{Binding Monogram}" Style="{StaticResource Tv.Type.BodyStrong}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Border>
+    <!-- the existing Image element, unchanged -->
+</Grid>
+```
+
+The `Grid` takes over the image's `Grid.Column` attribute if the image had one.
+
+Step 6. Refresh `.context7/verification.json`.
+
+**Don't:**
+- add image assets;
+- change the Talvora logo path;
+- change row heights, columns or any other token.
+
+**Acceptance:**
+- Red, then green.
+- Full gate `Hepsi geçti.`.
+- Deploy.
+- Control Center smoke PNGs show:
+  - `G` and `P` badges on the Services page and the Overview service list, in both themes;
+  - About Sürüm = `3.0.0-dev` on one line.
+- Mark `[~] visual check pending (Claude)`.
+- Push; CI once.
+
 ### Audit 2026-10-28 (34) · R6 verified · no new cards
 
 - **R6 (`144c8dd`)** matches its card: every exact line is present, and the red test was recorded before the change.
