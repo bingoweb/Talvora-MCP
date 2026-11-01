@@ -1096,6 +1096,123 @@ with
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### WL1 — Every finished step carries its real measured duration (data for the UI12 redesign) (2026-11-01)
+
+**Why:** the tmux redesign (DESIGN-WORKLOG §7b, `[C] UI12`) draws a duration and a signal bar per history row. The user's rule is that these must be real measurements ("gerçek veri olmasına çok dikkat et"). The service already measures each call (`EndWorklog` receives that call's stopwatch `elapsed`) but drops it; the protocol has only a timestamp. This card carries the measured value. It also stops the service cutting hunk declarations at 80 characters, so the card can show whole real text.
+
+**Files:**
+- `src/Talvora.Shared/DesktopProgressProtocol.cs`
+- `src/Talvora/TalvoraDesktopWorklogState.cs`
+- `src/Talvora/WorklogDiff/TextDiffBuilder.cs`
+- `tests/Talvora.Notification.Regression/Program.WL1.cs` (new)
+- `tests/Talvora.Notification.Regression/Program.cs`
+- `.context7/verification.json`
+
+**Context7:** `/dotnet/docs`: "System.Text.Json positional record optional parameter default value deserialization missing property" (the old frames from an older service must still deserialize, with `DurationSeconds = null`).
+
+#### Exact implementation
+
+Step 1 (red first). Create `tests/Talvora.Notification.Regression/Program.WL1.cs`:
+
+```csharp
+using System.Collections.Concurrent;
+using System.Text.Json;
+using Talvora;
+using Talvora.Shared;
+
+internal static partial class Program
+{
+    /// <summary>WL1: a finished step carries its measured duration; an old frame without it still reads (null).</summary>
+    private static async Task AssertWl1StepDurationAsync()
+    {
+        var project = Path.Combine(Path.GetTempPath(), "Talvora-WL1-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(project, ".git"));
+        var messages = new ConcurrentQueue<DesktopProgressMessage>();
+        var notifier = CreateNotifier(messages);
+        try
+        {
+            var arguments = new Dictionary<string, JsonElement>
+            {
+                ["workspaceRoot"] = JsonSerializer.SerializeToElement(project),
+            };
+            await notifier.RunToolCallAsync<object>("talvora_dotnet_build", arguments,
+                async _ =>
+                {
+                    await Task.Delay(400);
+                    return new { success = true, exitCode = 0 };
+                },
+                CancellationToken.None);
+            var entry = messages.Last(message => message.WorklogFrame is { Timeline.Count: > 0 }).WorklogFrame!.Timeline[0];
+            if (entry.DurationSeconds is not { } seconds || seconds < 0.4 || seconds > 10)
+                throw new InvalidOperationException($"WL1: a finished step must carry its measured duration, got {entry.DurationSeconds}.");
+        }
+        finally
+        {
+            await notifier.DisposeAsync();
+            Directory.Delete(project, recursive: true);
+        }
+
+        var protocolOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+        };
+        var old = JsonSerializer.Deserialize<WorklogTimelineEntry>(
+            """{"timestampUtc":"2026-11-01T10:00:00+00:00","state":"succeeded","label":"Eski"}""", protocolOptions)!;
+        if (old.DurationSeconds is not null)
+            throw new InvalidOperationException("WL1: a frame without a duration must read as null, never as 0.");
+    }
+}
+```
+
+In `Program.cs`, add `await AssertWl1StepDurationAsync();` directly after `await AssertN10ChangesAsync();`. Run the Notification regression; the red state is the compile error (`DurationSeconds` missing). Quote it in the Log.
+
+Step 2. In `DesktopProgressProtocol.cs`, replace
+
+```csharp
+public sealed record WorklogTimelineEntry(
+    DateTimeOffset TimestampUtc, WorklogStepState State, string Label);
+```
+
+with
+
+```csharp
+// WL1: DurationSeconds is the measured stopwatch time of that tool call; null when nothing was measured (never estimated).
+public sealed record WorklogTimelineEntry(
+    DateTimeOffset TimestampUtc, WorklogStepState State, string Label, double? DurationSeconds = null);
+```
+
+Step 3. In `TalvoraDesktopWorklogState.EndWorklog`, replace
+
+```csharp
+            session.Timeline.Insert(0, new WorklogTimelineEntry(
+                session.LastActivityUtc, ToWorklogState(kind), title));
+```
+
+with
+
+```csharp
+            session.Timeline.Insert(0, new WorklogTimelineEntry(
+                session.LastActivityUtc, ToWorklogState(kind), title, Math.Max(0, elapsed.TotalSeconds)));
+```
+
+Do not change the other `new WorklogTimelineEntry(` calls (Codex/Claude job events and the protocol self-test have no per-step stopwatch; they stay `null`).
+
+Step 4. In `TextDiffBuilder.cs`, delete the line `if (declaration.Length > 80) declaration = declaration[..80];`. The whole real declaration reaches the card, which wraps it. If a test asserts the 80-character cut, change that assertion to the full declaration and list it in the Log.
+
+Step 5. Refresh `.context7/verification.json`.
+
+**Don't:**
+- add exit codes, percentages or any other field;
+- change `ElapsedSeconds`, `Totals` or how `elapsed` is measured;
+- touch any file under `src/Talvora.Tray/Worklog/` (reserved for `[C] UI12`).
+
+**Acceptance:**
+- Red, then green.
+- Notification and SourceEdit regressions green.
+- Full gate `Hepsi geçti.` as the signed-in user.
+- Deploy; `/healthz.sourceCommit` = HEAD (the installed service must send the field before UI12 can use it).
+- Push; CI once.
+
 ### Audit 2026-11-01 (35) · whole-project deep audit: tools, Windows compatibility, screens · result: W1–W7, L1, UX1, UI11
 
 There were no agent commits since audit 34 (queue empty, installed 144c8dd). Claude probed the installed runtime tool by tool with these inputs:

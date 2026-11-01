@@ -381,6 +381,34 @@ Summary of what the files implement (for reading, not for re-implementing):
 
 The worklog never follows the light theme (terminal identity per AGENTS.md). The Control Center keeps its own Gece/Gün tokens; UI7 must not change these files.
 
+### 7b. "tmux" redesign — UI12 (Claude builds it as `[C]`; user decision 2026-11-01)
+
+The card becomes a **tmux pane attached to the agent's session**: a shell prompt, the command that is running, the shell history
+of the session with real step times, a split pane for the diff and a tmux status bar. It replaces the Phosphor layout of §7; colours,
+fonts and the high-contrast rules of §7 stay. **Every number and bar is measured** (AGENTS.md desktop rules): sources are listed
+in the table, and anything without a source is not drawn.
+
+| Element | Look | Source of every value (real only) |
+|---|---|---|
+| Prompt row | `talvora@MSI:~/Talvora-MCP · chatgpt·dev` left; state word right (no brackets) | `Header.ProjectName`, machine name, `Header.ActorName` |
+| Task line | `# görev …` (unchanged) | `Header.TaskNote` |
+| Command line | `$ ` + title, typed in at 18 ms per character (max 360 ms) when the title changes; block cursor blinks only while running; finished: `$ title   ✓ 41,2 sn` | `Current.Title`; duration = `Current.ElapsedSeconds` (stopwatch of that call) |
+| Answers | `ne / nerede / fark / sonuç` (content unchanged) | §6.2 |
+| History | shell history rows `✓ 14:02  label ········ 0,9 sn ▮▮▮▮`; mark coloured by state; dotted leader; real duration right-aligned; bar after it | `Timeline[i].TimestampUtc`, `.State`, `.Label`, `.DurationSeconds` (WL1). No `DurationSeconds` → no number and no bar |
+| Signal bars | width = `round(56 × log10(1 + 10·s) / log10(1 + 6000))` DIP, min 2 DIP, max 56 DIP (fixed log scale: 0.1 s ≈ 4 DIP, 1 s ≈ 15 DIP, 10 s ≈ 30 DIP, 10 min = 56 DIP), height 6 DIP, colour = row state at 70 % | `DurationSeconds` only |
+| Code pane | a tmux split: one box-drawing border line `─ diff ── kiosk-routes.js +3 −1 ── 14:02:11 ─` then the existing diff rows; hunk headers show the **whole** declaration and wrap (no `…` cut in the view) | `Evidence.CodePreview`, parser |
+| Status bar | 22 DIP tmux bar at the bottom, edge to edge: left `[talvora] 0:<project>* · <actor>`, right `⏱ mm:ss · n adım · k dosya`; background by state (running `#12301F`, success `#0F3A22`, failure `#3A1018`, waiting/cancelled `#3A2A0E`), text `#D8FFE7` | `Totals.SessionSeconds`, `Totals.Steps`, `Totals.FilesChanged`. While **running** the clock advances from `SessionSeconds + (now − frame.TimestampUtc)` (wall clock since the measured value); in any other state it is frozen at the frame value |
+
+Motion vocabulary (all off when reduced motion or high contrast is active, or when the card is hidden):
+- **enter**: the existing 180 ms fade with a 12 px rise;
+- **type**: a new command line types in;
+- **row-in**: a new history row slides down 8 px and fades in over 220 ms (cubic ease-out);
+- **ok**: on the transition to success, a lighter band crosses the status bar once, left to right, in 420 ms;
+- **fail**: on the transition to failure, the card jitters 2 px, twice, in 120 ms, and the status bar flashes once;
+- **wait**: three status-bar dots pulse in opacity every 1.2 s, only while waiting.
+
+The live gradient line and the braille spinner are retired; the status bar and the cursor carry "running".
+
 ## 8. Control Center integration
 
 - New rail item **"Çalışma günlüğü"** (between "Hizmetler" and "Bağlantı zinciri" in `DESIGN-CONTROL-CENTER.md` §4) listing sessions (project, actor, start/end, steps, files changed, outcome) for the last 7 days, newest first; selecting a session shows its full timeline and evidence (redacted). Search and filters: project, actor, outcome.
