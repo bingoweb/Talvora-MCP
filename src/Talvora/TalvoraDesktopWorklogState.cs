@@ -315,6 +315,13 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             session.BeganUtc = DateTimeOffset.UtcNow;
             session.Timeline.Clear();
             session.Steps = 0;
+            // D25: a new session never shows the previous session's files, build, test or change facts.
+            session.ChangedFiles.Clear();
+            session.LastBuild = WorklogCheckState.Unknown;
+            session.LastTests = WorklogCheckState.Unknown;
+            session.Changes = null;
+            session.Purpose = null;
+            session.ProgressFact = null;
             session.Failure = null;
             session.Cancellation = null;
             session.TaskNote = null;

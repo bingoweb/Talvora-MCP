@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-01T17:19:29.000Z",
-  "scope": "D24: worklog card motion fixes (coalesced collection refresh so row-in and peak growth run), signal axis for sessions beyond the 30-step window, real minute ticks.",
+  "verifiedAtUtc": "2026-11-01T17:27:23.000Z",
+  "scope": "D25: a restarted worklog session resets its file, build, test and change facts.",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-01 D24: work queued with Dispatcher.BeginInvoke at DispatcherPriority.Loaded runs after layout and render have finished, so one coalesced refresh after a Clear+Add batch sees generated item containers. Context7 returned only BeginInvoke threading samples (query: \"threading model Dispatcher BeginInvoke priority\"); the priority semantics were confirmed on the vendor enum page."
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-01 D25: HashSet<T>.Clear removes all elements so the restarted session's ChangedFiles count is zero; Context7 returned an unrelated array-clearing snippet (query: \"HashSet<T>.Clear removes all elements Count zero\"), confirmed on the vendor API page."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.windows.threading.dispatcherpriority"
+    "https://learn.microsoft.com/dotnet/api/system.collections.generic.hashset-1.clear"
   ]
 }
