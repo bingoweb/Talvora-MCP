@@ -24,7 +24,7 @@
 
 ## In progress
 
-In progress: WL1 + [C] UI12 — Claude implements both (one-off user exception 2026-11-01); the agent waits and takes W1 only after this line is reset
+In progress: (none)
 
 ## Agent queue
 
@@ -134,7 +134,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] CI2 — Get-CiStatus follows a cancelled run to the run that replaced it (audit 30; Full 68/0; no deploy; GitHub CI 40737107002 success; verified by Claude audit 32)
 - [x] R6 — Keep source-edit history small so every patch is fast (audit 32; signed-in Full 68/0; installed 144c8dd; live 252 transactions / 300 receipts, probe patches 0.89–1.02 s; GitHub CI 40747815417 success; verified by Claude audit 34)
 - [x] WL1 — Every finished step carries its real measured duration (data for the UI12 redesign) — implemented by Claude (one-off user exception 2026-11-01); signed-in Full 68/0
-- [C] UI12 — "tmux" redesign of the desktop worklog card (DESIGN-WORKLOG §7b) — Claude builds it after WL1 is installed; the agent skips this line and does not touch src/Talvora.Tray/Worklog/
+- [x] UI12 — "tmux" redesign of the desktop worklog card (DESIGN-WORKLOG §7b) — built by Claude; signed-in Full 68/0; previews of every state reviewed
 - [ ] W1 — Console output keeps Turkish text (UTF-8, otherwise the OEM code page) (audit 35)
 - [ ] W2 — Git reports Turkish paths as text, not octal escapes (audit 35)
 - [ ] W3 — Paths longer than 260 characters work for writes and source edits (audit 35)
@@ -185,6 +185,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-01 — [C] UI12 built by Claude: tmux layout (prompt row, typed command line with measured "sürdü", shell history with measured durations and fixed log-scale signal bars, split diff pane with whole hunk declarations, state-coloured status bar with a clock that advances only from the measured session time while running). Motion: type, row-in, ok sweep, fail jitter, wait pulse; none under reduced motion or high contrast. Approved reference copies and SHA256SUMS refreshed (N5 guard). Context7 /dotnet/docs-desktop (map row added). Signed-in Full 68 kontrol, 0 hata, Hepsi geçti.
 - 2026-11-01 — WL1 implemented by Claude (one-off user exception): WorklogTimelineEntry.DurationSeconds = the measured stopwatch time of the call (null when not measured; older frames read as null); hunk declarations no longer cut at 80 characters. RED: compile error (DurationSeconds missing); GREEN: Notification regression with the 400 ms measured-step check. Context7 /dotnet/docs (optional positional parameters). Signed-in Full 68 kontrol, 0 hata, Hepsi geçti.
 - 2026-11-01 — Claude: user chose the "tmux" redesign of the worklog card (DESIGN-WORKLOG §7b) and asked Claude to build it (`[C]` rule, AGENTS.md rule 10a). User rule: every bar, signal and duration is a real measurement (AGENTS.md desktop rules). Queued WL1 (measured step duration in the protocol) before `[C] UI12`.
 - 2026-11-01 — Claude audit 35 (whole-project deep audit on installed 144c8dd: live tool sweep with Turkish/long paths and legacy encodings, Windows compatibility, all Control Center screens in both themes). Origin/CORS, zip-slip, CRLF/UTF-16 and Turkish file names are correct. Queued W1 (console output mojibake), W2 (Git octal paths), W3 (paths > 260 fail on write), W4 (service-made zips unreadable), W5 (BOM added, JSON escapes Turkish), W6 (Turkish case-insensitive search), W7 (bare command names), L1 (Windows-1254 files), UX1 (Start menu entry), UI11 (service badges, About version). User decisions recorded in the cards. Tag `audit/2026-11-01-35`.

@@ -35,8 +35,9 @@ internal static class WorklogPreviewScenarios
     {
         Directory.CreateDirectory(outputDirectory);
         var written = new List<string>();
-        foreach (var (name, model, highContrast) in All())
+        foreach (var (name, raw, highContrast) in All())
         {
+            var model = Fold(raw);
             model.AnimationsEnabled = false;
             var view = new WorklogCardView { DataContext = model, Width = CardWidth };
             view.ApplyContrast(highContrast);
@@ -73,10 +74,9 @@ internal static class WorklogPreviewScenarios
         model.Purpose = "Bekleyen kod sınırı 5'ten 50'ye çıkıyor; sıra dolunca ekran 429 ile beklemeye alınıyor";
         model.SetTimeline(
         [
-            new(WorklogRowState.Running, "14:02", "Kod değişikliği uygulanıyor · kiosk-routes.js, app.js ve 1 dosya"),
-            new(WorklogRowState.Succeeded, "14:01", "Kaynaklar incelendi · 12 dosya"),
-            new(WorklogRowState.Muted, "14:01", "Okuma başarısız · yanlış parametre"),
-            new(WorklogRowState.Succeeded, "13:58", "Testler geçti · 1 837 test"),
+            new(WorklogRowState.Succeeded, "14:01", "Kaynaklar incelendi · 12 dosya", 0.6),
+            new(WorklogRowState.Muted, "14:01", "Okuma başarısız · yanlış parametre", 0.2),
+            new(WorklogRowState.Succeeded, "13:58", "Testler geçti · 1 837 test", 41.3),
         ]);
         Code(model, "diff · 14:02:11",
             "+++ b/backend/routes/kiosk-routes.js\n" +
@@ -91,7 +91,7 @@ internal static class WorklogPreviewScenarios
             "@@ -12,3 +12,3 @@\n" +
             "-app.disable('x-powered-by')\n" +
             "+app.disable('x-powered-by');\n");
-        model.Footer = "7 adım · 03:41 · 3 dosya değişti";
+        Stats(model, 7, 221, 3);
         return model;
     }
 
@@ -102,15 +102,15 @@ internal static class WorklogPreviewScenarios
         model.FactLine = "56 kontrol · 0 hata";
         model.SetTimeline(
         [
-            new(WorklogRowState.Succeeded, "16:21", "Kalite kontrolü geçti · tam"),
-            new(WorklogRowState.Succeeded, "16:20", "Derleme başarılı · Talvora.csproj"),
-            new(WorklogRowState.Succeeded, "16:18", "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya"),
-            new(WorklogRowState.Failed, "16:17", "Kod değişikliği uygulanamadı · dosya değişmişti"),
-            new(WorklogRowState.Succeeded, "16:15", "Git işlemi tamamlandı · pull origin/main"),
-            new(WorklogRowState.Succeeded, "16:14", "Görev bağlamı hazır"),
-            new(WorklogRowState.Succeeded, "16:12", "Paketler hazır"),
+            new(WorklogRowState.Succeeded, "16:21", "Kalite kontrolü geçti · tam", 312.4),
+            new(WorklogRowState.Succeeded, "16:20", "Derleme başarılı · Talvora.csproj", 18.9),
+            new(WorklogRowState.Succeeded, "16:18", "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya", 0.9),
+            new(WorklogRowState.Failed, "16:17", "Kod değişikliği uygulanamadı · dosya değişmişti", 0.3),
+            new(WorklogRowState.Succeeded, "16:15", "Git işlemi tamamlandı · pull origin/main", 2.7),
+            new(WorklogRowState.Succeeded, "16:14", "Görev bağlamı hazır", 1.1),
+            new(WorklogRowState.Succeeded, "16:12", "Paketler hazır", 7.6),
         ]);
-        model.Footer = "12 adım · 09:05 · 2 dosya değişti";
+        Stats(model, 12, 545, 2);
         return model;
     }
 
@@ -122,8 +122,8 @@ internal static class WorklogPreviewScenarios
         model.OutcomeReason = "Derleme hata verdi. Ajan hataları düzeltebilir; kodunuz kaydedildiği hâliyle duruyor.";
         model.SetTimeline(
         [
-            new(WorklogRowState.Failed, "17:44", "Derleme başarısız · Talvora.Tray.csproj · 3 hata"),
-            new(WorklogRowState.Succeeded, "17:43", "Kod değişikliği uygulandı · ControlCenterWindow.cs"),
+            new(WorklogRowState.Failed, "17:44", "Derleme başarısız · Talvora.Tray.csproj · 3 hata", 18.4),
+            new(WorklogRowState.Succeeded, "17:43", "Kod değişikliği uygulandı · ControlCenterWindow.cs", 0.8),
         ]);
         Code(model, "diff · 17:43:02",
             "+++ b/src/Talvora.Tray/ControlCenterWindow.cs\n" +
@@ -132,7 +132,7 @@ internal static class WorklogPreviewScenarios
             "+        Title = \"Talvora Kontrol Merkezi\";\n" +
             "         Width = 1220;\n" +
             "… 2 satır daha · tamamı Çalışma günlüğünde\n");
-        model.Footer = "2 adım · 00:58 · 1 dosya değişti";
+        Stats(model, 2, 58, 1);
         return model;
     }
 
@@ -142,19 +142,18 @@ internal static class WorklogPreviewScenarios
         model.FactLine = "Testleri çalıştırıyor · 23 komut, 4 araç çağrısı";
         model.SetTimeline(
         [
-            new(WorklogRowState.Running, "09:31", "Testleri çalıştırıyor"),
-            new(WorklogRowState.Succeeded, "09:29", "Dosya düzenledi · time-provider.js"),
-            new(WorklogRowState.Succeeded, "09:27", "Kaynakları inceledi"),
+            new(WorklogRowState.Succeeded, "09:29", "Dosya düzenledi · time-provider.js", 1.4),
+            new(WorklogRowState.Succeeded, "09:27", "Kaynakları inceledi", 3.2),
         ]);
-        model.Footer = "23 adım · 12:40 · 4 dosya değişti";
+        Stats(model, 23, 760, 4);
         return model;
     }
 
     private static WorklogCardViewModel Waiting()
     {
         var model = Base("Classroom", "codex", WorklogVisualState.Waiting, "Yanıt bekleniyor");
-        model.FactLine = "Codex 1 dk 10 sn'dir yeni bilgi göndermedi · son: 14:21:03";
-        model.Footer = "31 adım · 18:02";
+        model.FactLine = "Codex 1 dk 10 sn'dir yeni bilgi göndermedi · son:\u00a014:21:03";
+        Stats(model, 31, 1082, 0);
         return model;
     }
 
@@ -188,10 +187,10 @@ internal static class WorklogPreviewScenarios
             "+    $text -match '\"push\"[\\s\\S]*?\"fetch\"[\\s\\S]*?\"pull\"' -and\n");
         model.SetTimeline(
         [
-            new(WorklogRowState.Succeeded, "16:18", "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya"),
-            new(WorklogRowState.Succeeded, "16:15", "Git işlemi tamamlandı · pull origin/main"),
+            new(WorklogRowState.Succeeded, "16:18", "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya", 0.9),
+            new(WorklogRowState.Succeeded, "16:15", "Git işlemi tamamlandı · pull origin/main", 2.7),
         ]);
-        model.Footer = "6 adım · 02:44 · 2 dosya değişti";
+        Stats(model, 6, 164, 2);
         return model;
     }
 
@@ -326,6 +325,27 @@ internal static class WorklogPreviewScenarios
         return model;
     }
 
+    /// <summary>Status-bar values of a fixture (tmux §7b): steps, session seconds, changed files. No live clock.</summary>
+    private static void Stats(WorklogCardViewModel model, int steps, double seconds, int files)
+    {
+        model.Steps = steps;
+        model.SessionSeconds = seconds;
+        model.FilesChanged = files;
+    }
+
+    /// <summary>The mapper's rule for fixtures: a finished step's own history row folds into the command line.</summary>
+    private static WorklogCardViewModel Fold(WorklogCardViewModel model)
+    {
+        if (!model.IsRunning && model.Timeline.Count > 0 &&
+            string.Equals(model.Timeline[0].Label, model.Title, StringComparison.Ordinal))
+        {
+            model.FinishedSeconds = model.Timeline[0].DurationSeconds;
+            model.Timeline.RemoveAt(0);
+        }
+
+        return model;
+    }
+
     private static void Code(WorklogCardViewModel model, string header, string preview)
     {
         var (files, lines) = UnifiedDiffViewParser.Parse(preview);
@@ -336,6 +356,7 @@ internal static class WorklogPreviewScenarios
         new()
         {
             Prompt = $"talvora@MSI:~/{project}",
+            SessionName = $"0:{project}*",
             Actor = actor,
             State = state,
             Title = title,

@@ -40,7 +40,7 @@ public static class WorklogCardMapper
             };
         model.Title = stale ? "Yanıt bekleniyor" : frame.Current.Title;
         model.FactLine = stale
-            ? $"{frame.Header.ActorName} {FormatAge(DateTimeOffset.UtcNow - frame.TimestampUtc)} yeni bilgi göndermedi · son: {frame.TimestampUtc.ToLocalTime():HH:mm:ss}"
+            ? $"{frame.Header.ActorName} {FormatAge(DateTimeOffset.UtcNow - frame.TimestampUtc)} yeni bilgi göndermedi · son:\u00a0{frame.TimestampUtc.ToLocalTime():HH:mm:ss}"
             : frame.Current.FactLine;
         model.TaskNote = frame.Header.TaskNote;
         model.Purpose = stale ? null : frame.Current.Purpose;
@@ -50,11 +50,19 @@ public static class WorklogCardMapper
         model.OutcomeReason = stale ? null : frame.Current.Outcome?.PlainReason;
         model.OutcomeNextStep = stale ? null : frame.Current.Outcome?.NextStep;
 
-        // A session of one step: the single timeline row would only repeat the title (§7 polish, audit 12).
-        var timeline = frame.Timeline.Count == 1 &&
-            string.Equals(frame.Timeline[0].Label, frame.Current.Title, StringComparison.Ordinal)
-                ? []
-                : frame.Timeline;
+        // A finished step is already the command line: its history row would only repeat it, so the row is folded
+        // into the command line together with its measured duration (§7b). A one-step session folds the same way.
+        IReadOnlyList<WorklogTimelineEntry> timeline = frame.Timeline;
+        double? finishedSeconds = null;
+        if (frame.Timeline.Count > 0 &&
+            string.Equals(frame.Timeline[0].Label, frame.Current.Title, StringComparison.Ordinal) &&
+            (frame.Timeline.Count == 1 || (!stale && frame.Current.State != WorklogStepState.Running)))
+        {
+            finishedSeconds = frame.Timeline[0].DurationSeconds;
+            timeline = frame.Timeline.Skip(1).ToArray();
+        }
+
+        model.FinishedSeconds = stale ? null : finishedSeconds;
         model.SetTimeline(timeline
             .Select(entry => new WorklogTimelineRow(
                 entry.State switch
@@ -66,10 +74,16 @@ public static class WorklogCardMapper
                     _ => WorklogRowState.Muted,
                 },
                 entry.TimestampUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture),
-                entry.Label))
+                entry.Label,
+                entry.DurationSeconds))
             .ToArray());
 
         model.Footer = FormatFooter(frame.Totals);
+        model.SessionName = $"0:{(string.IsNullOrWhiteSpace(project) ? "talvora" : project)}*";
+        model.Steps = frame.Totals.Steps;
+        model.FilesChanged = frame.Totals.FilesChanged;
+        model.SessionSeconds = frame.Totals.SessionSeconds;
+        model.ClockAnchorUtc = frame.TimestampUtc;
         model.SetDetails(details is null ? [] : BuildDetailRows(details));
 
         var preview = frame.Evidence?.CodePreview;

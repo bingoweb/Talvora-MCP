@@ -114,7 +114,7 @@ public static partial class UnifiedDiffViewParser
         return (files.Select(f => new DiffFileTab(f.Name, f.Added, f.Removed)).ToArray(), lines);
     }
 
-    /// <summary>"@@ -790,6 +790,10 @@ private static … Name(" → "@@ 790 · private static … Name(" (max 48 chars, one line).</summary>
+    /// <summary>"@@ -790,6 +790,10 @@ private static … Name(" → "@@ 790 · private static … Name(" (whole text; the view wraps it).</summary>
     private static string CompactHunk(string raw, Match match)
     {
         if (!match.Success)
@@ -124,7 +124,8 @@ public static partial class UnifiedDiffViewParser
 
         var context = raw[match.Length..].Trim();
         var text = "@@ " + match.Groups["new"].Value + (context.Length > 0 ? " · " + context : string.Empty);
-        return text.Length <= 48 ? text : text[..47] + "…";
+        // §7b: the whole real declaration is shown and wraps; the view never cuts it.
+        return text;
     }
 
     /// <summary>

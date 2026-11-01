@@ -8,6 +8,7 @@
     SnapsToDevicePixels="True"
     TextOptions.TextFormattingMode="Display">
 
+    <!-- Talvora desktop worklog · "tmux" (DESIGN-WORKLOG §7b, [C] UI12). Every number and bar is measured; see the spec. -->
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -36,33 +37,48 @@
                 </Style.Triggers>
             </Style>
 
+            <!-- Shell history row: mark · time · label · measured duration · signal bar (§7b). -->
             <DataTemplate x:Key="TimelineRowTemplate" DataType="{x:Type wl:WorklogTimelineRow}">
                 <Grid Margin="0,1,0,1">
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="16" />
                         <ColumnDefinition Width="44" />
-                        <ColumnDefinition Width="46" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="62" />
                     </Grid.ColumnDefinitions>
                     <TextBlock x:Name="Tag" Text="{Binding Tag}" Style="{StaticResource Wl.TextBase}"
                                FontSize="11.5" TextWrapping="NoWrap" Foreground="{DynamicResource Wl.Faint}" />
                     <TextBlock Grid.Column="1" Text="{Binding Time}" Style="{StaticResource Wl.TextBase}"
                                FontSize="11.5" TextWrapping="NoWrap" Foreground="{DynamicResource Wl.Faint}" />
                     <TextBlock x:Name="Label" Grid.Column="2" Text="{Binding Label}" Style="{StaticResource Wl.TextBase}"
-                               FontSize="11.5" />
+                               FontSize="11.5" LineHeight="16" />
+                    <TextBlock Grid.Column="3" Text="{Binding DurationText}" Style="{StaticResource Wl.TextBase}"
+                               FontSize="11" TextWrapping="NoWrap" Margin="10,0,8,0" VerticalAlignment="Top"
+                               Foreground="{DynamicResource Wl.Muted}"
+                               Visibility="{Binding HasDuration, Converter={StaticResource BoolToVisibility}}" />
+                    <Border x:Name="Bar" Grid.Column="4" Height="6" Width="{Binding BarWidth}" HorizontalAlignment="Left"
+                            VerticalAlignment="Top" Margin="0,5,0,0" CornerRadius="1" Opacity="0.7"
+                            Background="{DynamicResource Wl.Faint}"
+                            Visibility="{Binding HasDuration, Converter={StaticResource BoolToVisibility}}" />
                 </Grid>
                 <DataTemplate.Triggers>
                     <DataTrigger Binding="{Binding State}" Value="Running">
                         <Setter TargetName="Tag" Property="Foreground" Value="{DynamicResource Wl.Cyan}" />
+                        <Setter TargetName="Bar" Property="Background" Value="{DynamicResource Wl.Cyan}" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding State}" Value="Succeeded">
                         <Setter TargetName="Tag" Property="Foreground" Value="{DynamicResource Wl.Green}" />
+                        <Setter TargetName="Bar" Property="Background" Value="{DynamicResource Wl.Green}" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding State}" Value="Failed">
                         <Setter TargetName="Tag" Property="Foreground" Value="{DynamicResource Wl.Red}" />
                         <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource Wl.Text}" />
+                        <Setter TargetName="Bar" Property="Background" Value="{DynamicResource Wl.Red}" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding State}" Value="Cancelled">
                         <Setter TargetName="Tag" Property="Foreground" Value="{DynamicResource Wl.Amber}" />
+                        <Setter TargetName="Bar" Property="Background" Value="{DynamicResource Wl.Amber}" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding State}" Value="Muted">
                         <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource Wl.Faint}" />
@@ -156,73 +172,28 @@
             BorderBrush="{DynamicResource Wl.BorderStrong}"
             BorderThickness="1"
             CornerRadius="10">
+        <Border.RenderTransform>
+            <TranslateTransform x:Name="CardShift" />
+        </Border.RenderTransform>
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="2" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- State line: finished cards keep a quiet 2 px line in their state colour (audit 12 polish). -->
-            <Rectangle x:Name="StateLine" Grid.Row="0" Margin="10,0,10,0" Opacity="0.55"
-                       Visibility="{Binding IsFinished, Converter={StaticResource BoolToVisibility}}">
-                <Rectangle.Style>
-                    <Style TargetType="Rectangle">
-                        <Setter Property="Fill" Value="{DynamicResource Wl.Green}" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding State}" Value="Failed">
-                                <Setter Property="Fill" Value="{DynamicResource Wl.Red}" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding State}" Value="Cancelled">
-                                <Setter Property="Fill" Value="{DynamicResource Wl.Amber}" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding State}" Value="Waiting">
-                                <Setter Property="Fill" Value="{DynamicResource Wl.Amber}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Rectangle.Style>
-            </Rectangle>
+            <StackPanel Grid.Row="0" Margin="14,10,10,10">
 
-            <!-- Live line: only while running; a moving phosphor gradient. -->
-            <Rectangle x:Name="LiveLine" Grid.Row="0" Margin="10,0,10,0"
-                       Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}">
-                <Rectangle.Fill>
-                    <LinearGradientBrush x:Name="LiveLineBrush" StartPoint="0,0" EndPoint="1,0">
-                        <LinearGradientBrush.RelativeTransform>
-                            <TranslateTransform x:Name="LiveLineShift" X="-1" />
-                        </LinearGradientBrush.RelativeTransform>
-                        <GradientStop Offset="0" Color="#0039FF88" />
-                        <GradientStop Offset="0.45" Color="#FF39FF88" />
-                        <GradientStop Offset="0.55" Color="#FF5BD8FF" />
-                        <GradientStop Offset="1" Color="#005BD8FF" />
-                    </LinearGradientBrush>
-                </Rectangle.Fill>
-            </Rectangle>
-
-            <StackPanel Grid.Row="1" Margin="14,8,10,10">
-
-                <!-- Header: prompt · actor · state · pin · close -->
+                <!-- Prompt row: where and who · state word · pin · close -->
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Prompt}" Style="{StaticResource Wl.TextBase}" FontSize="11.5"
-                                   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
-                                   Foreground="{DynamicResource Wl.Green}" />
-                        <TextBlock Text=" · " Style="{StaticResource Wl.TextBase}" FontSize="11.5"
-                                   TextWrapping="NoWrap" Foreground="{DynamicResource Wl.Faint}" />
-                        <TextBlock Text="{Binding Actor}" Style="{StaticResource Wl.TextBase}" FontSize="11.5"
-                                   TextWrapping="NoWrap" Foreground="{DynamicResource Wl.Muted}" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,6,0">
-                        <TextBlock x:Name="Spinner" Text="⠋" Style="{StaticResource Wl.TextBase}" FontSize="12"
-                                   TextWrapping="NoWrap" Margin="0,0,5,0" Foreground="{DynamicResource Wl.Cyan}"
-                                   Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBlock Text="{Binding StateLabel}" Style="{StaticResource StateColored}" FontSize="11.5" />
-                    </StackPanel>
+                    <TextBlock Style="{StaticResource Wl.TextBase}" FontSize="11.5" TextWrapping="NoWrap"
+                               VerticalAlignment="Center"><Run Text="{Binding Prompt, Mode=OneWay}" Foreground="{DynamicResource Wl.Green}" /><Run Text=" · " Foreground="{DynamicResource Wl.Faint}" /><Run Text="{Binding Actor, Mode=OneWay}" Foreground="{DynamicResource Wl.Muted}" /></TextBlock>
+                    <TextBlock Grid.Column="1" Text="{Binding StateLabel}" Style="{StaticResource StateColored}" FontSize="11"
+                               VerticalAlignment="Center" Margin="8,0,8,0" />
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button x:Name="PinButton" Style="{StaticResource Wl.IconButton}" Click="OnPinClick"
                                 AutomationProperties.Name="Konumu sabitle" ToolTip="Konumu sabitle">
@@ -236,25 +207,24 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Task line: the agent's task for this session (talvora_worklog_note, §6.2). -->
+                <!-- Task line (talvora_worklog_note, §6.2). -->
                 <TextBlock Margin="0,5,0,0" Style="{StaticResource Wl.TextBase}" FontSize="11.5" LineHeight="16"
                            Visibility="{Binding TaskNote, Converter={StaticResource NullToCollapsed}}"><Run Text="# görev  " Foreground="{DynamicResource Wl.Faint}" /><Run Text="{Binding TaskNote, Mode=OneWay}" Foreground="{DynamicResource Wl.Cyan}" /></TextBlock>
 
-                <!-- Title line: "> Title▍". The prompt sits in a 16 DIP gutter, so a wrapped title hangs at the
-                     same text edge as the answers and the notice below (audit 2026-10-24 (15) polish). -->
-                <Grid x:Name="TitleText" Margin="0,8,0,0">
+                <!-- Command line: "$ title▍" typed in; a finished step shows its measured time after it (§7b). -->
+                <Grid x:Name="TitleText" Margin="0,9,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="16" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Style="{StaticResource Wl.TextBase}" FontSize="14.5" FontWeight="SemiBold" LineHeight="20"
-                               TextWrapping="NoWrap"><Run x:Name="PromptMark" Text="&gt;" Foreground="{DynamicResource Wl.Cyan}" /></TextBlock>
+                               TextWrapping="NoWrap"><Run x:Name="PromptMark" Text="$" Foreground="{DynamicResource Wl.Cyan}" /></TextBlock>
                     <TextBlock Grid.Column="1" Style="{StaticResource Wl.TextBase}" FontSize="14.5" FontWeight="SemiBold"
-                               Foreground="{DynamicResource Wl.Text}" LineHeight="20"><Run Text="{Binding TitleMain, Mode=OneWay}" /><Run Text="{Binding TitleDetail, Mode=OneWay}" FontWeight="Normal" Foreground="{DynamicResource Wl.Muted}" /><Run x:Name="TypingCursor" Text="▍"><Run.Foreground><SolidColorBrush Color="#39FF88" /></Run.Foreground></Run></TextBlock>
+                               Foreground="{DynamicResource Wl.Text}" LineHeight="20"><Run x:Name="TitleMainRun" /><Run x:Name="TitleDetailRun" FontWeight="Normal" Foreground="{DynamicResource Wl.Muted}" /><Run x:Name="TypingCursor" Text="▍"><Run.Foreground><SolidColorBrush Color="#39FF88" /></Run.Foreground></Run><Run x:Name="FinishedRun" Text="{Binding FinishedText, Mode=OneWay}" FontSize="12" FontWeight="Normal" Foreground="{DynamicResource Wl.Muted}" /></TextBlock>
                 </Grid>
 
-                <!-- Answers (§6.2): ne = agent's purpose, nerede = files › places, fark = real totals, sonuç = real fact. -->
-                <Grid Margin="16,4,0,0">
+                <!-- Answers (§6.2): ne · nerede · fark · sonuç -->
+                <Grid Margin="16,5,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="58" />
                         <ColumnDefinition Width="*" />
@@ -294,7 +264,6 @@
                 </Grid>
 
                 <StackPanel Margin="16,6,0,0" Visibility="{Binding OutcomeReason, Converter={StaticResource NullToCollapsed}}">
-                    <!-- "!" in its own 16 DIP gutter: the reason's wrapped lines hang under its first word. -->
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="16" />
@@ -309,25 +278,25 @@
                                Visibility="{Binding OutcomeNextStep, Converter={StaticResource NullToCollapsed}}" />
                 </StackPanel>
 
-                <!-- Session timeline -->
-                <StackPanel Margin="0,10,0,0" Visibility="{Binding HasTimeline, Converter={StaticResource BoolToVisibility}}">
+                <!-- Shell history of the session -->
+                <StackPanel Margin="0,11,0,0" Visibility="{Binding HasTimeline, Converter={StaticResource BoolToVisibility}}">
                     <Grid Margin="0,0,0,4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="── oturum " Style="{StaticResource Wl.TextBase}" FontSize="11"
+                        <TextBlock Text="── geçmiş " Style="{StaticResource Wl.TextBase}" FontSize="11"
                                    TextWrapping="NoWrap" Foreground="{DynamicResource Wl.Faint}" />
                         <Rectangle Grid.Column="1" Height="1" VerticalAlignment="Center" Fill="{DynamicResource Wl.Border}" />
                     </Grid>
-                    <ItemsControl ItemsSource="{Binding Timeline}" ItemTemplate="{StaticResource TimelineRowTemplate}" Focusable="False" />
-                    <TextBlock Margin="90,1,0,0" Text="{Binding MoreSteps}" Style="{StaticResource Wl.TextBase}" FontSize="11"
+                    <ItemsControl x:Name="History" ItemsSource="{Binding Timeline}" ItemTemplate="{StaticResource TimelineRowTemplate}" Focusable="False" />
+                    <TextBlock Margin="60,1,0,0" Text="{Binding MoreSteps}" Style="{StaticResource Wl.TextBase}" FontSize="11"
                                Foreground="{DynamicResource Wl.Faint}"
                                Visibility="{Binding MoreSteps, Converter={StaticResource NullToCollapsed}}" />
                 </StackPanel>
 
-                <!-- Code terminal: the vertical expansion the user loves. -->
-                <Border x:Name="Terminal" Margin="0,10,0,0" Background="{DynamicResource Wl.Terminal}"
+                <!-- Code terminal as a tmux split: one box-drawing border line, then the real diff. -->
+                <Border x:Name="Terminal" Margin="0,11,0,0" Background="{DynamicResource Wl.Terminal}"
                         BorderBrush="{DynamicResource Wl.Border}" BorderThickness="1" CornerRadius="6"
                         Visibility="{Binding HasCode, Converter={StaticResource BoolToVisibility}}">
                     <Grid>
@@ -336,23 +305,22 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <Border Background="{DynamicResource Wl.Raised}" CornerRadius="6,6,0,0" Padding="9,5,6,5"
-                                BorderBrush="{DynamicResource Wl.Border}" BorderThickness="0,0,0,1">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <!-- No imitation window buttons: the header is a label, not a second window (audit 15). -->
-                                <TextBlock Grid.Column="1" Text="{Binding CodeHeader}"
-                                           Style="{StaticResource Wl.TextBase}" FontSize="11" TextWrapping="NoWrap"
-                                           Foreground="{DynamicResource Wl.Faint}" VerticalAlignment="Center" />
-                                <Button Grid.Column="2" Style="{StaticResource Wl.LinkButton}" Click="OnCopyClick"
-                                        Content="kopyala" AutomationProperties.Name="Kodu kopyala" />
-                            </Grid>
-                        </Border>
-                        <ItemsControl Grid.Row="1" Margin="9,6,9,2" ItemsSource="{Binding CodeFiles}"
+                        <Grid Margin="9,5,6,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="─ diff " Style="{StaticResource Wl.TextBase}" FontSize="11" TextWrapping="NoWrap"
+                                       Foreground="{DynamicResource Wl.Green}" VerticalAlignment="Center" />
+                            <Rectangle Grid.Column="1" Height="1" VerticalAlignment="Center" Fill="{DynamicResource Wl.BorderStrong}" />
+                            <TextBlock Grid.Column="2" Style="{StaticResource Wl.TextBase}" FontSize="11" TextWrapping="NoWrap"
+                                       VerticalAlignment="Center" Foreground="{DynamicResource Wl.Faint}"><Run Text=" " /><Run Text="{Binding CodeTime, Mode=OneWay}" /><Run Text=" ─ " /></TextBlock>
+                            <Button Grid.Column="3" Style="{StaticResource Wl.LinkButton}" Click="OnCopyClick"
+                                    Content="kopyala" AutomationProperties.Name="Kodu kopyala" />
+                        </Grid>
+                        <ItemsControl Grid.Row="1" Margin="9,2,9,2" ItemsSource="{Binding CodeFiles}"
                                       ItemTemplate="{StaticResource FileTabTemplate}" Focusable="False"
                                       Visibility="{Binding HasFileTabs, Converter={StaticResource BoolToVisibility}}">
                             <ItemsControl.ItemsPanel>
@@ -369,7 +337,7 @@
                     </Grid>
                 </Border>
 
-                <!-- "ayrıntılar" (N6): technical evidence only, sunken mono panel; never repeats code. -->
+                <!-- "ayrıntılar" (N6): technical evidence only. -->
                 <Border x:Name="Details" Margin="0,10,0,0" Background="{DynamicResource Wl.Terminal}"
                         BorderBrush="{DynamicResource Wl.Border}" BorderThickness="1" CornerRadius="6" Padding="10,7,8,8"
                         Visibility="{Binding ShowDetails, Converter={StaticResource BoolToVisibility}}"
@@ -407,20 +375,63 @@
                         </ItemsControl>
                     </Grid>
                 </Border>
-
-                <!-- Footer -->
-                <Grid Margin="0,10,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Footer}" Style="{StaticResource Wl.TextBase}" FontSize="11"
-                               Foreground="{DynamicResource Wl.Faint}" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Style="{StaticResource Wl.LinkButton}" Click="OnDetailsClick"
-                            Content="{Binding DetailsToggleText}" AutomationProperties.Name="Ayrıntılar"
-                            Visibility="{Binding HasDetails, Converter={StaticResource BoolToVisibility}}" />
-                </Grid>
             </StackPanel>
+
+            <!-- tmux status bar: session · actor | measured clock · steps · files · ayrıntılar (§7b). -->
+            <Border x:Name="StatusBar" Grid.Row="1" Height="24" CornerRadius="0,0,9,9" ClipToBounds="True"
+                    BorderBrush="{DynamicResource Wl.Border}" BorderThickness="0,1,0,0">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="{DynamicResource Wl.Status.Running}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding State}" Value="Succeeded">
+                                <Setter Property="Background" Value="{DynamicResource Wl.Status.Succeeded}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding State}" Value="Failed">
+                                <Setter Property="Background" Value="{DynamicResource Wl.Status.Failed}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding State}" Value="Cancelled">
+                                <Setter Property="Background" Value="{DynamicResource Wl.Status.Waiting}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding State}" Value="Waiting">
+                                <Setter Property="Background" Value="{DynamicResource Wl.Status.Waiting}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Rectangle x:Name="SweepBand" Width="140" HorizontalAlignment="Left" IsHitTestVisible="False" Opacity="0">
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Offset="0" Color="#00FFFFFF" />
+                                <GradientStop Offset="0.5" Color="#3DFFFFFF" />
+                                <GradientStop Offset="1" Color="#00FFFFFF" />
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                        <Rectangle.RenderTransform>
+                            <TranslateTransform x:Name="SweepShift" X="-140" />
+                        </Rectangle.RenderTransform>
+                    </Rectangle>
+                    <Grid Margin="10,0,6,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource Wl.TextBase}" FontSize="11" TextWrapping="NoWrap" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Wl.StatusText}"><Run Text="[talvora] " FontWeight="SemiBold" /><Run Text="{Binding SessionName, Mode=OneWay}" /></TextBlock>
+                        <TextBlock x:Name="WaitDots" Grid.Column="1" Text="· · ·  " Style="{StaticResource Wl.TextBase}" FontSize="11"
+                                   TextWrapping="NoWrap" VerticalAlignment="Center" Foreground="{DynamicResource Wl.Amber}"
+                                   Visibility="Collapsed" />
+                        <TextBlock x:Name="StatusStats" Grid.Column="2" Margin="12,0,0,0" Style="{StaticResource Wl.TextBase}" FontSize="11"
+                                   TextWrapping="NoWrap" VerticalAlignment="Center" Foreground="{DynamicResource Wl.StatusText}" />
+                        <Button Grid.Column="3" Style="{StaticResource Wl.LinkButton}" Click="OnDetailsClick" Margin="8,0,0,0"
+                                Content="{Binding DetailsToggleText}" AutomationProperties.Name="Ayrıntılar" FontSize="11"
+                                Visibility="{Binding HasDetails, Converter={StaticResource BoolToVisibility}}" />
+                    </Grid>
+                </Grid>
+            </Border>
 
             <!-- CRT scanlines, purely decorative, never hit-testable. -->
             <Rectangle x:Name="Scanlines" Grid.RowSpan="2" Fill="{DynamicResource Wl.Scanlines}" IsHitTestVisible="False"

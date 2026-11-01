@@ -35,16 +35,66 @@ public enum DiffLineKind
     Note,
 }
 
-public sealed record WorklogTimelineRow(WorklogRowState State, string Time, string Label)
+/// <summary>
+/// One shell-history row (DESIGN-WORKLOG §7b). <see cref="DurationSeconds"/> is the measured stopwatch time of that
+/// tool call (WL1); null means nothing was measured, and then neither a number nor a bar is drawn.
+/// </summary>
+public sealed record WorklogTimelineRow(WorklogRowState State, string Time, string Label, double? DurationSeconds = null)
 {
     public string Tag => State switch
     {
-        WorklogRowState.Running => "[ ▸ ]",
-        WorklogRowState.Succeeded => "[ ✓ ]",
-        WorklogRowState.Failed => "[ ✗ ]",
-        WorklogRowState.Cancelled => "[ ■ ]",
-        _ => "[ · ]",
+        WorklogRowState.Running => "▸",
+        WorklogRowState.Succeeded => "✓",
+        WorklogRowState.Failed => "✗",
+        WorklogRowState.Cancelled => "■",
+        _ => "·",
     };
+
+    public bool HasDuration => DurationSeconds is not null;
+
+    public string DurationText => DurationSeconds is { } seconds ? WorklogMeasure.Format(seconds) : string.Empty;
+
+    /// <summary>Signal bar width on the fixed log scale of §7b; 0 when nothing was measured.</summary>
+    public double BarWidth => DurationSeconds is { } seconds ? WorklogMeasure.BarWidth(seconds) : 0;
+}
+
+/// <summary>Formats and scales measured durations (DESIGN-WORKLOG §7b). Pure; never estimates.</summary>
+public static class WorklogMeasure
+{
+    private static readonly System.Globalization.CultureInfo Turkish = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+
+    /// <summary>"0,9 sn" · "41 sn" · "1:05" · "1:02:07".</summary>
+    public static string Format(double seconds)
+    {
+        var value = Math.Max(0, seconds);
+        if (value < 10)
+        {
+            return value.ToString("0.0", Turkish) + " sn";
+        }
+
+        if (value < 60)
+        {
+            return Math.Floor(value).ToString("0", Turkish) + " sn";
+        }
+
+        var span = TimeSpan.FromSeconds(Math.Floor(value));
+        return span.TotalHours >= 1
+            ? span.ToString(@"h\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture)
+            : span.ToString(@"m\:ss", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>width = round(56 · log10(1 + 10·s) / log10(1 + 6000)), clamped to 2–56 DIP.</summary>
+    public static double BarWidth(double seconds) =>
+        Math.Clamp(Math.Round(56 * Math.Log10(1 + 10 * Math.Max(0, seconds)) / Math.Log10(6001)), 2, 56);
+
+    /// <summary>Session clock as "mm:ss" / "h:mm:ss".</summary>
+    public static string Clock(double seconds)
+    {
+        var span = TimeSpan.FromSeconds(Math.Floor(Math.Max(0, seconds)));
+        return span.TotalHours >= 1
+            ? span.ToString(@"h\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture)
+            : span.ToString(@"mm\:ss", System.Globalization.CultureInfo.InvariantCulture);
+    }
 }
 
 public sealed record DiffFileTab(string Name, int Added, int Removed)
@@ -161,6 +211,12 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
     private bool animationsEnabled = true;
     private bool hasDetails;
     private bool isDetailsOpen;
+    private double? finishedSeconds;
+    private string sessionName = string.Empty;
+    private int steps;
+    private int filesChanged;
+    private double sessionSeconds;
+    private DateTimeOffset? clockAnchorUtc;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -192,17 +248,18 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
                 OnPropertyChanged(nameof(StateLabel));
                 OnPropertyChanged(nameof(IsRunning));
                 OnPropertyChanged(nameof(IsFinished));
+                OnPropertyChanged(nameof(FinishedText));
             }
         }
     }
 
     public string StateLabel => State switch
     {
-        WorklogVisualState.Running => "[ÇALIŞIYOR]",
-        WorklogVisualState.Succeeded => "[TAMAM]",
-        WorklogVisualState.Failed => "[HATA]",
-        WorklogVisualState.Cancelled => "[DURDU]",
-        _ => "[BEKLİYOR]",
+        WorklogVisualState.Running => "ÇALIŞIYOR",
+        WorklogVisualState.Succeeded => "TAMAM",
+        WorklogVisualState.Failed => "HATA",
+        WorklogVisualState.Cancelled => "DURDU",
+        _ => "BEKLİYOR",
     };
 
     public bool IsRunning => State == WorklogVisualState.Running;
@@ -273,7 +330,76 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
     public string Footer { get => footer; set => Set(ref footer, value); }
 
     /// <summary>"diff · 14:02:11" — time of the real code change.</summary>
-    public string CodeHeader { get => codeHeader; set => Set(ref codeHeader, value); }
+    public string CodeHeader
+    {
+        get => codeHeader;
+        set
+        {
+            if (Set(ref codeHeader, value))
+            {
+                OnPropertyChanged(nameof(CodeTime));
+            }
+        }
+    }
+
+    /// <summary>"14:02:11" of <see cref="CodeHeader"/>, for the split-pane border line (§7b).</summary>
+    public string CodeTime => CodeHeader.StartsWith("diff · ", StringComparison.Ordinal) ? CodeHeader[7..] : CodeHeader;
+
+    /// <summary>Measured time of the finished current step (its history row, WL1); null = not measured.</summary>
+    public double? FinishedSeconds
+    {
+        get => finishedSeconds;
+        set
+        {
+            if (Set(ref finishedSeconds, value))
+            {
+                OnPropertyChanged(nameof(FinishedText));
+            }
+        }
+    }
+
+    /// <summary>"   41\u00a0sn\u00a0sürdü" after the command line (kept on one line), or empty.</summary>
+    public string FinishedText => FinishedSeconds is { } seconds && IsFinished
+        ? "   " + WorklogMeasure.Format(seconds).Replace(' ', '\u00a0') + "\u00a0sürdü"
+        : string.Empty;
+
+    /// <summary>tmux window name, "0:Classroom*".</summary>
+    public string SessionName { get => sessionName; set => Set(ref sessionName, value); }
+
+    /// <summary>Real step count of the session (Totals.Steps).</summary>
+    public int Steps { get => steps; set => Set(ref steps, value); }
+
+    /// <summary>Real changed-file count of the session (Totals.FilesChanged).</summary>
+    public int FilesChanged { get => filesChanged; set => Set(ref filesChanged, value); }
+
+    /// <summary>Measured session seconds at <see cref="ClockAnchorUtc"/> (Totals.SessionSeconds).</summary>
+    public double SessionSeconds { get => sessionSeconds; set => Set(ref sessionSeconds, value); }
+
+    /// <summary>When <see cref="SessionSeconds"/> was measured; null = no live clock (the value stays frozen).</summary>
+    public DateTimeOffset? ClockAnchorUtc { get => clockAnchorUtc; set => Set(ref clockAnchorUtc, value); }
+
+    /// <summary>Session seconds now: advances by wall clock from the measured value only while running.</summary>
+    public double SessionSecondsAt(DateTimeOffset nowUtc) =>
+        IsRunning && ClockAnchorUtc is { } anchor
+            ? SessionSeconds + Math.Max(0, (nowUtc - anchor).TotalSeconds)
+            : SessionSeconds;
+
+    /// <summary>"03:41 · 7 adım · 3 dosya" — zero counts are omitted.</summary>
+    public string StatusStats(DateTimeOffset nowUtc)
+    {
+        var parts = new List<string> { WorklogMeasure.Clock(SessionSecondsAt(nowUtc)) };
+        if (Steps > 0)
+        {
+            parts.Add($"{Steps} adım");
+        }
+
+        if (FilesChanged > 0)
+        {
+            parts.Add($"{FilesChanged} dosya");
+        }
+
+        return string.Join(" · ", parts);
+    }
 
     public bool HasCode => CodeLines.Count > 0;
 

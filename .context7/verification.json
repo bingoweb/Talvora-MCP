@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "verifiedAtUtc": "2026-11-01T16:57:50.000Z",
-  "scope": "WL1: measured step duration in the worklog protocol.",
+  "scope": "UI12: tmux redesign of the desktop worklog card.",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-01 WL1: System.Text.Json treats positional record constructor parameters as optional when deserializing, so an older frame without DurationSeconds reads with the default null (query: \"System.Text.Json positional record constructor parameter default value missing JSON property\")."
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-01 UI12: a DoubleAnimation animates a RenderTransform property (TranslateTransform X/Y) of an element, used for the row-in slide, the failure jitter and the status-bar sweep (query: \"UIElement.BeginAnimation DoubleAnimation EasingFunction RenderTransform TranslateTransform\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/required-properties"
+    "https://learn.microsoft.com/dotnet/desktop/wpf/graphics-multimedia/animation-overview"
   ]
 }
