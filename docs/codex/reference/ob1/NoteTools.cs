@@ -88,6 +88,12 @@ public static class NoteTools
                 nameof(content));
         }
 
+        // The vault runs the Templater plugin; "<%" would let a written note execute code when Obsidian opens it.
+        if (content.Contains("<%", StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Not şablon kodu (<% … %>) içeriyor; kasaya kod yazılmaz.", nameof(content));
+        }
+
         string text;
         switch (mode)
         {

@@ -1094,7 +1094,7 @@ with
 
 ## Phase OB — Obsidian vault (user request 2026-11-01)
 
-The user installed Obsidian. Claude built one vault for every project at `C:\Users\tayla\Obsidian\Taylan` (local git history, no remote, nothing paid). Each project's `docs/` folder is linked into the vault as a directory junction named `Repo belgeleri`, so the repository stays the only source (AGENTS.md → `### OBSIDIAN VAULT`). Agents read notes with the existing `talvora_read_source` / `talvora_search_text` (the vault is a git folder, so it is a recognised workspace). OB1 adds the one missing piece: a write tool that refuses secrets by code.
+The user installed Obsidian. Claude built one vault for every project at `C:\Users\tayla\Obsidian\Taylan` (local git history, no remote, nothing paid). Each project's `docs/` folder is linked into the vault as a directory junction named `Repo belgeleri`, so the repository stays the only source (AGENTS.md → `### OBSIDIAN VAULT`). Agents read notes with the existing `talvora_read_source` / `talvora_search_text` (the vault is a git folder, so it is a recognised workspace). OB1 adds the one missing piece: a write tool that refuses secrets and Templater code (`<%`, which the vault's Templater plugin could execute) by code.
 
 ### OB1 — `talvora_note_write`: write vault notes, refuse secrets and the linked repo docs
 
@@ -1120,7 +1120,7 @@ The user installed Obsidian. Claude built one vault for every project at `C:\Use
 
 #### Exact implementation
 
-Step 1 (red first). Copy `docs/codex/reference/ob1/SourceEditRegressionRunner.Notes.cs` → `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Notes.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `9ac0bc68fbd435500aeeefe54de30de04b8a4a8fb945323d1da71f7ee0bb1f21`). In `SourceEditRegressionRunner.cs`, directly after the line `("ap2-agent-patch-dialect", Ap2AgentPatchToleranceAsync),` add:
+Step 1 (red first). Copy `docs/codex/reference/ob1/SourceEditRegressionRunner.Notes.cs` → `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Notes.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `617e0451159036130bd64d11b0f130016380883654e8e5db1a8fe4cb34b3c0ab`). In `SourceEditRegressionRunner.cs`, directly after the line `("ap2-agent-patch-dialect", Ap2AgentPatchToleranceAsync),` add:
 
 ```csharp
             ("ob1-vault-note-writer", RunVaultNoteWriterAsync),
@@ -1128,7 +1128,7 @@ Step 1 (red first). Copy `docs/codex/reference/ob1/SourceEditRegressionRunner.No
 
 Build the test project: the red state is the compile error `CS0103` for `NoteTools`; quote it in the Log.
 
-Step 2. Copy `docs/codex/reference/ob1/NoteTools.cs` → `src/Talvora/Tools/NoteTools.cs` (normalised SHA-256 `7444fe5957b7435833754a3950d323b198c2c54a090d11a970c27e78cccbae22`).
+Step 2. Copy `docs/codex/reference/ob1/NoteTools.cs` → `src/Talvora/Tools/NoteTools.cs` (normalised SHA-256 `bac639e6a6d458d3ec48786829a9aee8e3a984915c047646e511c2e207c82ae6`).
 
 Step 3. `src/Talvora.Shared/FileLog.cs`: insert directly before `    private static string FormatExceptionDetails(string value)`:
 
@@ -1139,7 +1139,7 @@ Step 3. `src/Talvora.Shared/FileLog.cs`: insert directly before `    private sta
 
 ```
 
-Claude verified steps 1–3 in a scratch clone on 2026-11-01: the test project builds with 0 warnings and `ob1-vault-note-writer` is green, including the real-junction refusal.
+Claude verified steps 1–3 in a scratch clone on 2026-11-01 (re-verified after adding the `<%` refusal): the test project builds with 0 warnings and `ob1-vault-note-writer` is green, including the real-junction refusal.
 
 Step 4. `src/Talvora.Shared/TalvoraToolManifest.cs`: directly after `"talvora_worklog_note",` add `"talvora_note_write",`.
 
@@ -1182,6 +1182,7 @@ Step 9. Refresh `.context7/verification.json` with the two lookups above (replac
 **Don't:**
 - add read, search or list note tools (the existing tools cover reading);
 - redact and then write: secret-looking content is refused whole, never partly written;
+- relax the `<%` refusal (Templater in the vault executes such code; refuse, never escape);
 - add folder checks beyond the reference file (the allowed folders are an AGENTS.md rule);
 - run git in the vault, add a remote, or touch Obsidian settings;
 - add a vault path setting or a default `vaultRoot` (the service runs as LocalSystem; the caller always passes it).

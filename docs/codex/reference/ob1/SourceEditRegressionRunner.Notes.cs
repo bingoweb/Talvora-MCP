@@ -25,6 +25,7 @@ internal static partial class SourceEditRegressionRunner
             await AssertNoteRefusedAsync(root, "a.md", "api_key=abcdef123456", "create", "OB1: secrets are refused.");
             await AssertNoteRefusedAsync(root, "b.md", "şifre: Gizli123", "create", "OB1: Turkish password lines are refused.");
             await AssertNoteRefusedAsync(root, "c.md", "-----BEGIN OPENSSH PRIVATE KEY-----", "create", "OB1: private keys are refused.");
+            await AssertNoteRefusedAsync(root, "e.md", "<% tp.date.now() %>", "create", "OB1: Templater code is refused.");
             await AssertNoteRefusedAsync(root, "../dışarı.md", "x", "create", "OB1: parent segments are refused.");
             await AssertNoteRefusedAsync(root, ".obsidian/app.md", "x", "create", "OB1: hidden folders are refused.");
             await AssertNoteRefusedAsync(root, "Repo belgeleri/STATUS.md", "x", "create", "OB1: linked docs folders are refused by name.");
