@@ -218,6 +218,8 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
     private bool hasDetails;
     private bool isDetailsOpen;
     private double? finishedSeconds;
+    private string signalCaption = "── oturum sinyali ";
+    private double signalSpanSeconds;
     private string sessionName = string.Empty;
     private int steps;
     private int filesChanged;
@@ -239,6 +241,12 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
     public ObservableCollection<SignalPeak> Signal { get; } = [];
 
     public bool HasSignal => Signal.Count > 0;
+
+    /// <summary>"── oturum sinyali " or, when older steps fell out of the 30-step window, "── son 30 adım ".</summary>
+    public string SignalCaption { get => signalCaption; set => Set(ref signalCaption, value); }
+
+    /// <summary>Real length of the strip's time axis in seconds (for minute ticks); 0 = no ticks.</summary>
+    public double SignalSpanSeconds { get => signalSpanSeconds; set => Set(ref signalSpanSeconds, value); }
 
     /// <summary>"ayrıntılar" rows (N6); empty hides the footer button.</summary>
     public ObservableCollection<WorklogDetailRow> DetailRows { get; } = [];

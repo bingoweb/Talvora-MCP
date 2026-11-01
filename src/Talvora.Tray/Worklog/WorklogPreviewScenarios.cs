@@ -339,9 +339,12 @@ internal static class WorklogPreviewScenarios
     }
 
     /// <summary>Signal strip fixture: (start, duration) seconds on a session of <paramref name="session"/> seconds.</summary>
-    private static void Signal(WorklogCardViewModel model, double session, params (double Start, double Seconds, WorklogRowState State)[] steps) =>
+    private static void Signal(WorklogCardViewModel model, double session, params (double Start, double Seconds, WorklogRowState State)[] steps)
+    {
+        model.SignalSpanSeconds = session;
         model.SetSignal(steps.Select(step => new SignalPeak(
             step.Start / session, step.Seconds / session, WorklogMeasure.BarWidth(step.Seconds) / 56, step.State)).ToArray());
+    }
 
     /// <summary>The mapper's rule for fixtures: a finished step's own history row folds into the command line.</summary>
     private static WorklogCardViewModel Fold(WorklogCardViewModel model)

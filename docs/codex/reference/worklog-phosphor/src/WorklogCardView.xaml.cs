@@ -157,7 +157,7 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
         {
             subscribed.PropertyChanged -= OnModelChanged;
             subscribed.Timeline.CollectionChanged -= OnTimelineChanged;
-            subscribed.Signal.CollectionChanged -= OnSignalChanged;
+            subscribed.Signal.CollectionChanged -= OnTimelineChanged;
         }
 
         subscribed = model;
@@ -167,7 +167,7 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
         {
             subscribed.PropertyChanged += OnModelChanged;
             subscribed.Timeline.CollectionChanged += OnTimelineChanged;
-            subscribed.Signal.CollectionChanged += OnSignalChanged;
+            subscribed.Signal.CollectionChanged += OnTimelineChanged;
             firstRowKey = RowKey(subscribed);
         }
 
@@ -248,9 +248,7 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
     }
 
     private int drawnPeaks;
-
-    private void OnSignalChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => DrawSignal(animateNewest: true));
+    private bool refreshPending;
 
     /// <summary>
     /// §7b "oturum sinyali": a baseline and one peak per measured step. x and width are the step's real place on the
@@ -272,6 +270,22 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
         baseline.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "Wl.Border");
         System.Windows.Controls.Canvas.SetTop(baseline, height - 1);
         SignalCanvas.Children.Add(baseline);
+
+        // Real time ticks on the baseline, so empty space reads as time passing: every minute up to 10 minutes,
+        // every 5 minutes up to an hour, then every 15 minutes.
+        var span = subscribed?.SignalSpanSeconds ?? 0;
+        if (span > 0)
+        {
+            var step = span <= 600 ? 60 : span <= 3600 ? 300 : 900;
+            for (var second = step; second < span; second += step)
+            {
+                var tick = new System.Windows.Shapes.Rectangle { Width = 1, Height = 3, Opacity = 0.9 };
+                tick.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "Wl.Faint");
+                System.Windows.Controls.Canvas.SetLeft(tick, Math.Round(second / span * width));
+                System.Windows.Controls.Canvas.SetTop(tick, height - 4);
+                SignalCanvas.Children.Add(tick);
+            }
+        }
 
         for (var index = 0; index < peaks.Count; index++)
         {
@@ -318,41 +332,49 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
         drawnPeaks = peaks.Count;
     }
 
-    // §7b "row-in": the newest history row slides down 8 px and fades in.
+    // The mapper replaces Timeline and Signal with Clear + Add, which raises one event per item. Reacting to each
+    // event would reset the "previous first row" and redraw the strip N times in one frame, killing both animations,
+    // so all events of a batch collapse into one refresh after layout.
     private void OnTimelineChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        if (refreshPending)
+        {
+            return;
+        }
+
+        refreshPending = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, RefreshCollections);
+    }
+
+    private void RefreshCollections()
+    {
+        refreshPending = false;
         if (subscribed is null)
         {
             return;
         }
 
+        DrawSignal(animateNewest: true);
+
+        // §7b "row-in": the newest history row slides down 8 px and fades in, only when a new row arrived.
         var key = RowKey(subscribed);
-        if (key is null || key == firstRowKey)
+        var arrived = key is not null && firstRowKey is not null && key != firstRowKey;
+        if (key is not null)
         {
             firstRowKey = key;
-            return;
         }
 
-        var animate = firstRowKey is not null && MotionAllowed;
-        firstRowKey = key;
-        if (!animate)
+        if (!arrived || !MotionAllowed ||
+            History.ItemContainerGenerator.ContainerFromIndex(0) is not FrameworkElement row)
         {
             return;
         }
 
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
-        {
-            if (History.ItemContainerGenerator.ContainerFromIndex(0) is not FrameworkElement row)
-            {
-                return;
-            }
-
-            var shift = new TranslateTransform(0, -8);
-            row.RenderTransform = shift;
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-8, 0, RowIn) { EasingFunction = ease });
-            row.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, RowIn) { EasingFunction = ease });
-        });
+        var shift = new TranslateTransform(0, -8);
+        row.RenderTransform = shift;
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-8, 0, RowIn) { EasingFunction = ease });
+        row.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, RowIn) { EasingFunction = ease });
     }
 
     private static string? RowKey(WorklogCardViewModel model) =>
@@ -444,7 +466,13 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
     private void StopMotion()
     {
         clockTimer.Stop();
-        typeTimer.Stop();
+        if (typeTimer.IsEnabled)
+        {
+            typeTimer.Stop();
+            TitleMainRun.Text = typedMain;
+            TitleDetailRun.Text = typedDetail;
+        }
+
         cursorBlink.Stop(this);
         waitPulse.Stop(this);
     }

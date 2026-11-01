@@ -1,10 +1,10 @@
 # SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
-# Updated by Claude 2026-11-01 for the tmux redesign (WL1, [C] UI12 and UI12b, DESIGN-WORKLOG §7b).
+# Updated by Claude 2026-11-01 for the tmux redesign (WL1, [C] UI12, UI12b, D24; DESIGN-WORKLOG §7b).
 07673b7808f6434881b358c11a77b08a18627f70a83ec4e15069add241d8bf23  src/DesktopProgressNotificationWindow.cs
 9ce414a94482db8da0dc80cce316f09cf662f2133dcfd302547b8bb7b8715324  src/UnifiedDiffViewParser.cs
-b95665ce05014162d0a68fa747c60deff97d858a99c137b05fe296e6fb90026d  src/WorklogCardMapper.cs
-ad6c1dd6b3b14d4c07959a19eb52121710cab6732bb8eec5b982b16e76b85036  src/WorklogCardView.xaml
-654fa80671031f70c7afcc4ea8c4c8934236c0c1ccb4481a9c5cdc3c22a13970  src/WorklogCardView.xaml.cs
-19c35d67d42bc76767a3dcaad0243ec103257eac2d551bc7963eb2b4897073b5  src/WorklogCardViewModel.cs
-dd63bb84965570b57e0615cd05d5ea7864cd412154af2ae25eb39ffd8e07e26f  src/WorklogPreviewScenarios.cs
+3410220d81af848201b37cf066b2cf015087d8a1464207eb0bb9e054483a8f4d  src/WorklogCardMapper.cs
+0154edbebef72f48ac058fe1c5ec3985f2f862b9d94a2d1e47bafb5a001c2101  src/WorklogCardView.xaml
+f0abb48fb2af890761ae854dbc6546a147e2a3f4d1cd7a13b9074664b179fe90  src/WorklogCardView.xaml.cs
+5dbfb76badfed5438fa0c138fce55db02e1e1eae9669daeec2e3eb7d8fec0567  src/WorklogCardViewModel.cs
+50281759dafc082eed1ab234a1f846349eeac07c3c17681b2b9a349b322dbed9  src/WorklogPreviewScenarios.cs
 a5df883dfae6144927c23a0f00bb5b9e1cfb7e2bb5bb6931c44554c519cf8313  src/WorklogTheme.xaml

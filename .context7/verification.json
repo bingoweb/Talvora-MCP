@@ -1,15 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-01T17:10:02.000Z",
-  "scope": "UI12b: session signal strip (measured steps on the real session axis) and ANSI double frame for the worklog code pane.",
+  "verifiedAtUtc": "2026-11-01T17:19:29.000Z",
+  "scope": "D24: worklog card motion fixes (coalesced collection refresh so row-in and peak growth run), signal axis for sessions beyond the 30-step window, real minute ticks.",
   "libraries": [
     {
       "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-01 UI12b: Canvas.SetLeft/SetTop set the Left/Top attached properties that position each signal peak, and a ScaleTransform ScaleY animated by DoubleAnimation grows a new peak from its bottom origin. Context7 returned no Canvas snippet after three queries (query: \"Canvas Left Top attached property\"); confirmed on the vendor API page instead."
+      "verified": "2026-11-01 D24: work queued with Dispatcher.BeginInvoke at DispatcherPriority.Loaded runs after layout and render have finished, so one coalesced refresh after a Clear+Add batch sees generated item containers. Context7 returned only BeginInvoke threading samples (query: \"threading model Dispatcher BeginInvoke priority\"); the priority semantics were confirmed on the vendor enum page."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.windows.controls.canvas.setleft",
-    "https://learn.microsoft.com/dotnet/desktop/wpf/graphics-multimedia/animation-overview"
+    "https://learn.microsoft.com/dotnet/api/system.windows.threading.dispatcherpriority"
   ]
 }

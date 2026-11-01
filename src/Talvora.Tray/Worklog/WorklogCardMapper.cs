@@ -78,7 +78,11 @@ public static class WorklogCardMapper
                 entry.DurationSeconds))
             .ToArray());
 
+        model.SignalSpanSeconds = SignalSpan(frame);
         model.SetSignal(BuildSignal(frame));
+        model.SignalCaption = frame.Totals.Steps > frame.Timeline.Count
+            ? $"── son {frame.Timeline.Count} adım "
+            : "── oturum sinyali ";
         model.Footer = FormatFooter(frame.Totals);
         model.SessionName = $"0:{(string.IsNullOrWhiteSpace(project) ? "talvora" : project)}*";
         model.Steps = frame.Totals.Steps;
@@ -109,13 +113,12 @@ public static class WorklogCardMapper
     /// </summary>
     public static IReadOnlyList<SignalPeak> BuildSignal(DesktopWorklogFrame frame)
     {
-        var span = frame.Totals.SessionSeconds;
+        var (start, span) = SignalAxis(frame);
         if (span <= 0)
         {
             return [];
         }
 
-        var start = frame.TimestampUtc.AddSeconds(-span);
         var peaks = new List<SignalPeak>();
         foreach (var entry in frame.Timeline.Reverse())
         {
@@ -137,6 +140,38 @@ public static class WorklogCardMapper
         }
 
         return peaks;
+    }
+
+    /// <summary>Real length of the strip's axis in seconds (0 when the session has no measured length).</summary>
+    public static double SignalSpan(DesktopWorklogFrame frame) => SignalAxis(frame).Span;
+
+    private static (DateTimeOffset Start, double Span) SignalAxis(DesktopWorklogFrame frame)
+    {
+        var span = frame.Totals.SessionSeconds;
+        if (span <= 0)
+        {
+            return (frame.TimestampUtc, 0);
+        }
+
+        var start = frame.TimestampUtc.AddSeconds(-span);
+
+        // Only the newest 30 steps travel in a frame. When older ones fell out, the axis starts where the oldest kept
+        // step began, so empty space never suggests an idle period that really had work in it.
+        if (frame.Totals.Steps > frame.Timeline.Count)
+        {
+            var kept = frame.Timeline
+                .Where(entry => entry.DurationSeconds is not null)
+                .Select(entry => entry.TimestampUtc.AddSeconds(-entry.DurationSeconds!.Value))
+                .DefaultIfEmpty(start)
+                .Min();
+            if (kept > start)
+            {
+                start = kept;
+                span = Math.Max(0.001, (frame.TimestampUtc - start).TotalSeconds);
+            }
+        }
+
+        return (start, span);
     }
 
     /// <summary>

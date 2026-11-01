@@ -348,7 +348,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="── oturum sinyali " Style="{StaticResource Wl.TextBase}" FontSize="11"
+                        <TextBlock Text="{Binding SignalCaption}" Style="{StaticResource Wl.TextBase}" FontSize="11"
                                    TextWrapping="NoWrap" Foreground="{DynamicResource Wl.Faint}" />
                         <Rectangle Grid.Column="1" Height="1" VerticalAlignment="Center" Fill="{DynamicResource Wl.Border}" />
                     </Grid>

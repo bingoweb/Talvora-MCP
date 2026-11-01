@@ -413,7 +413,13 @@ The live gradient line and the braille spinner are retired; the status bar and t
 - **Oturum sinyali** (from B): a 22 DIP strip under `── oturum sinyali`, above the status bar. The x axis is the session's real time (start = frame time − `Totals.SessionSeconds`, end = frame time). Each step with a measured `DurationSeconds` is a plateau from `timestamp − duration` to `timestamp`, at least 2 DIP wide. Its height is `3 + (history bar width / 56) × 17` DIP (the same fixed log scale), drawn as a 28 % body with a 2 px crest in the step's state colour. Steps without a measurement are not drawn; with no measured step the strip is hidden. The running step is not drawn until it has a measured end. Motion: only a newly arrived peak grows from the baseline (260 ms, cubic ease-out).
 - **ANSI frame** (from C): the code pane gets a double frame (outer 1 px `BorderStrong` with 2 px gap, inner 1 px `BorderStrong`). Its header reads `═╡ diff ╞` + a double rule + `╡ HH:mm:ss ╞═` + `kopyala`. Decoration only; it carries no data. C's percentage bar is **not** built: tool calls report no real progress.
 
-Built by Claude on 2026-11-01 (WL1 + UI12 + UI12b). The preview harness (`Talvora.Tray.exe --worklog-preview <dir>`) renders every state; fixture durations there are labelled design fixtures, while the live card reads only WL1 measurements.
+**D24 (Claude's own audit of UI12/UI12b, 2026-11-01):**
+- Timeline and Signal changes of one frame are handled as one refresh after layout, so row-in and peak growth really run. They are verified in a live window: both transforms animate.
+- When older steps fell out of the 30-step frame window, the strip's axis starts where the oldest kept step began, and the caption reads `── son N adım`, so empty space never claims idle time that really had work.
+- Faint 1×3 DIP ticks on the baseline mark real time: every minute up to 10 min, every 5 min up to 1 h, then every 15 min.
+- A hidden or unloaded card finishes a half-typed title.
+
+Built by Claude on 2026-11-01 (WL1 + UI12 + UI12b + D24). The preview harness (`Talvora.Tray.exe --worklog-preview <dir>`) renders every state; fixture durations there are labelled design fixtures, while the live card reads only WL1 measurements.
 
 ## 8. Control Center integration
 
