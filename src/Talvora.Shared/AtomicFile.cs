@@ -221,8 +221,8 @@ public static class AtomicFile
         }
 
         if (!MoveFileExW(
-                sourcePath,
-                destinationPath,
+                Win32Path.Extended(sourcePath),
+                Win32Path.Extended(destinationPath),
                 flags))
         {
             throw new IOException(

@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-01T19:16:26.000Z",
-  "scope": "[C] UI12d: time ruler polish (finished-step count with running named separately, nearest-second rounding, same-minute end labels).",
+  "verifiedAtUtc": "2026-11-01T19:23:49.000Z",
+  "scope": "W3: support long paths in Win32 file calls.",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-01 UI12d: Math.Round(value, MidpointRounding.AwayFromZero) rounds to the nearest integer with halves away from zero, used so 13.7 s prints as 14 sn. Context7 returned no Math.Round snippet (query: \"Math.Round MidpointRounding.AwayFromZero nearest integer\"); confirmed on the vendor API page."
+      "verified": "2026-11-01 W3: the Windows extended device path syntax uses \\\\?\\ and UNC paths use \\\\?\\UNC\\; .NET handles long paths implicitly while device paths skip normalization (query: \"Win32 long path \\\\?\\ prefix MAX_PATH CreateFileW MoveFileExW\"). The vendor Win32 long-path documentation confirms the extended form for Unicode APIs."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.math.round"
+    "https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation"
   ]
 }

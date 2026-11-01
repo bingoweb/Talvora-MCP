@@ -451,7 +451,7 @@ public static class KnowledgeTools
             return false;
         }
 
-        var findHandle = FindFirstFileW(path, out var found);
+        var findHandle = FindFirstFileW(Win32Path.Extended(path), out var found);
         if (findHandle == new IntPtr(-1))
         {
             return true; // Unknown reparse metadata is not safe to hydrate.
@@ -476,7 +476,7 @@ public static class KnowledgeTools
     {
         var normalized = Path.GetFullPath(path);
         using var handle = CreateFileW(
-            normalized,
+            Win32Path.Extended(normalized),
             desiredAccess: 0x00000080u, // FILE_READ_ATTRIBUTES
             shareMode: 0x00000007u, // READ | WRITE | DELETE
             securityAttributes: IntPtr.Zero,

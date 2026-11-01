@@ -35,4 +35,26 @@ internal static partial class SourceEditRegressionRunner
         }
         return Task.CompletedTask;
     }
+
+    // W3: durable writes work beyond MAX_PATH even when LongPathsEnabled is off.
+    public static async Task RunLongPathWriteAsync()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "talvora-w3-" + Guid.NewGuid().ToString("N"));
+        var deep = root;
+        while (deep.Length < 300)
+        {
+            deep = Path.Combine(deep, "uzun_klasör_" + new string('x', 40));
+        }
+        Directory.CreateDirectory(deep);
+        try
+        {
+            var target = Path.Combine(deep, "dosya ğ.txt");
+            await AtomicFile.WriteAllTextAsync(target, "içerik", new UTF8Encoding(false), createBackup: false, CancellationToken.None);
+            AssertEqual("içerik", await File.ReadAllTextAsync(target), "W3: AtomicFile must write beyond MAX_PATH.");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
 }

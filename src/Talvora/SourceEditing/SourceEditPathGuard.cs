@@ -2,6 +2,7 @@ using Microsoft.Win32.SafeHandles;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text;
+using Talvora.Shared;
 
 namespace Talvora.SourceEditing;
 
@@ -525,7 +526,7 @@ internal sealed class SourceEditPathGuard : IDisposable
     {
         var handle =
             CreateFileW(
-                path,
+                Win32Path.Extended(path),
                 DeleteAccess | FileReadAttributes,
                 FileShare.Read |
                 FileShare.Write |
@@ -698,7 +699,7 @@ internal sealed class SourceEditPathGuard : IDisposable
         {
             var handle =
                 CreateFileW(
-                    path,
+                    Win32Path.Extended(path),
                     desiredAccess,
                     share,
                     IntPtr.Zero,
