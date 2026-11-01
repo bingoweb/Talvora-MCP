@@ -68,6 +68,18 @@ The user decided (2026-10-18): the agent does **only** what Claude's cards say, 
 
 Violations found in Claude's audits become D-cards that revert the unrequested change.
 
+### CONTEXT7 PROTOCOL — use Context7 precisely (user decision 2026-11-01, part of the EXECUTION MANDATE)
+
+Context7 exists to stop guesses about APIs. Use it where a wrong guess would break the card, and use it precisely. This section refines DELIVERY EVIDENCE; the gate file format stays the same.
+
+1. **What to look up.** Before writing code, list the external APIs the card's code will call whose exact name, signature, option, default, error or version behaviour matters: third-party packages, framework and platform APIs (the map lists them), protocols, CLIs, and standard-library calls that are new, version-sensitive or have subtle edge cases. Skip everyday calls you are certain of (`Date.now`, `strings.Contains`, `Array.map`): they are not evidence. Usually 1–4 lookups per card. A card with nothing worth looking up (docs, tests, a proposal) records its main library's one relevant fact instead of inventing lookups.
+2. **Which library id.** Take it from `docs/codex/CONTEXT7.md`: the project's pinned versions with their exact Context7 ids. Do **not** call `resolve-library-id` for a library that is in the map, and use the versioned id when the map gives one. For a library missing from the map: resolve once; choose the exact package (not a fork, mirror, translation or DeepWiki copy), the indexed version closest to the lockfile, trust score ≥ 7; then add one line `Context7 map candidate: <package> <version> → <id>` to the card's log entry (Claude adds it to the map).
+3. **How to ask.** One question per call, written as a precise query that names the symbol, the version and the question, e.g. `Vite 8 build.rolldownOptions.input with several HTML entries and output.entryFileNames`. Never a one-word topic (`api`, `docs`, `usage`). Ask for about 3,000–5,000 tokens. If the result does not contain the symbol, rephrase once with the exact symbol or error text; then open the official page from the map. At most three calls per question.
+4. **Version gaps.** The map marks libraries whose pinned version is newer than what Context7 has indexed. For those, use the newest indexed version only for long-stable APIs and confirm anything that may have changed in the official release notes or changelog linked in the map; record both.
+5. **Precedence.** Card > official vendor documentation > Context7 snippet > memory. If Context7 or the vendor page contradicts the card, do not choose: write a proposal quoting the id, the query and the snippet. If Context7 and the vendor page disagree, the vendor page wins; note it in the log.
+6. **Evidence that means something.** Each `libraries[]` entry: `libraryId` = the id you actually queried (versioned if you used a version); `verified` = `<date> <card>: <the one fact the code relies on> (query: "<query text>")`. `vendorSources[]` = the official URLs you actually opened (the map's Official column). Only what this card used, at most 12 each, replaced every card. An id or URL you did not actually query is a critical audit finding.
+7. **Economy.** Never paste documentation into logs, cards or commits; keep only the fact used. Do not query the same fact twice in one card.
+
 ### QUALITY CRAFT — how the agent builds what Claude designed (user decision 2026-10-30, part of the EXECUTION MANDATE)
 
 The user wants every product to look original, move beautifully and speak flawless Turkish, and every quality check to cover cosmetics and usability, not only security. Claude decides the design; the agent builds it with the same care and checks its own work. Nothing here gives design freedom: rules 6 and 9–10 still apply.
@@ -84,6 +96,7 @@ Every file read, command output, MCP tool schema and screenshot costs tokens. Th
 
 **A. Read only what the card needs**
 1. **Context helper first.** Run `pwsh scripts/Get-CodexContext.ps1` (or `-Card <ID>`) — ChatGPT: `talvora_agent_brief` (after A2) — and work from its output. Never open a whole `docs/codex/*.md` file.
+   **Truncated brief (D84, 2026-11-01):** if `talvora_agent_brief` reports `truncated: true`, run `Get-CodexContext.ps1 -Card <id>` (the id of the item you are about to take) before writing anything, and work from that full card text; never implement from a cut card.
 2. **STATUS without history:** read `docs/codex/STATUS.md` up to `## Log` plus the newest Log entry only.
 3. **AGENTS.md once per session.** Do not re-read it between steps of the same card.
 4. **Locate, then read a window.** `git grep -n "<symbol>"` / `rg -n` (ChatGPT: `talvora_search_text`), then read ±40 lines. Read a whole file only if it is < 250 lines or the card rewrites most of it.
@@ -142,7 +155,7 @@ When the user says "Talvora'ya devam et", "Talvora devam", "sıradaki adım" or 
 
 ## Context7 quality gate
 
-- Query Context7 before relying on third-party framework, SDK, library, protocol, CLI or package-manager behaviour that the change depends on. When it matters, Claude's card names the library and the exact point to verify; verify that point, not a generic topic.
+- How to query, which ids to use and what to record: **CONTEXT7 PROTOCOL** in the EXECUTION MANDATE (map: `docs/codex/CONTEXT7.md`). Query Context7 before relying on third-party framework, SDK, library, protocol, CLI or package-manager behaviour that the change depends on. When it matters, Claude's card names the library and the exact point to verify; verify that point, not a generic topic.
 - Context7 is mandatory for changes under `src/`, `scripts/`, `.github/workflows/`, `Directory.*.props` and `global.json` (the CI gate enforces it). Test-only and documentation-only changes are exempt.
 - `.context7/verification.json` holds **only the current change**: replace `verifiedAtUtc`, `scope`, `libraries` (at most 12) and `vendorSources` (at most 12) each time; never append. Earlier evidence lives in git history.
 - Record the Context7 library ID(s) and the verified point in the card's STATUS Log entry (Gitea mirror best effort).
