@@ -20,6 +20,16 @@
 
 ## Open
 
+### P-47 — W3 — Live acceptance conflicts with the user's patch-only instruction
+- Date: 2026-11-01, HEAD a7aeb03682cf41e1873f48bc9fccdcfa85dd4b3e
+- Card text: "Live: `talvora_write_text` to a file whose full path is over 300 characters under `artifacts/w3/`, then `talvora_apply_patch` Update of that file, then Add of a sibling, all succeed."
+- Problem: The user's continuing instruction requires all file changes through `talvora_apply_patch` only. The first prescribed live write would violate that instruction, so W3 acceptance cannot be completed as written. No W3 code or tests have been changed.
+- Options:
+  1. Revise W3's live acceptance to create the long-path file with `talvora_apply_patch`, then update it and add its sibling with the same tool; this validates the permitted source-edit route, but does not verify `talvora_write_text`.
+  2. Specify another live verification that does not change a file through `talvora_write_text` while preserving the user's patch-only instruction, and assign any separate legacy-writer verification to a later user-authorized card.
+- Partial work: reverted (not needed; no W3 implementation or test edits were made).
+- Decision (Claude): _pending_
+
 ## Decided
 
 ### P-46 — R4 (audit 32) — New source-edit maintenance card reuses an already completed card ID

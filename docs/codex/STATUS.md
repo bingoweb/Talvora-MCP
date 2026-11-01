@@ -140,8 +140,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] UI12c — Session time ruler replaces the signal strip (DESIGN-WORKLOG §7b UI12c, user chose concept A) — built by Claude; signed-in Full 68/0; live pending: install and CI of the pushed commit (Claude checks them in the same turn)
 - [x] D25 — A restarted worklog session no longer shows the previous session's files, build and test facts — found in Claude's live real-data check, fixed by Claude (one-off user exception 2026-11-01); signed-in Full 68/0
 - [x] W1 — Console output keeps Turkish text (UTF-8, otherwise the OEM code page) (installed e83bf6f, user-run smoke and Turkish output probes green; GitHub CI 41337913647 success)
-- [~] W2 — Git reports Turkish paths as text, not octal escapes (live pending: deploy, installed smoke and Turkish Git status; CI pending)
-- [ ] W3 — Paths longer than 260 characters work for writes and source edits (audit 35)
+- [x] W2 — Git reports Turkish paths as text, not octal escapes (installed a7aeb03; live Turkish Git status and surface smoke green; GitHub CI 41339489645 success)
+- [?] W3 — Paths longer than 260 characters work for writes and source edits (audit 35; waiting for Claude: P-47)
 - [ ] W4 — Archives made by the service are readable by the user (audit 35)
 - [ ] W5 — Config writers keep the file's BOM and readable non-ASCII text (audit 35)
 - [ ] W6 — Case-insensitive search treats I, ı, İ and i as one letter (audit 35)
@@ -192,6 +192,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-01 — W2 closeout: installed a7aeb03 /healthz matched HEAD; live git_status returned root `artifacts/w2 ğüş` and untracked `Sınıf Öğrenci.cs`; installed surface smoke GREEN; GitHub windows-ci 41339489645 success. W3 blocked by P-47 because its live write_text acceptance conflicts with the user's patch-only file mutation instruction; no W3 implementation started.
 - 2026-11-01 — W2, executor ChatGPT via Talvora: prefix Git calls with core.quotepath=false while preserving safe.directory. RED: W2 argument assertion failed; SourceEdit core regression GREEN. Signed-in Full: 68 kontrol, 0 hata; Hepsi geçti. Context7 /git/git and Git's official config documentation confirm non-ASCII bytes remain unquoted while control characters retain escaping. Context7 map candidate: Git 2.55.0.windows.5 → /git/git. Exact-commit deployment, installed smoke, live Git status and CI pending. Gitea mirror skipped: Talvora connector exposes no authenticated Gitea comment tool.
 - 2026-11-01 — W1 closeout: installed e83bf6f /healthz matched HEAD; user-run live smoke GREEN; both process runners returned `düz arşiv.txt`, and dotnet's missing-project output contained `dosyası`; GitHub windows-ci 41337913647 success.
 - 2026-11-01 — [C] UI12c by Claude (user: the session signal was unreadable; concept A "zaman cetveli" chosen from three previews). Diagnosis: one duration drawn twice on two scales (linear width, log height), no numbers, clock or legend. Now one linear real-time axis: solid blocks per measured step (WL1) and the running step from Current.ElapsedSeconds, dotted idle line, failure caret, real local clock labels, legend iş (union of measured intervals) · hata · ara (only when every finished step was measured). Previews build fixtures as protocol frames through the mapper. Red first: AssertUi12cTimeRuler (missing BuildSignalLegend). Reference copies, SHA256SUMS and approved previews refreshed. Context7 /dotnet/docs-desktop (Canvas.SetRight, vendor page). Signed-in Full 68/0, Hepsi geçti.
