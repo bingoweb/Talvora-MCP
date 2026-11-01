@@ -251,46 +251,38 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
     private bool refreshPending;
 
     /// <summary>
-    /// §7b "oturum sinyali": a baseline and one peak per measured step. x and width are the step's real place on the
-    /// session axis; height is the history bar's fixed log scale. Only a newly arrived peak grows in (260 ms).
+    /// §7b UI12c "zaman cetveli": one linear real-time axis. Each measured step is a solid block from its start to its
+    /// end; the dotted line is time in which no tool ran. Clock labels under the axis are real local times. A block
+    /// prints its own label and measured duration only when the whole text fits; nothing is cut. Only a newly arrived
+    /// block draws in from its left edge (260 ms).
     /// </summary>
     private void DrawSignal(bool animateNewest)
     {
         SignalCanvas.Children.Clear();
         var peaks = subscribed?.Signal;
+        var legend = subscribed?.SignalLegend;
         var width = SignalCanvas.ActualWidth > 0 ? SignalCanvas.ActualWidth : Math.Max(0, ActualWidth - 26);
-        if (peaks is null || peaks.Count == 0 || width <= 0)
+        if (peaks is null || peaks.Count == 0 || legend is null || width <= 0)
         {
             drawnPeaks = 0;
             return;
         }
 
-        const double height = 22;
-        var baseline = new System.Windows.Shapes.Rectangle { Width = width, Height = 1, Opacity = 0.8 };
-        baseline.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "Wl.Border");
-        System.Windows.Controls.Canvas.SetTop(baseline, height - 1);
-        SignalCanvas.Children.Add(baseline);
+        const double trackTop = 6;
+        const double track = 14;
+        const double axisTop = trackTop + track;
 
-        // Real time ticks on the baseline, so empty space reads as time passing: every minute up to 10 minutes,
-        // every 5 minutes up to an hour, then every 15 minutes.
-        var span = subscribed?.SignalSpanSeconds ?? 0;
-        if (span > 0)
+        var idle = new System.Windows.Shapes.Line
         {
-            var step = span <= 600 ? 60 : span <= 3600 ? 300 : 900;
-            for (var second = step; second < span; second += step)
-            {
-                var tick = new System.Windows.Shapes.Rectangle { Width = 1, Height = 3, Opacity = 0.9 };
-                tick.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "Wl.Faint");
-                System.Windows.Controls.Canvas.SetLeft(tick, Math.Round(second / span * width));
-                System.Windows.Controls.Canvas.SetTop(tick, height - 4);
-                SignalCanvas.Children.Add(tick);
-            }
-        }
+            X1 = 0, X2 = width, Y1 = trackTop + track / 2, Y2 = trackTop + track / 2,
+            StrokeThickness = 1, StrokeDashArray = [1, 3],
+        };
+        idle.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "Wl.Faint");
+        SignalCanvas.Children.Add(idle);
 
         for (var index = 0; index < peaks.Count; index++)
         {
             var peak = peaks[index];
-            var barHeight = 3 + peak.HeightFraction * (height - 5);
             var brushKey = peak.State switch
             {
                 WorklogRowState.Succeeded => "Wl.Green",
@@ -299,30 +291,58 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
                 WorklogRowState.Running => "Wl.Cyan",
                 _ => "Wl.Faint",
             };
-            var barWidth = Math.Max(2, peak.WidthFraction * width);
+            var blockWidth = Math.Max(2, peak.WidthFraction * width);
+            var left = Math.Min(peak.StartFraction * width, width - blockWidth);
 
-            // Phosphor look: a faint body with a bright 2 px crest, so long steps read as signal plateaus.
-            var bar = new System.Windows.Controls.Grid
+            var block = new System.Windows.Controls.Grid
             {
-                Width = barWidth,
-                Height = barHeight,
-                RenderTransformOrigin = new System.Windows.Point(0.5, 1),
+                Width = blockWidth,
+                Height = track,
+                RenderTransformOrigin = new System.Windows.Point(0, 0.5),
             };
-            var body = new System.Windows.Shapes.Rectangle { Opacity = 0.28, RadiusX = 1, RadiusY = 1 };
+            var body = new System.Windows.Shapes.Rectangle { Opacity = 0.85, RadiusX = 1, RadiusY = 1 };
             body.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, brushKey);
-            var crest = new System.Windows.Shapes.Rectangle { Height = 2, VerticalAlignment = VerticalAlignment.Top };
-            crest.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, brushKey);
-            bar.Children.Add(body);
-            bar.Children.Add(crest);
-            System.Windows.Controls.Canvas.SetLeft(bar, Math.Min(peak.StartFraction * width, width - barWidth));
-            System.Windows.Controls.Canvas.SetTop(bar, height - 1 - barHeight);
-            SignalCanvas.Children.Add(bar);
+            block.Children.Add(body);
+
+            var duration = WorklogMeasure.Format(peak.Seconds);
+            var text = FitsIn($"{peak.Label} · {duration}", blockWidth - 10) ?? FitsIn(duration, blockWidth - 10);
+            if (text is not null)
+            {
+                var caption = new System.Windows.Controls.TextBlock
+                {
+                    Text = text,
+                    FontSize = 11,
+                    Margin = new Thickness(5, 0, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextWrapping = TextWrapping.NoWrap,
+                };
+                caption.SetResourceReference(System.Windows.Controls.TextBlock.FontFamilyProperty, "Wl.Mono");
+                caption.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "Wl.Terminal");
+                block.Children.Add(caption);
+            }
+
+            System.Windows.Controls.Canvas.SetLeft(block, left);
+            System.Windows.Controls.Canvas.SetTop(block, trackTop);
+            SignalCanvas.Children.Add(block);
+
+            // A failure can be a 2 DIP sliver on a long session, so a caret above it keeps it findable.
+            if (peak.State == WorklogRowState.Failed)
+            {
+                var caret = new System.Windows.Shapes.Polygon
+                {
+                    Points = [new(0, 0), new(8, 0), new(4, 5)],
+                };
+                caret.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "Wl.Red");
+                System.Windows.Controls.Canvas.SetLeft(caret, Math.Clamp(left + blockWidth / 2 - 4, 0, width - 8));
+                System.Windows.Controls.Canvas.SetTop(caret, 0);
+                SignalCanvas.Children.Add(caret);
+            }
 
             if (animateNewest && index == peaks.Count - 1 && peaks.Count > drawnPeaks && MotionAllowed)
             {
-                var grow = new ScaleTransform(1, 0);
-                bar.RenderTransform = grow;
-                grow.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(260))
+                var grow = new ScaleTransform(0, 1);
+                block.RenderTransform = grow;
+                grow.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(260))
                 {
                     EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
                 });
@@ -330,7 +350,86 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
         }
 
         drawnPeaks = peaks.Count;
+        DrawClockAxis(width, axisTop, legend.StartLocal, subscribed?.SignalSpanSeconds ?? 0);
     }
+
+    /// <summary>
+    /// Real local clock under the ruler: start and end at the edges, ticks on whole minutes (axis up to 10 min),
+    /// 5 minutes (up to 1 h) or 15 minutes. A tick label is skipped, never shortened, when it would touch another.
+    /// </summary>
+    private void DrawClockAxis(double width, double top, DateTime startLocal, double span)
+    {
+        var axis = new System.Windows.Shapes.Rectangle { Width = width, Height = 1 };
+        axis.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "Wl.Border");
+        System.Windows.Controls.Canvas.SetTop(axis, top + 1);
+        SignalCanvas.Children.Add(axis);
+        if (span <= 0)
+        {
+            return;
+        }
+
+        var startText = startLocal.ToString("HH:mm", CultureInfo.InvariantCulture);
+        var endText = startLocal.AddSeconds(span).ToString("HH:mm", CultureInfo.InvariantCulture);
+        var startWidth = AddClockLabel(startText, 0, top);
+        var endWidth = AddClockLabel(endText, null, top);
+
+        var step = span <= 600 ? 60 : span <= 3600 ? 300 : 900;
+        var stepTicks = TimeSpan.FromSeconds(step).Ticks;
+        var first = new DateTime(startLocal.Ticks - startLocal.Ticks % stepTicks, startLocal.Kind).AddSeconds(step);
+        var labelRight = startWidth;
+        for (var tickTime = first; (tickTime - startLocal).TotalSeconds < span; tickTime = tickTime.AddSeconds(step))
+        {
+            var x = Math.Round((tickTime - startLocal).TotalSeconds / span * width);
+            var tick = new System.Windows.Shapes.Rectangle { Width = 1, Height = 4 };
+            tick.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "Wl.Faint");
+            System.Windows.Controls.Canvas.SetLeft(tick, x);
+            System.Windows.Controls.Canvas.SetTop(tick, top + 2);
+            SignalCanvas.Children.Add(tick);
+
+            // A tick in the same minute as an edge label would only repeat it.
+            var clock = tickTime.ToString("HH:mm", CultureInfo.InvariantCulture);
+            if (clock == startText || clock == endText)
+            {
+                continue;
+            }
+
+            var label = step == 60 ? tickTime.ToString("':'mm", CultureInfo.InvariantCulture) : clock;
+            var labelWidth = MeasureLabel(label);
+            var labelLeft = x - labelWidth / 2;
+            if (labelLeft >= labelRight + 8 && labelLeft + labelWidth <= width - endWidth - 8)
+            {
+                AddClockLabel(label, labelLeft, top);
+                labelRight = labelLeft + labelWidth;
+            }
+        }
+    }
+
+    /// <summary>Adds a clock label at <paramref name="left"/>, or flush with the right edge when it is null.</summary>
+    private double AddClockLabel(string text, double? left, double top)
+    {
+        var label = new System.Windows.Controls.TextBlock { Text = text, FontSize = 11, TextWrapping = TextWrapping.NoWrap };
+        label.SetResourceReference(System.Windows.Controls.TextBlock.FontFamilyProperty, "Wl.Mono");
+        label.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "Wl.Faint");
+        if (left is { } x)
+        {
+            System.Windows.Controls.Canvas.SetLeft(label, x);
+        }
+        else
+        {
+            System.Windows.Controls.Canvas.SetRight(label, 0);
+        }
+
+        System.Windows.Controls.Canvas.SetTop(label, top + 6);
+        SignalCanvas.Children.Add(label);
+        return MeasureLabel(text);
+    }
+
+    private string? FitsIn(string text, double room) => MeasureLabel(text) <= room ? text : null;
+
+    private double MeasureLabel(string text) =>
+        new FormattedText(text, CultureInfo.GetCultureInfo("tr-TR"), System.Windows.FlowDirection.LeftToRight,
+            new Typeface((System.Windows.Media.FontFamily)FindResource("Wl.Mono"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal),
+            11, System.Windows.Media.Brushes.Transparent, VisualTreeHelper.GetDpi(this).PixelsPerDip).WidthIncludingTrailingWhitespace;
 
     // The mapper replaces Timeline and Signal with Clear + Add, which raises one event per item. Reacting to each
     // event would reset the "previous first row" and redraw the strip N times in one frame, killing both animations,

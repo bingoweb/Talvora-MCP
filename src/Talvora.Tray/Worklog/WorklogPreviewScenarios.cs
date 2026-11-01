@@ -1,7 +1,9 @@
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Talvora.Shared;
 
 namespace Talvora.Tray.Worklog;
 
@@ -91,8 +93,11 @@ internal static class WorklogPreviewScenarios
             "@@ -12,3 +12,3 @@\n" +
             "-app.disable('x-powered-by')\n" +
             "+app.disable('x-powered-by');\n");
-        Stats(model, 7, 221, 3);
-        Signal(model, 221, (20, 41.3, WorklogRowState.Succeeded), (175, 0.2, WorklogRowState.Muted), (180, 0.6, WorklogRowState.Succeeded));
+        Stats(model, 4, 261, 3);
+        Signal(model, "14:02:11", 261, 2.4,
+            (5, 41.3, WorklogStepState.Succeeded, "Testler geçti · 1 837 test"),
+            (192, 0.2, WorklogStepState.Waiting, "Okuma başarısız · yanlış parametre"),
+            (200, 0.6, WorklogStepState.Succeeded, "Kaynaklar incelendi · 12 dosya"));
         return model;
     }
 
@@ -103,7 +108,7 @@ internal static class WorklogPreviewScenarios
         model.FactLine = "56 kontrol · 0 hata";
         model.SetTimeline(
         [
-            new(WorklogRowState.Succeeded, "16:21", "Kalite kontrolü geçti · tam", 312.4),
+            new(WorklogRowState.Succeeded, "16:25", "Kalite kontrolü geçti · tam", 312.4),
             new(WorklogRowState.Succeeded, "16:20", "Derleme başarılı · Talvora.csproj", 18.9),
             new(WorklogRowState.Succeeded, "16:18", "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya", 0.9),
             new(WorklogRowState.Failed, "16:17", "Kod değişikliği uygulanamadı · dosya değişmişti", 0.3),
@@ -111,8 +116,15 @@ internal static class WorklogPreviewScenarios
             new(WorklogRowState.Succeeded, "16:14", "Görev bağlamı hazır", 1.1),
             new(WorklogRowState.Succeeded, "16:12", "Paketler hazır", 7.6),
         ]);
-        Stats(model, 12, 545, 2);
-        Signal(model, 545, (5, 7.6, WorklogRowState.Succeeded), (40, 1.1, WorklogRowState.Succeeded), (60, 2.7, WorklogRowState.Succeeded), (95, 0.3, WorklogRowState.Failed), (120, 0.9, WorklogRowState.Succeeded), (140, 18.9, WorklogRowState.Succeeded), (170, 312.4, WorklogRowState.Succeeded));
+        Stats(model, 7, 820, 2);
+        Signal(model, "16:25:40", 820, 0,
+            (15, 7.6, WorklogStepState.Succeeded, "Paketler hazır"),
+            (125, 1.1, WorklogStepState.Succeeded, "Görev bağlamı hazır"),
+            (185, 2.7, WorklogStepState.Succeeded, "Git işlemi tamamlandı · pull origin/main"),
+            (300, 0.3, WorklogStepState.Failed, "Kod değişikliği uygulanamadı · dosya değişmişti"),
+            (370, 0.9, WorklogStepState.Succeeded, "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya"),
+            (470, 18.9, WorklogStepState.Succeeded, "Derleme başarılı · Talvora.csproj"),
+            (495, 312.4, WorklogStepState.Succeeded, "Kalite kontrolü geçti · tam"));
         return model;
     }
 
@@ -134,8 +146,10 @@ internal static class WorklogPreviewScenarios
             "+        Title = \"Talvora Kontrol Merkezi\";\n" +
             "         Width = 1220;\n" +
             "… 2 satır daha · tamamı Çalışma günlüğünde\n");
-        Stats(model, 2, 58, 1);
-        Signal(model, 58, (30, 0.8, WorklogRowState.Succeeded), (38, 18.4, WorklogRowState.Failed));
+        Stats(model, 2, 90, 1);
+        Signal(model, "17:44:20", 90, 0,
+            (10, 0.8, WorklogStepState.Succeeded, "Kod değişikliği uygulandı · ControlCenterWindow.cs"),
+            (70, 18.4, WorklogStepState.Failed, "Derleme başarısız · Talvora.Tray.csproj · 3 hata"));
         return model;
     }
 
@@ -149,7 +163,9 @@ internal static class WorklogPreviewScenarios
             new(WorklogRowState.Succeeded, "09:27", "Kaynakları inceledi", 3.2),
         ]);
         Stats(model, 23, 760, 4);
-        Signal(model, 760, (600, 3.2, WorklogRowState.Succeeded), (700, 1.4, WorklogRowState.Succeeded));
+        Signal(model, "09:30:00", 760, 45,
+            (600, 3.2, WorklogStepState.Succeeded, "Kaynakları inceledi"),
+            (700, 1.4, WorklogStepState.Succeeded, "Dosya düzenledi · time-provider.js"));
         return model;
     }
 
@@ -194,8 +210,10 @@ internal static class WorklogPreviewScenarios
             new(WorklogRowState.Succeeded, "16:18", "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya", 0.9),
             new(WorklogRowState.Succeeded, "16:15", "Git işlemi tamamlandı · pull origin/main", 2.7),
         ]);
-        Stats(model, 6, 164, 2);
-        Signal(model, 164, (20, 2.7, WorklogRowState.Succeeded), (150, 0.9, WorklogRowState.Succeeded));
+        Stats(model, 2, 164, 2);
+        Signal(model, "16:18:10", 164, 0,
+            (20, 2.7, WorklogStepState.Succeeded, "Git işlemi tamamlandı · pull origin/main"),
+            (160, 0.9, WorklogStepState.Succeeded, "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya"));
         return model;
     }
 
@@ -338,12 +356,30 @@ internal static class WorklogPreviewScenarios
         model.FilesChanged = files;
     }
 
-    /// <summary>Signal strip fixture: (start, duration) seconds on a session of <paramref name="session"/> seconds.</summary>
-    private static void Signal(WorklogCardViewModel model, double session, params (double Start, double Seconds, WorklogRowState State)[] steps)
+    /// <summary>
+    /// Time ruler fixture (UI12c): steps as (start second on the axis, measured seconds, state, label), the axis ending at
+    /// the local clock time <paramref name="end"/>. The fixture is turned into a protocol frame and drawn by the mapper's
+    /// own rules, so the preview shows exactly what a live frame with these measurements would show.
+    /// </summary>
+    private static void Signal(WorklogCardViewModel model, string end, double session, double runningSeconds,
+        params (double Start, double Seconds, WorklogStepState State, string Label)[] steps)
     {
-        model.SignalSpanSeconds = session;
-        model.SetSignal(steps.Select(step => new SignalPeak(
-            step.Start / session, step.Seconds / session, WorklogMeasure.BarWidth(step.Seconds) / 56, step.State)).ToArray());
+        var now = new DateTimeOffset(DateTime.SpecifyKind(
+            DateTime.ParseExact("2026-11-01 " + end, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture), DateTimeKind.Local));
+        var start = now.AddSeconds(-session);
+        var current = new WorklogStep(WorklogStepCategory.GenericExecution,
+            runningSeconds > 0 ? WorklogStepState.Running : WorklogStepState.Succeeded, model.Title, null, null, runningSeconds);
+        var timeline = steps
+            .Select(step => new WorklogTimelineEntry(start.AddSeconds(step.Start + step.Seconds), step.State, step.Label, step.Seconds))
+            .Reverse()
+            .ToArray();
+        var frame = new DesktopWorklogFrame("preview", 1, now.ToUniversalTime(), new WorklogSessionHeader(null, "preview"),
+            current, timeline, new WorklogTotals(model.Steps, session, model.FilesChanged, WorklogCheckState.Unknown, WorklogCheckState.Unknown),
+            null, 30);
+        model.SignalSpanSeconds = WorklogCardMapper.SignalSpan(frame);
+        model.SetSignal(WorklogCardMapper.BuildSignal(frame));
+        model.SignalLegend = WorklogCardMapper.BuildSignalLegend(frame);
+        model.SignalCaption = model.Steps > timeline.Length ? $"── son {timeline.Length} adım " : "── oturum ";
     }
 
     /// <summary>The mapper's rule for fixtures: a finished step's own history row folds into the command line.</summary>

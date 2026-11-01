@@ -341,9 +341,10 @@
                     </Border>
                 </Border>
 
-                <!-- Session signal (§7b "oturum sinyali"): measured steps on the session's real time axis; hidden without data. -->
+                <!-- Session time ruler (§7b UI12c "zaman cetveli"): measured steps on one linear real-time axis, real clock
+                     labels and the measured totals beside it; hidden without data. -->
                 <StackPanel Margin="0,11,0,0" Visibility="{Binding HasSignal, Converter={StaticResource BoolToVisibility}}">
-                    <Grid Margin="0,0,0,3">
+                    <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -352,8 +353,21 @@
                                    TextWrapping="NoWrap" Foreground="{DynamicResource Wl.Faint}" />
                         <Rectangle Grid.Column="1" Height="1" VerticalAlignment="Center" Fill="{DynamicResource Wl.Border}" />
                     </Grid>
-                    <Canvas x:Name="SignalCanvas" Height="22" ClipToBounds="True" Background="Transparent"
-                            AutomationProperties.Name="Oturum sinyali" />
+                    <Canvas x:Name="SignalCanvas" Height="40" ClipToBounds="True" Background="Transparent"
+                            AutomationProperties.Name="Oturum zaman cetveli" />
+                    <WrapPanel Margin="0,1,0,0">
+                        <TextBlock Style="{StaticResource Wl.TextBase}" FontSize="11" TextWrapping="NoWrap" Margin="0,0,16,0">
+                            <Run Text="■ " Foreground="{DynamicResource Wl.Green}" /><Run Text="{Binding SignalLegend.Work, Mode=OneWay}" Foreground="{DynamicResource Wl.Muted}" />
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource Wl.TextBase}" FontSize="11" TextWrapping="NoWrap" Margin="0,0,16,0"
+                                   Visibility="{Binding SignalLegend.Failures, Converter={StaticResource NullToCollapsed}}">
+                            <Run Text="▼ " Foreground="{DynamicResource Wl.Red}" /><Run Text="{Binding SignalLegend.Failures, Mode=OneWay}" Foreground="{DynamicResource Wl.Muted}" />
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource Wl.TextBase}" FontSize="11" TextWrapping="NoWrap"
+                                   Visibility="{Binding SignalLegend.Gap, Converter={StaticResource NullToCollapsed}}">
+                            <Run Text="┈ " Foreground="{DynamicResource Wl.Faint}" /><Run Text="{Binding SignalLegend.Gap, Mode=OneWay}" Foreground="{DynamicResource Wl.Muted}" />
+                        </TextBlock>
+                    </WrapPanel>
                 </StackPanel>
 
                 <!-- "ayrıntılar" (N6): technical evidence only. -->

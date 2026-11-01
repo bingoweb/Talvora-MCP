@@ -59,10 +59,16 @@ public sealed record WorklogTimelineRow(WorklogRowState State, string Time, stri
 }
 
 /// <summary>
-/// One peak of the session signal strip (§7b "oturum sinyali"): where a measured step ran on the session's real time
-/// axis (fractions of the session length) and its height on the same fixed log scale as the history bars.
+/// One block of the session time ruler (§7b UI12c "zaman cetveli"): where a measured step ran on the session's real
+/// time axis (fractions of the axis length, one linear scale), its state, label and measured seconds.
 /// </summary>
-public sealed record SignalPeak(double StartFraction, double WidthFraction, double HeightFraction, WorklogRowState State);
+public sealed record SignalPeak(double StartFraction, double WidthFraction, WorklogRowState State, string Label, double Seconds);
+
+/// <summary>
+/// Printed numbers of the time ruler (UI12c): axis start (local), the union of measured step time with
+/// the step count, failures (null when none) and the idle gap (null unless every finished step was measured).
+/// </summary>
+public sealed record SignalLegend(DateTime StartLocal, string Work, string? Failures, string? Gap);
 
 /// <summary>Formats and scales measured durations (DESIGN-WORKLOG §7b). Pure; never estimates.</summary>
 public static class WorklogMeasure
@@ -218,8 +224,9 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
     private bool hasDetails;
     private bool isDetailsOpen;
     private double? finishedSeconds;
-    private string signalCaption = "── oturum sinyali ";
+    private string signalCaption = "── oturum ";
     private double signalSpanSeconds;
+    private SignalLegend? signalLegend;
     private string sessionName = string.Empty;
     private int steps;
     private int filesChanged;
@@ -237,16 +244,19 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
     /// <summary>"nerede" rows, at most three; the rest is counted in <see cref="MoreChangedFiles"/>.</summary>
     public ObservableCollection<WorklogChangeRow> ChangeRows { get; } = [];
 
-    /// <summary>Session signal strip (§7b); only measured steps, so an empty list hides the strip.</summary>
+    /// <summary>Session time ruler (§7b UI12c); only measured steps, so an empty list hides the ruler.</summary>
     public ObservableCollection<SignalPeak> Signal { get; } = [];
 
     public bool HasSignal => Signal.Count > 0;
 
-    /// <summary>"── oturum sinyali " or, when older steps fell out of the 30-step window, "── son 30 adım ".</summary>
+    /// <summary>"── oturum " or, when older steps fell out of the 30-step window, "── son 30 adım ".</summary>
     public string SignalCaption { get => signalCaption; set => Set(ref signalCaption, value); }
 
-    /// <summary>Real length of the strip's time axis in seconds (for minute ticks); 0 = no ticks.</summary>
+    /// <summary>Real length of the ruler's time axis in seconds (for clock ticks); 0 = no ticks.</summary>
     public double SignalSpanSeconds { get => signalSpanSeconds; set => Set(ref signalSpanSeconds, value); }
+
+    /// <summary>Measured numbers printed with the ruler (UI12c); null hides them.</summary>
+    public SignalLegend? SignalLegend { get => signalLegend; set => Set(ref signalLegend, value); }
 
     /// <summary>"ayrıntılar" rows (N6); empty hides the footer button.</summary>
     public ObservableCollection<WorklogDetailRow> DetailRows { get; } = [];

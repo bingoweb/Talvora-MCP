@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-01T18:28:00.000Z",
-  "scope": "W1: preserve UTF-8 and OEM console output.",
+  "verifiedAtUtc": "2026-11-01T18:44:52.000Z",
+  "scope": "UI12c: the worklog session signal becomes a linear time ruler with real clock labels and measured totals.",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-01 W1: DecoderFallbackBuffer.Fallback receives undecodable bytes and their index (query: \"DecoderFallback custom DecoderFallbackBuffer Fallback bytesUnknown .NET 10\"); registering CodePagesEncodingProvider enables code-page lookup and GetEncoding supports encoder and decoder fallbacks (query: \"Encoding.GetEncoding codepage EncoderFallback DecoderFallback CodePagesEncodingProvider.Instance\"). StandardOutputEncoding specifies the preferred encoding; Context7 returned unrelated snippets (queries: \"ProcessStartInfo StandardOutputEncoding default when null .NET 10\" and \"ProcessStartInfo.StandardOutputEncoding property redirected output\"), confirmed on the vendor API page."
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-01 UI12c: Canvas children are placed with the Canvas.Left/Top attached properties and Canvas.SetRight positions the end clock label flush with the right edge; Context7 returned only a Canvas.Left/Top snippet (query: \"Canvas.Right Canvas.Left position child element WPF\"), SetRight confirmed on the vendor API page."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.processstartinfo.standardoutputencoding?view=net-10.0"
+    "https://learn.microsoft.com/dotnet/api/system.windows.controls.canvas.setright"
   ]
 }

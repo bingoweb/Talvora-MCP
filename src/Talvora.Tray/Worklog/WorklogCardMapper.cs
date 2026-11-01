@@ -80,9 +80,10 @@ public static class WorklogCardMapper
 
         model.SignalSpanSeconds = SignalSpan(frame);
         model.SetSignal(BuildSignal(frame));
+        model.SignalLegend = model.HasSignal ? BuildSignalLegend(frame) : null;
         model.SignalCaption = frame.Totals.Steps > frame.Timeline.Count
             ? $"── son {frame.Timeline.Count} adım "
-            : "── oturum sinyali ";
+            : "── oturum ";
         model.Footer = FormatFooter(frame.Totals);
         model.SessionName = $"0:{(string.IsNullOrWhiteSpace(project) ? "talvora" : project)}*";
         model.Steps = frame.Totals.Steps;
@@ -107,9 +108,10 @@ public static class WorklogCardMapper
     }
 
     /// <summary>
-    /// Session signal (§7b): every step with a measured duration (WL1) sits on the session's real time axis.
-    /// Axis start = frame time − measured session seconds; a step ends at its timestamp and began its measured duration
-    /// earlier. Steps without a measurement are not drawn; nothing is interpolated.
+    /// Session time ruler (§7b UI12c): every step with a measured duration (WL1) is a block on one linear real-time
+    /// axis. Axis start = frame time − measured session seconds; a step ends at its timestamp and began its measured
+    /// duration earlier. The running step is drawn from its measured elapsed time up to the frame time. Steps without
+    /// a measurement are not drawn; nothing is interpolated.
     /// </summary>
     public static IReadOnlyList<SignalPeak> BuildSignal(DesktopWorklogFrame frame)
     {
@@ -120,6 +122,49 @@ public static class WorklogCardMapper
         }
 
         var peaks = new List<SignalPeak>();
+        foreach (var (begin, end, state, label, seconds) in MeasuredIntervals(frame, start))
+        {
+            var from = Math.Clamp((begin - start).TotalSeconds / span, 0, 1);
+            var to = Math.Clamp((end - start).TotalSeconds / span, from, 1);
+            peaks.Add(new SignalPeak(from, to - from, state, label, seconds));
+        }
+
+        return peaks;
+    }
+
+    /// <summary>
+    /// The ruler's printed numbers (UI12c). Work is the union of the measured intervals, so parallel steps count once.
+    /// The gap (axis length − work) is printed only when every finished step on the axis was measured; otherwise the
+    /// unmeasured steps would be miscounted as idle time.
+    /// </summary>
+    public static SignalLegend BuildSignalLegend(DesktopWorklogFrame frame)
+    {
+        var (start, span) = SignalAxis(frame);
+        var intervals = span <= 0 ? [] : MeasuredIntervals(frame, start).ToArray();
+        var work = 0d;
+        var reach = start;
+        foreach (var (begin, end, _, _, _) in intervals.OrderBy(interval => interval.Begin))
+        {
+            var from = begin < reach ? reach : begin;
+            if (end > from)
+            {
+                work += (end - from).TotalSeconds;
+                reach = end;
+            }
+        }
+
+        var failures = intervals.Count(interval => interval.State == WorklogRowState.Failed);
+        var complete = frame.Timeline.All(entry => entry.DurationSeconds is not null || entry.State == WorklogStepState.Running);
+        return new SignalLegend(
+            start.ToLocalTime().DateTime,
+            $"iş {WorklogMeasure.Format(work)} · {intervals.Length} adım",
+            failures > 0 ? $"{failures} hata" : null,
+            complete && span > 0 ? $"ara {WorklogMeasure.Format(Math.Max(0, span - work))}" : null);
+    }
+
+    private static IEnumerable<(DateTimeOffset Begin, DateTimeOffset End, WorklogRowState State, string Label, double Seconds)> MeasuredIntervals(
+        DesktopWorklogFrame frame, DateTimeOffset start)
+    {
         foreach (var entry in frame.Timeline.Reverse())
         {
             if (entry.DurationSeconds is not { } seconds)
@@ -127,19 +172,22 @@ public static class WorklogCardMapper
                 continue;
             }
 
-            var end = Math.Clamp((entry.TimestampUtc - start).TotalSeconds / span, 0, 1);
-            var begin = Math.Clamp(end - seconds / span, 0, end);
-            peaks.Add(new SignalPeak(begin, end - begin, WorklogMeasure.BarWidth(seconds) / 56, entry.State switch
+            var begin = entry.TimestampUtc.AddSeconds(-seconds);
+            yield return (begin < start ? start : begin, entry.TimestampUtc, entry.State switch
             {
                 WorklogStepState.Succeeded => WorklogRowState.Succeeded,
                 WorklogStepState.Failed => WorklogRowState.Failed,
                 WorklogStepState.Cancelled => WorklogRowState.Cancelled,
                 WorklogStepState.Running => WorklogRowState.Running,
                 _ => WorklogRowState.Muted,
-            }));
+            }, entry.Label, seconds);
         }
 
-        return peaks;
+        if (frame.Current.State == WorklogStepState.Running && frame.Current.ElapsedSeconds > 0)
+        {
+            var begin = frame.TimestampUtc.AddSeconds(-frame.Current.ElapsedSeconds);
+            yield return (begin < start ? start : begin, frame.TimestampUtc, WorklogRowState.Running, frame.Current.Title, frame.Current.ElapsedSeconds);
+        }
     }
 
     /// <summary>Real length of the strip's axis in seconds (0 when the session has no measured length).</summary>

@@ -410,7 +410,7 @@ Motion vocabulary (all off when reduced motion or high contrast is active, or wh
 The live gradient line and the braille spinner are retired; the status bar and the cursor carry "running".
 
 **UI12b additions (user, 2026-11-01: the measurable parts of concepts B and C):**
-- **Oturum sinyali** (from B): a 22 DIP strip under `── oturum sinyali`, above the status bar. The x axis is the session's real time (start = frame time − `Totals.SessionSeconds`, end = frame time). Each step with a measured `DurationSeconds` is a plateau from `timestamp − duration` to `timestamp`, at least 2 DIP wide. Its height is `3 + (history bar width / 56) × 17` DIP (the same fixed log scale), drawn as a 28 % body with a 2 px crest in the step's state colour. Steps without a measurement are not drawn; with no measured step the strip is hidden. The running step is not drawn until it has a measured end. Motion: only a newly arrived peak grows from the baseline (260 ms, cubic ease-out).
+- **Oturum sinyali** (from B; **replaced by UI12c below**): a 22 DIP strip under `── oturum sinyali`, above the status bar. The x axis is the session's real time (start = frame time − `Totals.SessionSeconds`, end = frame time). Each step with a measured `DurationSeconds` is a plateau from `timestamp − duration` to `timestamp`, at least 2 DIP wide. Its height is `3 + (history bar width / 56) × 17` DIP (the same fixed log scale), drawn as a 28 % body with a 2 px crest in the step's state colour. Steps without a measurement are not drawn; with no measured step the strip is hidden. The running step is not drawn until it has a measured end. Motion: only a newly arrived peak grows from the baseline (260 ms, cubic ease-out).
 - **ANSI frame** (from C): the code pane gets a double frame (outer 1 px `BorderStrong` with 2 px gap, inner 1 px `BorderStrong`). Its header reads `═╡ diff ╞` + a double rule + `╡ HH:mm:ss ╞═` + `kopyala`. Decoration only; it carries no data. C's percentage bar is **not** built: tool calls report no real progress.
 
 **D24 (Claude's own audit of UI12/UI12b, 2026-11-01):**
@@ -419,7 +419,27 @@ The live gradient line and the braille spinner are retired; the status bar and t
 - Faint 1×3 DIP ticks on the baseline mark real time: every minute up to 10 min, every 5 min up to 1 h, then every 15 min.
 - A hidden or unloaded card finishes a half-typed title.
 
-Built by Claude on 2026-11-01 (WL1 + UI12 + UI12b + D24). The preview harness (`Talvora.Tray.exe --worklog-preview <dir>`) renders every state; fixture durations there are labelled design fixtures, while the live card reads only WL1 measurements.
+**UI12c "zaman cetveli" (user, 2026-11-01: "realtime oturum sinyali görseli çok kötü, anlaşılmaz"; concept A chosen over a
+time-share bar and step columns).** Diagnosis of the UI12b strip: it drew the same duration twice on two scales (linear width,
+log height), printed no number, no clock and no legend, so no bar could be tied to a history row and the empty space did not
+read as time. The ruler replaces it, still between the code pane and the status bar:
+
+| Element | Look | Source (real only) |
+|---|---|---|
+| Caption | `── oturum ` + rule (`── son N adım ` when older steps fell out of the 30-step window, as in D24) | `Totals.Steps`, `Timeline.Count` |
+| Axis | one **linear** real-time scale; start = frame time − `Totals.SessionSeconds` (or the oldest kept step's start, D24), end = frame time | frame timestamp, `SessionSeconds`, WL1 durations |
+| Idle line | dotted 1 DIP line (dash 1/3, `Wl.Faint`) through the middle of the 14 DIP track: time in which no tool of this session ran | the axis itself |
+| Step block | solid 14 DIP block from `timestamp − DurationSeconds` to `timestamp`, state colour at 85 %, radius 1, min 2 DIP; prints `label · duration`, else `duration`, in `Wl.Terminal` 11 px **only when the whole text fits** (never cut) | `Timeline[i]` with `DurationSeconds` (WL1) |
+| Running block | cyan block from `frame time − Current.ElapsedSeconds` to frame time | `Current.ElapsedSeconds` (stopwatch of the running call) |
+| Failure caret | 8×5 DIP red triangle above every failed block, so a 2 DIP failure stays findable | step state |
+| Clock | 1 DIP axis line; 1×4 ticks on whole local minutes (axis ≤ 10 min), 5 min (≤ 1 h) or 15 min; labels `:mm` for minute ticks, `HH:mm` otherwise; `HH:mm` start at the left edge and end flush right; a tick label that would come within 8 DIP of another, or repeats an edge minute, is skipped, never shortened | frame timestamp, local time zone |
+| Legend | `■ iş 5:39 · 4 adım` (green square) · `▼ 1 hata` (only with failures) · `┈ ara 3:25` (only when **every** finished step on the axis was measured) — 11 px, `Wl.Muted` text | work = **union** of the measured intervals (parallel steps count once), adım = drawn blocks, ara = axis − work |
+
+Steps without a measurement are not drawn; with no measured step the ruler is hidden. Motion: only a newly arrived block draws
+in from its left edge (260 ms, cubic ease-out); off under reduced motion, high contrast or when hidden. The preview harness
+builds each fixture as a protocol frame and draws it with the mapper's own functions.
+
+Built by Claude on 2026-11-01 (WL1 + UI12 + UI12b + D24 + UI12c). The preview harness (`Talvora.Tray.exe --worklog-preview <dir>`) renders every state; fixture durations there are labelled design fixtures, while the live card reads only WL1 measurements.
 
 ## 8. Control Center integration
 
