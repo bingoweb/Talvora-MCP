@@ -80,6 +80,13 @@ Context7 exists to stop guesses about APIs. Use it where a wrong guess would bre
 6. **Evidence that means something.** Each `libraries[]` entry: `libraryId` = the id you actually queried (versioned if you used a version); `verified` = `<date> <card>: <the one fact the code relies on> (query: "<query text>")`. `vendorSources[]` = the official URLs you actually opened (the map's Official column). Only what this card used, at most 12 each, replaced every card. An id or URL you did not actually query is a critical audit finding.
 7. **Economy.** Never paste documentation into logs, cards or commits; keep only the fact used. Do not query the same fact twice in one card.
 
+### TOOLCHAIN PREFERENCE — Rust, cargo and uv first (permanent user rule 2026-11-01, part of the EXECUTION MANDATE)
+
+The user's permanent rule: **Rust, `cargo` and `uv` have priority wherever they fit.** Claude still decides the language and technique for every card; the agent never switches a language or tool on its own.
+1. **Python is always run and managed with `uv`:** `uv run`, `uv add`/`uv remove`, `uv sync`, `uv lock`, `uvx` for one-off tools, `uv python install` for interpreters; `pyproject.toml` + `uv.lock` are canonical. Never `pip`, `pip install --user`, `python -m venv`, `virtualenv`, `poetry`, `pipenv` or `conda`, also not for helper scripts or tests. A Python step in a card that names another tool is executed with the `uv` equivalent; where none exists, that is a proposal.
+2. **Rust is always built, tested and managed with `cargo`:** `cargo build`, `cargo test`, `cargo check`, `cargo clippy`, `cargo fmt`, `cargo add`/`cargo remove` (exact versions pinned as the card says); `Cargo.lock` is committed for binaries. Never call `rustc` directly for project code. Toolchains come from `rustup`.
+3. **Existing choices stay until a card changes them.** The rule shapes Claude's decisions; it does not let the agent rewrite existing code, migrate a stack or add a Rust or Python component that no card names (EXECUTION MANDATE rules 1–3 still apply). If you see a place where Rust, cargo or uv would clearly fit better, write one line under the STATUS findings for Claude; do not change it.
+
 ### QUALITY CRAFT — how the agent builds what Claude designed (user decision 2026-10-30, part of the EXECUTION MANDATE)
 
 The user wants every product to look original, move beautifully and speak flawless Turkish, and every quality check to cover cosmetics and usability, not only security. Claude decides the design; the agent builds it with the same care and checks its own work. Nothing here gives design freedom: rules 6 and 9–10 still apply.
