@@ -1092,6 +1092,106 @@ with
 
 **Acceptance:** `DESKTOP_PROGRESS_BEHAVIOR_GREEN` (includes the RM test); smoke surface/metadata green; Full gate `Hepsi geçti.`; installer + deploy; live through the installed service (signed-in session): `talvora_remotion_guide` → `defaultProjectsRoot` ends with `\Videos\Talvora`; `talvora_remotion_run {action:"create", name:"talvora-rm1-deneme"}` → poll status to `succeeded`; `compositions` → `["MyComp"]`; `render {compositionId:"MyComp", format:"gif", scale:0.25, openWhenDone:false}` → `succeeded`, output size > 0 (the blank template renders an empty 2 s clip); paste runIds, states and the output size into the Log; the desktop showed one card per step; GitHub CI green (10b).
 
+## Phase OB — Obsidian vault (user request 2026-11-01)
+
+The user installed Obsidian. Claude built one vault for every project at `C:\Users\tayla\Obsidian\Taylan` (local git history, no remote, nothing paid). Each project's `docs/` folder is linked into the vault as a directory junction named `Repo belgeleri`, so the repository stays the only source (AGENTS.md → `### OBSIDIAN VAULT`). Agents read notes with the existing `talvora_read_source` / `talvora_search_text` (the vault is a git folder, so it is a recognised workspace). OB1 adds the one missing piece: a write tool that refuses secrets by code.
+
+### OB1 — `talvora_note_write`: write vault notes, refuse secrets and the linked repo docs
+
+**Why:** user decision 2026-11-01 (ChatGPT and Claude read and write vault notes; no secret may enter the vault). Secret protection must be code, not convention.
+
+**Files:**
+- new `src/Talvora/Tools/NoteTools.cs` (reference copy)
+- new `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Notes.cs` (reference copy)
+- `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.cs`
+- `src/Talvora.Shared/FileLog.cs`
+- `src/Talvora.Shared/TalvoraToolManifest.cs`
+- `src/Talvora.Shared/TalvoraToolTitles.cs`
+- `src/Talvora.Shared/TalvoraToolGuides.cs`
+- `src/Talvora.Shared/TalvoraMcpToolSurfacePolicy.cs`
+- `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`
+- `tests/Talvora.Smoke/SmokeScenarios.SurfacePolicy.cs`
+- `tests/CodexCliIntegrationSourceRegression.ps1`
+- `tests/FocusedMcpSurfaceSourceRegression.ps1`
+- `README.md`, `docs/ARCHITECTURE.md`
+- `.context7/verification.json`
+
+**Context7:** `/modelcontextprotocol/csharp-sdk`: "McpServerTool async Task method with CancellationToken parameter binding, ModelContextProtocol 2.2.0" (the SDK binds the token; it is not part of the input schema). `/dotnet/docs`: "FileAttributes.ReparsePoint DirectoryInfo.Attributes junction detection .NET 10". Vendor: the two Official links in `docs/codex/CONTEXT7.md`.
+
+#### Exact implementation
+
+Step 1 (red first). Copy `docs/codex/reference/ob1/SourceEditRegressionRunner.Notes.cs` → `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.Notes.cs` (AGENTS.md rule 5 "Reference copies"; normalised SHA-256 `9ac0bc68fbd435500aeeefe54de30de04b8a4a8fb945323d1da71f7ee0bb1f21`). In `SourceEditRegressionRunner.cs`, directly after the line `("ap2-agent-patch-dialect", Ap2AgentPatchToleranceAsync),` add:
+
+```csharp
+            ("ob1-vault-note-writer", RunVaultNoteWriterAsync),
+```
+
+Build the test project: the red state is the compile error `CS0103` for `NoteTools`; quote it in the Log.
+
+Step 2. Copy `docs/codex/reference/ob1/NoteTools.cs` → `src/Talvora/Tools/NoteTools.cs` (normalised SHA-256 `7444fe5957b7435833754a3950d323b198c2c54a090d11a970c27e78cccbae22`).
+
+Step 3. `src/Talvora.Shared/FileLog.cs`: insert directly before `    private static string FormatExceptionDetails(string value)`:
+
+```csharp
+    public static bool ContainsSensitiveData(string? value) =>
+        !string.IsNullOrEmpty(value) &&
+        !string.Equals(RedactSensitiveData(value), value, StringComparison.Ordinal);
+
+```
+
+Claude verified steps 1–3 in a scratch clone on 2026-11-01: the test project builds with 0 warnings and `ob1-vault-note-writer` is green, including the real-junction refusal.
+
+Step 4. `src/Talvora.Shared/TalvoraToolManifest.cs`: directly after `"talvora_worklog_note",` add `"talvora_note_write",`.
+
+Step 5. `src/Talvora.Shared/TalvoraToolTitles.cs`: directly after `["talvora_worklog_note"] = "Görev satırını ayarla",` add:
+
+```csharp
+        ["talvora_note_write"] = "Kasaya not yaz",
+```
+
+Step 6. `src/Talvora.Shared/TalvoraToolGuides.cs`: directly before `["talvora_gh_run"] = new(` add:
+
+```csharp
+            ["talvora_note_write"] = new(
+                "Create or append a Markdown note in the user's Obsidian vault; secret-looking text is refused.",
+                P(("vaultRoot", "Absolute vault root, C:\\Users\\tayla\\Obsidian\\Taylan."),
+                  ("path", "Vault-relative .md path, e.g. 40 Oturum Notları/2026-11-01 Talvora OB1.md."),
+                  ("content", "Markdown text, at most 64000 characters, no secrets."),
+                  ("mode", "create (new note) or append (existing note).")),
+                """{"vaultRoot":"C:\\Users\\tayla\\Obsidian\\Taylan","path":"40 Oturum Notları/2026-11-01 Talvora OB1.md","content":"# OB1\n","mode":"create"}"""),
+```
+
+Step 7. Counts (the tool is Dev-only: it is in neither `DevelopmentExcludedTools` nor `AdministrationTools`; it is not open-world and not destructive):
+- `TalvoraMcpToolSurfacePolicy.cs`: `ExpectedFullToolCount = 250` → `251`; `ExpectedDevelopmentToolCount = 213` → `214`. Admin `88` and shared `51` stay.
+- `TalvoraMcpToolMetadataPolicy.cs`: `ExpectedReviewedToolCount = 250` → `251`. Open-world `85` and destructive `100` stay.
+- `tests/CodexCliIntegrationSourceRegression.ps1` and `tests/FocusedMcpSurfaceSourceRegression.ps1`: the strings `'ExpectedFullToolCount = 250'` → `'ExpectedFullToolCount = 251'` and `'ExpectedDevelopmentToolCount = 213'` → `'ExpectedDevelopmentToolCount = 214'`.
+- `README.md`: every Full count `250` → `251` and every Dev count `213` → `214` in the places `tests/ToolManifestDocumentationRegression.ps1` checks: badge text, badge URL, the summary line (`**251 total**, **214 Dev**, …`), the focused diagram line, the full diagram line, the `/mcp` and `/mcp/dev` table rows.
+- `docs/ARCHITECTURE.md`: `/mcp` (**251 tools**), `/mcp/dev` (**214 tools**), "complete 251-tool capability set".
+
+Step 8. `tests/Talvora.Smoke/SmokeScenarios.SurfacePolicy.cs`: directly after the `AssertSurface("talvora_worklog_note", development: true, administration: false);` statement add:
+
+```csharp
+        AssertSurface(
+            "talvora_note_write",
+            development: true,
+            administration: false);
+```
+
+Step 9. Refresh `.context7/verification.json` with the two lookups above (replace, never append).
+
+**Don't:**
+- add read, search or list note tools (the existing tools cover reading);
+- redact and then write: secret-looking content is refused whole, never partly written;
+- add folder checks beyond the reference file (the allowed folders are an AGENTS.md rule);
+- run git in the vault, add a remote, or touch Obsidian settings;
+- add a vault path setting or a default `vaultRoot` (the service runs as LocalSystem; the caller always passes it).
+
+**Acceptance:**
+- Red (CS0103), then green: `ob1-vault-note-writer` passes.
+- Full gate `Hepsi geçti.` as the signed-in user (the Q7 dev payload budget included; if it is exceeded, stop with a proposal and never raise the budget yourself).
+- Deploy; `/healthz.sourceCommit` = HEAD. Live check on the installed runtime: `talvora_note_write {vaultRoot: "C:\\Users\\tayla\\Obsidian\\Taylan", path: "40 Oturum Notları/2026-11-01 Talvora OB1.md", content: <a session note with the template properties tür: oturum, proje: Talvora, yazan: ChatGPT, tarih: 2026-11-01>, mode: "create"}` succeeds; the same tool with path `01 Gelen Kutusu/OB1 deneme.md` and content `api_key=abcdef123456` is refused with the Turkish secret message and creates no file.
+- Push; CI once.
+
 ## Audit fixes (external audits by Claude)
 
 D-cards go to the top of the agent queue. Newest audit first.

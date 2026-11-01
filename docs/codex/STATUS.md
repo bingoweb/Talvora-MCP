@@ -148,6 +148,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] L1 — Legacy Windows-1254 text files can be read and edited, keeping their encoding (audit 35)
 - [ ] UX1 — Start menu entry "Talvora Kontrol Merkezi" opens the Control Center (audit 35)
 - [ ] UI11 — Initial-letter badge for services without a logo; plain version in About (audit 35)
+- [ ] OB1 — talvora_note_write: write Obsidian vault notes, refuse secrets and the linked repo docs (user request 2026-11-01)
 
 ## User queue
 
@@ -188,6 +189,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-01 — Claude: Obsidian set up for every project (user request). One vault `C:\Users\tayla\Obsidian\Taylan` with local git only, nothing paid; each repo's `docs/` is a junction (`Repo belgeleri`), so the repository stays the only source. Core plugins + Dataview, Templater, Git (DataviewJS and Templater system commands off). New AGENTS.md section `### OBSIDIAN VAULT`. Queued OB1 (`talvora_note_write`, secrets refused by code; reference code verified green in a scratch clone).
 - 2026-11-01 — Live real-data verification of the redesigned card on the real desktop (screen captures of the tray window): measured 2.47/0.37/1.64/9.51 s client-side vs card 2,4/0,3/1,6/9,5 sn; the running clock advanced 00:08→00:13 over 4.9 s; the signal strip matched order, gaps and widths. Found D25: a session restarting after 90 s idle kept ChangedFiles/LastBuild/LastTests ("1 dosya" with no file changed). RED test reproduced it; fixed by resetting all session facts on restart. Context7 /dotnet/docs + vendor HashSet.Clear page. Signed-in Full 68 kontrol, 0 hata.
 - 2026-11-01 — D24 by Claude (one-off user exception): deep check of UI12/UI12b found row-in and peak-growth animations never ran (Clear+Add raised one event per item, resetting the previous key and redrawing the strip N times in one frame); now one coalesced refresh at DispatcherPriority.Loaded, verified in a live off-screen window (both transforms animating). Signal axis honours the 30-step window ("son N adım"); real minute ticks; half-typed title completed on hide.
 - 2026-11-01 — UI12b built by Claude: "oturum sinyali" strip (measured steps on the real session time axis, same fixed log height scale, hidden without measurements; only a new peak grows in) and ANSI double frame for the code pane. C's percentage bar not built (no real progress data). Context7 /dotnet/docs-desktop had no Canvas snippet after three queries; vendor API page used. Signed-in Full 68 kontrol, 0 hata, Hepsi geçti.
