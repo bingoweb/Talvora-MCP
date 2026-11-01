@@ -21,6 +21,7 @@ internal static partial class SourceEditRegressionRunner
             ("ownership-preservation", RunOwnershipContractsAsync),
             ("git-work-contract", RunWorkContractAsync),
             ("git-argument-classification", RunGitArgumentClassificationAsync),
+            ("w1-console-output-encoding", RunConsoleOutputEncodingAsync),
             ("ast-grep-pinned-cache-tamper", RunPinnedAstGrepCacheAsync),
             ("knowledge-s6-scoped-fetch", RunKnowledgeS6LocalAsync),
             ("quality-audit-delivery-and-jobs", RunQualityAuditAsync),

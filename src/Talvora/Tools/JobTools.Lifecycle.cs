@@ -72,8 +72,8 @@ public static partial class JobTools
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
+            StandardOutputEncoding = ConsoleOutputEncoding.Instance,
+            StandardErrorEncoding = ConsoleOutputEncoding.Instance,
             CreateNoWindow = true,
         };
 

@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-01T17:27:23.000Z",
-  "scope": "D25: a restarted worklog session resets its file, build, test and change facts.",
+  "verifiedAtUtc": "2026-11-01T18:28:00.000Z",
+  "scope": "W1: preserve UTF-8 and OEM console output.",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-01 D25: HashSet<T>.Clear removes all elements so the restarted session's ChangedFiles count is zero; Context7 returned an unrelated array-clearing snippet (query: \"HashSet<T>.Clear removes all elements Count zero\"), confirmed on the vendor API page."
+      "verified": "2026-11-01 W1: DecoderFallbackBuffer.Fallback receives undecodable bytes and their index (query: \"DecoderFallback custom DecoderFallbackBuffer Fallback bytesUnknown .NET 10\"); registering CodePagesEncodingProvider enables code-page lookup and GetEncoding supports encoder and decoder fallbacks (query: \"Encoding.GetEncoding codepage EncoderFallback DecoderFallback CodePagesEncodingProvider.Instance\"). StandardOutputEncoding specifies the preferred encoding; Context7 returned unrelated snippets (queries: \"ProcessStartInfo StandardOutputEncoding default when null .NET 10\" and \"ProcessStartInfo.StandardOutputEncoding property redirected output\"), confirmed on the vendor API page."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.collections.generic.hashset-1.clear"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.processstartinfo.standardoutputencoding?view=net-10.0"
   ]
 }

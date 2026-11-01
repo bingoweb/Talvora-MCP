@@ -138,7 +138,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UI12b — Session signal strip and ANSI frame for the worklog card (DESIGN-WORKLOG §7b, user asked for the measurable parts of concepts B and C) — built by Claude; signed-in Full 68/0; installed a7a7194; GitHub CI 41330417287 success
 - [x] D24 — Worklog card motion and signal-axis fixes from Claude's own deep check (DESIGN-WORKLOG §7b D24) — fixed by Claude (one-off user exception 2026-11-01); signed-in Full 68/0; installed d62a818; GitHub CI 41331187830 success
 - [x] D25 — A restarted worklog session no longer shows the previous session's files, build and test facts — found in Claude's live real-data check, fixed by Claude (one-off user exception 2026-11-01); signed-in Full 68/0
-- [ ] W1 — Console output keeps Turkish text (UTF-8, otherwise the OEM code page) (audit 35)
+- [~] W1 — Console output keeps Turkish text (UTF-8, otherwise the OEM code page) (live pending: deploy, installed smoke and Turkish output probes; CI pending)
 - [ ] W2 — Git reports Turkish paths as text, not octal escapes (audit 35)
 - [ ] W3 — Paths longer than 260 characters work for writes and source edits (audit 35)
 - [ ] W4 — Archives made by the service are readable by the user (audit 35)
@@ -172,6 +172,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
+- tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.AtomicRace.cs:23 — The first signed-in W1 Full gate hit UnauthorizedAccessException in concurrent first writers; the standalone SourceEdit regression and repeated Full gate passed.
+
 - (resolved -> Q3) docs/codex/ROADMAP.md:601 — README was already in the card's Files list; compacting it within the documented diet scope brings root Markdown to 119650 bytes including the new HANDOFF. No additional archive or product scope required.
 
 - (resolved → P-35/P-38) tests/Talvora.Notification.Regression/Program.N7.cs:64 — N7 2,000-entry loading perf guard passes isolated in 116 ms, but fails when independent Full suites compete (340, 309, 321 ms against 300 ms); see P-35. No N7 changes made during UI5.
@@ -189,6 +191,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-01 — W1, executor ChatGPT via Talvora: preserve UTF-8 output and decode invalid UTF-8 through the OEM code page in process, interactive-user and job output. RED: CS0103: 'ConsoleOutputEncoding' adı geçerli bağlamda yok. SourceEdit regression GREEN; existing tests/CodexCliIntegrationSourceRegression.ps1 minimally updated because it asserted the replaced encoding literals, and passed. Signed-in Full retry: 68 kontrol, 0 hata; Hepsi geçti. Context7 /dotnet/docs: decoder fallback, registered code pages and encoding fallbacks; StandardOutputEncoding confirmed on Microsoft Learn after Context7 returned unrelated snippets. First Full run had an unrelated atomic writer access failure (see Findings). Exact-commit installation, live output and CI pending. Gitea mirror skipped: Talvora connector exposes no authenticated Gitea comment tool.
 - 2026-11-01 — Claude: Obsidian set up for every project (user request). One vault `C:\Users\tayla\Obsidian\Taylan` with local git only, nothing paid; each repo's `docs/` is a junction (`Repo belgeleri`), so the repository stays the only source. Core plugins + Dataview, Templater, Git (DataviewJS and Templater system commands off). New AGENTS.md section `### OBSIDIAN VAULT`. Queued OB1 (`talvora_note_write`, secrets refused by code; reference code verified green in a scratch clone).
 - 2026-11-01 — Live real-data verification of the redesigned card on the real desktop (screen captures of the tray window): measured 2.47/0.37/1.64/9.51 s client-side vs card 2,4/0,3/1,6/9,5 sn; the running clock advanced 00:08→00:13 over 4.9 s; the signal strip matched order, gaps and widths. Found D25: a session restarting after 90 s idle kept ChangedFiles/LastBuild/LastTests ("1 dosya" with no file changed). RED test reproduced it; fixed by resetting all session facts on restart. Context7 /dotnet/docs + vendor HashSet.Clear page. Signed-in Full 68 kontrol, 0 hata.
 - 2026-11-01 — D24 by Claude (one-off user exception): deep check of UI12/UI12b found row-in and peak-growth animations never ran (Clear+Add raised one event per item, resetting the previous key and redrawing the strip N times in one frame); now one coalesced refresh at DispatcherPriority.Loaded, verified in a live off-screen window (both transforms animating). Signal axis honours the 30-step window ("son N adım"); real minute ticks; half-typed title completed on hide.

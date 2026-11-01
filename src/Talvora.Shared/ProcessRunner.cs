@@ -221,6 +221,8 @@ public static class ProcessRunner
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = ConsoleOutputEncoding.Instance,
+                StandardErrorEncoding = ConsoleOutputEncoding.Instance,
                 CreateNoWindow = true,
             };
             foreach (var argument in arguments)
@@ -261,6 +263,8 @@ public static class ProcessRunner
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardOutputEncoding = ConsoleOutputEncoding.Instance,
+            StandardErrorEncoding = ConsoleOutputEncoding.Instance,
             CreateNoWindow = true,
             Arguments = "/d /v:on /s /c \"\"" + temporaryCommandScript + "\"\"",
         };

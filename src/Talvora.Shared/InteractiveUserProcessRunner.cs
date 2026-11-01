@@ -589,9 +589,9 @@ try {
     $stdinPath = [string]$request.StandardInputPath
     $psi.RedirectStandardInput = [bool]$request.CloseStandardInput -or
         -not [string]::IsNullOrWhiteSpace($stdinPath)
-    # Native Codex emits UTF-8, regardless of the Windows OEM code page.
-    $psi.StandardOutputEncoding = [Text.UTF8Encoding]::new($false)
-    $psi.StandardErrorEncoding = [Text.UTF8Encoding]::new($false)
+    # W1: UTF-8 output (Codex) stays UTF-8; anything else is read through the OEM code page.
+    $psi.StandardOutputEncoding = [Talvora.Shared.ConsoleOutputEncoding]::Instance
+    $psi.StandardErrorEncoding = [Talvora.Shared.ConsoleOutputEncoding]::Instance
     if ($psi.RedirectStandardInput) {
         $psi.StandardInputEncoding = [Text.UTF8Encoding]::new($false)
     }

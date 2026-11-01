@@ -126,8 +126,8 @@ $checks = [ordered]@{
         $source.Contains('CodexCliInvocationPolicy.SafeErrorSummary(') -and
         $source.Contains('discardStandardError: true') -and
         $policy.Contains('[TASK_PROMPT_REDACTED]') -and
-        $runner.Contains('StandardOutputEncoding = [Text.UTF8Encoding]') -and
-        $runner.Contains('StandardErrorEncoding = [Text.UTF8Encoding]') -and
+        $runner.Contains('StandardOutputEncoding = [Talvora.Shared.ConsoleOutputEncoding]::Instance') -and
+        $runner.Contains('StandardErrorEncoding = [Talvora.Shared.ConsoleOutputEncoding]::Instance') -and
         $runner.Contains('TextFileStore.ReadBoundedAsync(') -and
         $pump.Contains('var headLimit = maximumCharacters / 2') -and
         $pump.Contains('writer.FlushAsync(cancellationToken)') -and
