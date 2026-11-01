@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-01T18:44:52.000Z",
-  "scope": "UI12c: the worklog session signal becomes a linear time ruler with real clock labels and measured totals.",
+  "verifiedAtUtc": "2026-11-01T18:52:42.000Z",
+  "scope": "W2: Git emits non-ASCII paths as text.",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-01 UI12c: Canvas children are placed with the Canvas.Left/Top attached properties and Canvas.SetRight positions the end clock label flush with the right edge; Context7 returned only a Canvas.Left/Top snippet (query: \"Canvas.Right Canvas.Left position child element WPF\"), SetRight confirmed on the vendor API page."
+      "libraryId": "/git/git",
+      "verified": "2026-11-01 W2: core.quotePath=false stops treating bytes above 0x80 as unusual in path output; control characters, quotes and backslashes remain escaped (query: \"core.quotePath false git status porcelain non-ASCII paths\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.windows.controls.canvas.setright"
+    "https://git-scm.com/docs/git-config"
   ]
 }

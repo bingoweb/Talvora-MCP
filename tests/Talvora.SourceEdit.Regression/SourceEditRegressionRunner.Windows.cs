@@ -19,4 +19,20 @@ internal static partial class SourceEditRegressionRunner
         AssertEqual("dir: arşiv\r\nutf8: ğüş\r\n", reader.ReadToEnd(), "W1: streamed mixed output must decode per byte run.");
         return Task.CompletedTask;
     }
+
+    // W2: every Git call Talvora makes turns off octal quoting of non-ASCII paths.
+    public static Task RunGitQuotePathAsync()
+    {
+        var method = typeof(GitTools).GetMethod("AddSafeDirectoryArgument",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            ?? throw new InvalidOperationException("GitTools.AddSafeDirectoryArgument is missing.");
+        foreach (var directory in new[] { Path.GetTempPath(), Directory.GetCurrentDirectory() })
+        {
+            var result = (string[])(method.Invoke(null, [directory, new[] { "status" }])
+                ?? throw new InvalidOperationException("No Git arguments returned."));
+            Assert(result.Length >= 3 && result[0] == "-c" && result[1] == "core.quotepath=false",
+                "W2: Git arguments must start with -c core.quotepath=false.");
+        }
+        return Task.CompletedTask;
+    }
 }

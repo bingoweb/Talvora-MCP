@@ -1013,7 +1013,8 @@ public static class GitTools
         var safeDirectory = FindRepositoryDirectory(workingDirectory);
         if (safeDirectory is null)
         {
-            return requestedArguments;
+            // W2: Turkish and other non-ASCII paths come back as text instead of "\304\261" escapes.
+            return ["-c", "core.quotepath=false", .. requestedArguments];
         }
 
         var normalizedSafeDirectory = safeDirectory
@@ -1022,6 +1023,8 @@ public static class GitTools
                 Path.AltDirectorySeparatorChar);
         return
         [
+            "-c",
+            "core.quotepath=false",
             "-c",
             $"safe.directory={normalizedSafeDirectory}",
             .. requestedArguments,
