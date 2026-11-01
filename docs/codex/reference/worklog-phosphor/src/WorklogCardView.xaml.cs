@@ -61,6 +61,7 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
 
         ApplyContrast(SystemParameters.HighContrast);
         DataContextChanged += (_, _) => Subscribe(DataContext as WorklogCardViewModel);
+        SignalCanvas.SizeChanged += (_, _) => DrawSignal(animateNewest: false);
         IsVisibleChanged += (_, _) => UpdateMotion();
         Unloaded += (_, _) => StopMotion();
         SystemParameters.StaticPropertyChanged += OnSystemParametersChanged;
@@ -156,6 +157,7 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
         {
             subscribed.PropertyChanged -= OnModelChanged;
             subscribed.Timeline.CollectionChanged -= OnTimelineChanged;
+            subscribed.Signal.CollectionChanged -= OnSignalChanged;
         }
 
         subscribed = model;
@@ -165,11 +167,13 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
         {
             subscribed.PropertyChanged += OnModelChanged;
             subscribed.Timeline.CollectionChanged += OnTimelineChanged;
+            subscribed.Signal.CollectionChanged += OnSignalChanged;
             firstRowKey = RowKey(subscribed);
         }
 
         ShowTitle(animate: false);
         UpdateClock();
+        DrawSignal(animateNewest: false);
         UpdateMotion();
     }
 
@@ -241,6 +245,77 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
         {
             typeTimer.Stop();
         }
+    }
+
+    private int drawnPeaks;
+
+    private void OnSignalChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => DrawSignal(animateNewest: true));
+
+    /// <summary>
+    /// §7b "oturum sinyali": a baseline and one peak per measured step. x and width are the step's real place on the
+    /// session axis; height is the history bar's fixed log scale. Only a newly arrived peak grows in (260 ms).
+    /// </summary>
+    private void DrawSignal(bool animateNewest)
+    {
+        SignalCanvas.Children.Clear();
+        var peaks = subscribed?.Signal;
+        var width = SignalCanvas.ActualWidth > 0 ? SignalCanvas.ActualWidth : Math.Max(0, ActualWidth - 26);
+        if (peaks is null || peaks.Count == 0 || width <= 0)
+        {
+            drawnPeaks = 0;
+            return;
+        }
+
+        const double height = 22;
+        var baseline = new System.Windows.Shapes.Rectangle { Width = width, Height = 1, Opacity = 0.8 };
+        baseline.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "Wl.Border");
+        System.Windows.Controls.Canvas.SetTop(baseline, height - 1);
+        SignalCanvas.Children.Add(baseline);
+
+        for (var index = 0; index < peaks.Count; index++)
+        {
+            var peak = peaks[index];
+            var barHeight = 3 + peak.HeightFraction * (height - 5);
+            var brushKey = peak.State switch
+            {
+                WorklogRowState.Succeeded => "Wl.Green",
+                WorklogRowState.Failed => "Wl.Red",
+                WorklogRowState.Cancelled => "Wl.Amber",
+                WorklogRowState.Running => "Wl.Cyan",
+                _ => "Wl.Faint",
+            };
+            var barWidth = Math.Max(2, peak.WidthFraction * width);
+
+            // Phosphor look: a faint body with a bright 2 px crest, so long steps read as signal plateaus.
+            var bar = new System.Windows.Controls.Grid
+            {
+                Width = barWidth,
+                Height = barHeight,
+                RenderTransformOrigin = new System.Windows.Point(0.5, 1),
+            };
+            var body = new System.Windows.Shapes.Rectangle { Opacity = 0.28, RadiusX = 1, RadiusY = 1 };
+            body.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, brushKey);
+            var crest = new System.Windows.Shapes.Rectangle { Height = 2, VerticalAlignment = VerticalAlignment.Top };
+            crest.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, brushKey);
+            bar.Children.Add(body);
+            bar.Children.Add(crest);
+            System.Windows.Controls.Canvas.SetLeft(bar, Math.Min(peak.StartFraction * width, width - barWidth));
+            System.Windows.Controls.Canvas.SetTop(bar, height - 1 - barHeight);
+            SignalCanvas.Children.Add(bar);
+
+            if (animateNewest && index == peaks.Count - 1 && peaks.Count > drawnPeaks && MotionAllowed)
+            {
+                var grow = new ScaleTransform(1, 0);
+                bar.RenderTransform = grow;
+                grow.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(260))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+                });
+            }
+        }
+
+        drawnPeaks = peaks.Count;
     }
 
     // §7b "row-in": the newest history row slides down 8 px and fades in.

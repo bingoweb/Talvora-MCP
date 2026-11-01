@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-01T16:57:50.000Z",
-  "scope": "UI12: tmux redesign of the desktop worklog card.",
+  "verifiedAtUtc": "2026-11-01T17:10:02.000Z",
+  "scope": "UI12b: session signal strip (measured steps on the real session axis) and ANSI double frame for the worklog code pane.",
   "libraries": [
     {
       "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-01 UI12: a DoubleAnimation animates a RenderTransform property (TranslateTransform X/Y) of an element, used for the row-in slide, the failure jitter and the status-bar sweep (query: \"UIElement.BeginAnimation DoubleAnimation EasingFunction RenderTransform TranslateTransform\")."
+      "verified": "2026-11-01 UI12b: Canvas.SetLeft/SetTop set the Left/Top attached properties that position each signal peak, and a ScaleTransform ScaleY animated by DoubleAnimation grows a new peak from its bottom origin. Context7 returned no Canvas snippet after three queries (query: \"Canvas Left Top attached property\"); confirmed on the vendor API page instead."
     }
   ],
   "vendorSources": [
+    "https://learn.microsoft.com/dotnet/api/system.windows.controls.canvas.setleft",
     "https://learn.microsoft.com/dotnet/desktop/wpf/graphics-multimedia/animation-overview"
   ]
 }

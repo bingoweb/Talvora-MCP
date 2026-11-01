@@ -92,6 +92,7 @@ internal static class WorklogPreviewScenarios
             "-app.disable('x-powered-by')\n" +
             "+app.disable('x-powered-by');\n");
         Stats(model, 7, 221, 3);
+        Signal(model, 221, (20, 41.3, WorklogRowState.Succeeded), (175, 0.2, WorklogRowState.Muted), (180, 0.6, WorklogRowState.Succeeded));
         return model;
     }
 
@@ -111,6 +112,7 @@ internal static class WorklogPreviewScenarios
             new(WorklogRowState.Succeeded, "16:12", "Paketler hazır", 7.6),
         ]);
         Stats(model, 12, 545, 2);
+        Signal(model, 545, (5, 7.6, WorklogRowState.Succeeded), (40, 1.1, WorklogRowState.Succeeded), (60, 2.7, WorklogRowState.Succeeded), (95, 0.3, WorklogRowState.Failed), (120, 0.9, WorklogRowState.Succeeded), (140, 18.9, WorklogRowState.Succeeded), (170, 312.4, WorklogRowState.Succeeded));
         return model;
     }
 
@@ -133,6 +135,7 @@ internal static class WorklogPreviewScenarios
             "         Width = 1220;\n" +
             "… 2 satır daha · tamamı Çalışma günlüğünde\n");
         Stats(model, 2, 58, 1);
+        Signal(model, 58, (30, 0.8, WorklogRowState.Succeeded), (38, 18.4, WorklogRowState.Failed));
         return model;
     }
 
@@ -146,6 +149,7 @@ internal static class WorklogPreviewScenarios
             new(WorklogRowState.Succeeded, "09:27", "Kaynakları inceledi", 3.2),
         ]);
         Stats(model, 23, 760, 4);
+        Signal(model, 760, (600, 3.2, WorklogRowState.Succeeded), (700, 1.4, WorklogRowState.Succeeded));
         return model;
     }
 
@@ -191,6 +195,7 @@ internal static class WorklogPreviewScenarios
             new(WorklogRowState.Succeeded, "16:15", "Git işlemi tamamlandı · pull origin/main", 2.7),
         ]);
         Stats(model, 6, 164, 2);
+        Signal(model, 164, (20, 2.7, WorklogRowState.Succeeded), (150, 0.9, WorklogRowState.Succeeded));
         return model;
     }
 
@@ -332,6 +337,11 @@ internal static class WorklogPreviewScenarios
         model.SessionSeconds = seconds;
         model.FilesChanged = files;
     }
+
+    /// <summary>Signal strip fixture: (start, duration) seconds on a session of <paramref name="session"/> seconds.</summary>
+    private static void Signal(WorklogCardViewModel model, double session, params (double Start, double Seconds, WorklogRowState State)[] steps) =>
+        model.SetSignal(steps.Select(step => new SignalPeak(
+            step.Start / session, step.Seconds / session, WorklogMeasure.BarWidth(step.Seconds) / 56, step.State)).ToArray());
 
     /// <summary>The mapper's rule for fixtures: a finished step's own history row folds into the command line.</summary>
     private static WorklogCardViewModel Fold(WorklogCardViewModel model)

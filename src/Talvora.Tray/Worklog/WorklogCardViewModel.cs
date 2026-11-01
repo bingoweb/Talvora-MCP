@@ -58,6 +58,12 @@ public sealed record WorklogTimelineRow(WorklogRowState State, string Time, stri
     public double BarWidth => DurationSeconds is { } seconds ? WorklogMeasure.BarWidth(seconds) : 0;
 }
 
+/// <summary>
+/// One peak of the session signal strip (§7b "oturum sinyali"): where a measured step ran on the session's real time
+/// axis (fractions of the session length) and its height on the same fixed log scale as the history bars.
+/// </summary>
+public sealed record SignalPeak(double StartFraction, double WidthFraction, double HeightFraction, WorklogRowState State);
+
 /// <summary>Formats and scales measured durations (DESIGN-WORKLOG §7b). Pure; never estimates.</summary>
 public static class WorklogMeasure
 {
@@ -228,6 +234,11 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
 
     /// <summary>"nerede" rows, at most three; the rest is counted in <see cref="MoreChangedFiles"/>.</summary>
     public ObservableCollection<WorklogChangeRow> ChangeRows { get; } = [];
+
+    /// <summary>Session signal strip (§7b); only measured steps, so an empty list hides the strip.</summary>
+    public ObservableCollection<SignalPeak> Signal { get; } = [];
+
+    public bool HasSignal => Signal.Count > 0;
 
     /// <summary>"ayrıntılar" rows (N6); empty hides the footer button.</summary>
     public ObservableCollection<WorklogDetailRow> DetailRows { get; } = [];
@@ -481,6 +492,18 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
         }
         OnPropertyChanged(nameof(HasChanges));
         OnPropertyChanged(nameof(ResultLine));
+    }
+
+    /// <summary>Replaces the session signal peaks (oldest first).</summary>
+    public void SetSignal(IReadOnlyList<SignalPeak> peaks)
+    {
+        Signal.Clear();
+        foreach (var peak in peaks)
+        {
+            Signal.Add(peak);
+        }
+
+        OnPropertyChanged(nameof(HasSignal));
     }
 
     /// <summary>Replaces the code terminal content. An empty list hides the terminal.</summary>

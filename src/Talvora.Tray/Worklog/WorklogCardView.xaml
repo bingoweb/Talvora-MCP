@@ -295,10 +295,11 @@
                                Visibility="{Binding MoreSteps, Converter={StaticResource NullToCollapsed}}" />
                 </StackPanel>
 
-                <!-- Code terminal as a tmux split: one box-drawing border line, then the real diff. -->
+                <!-- Code terminal as a tmux split inside an ANSI double frame (╔═╗, §7b): decoration only, no data. -->
                 <Border x:Name="Terminal" Margin="0,11,0,0" Background="{DynamicResource Wl.Terminal}"
-                        BorderBrush="{DynamicResource Wl.Border}" BorderThickness="1" CornerRadius="6"
+                        BorderBrush="{DynamicResource Wl.BorderStrong}" BorderThickness="1" CornerRadius="6" Padding="2"
                         Visibility="{Binding HasCode, Converter={StaticResource BoolToVisibility}}">
+                    <Border BorderBrush="{DynamicResource Wl.BorderStrong}" BorderThickness="1" CornerRadius="4">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -312,11 +313,13 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="─ diff " Style="{StaticResource Wl.TextBase}" FontSize="11" TextWrapping="NoWrap"
-                                       Foreground="{DynamicResource Wl.Green}" VerticalAlignment="Center" />
-                            <Rectangle Grid.Column="1" Height="1" VerticalAlignment="Center" Fill="{DynamicResource Wl.BorderStrong}" />
+                            <TextBlock Style="{StaticResource Wl.TextBase}" FontSize="11" TextWrapping="NoWrap" VerticalAlignment="Center"><Run Text="═╡ " Foreground="{DynamicResource Wl.BorderStrong}" /><Run Text="diff" Foreground="{DynamicResource Wl.Green}" /><Run Text=" ╞" Foreground="{DynamicResource Wl.BorderStrong}" /></TextBlock>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <Rectangle Height="1" Fill="{DynamicResource Wl.BorderStrong}" />
+                                <Rectangle Height="1" Margin="0,2,0,0" Fill="{DynamicResource Wl.BorderStrong}" />
+                            </StackPanel>
                             <TextBlock Grid.Column="2" Style="{StaticResource Wl.TextBase}" FontSize="11" TextWrapping="NoWrap"
-                                       VerticalAlignment="Center" Foreground="{DynamicResource Wl.Faint}"><Run Text=" " /><Run Text="{Binding CodeTime, Mode=OneWay}" /><Run Text=" ─ " /></TextBlock>
+                                       VerticalAlignment="Center"><Run Text="╡ " Foreground="{DynamicResource Wl.BorderStrong}" /><Run Text="{Binding CodeTime, Mode=OneWay}" Foreground="{DynamicResource Wl.Faint}" /><Run Text=" ╞═ " Foreground="{DynamicResource Wl.BorderStrong}" /></TextBlock>
                             <Button Grid.Column="3" Style="{StaticResource Wl.LinkButton}" Click="OnCopyClick"
                                     Content="kopyala" AutomationProperties.Name="Kodu kopyala" />
                         </Grid>
@@ -335,7 +338,23 @@
                                           Focusable="False" AutomationProperties.Name="Kod değişiklikleri" />
                         </ScrollViewer>
                     </Grid>
+                    </Border>
                 </Border>
+
+                <!-- Session signal (§7b "oturum sinyali"): measured steps on the session's real time axis; hidden without data. -->
+                <StackPanel Margin="0,11,0,0" Visibility="{Binding HasSignal, Converter={StaticResource BoolToVisibility}}">
+                    <Grid Margin="0,0,0,3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="── oturum sinyali " Style="{StaticResource Wl.TextBase}" FontSize="11"
+                                   TextWrapping="NoWrap" Foreground="{DynamicResource Wl.Faint}" />
+                        <Rectangle Grid.Column="1" Height="1" VerticalAlignment="Center" Fill="{DynamicResource Wl.Border}" />
+                    </Grid>
+                    <Canvas x:Name="SignalCanvas" Height="22" ClipToBounds="True" Background="Transparent"
+                            AutomationProperties.Name="Oturum sinyali" />
+                </StackPanel>
 
                 <!-- "ayrıntılar" (N6): technical evidence only. -->
                 <Border x:Name="Details" Margin="0,10,0,0" Background="{DynamicResource Wl.Terminal}"

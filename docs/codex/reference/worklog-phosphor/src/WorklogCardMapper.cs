@@ -78,6 +78,7 @@ public static class WorklogCardMapper
                 entry.DurationSeconds))
             .ToArray());
 
+        model.SetSignal(BuildSignal(frame));
         model.Footer = FormatFooter(frame.Totals);
         model.SessionName = $"0:{(string.IsNullOrWhiteSpace(project) ? "talvora" : project)}*";
         model.Steps = frame.Totals.Steps;
@@ -99,6 +100,43 @@ public static class WorklogCardMapper
                 files,
                 lines);
         }
+    }
+
+    /// <summary>
+    /// Session signal (§7b): every step with a measured duration (WL1) sits on the session's real time axis.
+    /// Axis start = frame time − measured session seconds; a step ends at its timestamp and began its measured duration
+    /// earlier. Steps without a measurement are not drawn; nothing is interpolated.
+    /// </summary>
+    public static IReadOnlyList<SignalPeak> BuildSignal(DesktopWorklogFrame frame)
+    {
+        var span = frame.Totals.SessionSeconds;
+        if (span <= 0)
+        {
+            return [];
+        }
+
+        var start = frame.TimestampUtc.AddSeconds(-span);
+        var peaks = new List<SignalPeak>();
+        foreach (var entry in frame.Timeline.Reverse())
+        {
+            if (entry.DurationSeconds is not { } seconds)
+            {
+                continue;
+            }
+
+            var end = Math.Clamp((entry.TimestampUtc - start).TotalSeconds / span, 0, 1);
+            var begin = Math.Clamp(end - seconds / span, 0, end);
+            peaks.Add(new SignalPeak(begin, end - begin, WorklogMeasure.BarWidth(seconds) / 56, entry.State switch
+            {
+                WorklogStepState.Succeeded => WorklogRowState.Succeeded,
+                WorklogStepState.Failed => WorklogRowState.Failed,
+                WorklogStepState.Cancelled => WorklogRowState.Cancelled,
+                WorklogStepState.Running => WorklogRowState.Running,
+                _ => WorklogRowState.Muted,
+            }));
+        }
+
+        return peaks;
     }
 
     /// <summary>
