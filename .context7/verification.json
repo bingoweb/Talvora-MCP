@@ -1,15 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-10-28T18:29:46.830Z",
-  "scope": "R6: bounded source-edit transaction retention and cleanup.",
+  "verifiedAtUtc": "2026-11-01T16:57:50.000Z",
+  "scope": "WL1: measured step duration in the worklog protocol.",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "R6: Directory.EnumerateFiles and EnumerateDirectories return lazily enumerated names without preloading a whole directory. The transaction cleanup enumerates receipts separately from deleted transaction directories and limits per-run deletions."
+      "verified": "2026-11-01 WL1: System.Text.Json treats positional record constructor parameters as optional when deserializing, so an older frame without DurationSeconds reads with the default null (query: \"System.Text.Json positional record constructor parameter default value missing JSON property\")."
     }
   ],
   "vendorSources": [
-    "Microsoft .NET guidance: https://github.com/dotnet/docs/blob/main/docs/standard/io/how-to-enumerate-directories-and-files.md",
-    "Microsoft .NET enumeration performance: https://github.com/dotnet/docs/blob/main/docs/standard/parallel-programming/how-to-iterate-file-directories-with-plinq.md"
+    "https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/required-properties"
   ]
 }

@@ -71,7 +71,6 @@ internal static class TextDiffBuilder
             {
                 if (DeclarationLine.PlaceName(diff.PiecesOld[line]) is null) continue;
                 declaration = diff.PiecesOld[line].Trim();
-                if (declaration.Length > 80) declaration = declaration[..80];
                 break;
             }
             output.AppendLine($"@@ -{(endOld == startOld ? startOld : startOld + 1)},{endOld - startOld} +{(endNew == startNew ? startNew : startNew + 1)},{endNew - startNew} @@" +

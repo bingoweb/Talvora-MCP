@@ -103,8 +103,9 @@ public sealed record WorklogFileChange(string File, int Added, int Removed, IRea
 public sealed record WorklogOutcome(
     WorklogFailureKind? FailureKind, string PlainReason, string? NextStep);
 
+// WL1: DurationSeconds is the measured stopwatch time of that tool call; null when nothing was measured (never estimated).
 public sealed record WorklogTimelineEntry(
-    DateTimeOffset TimestampUtc, WorklogStepState State, string Label);
+    DateTimeOffset TimestampUtc, WorklogStepState State, string Label, double? DurationSeconds = null);
 
 public sealed record WorklogTotals(
     int Steps, double SessionSeconds, int FilesChanged,

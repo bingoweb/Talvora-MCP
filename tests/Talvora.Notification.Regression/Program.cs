@@ -68,6 +68,7 @@ internal static partial class Program
         await AssertN9SubjectsAsync();
         await AssertN8NotificationsInChildAsync();
         await AssertN10ChangesAsync();
+        await AssertWl1StepDurationAsync();
         await AssertRemotionWorklogAsync();
         AssertN6Details();
         AssertN7History();
