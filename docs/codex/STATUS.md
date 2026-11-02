@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-11-01-36` = the audit 36 commit. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-11-02-37` = the audit 37 commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -145,6 +145,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] W3 — Paths longer than 260 characters work for writes and source edits (installed e12f736; 337-character live write, update and add green; installed surface smoke green; GitHub CI 41342201505 success)
 - [~] W4 — Archives made by the service are readable by the user (live pending: deploy, signed-in archive read and installed smoke; CI pending)
 - [ ] W8 — git_run allows the protocol's fast-forward pull without explicitAdmin (TahtaPilot P-30)
+- [ ] DEP18 — Apply Dependabot PR #18 (ModelContextProtocol 2.3.0) with the DEP17 steps plus a 95-second silent-call check (audit 37)
 - [ ] W5 — Config writers keep the file's BOM and readable non-ASCII text (audit 35)
 - [ ] W6 — Case-insensitive search treats I, ı, İ and i as one letter (audit 35)
 - [ ] W7 — run_process resolves bare command names through PATH and PATHEXT (audit 35)
@@ -194,6 +195,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-02 — Claude audit 37 of `85ecb44..4e36b42` (UI12d by Claude, W3, W4 by ChatGPT, W8 card): W3 and W4 match their exact blocks line for line; CI success on ad7d6df, e12f736, 1e98646, 4e36b42; installed 1e98646; W3 live check done by the agent, W4 live check is the agent's next step. Dependabot PR #18 (ModelContextProtocol 2.3.0) is red only on the Context7 gate → DEP18 queued after W8; its release note says modern-protocol responses hold headers until the first message, so DEP18 adds a 95-second silent call through the connector. Tag `audit/2026-11-02-37`.
 - 2026-11-01 — Claude: W8 card written and queued after W4. Cause of TahtaPilot P-30's refused sync: `pull` is in `SourceMutationPolicy.GitWorkingTreeMutationCommands`, so `talvora_git_run` refuses `git pull --ff-only` in every development workspace without `explicitAdmin`, and ChatGPT's `explicitAdmin` call is blocked by OpenAI's connector check. W8 lets only the plain `pull --ff-only [<remote> [<branch>]]` through; Claude verified with Git 2.55 in a scratch repository that `--ff-only` refuses diverged history with `pull.rebase=true` and leaves HEAD unchanged. Git added to the Context7 map (`/websites/git-scm`).
 - 2026-11-01 — W4, executor ChatGPT via Talvora: publish service-created archives via a destination-directory sibling copy before moving into place. RED: installed e12f736 created a ZIP that the signed-in user could not read (access denied). Signed-in Full: 68 kontrol, 0 hata; Hepsi geçti. Context7 /dotnet/docs returned unrelated ACL guidance; Microsoft CopyFile and MoveFileEx documentation checked, with actual destination permissions to be verified live. Exact-commit deployment, signed-in archive read and CI pending. Gitea mirror skipped: Talvora connector exposes no authenticated Gitea comment tool.
 - 2026-11-01 — W3 closeout: installed e12f736 /healthz matched HEAD; write_text, apply_patch update and add succeeded at a 337-character path under artifacts/w3, and test files were deleted; installed surface smoke GREEN; GitHub windows-ci 41342201505 success.

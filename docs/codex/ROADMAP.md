@@ -5241,6 +5241,29 @@ Step 4 — apply PR #17: first add the queue/Log line for `DEP17` to STATUS (the
 
 **Acceptance:** exactly one DEP17 commit; CI green; PR #17 closed (not merged); `origin/main` = `github/main`; installed commit = DEP17.
 
+### DEP18 — Apply Dependabot PR #18 (`ModelContextProtocol` and `ModelContextProtocol.AspNetCore` 2.2.0 → 2.3.0)
+
+> Audit 37. Standing DEP procedure (DEP1/DEP17). The PR's own CI run 41382106504 is red only because the Context7 gate has no evidence for it; that is expected and is fixed by step 1. Talvora reads no `McpClient.ServerInfo`, so the one breaking change in 2.3.0 (#1903) does not touch our code.
+
+**Files:** `Directory.Packages.props`, every `packages.lock.json`, `THIRD-PARTY-NOTICES.md` (only if the script changes it), `.context7/verification.json`, `docs/codex/CONTEXT7.md` (one row), `docs/codex/STATUS.md`.
+
+**Context7:** `/modelcontextprotocol/csharp-sdk`: "ModelContextProtocol 2.3.0 Streamable HTTP modern responses wait for the first protocol message before sending headers; legacy eager headers" (vendor: https://github.com/modelcontextprotocol/csharp-sdk/releases/tag/v2.3.0).
+
+#### Exact implementation — copy this, do not reinterpret
+
+1. `docs/codex/STATUS.md`: write `In progress: DEP18`. Refresh `.context7/verification.json` with `talvora_apply_patch` (scope `DEP18: ModelContextProtocol 2.2.0 -> 2.3.0`, the library above, `verifiedAtUtc` = now). In `docs/codex/CONTEXT7.md` change only `` `ModelContextProtocol` 2.2.0 `` to `` `ModelContextProtocol` 2.3.0 `` in the MCP C# SDK row.
+2. Start the script **once, detached**: `talvora_user_process_start {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-File","scripts/Apply-DependabotPr.ps1","-Pr","18"], workingDirectory: "C:\Users\tayla\Talvora-MCP", visible: false}`. Then about every 60 s read line 1 of `artifacts/dependabot/pr-18.result` (`talvora_read_text_range`) until it no longer starts with `RUNNING` (limit 20 minutes; at the limit stop and report, never start a second run). Progress: `talvora_tail_text` on `artifacts/dependabot/pr-18.log`. `READY DEP18: …` → step 3. `FAILED: …` → paste that line into the Log, restore with `talvora_git_run {args:["restore","--staged","--worktree","--",".",":!docs/codex/STATUS.md",":!.context7/verification.json",":!docs/codex/CONTEXT7.md"]}` and stop with a proposal. Exit 3 / "already active" means a run is still going: keep polling, do not restore.
+3. STATUS: tick DEP18 and add the Log entry (changed files line from step 2, gate last line).
+4. `talvora_git_run {args:["add","--","Directory.Packages.props","*packages.lock.json","THIRD-PARTY-NOTICES.md",".context7/verification.json","docs/codex/CONTEXT7.md","docs/codex/STATUS.md"]}`, then commit with subject `MCP kütüphanesi 2.3.0 sürümüne güncellendi`, body `Dependabot'un önerdiği güncelleme ana dalda uygulandı, kilit dosyaları yeniden üretildi.` and trailer `Card: DEP18`.
+5. `talvora_git_run` push `origin main`, then `github main`.
+6. `talvora_gh_run {args:["pr","close","18","--repo","bingoweb/Talvora-MCP","--comment","Ana dalda <kısa sha> olarak uygulandı, kilit dosyaları yeniden üretildi."]}` (replace `<kısa sha>` with the 7-character DEP18 commit id).
+7. CI check (10b). Deploy (runtime dependency): build the installer for HEAD and run `scripts/Deploy-Windows-Installer.ps1` as in the AGENTS.md Deploy row; `/healthz.sourceCommit` = the DEP18 commit.
+8. Live check of the one behaviour 2.3.0 changes for silent long handlers, through this chat's connector (the real Cloudflare path): `talvora_user_run {executable: "C:\Program Files\PowerShell\7\pwsh.exe", arguments: ["-NoProfile","-Command","Start-Sleep -Seconds 95; 'tamam'"], workingDirectory: "C:\Users\tayla\Talvora-MCP", timeoutSeconds: 110}` must return `tamam`. If the call fails with a timeout or a 524 instead, do not revert: write the exact error into "Findings for Claude", mark DEP18 `[~] live pending: 95 s silent call failed` and stop.
+
+**Don't:** merge PR #18 on GitHub; change any other package; touch `global.json`.
+
+**Acceptance:** exactly one DEP18 commit; CI green; PR #18 closed (not merged); `origin/main` = `github/main`; installed commit = DEP18; the 95-second call returned `tamam`.
+
 ### Audit 2026-10-20 (4) · range `429591f..429591f` (no agent commits) · result: FIX REQUIRED (caused by Claude)
 
 The agent made **no commits**: it started D7, found the gate red on a clean HEAD, reverted everything and raised P-19; D6 hit the same red baseline and was also reverted. That is exactly the required behaviour.
