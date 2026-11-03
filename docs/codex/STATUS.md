@@ -150,6 +150,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] SN4 — Fault choreography: attention, plug drop with measured reconnect timer, re-seat (§5) — built in the SN3 commit (same control); smoke screenshot of a dropped line in both themes
 - [x] SN5 — Event slips on Genel bakış and Olaylar (§6) — built by Claude; Full 68/0; both themes on smoke screenshots
 - [x] SN6 — Hizmetler, Hizmet ayrıntısı, Ayarlar stepper and shell in the Santral language (§7) — built by Claude; line cards, wordmark, real check times; detail and settings follow the tokens
+- [x] SN7b — Overview: counts and the check time on separate lines (the live capture broke "3.0.0-dev" across two lines) — Claude
 - [~] SN7 — Proof on real screens: both themes, DPI, high contrast, reduced motion, idle CPU; retire Gözlemevi leftovers (§9) — Nabız ring retired, User-Agent fallback for the client name; live pending: final deploy and the user's own look
 - [ ] W8 — git_run allows the protocol's fast-forward pull without explicitAdmin (TahtaPilot P-30)
 - [ ] DEP18 — ModelContextProtocol 2.2.0 → 2.3.1 by a manual bump (not the PR script), close PR #18, plus a 95-second silent-call check (audits 37–38)

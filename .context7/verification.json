@@ -1,15 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-03T14:00:37.000Z",
-  "scope": "SN5-SN7: event slips, line cards and wordmark, real check times, User-Agent fallback for the SN1 client name, retired Nabız ring.",
+  "verifiedAtUtc": "2026-11-03T14:07:11.000Z",
+  "scope": "SN7b: overview summary and check time on separate lines (XAML layout only).",
   "libraries": [
     {
-      "libraryId": "/dotnet/aspnetcore.docs",
-      "verified": "2026-11-03 SN7: Context7 query \"HttpRequest Headers UserAgent IHttpContextAccessor\" returned the IHttpContextAccessor injection pages and \"Extract header value by name\"; request headers are read from HttpContext.Request.Headers and IHeaderDictionary exposes the typed UserAgent property. The meter receives the User-Agent text only when the MCP client sent no name, and stores only the classified client (Codex / Claude / ChatGPT / Diğer)."
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-03 SN7b: TextBlock TextWrapping and TextTrimming=CharacterEllipsis on two stacked TextBlocks; Context7 gap for these WPF API pages noted in SN3, vendor page confirms TextTrimming.CharacterEllipsis. Checked on a live-data capture in Gece vardiyası."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/microsoft.aspnetcore.http.iheaderdictionary.useragent",
-    "https://learn.microsoft.com/aspnet/core/fundamentals/http-context"
+    "https://learn.microsoft.com/dotnet/api/system.windows.controls.textblock.texttrimming"
   ]
 }

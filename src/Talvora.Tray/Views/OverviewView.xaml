@@ -61,10 +61,11 @@
                                AutomationProperties.LiveSetting="Polite"/>
                     <TextBlock Text="{Binding Description}" Style="{StaticResource Tv.Type.Body}"
                                Foreground="{DynamicResource Sn.InkMuted}" TextWrapping="Wrap" Margin="0,4,0,0"/>
-                    <TextBlock Style="{StaticResource Tv.Type.Mono}" Foreground="{DynamicResource Sn.InkFaint}"
-                               Margin="0,8,0,0" TextWrapping="Wrap">
-                        <Run Text="{Binding Summary, Mode=OneWay}"/><Run Text="  ·  "/><Run Text="{Binding StatusLine, Mode=OneWay}"/>
-                    </TextBlock>
+                    <!-- Counts and the check time on separate lines: a version string must never break mid-word. -->
+                    <TextBlock Text="{Binding Summary}" Style="{StaticResource Tv.Type.Mono}"
+                               Foreground="{DynamicResource Sn.InkMuted}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding StatusLine}" Style="{StaticResource Tv.Type.Mono}"
+                               Foreground="{DynamicResource Sn.InkFaint}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
                     <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
                         <Button Content="Yenile" Click="OnRefresh" Style="{StaticResource SantralButton}"
                                 AutomationProperties.Name="Yenile"/>
