@@ -188,6 +188,11 @@ internal static class SourceMutationPolicy
             return;
         }
 
+        if (IsPlainFastForwardPull(arguments))
+        {
+            return;
+        }
+
         var command =
             GitArgumentParser.GetSubcommand(arguments);
         if (command is null ||
@@ -211,6 +216,32 @@ internal static class SourceMutationPolicy
             repositoryPath,
             toolName,
             classification);
+    }
+
+    // W8: a fast-forward-only pull can only move the branch to commits that already exist upstream
+    // (Git refuses diverged history even with pull.rebase=true), so the CONTINUE PROTOCOL sync step
+    // needs no explicitAdmin. Only the plain shape passes: no global options, no other flags, no refspec or URL.
+    private static bool IsPlainFastForwardPull(IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count < 2 || arguments.Count > 4 ||
+            !string.Equals(arguments[0], "pull", StringComparison.Ordinal) ||
+            !string.Equals(arguments[1], "--ff-only", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        for (var index = 2; index < arguments.Count; index++)
+        {
+            var value = arguments[index];
+            if (string.IsNullOrWhiteSpace(value) ||
+                value.StartsWith('-') ||
+                value.Contains(':'))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static void ThrowPolicyViolation(

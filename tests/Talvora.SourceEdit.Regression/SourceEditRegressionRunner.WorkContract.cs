@@ -61,6 +61,33 @@ internal static partial class SourceEditRegressionRunner
                 fixture.Root, arguments, "talvora_git_run",
                 explicitAdmin: true);
         }
+        // W8: only the plain fast-forward pull passes without explicitAdmin.
+        foreach (var arguments in new string[][]
+        {
+            ["pull", "--ff-only"],
+            ["pull", "--ff-only", "origin"],
+            ["pull", "--ff-only", "origin", "main"],
+        })
+            SourceMutationPolicy.EnsureGitWorkingTreeMutationAllowed(
+                fixture.Root, arguments, "talvora_git_run",
+                explicitAdmin: false);
+        foreach (var arguments in new string[][]
+        {
+            ["pull"],
+            ["pull", "origin", "main"],
+            ["pull", "--rebase"],
+            ["pull", "--ff-only", "--rebase"],
+            ["pull", "origin", "main", "--ff-only"],
+            ["pull", "--ff-only", "origin", "main:other"],
+            ["pull", "--ff-only", "https://example.invalid/r.git"],
+            ["pull", "--ff-only", "origin", "main", "extra"],
+            ["-C", "x", "pull", "--ff-only"],
+            ["merge", "--ff-only", "origin/main"],
+        })
+            ExpectPolicyViolation(() =>
+                SourceMutationPolicy.EnsureGitWorkingTreeMutationAllowed(
+                    fixture.Root, arguments, "talvora_git_run",
+                    explicitAdmin: false));
         SourceMutationPolicy.EnsureGitWorkingTreeMutationAllowed(
             fixture.Root, ["status"], "talvora_git_run",
             explicitAdmin: false);

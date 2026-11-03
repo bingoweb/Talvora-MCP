@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-03T14:07:11.000Z",
-  "scope": "SN7b: overview summary and check time on separate lines (XAML layout only).",
+  "verifiedAtUtc": "2026-11-03T20:26:57.891Z",
+  "scope": "W8: permit only the plain fast-forward Git pull shape without explicitAdmin.",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-03 SN7b: TextBlock TextWrapping and TextTrimming=CharacterEllipsis on two stacked TextBlocks; Context7 gap for these WPF API pages noted in SN3, vendor page confirms TextTrimming.CharacterEllipsis. Checked on a live-data capture in Gece vardiyası."
+      "libraryId": "/websites/git-scm",
+      "verified": "2026-11-03 W8: git pull --ff-only refuses divergent history and only fast-forwards a branch even when pull.rebase is set (query: \"Git 2.55 git pull --ff-only: when pull.rebase=true and local/upstream histories diverge, does --ff-only reject the pull and leave HEAD unchanged? Exact git-pull --ff-only and pull.rebase option behavior.\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.windows.controls.textblock.texttrimming"
+    "https://git-scm.com/docs/git-pull"
   ]
 }

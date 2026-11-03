@@ -557,7 +557,7 @@ public static class GitTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraGitRunResponse)),
-     Description("Run Git with arbitrary arguments in any accessible repository or working directory. Known working-tree mutation commands in recognized development workspaces route to talvora_apply_patch by default; explicitAdmin=true deliberately preserves the unrestricted Git administration path. Read/status/history/fetch/push workflows remain directly available. SSH fetch/push and GitHub HTTPS fetch/push automatically run in the logged-on Windows user session so user-scoped credentials and host trust remain available.")]
+     Description("Run Git with arbitrary arguments in any accessible repository or working directory. Known working-tree mutation commands in recognized development workspaces route to talvora_apply_patch by default, except a plain pull --ff-only [<remote> [<branch>]] (no other options) for the sync step; explicitAdmin=true deliberately preserves the unrestricted Git administration path. Read/status/history/fetch/push workflows remain directly available. SSH fetch/push and GitHub HTTPS fetch/push automatically run in the logged-on Windows user session so user-scoped credentials and host trust remain available.")]
     public static Task<TalvoraGitRunResponse> Run(
         string repositoryPath,
         string[] arguments,
