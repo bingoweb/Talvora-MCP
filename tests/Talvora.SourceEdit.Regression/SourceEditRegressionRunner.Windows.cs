@@ -85,4 +85,27 @@ internal static partial class SourceEditRegressionRunner
             Directory.Delete(root, recursive: true);
         }
     }
+
+    // W6: Turkish case-insensitive literal search.
+    public static async Task RunTurkishSearchAsync()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "talvora-w6-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(root, "a.txt"), "İzmir\nsatır\nşehir\nfile\n", new UTF8Encoding(false));
+            foreach (var (query, line) in new[] { ("izmir", 1), ("SATIR", 2), ("ŞEHİR", 3), ("FILE", 4), ("IZMIR", 1) })
+            {
+                var result = await DeveloperTools.SearchText(root, query);
+                Assert(result.MatchCount == 1 && result.Matches[0].LineNumber == line,
+                    $"W6: '{query}' must match line {line} once.");
+            }
+            var exact = await DeveloperTools.SearchText(root, "izmir", caseSensitive: true);
+            Assert(exact.MatchCount == 0, "W6: case-sensitive search stays exact.");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
 }

@@ -350,13 +350,13 @@ public static partial class DeveloperTools
                     }
                     else
                     {
-                        var comparison = caseSensitive
-                            ? StringComparison.Ordinal
-                            : StringComparison.OrdinalIgnoreCase;
+                        // W6: case-insensitive search treats I, ı, İ and i as one letter (user decision 2026-11-01).
+                        var haystack = caseSensitive ? line : TurkishTolerantFold(line);
+                        var needle = caseSensitive ? query : TurkishTolerantFold(query);
                         var searchFrom = 0;
-                        while (searchFrom <= line.Length - query.Length)
+                        while (searchFrom <= haystack.Length - needle.Length)
                         {
-                            var index = line.IndexOf(query, searchFrom, comparison);
+                            var index = haystack.IndexOf(needle, searchFrom, StringComparison.Ordinal);
                             if (index < 0)
                             {
                                 break;
@@ -366,13 +366,13 @@ public static partial class DeveloperTools
                                     file.FullName,
                                     lineNumber,
                                     index + 1,
-                                    query,
+                                    line.Substring(index, needle.Length),
                                     line))
                             {
                                 break;
                             }
 
-                            searchFrom = index + Math.Max(1, query.Length);
+                            searchFrom = index + Math.Max(1, needle.Length);
                         }
                     }
 
@@ -405,6 +405,18 @@ public static partial class DeveloperTools
             matches,
             errors);
     }
+
+    // W6: one lower-case letter for I, ı, İ and i; every other character uses invariant lower case.
+    // One char in, one char out, so match positions in the folded line are positions in the original line.
+    internal static string TurkishTolerantFold(string value) =>
+        string.Create(value.Length, value, static (span, source) =>
+        {
+            for (var i = 0; i < source.Length; i++)
+            {
+                var c = source[i];
+                span[i] = c is 'I' or 'ı' or 'İ' ? 'i' : char.ToLowerInvariant(c);
+            }
+        });
 
     private static int CountOccurrences(
         string source,
