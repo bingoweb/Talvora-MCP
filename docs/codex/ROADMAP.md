@@ -733,7 +733,11 @@ No separate work: N3b's `CodeChangeId` rule (heartbeats ≤ 4 KB) is the token/I
 
 Full review (defects W1–W19, code-terminal defects C1–C7, live screenshot), information model, copy deck, visual spec and cards: **`docs/codex/DESIGN-WORKLOG.md`**. Order: N1 → N2 → N3 → N3b → N4 → N5 → N6 → N7 (needs UI2 shell) → N8 (needs UI6). The vertical "code terminal" expansion is the user's favourite feature: every N-card must keep it working, and N3b/N5 make it exact (only applied changes), persistent for the session and terminal-like.
 
-## Phase UI — Control Center redesign ("Gözlemevi")
+## Phase SN — Control Center redesign ("Santral", user choice 2026-11-03)
+
+Specification, tokens, layout, motion, copy and card table: **`docs/codex/DESIGN-SANTRAL.md`**. It replaces Phase UI's "Gözlemevi" look. One-off user exception: Claude builds every SN card itself, the data card SN1 included; all SN lines are `[C]`, so the agent skips them and does not edit their files while they are open. Every element on the screen comes from real, live data.
+
+## Phase UI — Control Center redesign ("Gözlemevi") — superseded by Phase SN
 
 Specification, tokens, wireframes and sample XAML: **`docs/codex/DESIGN-CONTROL-CENTER.md`**. Every UI card: Awwwards evidence (`.talvora/awwwards-verification.json`) with the concrete references you reviewed, Context7 for WPF-UI and WPF APIs used, before/after PNGs of both themes attached to the Gitea issue, and the smoke from Q5 green.
 
