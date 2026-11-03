@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ModelContextProtocol.Server;
@@ -13,8 +14,11 @@ namespace Talvora.Tools;
 
 public static partial class ConfigAssetTools
 {
+// W5: JSON files keep Turkish and other non-ASCII text readable instead of \uXXXX escapes.
 private static readonly JsonSerializerOptions IndentedJsonOptions =
-        new(JsonSerializerOptions.Default) { WriteIndented = true };
+        new(JsonSerializerOptions.Default) { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+private static readonly JsonSerializerOptions CompactJsonOptions =
+        new(JsonSerializerOptions.Default) { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
     [McpServerTool(
         Name = "talvora_json_get",
@@ -462,7 +466,7 @@ private static readonly JsonSerializerOptions IndentedJsonOptions =
 
     internal static string ToJson(JsonNode? node, bool indented) =>
         node?.ToJsonString(
-            indented ? IndentedJsonOptions : JsonSerializerOptions.Default)
+            indented ? IndentedJsonOptions : CompactJsonOptions)
         ?? "null";
 
     internal static string ToBoundedJson(

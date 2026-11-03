@@ -57,4 +57,32 @@ internal static partial class SourceEditRegressionRunner
             Directory.Delete(root, recursive: true);
         }
     }
+
+    // W5: ini/dotenv edits never add a BOM; json edits keep Turkish text unescaped.
+    public static async Task RunConfigWritersKeepTextAsync()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "talvora-w5-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var ini = Path.Combine(root, "ayar.ini");
+            await File.WriteAllTextAsync(ini, "[Bölüm]\r\nŞehir=İzmir\r\n", new UTF8Encoding(false));
+            await ConfigFormatTools.IniSet(ini, "Bölüm", "İlçe", "Bornova");
+            Assert((await File.ReadAllBytesAsync(ini))[0] == (byte)'[', "W5: ini_set must not add a BOM.");
+            var env = Path.Combine(root, ".env");
+            await File.WriteAllTextAsync(env, "ŞEHİR=İzmir\n", new UTF8Encoding(false));
+            await ConfigFormatTools.DotenvSet(env, "YENİ", "değer");
+            Assert((await File.ReadAllBytesAsync(env))[0] == 0xC5, "W5: dotenv_set must not add a BOM.");
+            var json = Path.Combine(root, "ayar.json");
+            await File.WriteAllTextAsync(json, "{\"şehir\":\"İzmir\"}", new UTF8Encoding(false));
+            await ConfigAssetTools.JsonSet(json, "/ilçe", "\"Karşıyaka\"");
+            var text = await File.ReadAllTextAsync(json);
+            Assert(text.Contains("\"şehir\"", StringComparison.Ordinal) && text.Contains("\"Karşıyaka\"", StringComparison.Ordinal),
+                "W5: json_set must keep non-ASCII text unescaped.");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
 }

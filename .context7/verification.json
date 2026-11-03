@@ -1,15 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-03T20:50:15.957Z",
-  "scope": "DEP18: ModelContextProtocol 2.2.0 -> 2.3.1",
+  "verifiedAtUtc": "2026-11-03T21:09:00.359Z",
+  "scope": "W5: preserve BOM-less config files and readable non-ASCII JSON.",
   "libraries": [
     {
-      "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "2026-11-03 DEP18: HttpServerSessionMode.Stateless remains available in the C# SDK; 2.3.0 modern Streamable HTTP defers headers until the first protocol message, verified in official release notes (query: \"ModelContextProtocol C# SDK 2.3.1: stateless Streamable HTTP via HttpServerSessionMode.Stateless, and 2.3.0 modern Streamable HTTP responses delay HTTP headers until first protocol message; check API names and version-specific changes.\")."
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-03 W5: StreamReader BOM autodetection updates CurrentEncoding after the first read; JavaScriptEncoder.UnsafeRelaxedJsonEscaping reduces non-ASCII escaping in UTF-8 JSON config files (queries: \"On .NET 10 System.IO.StreamReader using detectEncodingFromByteOrderMarks:true, how does StreamReader.CurrentEncoding report UTF-8 BOM vs no-BOM when constructed with new UTF8Encoding(false)? Explain BOM preservation for file writer.\"; \"On .NET 10 System.Text.Json JsonSerializerOptions.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, how does JsonNode.ToJsonString(options) output Turkish non-ASCII characters vs Unicode escape sequences, and what namespace declares JavaScriptEncoder?\")."
     }
   ],
   "vendorSources": [
-    "https://github.com/modelcontextprotocol/csharp-sdk/releases/tag/v2.3.1",
-    "https://github.com/modelcontextprotocol/csharp-sdk/releases/tag/v2.3.0"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.io.streamreader.currentencoding?view=net-10.0",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.io.streamreader.-ctor?view=net-10.0",
+    "https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/character-encoding"
   ]
 }

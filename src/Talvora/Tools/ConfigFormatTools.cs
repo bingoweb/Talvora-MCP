@@ -166,7 +166,7 @@ private sealed record TextDocument(
 
         using var reader = new StreamReader(
             stream,
-            Encoding.UTF8,
+            new UTF8Encoding(false),
             detectEncodingFromByteOrderMarks: true,
             bufferSize: 16 * 1024,
             leaveOpen: false);

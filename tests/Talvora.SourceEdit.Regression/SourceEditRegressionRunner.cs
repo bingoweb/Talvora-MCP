@@ -22,6 +22,7 @@ internal static partial class SourceEditRegressionRunner
             ("git-work-contract", RunWorkContractAsync),
             ("git-argument-classification", RunGitArgumentClassificationAsync),
             ("w3-long-path-write", RunLongPathWriteAsync),
+            ("w5-config-writers-keep-text", RunConfigWritersKeepTextAsync),
             ("w2-git-quote-path", RunGitQuotePathAsync),
             ("w1-console-output-encoding", RunConsoleOutputEncodingAsync),
             ("ast-grep-pinned-cache-tamper", RunPinnedAstGrepCacheAsync),
