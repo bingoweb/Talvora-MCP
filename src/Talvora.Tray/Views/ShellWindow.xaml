@@ -20,10 +20,14 @@
                      CloseWindowByDoubleClickOnIcon="False" ForceShutdown="False">
             <ui:TitleBar.Header>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0">
-                    <TextBlock Text="T" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource Tv.Aurora}"
-                               FontFamily="Segoe UI Variable Display" VerticalAlignment="Center" />
-                    <TextBlock Text="Talvora  ›" Style="{StaticResource Tv.Type.BodyStrong}" Margin="12,0,8,0" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding SelectedLabel}" Style="{StaticResource Tv.Type.Body}" VerticalAlignment="Center" />
+                    <!-- SN6 wordmark: TALVORA in brass-ink condensed, then the page name. -->
+                    <TextBlock Text="TALVORA" FontFamily="Bahnschrift" FontStretch="Condensed" FontWeight="Bold" FontSize="20"
+                               Foreground="{DynamicResource Sn.Ink}" VerticalAlignment="Center" />
+                    <TextBlock Text="KONTROL MERKEZİ" FontFamily="Bahnschrift" FontStretch="Condensed" FontWeight="Light" FontSize="20"
+                               Foreground="{DynamicResource Sn.InkMuted}" Margin="8,0,14,0" VerticalAlignment="Center" />
+                    <Rectangle Width="1" Height="18" Fill="{DynamicResource Sn.Rule}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding SelectedLabel}" Style="{StaticResource Tv.Type.BodyStrong}" Margin="14,0,0,0"
+                               Foreground="{DynamicResource Sn.InkMuted}" VerticalAlignment="Center" />
                 </StackPanel>
             </ui:TitleBar.Header>
             <ui:TitleBar.CenterContent>

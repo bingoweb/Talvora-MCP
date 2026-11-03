@@ -69,7 +69,9 @@ internal sealed class ServicesViewModel : ObservableObject
                 GetRole(source.Registration),
                 state,
                 OverviewViewModel.Word(state),
-                optional && source.Health != ControlCenterHealthState.Ready ? "—" : "az önce",
+                // SN6: the real check time, never a made-up "az önce".
+                optional && source.Health != ControlCenterHealthState.Ready ? "—"
+                    : checkedAt.ToLocalTime().ToString("HH:mm:ss", System.Globalization.CultureInfo.GetCultureInfo("tr-TR")),
                 checkedAt.ToLocalTime().ToString("G",
                     System.Globalization.CultureInfo.GetCultureInfo("tr-TR")),
                 manuallyStopped,

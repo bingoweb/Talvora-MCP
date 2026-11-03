@@ -3,9 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:Talvora.Tray.Controls"
              Background="Transparent">
-    <Border Background="{DynamicResource Tv.SurfaceRaised}"
-            BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
-            CornerRadius="{StaticResource Tv.Radius.M}" Padding="8" MinHeight="56">
+    <!-- SN6: a "hat kartı" (DESIGN-SANTRAL §7): brass socket with the service's own logo in its hole. -->
+    <Border Background="{DynamicResource Sn.PanelRaised}"
+            BorderBrush="{DynamicResource Sn.Rule}" BorderThickness="1"
+            CornerRadius="4" Padding="8" MinHeight="60">
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="48"/>
@@ -15,16 +16,25 @@
                 <ColumnDefinition Width="86"/>
                 <ColumnDefinition Width="36"/>
             </Grid.ColumnDefinitions>
-            <Image Source="{Binding Logo}" Width="32" Height="32" Stretch="Uniform"
-                   VerticalAlignment="Center" AutomationProperties.Name="{Binding Name}"/>
+            <Grid Width="40" Height="40" VerticalAlignment="Center" HorizontalAlignment="Left">
+                <Ellipse>
+                    <Ellipse.Fill>
+                        <RadialGradientBrush GradientOrigin="0.35,0.3">
+                            <GradientStop Color="{DynamicResource Sn.BrassLight.Color}" Offset="0"/>
+                            <GradientStop Color="{DynamicResource Sn.Brass.Color}" Offset="0.6"/>
+                            <GradientStop Color="{DynamicResource Sn.BrassDark.Color}" Offset="1"/>
+                        </RadialGradientBrush>
+                    </Ellipse.Fill>
+                </Ellipse>
+                <Ellipse Width="26" Height="26" Fill="{DynamicResource Sn.Socket}"/>
+                <Image Source="{Binding Logo}" Width="18" Height="18" Stretch="Uniform"
+                       AutomationProperties.Name="{Binding Name}"/>
+            </Grid>
             <TextBlock Grid.Column="1" Text="{Binding Name}"
                        Style="{StaticResource Tv.Type.BodyStrong}"
                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-            <Border Grid.Column="2" Background="{DynamicResource Tv.Surface}"
-                    CornerRadius="{StaticResource Tv.Radius.S}" Padding="8,3"
-                    VerticalAlignment="Center" Margin="8,0">
-                <TextBlock Text="{Binding Role}" Style="{StaticResource Tv.Type.Caption}"/>
-            </Border>
+            <TextBlock Grid.Column="2" Text="{Binding Role}" Style="{StaticResource Tv.Type.Mono}"
+                       Foreground="{DynamicResource Sn.InkMuted}" VerticalAlignment="Center" Margin="8,0"/>
             <controls:StatusPill Grid.Column="3" State="{Binding State}"
                                  VerticalAlignment="Center" Margin="8,0"/>
             <TextBlock Grid.Column="4" Text="{Binding LastChecked}"
