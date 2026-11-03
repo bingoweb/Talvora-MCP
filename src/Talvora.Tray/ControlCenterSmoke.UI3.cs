@@ -49,6 +49,8 @@ internal static partial class ControlCenterSmoke
         if (overview.Model.AttentionCount != 1 || overview.Model.OptionalCount != 1 ||
             overview.Model.Segments.Count != 5 || overview.Model.ReadyFraction != "3/5")
             throw new InvalidOperationException("UI3 overview rendered unrelated status facts.");
+        AssertSn3Switchboard(overview);
+        AssertSn4DroppedLine(window, overview, snapshot, variant);
         SaveVisualSnapshotIfRequested(window, "ui3-overview-" + variant);
 
         window.ShellModel.SelectPage(3);

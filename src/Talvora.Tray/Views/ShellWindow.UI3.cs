@@ -39,13 +39,9 @@ internal sealed partial class ShellWindow
                         _ = OpenUi3DetailsAsync(target);
                 };
                 _overviewView.ServiceRequested += state => _ = OpenUi3DetailsAsync(state);
-                _overviewView.ShowChainRequested += () => _shellModel?.SelectPage(3);
-                _overviewView.ChainNodeRequested += node =>
-                {
-                    _shellModel?.SelectPage(3);
-                    _chainView?.SelectNode(node);
-                };
+                _overviewView.ShowEventsRequested += () => _shellModel?.SelectPage(4);
                 OverviewContentHost.Content = _overviewView;
+                StartTrafficPoller();
             }
             _overviewView.Model.IsWide = ActualWidth >= 1360;
         }
@@ -149,6 +145,51 @@ internal sealed partial class ShellWindow
             RecordOperationFailure(state.Registration, "Onarım başarısız", friendly);
             await ShowOperationErrorAsync(
                 state.Registration.DisplayName + " onarılamadı", friendly);
+        }
+    }
+
+    // SN1/SN3: the switchboard reads measured call traffic once a second while the overview is on screen.
+    private System.Windows.Threading.DispatcherTimer? _trafficTimer;
+    private bool _trafficBusy;
+    private bool _trafficFailureLogged;
+
+    private void StartTrafficPoller()
+    {
+        if (_trafficTimer is not null) return;
+        _trafficTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromSeconds(1),
+        };
+        _trafficTimer.Tick += async (_, _) => await PollTrafficAsync();
+        _trafficTimer.Start();
+        _ = PollTrafficAsync();
+    }
+
+    private async Task PollTrafficAsync()
+    {
+        if (_trafficBusy || _overviewView is null || _shellModel?.SelectedIndex != 0 || !IsVisible ||
+            WindowState == WindowState.Minimized || _lifetimeCts.IsCancellationRequested) return;
+        _trafficBusy = true;
+        try
+        {
+            var after = _overviewView.Model.Traffic is { } known ? Math.Max(0, known.NextSeq - 1) : 0;
+            var feed = await ControlCenterTrafficService.GetAsync(after, _lifetimeCts.Token);
+            _overviewView.ApplyTraffic(feed);
+            _trafficFailureLogged = false;
+        }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            // An older service without /healthz/traffic, or a stopped service: counters show "—", no lights.
+            _overviewView.ApplyTraffic(null);
+            if (!_trafficFailureLogged) TrayLog.Write("Santral traffic feed unavailable", ex);
+            _trafficFailureLogged = true;
+        }
+        finally
+        {
+            _trafficBusy = false;
         }
     }
 

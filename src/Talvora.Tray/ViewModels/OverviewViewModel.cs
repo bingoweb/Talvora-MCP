@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Talvora.Shared;
+using Talvora.Tray.Controls;
 
 namespace Talvora.Tray.ViewModels;
 
@@ -17,7 +18,7 @@ internal sealed record OverviewServiceItem(
     bool IsOptional,
     BitmapSource? Logo);
 
-internal sealed record OverviewEventItem(string Time, string Title, string Service);
+internal sealed record OverviewEventItem(string Time, string Title, string Service, string Kind = "", string Detail = "");
 
 /// <summary>Immutable status facts from existing Control Center services, adapted to §5.1.</summary>
 internal sealed class OverviewViewModel : ObservableObject
@@ -38,6 +39,12 @@ internal sealed class OverviewViewModel : ObservableObject
     private bool _hasRecovery;
     private bool _canRepair;
     private ManagedMcpDashboardState? _repairTarget;
+    private string _summary = string.Empty;
+    private OverviewEventItem? _latestEvent;
+    private IReadOnlyList<SwitchboardSocket> _sockets = [];
+    private ControlCenterDashboardSnapshot? _snapshot;
+    private TrafficFeed? _traffic;
+    private readonly ControlCenterStateSinceTracker _stateSince = new();
 
     public ObservableCollection<OverviewServiceItem> Services { get; } = [];
     public ObservableCollection<OverviewServiceItem> FilteredServices { get; } = [];
@@ -60,6 +67,13 @@ internal sealed class OverviewViewModel : ObservableObject
     public bool IsWide { get => _isWide; set => SetProperty(ref _isWide, value); }
     public bool CanRepair { get => _canRepair; private set => SetProperty(ref _canRepair, value); }
     public ManagedMcpDashboardState? RepairTarget => _repairTarget;
+    public string Summary { get => _summary; private set => SetProperty(ref _summary, value); }
+    public OverviewEventItem? LatestEvent
+    { get => _latestEvent; private set { if (SetProperty(ref _latestEvent, value)) OnPropertyChanged(nameof(HasLatestEvent)); } }
+    public bool HasLatestEvent => _latestEvent is not null;
+    /// <summary>SN3: the switchboard's sockets, rebuilt from the latest health snapshot and SN1 traffic feed.</summary>
+    public IReadOnlyList<SwitchboardSocket> Sockets { get => _sockets; private set => SetProperty(ref _sockets, value); }
+    public TrafficFeed? Traffic => _traffic;
 
     public string SearchText
     {
@@ -91,7 +105,7 @@ internal sealed class OverviewViewModel : ObservableObject
 
         Title = message.Title;
         Description = message.Detail;
-        StatusLine = "Son kontrol " + checkedAt.ToLocalTime().ToString("HH:mm",
+        StatusLine = "Son kontrol " + checkedAt.ToLocalTime().ToString("HH:mm:ss",
             System.Globalization.CultureInfo.GetCultureInfo("tr-TR")) +
             " · " + (typeof(ControlCenterVersionService).Assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
@@ -114,7 +128,8 @@ internal sealed class OverviewViewModel : ObservableObject
             var state = VisualState(row.State.Health, row.Optional);
             Services.Add(new OverviewServiceItem(
                 row.State, row.State.Registration.DisplayName, GetRole(row.State.Registration),
-                state, Word(state), "az önce", checkedAt.ToLocalTime().ToString("G",
+                state, Word(state), checkedAt.ToLocalTime().ToString("HH:mm:ss",
+                    System.Globalization.CultureInfo.GetCultureInfo("tr-TR")), checkedAt.ToLocalTime().ToString("G",
                     System.Globalization.CultureInfo.GetCultureInfo("tr-TR")), row.Optional,
                 McpLogoResolver.TryResolve(row.State.Registration.Id)));
         }
@@ -127,9 +142,89 @@ internal sealed class OverviewViewModel : ObservableObject
         HasRecovery = RecoveryCount > 0;
         RecentEvents.Clear();
         foreach (var entry in events.OrderByDescending(item => item.LastOccurredAtUtc).Take(6))
-            RecentEvents.Add(new OverviewEventItem(entry.LastOccurredAtUtc.ToLocalTime().ToString("HH:mm"),
-                FileLog.RedactSensitiveData(entry.Title), entry.McpId ?? string.Empty));
+            RecentEvents.Add(new OverviewEventItem(entry.LastOccurredAtUtc.ToLocalTime().ToString("HH:mm:ss"),
+                FileLog.RedactSensitiveData(entry.Title),
+                snapshot.Mcps.FirstOrDefault(state => string.Equals(state.Registration.Id, entry.McpId,
+                    StringComparison.OrdinalIgnoreCase))?.Registration.DisplayName ?? entry.McpId ?? string.Empty,
+                EventKind(entry.Category), FileLog.RedactSensitiveData(entry.Detail ?? string.Empty)));
+        LatestEvent = RecentEvents.FirstOrDefault();
+        Summary = string.Join(" · ", new[]
+        {
+            $"{ReadyCount} hazır",
+            AttentionCount > 0 ? $"{AttentionCount} dikkat" : null,
+            OptionalCount > 0 ? $"{OptionalCount} kapalı" : null,
+            HasRecovery ? $"son 24 saatte {RecoveryCount} otomatik onarım" : null,
+        }.Where(part => part is not null));
+        _snapshot = snapshot;
+        RebuildSockets(checkedAt);
         IsLoading = false;
+    }
+
+    /// <summary>SN1 feed in; returns the lines of calls finished since the previous read (one light each).</summary>
+    public IReadOnlyList<string> ApplyTraffic(TrafficFeed? feed)
+    {
+        var previous = _traffic;
+        _traffic = feed;
+        RebuildSockets(DateTimeOffset.Now);
+        if (feed is null || previous is null || previous.StartedAtUtc != feed.StartedAtUtc) return [];
+        return feed.Recent.Where(call => call.Seq > previous.NextSeq).OrderBy(call => call.Seq)
+            .Select(call => call.Line).ToArray();
+    }
+
+    internal static string EventKind(string? category) => category?.ToLowerInvariant() switch
+    {
+        "recovery" => "OTOMATİK ONARIM",
+        "lifecycle" or "operation" => "YAŞAM DÖNGÜSÜ",
+        "problem" or "error" or "failure" => "SORUN",
+        _ => "BİLGİ",
+    };
+
+    // Registry id -> (socket name, measured line, outside title, outside sub). Gitea's calls are not seen by Talvora.
+    private static readonly (string Id, string Name, string? Line, string? Outside, string? Sub)[] BoardLayout =
+    [
+        ("talvora", "Çekirdek", "core", "YEREL", null),
+        ("talvora-dev", "Dev", "dev", "CHATGPT", "Dev"),
+        ("talvora-admin", "Admin", "admin", "CHATGPT", "Admin"),
+        ("gitea", "Gitea", null, "CHATGPT", "Gitea"),
+        ("penpot", "Penpot", null, null, null),
+    ];
+
+    private void RebuildSockets(DateTimeOffset now)
+    {
+        if (_snapshot is null) return;
+        var sockets = new List<SwitchboardSocket>();
+        var states = _snapshot.Mcps
+            .OrderBy(state => Array.FindIndex(BoardLayout, row => string.Equals(row.Id, state.Registration.Id,
+                StringComparison.OrdinalIgnoreCase)) is var index && index >= 0 ? index : BoardLayout.Length)
+            .ThenBy(state => state.Registration.DisplayName, StringComparer.CurrentCultureIgnoreCase);
+        foreach (var state in states)
+        {
+            var optional = ManagedMcpAggregateHealthPolicy.IsIgnored(state.Registration, state.Health,
+                ManagedMcpSessionState.IsManuallyStopped(state.Registration.Id));
+            var visual = VisualState(state.Health, optional);
+            var layout = BoardLayout.FirstOrDefault(row => string.Equals(row.Id, state.Registration.Id,
+                StringComparison.OrdinalIgnoreCase));
+            var name = layout.Id is null ? state.Registration.DisplayName : layout.Name;
+            var line = layout.Line;
+            TrafficFeedLine? measured = null;
+            if (line is not null && _traffic?.Lines.TryGetValue(line, out var found) == true) measured = found;
+            var sub = layout.Sub;
+            if (layout.Id is not null && line == "core")
+            {
+                var clients = _traffic?.Clients
+                    .Where(client => client.Line == "core" && client.LastSeenAtUtc >= now.ToUniversalTime().AddMinutes(-60))
+                    .Select(client => client.Client).Distinct().Order(StringComparer.Ordinal).ToArray() ?? [];
+                sub = clients.Length > 0 ? string.Join(" · ", clients) : "son saatte istemci yok";
+            }
+            sockets.Add(new SwitchboardSocket(
+                state.Registration.Id, name,
+                optional ? "isteğe bağlı" : null,
+                visual, line, layout.Id is null ? null : layout.Outside, sub,
+                measured?.Calls, measured?.LastCallAtUtc,
+                _stateSince.Observe(state.Registration.Id, state.Health, now.ToUniversalTime()),
+                state));
+        }
+        Sockets = sockets;
     }
 
     public void MarkUnavailable()
