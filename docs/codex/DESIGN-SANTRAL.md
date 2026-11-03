@@ -17,7 +17,7 @@ User decisions (2026-11-03): concept A; a dark variant **"Gece vardiyası"** fol
 
 ## 3. Tokens
 
-All colours live in `Themes/Tokens.Gunduz.xaml` and `Themes/Tokens.GeceVardiyasi.xaml` with identical keys (`Sn.*`), referenced by `DynamicResource`. Existing `Tv.*` keys are re-pointed to the matching `Sn.*` values so untouched views follow the new theme; they are removed in SN7.
+All colours live in `Themes/Tokens.Gun.xaml` (Gündüz) and `Themes/Tokens.Gece.xaml` (Gece vardiyası) with identical keys (`Sn.*`; file names kept so the theme manager and its tests stay unchanged), referenced by `DynamicResource`. Existing `Tv.*` keys are re-pointed to the matching `Sn.*` values so untouched views follow the new theme; they are removed in SN7.
 
 | Key | Gündüz | Gece vardiyası | Use |
 |---|---|---|---|

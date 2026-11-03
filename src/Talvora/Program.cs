@@ -111,7 +111,10 @@ builder.Services
             finally
             {
                 // SN1: every finished call lights its real line in the Control Center, failed ones included.
-                request.Services?.GetService<TalvoraLineTrafficMeter>()?.Record(surfacePath, clientName, ok);
+                // Stateless MCP sessions often carry no client name; the HTTP User-Agent still says who called.
+                request.Services?.GetService<TalvoraLineTrafficMeter>()?.Record(surfacePath,
+                    clientName ?? request.Services?.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>()
+                        ?.HttpContext?.Request.Headers.UserAgent.ToString(), ok);
             }
 
             return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(result));
