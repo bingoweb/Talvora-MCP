@@ -91,9 +91,9 @@ Upstream:
 **License:** Apache-2.0  
 **Relationship:** bundled.
 
-- `ModelContextProtocol 2.2.0`
-- `ModelContextProtocol.AspNetCore 2.2.0`
-- `ModelContextProtocol.Core 2.2.0`
+- `ModelContextProtocol 2.3.1`
+- `ModelContextProtocol.AspNetCore 2.3.1`
+- `ModelContextProtocol.Core 2.3.1`
 
 Upstream: https://github.com/modelcontextprotocol/csharp-sdk
 

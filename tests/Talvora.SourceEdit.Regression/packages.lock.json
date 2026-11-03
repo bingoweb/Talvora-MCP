@@ -266,11 +266,11 @@
       },
       "ModelContextProtocol.Core": {
         "type": "Transitive",
-        "resolved": "2.2.0",
-        "contentHash": "FeBfXU6T8k+jw4afg4sfxdEX2rL/e5oKOk9ROOGztu9k47+7Bz08sdaToYt2XvMY1opNbwxYQOFMj6wH9TInhA==",
+        "resolved": "2.3.1",
+        "contentHash": "cuYIbAWWhVSY0PRaz0LiDoxxnpLdps1tKXjo2LN91CObgWBFcKg3Ebz4kF95O++2Do7GXI2Tl5KQOYM8UoAyZA==",
         "dependencies": {
-          "Microsoft.Extensions.AI.Abstractions": "10.8.3",
-          "Microsoft.Extensions.Logging.Abstractions": "10.0.10"
+          "Microsoft.Extensions.AI.Abstractions": "10.11.0",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.13"
         }
       },
       "SQLite": {
@@ -322,7 +322,7 @@
           "Microsoft.Data.Sqlite": "[10.0.14, )",
           "Microsoft.Extensions.AI.Abstractions": "[10.11.0, )",
           "Microsoft.Extensions.Hosting.WindowsServices": "[10.0.14, )",
-          "ModelContextProtocol.AspNetCore": "[2.2.0, )",
+          "ModelContextProtocol.AspNetCore": "[2.3.1, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
           "Talvora.Shared": "[3.0.0-dev, )",
           "Tomlyn": "[2.10.1, )",
@@ -500,22 +500,22 @@
       },
       "ModelContextProtocol": {
         "type": "CentralTransitive",
-        "requested": "[2.2.0, )",
-        "resolved": "2.2.0",
-        "contentHash": "4Pb9u02Nwsp0poueDsqNdyGRojFxOYpljB7zDBsq+aHL+Afou3OgxlBc3GWFVnsRMRJrUtWqDh3s6k2JgPzmrQ==",
+        "requested": "[2.3.1, )",
+        "resolved": "2.3.1",
+        "contentHash": "r93TE8VAvPIJrvoMPpWhKWcMLvKIPB72JozRye3hHeY7gCsMXYo/3fLVnzNEnjBcXmV8+EXcNMYzC/+0wRkidA==",
         "dependencies": {
-          "Microsoft.Extensions.Caching.Abstractions": "10.0.10",
-          "Microsoft.Extensions.Hosting.Abstractions": "10.0.10",
-          "ModelContextProtocol.Core": "[2.2.0]"
+          "Microsoft.Extensions.Caching.Abstractions": "10.0.13",
+          "Microsoft.Extensions.Hosting.Abstractions": "10.0.13",
+          "ModelContextProtocol.Core": "[2.3.1]"
         }
       },
       "ModelContextProtocol.AspNetCore": {
         "type": "CentralTransitive",
-        "requested": "[2.2.0, )",
-        "resolved": "2.2.0",
-        "contentHash": "3JelDMuFIwFzXybsh6K30G6wXu5gmqKnuRnieqgBMuR0FkqqXRv4B+NYZuPgthSyNq5UwRyvv2U2VJBE3RD3PQ==",
+        "requested": "[2.3.1, )",
+        "resolved": "2.3.1",
+        "contentHash": "qlX2AkOg9QJ8iap9NXyOfkNW7abMrf6HU3o7kImIgsNjkPpZQd6ewGxkwRuI5GQNXdONCaROfKMlhPVcYoWQfw==",
         "dependencies": {
-          "ModelContextProtocol": "[2.2.0]"
+          "ModelContextProtocol": "[2.3.1]"
         }
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {

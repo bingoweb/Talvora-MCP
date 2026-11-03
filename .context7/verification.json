@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-03T20:26:57.891Z",
-  "scope": "W8: permit only the plain fast-forward Git pull shape without explicitAdmin.",
+  "verifiedAtUtc": "2026-11-03T20:50:15.957Z",
+  "scope": "DEP18: ModelContextProtocol 2.2.0 -> 2.3.1",
   "libraries": [
     {
-      "libraryId": "/websites/git-scm",
-      "verified": "2026-11-03 W8: git pull --ff-only refuses divergent history and only fast-forwards a branch even when pull.rebase is set (query: \"Git 2.55 git pull --ff-only: when pull.rebase=true and local/upstream histories diverge, does --ff-only reject the pull and leave HEAD unchanged? Exact git-pull --ff-only and pull.rebase option behavior.\")."
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-11-03 DEP18: HttpServerSessionMode.Stateless remains available in the C# SDK; 2.3.0 modern Streamable HTTP defers headers until the first protocol message, verified in official release notes (query: \"ModelContextProtocol C# SDK 2.3.1: stateless Streamable HTTP via HttpServerSessionMode.Stateless, and 2.3.0 modern Streamable HTTP responses delay HTTP headers until first protocol message; check API names and version-specific changes.\")."
     }
   ],
   "vendorSources": [
-    "https://git-scm.com/docs/git-pull"
+    "https://github.com/modelcontextprotocol/csharp-sdk/releases/tag/v2.3.1",
+    "https://github.com/modelcontextprotocol/csharp-sdk/releases/tag/v2.3.0"
   ]
 }

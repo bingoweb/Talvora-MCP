@@ -6,7 +6,7 @@ Maintained by Claude (CONTEXT7 PROTOCOL in AGENTS.md). Every id below was checke
 |---|---|---|---|
 | .NET / C# / SDK and CLI | .NET SDK 10.0.403 | `/dotnet/docs`; runtime source: `/dotnet/runtime` | https://learn.microsoft.com/dotnet/ |
 | ASP.NET Core (MCP HTTP host) | .NET 10 | `/dotnet/aspnetcore.docs` | https://learn.microsoft.com/aspnet/core/ |
-| MCP C# SDK | `ModelContextProtocol` 2.2.0 | `/modelcontextprotocol/csharp-sdk` | https://github.com/modelcontextprotocol/csharp-sdk |
+| MCP C# SDK | `ModelContextProtocol` 2.3.1 | `/modelcontextprotocol/csharp-sdk` | https://github.com/modelcontextprotocol/csharp-sdk |
 | Roslyn | `Microsoft.CodeAnalysis.*` | `/dotnet/roslyn` | https://learn.microsoft.com/dotnet/csharp/roslyn-sdk/ |
 | SQLite (ADO.NET) | `Microsoft.Data.Sqlite` 10.0.14 | `/dotnet/docs` (Microsoft.Data.Sqlite pages); SQL: `/websites/sqlite_docs` | https://learn.microsoft.com/dotnet/standard/data/sqlite/ |
 | MVVM | `CommunityToolkit.Mvvm` | `/websites/learn_microsoft_en-us_dotnet_communitytoolkit_mvvm` | https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/ |
