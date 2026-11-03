@@ -33,6 +33,7 @@ builder.Configuration["AllowedHosts"] = "localhost;127.0.0.1;[::1]";
 builder.WebHost.ConfigureKestrel(options => options.ListenLocalhost(7676));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<TalvoraDesktopProgressNotifier>();
+builder.Services.AddSingleton<TalvoraLineTrafficMeter>();
 builder.Services.AddHostedService<TalvoraSystemStorageMaintenanceService>();
 
 builder.Services
@@ -76,6 +77,9 @@ builder.Services
 
             var notifier =
                 request.Services?.GetService<TalvoraDesktopProgressNotifier>();
+            var surfacePath = request.Services?.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>()
+                ?.HttpContext?.Request.Path.Value;
+            var clientName = request.Server.ClientInfo?.Name;
             Func<CancellationToken, ValueTask<CallToolResult>> operation =
                 token => next(request, token);
             if (notifier is not null)
@@ -86,15 +90,16 @@ builder.Services
                     request.Params.Arguments,
                     inner,
                     token,
-                    request.Services?.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>()
-                        ?.HttpContext?.Request.Path.Value,
-                    request.Server.ClientInfo?.Name);
+                    surfacePath,
+                    clientName);
             }
 
             CallToolResult result;
+            var ok = false;
             try
             {
                 result = await operation(cancellationToken);
+                ok = result.IsError != true;
             }
             catch (Exception exception) when (
                 exception is not ModelContextProtocol.McpProtocolException &&
@@ -102,6 +107,11 @@ builder.Services
             {
                 // H3: the SDK would answer with only "An error occurred invoking '<tool>'."; the model needs the reason.
                 result = ToolFailureGuidance.FromException(request.Params?.Name, exception);
+            }
+            finally
+            {
+                // SN1: every finished call lights its real line in the Control Center, failed ones included.
+                request.Services?.GetService<TalvoraLineTrafficMeter>()?.Record(surfacePath, clientName, ok);
             }
 
             return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(result));
@@ -225,6 +235,9 @@ app.MapGet("/healthz", () =>
         isWindowsService,
     });
 });
+
+app.MapGet("/healthz/traffic", (long? after, TalvoraLineTrafficMeter meter) =>
+    Results.Json(meter.Snapshot(Math.Max(0, after ?? 0)), TalvoraLineTrafficMeter.JsonOptions));
 
 PenpotAiPluginEndpoints.Map(app);
 EmbeddedMcpIntegrationHealth.Map(app);

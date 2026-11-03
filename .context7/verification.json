@@ -1,15 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-01T19:36:38.000Z",
-  "scope": "W4: publish archives with destination-directory permissions.",
+  "verifiedAtUtc": "2026-11-03T13:40:00.000Z",
+  "scope": "SN1: tool-call traffic meter and /healthz/traffic minimal API endpoint for the Santral Control Center.",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-01 W4: Context7 returned unrelated ACL guidance for the requested copy and move security descriptor facts (queries: \"File.Copy security descriptor inherited from destination directory; File.Move keeps the security descriptor\" and \"System.IO.File.Copy destination inherited access control permissions Windows\"). Vendor CopyFile documents copied security resource attributes; MoveFileEx documents destination security inheritance when moving across volumes. Destination inheritance for this scenario is checked live with the signed-in user."
+      "libraryId": "/dotnet/aspnetcore.docs",
+      "verified": "2026-11-03 SN1: Context7 query \"minimal API MapGet query string parameter binding nullable Results.Json JsonSerializerOptions\" returned the parameter-binding pages: simple values bind from the query string (GET /42?page=3 binds page from the query) and registered services bind from dependency injection. The endpoint uses (long? after, TalvoraLineTrafficMeter meter) and Results.Json with explicit web serializer options."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-copyfile",
-    "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-movefileexw"
+    "https://learn.microsoft.com/aspnet/core/fundamentals/minimal-apis/parameter-binding"
   ]
 }

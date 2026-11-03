@@ -29,6 +29,11 @@ internal static partial class Program
             await AssertUi6SettingsAsync();
             return 0;
         }
+        if (Environment.GetCommandLineArgs().Contains("--sn1-only", StringComparer.Ordinal))
+        {
+            AssertSn1LineTraffic();
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--ui5-only", StringComparer.Ordinal))
         {
             AssertUi5EventGroupingAndFilters();
@@ -69,6 +74,7 @@ internal static partial class Program
         await AssertN8NotificationsInChildAsync();
         await AssertN10ChangesAsync();
         await AssertWl1StepDurationAsync();
+        AssertSn1LineTraffic();
         AssertUi12cTimeRuler();
         await AssertD25SessionRestartResetsTotalsAsync();
         await AssertRemotionWorklogAsync();
