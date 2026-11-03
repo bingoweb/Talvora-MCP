@@ -8,9 +8,12 @@ namespace Talvora.Tray.ViewModels;
 internal sealed record EventServiceFilter(string? Id, string Name);
 internal sealed record EventTimelineItem(
     string Time, string Glyph, ControlCenterEventSeverity Severity,
-    string Title, string Detail, string ServiceName, int Count)
+    string Title, string Detail, string ServiceName, int Count, string Kind = "")
 {
     public bool HasService => !string.IsNullOrWhiteSpace(ServiceName);
+    public bool HasDetail => !string.IsNullOrWhiteSpace(Detail);
+    /// <summary>SN5 slip header: real kind and, when the store merged repeats, the measured count.</summary>
+    public string SlipHeader => Count > 1 ? $"{Kind} · {Count} KEZ" : Kind;
 }
 internal sealed record EventDayGroup(string Title, IReadOnlyList<EventTimelineItem> Items);
 
@@ -165,7 +168,9 @@ internal sealed class EventsViewModel : ObservableObject
                     FileLog.RedactSensitiveData(entry.Detail),
                     entry.McpId is { } id && _serviceNames.TryGetValue(id, out var name)
                         ? name : string.Empty,
-                    entry.Count)).ToArray()))
+                    entry.Count,
+                    entry.Severity == ControlCenterEventSeverity.Error && entry.Category is not "recovery"
+                        ? "SORUN" : OverviewViewModel.EventKind(entry.Category))).ToArray()))
             .ToArray();
         Groups.Clear();
         foreach (var group in matched)

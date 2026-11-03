@@ -1,16 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-03T13:49:45.000Z",
-  "scope": "SN3/SN4: Santral switchboard control (custom OnRender drawing, FormattedText, DispatcherTimer animation, hotspots) on Genel bakış with live SN1 traffic.",
+  "verifiedAtUtc": "2026-11-03T14:00:37.000Z",
+  "scope": "SN5-SN7: event slips, line cards and wordmark, real check times, User-Agent fallback for the SN1 client name, retired Nabız ring.",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-03 SN3: Context7 queries \"OnRender DrawingContext FormattedText DrawGeometry custom FrameworkElement rendering\" and \"WPF FormattedText DrawText PixelsPerDip\" returned only WinForms renderer and unrelated WPF pages. The vendor API pages confirm FormattedText(string, CultureInfo, FlowDirection, Typeface, double, Brush, double pixelsPerDip) with VisualTreeHelper.GetDpi(visual).PixelsPerDip, and UIElement.OnRender(DrawingContext) with Panel children drawn above the panel's own rendering; behaviour verified on real smoke screenshots in both themes."
+      "libraryId": "/dotnet/aspnetcore.docs",
+      "verified": "2026-11-03 SN7: Context7 query \"HttpRequest Headers UserAgent IHttpContextAccessor\" returned the IHttpContextAccessor injection pages and \"Extract header value by name\"; request headers are read from HttpContext.Request.Headers and IHeaderDictionary exposes the typed UserAgent property. The meter receives the User-Agent text only when the MCP client sent no name, and stores only the classified client (Codex / Claude / ChatGPT / Diğer)."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.windows.media.formattedtext.-ctor",
-    "https://learn.microsoft.com/dotnet/api/system.windows.uielement.onrender",
-    "https://learn.microsoft.com/dotnet/api/system.windows.threading.dispatchertimer"
+    "https://learn.microsoft.com/dotnet/api/microsoft.aspnetcore.http.iheaderdictionary.useragent",
+    "https://learn.microsoft.com/aspnet/core/fundamentals/http-context"
   ]
 }

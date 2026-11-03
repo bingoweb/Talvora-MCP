@@ -131,45 +131,40 @@
                                 <ItemsControl ItemsSource="{Binding Items}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Expander Margin="0,0,0,8" Background="{DynamicResource Tv.Surface}"
-                                                      BorderBrush="{DynamicResource Tv.Border}"
-                                                      BorderThickness="1"
-                                                      AutomationProperties.Name="{Binding Title}">
-                                                <Expander.Header>
-                                                    <Grid MinHeight="48">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="64"/>
-                                                            <ColumnDefinition Width="32"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Grid.Column="0" Text="{Binding Time}"
-                                                                   Style="{StaticResource Tv.Type.Mono}"
-                                                                   VerticalAlignment="Center"/>
-                                                        <TextBlock Grid.Column="1" Text="{Binding Glyph}"
-                                                                   Style="{StaticResource EventGlyph}"
-                                                                   VerticalAlignment="Center"/>
-                                                        <TextBlock Grid.Column="2" Text="{Binding Title}"
-                                                                   Style="{StaticResource Tv.Type.BodyStrong}"
-                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                        <Border Grid.Column="3"
-                                                                Visibility="{Binding HasService, Converter={StaticResource EventBool}}"
-                                                                Background="{DynamicResource Tv.SurfaceRaised}"
-                                                                CornerRadius="{StaticResource Tv.Radius.S}"
-                                                                Padding="8,3" Margin="12,0,0,0"
-                                                                VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding ServiceName}"
-                                                                       Style="{StaticResource Tv.Type.Caption}"/>
-                                                        </Border>
-                                                    </Grid>
-                                                </Expander.Header>
-                                                <Border Background="{DynamicResource Tv.SurfaceSunken}"
-                                                        Padding="12">
-                                                    <TextBlock Text="{Binding Detail}"
-                                                               Style="{StaticResource Tv.Type.Body}"
-                                                               TextWrapping="Wrap"/>
+                                            <!-- SN5: each real event is a paper slip (DESIGN-SANTRAL §6). -->
+                                            <Grid Margin="4,0,12,14" HorizontalAlignment="Stretch"
+                                                  AutomationProperties.Name="{Binding Title}">
+                                                <Border Background="{DynamicResource Sn.Shadow}" Margin="4,6,-4,-6" CornerRadius="2"/>
+                                                <Border Background="{DynamicResource Sn.Slip}" CornerRadius="2" Padding="22,18,22,14">
+                                                    <StackPanel>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="{Binding Time}" Style="{StaticResource Tv.Type.Mono}"
+                                                                       Foreground="{DynamicResource Sn.InkMuted}" VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Glyph}" Style="{StaticResource EventGlyph}"
+                                                                       Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="3" Text="{Binding SlipHeader}" Style="{StaticResource Tv.Type.Mono}"
+                                                                       Foreground="{DynamicResource Sn.InkMuted}" VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                        <TextBlock Text="{Binding Title}" Style="{StaticResource Tv.Type.Subtitle}" FontSize="21"
+                                                                   Foreground="{DynamicResource Sn.Ink}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                                                        <TextBlock Text="{Binding Detail}" Style="{StaticResource Tv.Type.Body}"
+                                                                   Foreground="{DynamicResource Sn.InkMuted}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                                   Visibility="{Binding HasDetail, Converter={StaticResource EventBool}}"/>
+                                                        <TextBlock Text="{Binding ServiceName}" Style="{StaticResource Tv.Type.Overline}"
+                                                                   Foreground="{DynamicResource Sn.InkFaint}" Margin="0,10,0,0"
+                                                                   Visibility="{Binding HasService, Converter={StaticResource EventBool}}"/>
+                                                    </StackPanel>
                                                 </Border>
-                                            </Expander>
+                                                <Rectangle Height="2" VerticalAlignment="Top" Margin="8,6,8,0"
+                                                           Stroke="{DynamicResource Sn.Panel}" StrokeThickness="6"
+                                                           StrokeDashArray="0.01 3" StrokeDashCap="Round"/>
+                                            </Grid>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
