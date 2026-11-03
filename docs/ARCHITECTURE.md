@@ -180,7 +180,7 @@ Docker discovery distinguishes CLI presence from engine and Compose availability
 
 ## SQLite application-development layer
 
-The SQLite suite exposes `talvora_sqlite_info`, `talvora_sqlite_query`, `talvora_sqlite_execute`, `talvora_sqlite_schema`, and `talvora_sqlite_backup`. Talvora references `Microsoft.Data.Sqlite 10.0.12`, which brings the native SQLite bundle into the normal service publish/installer payload; no external SQLite CLI is required for these structured calls.
+The SQLite suite exposes `talvora_sqlite_info`, `talvora_sqlite_query`, `talvora_sqlite_execute`, `talvora_sqlite_schema`, and `talvora_sqlite_backup`. Talvora references `Microsoft.Data.Sqlite 10.0.14`, which brings the native SQLite bundle into the normal service publish/installer payload; no external SQLite CLI is required for these structured calls.
 
 Each operation builds a `SqliteConnectionStringBuilder` with pooling disabled. Query defaults to `SqliteOpenMode.ReadOnly`, while execute explicitly selects `ReadWrite` or `ReadWriteCreate` according to `createIfMissing`. Caller-controlled command/default timeouts are forwarded to the provider. Named MCP parameter values are bound through `SqliteParameter` rather than concatenated into SQL; scalar JSON values keep numeric/string/boolean/null semantics and array/object values are stored as JSON text.
 
