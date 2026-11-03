@@ -35,14 +35,14 @@
             <ui:TitleBar.TrailingContent>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
                     <TextBlock Text="◐" Style="{StaticResource Tv.Type.Body}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <ComboBox x:Name="ThemeChoice" MinHeight="32" MinWidth="96" SelectionChanged="OnShellThemeChanged"
+                    <ComboBox x:Name="ThemeChoice" MinHeight="32" MinWidth="150" SelectionChanged="OnShellThemeChanged"
                               FocusVisualStyle="{StaticResource ShellFocusVisual}"
                               AutomationProperties.Name="Tema">
                         <ComboBox.ItemContainerStyle><Style TargetType="ComboBoxItem">
                             <Setter Property="MinHeight" Value="32" />
                             <Setter Property="FocusVisualStyle" Value="{StaticResource ShellFocusVisual}" />
                         </Style></ComboBox.ItemContainerStyle>
-                        <ComboBoxItem Content="Sistem" /><ComboBoxItem Content="Gece" /><ComboBoxItem Content="Gün" />
+                        <ComboBoxItem Content="Sistem" /><ComboBoxItem Content="Gece vardiyası" /><ComboBoxItem Content="Gündüz" />
                     </ComboBox>
                 </StackPanel>
             </ui:TitleBar.TrailingContent>

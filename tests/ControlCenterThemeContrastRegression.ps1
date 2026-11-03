@@ -58,6 +58,12 @@ foreach ($theme in @(@('Gece', $gece), @('Gun', $gun))) {
         }
     }
     Assert-Contrast $palette.Colors 'Tv.AccentInk' 'Tv.Accent' $name
+    # SN2: Santral text and lamp words stay readable on every panel surface and on the event slip.
+    foreach ($background in @('Sn.Panel', 'Sn.PanelRaised', 'Sn.PanelSunken', 'Sn.Slip')) {
+        foreach ($foreground in @('Sn.Ink', 'Sn.InkMuted', 'Sn.InkFaint', 'Sn.Word.Ready', 'Sn.Word.Attention', 'Sn.Word.Offline', 'Sn.Word.Off')) {
+            Assert-Contrast $palette.Colors $foreground $background $name
+        }
+    }
     foreach ($state in @('Ready', 'Attention', 'Offline', 'Neutral', 'Repairing')) {
         $key = "Tv.$state.Soft"
         if (-not $palette.Brushes.ContainsKey($key) -or $palette.Brushes[$key].Opacity -ne '0.14') {

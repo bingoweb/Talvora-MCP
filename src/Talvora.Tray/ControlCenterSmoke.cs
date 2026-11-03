@@ -59,8 +59,8 @@ internal static partial class ControlCenterSmoke
                 var initialPreference = TalvoraThemeManager.Preference;
                 var contentRoot = (Grid)window.Content;
                 var initialBackground = ((SolidColorBrush)contentRoot.Background).Color;
-                var alternatePreference = initialBackground ==
-                    System.Windows.Media.Color.FromRgb(0x0A, 0x0E, 0x15)
+                // Dark palette (any shade) -> switch to day, otherwise to night; no palette literal (SN2).
+                var alternatePreference = initialBackground.R + initialBackground.G + initialBackground.B < 3 * 128
                     ? TalvoraThemePreference.Gun : TalvoraThemePreference.Gece;
                 await TalvoraThemeManager.SetPreferenceAsync(alternatePreference, persist: true);
                 if (((SolidColorBrush)contentRoot.Background).Color == initialBackground)

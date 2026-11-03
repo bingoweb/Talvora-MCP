@@ -1,26 +1,26 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
-    <!-- Approved UI1 colour tokens: DESIGN-CONTROL-CENTER §3 and P-31. -->
-    <Color x:Key="Tv.Bg.Color">#F4F6FA</Color>
-    <Color x:Key="Tv.Surface.Color">#FFFFFF</Color>
-    <Color x:Key="Tv.SurfaceRaised.Color">#EDF1F7</Color>
-    <Color x:Key="Tv.SurfaceSunken.Color">#E7ECF3</Color>
-    <Color x:Key="Tv.Border.Color">#DCE2EC</Color>
-    <Color x:Key="Tv.BorderStrong.Color">#B9C3D3</Color>
-    <Color x:Key="Tv.Text.Color">#0E1625</Color>
-    <Color x:Key="Tv.TextMuted.Color">#46546C</Color>
-    <Color x:Key="Tv.TextFaint.Color">#5D6A81</Color>
-    <Color x:Key="Tv.Accent.Color">#0779A8</Color>
-    <Color x:Key="Tv.AccentInk.Color">#FFFFFF</Color>
-    <Color x:Key="Tv.AccentSoft.Color">#E1F3FA</Color>
-    <Color x:Key="Tv.Aurora.Start.Color">#0A9BD0</Color>
-    <Color x:Key="Tv.Aurora.End.Color">#6D5BEA</Color>
-    <Color x:Key="Tv.Ready.Color">#12805A</Color>
-    <Color x:Key="Tv.Attention.Color">#9A5B00</Color>
-    <Color x:Key="Tv.Offline.Color">#C2324A</Color>
-    <Color x:Key="Tv.Neutral.Color">#5F6C82</Color>
-    <Color x:Key="Tv.Repairing.Color">#2F6FD6</Color>
+    <!-- Santral · Gündüz (DESIGN-SANTRAL §3). Tv.* keys carry the Santral values until SN7 retires them. -->
+    <Color x:Key="Tv.Bg.Color">#E7DFCB</Color>
+    <Color x:Key="Tv.Surface.Color">#EDE6D5</Color>
+    <Color x:Key="Tv.SurfaceRaised.Color">#F3EEE2</Color>
+    <Color x:Key="Tv.SurfaceSunken.Color">#DCD3BD</Color>
+    <Color x:Key="Tv.Border.Color">#CFC5AE</Color>
+    <Color x:Key="Tv.BorderStrong.Color">#8C826F</Color>
+    <Color x:Key="Tv.Text.Color">#1F1C18</Color>
+    <Color x:Key="Tv.TextMuted.Color">#5E574A</Color>
+    <Color x:Key="Tv.TextFaint.Color">#60584A</Color>
+    <Color x:Key="Tv.Accent.Color">#6E5329</Color>
+    <Color x:Key="Tv.AccentInk.Color">#FFF8EC</Color>
+    <Color x:Key="Tv.AccentSoft.Color">#E2D4B4</Color>
+    <Color x:Key="Tv.Aurora.Start.Color">#E2C68F</Color>
+    <Color x:Key="Tv.Aurora.End.Color">#B08D57</Color>
+    <Color x:Key="Tv.Ready.Color">#1A6443</Color>
+    <Color x:Key="Tv.Attention.Color">#7A4800</Color>
+    <Color x:Key="Tv.Offline.Color">#9E2E1D</Color>
+    <Color x:Key="Tv.Neutral.Color">#60584A</Color>
+    <Color x:Key="Tv.Repairing.Color">#7A4800</Color>
 
     <SolidColorBrush x:Key="Tv.Bg" Color="{StaticResource Tv.Bg.Color}" />
     <SolidColorBrush x:Key="Tv.Surface" Color="{StaticResource Tv.Surface.Color}" />
@@ -66,6 +66,59 @@
     <sys:Double x:Key="Tv.Motion.Fast">120</sys:Double>
     <sys:Double x:Key="Tv.Motion.Base">180</sys:Double>
     <sys:Double x:Key="Tv.Motion.Slow">260</sys:Double>
-    <sys:Double x:Key="Tv.Elevation.Blur">24</sys:Double>
-    <sys:Double x:Key="Tv.Elevation.Opacity">0.12</sys:Double>
+    <sys:Double x:Key="Tv.Elevation.Blur">18</sys:Double>
+    <sys:Double x:Key="Tv.Elevation.Opacity">0.18</sys:Double>
+    <!-- Santral switchboard tokens (Sn.*). -->
+    <Color x:Key="Sn.Panel.Color">#E7DFCB</Color>
+    <Color x:Key="Sn.PanelRaised.Color">#EFE9DA</Color>
+    <Color x:Key="Sn.PanelSunken.Color">#DCD3BD</Color>
+    <Color x:Key="Sn.Ink.Color">#1F1C18</Color>
+    <Color x:Key="Sn.InkMuted.Color">#5E574A</Color>
+    <Color x:Key="Sn.InkFaint.Color">#60584A</Color>
+    <Color x:Key="Sn.Rule.Color">#8C826F</Color>
+    <Color x:Key="Sn.Brass.Color">#B08D57</Color>
+    <Color x:Key="Sn.BrassLight.Color">#E2C68F</Color>
+    <Color x:Key="Sn.BrassDark.Color">#7A5E33</Color>
+    <Color x:Key="Sn.Socket.Color">#151210</Color>
+    <Color x:Key="Sn.Cable.Color">#2A2622</Color>
+    <Color x:Key="Sn.CableHighlight.Color">#29FFF0D2</Color>
+    <Color x:Key="Sn.Lamp.Ready.Color">#2F9E6B</Color>
+    <Color x:Key="Sn.Lamp.Attention.Color">#E39A1B</Color>
+    <Color x:Key="Sn.Lamp.Offline.Color">#C3412F</Color>
+    <Color x:Key="Sn.Lamp.Off.Color">#9A9184</Color>
+    <Color x:Key="Sn.Word.Ready.Color">#1A6443</Color>
+    <Color x:Key="Sn.Word.Attention.Color">#7A4800</Color>
+    <Color x:Key="Sn.Word.Offline.Color">#9E2E1D</Color>
+    <Color x:Key="Sn.Word.Off.Color">#60584A</Color>
+    <Color x:Key="Sn.Pulse.Color">#F6E7B8</Color>
+    <Color x:Key="Sn.Slip.Color">#F7F2E5</Color>
+    <Color x:Key="Sn.SlipShadow.Color">#381E1405</Color>
+    <Color x:Key="Sn.Focus.Color">#1F1C18</Color>
+    <Color x:Key="Sn.Shadow.Color">#2E28190A</Color>
+    <SolidColorBrush x:Key="Sn.Panel" Color="{StaticResource Sn.Panel.Color}" />
+    <SolidColorBrush x:Key="Sn.PanelRaised" Color="{StaticResource Sn.PanelRaised.Color}" />
+    <SolidColorBrush x:Key="Sn.PanelSunken" Color="{StaticResource Sn.PanelSunken.Color}" />
+    <SolidColorBrush x:Key="Sn.Ink" Color="{StaticResource Sn.Ink.Color}" />
+    <SolidColorBrush x:Key="Sn.InkMuted" Color="{StaticResource Sn.InkMuted.Color}" />
+    <SolidColorBrush x:Key="Sn.InkFaint" Color="{StaticResource Sn.InkFaint.Color}" />
+    <SolidColorBrush x:Key="Sn.Rule" Color="{StaticResource Sn.Rule.Color}" />
+    <SolidColorBrush x:Key="Sn.Brass" Color="{StaticResource Sn.Brass.Color}" />
+    <SolidColorBrush x:Key="Sn.BrassLight" Color="{StaticResource Sn.BrassLight.Color}" />
+    <SolidColorBrush x:Key="Sn.BrassDark" Color="{StaticResource Sn.BrassDark.Color}" />
+    <SolidColorBrush x:Key="Sn.Socket" Color="{StaticResource Sn.Socket.Color}" />
+    <SolidColorBrush x:Key="Sn.Cable" Color="{StaticResource Sn.Cable.Color}" />
+    <SolidColorBrush x:Key="Sn.CableHighlight" Color="{StaticResource Sn.CableHighlight.Color}" />
+    <SolidColorBrush x:Key="Sn.Lamp.Ready" Color="{StaticResource Sn.Lamp.Ready.Color}" />
+    <SolidColorBrush x:Key="Sn.Lamp.Attention" Color="{StaticResource Sn.Lamp.Attention.Color}" />
+    <SolidColorBrush x:Key="Sn.Lamp.Offline" Color="{StaticResource Sn.Lamp.Offline.Color}" />
+    <SolidColorBrush x:Key="Sn.Lamp.Off" Color="{StaticResource Sn.Lamp.Off.Color}" />
+    <SolidColorBrush x:Key="Sn.Word.Ready" Color="{StaticResource Sn.Word.Ready.Color}" />
+    <SolidColorBrush x:Key="Sn.Word.Attention" Color="{StaticResource Sn.Word.Attention.Color}" />
+    <SolidColorBrush x:Key="Sn.Word.Offline" Color="{StaticResource Sn.Word.Offline.Color}" />
+    <SolidColorBrush x:Key="Sn.Word.Off" Color="{StaticResource Sn.Word.Off.Color}" />
+    <SolidColorBrush x:Key="Sn.Pulse" Color="{StaticResource Sn.Pulse.Color}" />
+    <SolidColorBrush x:Key="Sn.Slip" Color="{StaticResource Sn.Slip.Color}" />
+    <SolidColorBrush x:Key="Sn.SlipShadow" Color="{StaticResource Sn.SlipShadow.Color}" />
+    <SolidColorBrush x:Key="Sn.Focus" Color="{StaticResource Sn.Focus.Color}" />
+    <SolidColorBrush x:Key="Sn.Shadow" Color="{StaticResource Sn.Shadow.Color}" />
 </ResourceDictionary>

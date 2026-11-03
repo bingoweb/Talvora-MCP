@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-03T13:40:00.000Z",
-  "scope": "SN1: tool-call traffic meter and /healthz/traffic minimal API endpoint for the Santral Control Center.",
+  "verifiedAtUtc": "2026-11-03T13:38:05.000Z",
+  "scope": "SN2: Santral colour tokens (Gündüz / Gece vardiyası), Bahnschrift type ramp with FontStretch Condensed, theme option names.",
   "libraries": [
     {
-      "libraryId": "/dotnet/aspnetcore.docs",
-      "verified": "2026-11-03 SN1: Context7 query \"minimal API MapGet query string parameter binding nullable Results.Json JsonSerializerOptions\" returned the parameter-binding pages: simple values bind from the query string (GET /42?page=3 binds page from the query) and registered services bind from dependency injection. The endpoint uses (long? after, TalvoraLineTrafficMeter meter) and Results.Json with explicit web serializer options."
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-03 SN2: Context7 queries \"TextBlock FontStretch Condensed FontWeight FontFamily XAML style setter\" and \"FontStretch\" returned only font packaging and WinForms default-font pages, no FontStretch page. The vendor FontStretches page lists Condensed; a live WPF render on this machine confirmed FontFamily=Bahnschrift with FontStretch=Condensed and FontWeight=SemiBold draws the condensed semibold face with every Turkish letter (Ç Ğ İ Ö Ş Ü ı)."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/aspnet/core/fundamentals/minimal-apis/parameter-binding"
+    "https://learn.microsoft.com/dotnet/api/system.windows.fontstretches",
+    "https://learn.microsoft.com/dotnet/api/system.windows.controls.textblock.fontstretch"
   ]
 }
