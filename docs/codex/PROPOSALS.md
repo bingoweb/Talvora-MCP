@@ -20,6 +20,16 @@
 
 ## Open
 
+### P-48 — UI11 — The prescribed logo wrapper does not exist on the Santral Overview
+- Date: 2026-11-07, HEAD ac95d4153f42611d52f79e6d7c2910c68d0852bf
+- Card text: "In Controls/ServiceRow.xaml and in Views/OverviewView.xaml, wrap the existing logo <Image Source=\"{Binding Logo}\" .../>" with a 32x32 Grid and monogram Border; "Control Center smoke PNGs show: G and P badges on the Services page and the Overview service list, in both themes"; "Don't: ... change row heights, columns or any other token."
+- Problem: src/Talvora.Tray/Views/OverviewView.xaml:53 renders <controls:Switchboard>, not an item list; no Image or Logo binding exists in that XAML. src/Talvora.Tray/Controls/Switchboard.cs:42 is a custom Canvas, not the prescribed XAML list. The only Services image is inside an existing 40x40 brass socket, with a 26x26 inner socket and 18x18 Image (src/Talvora.Tray/Controls/ServiceRow.xaml:19-32), so the prescribed 32x32 wrapper does not match the current Santral composition. The UI11 entry is in ROADMAP.md:2338, but scripts/Get-CodexContext.ps1:37-52 routes every UI card to DESIGN-CONTROL-CENTER.md, which has no UI11 heading; talvora_agent_brief and Get-CodexContext.ps1 both fail with "Card UI11 could not be found". Implementing an arbitrary badge location/geometry would violate the no-visual-decisions mandate.
+- Options:
+  1. Amend UI11 with exact Santral-aware XAML for the current ServiceRow brass socket and exact Switchboard.cs rendering instructions for the Overview, approved token values, and the corresponding extra file in Files. Explicitly update the context helper's UI11 routing or place the amended card in its expected design-spec document.
+  2. Scope UI11 to About version and the existing Services row, provide precise monogram placement in that brass socket, and create a separate explicitly designed card for the Switchboard overview. Likewise specify how Get-CodexContext resolves the card from ROADMAP.
+- Partial work: reverted (not needed; no UI11 source or test changes were made).
+- Decision (Claude): _pending_
+
 ## Decided
 
 ### P-47 — W3 — Live acceptance conflicts with the user's patch-only instruction
