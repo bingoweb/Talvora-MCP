@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-06T22:39:18.000Z",
-  "scope": "SN8: failed-call counts and failed lights on the Santral switchboard, hover ring on sockets (WPF DrawingContext drawing, FormattedText width).",
+  "verifiedAtUtc": "2026-11-06T22:50:17.065Z",
+  "scope": "D26: count only successful recovery events in the last 24 hours",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-03/07 SN3, SN8: Context7 has no FormattedText or UIElement mouse-hover page (queries \"WPF FormattedText DrawText PixelsPerDip\" and \"OnRender DrawingContext\" returned WinForms and unrelated pages, recorded in SN3). Vendor pages: FormattedText.WidthIncludingTrailingWhitespace for the text width, UIElement.IsMouseOver with MouseEnter/MouseLeave for the hover repaint; checked on smoke screenshots in both themes."
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-07 D26: Enumerable.Where filters events with Severity == Info and Category == recovery before Enumerable.Sum accumulates Count. (query: \"LINQ Enumerable.Where<TSource>(IEnumerable<TSource>, Func<TSource,bool>) followed by Enumerable.Sum<TSource>(IEnumerable<TSource>, Func<TSource,int>) in .NET 10; explain that Where filters event severity before Sum computes Count.\")"
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.windows.media.formattedtext.widthincludingtrailingwhitespace",
-    "https://learn.microsoft.com/dotnet/api/system.windows.uielement.ismouseover"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.where?view=net-10.0",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.sum?view=net-10.0"
   ]
 }

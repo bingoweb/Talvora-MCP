@@ -51,7 +51,36 @@ internal static partial class Program
                 reason: "00:15")], checkedAt);
         Ui3Check(repairing.Title == "Talvora Admin onarılıyor… (00:15)",
                  "Repairing must use the approved progress sentence.");
+        AssertD26RecoveryCount();
         Console.WriteLine("UI3_NARRATOR_GREEN");
+    }
+
+    // D26: only successful repairs count as "otomatik onarım".
+    private static void AssertD26RecoveryCount()
+    {
+        var now = DateTimeOffset.Now;
+        var core = new Talvora.Shared.ManagedMcpRegistration
+        {
+            Id = "talvora", DisplayName = "Talvora Çekirdeği", Description = "Talvora Çekirdeği",
+            Endpoint = "http://127.0.0.1:7676/mcp",
+        };
+        var snapshot = new Talvora.Tray.ControlCenterDashboardSnapshot(
+            [new Talvora.Tray.ManagedMcpDashboardState(core, Talvora.Tray.ControlCenterHealthState.Ready, "Hazır", "Hazır")],
+            "Her şey hazır", "", 1, 0, 0);
+        Talvora.Tray.ControlCenterEventRecord Event(Talvora.Tray.ControlCenterEventSeverity severity, string title, int count) =>
+            new()
+            {
+                Severity = severity, Category = "recovery", Title = title, Count = count,
+                FirstOccurredAtUtc = now.AddMinutes(-30), LastOccurredAtUtc = now.AddMinutes(-10),
+            };
+        var model = new OverviewViewModel();
+        model.ApplySnapshot(snapshot, now,
+        [
+            Event(Talvora.Tray.ControlCenterEventSeverity.Info, "Talvora Admin onarıldı", 2),
+            Event(Talvora.Tray.ControlCenterEventSeverity.Warning, "Hizmet sağlık bakımı yarıda kaldı", 7),
+            Event(Talvora.Tray.ControlCenterEventSeverity.Error, "Talvora Dev: müdahale gerekiyor", 1),
+        ]);
+        Ui3Check(model.RecoveryCount == 2, "D26: only successful repairs count as otomatik onarım.");
     }
 
     private static void Ui3Check(bool condition, string reason)

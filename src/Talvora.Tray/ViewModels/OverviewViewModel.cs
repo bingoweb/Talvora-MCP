@@ -136,7 +136,9 @@ internal sealed class OverviewViewModel : ObservableObject
         ApplyFilter();
 
         RecoveryCount = events
+            // D26: only successful repairs count; failed attempts are warnings or errors, not repairs.
             .Where(entry => entry.LastOccurredAtUtc >= checkedAt.AddHours(-24) &&
+                entry.Severity == ControlCenterEventSeverity.Info &&
                 string.Equals(entry.Category, "recovery", StringComparison.OrdinalIgnoreCase))
             .Sum(entry => entry.Count);
         HasRecovery = RecoveryCount > 0;
