@@ -159,8 +159,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] W7 — run_process resolves bare command names through PATH and PATHEXT (installed c50f1f2, npm --version 12.2.0, live surface-policy green; Full 68/0; GitHub CI 42294710574 success)
 - [x] L1 — Legacy Windows-1254 text files can be read and edited, keeping their encoding (installed eb7a8b6; live Windows-1254 read/patch and exact bytes green; Full 68/0; GitHub CI 42296839637 success)
 - [x] UX1 — Start menu entry "Talvora Kontrol Merkezi" opens the Control Center (installed ac95d41; live shortcut and open-window test GREEN; signed-in Full 68/0; GitHub CI 42299173262 attempt 2 success; audit 39: shortcut present under the common Start menu)
-- [~] D26 — "Otomatik onarım" counts only real repairs (audit 39; RED 10 vs expected 2, GREEN Notification; signed-in Full 68/0; exact-commit deployment and CI pending; visual check pending (Claude))
-- [ ] D27 — A dropped line says plainly that it does not answer (audit 39)
+- [~] D26 — "Otomatik onarım" counts only real repairs (audit 39; installed ec534b9; RED 10 vs expected 2, GREEN Notification; signed-in Full 68/0; live MCP surface-policy GREEN; GitHub CI 42308090265 success; visual check pending (Claude))
+- [~] D27 — A dropped line says plainly that it does not answer (audit 39; RED/GREEN Notification regression; signed-in Full 68/0; exact-commit deployment and CI pending; visual check pending (Claude))
 - [ ] D28 — Health-maintenance event in plain Turkish (audit 39)
 - [ ] D29 — Smoke clears its fixture traffic after the SN3 check (audit 39)
 - [ ] RV1 — Measure every tunnel-client command (investigation for the 12 s timeouts, audit 39)
@@ -212,6 +212,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D27, executor ChatGPT via Talvora: exact UI3 test RED ("UI3: D27: a dropped line must say it does not answer"); prescribed StatusNarrator Offline branch now says "Talvora Admin yanıt vermiyor." with the reason on the second line, and Sentence adds missing terminal punctuation. Notification regression GREEN; signed-in Full gate 68 checks, 0 errors, Hepsi geçti. Context7 /dotnet/docs and Microsoft Learn verified String.EndsWith(char) and Trim(). Exact-commit installer, installed smoke and CI follow commit; visual check pending (Claude). Gitea mirror skipped: no authenticated issue-comment tool in the Talvora Dev connector.
+  Self-review — cosmetics: no new layout, controls, tokens, animations or colours; prescribed text only.
+  Self-review — usability: the unavailable service now has an explicit title and its reason remains visible.
+  Self-review — Turkish: the approved wording "yanıt vermiyor." and punctuation match the card exactly.
+  Self-review — correctness/security: RED then GREEN, Full 68/0; other narrator messages preserved.
 - 2026-11-07 — D26, executor ChatGPT via Talvora: added the exact UI3 regression and confirmed RED "UI3: D26: only successful repairs count as otomatik onarım" (Info 2 + Warning 7 + Error 1 incorrectly summed to 10). Inserted Severity == Info into the existing 24-hour recovery filter as prescribed; Notification regression GREEN and signed-in Full gate 68 checks, 0 errors, Hepsi geçti. Context7 /dotnet/docs and Microsoft Learn confirmed Enumerable.Where filtering before Enumerable.Sum. Canonical exact-commit deployment, installed smoke and GitHub CI follow commit; visual check pending (Claude). Gitea mirror skipped: no authenticated issue-comment tool in the Talvora Dev connector.
   Self-review — cosmetics: no tokens, geometry, layout or empty states changed.
   Self-review — usability: actual successful repairs alone contribute to the 24-hour count.

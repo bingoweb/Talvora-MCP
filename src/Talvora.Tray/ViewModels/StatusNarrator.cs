@@ -51,7 +51,11 @@ internal static class StatusNarrator
         {
             var problem = activeProblems[0];
             var reason = string.IsNullOrWhiteSpace(problem.PlainReason)
-                ? "Dikkat istiyor." : problem.PlainReason;
+                ? "Dikkat istiyor." : Sentence(problem.PlainReason);
+            // D27: a dropped line reads like its lamp; the reason moves to the second line.
+            if (problem.State == ComponentVisualState.Offline)
+                return new StatusNarration($"{problem.Name} yanıt vermiyor.",
+                    $"{reason} {ready}/{total} bileşen hazır.");
             return new StatusNarration($"{problem.Name} dikkat istiyor: {reason}",
                 $"{ready}/{total} bileşen hazır.");
         }
@@ -70,5 +74,13 @@ internal static class StatusNarrator
 
         return new StatusNarration("Her şey yolunda.",
             $"{ready} bileşenin hepsi hazır. Son kontrol {checkedAt.ToLocalTime():HH:mm}.");
+    }
+
+    // D27: every reason ends as a sentence.
+    private static string Sentence(string text)
+    {
+        var trimmed = text.Trim();
+        return trimmed.EndsWith('.') || trimmed.EndsWith('…') || trimmed.EndsWith('!') || trimmed.EndsWith('?')
+            ? trimmed : trimmed + ".";
     }
 }

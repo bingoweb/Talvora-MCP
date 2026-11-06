@@ -52,6 +52,22 @@ internal static partial class Program
         Ui3Check(repairing.Title == "Talvora Admin onarılıyor… (00:15)",
                  "Repairing must use the approved progress sentence.");
         AssertD26RecoveryCount();
+        // D27: a dropped line reads like its lamp; reasons end as sentences.
+        var dropped = StatusNarrator.Build(
+        [
+            Item("Talvora Çekirdeği", ComponentVisualState.Ready),
+            Item("Talvora Dev", ComponentVisualState.Ready),
+            Item("Talvora Admin", ComponentVisualState.Offline, reason: "Ulaşılamıyor"),
+            Item("Gitea", ComponentVisualState.Ready),
+        ], checkedAt);
+        Ui3Check(dropped.Title == "Talvora Admin yanıt vermiyor." &&
+                 dropped.Detail == "Ulaşılamıyor. 3/4 bileşen hazır.",
+                 "D27: a dropped line must say it does not answer.");
+        var noPeriod = StatusNarrator.Build(
+            ready.Append(Item("Talvora Admin", ComponentVisualState.Attention, reason: "Bağlantı yavaş")).ToArray(),
+            checkedAt);
+        Ui3Check(noPeriod.Title == "Talvora Admin dikkat istiyor: Bağlantı yavaş.",
+                 "D27: the reason must end as a sentence.");
         Console.WriteLine("UI3_NARRATOR_GREEN");
     }
 

@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-06T22:50:17.065Z",
-  "scope": "D26: count only successful recovery events in the last 24 hours",
+  "verifiedAtUtc": "2026-11-06T23:24:55.607Z",
+  "scope": "D27: distinguish an offline service from attention and punctuate reasons as sentences",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D26: Enumerable.Where filters events with Severity == Info and Category == recovery before Enumerable.Sum accumulates Count. (query: \"LINQ Enumerable.Where<TSource>(IEnumerable<TSource>, Func<TSource,bool>) followed by Enumerable.Sum<TSource>(IEnumerable<TSource>, Func<TSource,int>) in .NET 10; explain that Where filters event severity before Sum computes Count.\")"
+      "verified": "2026-11-07 D27: String.EndsWith(char) checks final punctuation by ordinal character comparison; String.Trim() removes leading and trailing whitespace without changing internal text (query: \"C# .NET 10 System.String.Trim() removes surrounding white space; string.EndsWith(char) overload checks final punctuation for '.', '…', '!', '?'; exact API overload returns Boolean and uses ordinal character comparison.\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.where?view=net-10.0",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.sum?view=net-10.0"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.string.endswith?view=net-10.0",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.string.trim?view=net-10.0"
   ]
 }
