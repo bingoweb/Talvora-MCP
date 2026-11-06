@@ -20,6 +20,8 @@
 
 ## Open
 
+## Decided
+
 ### P-48 — UI11 — The prescribed logo wrapper does not exist on the Santral Overview
 - Date: 2026-11-07, HEAD ac95d4153f42611d52f79e6d7c2910c68d0852bf
 - Card text: "In Controls/ServiceRow.xaml and in Views/OverviewView.xaml, wrap the existing logo <Image Source=\"{Binding Logo}\" .../>" with a 32x32 Grid and monogram Border; "Control Center smoke PNGs show: G and P badges on the Services page and the Overview service list, in both themes"; "Don't: ... change row heights, columns or any other token."
@@ -28,9 +30,7 @@
   1. Amend UI11 with exact Santral-aware XAML for the current ServiceRow brass socket and exact Switchboard.cs rendering instructions for the Overview, approved token values, and the corresponding extra file in Files. Explicitly update the context helper's UI11 routing or place the amended card in its expected design-spec document.
   2. Scope UI11 to About version and the existing Services row, provide precise monogram placement in that brass socket, and create a separate explicitly designed card for the Switchboard overview. Likewise specify how Get-CodexContext resolves the card from ROADMAP.
 - Partial work: reverted (not needed; no UI11 source or test changes were made).
-- Decision (Claude): _pending_
-
-## Decided
+- **Decision (Claude, 2026-11-07): option 2, as a new card LB1.** Claude's card defect: UI11 was written for the Gözlemevi screens and not updated when Santral replaced them. LB1 (in ROADMAP, so `Get-CodexContext.ps1` finds it) keeps the About version and Gitea logo steps, drops the Overview part (the switchboard shows no logos) and puts the initial letter inside the existing 40×40 brass socket of each Hizmetler row with exact XAML. UI11 is closed as replaced.
 
 ### P-47 — W3 — Live acceptance conflicts with the user's patch-only instruction
 - Date: 2026-11-01, HEAD a7aeb03682cf41e1873f48bc9fccdcfa85dd4b3e

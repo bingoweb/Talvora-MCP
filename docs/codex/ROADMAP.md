@@ -1201,6 +1201,238 @@ Step 9. Refresh `.context7/verification.json` with the two lookups above (replac
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-11-07 (39) · range `audit/2026-11-03-38..e5fa73b` · W8, DEP18, W5, W6, W7, L1, UX1, P-48 (agent) and SN1–SN7b (Claude) · result: D26–D29, RV1, LB1 (replaces UI11), [C] SN8
+
+All eight agent commits match their cards (code read line by line): W8 lets only the plain `pull --ff-only [<remote> [<branch>]]` through; W5 reads with a BOM-detecting UTF-8 reader so a BOM is kept and none is added; W6 folds I/ı/İ/i one char to one char so positions stay true; W7 resolves bare names through PATH/PATHEXT and never picks the working directory; L1 falls back to Windows-1254 with exception fallbacks (no silent corruption); UX1 writes the Start menu shortcut on every install and opens the window through a named event. Signed-in Full 68/0; GitHub CI success on every commit; installed ac95d41. P-48 is Claude's card defect (UI11 was not updated for Santral; the context helper routes every `UI*` id to DESIGN-CONTROL-CENTER.md).
+
+Live data on the installed build: dev 83 calls (7 failed), admin 1 (failed), all ChatGPT. Screens checked through the smoke's live capture in both themes (the user declined screen control).
+
+| # | Severity | Where | Finding | Card |
+|---|---|---|---|---|
+| 1 | HIGH (false data) | `OverviewViewModel.ApplySnapshot` | "son 24 saatte 15 otomatik onarım" sums every `recovery` event, failures included; only 7 were repairs (severity Info). The user's rule: every number is a real measurement. | D26 |
+| 2 | MEDIUM (wording) | `StatusNarrator.Build` | A dropped line reads "Talvora Admin dikkat istiyor: Ulaşılamıyor" (red lamp says ulaşılamıyor, sentence says dikkat; no final period). | D27 |
+| 3 | MEDIUM (Turkish) | `TrayApplicationContext.cs:1332` | Event "Yönetilen MCP sağlık bakımı başarısız" / "Generic managed-MCP sağlık döngüsü…": English leftovers and jargon on a main surface. | D28 |
+| 4 | LOW (test) | `ControlCenterSmoke.SN3.cs` | SN3 fixture traffic (13/1/2 çağrı, Codex) stays on the overview and shows in the later live-data capture. | D29 |
+| 5 | INVESTIGATE | tray.log 2026-11-06 | Generic maintenance stopped three times on "tunnel-client komutu 12 saniye içinde tamamlanmadı". User chose: measure first, decide after. | RV1 |
+| 6 | OLASI | tray.log 2026-11-06 22:21 | One `MCP-Protocol-Version header '2026-07-28' does not match body '2025-11-25'` right after the DEP18 install; never repeated (version transition). Watch at the next audit. | — |
+
+Design improvements (user chose 2026-11-07): show failed calls on each line ("83 çağrı · 7 hata") and mark a failed call's light; hover ring on sockets → `[C] SN8` (Claude).
+
+### D26 — "Otomatik onarım" counts only real repairs
+
+**Why:** audit 39 finding 1. The overview said 15 automatic repairs in 24 h; 8 of those events were failures (warning/error).
+
+**Files:** `src/Talvora.Tray/ViewModels/OverviewViewModel.cs`, `tests/Talvora.Notification.Regression/Program.UI3.cs`, `.context7/verification.json` (scope note only; no new library — record `/dotnet/docs` "LINQ Where Sum" as the checked fact).
+
+#### Exact implementation
+
+Step 1 (red first). In `Program.UI3.cs`, add this method to the partial class and call it on the line before `Console.WriteLine("UI3_NARRATOR_GREEN");`. Run: red (the count is 10).
+
+```csharp
+    // D26: only successful repairs count as "otomatik onarım".
+    private static void AssertD26RecoveryCount()
+    {
+        var now = DateTimeOffset.Now;
+        var core = new Talvora.Shared.ManagedMcpRegistration
+        {
+            Id = "talvora", DisplayName = "Talvora Çekirdeği", Description = "Talvora Çekirdeği",
+            Endpoint = "http://127.0.0.1:7676/mcp",
+        };
+        var snapshot = new Talvora.Tray.ControlCenterDashboardSnapshot(
+            [new Talvora.Tray.ManagedMcpDashboardState(core, Talvora.Tray.ControlCenterHealthState.Ready, "Hazır", "Hazır")],
+            "Her şey hazır", "", 1, 0, 0);
+        Talvora.Tray.ControlCenterEventRecord Event(Talvora.Tray.ControlCenterEventSeverity severity, string title, int count) =>
+            new()
+            {
+                Severity = severity, Category = "recovery", Title = title, Count = count,
+                FirstOccurredAtUtc = now.AddMinutes(-30), LastOccurredAtUtc = now.AddMinutes(-10),
+            };
+        var model = new OverviewViewModel();
+        model.ApplySnapshot(snapshot, now,
+        [
+            Event(Talvora.Tray.ControlCenterEventSeverity.Info, "Talvora Admin onarıldı", 2),
+            Event(Talvora.Tray.ControlCenterEventSeverity.Warning, "Hizmet sağlık bakımı yarıda kaldı", 7),
+            Event(Talvora.Tray.ControlCenterEventSeverity.Error, "Talvora Dev: müdahale gerekiyor", 1),
+        ]);
+        Ui3Check(model.RecoveryCount == 2, "D26: only successful repairs count as otomatik onarım.");
+    }
+```
+
+Step 2. In `ApplySnapshot`, replace
+
+```csharp
+            .Where(entry => entry.LastOccurredAtUtc >= checkedAt.AddHours(-24) &&
+                string.Equals(entry.Category, "recovery", StringComparison.OrdinalIgnoreCase))
+```
+
+with
+
+```csharp
+            // D26: only successful repairs count; failed attempts are warnings or errors, not repairs.
+            .Where(entry => entry.LastOccurredAtUtc >= checkedAt.AddHours(-24) &&
+                entry.Severity == ControlCenterEventSeverity.Info &&
+                string.Equals(entry.Category, "recovery", StringComparison.OrdinalIgnoreCase))
+```
+
+**Don't:** change the events, their categories or the Olaylar page.
+
+**Acceptance:** Notification regression green; signed-in Full `Hepsi geçti.`; build and deploy; `[~] visual check pending (Claude)`.
+
+### D27 — A dropped line says plainly that it does not answer
+
+**Why:** audit 39 finding 2. The lamp says "ulaşılamıyor", the sentence said "dikkat istiyor: Ulaşılamıyor" and had no final period.
+
+**Files:** `src/Talvora.Tray/ViewModels/StatusNarrator.cs`, `tests/Talvora.Notification.Regression/Program.UI3.cs`, `.context7/verification.json`.
+
+#### Exact implementation
+
+Step 1 (red first). In `AssertUi3StatusNarrator`, insert directly before `Console.WriteLine("UI3_NARRATOR_GREEN");` (after the D26 call if D26 is already in). Run: red.
+
+```csharp
+        // D27: a dropped line reads like its lamp; reasons end as sentences.
+        var dropped = StatusNarrator.Build(
+        [
+            Item("Talvora Çekirdeği", ComponentVisualState.Ready),
+            Item("Talvora Dev", ComponentVisualState.Ready),
+            Item("Talvora Admin", ComponentVisualState.Offline, reason: "Ulaşılamıyor"),
+            Item("Gitea", ComponentVisualState.Ready),
+        ], checkedAt);
+        Ui3Check(dropped.Title == "Talvora Admin yanıt vermiyor." &&
+                 dropped.Detail == "Ulaşılamıyor. 3/4 bileşen hazır.",
+                 "D27: a dropped line must say it does not answer.");
+        var noPeriod = StatusNarrator.Build(
+            ready.Append(Item("Talvora Admin", ComponentVisualState.Attention, reason: "Bağlantı yavaş")).ToArray(),
+            checkedAt);
+        Ui3Check(noPeriod.Title == "Talvora Admin dikkat istiyor: Bağlantı yavaş.",
+                 "D27: the reason must end as a sentence.");
+```
+
+The existing check `"Talvora Admin dikkat istiyor: Bağlantı yavaş."` stays green.
+
+Step 2. In `StatusNarrator.Build`, replace the block that starts `if (activeProblems.Length == 1)` up to its closing brace with:
+
+```csharp
+        if (activeProblems.Length == 1)
+        {
+            var problem = activeProblems[0];
+            var reason = string.IsNullOrWhiteSpace(problem.PlainReason)
+                ? "Dikkat istiyor." : Sentence(problem.PlainReason);
+            // D27: a dropped line reads like its lamp; the reason moves to the second line.
+            if (problem.State == ComponentVisualState.Offline)
+                return new StatusNarration($"{problem.Name} yanıt vermiyor.",
+                    $"{reason} {ready}/{total} bileşen hazır.");
+            return new StatusNarration($"{problem.Name} dikkat istiyor: {reason}",
+                $"{ready}/{total} bileşen hazır.");
+        }
+```
+
+and add to the class:
+
+```csharp
+    // D27: every reason ends as a sentence.
+    private static string Sentence(string text)
+    {
+        var trimmed = text.Trim();
+        return trimmed.EndsWith('.') || trimmed.EndsWith('…') || trimmed.EndsWith('!') || trimmed.EndsWith('?')
+            ? trimmed : trimmed + ".";
+    }
+```
+
+**Don't:** change any other narrator sentence.
+
+**Acceptance:** Notification regression green; Full `Hepsi geçti.`; deploy; `[~] visual check pending (Claude)`.
+
+### D28 — Health-maintenance event in plain Turkish
+
+**Why:** audit 39 finding 3 (copy-deck rule: no "MCP", no English on main surfaces).
+
+**Files:** `src/Talvora.Tray/TrayApplicationContext.cs` only.
+
+#### Exact implementation
+
+In the `catch` that logs `"Generic managed MCP maintenance failed"` (around line 1332), replace the title and detail strings:
+- `"Yönetilen MCP sağlık bakımı başarısız"` → `"Hizmet sağlık bakımı yarıda kaldı"`
+- `"Generic managed-MCP sağlık döngüsü bu turu tamamlayamadı."` → `"Sağlık bakımı bu turda bitmedi; Talvora bir sonraki turda yeniden deneyecek."`
+
+Keep the TrayLog English text, the severity, the category and the `dedupKey` unchanged.
+
+**Acceptance:** Full `Hepsi geçti.`; deploy.
+
+### D29 — Smoke clears its fixture traffic after the SN3 check
+
+**Why:** audit 39 finding 4: the later live-data capture showed the fixture's 13/1/2 calls.
+
+**Files:** `src/Talvora.Tray/ControlCenterSmoke.SN3.cs` only (this file is test code inside a `[C]` area; this card is allowed to touch it).
+
+#### Exact implementation
+
+At the end of `AssertSn3Switchboard`, before the final `board.Settle();`, add `overview.ApplyTraffic(null);` with the comment `// D29: fixture traffic must not leak into the live-data capture.`
+
+**Acceptance:** Full `Hepsi geçti.`; the smoke's `*-loaded.png` overview shows "veri yok" or real counts, never 13/1/2.
+
+### RV1 — Measure every tunnel-client command (investigation for the 12 s timeouts)
+
+**Why:** audit 39 finding 5. Generic maintenance stopped three times on 2026-11-06 because a tunnel-client command did not finish in 12 s. The user chose to measure first and decide the fix from the numbers.
+
+**Files:** `src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs`, `.context7/verification.json`.
+
+#### Exact implementation
+
+In `RunClientAsync`, measure the whole `ProcessRunner.RunAsync` call with a `Stopwatch` and write one `TrayLog.Write` line after it returns **and** when it throws a timeout: `$"tunnel-client {verb} took {elapsed.TotalMilliseconds:0} ms (limit {timeout.TotalSeconds:0} s, exit {exitCodeOrTimeout})"` where `verb` is `string.Join(' ', arguments.TakeWhile(a => !a.StartsWith('-')).Take(2))` (for example `runtimes status`). Never log other arguments, keys or the environment. Do not change any timeout.
+
+**Don't:** change the 12 s limit or the retry logic (that decision follows the measurements).
+
+**Acceptance:** Full `Hepsi geçti.`; deploy; after one hour of normal use, `tray.log` has `tunnel-client … took … ms` lines; paste the slowest five into "Findings for Claude".
+
+### LB1 — Initial letter in the service socket for services without a logo; plain version in About (replaces UI11, P-48)
+
+**Why:** audit 35 defect 10 (user decision 2026-11-01: initial-letter badge). UI11 was written for the Gözlemevi screens; the Santral redesign (DESIGN-SANTRAL) replaced them, so the badge now sits inside the brass socket of each Hizmetler row (the Overview switchboard shows no logos and gets no badge). New id because `Get-CodexContext.ps1` routes every `UI*` card to DESIGN-CONTROL-CENTER.md (P-48).
+
+**Files:**
+- `src/Talvora.Tray/McpLogoResolver.cs`
+- `src/Talvora.Tray/ViewModels/ServicesViewModel.cs`
+- `src/Talvora.Tray/Controls/ServiceRow.xaml`
+- `src/Talvora.Tray/Views/SettingsView.xaml.cs`
+- `tests/Talvora.Notification.Regression/Program.UI7.cs`
+- `.context7/verification.json`
+
+**Context7:** `/dotnet/docs`: "TextInfo.ToUpper tr-TR dotted capital I". WPF layout (overlapping Grid children, `Image` with a null `Source` draws nothing): `/dotnet/docs-desktop` has no page for it; use the vendor page https://learn.microsoft.com/dotnet/desktop/wpf/controls/grid and record the gap.
+
+#### Exact implementation
+
+Step 1 (red first). In `tests/Talvora.Notification.Regression/Program.UI7.cs`, change `about.Version != "3.0.0-dev+1234567890abcdef"` to `about.Version != "3.0.0-dev"`. Run the Notification regression and record the red line.
+
+Step 2. In `SettingsView.GetUi7AboutMetadata`, replace `return (version, commit.Length >= 7 ? commit[..7] : "—");` with `return (separator >= 0 ? version[..separator] : version, commit.Length >= 7 ? commit[..7] : "—");`.
+
+Step 3. In `McpLogoResolver.TryResolve`, delete the `"gitea" => Path.Combine(...)` arm (four lines). Gitea's executable has no icon of its own, so Windows' blank program icon appeared.
+
+Step 4. Give the record `ServiceRowViewModel` (in `ServicesViewModel.cs`) these two body members. If the record has no body, replace its closing `);` with `)` followed by `{ ... }`:
+
+```csharp
+    // LB1: shown when no logo exists — the service's first letter in Turkish upper case.
+    public string Monogram => Name.Length == 0
+        ? string.Empty
+        : Name[..1].ToUpper(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"));
+    public System.Windows.Visibility MonogramVisibility =>
+        Logo is null ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+```
+
+Step 5. In `Controls/ServiceRow.xaml`, inside the existing 40×40 socket `Grid` (the one with the two `Ellipse` elements and the `Image`), add this as the **last** child, directly after the `<Image .../>`. Change nothing else in the file:
+
+```xml
+                <TextBlock Text="{Binding Monogram}" Visibility="{Binding MonogramVisibility}"
+                           FontFamily="Bahnschrift" FontStretch="Condensed" FontWeight="SemiBold" FontSize="15"
+                           Foreground="{DynamicResource Sn.BrassLight}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           AutomationProperties.Name="{Binding Name}"/>
+```
+
+Step 6. Refresh `.context7/verification.json`.
+
+**Don't:** touch `OverviewView.xaml`, `OverviewViewModel.cs` or `Controls/Switchboard.cs` (the switchboard has no logos); change sizes, colours or any token; add a badge anywhere else.
+
+**Acceptance:** Notification regression green (UI7 version without `+commit`); signed-in Full gate `Hepsi geçti.`; the Control Center smoke PNGs `*-ui4-services-initial.png` in both themes show a brass-light "G" in Gitea's socket and "P" in Penpot's socket, logos unchanged for the Talvora rows; build the installer and deploy (AGENTS.md Deploy row); `[~] visual check pending (Claude)`.
+
 ### WL1 — Every finished step carries its real measured duration (data for the UI12 redesign) (2026-11-01)
 
 **Why:** the tmux redesign (DESIGN-WORKLOG §7b, `[C] UI12`) draws a duration and a signal bar per history row. The user's rule is that these must be real measurements ("gerçek veri olmasına çok dikkat et"). The service already measures each call (`EndWorklog` receives that call's stopwatch `elapsed`) but drops it; the protocol has only a timestamp. This card carries the measured value. It also stops the service cutting hunk declarations at 80 characters, so the card can show whole real text.
@@ -2335,7 +2567,7 @@ Step 4. Refresh `.context7/verification.json`.
 - Mark `[~] visual check pending (Claude)`.
 - Push; CI once.
 
-### UI11 — Initial-letter badge for services without a logo; plain version in About (audit 35)
+### UI11 — Initial-letter badge for services without a logo; plain version in About (audit 35) — **replaced by LB1 (P-48); do not implement**
 
 **Why:** audit 35 defect 10 (user decision 2026-11-01: initial-letter badge).
 
