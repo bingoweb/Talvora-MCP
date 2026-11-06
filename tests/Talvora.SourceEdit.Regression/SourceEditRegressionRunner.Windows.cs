@@ -133,4 +133,19 @@ internal static partial class SourceEditRegressionRunner
             Directory.Delete(root, recursive: true);
         }
     }
+
+    // L1: BOM-less non-UTF-8 text is Windows-1254 and is written back as Windows-1254.
+    public static Task RunLegacyTurkishEncodingAsync()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var legacy = Encoding.GetEncoding(1254).GetBytes("echo Türkçe ğüşİ\r\n");
+        var document = SourceTextCodec.Decode(legacy);
+        AssertEqual("echo Türkçe ğüşİ\r\n", document.Text, "L1: Windows-1254 text must decode.");
+        AssertEqual("windows-1254", document.Encoding.Name, "L1: the encoding must be reported as windows-1254.");
+        var edited = SourceTextCodec.Encode(document with { Text = "echo Türkçe değişti\r\n" });
+        AssertEqual("echo Türkçe değişti\r\n", Encoding.GetEncoding(1254).GetString(edited), "L1: edits must be written as Windows-1254.");
+        var utf8 = SourceTextCodec.Decode(Encoding.UTF8.GetBytes("ğüş"));
+        AssertEqual("utf-8", utf8.Encoding.Name, "L1: valid UTF-8 stays UTF-8.");
+        return Task.CompletedTask;
+    }
 }

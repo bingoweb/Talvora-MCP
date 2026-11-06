@@ -25,6 +25,7 @@ internal static partial class SourceEditRegressionRunner
             ("w5-config-writers-keep-text", RunConfigWritersKeepTextAsync),
             ("w6-turkish-search", RunTurkishSearchAsync),
             ("w7-bare-command-resolution", RunBareCommandResolutionAsync),
+            ("l1-legacy-turkish-encoding", RunLegacyTurkishEncodingAsync),
             ("w2-git-quote-path", RunGitQuotePathAsync),
             ("w1-console-output-encoding", RunConsoleOutputEncodingAsync),
             ("ast-grep-pinned-cache-tamper", RunPinnedAstGrepCacheAsync),

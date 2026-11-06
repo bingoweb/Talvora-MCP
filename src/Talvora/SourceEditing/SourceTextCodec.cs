@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -44,6 +45,16 @@ internal static class SourceTextCodec
             "utf-32be-bom",
             new UTF32Encoding(bigEndian: true, byteOrderMark: false, throwOnInvalidCharacters: true),
             [0x00, 0x00, 0xFE, 0xFF]);
+
+    // L1: legacy Turkish Windows text (ANSI code page 1254) is read and written back in the same encoding.
+    private static readonly SourceTextEncodingDescriptor Windows1254 =
+        new("windows-1254", CreateWindows1254(), []);
+
+    private static Encoding CreateWindows1254()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        return Encoding.GetEncoding(1254, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
+    }
 
     public static async Task<SourceFileSnapshot> ReadSnapshotAsync(
         string fullPath,
@@ -187,6 +198,7 @@ internal static class SourceTextCodec
             "utf-16be-bom" or "utf16be-bom" => Utf16BeBom,
             "utf-32le-bom" or "utf32le-bom" => Utf32LeBom,
             "utf-32be-bom" or "utf32be-bom" => Utf32BeBom,
+            "windows-1254" or "cp1254" => Windows1254,
             _ => throw new SourceEditDomainException(
                 SourceEditCodes.UnsupportedEncoding,
                 $"Unsupported source encoding '{name}'.")
@@ -259,6 +271,8 @@ internal static class SourceTextCodec
                     bigEndian: true,
                     byteOrderMark: true,
                     throwOnInvalidCharacters: true),
+            "windows-1254" =>
+                Encoding.GetEncoding(1254, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback),
             _ =>
                 throw new SourceEditDomainException(
                     SourceEditCodes.UnsupportedEncoding,
@@ -558,7 +572,15 @@ internal static class SourceTextCodec
         }
 
         preambleLength = 0;
-        return Utf8;
+        return IsValidUtf8Prefix(bytes) ? Utf8 : Windows1254;
+    }
+
+    // L1: a sample cut inside a UTF-8 character must not count as invalid, so only complete sequences decide.
+    private static bool IsValidUtf8Prefix(ReadOnlySpan<byte> bytes)
+    {
+        var status = System.Text.Unicode.Utf8.ToUtf16(
+            bytes, new char[bytes.Length], out _, out _, replaceInvalidSequences: false, isFinalBlock: false);
+        return status is OperationStatus.Done or OperationStatus.NeedMoreData;
     }
 
     private static bool HasKnownBom(ReadOnlySpan<byte> bytes) =>

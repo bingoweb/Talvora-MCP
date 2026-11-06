@@ -1,15 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-06T21:07:57.181Z",
-  "scope": "W7: bare command resolution through PATH and PATHEXT",
+  "verifiedAtUtc": "2026-11-06T21:19:48.164Z",
+  "scope": "L1: preserve Windows-1254 legacy text when reading and editing",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 W7: Windows drive-relative paths such as C:Projects are rooted but not fully qualified; Path.IsPathRooted therefore keeps them out of bare-name resolution. Context7 returned no precise PATHEXT rule, so the Microsoft Learn ProcessStartInfo and CreateProcessW vendor pages confirm PATH search and .exe-only suffix behavior (query: \"C# .NET 10 ProcessStartInfo.FileName and UseShellExecute=false: does Process.Start resolve a bare command through PATHEXT when only a .cmd shim is on PATH? Explain ProcessStartInfo working directory vs search and CreateProcess resolution.\")."
+      "verified": "2026-11-07 L1: Encoding.RegisterProvider(CodePagesEncodingProvider.Instance) enables legacy code pages; Encoding.GetEncoding with exception fallbacks preserves strict encode/decode. Context7 lacked the exact Utf8.ToUtf16 signature; Microsoft Learn confirms replaceInvalidSequences:false yields InvalidData for malformed UTF-8 and isFinalBlock:false permits NeedMoreData for a truncated final sequence (queries: \"System.Text.Unicode.Utf8.ToUtf16 ReadOnlySpan<byte>, Span<char>, out int bytesRead, out int charsWritten, replaceInvalidSequences:false, isFinalBlock:false in .NET 10; exact OperationStatus.Done and NeedMoreData for valid partial UTF-8 sequence.\"; \"System.Text.Encoding.GetEncoding(1254, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback) with CodePagesEncodingProvider.Instance registration .NET 10; Windows-1254 name and encoder exception fallback\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.processstartinfo.useshellexecute?view=net-10.0",
-    "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.text.unicode.utf8.toutf16?view=net-10.0",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.text.encoding.getencoding?view=net-10.0",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.text.codepagesencodingprovider?view=net-10.0"
   ]
 }
