@@ -1329,8 +1329,8 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             ControlCenterEventStore.Record(
                 ControlCenterEventSeverity.Warning,
                 "recovery",
-                "Yönetilen MCP sağlık bakımı başarısız",
-                "Generic managed-MCP sağlık döngüsü bu turu tamamlayamadı.",
+                "Hizmet sağlık bakımı yarıda kaldı",
+                "Sağlık bakımı bu turda bitmedi; Talvora bir sonraki turda yeniden deneyecek.",
                 dedupKey: "recovery:generic:maintenance-failed");
         }
         finally

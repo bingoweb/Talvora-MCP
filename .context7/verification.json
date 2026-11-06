@@ -1,15 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-06T23:24:55.607Z",
-  "scope": "D27: distinguish an offline service from attention and punctuate reasons as sentences",
+  "verifiedAtUtc": "2026-11-06T23:40:55.719Z",
+  "scope": "D28: the health-maintenance event has plain Turkish title and detail, with diagnostic log and event metadata unchanged",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D27: String.EndsWith(char) checks final punctuation by ordinal character comparison; String.Trim() removes leading and trailing whitespace without changing internal text (query: \"C# .NET 10 System.String.Trim() removes surrounding white space; string.EndsWith(char) overload checks final punctuation for '.', '…', '!', '?'; exact API overload returns Boolean and uses ordinal character comparison.\")."
+      "verified": "2026-11-07 D28: ordinary C# quoted string literals can contain Unicode characters; the two approved Turkish phrases can be used literally without escaping (query: \"C# .NET 10 string literals containing Unicode characters in UTF-8 source; quoted regular string literals preserve Turkish characters ç ş ı İ ğ ü in the compiled string without requiring escaping.\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.string.endswith?view=net-10.0",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.string.trim?view=net-10.0"
+    "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/reference-types"
   ]
 }

@@ -160,8 +160,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] L1 — Legacy Windows-1254 text files can be read and edited, keeping their encoding (installed eb7a8b6; live Windows-1254 read/patch and exact bytes green; Full 68/0; GitHub CI 42296839637 success)
 - [x] UX1 — Start menu entry "Talvora Kontrol Merkezi" opens the Control Center (installed ac95d41; live shortcut and open-window test GREEN; signed-in Full 68/0; GitHub CI 42299173262 attempt 2 success; audit 39: shortcut present under the common Start menu)
 - [~] D26 — "Otomatik onarım" counts only real repairs (audit 39; installed ec534b9; RED 10 vs expected 2, GREEN Notification; signed-in Full 68/0; live MCP surface-policy GREEN; GitHub CI 42308090265 success; visual check pending (Claude))
-- [~] D27 — A dropped line says plainly that it does not answer (audit 39; RED/GREEN Notification regression; signed-in Full 68/0; exact-commit deployment and CI pending; visual check pending (Claude))
-- [ ] D28 — Health-maintenance event in plain Turkish (audit 39)
+- [~] D27 — A dropped line says plainly that it does not answer (audit 39; RED/GREEN Notification regression; signed-in Full 68/0; installed d00421b and live surface-policy smoke GREEN; GitHub CI 42312290019 success; visual check pending (Claude))
+- [~] D28 — Health-maintenance event in plain Turkish (audit 39; source-copy RED then GREEN, tray build 0/0, signed-in Full 68/0; exact-commit deployment and CI pending; visual check pending (Claude))
 - [ ] D29 — Smoke clears its fixture traffic after the SN3 check (audit 39)
 - [ ] RV1 — Measure every tunnel-client command (investigation for the 12 s timeouts, audit 39)
 - [ ] LB1 — Initial letter in the service socket for services without a logo; plain version in About (replaces UI11, P-48)
@@ -212,6 +212,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D28, executor ChatGPT via Talvora: replaced exactly the two user-visible generic health-maintenance failure strings in TrayApplicationContext.cs with the audit 39 approved Turkish text. RED source-copy check failed before the edit and GREEN check passed after; Tray build 0 warnings/0 errors; signed-in Full gate 68 checks, 0 errors, Hepsi geçti. Severity Warning, category recovery, dedupKey and English TrayLog unchanged. Context7 /dotnet/docs and Microsoft Learn confirmed ordinary C# literals preserve Unicode; .context7/verification.json refreshed as supporting evidence. Exact-commit install, live smoke and GitHub CI follow commit; visual check pending (Claude). Gitea mirror skipped: no authenticated issue-comment tool in Talvora Dev connector.
+  Self-review — cosmetics: no layout, token, colour or animation changed; only the two prescribed text strings.
+  Self-review — usability: the maintenance failure event now explains that a retry will occur.
+  Self-review — Turkish: the title and detail match the approved copy with correct diacritics.
+  Self-review — correctness/security: RED then GREEN, Full 68/0; log, severity, category and deduplication unaffected.
 - 2026-11-07 — D27, executor ChatGPT via Talvora: exact UI3 test RED ("UI3: D27: a dropped line must say it does not answer"); prescribed StatusNarrator Offline branch now says "Talvora Admin yanıt vermiyor." with the reason on the second line, and Sentence adds missing terminal punctuation. Notification regression GREEN; signed-in Full gate 68 checks, 0 errors, Hepsi geçti. Context7 /dotnet/docs and Microsoft Learn verified String.EndsWith(char) and Trim(). Exact-commit installer, installed smoke and CI follow commit; visual check pending (Claude). Gitea mirror skipped: no authenticated issue-comment tool in the Talvora Dev connector.
   Self-review — cosmetics: no new layout, controls, tokens, animations or colours; prescribed text only.
   Self-review — usability: the unavailable service now has an explicit title and its reason remains visible.
