@@ -105,7 +105,7 @@ Paper strip on `Sn.Slip`, perforation dots along the top edge, 1° tilt, soft sh
 | Section labels | DIŞ HATLAR · BU BİLGİSAYAR |
 | Outside lines | CHATGPT (sub: Dev / Admin / Gitea) · YEREL (sub: client names or "istemci yok") |
 | Lamp words | hazır · dikkat · onarılıyor · kapalı · ulaşılamıyor |
-| Counter | {n} çağrı · son çağrı {HH:mm} (tooltip) |
+| Counter | {n} çağrı; when the line has measured failures, a second line "{n} hata" in `Sn.Word.Offline` (SN8, user choice 2026-11-07); then "son {HH:mm:ss}" |
 | Reconnect timer | yeniden bağlanıyor · {mm:ss} |
 | Optional socket | isteğe bağlı |
 | Theme options | Sistem · Gündüz · Gece vardiyası |
@@ -121,4 +121,5 @@ Paper strip on `Sn.Slip`, perforation dots along the top edge, 1° tilt, soft sh
 | **[C] SN4** | Claude | Fault choreography: Attention, Drop (with reconnect timer), Re-seat; reduced-motion fallbacks. Needs SN1 part B. |
 | **[C] SN5** | Claude | Event slips on Genel bakış and Olaylar. |
 | **[C] SN6** | Claude | Hizmetler, Hizmet ayrıntısı, Ayarlar stepper and shell chrome in the Santral language. |
+| **[C] SN8** | Claude | Measured failures per line and failed-call lights with an end spark; brass hover ring on sockets (audit 39, user choice). |
 | **[C] SN7** | Claude | Proof: both themes at 100/125/150/200 % DPI, high contrast, reduced motion, idle CPU, UIA names; remove `Tv.*` aliases and the retired Nabız/Chain controls; README screenshots. |

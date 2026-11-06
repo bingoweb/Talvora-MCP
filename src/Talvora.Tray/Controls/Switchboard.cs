@@ -30,6 +30,7 @@ internal sealed record SwitchboardSocket(
     string? OutsideTitle,
     string? OutsideSub,
     long? Calls,
+    long? Failed,
     DateTimeOffset? LastCallAtUtc,
     DateTimeOffset StateSinceUtc,
     ManagedMcpDashboardState Source);
@@ -128,12 +129,12 @@ internal sealed class Switchboard : Canvas
     }
 
     /// <summary>Adds one light per finished call (SN1 feed); extra calls beyond the cap only raise the counter.</summary>
-    public void AddCalls(IEnumerable<string> lines)
+    public void AddCalls(IEnumerable<(string Line, bool Ok)> calls)
     {
         if (!MotionAllowed) return;
         var now = _clock.Elapsed;
         var second = (long)now.TotalSeconds;
-        foreach (var line in lines)
+        foreach (var (line, ok) in calls)
         {
             var socket = _sockets.FirstOrDefault(item => item.Line == line && item.OutsideTitle is not null);
             if (socket is null || !IsPlugged(socket.State)) continue;
@@ -141,7 +142,7 @@ internal sealed class Switchboard : Canvas
             if (lastSecond != second) count = 0;
             if (count >= MaxPulsesPerLinePerSecond) continue;
             _rate[line] = (second, count + 1);
-            _pulses.Add(new Pulse(socket.Id, now + TimeSpan.FromMilliseconds(60 * count)));
+            _pulses.Add(new Pulse(socket.Id, now + TimeSpan.FromMilliseconds(60 * count), ok));
         }
         UpdateTimers();
     }
@@ -346,15 +347,32 @@ internal sealed class Switchboard : Canvas
 
         // Lights: one per finished call, travelling from the outside line into the socket.
         var pulseBrush = Res("Sn.Pulse", Colors.LightYellow);
+        var failBrush = Res("Sn.Lamp.Offline", Colors.IndianRed);
         foreach (var pulse in _pulses)
         {
             if (!cables.TryGetValue(pulse.SocketId, out var cable) || now < pulse.Start) continue;
             var t = Smooth((now - pulse.Start).TotalMilliseconds / PulseDuration.TotalMilliseconds);
             var p = Bezier(cable, 1 - t);
+            // SN8: a failed call travels in the error colour and ends in a short spark at the socket.
+            var brush = pulse.Ok ? pulseBrush : failBrush;
             dc.PushOpacity(0.35);
-            dc.DrawEllipse(pulseBrush, null, p, 9, 9);
+            dc.DrawEllipse(brush, null, p, 9, 9);
             dc.Pop();
-            dc.DrawEllipse(pulseBrush, null, p, 4.5, 4.5);
+            dc.DrawEllipse(brush, null, p, 4.5, 4.5);
+            if (!pulse.Ok && t > 0.82)
+            {
+                var spark = (t - 0.82) / 0.18;
+                var pen = new Pen(failBrush, 2) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
+                dc.PushOpacity(1 - spark);
+                for (var k = 0; k < 6; k++)
+                {
+                    var a = k * Math.PI / 3 + 0.4;
+                    var r1 = 6 + 10 * spark;
+                    dc.DrawLine(pen, new Point(p.X + Math.Cos(a) * r1, p.Y + Math.Sin(a) * r1),
+                        new Point(p.X + Math.Cos(a) * (r1 + 6), p.Y + Math.Sin(a) * (r1 + 6)));
+                }
+                dc.Pop();
+            }
         }
 
         // Lamps, words, counters and timers.
@@ -385,8 +403,16 @@ internal sealed class Switchboard : Canvas
             var calls = socket.Line is null ? "ölçülmüyor"
                 : socket.Calls is { } count ? count.ToString("N0", Turkish) + " çağrı" : "veri yok";
             Text(dc, calls, outside.X + 82, outside.Y + 6, 13, socket.Calls is null ? faint : muted, dpi, mono: true);
+            // SN8: measured failures on their own line (outside lines sit too close for one long line).
+            var nextLine = outside.Y + 24;
+            if (socket.Failed is > 0 and var failed)
+            {
+                Text(dc, failed.ToString("N0", Turkish) + " hata", outside.X + 82, nextLine - 1, 13,
+                    Res("Sn.Word.Offline", Colors.IndianRed), dpi, mono: true, semibold: true);
+                nextLine += 18;
+            }
             if (socket.LastCallAtUtc is { } last)
-                Text(dc, "son " + last.ToLocalTime().ToString("HH:mm:ss", Turkish), outside.X + 82, outside.Y + 24, 12, faint, dpi, mono: true);
+                Text(dc, "son " + last.ToLocalTime().ToString("HH:mm:ss", Turkish), outside.X + 82, nextLine, 12, faint, dpi, mono: true);
         }
     }
 
@@ -506,7 +532,7 @@ internal sealed class Switchboard : Canvas
         dc.Pop();
     }
 
-    private static void Text(DrawingContext dc, string text, double x, double y, double size, Brush brush, double dpi,
+    private static double Text(DrawingContext dc, string text, double x, double y, double size, Brush brush, double dpi,
         bool semibold = false, bool condensed = false, bool mono = false, bool center = false)
     {
         var typeface = mono
@@ -515,6 +541,7 @@ internal sealed class Switchboard : Canvas
                 condensed ? FontStretches.Condensed : FontStretches.Normal);
         var formatted = new FormattedText(text, Turkish, System.Windows.FlowDirection.LeftToRight, typeface, size, brush, dpi);
         dc.DrawText(formatted, new Point(center ? x - formatted.Width / 2 : x, y));
+        return formatted.WidthIncludingTrailingWhitespace;
     }
 
     // ---------- interaction and accessibility ----------
@@ -527,7 +554,8 @@ internal sealed class Switchboard : Canvas
             var spot = new SwitchboardHotspot { Socket = socket };
             var word = Lamp(socket.State).Text;
             var calls = socket.Calls is { } count ? $", {count.ToString("N0", Turkish)} çağrı" : string.Empty;
-            AutomationProperties.SetName(spot, $"{socket.Name}, {word}{calls}");
+            var failed = socket.Failed is > 0 and var failures ? $", {failures.ToString("N0", Turkish)} hata" : string.Empty;
+            AutomationProperties.SetName(spot, $"{socket.Name}, {word}{calls}{failed}");
             spot.Click += (_, _) => SocketActivated?.Invoke(socket.Source);
             Children.Add(spot);
         }
@@ -557,7 +585,7 @@ internal sealed class Switchboard : Canvas
         public MotionKind Kind;
     }
 
-    private readonly record struct Pulse(string SocketId, TimeSpan Start);
+    private readonly record struct Pulse(string SocketId, TimeSpan Start, bool Ok);
 }
 
 /// <summary>Invisible, keyboard-reachable target over one socket; draws only the focus ring.</summary>
@@ -572,11 +600,17 @@ internal sealed class SwitchboardHotspot : ButtonBase
         Cursor = Cursors.Hand;
         FocusVisualStyle = null;
         IsKeyboardFocusedChanged += (_, _) => InvalidateVisual();
+        MouseEnter += (_, _) => InvalidateVisual();
+        MouseLeave += (_, _) => InvalidateVisual();
     }
 
     protected override void OnRender(DrawingContext dc)
     {
         dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, ActualWidth, ActualHeight));
+        // SN8: hover answers with a brass ring around the socket (socket centre is at 54, 40 in this box).
+        if (IsMouseOver && !IsKeyboardFocused)
+            dc.DrawEllipse(null, new Pen(TryFindResource("Sn.Brass") as Brush ?? Brushes.Goldenrod, 2),
+                new Point(54, 40), 37, 37);
         if (IsKeyboardFocused)
             dc.DrawRoundedRectangle(null, new Pen(TryFindResource("Sn.Focus") as Brush ?? Brushes.Black, 2),
                 new Rect(1, 1, ActualWidth - 2, ActualHeight - 2), 6, 6);

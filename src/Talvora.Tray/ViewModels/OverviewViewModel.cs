@@ -161,14 +161,14 @@ internal sealed class OverviewViewModel : ObservableObject
     }
 
     /// <summary>SN1 feed in; returns the lines of calls finished since the previous read (one light each).</summary>
-    public IReadOnlyList<string> ApplyTraffic(TrafficFeed? feed)
+    public IReadOnlyList<(string Line, bool Ok)> ApplyTraffic(TrafficFeed? feed)
     {
         var previous = _traffic;
         _traffic = feed;
         RebuildSockets(DateTimeOffset.Now);
         if (feed is null || previous is null || previous.StartedAtUtc != feed.StartedAtUtc) return [];
         return feed.Recent.Where(call => call.Seq > previous.NextSeq).OrderBy(call => call.Seq)
-            .Select(call => call.Line).ToArray();
+            .Select(call => (call.Line, call.Ok)).ToArray();
     }
 
     internal static string EventKind(string? category) => category?.ToLowerInvariant() switch
@@ -220,7 +220,7 @@ internal sealed class OverviewViewModel : ObservableObject
                 state.Registration.Id, name,
                 optional ? "isteğe bağlı" : null,
                 visual, line, layout.Id is null ? null : layout.Outside, sub,
-                measured?.Calls, measured?.LastCallAtUtc,
+                measured?.Calls, measured?.Failed, measured?.LastCallAtUtc,
                 _stateSince.Observe(state.Registration.Id, state.Health, now.ToUniversalTime()),
                 state));
         }

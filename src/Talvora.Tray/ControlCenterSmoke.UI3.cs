@@ -51,6 +51,7 @@ internal static partial class ControlCenterSmoke
             throw new InvalidOperationException("UI3 overview rendered unrelated status facts.");
         AssertSn3Switchboard(overview);
         AssertSn4DroppedLine(window, overview, snapshot, variant);
+        AssertSn8Failures(window, overview, variant);
         SaveVisualSnapshotIfRequested(window, "ui3-overview-" + variant);
 
         window.ShellModel.SelectPage(3);

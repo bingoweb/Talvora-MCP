@@ -1,17 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-06T21:39:28.684Z",
-  "scope": "UX1: Start menu shortcut requests Control Center through a named event",
+  "verifiedAtUtc": "2026-11-06T22:39:18.000Z",
+  "scope": "SN8: failed-call counts and failed lights on the Santral switchboard, hover ring on sockets (WPF DrawingContext drawing, FormattedText width).",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 UX1: EventWaitHandle named Windows events allow cross-process signals, and AutoReset releases one waiter; ThreadPool.RegisterWaitForSingleObject accepts a WaitHandle and repeat callback. Context7 did not establish CommonPrograms or WSH specifics; Microsoft Learn verifies the all-users Start menu folder and CreateShortcut with TargetPath, Arguments, WorkingDirectory, IconLocation and Save (queries: \"Windows .NET 10 EventWaitHandle named Local\\\\ scope, EventResetMode.AutoReset cross-process events, ThreadPool.RegisterWaitForSingleObject(WaitHandle, WaitOrTimerCallback, object, int millisecondsTimeoutInterval, bool executeOnlyOnce), RegisteredWaitHandle.Unregister(null), WPF Dispatcher.InvokeAsync; show exact signatures and lifetime behavior.\"; \".NET 10 Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms) exact target directory for all-users Start Menu programs, how Win32 known folders are resolved, Windows COM WScript.Shell CreateShortcut for .lnk targeting executable with Arguments and IconLocation.\")."
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-03/07 SN3, SN8: Context7 has no FormattedText or UIElement mouse-hover page (queries \"WPF FormattedText DrawText PixelsPerDip\" and \"OnRender DrawingContext\" returned WinForms and unrelated pages, recorded in SN3). Vendor pages: FormattedText.WidthIncludingTrailingWhitespace for the text width, UIElement.IsMouseOver with MouseEnter/MouseLeave for the hover repaint; checked on smoke screenshots in both themes."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.threading.eventwaithandle?view=net-10.0",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.threading.threadpool.registerwaitforsingleobject?view=net-10.0",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.environment.specialfolder?view=net-10.0",
-    "https://learn.microsoft.com/en-us/troubleshoot/windows-client/admin-development/create-desktop-shortcut-with-wsh"
+    "https://learn.microsoft.com/dotnet/api/system.windows.media.formattedtext.widthincludingtrailingwhitespace",
+    "https://learn.microsoft.com/dotnet/api/system.windows.uielement.ismouseover"
   ]
 }
