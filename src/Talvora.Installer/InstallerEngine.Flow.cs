@@ -132,6 +132,14 @@ public static async Task<HealthSnapshot> InstallAsync(
                 cancellationToken);
             progress.Report(new InstallProgress(76, "Sistem tepsisi uygulaması kaydediliyor..."));
             RegisterTrayStartup(trayExecutable, installUser);
+            try
+            {
+                RegisterStartMenuShortcut(trayExecutable);
+            }
+            catch (Exception ex) when (ex is COMException or IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                InstallerLog.Write("Start menu shortcut could not be written; installation continues.", ex);
+            }
             await WriteCurrentStateAsync(
                 health,
                 sourceCommit,

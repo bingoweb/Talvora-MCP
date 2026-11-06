@@ -451,6 +451,12 @@ internal static class Program
         var replaceExisting = args.Any(arg =>
             string.Equals(arg, "--replace", StringComparison.OrdinalIgnoreCase));
 
+        // UX1: a second start (the Start menu entry) asks the running tray to open the Control Center.
+        var openControlCenter = args.Any(arg =>
+            string.Equals(arg, "--open-control-center", StringComparison.OrdinalIgnoreCase));
+        using var openRequest = new EventWaitHandle(
+            false, EventResetMode.AutoReset, @"Local\Talvora.Tray.OpenControlCenter");
+
         TrayLog.Write(
             $"Tray startup requested. PID={Environment.ProcessId}; " +
             $"Session={Process.GetCurrentProcess().SessionId}; ReplaceExisting={replaceExisting}");
@@ -475,6 +481,10 @@ internal static class Program
 
         if (!ownsMutex)
         {
+            if (openControlCenter)
+            {
+                openRequest.Set();
+            }
             TrayLog.Write("Tray startup skipped because another tray instance owns the mutex.");
             return 0;
         }
@@ -487,7 +497,18 @@ internal static class Program
             var controlCenterApplication = new ControlCenterApplication();
             using var trayContext = new TrayApplicationContext(controlCenterApplication);
 
+            var openRegistration = ThreadPool.RegisterWaitForSingleObject(
+                openRequest,
+                (_, _) => controlCenterApplication.Dispatcher.InvokeAsync(controlCenterApplication.ShowControlCenter),
+                null,
+                Timeout.Infinite,
+                executeOnlyOnce: false);
+            if (openControlCenter)
+            {
+                controlCenterApplication.Dispatcher.InvokeAsync(controlCenterApplication.ShowControlCenter);
+            }
             var exitCode = controlCenterApplication.Run();
+            openRegistration.Unregister(null);
             TrayLog.Write("Tray/Control Center message loop exited.");
             return exitCode;
         }

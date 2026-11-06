@@ -1,16 +1,17 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-06T21:19:48.164Z",
-  "scope": "L1: preserve Windows-1254 legacy text when reading and editing",
+  "verifiedAtUtc": "2026-11-06T21:39:28.684Z",
+  "scope": "UX1: Start menu shortcut requests Control Center through a named event",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 L1: Encoding.RegisterProvider(CodePagesEncodingProvider.Instance) enables legacy code pages; Encoding.GetEncoding with exception fallbacks preserves strict encode/decode. Context7 lacked the exact Utf8.ToUtf16 signature; Microsoft Learn confirms replaceInvalidSequences:false yields InvalidData for malformed UTF-8 and isFinalBlock:false permits NeedMoreData for a truncated final sequence (queries: \"System.Text.Unicode.Utf8.ToUtf16 ReadOnlySpan<byte>, Span<char>, out int bytesRead, out int charsWritten, replaceInvalidSequences:false, isFinalBlock:false in .NET 10; exact OperationStatus.Done and NeedMoreData for valid partial UTF-8 sequence.\"; \"System.Text.Encoding.GetEncoding(1254, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback) with CodePagesEncodingProvider.Instance registration .NET 10; Windows-1254 name and encoder exception fallback\")."
+      "verified": "2026-11-07 UX1: EventWaitHandle named Windows events allow cross-process signals, and AutoReset releases one waiter; ThreadPool.RegisterWaitForSingleObject accepts a WaitHandle and repeat callback. Context7 did not establish CommonPrograms or WSH specifics; Microsoft Learn verifies the all-users Start menu folder and CreateShortcut with TargetPath, Arguments, WorkingDirectory, IconLocation and Save (queries: \"Windows .NET 10 EventWaitHandle named Local\\\\ scope, EventResetMode.AutoReset cross-process events, ThreadPool.RegisterWaitForSingleObject(WaitHandle, WaitOrTimerCallback, object, int millisecondsTimeoutInterval, bool executeOnlyOnce), RegisteredWaitHandle.Unregister(null), WPF Dispatcher.InvokeAsync; show exact signatures and lifetime behavior.\"; \".NET 10 Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms) exact target directory for all-users Start Menu programs, how Win32 known folders are resolved, Windows COM WScript.Shell CreateShortcut for .lnk targeting executable with Arguments and IconLocation.\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.text.unicode.utf8.toutf16?view=net-10.0",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.text.encoding.getencoding?view=net-10.0",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.text.codepagesencodingprovider?view=net-10.0"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.threading.eventwaithandle?view=net-10.0",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.threading.threadpool.registerwaitforsingleobject?view=net-10.0",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.environment.specialfolder?view=net-10.0",
+    "https://learn.microsoft.com/en-us/troubleshoot/windows-client/admin-development/create-desktop-shortcut-with-wsh"
   ]
 }

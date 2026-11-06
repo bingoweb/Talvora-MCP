@@ -94,6 +94,38 @@ private static InstallUserContext ResolveInstallUserContext()
             RegistryValueKind.String);
     }
 
+    // UX1: Start menu entry for every user; it opens the Control Center and starts the tray if it is not running.
+    private static void RegisterStartMenuShortcut(string trayExecutable)
+    {
+        var shortcutPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),
+            "Talvora Kontrol Merkezi.lnk");
+        var shellType = Type.GetTypeFromProgID("WScript.Shell")
+            ?? throw new InvalidOperationException("WScript.Shell is not available.");
+        dynamic shell = Activator.CreateInstance(shellType)!;
+        try
+        {
+            dynamic shortcut = shell.CreateShortcut(shortcutPath);
+            try
+            {
+                shortcut.TargetPath = trayExecutable;
+                shortcut.Arguments = "--open-control-center";
+                shortcut.WorkingDirectory = Path.GetDirectoryName(trayExecutable);
+                shortcut.IconLocation = trayExecutable + ",0";
+                shortcut.Description = "Talvora Kontrol Merkezi";
+                shortcut.Save();
+            }
+            finally
+            {
+                System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shortcut);
+            }
+        }
+        finally
+        {
+            System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shell);
+        }
+    }
+
     private static string? ReadTrayStartupExecutable(
         InstallUserContext installUser)
     {
