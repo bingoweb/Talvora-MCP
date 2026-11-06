@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-03T21:25:14.281Z",
-  "scope": "W6: Turkish-tolerant case-insensitive literal text search",
+  "verifiedAtUtc": "2026-11-06T21:07:57.181Z",
+  "scope": "W7: bare command resolution through PATH and PATHEXT",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-03 W6: string.Create<TState>(int, TState, SpanAction<char,TState>) provides a one-char-per-source-char output with direct span initialization; char.ToLowerInvariant(char) applies invariant lower casing, with I/ı/İ explicitly mapped to i by the W6 rule (query: \"C# .NET 10 string.Create<TState>(int length, TState state, SpanAction<char,TState> action) exact signature and usage; char.ToLowerInvariant(char) changes Turkish dotted and dotless I; show invariant lowercase behavior and in-place character folding.\")."
+      "verified": "2026-11-07 W7: Windows drive-relative paths such as C:Projects are rooted but not fully qualified; Path.IsPathRooted therefore keeps them out of bare-name resolution. Context7 returned no precise PATHEXT rule, so the Microsoft Learn ProcessStartInfo and CreateProcessW vendor pages confirm PATH search and .exe-only suffix behavior (query: \"C# .NET 10 ProcessStartInfo.FileName and UseShellExecute=false: does Process.Start resolve a bare command through PATHEXT when only a .cmd shim is on PATH? Explain ProcessStartInfo working directory vs search and CreateProcess resolution.\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.string.create?view=net-10.0",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.char.tolowerinvariant?view=net-10.0"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.processstartinfo.useshellexecute?view=net-10.0",
+    "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw"
   ]
 }

@@ -108,4 +108,29 @@ internal static partial class SourceEditRegressionRunner
             Directory.Delete(root, recursive: true);
         }
     }
+
+    // W7: a bare name finds a .cmd on PATH, never a same-named script in the working directory.
+    public static async Task RunBareCommandResolutionAsync()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "talvora-w7-" + Guid.NewGuid().ToString("N"));
+        var bin = Path.Combine(root, "bin");
+        var work = Path.Combine(root, "iş");
+        Directory.CreateDirectory(bin);
+        Directory.CreateDirectory(work);
+        var name = "talvora-w7-" + Guid.NewGuid().ToString("N")[..8];
+        await File.WriteAllTextAsync(Path.Combine(bin, name + ".cmd"), "@echo path-ok\r\n");
+        await File.WriteAllTextAsync(Path.Combine(work, name + ".cmd"), "@echo cwd-hijack\r\n");
+        var previous = Environment.GetEnvironmentVariable("PATH");
+        Environment.SetEnvironmentVariable("PATH", bin + ";" + previous);
+        try
+        {
+            var result = await ProcessRunner.RunAsync(name, work, [], timeoutSeconds: 30, cancellationToken: CancellationToken.None);
+            AssertEqual("path-ok", result.StandardOutput.Trim(), "W7: bare names resolve through PATH and PATHEXT, not the working directory.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", previous);
+            Directory.Delete(root, recursive: true);
+        }
+    }
 }

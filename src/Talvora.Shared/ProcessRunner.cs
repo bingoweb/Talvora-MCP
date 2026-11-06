@@ -52,6 +52,20 @@ public static class ProcessRunner
             throw new DirectoryNotFoundException($"Working directory was not found: {cwd}");
         }
 
+        // W7: Process.Start ignores PATHEXT, so "npm" (npm.cmd) failed and a bare "npm.cmd" broke the shim's %~dp0.
+        // Only PATH directories are searched; a same-named file in the working directory is never chosen.
+        if (OperatingSystem.IsWindows() &&
+            !Path.IsPathRooted(executable) &&
+            executable.IndexOfAny(['\\', '/']) < 0 &&
+            CommandResolver.ResolveAll([executable], workingDirectory: cwd)
+                .FirstOrDefault(path =>
+                    !string.Equals(Path.GetDirectoryName(path), cwd, StringComparison.OrdinalIgnoreCase) &&
+                    CommandResolver.GetExecutableExtensions().Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+            is { } resolvedExecutable)
+        {
+            executable = resolvedExecutable;
+        }
+
         var requestedArguments = arguments?.ToArray() ?? [];
         var startInfo = CreateStartInfo(
             executable,
