@@ -257,11 +257,11 @@ internal static partial class ControlCenterSmoke
         {
             var store = new WorklogHistoryStore(Path.Combine(directory, "worklog-sessions.jsonl"));
             var now = DateTimeOffset.UtcNow;
-            foreach (var id in new[] { "n7-first", "n7-second" })
+            foreach (var id in new[] { "n7-first", "n7-second", "wl2-no-project" })
             {
                 var frame = new Talvora.Shared.DesktopWorklogFrame(
                     id, 2, now,
-                    new Talvora.Shared.WorklogSessionHeader("Talvora-MCP", "ChatGPT · Dev"),
+                    new Talvora.Shared.WorklogSessionHeader(id == "wl2-no-project" ? "" : "Talvora-MCP", "ChatGPT · Dev"),
                     new Talvora.Shared.WorklogStep(Talvora.Shared.WorklogStepCategory.SourceEdit,
                         Talvora.Shared.WorklogStepState.Succeeded, "Düzenleme tamamlandı.",
                         "1 dosya değişti", null, 3),
@@ -286,10 +286,23 @@ internal static partial class ControlCenterSmoke
             var rows = FindVisualChild<System.Windows.Controls.ListBox>(page)
                 ?? throw new InvalidOperationException("Worklog history session list is missing.");
             var matching = page.Model.Sessions.Single(session => session.SessionId == "n7-second");
+            // WL2: before a session is chosen the detail column says what will appear there, and a session
+            // without a project says "Proje belirsiz" instead of leaving its first line empty.
+            var texts = FindVisualChildren<System.Windows.Controls.TextBlock>(page).ToArray();
+            var hint = texts.SingleOrDefault(text => text.Text.StartsWith("Soldan bir oturum seç", StringComparison.Ordinal))
+                ?? throw new InvalidOperationException("WL2: the detail column has no empty-state hint.");
+            if (page.Model.SelectedSession is not null || !hint.IsVisible)
+                throw new InvalidOperationException("WL2: the empty-state hint must show while no session is chosen.");
+            if (!texts.Any(text => text.Text == "Proje belirsiz" && text.IsVisible))
+                throw new InvalidOperationException("WL2: a session without a project must read 'Proje belirsiz'.");
+            SaveVisualSnapshotIfRequested(window, snapshot.Replace("worklog-session", "wl2-empty", StringComparison.Ordinal));
             rows.SelectedItem = matching; // The same selection binding a clicked card uses.
             if (page.Model.SelectedSession?.SessionId != "n7-second" ||
                 page.Model.SelectedSession?.Timeline.Count != 2)
                 throw new InvalidOperationException("A clicked worklog card opened another session.");
+            window.UpdateLayout();
+            if (hint.IsVisible)
+                throw new InvalidOperationException("WL2: the empty-state hint must hide once a session is chosen.");
             SaveVisualSnapshotIfRequested(window, snapshot);
         }
         finally
@@ -439,6 +452,17 @@ internal static partial class ControlCenterSmoke
 
         throw new InvalidOperationException(
             $"Control Center element with automation name '{automationName}' was not rendered.");
+    }
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root)
+        where T : DependencyObject
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = VisualTreeHelper.GetChild(root, index);
+            if (child is T match) yield return match;
+            foreach (var nested in FindVisualChildren<T>(child)) yield return nested;
+        }
     }
 
     private static T? FindVisualChild<T>(DependencyObject root)

@@ -44,7 +44,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D38 — "Yalnızca hatalar ve ajan işleri" counts ChatGPT as an agent (audit 40, user decision)
 - [ ] D39 — Penpot error text uses the shared secret masking (audit 40)
 - [~] [C] SN9 — Switchboard keeps focus and hover, draws calmly (Claude; audit 40; smoke RED/GREEN, signed-in Full green; live pending: exact-commit deploy and CI)
-- [ ] [C] WL2 — Çalışma günlüğü: no blank project line, a real empty state (Claude; audit 40)
+- [~] [C] WL2 — Çalışma günlüğü: no blank project line, a real empty state (Claude; audit 40; smoke RED/GREEN, signed-in Full green; live pending: exact-commit deploy and CI)
 - [ ] OB1 — talvora_note_write: write Obsidian vault notes, refuse secrets and the linked repo docs (user request 2026-11-01)
 
 ## User queue
@@ -60,6 +60,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-07 — [C] WL2, executor Claude: smoke first (`AssertWorklogHistorySelection` gains a session without a project) RED "WL2: the detail column has no empty-state hint", then GREEN. `WorklogHistoryView`: a session without a project reads "Proje belirsiz" in `Tv.TextFaint` (list row and detail title); until a session is chosen the detail column shows "Soldan bir oturum seç; adımları, kanıtları ve sonucu burada görürsün." centred in `Tv.TextMuted` (hidden while the list is empty). XAML style triggers only; the project filter already skips empty names.
+  Design gaps filled: the card named `Sn.InkFaint`/`Sn.InkMuted`; this page uses the Gözlemevi palette, so its `Tv.TextFaint`/`Tv.TextMuted` were used. Context7 `/dotnet/docs-desktop` (`{x:Null}`; MultiDataTrigger gap → vendor page). Signed-in Full 68/0 `Hepsi geçti.` (ControlCenter smoke included; one gate run covered SN9 and WL2 together).
+  Self-review — cosmetics: wl2-empty and worklog-session captures in both themes; usability: the empty column now says what to do; Turkish: two new strings reread; correctness: no view-model change.
 
 - 2026-11-07 — [C] SN9, executor Claude: smoke first (`ControlCenterSmoke.SN9.cs`: the hotspots must survive five traffic polls) RED "SN9: a traffic poll must update the socket hotspots in place, not rebuild them", then GREEN (keyboard focus granted and kept). `Switchboard` updates its hotspots in place and rebuilds them only when the socket ids change; the reconnect timer moved to `outside.Y + 70/+88`, clear of the neighbour's "son …" line; brushes, pens, text layouts and one static layer (grain, divider, labels, jacks) are cached per theme and DPI.
   Measured in the smoke fixture, 300 `OnRender` frames: 3.94–4.70 ms → 0.34–0.48 ms per frame. The window's idle CPU sample did not move (6.00 % → 6.71 %, single 3 s samples): at idle the board draws nothing, that number comes from the window's polls. Context7 `/dotnet/docs-desktop` (Freezable; DrawingGroup gap → vendor pages). Signed-in Full 68/0 `Hepsi geçti.` (ControlCenter smoke included; one gate run covered SN9 and WL2 together).

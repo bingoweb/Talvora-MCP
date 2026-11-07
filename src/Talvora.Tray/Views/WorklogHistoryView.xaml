@@ -17,6 +17,53 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+        <!-- WL2: a session without a project says so in faint ink instead of leaving its first line empty. -->
+        <Style x:Key="HistoryProject" TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.BodyStrong}">
+            <Setter Property="Text" Value="{Binding Header.ProjectName}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Header.ProjectName}" Value="">
+                    <Setter Property="Text" Value="Proje belirsiz" />
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.TextFaint}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Header.ProjectName}" Value="{x:Null}">
+                    <Setter Property="Text" Value="Proje belirsiz" />
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.TextFaint}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="HistoryProjectTitle" TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.Title}">
+            <Setter Property="Text" Value="{Binding Header.ProjectName}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Header.ProjectName}" Value="">
+                    <Setter Property="Text" Value="Proje belirsiz" />
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.TextFaint}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Header.ProjectName}" Value="{x:Null}">
+                    <Setter Property="Text" Value="Proje belirsiz" />
+                    <Setter Property="Foreground" Value="{DynamicResource Tv.TextFaint}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <!-- WL2: until a session is chosen the detail column says what will appear there (hidden when the list is empty). -->
+        <Style x:Key="HistoryDetailHint" TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.Body}">
+            <Setter Property="Foreground" Value="{DynamicResource Tv.TextMuted}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="MaxWidth" Value="320" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding HasSelection}" Value="False" />
+                        <Condition Binding="{Binding IsEmpty}" Value="False" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Visibility" Value="Visible" />
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
     <Grid Margin="24">
         <Grid.RowDefinitions>
@@ -78,7 +125,7 @@
                                     BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
                                     CornerRadius="{DynamicResource Tv.Radius.M}" Padding="12">
                                 <StackPanel>
-                                    <TextBlock Text="{Binding Header.ProjectName}" Style="{StaticResource Tv.Type.BodyStrong}" />
+                                    <TextBlock Style="{StaticResource HistoryProject}" />
                                     <TextBlock Text="{Binding Header.ActorName}" Style="{StaticResource Tv.Type.Caption}" />
                                     <TextBlock Text="{Binding Current.Title}" Style="{StaticResource Tv.Type.Body}"
                                                TextWrapping="Wrap" Margin="0,8,0,8" />
@@ -104,13 +151,15 @@
                            IsHitTestVisible="False"
                            Visibility="{Binding IsEmpty, Converter={StaticResource HistoryBool}}" />
             </Grid>
+            <TextBlock Grid.Column="1" Style="{StaticResource HistoryDetailHint}"
+                       Text="Soldan bir oturum seç; adımları, kanıtları ve sonucu burada görürsün." />
             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"
                           Visibility="{Binding HasSelection, Converter={StaticResource HistoryBool}}">
                 <Border BorderBrush="{DynamicResource Tv.Border}" BorderThickness="1"
                         Background="{DynamicResource Tv.Surface}"
                         CornerRadius="{DynamicResource Tv.Radius.L}" Padding="16">
                     <StackPanel DataContext="{Binding SelectedSession}">
-                        <TextBlock Text="{Binding Header.ProjectName}" Style="{StaticResource Tv.Type.Title}" />
+                        <TextBlock Style="{StaticResource HistoryProjectTitle}" />
                         <TextBlock Text="{Binding Header.ActorName}" Style="{StaticResource Tv.Type.Body}" />
                         <TextBlock Text="{Binding Header.TaskNote}" Style="{StaticResource Tv.Type.Body}"
                                    TextWrapping="Wrap" Margin="0,8,0,0" />

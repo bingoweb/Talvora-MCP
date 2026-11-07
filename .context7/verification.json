@@ -1,19 +1,18 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T09:17:15.000Z",
-  "scope": "SN9: the Santral switchboard keeps its socket hotspots across traffic polls, moves the reconnect timer below neighbouring text, and caches frozen brushes, pens, text layouts and one static drawing layer per theme and DPI",
+  "verifiedAtUtc": "2026-11-07T09:19:49.000Z",
+  "scope": "WL2: the worklog history page shows 'Proje belirsiz' for a session without a project and an empty-state hint in the detail column until a session is chosen, with XAML style triggers only",
   "libraries": [
     {
       "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-07 SN9: modifying a frozen Freezable throws InvalidOperationException and IsFrozen plus Clone gives a modifiable copy, so shared theme brushes are cloned before Freeze and never frozen in place (query: \"WPF Freezable.Freeze CanFreeze CloneCurrentValue frozen Brush and Pen performance in OnRender DrawingContext\")"
+      "verified": "2026-11-07 WL2: {x:Null} used as an attribute value sets a XAML member to null, so a DataTrigger with Value=\"{x:Null}\" matches a session whose project name is null (query: \"WPF Style MultiDataTrigger Conditions Binding Value False setter Visibility and DataTrigger Value x:Null\")"
     },
     {
       "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-07 SN9: two Context7 queries returned no DrawingGroup.Open or DrawDrawing text (gap); the vendor pages state that DrawingGroup.Open opens the group to populate its Children and DrawingContext.DrawDrawing draws the given Drawing (query: \"DrawingGroup.Open method returns DrawingContext; DrawingContext.DrawDrawing(Drawing)\")"
+      "verified": "2026-11-07 WL2: two Context7 queries returned no MultiDataTrigger text (gap); the vendor page states that a MultiDataTrigger applies its setters when the bound data meet its set of conditions, so the hint shows only while HasSelection and IsEmpty are both False (query: \"MultiDataTrigger.Conditions Condition Binding Value Setter in Style.Triggers\")"
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.windows.media.drawinggroup.open",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.windows.media.drawingcontext.drawdrawing"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.windows.multidatatrigger"
   ]
 }
