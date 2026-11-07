@@ -46,7 +46,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## User queue
 
-- [ ] U14 — Makine (sistem) PATH değişkeninden `C:\Users\tayla\.cargo\bin` satırını kaldırın; bu klasör kullanıcı PATH'inizde zaten var. Başlat'ta "ortam değişkenleri" yazın → Ortam Değişkenleri → Sistem değişkenleri → Path → Düzenle → satırı silin → Tamam. (RS2)
+- [x] U14 — Makine (sistem) PATH değişkeninden `C:\Users\tayla\.cargo\bin` satırı kaldırıldı (kullanıcı, 2026-11-08). Claude'un kontrolü: makine PATH'i 32 satır ve diğer satırlar değişmedi (değer artık REG_SZ; hiçbir satırda % yok); kullanıcı PATH'inde satır duruyor; `talvora_rust_info` 1.99.1. (RS2)
 - [ ] U15 — ChatGPT'de Talvora Dev ve Talvora Admin bağlayıcılarını yenileyin, Claude Desktop'ı da bir kez kapatıp açın: araç listesi değişti (`talvora_uv_run` geldi; `talvora_pip_install`, `talvora_pip_run` ve `talvora_python_venv_create` kalktı). (UV1)
 
 ## Open questions
