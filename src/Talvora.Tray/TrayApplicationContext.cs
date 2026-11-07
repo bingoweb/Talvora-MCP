@@ -256,7 +256,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 ControlCenterEventSeverity.Info,
                 "system",
                 "Yönetim Merkezi hazır",
-                $"{registry.Mcps.Count} yönetilen MCP kaydı yüklendi.",
+                $"{registry.Mcps.Count} yönetilen hizmet kaydı yüklendi.",
                 dedupKey: "system:control-center-startup");
 
             var setupState = ControlCenterSetupService.Evaluate(registry);
@@ -325,7 +325,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 ControlCenterEventSeverity.Error,
                 "startup",
                 "Yönetim Merkezi başlangıç hazırlığı başarısız",
-                "Yönetilen MCP kayıtları veya otomatik kurtarma hazırlanamadı.",
+                "Yönetilen hizmet kayıtları ya da otomatik kurtarma hazırlanamadı.",
                 dedupKey: "startup:registry-recovery-failed");
         }
         finally
@@ -482,8 +482,8 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 ControlCenterEventStore.Record(
                     ControlCenterEventSeverity.Info,
                     "recovery",
-                    "Talvora MCP otomatik olarak düzeltildi",
-                    "Yerel servis ile Dev ve Admin güvenli MCP tünelleri yeniden hazır.",
+                    "Talvora otomatik olarak düzeltildi",
+                    "Yerel servis ile Dev ve Admin güvenli bağlantıları yeniden hazır.",
                     "talvora",
                     "recovery:talvora:success");
 
@@ -682,7 +682,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 ControlCenterEventSeverity.Info,
                 "connection",
                 "Talvora bağlantısı yenilendi",
-                "Talvora Dev ve Admin güvenli MCP tünelleri yeniden bağlandı.",
+                "Talvora Dev ve Admin güvenli bağlantıları yeniden kuruldu.",
                 "talvora",
                 "connection:talvora:tray-reconnect-success");
 
@@ -864,7 +864,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 ControlCenterEventStore.Record(
                     ControlCenterEventSeverity.Warning,
                     "recovery",
-                    "Gitea MCP otomatik kurtarma denemesi başarısız",
+                    "Gitea otomatik kurtarma denemesi başarısız",
                     $"Deneme {failure.ConsecutiveFailures}; {failure.RetryDelay.TotalSeconds:F0} saniye sonra yeniden denenecek.",
                     "gitea",
                     "recovery:gitea:failed");
@@ -902,7 +902,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             ControlCenterEventStore.Record(
                 ControlCenterEventSeverity.Warning,
                 "recovery",
-                "Gitea MCP sağlık bakımı başarısız",
+                "Gitea sağlık bakımı yarıda kaldı",
                 $"Deneme {failure.ConsecutiveFailures}; {failure.RetryDelay.TotalSeconds:F0} saniye sonra yeniden denenecek.",
                 "gitea",
                 "recovery:gitea:maintenance-failed");
@@ -1030,14 +1030,14 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             {
                 ShowNotification(
                     "Gitea yeniden başlatıldı",
-                    "Gitea MCP zinciri sağlıklı ve kullanıma hazır.",
+                    "Gitea ve bağlantı zinciri sağlıklı, kullanıma hazır.",
                     ToolTipIcon.Info);
                 TrayLog.Write("Gitea service restart succeeded.");
                 ControlCenterEventStore.Record(
                     ControlCenterEventSeverity.Info,
                     "operation",
-                    "Gitea MCP yeniden başlatıldı",
-                    "Gitea MCP zinciri sağlıklı ve kullanıma hazır.",
+                    "Gitea yeniden başlatıldı",
+                    "Gitea ve bağlantı zinciri sağlıklı, kullanıma hazır.",
                     "gitea",
                     "operation:gitea:tray-restart-success");
             }
@@ -1069,7 +1069,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             ControlCenterEventStore.Record(
                 ControlCenterEventSeverity.Error,
                 "operation",
-                "Gitea MCP yeniden başlatılamadı",
+                "Gitea yeniden başlatılamadı",
                 "Ayrıntılar ham günlükte bulunuyor.",
                 "gitea",
                 "operation:gitea:tray-restart-failed");
@@ -1194,8 +1194,8 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                         ControlCenterEventStore.Record(
                             ControlCenterEventSeverity.Warning,
                             "tunnel",
-                            $"{registration.DisplayName} tunnel-client güncellemesi ertelendi",
-                            "Mevcut çalışan sürüm korunuyor; latest kontrolü daha sonra yeniden denenecek.",
+                            $"{registration.DisplayName} bağlantı istemcisi güncellemesi ertelendi",
+                            "Çalışan sürüm korunuyor; yeni sürüm denetimi daha sonra yeniden yapılacak.",
                             registration.Id,
                             $"tunnel:{registration.Id}:client-update-deferred");
                     }

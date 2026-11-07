@@ -439,7 +439,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 ControlCenterEventSeverity.Info,
                 "tunnel",
                 $"{registration.DisplayName} güvenli tüneli hazır",
-                "Runtime profili oluşturuldu ve health/ready doğrulaması geçti.",
+                "Bağlantı profili oluşturuldu ve sağlık denetimi geçti.",
                 registration.Id,
                 $"tunnel:{registration.Id}:ready");
 

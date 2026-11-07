@@ -36,8 +36,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D41 — One caller name: Talvora's own calls leave no trace, Claude is named (audit 41; RED CS0117 then D41_CALLER_IDENTITY_GREEN and SN1_LINE_TRAFFIC_GREEN; Changed 28/0, signed-in Full 69/0 Hepsi geçti.; installed 39b78e2 and smoke green; GitHub CI 42382205457 success; live pending (Claude): bridge call named Claude and smoke leaves no worklog session; Gitea #9 comment 206)
 - [~] D42 — "Zaten hazır" is not an automatic repair (audit 41; RED CS1061 then UI3_NARRATOR_GREEN; Changed 22/0 and signed-in Full 69/0 Hepsi geçti.; exact-commit install; GitHub CI 42401835186 success; installed smoke pending; Gitea #9 comment 207)
 - [x] D35 — The GitHub release lookup waits after a failure (audit 40; RED CS8604/CS8602, D35_LATEST_BACKOFF_GREEN; Changed 31/0 and signed-in Full 69/0 Hepsi geçti.; installed 2325945, loopback smoke green; GitHub CI 42403430745 success; Gitea #9 comment 208)
-- [~] D36 — Atomic publication also retries a busy destination (audit 40; RED D36 retry-filter, then D36_RETRY_FILTER_GREEN; Changed 18/0 and signed-in Full 69/0 Hepsi geçti.; exact-commit install, smoke and GitHub CI pending; Gitea #9 comment 209)
-- [ ] D37 — Event slips in plain Turkish (audit 40)
+- [x] D36 — Atomic publication also retries a busy destination (audit 40; RED D36 retry-filter, then D36_RETRY_FILTER_GREEN; Changed 18/0 and signed-in Full 69/0 Hepsi geçti.; installed a8d9a1d, loopback smoke green; GitHub CI 42404315174 success; Gitea #9 comment 209)
+- [~] D37 — Event slips in plain Turkish (audit 40; RED old text, EVENT_TEXT_TURKISH_GREEN; Changed 26/0 and signed-in Full 70/0 Hepsi geçti.; install, smoke and GitHub CI pending; visual check pending (Claude); Gitea #9 comment 210)
 - [ ] D38 — "Yalnızca hatalar ve ajan işleri" counts ChatGPT as an agent (audit 40, user decision)
 - [ ] D39 — Penpot error text uses the shared secret masking (audit 40)
 - [ ] D43 — Çalışma günlüğü names the day once ("Bugün 15:44 · 3 sn") (audit 41, design improvement)
@@ -58,6 +58,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D37, executor ChatGPT via Talvora: replaced 23 specified event text pairs in four tray sources; both Gitea readiness details updated. RED old text then EVENT_TEXT_TURKISH_GREEN; Changed 26/0 and signed-in Full 70/0 Hepsi geçti. Context7 /dotnet/docs C# interpolation; exact-commit install, smoke and CI pending. Gitea issue #9 comment 210.
+  Self-review — cosmetics: no layout, styling or motion change; prescribed event wording only.
+  Self-review — usability: event cards use the exact Turkish titles and details specified.
+  Self-review — Turkish: all 23 pairs and the duplicate Gitea detail pass regression.
+  Self-review — correctness/security: interpolation holes, TrayLog, event categories and dedup keys are unchanged; visual check pending (Claude).
 - 2026-11-07 — D36, executor ChatGPT via Talvora: PublishDurable retries IOException or UnauthorizedAccessException with its existing bounded filter and source-exists guard. RED source assertion then D36_RETRY_FILTER_GREEN; Changed 18/0 and signed-in Full 69/0 Hepsi geçti (AtomicRace). Context7 /dotnet/docs File.Replace and I/O errors; exact-commit install, smoke and CI pending. Gitea issue #9 comment 209.
   Self-review — cosmetics: no layout, styling or visible elements changed.
   Self-review — usability: busy file destinations use the existing retry window.

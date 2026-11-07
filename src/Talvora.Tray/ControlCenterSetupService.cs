@@ -296,7 +296,7 @@ internal static class ControlCenterSetupService
                 ControlCenterEventSeverity.Info,
                 "setup",
                 "Yönetim Merkezi kurulumu tamamlandı",
-                "Mevcut güvenli MCP tünelleri bağlandı.",
+                "Mevcut güvenli bağlantılar kuruldu.",
                 dedupKey: "setup:completed");
 
             return before;
@@ -336,7 +336,7 @@ internal static class ControlCenterSetupService
             ControlCenterEventSeverity.Info,
             "setup",
             "Yönetim Merkezi kurulumu tamamlandı",
-            "Eksik güvenli MCP tüneli yapılandırması hazırlandı.",
+            "Eksik güvenli bağlantı ayarları hazırlandı.",
             dedupKey: "setup:completed");
 
         return after;

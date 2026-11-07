@@ -1,15 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T18:59:13Z",
-  "scope": "D36: bounded atomic publication retries also handle access-denied failures",
+  "verifiedAtUtc": "2026-11-07T19:13:07Z",
+  "scope": "D37: preserve C# interpolation holes while replacing event copy with prescribed Turkish strings",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D36: .NET filesystem APIs may raise either IOException or UnauthorizedAccessException, and C# catch filters can restrict retry handling to those types (query: \"In .NET 10 C#, File.Replace(sourceFileName, destinationFileName, destinationBackupFileName) throws UnauthorizedAccessException versus IOException when destination is in use, locked or pending delete; how should a retry filter catch both and preserve File.Replace then File.Move order?\")."
+      "verified": "2026-11-07 D37: C# interpolated strings evaluate expressions inside braces and substitute their values; changing only the literal portions preserves the same expressions (query: \"C# 12 or newer interpolated string literals: how are expressions inside {...} evaluated and how does replacing only literal text around interpolation holes preserve interpolation? Distinguish ordinary interpolated strings from plain string literals.\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.io.file.replace?view=net-10.0",
-    "https://learn.microsoft.com/en-us/dotnet/standard/io/handling-io-errors"
+    "https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/strings/interpolation"
   ]
 }

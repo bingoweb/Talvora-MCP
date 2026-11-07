@@ -91,8 +91,8 @@ internal static partial class ManagedMcpTunnelProvisioningService
             ControlCenterEventStore.Record(
                 ControlCenterEventSeverity.Info,
                 "tunnel",
-                $"{registration.DisplayName} tunnel-client güncellendi",
-                $"OpenAI tunnel-client {candidateConfig.TunnelClientVersion} sürümüne readiness doğrulamasından sonra atomik olarak geçirildi.",
+                $"{registration.DisplayName} bağlantı istemcisi güncellendi",
+                $"Güvenli bağlantı istemcisi {candidateConfig.TunnelClientVersion} sürümüne geçti; hazır olduğu doğrulandıktan sonra devreye alındı.",
                 registration.Id,
                 $"tunnel:{registration.Id}:client-updated");
         }
@@ -204,8 +204,8 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 ControlCenterEventStore.Record(
                     ControlCenterEventSeverity.Info,
                     "tunnel",
-                    $"{registration.DisplayName} tunnel-client update recovered",
-                    $"Interrupted update recovered with {journal.CandidateConfig.TunnelClientVersion}; runtime readiness was verified before commit.",
+                    $"{registration.DisplayName} yarım kalan güncelleme tamamlandı",
+                    $"Yarıda kesilen güncelleme {journal.CandidateConfig.TunnelClientVersion} sürümüyle tamamlandı; sürüm hazır olduğu doğrulandıktan sonra devreye alındı.",
                     registration.Id,
                     $"tunnel:{registration.Id}:client-update-recovered");
 
@@ -234,8 +234,8 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 ControlCenterEventStore.Record(
                     ControlCenterEventSeverity.Warning,
                     "tunnel",
-                    $"{registration.DisplayName} tunnel-client update geri alındı",
-                    $"Interrupted candidate {journal.CandidateConfig.TunnelClientVersion} readiness doğrulamasını geçemedi; previous client {journal.PreviousConfig.TunnelClientVersion} yeniden çalıştırıldı.",
+                    $"{registration.DisplayName} güncellemesi geri alındı",
+                    $"Yeni sürüm {journal.CandidateConfig.TunnelClientVersion} hazırlık denetimini geçemedi; önceki sürüm {journal.PreviousConfig.TunnelClientVersion} yeniden çalıştırıldı.",
                     registration.Id,
                     $"tunnel:{registration.Id}:client-update-rolled-back");
 
@@ -262,8 +262,8 @@ internal static partial class ManagedMcpTunnelProvisioningService
         ControlCenterEventStore.Record(
             ControlCenterEventSeverity.Warning,
             "tunnel",
-            $"{registration.DisplayName} tunnel-client update toparlandı",
-            $"Incomplete update journal was rolled back to {journal.PreviousConfig.TunnelClientVersion}.",
+            $"{registration.DisplayName} yarım güncelleme toparlandı",
+            $"Yarım kalan güncelleme geri alındı; {journal.PreviousConfig.TunnelClientVersion} sürümü kullanılıyor.",
             registration.Id,
             $"tunnel:{registration.Id}:client-update-recovered-rollback");
 
