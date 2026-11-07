@@ -13,7 +13,7 @@
   <a href="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml"><img alt="Windows CI" src="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml/badge.svg?branch=main"></a>
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0B65C2?logo=windows11&logoColor=white">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white">
-  <img alt="MCP 251 tools" src="https://img.shields.io/badge/MCP-251%20tools-198754">
+  <img alt="MCP 249 tools" src="https://img.shields.io/badge/MCP-249%20tools-198754">
   <img alt="Active development" src="https://img.shields.io/badge/status-active%20development-6C757D">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2EA44F"></a>
 </p>
@@ -44,7 +44,7 @@ The project is deliberately opinionated:
 
 [HANDOFF.md](HANDOFF.md) is the short entry point; [STATUS](docs/codex/STATUS.md) is the live queue and [ROADMAP](docs/codex/ROADMAP.md) holds the open cards. Agent rules are in [AGENTS.md](AGENTS.md); finished work lives in git history.
 
-- **Lean MCP surface:** **251 total**, **214 Dev**, **88 Admin**, with **51 explicitly shared** tools. The former automatic memory and embedding subsystem has been removed.
+- **Lean MCP surface:** **249 total**, **212 Dev**, **88 Admin**, with **51 explicitly shared** tools. The former automatic memory and embedding subsystem has been removed.
 - One LocalSystem Windows Service owns loopback MCP; the native WPF Tray/Control Center observes health and manages lifecycle, diagnostic repair, events and redacted logs.
 - Source edits use revision checks, durable WAL/receipts, syntax validation, atomic commit, replay protection, rollback and recovery.
 - Desktop worklog cards retain the user's width, show real code evidence and progress, and expose a persistent session history.
@@ -55,7 +55,7 @@ The project is deliberately opinionated:
                           ChatGPT Business
                          /                \
                  Talvora Dev          Talvora Admin
-                   214 tools             88 tools
+                   212 tools             88 tools
                          \              /
                           Secure MCP Tunnel
                                  |
@@ -66,7 +66,7 @@ Local MCP clients ------>  Talvora Windows Service
                   +--------------+--------------+
                   |              |              |
               /mcp           /mcp/dev       /mcp/admin
-            251 tools        214 tools        88 tools
+            249 tools        212 tools        88 tools
                   |
         +----------------+----------------+----------------+
         |                |                |                |
@@ -87,8 +87,8 @@ Talvora exposes three local endpoints:
 
 | Endpoint | Purpose | Tools |
 | --- | --- | ---: |
-| <code>/mcp</code> | Complete capability surface | **251** |
-| <code>/mcp/dev</code> | Development, source editing, builds, Git, jobs, Penpot and Modal workflows | **214** |
+| <code>/mcp</code> | Complete capability surface | **249** |
+| <code>/mcp/dev</code> | Development, source editing, builds, Git, jobs, Penpot and Modal workflows | **212** |
 | <code>/mcp/admin</code> | Windows administration, services, registry, environment and machine management | **88** |
 
 Dev and Admin share **51 reviewed tools** for diagnostics and common fallback operations. The overlap is explicit and regression-tested; it is not accidental duplication.

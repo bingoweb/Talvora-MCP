@@ -4,11 +4,11 @@ Talvora intentionally starts from a clean design.
 
 ## Runtime
 
-`Talvora.exe` is a self-contained ASP.NET Core application installed as the Windows service `Talvora` under `LocalSystem`. It listens only on loopback port 7676 and maps MCP through the official C# MCP SDK's stateless HTTP transport. The full surface is `/mcp` (**251 tools**); focused surfaces are `/mcp/dev` (**214 tools**) and `/mcp/admin` (**88 tools**).
+`Talvora.exe` is a self-contained ASP.NET Core application installed as the Windows service `Talvora` under `LocalSystem`. It listens only on loopback port 7676 and maps MCP through the official C# MCP SDK's stateless HTTP transport. The full surface is `/mcp` (**249 tools**); focused surfaces are `/mcp/dev` (**212 tools**) and `/mcp/admin` (**88 tools**).
 
 There is no separate MCP gateway or secondary privileged command service. A session-specific, ACL-protected named pipe carries desktop worklog notifications to the interactive Tray; it is not an MCP transport or a security boundary.
 
-Focused surfaces are per-request views over the same canonical tool implementation. Stateless `ConfigureSessionOptions` selects a request-local `ToolCollection` from the HTTP path, so focused filtering applies to both discovery and invocation. A tool excluded from a focused endpoint is therefore not callable through that endpoint, while the full `/mcp` endpoint preserves the complete 251-tool capability set.
+Focused surfaces are per-request views over the same canonical tool implementation. Stateless `ConfigureSessionOptions` selects a request-local `ToolCollection` from the HTTP path, so focused filtering applies to both discovery and invocation. A tool excluded from a focused endpoint is therefore not callable through that endpoint, while the full `/mcp` endpoint preserves the complete 249-tool capability set.
 
 The focused policy has a first-class **Shared** contract: Dev and Admin overlap on exactly 51 reviewed tools for diagnostics, inspection, common filesystem/config work and deliberate general-purpose process/PowerShell fallback. Outside that set, tools have one primary focused role. Development owns source editing, build/test, Git/GitHub, language/toolchain, long-running development jobs and product-development integrations. Administration owns Windows service/registry/event-log/session workflows plus package mutation, persistent environment mutation and arbitrary PID termination. This is a discovery and tool-selection boundary, not a privilege sandbox; both endpoints still execute through the same LocalSystem Talvora Core and the unrestricted full surface remains available.
 
@@ -172,9 +172,9 @@ The caller can explicitly select a session or let Talvora choose an active logge
 
 ## Python and Docker runtimes
 
-The runtime suite exposes `talvora_python_info`, `talvora_python_run`, `talvora_python_venv_create`, `talvora_pip_install`, `talvora_pip_run`, `talvora_docker_info`, `talvora_docker_ps`, `talvora_docker_images`, `talvora_docker_logs`, `talvora_docker_exec`, `talvora_docker_run`, and `talvora_docker_compose_run`.
+The runtime suite exposes `talvora_python_info`, `talvora_python_run`, `talvora_uv_run`, `talvora_docker_info`, `talvora_docker_ps`, `talvora_docker_images`, `talvora_docker_logs`, `talvora_docker_exec`, `talvora_docker_run`, and `talvora_docker_compose_run`.
 
-Python discovery resolves the service PATH or an explicitly supplied interpreter/Windows `py` launcher, then probes `sys.executable`, version, prefix/base-prefix, virtual-environment state, and `python -m pip --version`. Venv creation uses the standard-library `venv` module. Generic Python and pip runners forward caller-supplied argument vectors and environment overrides.
+Python discovery resolves the service PATH or an explicitly supplied interpreter/Windows `py` launcher, then probes `sys.executable`, version, prefix/base-prefix, virtual-environment state, and `python -m pip --version`. Project work goes through `talvora_uv_run`, which runs uv as the signed-in user (environments, packages, scripts, tools and Python versions); Talvora has no pip or venv tools. The generic Python runner forwards caller-supplied argument vectors and environment overrides.
 
 Docker discovery distinguishes CLI presence from engine and Compose availability. Container/image listings use Docker's JSON formatter and are returned as structured rows. Log/exec conveniences sit above general-purpose `docker_run`; Compose similarly preserves caller-supplied `docker compose` arguments. Missing Docker is a normal structured state rather than a Talvora startup requirement.
 

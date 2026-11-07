@@ -27,11 +27,6 @@ public sealed record TalvoraPythonInfoResponse(
     bool PipAvailable,
     string? PipVersion);
 
-public sealed record TalvoraPythonVenvResponse(
-    string Path,
-    string? PythonExecutable,
-    TalvoraRuntimeCommandResponse Command);
-
 public sealed record TalvoraDockerInfoResponse(
     bool Found,
     string? Executable,

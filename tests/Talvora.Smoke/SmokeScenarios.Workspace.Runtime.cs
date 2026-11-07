@@ -11,8 +11,7 @@ internal static partial class SmokeScenarios
         var dotnetProjectFile = context.DotnetProjectFile;
         var dotnetProgramFile = context.DotnetProgramFile;
         var dotnetOutputDll = context.DotnetOutputDll;
-        var pythonVenvRoot = context.PythonVenvRoot;
-        var chocoInfoResult = await EnsureSuccess(byName["talvora_choco_info"], new());
+                var chocoInfoResult = await EnsureSuccess(byName["talvora_choco_info"], new());
                 if (chocoInfoResult.StructuredContent is not { } chocoInfoJson ||
                     string.IsNullOrWhiteSpace(chocoInfoJson.GetProperty("executable").GetString()) ||
                     string.IsNullOrWhiteSpace(chocoInfoJson.GetProperty("version").GetString()))
@@ -353,54 +352,24 @@ internal static partial class SmokeScenarios
                     throw new InvalidOperationException("python_run did not execute the smoke expression.");
                 }
                 
-                if (pythonInfoJson.GetProperty("pipAvailable").GetBoolean())
+                // UV1: Python work goes through uv as the signed-in user; checked when that user has uv.
+                if (Talvora.Shared.CommandResolver.Resolve(["uv.exe", "uv"], []) is not null)
                 {
-                    var pipRunResult = await EnsureSuccess(byName["talvora_pip_run"], new()
+                    var uvRunResult = await EnsureSuccess(byName["talvora_uv_run"], new()
                     {
-                        ["pythonExecutable"] = pythonExecutable,
                         ["workingDirectory"] = root,
                         ["arguments"] = new[] { "--version" },
-                        ["timeoutSeconds"] = 30,
+                        ["timeoutSeconds"] = 60,
                     });
-                    if (pipRunResult.StructuredContent is not { } pipRunJson ||
-                        pipRunJson.GetProperty("exitCode").GetInt32() != 0 ||
-                        pipRunJson.GetProperty("timedOut").GetBoolean() ||
-                        !(pipRunJson.GetProperty("standardOutput").GetString() ?? string.Empty)
-                            .Contains("pip", StringComparison.OrdinalIgnoreCase))
+                    if (uvRunResult.StructuredContent is not { } uvRunJson ||
+                        uvRunJson.GetProperty("exitCode").GetInt32() != 0 ||
+                        !(uvRunJson.GetProperty("standardOutput").GetString() ?? string.Empty)
+                            .StartsWith("uv ", StringComparison.Ordinal))
                     {
-                        throw new InvalidOperationException("pip_run --version failed.");
+                        throw new InvalidOperationException("uv_run --version did not run uv as the signed-in user.");
                     }
                 }
-                
-                var venvCreateResult = await EnsureSuccess(byName["talvora_python_venv_create"], new()
-                {
-                    ["path"] = pythonVenvRoot,
-                    ["pythonExecutable"] = pythonExecutable,
-                    ["workingDirectory"] = root,
-                    ["withoutPip"] = true,
-                    ["timeoutSeconds"] = 120,
-                });
-                if (venvCreateResult.StructuredContent is not { } venvCreateJson ||
-                    venvCreateJson.GetProperty("command").GetProperty("exitCode").GetInt32() != 0 ||
-                    venvCreateJson.GetProperty("command").GetProperty("timedOut").GetBoolean() ||
-                    string.IsNullOrWhiteSpace(venvCreateJson.GetProperty("pythonExecutable").GetString()))
-                {
-                    throw new InvalidOperationException("python_venv_create did not create a usable virtual environment.");
-                }
-                
-                var venvPythonExecutable = venvCreateJson.GetProperty("pythonExecutable").GetString()!;
-                var venvInfoResult = await EnsureSuccess(byName["talvora_python_info"], new()
-                {
-                    ["pythonExecutable"] = venvPythonExecutable,
-                    ["workingDirectory"] = root,
-                });
-                if (venvInfoResult.StructuredContent is not { } venvInfoJson ||
-                    !venvInfoJson.GetProperty("found").GetBoolean() ||
-                    !venvInfoJson.GetProperty("inVirtualEnvironment").GetBoolean())
-                {
-                    throw new InvalidOperationException("python_info did not identify the created virtual environment.");
-                }
-                
+
                 var dockerInfoResult = await EnsureSuccess(byName["talvora_docker_info"], new()
                 {
                     ["workingDirectory"] = root,

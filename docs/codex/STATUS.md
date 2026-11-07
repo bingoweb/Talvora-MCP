@@ -39,7 +39,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D49 — Plain Turkish service names, also for older registries (audit 42; after D46)
 - [ ] D47 — Plain Turkish for the remaining Control Center texts (audit 42; setup texts per the user's decision; table and test in docs/codex/reference/d47)
 - [ ] [C] WL3 — Çalışma günlüğü and Olaylar polish (Claude; audit 42, user: later; after D45 and D50)
-- [ ] [C] UV1 — Python through uv: talvora_uv_run replaces the pip and venv tools (Claude, one-off, user 2026-11-08)
+- [~] [C] UV1 — Python through uv: talvora_uv_run replaces the pip and venv tools (Claude, one-off, user 2026-11-08; RED NativeInstallerSourceRegression PythonDockerToolContract False, then GREEN; Changed 19/0 and signed-in Full 70/0 Hepsi geçti.; install, installed smoke and CI pending)
 - [ ] [C] RS1 — Rust tools run as the signed-in user (Claude, one-off)
 - [ ] [C] RS2 — The service account's own Rust toolchain is removed (Claude, one-off; after RS1)
 
@@ -57,6 +57,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-08 — UV1, executor Claude (one-off, user: "bu arada tüm bu modernizasyonu bu defalık sen yap"): new `talvora_uv_run` (Dev only; runs uv as the signed-in user through `UserRunTools.Run`, the same bounds and redaction); `talvora_pip_install`, `talvora_pip_run` and `talvora_python_venv_create` removed with their guides, titles, metadata entries and `TalvoraPythonVenvResponse`. Counts: full 249, Dev 212, reviewed 249, open-world 83, destructive 98; README and ARCHITECTURE follow. RED NativeInstallerSourceRegression (PythonDockerToolContract False), then GREEN together with the source-only surface, metadata and Codex integration smokes. Changed 19/0 and signed-in Full 70/0 `Hepsi geçti.`. Context7 /modelcontextprotocol/csharp-sdk (tools concept page; vendor McpServerToolAttribute source). Install, installed smoke and CI follow. Gitea mirror skipped: executor Claude, no Gitea comment tool in this session.
+  Self-review — cosmetics: no screen change; the worklog names the step by its Turkish title "uv komutu çalıştır".
+  Self-review — usability: one tool for every Python task, as the user; no system-wide pip install and no SYSTEM-owned venv.
+  Self-review — Turkish: the only new visible text is the title "uv komutu çalıştır".
+  Self-review — correctness/security: identity and output bounds come from talvora_user_run; the smoke runs uv only where the signed-in user has it; talvora_python_info and talvora_python_run keep working.
 - 2026-11-08 — Claude: Rust/uv research (user request). Talvora stays .NET: Roslyn (semantic C# edits) and the WPF Control Center cannot move, the C# and Rust MCP SDKs are both Tier 1, and the service mostly launches other programs; measured service 145 MB, tray 270 MB, 363 MB per installed version. Found: the Python tools offer pip and venv but no uv and run as LocalSystem against the machine Python; the Rust tools run as LocalSystem with the service account's own Chocolatey rustup (cargo 1.99.0; the user has 1.99.1). User: "Evet, yaz", then "bu arada tüm bu modernizasyonu bu defalık sen yap": UV1, RS1 and RS2 are Claude's one-off items.
 
 - 2026-11-08 — Claude, audit 42 decisions (user): the look fixes and the worklog list's outcome mark are Claude's [C] WL3, queued for later ("Sıraya koy, sonra yap"); the setup wizard keeps OpenAI's names in parentheses inside Turkish sentences ("Adlar kalsın, cümleler Türkçe"), so D47 gained 38 setup rows (113 in all; the reference test and table were rebuilt and re-verified in the scratch clone: red on the current source, green after it, tray build 0 warnings, related tests green).

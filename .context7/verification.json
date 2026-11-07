@@ -1,19 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T20:18:07Z",
-  "scope": "OB1: MCP C# SDK tool cancellation binding, .NET junction/reparse-point detection",
+  "verifiedAtUtc": "2026-11-07T22:00:16Z",
+  "scope": "UV1: talvora_uv_run (MCP C# SDK tool attribute and generated schema) replaces the pip and venv tools",
   "libraries": [
     {
       "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "2026-11-07 OB1: C# MCP SDK server tools support async Task<T> methods accepting an injected CancellationToken, forwarded to file operations to handle client cancellation. SDK pinned at ModelContextProtocol 2.3.1. Query: ModelContextProtocol C# SDK 2.3.1 McpServerToolAttribute annotated async Task<T> method with CancellationToken cancellationToken=default parameter automatic DI binding cancellation, omitted from JSON inputSchema; UseStructuredContent and OutputSchemaType."
-    },
-    {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 OB1: Path.IsPathFullyQualified distinguishes absolute from drive-relative paths; Path.GetFullPath normalizes traversal before comparison. Inspecting FileAttributes.ReparsePoint on DirectoryInfo and File.GetAttributes is the reference junction/symlink refusal. Query: In .NET 10 Windows, DirectoryInfo.Attributes.HasFlag(FileAttributes.ReparsePoint) detecting NTFS junction or symbolic link directory and File.GetAttributes; Path.IsPathFullyQualified, Path.GetFullPath for secure vault path."
+      "verified": "2026-11-08 UV1: [McpServerTool] on a static method generates the tool JSON input schema from the method signature; [Description] fills the descriptions and optional parameters keep their defaults (Context7, docs/concepts/tools/tools.md). The vendor source McpServerToolAttribute exposes Name, Title, Destructive, Idempotent, OpenWorld, ReadOnly, UseStructuredContent and OutputSchemaType, the annotations the new tool sets. SDK pinned at ModelContextProtocol 2.3.1. Query: McpServerTool Destructive OpenWorld tool annotations; McpServerToolAttribute Destructive OpenWorld Idempotent ReadOnly hints ToolAnnotations."
     }
   ],
   "vendorSources": [
     "https://github.com/modelcontextprotocol/csharp-sdk",
-    "https://learn.microsoft.com/dotnet/"
+    "https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md",
+    "https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Server/McpServerToolAttribute.cs"
   ]
 }

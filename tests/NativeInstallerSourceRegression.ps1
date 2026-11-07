@@ -407,9 +407,7 @@ $result = [pscustomobject]@{
     PythonDockerToolContract = (
         $runtimeTools -match 'talvora_python_info' -and
         $runtimeTools -match 'talvora_python_run' -and
-        $runtimeTools -match 'talvora_python_venv_create' -and
-        $runtimeTools -match 'talvora_pip_install' -and
-        $runtimeTools -match 'talvora_pip_run' -and
+        $runtimeTools -match 'talvora_uv_run' -and
         $runtimeTools -match 'talvora_docker_info' -and
         $runtimeTools -match 'talvora_docker_ps' -and
         $runtimeTools -match 'talvora_docker_images' -and
@@ -418,7 +416,7 @@ $result = [pscustomobject]@{
         $runtimeTools -match 'talvora_docker_run' -and
         $runtimeTools -match 'talvora_docker_compose_run' -and
         $runtimeTools -match 'complete Docker CLI surface' -and
-        $runtimeTools -match 'No pip subcommand, package, index, target, or option allowlist/denylist'
+        $runtimeTools -match 'Use instead of pip or venv'
     )
     SessionToolContract = (
         $sessionTools -match 'talvora_session_list' -and
