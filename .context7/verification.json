@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T19:48:04Z",
-  "scope": "D43: Turkish local day names and measured worklog session durations",
+  "verifiedAtUtc": "2026-11-07T20:01:17Z",
+  "scope": "D44: WPF template focus/hover triggers and width-linked repair count underline",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D43: DateTimeOffset/DateTime custom date-time patterns d MMMM dddd and d MMMM yyyy dddd use the CultureInfo month and weekday names, supporting tr-TR labels (query: \"Custom date and time format strings d MMMM dddd with CultureInfo tr-TR and another-year yyyy. DateTime.ToString(format, CultureInfo.GetCultureInfo(\\\"tr-TR\\\")) Turkish month weekday names; DateTimeOffset time HH:mm:ss.\")."
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-07 D44: WPF ControlTemplate.Triggers supports targeted setters on IsMouseOver and IsKeyboardFocused for named template elements; template names have their own XAML namescope, and a Line.X2 binding can reference a named TextBlock's ActualWidth inside that template. Context7 queries: ControlTemplate.Triggers IsKeyboardFocused Setter TargetName, and a Line whose X2 binds to ActualWidth with ElementName inside a template; WPF XAML inside ControlTemplate set Line.X2 with Binding ActualWidth ElementName Label."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings"
+    "https://learn.microsoft.com/en-us/dotnet/desktop/wpf/advanced/styling-for-focus-in-controls-and-focusvisualstyle",
+    "https://learn.microsoft.com/en-us/dotnet/desktop/wpf/advanced/wpf-xaml-namescopes"
   ]
 }

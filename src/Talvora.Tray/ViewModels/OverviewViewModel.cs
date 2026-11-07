@@ -37,6 +37,7 @@ internal sealed class OverviewViewModel : ObservableObject
     private int _optionalCount;
     private int _recoveryCount;
     private bool _hasRecovery;
+    private string _recoveryText = string.Empty;
     private bool _canRepair;
     private ManagedMcpDashboardState? _repairTarget;
     private string _summary = string.Empty;
@@ -63,6 +64,8 @@ internal sealed class OverviewViewModel : ObservableObject
     public int OptionalCount { get => _optionalCount; private set => SetProperty(ref _optionalCount, value); }
     public int RecoveryCount { get => _recoveryCount; private set => SetProperty(ref _recoveryCount, value); }
     public bool HasRecovery { get => _hasRecovery; private set => SetProperty(ref _hasRecovery, value); }
+    // D44: the repair count is its own link text; it opens Olaylar on "Onarımlar".
+    public string RecoveryText { get => _recoveryText; private set => SetProperty(ref _recoveryText, value); }
     public bool IsLoading { get => _isLoading; private set => SetProperty(ref _isLoading, value); }
     public bool IsWide { get => _isWide; set => SetProperty(ref _isWide, value); }
     public bool CanRepair { get => _canRepair; private set => SetProperty(ref _canRepair, value); }
@@ -144,6 +147,7 @@ internal sealed class OverviewViewModel : ObservableObject
                 !entry.DedupKey.EndsWith(":already-ready", StringComparison.Ordinal))
             .Sum(entry => entry.Count);
         HasRecovery = RecoveryCount > 0;
+        RecoveryText = HasRecovery ? $"son 24 saatte {RecoveryCount} otomatik onarım" : string.Empty;
         RecentEvents.Clear();
         foreach (var entry in events.OrderByDescending(item => item.LastOccurredAtUtc).Take(6))
             RecentEvents.Add(new OverviewEventItem(entry.LastOccurredAtUtc.ToLocalTime().ToString("HH:mm:ss"),
@@ -157,7 +161,6 @@ internal sealed class OverviewViewModel : ObservableObject
             $"{ReadyCount} hazır",
             AttentionCount > 0 ? $"{AttentionCount} dikkat" : null,
             OptionalCount > 0 ? $"{OptionalCount} kapalı" : null,
-            HasRecovery ? $"son 24 saatte {RecoveryCount} otomatik onarım" : null,
         }.Where(part => part is not null));
         _snapshot = snapshot;
         RebuildSockets(checkedAt);

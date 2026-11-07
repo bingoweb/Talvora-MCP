@@ -40,8 +40,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D37 — Event slips in plain Turkish (audit 40; RED old text, EVENT_TEXT_TURKISH_GREEN; Changed 26/0 and signed-in Full 70/0 Hepsi geçti.; installed 19a892a, loopback smoke green; GitHub CI 42405471230 success; visual check pending (Claude); Gitea #9 comment 210)
 - [x] D38 — "Yalnızca hatalar ve ajan işleri" counts ChatGPT as an agent (audit 40, user decision; RED ChatGPT agent card filtered, N8_NOTIFICATIONS_GREEN; Changed 16/0 and signed-in Full 70/0 Hepsi geçti.; installed 1aad6e4, loopback smoke green; GitHub CI 42406357407 success; Gitea #9 comment 211)
 - [x] D39 — Penpot error text uses the shared secret masking (audit 40; RED CS0117 then D39_PENPOT_REDACTION_GREEN; Changed 28/0 and signed-in Full 70/0 Hepsi geçti.; installed d5cd0bc, loopback smoke green; GitHub CI 42407259647 success; Gitea #9 comment 212)
-- [~] D43 — Çalışma günlüğü names the day once ("Bugün 15:44 · 3 sn") (audit 41, design improvement; RED CS0103 then D43_SESSION_TIME_TEXT_GREEN; Changed 27/0 and signed-in Full 70/0 Hepsi geçti.; before/after worklog-session and wl2-empty PNGs, both themes: artifacts/d43-before and artifacts/d43-after; exact-commit install, smoke, CI pending; visual check pending (Claude); Gitea #9 comment 213)
-- [ ] D44 — The repair count opens Olaylar on "Onarımlar" (audit 41, design improvement; after D42)
+- [~] D43 — Çalışma günlüğü names the day once ("Bugün 15:44 · 3 sn") (audit 41, design improvement; RED CS0103 then D43_SESSION_TIME_TEXT_GREEN; Changed 27/0 and signed-in Full 70/0 Hepsi geçti.; before/after worklog-session and wl2-empty PNGs, both themes: artifacts/d43-before and artifacts/d43-after; installed 5b769e4, Control Center and loopback smoke green; GitHub CI 42408388279 success; visual check pending (Claude); Gitea #9 comment 213)
+- [~] D44 — The repair count opens Olaylar on "Onarımlar" (audit 41, design improvement; RED CS1061 then UI3_NARRATOR_GREEN; Changed 17/0, signed-in Full 70/0 Hepsi geçti.; UI smoke open link/filtered repairs green, before/after PNGs both themes artifacts/d44-before and artifacts/d44-after; exact-commit install, smoke and CI pending; visual check pending (Claude); Gitea #9 comment 214)
 - [ ] OB1 — talvora_note_write: write Obsidian vault notes, refuse secrets and the linked repo docs (user request 2026-11-01)
 
 ## User queue
@@ -58,6 +58,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D44, executor ChatGPT via Talvora: the 24-hour repair count is a dedicated overview link with the prescribed dotted brass underline and keyboard focus ring; click selects Olaylar → Onarımlar and clears search/service filters. RED CS1061 then UI3_NARRATOR_GREEN; Changed 17/0, signed-in Full 70/0 Hepsi geçti. Context7 /dotnet/docs-desktop WPF template triggers and namescopes. Exact-commit install, smoke, CI pending. Gitea #9 comment 214.
+  Visual evidence — before: artifacts/d44-before/control-center-ui3-overview-{initial,alternate}.png; after: artifacts/d44-after/control-center-d44-{link,repairs}-{initial,alternate}.png; Claude visual check pending.
+  Self-review — cosmetics: quiet monospace link, text-width dotted underline, hover and focus styling use prescribed tokens only.
+  Self-review — usability: click enters events with only Onarımlar category, search/service cleared; keyboard and accessibility names preserved.
+  Self-review — Turkish: current status copy reused unchanged; no unrelated strings modified.
+  Self-review — correctness/security: D42 count and event filtering unchanged; UI/Notification regressions and both-theme smoke green.
 - 2026-11-07 — D43, executor ChatGPT via Talvora: added LocalTimeText for day-once Turkish worklog session labels and actual measured duration; list and detail XAML bindings updated without touching timeline, storage or filters. RED CS0103 then D43_SESSION_TIME_TEXT_GREEN; Changed 27/0 and signed-in Full 70/0 Hepsi geçti. Context7 /dotnet/docs tr-TR custom date-time formats; installed runtime/CI pending. Gitea issue #9 comment 213.
   Visual evidence — before: artifacts/d43-before; after: artifacts/d43-after, worklog-session and wl2-empty, both themes; Claude visual check pending.
   Self-review — cosmetics: only list/detail timestamp rows, no styling or layout tokens changed.

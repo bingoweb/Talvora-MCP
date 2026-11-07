@@ -54,6 +54,7 @@ internal static partial class ControlCenterSmoke
         AssertSn8Failures(window, overview, variant);
         AssertSn9HotspotsSurvivePolls(overview);
         SaveVisualSnapshotIfRequested(window, "ui3-overview-" + variant);
+        AssertD44RepairCountOpensRepairs(window, overview, snapshot, variant);
 
         window.ShellModel.SelectPage(3);
         if (window.ChainContentHost.Content is not Views.ChainView chain)

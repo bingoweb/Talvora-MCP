@@ -97,6 +97,18 @@ internal sealed partial class EventsView : System.Windows.Controls.UserControl
 
     internal void OpenRawLog() => Model.RawLogVisible = true;
 
+    // D44: opens a category the way a click on its chip does; the search and the service filter are cleared.
+    internal void ShowCategory(string label)
+    {
+        Model.SearchText = string.Empty;
+        Model.SelectedServiceId = null;
+        foreach (var chip in CategoryChips.Children.OfType<System.Windows.Controls.RadioButton>())
+        {
+            if (chip.Tag is string tag && tag == label)
+                chip.IsChecked = true;
+        }
+    }
+
     private void OnCategoryChecked(object sender, RoutedEventArgs e)
     {
         if (DataContext is EventsViewModel vm &&

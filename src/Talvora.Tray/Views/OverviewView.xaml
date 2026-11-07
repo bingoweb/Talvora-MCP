@@ -62,8 +62,44 @@
                     <TextBlock Text="{Binding Description}" Style="{StaticResource Tv.Type.Body}"
                                Foreground="{DynamicResource Sn.InkMuted}" TextWrapping="Wrap" Margin="0,4,0,0"/>
                     <!-- Counts and the check time on separate lines: a version string must never break mid-word. -->
-                    <TextBlock Text="{Binding Summary}" Style="{StaticResource Tv.Type.Mono}"
-                               Foreground="{DynamicResource Sn.InkMuted}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                    <!-- D44: the repair count is a link to Olaylar → Onarımlar; on a narrow window it wraps to its own line. -->
+                    <WrapPanel Margin="0,8,0,0">
+                        <TextBlock Text="{Binding Summary}" Style="{StaticResource Tv.Type.Mono}"
+                                   Foreground="{DynamicResource Sn.InkMuted}"/>
+                        <TextBlock Text=" · " Style="{StaticResource Tv.Type.Mono}"
+                                   Foreground="{DynamicResource Sn.InkMuted}"
+                                   Visibility="{Binding HasRecovery, Converter={StaticResource OverviewBool}}"/>
+                        <Button Click="OnShowRepairs" Cursor="Hand" FocusVisualStyle="{x:Null}" Margin="-4,-2,0,-2"
+                                Visibility="{Binding HasRecovery, Converter={StaticResource OverviewBool}}"
+                                AutomationProperties.Name="{Binding RecoveryText}"
+                                AutomationProperties.HelpText="Olaylar sayfasını Onarımlar süzgeciyle açar">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Ring" BorderThickness="2" BorderBrush="Transparent"
+                                            CornerRadius="2" Padding="2,0,2,1" Background="Transparent">
+                                        <Grid>
+                                            <TextBlock x:Name="Label" Text="{Binding RecoveryText}"
+                                                       Style="{StaticResource Tv.Type.Mono}"
+                                                       Foreground="{DynamicResource Sn.InkMuted}"/>
+                                            <Line x:Name="Rule" X1="0" Y1="0.5" Y2="0.5" VerticalAlignment="Bottom"
+                                                  X2="{Binding ActualWidth, ElementName=Label}"
+                                                  Stroke="{DynamicResource Sn.Brass}" StrokeThickness="1"
+                                                  StrokeDashArray="1 2" SnapsToDevicePixels="True"/>
+                                        </Grid>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource Sn.Ink}"/>
+                                            <Setter TargetName="Rule" Property="StrokeDashArray" Value="{x:Null}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource Sn.Focus}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </WrapPanel>
                     <TextBlock Text="{Binding StatusLine}" Style="{StaticResource Tv.Type.Mono}"
                                Foreground="{DynamicResource Sn.InkFaint}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
                     <StackPanel Orientation="Horizontal" Margin="0,14,0,0">

@@ -40,6 +40,12 @@ internal sealed partial class ShellWindow
                 };
                 _overviewView.ServiceRequested += state => _ = OpenUi3DetailsAsync(state);
                 _overviewView.ShowEventsRequested += () => _shellModel?.SelectPage(4);
+                // D44: the repair count opens Olaylar on "Onarımlar".
+                _overviewView.ShowRepairsRequested += () =>
+                {
+                    _shellModel?.SelectPage(4);
+                    _eventsView?.ShowCategory("Onarımlar");
+                };
                 OverviewContentHost.Content = _overviewView;
                 StartTrafficPoller();
             }

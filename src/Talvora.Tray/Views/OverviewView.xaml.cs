@@ -22,6 +22,7 @@ internal sealed partial class OverviewView : System.Windows.Controls.UserControl
     public event Action? RepairRequested;
     public event Action? DetailsRequested;
     public event Action? ShowEventsRequested;
+    public event Action? ShowRepairsRequested;
     public event Action<ManagedMcpDashboardState>? ServiceRequested;
 
     public void ApplySnapshot(ControlCenterDashboardSnapshot snapshot, DateTimeOffset checkedAt,
@@ -53,4 +54,5 @@ internal sealed partial class OverviewView : System.Windows.Controls.UserControl
     private void OnRepair(object sender, RoutedEventArgs e) => RepairRequested?.Invoke();
     private void OnDetails(object sender, RoutedEventArgs e) => DetailsRequested?.Invoke();
     private void OnShowEvents(object sender, RoutedEventArgs e) => ShowEventsRequested?.Invoke();
+    private void OnShowRepairs(object sender, RoutedEventArgs e) => ShowRepairsRequested?.Invoke();
 }

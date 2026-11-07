@@ -108,6 +108,10 @@ internal static partial class Program
             !new Talvora.Tray.ManagedMcpRepairResult("Doğrulama", "", "", false, ready, ready).RepairApplied &&
             new Talvora.Tray.ManagedMcpRepairResult("Yeniden başlat", "", "", false, offline, ready).RepairApplied,
             "D42: only a repair that started from a non-ready state was applied.");
+        // D44: the repair count is its own link text; the summary keeps only the states.
+        Ui3Check(model.RecoveryText == "son 24 saatte 2 otomatik onarım" &&
+            !model.Summary.Contains("onarım", StringComparison.Ordinal),
+            "D44: the repair count must leave the summary and become the link text.");
     }
 
     private static void Ui3Check(bool condition, string reason)
