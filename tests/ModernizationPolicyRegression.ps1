@@ -309,7 +309,7 @@ finally {
 # UR1: developer tools find and run their programs as the signed-in user, never in the service account's environment.
 function Assert-SignedInUserToolchain([string]$Card, [string[]]$Files) {
     foreach ($runnerFile in $Files) {
-        Assert-NotContains $runnerFile '(?<!InteractiveUser)ProcessRunner\.RunAsync\(' "${Card}: $runnerFile still runs a developer tool as the service account."
+        Assert-NotContains $runnerFile '(?<!InteractiveUser)ProcessRunner\.Run\w*Async\(' "${Card}: $runnerFile still runs a developer tool as the service account."
         Assert-NotContains $runnerFile 'CommandResolver\.Resolve(All)?\(' "${Card}: $runnerFile still resolves a developer tool on the service account's PATH."
         Assert-NotContains $runnerFile 'Environment\.GetEnvironmentVariable\([^,()]*\)' "${Card}: $runnerFile still reads the service account's environment."
         Assert-NotContains $runnerFile 'Environment\.GetFolderPath\(' "${Card}: $runnerFile still takes a folder from the service account's profile."

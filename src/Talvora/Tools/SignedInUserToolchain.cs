@@ -68,6 +68,44 @@ internal static class SignedInUserToolchain
                 timeoutSeconds,
                 cancellationToken);
 
+    // The version probes of the *_info tools: the same failure rule as ProcessRunner.RunCheckedAsync.
+    internal static async Task<ProcessExecutionResult> RunCheckedAsync(
+        string executable,
+        string? workingDirectory,
+        IEnumerable<string>? arguments = null,
+        IReadOnlyDictionary<string, string?>? environment = null,
+        int timeoutSeconds = 0,
+        CancellationToken cancellationToken = default)
+    {
+        if (!RunsAsService)
+        {
+            return await ProcessRunner.RunCheckedAsync(
+                executable,
+                workingDirectory,
+                arguments,
+                environment,
+                timeoutSeconds,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        var result = await RunAsync(
+            executable,
+            workingDirectory,
+            arguments,
+            environment,
+            timeoutSeconds,
+            cancellationToken).ConfigureAwait(false);
+        if (result.TimedOut || result.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"Process failed. Executable={executable}, ExitCode={result.ExitCode}, " +
+                $"TimedOut={result.TimedOut}, OutputDrainTimedOut={result.OutputDrainTimedOut}, " +
+                $"StderrTruncated={result.StandardErrorTruncated}, stderr={result.StandardError}");
+        }
+
+        return result;
+    }
+
     private static bool IsLocalSystem()
     {
         using var identity = WindowsIdentity.GetCurrent();

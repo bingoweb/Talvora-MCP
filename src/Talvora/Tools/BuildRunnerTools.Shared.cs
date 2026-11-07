@@ -79,7 +79,7 @@ private static Task<TalvoraCliCommandResponse> RunDotnetAsync(
         int timeoutSeconds = 60,
         CancellationToken cancellationToken = default)
     {
-        var result = await ProcessRunner.RunCheckedAsync(
+        var result = await SignedInUserToolchain.RunCheckedAsync(
             executable,
             workingDirectory,
             arguments,
