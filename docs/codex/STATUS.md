@@ -32,6 +32,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
+- [ ] D51 — The full installed smoke is green again (Claude's check while closing UV1 and RS1; first: from D51 on every install runs the installed smokes, Deploy row)
 - [ ] D45 — Çalışma günlüğü measures a session up to its last step (audit 42, data truth)
 - [ ] D50 — Çalışma günlüğü keeps every session (audit 42, data truth; after D45)
 - [ ] D46 — A CI run that is still going is not a failed step (audit 42)
@@ -46,6 +47,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 ## User queue
 
 - [ ] U14 — Makine (sistem) PATH değişkeninden `C:\Users\tayla\.cargo\bin` satırını kaldırın; bu klasör kullanıcı PATH'inizde zaten var. Başlat'ta "ortam değişkenleri" yazın → Ortam Değişkenleri → Sistem değişkenleri → Path → Düzenle → satırı silin → Tamam. (RS2)
+- [ ] U15 — ChatGPT'de Talvora Dev ve Talvora Admin bağlayıcılarını yenileyin, Claude Desktop'ı da bir kez kapatıp açın: araç listesi değişti (`talvora_uv_run` geldi; `talvora_pip_install`, `talvora_pip_run` ve `talvora_python_venv_create` kalktı). (UV1)
 
 ## Open questions
 
@@ -56,6 +58,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — Claude: D51 written and put first. The full installed smoke against d93a5ea stopped at nine older faults (find_files relative paths, the OS TCP listener table, job_stop and dev_server_stop flagged by H3, the git_log argument and its compact entries, the PowerShell step's folder and exit code, the Codex profile check, the SDK `/?` probe, the destructive count 98 vs live 106); Claude fixed them one run at a time in a scratch clone until the run went through, and verified the H3 change red-first in a second clone. AGENTS.md: the Deploy row now runs `--metadata-policy-only` and the full installed smoke after every install; TOOLCHAIN PREFERENCE names `talvora_uv_run`. U15: the connectors see the new tool list only after a refresh.
 
 - 2026-11-08 — RS2, executor Claude (one-off): as LocalSystem through Talvora, the service account's own rustup (`C:\WINDOWS\system32\config\systemprofile\.cargo\bin\rustup.exe`) ran `self uninstall -y` as a detached job (exit 0 after 12 min: toolchain stable-x86_64-pc-windows-msvc, rustup home, cargo home and binaries removed); `choco uninstall rustup.install -y --skip-autouninstaller` removed the package record (1/1, lib folder gone). `systemprofile\.cargo` and `systemprofile\.rustup` no longer exist; `talvora_rust_info` and `cargo --version` as the user are unchanged (1.99.1, rustup 1.29.2). The machine PATH still lists `C:\Users\tayla\.cargo\bin` (a user folder in the machine PATH; the user PATH already has it): a machine setting, so U14 for the user. UV1 and RS1 closed with the installed d93a5ea, the live checks on their queue lines and CI 42419169512. Their "full installed smoke" acceptance is not met: the full run stops at steps older than both cards (D51).
 

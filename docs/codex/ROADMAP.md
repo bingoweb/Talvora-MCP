@@ -30,6 +30,478 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Check 2026-11-08 (Claude, the full installed smoke while closing UV1 and RS1) · result: D51
+
+Claude ran the full installed smoke against the installed d93a5ea: red. None of the stops comes from UV1 or RS1; the full run had not been made for weeks, because installs were checked with `--loopback-policy-live` only. Claude fixed every stop in a scratch clone, one run at a time, until the run went through to the end; D51 carries the result. From D51 on, every install runs the installed smokes (AGENTS.md Deploy row).
+
+### D51 — The full installed smoke is green again
+
+**Why:** the full installed smoke (`dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release -- http://127.0.0.1:7676/mcp C:\Users\tayla\Talvora-MCP`) is red against the installed d93a5ea, and `--metadata-policy-only` too. The stops, in run order:
+1. `talvora_find_files` returns paths relative to `root` by default (since 5ea89e7); the smoke compares the absolute path.
+2. This Windows build (10.0.26300) lists only 4–5 listening sockets in its TCP table (netstat, `IPGlobalProperties` and `Get-NetTCPConnection` agree) and never Talvora's 7676, so `talvora_tcp_listeners` cannot show Talvora's listener; `talvora_tcp_connections` shows the live 7676 connections.
+3. `talvora_job_stop` answers `{"found":true,"killIssued":true,"exited":true,"state":"Exited","exitCode":-1}` with `isError: true`. H3 (`ToolFailureGuidance.Apply`) counts every non-zero `exitCode` as the call's own failure, but this is the exit code of the job the call has just stopped. `talvora_dev_server_stop` stops the smoke's dev-server step the same way, `talvora_job_get` (a finished job with a non-zero exit) and `talvora_dev_server_get` behave the same, and Çalışma günlüğü shows such steps as failed.
+4. The smoke calls `talvora_git_log` with `maxCount`; the parameter is `maxCommits` (since 5ea89e7), and unknown arguments are rejected.
+5. `talvora_git_log` returns compact entries without `commit` by default; the smoke looks for the full HEAD id.
+6. The PowerShell step creates its working folder under `C:\ProgramData\Talvora`, which the signed-in user may not write, and runs a script that exits 7 on purpose through `EnsureSuccess`, which H3 rightly reports as an error result.
+7. The Codex discovery check accepts only `sandbox: workspace-write` (the balanced profile); the user's profile is trusted, so `talvora_codex_info` rightly reports `danger-full-access`.
+8. The Windows SDK probe calls each release tool with `/?` through `EnsureSuccess`; `makeappx /?` prints its usage and exits 1, which H3 rightly reports as an error result.
+9. `ExpectedDestructiveToolCount` is 98 while the live server marks 106 tools destructive (the constant was last set by Q2a; tools added since were not counted).
+Also, `SmokeSupport.EnsureSuccess` throws only "Tool failed: <name>" and hides the reason.
+
+**Decision (Claude):** a tool that reports on a process this call did not run (`talvora_job_get`, `talvora_job_stop`, `talvora_dev_server_get`, `talvora_dev_server_stop`) returns that process's exit code as data; only `timedOut: true` or `success: false` make such a call fail. Every tool that runs its process within the call (`talvora_run_process`, `talvora_run_powershell`, `talvora_user_run`, `talvora_dev_server_start`, `talvora_dev_server_wait`, the build runners …) keeps H3 unchanged. The smoke follows the tools as they are: no tool changes its arguments or its output.
+
+**Verified by Claude** in scratch clones of d93a5ea: the new regression stops with Step 1's message before Step 2 and prints `D51_REPORTED_EXIT_CODES_GREEN` after Step 5; the whole Notification regression and the smoke's `--codex-integration-policy-only` stay green; with Steps 6 and 7, `--metadata-policy-only` is green against the installed d93a5ea, and the full run reaches `TALVORA MCP SMOKE GREEN` when its `talvora_job_stop`, `talvora_job_get`, `talvora_dev_server_get` and `talvora_dev_server_stop` calls are taken the way Steps 2–5 make the server answer them. Against the installed d93a5ea it still stops at `talvora_job_stop` until the D51 build is installed (Step 7's red evidence).
+
+**Files:** `src/Talvora/StructuredResultFailure.cs`, `src/Talvora/ToolFailureGuidance.cs`, `src/Talvora/ToolResultTextPolicy.cs`, `src/Talvora/Program.cs`, `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `src/Talvora/TalvoraDesktopProgressEvidence.cs`, `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`, `tests/Talvora.Notification.Regression/Program.D51.cs` (new), `tests/Talvora.Notification.Regression/Program.cs`, `tests/Talvora.Smoke/SmokeSupport.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.Core.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.HttpNetwork.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.WatchJobGit.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.ProcessSearch.cs`, `tests/Talvora.Smoke/SmokeScenarios.ApplicationDevelopment.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+**Tests that pin these lines** and stay green unchanged: `tests/ModernizationPolicyRegression.ps1` lines 54–55 (`StructuredResultFailure.cs` still contains `exitCode`; the notifier still calls `StructuredResultFailure.IsFailure`); the smoke compiles `StructuredResultFailure.cs` and `ToolResultTextPolicy.cs` directly (`tests/Talvora.Smoke/Talvora.Smoke.csproj`), and its source check `RunToolResultTextPolicy` still calls `ToolResultTextPolicy.Apply(result)`, which compiles because the tool name is optional.
+
+#### Exact implementation
+
+Step 1 (red first) — new file `tests/Talvora.Notification.Regression/Program.D51.cs`:
+
+```csharp
+using System.Collections.Concurrent;
+using System.Text.Json;
+using ModelContextProtocol.Protocol;
+using Talvora;
+using Talvora.Shared;
+
+internal static partial class Program
+{
+    /// <summary>D51: a status or stop tool reports another process's exit code as data; the call itself did not fail.</summary>
+    private static async Task AssertD51ReportedExitCodesAsync()
+    {
+        const string stopped = """{"found":true,"killIssued":true,"exited":true,"state":"Exited","exitCode":-1}""";
+        foreach (var tool in new[] { "talvora_job_get", "talvora_job_stop", "talvora_dev_server_get", "talvora_dev_server_stop" })
+        {
+            if (ToolFailureGuidance.Apply(tool, D51Result(stopped)).IsError is true)
+                throw new InvalidOperationException($"D51: {tool} reports another process's exit code; the call itself succeeded.");
+        }
+
+        foreach (var tool in new[] { "talvora_run_process", "talvora_dev_server_wait" })
+        {
+            if (ToolFailureGuidance.Apply(tool, D51Result("""{"exitCode":1}""")).IsError is not true)
+                throw new InvalidOperationException($"D51: {tool} ran the process in this call; a non-zero exit code stays an error (H3).");
+        }
+
+        if (!await D51StepFailedAsync("talvora_run_process", """{"exitCode":1}"""))
+            throw new InvalidOperationException("D51: a command that failed in this call is a failed step in Çalışma günlüğü.");
+        if (await D51StepFailedAsync("talvora_job_stop", stopped))
+            throw new InvalidOperationException("D51: a stopped job is not a failed step in Çalışma günlüğü.");
+
+        Console.WriteLine("D51_REPORTED_EXIT_CODES_GREEN");
+    }
+
+    private static async Task<bool> D51StepFailedAsync(string tool, string json)
+    {
+        var observed = new ConcurrentQueue<DesktopProgressMessage>();
+        var notifier = CreateNotifier(observed);
+        try
+        {
+            _ = await notifier.RunToolCallAsync(tool, null,
+                _ => ValueTask.FromResult(D51Result(json)), CancellationToken.None, "/mcp", "Claude");
+        }
+        finally
+        {
+            await notifier.DisposeAsync();
+        }
+        return observed.Any(message => message.Kind == DesktopProgressKind.Failed);
+    }
+
+    private static CallToolResult D51Result(string json) => new()
+    {
+        Content = [new TextContentBlock { Text = json }],
+        StructuredContent = JsonDocument.Parse(json).RootElement.Clone(),
+    };
+}
+```
+
+In `tests/Talvora.Notification.Regression/Program.cs`, after the line `        await AssertD41CallerIdentityAsync();` add the line `        await AssertD51ReportedExitCodesAsync();`. Run the Notification regression: it must stop with `D51: talvora_job_get reports another process's exit code; the call itself succeeded.` (the red evidence).
+
+Step 2 — `src/Talvora/StructuredResultFailure.cs`, three replacements:
+
+Replace
+
+```csharp
+    internal static bool IsFailure(JsonElement json) => Describe(json) is not null;
+
+    internal static string? Describe(JsonElement json)
+    {
+```
+
+with
+
+```csharp
+    // D51: these tools report a process this call did not run (a background job or a dev server); that process's
+    // exit code is data, so only timedOut and success=false make such a call a failure.
+    private static readonly HashSet<string> ReportedProcessTools = new(StringComparer.Ordinal)
+    {
+        "job_get", "job_stop", "dev_server_get", "dev_server_stop",
+    };
+
+    internal static bool IsFailure(JsonElement json, string? toolName = null) => Describe(json, toolName) is not null;
+
+    internal static string? Describe(JsonElement json, string? toolName = null)
+    {
+```
+
+Replace
+
+```csharp
+        if (TryGetPropertyIgnoreCase(json, "exitCode", out var exitCode) &&
+```
+
+with
+
+```csharp
+        if (!ReportsAnotherProcess(toolName) &&
+            TryGetPropertyIgnoreCase(json, "exitCode", out var exitCode) &&
+```
+
+Replace
+
+```csharp
+    private static bool TryGetPropertyIgnoreCase(
+```
+
+with
+
+```csharp
+    internal static bool ReportsAnotherProcess(string? toolName)
+    {
+        var name = toolName?.Trim() ?? string.Empty;
+        if (name.StartsWith("talvora_", StringComparison.OrdinalIgnoreCase))
+        {
+            name = name["talvora_".Length..];
+        }
+
+        return ReportedProcessTools.Contains(name);
+    }
+
+    private static bool TryGetPropertyIgnoreCase(
+```
+
+Step 3 — `src/Talvora/ToolFailureGuidance.cs`:
+
+Replace
+
+```csharp
+            result.StructuredContent is { } structured && StructuredResultFailure.IsFailure(structured);
+```
+
+with
+
+```csharp
+            result.StructuredContent is { } structured && StructuredResultFailure.IsFailure(structured, toolName);
+```
+
+Step 4 — `src/Talvora/ToolResultTextPolicy.cs` (two replacements) and `src/Talvora/Program.cs` (one):
+
+Replace
+
+```csharp
+    internal static CallToolResult Apply(CallToolResult result)
+```
+
+with
+
+```csharp
+    internal static CallToolResult Apply(CallToolResult result, string? toolName = null)
+```
+
+Replace
+
+```csharp
+            StructuredResultFailure.IsFailure(structured))
+```
+
+with
+
+```csharp
+            StructuredResultFailure.IsFailure(structured, toolName))
+```
+
+Replace
+
+```csharp
+            return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(result));
+```
+
+with
+
+```csharp
+            return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(result, request.Params?.Name));
+```
+
+Step 5 — `src/Talvora/TalvoraDesktopProgressNotifier.cs` (four replacements) and `src/Talvora/TalvoraDesktopProgressEvidence.cs` (one: the second caller of `TryDescribeFailure`, where `toolName` is already in scope):
+
+Replace
+
+```csharp
+            var failed = TryDescribeFailure(result);
+```
+
+with
+
+```csharp
+            var failed = TryDescribeFailure(result, canonicalToolName);
+```
+
+Replace
+
+```csharp
+    private static bool TryDescribeFailure<T>(T result)
+```
+
+with
+
+```csharp
+    private static bool TryDescribeFailure<T>(T result, string toolName)
+```
+
+Replace
+
+```csharp
+                StructuredResultFailure.IsFailure(structured))
+```
+
+with
+
+```csharp
+                StructuredResultFailure.IsFailure(structured, toolName))
+```
+
+Replace
+
+```csharp
+            return StructuredResultFailure.IsFailure(JsonSerializer.SerializeToElement(result));
+```
+
+with
+
+```csharp
+            return StructuredResultFailure.IsFailure(JsonSerializer.SerializeToElement(result), toolName);
+```
+
+Replace
+
+```csharp
+            if (!TryDescribeFailure(result) && TryGetPropertyIgnoreCase(json, "codeEvidence", out var codeEvidence) &&
+```
+
+with
+
+```csharp
+            if (!TryDescribeFailure(result, toolName) && TryGetPropertyIgnoreCase(json, "codeEvidence", out var codeEvidence) &&
+```
+
+The Notification regression now prints `D51_REPORTED_EXIT_CODES_GREEN`.
+
+Step 6 — `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`:
+
+Replace
+
+```csharp
+    public const int ExpectedDestructiveToolCount = 98;
+```
+
+with
+
+```csharp
+    public const int ExpectedDestructiveToolCount = 106;
+```
+
+Step 7 — the smoke. `tests/Talvora.Smoke/SmokeSupport.cs`:
+
+Replace
+
+```csharp
+            throw new InvalidOperationException($"Tool failed: {tool.Name}");
+```
+
+with
+
+```csharp
+            throw new InvalidOperationException(
+                $"Tool failed: {tool.Name}: {string.Join(" ", result.Content.OfType<TextContentBlock>().Select(block => block.Text))}");
+```
+
+`tests/Talvora.Smoke/SmokeScenarios.Workspace.Core.cs`:
+
+Replace
+
+```csharp
+                        string.Equals(foundPath.GetString(), developerPatchFile, StringComparison.OrdinalIgnoreCase)))
+```
+
+with
+
+```csharp
+                        string.Equals(foundPath.GetString(), Path.GetRelativePath(root, developerPatchFile), StringComparison.OrdinalIgnoreCase)))
+```
+
+`tests/Talvora.Smoke/SmokeScenarios.Workspace.HttpNetwork.cs`:
+
+Replace
+
+```csharp
+                var tcpListenersResult = await EnsureSuccess(byName["talvora_tcp_listeners"], new()
+                {
+                    ["localPort"] = 7676,
+                });
+                if (tcpListenersResult.StructuredContent is not { } tcpListenersJson ||
+                    tcpListenersJson.GetProperty("count").GetInt32() < 1 ||
+                    !tcpListenersJson.GetProperty("connections").EnumerateArray().Any(connection =>
+                        connection.GetProperty("localPort").GetInt32() == 7676 &&
+                        connection.GetProperty("processId").GetInt32() > 0))
+                {
+                    throw new InvalidOperationException("tcp_listeners did not report the Talvora listener.");
+```
+
+with
+
+```csharp
+                // D51: some Windows builds list only a few listeners in the TCP table (netstat, IPGlobalProperties and
+                // Get-NetTCPConnection alike), so the live Talvora socket is checked through its established connections.
+                await EnsureSuccess(byName["talvora_tcp_listeners"], new()
+                {
+                    ["localPort"] = 7676,
+                });
+                var tcpServerResult = await EnsureSuccess(byName["talvora_tcp_connections"], new()
+                {
+                    ["localPort"] = 7676,
+                    ["state"] = "ESTABLISHED",
+                });
+                if (tcpServerResult.StructuredContent is not { } tcpServerJson ||
+                    !tcpServerJson.GetProperty("connections").EnumerateArray().Any(connection =>
+                        connection.GetProperty("localPort").GetInt32() == 7676 &&
+                        connection.GetProperty("processId").GetInt32() > 0))
+                {
+                    throw new InvalidOperationException("tcp_connections did not report a Talvora connection.");
+```
+
+`tests/Talvora.Smoke/SmokeScenarios.Workspace.WatchJobGit.cs` (the `talvora_git_log` call):
+
+Replace
+
+```csharp
+                    ["maxCount"] = 5,
+```
+
+with
+
+```csharp
+                    ["maxCommits"] = 5,
+                    ["detail"] = "full",
+```
+
+`tests/Talvora.Smoke/SmokeScenarios.Workspace.ProcessSearch.cs` (three replacements):
+
+Replace
+
+```csharp
+        var powerShellRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "Talvora",
+            "PowerShell Smoke " + smokeId);
+```
+
+with
+
+```csharp
+        // D51: C:\ProgramData\Talvora is closed to the signed-in user; the smoke's own workspace (Public Documents)
+        // is open to the user and to LocalSystem, and the folder name keeps its space.
+        var powerShellRoot = Path.Combine(root, "PowerShell Smoke " + smokeId);
+```
+
+Replace
+
+```csharp
+            var powerShellResult = await EnsureSuccess(byName["talvora_run_powershell"], new()
+```
+
+with
+
+```csharp
+            // D51: the script exits 7 on purpose; H3 reports a script's own non-zero exit as an error result.
+            var powerShellResult = await byName["talvora_run_powershell"].CallAsync(new Dictionary<string, object?>
+```
+
+Replace
+
+```csharp
+            if (powerShellResult.StructuredContent is not { } psJson ||
+```
+
+with
+
+```csharp
+            if (powerShellResult.IsError is not true ||
+                powerShellResult.StructuredContent is not { } psJson ||
+```
+
+`tests/Talvora.Smoke/SmokeScenarios.ApplicationDevelopment.cs` (two replacements: the Codex discovery check and the Windows SDK probe loop):
+
+Replace
+
+```csharp
+        if (GetString(codex, "model") != "gpt-6.1-sol" ||
+            GetString(codex, "reasoningEffort") != "medium" ||
+            GetString(codex, "sandbox") != "workspace-write")
+```
+
+with
+
+```csharp
+        // D51: the sandbox follows the signed-in user's Codex profile (balanced: workspace-write; trusted: danger-full-access).
+        if (GetString(codex, "model") != "gpt-6.1-sol" ||
+            GetString(codex, "reasoningEffort") != "medium" ||
+            GetString(codex, "sandbox") is not ("workspace-write" or "danger-full-access"))
+```
+
+Replace
+
+```csharp
+                await EnsureSuccess(byName[toolName], new()
+                {
+                    ["workingDirectory"] = repositoryPath,
+                    ["arguments"] = new[] { "/?" },
+                    ["timeoutSeconds"] = 60,
+                });
+```
+
+with
+
+```csharp
+                // D51: with `/?` some SDK tools (makeappx) print their usage and exit 1, which H3 reports as an error
+                // result; the probe proves that the tool runs, not its exit code.
+                var probe = await byName[toolName].CallAsync(new Dictionary<string, object?>
+                {
+                    ["workingDirectory"] = repositoryPath,
+                    ["arguments"] = new[] { "/?" },
+                    ["timeoutSeconds"] = 60,
+                });
+                if (probe.StructuredContent is not { } probeJson ||
+                    !probeJson.TryGetProperty("exitCode", out _) ||
+                    probeJson.TryGetProperty("timedOut", out var probeTimedOut) && probeTimedOut.GetBoolean())
+                {
+                    throw new InvalidOperationException(
+                        $"{toolName} did not run: {string.Join(" ", probe.Content.OfType<TextContentBlock>().Select(block => block.Text))}");
+                }
+```
+
+Before the install, the full smoke with these changes stops at `Tool failed: talvora_job_stop: {"found":true,...,"exitCode":-1}` (the installed d93a5ea still flags it); after the install it passes.
+
+**Context7:** `/modelcontextprotocol/csharp-sdk`, query "CallToolResult IsError tool error" (`CallToolResult.IsError` marks a tool execution error inside a result; `StructuredContent` carries the data). Vendor sources: `https://github.com/modelcontextprotocol/csharp-sdk`, `https://modelcontextprotocol.io/specification/2025-06-18/server/tools`.
+
+**Acceptance:**
+1. Red: Step 1's message before Step 2.
+2. Signed-in Full gate `Hepsi geçti.`
+3. Install (Deploy row); `/healthz.sourceCommit` = HEAD.
+4. `--metadata-policy-only` → `TALVORA MCP METADATA POLICY LIVE GREEN` and the full installed smoke → `TALVORA MCP SMOKE GREEN` (both commands in the Deploy row). A stop at a step this card does not name → proposal with the exact message (EnsureSuccess now prints it); do not change that test.
+5. CI success.
+
 ### Audit 2026-11-08 (42, deep, whole project) · range `audit/2026-11-07-41..97344f7` plus every subsystem · result: D45–D50, live checks of D37, D40–D44 and OB1 closed
 
 User request: "Talvora'yı derinlemesine denetle". Method: the range line by line against the cards (the literal-block cards compared file by file with Claude's audit 41 scratch clone), Claude's signed-in Full gate, CI, the runtime records since audit 41 (tray.log, Windows Application log, `/healthz/traffic`, the worklog history and the event store), the real Control Center read through UI Automation, then the subsystems audit 40 did not read line by line (source-edit commit and rollback core, interactive user runner, delivery and work-contract gates, HTTP download, registry store) and bug-class searches over `src` (culture-dependent casing, `async void`, sync-over-async).
