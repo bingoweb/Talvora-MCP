@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T18:27:52.995Z",
-  "scope": "D42: exclude already-ready recovery results from automatic repair totals using an ordinal suffix comparison",
+  "verifiedAtUtc": "2026-11-07T18:46:52Z",
+  "scope": "D35: HttpMessageHandler test seam for release lookup failure backoff",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D42: string.EndsWith(string, StringComparison.Ordinal) tests an exact case-sensitive suffix appropriate for machine-defined event dedup keys, without culture-sensitive comparison (query: \"C# System.String.EndsWith(string value, StringComparison.Ordinal) .NET 10 checks an exact case-sensitive ordinal suffix; method accepts string value and StringComparison comparisonType\")."
+      "verified": "2026-11-07 D35: HttpMessageHandler.SendAsync(HttpRequestMessage, CancellationToken) can be overridden to return or throw for a test HttpClient(handler); an HTTP failure raises HttpRequestException while cancellation or timeout can raise TaskCanceledException (query: \"C# .NET 10 HttpMessageHandler.SendAsync(HttpRequestMessage,CancellationToken) custom test handler override and HttpClient(HttpMessageHandler) constructor; thrown HttpRequestException from SendAsync and TaskCanceledException behavior\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.string.endswith?view=net-10.0"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpmessagehandler.sendasync?view=net-10.0",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient.-ctor?view=net-10.0"
   ]
 }

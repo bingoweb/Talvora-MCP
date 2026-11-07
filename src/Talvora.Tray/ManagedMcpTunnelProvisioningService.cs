@@ -54,10 +54,11 @@ internal static partial class ManagedMcpTunnelProvisioningService
     private static readonly ConcurrentDictionary<string, RuntimeStatusCacheEntry> RuntimeStatusCache =
         new(StringComparer.OrdinalIgnoreCase);
     private static readonly SemaphoreSlim TunnelClientReleaseGate = new(1, 1);
-    private static readonly HttpClient TunnelClientReleaseHttp = TalvoraHttp.CreateClient(
+    internal static HttpClient TunnelClientReleaseHttp { get; set; } = TalvoraHttp.CreateClient(
         timeout: TimeSpan.FromSeconds(25));
     private static DateTimeOffset _tunnelClientLatestCheckedAtUtc;
     private static string? _cachedTunnelClientLatestTag;
+    private static DateTimeOffset _tunnelClientLatestFailedAtUtc;
     private static readonly Regex TunnelIdPattern = new(
         "^tunnel_[0-9a-f]{32}$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -1462,6 +1463,12 @@ internal static partial class ManagedMcpTunnelProvisioningService
             var latestTag = await GetLatestTunnelClientTagAsync(
                 cancellationToken).ConfigureAwait(false);
 
+            // D35: no release known (GitHub unreachable): keep the running client.
+            if (latestTag is null)
+            {
+                return config;
+            }
+
             var architecture = RuntimeInformation.OSArchitecture switch
             {
                 Architecture.X64 => "amd64",
@@ -1704,7 +1711,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
             .SequenceEqual(SHA256.HashData(second));
     }
 
-    private static async Task<string> GetLatestTunnelClientTagAsync(
+    internal static async Task<string?> GetLatestTunnelClientTagAsync(
         CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
@@ -1712,6 +1719,12 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 _cachedTunnelClientLatestTag) &&
             now - _tunnelClientLatestCheckedAtUtc <
                 TimeSpan.FromHours(6))
+        {
+            return _cachedTunnelClientLatestTag;
+        }
+
+        // D35: after a failed lookup, ask GitHub again only after 30 minutes.
+        if (now - _tunnelClientLatestFailedAtUtc < TimeSpan.FromMinutes(30))
         {
             return _cachedTunnelClientLatestTag;
         }
@@ -1730,45 +1743,63 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 return _cachedTunnelClientLatestTag;
             }
 
-            using var request = new HttpRequestMessage(
-                HttpMethod.Get,
-                "https://api.github.com/repos/openai/tunnel-client/releases/latest");
-            request.Headers.UserAgent.ParseAdd(
-                "Talvora-ControlCenter/1.0");
-
-            using var response =
-                await TunnelClientReleaseHttp.SendAsync(
-                    request,
-                    HttpCompletionOption.ResponseHeadersRead,
-                    cancellationToken).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-
-            using var document = JsonDocument.Parse(
-                await response.Content.ReadAsStringAsync(
-                    cancellationToken).ConfigureAwait(false));
-            if (!document.RootElement.TryGetProperty(
-                    "tag_name",
-                    out var tagElement) ||
-                tagElement.ValueKind != JsonValueKind.String)
+            // D35: after a failed lookup, ask GitHub again only after 30 minutes.
+            if (now - _tunnelClientLatestFailedAtUtc < TimeSpan.FromMinutes(30))
             {
-                throw new InvalidDataException(
-                    "OpenAI tunnel-client latest release response does not contain tag_name.");
+                return _cachedTunnelClientLatestTag;
             }
 
-            var tag = tagElement.GetString();
-            if (string.IsNullOrWhiteSpace(tag) ||
-                !Regex.IsMatch(
-                    tag,
-                    @"^v[0-9]+\.[0-9]+\.[0-9]+$",
-                    RegexOptions.CultureInvariant))
+            try
             {
-                throw new InvalidDataException(
-                    $"OpenAI tunnel-client latest release tag is invalid: {tag}");
-            }
+                using var request = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    "https://api.github.com/repos/openai/tunnel-client/releases/latest");
+                request.Headers.UserAgent.ParseAdd(
+                    "Talvora-ControlCenter/1.0");
 
-            _cachedTunnelClientLatestTag = tag;
-            _tunnelClientLatestCheckedAtUtc = now;
-            return tag;
+                using var response =
+                    await TunnelClientReleaseHttp.SendAsync(
+                        request,
+                        HttpCompletionOption.ResponseHeadersRead,
+                        cancellationToken).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+
+                using var document = JsonDocument.Parse(
+                    await response.Content.ReadAsStringAsync(
+                        cancellationToken).ConfigureAwait(false));
+                if (!document.RootElement.TryGetProperty(
+                        "tag_name",
+                        out var tagElement) ||
+                    tagElement.ValueKind != JsonValueKind.String)
+                {
+                    throw new InvalidDataException(
+                        "OpenAI tunnel-client latest release response does not contain tag_name.");
+                }
+
+                var tag = tagElement.GetString();
+                if (string.IsNullOrWhiteSpace(tag) ||
+                    !Regex.IsMatch(
+                        tag,
+                        @"^v[0-9]+\.[0-9]+\.[0-9]+$",
+                        RegexOptions.CultureInvariant))
+                {
+                    throw new InvalidDataException(
+                        $"OpenAI tunnel-client latest release tag is invalid: {tag}");
+                }
+
+                _cachedTunnelClientLatestTag = tag;
+                _tunnelClientLatestCheckedAtUtc = now;
+                return tag;
+            }
+            catch (Exception ex) when (
+                ex is HttpRequestException or InvalidDataException or JsonException ||
+                (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested))
+            {
+                // D35: one log line per failure window; the running client stays in use.
+                _tunnelClientLatestFailedAtUtc = now;
+                TrayLog.Write("tunnel-client latest release check failed; next try in 30 minutes", ex);
+                return _cachedTunnelClientLatestTag;
+            }
         }
         finally
         {

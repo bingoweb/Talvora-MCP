@@ -29,7 +29,7 @@ Assert-Contract ($main.Contains('ExecuteClientUpdateTransactionAsync(')) 'Both u
 Assert-Contract ($main.Contains('ConnectExistingWithConfigAsync(')) 'Rollback/recovery must be able to connect an exact config without re-entering auto-update.'
 
 $stageStart = $main.IndexOf('private static async Task<BusinessConfig> StageLatestTunnelClientAsync(', [StringComparison]::Ordinal)
-$stageEnd = $main.IndexOf('private static async Task<string> GetLatestTunnelClientTagAsync(', $stageStart, [StringComparison]::Ordinal)
+$stageEnd = $main.IndexOf('internal static async Task<string?> GetLatestTunnelClientTagAsync(', $stageStart, [StringComparison]::Ordinal)
 Assert-Contract ($stageStart -ge 0 -and $stageEnd -gt $stageStart) 'StageLatestTunnelClientAsync source range was not found.'
 $stageBody = $main.Substring($stageStart, $stageEnd - $stageStart)
 Assert-Contract (-not $stageBody.Contains('WriteBusinessConfig(')) 'StageLatestTunnelClientAsync must not publish the candidate config before readiness.'
