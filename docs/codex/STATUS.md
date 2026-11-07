@@ -40,7 +40,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D47 — Plain Turkish for the remaining Control Center texts (audit 42; setup texts per the user's decision; table and test in docs/codex/reference/d47)
 - [ ] [C] WL3 — Çalışma günlüğü and Olaylar polish (Claude; audit 42, user: later; after D45 and D50)
 - [~] [C] UV1 — Python through uv: talvora_uv_run replaces the pip and venv tools (Claude, one-off, user 2026-11-08; RED NativeInstallerSourceRegression PythonDockerToolContract False, then GREEN; Changed 19/0 and signed-in Full 70/0 Hepsi geçti.; install, installed smoke and CI pending)
-- [ ] [C] RS1 — Rust tools run as the signed-in user (Claude, one-off)
+- [~] [C] RS1 — Rust tools run as the signed-in user (Claude, one-off; RED: the installed 97344f7 reports cargo from the service profile, which the new smoke check refuses; Changed 14/0 and signed-in Full 70/0 Hepsi geçti.; install, installed smoke and CI pending)
 - [ ] [C] RS2 — The service account's own Rust toolchain is removed (Claude, one-off; after RS1)
 
 ## User queue
@@ -57,6 +57,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-08 — RS1, executor Claude (one-off): `RunRustTool` runs cargo, rustc and rustup through `InteractiveUserProcessRunner` as the active interactive user (a bare name resolves on that user's PATH; an explicit executable stays allowed); `talvora_rust_info` resolves the tools with `where.exe` and reads their versions as that user; `ResolveRustTool` removed. RED: the installed 97344f7 answers `talvora_rust_info` with `C:\WINDOWS\system32\config\systemprofile\.cargo\bin\cargo.exe` (cargo 1.99.0, the service account's own Chocolatey rustup), which the new installed-smoke check rejects. Changed 14/0 and signed-in Full 70/0 `Hepsi geçti.`. Context7 /dotnet/docs has no API page for StringSplitOptions or Environment.SystemDirectory (gap; Microsoft Learn pages used). Install, installed smoke and CI follow. Gitea mirror skipped: executor Claude, no Gitea comment tool in this session.
+  Self-review — cosmetics: no screen change.
+  Self-review — usability: agents build with the user's toolchain (1.99.1) and crate cache; build output belongs to the user.
+  Self-review — Turkish: no visible text changed.
+  Self-review — correctness/security: the user identity check of InteractiveUserProcessRunner applies; the tool calls keep their timeouts and output bounds; Go and the other build tools are unchanged.
 - 2026-11-08 — UV1, executor Claude (one-off, user: "bu arada tüm bu modernizasyonu bu defalık sen yap"): new `talvora_uv_run` (Dev only; runs uv as the signed-in user through `UserRunTools.Run`, the same bounds and redaction); `talvora_pip_install`, `talvora_pip_run` and `talvora_python_venv_create` removed with their guides, titles, metadata entries and `TalvoraPythonVenvResponse`. Counts: full 249, Dev 212, reviewed 249, open-world 83, destructive 98; README and ARCHITECTURE follow. RED NativeInstallerSourceRegression (PythonDockerToolContract False), then GREEN together with the source-only surface, metadata and Codex integration smokes. Changed 19/0 and signed-in Full 70/0 `Hepsi geçti.`. Context7 /modelcontextprotocol/csharp-sdk (tools concept page; vendor McpServerToolAttribute source). Install, installed smoke and CI follow. Gitea mirror skipped: executor Claude, no Gitea comment tool in this session.
   Self-review — cosmetics: no screen change; the worklog names the step by its Turkish title "uv komutu çalıştır".
   Self-review — usability: one tool for every Python task, as the user; no system-wide pip install and no SYSTEM-owned venv.

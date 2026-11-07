@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T22:00:16Z",
-  "scope": "UV1: talvora_uv_run (MCP C# SDK tool attribute and generated schema) replaces the pip and venv tools",
+  "verifiedAtUtc": "2026-11-07T22:04:44Z",
+  "scope": "RS1: Rust tools run as the signed-in user (where.exe resolution parsed with String.Split options, neutral working directory)",
   "libraries": [
     {
-      "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "2026-11-08 UV1: [McpServerTool] on a static method generates the tool JSON input schema from the method signature; [Description] fills the descriptions and optional parameters keep their defaults (Context7, docs/concepts/tools/tools.md). The vendor source McpServerToolAttribute exposes Name, Title, Destructive, Idempotent, OpenWorld, ReadOnly, UseStructuredContent and OutputSchemaType, the annotations the new tool sets. SDK pinned at ModelContextProtocol 2.3.1. Query: McpServerTool Destructive OpenWorld tool annotations; McpServerToolAttribute Destructive OpenWorld Idempotent ReadOnly hints ToolAnnotations."
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-08 RS1: Context7 /dotnet/docs holds no API reference for StringSplitOptions or Environment.SystemDirectory (gap, vendor pages used). StringSplitOptions.RemoveEmptyEntries with TrimEntries drops empty and white-space-only entries (TrimEntries is .NET 5 and later), so the where.exe lines parse cleanly; Environment.SystemDirectory is the system folder used as the neutral working directory of the user runs in talvora_rust_info. Query: String.Split char array StringSplitOptions RemoveEmptyEntries TrimEntries; StringSplitOptions TrimEntries; Environment.SystemDirectory property."
     }
   ],
   "vendorSources": [
-    "https://github.com/modelcontextprotocol/csharp-sdk",
-    "https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md",
-    "https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Server/McpServerToolAttribute.cs"
+    "https://learn.microsoft.com/dotnet/",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.stringsplitoptions",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.environment.systemdirectory"
   ]
 }

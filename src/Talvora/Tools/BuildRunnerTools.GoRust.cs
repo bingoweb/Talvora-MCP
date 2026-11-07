@@ -116,9 +116,17 @@ public static partial class BuildRunnerTools
     public static async Task<TalvoraRustInfoResponse> RustInfo(
         CancellationToken cancellationToken = default)
     {
-        var cargo = ResolveRustTool("cargo");
-        var rustc = ResolveRustTool("rustc");
-        var rustup = ResolveRustTool("rustup");
+        // RS1: report the signed-in user's toolchain, the one their builds use (never the service account's own).
+        var cwd = Environment.SystemDirectory;
+        var where = await RunAsSignedInUserAsync(
+            "where.exe", cwd, ["cargo", "rustc", "rustup"], null, 30, cancellationToken);
+        var found = where.StandardOutput.Split(
+            ['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        string? Find(string tool) => found.FirstOrDefault(path => string.Equals(
+            Path.GetFileNameWithoutExtension(path), tool, StringComparison.OrdinalIgnoreCase));
+        var cargo = Find("cargo");
+        var rustc = Find("rustc");
+        var rustup = Find("rustup");
 
         string? cargoVersion = null;
         string? rustcVersion = null;
@@ -128,47 +136,24 @@ public static partial class BuildRunnerTools
 
         if (cargo is not null)
         {
-            cargoVersion = (await RunCliCheckedAsync(
-                cargo,
-                Environment.CurrentDirectory,
-                ["--version"],
-                timeoutSeconds: 30,
-                cancellationToken: cancellationToken)).StandardOutput.Trim();
+            cargoVersion = (await RunAsSignedInUserAsync(
+                cargo, cwd, ["--version"], null, 30, cancellationToken)).StandardOutput.Trim();
         }
 
         if (rustc is not null)
         {
-            rustcVersion = (await RunCliCheckedAsync(
-                rustc,
-                Environment.CurrentDirectory,
-                ["--version"],
-                timeoutSeconds: 30,
-                cancellationToken: cancellationToken)).StandardOutput.Trim();
-
-            var verbose = await RunCliCheckedAsync(
-                rustc,
-                Environment.CurrentDirectory,
-                ["-vV"],
-                timeoutSeconds: 30,
-                cancellationToken: cancellationToken);
-            host = ParseLineValue(verbose.StandardOutput, "host: ");
+            var verbose = (await RunAsSignedInUserAsync(
+                rustc, cwd, ["-vV"], null, 30, cancellationToken)).StandardOutput;
+            rustcVersion = verbose.Split('\n', StringSplitOptions.TrimEntries).FirstOrDefault();
+            host = ParseLineValue(verbose, "host: ");
         }
 
         if (rustup is not null)
         {
-            rustupVersion = (await RunCliCheckedAsync(
-                rustup,
-                Environment.CurrentDirectory,
-                ["--version"],
-                timeoutSeconds: 30,
-                cancellationToken: cancellationToken)).StandardOutput.Trim();
-
-            activeToolchain = (await RunCliCheckedAsync(
-                rustup,
-                Environment.CurrentDirectory,
-                ["show", "active-toolchain"],
-                timeoutSeconds: 30,
-                cancellationToken: cancellationToken)).StandardOutput.Trim();
+            rustupVersion = (await RunAsSignedInUserAsync(
+                rustup, cwd, ["--version"], null, 30, cancellationToken)).StandardOutput.Trim();
+            activeToolchain = (await RunAsSignedInUserAsync(
+                rustup, cwd, ["show", "active-toolchain"], null, 30, cancellationToken)).StandardOutput.Trim();
         }
 
         return new TalvoraRustInfoResponse(
@@ -257,6 +242,8 @@ public static partial class BuildRunnerTools
             timeoutSeconds,
             cancellationToken);
 
+    // RS1: cargo, rustc and rustup run as the signed-in user: the user's rustup toolchain and crate cache,
+    // and build output owned by the user. A bare name resolves on that user's PATH.
     private static Task<TalvoraCliCommandResponse> RunRustTool(
         string workingDirectory,
         string[] arguments,
@@ -268,13 +255,8 @@ public static partial class BuildRunnerTools
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var executable = ResolveRequestedExecutable(
-            explicitExecutable,
-            () => ResolveRustTool(tool),
-            tool);
-
-        return RunCliAsync(
-            executable,
+        return RunAsSignedInUserAsync(
+            string.IsNullOrWhiteSpace(explicitExecutable) ? tool : explicitExecutable,
             NormalizeWorkingDirectory(workingDirectory),
             arguments,
             environment,
@@ -282,32 +264,41 @@ public static partial class BuildRunnerTools
             cancellationToken);
     }
 
+    private static async Task<TalvoraCliCommandResponse> RunAsSignedInUserAsync(
+        string executable,
+        string workingDirectory,
+        IEnumerable<string> arguments,
+        Dictionary<string, string?>? environment,
+        int timeoutSeconds,
+        CancellationToken cancellationToken)
+    {
+        var result = await InteractiveUserProcessRunner.RunAsync(
+            executable,
+            workingDirectory,
+            arguments,
+            environment,
+            timeoutSeconds,
+            cancellationToken,
+            ProcessRunner.DefaultMaximumCapturedCharacters,
+            WindowsSessionLauncher.GetActiveInteractiveUser(),
+            closeStandardInput: true).ConfigureAwait(false);
+
+        return new TalvoraCliCommandResponse(
+            result.ExitCode,
+            result.StandardOutput,
+            result.StandardError,
+            result.TimedOut,
+            result.ProcessId,
+            result.Executable,
+            result.WorkingDirectory,
+            result.Arguments,
+            result.ElapsedMilliseconds);
+    }
+
     private static string? ResolveGo() =>
         CommandResolver.Resolve(
             ["go.exe", "go"],
             [@"C:\Program Files\Go\bin\go.exe"]);
-
-    private static string? ResolveRustTool(string tool)
-    {
-        var candidates = new List<string>();
-        var cargoHome = Environment.GetEnvironmentVariable("CARGO_HOME");
-
-        if (!string.IsNullOrWhiteSpace(cargoHome))
-        {
-            candidates.Add(Path.Combine(cargoHome, "bin", tool + ".exe"));
-        }
-
-        var userProfile = Environment.GetFolderPath(
-            Environment.SpecialFolder.UserProfile);
-        if (!string.IsNullOrWhiteSpace(userProfile))
-        {
-            candidates.Add(Path.Combine(userProfile, ".cargo", "bin", tool + ".exe"));
-        }
-
-        return CommandResolver.Resolve(
-            [tool + ".exe", tool],
-            candidates);
-    }
 
     private static string? GetJsonString(
         JsonElement root,

@@ -214,6 +214,15 @@ internal static partial class SmokeScenarios
         }
 
         var rust = await EnsureSuccess(byName["talvora_rust_info"], new());
+        // RS1: the Rust tools run as the signed-in user, never with the service account's own rustup.
+        foreach (var field in new[] { "cargoExecutable", "rustcExecutable", "rustupExecutable" })
+        {
+            if (GetString(rust, field) is { } path &&
+                path.Contains(@"\systemprofile\", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"RS1: {field} is the service account's own tool: {path}");
+            }
+        }
         if (GetBoolean(rust, "rustcFound"))
         {
             await EnsureSuccess(byName["talvora_rustc_run"], new()
