@@ -37,7 +37,7 @@ public static partial class WindowsToolchainTools
                 "MSBuild.exe");
         }
 
-        var dotnet = CommandResolver.Resolve(
+        var dotnet = SignedInUserToolchain.Resolve(
             ["dotnet.exe", "dotnet"],
             [@"C:\Program Files\dotnet\dotnet.exe"]);
 
@@ -103,7 +103,7 @@ public static partial class WindowsToolchainTools
                 cancellationToken);
         }
 
-        var dotnet = CommandResolver.Resolve(
+        var dotnet = SignedInUserToolchain.Resolve(
             ["dotnet.exe", "dotnet"],
             [@"C:\Program Files\dotnet\dotnet.exe"])
             ?? throw new FileNotFoundException("Neither MSBuild.exe nor dotnet msbuild was found.");
@@ -177,6 +177,6 @@ public static partial class WindowsToolchainTools
             }
         }
 
-        return CommandResolver.Resolve(["MSBuild.exe", "msbuild"], []);
+        return SignedInUserToolchain.Resolve(["MSBuild.exe", "msbuild"], []);
     }
 }

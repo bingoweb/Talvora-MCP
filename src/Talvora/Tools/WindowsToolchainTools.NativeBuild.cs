@@ -13,7 +13,7 @@ public static partial class WindowsToolchainTools
     public static async Task<TalvoraToolInfoResponse> CMakeInfo(
         CancellationToken cancellationToken = default)
     {
-        var executable = CommandResolver.Resolve(
+        var executable = SignedInUserToolchain.Resolve(
             ["cmake.exe", "cmake"],
             [
                 @"C:\Program Files\CMake\bin\cmake.exe",
@@ -26,7 +26,7 @@ public static partial class WindowsToolchainTools
     public static async Task<TalvoraToolInfoResponse> NinjaInfo(
         CancellationToken cancellationToken = default)
     {
-        var executable = CommandResolver.Resolve(
+        var executable = SignedInUserToolchain.Resolve(
             ["ninja.exe", "ninja"],
             [@"C:\ProgramData\chocolatey\bin\ninja.exe"]);
 
@@ -42,7 +42,7 @@ public static partial class WindowsToolchainTools
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var executable = CommandResolver.Resolve(
+        var executable = SignedInUserToolchain.Resolve(
             ["cmake.exe", "cmake"],
             [
                 @"C:\Program Files\CMake\bin\cmake.exe",
@@ -67,7 +67,7 @@ public static partial class WindowsToolchainTools
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var executable = CommandResolver.Resolve(
+        var executable = SignedInUserToolchain.Resolve(
             ["ninja.exe", "ninja"],
             [
                 @"C:\ProgramData\chocolatey\bin\ninja.exe",
@@ -146,7 +146,7 @@ public static partial class WindowsToolchainTools
         int timeoutSeconds,
         CancellationToken cancellationToken)
     {
-        var result = await ProcessRunner.RunAsync(
+        var result = await SignedInUserToolchain.RunAsync(
             executable,
             workingDirectory,
             arguments,

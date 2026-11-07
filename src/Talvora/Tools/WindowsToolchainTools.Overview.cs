@@ -26,13 +26,13 @@ public static partial class WindowsToolchainTools
         var msBuild = ResolveMsBuild(instances);
         var sdks = DiscoverWindowsSdks();
 
-        var cmake = CommandResolver.Resolve(
+        var cmake = SignedInUserToolchain.Resolve(
             ["cmake.exe", "cmake"],
             [
                 @"C:\Program Files\CMake\bin\cmake.exe",
                 @"C:\Program Files (x86)\CMake\bin\cmake.exe",
             ]);
-        var ninja = CommandResolver.Resolve(
+        var ninja = SignedInUserToolchain.Resolve(
             ["ninja.exe", "ninja"],
             [
                 @"C:\ProgramData\chocolatey\bin\ninja.exe",

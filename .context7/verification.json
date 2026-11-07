@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T23:38:33Z",
-  "scope": "UR2: Flutter, Dart and Android tools resolve and run in the signed-in user's environment (ANDROID_HOME, ANDROID_SDK_ROOT, LOCALAPPDATA) and as that user",
+  "verifiedAtUtc": "2026-11-07T23:40:22Z",
+  "scope": "UR3: MSBuild, CMake, Ninja, vswhere and the Windows SDK tools resolve and run in the signed-in user's environment and as that user; talvora_vs_dev_environment stays with the service",
   "libraries": [
     {
-      "libraryId": "/websites/developer_android_develop",
-      "verified": "2026-11-08 UR2: Context7 returns no passage for ANDROID_HOME (gap; the Android developer page used). ANDROID_HOME is the variable many tools read to find the Android SDK installation directory, so Talvora reads it, ANDROID_SDK_ROOT and the default %LOCALAPPDATA%\\Android\\Sdk from the signed-in user's environment instead of the service account's; the machine-target reads stay because machine values are the same for every account. Query: ANDROID_HOME environment variable SDK location."
+      "libraryId": "/microsoftdocs/visualstudio-docs",
+      "verified": "2026-11-08 UR3: vswhere.exe lists every Visual Studio instance as JSON and ships with Visual Studio 2017 and later in C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer, a machine-wide folder, so the signed-in user runs it and the MSBuild it finds the same way the service did; the user's own PATH and variables now decide which cmake, ninja and SDK tools are found. Query: vswhere; vswhere find MSBuild location."
     }
   ],
   "vendorSources": [
-    "https://developer.android.com/tools/variables",
-    "https://learn.microsoft.com/en-us/windows/win32/api/userenv/nf-userenv-createenvironmentblock"
+    "https://github.com/microsoft/vswhere",
+    "https://learn.microsoft.com/en-us/visualstudio/install/tools-for-managing-visual-studio-instances"
   ]
 }
