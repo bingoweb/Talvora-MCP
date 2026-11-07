@@ -463,7 +463,7 @@ public static partial class RuntimeTools
         if (OperatingSystem.IsWindows())
         {
             var programFiles =
-                Environment.GetFolderPath(
+                SignedInUserToolchain.Folder(
                     Environment.SpecialFolder.ProgramFiles);
             var dockerDesktop = Path.Combine(
                 programFiles,

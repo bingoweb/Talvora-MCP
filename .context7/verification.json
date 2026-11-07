@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T23:40:22Z",
-  "scope": "UR3: MSBuild, CMake, Ninja, vswhere and the Windows SDK tools resolve and run in the signed-in user's environment and as that user; talvora_vs_dev_environment stays with the service",
+  "verifiedAtUtc": "2026-11-07T23:42:06Z",
+  "scope": "UR4: Python and Docker tools resolve and run in the signed-in user's environment and as that user; talvora_python_info reports uv instead of pip",
   "libraries": [
     {
-      "libraryId": "/microsoftdocs/visualstudio-docs",
-      "verified": "2026-11-08 UR3: vswhere.exe lists every Visual Studio instance as JSON and ships with Visual Studio 2017 and later in C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer, a machine-wide folder, so the signed-in user runs it and the MSBuild it finds the same way the service did; the user's own PATH and variables now decide which cmake, ninja and SDK tools are found. Query: vswhere; vswhere find MSBuild location."
+      "libraryId": "/astral-sh/uv",
+      "verified": "2026-11-08 UR4: uv reports its installed version (uv self version since 0.7.0; uv --version prints the same line, live through talvora_uv_run: uv 0.13.7) and uv python find returns the interpreter uv would use, so talvora_python_info resolves uv for the signed-in user and reports UvAvailable and UvVersion; Python packages go through talvora_uv_run, never pip. Query: uv version command self version; uv python find."
     }
   ],
   "vendorSources": [
-    "https://github.com/microsoft/vswhere",
-    "https://learn.microsoft.com/en-us/visualstudio/install/tools-for-managing-visual-studio-instances"
+    "https://docs.astral.sh/uv/",
+    "https://docs.docker.com/desktop/setup/install/windows-permission-requirements/"
   ]
 }

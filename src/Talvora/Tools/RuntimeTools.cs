@@ -24,8 +24,8 @@ public sealed record TalvoraPythonInfoResponse(
     string? Prefix,
     string? BasePrefix,
     bool InVirtualEnvironment,
-    bool PipAvailable,
-    string? PipVersion);
+    bool UvAvailable,
+    string? UvVersion);
 
 public sealed record TalvoraDockerInfoResponse(
     bool Found,

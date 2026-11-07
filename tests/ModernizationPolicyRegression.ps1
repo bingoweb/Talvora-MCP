@@ -321,4 +321,7 @@ Assert-Contains 'src/Talvora/Tools/SignedInUserToolchain.cs' 'GetActiveInteracti
 Assert-SignedInUserToolchain 'UR2' @('src/Talvora/Tools/MobileTools.cs', 'src/Talvora/Tools/MobileTools.Shared.cs', 'src/Talvora/Tools/MobileTools.Android.cs', 'src/Talvora/Tools/MobileTools.Flutter.cs')
 # UR3: talvora_vs_dev_environment (WindowsToolchainTools.VisualStudio.cs) stays with the service: it only returns Visual Studio's variables.
 Assert-SignedInUserToolchain 'UR3' @('src/Talvora/Tools/WindowsToolchainTools.cs', 'src/Talvora/Tools/WindowsToolchainTools.NativeBuild.cs', 'src/Talvora/Tools/WindowsToolchainTools.MsBuild.cs', 'src/Talvora/Tools/WindowsToolchainTools.Overview.cs', 'src/Talvora/Tools/WindowsToolchainTools.Release.cs', 'src/Talvora/Tools/WindowsToolchainTools.Sdk.cs', 'src/Talvora/Tools/WindowsToolchainTools.Binary.cs')
+Assert-SignedInUserToolchain 'UR4' @('src/Talvora/Tools/RuntimeTools.cs', 'src/Talvora/Tools/RuntimeTools.Shared.cs', 'src/Talvora/Tools/RuntimeTools.Docker.cs', 'src/Talvora/Tools/RuntimeTools.Python.cs', 'src/Talvora/Tools/RuntimeTools.Uv.cs')
+Assert-NotContains 'src/Talvora/Tools/RuntimeTools.Python.cs' '"pip"' 'UR4: talvora_python_info reports uv, not pip.'
+Assert-Contains 'src/Talvora/Tools/RuntimeTools.cs' 'bool UvAvailable,\s*string\? UvVersion\)' 'UR4: the Python info record carries uv availability.'
 Write-Host 'MODERNIZATION_POLICY_GREEN'

@@ -35,7 +35,7 @@ private static string? ResolveExecutable(string command)
             }
         }
 
-        return CommandResolver.Resolve([command]);
+        return SignedInUserToolchain.Resolve([command]);
     }
 
     private static async Task<TalvoraRuntimeCommandResponse>
@@ -47,7 +47,7 @@ private static string? ResolveExecutable(string command)
             int timeoutSeconds,
             CancellationToken cancellationToken)
     {
-        var result = await ProcessRunner.RunAsync(
+        var result = await SignedInUserToolchain.RunAsync(
             executable,
             workingDirectory,
             arguments,

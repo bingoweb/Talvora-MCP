@@ -14,7 +14,7 @@ public static partial class RuntimeTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraPythonInfoResponse)),
-     Description("Discover Python for the Talvora service or inspect an explicitly supplied Python/py launcher. Returns interpreter identity, version, virtual-environment state, and pip availability. Missing Python is reported structurally rather than treated as an error.")]
+     Description("Discover Python for the signed-in user or inspect an explicitly supplied Python/py launcher. Returns interpreter identity, version, virtual-environment state, and uv availability. Missing Python is reported structurally rather than treated as an error.")]
     public static async Task<TalvoraPythonInfoResponse> PythonInfo(
         string? pythonExecutable = null,
         string? workingDirectory = null,
@@ -69,19 +69,17 @@ public static partial class RuntimeTools
             probeResult.StandardOutput.Trim());
         var root = document.RootElement;
 
-        var pipArguments = new List<string>();
-        pipArguments.AddRange(python.PrefixArguments);
-        pipArguments.Add("-m");
-        pipArguments.Add("pip");
-        pipArguments.Add("--version");
-
-        var pipResult = await RunCommandAsync(
-            python.Executable,
-            pipArguments,
-            workingDirectory,
-            environment: null,
-            timeoutSeconds: 30,
-            cancellationToken);
+        // UR4: Python packages go through uv (talvora_uv_run), so the probe reports uv instead of pip.
+        var uv = SignedInUserToolchain.Resolve(["uv.exe", "uv"]);
+        var uvResult = uv is null
+            ? null
+            : await RunCommandAsync(
+                uv,
+                ["--version"],
+                workingDirectory,
+                environment: null,
+                timeoutSeconds: 30,
+                cancellationToken);
 
         return new TalvoraPythonInfoResponse(
             true,
@@ -91,9 +89,9 @@ public static partial class RuntimeTools
             root.GetProperty("prefix").GetString(),
             root.GetProperty("base_prefix").GetString(),
             root.GetProperty("venv").GetBoolean(),
-            pipResult.ExitCode == 0 && !pipResult.TimedOut,
-            pipResult.ExitCode == 0
-                ? pipResult.StandardOutput.Trim()
+            uvResult is { ExitCode: 0, TimedOut: false },
+            uvResult is { ExitCode: 0, TimedOut: false }
+                ? uvResult.StandardOutput.Trim()
                 : null);
     }
 

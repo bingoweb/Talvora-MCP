@@ -1156,7 +1156,7 @@ public static class TalvoraToolGuides
                   ("resultOffset", "Number of matching entries to skip before this result page.")),
                 """{"root":"C:\\Users\\tayla\\Talvora-MCP"}"""),
             ["talvora_python_info"] = new(
-                "Discover Python for the Talvora service or inspect an explicitly supplied Python/py launcher.",
+                "Discover Python for the signed-in user or inspect an explicitly supplied Python/py launcher.",
                 P(("pythonExecutable", "Optional Python executable, launcher, or virtual-env interpreter."),
                   ("workingDirectory", "Absolute directory to run the command in.")),
                 """{"workingDirectory":"C:\\Users\\tayla\\Talvora-MCP"}"""),
