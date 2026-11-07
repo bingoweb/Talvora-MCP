@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T19:23:49Z",
-  "scope": "D38: ordinal prefix recognition for ChatGPT agent caller names",
+  "verifiedAtUtc": "2026-11-07T19:35:08Z",
+  "scope": "D39: preserve Penpot userToken masking and apply shared redaction to error text",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D38: string.StartsWith(string, StringComparison.Ordinal) performs a case-sensitive culture-independent prefix check, appropriate for known caller labels (query: \"C# .NET 10 string.StartsWith(string value, StringComparison comparisonType) StringComparison.Ordinal prefix matching; ordinal case-sensitive and nullable string usage with ?.StartsWith.\")."
+      "verified": "2026-11-07 D39: .NET Regex.Replace supports the $1 capture-group substitution, retaining the userToken= prefix while masking its value; passing the resulting string to shared redaction also removes other secret formats (query: \"In .NET C#, Regex.Replace(string input, string replacement) performs capture group replacement $1; string.Replace / Regex.Replace outputs can be fed to a shared sanitization function for redaction; calling a method twice to mask several secret formats is supported.\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/standard/base-types/best-practices-strings"
+    "https://learn.microsoft.com/en-us/dotnet/standard/base-types/substitutions-in-regular-expressions"
   ]
 }

@@ -38,8 +38,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D35 — The GitHub release lookup waits after a failure (audit 40; RED CS8604/CS8602, D35_LATEST_BACKOFF_GREEN; Changed 31/0 and signed-in Full 69/0 Hepsi geçti.; installed 2325945, loopback smoke green; GitHub CI 42403430745 success; Gitea #9 comment 208)
 - [x] D36 — Atomic publication also retries a busy destination (audit 40; RED D36 retry-filter, then D36_RETRY_FILTER_GREEN; Changed 18/0 and signed-in Full 69/0 Hepsi geçti.; installed a8d9a1d, loopback smoke green; GitHub CI 42404315174 success; Gitea #9 comment 209)
 - [~] D37 — Event slips in plain Turkish (audit 40; RED old text, EVENT_TEXT_TURKISH_GREEN; Changed 26/0 and signed-in Full 70/0 Hepsi geçti.; installed 19a892a, loopback smoke green; GitHub CI 42405471230 success; visual check pending (Claude); Gitea #9 comment 210)
-- [~] D38 — "Yalnızca hatalar ve ajan işleri" counts ChatGPT as an agent (audit 40, user decision; RED ChatGPT agent card filtered, N8_NOTIFICATIONS_GREEN; Changed 16/0 and signed-in Full 70/0 Hepsi geçti.; exact-commit install, smoke and GitHub CI pending; Gitea #9 comment 211)
-- [ ] D39 — Penpot error text uses the shared secret masking (audit 40)
+- [x] D38 — "Yalnızca hatalar ve ajan işleri" counts ChatGPT as an agent (audit 40, user decision; RED ChatGPT agent card filtered, N8_NOTIFICATIONS_GREEN; Changed 16/0 and signed-in Full 70/0 Hepsi geçti.; installed 1aad6e4, loopback smoke green; GitHub CI 42406357407 success; Gitea #9 comment 211)
+- [~] D39 — Penpot error text uses the shared secret masking (audit 40; RED CS0117 then D39_PENPOT_REDACTION_GREEN; Changed 28/0 and signed-in Full 70/0 Hepsi geçti.; exact-commit install, smoke and GitHub CI pending; Gitea #9 comment 212)
 - [ ] D43 — Çalışma günlüğü names the day once ("Bugün 15:44 · 3 sn") (audit 41, design improvement)
 - [ ] D44 — The repair count opens Olaylar on "Onarımlar" (audit 41, design improvement; after D42)
 - [ ] OB1 — talvora_note_write: write Obsidian vault notes, refuse secrets and the linked repo docs (user request 2026-11-01)
@@ -58,6 +58,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D39, executor ChatGPT via Talvora: Penpot error text now passes through both its existing userToken regex and shared FileLog.RedactSensitiveData for Authorization and JWT masking. RED CS0117 then D39_PENPOT_REDACTION_GREEN; Changed 28/0 and signed-in Full 70/0 Hepsi geçti. Context7 /dotnet/docs regex $1 capture substitution; exact-commit install, smoke and CI pending. Gitea issue #9 comment 212.
+  Self-review — cosmetics: no interface or layout changes.
+  Self-review — usability: Penpot status errors no longer expose covered secret patterns.
+  Self-review — Turkish: no product copy changed.
+  Self-review — correctness/security: existing Penpot token mask, endpoint resolution and credential configuration unchanged; shared masking added afterward.
 - 2026-11-07 — D38, executor ChatGPT via Talvora: presenter agent-only filter recognizes Codex, Claude, and ordinal ChatGPT prefixes; unknown caller Diğer is filtered but terminal history remains. RED N8 "D38: ChatGPT agent card filtered", then N8_NOTIFICATIONS_GREEN. Signed-in Changed 16/0, Full 70/0 Hepsi geçti. Context7 /dotnet/docs StartsWith(StringComparison.Ordinal); exact-commit install, smoke and CI pending. Gitea issue #9 comment 211.
   Self-review — cosmetics: no layout or styling change; visual behavior is now visible ChatGPT cards.
   Self-review — usability: ChatGPT · Dev and ChatGPT · Yönetim are agent labels.

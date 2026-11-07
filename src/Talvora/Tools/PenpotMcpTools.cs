@@ -324,8 +324,9 @@ public static class PenpotMcpTools
             ? $"http://127.0.0.1:{port}/mcp"
             : "invalid-fallback-endpoint";
 
-    private static string RedactSensitiveText(string value) =>
-        UserTokenPattern.Replace(value, "$1<redacted>");
+    // D39: Penpot's own token mask plus the shared masking (keys, Authorization, JWT).
+    internal static string RedactSensitiveText(string value) =>
+        Talvora.Shared.FileLog.RedactSensitiveData(UserTokenPattern.Replace(value, "$1<redacted>"));
 
     private static HttpClientTransport CreateTransport(Uri endpoint) =>
         new(
