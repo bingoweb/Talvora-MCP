@@ -1233,3 +1233,61 @@ User: "Talvora'da rust, uv modernizasyonu yapmamız anlamlı olur mu araştır",
 **Do (as LocalSystem through Talvora):** confirm that the service account's `rustup show home` is under `systemprofile`; run that rustup's `self uninstall -y` detached and wait for it; drop the package record with `choco uninstall rustup.install -y --skip-autouninstaller`. The machine PATH entry `C:\Users\tayla\.cargo\bin` (a user folder in the machine PATH; the user PATH already holds it) is a machine setting: the user removes it, Claude only reports it.
 
 **Acceptance:** `systemprofile\.cargo` and `systemprofile\.rustup` are gone; Chocolatey lists no `rustup.install`; `talvora_rust_info` and `cargo --version` as the user are unchanged (1.99.1).
+
+Follow-up (user 2026-11-08): Claude proposed four more modernizations; the user said "Evet, hepsini yaz", then, asked why ChatGPT should redo work Claude had already applied and compiled in a scratch clone, chose "Bu defalık sen yap". UR1–UR4 and D51 are Claude's one-off items; UR5 is Claude's later cleanup; PK1 and PK2 are the agent's.
+
+**Shared finding (UR1–UR4):** after RS1 the remaining developer tools still run through `ProcessRunner` as LocalSystem and resolve their programs with the service account's PATH and variables, so their output (`bin/`, `obj/`, `node_modules/`, build folders) belongs to SYSTEM (AGENTS.md forbids them for repository work for that reason) and their caches sit in the service profile. Measured as LocalSystem on 2026-11-08: NuGet packages 3.11 GB, npm cache 2.49 GB, npm global 0.02 GB, Go 0.54 GB and its build cache 0.11 GB, Dart pub 0.56 GB, pip cache 0.02 GB.
+
+**Shared method (UR1 adds the helper, UR2–UR4 reuse it):** `src/Talvora/Tools/SignedInUserToolchain.cs` resolves commands in the active user's environment block (`WindowsSessionLauncher.GetActiveInteractiveUser().Environment`, the same block `CreateEnvironmentBlock` gives that user's processes), reads variables from it and runs programs through `InteractiveUserProcessRunner` as that user. In each card's files: every `ProcessRunner.RunAsync(` becomes `SignedInUserToolchain.RunAsync(`, every `CommandResolver.Resolve(` becomes `SignedInUserToolchain.Resolve(`, every one-argument `Environment.GetEnvironmentVariable(` becomes `SignedInUserToolchain.Variable(`; reads with `EnvironmentVariableTarget.Machine` stay (machine values are the same for every account). `tests/ModernizationPolicyRegression.ps1` holds `Assert-SignedInUserToolchain <card> <files>` (no SYSTEM run, no service-PATH lookup, no process-environment read in those files); each card adds its line first (red). Claude verified the whole method in a scratch clone of a01ecb5: the policy check fails first with `UR1: src/Talvora/Tools/BuildRunnerTools.Shared.cs still runs a developer tool as the service account.`, `src/Talvora` builds without errors or warnings after the change, and the check prints `MODERNIZATION_POLICY_GREEN`.
+
+### UR1 — dotnet, Node, JVM and Go tools run as the signed-in user (Claude)
+
+**Files:** new `src/Talvora/Tools/SignedInUserToolchain.cs`; `BuildRunnerTools.Shared.cs` (the shared `RunCliAsync`, the dotnet, Node and npm resolvers, `DOTNET_ROOT`), `BuildRunnerTools.GoRust.cs` (`ResolveGo`; RS1's `RunAsSignedInUserAsync` calls the helper), `BuildRunnerTools.JavaScriptExtras.cs` (pnpm, Yarn, Bun), `BuildRunnerTools.Jvm.cs` (java, javac, Maven, Gradle, `JAVA_HOME`); `talvora_node_info`'s text says "the signed-in user's environment" (`BuildRunnerTools.Node.cs`, `TalvoraToolGuides.cs`); `tests/ModernizationPolicyRegression.ps1`; the installed smoke runs `talvora_go_run ["env","GOPATH"]` when Go is found and fails when the answer points into the service profile.
+
+**Acceptance:** red policy check; Changed and Full `Hepsi geçti.`; install; `--metadata-policy-only` and the full installed smoke green; CI.
+
+### UR2 — Flutter, Dart and Android tools run as the signed-in user (Claude)
+
+**Why, besides the shared finding:** an emulator started as LocalSystem cannot show its window in the user's session, and an adb server started as LocalSystem fights the user's own adb.
+
+**Files:** `MobileTools.Shared.cs` (its `RunCliAsync` and resolver), `MobileTools.Android.cs` (`ANDROID_HOME`/`ANDROID_SDK_ROOT` from the user's environment; the machine-target reads stay), `MobileTools.Flutter.cs`; the policy line.
+
+**Acceptance:** as UR1.
+
+### UR3 — MSBuild, CMake, Ninja and Windows SDK tools run as the signed-in user (Claude)
+
+**Files:** `WindowsToolchainTools.NativeBuild.cs` (its `RunCliAsync`, used by the MSBuild, CMake, Ninja, SDK and vswhere calls), `WindowsToolchainTools.MsBuild.cs`, `WindowsToolchainTools.Overview.cs`, `WindowsToolchainTools.Release.cs`; the policy line. `talvora_vs_dev_environment` stays as it is: it writes its wrapper into the service's temp folder and only returns Visual Studio's variables.
+
+**Acceptance:** as UR1.
+
+### UR4 — Python and Docker tools run as the signed-in user; `talvora_python_info` reports uv (Claude)
+
+**Files:** `RuntimeTools.Shared.cs` (`RunCommandAsync` and its resolver), `RuntimeTools.Docker.cs`, `RuntimeTools.Python.cs` (the pip probe becomes `uv --version` resolved for the user; texts say "the signed-in user" and "uv availability"), `RuntimeTools.cs` (`TalvoraPythonInfoResponse`: `PipAvailable`/`PipVersion` become `UvAvailable`/`UvVersion`), `TalvoraToolGuides.cs`; the policy line plus two checks (no `"pip"` in the Python tool; the record carries `UvAvailable`). Docker works as the user: the user is in `docker-users` and Docker Desktop runs in the user's session.
+
+**Acceptance:** as UR1; live `talvora_python_info` reports `uvAvailable: true` and `uv 0.13.7`.
+
+### UR5 — The service profile's developer caches are removed (Claude; after UR1–UR4, with the user's go-ahead)
+
+**Do (as LocalSystem through Talvora):** once UR1–UR4 are installed and the full installed smoke is green, measure the folders again (they must not have grown since the install), ask the user, then delete exactly `C:\WINDOWS\system32\config\systemprofile\.nuget\packages`, `…\AppData\Local\npm-cache`, `…\AppData\Roaming\npm`, `…\go`, `…\AppData\Local\go-build`, `…\AppData\Local\Pub\Cache` and `…\AppData\Local\pip`. Nothing else under the service profile.
+
+**Acceptance:** the folders are gone; the full installed smoke stays green; the user's own caches are untouched.
+
+### PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
+
+**Why:** `ModelContextProtocol` and `ModelContextProtocol.AspNetCore` 2.4.0 (2026-11-07) and `Tomlyn` 2.10.2 are out; Talvora pins 2.3.1 and 2.10.1. The 2.4.0 notes list no breaking change; the items that touch Talvora: protocol property names now match case-sensitively (#1934), legacy output schemas of delegating server tools are fixed (#1928), and the legacy OAuth metadata fallback needs an opt-in (#1952; Talvora's server uses no SDK OAuth, so nothing changes there).
+
+**Do:** `Directory.Packages.props`: both `ModelContextProtocol` lines to the newest 2.4.x stable on nuget.org when the card runs (2.4.0 on 2026-11-08; never a preview, never 2.5 or later), `Tomlyn` to 2.10.2. `docs/codex/CONTEXT7.md`: the MCP C# SDK row's version; the TOML row's version and id (`/xoofx/tomlyn/2.10.2` when Context7 lists it, otherwise `/xoofx/tomlyn` with a gap note). Nothing else changes. A compile error or a test that fails because of the update → proposal with the exact message.
+
+**Context7:** `/modelcontextprotocol/csharp-sdk` (query "2.4.0 release notes breaking changes"), `/xoofx/tomlyn`. Vendor sources: `https://github.com/modelcontextprotocol/csharp-sdk/releases/tag/v2.4.0`, `https://www.nuget.org/packages/ModelContextProtocol`, `https://www.nuget.org/packages/Tomlyn`.
+
+**Acceptance:** restore and signed-in Full `Hepsi geçti.`; install; `--metadata-policy-only` and the full installed smoke green (Deploy row); CI.
+
+### PK2 — `Microsoft.Build.Framework` follows the SDK's MSBuild (after PK1)
+
+**Why:** Talvora compiles against `Microsoft.Build.Framework` 17.14.28 (`ExcludeAssets="runtime"`); at run time MSBuildLocator loads the MSBuild of the installed .NET SDK 10.0.403, which is MSBuild 18.9.15 (`dotnet msbuild -version`). The compile reference follows the runtime MSBuild's line and is never newer than it; 18.10 and 18.11 are on nuget.org but newer than the SDK's MSBuild.
+
+**Do:** first run `dotnet msbuild -version` as the signed-in user; when it does not start with `18.9.` → proposal with the output (the SDK changed). Then `Directory.Packages.props`: `Microsoft.Build.Framework` 17.14.28 → 18.9.6 (the newest 18.9.x on 2026-11-08). `Microsoft.Build.Locator` 1.11.2 stays (current). Add a `docs/codex/CONTEXT7.md` row for MSBuild with the id Context7 returns for "msbuild" (or a gap note and the Microsoft Learn link).
+
+**Context7:** search "msbuild"; vendor sources: `https://learn.microsoft.com/visualstudio/msbuild/find-and-use-msbuild-versions`, `https://www.nuget.org/packages/Microsoft.Build.Framework`.
+
+**Acceptance:** signed-in Full `Hepsi geçti.` (it runs the semantic source edit regression); install; `dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release -- --semantic-source-edit-only http://127.0.0.1:7676/mcp C:\Users\tayla\Talvora-MCP` → `TALVORA SEMANTIC SOURCE EDIT SMOKE GREEN`, and the full installed smoke green; CI.

@@ -32,22 +32,30 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [ ] D51 — The full installed smoke is green again (Claude's check while closing UV1 and RS1; first: from D51 on every install runs the installed smokes, Deploy row)
+- [ ] [C] D51 — The full installed smoke is green again (Claude, one-off, user 2026-11-08: "Bu defalık sen yap"; from D51 on every install runs the installed smokes, Deploy row)
 - [ ] D45 — Çalışma günlüğü measures a session up to its last step (audit 42, data truth)
 - [ ] D50 — Çalışma günlüğü keeps every session (audit 42, data truth; after D45)
 - [ ] D46 — A CI run that is still going is not a failed step (audit 42)
 - [ ] D48 — A vault note belongs to the vault's owner (audit 42)
 - [ ] D49 — Plain Turkish service names, also for older registries (audit 42; after D46)
 - [ ] D47 — Plain Turkish for the remaining Control Center texts (audit 42; setup texts per the user's decision; table and test in docs/codex/reference/d47)
+- [ ] [C] UR1 — dotnet, Node, JVM and Go tools run as the signed-in user (Claude, one-off, user 2026-11-08)
+- [ ] [C] UR2 — Flutter, Dart and Android tools run as the signed-in user (Claude, one-off)
+- [ ] [C] UR3 — MSBuild, CMake, Ninja and Windows SDK tools run as the signed-in user (Claude, one-off)
+- [ ] [C] UR4 — Python and Docker tools run as the signed-in user; talvora_python_info reports uv (Claude, one-off)
+- [ ] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
+- [ ] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (after PK1)
 - [ ] [C] WL3 — Çalışma günlüğü and Olaylar polish (Claude; audit 42, user: later; after D45 and D50)
 - [x] [C] UV1 — Python through uv: talvora_uv_run replaces the pip and venv tools (Claude, one-off, user 2026-11-08; installed d93a5ea: talvora_uv_run --version → uv 0.13.7 as MSI\tayla, tools/list 249 without the pip and venv tools, live open-world 83; CI 42419169512 success; the full installed smoke stops at older steps → D51)
 - [x] [C] RS1 — Rust tools run as the signed-in user (Claude, one-off; installed d93a5ea: talvora_rust_info → C:\Users\tayla\.cargo\bin, cargo and rustc 1.99.1, rustup 1.29.2; talvora_cargo_run --version 1.99.1; CI 42419169512 success)
 - [x] [C] RS2 — The service account's own Rust toolchain is removed (Claude, one-off; systemprofile .cargo and .rustup gone, rustup.install no longer in Chocolatey, the user's 1.99.1 unchanged; the machine PATH entry is U14)
+- [ ] [C] UR5 — The service profile's developer caches are removed (Claude; after UR1–UR4, with the user's go-ahead)
 
 ## User queue
 
 - [x] U14 — Makine (sistem) PATH değişkeninden `C:\Users\tayla\.cargo\bin` satırı kaldırıldı (kullanıcı, 2026-11-08). Claude'un kontrolü: makine PATH'i 32 satır ve diğer satırlar değişmedi (değer artık REG_SZ; hiçbir satırda % yok); kullanıcı PATH'inde satır duruyor; `talvora_rust_info` 1.99.1. (RS2)
 - [ ] U15 — ChatGPT'de Talvora Dev ve Talvora Admin bağlayıcılarını yenileyin, Claude Desktop'ı da bir kez kapatıp açın: araç listesi değişti (`talvora_uv_run` geldi; `talvora_pip_install`, `talvora_pip_run` ve `talvora_python_venv_create` kalktı). (UV1)
+- [ ] U16 — İsteğe bağlı: makine (sistem) PATH'inde aynı klasörü gösteren ikinci satırlar var: `C:\Python314\Scripts`, `C:\Python314`, `C:\Program Files\dotnet\`, `C:\Program Files\PowerShell\7\` ve `C:\Program Files\nodejs\`. Zararsızlar; isterseniz U14'teki gibi Sistem değişkenleri → Path → Düzenle'den bu beşini silebilirsiniz.
 
 ## Open questions
 
@@ -58,6 +66,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — Claude: UR1–UR5, PK1 and PK2 written (user: "Evet, hepsini yaz"). The user then chose "Bu defalık sen yap" for the work Claude had already applied and compiled in a scratch clone: D51 and UR1–UR4 are Claude's one-off items; PK1 and PK2 stay with the agent, after UR4. Measured as LocalSystem: 6.85 GB of developer caches in the service profile (UR5 removes them later, with the user's go-ahead).
 
 - 2026-11-08 — Claude: D51 written and put first. The full installed smoke against d93a5ea stopped at nine older faults (find_files relative paths, the OS TCP listener table, job_stop and dev_server_stop flagged by H3, the git_log argument and its compact entries, the PowerShell step's folder and exit code, the Codex profile check, the SDK `/?` probe, the destructive count 98 vs live 106); Claude fixed them one run at a time in a scratch clone until the run went through, and verified the H3 change red-first in a second clone. AGENTS.md: the Deploy row now runs `--metadata-policy-only` and the full installed smoke after every install; TOOLCHAIN PREFERENCE names `talvora_uv_run`. U15: the connectors see the new tool list only after a refresh.
 
