@@ -54,7 +54,7 @@ public static partial class MobileTools
         int timeoutSeconds,
         CancellationToken cancellationToken)
     {
-        var result = await ProcessRunner.RunCheckedAsync(
+        var result = await SignedInUserToolchain.RunCheckedAsync(
             executable,
             NormalizeWorkingDirectory(workingDirectory),
             arguments,
