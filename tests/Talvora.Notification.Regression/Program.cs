@@ -83,6 +83,7 @@ internal static partial class Program
         AssertSn1LineTraffic();
         AssertUi12cTimeRuler();
         await AssertD25SessionRestartResetsTotalsAsync();
+        AssertD43SessionTimeText();
         AssertD39PenpotRedaction();
         await AssertD35LatestBackoffAsync();
         await AssertD41CallerIdentityAsync();

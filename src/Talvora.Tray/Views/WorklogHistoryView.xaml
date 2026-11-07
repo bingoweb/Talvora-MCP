@@ -130,11 +130,7 @@
                                     <TextBlock Text="{Binding Current.Title}" Style="{StaticResource Tv.Type.Body}"
                                                TextWrapping="Wrap" Margin="0,8,0,8" />
                                     <TextBlock Text="{Binding OutcomeLabel}" Style="{StaticResource Tv.Type.BodyStrong}" />
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding StartedLocal}" Style="{StaticResource Tv.Type.Caption}" />
-                                        <TextBlock Text=" → " Style="{StaticResource Tv.Type.Caption}" />
-                                        <TextBlock Text="{Binding EndedLocal}" Style="{StaticResource Tv.Type.Caption}" />
-                                    </StackPanel>
+                                    <TextBlock Text="{Binding ListTimeText}" Style="{StaticResource Tv.Type.Caption}" />
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding Totals.Steps}" Style="{StaticResource Tv.Type.Caption}" />
                                         <TextBlock Text=" adım · " Style="{StaticResource Tv.Type.Caption}" />
@@ -169,11 +165,8 @@
                                    TextWrapping="Wrap" />
                         <TextBlock Text="{Binding OutcomeLabel}" Style="{StaticResource Tv.Type.BodyStrong}"
                                    Foreground="{DynamicResource Tv.Accent}" Margin="0,8,0,0" />
-                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                            <TextBlock Text="{Binding StartedLocal}" Style="{StaticResource Tv.Type.Caption}" />
-                            <TextBlock Text=" → " Style="{StaticResource Tv.Type.Caption}" />
-                            <TextBlock Text="{Binding EndedLocal}" Style="{StaticResource Tv.Type.Caption}" />
-                        </StackPanel>
+                        <TextBlock Text="{Binding DetailTimeText}" Style="{StaticResource Tv.Type.Caption}"
+                                   Margin="0,8,0,0" />
                         <TextBlock Text="Zaman çizelgesi" Style="{StaticResource Tv.Type.Subtitle}" Margin="0,24,0,8" />
                         <ItemsControl ItemsSource="{Binding TimelineRows}">
                             <ItemsControl.ItemTemplate>

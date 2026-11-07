@@ -27,11 +27,12 @@ internal sealed record WorklogHistorySession(
         _ => "Devam ediyor",
     };
 
+    // D43: the day once, then the time and the measured duration (the Olaylar page's day words).
     [JsonIgnore]
-    public string StartedLocal => StartedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+    public string ListTimeText => LocalTimeText.SessionShort(StartedAtUtc, EndedAtUtc, DateTimeOffset.Now);
 
     [JsonIgnore]
-    public string EndedLocal => EndedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+    public string DetailTimeText => LocalTimeText.SessionLong(StartedAtUtc, EndedAtUtc, DateTimeOffset.Now);
 
     [JsonIgnore]
     public IReadOnlyList<WorklogHistoryTimelineRow> TimelineRows =>

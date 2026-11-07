@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T19:35:08Z",
-  "scope": "D39: preserve Penpot userToken masking and apply shared redaction to error text",
+  "verifiedAtUtc": "2026-11-07T19:48:04Z",
+  "scope": "D43: Turkish local day names and measured worklog session durations",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D39: .NET Regex.Replace supports the $1 capture-group substitution, retaining the userToken= prefix while masking its value; passing the resulting string to shared redaction also removes other secret formats (query: \"In .NET C#, Regex.Replace(string input, string replacement) performs capture group replacement $1; string.Replace / Regex.Replace outputs can be fed to a shared sanitization function for redaction; calling a method twice to mask several secret formats is supported.\")."
+      "verified": "2026-11-07 D43: DateTimeOffset/DateTime custom date-time patterns d MMMM dddd and d MMMM yyyy dddd use the CultureInfo month and weekday names, supporting tr-TR labels (query: \"Custom date and time format strings d MMMM dddd with CultureInfo tr-TR and another-year yyyy. DateTime.ToString(format, CultureInfo.GetCultureInfo(\\\"tr-TR\\\")) Turkish month weekday names; DateTimeOffset time HH:mm:ss.\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/standard/base-types/substitutions-in-regular-expressions"
+    "https://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings"
   ]
 }

@@ -39,8 +39,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D36 — Atomic publication also retries a busy destination (audit 40; RED D36 retry-filter, then D36_RETRY_FILTER_GREEN; Changed 18/0 and signed-in Full 69/0 Hepsi geçti.; installed a8d9a1d, loopback smoke green; GitHub CI 42404315174 success; Gitea #9 comment 209)
 - [~] D37 — Event slips in plain Turkish (audit 40; RED old text, EVENT_TEXT_TURKISH_GREEN; Changed 26/0 and signed-in Full 70/0 Hepsi geçti.; installed 19a892a, loopback smoke green; GitHub CI 42405471230 success; visual check pending (Claude); Gitea #9 comment 210)
 - [x] D38 — "Yalnızca hatalar ve ajan işleri" counts ChatGPT as an agent (audit 40, user decision; RED ChatGPT agent card filtered, N8_NOTIFICATIONS_GREEN; Changed 16/0 and signed-in Full 70/0 Hepsi geçti.; installed 1aad6e4, loopback smoke green; GitHub CI 42406357407 success; Gitea #9 comment 211)
-- [~] D39 — Penpot error text uses the shared secret masking (audit 40; RED CS0117 then D39_PENPOT_REDACTION_GREEN; Changed 28/0 and signed-in Full 70/0 Hepsi geçti.; exact-commit install, smoke and GitHub CI pending; Gitea #9 comment 212)
-- [ ] D43 — Çalışma günlüğü names the day once ("Bugün 15:44 · 3 sn") (audit 41, design improvement)
+- [x] D39 — Penpot error text uses the shared secret masking (audit 40; RED CS0117 then D39_PENPOT_REDACTION_GREEN; Changed 28/0 and signed-in Full 70/0 Hepsi geçti.; installed d5cd0bc, loopback smoke green; GitHub CI 42407259647 success; Gitea #9 comment 212)
+- [~] D43 — Çalışma günlüğü names the day once ("Bugün 15:44 · 3 sn") (audit 41, design improvement; RED CS0103 then D43_SESSION_TIME_TEXT_GREEN; Changed 27/0 and signed-in Full 70/0 Hepsi geçti.; before/after worklog-session and wl2-empty PNGs, both themes: artifacts/d43-before and artifacts/d43-after; exact-commit install, smoke, CI pending; visual check pending (Claude); Gitea #9 comment 213)
 - [ ] D44 — The repair count opens Olaylar on "Onarımlar" (audit 41, design improvement; after D42)
 - [ ] OB1 — talvora_note_write: write Obsidian vault notes, refuse secrets and the linked repo docs (user request 2026-11-01)
 
@@ -58,6 +58,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D43, executor ChatGPT via Talvora: added LocalTimeText for day-once Turkish worklog session labels and actual measured duration; list and detail XAML bindings updated without touching timeline, storage or filters. RED CS0103 then D43_SESSION_TIME_TEXT_GREEN; Changed 27/0 and signed-in Full 70/0 Hepsi geçti. Context7 /dotnet/docs tr-TR custom date-time formats; installed runtime/CI pending. Gitea issue #9 comment 213.
+  Visual evidence — before: artifacts/d43-before; after: artifacts/d43-after, worklog-session and wl2-empty, both themes; Claude visual check pending.
+  Self-review — cosmetics: only list/detail timestamp rows, no styling or layout tokens changed.
+  Self-review — usability: day shown once and real duration is legible.
+  Self-review — Turkish: Bugün, Dün, month and weekday names, singular short duration formats tested.
+  Self-review — correctness/security: span uses EndedAtUtc minus StartedAtUtc; crossing midnight and year handled; JSONL and timeline unchanged.
 - 2026-11-07 — D39, executor ChatGPT via Talvora: Penpot error text now passes through both its existing userToken regex and shared FileLog.RedactSensitiveData for Authorization and JWT masking. RED CS0117 then D39_PENPOT_REDACTION_GREEN; Changed 28/0 and signed-in Full 70/0 Hepsi geçti. Context7 /dotnet/docs regex $1 capture substitution; exact-commit install, smoke and CI pending. Gitea issue #9 comment 212.
   Self-review — cosmetics: no interface or layout changes.
   Self-review — usability: Penpot status errors no longer expose covered secret patterns.
