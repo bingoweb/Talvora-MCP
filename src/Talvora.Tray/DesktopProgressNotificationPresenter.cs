@@ -139,6 +139,11 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
     // The code-preview choice a card opened with (N8); kept for its later updates.
     private readonly Dictionary<string, bool> _previewBySession = new(StringComparer.Ordinal);
 
+    // D38: agents are Codex, Claude and ChatGPT (ChatGPT · Dev, ChatGPT · Yönetim) — user decision 2026-11-07.
+    private static bool IsAgentActor(string? actor) =>
+        actor is "Codex" or "Claude" ||
+        actor?.StartsWith("ChatGPT", StringComparison.Ordinal) == true;
+
     private void PublishCore(DesktopProgressMessage message)
     {
         message = _codeState.Restore(message);
@@ -160,7 +165,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             (preferences.QuietMode ||
              (preferences.FailureAndAgentOnly &&
               message.Kind != DesktopProgressKind.Failed &&
-              message.WorklogFrame?.Header.ActorName is not ("Codex" or "Claude"))))
+              !IsAgentActor(message.WorklogFrame?.Header.ActorName))))
         {
             return;
         }

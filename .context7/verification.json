@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T19:13:07Z",
-  "scope": "D37: preserve C# interpolation holes while replacing event copy with prescribed Turkish strings",
+  "verifiedAtUtc": "2026-11-07T19:23:49Z",
+  "scope": "D38: ordinal prefix recognition for ChatGPT agent caller names",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D37: C# interpolated strings evaluate expressions inside braces and substitute their values; changing only the literal portions preserves the same expressions (query: \"C# 12 or newer interpolated string literals: how are expressions inside {...} evaluated and how does replacing only literal text around interpolation holes preserve interpolation? Distinguish ordinary interpolated strings from plain string literals.\")."
+      "verified": "2026-11-07 D38: string.StartsWith(string, StringComparison.Ordinal) performs a case-sensitive culture-independent prefix check, appropriate for known caller labels (query: \"C# .NET 10 string.StartsWith(string value, StringComparison comparisonType) StringComparison.Ordinal prefix matching; ordinal case-sensitive and nullable string usage with ?.StartsWith.\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/strings/interpolation"
+    "https://learn.microsoft.com/en-us/dotnet/standard/base-types/best-practices-strings"
   ]
 }

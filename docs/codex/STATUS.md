@@ -37,8 +37,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D42 — "Zaten hazır" is not an automatic repair (audit 41; RED CS1061 then UI3_NARRATOR_GREEN; Changed 22/0 and signed-in Full 69/0 Hepsi geçti.; exact-commit install; GitHub CI 42401835186 success; installed smoke pending; Gitea #9 comment 207)
 - [x] D35 — The GitHub release lookup waits after a failure (audit 40; RED CS8604/CS8602, D35_LATEST_BACKOFF_GREEN; Changed 31/0 and signed-in Full 69/0 Hepsi geçti.; installed 2325945, loopback smoke green; GitHub CI 42403430745 success; Gitea #9 comment 208)
 - [x] D36 — Atomic publication also retries a busy destination (audit 40; RED D36 retry-filter, then D36_RETRY_FILTER_GREEN; Changed 18/0 and signed-in Full 69/0 Hepsi geçti.; installed a8d9a1d, loopback smoke green; GitHub CI 42404315174 success; Gitea #9 comment 209)
-- [~] D37 — Event slips in plain Turkish (audit 40; RED old text, EVENT_TEXT_TURKISH_GREEN; Changed 26/0 and signed-in Full 70/0 Hepsi geçti.; install, smoke and GitHub CI pending; visual check pending (Claude); Gitea #9 comment 210)
-- [ ] D38 — "Yalnızca hatalar ve ajan işleri" counts ChatGPT as an agent (audit 40, user decision)
+- [~] D37 — Event slips in plain Turkish (audit 40; RED old text, EVENT_TEXT_TURKISH_GREEN; Changed 26/0 and signed-in Full 70/0 Hepsi geçti.; installed 19a892a, loopback smoke green; GitHub CI 42405471230 success; visual check pending (Claude); Gitea #9 comment 210)
+- [~] D38 — "Yalnızca hatalar ve ajan işleri" counts ChatGPT as an agent (audit 40, user decision; RED ChatGPT agent card filtered, N8_NOTIFICATIONS_GREEN; Changed 16/0 and signed-in Full 70/0 Hepsi geçti.; exact-commit install, smoke and GitHub CI pending; Gitea #9 comment 211)
 - [ ] D39 — Penpot error text uses the shared secret masking (audit 40)
 - [ ] D43 — Çalışma günlüğü names the day once ("Bugün 15:44 · 3 sn") (audit 41, design improvement)
 - [ ] D44 — The repair count opens Olaylar on "Onarımlar" (audit 41, design improvement; after D42)
@@ -58,6 +58,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D38, executor ChatGPT via Talvora: presenter agent-only filter recognizes Codex, Claude, and ordinal ChatGPT prefixes; unknown caller Diğer is filtered but terminal history remains. RED N8 "D38: ChatGPT agent card filtered", then N8_NOTIFICATIONS_GREEN. Signed-in Changed 16/0, Full 70/0 Hepsi geçti. Context7 /dotnet/docs StartsWith(StringComparison.Ordinal); exact-commit install, smoke and CI pending. Gitea issue #9 comment 211.
+  Self-review — cosmetics: no layout or styling change; visual behavior is now visible ChatGPT cards.
+  Self-review — usability: ChatGPT · Dev and ChatGPT · Yönetim are agent labels.
+  Self-review — Turkish: no product copy or setting text changed.
+  Self-review — correctness/security: failure events, history persistence, filter defaults and already-open cards retain their behavior.
 - 2026-11-07 — D37, executor ChatGPT via Talvora: replaced 23 specified event text pairs in four tray sources; both Gitea readiness details updated. RED old text then EVENT_TEXT_TURKISH_GREEN; Changed 26/0 and signed-in Full 70/0 Hepsi geçti. Context7 /dotnet/docs C# interpolation; exact-commit install, smoke and CI pending. Gitea issue #9 comment 210.
   Self-review — cosmetics: no layout, styling or motion change; prescribed event wording only.
   Self-review — usability: event cards use the exact Turkish titles and details specified.

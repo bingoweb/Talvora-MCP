@@ -101,7 +101,7 @@ internal static partial class Program
                 if (Frame(restored)?.Evidence?.CodePreview is null)
                     throw new InvalidOperationException("N8: filter toggle altered a visible card.");
                 restored.Close();
-                presenter.Publish(Message("filtered", "ChatGPT", DesktopProgressKind.Completed, terminal: true));
+                presenter.Publish(Message("filtered", "Diğer", DesktopProgressKind.Completed, terminal: true));
                 if (Window("filtered") is not null ||
                     !history.LoadRecent().Any(x => x.SessionId == "filtered"))
                     throw new InvalidOperationException("N8: filtered completion not history-only.");
@@ -117,6 +117,11 @@ internal static partial class Program
                 if (Window("claude") is not { } claudeCard)
                     throw new InvalidOperationException("N8: Claude agent card filtered.");
                 claudeCard.Close();
+                // D38: ChatGPT is an agent too (user decision 2026-11-07).
+                presenter.Publish(Message("chatgpt-dev", "ChatGPT · Dev", DesktopProgressKind.Started));
+                if (Window("chatgpt-dev") is not { } chatgptCard)
+                    throw new InvalidOperationException("D38: ChatGPT agent card filtered.");
+                chatgptCard.Close();
                 Set(defaults);
                 presenter.Publish(Message("normal", "ChatGPT", DesktopProgressKind.Started));
                 var visible = Window("normal")
