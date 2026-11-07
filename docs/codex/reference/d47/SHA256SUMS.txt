@@ -1,0 +1,3 @@
+# SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
+be18b40a154ed09be506a6765fda3d8cb0ecbd204f1430bdc404b91621f04d6c  MainSurfaceTurkishRegression.ps1
+0b581d70b2b4dddc83050060d122c7ce538d616fb678e62f0d55660d1da6cca9  texts.tsv

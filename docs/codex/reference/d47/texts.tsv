@@ -1,0 +1,76 @@
+file	count	match	old	new
+src/Talvora.Tray/ControlCenterRepairService.cs	1	text	Sağlık ve readiness kontrolleri onarım gerektiren bir arıza göstermedi.	Sağlık ve hazırlık denetimleri onarım gerektiren bir arıza göstermedi.
+src/Talvora.Tray/ControlCenterRepairService.cs	1	literal	Browser doğrulamasını yenile	Tarayıcı denetimini yenile
+src/Talvora.Tray/ControlCenterRepairService.cs	1	text	{registration.DisplayName} browser doğrulaması yenilendi	{registration.DisplayName} tarayıcı denetimi yenilendi
+src/Talvora.Tray/ControlCenterRepairService.cs	1	text	Çalışan MCP/browser zinciri kesilmeden gerçek browser smoke yeniden doğrulandı.	Çalışan bağlantı kesilmeden tarayıcıyla gerçek bir sayfa yeniden denendi.
+src/Talvora.Tray/ControlCenterRepairService.cs	1	text	Yerel MCP/browser zinciri kesilmeden yalnız Secure MCP Tunnel yeniden hazırlandı.	Yerel hizmet kesilmeden yalnızca güvenli tünel yeniden hazırlandı.
+src/Talvora.Tray/ControlCenterRepairService.cs	1	text	Control-plane veya yanıt teslimi katmanındaki bozulma nedeniyle yalnız Secure MCP Tunnel runtime yenilendi; yerel MCP/browser zinciri korunuyor.	OpenAI tarafındaki yanıt iletimi aksadığı için yalnızca güvenli tünelin çalışma katmanı yenilendi; yerel hizmet kesilmedi.
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	{diagnosis.Strategy} uygulandı; Gitea zinciri tam readiness doğrulamasını geçti.	{diagnosis.Strategy} uygulandı; Gitea zinciri bütün hazırlık denetimlerini geçti.
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Hedefli Gitea onarımı readiness sağlamadı: {targeted.Detail}	Hedefli Gitea onarımı yetmedi: {targeted.Detail}
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Hedefli onarım readiness sağlamadı; kontrollü tam zincir yeniden başlatma ile Gitea yeniden hazırlandı.	Hedefli onarım yetmedi; Gitea zinciri sırayla yeniden başlatılarak hazırlandı.
+src/Talvora.Tray/GiteaTrayClient.cs	1	literal	Gitea MCP sunucusu ve tünelini yenile	Gitea araç sunucusunu ve tünelini yenile
+src/Talvora.Tray/GiteaTrayClient.cs	1	literal	Gitea MCP protokol zincirini yenile	Gitea araç protokolünü yenile
+src/Talvora.Tray/GiteaTrayClient.cs	1	literal	Gitea çalışıyor, MCP sunucusu hazır değil	Gitea çalışıyor, araç sunucusu hazır değil
+src/Talvora.Tray/GiteaTrayClient.cs	1	literal	Gitea MCP health açık, protokol hazır değil	Gitea araç sunucusu açık, protokolü hazır değil
+src/Talvora.Tray/GiteaTrayClient.cs	1	literal	Gitea MCP çalışıyor, tünel hazır değil	Gitea araç sunucusu çalışıyor, tünel hazır değil
+src/Talvora.Tray/GiteaTrayClient.cs	1	literal	Gitea MCP hazır	Gitea hazır
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Gitea, Caddy, MCP sunucusu ve güvenli tünel sağlıklı.	Gitea, Caddy, araç sunucusu ve güvenli tünel sağlıklı.
+src/Talvora.Tray/GiteaTrayClient.cs	2	literal	Gitea MCP durduruldu	Gitea durduruldu
+src/Talvora.Tray/GiteaTrayClient.cs	2	text	Gitea MCP zinciri bu Windows oturumu için elle durduruldu.	Gitea zinciri bu Windows oturumu için elle durduruldu.
+src/Talvora.Tray/GiteaTrayClient.cs	1	literal	Gitea MCP tam olarak durdurulamadı	Gitea tam olarak durdurulamadı
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	{component} health kontrolü zaman aşımına uğradı.	{component} sağlık denetimi zaman aşımına uğradı.
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Gitea MCP protokol kaydı bulunamadı.	Gitea araç protokolü kaydı bulunamadı.
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Gitea MCP initialize + tools/list hazır. Araç sayısı: {result.ToolCount}.	Gitea araç sunucusu yanıt veriyor. Araç sayısı: {result.ToolCount}.
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Secure MCP Tunnel çalışma bilgisi bulunamadı.	Güvenli tünelin çalışma bilgisi bulunamadı.
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Secure MCP Tunnel durumu okunamadı.	Güvenli tünelin durumu okunamadı.
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Secure MCP Tunnel health adresi geçersiz.	Güvenli tünelin sağlık adresi geçersiz.
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Secure MCP Tunnel hazır.	Güvenli tünel hazır.
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Secure MCP Tunnel henüz hazır değil.	Güvenli tünel henüz hazır değil.
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Secure MCP Tunnel health kontrolü zaman aşımına uğradı.	Güvenli tünelin sağlık denetimi zaman aşımına uğradı.
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Secure MCP Tunnel erişilemiyor.	Güvenli tünele ulaşılamıyor.
+src/Talvora.Tray/GiteaTrayClient.cs	1	literal	Secure MCP Tunnel	Güvenli tünel
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Gitea MCP zincirinin tüm health/readiness yüzeyleri kapalı.	Gitea zincirinin bütün sağlık denetimleri kapalı.
+src/Talvora.Tray/GiteaTrayClient.cs	1	text	Talvora MCP, Gitea yaşam döngüsü işlemini tamamlayamadı.	Talvora, Gitea işlemini tamamlayamadı.
+src/Talvora.Tray/ControlCenterLifecycleService.cs	1	literal	Gitea MCP başlatıldı	Gitea başlatıldı
+src/Talvora.Tray/ControlCenterLifecycleService.cs	1	text	Gitea MCP zinciri tamamen durmadı.	Gitea zinciri tamamen durmadı.
+src/Talvora.Tray/ControlCenterLifecycleService.cs	1	literal	Gitea MCP durduruldu	Gitea durduruldu
+src/Talvora.Tray/ControlCenterLifecycleService.cs	1	literal	Gitea MCP yeniden başlatıldı	Gitea yeniden başlatıldı
+src/Talvora.Tray/ControlCenterLifecycleService.Penpot.cs	1	text	Penpot arayüzü ve yerel MCP bileşeni kullanıma hazırlandı.	Penpot arayüzü ve yerel araç sunucusu kullanıma hazırlandı.
+src/Talvora.Tray/ControlCenterLifecycleService.Penpot.cs	1	text	Penpot yerel MCP bileşeni tamamen durdurulamadı.	Penpot yerel araç sunucusu tamamen durdurulamadı.
+src/Talvora.Tray/ControlCenterLifecycleService.Penpot.cs	1	text	Penpot arayüzü ve yerel MCP bileşeni kapatıldı; kalıcı veriler korundu.	Penpot arayüzü ve yerel araç sunucusu kapatıldı; kalıcı veriler korundu.
+src/Talvora.Tray/ControlCenterLifecycleService.Penpot.cs	1	text	Penpot arayüzü ve yerel MCP bileşeni yeniden hazırlandı.	Penpot arayüzü ve yerel araç sunucusu yeniden hazırlandı.
+src/Talvora.Tray/ControlCenterWindow.Actions.cs	1	text	Gitea MCP zinciri ve güvenli bağlantısı birlikte durdurulacak.	Gitea zinciri ve güvenli bağlantısı birlikte durdurulacak.
+src/Talvora.Tray/ControlCenterDashboardService.cs	1	text	Bu MCP bu Windows oturumu için elle durduruldu.	Bu hizmet bu Windows oturumu için elle durduruldu.
+src/Talvora.Tray/ControlCenterDashboardService.cs	1	text	Bu MCP isteğe bağlıdır; kaynak tüketmemesi için kapalı tutuluyor. Gerektiğinde Başlat ile açabilirsiniz.	Bu hizmet isteğe bağlıdır; kaynak tüketmemesi için kapalı tutuluyor. Gerektiğinde Başlat ile açabilirsiniz.
+src/Talvora.Tray/ControlCenterDashboardService.cs	1	text	MCP hazır; mevcut çalışma için gerçek tarayıcı açma ve sayfa görüntüsü doğrulaması henüz tamamlanmadı.	Hizmet hazır; bu çalışma için tarayıcı açma ve sayfa görüntüsü denetimi henüz bitmedi.
+src/Talvora.Tray/ControlCenterDashboardService.cs	1	text	Bu MCP için henüz bir sağlık kontrolü tanımlı değil.	Bu hizmet için henüz bir sağlık denetimi tanımlı değil.
+src/Talvora.Tray/ControlCenterDashboardService.cs	1	text	Yerel MCP sağlık kontrolüne ulaşılamadı.	Yerel hizmetin sağlık denetimine ulaşılamadı.
+src/Talvora.Tray/ControlCenterComponentHealthService.cs	1	literal	Tünel MCP gözlemi	Tünel gözlemi
+src/Talvora.Tray/ControlCenterComponentHealthService.cs	1	literal	MCP erişilemiyor	Araç sunucusuna ulaşılamıyor
+src/Talvora.Tray/ControlCenterComponentHealthService.cs	1	text	MCP protokol sağlık kontrolü tanımlı değil.	Araç protokolü için sağlık denetimi tanımlı değil.
+src/Talvora.Tray/ControlCenterComponentHealthService.cs	1	text	Bu bileşen için doğrudan sağlık uç noktası (endpoint) bulunmuyor.	Bu bileşenin doğrudan bir sağlık adresi yok.
+src/Talvora.Tray/ControlCenterComponentHealthService.cs	1	text	Structured tunnel runtime durumu okunamadı.	Tünelin ayrıntılı çalışma durumu okunamadı.
+src/Talvora.Tray/ControlCenterComponentHealthService.cs	1	literal	Tunnel runtime	Tünel çalışma katmanı
+src/Talvora.Tray/ControlCenterComponentHealthService.cs	1	literal	Control plane	Yönetim katmanı
+src/Talvora.Tray/ControlCenterComponentHealthService.cs	1	literal	OAuth discovery	OAuth keşfi
+src/Talvora.Tray/ManagedMcpProtocolProbeService.cs	1	text	MCP protokol sağlık kontrolü tanımlı değil.	Araç protokolü için sağlık denetimi tanımlı değil.
+src/Talvora.Tray/TrayApplicationContext.cs	5	literal	Gitea MCP	Gitea
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Servis ve güvenli MCP tüneli yeniden hazır.	Servis ve güvenli bağlantı yeniden hazır.
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Yerel servis ve güvenli MCP tüneli yeniden hazırlanıyor.	Yerel servis ve güvenli bağlantı yeniden hazırlanıyor.
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Dev ve Admin güvenli MCP tünelleri yeniden hazırlanıyor.	Dev ve Admin güvenli bağlantıları yeniden hazırlanıyor.
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Servis ile Dev ve Admin güvenli MCP tünelleri otomatik olarak düzeltildi.	Servis ile Dev ve Admin güvenli bağlantıları otomatik olarak düzeltildi.
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Yerel MCP servisi hazır. Dev ve Admin bağlantıları ayrı izleniyor.	Yerel Talvora servisi hazır. Dev ve Admin bağlantıları ayrı izleniyor.
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Dev ve Admin güvenli MCP tünelleri hazırlanıyor.	Dev ve Admin güvenli bağlantıları hazırlanıyor.
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Dev ve Admin güvenli MCP tünelleri yeniden bağlandı.	Dev ve Admin güvenli bağlantıları yeniden kuruldu.
+src/Talvora.Tray/TrayApplicationContext.cs	2	literal	Gitea MCP elle durduruldu	Gitea elle durduruldu
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Gitea, Caddy, MCP sunucusu ve güvenli tünel yeniden hazır.	Gitea, Caddy, araç sunucusu ve güvenli tünel yeniden hazır.
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Gitea MCP otomatik onarılıyor...	Gitea otomatik onarılıyor…
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Gitea MCP yönetim kaydı bulunamadı.	Gitea yönetim kaydı bulunamadı.
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Otomatik kurtarma tamamlandı ancak Gitea MCP hazır değil: {status.Detail}	Otomatik kurtarma bitti ama Gitea hazır değil: {status.Detail}
+src/Talvora.Tray/TrayApplicationContext.cs	1	literal	Gitea MCP zinciri otomatik olarak düzeltildi.	Gitea zinciri otomatik olarak düzeltildi.
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Gitea MCP üzerinde işlem sürüyor...	Gitea üzerinde işlem sürüyor…
+src/Talvora.Tray/TrayApplicationContext.cs	1	literal	Gitea MCP durumu hazırlanıyor	Gitea durumu hazırlanıyor
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Talvora MCP üzerinden servis zinciri yeniden hazırlanıyor.	Talvora servis zincirini yeniden hazırlıyor.
+src/Talvora.Tray/TrayApplicationContext.cs	1	text	Bu MCP bu Windows oturumu için elle durduruldu.	Bu hizmet bu Windows oturumu için elle durduruldu.
+src/Talvora.Tray/TrayApplicationContext.cs	1	literal	MCP zinciri ve gerekli bağlantılar yeniden hazır.	Hizmet zinciri ve gerekli bağlantılar yeniden hazır.
+src/Talvora.Tray/TrayApplicationContext.cs	1	literal	MCP zinciri otomatik olarak düzeltildi.	Hizmet zinciri otomatik olarak düzeltildi.

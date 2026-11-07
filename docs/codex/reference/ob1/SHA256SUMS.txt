@@ -1,3 +1,0 @@
-# SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
-bac639e6a6d458d3ec48786829a9aee8e3a984915c047646e511c2e207c82ae6  NoteTools.cs
-617e0451159036130bd64d11b0f130016380883654e8e5db1a8fe4cb34b3c0ab  SourceEditRegressionRunner.Notes.cs
