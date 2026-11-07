@@ -13,10 +13,6 @@ internal static class McpLogoResolver
         var executable = managedMcpId.ToLowerInvariant() switch
         {
             "talvora" => Environment.ProcessPath,
-            "gitea" => Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                "Gitea",
-                "gitea.exe"),
             _ => null,
         };
 

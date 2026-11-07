@@ -163,8 +163,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D27 — A dropped line says plainly that it does not answer (audit 39; RED/GREEN Notification regression; signed-in Full 68/0; installed d00421b and live surface-policy smoke GREEN; GitHub CI 42312290019 success; visual check pending (Claude))
 - [~] D28 — Health-maintenance event in plain Turkish (audit 39; source-copy RED then GREEN, tray build 0/0, signed-in Full 68/0; installed b4bc9f9, live MCP surface-policy GREEN, GitHub CI 42313993832 success; visual check pending (Claude))
 - [?] D29 — Smoke clears its fixture traffic after the SN3 check (audit 39; waiting for Claude P-49: Full gate PS:QualityGateParallelRegression timing failure under concurrent load)
-- [~] RV1 — Measure every tunnel-client command (investigation for the 12 s timeouts, audit 39; RED/GREEN source check; tray build 0/0; signed-in Full 68/0; exact-commit deploy and CI pending; live pending: one hour of normal use, then five slowest tray.log entries for Findings for Claude)
-- [ ] LB1 — Initial letter in the service socket for services without a logo; plain version in About (replaces UI11, P-48)
+- [x] RV1 — Measure every tunnel-client command (audit 39; installed 722ebd8; RED/GREEN; signed-in Full 68/0; GitHub CI 42322843045 success; live 1,689 post-install commands across 6.11 h, 0 timeouts; slowest five recorded for Claude)
+- [~] LB1 — Initial letter in the service socket for services without a logo; plain version in About (replaces UI11, P-48; UI7 RED then GREEN; signed-in Full 68/0; both theme smoke PNGs show G/P brass monograms and retain Talvora logos; exact-commit deploy and CI pending; visual check pending (Claude))
 - [-] UI11 — replaced by LB1 (P-48, audit 39)
 - [x] SN8 — Santral lines show failed calls ("7 hata" under the call count) and mark failed lights; hover ring on sockets (audit 39, user choice) — built by Claude; both themes on smoke screenshots
 - [ ] OB1 — talvora_note_write: write Obsidian vault notes, refuse secrets and the linked repo docs (user request 2026-11-01)
@@ -191,6 +191,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
+- src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs:1302 — RV1 post-install tray.log 2026-11-07 04:17:59–10:24:20 local: 1,689 tunnel-client commands over 6.11 h, no timed-out commands. Slowest five for Claude: runtimes connect 10124 ms (45 s limit, exit 0, 08:41:34); runtimes status 9874 ms (12 s, exit 0, 06:48:46); runtimes connect 6114 ms (45 s, exit 2, 08:42:08); runtimes status 4261 ms (12 s, exit 0, 08:41:12); runtimes status 4192 ms (12 s, exit 0, 08:29:35). The 9874 ms status call approached the 12 s limit; no timeout/retry change was made.
+
 - src/Talvora.Tray/ControlCenterSmoke.UI3.cs:106 — An isolated Santral Control Center smoke reported 5.58% overview idle CPU over 3009 ms on 2026-11-03, above the earlier UI8 <1% target; W8 made no UI changes.
 
 - tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.AtomicRace.cs:23 — The first signed-in W1 Full gate hit UnauthorizedAccessException in concurrent first writers; the standalone SourceEdit regression and repeated Full gate passed.
@@ -212,6 +214,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — LB1, executor ChatGPT via Talvora: UI7 changed first and failed RED "UI7 About must expose version, short source commit and approved links" (Program.UI7.cs:52); Settings About now shows bare version with a separate 7-character commit, Gitea placeholder icon fallback removed, Turkish-cased Monogram/MonogramVisibility added, and exact prescribed 15px Bahnschrift brass-light text added inside the existing 40px socket. Notification regression GREEN, signed-in Full gate 68 checks/0 errors, Hepsi geçti. Both smoke PNGs artifacts/lb1-preview/control-center-ui4-services-{initial,alternate}.png visually inspected: brass G/P present, Talvora logos retained, no geometry change. Context7 /dotnet/docs (tr-TR casing) and /dotnet/docs-desktop (Grid general, documented overlap/null Source gap) plus official vendor Grid page checked. Exact-commit install and GitHub CI follow commit; Claude visual check pending. RV1 closed via 6.11 h post-install log data and slowest five entered in Findings for Claude.
+  Self-review — cosmetics: exact prescribed socket typography/colour only; both original and alternate theme PNGs show G/P, Talvora logos unchanged.
+  Self-review — usability: each serviceless-logo socket has a recognisable first letter; About displays plain version separately from short commit.
+  Self-review — Turkish: first-letter uppercase uses tr-TR; existing UI words untouched.
+  Self-review — correctness/security: UI7 RED/GREEN, Full 68/0, no token/sizing changes or unrelated source edits.
 - 2026-11-07 — RV1, executor ChatGPT via Talvora: timed the complete ProcessRunner.RunAsync call via Stopwatch in RunClientAsync, recording only the first two safe positional verb words, elapsed milliseconds, the existing limit and the exit code or timeout. Added one log line on normal returns (including TimedOut results) and on thrown TimeoutException; original timeout and retries are unchanged. Source RED then GREEN, signed-in Tray build 0 warnings/0 errors, Full gate 68 checks/0 errors, Hepsi geçti. Context7 /dotnet/docs and Microsoft Learn verified Stopwatch.StartNew for awaited work. Exact-commit deployment and GitHub CI follow commit; live pending one hour of normal use and five slowest lines from tray.log for Findings for Claude.
   Self-review — cosmetics: no presentation, tokens or animation changed.
   Self-review — usability: command timing diagnostics aid diagnosis without changing the user workflow.

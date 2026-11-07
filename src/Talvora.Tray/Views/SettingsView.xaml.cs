@@ -48,7 +48,7 @@ internal sealed partial class SettingsView : System.Windows.Controls.UserControl
             ? "Bilinmiyor" : informationalVersion;
         var separator = version.IndexOf('+');
         var commit = separator >= 0 ? version[(separator + 1)..] : string.Empty;
-        return (version, commit.Length >= 7 ? commit[..7] : "—");
+        return (separator >= 0 ? version[..separator] : version, commit.Length >= 7 ? commit[..7] : "—");
     }
 
     internal void SynchronizeTheme()

@@ -16,6 +16,12 @@ internal sealed record ServiceRowViewModel(
     bool IsManuallyStopped,
     System.Windows.Media.Imaging.BitmapSource? Logo)
 {
+    // LB1: shown when no logo exists — the service's first letter in Turkish upper case.
+    public string Monogram => Name.Length == 0
+        ? string.Empty
+        : Name[..1].ToUpper(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"));
+    public System.Windows.Visibility MonogramVisibility =>
+        Logo is null ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
     public bool CanStart => IsManuallyStopped || Source.Health == ControlCenterHealthState.Offline;
     public bool CanStop => !CanStart;
     public bool CanRestart => !CanStart;

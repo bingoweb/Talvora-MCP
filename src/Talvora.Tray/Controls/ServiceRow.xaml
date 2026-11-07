@@ -29,6 +29,11 @@
                 <Ellipse Width="26" Height="26" Fill="{DynamicResource Sn.Socket}"/>
                 <Image Source="{Binding Logo}" Width="18" Height="18" Stretch="Uniform"
                        AutomationProperties.Name="{Binding Name}"/>
+                <TextBlock Text="{Binding Monogram}" Visibility="{Binding MonogramVisibility}"
+                           FontFamily="Bahnschrift" FontStretch="Condensed" FontWeight="SemiBold" FontSize="15"
+                           Foreground="{DynamicResource Sn.BrassLight}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           AutomationProperties.Name="{Binding Name}"/>
             </Grid>
             <TextBlock Grid.Column="1" Text="{Binding Name}"
                        Style="{StaticResource Tv.Type.BodyStrong}"

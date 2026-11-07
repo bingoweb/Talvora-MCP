@@ -1,14 +1,19 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T01:06:57.719Z",
-  "scope": "RV1: measure each tunnel-client process execution and timeout without exposing command options, keys, or environment",
+  "verifiedAtUtc": "2026-11-07T07:27:24.907Z",
+  "scope": "LB1: display Turkish-cased first letter in existing Santral socket only when the row has no logo, and keep commit separate from About version",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 RV1: Stopwatch.StartNew measures elapsed time across awaited work; its Elapsed time remains readable on return or exception (query: \"System.Diagnostics.Stopwatch.StartNew in .NET 10: the Stopwatch starts immediately and its Elapsed.TotalMilliseconds returns measured elapsed time; safe to call Elapsed when an awaited task completes or throws. How does Stopwatch behave for asynchronous calls?\")"
+      "verified": "2026-11-07 LB1: Turkish tr-TR uppercase of lower-case i is dotted capital İ, so String.ToUpper(CultureInfo) uses a culture-specific override (query: \"System.Globalization.CultureInfo.GetCultureInfo(\"tr-TR\") and string.ToUpper(CultureInfo) dotted Turkish İ: when uppercasing first letter of 'istanbul' how to preserve dotted capital I in .NET 10?\")"
+    },
+    {
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-07 LB1: Grid.Row and Grid.Column default to zero; Context7 gives no explicit page for overlapping Grid children or null Image.Source so vendor Grid page checked and this gap is recorded (query: \"WPF Grid overlapping children in same grid row and column, Image with Source null renders nothing, TextBlock visibility binding Visibility enum, .NET 10 WPF UI controls.\")"
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.stopwatch.startnew?view=net-10.0"
+    "https://learn.microsoft.com/en-us/dotnet/standard/base-types/best-practices-strings",
+    "https://learn.microsoft.com/en-us/dotnet/desktop/wpf/controls/grid"
   ]
 }
