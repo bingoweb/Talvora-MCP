@@ -35,8 +35,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D40 — Tests never write into the user's Talvora files (audit 41; RED CS1061, then D40_TEST_ISOLATION_GREEN; Changed 27/0 and signed-in Full 69/0 Hepsi geçti.; real log and Project A timestamps unchanged; installed 028bd07 and smoke green; GitHub CI 42378419166 success; Gitea #9 comment 205)
 - [~] D41 — One caller name: Talvora's own calls leave no trace, Claude is named (audit 41; RED CS0117 then D41_CALLER_IDENTITY_GREEN and SN1_LINE_TRAFFIC_GREEN; Changed 28/0, signed-in Full 69/0 Hepsi geçti.; installed 39b78e2 and smoke green; GitHub CI 42382205457 success; live pending (Claude): bridge call named Claude and smoke leaves no worklog session; Gitea #9 comment 206)
 - [~] D42 — "Zaten hazır" is not an automatic repair (audit 41; RED CS1061 then UI3_NARRATOR_GREEN; Changed 22/0 and signed-in Full 69/0 Hepsi geçti.; exact-commit install; GitHub CI 42401835186 success; installed smoke pending; Gitea #9 comment 207)
-- [~] D35 — The GitHub release lookup waits after a failure (audit 40; RED CS8604/CS8602, D35_LATEST_BACKOFF_GREEN; Changed 31/0 and signed-in Full 69/0 Hepsi geçti.; exact-commit install, smoke and CI pending; Gitea #9 comment 208)
-- [ ] D36 — Atomic publication also retries a busy destination (audit 40)
+- [x] D35 — The GitHub release lookup waits after a failure (audit 40; RED CS8604/CS8602, D35_LATEST_BACKOFF_GREEN; Changed 31/0 and signed-in Full 69/0 Hepsi geçti.; installed 2325945, loopback smoke green; GitHub CI 42403430745 success; Gitea #9 comment 208)
+- [~] D36 — Atomic publication also retries a busy destination (audit 40; RED D36 retry-filter, then D36_RETRY_FILTER_GREEN; Changed 18/0 and signed-in Full 69/0 Hepsi geçti.; exact-commit install, smoke and GitHub CI pending; Gitea #9 comment 209)
 - [ ] D37 — Event slips in plain Turkish (audit 40)
 - [ ] D38 — "Yalnızca hatalar ve ajan işleri" counts ChatGPT as an agent (audit 40, user decision)
 - [ ] D39 — Penpot error text uses the shared secret masking (audit 40)
@@ -58,6 +58,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D36, executor ChatGPT via Talvora: PublishDurable retries IOException or UnauthorizedAccessException with its existing bounded filter and source-exists guard. RED source assertion then D36_RETRY_FILTER_GREEN; Changed 18/0 and signed-in Full 69/0 Hepsi geçti (AtomicRace). Context7 /dotnet/docs File.Replace and I/O errors; exact-commit install, smoke and CI pending. Gitea issue #9 comment 209.
+  Self-review — cosmetics: no layout, styling or visible elements changed.
+  Self-review — usability: busy file destinations use the existing retry window.
+  Self-review — Turkish: all user-facing text unchanged.
+  Self-review — correctness/security: only the exception filter changed; attempts, delay, replace/move order and source-path guard are preserved.
 - 2026-11-07 — D35, executor ChatGPT via Talvora: failed release lookups back off for 30 minutes; no latest tag keeps the running client. HTTP handler regression RED CS8604/CS8602 then D35_LATEST_BACKOFF_GREEN; supporting PS rollback source-range marker updated for the nullable internal signature. Changed 31/0, signed-in Full 69/0 Hepsi geçti. Context7 /dotnet/docs HttpMessageHandler.SendAsync; exact-commit install, smoke and CI pending. Gitea issue #9 comment 208.
   Self-review — cosmetics: no UI or visual changes.
   Self-review — usability: a GitHub outage preserves the running tunnel client and suppresses repeated requests.

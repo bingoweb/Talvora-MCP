@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T18:46:52Z",
-  "scope": "D35: HttpMessageHandler test seam for release lookup failure backoff",
+  "verifiedAtUtc": "2026-11-07T18:59:13Z",
+  "scope": "D36: bounded atomic publication retries also handle access-denied failures",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D35: HttpMessageHandler.SendAsync(HttpRequestMessage, CancellationToken) can be overridden to return or throw for a test HttpClient(handler); an HTTP failure raises HttpRequestException while cancellation or timeout can raise TaskCanceledException (query: \"C# .NET 10 HttpMessageHandler.SendAsync(HttpRequestMessage,CancellationToken) custom test handler override and HttpClient(HttpMessageHandler) constructor; thrown HttpRequestException from SendAsync and TaskCanceledException behavior\")."
+      "verified": "2026-11-07 D36: .NET filesystem APIs may raise either IOException or UnauthorizedAccessException, and C# catch filters can restrict retry handling to those types (query: \"In .NET 10 C#, File.Replace(sourceFileName, destinationFileName, destinationBackupFileName) throws UnauthorizedAccessException versus IOException when destination is in use, locked or pending delete; how should a retry filter catch both and preserve File.Replace then File.Move order?\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpmessagehandler.sendasync?view=net-10.0",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient.-ctor?view=net-10.0"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.io.file.replace?view=net-10.0",
+    "https://learn.microsoft.com/en-us/dotnet/standard/io/handling-io-errors"
   ]
 }

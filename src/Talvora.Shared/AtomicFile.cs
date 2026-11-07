@@ -202,7 +202,9 @@ public static class AtomicFile
                     replaceExisting: false);
                 return null;
             }
-            catch (IOException) when (attempt < PublishAttempts && File.Exists(sourcePath))
+            // D36: a concurrent File.Replace or a delete-pending destination reports access denied, not IOException.
+            catch (Exception ex) when ((ex is IOException or UnauthorizedAccessException) &&
+                attempt < PublishAttempts && File.Exists(sourcePath))
             {
                 Thread.Sleep(10 * attempt);
             }
