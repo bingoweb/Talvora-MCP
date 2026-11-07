@@ -43,8 +43,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D37 — Event slips in plain Turkish (audit 40)
 - [ ] D38 — "Yalnızca hatalar ve ajan işleri" counts ChatGPT as an agent (audit 40, user decision)
 - [ ] D39 — Penpot error text uses the shared secret masking (audit 40)
-- [~] [C] SN9 — Switchboard keeps focus and hover, draws calmly (Claude; audit 40; smoke RED/GREEN, signed-in Full green; live pending: exact-commit deploy and CI)
-- [~] [C] WL2 — Çalışma günlüğü: no blank project line, a real empty state (Claude; audit 40; smoke RED/GREEN, signed-in Full green; live pending: exact-commit deploy and CI)
+- [x] [C] SN9 — Switchboard keeps focus and hover, draws calmly (Claude; audit 40; installed 8222d4f, installed Control Center smoke GREEN, GitHub CI 42359284287 success)
+- [x] [C] WL2 — Çalışma günlüğü: no blank project line, a real empty state (Claude; audit 40; installed 8222d4f, installed Control Center smoke GREEN, GitHub CI 42359284287 success)
 - [ ] OB1 — talvora_note_write: write Obsidian vault notes, refuse secrets and the linked repo docs (user request 2026-11-01)
 
 ## User queue
@@ -60,6 +60,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-07 — Claude: [C] SN9 and [C] WL2 installed 8222d4f (`/healthz` sourceCommit after ~30 s; the tray restarted from the new version folder); the installed tray's Control Center smoke is GREEN (hotspots and keyboard focus kept across five polls; 39 captures checked in both themes: reconnect timer clear of the neighbour's text, "Proje belirsiz" and the empty-state hint in place); GitHub CI 42359284287 success. Both closed.
 
 - 2026-11-07 — [C] WL2, executor Claude: smoke first (`AssertWorklogHistorySelection` gains a session without a project) RED "WL2: the detail column has no empty-state hint", then GREEN. `WorklogHistoryView`: a session without a project reads "Proje belirsiz" in `Tv.TextFaint` (list row and detail title); until a session is chosen the detail column shows "Soldan bir oturum seç; adımları, kanıtları ve sonucu burada görürsün." centred in `Tv.TextMuted` (hidden while the list is empty). XAML style triggers only; the project filter already skips empty names.
   Design gaps filled: the card named `Sn.InkFaint`/`Sn.InkMuted`; this page uses the Gözlemevi palette, so its `Tv.TextFaint`/`Tv.TextMuted` were used. Context7 `/dotnet/docs-desktop` (`{x:Null}`; MultiDataTrigger gap → vendor page). Signed-in Full 68/0 `Hepsi geçti.` (ControlCenter smoke included; one gate run covered SN9 and WL2 together).
