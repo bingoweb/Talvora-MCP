@@ -32,7 +32,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [ ] D30 — The agent brief always carries the current card (audit 40, critical)
+- [~] D30 — The agent brief always carries the current card (audit 40, critical; RED card-first fixture; AGENT_CONTEXT_ORDER_GREEN; QualityGateRegression GREEN; signed-in Full 69/0, Hepsi geçti.; exact-commit deployment, CI and installed agent-brief check pending)
 - [ ] D31 — The parallel-gate timing regression runs on its own (audit 40; P-49 decided)
 - [ ] D29 — Smoke clears its fixture traffic after the SN3 check (audit 39; unblocked: P-49 decided, D31 first; implement the card unchanged)
 - [ ] D32 — The traffic meter never counts Talvora's own clients (audit 40, user decision)
@@ -61,6 +61,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D30, executor ChatGPT via Talvora: added exactly the prescribed AgentContextOrderRegression fixture (RED "the card must come first, got: === STATUS...", then AGENT_CONTEXT_ORDER_GREEN); reordered the helper with ROADMAP fallback for UI/N, trimmed finished queue lines at the end; the 60,000-character brief keeps the card and marks trimmed STATUS. QualityGateRegression GREEN; C# build 0 warnings/errors; signed-in Full gate 69 checks, 0 errors, Hepsi geçti. Context7 /dotnet/docs and Microsoft Learn verified string[..^n] (C# from-end slicing). Exact-commit install, live agent-brief and GitHub CI follow commit. Gitea issue #9 mirror skipped: no authenticated comment tool via Talvora Dev.
+  Self-review — cosmetics: no UI elements, layouts or style values changed.
+  Self-review — usability: current card is shown first; finished queue items are omitted; UI/N cards can come from ROADMAP.
+  Self-review — Turkish: no user-facing copy changed; technical marker matches the card.
+  Self-review — correctness/security: RED then GREEN, target regression plus Full 69/0; summary size limit unchanged and no secrets emitted.
 - 2026-11-07 — Claude: [C] SN9 and [C] WL2 installed 8222d4f (`/healthz` sourceCommit after ~30 s; the tray restarted from the new version folder); the installed tray's Control Center smoke is GREEN (hotspots and keyboard focus kept across five polls; 39 captures checked in both themes: reconnect timer clear of the neighbour's text, "Proje belirsiz" and the empty-state hint in place); GitHub CI 42359284287 success. Both closed.
 
 - 2026-11-07 — [C] WL2, executor Claude: smoke first (`AssertWorklogHistorySelection` gains a session without a project) RED "WL2: the detail column has no empty-state hint", then GREEN. `WorklogHistoryView`: a session without a project reads "Proje belirsiz" in `Tv.TextFaint` (list row and detail title); until a session is chosen the detail column shows "Soldan bir oturum seç; adımları, kanıtları ve sonucu burada görürsün." centred in `Tv.TextMuted` (hidden while the list is empty). XAML style triggers only; the project filter already skips empty names.

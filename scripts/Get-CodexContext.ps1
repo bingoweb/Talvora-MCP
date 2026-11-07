@@ -46,9 +46,19 @@ elseif ($Card -match '^N[0-9]') {
 else {
     'docs/codex/ROADMAP.md'
 }
-$roadmap = [IO.File]::ReadAllText((Join-Path $repoRoot $source))
 $cardPattern = '(?ms)^#{2,3}[ \t]+' + [regex]::Escape($Card) + '[ \t]+[—–-].*?(?=^#{2,3}[ \t]+|\z)'
+$sourcePath = Join-Path $repoRoot $source
+$roadmap = if (Test-Path -LiteralPath $sourcePath -PathType Leaf) { [IO.File]::ReadAllText($sourcePath) } else { '' }
+# D30: cited spec sections still come from the design spec when the card itself lives in ROADMAP.
+$specSource = $source
+$specText = $roadmap
 $cardMatch = [regex]::Match($roadmap, $cardPattern)
+if (-not $cardMatch.Success -and $source -ne 'docs/codex/ROADMAP.md') {
+    # D30: finished UI/N cards were removed from the design specs; new UI/N cards are written in ROADMAP.
+    $source = 'docs/codex/ROADMAP.md'
+    $roadmap = [IO.File]::ReadAllText((Join-Path $repoRoot $source))
+    $cardMatch = [regex]::Match($roadmap, $cardPattern)
+}
 if (-not $cardMatch.Success) { throw "Card $Card could not be found in $source." }
 $cardText = $cardMatch.Value.TrimEnd()
 
@@ -108,12 +118,10 @@ function Get-CitedSections {
     }
 }
 
-Add-ContextText '=== STATUS (without historical Log) ==='
-Add-ContextText $statusHeader
-Add-ContextText '=== NEWEST LOG ==='
-if ($recent.Success) { Add-ContextText $recent.Value.TrimEnd() } else { Add-ContextText '(none)' }
 Add-ContextText "=== CARD $Card ($source) ==="
 Add-ContextText $cardText
+Add-ContextText '=== NEWEST LOG ==='
+if ($recent.Success) { Add-ContextText $recent.Value.TrimEnd() } else { Add-ContextText '(none)' }
 
 $additionsPath = Join-Path $repoRoot 'docs/codex/QUEUE-ADDITIONS.md'
 $pending = if (Test-Path -LiteralPath $additionsPath -PathType Leaf) {
@@ -157,14 +165,14 @@ else { Add-ContextText '(card does not declare files)' }
 if ($Card -match '^(UI|N[0-9])') {
     $sections = [Collections.Generic.List[object]]::new()
     foreach ($number in @(Get-CitedSections $cardText)) {
-        $text = Get-SpecSection -Document $roadmap -Number $number
+        $text = Get-SpecSection -Document $specText -Number $number
         $sections.Add([pscustomobject]@{
             Number = $number
             Lines = @($text -split '\r?\n')
         })
     }
     if ($sections.Count) {
-        Add-ContextText "=== REFERENCED SPEC SECTIONS ($source) ==="
+        Add-ContextText "=== REFERENCED SPEC SECTIONS ($specSource) ==="
         # Reserve one heading per section and keep the entire report under 250 lines.
         $remaining = [Math]::Max(0, 248 - $script:ContextLines.Count - $sections.Count)
         for ($i = 0; $i -lt $sections.Count; $i++) {
@@ -180,10 +188,13 @@ if ($Card -match '^(UI|N[0-9])') {
             }
             $remaining -= $take
             if ($truncated -and $remaining -gt 0) {
-                Add-ContextText "… ($($section.Lines.Count - $take) more lines in $source §$($section.Number))"
+                Add-ContextText "… ($($section.Lines.Count - $take) more lines in $specSource §$($section.Number))"
                 $remaining--
             }
         }
     }
 }
+# D30: STATUS goes last and without finished queue lines, so a size cap trims STATUS, never the card.
+Add-ContextText '=== STATUS (open items; finished work is in git history) ==='
+Add-ContextText (($statusHeader -split '\r?\n' | Where-Object { $_ -notmatch '^- \[(x|-)\] ' }) -join "`n")
 $script:ContextLines

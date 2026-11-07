@@ -15,6 +15,8 @@ public sealed record TalvoraAgentBriefResponse(
 public static class AgentBriefTools
 {
     private const int MaxTotalCharacters = 60_000;
+    private const string TrimMarker =
+        "\n[brief trimmed here: the rest of STATUS is in docs/codex/STATUS.md]";
     private static readonly string[] RequiredHeadings =
     [
         "## PERMANENT USER-APPROVED AGENT PROMPT",
@@ -95,11 +97,12 @@ public static class AgentBriefTools
             0, root.Length + sections.Length + context.Length -
                 MaxTotalCharacters);
         var truncated = excess > 0;
-        if (excess > 0)
+        if (excess > 0 && context.Length > 0)
         {
-            var fromContext = Math.Min(excess, context.Length);
-            context = context[..^fromContext];
-            excess -= fromContext;
+            // D30: STATUS is the last context section, so trimming cuts STATUS, never the card; say so.
+            var fromContext = Math.Min(excess + TrimMarker.Length, context.Length);
+            context = context[..^fromContext] + TrimMarker;
+            excess = Math.Max(0, excess + TrimMarker.Length - fromContext);
         }
         if (excess > 0)
         {

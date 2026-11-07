@@ -1,18 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T09:19:49.000Z",
-  "scope": "WL2: the worklog history page shows 'Proje belirsiz' for a session without a project and an empty-state hint in the detail column until a session is chosen, with XAML style triggers only",
+  "verifiedAtUtc": "2026-11-07T09:36:45.259Z",
+  "scope": "D30: preserve the current card and newest log when trimming agent-brief context, using the C# from-end string range",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-07 WL2: {x:Null} used as an attribute value sets a XAML member to null, so a DataTrigger with Value=\"{x:Null}\" matches a session whose project name is null (query: \"WPF Style MultiDataTrigger Conditions Binding Value False setter Visibility and DataTrigger Value x:Null\")"
-    },
-    {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-07 WL2: two Context7 queries returned no MultiDataTrigger text (gap); the vendor page states that a MultiDataTrigger applies its setters when the bound data meet its set of conditions, so the hint shows only while HasSelection and IsEmpty are both False (query: \"MultiDataTrigger.Conditions Condition Binding Value Setter in Style.Triggers\")"
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-07 D30: string[..^n] returns a substring ending n characters before its original end, so the range safely trims only suffix content (query: \"C# .NET 10 System.String range index from-end expression text[..^n]: takes substring with end exclusive, used to trim last n characters from string, syntax string[..^fromContext], and string slicing behavior.\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.windows.multidatatrigger"
+    "https://learn.microsoft.com/en-us/dotnet/csharp/tutorials/ranges-indexes"
   ]
 }

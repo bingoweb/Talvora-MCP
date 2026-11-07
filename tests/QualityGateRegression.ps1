@@ -111,13 +111,6 @@ try {
         throw 'HealthHandle regression must run after installing the Windows service.'
     }
 
-    $contextOutput = @(& $contextPath -Card K1 | Out-String) -join ''
-    if ($contextOutput -notmatch '### K1\s+[—-]' -or
-        $contextOutput -notmatch 'Invoke-QualityGate\.ps1' -or
-        $contextOutput -match '### K2\s+[—-]') {
-        throw 'The context helper must print the selected card without neighbouring cards.'
-    }
-
     $fixtureRoot = Join-Path $tempRoot 'context-fixture'
     $fixtureScripts = Join-Path $fixtureRoot 'scripts'
     $fixtureDocs = Join-Path $fixtureRoot 'docs/codex'
@@ -254,8 +247,12 @@ Q2A BODY
         throw 'D1 must not match the D10 fixture card.'
     }
 
-    foreach ($card in @('UI1','UI2','UI3','UI4','UI5','UI6','UI7','UI8',
-            'N1','N2','N3','N3b','N4','N5','N6','N7','N8')) {
+    # D30: measure the open cards of the live queue; finished cards leave the documents at every audit.
+    $statusText = [IO.File]::ReadAllText((Join-Path $repoRoot 'docs/codex/STATUS.md'))
+    $queueText = [regex]::Match($statusText, '(?ms)^## Agent queue[^\r\n]*\r?\n(.*?)(?=^## )').Groups[1].Value
+    $liveCards = @([regex]::Matches($queueText, '(?m)^- \[[ ~?]\] (?<id>[0-9A-Za-z.\-]+) [—–-]') |
+        ForEach-Object { $_.Groups['id'].Value })
+    foreach ($card in $liveCards) {
         $actual = @(& $contextPath -Card $card | Out-String) -join ''
         # Literal "#### Exact implementation" blocks must reach the agent complete, and the
         # STATUS header is required reading anyway; the 250-line economy budget applies to
