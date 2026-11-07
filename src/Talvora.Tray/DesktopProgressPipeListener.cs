@@ -9,7 +9,7 @@ namespace Talvora.Tray;
 internal sealed class DesktopProgressPipeListener : IDisposable
 {
     internal static readonly TimeSpan PipeReadTimeout =
-        TimeSpan.FromSeconds(3);
+        TimeSpan.FromSeconds(10);
 
     private readonly int _sessionId;
     private readonly Action<DesktopProgressMessage> _onMessage;

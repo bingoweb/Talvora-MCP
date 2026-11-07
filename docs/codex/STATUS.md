@@ -35,8 +35,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D30 — The agent brief always carries the current card (audit 40, critical; RED card-first fixture; AGENT_CONTEXT_ORDER_GREEN; QualityGateRegression GREEN; signed-in Full 69/0; installed e62b81d and live agent-brief truncated=false with card first, MCP smoke GREEN; GitHub CI 42361563244 success)
 - [x] D31 — The parallel-gate timing regression runs on its own (audit 40; P-49 decided; source RED then GREEN; focused QUALITY_GATE_PARALLEL_GREEN; two consecutive signed-in Full gates 69/0 and Hepsi geçti.; exact-commit installer, live smoke and CI follow commit; D29 next)
 - [x] D29 — Smoke clears its fixture traffic after the SN3 check (audit 39; RED then D29_GREEN; Changed 16/0, signed-in Full 69/0 and Hepsi geçti.; smoke loaded.png shows "veri yok", no fixture 13/1/2; Gitea #9 comment 201; installed f1e6e76; GitHub CI 42364895060 success)
-- [~] D32 — The traffic meter never counts Talvora's own clients (audit 40; SN1 RED then GREEN; Notification/Changed 17/0, signed-in Full 69/0 Hepsi geçti.; exact-commit install and live traffic smoke follow commit; GitHub CI pending; Gitea #9 comment 202)
-- [ ] D33 — Desktop progress frames survive a busy machine (audit 40)
+- [x] D32 — The traffic meter never counts Talvora's own clients (audit 40; SN1 RED then GREEN; Notification/Changed 17/0, signed-in Full 69/0 Hepsi geçti.; installed 4b29be2, live admin 0 calls after smoke, Gitea #9 comment 202, GitHub CI 42365696416 success)
+- [~] D33 — Desktop progress frames survive a busy machine (audit 40; initial RED CS0103 then D33_DELIVERY_BUDGETS_GREEN, Changed 28/0 and Full 69/0 Hepsi geçti.; exact-commit install, live card and CI pending; Gitea #9 comment 203)
 - [ ] D34 — Tunnel health without launching tunnel-client every round (audit 40)
 - [ ] D35 — The GitHub release lookup waits after a failure (audit 40)
 - [ ] D36 — Atomic publication also retries a busy destination (audit 40)
@@ -61,6 +61,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D33, executor ChatGPT via Talvora: added literal delivery-budget and PID/start-time cache regression; initial RED CS0103 (cache not implemented), then D33_DELIVERY_BUDGETS_GREEN and Notification GREEN. Set read/write budgets 10/8 s, kept connect 2 s and three retries, cached trusted tray by PID+StartTime, logged dropped frames at Warning at most once per 10 min. Changed gate 28/0 and signed-in Full 69/0, Hepsi geçti. Context7 /dotnet/docs and Microsoft Learn Process.StartTime and ILogger.Log overloads verified; exact-commit install, desktop-card check, GitHub CI pending. Gitea issue #9 comment 203.
+  Self-review — cosmetics: no layout, colour or motion change.
+  Self-review — usability: busy-machine frames gain headroom without weakening tray-path verification.
+  Self-review — Turkish: no user-facing text changed.
+  Self-review — correctness/security: RED/GREEN, Notification and Full gate; process-session check, protocol, frame limit, connect deadline and retries unchanged.
 - 2026-11-07 — D32, executor ChatGPT via Talvora: SN1 test first RED "D32: Talvora's own clients must never be counted", then SN1_LINE_TRAFFIC_GREEN after the exact prefix guard in Record. Notification/Changed gate 17 checks, 0 errors; signed-in Full gate 69 checks, 0 errors, Hepsi geçti. The line, JSON and ring remain unchanged. Context7 /dotnet/docs and Microsoft Learn confirmed String.StartsWith(value, StringComparison.OrdinalIgnoreCase). Exact-commit installation and installed smoke follow the commit. Gitea issue #9 comment 202.
   Self-review — cosmetics: no new layout or visual decoration; only measured traffic data changes.
   Self-review — usability: own-client smoke and tray activity is excluded; external calls remain counted.

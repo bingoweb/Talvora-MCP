@@ -20,7 +20,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     internal static readonly TimeSpan PipeConnectTimeout =
         TimeSpan.FromSeconds(2);
     internal static readonly TimeSpan PipeWriteTimeout =
-        TimeSpan.FromSeconds(2);
+        TimeSpan.FromSeconds(8);
     internal static readonly TimeSpan ShutdownDrainTimeout =
         TimeSpan.FromSeconds(8);
     internal static readonly TimeSpan ForcedShutdownTimeout =
@@ -40,6 +40,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     private readonly TimeSpan _shutdownDrainTimeout;
     private readonly TimeSpan _forcedShutdownTimeout;
     private readonly Task _deliveryTask;
+    private static DateTimeOffset _lastDropWarningUtc = DateTimeOffset.MinValue;
     private long _droppedProgressMessages;
     private long _droppedTerminalMessages;
     private long _pendingTerminalMessages;
@@ -648,16 +649,28 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             }
         }
 
+        // D33: a lost frame is visible in the service log, at most once per 10 minutes.
+        var now = DateTimeOffset.UtcNow;
+        var level = now - _lastDropWarningUtc >= TimeSpan.FromMinutes(10) ? LogLevel.Warning : LogLevel.Debug;
+        if (level == LogLevel.Warning)
+        {
+            _lastDropWarningUtc = now;
+        }
+
         if (lastError is null)
         {
-            _logger.LogDebug(
-                "Desktop progress tray IPC stayed unavailable after retrying.");
+            _logger.Log(
+                level,
+                "Desktop progress tray IPC stayed unavailable after retrying (operation {OperationId}).",
+                message.OperationId);
         }
         else
         {
-            _logger.LogDebug(
+            _logger.Log(
+                level,
                 lastError,
-                "Desktop progress notification failed after retrying without affecting the tool operation.");
+                "Desktop progress notification failed after retrying without affecting the tool operation (operation {OperationId}).",
+                message.OperationId);
         }
     }
 
@@ -703,6 +716,13 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 return false;
             }
 
+            // D33: MainModule is slow and cannot be cancelled; check each tray process once.
+            var startedUtc = process.StartTime.ToUniversalTime();
+            if (TrayPipeVerificationCache.TryGet(process.Id, startedUtc, out var known))
+            {
+                return known;
+            }
+
             var imagePath = process.MainModule?.FileName;
             if (string.IsNullOrWhiteSpace(imagePath))
             {
@@ -714,13 +734,15 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                         Environment.SpecialFolder.ProgramFiles),
                     "Talvora") + Path.DirectorySeparatorChar;
             var actualPath = Path.GetFullPath(imagePath);
-            return actualPath.StartsWith(
+            var trusted = actualPath.StartsWith(
                     installedRoot,
                     StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(
                     Path.GetFileName(actualPath),
                     "Talvora.Tray.exe",
                     StringComparison.OrdinalIgnoreCase);
+            TrayPipeVerificationCache.Store(process.Id, startedUtc, trusted);
+            return trusted;
         }
         catch (Exception)
         {
@@ -942,4 +964,34 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     private static partial bool GetNamedPipeServerProcessId(
         SafePipeHandle pipe,
         out uint serverProcessId);
+}
+
+// D33: the tray's image path is checked once per tray process, not for every frame.
+internal static class TrayPipeVerificationCache
+{
+    private static readonly object Gate = new();
+    private static (int ProcessId, DateTime StartTimeUtc, bool Trusted)? _last;
+
+    internal static bool TryGet(int processId, DateTime startTimeUtc, out bool trusted)
+    {
+        lock (Gate)
+        {
+            if (_last is { } entry && entry.ProcessId == processId && entry.StartTimeUtc == startTimeUtc)
+            {
+                trusted = entry.Trusted;
+                return true;
+            }
+
+            trusted = false;
+            return false;
+        }
+    }
+
+    internal static void Store(int processId, DateTime startTimeUtc, bool trusted)
+    {
+        lock (Gate)
+        {
+            _last = (processId, startTimeUtc, trusted);
+        }
+    }
 }

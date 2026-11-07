@@ -1,14 +1,19 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T10:47:12.301Z",
-  "scope": "D32: exclude Talvora's own clients from measured MCP traffic before recording",
+  "verifiedAtUtc": "2026-11-07T10:58:03.248Z",
+  "scope": "D33: longer IPC frame budgets, a process-start-time identity cache, and throttled lost-frame logging",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D32: string.StartsWith(string, StringComparison) supports StringComparison.OrdinalIgnoreCase for case-insensitive ordinal prefix matching (query: \"C# .NET 10 string.StartsWith(string value, StringComparison comparisonType) overload: returns true for matching prefix and StringComparison.OrdinalIgnoreCase performs case-insensitive ordinal comparison. Verify signature and null handling for client name filter.\")."
+      "verified": "2026-11-07 D33: Process.StartTime is a DateTime giving when the associated process started, so PID plus its converted UTC start time distinguishes PID reuse; Context7 did not index this symbol, confirmed in Microsoft Learn (query: \"System.Diagnostics.Process.StartTime property in .NET 10: DateTime value start time of associated process, remains fixed for process lifetime, can distinguish reused process IDs; GetProcessById and StartTime.ToUniversalTime use.\")."
+    },
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-07 D33: Microsoft.Extensions.Logging.LoggerExtensions.Log accepts a LogLevel variable and overloads for the formatted message and for an exception plus message, confirmed in Context7 and Microsoft Learn (query: \"Microsoft.Extensions.Logging ILogger.Log(LogLevel logLevel, Exception? exception, string? message, params object?[] args) and ILogger.Log(LogLevel logLevel, string? message, params object?[] args) when level is a variable: .NET 10 extension method dynamic severity vs LogDebug and LogWarning.\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.string.startswith?view=net-10.0"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.starttime?view=net-10.0",
+    "https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loggerextensions.log?view=net-10.0-pp"
   ]
 }
