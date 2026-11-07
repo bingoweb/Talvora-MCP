@@ -31,6 +31,7 @@ public static class TalvoraToolManifest
         "talvora_run_powershell",
         "talvora_user_run",
         "talvora_worklog_note",
+        "talvora_note_write",
         "talvora_remotion_guide",
         "talvora_remotion_run",
         "talvora_remotion_status",

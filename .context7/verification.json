@@ -1,15 +1,19 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T20:01:17Z",
-  "scope": "D44: WPF template focus/hover triggers and width-linked repair count underline",
+  "verifiedAtUtc": "2026-11-07T20:18:07Z",
+  "scope": "OB1: MCP C# SDK tool cancellation binding, .NET junction/reparse-point detection",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-07 D44: WPF ControlTemplate.Triggers supports targeted setters on IsMouseOver and IsKeyboardFocused for named template elements; template names have their own XAML namescope, and a Line.X2 binding can reference a named TextBlock's ActualWidth inside that template. Context7 queries: ControlTemplate.Triggers IsKeyboardFocused Setter TargetName, and a Line whose X2 binds to ActualWidth with ElementName inside a template; WPF XAML inside ControlTemplate set Line.X2 with Binding ActualWidth ElementName Label."
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-11-07 OB1: C# MCP SDK server tools support async Task<T> methods accepting an injected CancellationToken, forwarded to file operations to handle client cancellation. SDK pinned at ModelContextProtocol 2.3.1. Query: ModelContextProtocol C# SDK 2.3.1 McpServerToolAttribute annotated async Task<T> method with CancellationToken cancellationToken=default parameter automatic DI binding cancellation, omitted from JSON inputSchema; UseStructuredContent and OutputSchemaType."
+    },
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-07 OB1: Path.IsPathFullyQualified distinguishes absolute from drive-relative paths; Path.GetFullPath normalizes traversal before comparison. Inspecting FileAttributes.ReparsePoint on DirectoryInfo and File.GetAttributes is the reference junction/symlink refusal. Query: In .NET 10 Windows, DirectoryInfo.Attributes.HasFlag(FileAttributes.ReparsePoint) detecting NTFS junction or symbolic link directory and File.GetAttributes; Path.IsPathFullyQualified, Path.GetFullPath for secure vault path."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/desktop/wpf/advanced/styling-for-focus-in-controls-and-focusvisualstyle",
-    "https://learn.microsoft.com/en-us/dotnet/desktop/wpf/advanced/wpf-xaml-namescopes"
+    "https://github.com/modelcontextprotocol/csharp-sdk",
+    "https://learn.microsoft.com/dotnet/"
   ]
 }

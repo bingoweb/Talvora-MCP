@@ -161,6 +161,13 @@ public static class TalvoraToolGuides
                 P(("text", "One plain Turkish sentence about the current task."),
                   ("workspaceRoot", "Absolute repository root the note belongs to.")),
                 """{"text":"AP2 — yama aracının hata mesajları anlaşılır hale geliyor","workspaceRoot":"C:\\Users\\tayla\\Talvora-MCP"}"""),
+            ["talvora_note_write"] = new(
+                "Create or append a Markdown note in the user's Obsidian vault; secret-looking text is refused.",
+                P(("vaultRoot", "Absolute vault root, C:\\Users\\tayla\\Obsidian\\Taylan."),
+                  ("path", "Vault-relative .md path, e.g. 40 Oturum Notları/2026-11-01 Talvora OB1.md."),
+                  ("content", "Markdown text, at most 64000 characters, no secrets."),
+                  ("mode", "create (new note) or append (existing note).")),
+                """{"vaultRoot":"C:\\Users\\tayla\\Obsidian\\Taylan","path":"40 Oturum Notları/2026-11-01 Talvora OB1.md","content":"# OB1\n","mode":"create"}"""),
             ["talvora_gh_run"] = new(
                 "Run one GitHub CLI command as the signed-in user, with separate arguments.",
                 P(("workingDirectory", "Absolute repository root."),

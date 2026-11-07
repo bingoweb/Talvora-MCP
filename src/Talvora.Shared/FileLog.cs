@@ -116,6 +116,10 @@ public static class FileLog
             "[REDACTED]");
     }
 
+    public static bool ContainsSensitiveData(string? value) =>
+        !string.IsNullOrEmpty(value) &&
+        !string.Equals(RedactSensitiveData(value), value, StringComparison.Ordinal);
+
     private static string FormatExceptionDetails(string value)
     {
         var redacted = RedactSensitiveData(value)

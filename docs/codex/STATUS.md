@@ -41,8 +41,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D38 — "Yalnızca hatalar ve ajan işleri" counts ChatGPT as an agent (audit 40, user decision; RED ChatGPT agent card filtered, N8_NOTIFICATIONS_GREEN; Changed 16/0 and signed-in Full 70/0 Hepsi geçti.; installed 1aad6e4, loopback smoke green; GitHub CI 42406357407 success; Gitea #9 comment 211)
 - [x] D39 — Penpot error text uses the shared secret masking (audit 40; RED CS0117 then D39_PENPOT_REDACTION_GREEN; Changed 28/0 and signed-in Full 70/0 Hepsi geçti.; installed d5cd0bc, loopback smoke green; GitHub CI 42407259647 success; Gitea #9 comment 212)
 - [~] D43 — Çalışma günlüğü names the day once ("Bugün 15:44 · 3 sn") (audit 41, design improvement; RED CS0103 then D43_SESSION_TIME_TEXT_GREEN; Changed 27/0 and signed-in Full 70/0 Hepsi geçti.; before/after worklog-session and wl2-empty PNGs, both themes: artifacts/d43-before and artifacts/d43-after; installed 5b769e4, Control Center and loopback smoke green; GitHub CI 42408388279 success; visual check pending (Claude); Gitea #9 comment 213)
-- [~] D44 — The repair count opens Olaylar on "Onarımlar" (audit 41, design improvement; RED CS1061 then UI3_NARRATOR_GREEN; Changed 17/0, signed-in Full 70/0 Hepsi geçti.; UI smoke open link/filtered repairs green, before/after PNGs both themes artifacts/d44-before and artifacts/d44-after; exact-commit install, smoke and CI pending; visual check pending (Claude); Gitea #9 comment 214)
-- [ ] OB1 — talvora_note_write: write Obsidian vault notes, refuse secrets and the linked repo docs (user request 2026-11-01)
+- [~] D44 — The repair count opens Olaylar on "Onarımlar" (audit 41, design improvement; RED CS1061 then UI3_NARRATOR_GREEN; Changed 17/0, signed-in Full 70/0 Hepsi geçti.; UI smoke open link/filtered repairs green, before/after PNGs both themes artifacts/d44-before, artifacts/d44-after, artifacts/d44-installed; installed 5f7d3a7, Control Center and loopback smoke green; GitHub CI 42409541629 success; visual check pending (Claude); Gitea #9 comment 214)
+- [~] OB1 — talvora_note_write: write Obsidian vault notes, refuse secrets and the linked repo docs (user request 2026-11-01; RED CS0103 then ob1-vault-note-writer and SourceEdit core green; reference SHA-256 matched, Changed 23/0 and signed-in Full 70/0 Hepsi geçti.; exact-commit install, live vault create/refusal and CI pending; Gitea #9 comment 215)
 
 ## User queue
 
@@ -58,6 +58,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — OB1, executor ChatGPT via Talvora: added Dev-only talvora_note_write to create/append Obsidian Markdown notes with fail-closed secret, Templater code, traversal, hidden path, repo-document and junction checks. Both reference copies match normalized SHA-256. RED CS0103, then ob1-vault-note-writer and SourceEdit core green; signed-in Changed 23/0 and Full 70/0 Hepsi geçti, Q7 payload unchanged. Context7 /modelcontextprotocol/csharp-sdk and /dotnet/docs; install, live create/refusal and CI pending. Gitea #9 comment 215.
+  Self-review — cosmetics: no user interface changes.
+  Self-review — usability: caller supplies vault root; create and append are explicit.
+  Self-review — Turkish: title Kasaya not yaz and all refusal messages use approved Turkish.
+  Self-review — correctness/security: whole secret-containing notes refused, never partially redacted; hidden folders, <%, reparse-point links and repo-linked docs blocked; user settings untouched.
 - 2026-11-07 — D44, executor ChatGPT via Talvora: the 24-hour repair count is a dedicated overview link with the prescribed dotted brass underline and keyboard focus ring; click selects Olaylar → Onarımlar and clears search/service filters. RED CS1061 then UI3_NARRATOR_GREEN; Changed 17/0, signed-in Full 70/0 Hepsi geçti. Context7 /dotnet/docs-desktop WPF template triggers and namescopes. Exact-commit install, smoke, CI pending. Gitea #9 comment 214.
   Visual evidence — before: artifacts/d44-before/control-center-ui3-overview-{initial,alternate}.png; after: artifacts/d44-after/control-center-d44-{link,repairs}-{initial,alternate}.png; Claude visual check pending.
   Self-review — cosmetics: quiet monospace link, text-width dotted underline, hover and focus styling use prescribed tokens only.
