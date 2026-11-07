@@ -124,6 +124,12 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     {
         ArgumentNullException.ThrowIfNull(operation);
 
+        // D41: Talvora's own clients leave no desktop card and no worklog session (user decision 2026-11-07).
+        if (TalvoraLineTrafficMeter.IsOwnClient(clientName))
+        {
+            return await operation(cancellationToken);
+        }
+
         if (NormalizeToolName(toolName) == "worklog_note")
         {
             TrySetTaskNote(arguments, surfacePath, clientName);

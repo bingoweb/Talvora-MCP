@@ -79,7 +79,12 @@ builder.Services
                 request.Services?.GetService<TalvoraDesktopProgressNotifier>();
             var surfacePath = request.Services?.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>()
                 ?.HttpContext?.Request.Path.Value;
-            var clientName = request.Server.ClientInfo?.Name;
+            var headers = request.Services?.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>()
+                ?.HttpContext?.Request.Headers;
+            var clientName = TalvoraLineTrafficMeter.ResolveCallerName(
+                headers?["X-Talvora-Client"].ToString(),
+                request.Server.ClientInfo?.Name,
+                headers?.UserAgent.ToString());
             Func<CancellationToken, ValueTask<CallToolResult>> operation =
                 token => next(request, token);
             if (notifier is not null)
@@ -111,10 +116,7 @@ builder.Services
             finally
             {
                 // SN1: every finished call lights its real line in the Control Center, failed ones included.
-                // Stateless MCP sessions often carry no client name; the HTTP User-Agent still says who called.
-                request.Services?.GetService<TalvoraLineTrafficMeter>()?.Record(surfacePath,
-                    clientName ?? request.Services?.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>()
-                        ?.HttpContext?.Request.Headers.UserAgent.ToString(), ok);
+                request.Services?.GetService<TalvoraLineTrafficMeter>()?.Record(surfacePath, clientName, ok);
             }
 
             return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(result));

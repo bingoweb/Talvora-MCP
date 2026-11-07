@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T13:39:48.428Z",
-  "scope": "D40: isolate test log and worklog writes in a unique current-user temp folder",
+  "verifiedAtUtc": "2026-11-07T14:28:38.834Z",
+  "scope": "D41: resolve one caller identity from the HTTP bridge header, MCP client name, then User-Agent",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D40: Path.GetTempPath() returns the current user's temporary folder; combining it with a new Guid creates an isolated default destination for test-generated log and worklog files (query: \"System.IO.Path.GetTempPath() in .NET 10 returns the current user's temporary folder. Use GetTempPath with Path.Combine to isolate temporary test output files, Path.GetTempPath does not create the folder.\")."
+      "libraryId": "/dotnet/aspnetcore.docs",
+      "verified": "2026-11-07 D41: HttpRequest.Headers exposes an IHeaderDictionary with case-insensitive header-name lookup and named properties for common HTTP headers, including UserAgent; the X-Talvora-Client bridge header is read through the string indexer, with the MCP name and User-Agent as fallbacks (query: \"ASP.NET Core Microsoft.AspNetCore.Http.IHeaderDictionary indexer for missing header returns StringValues.Empty; IHeaderDictionary.UserAgent property access and ToString; retrieving a custom X-Talvora-Client request header with Headers[\\\"X-Talvora-Client\\\"].ToString()\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.io.path.gettemppath?view=net-10.0"
+    "https://learn.microsoft.com/en-us/aspnet/core/fundamentals/use-http-context?view=aspnetcore-10.0",
+    "https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.http.iheaderdictionary?view=aspnetcore-10.0"
   ]
 }

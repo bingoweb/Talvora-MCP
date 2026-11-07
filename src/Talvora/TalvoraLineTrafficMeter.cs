@@ -47,10 +47,21 @@ internal sealed class TalvoraLineTrafficMeter
         return "Diğer";
     }
 
+    // D41: one caller name for the worklog and the traffic meter: the X-Talvora-Client header (the Claude
+    // Desktop "Talvora Chat" bridge sends "Claude"), else the MCP client name, else the HTTP User-Agent.
+    internal static string? ResolveCallerName(string? clientHeader, string? clientInfoName, string? userAgent) =>
+        !string.IsNullOrWhiteSpace(clientHeader) ? clientHeader.Trim() :
+        !string.IsNullOrWhiteSpace(clientInfoName) ? clientInfoName :
+        string.IsNullOrWhiteSpace(userAgent) ? null : userAgent;
+
+    // D41: Talvora's own clients (installed smoke, tray) are not activity anywhere (user decisions 2026-11-07).
+    internal static bool IsOwnClient(string? clientName) =>
+        clientName?.StartsWith("Talvora.", StringComparison.OrdinalIgnoreCase) == true;
+
     public void Record(string? surfacePath, string? clientName, bool ok)
     {
         // D32: Talvora's own clients are not traffic (user decision 2026-11-07).
-        if (clientName?.StartsWith("Talvora.", StringComparison.OrdinalIgnoreCase) == true) return;
+        if (IsOwnClient(clientName)) return;
         var line = ResolveLine(surfacePath);
         var client = ResolveClient(clientName, line);
         var now = _time.GetUtcNow();

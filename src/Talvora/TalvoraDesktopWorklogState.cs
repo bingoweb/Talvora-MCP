@@ -376,7 +376,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         {
             return "ChatGPT · Yönetim";
         }
-        return "Talvora";
+        return "Diğer";
     }
 
     private static (string? Root, string? Name) ResolveProject(

@@ -32,8 +32,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [~] D40 — Tests never write into the user's Talvora files (audit 41; RED CS1061, then D40_TEST_ISOLATION_GREEN; Changed 27/0 and signed-in Full 69/0 Hepsi geçti.; real log and Project A timestamps unchanged; installed smoke and CI pending; Gitea #9 comment 205)
-- [ ] D41 — One caller name: Talvora's own calls leave no trace, Claude is named (audit 41, user decisions)
+- [x] D40 — Tests never write into the user's Talvora files (audit 41; RED CS1061, then D40_TEST_ISOLATION_GREEN; Changed 27/0 and signed-in Full 69/0 Hepsi geçti.; real log and Project A timestamps unchanged; installed 028bd07 and smoke green; GitHub CI 42378419166 success; Gitea #9 comment 205)
+- [~] D41 — One caller name: Talvora's own calls leave no trace, Claude is named (audit 41; RED CS0117 then D41_CALLER_IDENTITY_GREEN and SN1_LINE_TRAFFIC_GREEN; Changed 28/0, signed-in Full 69/0 Hepsi geçti.; exact-commit install and CI pending; live pending (Claude): bridge call named Claude and smoke leaves no worklog session, since pending install; Gitea #9 comment 206)
 - [ ] D42 — "Zaten hazır" is not an automatic repair (audit 41)
 - [ ] D35 — The GitHub release lookup waits after a failure (audit 40)
 - [ ] D36 — Atomic publication also retries a busy destination (audit 40)
@@ -58,6 +58,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D41, executor ChatGPT via Talvora: caller identity now X-Talvora-Client, MCP name, then HTTP User-Agent; self Talvora.* calls bypass desktop cards/worklog and traffic; unknown actor Diğer. RED CS0117, then D41_CALLER_IDENTITY_GREEN and SN1_LINE_TRAFFIC_GREEN; Changed 28/0, signed-in Full 69/0 Hepsi geçti. Context7 /dotnet/aspnetcore.docs; exact-commit install/CI pending; live bridge and worklog checks owned by Claude next audit. Gitea #9 comment 206.
+  Self-review — cosmetics: no layout changed.
+  Self-review — usability: smoke has no cards, Claude is named, unknowns Diğer.
+  Self-review — Turkish: UI text unchanged except mandated Diğer fallback.
+  Self-review — correctness/security: caller precedence and self-filter tested; ResolveClient, D32 and surface routes unchanged.
 - 2026-11-07 — D40, executor ChatGPT via Talvora: isolated Notification tests' tray.log and default worklog-sessions.jsonl under unique user temp root, restoring previous TrayLog override in recovery regression. RED CS1061 then D40_TEST_ISOLATION_GREEN, Changed 27/0 and signed-in Full 69/0 Hepsi geçti. Before/after Full: last timeout 2026-11-07T15:24:05.2225314+03:00 / identical; Project A endedAtUtc 11/07/2026 15:05:25 / identical. Context7 /dotnet/docs Path.GetTempPath; installed smoke and CI pending. Gitea #9 comment 205.
   Self-review — cosmetics: no UI or layout changed.
   Self-review — usability: test entries never pollute the real desktop history.
