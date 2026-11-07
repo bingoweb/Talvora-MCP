@@ -161,8 +161,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] UX1 — Start menu entry "Talvora Kontrol Merkezi" opens the Control Center (installed ac95d41; live shortcut and open-window test GREEN; signed-in Full 68/0; GitHub CI 42299173262 attempt 2 success; audit 39: shortcut present under the common Start menu)
 - [~] D26 — "Otomatik onarım" counts only real repairs (audit 39; installed ec534b9; RED 10 vs expected 2, GREEN Notification; signed-in Full 68/0; live MCP surface-policy GREEN; GitHub CI 42308090265 success; visual check pending (Claude))
 - [~] D27 — A dropped line says plainly that it does not answer (audit 39; RED/GREEN Notification regression; signed-in Full 68/0; installed d00421b and live surface-policy smoke GREEN; GitHub CI 42312290019 success; visual check pending (Claude))
-- [~] D28 — Health-maintenance event in plain Turkish (audit 39; source-copy RED then GREEN, tray build 0/0, signed-in Full 68/0; exact-commit deployment and CI pending; visual check pending (Claude))
-- [ ] D29 — Smoke clears its fixture traffic after the SN3 check (audit 39)
+- [~] D28 — Health-maintenance event in plain Turkish (audit 39; source-copy RED then GREEN, tray build 0/0, signed-in Full 68/0; installed b4bc9f9, live MCP surface-policy GREEN, GitHub CI 42313993832 success; visual check pending (Claude))
+- [?] D29 — Smoke clears its fixture traffic after the SN3 check (audit 39; waiting for Claude P-49: Full gate PS:QualityGateParallelRegression timing failure under concurrent load)
 - [ ] RV1 — Measure every tunnel-client command (investigation for the 12 s timeouts, audit 39)
 - [ ] LB1 — Initial letter in the service socket for services without a logo; plain version in About (replaces UI11, P-48)
 - [-] UI11 — replaced by LB1 (P-48, audit 39)
@@ -212,6 +212,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D29 blocked, executor ChatGPT via Talvora: prescribed overview.ApplyTraffic(null) added and source regression RED/GREEN; Tray build 0 warnings/errors. First signed-in Full failed Context7 gate; the explicitly allowed .context7 supporting evidence was added. Second signed-in Full failed unrelated PS:QualityGateParallelRegression at tests/QualityGateParallelRegression.ps1:48 (7.4040841 s >= 7 s, 61 checks/1 failure), while isolated regression returned QUALITY_GATE_PARALLEL_GREEN. To preserve the Full-gate requirement, changes to SN3 and Context7 reverted; P-49 requests the permitted next action. No installation, deployment or D29 commit. Gitea mirror skipped: no authenticated issue-comment route.
 - 2026-11-07 — D28, executor ChatGPT via Talvora: replaced exactly the two user-visible generic health-maintenance failure strings in TrayApplicationContext.cs with the audit 39 approved Turkish text. RED source-copy check failed before the edit and GREEN check passed after; Tray build 0 warnings/0 errors; signed-in Full gate 68 checks, 0 errors, Hepsi geçti. Severity Warning, category recovery, dedupKey and English TrayLog unchanged. Context7 /dotnet/docs and Microsoft Learn confirmed ordinary C# literals preserve Unicode; .context7/verification.json refreshed as supporting evidence. Exact-commit install, live smoke and GitHub CI follow commit; visual check pending (Claude). Gitea mirror skipped: no authenticated issue-comment tool in Talvora Dev connector.
   Self-review — cosmetics: no layout, token, colour or animation changed; only the two prescribed text strings.
   Self-review — usability: the maintenance failure event now explains that a retry will occur.
