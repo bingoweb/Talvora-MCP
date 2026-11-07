@@ -102,7 +102,7 @@ Step 7. Counts (the tool is Dev-only: it is in neither `DevelopmentExcludedTools
 - `README.md`: every Full count `250` → `251` and every Dev count `213` → `214` in the places `tests/ToolManifestDocumentationRegression.ps1` checks: badge text, badge URL, the summary line (`**251 total**, **214 Dev**, …`), the focused diagram line, the full diagram line, the `/mcp` and `/mcp/dev` table rows.
 - `docs/ARCHITECTURE.md`: `/mcp` (**251 tools**), `/mcp/dev` (**214 tools**), "complete 251-tool capability set".
 
-Step 8. `tests/Talvora.Smoke/SmokeScenarios.SurfacePolicy.cs`: directly after the `AssertSurface("talvora_worklog_note", development: true, administration: false);` statement add:
+Step 8. `tests/Talvora.Smoke/SmokeScenarios.SurfacePolicy.cs`: directly after the statement that asserts `"talvora_worklog_note"` (it spans four lines: `AssertSurface(`, `"talvora_worklog_note",`, `development: true,`, `administration: false);`) add:
 
 ```csharp
         AssertSurface(
@@ -124,392 +124,300 @@ Step 9. Refresh `.context7/verification.json` with the two lookups above (replac
 **Acceptance:**
 - Red (CS0103), then green: `ob1-vault-note-writer` passes.
 - Full gate `Hepsi geçti.` as the signed-in user (the Q7 dev payload budget included; if it is exceeded, stop with a proposal and never raise the budget yourself).
-- Deploy; `/healthz.sourceCommit` = HEAD. Live check on the installed runtime: `talvora_note_write {vaultRoot: "C:\\Users\\tayla\\Obsidian\\Taylan", path: "40 Oturum Notları/2026-11-01 Talvora OB1.md", content: <a session note with the template properties tür: oturum, proje: Talvora, yazan: ChatGPT, tarih: 2026-11-01>, mode: "create"}` succeeds; the same tool with path `01 Gelen Kutusu/OB1 deneme.md` and content `api_key=abcdef123456` is refused with the Turkish secret message and creates no file.
+- Deploy; `/healthz.sourceCommit` = HEAD. Live check on the installed runtime: `talvora_note_write {vaultRoot: "C:\\Users\\tayla\\Obsidian\\Taylan", path: "40 Oturum Notları/<today as yyyy-MM-dd> Talvora OB1.md", content: <a session note with the template properties tür: oturum, proje: Talvora, yazan: ChatGPT, tarih: <today as yyyy-MM-dd>>, mode: "create"}` succeeds; the same tool with path `01 Gelen Kutusu/OB1 deneme.md` and content `api_key=abcdef123456` is refused with the Turkish secret message and creates no file.
 - Push; CI once.
 
 ## Audit fixes (external audits by Claude)
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-07 (40, deep, whole project) · range `audit/2026-11-07-39..47b43a8` plus every subsystem · result: D30–D39, P-49 decided, [C] SN9, [C] WL2, agent documents cleaned
+### Audit 2026-11-07 (41, full check) · range `audit/2026-11-07-40..1302b75` plus runtime records · result: D40, D41, D42, rule for waiting checks, OB1 and D38 card fixes
 
-User request: "Talvora'yı derinlemesine incele … kodları didik didik et", then "tüm talvora projesini baştan aşağı denetle" and "bitmiş olan işleri temizlemenin bir yolunu da bul … tüm dosyaları kontext ve token ekonomisi önceliği ile optimize et". Method: real failure records first (tray.log, Windows Application log, installer log, live `/healthz/traffic`), the analyzers of the whole solution in a scratch clone (`AnalysisMode=Recommended`, 794 warnings, product code clean of bug-class rules), a clone detector over `src` (38 duplicated 8-line windows in 95 k lines: low), then line-by-line reading of the risky parts of every subsystem (agent brief, desktop progress pipe, tunnel maintenance, atomic publication, file tools, archive extraction, storage maintenance, Control Center, worklog history, quality gate, governance documents).
+User request: "Talvora'yı yine tam kontrolden geçir.. saatlik kontrol nedeniyle takıldı kaldı chatgpt". Method: the range line by line, signed-in Full gate, CI, then the runtime records of the installed version (tray.log, Windows Application log, the live worklog history, `/healthz/traffic`), then every open card read the way the agent will.
 
-Range: D26, D27, D28, RV1 and LB1 match their cards line for line; signed-in Full 68/0; CI success on every commit; installed 47b43a8; D26/D27/D28/LB1 visual checks passed on smoke captures in both themes (closed). RV1 data: 1,689 tunnel-client launches in 6.11 h, slowest `runtimes status` 9,874 ms against its 12 s limit.
+Range: D30, D31, D29, D32, D33 and D34 match their cards line for line; one commit per card, Turkish subjects, STATUS in each commit, Context7 evidence real (D34: `/dotnet/docs` and two Microsoft Learn pages); signed-in Full 69/0 `Hepsi geçti.` (Claude, 15:21); CI success on every commit (latest 42371088200); installed 1302b75 at 15:09. D34 safety holds: the 15 s health probe (`GetTunnelDiagnosticStatesAsync` → `GetSnapshotCachedAsync`) drops the 10-minute ready status, so a dead tunnel is still noticed within about two rounds. D34 count (Claude, from tray.log): the hour after the install runs to 16:09:50; 17 `tunnel-client runtimes status` lines in the first 39 minutes, about half of them from smoke runs (limit 30, before 92).
 
 | # | Severity | Where | Finding (verified) | Card |
 |---|---|---|---|---|
-| 1 | CRITICAL | `AgentBriefTools.Get` + `Get-CodexContext.ps1` | The brief is capped at 60,000 characters and cuts the end of the context; the context printed STATUS (30.7 k) first, so the card, the newest Log entry and the open proposals were cut. Proven with the live tool: `truncated: true`, no `=== CARD`. The cleanup below fixes today's brief; D30 makes the order safe for good. | D30 |
-| 2 | HIGH | `tests/QualityGateParallelRegression.ps1` in the parallel phase | The 7-second overlap check runs beside the heaviest suites and fails under load (7.4 s, 8.9 s) while it passes alone (P-49). | D31 |
-| 3 | HIGH (data truth) | `TalvoraLineTrafficMeter` (SN1, Claude's) | Talvora's own clients (`Talvora.Smoke`, `Talvora.Tray`) are counted: after every install the smoke's deliberate unknown-tool probes show as "Admin 1 çağrı · 1 hata" on the Santral. User: never count them. | D32 |
-| 4 | HIGH (desktop notifications) | `DesktopProgressPipeListener`, `TalvoraDesktopProgressNotifier` | Under load the tray drops frames: 27 "IPC client timed out while sending a frame" and 4 "frame payload was truncated" in four days, all in the minutes of builds, gates and installs. The tray's 3 s read window starts at connect while the service still verifies the server through `Process.MainModule` (slow, uncancellable); the 2 s write budget is short for large frames; a final drop is logged only at Debug. A lost last frame leaves the card on "running". | D33 |
-| 5 | MEDIUM (efficiency) | `_genericMcpTimer` (15 s) → `GetRuntimeStatusCachedAsync` (2 s cache) | About 240–290 `tunnel-client runtimes status` launches an hour around the clock, partly only to learn the health address that tunnel-client already publishes in `<StateRoot>\health\<alias>.url` (verified: `http://127.0.0.1:60409`, rewritten on every restart). | D34 |
-| 6 | MEDIUM | `GetLatestTunnelClientTagAsync` | A failed GitHub lookup (offline, 403 rate limit) records no time, so it repeats every 15 s per tunnel, each with a log line and a deferral event. | D35 |
-| 7 | MEDIUM | `AtomicFile.PublishDurable` | Retries only `IOException`; a concurrent `File.Replace` or a delete-pending destination raises `UnauthorizedAccessException`, which fails the write at once (seen in the AtomicRace regression). | D36 |
-| 8 | MEDIUM (Turkish) | Tray event texts | Event slips show English and jargon: "tunnel-client update recovered", "Interrupted update recovered with … runtime readiness …", "Incomplete update journal was rolled back …", "latest kontrolü", "health/ready doğrulaması", "MCP" in titles. | D37 |
-| 9 | PRODUCT (user decided) | `DesktopProgressNotificationPresenter.PublishCore` | "Yalnızca hatalar ve ajan işleri için kart göster" treats only Codex/Claude as agents, so ChatGPT's work shows no card. User: ChatGPT counts as an agent. | D38 |
-| 10 | LOW | `PenpotMcpTools.RedactSensitiveText` | Penpot masks only its URL token; the shared `FileLog.RedactSensitiveData` (keys, Authorization, JWT) is not applied to its error text. | D39 |
-| 11 | MEDIUM (Claude's look code) | `Controls/Switchboard.cs` | The 1 s traffic poll rebuilds every hotspot (`Children.Clear()`), so keyboard focus and the hover ring are lost every second; with failures on a line the "son …" text meets a neighbour's "yeniden bağlanıyor"; every frame re-creates pens, brushes and text layouts (isolated smoke: 5.58 % idle CPU). | [C] SN9 |
-| 12 | LOW (Claude's look code) | Çalışma günlüğü | Sessions without a project show an empty first line; the detail pane is blank until a session is chosen. | [C] WL2 |
-| 13 | HIGH (token economy, fixed by Claude) | agent documents | Finished work filled the documents: STATUS 203 k characters (172 k of old Log), ROADMAP 445 k (31 k open cards), PROPOSALS 105 k (CONTINUE PROTOCOL step 3 told the agent to read every decided proposal each session), DESIGN-WORKLOG 118 k (68 k finished N cards), `docs/archive/` 511 k; `HANDOFF.md` still named UI6, N8, UI7, UI8 as the next cards. Cleaned in this audit (user: "Dosyalardan sil, git'te kalsın"). | — |
-| 14 | GOVERNANCE (fixed by Claude) | AGENTS.md, CODEX-PROMPT | Visual authority named only DESIGN-CONTROL-CENTER.md (Gözlemevi, superseded); conditions for long-finished cards (A1, A2, A3, T3, N10, R3) were still in the rules. | — |
+| 1 | CRITICAL (workflow, fixed by Claude) | D34 Acceptance + AGENTS.md CONTINUE PROTOCOL step 8 | D34 asked for a count "after one hour of normal running", and step 8 makes a `[~] live pending` check the first task of the next message: every "Talvora'ya devam et" in that hour re-checked, found the hour unfinished and stopped (ChatGPT session 15:14–15:17: brief, pull, CI read, three counts, stop). Fixed: a check that needs a wait is Claude's (`[~] live pending (Claude)`, skipped by step 5); the card-writing rules forbid waiting acceptance steps; Claude ran D34's count. | — |
+| 2 | HIGH (data truth) | Notification regression → `DesktopProgressNotificationPresenter`, `TrayLog` | Every gate run writes test data into the user's files: the presenter test leaves a finished "Project A · ChatGPT · Dev · Kod güncellendi" session in `worklog-sessions.jsonl` (rewritten at 15:24:17 by this audit's own gate), and the deliberately stalled client of `AssertPipeReadTimeoutRecoveryAsync` writes "Desktop progress IPC client timed out while sending a frame." into the real `tray.log` (one line per gate run; 15:24:05 in this audit's run). Audit 40 finding 4 counted these lines as real drops; the Application log shows no dropped frame since D33. | D40 |
+| 3 | HIGH (data truth, user decided) | `TalvoraDesktopProgressNotifier.RunToolCallAsync`, `ResolveActor` | The installed smoke's deliberate failing calls (`Talvora.Smoke`) become ChatGPT sessions in the worklog ("ChatGPT · Dev — cmd.exe hata ile bitti", "ChatGPT · Yönetim — Arka plan işi başlat · tamamlanamadı", 13:53) and can open desktop cards: the actor comes from the surface path, D32 cleaned only the counters. User: never shown ("Hiç görünmesin"). | D41 |
+| 4 | MEDIUM (data truth, user decided) | `Program.cs` call filter | Claude's calls through the Claude Desktop "Talvora Chat" bridge (mcp-remote, stateless HTTP) carry no client name and a generic User-Agent: the Santral shows "Diğer", the worklog "Talvora", and after D38 Claude's cards would be filtered as non-agent work (proven with two live pings: `core · Diğer`). The meter and the worklog also resolve the caller differently. User: "Köprü kendini tanıtsın". Claude added `--header X-Talvora-Client:Claude` to the bridge (installed copy under Claude Desktop's extensions and the source copy in `%LOCALAPPDATA%\Talvora\ClaudeDesktopChatExtension`, backups in its `backups` folder; a live call through the changed bridge succeeded); Talvora must read it. | D41 |
+| 5 | MEDIUM (data truth) | `OverviewViewModel.RecoveryCount`, repair event keys | "son 24 saatte 14 otomatik onarım" was 11 repairs plus 3 "Gitea MCP zaten hazır" results: a recovery that finds the service already ready repairs nothing but is recorded as `recovery:gitea:success` and counted. | D42 |
+| 6 | LOW (agent stop risk, fixed by Claude) | OB1, D38 card text | OB1 Step 8 quoted a one-line `AssertSurface(…)` statement that the file writes on four lines, and its live check wrote a note dated 2026-11-01; D38's non-agent test actor becomes "Diğer" after D41. Card texts fixed. | — |
 
-User decisions in this audit: `talvora_delete` stays as it is (no guard, "Dokunma"); ChatGPT counts as an agent; Talvora's own test calls are never counted; the 2.5 GB `C:\ProgramData\Talvora\Diagnostics` folder (10 Oct driver/update leftovers) was deleted; items that only waited for the user's own check (E1, E2, S5, TI1, UI2, U2–U11) are closed; finished work leaves the agent documents at every audit (git keeps it); local `artifacts/` entries older than 7 days are pruned at every audit.
+Look-ahead: the anchors of D35–D39 match the current source (D35's two cache checks and `return tag;`, D36's catch line, all 23 D37 texts, D38's two test lines and presenter condition, D39's `RedactSensitiveText`); the OB1 reference files match `SHA256SUMS.txt`; Dev tools/list is 194,569 bytes of its 203,776 budget (OB1 adds one Dev tool). Checked and sound: the Application log's "Unknown tool" errors at 12:55 and 13:53 are the smoke's deliberate surface probes; the upstream probe postponed once at 15:29 and recovered on the next round.
 
-Checked and sound (no card): archive extraction (every entry resolved with `GetFullPath`, prefix-checked, reparse points refused); storage maintenance (only `Talvora…` prefixes); old version folders (only the current one kept); installer log (no warnings); tool failure guides (examples validated against the live schema by smoke H1); user-run guide text; culture-sensitive formatting (only integers and display dates); `AgentJobRegistry` keeps one timer-less `CancellationTokenSource` per remembered job (at most 120): no leak worth a card.
+### D40 — Tests never write into the user's Talvora files
 
-Notes: the Windows event log gets about 50 "Unknown tool … threw an unhandled exception" warnings per install from the deliberate surface-policy smoke probes (expected); two `resources/list` requests got "no handler" (a client probing resources; harmless); `ControlCenterWindow*.cs` hold `partial class ShellWindow` (misleading names, no defect).
+**Why:** audit 41 finding 2. The Notification regression runs in the signed-in user's profile and writes into the real files: the presenter test's finished "Project A · ChatGPT · Dev · Kod güncellendi" session lands in `%LOCALAPPDATA%\Talvora\ControlCenter\worklog-sessions.jsonl` (Çalışma günlüğü lists it as real work) and test listeners write lines such as "Desktop progress IPC client timed out while sending a frame." into `%LOCALAPPDATA%\Talvora\Tray\tray.log`. Cause: `DesktopProgressNotificationPresenter` falls back to `new WorklogHistoryStore()` (the user's file), `TrayLog` writes to the user's log unless `TrayLog.PathOverrideForTests` is set, and `AssertRecoveryLogContract` resets that override to `null`.
 
-### D30 — The agent brief always carries the current card
+**Files:** `src/Talvora.Tray/WorklogHistoryStore.cs`, `tests/Talvora.Notification.Regression/Program.cs`, `tests/Talvora.Notification.Regression/Program.D40.cs` (new), `.context7/verification.json`.
 
-**Why:** audit 40 finding 1 (CRITICAL). `talvora_agent_brief` caps the brief at 60,000 characters and trims the end of the context. The context printed STATUS first, so the card, the newest Log entry and the open proposals were cut while the brief still returned. Claude's cleanup fixes today's brief; this card makes the order and the trimming safe for good. It also lets a UI or N card live in ROADMAP: audit 40 removed the finished cards from the design specs, and new UI/N cards are written in ROADMAP (P-48 showed the old routing failing).
-
-**Files:** `scripts/Get-CodexContext.ps1`, `src/Talvora/Tools/AgentBriefTools.cs`, `tests/AgentContextOrderRegression.ps1` (new), `tests/QualityGateRegression.ps1`, `.context7/verification.json`.
-
-**Context7:** the script change needs no lookup; for `AgentBriefTools.cs` record the map's .NET entry with the one fact used (C# range on `string`, `[..^n]`), per CONTEXT7 PROTOCOL rule 1.
+**Context7:** record the map's .NET entry with the one fact used (`Path.GetTempPath()` returns the current user's temporary folder), per CONTEXT7 PROTOCOL rule 1.
 
 #### Exact implementation
 
-Step 1 (red first). Create `tests/AgentContextOrderRegression.ps1` with exactly this content, run it, see it fail:
-
-```powershell
-$ErrorActionPreference = 'Stop'
-Set-StrictMode -Version Latest
-# D30: the card comes first, STATUS (open lines only) comes last, and a UI/N card that its
-# design spec does not hold (or whose spec file is missing) is read from ROADMAP.
-$repoRoot = Split-Path -Parent $PSScriptRoot
-$fixture = Join-Path ([IO.Path]::GetTempPath()) ('talvora-d30-' + [guid]::NewGuid().ToString('N'))
-try {
-    $scripts = Join-Path $fixture 'scripts'
-    $docs = Join-Path $fixture 'docs/codex'
-    New-Item -ItemType Directory -Path $scripts, $docs -Force | Out-Null
-    $helper = Join-Path $scripts 'Get-CodexContext.ps1'
-    Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts/Get-CodexContext.ps1') -Destination $helper
-    Set-Content -LiteralPath (Join-Path $docs 'STATUS.md') -Encoding utf8 -Value @(
-        '## In progress', '(none)',
-        '## Agent queue',
-        '- [x] D7 — FINISHED_LINE_MUST_NOT_APPEAR',
-        '- [-] D8 — DROPPED_LINE_MUST_NOT_APPEAR',
-        '- [ ] D9 — Open card',
-        '## User queue', '(none)',
-        '## Log',
-        '- 2026-11-07 — NEWEST_LOG_SENTINEL')
-    Set-Content -LiteralPath (Join-Path $docs 'ROADMAP.md') -Encoding utf8 -Value @(
-        '### D9 — Open card', 'D9_CARD_SENTINEL',
-        '### UI9 — UI card written in ROADMAP', 'UI9_CARD_SENTINEL',
-        '### N9 — Worklog card written in ROADMAP', 'N9_CARD_SENTINEL')
-    Set-Content -LiteralPath (Join-Path $docs 'DESIGN-WORKLOG.md') -Encoding utf8 -Value @(
-        '## 3. Worklog', 'WORKLOG_SPEC_SENTINEL')
-
-    $context = @(& $helper | Out-String) -join ''
-    $first = @($context -split '\r?\n' | Where-Object { $_.Trim() -ne '' })[0]
-    if ($first -ne '=== CARD D9 (docs/codex/ROADMAP.md) ===') { throw "D30: the card must come first, got: $first" }
-    $statusAt = $context.IndexOf('=== STATUS', [StringComparison]::Ordinal)
-    if ($statusAt -lt 0) { throw 'D30: STATUS must still be printed.' }
-    foreach ($section in @('=== NEWEST LOG', '=== PENDING QUEUE ADDITIONS', '=== OPEN PROPOSALS', '=== FILE LINE COUNTS')) {
-        $at = $context.IndexOf($section, [StringComparison]::Ordinal)
-        if ($at -lt 0 -or $at -gt $statusAt) { throw "D30: $section must come before STATUS." }
-    }
-    foreach ($forbidden in @('FINISHED_LINE_MUST_NOT_APPEAR', 'DROPPED_LINE_MUST_NOT_APPEAR')) {
-        if ($context.Contains($forbidden)) { throw "D30: finished queue lines must not reach the brief ($forbidden)." }
-    }
-    if (-not $context.Contains('- [ ] D9 — Open card') -or -not $context.Contains('NEWEST_LOG_SENTINEL')) {
-        throw 'D30: open queue lines and the newest Log entry must stay.'
-    }
-    # The fixture has no DESIGN-CONTROL-CENTER.md, and its DESIGN-WORKLOG.md has no N9 card.
-    foreach ($card in @('UI9', 'N9')) {
-        $out = @(& $helper -Card $card | Out-String) -join ''
-        if ($out -notmatch "(?m)^=== CARD $card \(docs/codex/ROADMAP\.md\) ===" -or -not $out.Contains("${card}_CARD_SENTINEL")) {
-            throw "D30: $card must be read from ROADMAP when its design spec does not hold it."
-        }
-    }
-    Write-Output 'AGENT_CONTEXT_ORDER_GREEN'
-}
-finally {
-    Remove-Item -LiteralPath $fixture -Recurse -Force -ErrorAction SilentlyContinue
-}
-```
-
-Step 2. In `scripts/Get-CodexContext.ps1`:
-
-(a) Replace these four lines
-
-```powershell
-$roadmap = [IO.File]::ReadAllText((Join-Path $repoRoot $source))
-$cardPattern = '(?ms)^#{2,3}[ \t]+' + [regex]::Escape($Card) + '[ \t]+[—–-].*?(?=^#{2,3}[ \t]+|\z)'
-$cardMatch = [regex]::Match($roadmap, $cardPattern)
-if (-not $cardMatch.Success) { throw "Card $Card could not be found in $source." }
-```
-
-with
-
-```powershell
-$cardPattern = '(?ms)^#{2,3}[ \t]+' + [regex]::Escape($Card) + '[ \t]+[—–-].*?(?=^#{2,3}[ \t]+|\z)'
-$sourcePath = Join-Path $repoRoot $source
-$roadmap = if (Test-Path -LiteralPath $sourcePath -PathType Leaf) { [IO.File]::ReadAllText($sourcePath) } else { '' }
-# D30: cited spec sections still come from the design spec when the card itself lives in ROADMAP.
-$specSource = $source
-$specText = $roadmap
-$cardMatch = [regex]::Match($roadmap, $cardPattern)
-if (-not $cardMatch.Success -and $source -ne 'docs/codex/ROADMAP.md') {
-    # D30: finished UI/N cards were removed from the design specs; new UI/N cards are written in ROADMAP.
-    $source = 'docs/codex/ROADMAP.md'
-    $roadmap = [IO.File]::ReadAllText((Join-Path $repoRoot $source))
-    $cardMatch = [regex]::Match($roadmap, $cardPattern)
-}
-if (-not $cardMatch.Success) { throw "Card $Card could not be found in $source." }
-```
-
-(b) In the referenced-spec block: `$text = Get-SpecSection -Document $roadmap -Number $number` becomes `$text = Get-SpecSection -Document $specText -Number $number`; in the two lines that print `($source)` and `in $source §` inside that block, use `$specSource` instead of `$source`.
-
-(c) Order. Replace these six lines
-
-```powershell
-Add-ContextText '=== STATUS (without historical Log) ==='
-Add-ContextText $statusHeader
-Add-ContextText '=== NEWEST LOG ==='
-if ($recent.Success) { Add-ContextText $recent.Value.TrimEnd() } else { Add-ContextText '(none)' }
-Add-ContextText "=== CARD $Card ($source) ==="
-Add-ContextText $cardText
-```
-
-with
-
-```powershell
-Add-ContextText "=== CARD $Card ($source) ==="
-Add-ContextText $cardText
-Add-ContextText '=== NEWEST LOG ==='
-if ($recent.Success) { Add-ContextText $recent.Value.TrimEnd() } else { Add-ContextText '(none)' }
-```
-
-and insert directly above the last line of the script (`$script:ContextLines`):
-
-```powershell
-# D30: STATUS goes last and without finished queue lines, so a size cap trims STATUS, never the card.
-Add-ContextText '=== STATUS (open items; finished work is in git history) ==='
-Add-ContextText (($statusHeader -split '\r?\n' | Where-Object { $_ -notmatch '^- \[(x|-)\] ' }) -join "`n")
-```
-
-Step 3. In `src/Talvora/Tools/AgentBriefTools.cs` add below `MaxTotalCharacters`:
+Step 1 (red first). Create `Program.D40.cs`:
 
 ```csharp
-    private const string TrimMarker =
-        "\n[brief trimmed here: the rest of STATUS is in docs/codex/STATUS.md]";
-```
-
-and replace the first trimming block (the one with `fromContext`)
-
-```csharp
-        if (excess > 0)
-        {
-            var fromContext = Math.Min(excess, context.Length);
-            context = context[..^fromContext];
-            excess -= fromContext;
-        }
-```
-
-with
-
-```csharp
-        if (excess > 0 && context.Length > 0)
-        {
-            // D30: STATUS is the last context section, so trimming cuts STATUS, never the card; say so.
-            var fromContext = Math.Min(excess + TrimMarker.Length, context.Length);
-            context = context[..^fromContext] + TrimMarker;
-            excess = Math.Max(0, excess + TrimMarker.Length - fromContext);
-        }
-```
-
-The second block (trimming `sections`) stays as it is.
-
-Step 4. In `tests/QualityGateRegression.ps1` delete the live check: the line `$contextOutput = @(& $contextPath -Card K1 | Out-String) -join ''` and the `if` block right after it (the one that throws 'The context helper must print the selected card without neighbouring cards.'). Finished cards such as K1 leave ROADMAP at every audit, and the fixture checks further down in the same test already cover card extraction. In the same file, the live 250-line budget loop iterates over a fixed list of finished cards (`foreach ($card in @('UI1','UI2', … 'N8')) {`); replace that `foreach` line (both of its lines) with these lines, so the budget is measured on the open cards of the live queue:
-
-```powershell
-    # D30: measure the open cards of the live queue; finished cards leave the documents at every audit.
-    $statusText = [IO.File]::ReadAllText((Join-Path $repoRoot 'docs/codex/STATUS.md'))
-    $queueText = [regex]::Match($statusText, '(?ms)^## Agent queue[^\r\n]*\r?\n(.*?)(?=^## )').Groups[1].Value
-    $liveCards = @([regex]::Matches($queueText, '(?m)^- \[[ ~?]\] (?<id>[0-9A-Za-z.\-]+) [—–-]') |
-        ForEach-Object { $_.Groups['id'].Value })
-    foreach ($card in $liveCards) {
-```
-
-Nothing else in that file changes.
-
-Step 5. Refresh `.context7/verification.json` (only this change).
-
-**Don't:** change `MaxTotalCharacters`, the AGENTS sections, the queue selection, STATUS.md, or anything in `tests/QualityGateRegression.ps1` beyond Step 4.
-
-**Acceptance:** `AGENT_CONTEXT_ORDER_GREEN`; `tests/QualityGateRegression.ps1` green; signed-in Full `Hepsi geçti.`; build and deploy; live: `talvora_agent_brief` for this repository returns `truncated: false` and its context starts with `=== CARD`.
-
-### D31 — The parallel-gate timing regression runs on its own (decision P-49)
-
-**Why:** audit 40 finding 2; P-49 option 2. `tests/QualityGateParallelRegression.ps1` checks that 3+1+3+1 s of work overlaps within 7 s of wall time; in the Full gate it runs beside the heaviest suites and failed at 7.4 s and 8.9 s, while it passes alone.
-
-**Files:** `scripts/Invoke-QualityGate.ps1`, `.context7/verification.json`.
-
-**Context7:** record the map's PowerShell 7 entry with the one fact used (a literal array of file names), per CONTEXT7 PROTOCOL rule 1.
-
-#### Exact implementation
-
-In `$serialRegressions` add `'QualityGateParallelRegression.ps1'` as the last entry; the three existing names and their order stay. Nothing else changes.
-
-**Don't:** change the 7-second threshold, the test or the parallel phase.
-
-**Acceptance:** two consecutive signed-in Full gates `Hepsi geçti.`. Then D29 is next: implement its card unchanged.
-
-### D32 — The traffic meter never counts Talvora's own clients
-
-**Why:** audit 40 finding 3; user decision 2026-11-07 ("Talvora's own test calls are never counted on the Santral counters or lights"). After every install the smoke's deliberate unknown-tool probes showed as "Admin 1 çağrı · 1 hata".
-
-**Files:** `src/Talvora/TalvoraLineTrafficMeter.cs`, `tests/Talvora.Notification.Regression/Program.SN1.cs`, `.context7/verification.json`.
-
-**Context7:** record the map's .NET entry with the one fact used (`string.StartsWith(string, StringComparison)`), per CONTEXT7 PROTOCOL rule 1.
-
-#### Exact implementation
-
-Step 1 (red first). In `Program.SN1.cs`, inside `AssertSn1LineTraffic`, insert directly above `Console.WriteLine("SN1_LINE_TRAFFIC_GREEN");`:
-
-```csharp
-        // D32: Talvora's own clients (Talvora.Smoke, Talvora.Tray) are not traffic.
-        var own = new TalvoraLineTrafficMeter(clock);
-        own.Record("/mcp/admin", "Talvora.Smoke", ok: false);
-        own.Record("/mcp", "Talvora.Tray", ok: true);
-        own.Record("/mcp/dev", "openai-mcp", ok: true);
-        var ownSnapshot = own.Snapshot(after: 0);
-        if (ownSnapshot.NextSeq != 1 || ownSnapshot.Lines.Single(line => line.Line == "admin").Calls != 0)
-            throw new InvalidOperationException("D32: Talvora's own clients must never be counted.");
-```
-
-Step 2. In `TalvoraLineTrafficMeter.Record`, insert as the first statement:
-
-```csharp
-        // D32: Talvora's own clients are not traffic (user decision 2026-11-07).
-        if (clientName?.StartsWith("Talvora.", StringComparison.OrdinalIgnoreCase) == true) return;
-```
-
-**Don't:** change `ResolveClient`, the endpoint, the JSON shape or the ring size.
-
-**Acceptance:** Notification regression green; signed-in Full `Hepsi geçti.`; build and deploy; live: after the post-install smoke, `/healthz/traffic` shows no admin call from the smoke.
-
-### D33 — Desktop progress frames survive a busy machine
-
-**Why:** audit 40 finding 4 (27 timed-out and 4 truncated frames in four days, all during heavy work).
-
-**Files:** `src/Talvora.Tray/DesktopProgressPipeListener.cs`, `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `tests/Talvora.Notification.Regression/Program.D33.cs` (new), `tests/Talvora.Notification.Regression/Program.cs`, `.context7/verification.json`.
-
-**Context7:** `/dotnet/docs` — "Process.StartTime" (the value is fixed for the life of a process) and "ILogger.Log with a LogLevel variable"; record both queries.
-
-#### Exact implementation
-
-Step 1 (red first). Create `Program.D33.cs`:
-
-```csharp
-using Talvora;
 using Talvora.Tray;
 
 internal static partial class Program
 {
-    /// <summary>D33: frames get enough time on a busy machine; the tray process is verified once.</summary>
-    private static void AssertD33DeliveryBudgets()
+    /// <summary>D40: a test run writes nothing into the signed-in user's Talvora folder.</summary>
+    private static void AssertD40TestIsolation()
     {
-        if (DesktopProgressPipeListener.PipeReadTimeout != TimeSpan.FromSeconds(10) ||
-            TalvoraDesktopProgressNotifier.PipeWriteTimeout != TimeSpan.FromSeconds(8))
-            throw new InvalidOperationException("D33: pipe budgets must be 10 s (tray read) and 8 s (service write).");
-        var started = new DateTime(2026, 11, 7, 9, 0, 0, DateTimeKind.Utc);
-        TrayPipeVerificationCache.Store(4242, started, trusted: true);
-        if (!TrayPipeVerificationCache.TryGet(4242, started, out var trusted) || !trusted)
-            throw new InvalidOperationException("D33: the same tray process must reuse its verdict.");
-        if (TrayPipeVerificationCache.TryGet(4242, started.AddSeconds(1), out _))
-            throw new InvalidOperationException("D33: a reused process id with another start time must be verified again.");
-        Console.WriteLine("D33_DELIVERY_BUDGETS_GREEN");
+        var userFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Talvora");
+        if (TrayLog.PathName.StartsWith(userFolder, StringComparison.OrdinalIgnoreCase) ||
+            new WorklogHistoryStore().PathName.StartsWith(userFolder, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("D40: tests must not write into the user's Talvora folder.");
+        Console.WriteLine("D40_TEST_ISOLATION_GREEN");
     }
 }
 ```
 
-In `Program.cs` (`Main`, full run) add `AssertD33DeliveryBudgets();` on its own line directly below `await AssertD25SessionRestartResetsTotalsAsync();`.
+In `Program.cs` (`Main`, full run) add `AssertD40TestIsolation();` on its own line directly above the `Console.WriteLine(` statement that prints `"DESKTOP_PROGRESS_BEHAVIOR_GREEN"`, so it runs after every test that could reset the override. Red: CS1061 (`PathName` does not exist yet).
 
-Step 2. Timeouts: in the `PipeReadTimeout` initializer of `DesktopProgressPipeListener` change `TimeSpan.FromSeconds(3)` to `TimeSpan.FromSeconds(10)`; in the `PipeWriteTimeout` initializer of `TalvoraDesktopProgressNotifier` change `TimeSpan.FromSeconds(2)` to `TimeSpan.FromSeconds(8)` (`PipeConnectTimeout` stays 2 s).
-
-Step 3. Add at the end of `TalvoraDesktopProgressNotifier.cs` (namespace `Talvora`):
+Step 2. `WorklogHistoryStore.cs`: directly below `private List<WorklogHistorySession>? _sessions;` add
 
 ```csharp
-// D33: the tray's image path is checked once per tray process, not for every frame.
-internal static class TrayPipeVerificationCache
+    // D40: a test process points every default store at its own folder.
+    internal static string? DefaultPathOverrideForTests { get; set; }
+
+    internal string PathName => _path;
+```
+
+and in the constructor replace `_path = path ?? Path.Combine(` with `_path = path ?? DefaultPathOverrideForTests ?? Path.Combine(`.
+
+Step 3. `Program.cs`:
+
+(a) Insert as the first statements of `Main`, directly above `if (Environment.GetCommandLineArgs().Contains("--ui7-only", StringComparer.Ordinal))`:
+
+```csharp
+        // D40: this process never writes into the signed-in user's Talvora files (tray.log, worklog
+        // history); child runs (--n8-only and the others) start here too and get their own folder.
+        var isolatedRoot = Path.Combine(Path.GetTempPath(), "talvora-notification-" + Guid.NewGuid().ToString("N"));
+        TrayLog.PathOverrideForTests = Path.Combine(isolatedRoot, "tray.log");
+        WorklogHistoryStore.DefaultPathOverrideForTests = Path.Combine(isolatedRoot, "worklog-sessions.jsonl");
+```
+
+(b) In `AssertRecoveryLogContract`, directly below `var path = Path.Combine(root, "recovery.log");` add `var previousLogPath = TrayLog.PathOverrideForTests;`, and in its `finally` replace `TrayLog.PathOverrideForTests = null;` with `TrayLog.PathOverrideForTests = previousLogPath;`.
+
+(c) Directly below the `AssertD40TestIsolation();` line from Step 1 add:
+
+```csharp
+        // D40: best effort; the folder exists only when a test wrote into it.
+        try
+        {
+            if (Directory.Exists(isolatedRoot)) Directory.Delete(isolatedRoot, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+```
+
+**Don't:** change the Control Center smoke (the gate reads its stage lines from the real tray.log on purpose), the presenter, `TrayLog` itself or any existing assertion.
+
+**Acceptance:** Notification regression green (`D40_TEST_ISOLATION_GREEN`); signed-in Full `Hepsi geçti.`; build and deploy. Live, inside this message: read the newest "Desktop progress IPC client timed out while sending a frame." time in `%LOCALAPPDATA%\Talvora\Tray\tray.log` and the `endedAtUtc` of the "Project A" session in `%LOCALAPPDATA%\Talvora\ControlCenter\worklog-sessions.jsonl` before and after the signed-in Full gate; both stay the same (paste the four values in the Log entry). Claude removes the old "Project A" session at the next audit.
+
+### D41 — One caller name: Talvora's own calls leave no trace, Claude is named
+
+**Why:** audit 41 findings 3 and 4, user decisions 2026-11-07 ("Hiç görünmesin", "Köprü kendini tanıtsın"). (1) The installed smoke's deliberate failing calls (`Talvora.Smoke`) become ChatGPT sessions in the worklog and can open desktop cards, because the worklog takes the actor from the surface path; D32 cleaned only the counters. (2) Claude's calls through the Claude Desktop "Talvora Chat" bridge arrive stateless, without a client name and with a generic User-Agent, so the Santral shows "Diğer" and the worklog "Talvora". Claude added `--header X-Talvora-Client:Claude` to the bridge; Talvora must read it. (3) The traffic meter falls back to the User-Agent and the worklog does not.
+
+**Files:** `src/Talvora/Program.cs`, `src/Talvora/TalvoraLineTrafficMeter.cs`, `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `src/Talvora/TalvoraDesktopWorklogState.cs`, `tests/Talvora.Notification.Regression/Program.D41.cs` (new), `tests/Talvora.Notification.Regression/Program.cs`, `.context7/verification.json`.
+
+**Context7:** `/dotnet/aspnetcore.docs` — "IHeaderDictionary indexer returns StringValues.Empty for a missing header; IHeaderDictionary.UserAgent"; record the query.
+
+#### Exact implementation
+
+Step 1 (red first). Create `Program.D41.cs`:
+
+```csharp
+using System.Collections.Concurrent;
+using Talvora;
+using Talvora.Shared;
+
+internal static partial class Program
 {
-    private static readonly object Gate = new();
-    private static (int ProcessId, DateTime StartTimeUtc, bool Trusted)? _last;
-
-    internal static bool TryGet(int processId, DateTime startTimeUtc, out bool trusted)
+    /// <summary>D41: one caller name; Talvora's own calls leave no trace; the bridge header names Claude.</summary>
+    private static async Task AssertD41CallerIdentityAsync()
     {
-        lock (Gate)
+        if (TalvoraLineTrafficMeter.ResolveCallerName("Claude", "bridge", "node") != "Claude" ||
+            TalvoraLineTrafficMeter.ResolveCallerName(null, "Talvora.Smoke", "node") != "Talvora.Smoke" ||
+            TalvoraLineTrafficMeter.ResolveCallerName(" ", null, "codex_cli_rs/0.1") != "codex_cli_rs/0.1" ||
+            TalvoraLineTrafficMeter.ResolveCallerName(null, null, "") is not null ||
+            !TalvoraLineTrafficMeter.IsOwnClient("Talvora.Smoke") || TalvoraLineTrafficMeter.IsOwnClient("Claude"))
+            throw new InvalidOperationException("D41: the caller name order is header, client name, User-Agent.");
+
+        var observed = new ConcurrentQueue<DesktopProgressMessage>();
+        var notifier = CreateNotifier(observed);
+        try
         {
-            if (_last is { } entry && entry.ProcessId == processId && entry.StartTimeUtc == startTimeUtc)
+            _ = await notifier.RunToolCallAsync<int>("talvora_apply_patch", null,
+                _ => ValueTask.FromResult(1), CancellationToken.None, "/mcp/dev", "Talvora.Smoke");
+            if (!observed.IsEmpty)
+                throw new InvalidOperationException("D41: Talvora's own calls must leave no desktop card or worklog session.");
+            foreach (var (client, actor) in new[] { ("Claude", "Claude"), ("curl/8.9.1", "Diğer") })
             {
-                trusted = entry.Trusted;
-                return true;
+                _ = await notifier.RunToolCallAsync<int>("talvora_apply_patch", null,
+                    _ => ValueTask.FromResult(1), CancellationToken.None, "/mcp", client);
+                var named = observed.LastOrDefault(message => message.WorklogFrame is not null)
+                    ?.WorklogFrame?.Header.ActorName;
+                if (named != actor)
+                    throw new InvalidOperationException($"D41: caller {client} must be named {actor}, got {named}.");
             }
-
-            trusted = false;
-            return false;
         }
-    }
-
-    internal static void Store(int processId, DateTime startTimeUtc, bool trusted)
-    {
-        lock (Gate)
+        finally
         {
-            _last = (processId, startTimeUtc, trusted);
+            await notifier.DisposeAsync();
         }
+        Console.WriteLine("D41_CALLER_IDENTITY_GREEN");
     }
 }
 ```
 
-In `IsTrustedTrayPipeServer`, directly after the block `if (process.SessionId != expectedSessionId) { return false; }`, insert:
+In `Program.cs` (`Main`, full run) add `await AssertD41CallerIdentityAsync();` on its own line directly below `await AssertD25SessionRestartResetsTotalsAsync();`.
+
+Step 2. `TalvoraLineTrafficMeter.cs`: directly above `public void Record(string? surfacePath, string? clientName, bool ok)` add
 
 ```csharp
-            // D33: MainModule is slow and cannot be cancelled; check each tray process once.
-            var startedUtc = process.StartTime.ToUniversalTime();
-            if (TrayPipeVerificationCache.TryGet(process.Id, startedUtc, out var known))
+    // D41: one caller name for the worklog and the traffic meter: the X-Talvora-Client header (the Claude
+    // Desktop "Talvora Chat" bridge sends "Claude"), else the MCP client name, else the HTTP User-Agent.
+    internal static string? ResolveCallerName(string? clientHeader, string? clientInfoName, string? userAgent) =>
+        !string.IsNullOrWhiteSpace(clientHeader) ? clientHeader.Trim() :
+        !string.IsNullOrWhiteSpace(clientInfoName) ? clientInfoName :
+        string.IsNullOrWhiteSpace(userAgent) ? null : userAgent;
+
+    // D41: Talvora's own clients (installed smoke, tray) are not activity anywhere (user decisions 2026-11-07).
+    internal static bool IsOwnClient(string? clientName) =>
+        clientName?.StartsWith("Talvora.", StringComparison.OrdinalIgnoreCase) == true;
+```
+
+and in `Record` replace `if (clientName?.StartsWith("Talvora.", StringComparison.OrdinalIgnoreCase) == true) return;` with `if (IsOwnClient(clientName)) return;`.
+
+Step 3. `src/Talvora/Program.cs`, call-tool filter:
+
+(a) Replace `var clientName = request.Server.ClientInfo?.Name;` with
+
+```csharp
+            var headers = request.Services?.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>()
+                ?.HttpContext?.Request.Headers;
+            var clientName = TalvoraLineTrafficMeter.ResolveCallerName(
+                headers?["X-Talvora-Client"].ToString(),
+                request.Server.ClientInfo?.Name,
+                headers?.UserAgent.ToString());
+```
+
+(b) In the `finally` block replace the four lines from `// Stateless MCP sessions often carry no client name; the HTTP User-Agent still says who called.` through `?.HttpContext?.Request.Headers.UserAgent.ToString(), ok);` (inclusive) with
+
+```csharp
+                request.Services?.GetService<TalvoraLineTrafficMeter>()?.Record(surfacePath, clientName, ok);
+```
+
+The `// SN1: …` comment line above them stays.
+
+Step 4. `TalvoraDesktopProgressNotifier.cs`, `RunToolCallAsync`: directly below `ArgumentNullException.ThrowIfNull(operation);` add
+
+```csharp
+        // D41: Talvora's own clients leave no desktop card and no worklog session (user decision 2026-11-07).
+        if (TalvoraLineTrafficMeter.IsOwnClient(clientName))
+        {
+            return await operation(cancellationToken);
+        }
+```
+
+Step 5. `TalvoraDesktopWorklogState.cs`, `ResolveActor`: replace its last statement `return "Talvora";` with `return "Diğer";` (an unknown caller gets the Santral's name; Talvora's own calls never reach it after Step 4).
+
+**Don't:** change `ResolveClient`, the surface paths, the D32 test, the worklog layout or any other user-facing text.
+
+**Acceptance:** Notification regression green (`D41_CALLER_IDENTITY_GREEN`, `SN1_LINE_TRAFFIC_GREEN`); signed-in Full `Hepsi geçti.`; build and deploy; installed smoke green. Claude checks at the next audit (no agent step): a call through the Talvora Chat bridge shows `core · Claude` in `/healthz/traffic` and "Claude" in the worklog, and the installed smoke left no worklog session.
+
+### D42 — "Zaten hazır" is not an automatic repair
+
+**Why:** audit 41 finding 5. The overview line "son 24 saatte 14 otomatik onarım" counted 11 repairs and 3 "Gitea MCP zaten hazır" results: when a status check fails and the recovery then finds the service already ready, nothing is repaired, but the event is recorded under the same `recovery:<id>:success` key as a real repair, and `OverviewViewModel` counts every Info "recovery" event (D26 removed only the failed attempts).
+
+**Files:** `src/Talvora.Tray/ControlCenterRepairService.cs`, `src/Talvora.Tray/TrayApplicationContext.cs`, `src/Talvora.Tray/ViewModels/OverviewViewModel.cs`, `tests/Talvora.Notification.Regression/Program.UI3.cs`, `.context7/verification.json`.
+
+**Context7:** record the map's .NET entry with the one fact used (`string.EndsWith(string, StringComparison.Ordinal)`), per CONTEXT7 PROTOCOL rule 1.
+
+#### Exact implementation
+
+Step 1 (red first). `Program.UI3.cs`, `AssertD26RecoveryCount`: replace
+
+```csharp
+            Event(Talvora.Tray.ControlCenterEventSeverity.Error, "Talvora Dev: müdahale gerekiyor", 1),
+        ]);
+        Ui3Check(model.RecoveryCount == 2, "D26: only successful repairs count as otomatik onarım.");
+```
+
+with
+
+```csharp
+            Event(Talvora.Tray.ControlCenterEventSeverity.Error, "Talvora Dev: müdahale gerekiyor", 1),
+            // D42: a recovery that found the service already ready repaired nothing.
+            Event(Talvora.Tray.ControlCenterEventSeverity.Info, "Gitea MCP zaten hazır", 3) with
             {
-                return known;
-            }
+                DedupKey = "recovery:gitea:already-ready",
+            },
+        ]);
+        Ui3Check(model.RecoveryCount == 2, "D26/D42: only applied repairs count as otomatik onarım.");
+        var ready = new Talvora.Tray.ManagedMcpDashboardState(core, Talvora.Tray.ControlCenterHealthState.Ready, "Hazır", "Hazır");
+        var offline = ready with { Health = Talvora.Tray.ControlCenterHealthState.Offline };
+        Ui3Check(
+            !new Talvora.Tray.ManagedMcpRepairResult("Doğrulama", "", "", false, ready, ready).RepairApplied &&
+            new Talvora.Tray.ManagedMcpRepairResult("Yeniden başlat", "", "", false, offline, ready).RepairApplied,
+            "D42: only a repair that started from a non-ready state was applied.");
 ```
 
-and turn the method's final `return actualPath.StartsWith(…) && string.Equals(…);` statement into `var trusted = <the same expression>;` followed by `TrayPipeVerificationCache.Store(process.Id, startedUtc, trusted);` and `return trusted;`.
+Red: CS1061 (`RepairApplied` does not exist yet).
 
-Step 4. At the end of the delivery method (the one with `for (var attempt = 1; attempt <= 3; attempt++)`), replace the final `if (lastError is null) { _logger.LogDebug(…stayed unavailable…) } else { _logger.LogDebug(lastError, …failed after retrying…) }` block with:
+Step 2. `ControlCenterRepairService.cs`: replace the last parameter line of the `ManagedMcpRepairResult` record, `    ManagedMcpDashboardState FinalState);`, with
 
 ```csharp
-        // D33: a lost frame is visible in the service log, at most once per 10 minutes.
-        var now = DateTimeOffset.UtcNow;
-        var level = now - _lastDropWarningUtc >= TimeSpan.FromMinutes(10) ? LogLevel.Warning : LogLevel.Debug;
-        if (level == LogLevel.Warning)
-        {
-            _lastDropWarningUtc = now;
-        }
-
-        if (lastError is null)
-        {
-            _logger.Log(
-                level,
-                "Desktop progress tray IPC stayed unavailable after retrying (operation {OperationId}).",
-                message.OperationId);
-        }
-        else
-        {
-            _logger.Log(
-                level,
-                lastError,
-                "Desktop progress notification failed after retrying without affecting the tool operation (operation {OperationId}).",
-                message.OperationId);
-        }
+    ManagedMcpDashboardState FinalState)
+{
+    // D42: a recovery that found the service already ready applied no repair.
+    public bool RepairApplied => InitialState.Health != ControlCenterHealthState.Ready;
+}
 ```
 
-and add the field `private static DateTimeOffset _lastDropWarningUtc = DateTimeOffset.MinValue;` next to the other fields of the class.
+Step 3. `TrayApplicationContext.cs` (each old text occurs once): in the Gitea recovery replace `"recovery:gitea:success");` with
 
-**Don't:** change the protocol, the frame size limit, the single-instance pipe, the connect timeout or the retry count.
+```csharp
+                    // D42: an already-ready result is recorded under its own key and never counted as a repair.
+                    repair.RepairApplied ? "recovery:gitea:success" : "recovery:gitea:already-ready");
+```
 
-**Acceptance:** Notification regression green (`D33_DELIVERY_BUDGETS_GREEN`); signed-in Full `Hepsi geçti.`; build and deploy; live: one tool call shows its desktop card. Claude counts the "IPC client timed out" lines in tray.log at the next audit (do not wait for it).
+and in the managed-MCP recovery replace `$"recovery:{registration.Id}:success");` with
+
+```csharp
+                        // D42: an already-ready result is recorded under its own key and never counted as a repair.
+                        repair.RepairApplied
+                            ? $"recovery:{registration.Id}:success"
+                            : $"recovery:{registration.Id}:already-ready");
+```
+
+Step 4. `OverviewViewModel.cs`, the `RecoveryCount` query: replace
+
+```csharp
+                string.Equals(entry.Category, "recovery", StringComparison.OrdinalIgnoreCase))
+            .Sum(entry => entry.Count);
+```
+
+with
+
+```csharp
+                string.Equals(entry.Category, "recovery", StringComparison.OrdinalIgnoreCase) &&
+                // D42: "zaten hazır" results repaired nothing.
+                !entry.DedupKey.EndsWith(":already-ready", StringComparison.Ordinal))
+            .Sum(entry => entry.Count);
+```
+
+**Don't:** change event titles or texts (D37 owns them), the dedup window, the repair logic, or the core recovery's `recovery:talvora:success` (it always repairs).
+
+**Acceptance:** Notification regression green (`UI3_NARRATOR_GREEN`); signed-in Full `Hepsi geçti.`; build and deploy; installed Control Center smoke green.
 
 ### D34 — Tunnel health without launching tunnel-client every round
 
@@ -767,7 +675,7 @@ Step 4. In `GetLatestTunnelClientTagAsync`, directly after each of the two 6-hou
         }
 ```
 
-Step 5. Wrap the lines from `using var request = new HttpRequestMessage(` to `return tag;` (inclusive) in:
+Step 5. In `GetLatestTunnelClientTagAsync` (the file has a second `using var request = new HttpRequestMessage(` in another method; leave that one alone), wrap the lines from its `using var request = new HttpRequestMessage(` to `return tag;` (inclusive) in:
 
 ```csharp
             try
@@ -880,7 +788,7 @@ Red first: create `tests/EventTextTurkishRegression.ps1` (UTF-8). This source-te
 #### Exact implementation
 
 Step 1 (red first). In `Program.N8.cs`:
-- replace `presenter.Publish(Message("filtered", "ChatGPT", DesktopProgressKind.Completed, terminal: true));` with `presenter.Publish(Message("filtered", "Talvora", DesktopProgressKind.Completed, terminal: true));` (a plain Talvora call is the non-agent case now);
+- replace `presenter.Publish(Message("filtered", "ChatGPT", DesktopProgressKind.Completed, terminal: true));` with `presenter.Publish(Message("filtered", "Diğer", DesktopProgressKind.Completed, terminal: true));` (an unknown caller is the non-agent case; D41 names it "Diğer");
 - directly below `claudeCard.Close();` insert:
 
 ```csharp
@@ -952,43 +860,3 @@ with
 ```
 
 **Acceptance:** Notification regression green (`D39_PENPOT_REDACTION_GREEN`); signed-in Full `Hepsi geçti.`; build and deploy.
-
-### SN9 — Switchboard keeps focus and hover, draws calmly (Claude)
-
-`[C]` card, Claude builds it (audit 40 finding 11): update the hotspots in place when the socket ids do not change (no `Children.Clear()` on every traffic poll), so keyboard focus and the hover ring survive; move the reconnect timer to `outside.Y + 70` / `+ 88` so it never meets a neighbour's third text line; cache pens, brushes and the static text layer per theme and redraw only lamps, moving lights and counters each frame. Acceptance: the smoke keeps focus on one socket across five polls; isolated overview idle CPU measured before and after (before 5.58 %), after lower; screenshots in both themes.
-
-### WL2 — Çalışma günlüğü: no blank project line, a real empty state (Claude)
-
-`[C]` card, Claude builds it (audit 40 finding 12): a session without a project shows "Proje belirsiz" in `Sn.InkFaint`; with nothing selected the detail pane shows "Soldan bir oturum seç; adımları, kanıtları ve sonucu burada görürsün." centred in `Sn.InkMuted`. Acceptance: smoke captures in both themes.
-
-### D29 — Smoke clears its fixture traffic after the SN3 check
-
-**Why:** audit 39 finding 4: the later live-data capture showed the fixture's 13/1/2 calls.
-
-**Files:** `src/Talvora.Tray/ControlCenterSmoke.SN3.cs` only (this file is test code inside a `[C]` area; this card is allowed to touch it).
-
-#### Exact implementation
-
-At the end of `AssertSn3Switchboard`, before the final `board.Settle();`, add `overview.ApplyTraffic(null);` with the comment `// D29: fixture traffic must not leak into the live-data capture.`
-
-**Acceptance:** Full `Hepsi geçti.`; the smoke's `*-loaded.png` overview shows "veri yok" or real counts, never 13/1/2.
-
-## Kept for a regression test (finished card, never implement)
-
-`tests/QualityGateRegression.ps1` still reads card K1 from this file; D30 removes that check (its fixture covers the same thing). K1 is finished and is not in the queue: never select or implement it. Claude deletes this section once D30 is done.
-
-### K1 — One quality gate script, all suites in CI, quiet output
-
-**Why:** `Talvora.SourceEdit.Regression` is not in CI; 25 `tests/*.ps1` are orphaned; there is no single local command that matches CI, and full output wastes Codex tokens.
-
-**Files:** new `scripts/Invoke-QualityGate.ps1`, `.github/workflows/windows-ci.yml`, orphaned `tests/*.ps1` (run, fix or delete), new `scripts/Get-CodexContext.ps1`, `tests/` (new test for both scripts).
-
-**Do:**
-- `scripts/Invoke-QualityGate.ps1 [-Scope Fast|Full] [-Verbose]`: locked restore → Release build → PowerShell parse → WinGet ban → Context7/Delivery gate validators → every behavioural suite (`Talvora.SourceEdit.Regression`, `Talvora.Notification.Regression`, `Talvora.Smoke --codex-integration-policy-only`, all `tests/*.ps1` that still apply) → prints one summary line `N kontrol, 0 hata` and, as the **very last line**, `Hepsi geçti.` or `Kontrol başarısız: <adım>`. Default output: one line per step; on failure re-print only the failing step's output. `-Verbose` = today's full output.
-- CI calls the same script (`-Scope Full`) instead of duplicating steps; keep the installer/installed-runtime steps after it.
-- For each orphaned script: if it still passes, add it to the gate; if it fails because the contract is obsolete, delete it and say why in the Log; if it reveals a real bug, open a D-card in STATUS instead of fixing it here.
-- `scripts/Get-CodexContext.ps1 [-Card <ID>]` prints: STATUS up to `## Log` + newest Log entry; the card text (default: first unchecked queue item) from this ROADMAP until the next `### `; and the card's `**Files:**` list with current line counts. (Token economy — read this instead of the whole ROADMAP.)
-
-**Don't:** weaken any existing assertion; make CI slower than 25 minutes (raise `timeout-minutes` only if needed, with reason).
-
-**Acceptance:** `pwsh scripts/Invoke-QualityGate.ps1` ends with `Hepsi geçti.` on a clean tree; deliberately breaking a source-edit regression makes it end with `Kontrol başarısız: SourceEdit`; CI runs the SourceEdit suite (visible in the log).
