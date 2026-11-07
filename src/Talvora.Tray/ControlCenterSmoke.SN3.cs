@@ -44,6 +44,8 @@ internal static partial class ControlCenterSmoke
         if (names.Length != 5 || !names.Any(name => name.StartsWith("Admin, dikkat", StringComparison.Ordinal)) ||
             !names.Any(name => name.Contains("13 çağrı", StringComparison.Ordinal)))
             throw new InvalidOperationException("SN3 sockets must be reachable and named for screen readers: " + string.Join(" | ", names));
+        // D29: fixture traffic must not leak into the live-data capture.
+        overview.ApplyTraffic(null);
         board.Settle();
     }
 

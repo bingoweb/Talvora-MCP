@@ -32,9 +32,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [~] D30 — The agent brief always carries the current card (audit 40, critical; RED card-first fixture; AGENT_CONTEXT_ORDER_GREEN; QualityGateRegression GREEN; signed-in Full 69/0; installed e62b81d and live agent-brief truncated=false with card first, MCP smoke GREEN; GitHub CI 42360733913 running at first check)
+- [x] D30 — The agent brief always carries the current card (audit 40, critical; RED card-first fixture; AGENT_CONTEXT_ORDER_GREEN; QualityGateRegression GREEN; signed-in Full 69/0; installed e62b81d and live agent-brief truncated=false with card first, MCP smoke GREEN; GitHub CI 42361563244 success)
 - [x] D31 — The parallel-gate timing regression runs on its own (audit 40; P-49 decided; source RED then GREEN; focused QUALITY_GATE_PARALLEL_GREEN; two consecutive signed-in Full gates 69/0 and Hepsi geçti.; exact-commit installer, live smoke and CI follow commit; D29 next)
-- [ ] D29 — Smoke clears its fixture traffic after the SN3 check (audit 39; unblocked: P-49 decided, D31 first; implement the card unchanged)
+- [~] D29 — Smoke clears its fixture traffic after the SN3 check (audit 39; RED then D29_GREEN; Changed 16/0, signed-in Full 69/0 and Hepsi geçti.; smoke loaded.png shows "veri yok", no fixture 13/1/2; Gitea #9 comment 201; CI pending)
 - [ ] D32 — The traffic meter never counts Talvora's own clients (audit 40, user decision)
 - [ ] D33 — Desktop progress frames survive a busy machine (audit 40)
 - [ ] D34 — Tunnel health without launching tunnel-client every round (audit 40)
@@ -61,6 +61,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D29, executor ChatGPT via Talvora: added the exact SN3 fixture cleanup before final Settle; source assertion RED (missing cleanup), then D29_GREEN; Changed gate 16 checks/0 failures and signed-in Full 69 checks/0 failures/Hepsi geçti. ControlCenter smoke PASS; artifacts/d29/control-center-loaded.png visually verified with 'veri yok' for Dev/Admin/core, never fixture 13/1/2. Context7 /dotnet/docs plus Microsoft Learn verified a null argument to TrafficFeed?. Exact-commit installer, installed smoke and GitHub CI follow the commit. Gitea issue #9 comment 201.
+  Self-review — cosmetics: no production layout, palette or motion changed; loaded overview preview verified.
+  Self-review — usability: the live-data capture no longer retains fixture counters.
+  Self-review — Turkish: no product wording changed; existing 'veri yok' visible.
+  Self-review — correctness/security: RED/GREEN, source syntax and JSON validation, Changed 16/0 and Full 69/0; cleanup touches only the smoke fixture.
 - 2026-11-07 — D31, executor ChatGPT via Talvora: moved exactly the existing QualityGateParallelRegression.ps1 to the final position in $serialRegressions, preserving the preceding three entries and 7-second regression threshold. Source assertion RED (missing fourth serial entry), then D31_SERIAL_GREEN; standalone QUALITY_GATE_PARALLEL_GREEN. Two consecutive signed-in Full gates: first 69 checks/0 failures/Hepsi geçti., second 69 checks/0 failures/Hepsi geçti. No timing guard, parallel phase, or test was changed. Context7 /microsoftdocs/powershell-docs and Microsoft Learn verified PowerShell array literals. Exact-commit installer, installed MCP smoke and GitHub CI follow the commit. Gitea issue #9 mirror skipped: no authenticated comment tool exposed through Talvora Dev.
   Self-review — cosmetics: no UI, colour, animation or layout change.
   Self-review — usability: timing-sensitive regression no longer competes with the parallel gate phase.

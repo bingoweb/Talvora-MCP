@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T09:46:43.643Z",
-  "scope": "D31: run the existing timing-sensitive PowerShell regression as the last serial quality-gate test without relaxing its seven-second limit",
+  "verifiedAtUtc": "2026-11-07T10:34:58.211Z",
+  "scope": "D29: clear SN3 fixture traffic before the loaded live-data screenshot",
   "libraries": [
     {
-      "libraryId": "/microsoftdocs/powershell-docs",
-      "verified": "2026-11-07 D31: PowerShell 7 supports a literal @() array with comma-separated filename strings in declaration order, so adding one final entry to $serialRegressions keeps the preceding three names and ordering unchanged (query: \"PowerShell 7 array literal @('one.ps1','two.ps1') containing script file name strings preserving their sequence\")."
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-07 D29: a C# parameter annotated TrafficFeed? permits an explicit null argument; nullable reference annotations affect compiler diagnostics, not runtime types (query: \"C# nullable reference types: passing a null literal to a method parameter declared as nullable reference type TrafficFeed? and checking argument without throwing; what compiler behavior and method call syntax apply in .NET 10 C#?\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays"
+    "https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/null-safety/nullable-reference-types"
   ]
 }
