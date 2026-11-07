@@ -54,6 +54,14 @@ internal static partial class Program
             tracker.Observe("talvora-admin", ControlCenterHealthState.Offline, t0.AddSeconds(8)) != t0.AddSeconds(8) ||
             tracker.Observe("talvora-admin", ControlCenterHealthState.Offline, t0.AddSeconds(12)) != t0.AddSeconds(8))
             throw new InvalidOperationException("SN1: state-since must be the first time the current state was observed.");
+        // D32: Talvora's own clients (Talvora.Smoke, Talvora.Tray) are not traffic.
+        var own = new TalvoraLineTrafficMeter(clock);
+        own.Record("/mcp/admin", "Talvora.Smoke", ok: false);
+        own.Record("/mcp", "Talvora.Tray", ok: true);
+        own.Record("/mcp/dev", "openai-mcp", ok: true);
+        var ownSnapshot = own.Snapshot(after: 0);
+        if (ownSnapshot.NextSeq != 1 || ownSnapshot.Lines.Single(line => line.Line == "admin").Calls != 0)
+            throw new InvalidOperationException("D32: Talvora's own clients must never be counted.");
         Console.WriteLine("SN1_LINE_TRAFFIC_GREEN");
     }
 

@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T10:34:58.211Z",
-  "scope": "D29: clear SN3 fixture traffic before the loaded live-data screenshot",
+  "verifiedAtUtc": "2026-11-07T10:47:12.301Z",
+  "scope": "D32: exclude Talvora's own clients from measured MCP traffic before recording",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D29: a C# parameter annotated TrafficFeed? permits an explicit null argument; nullable reference annotations affect compiler diagnostics, not runtime types (query: \"C# nullable reference types: passing a null literal to a method parameter declared as nullable reference type TrafficFeed? and checking argument without throwing; what compiler behavior and method call syntax apply in .NET 10 C#?\")."
+      "verified": "2026-11-07 D32: string.StartsWith(string, StringComparison) supports StringComparison.OrdinalIgnoreCase for case-insensitive ordinal prefix matching (query: \"C# .NET 10 string.StartsWith(string value, StringComparison comparisonType) overload: returns true for matching prefix and StringComparison.OrdinalIgnoreCase performs case-insensitive ordinal comparison. Verify signature and null handling for client name filter.\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/null-safety/nullable-reference-types"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.string.startswith?view=net-10.0"
   ]
 }

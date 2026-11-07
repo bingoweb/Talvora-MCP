@@ -49,6 +49,8 @@ internal sealed class TalvoraLineTrafficMeter
 
     public void Record(string? surfacePath, string? clientName, bool ok)
     {
+        // D32: Talvora's own clients are not traffic (user decision 2026-11-07).
+        if (clientName?.StartsWith("Talvora.", StringComparison.OrdinalIgnoreCase) == true) return;
         var line = ResolveLine(surfacePath);
         var client = ResolveClient(clientName, line);
         var now = _time.GetUtcNow();
