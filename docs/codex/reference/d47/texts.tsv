@@ -74,3 +74,41 @@ src/Talvora.Tray/TrayApplicationContext.cs	1	text	Talvora MCP üzerinden servis 
 src/Talvora.Tray/TrayApplicationContext.cs	1	text	Bu MCP bu Windows oturumu için elle durduruldu.	Bu hizmet bu Windows oturumu için elle durduruldu.
 src/Talvora.Tray/TrayApplicationContext.cs	1	literal	MCP zinciri ve gerekli bağlantılar yeniden hazır.	Hizmet zinciri ve gerekli bağlantılar yeniden hazır.
 src/Talvora.Tray/TrayApplicationContext.cs	1	literal	MCP zinciri otomatik olarak düzeltildi.	Hizmet zinciri otomatik olarak düzeltildi.
+src/Talvora.Tray/ControlCenterSetupService.cs	1	text	Yeniden kullanılabilir Runtime API key ve tunnel-client kurulumu bulunamadı. 	Yeniden kullanılabilir çalışma anahtarı (Runtime API key) ve bağlantı istemcisi kurulumu bulunamadı. 
+src/Talvora.Tray/ControlCenterSetupService.cs	1	literal	Yeni MCP tüneli için tek bilgi gerekiyor	Yeni güvenli tünel için tek bilgi gerekiyor
+src/Talvora.Tray/ControlCenterSetupService.cs	1	text	OpenAI Admin API key yalnız yeni tüneli oluşturmak için kullanılacak. 	OpenAI Admin API anahtarı (Admin API key) yalnızca yeni tüneli oluşturmak için kullanılacak. 
+src/Talvora.Tray/ControlCenterSetupService.cs	1	text	Gerekli credential ve scope hazır. Talvora tüneli oluşturup profili bağlayabilir.	Gerekli anahtar ve yetkiler hazır. Talvora tüneli oluşturup profili bağlayabilir.
+src/Talvora.Tray/ControlCenterSetupService.cs	1	text	Eksik tunnel kayıtları için mevcut tunnel ID veya OpenAI Admin API key gerekiyor.	Eksik tünel kayıtları için mevcut tünel kimliği (tunnel ID) ya da OpenAI Admin API anahtarı (Admin API key) gerekiyor.
+src/Talvora.Tray/ControlCenterSetupService.cs	1	text	Yeni tünel oluşturmak için OpenAI Admin API key gerekiyor.	Yeni tünel oluşturmak için OpenAI Admin API anahtarı (Admin API key) gerekiyor.
+src/Talvora.Tray/ControlCenterSetupService.cs	1	text	Güvenli MCP tünel temel kurulumu henüz tamamlanmadı.	Güvenli tünel temel kurulumu henüz tamamlanmadı.
+src/Talvora.Tray/ControlCenterSetupService.cs	1	text	Yönetilen MCP bağlantıları için gerekli temel yapılandırma hazır.	Yönetilen hizmet bağlantıları için gerekli temel yapılandırma hazır.
+src/Talvora.Tray/ControlCenterWindow.Setup.cs	1	text	Mevcut tunnel ID geçersiz veya bu MCP kaydıyla bağlanamadı. OpenAI tunnel kaydını ve ID biçimini kontrol edin.	Mevcut tünel kimliği (tunnel ID) geçersiz ya da bu hizmetin kaydıyla bağlanamadı. OpenAI'deki tünel kaydını ve kimliğin biçimini kontrol edin.
+src/Talvora.Tray/ControlCenterWindow.Setup.cs	1	text	Yeni tünel oluşturmak için geçerli OpenAI Admin API key gerekiyor.	Yeni tünel oluşturmak için geçerli bir OpenAI Admin API anahtarı (Admin API key) gerekiyor.
+src/Talvora.Tray/ControlCenterWindow.Setup.cs	1	text	Güvenli MCP tünelinin Runtime temel kurulumu eksik. Mevcut Business tünel kurulumunu tamamlayıp yeniden deneyin.	Güvenli tünelin temel kurulumu eksik (Runtime API key). Mevcut ChatGPT Business tünel kurulumunu tamamlayıp yeniden deneyin.
+src/Talvora.Tray/ControlCenterAdminCredentialStore.cs	2	text	OpenAI Admin API key biçimi geçersiz.	OpenAI Admin API anahtarının (Admin API key) biçimi geçersiz.
+src/Talvora.Tray/ControlCenterAdminCredentialStore.cs	1	text	Kaydedilmiş OpenAI Admin API key silinemedi.	Kaydedilmiş OpenAI Admin API anahtarı (Admin API key) silinemedi.
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	1	text	Bu MCP için tünel gerekmiyor.	Bu hizmet için tünel gerekmiyor.
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	1	text	Yeniden kullanılabilir Runtime API key bulunamadı.	Yeniden kullanılabilir çalışma anahtarı (Runtime API key) bulunamadı.
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	1	text	Yeni tünel oluşturmak için OpenAI Admin API key gerekiyor.	Yeni tünel oluşturmak için OpenAI Admin API anahtarı (Admin API key) gerekiyor.
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	2	text	Yeniden kullanılabilir güvenli MCP tünel Runtime API key kaynağı bulunamadı.	Yeniden kullanılabilir güvenli tünel çalışma anahtarı (Runtime API key) kaynağı bulunamadı.
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	1	text	Tunnel ID biçimi geçersiz.	Tünel kimliğinin (tunnel ID) biçimi geçersiz.
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	2	text	Tunnel config dizini çözümlenemedi.	Tünel ayar klasörü bulunamadı.
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	1	text	Tünel runtime durumu okunamadı: 	Tünelin çalışma durumu okunamadı: 
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	1	text	Tünel runtime durumu geçerli JSON içermiyor.	Tünelin çalışma durumu okunamadı (geçerli JSON değil).
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	1	text	Mevcut tünel scope bilgisi okunamadı: 	Mevcut tünelin yetki bilgisi okunamadı: 
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	1	text	Yeni güvenli MCP tüneli 90 saniye içinde hazır olmadı.	Yeni güvenli tünel 90 saniye içinde hazır olmadı.
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	1	text	OpenAI tunnel-client bulunamadı.	OpenAI bağlantı istemcisi (tunnel-client) bulunamadı.
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	1	text	tunnel-client komutu {timeout.TotalSeconds:F0} saniye içinde tamamlanmadı.	Bağlantı istemcisi (tunnel-client) komutu {timeout.TotalSeconds:F0} saniye içinde tamamlanmadı.
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	1	text	Tunnel bağlantı yapılandırması bulunamadı.	Tünel bağlantı ayarları bulunamadı.
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs	1	text	Tunnel bağlantı yapılandırması geçersiz.	Tünel bağlantı ayarları geçersiz.
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.Pending.cs	1	text	Belirsiz pending tünel create sonucunu reconcile etmek için OpenAI Admin API key gerekiyor.	Yarım kalan tünel oluşturma işleminin sonucunu doğrulamak için OpenAI Admin API anahtarı (Admin API key) gerekiyor.
+src/Talvora.Tray/ManagedMcpTunnelProvisioningService.Pending.cs	1	text	Yeni tünel oluşturmak için OpenAI Admin API key gerekiyor.	Yeni tünel oluşturmak için OpenAI Admin API anahtarı (Admin API key) gerekiyor.
+src/Talvora.Tray/BusinessTunnelClient.cs	1	text	ChatGPT Business tunnel yapılandırması bulunamadı.	ChatGPT Business tünel ayarları bulunamadı.
+src/Talvora.Tray/BusinessTunnelClient.cs	1	text	ChatGPT Business tunnel yapılandırması geçersiz.	ChatGPT Business tünel ayarları geçersiz.
+src/Talvora.Tray/BusinessTunnelClient.cs	1	literal	Yerel MCP servisi çalışmıyor.	Yerel Talvora servisi çalışmıyor.
+src/Talvora.Tray/BusinessTunnelClient.cs	1	text	Yerel MCP servisi hazır. Dev ve Admin güvenli tünelleri ayrı izleniyor.	Yerel Talvora servisi hazır. Dev ve Admin güvenli bağlantıları ayrı izleniyor.
+src/Talvora.Tray/BusinessTunnelClient.cs	1	text	Yerel Talvora MCP servisi çalışmıyor. Önce Talvora servisini başlatın.	Yerel Talvora servisi çalışmıyor. Önce Talvora servisini başlatın.
+src/Talvora.Tray/BusinessTunnelClient.cs	1	text	OpenAI tunnel-client bulunamadı.	OpenAI bağlantı istemcisi (tunnel-client) bulunamadı.
+src/Talvora.Tray/BusinessTunnelClient.cs	1	text	ChatGPT Business tunnel 90 saniye içinde hazır olmadı.	ChatGPT Business tüneli 90 saniye içinde hazır olmadı.
+src/Talvora.Tray/BusinessTunnelClient.cs	1	text	tunnel-client komutu {timeout.TotalSeconds:F0} saniye içinde tamamlanmadı.	Bağlantı istemcisi (tunnel-client) komutu {timeout.TotalSeconds:F0} saniye içinde tamamlanmadı.
+src/Talvora.Tray/Program.cs	3	text	Managed MCP kaydı bulunamadı: {managedMcpId}	Yönetilen hizmet kaydı bulunamadı: {managedMcpId}

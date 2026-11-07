@@ -37,7 +37,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D46 — A CI run that is still going is not a failed step (audit 42)
 - [ ] D48 — A vault note belongs to the vault's owner (audit 42)
 - [ ] D49 — Plain Turkish service names, also for older registries (audit 42; after D46)
-- [ ] D47 — Plain Turkish for the remaining Control Center texts (audit 42; table and test in docs/codex/reference/d47)
+- [ ] D47 — Plain Turkish for the remaining Control Center texts (audit 42; setup texts per the user's decision; table and test in docs/codex/reference/d47)
+- [ ] [C] WL3 — Çalışma günlüğü and Olaylar polish (Claude; audit 42, user: later; after D45 and D50)
 
 ## User queue
 
@@ -52,6 +53,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — Claude, audit 42 decisions (user): the look fixes and the worklog list's outcome mark are Claude's [C] WL3, queued for later ("Sıraya koy, sonra yap"); the setup wizard keeps OpenAI's names in parentheses inside Turkish sentences ("Adlar kalsın, cümleler Türkçe"), so D47 gained 38 setup rows (113 in all; the reference test and table were rebuilt and re-verified in the scratch clone: red on the current source, green after it, tray build 0 warnings, related tests green).
 
 - 2026-11-08 — Claude, audit 42 follow-up: D50 queued after D45 (finding 8: one project and actor share one session id and the worklog history deduplicated by it, so only the newest session per project and actor survived; seen when Claude's 00:16 probe replaced the 23:36 one). Its literal blocks were applied in the scratch clone together with D45–D49: Notification regression green, Full gate green.
 
