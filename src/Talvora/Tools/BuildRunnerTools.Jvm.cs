@@ -318,7 +318,7 @@ public static partial class BuildRunnerTools
         }
 
         return (
-            CommandResolver.Resolve(
+            SignedInUserToolchain.Resolve(
                 ["gradle.exe", "gradle.bat", "gradle.cmd", "gradle"]),
             false);
     }
@@ -339,7 +339,7 @@ public static partial class BuildRunnerTools
             return (wrapper, true);
         }
 
-        var resolved = CommandResolver.Resolve(
+        var resolved = SignedInUserToolchain.Resolve(
             ["mvn.cmd", "mvn.exe", "mvn"]);
         if (resolved is not null)
         {
@@ -347,11 +347,11 @@ public static partial class BuildRunnerTools
         }
 
         var chocolateyInstall =
-            Environment.GetEnvironmentVariable("ChocolateyInstall");
+            SignedInUserToolchain.Variable("ChocolateyInstall");
         if (string.IsNullOrWhiteSpace(chocolateyInstall))
         {
             chocolateyInstall = Path.Combine(
-                Environment.GetFolderPath(
+                SignedInUserToolchain.Folder(
                     Environment.SpecialFolder.CommonApplicationData),
                 "chocolatey");
         }
@@ -386,7 +386,7 @@ public static partial class BuildRunnerTools
                     command + ".exe"));
         }
 
-        return CommandResolver.Resolve(
+        return SignedInUserToolchain.Resolve(
             [command + ".exe", command],
             candidates);
     }
@@ -414,7 +414,7 @@ public static partial class BuildRunnerTools
             }
         }
 
-        var programFiles = Environment.GetFolderPath(
+        var programFiles = SignedInUserToolchain.Folder(
             Environment.SpecialFolder.ProgramFiles);
         if (!string.IsNullOrWhiteSpace(programFiles))
         {
@@ -452,7 +452,7 @@ public static partial class BuildRunnerTools
         }
 
         var processJavaHome =
-            Environment.GetEnvironmentVariable("JAVA_HOME");
+            SignedInUserToolchain.Variable("JAVA_HOME");
         if (!string.IsNullOrWhiteSpace(processJavaHome) &&
             Directory.Exists(processJavaHome))
         {
@@ -504,7 +504,7 @@ public static partial class BuildRunnerTools
         string executable,
         string displayName)
     {
-        var resolved = CommandResolver.Resolve([executable]);
+        var resolved = SignedInUserToolchain.Resolve([executable]);
         if (resolved is not null)
         {
             return resolved;

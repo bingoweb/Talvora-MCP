@@ -211,6 +211,20 @@ internal static partial class SmokeScenarios
                 ["arguments"] = new[] { "version" },
                 ["timeoutSeconds"] = 60,
             });
+
+            // UR1: Go runs as the signed-in user, so its module cache is the user's, never the service profile's.
+            var goPath = await EnsureSuccess(byName["talvora_go_run"], new()
+            {
+                ["workingDirectory"] = repositoryPath,
+                ["arguments"] = new[] { "env", "GOPATH" },
+                ["timeoutSeconds"] = 60,
+            });
+            if (GetString(goPath, "standardOutput") is not { Length: > 0 } goPathText ||
+                goPathText.Contains(@"\systemprofile\", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"UR1: go env GOPATH is the service account's: {GetString(goPath, "standardOutput")}");
+            }
         }
 
         var rust = await EnsureSuccess(byName["talvora_rust_info"], new());

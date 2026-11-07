@@ -107,7 +107,7 @@ private static Task<TalvoraCliCommandResponse> RunDotnetAsync(
         int timeoutSeconds,
         CancellationToken cancellationToken)
     {
-        var result = await ProcessRunner.RunAsync(
+        var result = await SignedInUserToolchain.RunAsync(
             executable,
             workingDirectory,
             arguments,
@@ -130,14 +130,14 @@ private static Task<TalvoraCliCommandResponse> RunDotnetAsync(
     {
         var candidates = new List<string>();
 
-        var dotnetRoot = Environment.GetEnvironmentVariable("DOTNET_ROOT");
+        var dotnetRoot = SignedInUserToolchain.Variable("DOTNET_ROOT");
         if (!string.IsNullOrWhiteSpace(dotnetRoot))
         {
             candidates.Add(Path.Combine(dotnetRoot, "dotnet.exe"));
             candidates.Add(Path.Combine(dotnetRoot, "dotnet"));
         }
 
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var programFiles = SignedInUserToolchain.Folder(Environment.SpecialFolder.ProgramFiles);
         if (!string.IsNullOrWhiteSpace(programFiles))
         {
             candidates.Add(Path.Combine(programFiles, "dotnet", "dotnet.exe"));
@@ -150,13 +150,13 @@ private static Task<TalvoraCliCommandResponse> RunDotnetAsync(
     {
         var candidates = new List<string>();
 
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var programFiles = SignedInUserToolchain.Folder(Environment.SpecialFolder.ProgramFiles);
         if (!string.IsNullOrWhiteSpace(programFiles))
         {
             candidates.Add(Path.Combine(programFiles, "nodejs", "node.exe"));
         }
 
-        var chocolateyInstall = Environment.GetEnvironmentVariable("ChocolateyInstall");
+        var chocolateyInstall = SignedInUserToolchain.Variable("ChocolateyInstall");
         if (!string.IsNullOrWhiteSpace(chocolateyInstall))
         {
             candidates.Add(Path.Combine(chocolateyInstall, "bin", "node.exe"));
@@ -169,14 +169,14 @@ private static Task<TalvoraCliCommandResponse> RunDotnetAsync(
     {
         var candidates = new List<string>();
 
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var programFiles = SignedInUserToolchain.Folder(Environment.SpecialFolder.ProgramFiles);
         if (!string.IsNullOrWhiteSpace(programFiles))
         {
             candidates.Add(Path.Combine(programFiles, "nodejs", "npm.cmd"));
             candidates.Add(Path.Combine(programFiles, "nodejs", "npm.exe"));
         }
 
-        var chocolateyInstall = Environment.GetEnvironmentVariable("ChocolateyInstall");
+        var chocolateyInstall = SignedInUserToolchain.Variable("ChocolateyInstall");
         if (!string.IsNullOrWhiteSpace(chocolateyInstall))
         {
             candidates.Add(Path.Combine(chocolateyInstall, "bin", "npm.exe"));
@@ -193,5 +193,5 @@ private static Task<TalvoraCliCommandResponse> RunDotnetAsync(
     private static string? ResolveFromCandidatesAndPath(
         IEnumerable<string> initialCandidates,
         params string[] commandNames) =>
-        CommandResolver.Resolve(commandNames, initialCandidates);
+        SignedInUserToolchain.Resolve(commandNames, initialCandidates);
 }

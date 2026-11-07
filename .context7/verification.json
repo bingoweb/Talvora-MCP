@@ -1,15 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T23:30:25Z",
-  "scope": "D51: a status or stop tool reports another process's exit code as data (CallToolResult.IsError only for the call's own failure); the full installed smoke follows the tools as they are",
+  "verifiedAtUtc": "2026-11-07T23:34:09Z",
+  "scope": "UR1: dotnet, Node, JVM and Go tools resolve and run in the signed-in user's environment block and as that user (SignedInUserToolchain)",
   "libraries": [
     {
-      "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "2026-11-08 D51: clients inspect CallToolResult.IsError to detect a tool error, and a handler that fails returns a CallToolResult with IsError = true and a readable message; StructuredContent carries the tool's data. So talvora_job_get, talvora_job_stop, talvora_dev_server_get and talvora_dev_server_stop leave IsError unset when the call itself worked, and the job's own exit code stays in StructuredContent. Query: CallToolResult IsError StructuredContent; CallToolResult IsError tool error."
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-08 UR1: Context7 /dotnet/docs returns nothing for CreateEnvironmentBlock or EnvironmentVariableTarget (gap; Microsoft Learn used). CreateEnvironmentBlock retrieves the environment variables for the specified user, the block a process started as that user receives, so commands are resolved against that user's PATH, JAVA_HOME, DOTNET_ROOT, APPDATA, LOCALAPPDATA and USERPROFILE. EnvironmentVariableTarget.Machine is stored in HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Session Manager\\Environment, the same for every account, so the machine-target reads stay. Query: CreateEnvironmentBlock user environment; EnvironmentVariableTarget Machine."
     }
   ],
   "vendorSources": [
-    "https://github.com/modelcontextprotocol/csharp-sdk",
-    "https://modelcontextprotocol.io/specification/2025-06-18/server/tools"
+    "https://learn.microsoft.com/en-us/windows/win32/api/userenv/nf-userenv-createenvironmentblock",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.environmentvariabletarget",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.environment.getenvironmentvariable"
   ]
 }

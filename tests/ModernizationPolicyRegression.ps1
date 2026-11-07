@@ -306,4 +306,16 @@ finally {
     Remove-Item -LiteralPath $eventPath -Force
 }
 
+# UR1: developer tools find and run their programs as the signed-in user, never in the service account's environment.
+function Assert-SignedInUserToolchain([string]$Card, [string[]]$Files) {
+    foreach ($runnerFile in $Files) {
+        Assert-NotContains $runnerFile '(?<!InteractiveUser)ProcessRunner\.RunAsync\(' "${Card}: $runnerFile still runs a developer tool as the service account."
+        Assert-NotContains $runnerFile 'CommandResolver\.Resolve(All)?\(' "${Card}: $runnerFile still resolves a developer tool on the service account's PATH."
+        Assert-NotContains $runnerFile 'Environment\.GetEnvironmentVariable\([^,()]*\)' "${Card}: $runnerFile still reads the service account's environment."
+        Assert-NotContains $runnerFile 'Environment\.GetFolderPath\(' "${Card}: $runnerFile still takes a folder from the service account's profile."
+        Assert-NotContains $runnerFile '"systemprofile"' "${Card}: $runnerFile still looks for a tool inside the service profile."
+    }
+}
+Assert-SignedInUserToolchain 'UR1' @('src/Talvora/Tools/BuildRunnerTools.cs', 'src/Talvora/Tools/BuildRunnerTools.Shared.cs', 'src/Talvora/Tools/BuildRunnerTools.Dotnet.cs', 'src/Talvora/Tools/BuildRunnerTools.Node.cs', 'src/Talvora/Tools/BuildRunnerTools.JavaScriptExtras.cs', 'src/Talvora/Tools/BuildRunnerTools.Jvm.cs', 'src/Talvora/Tools/BuildRunnerTools.GoRust.cs')
+Assert-Contains 'src/Talvora/Tools/SignedInUserToolchain.cs' 'GetActiveInteractiveUser\(\)\.Environment' 'UR1: the toolchain helper must resolve in the signed-in user''s environment.'
 Write-Host 'MODERNIZATION_POLICY_GREEN'

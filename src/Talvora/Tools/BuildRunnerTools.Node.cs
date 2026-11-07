@@ -13,7 +13,7 @@ public static partial class BuildRunnerTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraNodeInfoResponse)),
-     Description("Resolve Node.js and npm from the Talvora service environment and return their paths and versions. Missing Node/npm is reported structurally instead of throwing.")]
+     Description("Resolve Node.js and npm from the signed-in user's environment and return their paths and versions. Missing Node/npm is reported structurally instead of throwing.")]
     public static async Task<TalvoraNodeInfoResponse> NodeInfo(
         CancellationToken cancellationToken = default)
     {

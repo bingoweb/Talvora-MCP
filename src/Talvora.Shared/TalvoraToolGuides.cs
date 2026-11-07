@@ -1049,7 +1049,7 @@ public static class TalvoraToolGuides
                 P(),
                 """{}"""),
             ["talvora_node_info"] = new(
-                "Resolve Node.js and npm from the Talvora service environment and return their paths and versions. Missing Node/npm is reported structurally instead of throwing.",
+                "Resolve Node.js and npm from the signed-in user's environment and return their paths and versions. Missing Node/npm is reported structurally instead of throwing.",
                 P(),
                 """{}"""),
             ["talvora_npm_ci"] = new(

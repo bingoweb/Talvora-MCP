@@ -272,16 +272,13 @@ public static partial class BuildRunnerTools
         int timeoutSeconds,
         CancellationToken cancellationToken)
     {
-        var result = await InteractiveUserProcessRunner.RunAsync(
+        var result = await SignedInUserToolchain.RunAsync(
             executable,
             workingDirectory,
             arguments,
             environment,
             timeoutSeconds,
-            cancellationToken,
-            ProcessRunner.DefaultMaximumCapturedCharacters,
-            WindowsSessionLauncher.GetActiveInteractiveUser(),
-            closeStandardInput: true).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false);
 
         return new TalvoraCliCommandResponse(
             result.ExitCode,
@@ -296,7 +293,7 @@ public static partial class BuildRunnerTools
     }
 
     private static string? ResolveGo() =>
-        CommandResolver.Resolve(
+        SignedInUserToolchain.Resolve(
             ["go.exe", "go"],
             [@"C:\Program Files\Go\bin\go.exe"]);
 

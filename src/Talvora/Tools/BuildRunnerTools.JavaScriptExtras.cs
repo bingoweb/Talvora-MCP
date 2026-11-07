@@ -190,7 +190,7 @@ public static partial class BuildRunnerTools
     }
 
     private static string? ResolvePnpm() =>
-        CommandResolver.Resolve(
+        SignedInUserToolchain.Resolve(
             ["pnpm.exe", "pnpm.cmd", "pnpm"],
             [
                 @"C:\ProgramData\chocolatey\bin\pnpm.exe",
@@ -201,7 +201,7 @@ public static partial class BuildRunnerTools
     {
         var candidates = new List<string>();
 
-        var appData = Environment.GetFolderPath(
+        var appData = SignedInUserToolchain.Folder(
             Environment.SpecialFolder.ApplicationData);
         if (!string.IsNullOrWhiteSpace(appData))
         {
@@ -209,22 +209,7 @@ public static partial class BuildRunnerTools
             candidates.Add(Path.Combine(appData, "npm", "yarn"));
         }
 
-        var systemProfile =
-            Environment.GetEnvironmentVariable("SystemRoot");
-        if (!string.IsNullOrWhiteSpace(systemProfile))
-        {
-            candidates.Add(Path.Combine(
-                systemProfile,
-                "System32",
-                "config",
-                "systemprofile",
-                "AppData",
-                "Roaming",
-                "npm",
-                "yarn.cmd"));
-        }
-
-        return CommandResolver.Resolve(
+        return SignedInUserToolchain.Resolve(
             ["yarn.cmd", "yarn.exe", "yarn"],
             candidates);
     }
@@ -237,7 +222,7 @@ public static partial class BuildRunnerTools
             @"C:\ProgramData\chocolatey\lib\bun\tools\bun.exe",
         };
 
-        var userProfile = Environment.GetFolderPath(
+        var userProfile = SignedInUserToolchain.Folder(
             Environment.SpecialFolder.UserProfile);
         if (!string.IsNullOrWhiteSpace(userProfile))
         {
@@ -249,7 +234,7 @@ public static partial class BuildRunnerTools
                     "bun.exe"));
         }
 
-        return CommandResolver.Resolve(
+        return SignedInUserToolchain.Resolve(
             ["bun.exe", "bun"],
             candidates);
     }
