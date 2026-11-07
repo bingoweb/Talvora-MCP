@@ -131,11 +131,11 @@ Step 9. Refresh `.context7/verification.json` with the two lookups above (replac
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-07 (41, full check) · range `audit/2026-11-07-40..1302b75` plus runtime records · result: D40, D41, D42, rule for waiting checks, OB1 and D38 card fixes
+### Audit 2026-11-07 (41, full check) · range `audit/2026-11-07-40..1302b75` plus runtime records · result: D40, D41, D42, design improvements D43 and D44, rule for waiting checks, OB1, D35 and D38 card fixes, D34 closed
 
 User request: "Talvora'yı yine tam kontrolden geçir.. saatlik kontrol nedeniyle takıldı kaldı chatgpt". Method: the range line by line, signed-in Full gate, CI, then the runtime records of the installed version (tray.log, Windows Application log, the live worklog history, `/healthz/traffic`), then every open card read the way the agent will.
 
-Range: D30, D31, D29, D32, D33 and D34 match their cards line for line; one commit per card, Turkish subjects, STATUS in each commit, Context7 evidence real (D34: `/dotnet/docs` and two Microsoft Learn pages); signed-in Full 69/0 `Hepsi geçti.` (Claude, 15:21); CI success on every commit (latest 42371088200); installed 1302b75 at 15:09. D34 safety holds: the 15 s health probe (`GetTunnelDiagnosticStatesAsync` → `GetSnapshotCachedAsync`) drops the 10-minute ready status, so a dead tunnel is still noticed within about two rounds. D34 count (Claude, from tray.log): the hour after the install runs to 16:09:50; 17 `tunnel-client runtimes status` lines in the first 39 minutes, about half of them from smoke runs (limit 30, before 92).
+Range: D30, D31, D29, D32, D33 and D34 match their cards line for line; one commit per card, Turkish subjects, STATUS in each commit, Context7 evidence real (D34: `/dotnet/docs` and two Microsoft Learn pages); signed-in Full 69/0 `Hepsi geçti.` (Claude, 15:21); CI success on every commit (latest 42371088200); installed 1302b75 at 15:09. D34 safety holds: the 15 s health probe (`GetTunnelDiagnosticStatesAsync` → `GetSnapshotCachedAsync`) drops the 10-minute ready status, so a dead tunnel is still noticed within about two rounds. D34 count (Claude, from tray.log): 22 `tunnel-client runtimes status` lines from 15:09:50 to 16:09:50 (limit 30; before 92), 9 of them from three smoke runs, otherwise one every 5 minutes (each tunnel every 10 minutes); slowest call 176 ms; tunnels ready on the Control Center. D34 closed.
 
 | # | Severity | Where | Finding (verified) | Card |
 |---|---|---|---|---|
@@ -419,195 +419,328 @@ with
 
 **Acceptance:** Notification regression green (`UI3_NARRATOR_GREEN`); signed-in Full `Hepsi geçti.`; build and deploy; installed Control Center smoke green.
 
-### D34 — Tunnel health without launching tunnel-client every round
+### D43 — Çalışma günlüğü names the day once ("Bugün 15:44 · 3 sn")
 
-**Why:** audit 40 finding 5 (240–290 process launches an hour) and RV1 (status up to 9.9 s against a 12 s limit). Safety rule of this card: a long-lived "ready" status is allowed only while the tunnel's own health answer says live, ready and not critically degraded; every other answer or failure drops it at once, so repairs are never delayed.
+**Why:** audit 41 design improvement (user: "Evet, yaz"). Every session shows its date twice ("07.11.2026 15:44 → 07.11.2026 15:44"), in the list and in the detail. The list names the day once, then the start time and the measured duration ("Bugün 15:44 · 3 sn"); the detail adds seconds and the end ("Bugün 15:44:23 → 15:44:26 · 3 sn"; across midnight both days are named). Day words are the Olaylar page's ("Bugün", "Dün", "5 Kasım Perşembe"; another year adds the year). The duration is the measured span `EndedAtUtc − StartedAtUtc`, never an estimate. The literal blocks below were built and run by Claude in a scratch clone (Release 0 warnings, Notification regression and Control Center smoke green).
 
-**Files:** `src/Talvora.Tray/ManagedMcpTunnelProvisioningService.cs`, `src/Talvora.Tray/ManagedMcpTunnelHealthService.cs`, `tests/Talvora.Notification.Regression/Program.D34.cs` (new), `tests/Talvora.Notification.Regression/Program.cs`, `.context7/verification.json`.
+**Files:** `src/Talvora.Tray/LocalTimeText.cs` (new), `src/Talvora.Tray/WorklogHistoryStore.cs`, `src/Talvora.Tray/Views/WorklogHistoryView.xaml`, `tests/Talvora.Notification.Regression/Program.D43.cs` (new), `tests/Talvora.Notification.Regression/Program.cs`, `.context7/verification.json`.
 
-**Context7:** `/dotnet/docs` — "Uri.IsDefaultPort and Uri.GetLeftPart(UriPartial.Authority)"; record the query.
+**Context7:** `/dotnet/docs` — "custom date and time format strings d MMMM dddd with CultureInfo tr-TR"; record the query.
 
 #### Exact implementation
 
-Step 1 (red first). Create `Program.D34.cs`:
+Step 1 (red first). Create `Program.D43.cs`:
 
 ```csharp
-using System.Text.Json;
 using Talvora.Tray;
 
 internal static partial class Program
 {
-    /// <summary>D34: the published health address is read from its file; a fully ready status is kept 10 minutes.</summary>
-    private static void AssertD34TunnelHealthFile()
+    /// <summary>D43: a session names its day once, then its time and its measured duration.</summary>
+    private static void AssertD43SessionTimeText()
     {
-        var root = Path.Combine(Path.GetTempPath(), "talvora-d34-" + Guid.NewGuid().ToString("N"));
-        var health = Directory.CreateDirectory(Path.Combine(root, "health")).FullName;
-        try
+        var offset = TimeSpan.FromHours(3);
+        var now = new DateTimeOffset(2026, 11, 7, 18, 0, 0, offset);
+        var start = new DateTimeOffset(2026, 11, 7, 15, 44, 23, offset);
+        var checks = new (string Actual, string Expected)[]
         {
-            var file = Path.Combine(health, "alias-x.url");
-            File.WriteAllText(file, "http://127.0.0.1:60409");
-            if (ManagedMcpTunnelProvisioningService.TryReadHealthDetailsUrl(root, "alias-x") != "http://127.0.0.1:60409/health?details=true")
-                throw new InvalidOperationException("D34: the published health address must be read.");
-            foreach (var bad in new[] { "http://example.com:1", "https://127.0.0.1:60409", "http://127.0.0.1", "http://127.0.0.1:60409/other", new string('1', 300) })
-            {
-                File.WriteAllText(file, bad);
-                if (ManagedMcpTunnelProvisioningService.TryReadHealthDetailsUrl(root, "alias-x") is not null)
-                    throw new InvalidOperationException("D34: an unsafe health address was accepted.");
-            }
-            if (ManagedMcpTunnelProvisioningService.TryReadHealthDetailsUrl(root, "missing") is not null)
-                throw new InvalidOperationException("D34: a missing file must give no address.");
-        }
-        finally
+            (LocalTimeText.SessionShort(start, start.AddSeconds(3.4), now), "Bugün 15:44 · 3 sn"),
+            (LocalTimeText.SessionLong(start, start.AddSeconds(3.4), now), "Bugün 15:44:23 → 15:44:26 · 3 sn"),
+            (LocalTimeText.SessionShort(start, start.AddSeconds(0.007), now), "Bugün 15:44 · 1 sn'den kısa"),
+            (LocalTimeText.SessionShort(start.AddDays(-1), start.AddDays(-1).AddSeconds(292), now),
+                "Dün 15:44 · 4 dk 52 sn"),
+            (LocalTimeText.SessionLong(new DateTimeOffset(2026, 11, 6, 23, 58, 10, offset),
+                new DateTimeOffset(2026, 11, 7, 0, 3, 2, offset), now), "Dün 23:58:10 → Bugün 00:03:02 · 4 dk 52 sn"),
+            (LocalTimeText.SessionShort(start.AddDays(-2), start.AddDays(-2).AddSeconds(3780), now),
+                "5 Kasım Perşembe 15:44 · 1 sa 3 dk"),
+            (LocalTimeText.SessionShort(new DateTimeOffset(2025, 12, 31, 9, 5, 0, offset),
+                new DateTimeOffset(2025, 12, 31, 9, 6, 0, offset), now), "31 Aralık 2025 Çarşamba 09:05 · 1 dk"),
+        };
+        foreach (var (actual, expected) in checks)
         {
-            Directory.Delete(root, recursive: true);
+            if (actual != expected)
+                throw new InvalidOperationException($"D43: expected \"{expected}\", got \"{actual}\".");
         }
-
-        var ready = new ManagedMcpTunnelRuntimeStatus(Ready: true, ProcessRunning: true, Healthy: true, IdentityMatches: true, Detail: "ok");
-        if (ManagedMcpTunnelProvisioningService.RuntimeStatusCacheDurationFor(ready) != TimeSpan.FromMinutes(10) ||
-            ManagedMcpTunnelProvisioningService.RuntimeStatusCacheDurationFor(ready with { IdentityMatches = false }) != TimeSpan.FromSeconds(15))
-            throw new InvalidOperationException("D34: only a fully ready status may be kept for 10 minutes.");
-
-        using var notReady = JsonDocument.Parse("""{"schema_version":1,"live":true,"ready":false}""");
-        using var fine = JsonDocument.Parse("""{"schema_version":1,"live":true,"ready":true}""");
-        if (!ManagedMcpTunnelHealthService.ShouldRenewRuntimeStatus(ManagedMcpTunnelHealthService.ParseSnapshot(notReady.RootElement)) ||
-            ManagedMcpTunnelHealthService.ShouldRenewRuntimeStatus(ManagedMcpTunnelHealthService.ParseSnapshot(fine.RootElement)))
-            throw new InvalidOperationException("D34: a not-ready health answer must drop the cached status, a ready one must not.");
-        Console.WriteLine("D34_TUNNEL_HEALTH_FILE_GREEN");
+        Console.WriteLine("D43_SESSION_TIME_TEXT_GREEN");
     }
 }
 ```
 
-In `Program.cs` (`Main`, full run) add `AssertD34TunnelHealthFile();` on its own line directly below `await AssertD25SessionRestartResetsTotalsAsync();`.
+In `Program.cs` (`Main`, full run) add `AssertD43SessionTimeText();` on its own line directly below `await AssertD25SessionRestartResetsTotalsAsync();`. Red: CS0103 (`LocalTimeText` does not exist yet).
 
-Step 2. `ManagedMcpTunnelProvisioningService.cs`:
-
-(a) In the `RuntimeStatusCacheDuration` initializer change `TimeSpan.FromSeconds(2)` to `TimeSpan.FromSeconds(15)`.
-
-(b) In `GetRuntimeStatusCachedAsync` replace `now.Add(RuntimeStatusCacheDuration),` with `now.Add(RuntimeStatusCacheDurationFor(status)),` and add below that method:
+Step 2. Create `src/Talvora.Tray/LocalTimeText.cs`:
 
 ```csharp
-    // D34: a fully ready runtime is asked again only every 10 minutes; the health probe
-    // (ManagedMcpTunnelHealthService.GetSnapshotAsync) drops this cache the moment the tunnel
-    // stops answering or reports anything but live, ready and undegraded.
-    internal static TimeSpan RuntimeStatusCacheDurationFor(ManagedMcpTunnelRuntimeStatus status) =>
-        status.Ready && status.ProcessRunning && status.Healthy && status.IdentityMatches
-            ? TimeSpan.FromMinutes(10)
-            : RuntimeStatusCacheDuration;
+using System.Globalization;
 
-    // D34: tunnel-client publishes its local health address in <StateRoot>\health\<alias>.url
-    // (its status JSON names the file "health_url_file"); reading it needs no tunnel-client process.
-    internal static string? TryReadHealthDetailsUrl(ManagedMcpRegistration registration)
+namespace Talvora.Tray;
+
+/// <summary>D43: a session's day once, then its time and its measured duration (the Olaylar page's day words).</summary>
+internal static class LocalTimeText
+{
+    private static readonly CultureInfo Turkish = CultureInfo.GetCultureInfo("tr-TR");
+
+    /// <summary>"Bugün", "Dün", "5 Kasım Perşembe"; another year adds the year: "31 Aralık 2025 Çarşamba".</summary>
+    internal static string Day(DateTime localDate, DateTime today) =>
+        localDate == today ? "Bugün" :
+        localDate == today.AddDays(-1) ? "Dün" :
+        localDate.Year == today.Year ? localDate.ToString("d MMMM dddd", Turkish) :
+        localDate.ToString("d MMMM yyyy dddd", Turkish);
+
+    /// <summary>List row: "Bugün 15:44 · 3 sn".</summary>
+    internal static string SessionShort(DateTimeOffset startUtc, DateTimeOffset endUtc, DateTimeOffset now)
     {
-        if (registration.Tunnel is not { Required: true } ||
-            !IsTunnelId(registration.Tunnel.TunnelId))
-        {
-            return null;
-        }
+        var start = startUtc.ToOffset(now.Offset);
+        return $"{Day(start.Date, now.Date)} {start.ToString("HH:mm", Turkish)} · {Duration(endUtc - startUtc)}";
+    }
 
-        try
+    /// <summary>Detail: "Bugün 15:44:23 → 15:44:26 · 3 sn"; a session across midnight names both days.</summary>
+    internal static string SessionLong(DateTimeOffset startUtc, DateTimeOffset endUtc, DateTimeOffset now)
+    {
+        var start = startUtc.ToOffset(now.Offset);
+        var end = endUtc.ToOffset(now.Offset);
+        var endDay = end.Date == start.Date ? string.Empty : Day(end.Date, now.Date) + " ";
+        return $"{Day(start.Date, now.Date)} {start.ToString("HH:mm:ss", Turkish)} → " +
+            $"{endDay}{end.ToString("HH:mm:ss", Turkish)} · {Duration(endUtc - startUtc)}";
+    }
+
+    /// <summary>The measured span in whole seconds: "1 sn'den kısa", "3 sn", "4 dk 52 sn", "1 dk", "1 sa 3 dk".</summary>
+    internal static string Duration(TimeSpan span)
+    {
+        var total = (long)Math.Round(Math.Max(0, span.TotalSeconds), MidpointRounding.AwayFromZero);
+        if (total == 0) return "1 sn'den kısa";
+        if (total < 60) return $"{total} sn";
+        if (total < 3600) return total % 60 == 0 ? $"{total / 60} dk" : $"{total / 60} dk {total % 60} sn";
+        var minutes = total / 60 % 60;
+        return minutes == 0 ? $"{total / 3600} sa" : $"{total / 3600} sa {minutes} dk";
+    }
+}
+```
+
+Step 3. `WorklogHistoryStore.cs`: replace
+
+```csharp
+    [JsonIgnore]
+    public string StartedLocal => StartedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+
+    [JsonIgnore]
+    public string EndedLocal => EndedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+```
+
+with
+
+```csharp
+    // D43: the day once, then the time and the measured duration (the Olaylar page's day words).
+    [JsonIgnore]
+    public string ListTimeText => LocalTimeText.SessionShort(StartedAtUtc, EndedAtUtc, DateTimeOffset.Now);
+
+    [JsonIgnore]
+    public string DetailTimeText => LocalTimeText.SessionLong(StartedAtUtc, EndedAtUtc, DateTimeOffset.Now);
+```
+
+Step 4. `WorklogHistoryView.xaml`: in the list item template replace
+
+```xml
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding StartedLocal}" Style="{StaticResource Tv.Type.Caption}" />
+                                        <TextBlock Text=" → " Style="{StaticResource Tv.Type.Caption}" />
+                                        <TextBlock Text="{Binding EndedLocal}" Style="{StaticResource Tv.Type.Caption}" />
+                                    </StackPanel>
+```
+
+with
+
+```xml
+                                    <TextBlock Text="{Binding ListTimeText}" Style="{StaticResource Tv.Type.Caption}" />
+```
+
+and in the detail column replace
+
+```xml
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <TextBlock Text="{Binding StartedLocal}" Style="{StaticResource Tv.Type.Caption}" />
+                            <TextBlock Text=" → " Style="{StaticResource Tv.Type.Caption}" />
+                            <TextBlock Text="{Binding EndedLocal}" Style="{StaticResource Tv.Type.Caption}" />
+                        </StackPanel>
+```
+
+with
+
+```xml
+                        <TextBlock Text="{Binding DetailTimeText}" Style="{StaticResource Tv.Type.Caption}"
+                                   Margin="0,8,0,0" />
+```
+
+**Don't:** change the timeline rows (`HH:mm:ss`), the Olaylar page, the stored format, the filters or any other text.
+
+**Acceptance:** Notification regression green (`D43_SESSION_TIME_TEXT_GREEN`); signed-in Full `Hepsi geçti.`; build and deploy; installed Control Center smoke green; attach the `worklog-session` and `wl2-empty` captures of both themes; record `[~] visual check pending (Claude)`.
+
+### D44 — The repair count opens Olaylar on "Onarımlar"
+
+**Why:** audit 41 design improvement (user: "Evet, yaz"). "son 24 saatte N otomatik onarım" on the overview is a fact the user wants to check. It becomes a quiet link inside the status line: Mono text in `Sn.InkMuted` with a dotted `Sn.Brass` underline as wide as the text; on hover `Sn.Ink` and a solid underline; on keyboard focus the 2 px `Sn.Focus` ring. A click opens Olaylar with only the "Onarımlar" filter on (search and service filter cleared). Requires D42: its test lines are this card's anchor. The literal blocks below were built and run by Claude in a scratch clone (Release 0 warnings, Notification regression and Control Center smoke green; captures checked in both themes: the link stays on the status line and the Olaylar page opens on "Onarımlar").
+
+**Files:** `src/Talvora.Tray/ViewModels/OverviewViewModel.cs`, `src/Talvora.Tray/Views/OverviewView.xaml`, `src/Talvora.Tray/Views/OverviewView.xaml.cs`, `src/Talvora.Tray/Views/EventsView.xaml`, `src/Talvora.Tray/Views/EventsView.xaml.cs`, `src/Talvora.Tray/Views/ShellWindow.UI3.cs`, `src/Talvora.Tray/ControlCenterSmoke.D44.cs` (new), `src/Talvora.Tray/ControlCenterSmoke.UI3.cs`, `tests/Talvora.Notification.Regression/Program.UI3.cs`, `.context7/verification.json`.
+
+**Context7:** `/dotnet/docs-desktop` — "ControlTemplate.Triggers IsKeyboardFocused Setter TargetName, and a Line whose X2 binds to ActualWidth with ElementName inside a template"; record the query.
+
+#### Exact implementation
+
+Step 1 (red first). `Program.UI3.cs`, `AssertD26RecoveryCount`: directly below the statement that ends with `"D42: only a repair that started from a non-ready state was applied.");` add
+
+```csharp
+        // D44: the repair count is its own link text; the summary keeps only the states.
+        Ui3Check(model.RecoveryText == "son 24 saatte 2 otomatik onarım" &&
+            !model.Summary.Contains("onarım", StringComparison.Ordinal),
+            "D44: the repair count must leave the summary and become the link text.");
+```
+
+Red: CS1061 (`RecoveryText` does not exist yet).
+
+Step 2. `OverviewViewModel.cs`:
+
+(a) directly below `private bool _hasRecovery;` add `private string _recoveryText = string.Empty;`;
+
+(b) directly below the `HasRecovery` property line add
+
+```csharp
+    // D44: the repair count is its own link text; it opens Olaylar on "Onarımlar".
+    public string RecoveryText { get => _recoveryText; private set => SetProperty(ref _recoveryText, value); }
+```
+
+(c) directly below `HasRecovery = RecoveryCount > 0;` add `RecoveryText = HasRecovery ? $"son 24 saatte {RecoveryCount} otomatik onarım" : string.Empty;`;
+
+(d) in the `Summary` array delete the line `HasRecovery ? $"son 24 saatte {RecoveryCount} otomatik onarım" : null,`.
+
+Step 3. `OverviewView.xaml`: replace
+
+```xml
+                    <TextBlock Text="{Binding Summary}" Style="{StaticResource Tv.Type.Mono}"
+                               Foreground="{DynamicResource Sn.InkMuted}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+```
+
+with
+
+```xml
+                    <!-- D44: the repair count is a link to Olaylar → Onarımlar; on a narrow window it wraps to its own line. -->
+                    <WrapPanel Margin="0,8,0,0">
+                        <TextBlock Text="{Binding Summary}" Style="{StaticResource Tv.Type.Mono}"
+                                   Foreground="{DynamicResource Sn.InkMuted}"/>
+                        <TextBlock Text=" · " Style="{StaticResource Tv.Type.Mono}"
+                                   Foreground="{DynamicResource Sn.InkMuted}"
+                                   Visibility="{Binding HasRecovery, Converter={StaticResource OverviewBool}}"/>
+                        <Button Click="OnShowRepairs" Cursor="Hand" FocusVisualStyle="{x:Null}" Margin="-4,-2,0,-2"
+                                Visibility="{Binding HasRecovery, Converter={StaticResource OverviewBool}}"
+                                AutomationProperties.Name="{Binding RecoveryText}"
+                                AutomationProperties.HelpText="Olaylar sayfasını Onarımlar süzgeciyle açar">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Ring" BorderThickness="2" BorderBrush="Transparent"
+                                            CornerRadius="2" Padding="2,0,2,1" Background="Transparent">
+                                        <Grid>
+                                            <TextBlock x:Name="Label" Text="{Binding RecoveryText}"
+                                                       Style="{StaticResource Tv.Type.Mono}"
+                                                       Foreground="{DynamicResource Sn.InkMuted}"/>
+                                            <Line x:Name="Rule" X1="0" Y1="0.5" Y2="0.5" VerticalAlignment="Bottom"
+                                                  X2="{Binding ActualWidth, ElementName=Label}"
+                                                  Stroke="{DynamicResource Sn.Brass}" StrokeThickness="1"
+                                                  StrokeDashArray="1 2" SnapsToDevicePixels="True"/>
+                                        </Grid>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource Sn.Ink}"/>
+                                            <Setter TargetName="Rule" Property="StrokeDashArray" Value="{x:Null}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource Sn.Focus}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </WrapPanel>
+```
+
+Step 4. `OverviewView.xaml.cs`: directly below `public event Action? ShowEventsRequested;` add `public event Action? ShowRepairsRequested;`, and directly below the `OnShowEvents` method add `private void OnShowRepairs(object sender, RoutedEventArgs e) => ShowRepairsRequested?.Invoke();`.
+
+Step 5. `EventsView.xaml`: replace `<WrapPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,16">` with `<WrapPanel x:Name="CategoryChips" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,16">`. `EventsView.xaml.cs`: directly below `internal void OpenRawLog() => Model.RawLogVisible = true;` add a blank line and
+
+```csharp
+    // D44: opens a category the way a click on its chip does; the search and the service filter are cleared.
+    internal void ShowCategory(string label)
+    {
+        Model.SearchText = string.Empty;
+        Model.SelectedServiceId = null;
+        foreach (var chip in CategoryChips.Children.OfType<System.Windows.Controls.RadioButton>())
         {
-            var configPath = ResolveConfigPath(registration);
-            if (!File.Exists(configPath))
+            if (chip.Tag is string tag && tag == label)
+                chip.IsChecked = true;
+        }
+    }
+```
+
+Step 6. `ShellWindow.UI3.cs`: directly below `_overviewView.ShowEventsRequested += () => _shellModel?.SelectPage(4);` add
+
+```csharp
+                // D44: the repair count opens Olaylar on "Onarımlar".
+                _overviewView.ShowRepairsRequested += () =>
+                {
+                    _shellModel?.SelectPage(4);
+                    _eventsView?.ShowCategory("Onarımlar");
+                };
+```
+
+Step 7. Create `src/Talvora.Tray/ControlCenterSmoke.D44.cs`:
+
+```csharp
+using System.Windows;
+using System.Windows.Automation;
+
+namespace Talvora.Tray;
+
+internal static partial class ControlCenterSmoke
+{
+    /// <summary>D44: the overview's repair count is a link that opens Olaylar on "Onarımlar".</summary>
+    private static void AssertD44RepairCountOpensRepairs(ShellWindow window, Views.OverviewView overview,
+        ControlCenterDashboardSnapshot snapshot, string variant)
+    {
+        var now = DateTimeOffset.Now;
+        overview.ApplySnapshot(snapshot, now,
+        [
+            new ControlCenterEventRecord
             {
-                return null;
-            }
-
-            var config = LoadBusinessConfig(configPath);
-            return TryReadHealthDetailsUrl(config.StateRoot, config.Alias);
-        }
-        catch (Exception ex) when (
-            ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
-        {
-            return null;
-        }
+                Severity = ControlCenterEventSeverity.Info, Category = "recovery", Title = "Talvora Admin onarıldı",
+                Count = 2, McpId = "talvora-admin", DedupKey = "recovery:talvora-admin:success",
+                FirstOccurredAtUtc = now.AddMinutes(-30), LastOccurredAtUtc = now.AddMinutes(-10),
+            },
+        ]);
+        window.UpdateLayout();
+        var link = EnumerateVisualElements(overview).OfType<System.Windows.Controls.Button>()
+            .FirstOrDefault(button => AutomationProperties.GetName(button) == "son 24 saatte 2 otomatik onarım")
+            ?? throw new InvalidOperationException("D44: the repair count is not a named link.");
+        if (!link.IsVisible || overview.Model.Summary.Contains("onarım", StringComparison.Ordinal))
+            throw new InvalidOperationException("D44: the repair count must be its own visible link.");
+        SaveVisualSnapshotIfRequested(window, "d44-link-" + variant);
+        link.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+        window.UpdateLayout();
+        if (window.ShellModel.SelectedIndex != 4 ||
+            window.EventsContentHost.Content is not Views.EventsView events ||
+            events.Model.SelectedCategory != "Onarımlar")
+            throw new InvalidOperationException("D44: the repair count must open Olaylar on Onarımlar.");
+        SaveVisualSnapshotIfRequested(window, "d44-repairs-" + variant);
+        events.ShowCategory("Tümü");
+        window.ShellModel.SelectPage(0);
+        overview.ApplySnapshot(snapshot, now, []);
+        window.UpdateLayout();
     }
-
-    internal static string? TryReadHealthDetailsUrl(string stateRoot, string alias)
-    {
-        var path = Path.Combine(stateRoot, "health", alias + ".url");
-        var file = new FileInfo(path);
-        if (!file.Exists || file.Length > 256)
-        {
-            return null;
-        }
-
-        var text = File.ReadAllText(path).Trim();
-        if (!Uri.TryCreate(text, UriKind.Absolute, out var uri) ||
-            uri.Scheme != Uri.UriSchemeHttp ||
-            uri.Host is not ("127.0.0.1" or "localhost") ||
-            uri.IsDefaultPort ||
-            uri.AbsolutePath != "/" ||
-            uri.Query.Length > 0)
-        {
-            return null;
-        }
-
-        return uri.GetLeftPart(UriPartial.Authority) + "/health?details=true";
-    }
+}
 ```
 
-(c) In `GetRuntimeStatusAsync` change `timeout: TimeSpan.FromSeconds(12),` to `timeout: TimeSpan.FromSeconds(20),`.
+and in `ControlCenterSmoke.UI3.cs` directly below `SaveVisualSnapshotIfRequested(window, "ui3-overview-" + variant);` add `AssertD44RepairCountOpensRepairs(window, overview, snapshot, variant);`.
 
-Step 3. `ManagedMcpTunnelHealthService.cs`:
+**Don't:** change the count itself (D42 owns it), the other parts of the summary, the event slip, the Olaylar filter logic or any text.
 
-(a) Move the lines of `GetSnapshotAsync` from `using var response = await Http.GetAsync(` down to `return ParseSnapshot(document.RootElement);` (inclusive), unchanged, into a new method placed directly below `GetSnapshotAsync`:
-
-```csharp
-    // D34: the request and parsing lines moved here unchanged from GetSnapshotAsync.
-    private static async Task<ManagedMcpTunnelHealthSnapshot?> ReadSnapshotAsync(
-        Uri healthUri,
-        CancellationToken cancellationToken)
-    {
-        // (the moved lines)
-    }
-
-    internal static bool ShouldRenewRuntimeStatus(ManagedMcpTunnelHealthSnapshot snapshot) =>
-        !snapshot.Live || !snapshot.Ready || snapshot.HasCriticalDegradation;
-```
-
-(b) The rest of `GetSnapshotAsync`, from `var runtimeStatus =` to its end, becomes:
-
-```csharp
-        // D34: the health address tunnel-client publishes comes first; tunnel-client runs only when the file gives none.
-        var healthDetailsUrl = ManagedMcpTunnelProvisioningService.TryReadHealthDetailsUrl(registration);
-        if (healthDetailsUrl is null)
-        {
-            var runtimeStatus =
-                await ManagedMcpTunnelProvisioningService.GetRuntimeStatusCachedAsync(
-                    registration,
-                    cancellationToken);
-            healthDetailsUrl = runtimeStatus.HealthDetailsUrl;
-        }
-
-        if (string.IsNullOrWhiteSpace(healthDetailsUrl) ||
-            !TryValidateLoopbackHealthUri(
-                healthDetailsUrl,
-                out var healthUri))
-        {
-            return null;
-        }
-
-        try
-        {
-            var snapshot = await ReadSnapshotAsync(healthUri, cancellationToken);
-            // D34: anything but a live, ready, undegraded answer drops the long-lived ready status.
-            if (snapshot is null || ShouldRenewRuntimeStatus(snapshot))
-            {
-                ManagedMcpTunnelProvisioningService.InvalidateRuntimeStatusCache(registration.Id);
-            }
-
-            return snapshot;
-        }
-        catch (Exception) when (!cancellationToken.IsCancellationRequested)
-        {
-            ManagedMcpTunnelProvisioningService.InvalidateRuntimeStatusCache(registration.Id);
-            throw;
-        }
-```
-
-**Don't:** change the 15 s maintenance interval, the repair logic, `WaitForReadyAsync`, tunnel provisioning or the RV1 timing log (it stays on every call; it is how the result is measured).
-
-**Acceptance:** Notification regression green (`D34_TUNNEL_HEALTH_FILE_GREEN`); signed-in Full `Hepsi geçti.`; build and deploy; after one hour of normal running, tray.log has at most 30 `tunnel-client runtimes status` lines for that hour (before: about 240), and the Control Center shows the tunnels ready. Paste both numbers in the Log entry.
+**Acceptance:** Notification regression green (`UI3_NARRATOR_GREEN`); signed-in Full `Hepsi geçti.` (its Control Center smoke runs the D44 check); build and deploy; installed Control Center smoke green; attach the `d44-link-*` and `d44-repairs-*` captures of both themes; record `[~] visual check pending (Claude)`.
 
 ### D35 — The GitHub release lookup waits after a failure
 
