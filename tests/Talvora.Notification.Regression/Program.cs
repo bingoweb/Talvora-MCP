@@ -77,6 +77,7 @@ internal static partial class Program
         AssertSn1LineTraffic();
         AssertUi12cTimeRuler();
         await AssertD25SessionRestartResetsTotalsAsync();
+        AssertD34TunnelHealthFile();
         AssertD33DeliveryBudgets();
         await AssertRemotionWorklogAsync();
         AssertN6Details();

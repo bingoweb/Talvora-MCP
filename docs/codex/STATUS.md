@@ -36,8 +36,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D31 — The parallel-gate timing regression runs on its own (audit 40; P-49 decided; source RED then GREEN; focused QUALITY_GATE_PARALLEL_GREEN; two consecutive signed-in Full gates 69/0 and Hepsi geçti.; exact-commit installer, live smoke and CI follow commit; D29 next)
 - [x] D29 — Smoke clears its fixture traffic after the SN3 check (audit 39; RED then D29_GREEN; Changed 16/0, signed-in Full 69/0 and Hepsi geçti.; smoke loaded.png shows "veri yok", no fixture 13/1/2; Gitea #9 comment 201; installed f1e6e76; GitHub CI 42364895060 success)
 - [x] D32 — The traffic meter never counts Talvora's own clients (audit 40; SN1 RED then GREEN; Notification/Changed 17/0, signed-in Full 69/0 Hepsi geçti.; installed 4b29be2, live admin 0 calls after smoke, Gitea #9 comment 202, GitHub CI 42365696416 success)
-- [~] D33 — Desktop progress frames survive a busy machine (audit 40; initial RED CS0103 then D33_DELIVERY_BUDGETS_GREEN, Changed 28/0 and Full 69/0 Hepsi geçti.; exact-commit install, live card and CI pending; Gitea #9 comment 203)
-- [ ] D34 — Tunnel health without launching tunnel-client every round (audit 40)
+- [x] D33 — Desktop progress frames survive a busy machine (audit 40; initial RED CS0103 then D33_DELIVERY_BUDGETS_GREEN, Changed 28/0 and Full 69/0 Hepsi geçti.; installed 8170d46, live card and smoke confirmed, Gitea #9 comment 203, GitHub CI 42366500563 success)
+- [~] D34 — Tunnel health without launching tunnel-client every round (audit 40; RED missing methods then D34_TUNNEL_HEALTH_FILE_GREEN; Changed 31/0, signed-in Full 69/0 Hepsi geçti.; before 92 status launches/hour; post-install 60-minute count and tunnel readiness pending; CI pending; Gitea #9 comment 204)
 - [ ] D35 — The GitHub release lookup waits after a failure (audit 40)
 - [ ] D36 — Atomic publication also retries a busy destination (audit 40)
 - [ ] D37 — Event slips in plain Turkish (audit 40)
@@ -61,6 +61,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D34, executor ChatGPT via Talvora: added published loopback health URL file validation, 15 s non-ready/10 min ready runtime cache, 20 s status timeout and invalidation on non-live/non-ready/degraded or failed health HTTP response. RED missing members, then D34_TUNNEL_HEALTH_FILE_GREEN; Notification GREEN, Changed 31/0, signed-in Full 69/0 Hepsi geçti. Context7 /dotnet/docs and Microsoft Learn confirmed Uri.IsDefaultPort/GetLeftPart. Pre-deploy 60 min: 92 tunnel-client runtimes status lines; post-install 60 min count/ready state, exact-commit install and CI pending. Gitea #9 comment 204.
+  Self-review — cosmetics: no appearance or copy changes.
+  Self-review — usability: published health URL avoids repeated process launches when ready.
+  Self-review — Turkish: existing UI wording untouched.
+  Self-review — correctness/security: RED/GREEN, Notification and Full 69/0; failure invalidates ready cache; maintenance, repair, RV1 log and WaitForReady unchanged.
 - 2026-11-07 — D33, executor ChatGPT via Talvora: added literal delivery-budget and PID/start-time cache regression; initial RED CS0103 (cache not implemented), then D33_DELIVERY_BUDGETS_GREEN and Notification GREEN. Set read/write budgets 10/8 s, kept connect 2 s and three retries, cached trusted tray by PID+StartTime, logged dropped frames at Warning at most once per 10 min. Changed gate 28/0 and signed-in Full 69/0, Hepsi geçti. Context7 /dotnet/docs and Microsoft Learn Process.StartTime and ILogger.Log overloads verified; exact-commit install, desktop-card check, GitHub CI pending. Gitea issue #9 comment 203.
   Self-review — cosmetics: no layout, colour or motion change.
   Self-review — usability: busy-machine frames gain headroom without weakening tray-path verification.

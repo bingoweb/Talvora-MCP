@@ -1,19 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T10:58:03.248Z",
-  "scope": "D33: longer IPC frame budgets, a process-start-time identity cache, and throttled lost-frame logging",
+  "verifiedAtUtc": "2026-11-07T12:03:29.335Z",
+  "scope": "D34: validate published tunnel health address and cache ready runtime status without repeated tunnel-client launches",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D33: Process.StartTime is a DateTime giving when the associated process started, so PID plus its converted UTC start time distinguishes PID reuse; Context7 did not index this symbol, confirmed in Microsoft Learn (query: \"System.Diagnostics.Process.StartTime property in .NET 10: DateTime value start time of associated process, remains fixed for process lifetime, can distinguish reused process IDs; GetProcessById and StartTime.ToUniversalTime use.\")."
-    },
-    {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D33: Microsoft.Extensions.Logging.LoggerExtensions.Log accepts a LogLevel variable and overloads for the formatted message and for an exception plus message, confirmed in Context7 and Microsoft Learn (query: \"Microsoft.Extensions.Logging ILogger.Log(LogLevel logLevel, Exception? exception, string? message, params object?[] args) and ILogger.Log(LogLevel logLevel, string? message, params object?[] args) when level is a variable: .NET 10 extension method dynamic severity vs LogDebug and LogWarning.\")."
+      "verified": "2026-11-07 D34: Uri.IsDefaultPort rejects default scheme ports and Uri.GetLeftPart(UriPartial.Authority) yields the normalized scheme, host and explicit port without the path; Context7 confirmed authority extraction and Microsoft Learn confirmed both APIs (query: \"C# .NET 10 System.Uri.IsDefaultPort bool and Uri.GetLeftPart(UriPartial.Authority) exact behavior: validating explicitly specified non-default port in http loopback authority, stripping path query, GetLeftPart return authority; include URL examples and recommended checks\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.starttime?view=net-10.0",
-    "https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loggerextensions.log?view=net-10.0-pp"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.uri.isdefaultport?view=net-10.0",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.uri.getleftpart?view=net-10.0"
   ]
 }

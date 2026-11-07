@@ -50,7 +50,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
     internal const int MaximumTunnelMetadataJsonBytes =
         256 * 1024;
     private static readonly TimeSpan RuntimeStatusCacheDuration =
-        TimeSpan.FromSeconds(2);
+        TimeSpan.FromSeconds(15);
     private static readonly ConcurrentDictionary<string, RuntimeStatusCacheEntry> RuntimeStatusCache =
         new(StringComparer.OrdinalIgnoreCase);
     private static readonly SemaphoreSlim TunnelClientReleaseGate = new(1, 1);
@@ -772,9 +772,68 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
         RuntimeStatusCache[registration.Id] =
             new RuntimeStatusCacheEntry(
-                now.Add(RuntimeStatusCacheDuration),
+                now.Add(RuntimeStatusCacheDurationFor(status)),
                 status);
         return status;
+    }
+
+    // D34: a fully ready runtime is asked again only every 10 minutes; the health probe
+    // (ManagedMcpTunnelHealthService.GetSnapshotAsync) drops this cache the moment the tunnel
+    // stops answering or reports anything but live, ready and undegraded.
+    internal static TimeSpan RuntimeStatusCacheDurationFor(ManagedMcpTunnelRuntimeStatus status) =>
+        status.Ready && status.ProcessRunning && status.Healthy && status.IdentityMatches
+            ? TimeSpan.FromMinutes(10)
+            : RuntimeStatusCacheDuration;
+
+    // D34: tunnel-client publishes its local health address in <StateRoot>\health\<alias>.url
+    // (its status JSON names the file "health_url_file"); reading it needs no tunnel-client process.
+    internal static string? TryReadHealthDetailsUrl(ManagedMcpRegistration registration)
+    {
+        if (registration.Tunnel is not { Required: true } ||
+            !IsTunnelId(registration.Tunnel.TunnelId))
+        {
+            return null;
+        }
+
+        try
+        {
+            var configPath = ResolveConfigPath(registration);
+            if (!File.Exists(configPath))
+            {
+                return null;
+            }
+
+            var config = LoadBusinessConfig(configPath);
+            return TryReadHealthDetailsUrl(config.StateRoot, config.Alias);
+        }
+        catch (Exception ex) when (
+            ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    internal static string? TryReadHealthDetailsUrl(string stateRoot, string alias)
+    {
+        var path = Path.Combine(stateRoot, "health", alias + ".url");
+        var file = new FileInfo(path);
+        if (!file.Exists || file.Length > 256)
+        {
+            return null;
+        }
+
+        var text = File.ReadAllText(path).Trim();
+        if (!Uri.TryCreate(text, UriKind.Absolute, out var uri) ||
+            uri.Scheme != Uri.UriSchemeHttp ||
+            uri.Host is not ("127.0.0.1" or "localhost") ||
+            uri.IsDefaultPort ||
+            uri.AbsolutePath != "/" ||
+            uri.Query.Length > 0)
+        {
+            return null;
+        }
+
+        return uri.GetLeftPart(UriPartial.Authority) + "/health?details=true";
     }
 
     public static void InvalidateRuntimeStatusCache(string mcpId)
@@ -820,7 +879,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
             ["runtimes", "status", config.Alias, "--json"],
             runtimeKey: null,
             adminKey: null,
-            timeout: TimeSpan.FromSeconds(12),
+            timeout: TimeSpan.FromSeconds(20),
             cancellationToken).ConfigureAwait(false);
 
         if (result.ExitCode != 0)

@@ -135,19 +135,48 @@ internal static class ManagedMcpTunnelHealthService
             return null;
         }
 
-        var runtimeStatus =
-            await ManagedMcpTunnelProvisioningService.GetRuntimeStatusCachedAsync(
-                registration,
-                cancellationToken);
+        // D34: the health address tunnel-client publishes comes first; tunnel-client runs only when the file gives none.
+        var healthDetailsUrl = ManagedMcpTunnelProvisioningService.TryReadHealthDetailsUrl(registration);
+        if (healthDetailsUrl is null)
+        {
+            var runtimeStatus =
+                await ManagedMcpTunnelProvisioningService.GetRuntimeStatusCachedAsync(
+                    registration,
+                    cancellationToken);
+            healthDetailsUrl = runtimeStatus.HealthDetailsUrl;
+        }
 
-        if (string.IsNullOrWhiteSpace(runtimeStatus.HealthDetailsUrl) ||
+        if (string.IsNullOrWhiteSpace(healthDetailsUrl) ||
             !TryValidateLoopbackHealthUri(
-                runtimeStatus.HealthDetailsUrl,
+                healthDetailsUrl,
                 out var healthUri))
         {
             return null;
         }
 
+        try
+        {
+            var snapshot = await ReadSnapshotAsync(healthUri, cancellationToken);
+            // D34: anything but a live, ready, undegraded answer drops the long-lived ready status.
+            if (snapshot is null || ShouldRenewRuntimeStatus(snapshot))
+            {
+                ManagedMcpTunnelProvisioningService.InvalidateRuntimeStatusCache(registration.Id);
+            }
+
+            return snapshot;
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            ManagedMcpTunnelProvisioningService.InvalidateRuntimeStatusCache(registration.Id);
+            throw;
+        }
+    }
+
+    // D34: the request and parsing lines moved here unchanged from GetSnapshotAsync.
+    private static async Task<ManagedMcpTunnelHealthSnapshot?> ReadSnapshotAsync(
+        Uri healthUri,
+        CancellationToken cancellationToken)
+    {
         using var response = await Http.GetAsync(
             healthUri,
             HttpCompletionOption.ResponseHeadersRead,
@@ -178,6 +207,9 @@ internal static class ManagedMcpTunnelHealthService
             });
         return ParseSnapshot(document.RootElement);
     }
+
+    internal static bool ShouldRenewRuntimeStatus(ManagedMcpTunnelHealthSnapshot snapshot) =>
+        !snapshot.Live || !snapshot.Ready || snapshot.HasCriticalDegradation;
 
     internal static ManagedMcpTunnelHealthSnapshot ParseSnapshot(JsonElement root)
     {
