@@ -14,6 +14,12 @@ internal static partial class Program
 {
     public static async Task<int> Main()
     {
+        // D40: this process never writes into the signed-in user's Talvora files (tray.log, worklog
+        // history); child runs (--n8-only and the others) start here too and get their own folder.
+        var isolatedRoot = Path.Combine(Path.GetTempPath(), "talvora-notification-" + Guid.NewGuid().ToString("N"));
+        TrayLog.PathOverrideForTests = Path.Combine(isolatedRoot, "tray.log");
+        WorklogHistoryStore.DefaultPathOverrideForTests = Path.Combine(isolatedRoot, "worklog-sessions.jsonl");
+
         if (Environment.GetCommandLineArgs().Contains("--ui7-only", StringComparer.Ordinal))
         {
             AssertUi7TrayAndAbout();
@@ -104,6 +110,15 @@ internal static partial class Program
         await AssertPipeReadTimeoutRecoveryAsync();
         await AssertOffScreenPinnedPlacementIsNormalizedAsync();
         AssertUi7TrayAndAbout();
+        AssertD40TestIsolation();
+        // D40: best effort; the folder exists only when a test wrote into it.
+        try
+        {
+            if (Directory.Exists(isolatedRoot)) Directory.Delete(isolatedRoot, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
 
         Console.WriteLine(
             "DESKTOP_PROGRESS_BEHAVIOR_GREEN");
@@ -167,6 +182,7 @@ internal static partial class Program
             "Talvora-R4-Log-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         var path = Path.Combine(root, "recovery.log");
+        var previousLogPath = TrayLog.PathOverrideForTests;
         try
         {
             TrayLog.PathOverrideForTests = path;
@@ -190,7 +206,7 @@ internal static partial class Program
         }
         finally
         {
-            TrayLog.PathOverrideForTests = null;
+            TrayLog.PathOverrideForTests = previousLogPath;
             Directory.Delete(root, recursive: true);
         }
     }

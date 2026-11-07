@@ -63,9 +63,14 @@ internal sealed class WorklogHistoryStore
     private readonly Func<DateTimeOffset> _clock;
     private List<WorklogHistorySession>? _sessions;
 
+    // D40: a test process points every default store at its own folder.
+    internal static string? DefaultPathOverrideForTests { get; set; }
+
+    internal string PathName => _path;
+
     public WorklogHistoryStore(string? path = null, Func<DateTimeOffset>? clock = null)
     {
-        _path = path ?? Path.Combine(
+        _path = path ?? DefaultPathOverrideForTests ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Talvora", "ControlCenter", "worklog-sessions.jsonl");
         _clock = clock ?? (() => DateTimeOffset.UtcNow);

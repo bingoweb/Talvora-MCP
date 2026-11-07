@@ -32,7 +32,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [ ] D40 — Tests never write into the user's Talvora files (audit 41)
+- [~] D40 — Tests never write into the user's Talvora files (audit 41; RED CS1061, then D40_TEST_ISOLATION_GREEN; Changed 27/0 and signed-in Full 69/0 Hepsi geçti.; real log and Project A timestamps unchanged; installed smoke and CI pending; Gitea #9 comment 205)
 - [ ] D41 — One caller name: Talvora's own calls leave no trace, Claude is named (audit 41, user decisions)
 - [ ] D42 — "Zaten hazır" is not an automatic repair (audit 41)
 - [ ] D35 — The GitHub release lookup waits after a failure (audit 40)
@@ -58,6 +58,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D40, executor ChatGPT via Talvora: isolated Notification tests' tray.log and default worklog-sessions.jsonl under unique user temp root, restoring previous TrayLog override in recovery regression. RED CS1061 then D40_TEST_ISOLATION_GREEN, Changed 27/0 and signed-in Full 69/0 Hepsi geçti. Before/after Full: last timeout 2026-11-07T15:24:05.2225314+03:00 / identical; Project A endedAtUtc 11/07/2026 15:05:25 / identical. Context7 /dotnet/docs Path.GetTempPath; installed smoke and CI pending. Gitea #9 comment 205.
+  Self-review — cosmetics: no UI or layout changed.
+  Self-review — usability: test entries never pollute the real desktop history.
+  Self-review — Turkish: user-visible text unchanged.
+  Self-review — correctness/security: both real-file timestamps unchanged after Full; default test file paths isolated; existing Control Center smoke untouched.
 - 2026-11-07 — Claude, audit 41 follow-up: D34 closed (22 status lines in the hour after the install, limit 30). Design improvements written as cards (user: "Evet, yaz"): D43 (Çalışma günlüğü names the day once: "Bugün 15:44 · 3 sn", detail "Bugün 15:44:23 → 15:44:26 · 3 sn") and D44 (the overview's repair count is a quiet link that opens Olaylar on "Onarımlar"), queued after D39. Their literal blocks were built in a scratch clone together with D35 and D40–D42: Release 0 warnings, Notification regression GREEN (D43_SESSION_TIME_TEXT_GREEN, UI3_NARRATOR_GREEN), Control Center smoke GREEN; the D44 captures were checked in both themes (link on the status line, dotted brass underline, Olaylar opens on "Onarımlar"); the first draft's stretched underline was fixed before the card was written.
 
 - 2026-11-07 — Claude, audit 41 (full check; tag `audit/2026-11-07-41`): range `audit/2026-11-07-40..1302b75` (D30, D31, D29, D32, D33, D34) matches its cards; Claude's signed-in Full 69/0 `Hepsi geçti.`; CI success on every commit; installed 1302b75. Why ChatGPT stalled: D34's "after one hour of normal running" step plus CONTINUE PROTOCOL step 8 (live-pending checks first) made every "devam et" in that hour re-check an unfinished hour; AGENTS.md steps 5 and 8 now give waiting checks to Claude (`[~] live pending (Claude)`, skipped by the agent). D34 closed by Claude's count: 22 `tunnel-client runtimes status` lines from 15:09:50 to 16:09:50 (limit 30; before 92), 9 of them from three smoke runs, otherwise one every 5 minutes; slowest call 176 ms; tunnels ready.

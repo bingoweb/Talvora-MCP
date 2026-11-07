@@ -1,15 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T12:03:29.335Z",
-  "scope": "D34: validate published tunnel health address and cache ready runtime status without repeated tunnel-client launches",
+  "verifiedAtUtc": "2026-11-07T13:39:48.428Z",
+  "scope": "D40: isolate test log and worklog writes in a unique current-user temp folder",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D34: Uri.IsDefaultPort rejects default scheme ports and Uri.GetLeftPart(UriPartial.Authority) yields the normalized scheme, host and explicit port without the path; Context7 confirmed authority extraction and Microsoft Learn confirmed both APIs (query: \"C# .NET 10 System.Uri.IsDefaultPort bool and Uri.GetLeftPart(UriPartial.Authority) exact behavior: validating explicitly specified non-default port in http loopback authority, stripping path query, GetLeftPart return authority; include URL examples and recommended checks\")."
+      "verified": "2026-11-07 D40: Path.GetTempPath() returns the current user's temporary folder; combining it with a new Guid creates an isolated default destination for test-generated log and worklog files (query: \"System.IO.Path.GetTempPath() in .NET 10 returns the current user's temporary folder. Use GetTempPath with Path.Combine to isolate temporary test output files, Path.GetTempPath does not create the folder.\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.uri.isdefaultport?view=net-10.0",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.uri.getleftpart?view=net-10.0"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.io.path.gettemppath?view=net-10.0"
   ]
 }
