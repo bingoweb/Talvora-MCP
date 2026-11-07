@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
@@ -1299,13 +1300,27 @@ internal static partial class ManagedMcpTunnelProvisioningService
             ["OPENAI_ADMIN_KEY"] = adminKey,
         };
 
-        var result = await ProcessRunner.RunAsync(
-            clientPath,
-            Path.GetDirectoryName(clientPath),
-            arguments,
-            environment,
-            timeoutSeconds: Math.Max(1, (int)Math.Ceiling(timeout.TotalSeconds)),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var verb = string.Join(' ', arguments.TakeWhile(a => !a.StartsWith('-')).Take(2));
+        var stopwatch = Stopwatch.StartNew();
+        ProcessExecutionResult result;
+        try
+        {
+            result = await ProcessRunner.RunAsync(
+                clientPath,
+                Path.GetDirectoryName(clientPath),
+                arguments,
+                environment,
+                timeoutSeconds: Math.Max(1, (int)Math.Ceiling(timeout.TotalSeconds)),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            TrayLog.Write($"tunnel-client {verb} took {stopwatch.Elapsed.TotalMilliseconds:0} ms (limit {timeout.TotalSeconds:0} s, exit timeout)");
+            throw;
+        }
+
+        var exitCodeOrTimeout = result.TimedOut ? "timeout" : result.ExitCode.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        TrayLog.Write($"tunnel-client {verb} took {stopwatch.Elapsed.TotalMilliseconds:0} ms (limit {timeout.TotalSeconds:0} s, exit {exitCodeOrTimeout})");
 
         if (result.TimedOut)
         {

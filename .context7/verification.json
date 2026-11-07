@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-06T23:40:55.719Z",
-  "scope": "D28: the health-maintenance event has plain Turkish title and detail, with diagnostic log and event metadata unchanged",
+  "verifiedAtUtc": "2026-11-07T01:06:57.719Z",
+  "scope": "RV1: measure each tunnel-client process execution and timeout without exposing command options, keys, or environment",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D28: ordinary C# quoted string literals can contain Unicode characters; the two approved Turkish phrases can be used literally without escaping (query: \"C# .NET 10 string literals containing Unicode characters in UTF-8 source; quoted regular string literals preserve Turkish characters ç ş ı İ ğ ü in the compiled string without requiring escaping.\")."
+      "verified": "2026-11-07 RV1: Stopwatch.StartNew measures elapsed time across awaited work; its Elapsed time remains readable on return or exception (query: \"System.Diagnostics.Stopwatch.StartNew in .NET 10: the Stopwatch starts immediately and its Elapsed.TotalMilliseconds returns measured elapsed time; safe to call Elapsed when an awaited task completes or throws. How does Stopwatch behave for asynchronous calls?\")"
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/reference-types"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.stopwatch.startnew?view=net-10.0"
   ]
 }
