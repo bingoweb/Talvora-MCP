@@ -10,7 +10,7 @@ The user only types:
 Talvora'ya devam et
 ```
 
-Codex applies `AGENTS.md` → **CONTINUE PROTOCOL**: takes the first `[ ]` item of `docs/codex/STATUS.md` → "Agent queue", implements it per its card (`docs/codex/ROADMAP.md`; `docs/codex/DESIGN-WORKLOG.md` for N cards; `docs/codex/DESIGN-CONTROL-CENTER.md` for UI cards), runs `scripts/Invoke-QualityGate.ps1` (after K1), commits once, pushes to `origin` and `github`, and reports in Turkish. If Codex is opened in another folder, the `talvora-devam` skill routes it here.
+Codex applies `AGENTS.md` → **CONTINUE PROTOCOL**: takes the first `[ ]` item of `docs/codex/STATUS.md` → "Agent queue", implements it per its card (every open card is in `docs/codex/ROADMAP.md`), runs `scripts/Invoke-QualityGate.ps1`, commits once, pushes to `origin` and `github`, and reports in Turkish. If Codex is opened in another folder, the `talvora-devam` skill routes it here.
 
 The same shortcut works in a **ChatGPT chat with the Talvora connector** — see "ChatGPT + Talvora" below.
 
@@ -38,7 +38,7 @@ The prompts below are only for special situations (they work in Codex and in Cha
 ## A specific card
 
 ```
-Talvora: implement card <CARD> (e.g. S3, N3b, UI3) from docs/codex/ROADMAP.md, docs/codex/DESIGN-WORKLOG.md or docs/codex/DESIGN-CONTROL-CENTER.md. Do not move on to another card.
+Talvora: implement card <CARD> (e.g. D30) from docs/codex/ROADMAP.md. Do not move on to another card.
 Follow AGENTS.md and the CONTINUE PROTOCOL; failing test first, then code; Context7 evidence; run the quality gate (last line "Hepsi geçti."); update docs/codex/STATUS.md in English; exactly one commit with trailer "Card: <CARD>". Report to me in Turkish.
 ```
 

@@ -42,7 +42,7 @@ The project is deliberately opinionated:
 
 ## Current state
 
-[HANDOFF.md](HANDOFF.md) is the short entry point; [STATUS](docs/codex/STATUS.md) is the live queue. Agent rules and approved cards are in [AGENTS.md](AGENTS.md). Historical audits are in [docs/archive](docs/archive).
+[HANDOFF.md](HANDOFF.md) is the short entry point; [STATUS](docs/codex/STATUS.md) is the live queue and [ROADMAP](docs/codex/ROADMAP.md) holds the open cards. Agent rules are in [AGENTS.md](AGENTS.md); finished work lives in git history.
 
 - **Lean MCP surface:** **250 total**, **213 Dev**, **88 Admin**, with **51 explicitly shared** tools. The former automatic memory and embedding subsystem has been removed.
 - One LocalSystem Windows Service owns loopback MCP; the native WPF Tray/Control Center observes health and manages lifecycle, diagnostic repair, events and redacted logs.
@@ -205,5 +205,4 @@ A few project choices are deliberate and unlikely to change casually:
 
 - [Current state](HANDOFF.md) · [Live queue](docs/codex/STATUS.md) · [Architecture](docs/ARCHITECTURE.md)
 - [Development environment](docs/DEVELOPMENT-ENVIRONMENT.md) · [Engineering policy](docs/MODERNIZATION-POLICY.md)
-- [Application roadmap](APPLICATION-DEVELOPMENT-ROADMAP.md) · [Source-edit architecture](docs/SOURCE-EDIT-ENGINE-ARCHITECTURE.md)
-- [Historical handoff](docs/archive/HANDOFF.md) · [Historical audit](docs/archive/BUG-AUDIT.md)
+- [Source-edit architecture](docs/SOURCE-EDIT-ENGINE-ARCHITECTURE.md)

@@ -1,23 +1,10 @@
 # Talvora Kontrol Merkezi — Redesign spec "Gözlemevi"
 
-> Author: Claude (design direction), 2026-10-18. Implementer: Codex, cards `UI1`–`UI8` (bottom of this file).
+> Author: Claude (design direction), 2026-10-18. **Superseded for the look by `docs/codex/DESIGN-SANTRAL.md`**; the information architecture, copy deck §9 and accessibility bars §10 stay valid. Cards UI1–UI12 are finished; audit 40 removed them, the rationale (old §1) and the starting-point code (old §7); git keeps them. New Control Center cards are written in `docs/codex/ROADMAP.md`.
 > Language: this spec is English; every visible string in the product is ordinary Turkish (copy deck in §9 is authoritative).
 > This is a **cosmetic and information-architecture** redesign. All existing capabilities stay (health, lifecycle start/stop/restart/repair, setup, events, raw logs, embedded integrations, search/filter, window placement, tray). No new data sources, no fabricated telemetry: every number, time, latency or count on screen comes from an existing service (`ControlCenterDashboardService`, `ControlCenterComponentHealthService`, `ControlCenterEventStore`, `ControlCenterRawLogService`, `ControlCenterVersionService`, `EmbeddedMcpIntegrationHealth`).
 
 ---
-
-## 1. Why redesign (what is wrong today)
-
-Observed on the installed build and in `docs/media/control-center.png`:
-
-- It reads like a generic SaaS admin template (pastel light cards, big "1 / 1 / 3 / 5" numbers) — it does not say *what is connected to what*, which is the one thing a user of Talvora needs to understand at a glance.
-- Four equal metric cards take the whole first screen; the service list starts below the fold.
-- Jargon leaks into the main surface ("Runtime API key ve tunnel-client kurulumu bulunamadı").
-- Three names for one product: window title "Talvora Yönetim Merkezi", header "Kontrol Merkezi", rail "CONTROL CENTER".
-- Theme bug: `ControlCenterTheme.xaml` merges WPF-UI `Theme="Light"` while `ControlCenterApplication` applies `ApplicationTheme.Dark` → mixed control templates.
-- Primary-button hover text `#0D1118` on `#455DD5` fails WCAG contrast.
-- UI is constructed imperatively in C# (77 hard-coded `FontSize` values, no styles for type ramp), so consistency is impossible to keep.
-- No dark mode for the window although the desktop worklog card is dark/neon — the two Talvora surfaces feel like two products.
 
 ## 2. Concept — "Gözlemevi" (The Observatory)
 
@@ -226,180 +213,13 @@ Day-grouped timeline ("Bugün", "Dün", "15 Ekim Çarşamba"). Each item: time (
 |---|---|
 | `StatusPill` | glyph + word, background = state colour at 14 % opacity, text = state colour (Gece) / darker state colour (Gün). States: Ready, Attention, Offline, Neutral, Repairing. |
 | `NavRailItem` | `RadioButton`-based (one selected), icon + label, accent bar. |
-| `PulseRing` | custom `FrameworkElement` (sample §7.3). Properties: `Segments` (state list), `ReadyCount`, `TotalCount`, `IsAllReady`. Exposes `AutomationProperties.Name` = status sentence. |
+| `PulseRing` | custom `FrameworkElement`, retired by Santral (SN7). Properties: `Segments` (state list), `ReadyCount`, `TotalCount`, `IsAllReady`. Exposes `AutomationProperties.Name` = status sentence. |
 | `ChainView` | `ItemsControl` with a `Canvas`-based panel; nodes = `ChainNode` (circle 14 px, hollow for optional), links = `Path` with `StrokeDashArray="2 6"` and animated `StrokeDashOffset` when both ends ready. |
 | `ServiceRow` | template described in §5.1. |
 | `MetricInline` | label + tabular number + optional caption. |
 | `EvidencePanel` | sunken, mono, copy, wrap toggle, max height + scroll. |
 | `CommandPalette` | popup, `TextBox` + `ListBox`, fuzzy match (simple subsequence scoring is enough). |
 | `StepperCard` | vertical steps with connectors. |
-
-## 7. Sample code (starting points — verify APIs with Context7 for WPF-UI 4.3 and .NET 10 WPF)
-
-### 7.1 Token dictionary (excerpt, `Themes/Tokens.Gece.xaml`)
-
-```xml
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Color x:Key="Tv.Bg.Color">#0A0E15</Color>
-    <Color x:Key="Tv.Surface.Color">#101722</Color>
-    <Color x:Key="Tv.Accent.Color">#5BD8FF</Color>
-    <Color x:Key="Tv.Ready.Color">#3DDC97</Color>
-    <Color x:Key="Tv.Attention.Color">#F5B84B</Color>
-    <Color x:Key="Tv.Offline.Color">#FF6B81</Color>
-    <Color x:Key="Tv.Neutral.Color">#7C8AA3</Color>
-    <Color x:Key="Tv.Aurora.Start.Color">#5BD8FF</Color>
-    <Color x:Key="Tv.Aurora.End.Color">#9B8CFF</Color>
-
-    <SolidColorBrush x:Key="Tv.Bg" Color="{StaticResource Tv.Bg.Color}" />
-    <SolidColorBrush x:Key="Tv.Surface" Color="{StaticResource Tv.Surface.Color}" />
-    <SolidColorBrush x:Key="Tv.Accent" Color="{StaticResource Tv.Accent.Color}" />
-    <LinearGradientBrush x:Key="Tv.Aurora" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="{StaticResource Tv.Aurora.Start.Color}" />
-        <GradientStop Offset="1" Color="{StaticResource Tv.Aurora.End.Color}" />
-    </LinearGradientBrush>
-    <!-- …all keys from §3.1, same names in Tokens.Gun.xaml … -->
-</ResourceDictionary>
-```
-
-### 7.2 Theme manager (follow Windows, manual override, keep WPF-UI in sync)
-
-```csharp
-internal enum TalvoraThemePreference { System, Gece, Gun }
-
-internal static class TalvoraThemeManager
-{
-    private static readonly Uri GeceUri = new("pack://application:,,,/Talvora.Tray;component/Themes/Tokens.Gece.xaml");
-    private static readonly Uri GunUri  = new("pack://application:,,,/Talvora.Tray;component/Themes/Tokens.Gun.xaml");
-
-    public static void Apply(Application app, TalvoraThemePreference preference)
-    {
-        var dark = preference switch
-        {
-            TalvoraThemePreference.Gece => true,
-            TalvoraThemePreference.Gun => false,
-            _ => ApplicationThemeManager.GetSystemTheme() is SystemTheme.Dark or SystemTheme.HCBlack, // verify API name
-        };
-
-        // 1) WPF-UI control templates must match the Talvora palette (fixes today's Light/Dark mismatch).
-        ApplicationThemeManager.Apply(dark ? ApplicationTheme.Dark : ApplicationTheme.Light,
-            WindowBackdropType.Mica, updateAccent: false);
-
-        // 2) Swap the Talvora token dictionary in place (components use DynamicResource).
-        var dictionaries = app.Resources.MergedDictionaries;
-        var current = dictionaries.FirstOrDefault(d => d.Source == GeceUri || d.Source == GunUri);
-        var next = new ResourceDictionary { Source = dark ? GeceUri : GunUri };
-        if (current is null) dictionaries.Add(next); else dictionaries[dictionaries.IndexOf(current)] = next;
-    }
-}
-```
-
-Use WPF-UI's system-theme watcher (verify `SystemThemeWatcher.Watch(window)` in 4.3) when the preference is `System`. Remove `<ui:ThemesDictionary Theme="Light" />` from XAML and let the manager own it.
-
-### 7.3 Nabız ring
-
-```csharp
-public sealed class PulseRing : FrameworkElement
-{
-    public static readonly DependencyProperty SegmentsProperty = DependencyProperty.Register(
-        nameof(Segments), typeof(IReadOnlyList<ComponentVisualState>), typeof(PulseRing),
-        new FrameworkPropertyMetadata(Array.Empty<ComponentVisualState>(), FrameworkPropertyMetadataOptions.AffectsRender));
-
-    public IReadOnlyList<ComponentVisualState> Segments
-    {
-        get => (IReadOnlyList<ComponentVisualState>)GetValue(SegmentsProperty);
-        set => SetValue(SegmentsProperty, value);
-    }
-
-    protected override void OnRender(DrawingContext dc)
-    {
-        var size = Math.Min(ActualWidth, ActualHeight);
-        if (size <= 0 || Segments.Count == 0) return;
-        const double thickness = 8, gapDegrees = 6;
-        var center = new Point(ActualWidth / 2, ActualHeight / 2);
-        var radius = size / 2 - thickness;
-        var allReady = Segments.All(s => s == ComponentVisualState.Ready);
-        var sweep = 360.0 / Segments.Count;
-
-        for (var i = 0; i < Segments.Count; i++)
-        {
-            var start = -90 + i * sweep + gapDegrees / 2;
-            var end = start + sweep - gapDegrees;
-            var brush = allReady ? (Brush)FindResource("Tv.Aurora") : BrushFor(Segments[i]);
-            var pen = new Pen(brush, thickness) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
-            pen.Freeze();
-            dc.DrawGeometry(null, pen, Arc(center, radius, start, end));
-        }
-    }
-
-    private Brush BrushFor(ComponentVisualState state) => (Brush)FindResource(state switch
-    {
-        ComponentVisualState.Ready => "Tv.Ready",
-        ComponentVisualState.Attention => "Tv.Attention",
-        ComponentVisualState.Offline => "Tv.Offline",
-        ComponentVisualState.Repairing => "Tv.Repairing",
-        _ => "Tv.Neutral",
-    });
-
-    private static Geometry Arc(Point c, double r, double startDeg, double endDeg)
-    {
-        static Point P(Point c, double r, double deg) =>
-            new(c.X + r * Math.Cos(deg * Math.PI / 180), c.Y + r * Math.Sin(deg * Math.PI / 180));
-        var figure = new PathFigure { StartPoint = P(c, r, startDeg), IsClosed = false };
-        figure.Segments.Add(new ArcSegment(P(c, r, endDeg), new Size(r, r), 0,
-            isLargeArc: endDeg - startDeg > 180, SweepDirection.Clockwise, isStroked: true));
-        var g = new PathGeometry([figure]);
-        g.Freeze();
-        return g;
-    }
-}
-```
-
-The centre text ("4/5", `Title` style) and the breathing animation are XAML on top of the control. Re-render when the theme dictionary changes (`DynamicResource` brushes are looked up in `OnRender`, so call `InvalidateVisual()` on theme change).
-
-### 7.4 Chain link flow (only when both ends are ready and motion is allowed)
-
-```xml
-<Path Data="{Binding Geometry}" Stroke="{DynamicResource Tv.Accent}" StrokeThickness="2"
-      StrokeDashArray="2 6" StrokeDashCap="Round">
-    <Path.Style>
-        <Style TargetType="Path">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsFlowing}" Value="True">
-                    <DataTrigger.EnterActions>
-                        <BeginStoryboard x:Name="Flow">
-                            <Storyboard RepeatBehavior="Forever">
-                                <DoubleAnimation Storyboard.TargetProperty="StrokeDashOffset"
-                                                 From="0" To="-16" Duration="0:0:1.6" />
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </DataTrigger.EnterActions>
-                    <DataTrigger.ExitActions><StopStoryboard BeginStoryboardName="Flow" /></DataTrigger.ExitActions>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-    </Path.Style>
-</Path>
-```
-
-`IsFlowing = bothEndsReady && motionAllowed && windowActive`. Pause on `Deactivated`/minimize to keep idle CPU near zero (measure in UI8: < 1 % CPU idle on the overview).
-
-### 7.5 Status pill style
-
-```xml
-<Style x:Key="Tv.StatusPill" TargetType="Border">
-    <Setter Property="CornerRadius" Value="{StaticResource Tv.Radius.S}" />
-    <Setter Property="Padding" Value="8,3" />
-    <Setter Property="Background" Value="{DynamicResource Tv.Neutral.Soft}" />
-    <Style.Triggers>
-        <DataTrigger Binding="{Binding State}" Value="Ready">
-            <Setter Property="Background" Value="{DynamicResource Tv.Ready.Soft}" />
-        </DataTrigger>
-        <!-- Attention, Offline, Repairing … -->
-    </Style.Triggers>
-</Style>
-```
-(`*.Soft` brushes = state colour at 14 % opacity, defined in both token files.)
 
 ## 8. Architecture of the new UI
 
@@ -444,9 +264,9 @@ Rules: no "MCP", "tunnel-client", "runtime", "control plane" in main surfaces �
 - Reduced motion respected (§3.4).
 - Idle CPU on overview < 1 %; first paint < 500 ms after window show (measure with a Stopwatch log in smoke mode).
 
-## 11. Implementation cards
+## Kept for a regression test (finished cards, never implement)
 
-Each card = one commit, Context7 IDs for WPF-UI/WPF/CommunityToolkit used, before/after PNGs of **both themes** (Q5 smoke) attached to the Gitea issue, `Invoke-QualityGate.ps1` green, installed-runtime check of the tray.
+`tests/QualityGateRegression.ps1` still measures the context of these finished cards; D30 switches that check to the open cards of the live queue. They are not in the queue: never select or implement them. Claude deletes this section once D30 is done.
 
 ### UI1 — Tokens, theme manager, typography
 
