@@ -95,8 +95,19 @@ internal static partial class Program
             Event(Talvora.Tray.ControlCenterEventSeverity.Info, "Talvora Admin onarıldı", 2),
             Event(Talvora.Tray.ControlCenterEventSeverity.Warning, "Hizmet sağlık bakımı yarıda kaldı", 7),
             Event(Talvora.Tray.ControlCenterEventSeverity.Error, "Talvora Dev: müdahale gerekiyor", 1),
+            // D42: a recovery that found the service already ready repaired nothing.
+            Event(Talvora.Tray.ControlCenterEventSeverity.Info, "Gitea MCP zaten hazır", 3) with
+            {
+                DedupKey = "recovery:gitea:already-ready",
+            },
         ]);
-        Ui3Check(model.RecoveryCount == 2, "D26: only successful repairs count as otomatik onarım.");
+        Ui3Check(model.RecoveryCount == 2, "D26/D42: only applied repairs count as otomatik onarım.");
+        var ready = new Talvora.Tray.ManagedMcpDashboardState(core, Talvora.Tray.ControlCenterHealthState.Ready, "Hazır", "Hazır");
+        var offline = ready with { Health = Talvora.Tray.ControlCenterHealthState.Offline };
+        Ui3Check(
+            !new Talvora.Tray.ManagedMcpRepairResult("Doğrulama", "", "", false, ready, ready).RepairApplied &&
+            new Talvora.Tray.ManagedMcpRepairResult("Yeniden başlat", "", "", false, offline, ready).RepairApplied,
+            "D42: only a repair that started from a non-ready state was applied.");
     }
 
     private static void Ui3Check(bool condition, string reason)

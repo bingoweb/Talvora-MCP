@@ -832,7 +832,8 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                     repair.Summary,
                     repair.Detail,
                     "gitea",
-                    "recovery:gitea:success");
+                    // D42: an already-ready result is recorded under its own key and never counted as a repair.
+                    repair.RepairApplied ? "recovery:gitea:success" : "recovery:gitea:already-ready");
 
                 if (recoveredSeriousIncident)
                 {
@@ -1277,7 +1278,10 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                         repair.Summary,
                         repair.Detail,
                         registration.Id,
-                        $"recovery:{registration.Id}:success");
+                        // D42: an already-ready result is recorded under its own key and never counted as a repair.
+                        repair.RepairApplied
+                            ? $"recovery:{registration.Id}:success"
+                            : $"recovery:{registration.Id}:already-ready");
 
                     if (recoveredSeriousIncident)
                     {

@@ -1,15 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T14:28:38.834Z",
-  "scope": "D41: resolve one caller identity from the HTTP bridge header, MCP client name, then User-Agent",
+  "verifiedAtUtc": "2026-11-07T18:27:52.995Z",
+  "scope": "D42: exclude already-ready recovery results from automatic repair totals using an ordinal suffix comparison",
   "libraries": [
     {
-      "libraryId": "/dotnet/aspnetcore.docs",
-      "verified": "2026-11-07 D41: HttpRequest.Headers exposes an IHeaderDictionary with case-insensitive header-name lookup and named properties for common HTTP headers, including UserAgent; the X-Talvora-Client bridge header is read through the string indexer, with the MCP name and User-Agent as fallbacks (query: \"ASP.NET Core Microsoft.AspNetCore.Http.IHeaderDictionary indexer for missing header returns StringValues.Empty; IHeaderDictionary.UserAgent property access and ToString; retrieving a custom X-Talvora-Client request header with Headers[\\\"X-Talvora-Client\\\"].ToString()\")."
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-07 D42: string.EndsWith(string, StringComparison.Ordinal) tests an exact case-sensitive suffix appropriate for machine-defined event dedup keys, without culture-sensitive comparison (query: \"C# System.String.EndsWith(string value, StringComparison.Ordinal) .NET 10 checks an exact case-sensitive ordinal suffix; method accepts string value and StringComparison comparisonType\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/aspnet/core/fundamentals/use-http-context?view=aspnetcore-10.0",
-    "https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.http.iheaderdictionary?view=aspnetcore-10.0"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.string.endswith?view=net-10.0"
   ]
 }

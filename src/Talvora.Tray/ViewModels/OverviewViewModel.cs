@@ -139,7 +139,9 @@ internal sealed class OverviewViewModel : ObservableObject
             // D26: only successful repairs count; failed attempts are warnings or errors, not repairs.
             .Where(entry => entry.LastOccurredAtUtc >= checkedAt.AddHours(-24) &&
                 entry.Severity == ControlCenterEventSeverity.Info &&
-                string.Equals(entry.Category, "recovery", StringComparison.OrdinalIgnoreCase))
+                string.Equals(entry.Category, "recovery", StringComparison.OrdinalIgnoreCase) &&
+                // D42: "zaten hazır" results repaired nothing.
+                !entry.DedupKey.EndsWith(":already-ready", StringComparison.Ordinal))
             .Sum(entry => entry.Count);
         HasRecovery = RecoveryCount > 0;
         RecentEvents.Clear();

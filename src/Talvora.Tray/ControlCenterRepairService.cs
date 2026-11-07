@@ -14,7 +14,11 @@ internal sealed record ManagedMcpRepairResult(
     string Detail,
     bool Escalated,
     ManagedMcpDashboardState InitialState,
-    ManagedMcpDashboardState FinalState);
+    ManagedMcpDashboardState FinalState)
+{
+    // D42: a recovery that found the service already ready applied no repair.
+    public bool RepairApplied => InitialState.Health != ControlCenterHealthState.Ready;
+}
 
 internal static class ControlCenterRepairService
 {
