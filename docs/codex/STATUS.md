@@ -43,7 +43,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D37 — Event slips in plain Turkish (audit 40)
 - [ ] D38 — "Yalnızca hatalar ve ajan işleri" counts ChatGPT as an agent (audit 40, user decision)
 - [ ] D39 — Penpot error text uses the shared secret masking (audit 40)
-- [ ] [C] SN9 — Switchboard keeps focus and hover, draws calmly (Claude; audit 40)
+- [~] [C] SN9 — Switchboard keeps focus and hover, draws calmly (Claude; audit 40; smoke RED/GREEN, signed-in Full green; live pending: exact-commit deploy and CI)
 - [ ] [C] WL2 — Çalışma günlüğü: no blank project line, a real empty state (Claude; audit 40)
 - [ ] OB1 — talvora_note_write: write Obsidian vault notes, refuse secrets and the linked repo docs (user request 2026-11-01)
 
@@ -60,6 +60,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-07 — [C] SN9, executor Claude: smoke first (`ControlCenterSmoke.SN9.cs`: the hotspots must survive five traffic polls) RED "SN9: a traffic poll must update the socket hotspots in place, not rebuild them", then GREEN (keyboard focus granted and kept). `Switchboard` updates its hotspots in place and rebuilds them only when the socket ids change; the reconnect timer moved to `outside.Y + 70/+88`, clear of the neighbour's "son …" line; brushes, pens, text layouts and one static layer (grain, divider, labels, jacks) are cached per theme and DPI.
+  Measured in the smoke fixture, 300 `OnRender` frames: 3.94–4.70 ms → 0.34–0.48 ms per frame. The window's idle CPU sample did not move (6.00 % → 6.71 %, single 3 s samples): at idle the board draws nothing, that number comes from the window's polls. Context7 `/dotnet/docs-desktop` (Freezable; DrawingGroup gap → vendor pages). Signed-in Full 68/0 `Hepsi geçti.` (ControlCenter smoke included; one gate run covered SN9 and WL2 together).
+  Self-review — cosmetics: same look in both themes (sn4/sn8 captures), timer no longer overlaps; usability: focus and hover survive the 1 s poll; Turkish: no new strings; correctness: shared theme brushes are cloned before Freeze, every cache resets on a theme or DPI change.
 
 - 2026-11-07 — Claude, audit 40 (deep, whole project; tag `audit/2026-11-07-40`): range `audit/2026-11-07-39..47b43a8` matches its cards; D26, D27, D28 and LB1 passed the visual check in both themes and SN7 is done (idle CPU goes to SN9): closed. User decisions: `talvora_delete` stays unguarded; ChatGPT counts as an agent (D38); Talvora's own test calls are never counted (D32); E1, E2, S5, TI1, UI2 and the user lines U2–U11 closed (the user reports problems himself); local `artifacts/` older than 7 days pruned at every audit; the 2.5 GB `C:\ProgramData\Talvora\Diagnostics` leftovers deleted.
   Token economy: finished work removed from the agent documents (STATUS 203 k → 18.5 k characters, ROADMAP 445 k → 64 k, PROPOSALS 105 k → 5.6 k, DESIGN-WORKLOG §1/§9, DESIGN-CONTROL-CENTER §1/§7/§11, `docs/archive/`, `APPLICATION-DEVELOPMENT-ROADMAP.md`, finished cards' reference folders, the stale HANDOFF text); AGENTS.md: rule 8 names DESIGN-SANTRAL.md, CONTINUE PROTOCOL step 3 reads only the proposals a card names, conditions for finished cards (A1, A2, A3, T3, N10, R3) removed; then AGENTS.md compacted without any rule change (file 38.4 k → 35.2 k characters, its brief part 30.6 k → 28.1 k). The brief is 43.6 k characters with the card first (before: cut at 60 k without the card). K1, UI1–UI8 and N1–N8 stay under "Kept for a regression test" until D30 moves `tests/QualityGateRegression.ps1` off finished cards. P-49 decided (option 2 → D31). New cards: D30–D39, [C] SN9, [C] WL2.

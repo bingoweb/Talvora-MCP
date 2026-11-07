@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T07:27:24.907Z",
-  "scope": "LB1: display Turkish-cased first letter in existing Santral socket only when the row has no logo, and keep commit separate from About version",
+  "verifiedAtUtc": "2026-11-07T09:17:15.000Z",
+  "scope": "SN9: the Santral switchboard keeps its socket hotspots across traffic polls, moves the reconnect timer below neighbouring text, and caches frozen brushes, pens, text layouts and one static drawing layer per theme and DPI",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 LB1: Turkish tr-TR uppercase of lower-case i is dotted capital İ, so String.ToUpper(CultureInfo) uses a culture-specific override (query: \"System.Globalization.CultureInfo.GetCultureInfo(\"tr-TR\") and string.ToUpper(CultureInfo) dotted Turkish İ: when uppercasing first letter of 'istanbul' how to preserve dotted capital I in .NET 10?\")"
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-07 SN9: modifying a frozen Freezable throws InvalidOperationException and IsFrozen plus Clone gives a modifiable copy, so shared theme brushes are cloned before Freeze and never frozen in place (query: \"WPF Freezable.Freeze CanFreeze CloneCurrentValue frozen Brush and Pen performance in OnRender DrawingContext\")"
     },
     {
       "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-07 LB1: Grid.Row and Grid.Column default to zero; Context7 gives no explicit page for overlapping Grid children or null Image.Source so vendor Grid page checked and this gap is recorded (query: \"WPF Grid overlapping children in same grid row and column, Image with Source null renders nothing, TextBlock visibility binding Visibility enum, .NET 10 WPF UI controls.\")"
+      "verified": "2026-11-07 SN9: two Context7 queries returned no DrawingGroup.Open or DrawDrawing text (gap); the vendor pages state that DrawingGroup.Open opens the group to populate its Children and DrawingContext.DrawDrawing draws the given Drawing (query: \"DrawingGroup.Open method returns DrawingContext; DrawingContext.DrawDrawing(Drawing)\")"
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/standard/base-types/best-practices-strings",
-    "https://learn.microsoft.com/en-us/dotnet/desktop/wpf/controls/grid"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.windows.media.drawinggroup.open",
+    "https://learn.microsoft.com/en-us/dotnet/api/system.windows.media.drawingcontext.drawdrawing"
   ]
 }

@@ -48,7 +48,14 @@ internal sealed class Switchboard : Canvas
     private static readonly TimeSpan SwingDuration = TimeSpan.FromMilliseconds(2500);
     private static readonly TimeSpan SeatDuration = TimeSpan.FromMilliseconds(600);
     private const int MaxPulsesPerLinePerSecond = 12;
+    private const int MaxCachedTexts = 512;
     private static readonly CultureInfo Turkish = CultureInfo.GetCultureInfo("tr-TR");
+
+    // SN9: four type faces (Bahnschrift normal/condensed, Cascadia Mono; each normal/semibold), built once.
+    private static readonly Typeface[] Faces = BuildFaces();
+    private static readonly Brush LampHighlight = Frozen(new SolidColorBrush(Color.FromArgb(140, 255, 255, 255)));
+    private static readonly Transform CableShadowOffset = Frozen(new TranslateTransform(3, 5));
+    private static readonly Transform CableShineOffset = Frozen(new TranslateTransform(-1.5, -1.5));
 
     // Bound to Sn.Panel by resource reference: a theme swap changes it and re-renders the board.
     public static readonly DependencyProperty ThemeTokenProperty = DependencyProperty.Register(
@@ -63,6 +70,17 @@ internal sealed class Switchboard : Canvas
     private readonly DispatcherTimer _second;
     private IReadOnlyList<SwitchboardSocket> _sockets = [];
     private bool _firstApply = true;
+
+    // SN9: brushes, pens and text layouts are built once per theme and DPI instead of on every frame, and
+    // everything that does not move (grain, divider, section labels, jacks with their names) is one frozen layer.
+    private readonly Dictionary<string, Brush> _brushes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Pen> _pens = new(StringComparer.Ordinal);
+    private readonly Dictionary<Color, Brush> _halos = new();
+    private readonly Dictionary<(string Text, double Size, int Face, Brush Brush), FormattedText> _texts = new();
+    private object? _cacheToken;
+    private double _cacheDpi;
+    private DrawingGroup? _staticLayer;
+    private string? _staticKey;
 
     public Switchboard()
     {
@@ -123,7 +141,7 @@ internal sealed class Switchboard : Canvas
         _sockets = sockets;
         if (!MotionAllowed)
             foreach (var motion in _motion.Values) motion.ChangedAt = TimeSpan.MinValue;
-        RebuildHotspots();
+        UpdateHotspots();
         InvalidateVisual();
         UpdateTimers();
     }
@@ -293,10 +311,92 @@ internal sealed class Switchboard : Canvas
         }
     }
 
-    // ---------- drawing ----------
+    // ---------- caches (SN9) ----------
 
-    private Brush Res(string key, Color fallback) =>
-        TryFindResource(key) as Brush ?? new SolidColorBrush(fallback);
+    private static T Frozen<T>(T freezable) where T : Freezable
+    {
+        freezable.Freeze();
+        return freezable;
+    }
+
+    private static Typeface[] BuildFaces()
+    {
+        var bahnschrift = new FontFamily("Bahnschrift");
+        var mono = new FontFamily("Cascadia Mono, Consolas");
+        var faces = new Typeface[8];
+        for (var i = 0; i < faces.Length; i++)
+        {
+            var weight = (i & 2) != 0 ? FontWeights.SemiBold : FontWeights.Normal;
+            faces[i] = (i & 4) != 0
+                ? new Typeface(mono, FontStyles.Normal, weight, FontStretches.Normal)
+                : new Typeface(bahnschrift, FontStyles.Normal, weight, (i & 1) != 0 ? FontStretches.Condensed : FontStretches.Normal);
+        }
+        return faces;
+    }
+
+    /// <summary>Drops every cached brush, pen, text and the static layer when the theme or the DPI changes.</summary>
+    private void EnsureCaches(double dpi)
+    {
+        if (ReferenceEquals(_cacheToken, ThemeToken) && _cacheDpi == dpi) return;
+        _cacheToken = ThemeToken;
+        _cacheDpi = dpi;
+        _brushes.Clear();
+        _pens.Clear();
+        _halos.Clear();
+        _texts.Clear();
+        _staticLayer = null;
+        _staticKey = null;
+    }
+
+    private Brush Res(string key, Color fallback)
+    {
+        if (_brushes.TryGetValue(key, out var cached)) return cached;
+        var brush = TryFindResource(key) as Brush ?? new SolidColorBrush(fallback);
+        // A frozen copy: shared theme brushes are never frozen in place, and frozen brushes draw without change tracking.
+        if (!brush.IsFrozen)
+        {
+            brush = brush.CloneCurrentValue();
+            if (brush.CanFreeze) brush.Freeze();
+        }
+        _brushes[key] = brush;
+        return brush;
+    }
+
+    private Pen CachedPen(string name, Func<Pen> create)
+    {
+        if (_pens.TryGetValue(name, out var pen)) return pen;
+        pen = create();
+        if (pen.CanFreeze) pen.Freeze();
+        _pens[name] = pen;
+        return pen;
+    }
+
+    private Brush JackRing()
+    {
+        if (_brushes.TryGetValue("jack-ring", out var ring)) return ring;
+        var brass = Res("Sn.Brass", Color.FromRgb(0xB0, 0x8D, 0x57));
+        var light = Res("Sn.BrassLight", Color.FromRgb(0xE2, 0xC6, 0x8F));
+        var dark = Res("Sn.BrassDark", Color.FromRgb(0x7A, 0x5E, 0x33));
+        ring = Frozen(new RadialGradientBrush(
+            [new GradientStop(((SolidColorBrush)light).Color, 0), new GradientStop(((SolidColorBrush)brass).Color, 0.6),
+             new GradientStop(((SolidColorBrush)dark).Color, 1)])
+        { GradientOrigin = new Point(0.35, 0.3), Center = new Point(0.5, 0.5) });
+        _brushes["jack-ring"] = ring;
+        return ring;
+    }
+
+    private Brush PlugMetal()
+    {
+        if (_brushes.TryGetValue("plug-metal", out var metal)) return metal;
+        var dark = ((SolidColorBrush)Res("Sn.BrassDark", Colors.SaddleBrown)).Color;
+        var light = ((SolidColorBrush)Res("Sn.BrassLight", Colors.Wheat)).Color;
+        metal = Frozen(new LinearGradientBrush(
+            [new GradientStop(dark, 0), new GradientStop(light, 0.45), new GradientStop(dark, 1)], 0));
+        _brushes["plug-metal"] = metal;
+        return metal;
+    }
+
+    // ---------- drawing ----------
 
     protected override void OnRender(DrawingContext dc)
     {
@@ -304,27 +404,15 @@ internal sealed class Switchboard : Canvas
         if (ActualWidth <= 0 || ActualHeight <= 0) return;
         var now = _clock.Elapsed;
         var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        EnsureCaches(dpi);
         var ink = Res("Sn.Ink", Colors.Black);
         var muted = Res("Sn.InkMuted", Colors.DimGray);
         var faint = Res("Sn.InkFaint", Colors.Gray);
-        var rule = Res("Sn.Rule", Colors.Gray);
         var places = Arrange();
         var socketY = places.Count > 0 ? places[0].SocketCenter.Y : ActualHeight - 112;
 
-        // Brushed-metal grain: one hairline every 3 px, drawn as a tiled brush (cheap, theme-aware).
-        dc.DrawRectangle(Grain(ink), null, new Rect(0, 0, ActualWidth, ActualHeight));
-        var divider = new Pen(rule, 1) { DashStyle = new DashStyle([2, 5], 0) };
-        dc.DrawLine(divider, new Point(24, (104 + socketY) / 2), new Point(ActualWidth - 24, (104 + socketY) / 2));
-        Text(dc, "DIŞ HATLAR", 24, 92, 14, muted, dpi, semibold: true, condensed: true);
-        Text(dc, "BU BİLGİSAYAR", 24, socketY - 12, 14, muted, dpi, semibold: true, condensed: true);
-
-        foreach (var place in places)
-        {
-            if (place.OutsideCenter is { } outside)
-                DrawJack(dc, outside, place.Socket.OutsideTitle!, place.Socket.OutsideSub, top: true, ink, muted, dpi, optional: false);
-            DrawJack(dc, place.SocketCenter, place.Socket.Name, place.Socket.Note, top: false, ink, muted, dpi,
-                optional: place.Socket.State == ComponentVisualState.Neutral);
-        }
+        // SN9: grain, divider, section labels and jacks come from one cached layer; only what moves is drawn below.
+        DrawStaticLayer(dc, places, socketY, dpi, ink, muted);
 
         // Cables (behind lamps and words, above jacks).
         var cables = new Dictionary<string, (Point A, Point C1, Point C2, Point B)>(StringComparer.Ordinal);
@@ -362,7 +450,7 @@ internal sealed class Switchboard : Canvas
             if (!pulse.Ok && t > 0.82)
             {
                 var spark = (t - 0.82) / 0.18;
-                var pen = new Pen(failBrush, 2) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
+                var pen = CachedPen("spark", () => new Pen(failBrush, 2) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round });
                 dc.PushOpacity(1 - spark);
                 for (var k = 0; k < 6; k++)
                 {
@@ -391,10 +479,11 @@ internal sealed class Switchboard : Canvas
             {
                 var elapsed = DateTimeOffset.UtcNow - socket.StateSinceUtc;
                 if (elapsed < TimeSpan.Zero) elapsed = TimeSpan.Zero;
-                // The cable is gone, so the space under the jack carries the measured reconnect timer.
-                Text(dc, "yeniden bağlanıyor", outside.X, outside.Y + 40, 13, muted, dpi, mono: true, center: true);
+                // The cable is gone, so the space under the jack carries the measured reconnect timer. SN9: it sits
+                // below the neighbours' third text line ("son …" under a failure count), so the two never meet.
+                Text(dc, "yeniden bağlanıyor", outside.X, outside.Y + 70, 13, muted, dpi, mono: true, center: true);
                 Text(dc, elapsed.TotalHours >= 1 ? elapsed.ToString(@"h\:mm\:ss", Turkish) : elapsed.ToString(@"mm\:ss", Turkish),
-                    outside.X, outside.Y + 58, 19, ink, dpi, mono: true, semibold: true, center: true);
+                    outside.X, outside.Y + 88, 19, ink, dpi, mono: true, semibold: true, center: true);
                 continue;
             }
             Text(dc, outsideLit ? word : "kapalı", outside.X + 82, outside.Y - 14, 15,
@@ -414,6 +503,41 @@ internal sealed class Switchboard : Canvas
             if (socket.LastCallAtUtc is { } last)
                 Text(dc, "son " + last.ToLocalTime().ToString("HH:mm:ss", Turkish), outside.X + 82, nextLine, 12, faint, dpi, mono: true);
         }
+    }
+
+    /// <summary>SN9: draws the parts that only change with the size, the theme or the socket names, once.</summary>
+    private void DrawStaticLayer(DrawingContext dc, IReadOnlyList<Place> places, double socketY, double dpi,
+        Brush ink, Brush muted)
+    {
+        var key = string.Create(CultureInfo.InvariantCulture, $"{ActualWidth:0.##}x{ActualHeight:0.##}") +
+            string.Concat(places.Select(place => "|" + string.Join("\u001f", place.Socket.Id, place.Socket.Name,
+                place.Socket.Note, place.Socket.OutsideTitle, place.Socket.OutsideSub,
+                place.Socket.State == ComponentVisualState.Neutral ? "optional" : "-")));
+        if (_staticLayer is null || !string.Equals(_staticKey, key, StringComparison.Ordinal))
+        {
+            var layer = new DrawingGroup();
+            using (var context = layer.Open())
+            {
+                // Brushed-metal grain: one hairline every 3 px, drawn as a tiled brush (cheap, theme-aware).
+                context.DrawRectangle(Grain(ink), null, new Rect(0, 0, ActualWidth, ActualHeight));
+                var rule = Res("Sn.Rule", Colors.Gray);
+                var divider = CachedPen("divider", () => new Pen(rule, 1) { DashStyle = new DashStyle([2, 5], 0) });
+                context.DrawLine(divider, new Point(24, (104 + socketY) / 2), new Point(ActualWidth - 24, (104 + socketY) / 2));
+                Text(context, "DIŞ HATLAR", 24, 92, 14, muted, dpi, semibold: true, condensed: true);
+                Text(context, "BU BİLGİSAYAR", 24, socketY - 12, 14, muted, dpi, semibold: true, condensed: true);
+                foreach (var place in places)
+                {
+                    if (place.OutsideCenter is { } outside)
+                        DrawJack(context, outside, place.Socket.OutsideTitle!, place.Socket.OutsideSub, top: true, ink, muted, dpi, optional: false);
+                    DrawJack(context, place.SocketCenter, place.Socket.Name, place.Socket.Note, top: false, ink, muted, dpi,
+                        optional: place.Socket.State == ComponentVisualState.Neutral);
+                }
+            }
+            if (layer.CanFreeze) layer.Freeze();
+            _staticLayer = layer;
+            _staticKey = key;
+        }
+        dc.DrawDrawing(_staticLayer);
     }
 
     private static (string Lamp, string Word, string Text) Lamp(ComponentVisualState state) => state switch
@@ -454,20 +578,11 @@ internal sealed class Switchboard : Canvas
     private void DrawJack(DrawingContext dc, Point c, string title, string? sub, bool top, Brush ink, Brush muted,
         double dpi, bool optional)
     {
-        var brass = Res("Sn.Brass", Color.FromRgb(0xB0, 0x8D, 0x57));
-        var light = Res("Sn.BrassLight", Color.FromRgb(0xE2, 0xC6, 0x8F));
-        var dark = Res("Sn.BrassDark", Color.FromRgb(0x7A, 0x5E, 0x33));
-        var hole = Res("Sn.Socket", Colors.Black);
-        var shadow = Res("Sn.Shadow", Color.FromArgb(0x2E, 0x28, 0x19, 0x0A));
-        dc.DrawEllipse(shadow, null, new Point(c.X + 3, c.Y + 4), 30, 30);
-        var ring = new RadialGradientBrush(
-            [new GradientStop(((SolidColorBrush)light).Color, 0), new GradientStop(((SolidColorBrush)brass).Color, 0.6),
-             new GradientStop(((SolidColorBrush)dark).Color, 1)])
-        { GradientOrigin = new Point(0.35, 0.3), Center = new Point(0.5, 0.5) };
-        dc.DrawEllipse(ring, null, c, 28, 28);
-        dc.DrawEllipse(hole, null, c, 11, 11);
+        dc.DrawEllipse(Res("Sn.Shadow", Color.FromArgb(0x2E, 0x28, 0x19, 0x0A)), null, new Point(c.X + 3, c.Y + 4), 30, 30);
+        dc.DrawEllipse(JackRing(), null, c, 28, 28);
+        dc.DrawEllipse(Res("Sn.Socket", Colors.Black), null, c, 11, 11);
         if (optional)
-            dc.DrawEllipse(null, new Pen(muted, 1.4) { DashStyle = new DashStyle([2.5, 3], 0) }, c, 38, 38);
+            dc.DrawEllipse(null, CachedPen("optional", () => new Pen(muted, 1.4) { DashStyle = new DashStyle([2.5, 3], 0) }), c, 38, 38);
         var titleY = top ? c.Y - 78 : c.Y + 40;
         Text(dc, title, c.X, titleY, 22, ink, dpi, semibold: true, condensed: true, center: true);
         if (!string.IsNullOrWhiteSpace(sub))
@@ -485,11 +600,16 @@ internal sealed class Switchboard : Canvas
             return;
         }
         var c = ((SolidColorBrush)colour).Color;
-        var halo = new RadialGradientBrush(Color.FromArgb((byte)(150 * intensity), c.R, c.G, c.B), Color.FromArgb(0, c.R, c.G, c.B));
-        dc.DrawEllipse(halo, null, p, 30, 30);
+        if (!_halos.TryGetValue(c, out var halo))
+        {
+            halo = Frozen(new RadialGradientBrush(Color.FromArgb(150, c.R, c.G, c.B), Color.FromArgb(0, c.R, c.G, c.B)));
+            _halos[c] = halo;
+        }
+        // SN9: one cached halo per colour; the breath only changes the opacity of halo, lamp and highlight.
         dc.PushOpacity(intensity);
+        dc.DrawEllipse(halo, null, p, 30, 30);
         dc.DrawEllipse(colour, null, p, 9, 9);
-        dc.DrawEllipse(new SolidColorBrush(Color.FromArgb(140, 255, 255, 255)), null, new Point(p.X - 3, p.Y - 3), 2.6, 2.6);
+        dc.DrawEllipse(LampHighlight, null, new Point(p.X - 3, p.Y - 3), 2.6, 2.6);
         dc.Pop();
     }
 
@@ -505,14 +625,17 @@ internal sealed class Switchboard : Canvas
             for (var i = 1; i <= steps; i++) figure.Segments.Add(new LineSegment(Bezier(c, drawn * i / steps), true));
         }
         geometry.Figures.Add(figure);
-        var shadow = new Pen(Res("Sn.Shadow", Color.FromArgb(0x2E, 0x28, 0x19, 0x0A)), 13) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
-        var body = new Pen(Res("Sn.Cable", Colors.Black), 9) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
-        var shine = new Pen(Res("Sn.CableHighlight", Colors.White), 2) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
-        dc.PushTransform(new TranslateTransform(3, 5));
+        var shadow = CachedPen("cable-shadow", () => new Pen(Res("Sn.Shadow", Color.FromArgb(0x2E, 0x28, 0x19, 0x0A)), 13)
+            { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round });
+        var body = CachedPen("cable-body", () => new Pen(Res("Sn.Cable", Colors.Black), 9)
+            { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round });
+        var shine = CachedPen("cable-shine", () => new Pen(Res("Sn.CableHighlight", Colors.White), 2)
+            { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round });
+        dc.PushTransform(CableShadowOffset);
         dc.DrawGeometry(null, shadow, geometry);
         dc.Pop();
         dc.DrawGeometry(null, body, geometry);
-        dc.PushTransform(new TranslateTransform(-1.5, -1.5));
+        dc.PushTransform(CableShineOffset);
         dc.DrawGeometry(null, shine, geometry);
         dc.Pop();
     }
@@ -522,42 +645,62 @@ internal sealed class Switchboard : Canvas
         dc.PushTransform(new TranslateTransform(tip.X, tip.Y));
         dc.PushTransform(new RotateTransform((angle + Math.PI / 2) * 180 / Math.PI));
         dc.DrawRectangle(Res("Sn.Cable", Colors.Black), null, new Rect(-8, 0, 16, 22));
-        var metal = new LinearGradientBrush(
-            [new GradientStop(((SolidColorBrush)Res("Sn.BrassDark", Colors.SaddleBrown)).Color, 0),
-             new GradientStop(((SolidColorBrush)Res("Sn.BrassLight", Colors.Wheat)).Color, 0.45),
-             new GradientStop(((SolidColorBrush)Res("Sn.BrassDark", Colors.SaddleBrown)).Color, 1)], 0);
+        var metal = PlugMetal();
         dc.DrawRectangle(metal, null, new Rect(-7, -16, 14, 17));
         dc.DrawRectangle(metal, null, new Rect(-3.5, -27, 7, 12));
         dc.Pop();
         dc.Pop();
     }
 
-    private static double Text(DrawingContext dc, string text, double x, double y, double size, Brush brush, double dpi,
+    private double Text(DrawingContext dc, string text, double x, double y, double size, Brush brush, double dpi,
         bool semibold = false, bool condensed = false, bool mono = false, bool center = false)
     {
-        var typeface = mono
-            ? new Typeface(new FontFamily("Cascadia Mono, Consolas"), FontStyles.Normal, semibold ? FontWeights.SemiBold : FontWeights.Normal, FontStretches.Normal)
-            : new Typeface(new FontFamily("Bahnschrift"), FontStyles.Normal, semibold ? FontWeights.SemiBold : FontWeights.Normal,
-                condensed ? FontStretches.Condensed : FontStretches.Normal);
-        var formatted = new FormattedText(text, Turkish, System.Windows.FlowDirection.LeftToRight, typeface, size, brush, dpi);
+        var face = (mono ? 4 : 0) | (semibold ? 2 : 0) | (condensed && !mono ? 1 : 0);
+        var key = (text, size, face, brush);
+        if (!_texts.TryGetValue(key, out var formatted))
+        {
+            // Counters and clocks change every second, so the cache stays bounded.
+            if (_texts.Count >= MaxCachedTexts) _texts.Clear();
+            formatted = new FormattedText(text, Turkish, System.Windows.FlowDirection.LeftToRight, Faces[face], size, brush, dpi);
+            _texts[key] = formatted;
+        }
         dc.DrawText(formatted, new Point(center ? x - formatted.Width / 2 : x, y));
         return formatted.WidthIncludingTrailingWhitespace;
     }
 
     // ---------- interaction and accessibility ----------
 
-    private void RebuildHotspots()
+    /// <summary>
+    /// SN9: the 1 s traffic poll calls <see cref="Apply"/>; while the set of sockets stays the same, the hotspots
+    /// are updated in place so keyboard focus and the hover ring survive it. They are rebuilt only when it changes.
+    /// </summary>
+    private void UpdateHotspots()
     {
-        Children.Clear();
-        foreach (var socket in _sockets)
+        var same = Children.Count == _sockets.Count &&
+            Children.OfType<SwitchboardHotspot>().Select(spot => spot.Socket?.Id)
+                .SequenceEqual(_sockets.Select(socket => (string?)socket.Id), StringComparer.Ordinal);
+        if (!same)
         {
-            var spot = new SwitchboardHotspot { Socket = socket };
+            Children.Clear();
+            for (var i = 0; i < _sockets.Count; i++)
+            {
+                var spot = new SwitchboardHotspot();
+                spot.Click += (sender, _) =>
+                {
+                    if (sender is SwitchboardHotspot { Socket: { } socket }) SocketActivated?.Invoke(socket.Source);
+                };
+                Children.Add(spot);
+            }
+        }
+        for (var i = 0; i < _sockets.Count; i++)
+        {
+            var socket = _sockets[i];
+            var spot = (SwitchboardHotspot)Children[i];
+            spot.Socket = socket;
             var word = Lamp(socket.State).Text;
             var calls = socket.Calls is { } count ? $", {count.ToString("N0", Turkish)} çağrı" : string.Empty;
             var failed = socket.Failed is > 0 and var failures ? $", {failures.ToString("N0", Turkish)} hata" : string.Empty;
             AutomationProperties.SetName(spot, $"{socket.Name}, {word}{calls}{failed}");
-            spot.Click += (_, _) => SocketActivated?.Invoke(socket.Source);
-            Children.Add(spot);
         }
         LayoutHotspots();
     }
@@ -591,7 +734,8 @@ internal sealed class Switchboard : Canvas
 /// <summary>Invisible, keyboard-reachable target over one socket; draws only the focus ring.</summary>
 internal sealed class SwitchboardHotspot : ButtonBase
 {
-    public SwitchboardSocket? Socket { get; init; }
+    // SN9: settable, so a traffic poll can refresh the socket without replacing the hotspot.
+    public SwitchboardSocket? Socket { get; set; }
 
     public SwitchboardHotspot()
     {

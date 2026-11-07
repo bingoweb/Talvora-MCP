@@ -52,6 +52,7 @@ internal static partial class ControlCenterSmoke
         AssertSn3Switchboard(overview);
         AssertSn4DroppedLine(window, overview, snapshot, variant);
         AssertSn8Failures(window, overview, variant);
+        AssertSn9HotspotsSurvivePolls(overview);
         SaveVisualSnapshotIfRequested(window, "ui3-overview-" + variant);
 
         window.ShellModel.SelectPage(3);
