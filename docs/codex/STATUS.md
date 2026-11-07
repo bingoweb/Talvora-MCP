@@ -33,6 +33,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [ ] D45 — Çalışma günlüğü measures a session up to its last step (audit 42, data truth)
+- [ ] D50 — Çalışma günlüğü keeps every session (audit 42, data truth; after D45)
 - [ ] D46 — A CI run that is still going is not a failed step (audit 42)
 - [ ] D48 — A vault note belongs to the vault's owner (audit 42)
 - [ ] D49 — Plain Turkish service names, also for older registries (audit 42; after D46)
@@ -51,6 +52,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — Claude, audit 42 follow-up: D50 queued after D45 (finding 8: one project and actor share one session id and the worklog history deduplicated by it, so only the newest session per project and actor survived; seen when Claude's 00:16 probe replaced the 23:36 one). Its literal blocks were applied in the scratch clone together with D45–D49: Notification regression green, Full gate green.
 
 - 2026-11-08 — Claude, audit 42 (deep, whole project; tag `audit/2026-11-08-42`): range `audit/2026-11-07-41..97344f7` (D40, D41, D42, D35–D39, D43, D44, OB1) matches its cards (D35 and D40–D44 byte for byte with the verified blocks); Claude's signed-in Full 70/0 `Hepsi geçti.`; CI success on all 11 commits; installed 97344f7. Live checks closed by Claude: D40 (Claude's gate left the worklog history unchanged), D41 (bridge script call = `core · Claude`, worklog actor Claude), D42, D37, D43 and D44 (both themes; the real link opens Olaylar on Onarımlar with the repairs listed), OB1 (live note, secret refused, CI 42410824919). Accepted: D35's extra marker change in TunnelClientUpdateRollbackRegression.ps1 (Claude's card gap).
   New cards, first in the queue: D45 (a worklog session's duration ends with its last step, not with the 90 s close), D46 (Get-CiStatus exit 2 is "GitHub denetimi sürüyor", not a failed step), D48 (vault notes and new folders get the vault owner), D49 (plain service names, also for older registries), D47 (75 remaining English or jargon texts; table and test in `docs/codex/reference/d47`). Their literal blocks were applied together in a scratch clone: Notification and SourceEdit regressions green, Full gate 71/0 `Hepsi geçti.`. Claude deleted the fake "Project A" worklog session left by the old tests.

@@ -30,7 +30,7 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-08 (42, deep, whole project) · range `audit/2026-11-07-41..97344f7` plus every subsystem · result: D45–D49, live checks of D37, D40–D44 and OB1 closed
+### Audit 2026-11-08 (42, deep, whole project) · range `audit/2026-11-07-41..97344f7` plus every subsystem · result: D45–D50, live checks of D37, D40–D44 and OB1 closed
 
 User request: "Talvora'yı derinlemesine denetle". Method: the range line by line against the cards (the literal-block cards compared file by file with Claude's audit 41 scratch clone), Claude's signed-in Full gate, CI, the runtime records since audit 41 (tray.log, Windows Application log, `/healthz/traffic`, the worklog history and the event store), the real Control Center read through UI Automation, then the subsystems audit 40 did not read line by line (source-edit commit and rollback core, interactive user runner, delivery and work-contract gates, HTTP download, registry store) and bug-class searches over `src` (culture-dependent casing, `async void`, sync-over-async).
 
@@ -47,6 +47,7 @@ Live checks closed by Claude: D40 (Claude's Full gate left `worklog-sessions.jso
 | 5 | MEDIUM (Turkish) | Registry names | The real registry (written 2026-09-30) says "Talvora Core Service" and "Gitea MCP", components "Secure MCP Tunnel", "Penpot local MCP"; the smoke fixtures use "Talvora Çekirdeği" and "Gitea", so the captures hid it. | D49 |
 | 6 | PROCESS (Claude) | Card writing | D35 did not list a test that pins the signature it changed. Rule added to Claude's card checklist: grep `tests/` and the smokes for every signature and text a card changes and list those files (D47 lists two such tests). | — |
 | 7 | TEST GAP | D44 smoke | The light-theme capture of the repairs page is empty: the smoke feeds the count, not the Olaylar list, and asserts only the page and the chip. The real page lists the repairs (UI Automation). | [C] with the Olaylar empty state |
+| 8 | HIGH (data truth) | `WorklogHistoryStore`, session ids | One project and one actor keep one `SessionId` for all their sessions, and the history deduplicates by it: each new session replaces the previous one, so Çalışma günlüğü holds only the newest session per project and actor instead of every session of the last 7 days (a week of ChatGPT work on Talvora-MCP left one entry; Claude's 00:16 probe replaced the 23:36 one). | D50 |
 
 Screen pass, design improvements: the Çalışma günlüğü detail leaves 40 px holes for an empty task note and an empty result line; Olaylar shows a blank page when a filter or a search has no events; "Ham günlüğü göster" keeps its text while the raw log is open; each Çalışma günlüğü card reads its outcome twice ("Düzenleme tamamlandı." and "Tamamlandı").
 
@@ -165,6 +166,121 @@ with
 **Don't:** change `EndedAtUtc`, the stored JSON, the 90-second close, the timeline rows or `LocalTimeText`.
 
 **Acceptance:** `D45_WORK_ENDS_WITH_LAST_STEP_GREEN`; signed-in Full `Hepsi geçti.`; build and deploy; installed Control Center smoke green; record `[~] visual check pending (Claude)` (Claude reads the real Çalışma günlüğü).
+
+### D50 — Çalışma günlüğü keeps every session
+
+**Why:** audit 42 finding 8 (data truth). The service gives one project and one actor the same `SessionId` for all their sessions (`SHA256(projectRoot + actor)` in `TalvoraDesktopWorklogState.GetOrCreateSession`, so the desktop card follows the project), and `WorklogHistoryStore` deduplicates by `SessionId` when it appends, loads and prunes: each new session of that project and actor replaces the previous one. DESIGN-WORKLOG §8 asks for every session of the last 7 days (up to 2,000). Live: a week of ChatGPT work on Talvora-MCP left exactly one "ChatGPT · Dev / Talvora-MCP" entry, and Claude's 00:16 probe replaced Claude's 23:36 one. A history entry becomes the `SessionId` plus its start; a repeated close of the same session stays one entry; a card click still opens the newest session of its id (the list is newest first). The literal blocks below were built and run by Claude in a scratch clone (Notification regression green, Full gate green).
+
+**Files:** `src/Talvora.Tray/WorklogHistoryStore.cs`, `src/Talvora.Tray/ViewModels/WorklogHistoryViewModel.cs`, `tests/Talvora.Notification.Regression/Program.D50.cs` (new), `tests/Talvora.Notification.Regression/Program.cs`, `.context7/verification.json`.
+
+**Context7:** record the map's .NET entry with the one fact used (`Enumerable.DistinctBy` keeps the first element of each key), per CONTEXT7 PROTOCOL rule 1.
+
+#### Exact implementation
+
+Step 1 (red first). Create `Program.D50.cs`:
+
+```csharp
+using Talvora.Shared;
+using Talvora.Tray;
+
+internal static partial class Program
+{
+    /// <summary>D50: two sessions of the same project and actor are two history entries; a repeated close is one.</summary>
+    private static void AssertD50HistoryKeepsEverySession()
+    {
+        var offset = TimeSpan.FromHours(3);
+        var now = new DateTimeOffset(2026, 11, 7, 18, 0, 0, offset);
+        var directory = Path.Combine(Path.GetTempPath(), "talvora-d50-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var path = Path.Combine(directory, "worklog-sessions.jsonl");
+            var store = new WorklogHistoryStore(path, () => now);
+            void Close(DateTimeOffset start, string title)
+            {
+                var closed = start.AddSeconds(93);
+                var frame = new DesktopWorklogFrame(
+                    "d50-same-project-and-actor", 2, closed,
+                    new WorklogSessionHeader("Talvora-MCP", "ChatGPT · Dev"),
+                    new WorklogStep(WorklogStepCategory.SourceEdit, WorklogStepState.Succeeded, title, null, null, 3),
+                    [new WorklogTimelineEntry(start.AddSeconds(3), WorklogStepState.Succeeded, title, 3)],
+                    new WorklogTotals(1, 93, 1, WorklogCheckState.Unknown, WorklogCheckState.Unknown),
+                    null, 15);
+                store.AppendTerminal(new DesktopProgressMessage(
+                    "d50", "talvora_apply_patch", title, "", DesktopProgressKind.Completed, closed, 3, null,
+                    WorklogFrame: frame, SessionClosed: true));
+            }
+
+            Close(new DateTimeOffset(2026, 11, 7, 15, 0, 0, offset), "İlk oturum");
+            Close(new DateTimeOffset(2026, 11, 7, 15, 10, 0, offset), "İkinci oturum");
+            Close(new DateTimeOffset(2026, 11, 7, 15, 10, 0, offset), "İkinci oturum");
+            foreach (var reader in new[] { store, new WorklogHistoryStore(path, () => now) })
+            {
+                var titles = reader.LoadRecent()
+                    .Where(session => session.SessionId == "d50-same-project-and-actor")
+                    .Select(session => session.Current.Title)
+                    .ToArray();
+                if (titles is not ["İkinci oturum", "İlk oturum"])
+                    throw new InvalidOperationException(
+                        $"D50: expected both sessions newest first, got [{string.Join(", ", titles)}].");
+            }
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
+        Console.WriteLine("D50_HISTORY_KEEPS_EVERY_SESSION_GREEN");
+    }
+}
+```
+
+In `Program.cs` (`Main`, full run) add `AssertD50HistoryKeepsEverySession();` on its own line directly below `AssertD45WorkEndsWithLastStep();` (D45 adds that line). Red: `D50: expected both sessions newest first, got [İkinci oturum].`
+
+Step 2. `WorklogHistoryStore.cs`: replace
+
+```csharp
+    [JsonIgnore]
+    public bool HasCodePreview => !string.IsNullOrWhiteSpace(Evidence?.CodePreview);
+```
+
+with
+
+```csharp
+    [JsonIgnore]
+    public bool HasCodePreview => !string.IsNullOrWhiteSpace(Evidence?.CodePreview);
+
+    // D50: a project and an actor keep one SessionId across all their sessions (the desktop card follows it);
+    // one history entry is that id plus its start, so every session of the last 7 days stays in the history.
+    [JsonIgnore]
+    public string HistoryKey =>
+        SessionId + "@" + StartedAtUtc.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+```
+
+then replace the line `_sessions!.RemoveAll(item => item.SessionId == session.SessionId);` with `_sessions!.RemoveAll(item => item.HistoryKey == session.HistoryKey);`, in `EnsureLoaded` the line `.DistinctBy(row => row.Session.SessionId)` with `.DistinctBy(row => row.Session.HistoryKey)`, and in `Prune` the line `.DistinctBy(item => item.SessionId)` with `.DistinctBy(item => item.HistoryKey)`.
+
+Step 3. `WorklogHistoryViewModel.cs` (a reload or a filter keeps the session the user chose): replace `var previousSessionId = SelectedSession?.SessionId;` with `var previousKey = SelectedSession?.HistoryKey;`; replace `if (previousSessionId is not null) SelectSession(previousSessionId);` with `if (previousKey is not null) SelectedSession = Sessions.FirstOrDefault(s => s.HistoryKey == previousKey);`; replace `var selectedId = SelectedSession?.SessionId;` with `var selectedKey = SelectedSession?.HistoryKey;`; replace
+
+```csharp
+        SelectedSession = selectedId is null ? null :
+            Sessions.FirstOrDefault(s => s.SessionId == selectedId);
+```
+
+with
+
+```csharp
+        SelectedSession = selectedKey is null ? null :
+            Sessions.FirstOrDefault(s => s.HistoryKey == selectedKey);
+```
+
+**Don't:** change the service's session id, the desktop card, `SelectSession(string)`, the retention, the bounds or the stored format. Sessions that were already replaced cannot come back; say so in the Log.
+
+**Acceptance:** `D50_HISTORY_KEEPS_EVERY_SESSION_GREEN`; signed-in Full `Hepsi geçti.`; build and deploy; installed Control Center smoke green; record `[~] live check pending (Claude): two sessions of the same project and actor both stay in Çalışma günlüğü`.
 
 ### D46 — A CI run that is still going is not a failed step
 
