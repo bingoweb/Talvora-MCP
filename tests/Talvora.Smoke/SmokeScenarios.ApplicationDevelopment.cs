@@ -351,9 +351,10 @@ internal static partial class SmokeScenarios
         // without an installed Codex desktop app or signed-in session.
         var codex = await EnsureSuccess(
             byName["talvora_codex_info"], new());
+        // D51: the sandbox follows the signed-in user's Codex profile (balanced: workspace-write; trusted: danger-full-access).
         if (GetString(codex, "model") != "gpt-6.1-sol" ||
             GetString(codex, "reasoningEffort") != "medium" ||
-            GetString(codex, "sandbox") != "workspace-write")
+            GetString(codex, "sandbox") is not ("workspace-write" or "danger-full-access"))
         {
             throw new InvalidOperationException(
                 "Codex discovery did not expose the reviewed default model, effort and sandbox.");
@@ -373,12 +374,21 @@ internal static partial class SmokeScenarios
                 "talvora_makepri_run",
             })
             {
-                await EnsureSuccess(byName[toolName], new()
+                // D51: with `/?` some SDK tools (makeappx) print their usage and exit 1, which H3 reports as an error
+                // result; the probe proves that the tool runs, not its exit code.
+                var probe = await byName[toolName].CallAsync(new Dictionary<string, object?>
                 {
                     ["workingDirectory"] = repositoryPath,
                     ["arguments"] = new[] { "/?" },
                     ["timeoutSeconds"] = 60,
                 });
+                if (probe.StructuredContent is not { } probeJson ||
+                    !probeJson.TryGetProperty("exitCode", out _) ||
+                    probeJson.TryGetProperty("timedOut", out var probeTimedOut) && probeTimedOut.GetBoolean())
+                {
+                    throw new InvalidOperationException(
+                        $"{toolName} did not run: {string.Join(" ", probe.Content.OfType<TextContentBlock>().Select(block => block.Text))}");
+                }
             }
         }
     }

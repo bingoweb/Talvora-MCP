@@ -368,17 +368,23 @@ internal static partial class SmokeScenarios
                     }
                 }
                 
-                var tcpListenersResult = await EnsureSuccess(byName["talvora_tcp_listeners"], new()
+                // D51: some Windows builds list only a few listeners in the TCP table (netstat, IPGlobalProperties and
+                // Get-NetTCPConnection alike), so the live Talvora socket is checked through its established connections.
+                await EnsureSuccess(byName["talvora_tcp_listeners"], new()
                 {
                     ["localPort"] = 7676,
                 });
-                if (tcpListenersResult.StructuredContent is not { } tcpListenersJson ||
-                    tcpListenersJson.GetProperty("count").GetInt32() < 1 ||
-                    !tcpListenersJson.GetProperty("connections").EnumerateArray().Any(connection =>
+                var tcpServerResult = await EnsureSuccess(byName["talvora_tcp_connections"], new()
+                {
+                    ["localPort"] = 7676,
+                    ["state"] = "ESTABLISHED",
+                });
+                if (tcpServerResult.StructuredContent is not { } tcpServerJson ||
+                    !tcpServerJson.GetProperty("connections").EnumerateArray().Any(connection =>
                         connection.GetProperty("localPort").GetInt32() == 7676 &&
                         connection.GetProperty("processId").GetInt32() > 0))
                 {
-                    throw new InvalidOperationException("tcp_listeners did not report the Talvora listener.");
+                    throw new InvalidOperationException("tcp_connections did not report a Talvora connection.");
                 }
                 
                 var tcpConnectionsResult = await EnsureSuccess(byName["talvora_tcp_connections"], new()

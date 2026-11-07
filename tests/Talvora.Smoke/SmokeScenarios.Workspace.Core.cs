@@ -255,7 +255,7 @@ internal static partial class SmokeScenarios
                     !findFilesJson.TryGetProperty("entries", out var foundEntries) ||
                     !foundEntries.EnumerateArray().Any(entry =>
                         entry.TryGetProperty("path", out var foundPath) &&
-                        string.Equals(foundPath.GetString(), developerPatchFile, StringComparison.OrdinalIgnoreCase)))
+                        string.Equals(foundPath.GetString(), Path.GetRelativePath(root, developerPatchFile), StringComparison.OrdinalIgnoreCase)))
                 {
                     throw new InvalidOperationException("find_files did not return the expected text file.");
                 }

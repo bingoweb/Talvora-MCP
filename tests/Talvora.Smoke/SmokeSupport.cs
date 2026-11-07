@@ -11,7 +11,8 @@ internal static class SmokeSupport
         var result = await tool.CallAsync(arguments, cancellationToken: cancellationToken);
         if (result.IsError is true)
         {
-            throw new InvalidOperationException($"Tool failed: {tool.Name}");
+            throw new InvalidOperationException(
+                $"Tool failed: {tool.Name}: {string.Join(" ", result.Content.OfType<TextContentBlock>().Select(block => block.Text))}");
         }
         return result;
     }

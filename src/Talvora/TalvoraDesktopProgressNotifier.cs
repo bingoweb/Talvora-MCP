@@ -178,7 +178,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                     result,
                     canonicalToolName);
 
-            var failed = TryDescribeFailure(result);
+            var failed = TryDescribeFailure(result, canonicalToolName);
             try
             {
                 if (failed)
@@ -756,7 +756,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         }
     }
 
-    private static bool TryDescribeFailure<T>(T result)
+    private static bool TryDescribeFailure<T>(T result, string toolName)
     {
         if (result is CallToolResult callToolResult)
         {
@@ -766,7 +766,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             }
 
             if (callToolResult.StructuredContent is JsonElement structured &&
-                StructuredResultFailure.IsFailure(structured))
+                StructuredResultFailure.IsFailure(structured, toolName))
             {
                 return true;
             }
@@ -774,7 +774,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
 
         try
         {
-            return StructuredResultFailure.IsFailure(JsonSerializer.SerializeToElement(result));
+            return StructuredResultFailure.IsFailure(JsonSerializer.SerializeToElement(result), toolName);
         }
         catch (Exception ex)
         {

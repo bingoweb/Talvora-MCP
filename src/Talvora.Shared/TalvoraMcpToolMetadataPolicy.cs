@@ -11,7 +11,7 @@ public static class TalvoraMcpToolMetadataPolicy
 {
     public const int ExpectedReviewedToolCount = 249;
     public const int ExpectedOpenWorldToolCount = 83;
-    public const int ExpectedDestructiveToolCount = 98;
+    public const int ExpectedDestructiveToolCount = 106;
     public const int PreferredMaxDescriptionCharacters = 220;
 
     private static readonly HashSet<string> OpenWorldTools =

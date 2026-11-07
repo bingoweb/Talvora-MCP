@@ -7,13 +7,13 @@ internal static class ToolResultTextPolicy
 {
     internal const string SummaryText = "Structured result: see structuredContent.";
 
-    internal static CallToolResult Apply(CallToolResult result)
+    internal static CallToolResult Apply(CallToolResult result, string? toolName = null)
     {
         // Codex prefers structured data; leave empty/null payloads and errors untouched.
         if (result.IsError is true ||
             result.StructuredContent is not { } structured ||
             structured.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null ||
-            StructuredResultFailure.IsFailure(structured))
+            StructuredResultFailure.IsFailure(structured, toolName))
         {
             return result;
         }

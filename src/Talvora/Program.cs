@@ -119,7 +119,7 @@ builder.Services
                 request.Services?.GetService<TalvoraLineTrafficMeter>()?.Record(surfacePath, clientName, ok);
             }
 
-            return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(result));
+            return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(result, request.Params?.Name));
         });
 
         filters.AddListToolsFilter(next => async (

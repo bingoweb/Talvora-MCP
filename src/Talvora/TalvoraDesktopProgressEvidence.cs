@@ -76,7 +76,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                     CodeChangeId: Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
                         Encoding.UTF8.GetBytes(FactText(json, "transactionId") ?? fact))).ToLowerInvariant());
             }
-            if (!TryDescribeFailure(result) && TryGetPropertyIgnoreCase(json, "codeEvidence", out var codeEvidence) &&
+            if (!TryDescribeFailure(result, toolName) && TryGetPropertyIgnoreCase(json, "codeEvidence", out var codeEvidence) &&
                 codeEvidence.ValueKind == JsonValueKind.Object)
                 return JsonSerializer.Deserialize<DesktopProgressEvidence>(codeEvidence.GetRawText(),
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });

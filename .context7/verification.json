@@ -1,16 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T22:04:44Z",
-  "scope": "RS1: Rust tools run as the signed-in user (where.exe resolution parsed with String.Split options, neutral working directory)",
+  "verifiedAtUtc": "2026-11-07T23:30:25Z",
+  "scope": "D51: a status or stop tool reports another process's exit code as data (CallToolResult.IsError only for the call's own failure); the full installed smoke follows the tools as they are",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 RS1: Context7 /dotnet/docs holds no API reference for StringSplitOptions or Environment.SystemDirectory (gap, vendor pages used). StringSplitOptions.RemoveEmptyEntries with TrimEntries drops empty and white-space-only entries (TrimEntries is .NET 5 and later), so the where.exe lines parse cleanly; Environment.SystemDirectory is the system folder used as the neutral working directory of the user runs in talvora_rust_info. Query: String.Split char array StringSplitOptions RemoveEmptyEntries TrimEntries; StringSplitOptions TrimEntries; Environment.SystemDirectory property."
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-11-08 D51: clients inspect CallToolResult.IsError to detect a tool error, and a handler that fails returns a CallToolResult with IsError = true and a readable message; StructuredContent carries the tool's data. So talvora_job_get, talvora_job_stop, talvora_dev_server_get and talvora_dev_server_stop leave IsError unset when the call itself worked, and the job's own exit code stays in StructuredContent. Query: CallToolResult IsError StructuredContent; CallToolResult IsError tool error."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.stringsplitoptions",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.environment.systemdirectory"
+    "https://github.com/modelcontextprotocol/csharp-sdk",
+    "https://modelcontextprotocol.io/specification/2025-06-18/server/tools"
   ]
 }

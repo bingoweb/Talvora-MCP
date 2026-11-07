@@ -377,7 +377,8 @@ internal static partial class SmokeScenarios
                 var gitLogResult = await EnsureSuccess(byName["talvora_git_log"], new()
                 {
                     ["repositoryPath"] = repositoryPath,
-                    ["maxCount"] = 5,
+                    ["maxCommits"] = 5,
+                    ["detail"] = "full",
                 });
                 if (gitLogResult.StructuredContent is not { } gitLogJson ||
                     gitLogJson.GetProperty("count").GetInt32() < 1 ||

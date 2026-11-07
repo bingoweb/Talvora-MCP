@@ -10,7 +10,7 @@ internal static class ToolFailureGuidance
     internal static CallToolResult Apply(string? toolName, CallToolResult result)
     {
         var failed = result.IsError is true ||
-            result.StructuredContent is { } structured && StructuredResultFailure.IsFailure(structured);
+            result.StructuredContent is { } structured && StructuredResultFailure.IsFailure(structured, toolName);
         if (!failed)
         {
             return result;

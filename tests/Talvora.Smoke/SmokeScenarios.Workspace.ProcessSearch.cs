@@ -24,14 +24,14 @@ await EnsureSuccess(byName["talvora_write_text"], new()
             ["timeoutSeconds"] = 30,
         });
 
-        var powerShellRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "Talvora",
-            "PowerShell Smoke " + smokeId);
+        // D51: C:\ProgramData\Talvora is closed to the signed-in user; the smoke's own workspace (Public Documents)
+        // is open to the user and to LocalSystem, and the folder name keeps its space.
+        var powerShellRoot = Path.Combine(root, "PowerShell Smoke " + smokeId);
         Directory.CreateDirectory(powerShellRoot);
         try
         {
-            var powerShellResult = await EnsureSuccess(byName["talvora_run_powershell"], new()
+            // D51: the script exits 7 on purpose; H3 reports a script's own non-zero exit as an error result.
+            var powerShellResult = await byName["talvora_run_powershell"].CallAsync(new Dictionary<string, object?>
             {
                 ["script"] = """
                     $ErrorActionPreference = 'Stop'
@@ -44,7 +44,8 @@ await EnsureSuccess(byName["talvora_write_text"], new()
                 ["workingDirectory"] = powerShellRoot,
                 ["timeoutSeconds"] = 30,
             });
-            if (powerShellResult.StructuredContent is not { } psJson ||
+            if (powerShellResult.IsError is not true ||
+                powerShellResult.StructuredContent is not { } psJson ||
                 !psJson.TryGetProperty("exitCode", out var psExit) ||
                 psExit.GetInt32() != 7 ||
                 !psJson.TryGetProperty("timedOut", out var psTimedOut) ||
