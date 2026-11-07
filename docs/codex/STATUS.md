@@ -39,13 +39,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D49 — Plain Turkish service names, also for older registries (audit 42; after D46)
 - [ ] D47 — Plain Turkish for the remaining Control Center texts (audit 42; setup texts per the user's decision; table and test in docs/codex/reference/d47)
 - [ ] [C] WL3 — Çalışma günlüğü and Olaylar polish (Claude; audit 42, user: later; after D45 and D50)
-- [~] [C] UV1 — Python through uv: talvora_uv_run replaces the pip and venv tools (Claude, one-off, user 2026-11-08; RED NativeInstallerSourceRegression PythonDockerToolContract False, then GREEN; Changed 19/0 and signed-in Full 70/0 Hepsi geçti.; install, installed smoke and CI pending)
-- [~] [C] RS1 — Rust tools run as the signed-in user (Claude, one-off; RED: the installed 97344f7 reports cargo from the service profile, which the new smoke check refuses; Changed 14/0 and signed-in Full 70/0 Hepsi geçti.; install, installed smoke and CI pending)
-- [ ] [C] RS2 — The service account's own Rust toolchain is removed (Claude, one-off; after RS1)
+- [x] [C] UV1 — Python through uv: talvora_uv_run replaces the pip and venv tools (Claude, one-off, user 2026-11-08; installed d93a5ea: talvora_uv_run --version → uv 0.13.7 as MSI\tayla, tools/list 249 without the pip and venv tools, live open-world 83; CI 42419169512 success; the full installed smoke stops at older steps → D51)
+- [x] [C] RS1 — Rust tools run as the signed-in user (Claude, one-off; installed d93a5ea: talvora_rust_info → C:\Users\tayla\.cargo\bin, cargo and rustc 1.99.1, rustup 1.29.2; talvora_cargo_run --version 1.99.1; CI 42419169512 success)
+- [x] [C] RS2 — The service account's own Rust toolchain is removed (Claude, one-off; systemprofile .cargo and .rustup gone, rustup.install no longer in Chocolatey, the user's 1.99.1 unchanged; the machine PATH entry is U14)
 
 ## User queue
 
-(none)
+- [ ] U14 — Makine (sistem) PATH değişkeninden `C:\Users\tayla\.cargo\bin` satırını kaldırın; bu klasör kullanıcı PATH'inizde zaten var. Başlat'ta "ortam değişkenleri" yazın → Ortam Değişkenleri → Sistem değişkenleri → Path → Düzenle → satırı silin → Tamam. (RS2)
 
 ## Open questions
 
@@ -56,6 +56,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — RS2, executor Claude (one-off): as LocalSystem through Talvora, the service account's own rustup (`C:\WINDOWS\system32\config\systemprofile\.cargo\bin\rustup.exe`) ran `self uninstall -y` as a detached job (exit 0 after 12 min: toolchain stable-x86_64-pc-windows-msvc, rustup home, cargo home and binaries removed); `choco uninstall rustup.install -y --skip-autouninstaller` removed the package record (1/1, lib folder gone). `systemprofile\.cargo` and `systemprofile\.rustup` no longer exist; `talvora_rust_info` and `cargo --version` as the user are unchanged (1.99.1, rustup 1.29.2). The machine PATH still lists `C:\Users\tayla\.cargo\bin` (a user folder in the machine PATH; the user PATH already has it): a machine setting, so U14 for the user. UV1 and RS1 closed with the installed d93a5ea, the live checks on their queue lines and CI 42419169512. Their "full installed smoke" acceptance is not met: the full run stops at steps older than both cards (D51).
 
 - 2026-11-08 — RS1, executor Claude (one-off): `RunRustTool` runs cargo, rustc and rustup through `InteractiveUserProcessRunner` as the active interactive user (a bare name resolves on that user's PATH; an explicit executable stays allowed); `talvora_rust_info` resolves the tools with `where.exe` and reads their versions as that user; `ResolveRustTool` removed. RED: the installed 97344f7 answers `talvora_rust_info` with `C:\WINDOWS\system32\config\systemprofile\.cargo\bin\cargo.exe` (cargo 1.99.0, the service account's own Chocolatey rustup), which the new installed-smoke check rejects. Changed 14/0 and signed-in Full 70/0 `Hepsi geçti.`. Context7 /dotnet/docs has no API page for StringSplitOptions or Environment.SystemDirectory (gap; Microsoft Learn pages used). Install, installed smoke and CI follow. Gitea mirror skipped: executor Claude, no Gitea comment tool in this session.
   Self-review — cosmetics: no screen change.
