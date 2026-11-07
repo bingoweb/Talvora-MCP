@@ -202,7 +202,7 @@ function Get-ChangedScopePlan {
 # execute the same build output, so they run after the parallel phase.
 $serialRegressions = @(
     'GiteaProtocolReadinessRegression.ps1', 'GiteaStopChainRegression.ps1',
-    'InstallerDependencyProvenanceRegression.ps1')
+    'InstallerDependencyProvenanceRegression.ps1', 'QualityGateParallelRegression.ps1')
 $serviceRegressions = @('HealthHandleRegression.ps1', 'NativeInstallerRuntimeRegression.ps1')
 $canContinue = $true
 Push-Location -LiteralPath $repoRoot

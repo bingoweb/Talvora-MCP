@@ -32,8 +32,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [~] D30 — The agent brief always carries the current card (audit 40, critical; RED card-first fixture; AGENT_CONTEXT_ORDER_GREEN; QualityGateRegression GREEN; signed-in Full 69/0, Hepsi geçti.; exact-commit deployment, CI and installed agent-brief check pending)
-- [ ] D31 — The parallel-gate timing regression runs on its own (audit 40; P-49 decided)
+- [~] D30 — The agent brief always carries the current card (audit 40, critical; RED card-first fixture; AGENT_CONTEXT_ORDER_GREEN; QualityGateRegression GREEN; signed-in Full 69/0; installed e62b81d and live agent-brief truncated=false with card first, MCP smoke GREEN; GitHub CI 42360733913 running at first check)
+- [x] D31 — The parallel-gate timing regression runs on its own (audit 40; P-49 decided; source RED then GREEN; focused QUALITY_GATE_PARALLEL_GREEN; two consecutive signed-in Full gates 69/0 and Hepsi geçti.; exact-commit installer, live smoke and CI follow commit; D29 next)
 - [ ] D29 — Smoke clears its fixture traffic after the SN3 check (audit 39; unblocked: P-49 decided, D31 first; implement the card unchanged)
 - [ ] D32 — The traffic meter never counts Talvora's own clients (audit 40, user decision)
 - [ ] D33 — Desktop progress frames survive a busy machine (audit 40)
@@ -61,6 +61,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-07 — D31, executor ChatGPT via Talvora: moved exactly the existing QualityGateParallelRegression.ps1 to the final position in $serialRegressions, preserving the preceding three entries and 7-second regression threshold. Source assertion RED (missing fourth serial entry), then D31_SERIAL_GREEN; standalone QUALITY_GATE_PARALLEL_GREEN. Two consecutive signed-in Full gates: first 69 checks/0 failures/Hepsi geçti., second 69 checks/0 failures/Hepsi geçti. No timing guard, parallel phase, or test was changed. Context7 /microsoftdocs/powershell-docs and Microsoft Learn verified PowerShell array literals. Exact-commit installer, installed MCP smoke and GitHub CI follow the commit. Gitea issue #9 mirror skipped: no authenticated comment tool exposed through Talvora Dev.
+  Self-review — cosmetics: no UI, colour, animation or layout change.
+  Self-review — usability: timing-sensitive regression no longer competes with the parallel gate phase.
+  Self-review — Turkish: no product strings changed; technical test records remain in English.
+  Self-review — correctness/security: RED/GREEN, focused regression and two consecutive Full 69/0; original 7 s threshold and every unrelated gate step unchanged.
 - 2026-11-07 — D30, executor ChatGPT via Talvora: added exactly the prescribed AgentContextOrderRegression fixture (RED "the card must come first, got: === STATUS...", then AGENT_CONTEXT_ORDER_GREEN); reordered the helper with ROADMAP fallback for UI/N, trimmed finished queue lines at the end; the 60,000-character brief keeps the card and marks trimmed STATUS. QualityGateRegression GREEN; C# build 0 warnings/errors; signed-in Full gate 69 checks, 0 errors, Hepsi geçti. Context7 /dotnet/docs and Microsoft Learn verified string[..^n] (C# from-end slicing). Exact-commit install, live agent-brief and GitHub CI follow commit. Gitea issue #9 mirror skipped: no authenticated comment tool via Talvora Dev.
   Self-review — cosmetics: no UI elements, layouts or style values changed.
   Self-review — usability: current card is shown first; finished queue items are omitted; UI/N cards can come from ROADMAP.

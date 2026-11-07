@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T09:36:45.259Z",
-  "scope": "D30: preserve the current card and newest log when trimming agent-brief context, using the C# from-end string range",
+  "verifiedAtUtc": "2026-11-07T09:46:43.643Z",
+  "scope": "D31: run the existing timing-sensitive PowerShell regression as the last serial quality-gate test without relaxing its seven-second limit",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-07 D30: string[..^n] returns a substring ending n characters before its original end, so the range safely trims only suffix content (query: \"C# .NET 10 System.String range index from-end expression text[..^n]: takes substring with end exclusive, used to trim last n characters from string, syntax string[..^fromContext], and string slicing behavior.\")."
+      "libraryId": "/microsoftdocs/powershell-docs",
+      "verified": "2026-11-07 D31: PowerShell 7 supports a literal @() array with comma-separated filename strings in declaration order, so adding one final entry to $serialRegressions keeps the preceding three names and ordering unchanged (query: \"PowerShell 7 array literal @('one.ps1','two.ps1') containing script file name strings preserving their sequence\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/csharp/tutorials/ranges-indexes"
+    "https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays"
   ]
 }
