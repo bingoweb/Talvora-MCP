@@ -125,7 +125,7 @@ public static partial class MobileTools
     }
 
     private static string? ResolveFlutter() =>
-        CommandResolver.Resolve(
+        SignedInUserToolchain.Resolve(
             ["flutter.bat", "flutter.cmd", "flutter"],
             [@"C:\tools\flutter\bin\flutter.bat"]);
 
@@ -148,7 +148,7 @@ public static partial class MobileTools
 
         candidates.Add(@"C:\tools\flutter\bin\dart.bat");
 
-        return CommandResolver.Resolve(
+        return SignedInUserToolchain.Resolve(
             ["dart.exe", "dart.bat", "dart.cmd", "dart"],
             candidates);
     }

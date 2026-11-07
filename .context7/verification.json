@@ -1,16 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T23:34:09Z",
-  "scope": "UR1: dotnet, Node, JVM and Go tools resolve and run in the signed-in user's environment block and as that user (SignedInUserToolchain)",
+  "verifiedAtUtc": "2026-11-07T23:38:33Z",
+  "scope": "UR2: Flutter, Dart and Android tools resolve and run in the signed-in user's environment (ANDROID_HOME, ANDROID_SDK_ROOT, LOCALAPPDATA) and as that user",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 UR1: Context7 /dotnet/docs returns nothing for CreateEnvironmentBlock or EnvironmentVariableTarget (gap; Microsoft Learn used). CreateEnvironmentBlock retrieves the environment variables for the specified user, the block a process started as that user receives, so commands are resolved against that user's PATH, JAVA_HOME, DOTNET_ROOT, APPDATA, LOCALAPPDATA and USERPROFILE. EnvironmentVariableTarget.Machine is stored in HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Session Manager\\Environment, the same for every account, so the machine-target reads stay. Query: CreateEnvironmentBlock user environment; EnvironmentVariableTarget Machine."
+      "libraryId": "/websites/developer_android_develop",
+      "verified": "2026-11-08 UR2: Context7 returns no passage for ANDROID_HOME (gap; the Android developer page used). ANDROID_HOME is the variable many tools read to find the Android SDK installation directory, so Talvora reads it, ANDROID_SDK_ROOT and the default %LOCALAPPDATA%\\Android\\Sdk from the signed-in user's environment instead of the service account's; the machine-target reads stay because machine values are the same for every account. Query: ANDROID_HOME environment variable SDK location."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/windows/win32/api/userenv/nf-userenv-createenvironmentblock",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.environmentvariabletarget",
-    "https://learn.microsoft.com/en-us/dotnet/api/system.environment.getenvironmentvariable"
+    "https://developer.android.com/tools/variables",
+    "https://learn.microsoft.com/en-us/windows/win32/api/userenv/nf-userenv-createenvironmentblock"
   ]
 }

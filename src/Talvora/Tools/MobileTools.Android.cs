@@ -201,7 +201,7 @@ public static partial class MobileTools
                 return Path.GetFullPath(machineValue);
             }
 
-            var processValue = Environment.GetEnvironmentVariable(variable);
+            var processValue = SignedInUserToolchain.Variable(variable);
             if (!string.IsNullOrWhiteSpace(processValue) &&
                 Directory.Exists(processValue))
             {
@@ -214,7 +214,7 @@ public static partial class MobileTools
             @"C:\Android\android-sdk",
         };
 
-        var localAppData = Environment.GetFolderPath(
+        var localAppData = SignedInUserToolchain.Folder(
             Environment.SpecialFolder.LocalApplicationData);
         if (!string.IsNullOrWhiteSpace(localAppData))
         {

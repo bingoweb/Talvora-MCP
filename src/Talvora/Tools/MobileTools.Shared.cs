@@ -27,7 +27,7 @@ public static partial class MobileTools
         int timeoutSeconds,
         CancellationToken cancellationToken)
     {
-        var result = await ProcessRunner.RunAsync(
+        var result = await SignedInUserToolchain.RunAsync(
             executable,
             NormalizeWorkingDirectory(workingDirectory),
             arguments,
@@ -81,7 +81,7 @@ public static partial class MobileTools
     {
         if (!string.IsNullOrWhiteSpace(explicitExecutable))
         {
-            var resolvedExplicit = CommandResolver.Resolve([explicitExecutable]);
+            var resolvedExplicit = SignedInUserToolchain.Resolve([explicitExecutable]);
             if (resolvedExplicit is not null)
             {
                 return resolvedExplicit;
@@ -98,7 +98,7 @@ public static partial class MobileTools
                 full);
         }
 
-        return CommandResolver.Resolve(commandNames, candidates)
+        return SignedInUserToolchain.Resolve(commandNames, candidates)
             ?? throw new FileNotFoundException(
                 $"{displayName} executable was not found.");
     }

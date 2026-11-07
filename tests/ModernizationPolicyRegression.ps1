@@ -318,4 +318,5 @@ function Assert-SignedInUserToolchain([string]$Card, [string[]]$Files) {
 }
 Assert-SignedInUserToolchain 'UR1' @('src/Talvora/Tools/BuildRunnerTools.cs', 'src/Talvora/Tools/BuildRunnerTools.Shared.cs', 'src/Talvora/Tools/BuildRunnerTools.Dotnet.cs', 'src/Talvora/Tools/BuildRunnerTools.Node.cs', 'src/Talvora/Tools/BuildRunnerTools.JavaScriptExtras.cs', 'src/Talvora/Tools/BuildRunnerTools.Jvm.cs', 'src/Talvora/Tools/BuildRunnerTools.GoRust.cs')
 Assert-Contains 'src/Talvora/Tools/SignedInUserToolchain.cs' 'GetActiveInteractiveUser\(\)\.Environment' 'UR1: the toolchain helper must resolve in the signed-in user''s environment.'
+Assert-SignedInUserToolchain 'UR2' @('src/Talvora/Tools/MobileTools.cs', 'src/Talvora/Tools/MobileTools.Shared.cs', 'src/Talvora/Tools/MobileTools.Android.cs', 'src/Talvora/Tools/MobileTools.Flutter.cs')
 Write-Host 'MODERNIZATION_POLICY_GREEN'
