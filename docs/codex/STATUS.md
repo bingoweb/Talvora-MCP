@@ -39,6 +39,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D49 — Plain Turkish service names, also for older registries (audit 42; after D46)
 - [ ] D47 — Plain Turkish for the remaining Control Center texts (audit 42; setup texts per the user's decision; table and test in docs/codex/reference/d47)
 - [ ] [C] WL3 — Çalışma günlüğü and Olaylar polish (Claude; audit 42, user: later; after D45 and D50)
+- [ ] [C] UV1 — Python through uv: talvora_uv_run replaces the pip and venv tools (Claude, one-off, user 2026-11-08)
+- [ ] [C] RS1 — Rust tools run as the signed-in user (Claude, one-off)
+- [ ] [C] RS2 — The service account's own Rust toolchain is removed (Claude, one-off; after RS1)
 
 ## User queue
 
@@ -53,6 +56,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — Claude: Rust/uv research (user request). Talvora stays .NET: Roslyn (semantic C# edits) and the WPF Control Center cannot move, the C# and Rust MCP SDKs are both Tier 1, and the service mostly launches other programs; measured service 145 MB, tray 270 MB, 363 MB per installed version. Found: the Python tools offer pip and venv but no uv and run as LocalSystem against the machine Python; the Rust tools run as LocalSystem with the service account's own Chocolatey rustup (cargo 1.99.0; the user has 1.99.1). User: "Evet, yaz", then "bu arada tüm bu modernizasyonu bu defalık sen yap": UV1, RS1 and RS2 are Claude's one-off items.
 
 - 2026-11-08 — Claude, audit 42 decisions (user): the look fixes and the worklog list's outcome mark are Claude's [C] WL3, queued for later ("Sıraya koy, sonra yap"); the setup wizard keeps OpenAI's names in parentheses inside Turkish sentences ("Adlar kalsın, cümleler Türkçe"), so D47 gained 38 setup rows (113 in all; the reference test and table were rebuilt and re-verified in the scratch clone: red on the current source, green after it, tray build 0 warnings, related tests green).
 

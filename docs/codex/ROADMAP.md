@@ -733,3 +733,31 @@ Step 3. Two existing tests pin texts this card changes; update them in the same 
 4. `EventsView.xaml`: while the raw log is open the toggle reads "Ham günlüğü gizle" (content and `AutomationProperties.Name`).
 5. `StepperCard.xaml` setup labels: "Talvora Dev tünel kimliği (tunnel ID)", "Talvora Admin tünel kimliği (tunnel ID)", "OpenAI Admin API anahtarı (Admin API key)" (label and automation name; the placeholder "Admin API key" stays).
 6. `ControlCenterSmoke.D44.cs`: after the click, assert that the Olaylar list holds the recovery event the smoke applied (feed it through the snapshot the Olaylar page reads); the light-theme capture of audit 42 showed an empty list.
+
+## Toolchain modernization (user request 2026-11-08; Claude, one-off)
+
+User: "Talvora'da rust, uv modernizasyonu yapmamız anlamlı olur mu araştır", then "Evet, yaz" and "bu arada tüm bu modernizasyonu bu defalık sen yap". Research result: Talvora stays .NET (Roslyn and WPF cannot move, the C# and Rust MCP SDKs are both Tier 1, the work is process-bound); Rust is for new standalone components; the toolchain tools follow the uv/cargo rule. Claude implements these three items under the agent rules; the agent skips them (`[C]`).
+
+### UV1 — Python through uv: `talvora_uv_run` replaces the pip and venv tools (Claude)
+
+**Why:** user rule 2026-11-01 (uv for everything Python, never pip or venv). Talvora offered `talvora_pip_install`, `talvora_pip_run` and `talvora_python_venv_create` and no uv tool. They run as LocalSystem against the machine-wide `C:\Python315`, so a pip install lands in the system Python and a venv in a user repository is owned by SYSTEM, and they cannot see the user's uv (0.13.7, WinGet, user profile).
+
+**Do:** a new `talvora_uv_run` (Dev only; destructive, open-world) is `talvora_user_run` with the executable `uv`: the signed-in user, the same bounds and redaction. The three tools go with their guides, titles, metadata entries and `TalvoraPythonVenvResponse`. Counts: full 251→249, Dev 214→212, reviewed 249, open-world 85→83, destructive 100→98; README and ARCHITECTURE follow. Tests: `NativeInstallerSourceRegression.ps1` asserts the uv tool and its description; the count strings in `CodexCliIntegrationSourceRegression.ps1` and `FocusedMcpSurfaceSourceRegression.ps1`; the surface smoke asserts `talvora_uv_run` as Dev only; the runtime smoke runs `uv --version` through the tool when the signed-in user has uv (it replaces the pip and venv runs). `talvora_python_info` and `talvora_python_run` stay (the machine Python, as the service).
+
+**Acceptance:** red: `NativeInstallerSourceRegression.ps1` before the tool exists; signed-in Full `Hepsi geçti.`; install; the full installed smoke (it requires every manifest tool and runs uv) green; CI.
+
+### RS1 — Rust tools run as the signed-in user (Claude)
+
+**Why:** `talvora_cargo_run`, `talvora_rustc_run`, `talvora_rustup_run` and `talvora_rust_info` run as LocalSystem and resolve the service account's own rustup (`C:\WINDOWS\system32\config\systemprofile\.cargo\bin`, cargo 1.99.0), while the user builds with 1.99.1 from `%USERPROFILE%\.cargo\bin`: two toolchains, two crate caches, `target/` folders owned by SYSTEM.
+
+**Do:** `RunRustTool` runs through `InteractiveUserProcessRunner` as the active interactive user (a bare tool name resolves on that user's PATH; an explicit executable path stays allowed); `talvora_rust_info` resolves the tools with `where.exe` and reads their versions as that user; `ResolveRustTool` is removed. The installed smoke fails when `talvora_rust_info` reports a tool under the service account's profile.
+
+**Acceptance:** red: that smoke check against the installed 97344f7; signed-in Full `Hepsi geçti.`; install; installed smoke green; `talvora_rust_info` reports `%USERPROFILE%\.cargo\bin` and 1.99.1; CI.
+
+### RS2 — The service account's own Rust toolchain is removed (Claude; after RS1)
+
+**Why:** the Chocolatey package `rustup.install` 1.27.1 was installed as LocalSystem (`rustup-init -v -y`), which created `systemprofile\.cargo` and `systemprofile\.rustup` with a second toolchain; after RS1 nothing uses it.
+
+**Do (as LocalSystem through Talvora):** confirm that the service account's `rustup show home` is under `systemprofile`; run that rustup's `self uninstall -y` detached and wait for it; drop the package record with `choco uninstall rustup.install -y --skip-autouninstaller`. The machine PATH entry `C:\Users\tayla\.cargo\bin` (a user folder in the machine PATH; the user PATH already holds it) is a machine setting: the user removes it, Claude only reports it.
+
+**Acceptance:** `systemprofile\.cargo` and `systemprofile\.rustup` are gone; Chocolatey lists no `rustup.install`; `talvora_rust_info` and `cargo --version` as the user are unchanged (1.99.1).
