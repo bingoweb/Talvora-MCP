@@ -90,6 +90,7 @@ internal static partial class Program
         await AssertD35LatestBackoffAsync();
         await AssertD41CallerIdentityAsync();
         await AssertD46CiStillRunningAsync();
+        await AssertD60QuietWaitKeepsSessionAsync();
         await AssertTw2CallTraceAsync();
         await AssertD51ReportedExitCodesAsync();
         AssertD53DescriptionsAsWholeSentences();

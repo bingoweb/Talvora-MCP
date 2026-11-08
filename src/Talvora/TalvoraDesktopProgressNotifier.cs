@@ -39,6 +39,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
     private readonly Func<DesktopProgressMessage, CancellationToken, Task>? _deliveryOverride;
     private readonly TimeSpan _shutdownDrainTimeout;
     private readonly TimeSpan _forcedShutdownTimeout;
+    private readonly TimeSpan _sessionIdleInterval;
     private readonly Task _deliveryTask;
     private static DateTimeOffset _lastDropWarningUtc = DateTimeOffset.MinValue;
     private long _droppedProgressMessages;
@@ -80,7 +81,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
         Action<DesktopProgressMessage>? deliveryObserver,
         Func<DesktopProgressMessage, CancellationToken, Task>? deliveryOverride,
         TimeSpan? shutdownDrainTimeout = null,
-        TimeSpan? forcedShutdownTimeout = null)
+        TimeSpan? forcedShutdownTimeout = null,
+        TimeSpan? sessionIdleInterval = null)
     {
         _logger = logger;
         _deliveryObserver = deliveryObserver;
@@ -89,6 +91,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             shutdownDrainTimeout ?? ShutdownDrainTimeout;
         _forcedShutdownTimeout =
             forcedShutdownTimeout ?? ForcedShutdownTimeout;
+        _sessionIdleInterval = sessionIdleInterval ?? SessionIdleInterval;
         _progressDeliveryQueue =
             Channel.CreateBounded<DesktopProgressMessage>(
                 new BoundedChannelOptions(ProgressQueueCapacity)
@@ -137,7 +140,53 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
 
         if (!ShouldNotifyToolCall(toolName))
         {
-            return await operation(cancellationToken);
+            WorklogSession? quietSession = null;
+            try
+            {
+                lock (_worklogGate)
+                {
+                    quietSession = TryFindOpenSession(arguments, surfacePath, clientName);
+                    if (quietSession is not null)
+                    {
+                        quietSession.CloseDelay?.Cancel();
+                        quietSession.CloseDelay = null;
+                        quietSession.QuietCalls++;
+                        quietSession.LastActivityUtc = DateTimeOffset.UtcNow;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                quietSession = null;
+                _logger.LogDebug(ex, "Desktop worklog quiet-call start failed without affecting the tool operation.");
+            }
+            try
+            {
+                return await operation(cancellationToken);
+            }
+            finally
+            {
+                if (quietSession is not null)
+                {
+                    try
+                    {
+                        lock (_worklogGate)
+                        {
+                            quietSession.QuietCalls--;
+                            quietSession.LastActivityUtc = DateTimeOffset.UtcNow;
+                            if (quietSession.QuietCalls == 0 &&
+                                !_activeWorklog.Values.Any(item => ReferenceEquals(item.Session, quietSession)))
+                            {
+                                ScheduleClosure(quietSession);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "Desktop worklog quiet-call end failed without affecting the tool operation.");
+                    }
+                }
+            }
         }
 
         var canonicalToolName = NormalizeToolName(toolName);

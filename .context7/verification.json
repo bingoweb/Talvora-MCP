@@ -1,19 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T15:46:47Z",
-  "scope": "D46: mark a running GitHub CI check as a completed pending step rather than failed",
+  "verifiedAtUtc": "2026-11-08T16:21:45Z",
+  "scope": "D60: quiet read-only calls keep an existing worklog session open throughout long waits",
   "libraries": [
     {
-      "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "2026-11-08 D46: CallToolResult.StructuredContent is an optional System.Text.Json.JsonElement with the tool's structured payload. Context7 query: \"CallToolResult StructuredContent JsonElement property C# MCP return structured result\"."
-    },
-    {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 D46: JsonElement.TryGetInt32(out int) reads a JSON numeric exit code safely; a non-number, missing code or non-int value is not treated as CI pending. Context7 query: \"JsonElement.TryGetInt32 method parsing integer JSON element, TryGetProperty case insensitive manual JSON C#\"."
+      "verified": "2026-11-08 D60: cancelling a CancellationTokenSource used by Task.Delay ends the awaited delay with TaskCanceledException, which is an OperationCanceledException; CloseLaterAsync already catches OperationCanceledException. Context7 /dotnet/docs query: \"CancellationTokenSource Cancel Task.Delay TaskCanceledException OperationCanceledException\"."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.text.json.jsonelement.trygetint32",
-    "https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Protocol/CallToolResult.cs"
+    "https://learn.microsoft.com/dotnet/api/system.threading.tasks.task.delay"
   ]
 }

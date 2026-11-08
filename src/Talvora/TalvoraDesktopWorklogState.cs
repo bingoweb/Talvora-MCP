@@ -44,6 +44,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         public DesktopProgressKind Kind { get; set; } = DesktopProgressKind.Running;
         public TimeSpan Elapsed { get; set; }
         public bool Closed { get; set; }
+        public int QuietCalls { get; set; }
         public CancellationTokenSource? CloseDelay { get; set; }
         public PendingFailure? Failure { get; set; }
         public PendingCancellation? Cancellation { get; set; }
@@ -268,12 +269,17 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     {
         try
         {
-            await Task.Delay(SessionIdleInterval, source.Token);
+            await Task.Delay(_sessionIdleInterval, source.Token);
             lock (_worklogGate)
             {
                 if (!ReferenceEquals(session.CloseDelay, source) ||
                     _activeWorklog.Values.Any(item => ReferenceEquals(item.Session, session)))
                 {
+                    return;
+                }
+                if (session.QuietCalls > 0)
+                {
+                    session.CloseDelay = null;
                     return;
                 }
                 session.Closed = true;
@@ -295,9 +301,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         IDictionary<string, JsonElement>? arguments, string? surfacePath,
         string? clientName, string? projectOverride)
     {
-        var (projectRoot, projectName) = ResolveProject(arguments, projectOverride);
-        var actor = ResolveActor(surfacePath, clientName);
-        var key = string.Concat(projectRoot ?? "global", "\u0000", actor);
+        var (key, actor, projectName) = ResolveSessionIdentity(
+            arguments, surfacePath, clientName, projectOverride);
         if (!_sessions.TryGetValue(key, out var session))
         {
             var id = Convert.ToHexString(
@@ -306,8 +311,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             _sessions[key] = session;
         }
         else if (session.Closed ||
-                 (!_activeWorklog.Values.Any(item => ReferenceEquals(item.Session, session)) &&
-                  DateTimeOffset.UtcNow - session.LastActivityUtc > SessionIdleInterval))
+                 (session.QuietCalls == 0 &&
+                  !_activeWorklog.Values.Any(item => ReferenceEquals(item.Session, session)) &&
+                  DateTimeOffset.UtcNow - session.LastActivityUtc > _sessionIdleInterval))
         {
             session.CloseDelay?.Cancel();
             session.CloseDelay = null;
@@ -328,6 +334,23 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             session.LatestCodeEvidence = null;
         }
         return session;
+    }
+
+    // Quiet reads can keep an existing session alive, but must never create a new one.
+    private WorklogSession? TryFindOpenSession(
+        IDictionary<string, JsonElement>? arguments, string? surfacePath, string? clientName)
+    {
+        var (key, _, _) = ResolveSessionIdentity(arguments, surfacePath, clientName, null);
+        return _sessions.TryGetValue(key, out var session) && !session.Closed ? session : null;
+    }
+
+    private static (string Key, string Actor, string? ProjectName) ResolveSessionIdentity(
+        IDictionary<string, JsonElement>? arguments, string? surfacePath,
+        string? clientName, string? projectOverride)
+    {
+        var (projectRoot, projectName) = ResolveProject(arguments, projectOverride);
+        var actor = ResolveActor(surfacePath, clientName);
+        return (string.Concat(projectRoot ?? "global", "\u0000", actor), actor, projectName);
     }
 
     /// <summary>talvora_worklog_note: set the session's task line and show it at once if a card is up.</summary>
