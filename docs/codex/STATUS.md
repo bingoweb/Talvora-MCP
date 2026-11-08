@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-11-08-45` = the audit 45 commit. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-11-08-46` = the audit 46 commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -32,17 +32,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [x] D59 — installed d90bb6f; forced-race deploy and installed smokes green; CI 42487516284 success
-- [x] TW1 — installed 01dcf9a; both installed smokes green; CI 42488833981 success
-- [x] TW2 — installed 0c9e222; whoami trace and both installed smokes green; CI 42490285622 success
-- [x] D55 — installed 86f21c9; both installed smokes green; CI 42491730064 success
-- [~] D56 — installed faf7e96; identity and both installed smokes green; CI 42493293311 success; live pending (Claude): service-profile cache audit after real use
 - [~] D45 — installed 0e8ec9c; Control Center and both installed MCP smokes green; CI 42494495085 success; visual check pending (Claude)
-- [~] D50 — installed 3ca9c72; Control Center smoke green; CI 42495652858 success; live check pending (Claude): two new sessions remain in history
 - [~] D46 — code and gates green; live pending: install, installed smoke and CI; Claude checks real post-push pending-CI worklog wording
-- [ ] D48 — A vault note belongs to the vault's owner (audit 42)
-- [ ] D49 — Plain Turkish service names, also for older registries (audit 42; after D46)
-- [ ] D47 — Plain Turkish for the remaining Control Center texts (audit 42; setup texts per the user's decision; table and test in docs/codex/reference/d47)
+- [ ] D60 — A wait keeps its Çalışma günlüğü session (audit 46; first)
+- [ ] D61 — A session that never closed still reaches Çalışma günlüğü (audit 46; after D60)
 - [ ] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
 - [ ] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (after PK1)
 - [ ] RL1 — Talvora's version is 0.0.x.x and comes from the release tag (user request 2026-11-08)
@@ -50,6 +43,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] RL3 — Talvora is in Apps & features and can be uninstalled (user request 2026-11-08)
 - [ ] RL4 — A v0.0.x.x tag publishes the release (user decision 2026-11-08)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
+- [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
+- [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
+- [ ] [C] D47 — Plain Turkish for the remaining Control Center texts (Claude since audit 46; setup texts per the user's decision; table and test in docs/codex/reference/d47)
 - [ ] [C] WL3 — Çalışma günlüğü and Olaylar polish (Claude; audit 42, user: later; after D45 and D50; audit 43 adds items 7–8)
 
 ## User queue
@@ -65,6 +61,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — Claude, audit 46 (tag `audit/2026-11-08-46`): range `audit/2026-11-08-45..7aa5165`, eight cards by ChatGPT (D59, TW1, TW2, D55, D56, D45, D50, D46). All follow their cards; commit texts and self-reviews fine; CI success on all eight. D59: the forced-race deploy at 17:00 logs "Service did not accept STOP", then `Install succeeded` with no rollback and no tray recovery. D45, D50 and D46 match their literal blocks; D46's card still named `TryDescribeFailure(result)` (35115d8 added `canonicalToolName`) and the agent kept the current call: correct, Claude's look-ahead miss. D55/D56: the pipes allow only LocalSystem and the user's SID, the service never reads `child.pid` or `exit.code`, the relay deletes the request on read. Claude's checks: signed-in Full gate at 3ca9c72 in a clean clone 70/0 `Hepsi geçti.` (ControlCenter 24 s); `--metadata-policy-only` against the installed 3ca9c72 green (the full installed smoke was stopped so as not to meet the D46 deploy; D50 changed no service code and the agent's full smoke on 0e8ec9c was green); D56 live: no developer cache in the service profile since its install (only the Gitea proxy's Caddy config changed), done; D50 live: one project and actor kept two sessions (15:29:03Z and 15:38:19Z), done. TW2 trace 14:33–15:39Z (293 ChatGPT calls, D55 to D50): no loop; a card takes about 15 min and 70 calls; every wait is one `tail_text` call (1,076 s of 3,780 s); no secret in `cmd`. New: D60 (a read-only call such as a 100-s wait keeps its session: the D50 session closed mid-wait at 15:34:27Z) and D61 (a session open when the tray or the service stops still reaches the history: D50's commit, push, CI check and deploy, 15:35:27–15:37:31Z, were lost). User decision: D47, D48 and D49 are Claude's `[C]` items after the agent's queue (Claude built them at audit 42); D46 was already done. AGENTS.md: B7 uses the TW1 wait only; rule 10a: only a `[C]` item Claude has in progress locks its files. D45's visual check is still Claude's. Removed: finished queue lines (D59, TW1, TW2, D55, D56, D50), their cards, the TW section, Log entries before audit 45.
 
 - 2026-11-08 — D46, executor ChatGPT: Get-CiStatus.ps1 exit 2 now closes as Completed "GitHub denetimi sürüyor"; 0 succeeds, 1 fails with accurate titles. RED: exit 2 wrongly Failed; GREEN: D46_CI_STILL_RUNNING_GREEN and DESKTOP_PROGRESS_BEHAVIOR_GREEN. Changed 28/0, Full 70/0: Hepsi geçti. Context7 /modelcontextprotocol/csharp-sdk CallToolResult.StructuredContent and /dotnet/docs JsonElement.TryGetInt32; official API references. Install, installed smoke, CI and Claude real post-push check pending. Gitea #9 comment 224.
   Self-review — no layout or unrelated Turkish copy; CI pending never paints a failure, real failure remains Failed, existing script exit codes and classifier unchanged.
@@ -91,20 +89,3 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
   Self-review — no visual or Turkish copy changes; service ACL, forced kill, recovery policy and rollback kept as written.
 
 - 2026-11-08 — Claude, audit 45 (tag `audit/2026-11-08-45`): range `audit/2026-11-08-44..5afa33a` (D53 and D54 by Codex, D58 by ChatGPT, the P-52 stop, Claude's README and loop-check docs) plus P-53. D53 follows the card (the article fix runs after "arbitrary" → "caller-supplied"; descriptions are normalized once per tool name, like the schema cache). D54 follows it step by step (`RunCliAsync` runs as the signed-in user, `scope` defaults to the user, JAVA_HOME and ANDROID_HOME come from the user's environment, the policy test takes every file by pattern). D58 follows it (fixtures replace `_events`, no live refresh in smoke mode, normal use unchanged). Commit texts and self-reviews fine. P-53 decided: a wait call through Talvora kept the old service from stopping within 8 s, the installer killed it and the tray's automatic recovery started it again (B7 was Claude's miss). Claude installed 5afa33a with no call running (stopped in under 1 s, `Install succeeded` 16:24:57); `--metadata-policy-only` and the full installed smoke green; CI 42481964947 and 42482990847 success: D54 and D58 done. Full gate as the user with D57 70/0 `Hepsi geçti.` (ControlCenter 16 s). D57 shipped by Claude (6c8c977: README, both tests red first and green after, normalized SHA-256 matches the reference, old `control-center*.png` removed; CI 42485400239 success). New: D59 first. AGENTS.md: B7 says how to wait for an install, the Deploy row too, D4 removed (D58 installed). RL3 stops the tray before the service. Removed: finished queue lines (D53, D54, D57, D58), cards D53, D54, D57, D58, Log entries before audit 44, `docs/codex/reference/d57`. The agent's uncommitted STATUS lines are kept.
-
-- 2026-11-08 — D58 live follow-up: canonical installer for 5afa33a launched but the scheduled task returned 1; healthz still serves 4d8bdfe, so the new runtime was not installed. Installed smokes were not run against the stale service. Existing P-53 remains the service-install blocker; CI 42482990847 was in_progress at its single check.
-
-- 2026-11-08 — D58, executor ChatGPT: UI5 smoke fixtures now replace EventsView's stored events, live refresh is skipped only in smoke mode, and the existing snapshot is awaited for deterministic testing. RED: UI5 seven-day empty state was not rendered. Built tray smoke 3/3; Changed 17/0; Full 70/0: Hepsi geçti. Context7 /dotnet/docs-desktop, Microsoft IsVisible. Install, installed smokes and CI pending. D54 P-53 service-stop blocker remains; prior D54 proposal/STATUS changes preserved.
-  Self-review — cosmetics and raw-log timer unchanged; normal events refresh unchanged; no new user-facing text. Mirrored to Gitea issue #9 comment 216.
-
-- 2026-11-08 — D54 live follow-up: installer for c671abb could not stop the old service and rolled back to 4d8bdfe, verified by healthz; P-53 records the failure. CI 42481964947 was in progress at the single check; installed smokes pending.
-
-- 2026-11-08 — D54, executor Codex: command lookup defaults to the signed-in user, Java/Android prefer that environment, Python guidance uses uv and Rust shares the runner; dynamic source and uv smoke checks added. RED: installed cargo lookup and JAVA_HOME source check; modernization green, Changed 17/0, Full 70/0: Hepsi geçti. Context7 /dotnet/docs environment target; install and CI pending. Queue additions applied. Gitea mirror skipped: sending a comment was not explicitly authorized.
-  Self-review — cosmetics: no screen change; usability: user tools and settings are found consistently; Turkish: no Turkish copy changed; correctness/security: service scope retained explicitly and checks cover both toolchain paths.
-
-- 2026-11-08 — P-52, executor Codex: D57's two tests red before the reference copy and green after; normalized hash matched. Changed 13/0; Full stopped at unrelated UI5 empty-state smoke (69 checks, one failure). D57 partial work reverted; decision pending. D53 installed 4d8bdfe, first metadata and full installed smoke green, CI 42479997608 success. Gitea mirror skipped: sending a comment was not explicitly authorized.
-
-- 2026-11-08 — D53, executor Codex: normalize tool descriptions once, fixing articles and semicolon endings; red on talvora_dotnet_run, Notification green. Changed 28/0 and Full 70/0: Hepsi geçti. Context7 /dotnet/docs GetOrAdd and RegexOptions.Compiled; installed verification and CI pending. P-51 documents the interrupted initial Full gate. Queue additions applied. Gitea mirror skipped: sending a comment was not explicitly authorized.
-  Self-review — cosmetics: no screen change; usability: descriptions are correct on the first list; Turkish: no user-facing Turkish changed; correctness/security: idempotence tested across tools and metadata/schema behavior preserved.
-
-- 2026-11-08 — Claude, audit 44 (tag `audit/2026-11-08-44`): range `audit/2026-11-08-43..877662c` (D52 by Codex, U15 closed by Claude). D52 follows the card: `LiteralProcessStart` with the specified order (start info, clear, caller variables, wrapper variables last), `ProcessRunner` and the runner script use it, the literal block is exact, both red tests exist, `CodexCliIntegrationSourceRegression.ps1` follows the moved encoding lines (logged as a supporting change), Context7 records the gap and the three vendor pages. P-50 decided: the metadata stop was D53's first-list defect, not D52's; --metadata-policy-only against the installed 877662c green (TALVORA MCP METADATA POLICY LIVE GREEN); the full installed smoke green (TALVORA MCP SMOKE GREEN); signed-in Full gate 70/0 Hepsi geçti.; CI 42476029267 success; live talvora_npm_run ["--version","a&echo","TALVORA_BATCH_PROBE"] → stdout `12.2.1` only. D53's acceptance now names the first metadata run after its install. No screen changed in the range; the design improvements stay in WL3 (eight items). Next: D53.

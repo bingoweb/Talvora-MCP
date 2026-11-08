@@ -30,99 +30,50 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-08 (45) · range `audit/2026-11-08-44..5afa33a` plus P-53 · result: D59
+### Audit 2026-11-08 (46) · range `audit/2026-11-08-45..7aa5165` · result: D60, D61; D47–D49 to Claude
 
-D53, D54 and D58 follow their cards; Claude installed 5afa33a and verified D54 and D58 live. P-53's cause is the order in which the installer stops things (D59). Claude shipped D57 (`[C]`).
+ChatGPT's eight cards (D59, TW1, TW2, D55, D56, D45, D50, D46) follow their cards, and the TW2 trace shows no loop. D50 made two worklog faults visible: a long read-only wait closes the session (D60) and a session that is open at a deploy is lost (D61). D47, D48 and D49 are Claude's `[C]` items now (user decision); they wait below with WL3.
 
-### D59 — The tray's automatic recovery can no longer undo an install
+### D60 — A wait keeps its Çalışma günlüğü session
 
-**Why:** P-53: two installs rolled back on 2026-11-08 (c671abb at 15:45, 5afa33a at 16:03). A Talvora call was still running inside the service when the installer sent STOP, so the service did not stop within the installer's 8 seconds (`InstallerEngine.Service.cs:135`); the installer killed it (install.log 15:45:46 "terminating PID=7420", System event 7034 at 15:45:46.19). The tray was still running, because `InstallAsync` stops it only after the service (`InstallerEngine.Flow.cs:115–116`), and its automatic recovery (`TrayApplicationContext.MaintainTalvoraConnectionAsync` → `ControlCenterLifecycleService.StartAsync` → `sc start Talvora`; the signed-in user may start the service) started the old service again (Application "Service started successfully." 15:45:47.71, tray.log "Automatic Talvora recovery succeeded." 15:45:50.78). The installer's 30-second wait then never saw STOPPED and rolled back. TOKEN ECONOMY B7 no longer waits through Talvora during an install, but any slow stop (a user's long call, a busy service) still loses this race.
+**Why:** audit 46 (data truth). Read-only tools (`ShouldNotifyToolCall` returns false for `tail_text`, `read_source`, `search_text`, `http_request`, `git_status`, the `*_status`, `*_info`, `*_list` and `*_get` tools and the rest of its list) neither begin nor end a worklog step, so they never touch the session either. While an agent waits for its detached Full gate with TOKEN ECONOMY B7's 100-second `talvora_tail_text`, the 90-second idle close (`SessionIdleInterval`, `CloseLaterAsync`) closes the session in the middle of the wait, and the next tracked call opens a new one. Live on 3ca9c72 (TW2 trace and the history): the D50 session (start 15:29:03Z) closed at 15:34:27Z, exactly 90 s after the Full gate's start, while a 100-second wait ran from 15:33:01Z; the next session began at 15:35:27Z. Since D50 keeps every session, one card now shows as several pieces. A call the agent makes is work in progress even when it is not a step.
 
-**Files:** `src/Talvora.Installer/InstallerEngine.Flow.cs`, `src/Talvora.Installer/InstallerEngine.Service.cs`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files** (run them right after the change): `NativeInstallerSourceRegression.ps1` (`InstallerCanReplaceNonStoppableService` and `InstallerUpgradeNeverDeletesCanonicalService`: `serviceSwitchStarted = true`, `StopServiceForUpgradeAsync(ServiceName`, `"config"`, `"binPath="`, `Kill(entireProcessTree: false)` and no `"delete"` in the upgrade stop section all stay), `InstallerRollbackStateRegression.ps1` (Flow: `CaptureInstallerUserStateAsync` before `RegisterTrayStartup`, `RestoreInstallerUserStateAsync` after the rollback line).
+**Files:** `src/Talvora/TalvoraDesktopProgressNotifier.cs` (`RunToolCallAsync`, the internal constructor), `src/Talvora/TalvoraDesktopWorklogState.cs`, `tests/Talvora.Notification.Regression/Program.D60.cs` (new) and `Program.cs` (its call), `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `tests/ModernizationPolicyRegression.ps1` (keep `ShouldNotifyToolCall`, its `"read_source" or` line, `GetOrCreateSession`, `_activeWorklog`, `TryBeginWorklog`, `ShutdownDrainTimeout` and its other pinned texts); run it right after the change.
 
 **Do (method):**
-1. Red first, in `NativeInstallerSourceRegression.ps1`, two new keys in the result object: `InstallerStopsTrayBeforeService`, true only when in `InstallerEngine.Flow.cs` the index of `await StopTrayProcessesAsync(cancellationToken);` is greater than the index of `serviceSwitchStarted = true;` and smaller than the index of `await StopServiceForUpgradeAsync(ServiceName, cancellationToken);`; and `InstallerNamesRestartedService`, true only when `InstallerEngine.Service.cs` contains `was started again by another process during the upgrade`. Both are red today.
-2. `InstallAsync`: move `await StopTrayProcessesAsync(cancellationToken);` to directly after `serviceSwitchStarted = true;`, so the tray is gone before the service is asked to stop. Nothing else in the order changes: the rollback already relaunches the previous tray (install.log 15:46:18 "Tray launch requested in session 1"), and a successful install launches the new one at 82 %.
-3. `StopServiceForUpgradeAsync`: in both wait loops, when a `queryex` result does not contain `STOPPED`, read its PID with `ParseServiceProcessId`; when that PID is above 0 and differs from the `processId` read at the start, throw at once `new InvalidOperationException($"Windows service was started again by another process during the upgrade (old PID {processId}, new PID {currentProcessId}); registration preserved for rollback. Service={serviceName}")`. The `finally` block stays (it restores the recovery policy).
+1. Red first in `Program.D60.cs`, called from `Main` (full run) on its own line directly below `await AssertD46CiStillRunningAsync();`. Build the notifier the way the D46 test does (a delivery observer that collects every message) with the new `sessionIdleInterval: TimeSpan.FromMilliseconds(400)`. One project and one actor for every call: (a) a tracked call, then a quiet call (`talvora_tail_text`) whose operation waits 1,200 ms, then a tracked call: no message has `SessionClosed` before the second tracked call ends, and the session's `Totals.Steps` reaches 2; (b) with no further call, exactly one `SessionClosed` message arrives within 2 s; (c) a quiet call while no session of that project and actor exists sends no message. Messages start with `D60:`. Red: first CS1739 for the missing parameter; add only the parameter (step 2) and (a) must fail before step 4.
+2. The idle interval becomes injectable: `SessionIdleInterval` (90 s) stays the default; the internal constructor gains a last optional parameter `TimeSpan? sessionIdleInterval = null`, kept in a readonly field that `CloseLaterAsync` and `GetOrCreateSession` use instead of the static. Production stays 90 s.
+3. One private helper computes a session's key (`ResolveProject` plus `ResolveActor`, exactly as `GetOrCreateSession` does today); `GetOrCreateSession` and a new `TryFindOpenSession(arguments, surfacePath, clientName)` both use it. `TryFindOpenSession` returns the session only when it exists and is not `Closed`; it never creates one.
+4. `WorklogSession` gains `int QuietCalls`. In `RunToolCallAsync`, the early return for `!ShouldNotifyToolCall(toolName)` becomes a quiet run: under `_worklogGate`, when `TryFindOpenSession` finds a session, cancel and clear its `CloseDelay`, increment `QuietCalls` and set `LastActivityUtc`; run the operation; in `finally`, under `_worklogGate`, decrement `QuietCalls`, set `LastActivityUtc`, and when no `_activeWorklog` item belongs to the session and `QuietCalls` is 0, call `ScheduleClosure(session)`. The bookkeeping sits in try/catch with a debug log, like `TryBeginWorklog`, so it never changes a tool result. The `worklog_note` branch above it stays as it is.
+5. `CloseLaterAsync` returns without closing while `session.QuietCalls > 0`; the idle branch of `GetOrCreateSession` (the one that starts a new session) also requires `QuietCalls == 0`.
 
-**Don't:** change the 8- and 30-second windows, the forced kill (its comment explains `entireProcessTree: false`), the tray's automatic recovery, the service ACL, `CreateServiceAsync` or the rollback.
+**Don't:** create a session, step, title, message or desktop card for a quiet call; change `ShouldNotifyToolCall`'s list, the 90 seconds, the session id, the timeline or the tray.
 
-**Context7:** `/dotnet/docs`, query "Windows service stop ServiceController status" (it returns the Windows service pages). Vendor sources: `https://learn.microsoft.com/windows/win32/services/service-status-transitions`, `https://learn.microsoft.com/dotnet/api/system.diagnostics.process.kill`.
+**Context7:** `/dotnet/docs`, query "CancellationTokenSource Cancel Task.Delay TaskCanceledException"; record the one fact used (a cancelled `Task.Delay` ends with `TaskCanceledException`, which `CloseLaterAsync` already catches as `OperationCanceledException`).
 
-**Acceptance:** red first; the pinned tests; Changed and Full `Hepsi geçti.`; deploy with the race forced (this card's Acceptance wins over TOKEN ECONOMY B7): right after the `Deploy-Windows-Installer.ps1` call returns, start one `talvora_user_run` of `C:\Program Files\PowerShell\7\pwsh.exe` with `["-NoProfile","-Command","Start-Sleep -Seconds 30"]` (`timeoutSeconds: 40`; it is expected to come back as an error when the old service stops), then read `/healthz` with short calls only. The install must succeed: `/healthz` serves HEAD; `C:\ProgramData\Talvora\Installer\install.log` shows `Service did not accept STOP` and then `Install succeeded. Commit=<HEAD>` with no rollback line; `%LOCALAPPDATA%\Talvora\Tray\tray.log` has no `Automatic Talvora recovery` line between them. If install.log has no `Service did not accept STOP` line, the sleep call did not overlap the stop: deploy once more the same way. Then the installed smokes; CI.
+**Acceptance:** red first; the pinned test; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI. Then `[~] live check pending (Claude): a card with a 100-second wait stays one session in Çalışma günlüğü`.
 
-### Audit 2026-11-08 (43, deep, the uv/Rust/user-toolchain modernization) · range `audit/2026-11-08-42..154414b` plus every subsystem the move touches · result: D52–D56, [C] UR6 done, WL3 items 7–8
+### D61 — A session that never closed still reaches Çalışma günlüğü
 
-The user asked for a deep bug check of the modernization ("bu geçiş ve modernizasyon sırasında oluşan bir bug, hata ya da eksik kalan bir şey var mı"): UV1, RS1, RS2, D51, UR1–UR5. Claude read every changed line, compared `InteractiveUserProcessRunner` with `ProcessRunner`, traced every program launch that still runs as LocalSystem and tried each suspicion on the installed 00a9616.
+**Why:** audit 46 (data truth). The tray writes a session into the history only when the service sends its close, 90 s after the last step. A session that is still open when the tray or the service stops never gets that close: since D59 an install stops the tray first (its shutdown event) and then the service, so every deploy loses the end of the card that ran it. Live on 3ca9c72: D50's commit, push, CI check and deploy (15:35:27Z–15:37:31Z) are missing from the history. The tray already receives every step of the open session (the worklog card's messages); it only has to keep the newest one and write it when the session can no longer close.
 
-Correct and confirmed: `SignedInUserToolchain` keeps no token handle (the user context is a copied environment dictionary); D51 covers every tool whose top-level `exitCode` belongs to another process (the Codex and Claude job records keep theirs nested); the env tools already reach the signed-in user (`target=user`); nothing has written into the service profile since the 00a9616 install (newest writes 2026-11-07 22:13–22:47 UTC, install 23:57 UTC) and none of UR5's folders came back; the user is in `docker-users` (Docker Desktop was not running, so the engine itself could not be checked); 7676 missing from the TCP listener table is this Windows build (netstat lists 4 listeners in all), not Talvora; no other project's AGENTS.md names a removed pip tool; the Control Center's Çalışma günlüğü shows the moved tools with correct Turkish titles. Measured cost: each program that runs as the user now starts PowerShell first (≈0.4 s against ≈0.02 s direct), so an `*_info` call is 1–2 s slower; accepted.
+**Files:** `src/Talvora.Tray/WorklogOpenSessions.cs` (new), `src/Talvora.Tray/DesktopProgressNotificationPresenter.cs` (`PublishCore`, `Dispose`), `src/Talvora.Tray/WorklogHistoryStore.cs` (`AppendTerminal`), `tests/Talvora.Notification.Regression/Program.D61.cs` (new) and `Program.cs` (its call), `.context7/verification.json`, `docs/codex/STATUS.md`. After D60. **Tests that read these files:** `tests/ModernizationPolicyRegression.ps1` (the presenter's pinned texts such as `MaximumVisibleCardsPerLane`, `ApplyHeightConstraint` and `desktop-progress-placement.json`); run it right after the change.
 
-Findings:
-1. **D52** — a `.cmd`/`.bat` program that runs as the user gets its arguments re-parsed by cmd.exe (live: `talvora_npm_run ["--version","a&echo","TALVORA_BATCH_PROBE"]` printed `12.2.1` and then `TALVORA_BATCH_PROBE`).
-2. **D53** — the first `tools/list` after every service start carries "an caller-supplied" wherever a description said "an arbitrary"; the second list is repaired because the wire policy normalizes the shared tool objects again. This is the `--metadata-policy-only` stop seen right after the 00a9616 install. Two more slips of the same function are live in every list: "any accessible" becomes "accessible" without an article (eleven tools), and `talvora_java_run`/`talvora_javac_run` end with "resolution;".
-3. **D54** — `talvora_resolve_command cargo` answers `found: false` (it looks at the service PATH; since U14 only the user's PATH has cargo); the machine `JAVA_HOME`/`ANDROID_HOME` and the newest Adoptium JDK win over the user's own value, although Windows gives the user's value precedence (latent: no user value is set here); the smoke never checks `talvora_python_info`'s uv fields; the UR policy test names its files one by one; the Python "not found" text points to Chocolatey; RS1's private runner duplicates `RunCliAsync`.
-4. **D55 + D56** — `talvora_job_start` and `talvora_dev_server_start` still start their program as LocalSystem. Live: `talvora_job_start {"executable":"cargo","arguments":["--version"]}` → "An error occurred trying to start process 'cargo' … Sistem belirtilen dosyayı bulamıyor."; a SYSTEM `npm run dev`, `dotnet watch` or `go run` would also refill the caches UR5 and UR6 removed and leave SYSTEM-owned files in a repository. User decision 2026-11-08 ("Evet, varsayılan sen ol"): jobs and dev servers run as the signed-in user by default, and `runAs: "service"` keeps LocalSystem for a job that needs it; while nobody is signed in, such a job cannot start. Windows does not hand handles to a process in another session (CreateProcessAsUser: handles are not inherited across sessions), so D55 adds a small relay that runs inside the user's session and D56 wires the job system to it. After D56 Claude adds the routing line to AGENTS.md.
-5. **[C] UR6 (done by Claude in this audit)** — UR5's list missed four service-profile caches, untouched since the install: NuGet v3-cache 791.7 MB, the pnpm store 775.4 MB, the pnpm cache 303.8 MB and `.android` 318.7 MB. The user chose "Hepsini sil"; a LocalSystem job deleted exactly these four (sizes re-measured first, unchanged); the full installed smoke afterwards printed `TALVORA MCP SMOKE GREEN` and none of the eleven deleted folders (UR5 and UR6) came back.
-6. **WL3 items 7–8 (Claude's look work)** — a failed session shows only "Başarısız" although its `PlainReason` and `NextStep` are in the data (user: "Evet, nedeni göster"); "Kanıtlar" stays as a lone heading when a session has no evidence.
+**Do (method):**
+1. Red first in `Program.D61.cs`, called from `Main` (full run) on its own line directly below `AssertD50HistoryKeepsEverySession();`, against a `WorklogHistoryStore` on a temporary file (as the D50 test does) and the new `WorklogOpenSessions`: two worklog-lane messages of one session id (`Kind` Completed, `SessionClosed` false, `Totals.SessionSeconds` 10 and 20, timestamps t0+10 s and t0+20 s) → `Observe` returns nothing; a message of the same id whose start (`TimestampUtc` minus `SessionSeconds`) is later than t0+20 s → `Observe` returns the t0+20 s message; appending it with `unfinished: true` gives one history entry that starts at t0 and ends at t0+20 s; a `SessionClosed` message removes its session's open entry; `Drain` returns the remaining open messages and empties the set. Messages start with `D61:`. Red: CS0246 (`WorklogOpenSessions` does not exist).
+2. `WorklogOpenSessions` (internal sealed, no WPF): per `WorklogFrame.SessionId`, the newest worklog-lane message with `Kind` Completed, Failed or Cancelled whose session has not closed. `IReadOnlyList<DesktopProgressMessage> Observe(DesktopProgressMessage message)` ignores messages without a `WorklogFrame` or outside the worklog lane; when the stored message of that id belongs to an earlier session (the new message's start is later than the stored message's `TimestampUtc`), it returns that message and forgets it; then it stores the new message (those kinds, not closed) or forgets the id (`SessionClosed`). `IReadOnlyList<DesktopProgressMessage> Drain()` returns every stored message and clears the set. One lock guards both.
+3. `WorklogHistoryStore.AppendTerminal(DesktopProgressMessage message, bool unfinished = false)`: with `unfinished: true` it also accepts a message whose `SessionClosed` is false; everything else (redaction, `HistoryKey`, prune, save) stays as it is, so a later close of the same session replaces the entry.
+4. The presenter: in `PublishCore`, before its history write, pass the message to `Observe` and append each returned message with `unfinished: true` inside the same try/catch and `TrayLog` line as the existing write; in `Dispose`, before the windows close, append every message from `Drain()` with `unfinished: true`, each in that try/catch.
 
-Seen in passing, outside Talvora: `C:\Users\tayla\Repos\Classroom` and its `.git` are owned by SYSTEM since 2026-10-17, so the user's own git refuses the repository ("dubious ownership"); for Classroom's next audit.
+**Don't:** change the service, the protocol, the close timing, D50's `HistoryKey`, the stored format or the worklog card; write to disk on heartbeats.
 
-Queue: D52, D53, D54, D55, D56 first (D55 needs D52's `LiteralProcessStart`, D56 needs D55), then the audit-42 cards, PK1 and PK2.
+**Context7:** `/dotnet/docs`, query "lock statement thread synchronization Dictionary"; record the one fact used.
 
-### D55 — A relay runs one job inside the signed-in user's session
+**Acceptance:** red first; the pinned test; Changed and Full `Hepsi geçti.`; deploy; installed Control Center smoke green; CI. Then `[~] live check pending (Claude): the steps before a deploy stay in Çalışma günlüğü`.
 
-**Why:** D56 runs background jobs and dev servers as the signed-in user (user decision 2026-11-08). The job system keeps a live process with stdin, stdout and stderr and rotating logs (`JobTools`), but LocalSystem cannot give pipe handles to a process in the user's session: `CreateProcessAsUser` does not inherit handles across sessions. The interactive runner solves this for bounded runs with files; a job needs live streams. A small relay inside the user's session starts the program with its own pipes and copies them to three named pipes the service listens on, so `JobTools` keeps its pumps, logs, stdin and stop unchanged.
+### Audit 2026-11-08 (42–43) · cards still open
 
-**Files:** `src/Talvora.Shared/UserJobRelay.cs` (new), `tests/Talvora.Smoke/SmokeScenarios.SharedInfrastructure.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. After D52.
-
-**Do:**
-1. Red first: a relay test in `SmokeScenarios.SharedInfrastructure.cs` against a `UserJobRelay.Run` that only throws `NotImplementedException`. Everything runs as the current user: create three `NamedPipeServerStream`s named `talvora-relay-smoke-<guid>-in` (`PipeDirection.Out`), `-out` and `-err` (`PipeDirection.In`), `PipeOptions.Asynchronous`; write a request (step 2) whose program is pwsh with `-NoLogo -NoProfile -NonInteractive -Command "$line = [Console]::In.ReadLine(); [Console]::Out.WriteLine('got:' + $line); [Console]::Error.WriteLine('relay-err'); exit 3"`; start `Task.Run(() => UserJobRelay.Run(requestPath))`; wait up to 10 s for the three connections; write `ping` and a newline to the stdin pipe and dispose it; read the out and err pipes to their end; assert out = `got:ping` and err = `relay-err` (trimmed), `Run` returned 3, the exit-code file holds `3`, the child-PID file holds a positive integer. Then the same `args.cmd` and the first `ProcessRunner` argument list through the relay (stdin pipe disposed at once) → the same `ARG…` lines on the out pipe. Messages start with `D55:`.
-2. `UserJobRelay` (public static class) with:
-   - `public sealed record UserJobRequest(string Executable, string WorkingDirectory, IReadOnlyList<string> Arguments, IReadOnlyDictionary<string, string?> Environment, bool ClearEnvironment, string StandardInputPipe, string StandardOutputPipe, string StandardErrorPipe, string ChildProcessIdPath, string ExitCodePath);` (`System.Text.Json` defaults).
-   - `public const string RunnerScript` with exactly:
-```powershell
-param(
-    [Parameter(Mandatory = $true)][string]$RequestPath,
-    [Parameter(Mandatory = $true)][string]$HelperAssemblyPath
-)
-$ErrorActionPreference = 'Stop'
-[void][Reflection.Assembly]::LoadFrom($HelperAssemblyPath)
-exit ([Talvora.Shared.UserJobRelay]::Run($RequestPath))
-```
-   - `public static int Run(string requestPath)`: read, then delete the request file; connect `new NamedPipeClientStream(".", name, direction, PipeOptions.Asynchronous)` for stdin (`PipeDirection.In`), stdout and stderr (`PipeDirection.Out`), 15 000 ms each; `var startInfo = LiteralProcessStart.Create(request.Executable, request.WorkingDirectory, request.Arguments, request.Environment, request.ClearEnvironment, out var temporaryCommandScript); startInfo.RedirectStandardInput = true;` start it; write `process.Id` (invariant culture) to `ChildProcessIdPath`; three copy loops on `Task.Run`: the child's `StandardOutput.BaseStream` → stdout pipe and `StandardError.BaseStream` → stderr pipe (when a pipe write throws `IOException`, keep reading the child's stream into nothing until it ends, so the program never blocks on a full pipe); the stdin pipe → `process.StandardInput.BaseStream` with `Flush()` after every chunk, closing `process.StandardInput` when the pipe ends or throws. Then `process.WaitForExit()`, wait at most 5 s for the two output loops, write `process.ExitCode` to `ExitCodePath`, `LiteralProcessStart.DeleteTemporaryCommandScript(temporaryCommandScript)`, return the exit code. When the program cannot start: write the exception message to the stderr pipe, write exit code 1, return 1.
-
-**Don't:** change any tool (D56 wires the relay); inherit handles across sessions; poll.
-
-**Context7:** `/dotnet/docs`, queries "NamedPipeClientStream Connect timeout PipeDirection" and "Process StandardInput BaseStream Flush". Vendor sources: `https://learn.microsoft.com/dotnet/api/system.io.pipes.namedpipeclientstream`, `https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasuserw`.
-
-**Acceptance:** the relay test red first, then Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI.
-
-### D56 — Background jobs and dev servers run as the signed-in user
-
-**Why:** user decision 2026-11-08 ("Evet, varsayılan sen ol"). `talvora_job_start` ("Start any executable as a long-running background development job under the Talvora LocalSystem service") and `talvora_dev_server_start` (through `JobTools.Start`) are the last developer launchers that run as LocalSystem. Live on 00a9616: `talvora_job_start {"executable":"cargo","arguments":["--version"]}` → "An error occurred trying to start process 'cargo' … Sistem belirtilen dosyayı bulamıyor." (since U14 cargo is only on the user's PATH); a SYSTEM `npm run dev`, `dotnet watch` or `go run` would refill the service-profile caches UR5 and UR6 removed and leave SYSTEM-owned files in a repository (the reason AGENTS.md routes builds to `talvora_user_run`).
-
-**Files:** `src/Talvora/Tools/JobTools.cs`, `src/Talvora/Tools/JobTools.Lifecycle.cs`, `src/Talvora/Tools/JobTools.Persistence.cs`, `src/Talvora/Tools/JobTools.StopDelete.cs`, `src/Talvora/Tools/DevServerTools.Lifecycle.cs`, `src/Talvora.Shared/InteractiveUserProcessRunner.cs`, `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`, `src/Talvora.Shared/TalvoraToolGuides.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.WatchJobGit.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. After D55. **Tests that read these files** (run them right after the change): `NativeInstallerSourceRegression.ps1` (`JobTools*.cs`, `DevServerTools*.cs`: the job tool names, `JobTools.Start`/`JobTools.Stop` in the dev-server tools, and never `runtime.Dispose()` right after `LiveJobs.TryRemove(jobId, out _)`, so dispose the pipes in the job's existing exit path); `CodexCliIntegrationSourceRegression.ps1`, `InteractiveRunnerParentAccessRegression.ps1`, `PrivacySecuritySourceRegression.ps1`, `R2StdinRegression.ps1` and `GitSafeDirectoryRegression.ps1` (`InteractiveUserProcessRunner.cs`).
-
-**Do:**
-1. Red first, in the installed smoke (`SmokeScenarios.Workspace.WatchJobGit.cs`, after the existing job steps): (a) `talvora_job_start {"executable": "C:\\Windows\\System32\\whoami.exe", "workingDirectory": root}`; call `talvora_job_get` every 500 ms for up to 30 s until `state` is no longer `Running`; the trimmed stdout from `talvora_job_read_output` must equal (case-insensitive) the trimmed stdout of `talvora_user_run {"executable": "C:\\Windows\\System32\\whoami.exe", "arguments": [], "workingDirectory": root}`; (b) the same job with `"runAs": "service"` must print `nt authority\system`; (c) when `talvora_rust_info` has a `cargoExecutable`: `talvora_job_start {"executable": "cargo", "arguments": ["--version"], "workingDirectory": root}` → stdout starts with `cargo `. Delete each job afterwards with `talvora_job_delete`. Messages start with `D56:`. Red against 00a9616: (a) prints `nt authority\system`, (b) rejects the unknown `runAs`, (c) cannot start.
-2. `JobTools.Start(..., string runAs = "user")` accepts `"user"` or `"service"`, otherwise `ArgumentOutOfRangeException(nameof(runAs), runAs, "runAs is user or service.")`. `"service"` is today's path, except that it builds its start info with `LiteralProcessStart.Create(executable, cwd, arguments, environment, clearEnvironment, out var temporaryCommandScript)` (D52) plus `RedirectStandardInput = true`, and deletes the temporary command script when the job's process has exited and in `talvora_job_delete`.
-3. `"user"`:
-   a. `var user = WindowsSessionLauncher.GetActiveInteractiveUser();` when nobody is signed in, throw `InvalidOperationException("runAs=user needs a signed-in Windows user; sign in or use runAs=service. " + inner.Message)`.
-   b. A bare executable resolves with `SignedInUserToolchain.Resolve([executable])` (the user's PATH and PATHEXT, so `npm` finds `npm.cmd`); a rooted path stays; nothing found → `FileNotFoundException($"{executable} was not found on the signed-in user's PATH.")`. A missing working directory defaults to `user.UserProfile`.
-   c. `<job folder>\user`: add `public static void ProtectDirectory(string path, string userSid)` to `InteractiveUserProcessRunner` (the ACL `CreateProtectedRunDirectory` sets today: LocalSystem full control, the user modify, inheritance protected) and let `CreateProtectedRunDirectory` call it; create the folder and protect it. Write `UserJobRelay.RunnerScript` there as `jobrunner.ps1` (UTF-8 without BOM) and the `UserJobRequest` as `request.json`, with `ChildProcessIdPath` = `user\child.pid` and `ExitCodePath` = `user\exit.code`.
-   d. Three pipes: `talvora-job-<jobId>-in` (`PipeDirection.Out` on the service side), `-out` and `-err` (`PipeDirection.In`), each `NamedPipeServerStreamAcl.Create(name, direction, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, security)`, where `security` allows LocalSystem `FullControl` and the user's SID `ReadWrite | Synchronize`, nothing else.
-   e. Start the relay with `WindowsSessionLauncher.StartProcess(pwsh, ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script, "-RequestPath", request, "-HelperAssemblyPath", typeof(UserJobRelay).Assembly.Location], user.SessionId, userFolder, environment: null, visible: false, newConsole: false, expectedUserSid: user.Sid)` (pwsh resolved the way `InteractiveUserProcessRunner` resolves it); wait at most 30 s for the three connections; otherwise kill the relay's process tree, dispose the pipes and throw `InvalidOperationException("The signed-in user's job relay did not connect.")`.
-   f. The runtime: `Process` = `Process.GetProcessById(launch.ProcessId)` (the relay, whose exit code is the program's, so state and `exitCode` work as today); `StandardInput` = `new StreamWriter(stdinPipe, new UTF8Encoding(false)) { AutoFlush = true }`; the two pumps read `new StreamReader(stdoutPipe, ConsoleOutputEncoding.Instance)` and `new StreamReader(stderrPipe, ConsoleOutputEncoding.Instance)` into the same log files with the same rotation; the runtime owns the three pipes and disposes them when the job exits, is stopped or deleted. `talvora_job_stop` kills the relay's process tree (the program is its child).
-   g. `job.json` stores `RunAs` ("user" or "service"); a job written before D56 reads as "service". No output record changes (`TalvoraJobStartResponse`, `TalvoraJobInfoResponse`, the dev-server records), so clients keep their cached schemas.
-4. `talvora_dev_server_start` gets `string runAs = "user"` and passes it to `JobTools.Start`.
-5. Texts: `talvora_job_start`'s description override in `TalvoraMcpToolMetadataPolicy` becomes "Start a long-running development job as the signed-in user (runAs=user, default) or under the Talvora Windows service (runAs=service). Use talvora_user_run for bounded commands."; its `[Description]` starts with the same first sentence and keeps the log sentence; `talvora_dev_server_start`'s first sentence becomes "Start any executable through Talvora's persistent job system, as the signed-in user unless runAs=service, and wait for optional TCP/HTTP readiness probes."; `TalvoraToolGuides` adds `("runAs", "user (default): the signed-in Windows user; service: the Talvora LocalSystem service, only for jobs that need it.")` to both tools.
-6. The smoke's existing job and dev-server steps stay unchanged and pass as the user; a step that needs LocalSystem because it writes under `C:\ProgramData\Talvora` gets `"runAs": "service"` alone, and the Log names it.
-
-**Don't:** use handle inheritance across sessions; change an output schema, the log rotation or reading, or add a tool.
-
-**Context7:** `/dotnet/docs`, queries "NamedPipeServerStreamAcl.Create PipeSecurity PipeAccessRule" and "Process.Kill entireProcessTree". Vendor sources: `https://learn.microsoft.com/dotnet/api/system.io.pipes.namedpipeserverstreamacl.create`, `https://learn.microsoft.com/windows/win32/ipc/named-pipe-security-and-access-rights`, `https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasuserw`.
-
-**Acceptance:** the three smoke checks red first against 00a9616; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI. Then `[~] live pending (Claude)`: at the next audit Claude checks that the service profile gained no developer cache after real use.
+D46 is done (Claude checks its live wording at the next audit). D47, D48 and D49 are Claude's `[C]` items since audit 46 (user decision: Claude built and ran their literal blocks at audit 42, so the agent does not type them again); Claude ships them with WL3 after the agent's queue and re-checks each against the code of that day first. The agent skips them.
 
 ### D45 — Çalışma günlüğü measures a session up to its last step
 
@@ -235,121 +186,6 @@ with
 **Don't:** change `EndedAtUtc`, the stored JSON, the 90-second close, the timeline rows or `LocalTimeText`.
 
 **Acceptance:** `D45_WORK_ENDS_WITH_LAST_STEP_GREEN`; signed-in Full `Hepsi geçti.`; build and deploy; installed Control Center smoke green; record `[~] visual check pending (Claude)` (Claude reads the real Çalışma günlüğü).
-
-### D50 — Çalışma günlüğü keeps every session
-
-**Why:** audit 42 finding 8 (data truth). The service gives one project and one actor the same `SessionId` for all their sessions (`SHA256(projectRoot + actor)` in `TalvoraDesktopWorklogState.GetOrCreateSession`, so the desktop card follows the project), and `WorklogHistoryStore` deduplicates by `SessionId` when it appends, loads and prunes: each new session of that project and actor replaces the previous one. DESIGN-WORKLOG §8 asks for every session of the last 7 days (up to 2,000). Live: a week of ChatGPT work on Talvora-MCP left exactly one "ChatGPT · Dev / Talvora-MCP" entry, and Claude's 00:16 probe replaced Claude's 23:36 one. A history entry becomes the `SessionId` plus its start; a repeated close of the same session stays one entry; a card click still opens the newest session of its id (the list is newest first). The literal blocks below were built and run by Claude in a scratch clone (Notification regression green, Full gate green).
-
-**Files:** `src/Talvora.Tray/WorklogHistoryStore.cs`, `src/Talvora.Tray/ViewModels/WorklogHistoryViewModel.cs`, `tests/Talvora.Notification.Regression/Program.D50.cs` (new), `tests/Talvora.Notification.Regression/Program.cs`, `.context7/verification.json`.
-
-**Context7:** record the map's .NET entry with the one fact used (`Enumerable.DistinctBy` keeps the first element of each key), per CONTEXT7 PROTOCOL rule 1.
-
-#### Exact implementation
-
-Step 1 (red first). Create `Program.D50.cs`:
-
-```csharp
-using Talvora.Shared;
-using Talvora.Tray;
-
-internal static partial class Program
-{
-    /// <summary>D50: two sessions of the same project and actor are two history entries; a repeated close is one.</summary>
-    private static void AssertD50HistoryKeepsEverySession()
-    {
-        var offset = TimeSpan.FromHours(3);
-        var now = new DateTimeOffset(2026, 11, 7, 18, 0, 0, offset);
-        var directory = Path.Combine(Path.GetTempPath(), "talvora-d50-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        try
-        {
-            var path = Path.Combine(directory, "worklog-sessions.jsonl");
-            var store = new WorklogHistoryStore(path, () => now);
-            void Close(DateTimeOffset start, string title)
-            {
-                var closed = start.AddSeconds(93);
-                var frame = new DesktopWorklogFrame(
-                    "d50-same-project-and-actor", 2, closed,
-                    new WorklogSessionHeader("Talvora-MCP", "ChatGPT · Dev"),
-                    new WorklogStep(WorklogStepCategory.SourceEdit, WorklogStepState.Succeeded, title, null, null, 3),
-                    [new WorklogTimelineEntry(start.AddSeconds(3), WorklogStepState.Succeeded, title, 3)],
-                    new WorklogTotals(1, 93, 1, WorklogCheckState.Unknown, WorklogCheckState.Unknown),
-                    null, 15);
-                store.AppendTerminal(new DesktopProgressMessage(
-                    "d50", "talvora_apply_patch", title, "", DesktopProgressKind.Completed, closed, 3, null,
-                    WorklogFrame: frame, SessionClosed: true));
-            }
-
-            Close(new DateTimeOffset(2026, 11, 7, 15, 0, 0, offset), "İlk oturum");
-            Close(new DateTimeOffset(2026, 11, 7, 15, 10, 0, offset), "İkinci oturum");
-            Close(new DateTimeOffset(2026, 11, 7, 15, 10, 0, offset), "İkinci oturum");
-            foreach (var reader in new[] { store, new WorklogHistoryStore(path, () => now) })
-            {
-                var titles = reader.LoadRecent()
-                    .Where(session => session.SessionId == "d50-same-project-and-actor")
-                    .Select(session => session.Current.Title)
-                    .ToArray();
-                if (titles is not ["İkinci oturum", "İlk oturum"])
-                    throw new InvalidOperationException(
-                        $"D50: expected both sessions newest first, got [{string.Join(", ", titles)}].");
-            }
-        }
-        finally
-        {
-            try
-            {
-                Directory.Delete(directory, recursive: true);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-            }
-        }
-        Console.WriteLine("D50_HISTORY_KEEPS_EVERY_SESSION_GREEN");
-    }
-}
-```
-
-In `Program.cs` (`Main`, full run) add `AssertD50HistoryKeepsEverySession();` on its own line directly below `AssertD45WorkEndsWithLastStep();` (D45 adds that line). Red: `D50: expected both sessions newest first, got [İkinci oturum].`
-
-Step 2. `WorklogHistoryStore.cs`: replace
-
-```csharp
-    [JsonIgnore]
-    public bool HasCodePreview => !string.IsNullOrWhiteSpace(Evidence?.CodePreview);
-```
-
-with
-
-```csharp
-    [JsonIgnore]
-    public bool HasCodePreview => !string.IsNullOrWhiteSpace(Evidence?.CodePreview);
-
-    // D50: a project and an actor keep one SessionId across all their sessions (the desktop card follows it);
-    // one history entry is that id plus its start, so every session of the last 7 days stays in the history.
-    [JsonIgnore]
-    public string HistoryKey =>
-        SessionId + "@" + StartedAtUtc.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
-```
-
-then replace the line `_sessions!.RemoveAll(item => item.SessionId == session.SessionId);` with `_sessions!.RemoveAll(item => item.HistoryKey == session.HistoryKey);`, in `EnsureLoaded` the line `.DistinctBy(row => row.Session.SessionId)` with `.DistinctBy(row => row.Session.HistoryKey)`, and in `Prune` the line `.DistinctBy(item => item.SessionId)` with `.DistinctBy(item => item.HistoryKey)`.
-
-Step 3. `WorklogHistoryViewModel.cs` (a reload or a filter keeps the session the user chose): replace `var previousSessionId = SelectedSession?.SessionId;` with `var previousKey = SelectedSession?.HistoryKey;`; replace `if (previousSessionId is not null) SelectSession(previousSessionId);` with `if (previousKey is not null) SelectedSession = Sessions.FirstOrDefault(s => s.HistoryKey == previousKey);`; replace `var selectedId = SelectedSession?.SessionId;` with `var selectedKey = SelectedSession?.HistoryKey;`; replace
-
-```csharp
-        SelectedSession = selectedId is null ? null :
-            Sessions.FirstOrDefault(s => s.SessionId == selectedId);
-```
-
-with
-
-```csharp
-        SelectedSession = selectedKey is null ? null :
-            Sessions.FirstOrDefault(s => s.HistoryKey == selectedKey);
-```
-
-**Don't:** change the service's session id, the desktop card, `SelectSession(string)`, the retention, the bounds or the stored format. Sessions that were already replaced cannot come back; say so in the Log.
-
-**Acceptance:** `D50_HISTORY_KEEPS_EVERY_SESSION_GREEN`; signed-in Full `Hepsi geçti.`; build and deploy; installed Control Center smoke green; record `[~] live check pending (Claude): two sessions of the same project and actor both stay in Çalışma günlüğü`.
 
 ### D46 — A CI run that is still going is not a failed step
 
@@ -534,7 +370,7 @@ with
 
 **Acceptance:** `D46_CI_STILL_RUNNING_GREEN`; signed-in Full `Hepsi geçti.`; build and deploy; push and run the step-10b CI check once as usual; record `[~] live check pending (Claude): the CI check right after the push reads "GitHub denetimi sürüyor"` (Claude reads the worklog history).
 
-### D48 — A vault note belongs to the vault's owner
+### D48 — A vault note belongs to the vault's owner (Claude, `[C]`)
 
 **Why:** audit 42 finding 4 (consistency; Claude's OB1 reference file). The service runs as LocalSystem, so `talvora_note_write` leaves notes and the folders it creates owned by `NT AUTHORITY\SYSTEM` (live: `40 Oturum Notları/2026-11-07 Talvora OB1.md`), while source edits keep their workspace owner through `FileOwnership`. The literal blocks below were built and run by Claude in a scratch clone (SourceEdit regression green, Full gate green).
 
@@ -614,7 +450,7 @@ with
 
 **Acceptance:** SourceEdit regression green (`ob1-vault-note-writer`); signed-in Full `Hepsi geçti.`; build and deploy; live on the installed runtime: `talvora_note_write {vaultRoot: "C:\\Users\\tayla\\Obsidian\\Taylan", path: "40 Oturum Notları/2026-11-07 Talvora OB1.md", content: "D48: not artık kasanın sahibine ait.\n", mode: "append"}` succeeds, and `(Get-Acl -LiteralPath 'C:\Users\tayla\Obsidian\Taylan\40 Oturum Notları\2026-11-07 Talvora OB1.md').Owner` run with `talvora_user_run` names the signed-in user, not `NT AUTHORITY\SYSTEM`; record both lines.
 
-### D49 — Plain Turkish service names, also for older registries
+### D49 — Plain Turkish service names, also for older registries (Claude, `[C]`)
 
 **Why:** audit 42 finding 5. The real registry (`managed-mcps.json`, written 2026-09-30) names the core "Talvora Core Service" and Gitea "Gitea MCP", components "Secure MCP Tunnel", "Gitea MCP sunucusu", "Penpot local MCP", "Penpot MCP": the Hizmetler titles, the detail pages and every event built from `registration.DisplayName` ("Gitea MCP zaten hazır") show them, while the smoke fixtures already say "Talvora Çekirdeği" and "Gitea". New registries get the plain names from discovery; a registry written earlier is read with them (the file changes only when the tray saves it itself). The literal blocks below were built and run by Claude in a scratch clone (Notification regression green, Full gate green).
 
@@ -767,7 +603,7 @@ Step 5. `ControlCenterSmoke.UI4.cs`: replace `State(Registration("gitea", "Gitea
 
 **Acceptance:** `D49_PLAIN_SERVICE_NAMES_GREEN`; signed-in Full `Hepsi geçti.`; build and deploy; installed Control Center smoke green; record `[~] visual check pending (Claude)`.
 
-### D47 — Plain Turkish for the remaining Control Center texts
+### D47 — Plain Turkish for the remaining Control Center texts (Claude, `[C]`)
 
 **Why:** audit 42 finding 3 (copy deck §9: no "MCP", "tunnel-client", "runtime", "control plane" on main surfaces). D37 changed 23 event texts; 75 more still reach Olaylar, the event slips, the tray balloons and menu, the Hizmetler states and the chain rows with MCP, readiness, health, runtime, browser smoke, Secure MCP Tunnel, Control plane or OAuth discovery (seen live: "Gitea MCP zaten hazır / Sağlık ve readiness kontrolleri onarım gerektiren bir arıza göstermedi."). The setup wizard and its errors add 38 rows under the user's decision of 2026-11-08 ("Adlar kalsın, cümleler Türkçe"): OpenAI's own names stay in parentheses inside Turkish sentences, "OpenAI Admin API anahtarı (Admin API key)", so the user finds the same name on OpenAI's pages. Claude applied the whole table in a scratch clone: the new test is red on the current source and green after it, D37's test stays green, Full gate green.
 
@@ -805,38 +641,6 @@ Step 3. Two existing tests pin texts this card changes; update them in the same 
 7. `WorklogHistoryView.xaml`, detail column, right under the `OutcomeLabel` line (audit 43, user decision 2026-11-08 "Evet, nedeni göster"; the data is already in `WorklogOutcome`): `{Binding Current.Outcome.PlainReason, TargetNullValue='', FallbackValue=''}` in `Tv.Type.Body` with `Tv.TextMuted`, then `{Binding Current.Outcome.NextStep, StringFormat='Sonraki adım: {0}', TargetNullValue='', FallbackValue=''}` in `Tv.Type.Caption`; both use the `HistoryOptionalText` collapse of item 1, so a completed session shows neither line.
 8. `WorklogHistoryView.xaml`: the "Kanıtlar" heading collapses when the session has no evidence (summary, result, files and code preview all empty), with the same trigger style; check the bound values on a real session without evidence first (audit 43 screen pass: the "scratchpad" session showed the heading alone).
 9. `WorklogHistoryView.xaml`: with search text and no matching session, the empty line reads "Aramayla eşleşen çalışma yok." instead of "Henüz kayıtlı çalışma yok." (README screen pass 2026-11-08). After WL3, Claude takes the README screenshots again before the first release.
-
-## Agent efficiency (loop check 2026-11-08)
-
-User: "chatgpt'nin projeyi geliştirme esnasında gereksiz yere aynı testleri tekrar tekrar çalıştırması gibi süreci uzatacak bir döngüye girip girmediğini kontrol et". Claude read every tool call of the Codex sessions that ran D52/D53 (ChatGPT app, Talvora Dev connector) and W1–W4, the agents' gate logs of 2026-11-07 and the worklog. No real loop: every second gate or smoke run had a reason (a fix in between, a decided proposal, the first-list defect D53 fixed), and TOKEN ECONOMY B3 and D2 were kept. The cost is elsewhere: in the D52/D53 session 39 of 136 calls (29 %) only waited for a detached log (`sleep 45–50 s` plus a read), every call re-reading about 120 000 context tokens (16.9 M input tokens for two cards); about six calls per message looked up tool names; a Changed gate ran right before each Full gate; and a test that pins file text (`CodexCliIntegrationSourceRegression.ps1`) was found only by a failing gate in W1 and in D52. ChatGPT web sessions leave no command record at all (TW2). TOKEN ECONOMY gained A9, B1's last sentence, B7 and B8; the queued cards name the tests that read their files.
-
-### TW1 — `talvora_tail_text` can wait for a line
-
-**Why:** see the section above: waiting is the largest avoidable cost, and ChatGPT web has no sleep tool at all, so it can only call the read again.
-
-**Files:** `src/Talvora/Tools/ConfigAssetTools.Text.cs` (`TailText`), `src/Talvora.Shared/TalvoraToolGuides.cs`, `tests/Talvora.Smoke/SmokeScenarios.SharedInfrastructure.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `AppendTextEncodingSourceRegression.ps1` and `AppendTextNewlineSourceRegression.ps1` read `ConfigAssetTools.Text.cs`; run them right after the change.
-
-**Do (method):** two optional parameters, `waitForPattern` (a .NET regular expression, culture-invariant, one-second match timeout) and `waitSeconds` (0–100; anything else is an argument error). With both set, the tool reads the tail as today and returns as soon as one returned line matches; otherwise it reads again every 2 seconds until `waitSeconds` has passed or the call is cancelled, then returns the last read. A file that does not exist yet counts as "no match" until the time is up, then gives today's error. Without the two parameters nothing changes, and the output record never changes (clients keep their cached schema). The description gains one sentence about the wait and stays within the description bound; the guide lists both parameters. Red first in the shared-infrastructure smoke: a background writer appends `Hepsi geçti.` to a temporary file after 3 s and the call with `waitSeconds: 10` returns within 3–6 s with that line; with no match it returns after about `waitSeconds`; `waitSeconds: 101` is rejected.
-
-**Don't:** change the read without the new parameters, add an output field, or add another tool.
-
-**Context7:** `/dotnet/docs`, queries "Regex match timeout" and "Task.Delay cancellation token". Vendor source: `https://learn.microsoft.com/dotnet/standard/base-types/best-practices-regex`.
-
-**Acceptance:** red first; Full `Hepsi geçti.`; deploy; the installed smokes; CI. Claude then switches TOKEN ECONOMY B7 to the one-call wait.
-
-### TW2 — Talvora keeps a short trace of agent tool calls
-
-**Why:** user decision 2026-11-08 ("Evet, iz tutsun"): which heavy command a ChatGPT web session ran how often is recorded nowhere; the worklog keeps only step labels. With a trace, Claude can measure loops at audits.
-
-**Files:** `src/Talvora/Program.cs` (where every tool call runs), `src/Talvora/ToolCallTrace.cs` (new), `tests/Talvora.Notification.Regression/Program.TW2.cs` (new) and `Program.cs` (its call), `.context7/verification.json`, `docs/codex/STATUS.md`.
-
-**Do (method):** after every tool call from a client other than Talvora's own (the same caller rule as D41: the installed smoke and the tray leave nothing), append one JSON line to `C:\ProgramData\Talvora\CallTrace\calls-<UTC yyyy-MM-dd>.jsonl` with: `ts` (UTC start, ISO 8601), `caller` (the identity D41 resolves), `tool`, `ms`, `outcome` (`ok`, `error` or `timedOut`, decided the way `ToolFailureGuidance` decides with the tool name), `exit` (the top-level `exitCode` when present, else null), `cwd` (the call's `workingDirectory`, `repositoryPath`, `workspaceRoot` or `root` argument when present, else null), `cmd` (only when the arguments hold `executable`, `script` or `arguments`: the executable or tool name followed by the arguments, passed through `FileLog.RedactSensitiveData` and cut to 160 characters; else null) and `args` (the first 16 hex characters of the SHA-256 of the arguments' canonical JSON, so identical calls can be counted without storing them). Writing is append-only and serialized; it never delays or fails the call (a write error is dropped). At service start and once a day, files older than 14 days are deleted. The folder keeps ProgramData's protected ACL. No output, environment value or file content is ever stored. No UI, tool or setting. Red first in `Program.TW2.cs` against a temporary folder: one call gives one line with these fields; a secret-looking argument is masked; two identical calls share `args`; a Talvora-own caller writes nothing; a file dated 15 days ago is removed by the retention pass.
-
-**Don't:** store outputs, environment values or file contents; add a reader tool; slow a call down.
-
-**Context7:** `/dotnet/docs`, queries "System.Text.Json Utf8JsonWriter" and "SHA256.HashData". Vendor source: `https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/use-utf8jsonwriter`.
-
-**Acceptance:** red first; Full `Hepsi geçti.`; deploy; live: after one `talvora_user_run` of `whoami.exe` through the connector, today's trace file holds that call (Claude reads it through Talvora at the next audit); the installed smokes; CI.
 
 ## Releases and the public page (user request 2026-11-08)
 
