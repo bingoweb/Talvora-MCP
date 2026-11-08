@@ -1,0 +1,156 @@
+name: release
+
+on:
+  push:
+    tags: ['v0.0.*.*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Deneme sürümü (0.0.x.x)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Yayımlamadan paketi ve SHA-256 değerini doğrula'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag and release mode
+        id: release
+        shell: pwsh
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+          REQUESTED_DRY_RUN: ${{ inputs.dry_run }}
+          DISPATCH_EVENT: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:GITHUB_EVENT_NAME -eq 'push') {
+            $tag = $env:GITHUB_REF_NAME
+            if ($tag -cnotmatch '^v0\.0\.\d{1,5}\.\d{1,5}$') {
+              throw "Geçersiz sürüm etiketi: $tag"
+            }
+            $version = $tag.Substring(1)
+          }
+          elseif ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
+            $version = $env:REQUESTED_VERSION
+          }
+          else {
+            throw 'Yayımlama için etiket veya elle başlatılan deneme gerekir.'
+          }
+          if ($version -cnotmatch '^0\.0\.\d{1,5}\.\d{1,5}$') {
+            throw "Sürüm biçimi geçersiz: $version"
+          }
+          $tag = "v$version"
+          if ($tag -cnotmatch '^v0\.0\.\d{1,5}\.\d{1,5}$') {
+            throw "Sürüm etiketi geçersiz: $tag"
+          }
+          $dryRun = $env:GITHUB_EVENT_NAME -eq 'workflow_dispatch' -and
+            $env:REQUESTED_DRY_RUN -eq 'true'
+          # A real release is authorized only by a tag push, not by an untagged manual run.
+          if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch' -and -not $dryRun) {
+            throw 'Gerçek sürüm yalnızca v0.0.x.x etiketi gönderilerek yayımlanır.'
+          }
+          "version=$version" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "tag=$tag" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "dry_run=$($dryRun.ToString().ToLowerInvariant())" |
+            Out-File -LiteralPath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Require an ancestor of main
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & git fetch origin main --no-tags
+          if ($LASTEXITCODE -ne 0) { throw 'main geçmişi okunamadı.' }
+          & git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+          if ($LASTEXITCODE -ne 0) {
+            throw "Sürüm commit'i origin/main geçmişinde bulunmuyor: $env:GITHUB_SHA"
+          }
+
+      - name: Require successful windows-ci for this commit
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $raw = @(& gh run list --workflow windows-ci.yml --commit $env:GITHUB_SHA --json conclusion --limit 100)
+          if ($LASTEXITCODE -ne 0) { throw 'windows-ci çalışmaları okunamadı.' }
+          $runs = @(ConvertFrom-Json -InputObject ($raw -join [Environment]::NewLine))
+          if (@($runs | Where-Object { $_.conclusion -eq 'success' }).Count -eq 0) {
+            throw "Bu commit için başarılı windows-ci çalışması bulunamadı: $env:GITHUB_SHA"
+          }
+
+      - name: Require release notes
+        if: steps.release.outputs.dry_run != 'true'
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $notes = "docs/releases/$($env:RELEASE_VERSION).md"
+          if (-not (Test-Path -LiteralPath $notes -PathType Leaf)) {
+            throw "Sürüm notu yok: $notes"
+          }
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Build the canonical versioned installer
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & pwsh -NoProfile -File scripts/Build-Windows-Installer.ps1 -ReleaseVersion $env:RELEASE_VERSION
+          if ($LASTEXITCODE -ne 0) { throw 'Sürümlü Talvora kurulum paketi üretilemedi.' }
+          $installer = "artifacts/installer/Talvora-Kurulum-$($env:RELEASE_VERSION).exe"
+          if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
+            throw "Kurulum dosyası bulunamadı: $installer"
+          }
+
+      - name: Create SHA256SUMS.txt
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = "artifacts/installer/Talvora-Kurulum-$($env:RELEASE_VERSION).exe"
+          $hash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          $sumLine = "$hash  Talvora-Kurulum-$($env:RELEASE_VERSION).exe" + [char]10
+          [IO.File]::WriteAllText(
+            (Join-Path $PWD.Path 'SHA256SUMS.txt'),
+            $sumLine,
+            [Text.UTF8Encoding]::new($false))
+
+      - name: Publish GitHub release
+        if: steps.release.outputs.dry_run != 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = "v$($env:RELEASE_VERSION)"
+          $installer = "artifacts/installer/Talvora-Kurulum-$($env:RELEASE_VERSION).exe"
+          $notes = "docs/releases/$($env:RELEASE_VERSION).md"
+          & gh release create $tag $installer SHA256SUMS.txt --title "Talvora $($env:RELEASE_VERSION)" --notes-file $notes --latest
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub sürümü yayımlanamadı.' }

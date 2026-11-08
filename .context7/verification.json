@@ -1,15 +1,19 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T21:51:10.404Z",
-  "scope": "RL3: Windows Uninstall registry values, DWORD metadata and reboot-scheduled setup removal",
+  "verifiedAtUtc": "2026-11-08T22:09:57.676Z",
+  "scope": "RL4: GitHub Actions tag push filter and workflow_dispatch boolean dry_run controls",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-09 RL3: RegistryKey.CreateSubKey/SetValue with RegistryValueKind.DWord (query: \"Registry SetValue RegistryValueKind DWord registry local machine OpenSubKey CreateSubKey Windows .NET 10\")"
+      "libraryId": "/websites/github_en_actions",
+      "verified": "2026-11-09 RL4: tag push filter patterns in GitHub Actions (query: \"workflow push tags filter\")"
+    },
+    {
+      "libraryId": "/websites/github_en_actions",
+      "verified": "2026-11-09 RL4: workflow_dispatch boolean input keeps its type in the inputs context (query: \"workflow_dispatch inputs boolean\")"
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/windows/win32/msi/uninstall-registry-key",
-    "https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-movefileexw"
+    "https://docs.github.com/actions/writing-workflows/workflow-syntax-for-github-actions",
+    "https://cli.github.com/manual/gh_release_create"
   ]
 }

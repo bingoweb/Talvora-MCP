@@ -37,7 +37,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] RL2 — PowerShell 7 preflight and MSI integrity gate implemented; live pending: verified MSI download, deployed HEAD, smokes, CI
 - [x] [C] KUR1 — The setup window speaks Santral and carries the developer's maker plate (Claude; see Log)
 - [~] RL3 — Windows Apps registration and safe uninstall implemented; installed check and CI pending, real uninstall/reinstall plus visual check pending (Claude with user approval)
-- [ ] RL4 — A v0.0.x.x tag publishes the release (user decision 2026-11-08)
+- [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
 - [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
@@ -57,6 +57,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-09 — RL4, executor ChatGPT: new pinned GitHub Actions release workflow for v0.0.*.* and manual dry_run; checks version/tag, origin/main ancestry, same-commit successful windows-ci and release notes. Builds one versioned EXE and lowercase SHA256SUMS.txt; gh release create only on approved tag pushes, never on manual dispatch.
+  RED missing workflow, then RELEASE_WORKFLOW_GREEN, ModernizationPolicyRegression and CiDocsOnlyRegression GREEN. Signed-in Changed 13/0 and Full 72/0, Hepsi geçti. Context7 /websites/github_en_actions (tag filters, boolean dispatch); GitHub/gh CLI official docs. Gitea #9 comment 236.
+  Self-review — no UI changes; manual dry_run defaults true; no tag/release created, least-privilege GH token, checksum/notes/CI gates. Live pending committed-HEAD windows-ci and nonpublishing workflow_dispatch dry run.
 
 - 2026-11-09 — RL3, executor ChatGPT: installer copies Talvora-Kurulum.exe, writes the HKLM Uninstall entry (version, publisher, icon, uninstall commands, DWORD flags/size), wires KUR1 uninstall UI, --silent and read-only --what-if. Removal stops tray then service; clears only Talvora Run/shortcut/Codex table and Program Files; optional ProgramData cleanup excludes Secrets.
   RED then GREEN NativeInstallerSourceRegression (temporary HKCU registry fields, 6-step plan, optional fixture data, Codex table isolation, no log recreation). Real setup --what-if: 6 steps, --remove-data: 33, Secrets excluded. Signed-in Changed 26/0 and Full 71/0, Hepsi geçti. Context7 /dotnet/docs + Microsoft Windows registry and MoveFileEx.
