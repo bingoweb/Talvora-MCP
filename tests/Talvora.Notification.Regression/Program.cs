@@ -88,6 +88,7 @@ internal static partial class Program
         await AssertD35LatestBackoffAsync();
         await AssertD41CallerIdentityAsync();
         await AssertD51ReportedExitCodesAsync();
+        AssertD53DescriptionsAsWholeSentences();
         AssertD34TunnelHealthFile();
         AssertD33DeliveryBudgets();
         await AssertRemotionWorklogAsync();

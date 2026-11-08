@@ -32,7 +32,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [ ] D53 — Tool descriptions are normalized once, in the right order, as whole sentences (audit 43)
+- [~] D53 — live install, first metadata smoke, full installed smoke and CI pending (audit 43)
+- [ ] D57 — The new README goes live (user request 2026-11-08; reference in docs/codex/reference/d57)
 - [ ] D54 — Command lookup, JAVA_HOME and ANDROID_HOME follow the signed-in user; the small UR follow-ups (audit 43)
 - [ ] D55 — A relay runs one job inside the signed-in user's session (audit 43; after D52)
 - [ ] D56 — Background jobs and dev servers run as the signed-in user (audit 43, user decision; after D55)
@@ -44,6 +45,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D47 — Plain Turkish for the remaining Control Center texts (audit 42; setup texts per the user's decision; table and test in docs/codex/reference/d47)
 - [ ] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
 - [ ] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (after PK1)
+- [ ] RL1 — Talvora's version is 0.0.x.x and comes from the release tag (user request 2026-11-08)
+- [ ] RL2 — A fresh Windows gets PowerShell 7 from the installer (user decision 2026-11-08)
+- [ ] RL3 — Talvora is in Apps & features and can be uninstalled (user request 2026-11-08)
+- [ ] RL4 — A v0.0.x.x tag publishes the release (user decision 2026-11-08)
+- [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 - [ ] [C] WL3 — Çalışma günlüğü and Olaylar polish (Claude; audit 42, user: later; after D45 and D50; audit 43 adds items 7–8)
 
 ## User queue
@@ -59,6 +65,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — D53, executor Codex: normalize tool descriptions once, fixing articles and semicolon endings; red on talvora_dotnet_run, Notification green. Changed 28/0 and Full 70/0: Hepsi geçti. Context7 /dotnet/docs GetOrAdd and RegexOptions.Compiled; installed verification and CI pending. P-51 documents the interrupted initial Full gate. Queue additions applied. Gitea mirror skipped: sending a comment was not explicitly authorized.
+  Self-review — cosmetics: no screen change; usability: descriptions are correct on the first list; Turkish: no user-facing Turkish changed; correctness/security: idempotence tested across tools and metadata/schema behavior preserved.
 
 - 2026-11-08 — Claude, audit 44 (tag `audit/2026-11-08-44`): range `audit/2026-11-08-43..877662c` (D52 by Codex, U15 closed by Claude). D52 follows the card: `LiteralProcessStart` with the specified order (start info, clear, caller variables, wrapper variables last), `ProcessRunner` and the runner script use it, the literal block is exact, both red tests exist, `CodexCliIntegrationSourceRegression.ps1` follows the moved encoding lines (logged as a supporting change), Context7 records the gap and the three vendor pages. P-50 decided: the metadata stop was D53's first-list defect, not D52's; --metadata-policy-only against the installed 877662c green (TALVORA MCP METADATA POLICY LIVE GREEN); the full installed smoke green (TALVORA MCP SMOKE GREEN); signed-in Full gate 70/0 Hepsi geçti.; CI 42476029267 success; live talvora_npm_run ["--version","a&echo","TALVORA_BATCH_PROBE"] → stdout `12.2.1` only. D53's acceptance now names the first metadata run after its install. No screen changed in the range; the design improvements stay in WL3 (eight items). Next: D53.
 

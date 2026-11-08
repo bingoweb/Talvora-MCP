@@ -1,16 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T11:21:56Z",
-  "scope": "D52: preserve literal batch arguments in the interactive user runner",
+  "verifiedAtUtc": "2026-11-08T11:49:18Z",
+  "scope": "D53: normalize tool descriptions once and preserve complete sentences",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 D52: Context7 has no relevant passage on batch parsing (gap; Microsoft Learn used). ArgumentList escapes arguments into a command line; cmd.exe interprets its own special characters. (query: \"ProcessStartInfo ArgumentList batch file cmd.exe argument parsing\")"
+      "verified": "2026-11-08 D53: ConcurrentDictionary.GetOrAdd returns the existing or added value (query: \"ConcurrentDictionary GetOrAdd\"); RegexOptions.Compiled creates a compiled regular expression (query: \"RegexOptions Compiled\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.diagnostics.processstartinfo.argumentlist",
-    "https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw",
-    "https://learn.microsoft.com/windows-server/administration/windows-commands/cmd"
+    "https://learn.microsoft.com/dotnet/api/system.collections.concurrent.concurrentdictionary-2.getoradd",
+    "https://learn.microsoft.com/dotnet/standard/base-types/regular-expression-options"
   ]
 }

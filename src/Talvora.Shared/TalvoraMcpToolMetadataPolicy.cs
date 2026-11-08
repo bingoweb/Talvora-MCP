@@ -159,6 +159,10 @@ public static class TalvoraMcpToolMetadataPolicy
         @"Inside recognized development workspaces,[^.]*\.(?:\s+For development-workspace source/config/text changes,[^.]*\.)?(?:\s+talvora_structural_edit[^.]*\.)?(?:\s+Do not trial-call this compatibility mutator\.)?",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex SemicolonNoAllowDenyClause = new(
+        @";\s*no [^.]*\b(?:allow-?list|allowlist|deny-?list|denylist)\b[^.]*\.",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly Regex NoAllowDenySentence = new(
         @"(?:^|(?<=\s))No [^.]*\b(?:allow-?list|allowlist|deny-?list|denylist)\b[^.]*\.\s*",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -229,10 +233,6 @@ public static class TalvoraMcpToolMetadataPolicy
 
         var normalized = description
             .Replace(
-                "an caller-supplied",
-                "a caller-supplied",
-                StringComparison.OrdinalIgnoreCase)
-            .Replace(
                 "Talvora LocalSystem service",
                 "Talvora Windows service",
                 StringComparison.Ordinal)
@@ -250,7 +250,7 @@ public static class TalvoraMcpToolMetadataPolicy
                 StringComparison.Ordinal)
             .Replace(
                 "any accessible",
-                "accessible",
+                "an accessible",
                 StringComparison.OrdinalIgnoreCase)
             .Replace(
                 "any URI",
@@ -263,6 +263,10 @@ public static class TalvoraMcpToolMetadataPolicy
             .Replace(
                 "arbitrary",
                 "caller-supplied",
+                StringComparison.OrdinalIgnoreCase)
+            .Replace(
+                "an caller-supplied",
+                "a caller-supplied",
                 StringComparison.OrdinalIgnoreCase)
             .Replace(
                 "unrestricted",
@@ -280,6 +284,9 @@ public static class TalvoraMcpToolMetadataPolicy
             normalized,
             ".");
         normalized = WithoutAllowDenyClause.Replace(
+            normalized,
+            ".");
+        normalized = SemicolonNoAllowDenyClause.Replace(
             normalized,
             ".");
         normalized = NoAllowDenySentence.Replace(

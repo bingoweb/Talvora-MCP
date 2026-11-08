@@ -4,6 +4,12 @@
 
 ## Pending
 
+(none)
+
+## Applied
+
+### Applied 2026-11-08
+
 ### 2026-11-08 — README and stable releases (ROADMAP → "Releases and the public page")
 
 Insert this line into "Agent queue" **directly after the D53 line**:
@@ -21,8 +27,6 @@ Insert these lines **directly after the PK2 line** (before the WL3 line), in thi
 - [ ] RL4 — A v0.0.x.x tag publishes the release (user decision 2026-11-08)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 ```
-
-## Applied
 
 ### Applied 2026-10-18
 

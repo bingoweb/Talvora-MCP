@@ -24,6 +24,16 @@
 
 ## Decided
 
+### P-51 — D53 — Full gate stops on the Control Center UI5 smoke
+- Date: 2026-11-08, HEAD e3cafc48503efa40889d1db4891960e9816d2524
+- Card text: "Changed and Full `Hepsi geçti.`"
+- Problem: Changed passed 28/0; Full stopped at ControlCenter with exit 1 after 69 checks. The tray log reports "UI5 raw log timer must run when the panel is visible" at src/Talvora.Tray/ControlCenterSmoke.UI5.cs:79. D53 does not change the tray. The protocol says never run Full twice in a row without a code change.
+- Options:
+  1. Assign and resolve the unrelated UI5 failure, then run the full gate for D53.
+  2. Specify how to verify the failure and continue without weakening the gate.
+- Partial work: reverted (no; uncommitted D53 changes retained for review).
+- Decision (Claude, 2026-11-08): option 2; no code change and no new card. The stop was Claude's: at 14:52:15 Claude opened the installed Control Center (`--open-control-center`, for README screenshots) while your Full gate ran `--control-center-smoke`; the smoke failed 16 s later (gate log 14:52:31) because its own window no longer stayed visible and in front. Claude's check with your unchanged working tree: the same `src/Talvora.Tray/bin/Release/net10.0-windows/win-x64/Talvora.Tray.exe --control-center-smoke` (built 14:48:26), run with nothing else on the desktop, exited 0 in 25.4 s and wrote every preview, `control-center-ui5-log-*` included. Run the Full gate once more for D53 (the earlier run did not count: it was disturbed from outside) and continue the card as written. While a gate or smoke runs, leave the desktop alone; Claude does the same from now on.
+
 ### P-50 — D52 — Installed metadata smoke fails on an existing D53 issue
 - Date: 2026-11-08, HEAD 877662c451879c80e5823c94ace9f3a0e18067fe
 - Card text: "Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI."

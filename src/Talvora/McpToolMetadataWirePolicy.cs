@@ -18,10 +18,9 @@ internal static class McpToolMetadataWirePolicy
                 declared?.ReadOnlyHint == true;
 
             tool.Title = title ?? tool.Title;
-            tool.Description =
-                TalvoraMcpToolMetadataPolicy.NormalizeDescription(
-                    tool.Name,
-                    tool.Description);
+            tool.Description = NormalizedDescriptions.GetOrAdd(
+                tool.Name,
+                _ => TalvoraMcpToolMetadataPolicy.NormalizeDescription(tool.Name, tool.Description));
 
             if (TalvoraToolGuides.All.TryGetValue(tool.Name, out var guide))
             {
@@ -136,6 +135,9 @@ internal static class McpToolMetadataWirePolicy
             type is JsonValue value && value.TryGetValue<string>(out var name) && name == "null"),
         _ => false,
     };
+
+    private static readonly ConcurrentDictionary<string, string?> NormalizedDescriptions =
+        new(StringComparer.Ordinal);
 
     private static readonly ConcurrentDictionary<string, JsonElement> DescribedInputSchemas =
         new(StringComparer.Ordinal);
