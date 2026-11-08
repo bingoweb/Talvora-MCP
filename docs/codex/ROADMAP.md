@@ -48,50 +48,6 @@ Seen in passing, outside Talvora: `C:\Users\tayla\Repos\Classroom` and its `.git
 
 Queue: D52, D53, D54, D55, D56 first (D55 needs D52's `LiteralProcessStart`, D56 needs D55), then the audit-42 cards, PK1 and PK2.
 
-### D52 — Batch programs keep every argument literally when they run as the signed-in user
-
-**Why:** since UR1–UR4 the build, mobile, runtime and Windows-toolchain runners start their program through `InteractiveUserProcessRunner`. Its `RunnerScript` builds the `ProcessStartInfo` by hand (`FileName` = the program, `ArgumentList`). For a `.cmd`/`.bat` program Windows starts cmd.exe, which parses the command line again: `&`, `|`, `<`, `>`, `^` and `%NAME%` inside an argument act as cmd syntax. `ProcessRunner`, the path these tools used before, starts batch programs through a `cmd /d /v:on /s /c` wrapper that hands every argument over as a delayed-expansion variable (`CreateStartInfo`, `EncodeBatchArgument`), and `SmokeScenarios.SharedInfrastructure` proves it with `args.cmd` (`a&b`, `%PATH%`, `x!y`, `(z)`, `a|b`, `a"b`, `a<b`, `a>b`, `a&&b`). Live on 00a9616: `talvora_npm_run {"arguments":["--version","a&echo","TALVORA_BATCH_PROBE"]}` → stdout `12.2.1`, then `TALVORA_BATCH_PROBE`. Real cases: `npm install pkg@>=1.2` writes a file named `=1.2` and installs the wrong range, `react@^18` loses its `^`, `flutter build --dart-define=URL=https://x/?a=1&b=2` runs `b=2` as a command. Affected: npm (`talvora_npm_run`, `_ci`, `_install`, `_run_script`), pnpm, Yarn, Gradle and gradlew, Maven and mvnw, Flutter, `dart.bat`, the Android `.bat` tools, and `talvora_user_run`/`talvora_uv_run` with a `.cmd` program.
-
-**Files:** `src/Talvora.Shared/LiteralProcessStart.cs` (new), `src/Talvora.Shared/ProcessRunner.cs`, `src/Talvora.Shared/InteractiveUserProcessRunner.cs`, `tests/Talvora.Smoke/SmokeScenarios.SharedInfrastructure.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.Runtime.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
-
-**Do:**
-1. Red first, two tests:
-   a. `SmokeScenarios.SharedInfrastructure.cs`, after the two `ProcessRunner` batch checks: run the same `args.cmd` with the same two argument lists through the interactive runner's own script as the current user (no session switch is needed for this). Read the script with `(string)typeof(InteractiveUserProcessRunner).GetField("RunnerScript", BindingFlags.NonPublic | BindingFlags.Static)!.GetRawConstantValue()!` and write it as `runner.ps1` (UTF-8 without BOM) into a new folder under `root`. Write `request.json` there with `JsonSerializer.Serialize` of an anonymous object whose members are exactly those of the private `Request` record: `Executable` = `batchPath`, `WorkingDirectory` = `root`, `Arguments`, `Environment` = an empty `Dictionary<string, string?>`, `StandardOutputPath`, `StandardErrorPath` and `ResultPath` (files in the new folder), `HelperAssemblyPath` = `typeof(InteractiveUserProcessRunner).Assembly.Location`, `MaximumPersistedCharacters` = `ProcessRunner.DefaultMaximumCapturedCharacters`, `DiscardStandardError` = false, `CodexProgressPath` = null, `ClaudeProgressPath` = null, `CloseStandardInput` = true, `StandardInputPath` = null, `ClaudeWorkspaceRoot` = null. Run pwsh (resolved like the runner: `CommandResolver.Resolve(["pwsh.exe", "pwsh"], [@"C:\Program Files\PowerShell\7\pwsh.exe"])`) with `-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File <runner.ps1> -RequestPath <request.json>` through `ProcessRunner.RunAsync` (60 s), read the stdout file and assert the same `ARG…` lines as the `ProcessRunner` checks; message `D52: the interactive runner did not preserve batch-file arguments.` Today it fails (cmd splits `a&b`).
-   b. `SmokeScenarios.Workspace.Runtime.cs`, right after the `npm_run --version` check: `talvora_npm_run {"workingDirectory": root, "arguments": ["--version", "a&echo", "TALVORA_BATCH_PROBE"], "timeoutSeconds": 30}` → exit 0, trimmed stdout equals `npmVersion`, stdout does not contain `TALVORA_BATCH_PROBE`; message `D52: npm_run let cmd.exe interpret an argument.` Red against the installed 00a9616.
-2. `LiteralProcessStart` (public static class in `Talvora.Shared`): move `ProcessRunner.CreateStartInfo`, `EncodeBatchArgument` and `TryDeleteTemporaryCommandScript` here and handle the environment inside:
-   - `public static ProcessStartInfo Create(string executable, string workingDirectory, IReadOnlyList<string> arguments, IReadOnlyDictionary<string, string?>? environment, bool clearEnvironment, out string? temporaryCommandScript)`. Order inside: build the start info exactly as `CreateStartInfo` does today but without the wrapper variables; then `Environment.Clear()` when `clearEnvironment`; then apply `environment` (a null value removes the variable, as `ProcessRunner` does today); last, for a batch program only, add the wrapper's `TALVORA_<guid>_SCRIPT` and `_ARG_<n>` variables, so neither the clear nor a caller's variable can remove them.
-   - `public static void DeleteTemporaryCommandScript(string? path)` = today's `TryDeleteTemporaryCommandScript`.
-   `ProcessRunner.RunAsync` calls `Create(executable, cwd, requestedArguments, environment, clearEnvironment: false, out var temporaryCommandScript)`, no longer applies `environment` itself, and its `finally` calls `DeleteTemporaryCommandScript`. `ProcessRunner`'s behaviour does not change (its batch checks stay green).
-3. `InteractiveUserProcessRunner.RunnerScript`: replace the hand-built start info (from `$psi = [Diagnostics.ProcessStartInfo]::new()` through the `ArgumentList` loop) and the later environment loop with this block; stdin, the pumps and the result document stay as they are:
-```powershell
-    # D52: the same start path as ProcessRunner, so a .cmd/.bat program receives every argument literally.
-    $environmentMap = [Collections.Generic.Dictionary[string,string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($property in $request.Environment.PSObject.Properties) {
-        $environmentMap[$property.Name] = if ($null -eq $property.Value) { $null } else { [string]$property.Value }
-    }
-    $temporaryCommandScript = $null
-    $psi = [Talvora.Shared.LiteralProcessStart]::Create(
-        [string]$request.Executable,
-        [string]$request.WorkingDirectory,
-        [string[]]@($request.Arguments),
-        $environmentMap,
-        $false,
-        [ref]$temporaryCommandScript)
-    $stdinPath = [string]$request.StandardInputPath
-    $psi.RedirectStandardInput = [bool]$request.CloseStandardInput -or
-        -not [string]::IsNullOrWhiteSpace($stdinPath)
-    if ($psi.RedirectStandardInput) {
-        $psi.StandardInputEncoding = [Text.UTF8Encoding]::new($false)
-    }
-```
-   and give the script's outer `try`/`catch` a `finally { [Talvora.Shared.LiteralProcessStart]::DeleteTemporaryCommandScript($temporaryCommandScript) }` (the variable is `$null` when the failure came first; the method ignores it).
-
-**Don't:** change any tool's arguments, output or resolution; add a PATHEXT lookup to the runner (callers pass full paths); touch Remotion's own `npx.cmd` call inside its script.
-
-**Context7:** `/dotnet/docs`, query "ProcessStartInfo ArgumentList batch file cmd.exe argument parsing"; when it has no passage, record the gap and use the vendor pages. Vendor sources: `https://learn.microsoft.com/dotnet/api/system.diagnostics.processstartinfo.argumentlist`, `https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw`, `https://learn.microsoft.com/windows-server/administration/windows-commands/cmd`.
-
-**Acceptance:** 1a red on the source before the change and 1b red against the installed 00a9616; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI.
-
 ### D53 — Tool descriptions are normalized once, in the right order, as whole sentences
 
 **Why:** `TalvoraMcpToolMetadataPolicy.NormalizeDescription` replaces "an caller-supplied" → "a caller-supplied" before it replaces "arbitrary" → "caller-supplied", so one pass turns every "an arbitrary" into "an caller-supplied". `McpToolMetadataWirePolicy.Apply` writes the result back into the tool objects that every request shares (its own comment: "the Tool objects are shared by every surface's request"), so the second `tools/list` normalizes the text again and repairs it. The first client after each service start therefore receives about twenty broken descriptions (`talvora_dotnet_run`, `talvora_npm_run`, `talvora_go_run`, `talvora_cargo_run`, `talvora_java_run`, `talvora_http_request`, `talvora_flutter_run` …) and keeps them in its cache; on 2026-11-08 the installed `--metadata-policy-only` was that first client and stopped with "Live description contains grammar regression: talvora_dotnet_run", then passed on the rerun. Two more slips of the same function are live in every list: "any accessible" → "accessible" leaves the noun without an article ("Run Cargo with a caller-supplied argument vector in accessible working directory.", also `talvora_rustc_run`, `talvora_java_run`, `talvora_javac_run`, `talvora_npm_install`, `talvora_npm_ci`, `talvora_archive_list`, `_create`, `_extract`, `talvora_json_get`, `talvora_read_text_range`, `talvora_tail_text`, `talvora_xml_query`), and `NoAllowDenySentence` removes "no … allowlist is applied." after a semicolon, so `talvora_java_run` and `talvora_javac_run` end with "resolution;".
@@ -107,7 +63,7 @@ Queue: D52, D53, D54, D55, D56 first (D55 needs D52's `LiteralProcessStart`, D56
 
 **Context7:** `/dotnet/docs`, queries "ConcurrentDictionary GetOrAdd" and "RegexOptions Compiled". Vendor sources: `https://learn.microsoft.com/dotnet/api/system.collections.concurrent.concurrentdictionary-2.getoradd`, `https://learn.microsoft.com/dotnet/standard/base-types/regular-expression-options`.
 
-**Acceptance:** red first; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI.
+**Acceptance:** red first; Changed and Full `Hepsi geçti.`; deploy; the first `--metadata-policy-only` right after the install is green (before the fix that first run stops on "an caller-supplied", P-50), then the full installed smoke green; CI.
 
 ### D54 — Command lookup, JAVA_HOME and ANDROID_HOME follow the signed-in user; the small UR follow-ups
 

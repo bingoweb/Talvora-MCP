@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-11-08-43` = the audit 43 commit. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-11-08-44` = the audit 44 commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -32,7 +32,6 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [~] D52 — Batch programs keep every argument literally when they run as the signed-in user; live install, installed smokes and CI pending (audit 43)
 - [ ] D53 — Tool descriptions are normalized once, in the right order, as whole sentences (audit 43)
 - [ ] D54 — Command lookup, JAVA_HOME and ANDROID_HOME follow the signed-in user; the small UR follow-ups (audit 43)
 - [ ] D55 — A relay runs one job inside the signed-in user's session (audit 43; after D52)
@@ -49,7 +48,6 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## User queue
 
-- [x] U15 — ChatGPT'de Talvora Dev ve Talvora Admin bağlayıcıları yenilendi, Claude Desktop kapatılıp açıldı (kullanıcı, 2026-11-08). Claude'un kontrolü: Claude Desktop köprüsünde `talvora_python_info` artık hatasız yanıt veriyor (`uvAvailable: true`, uv 0.13.7) ve araç listesinde `talvora_uv_run` var. (UV1, UR4)
 - [ ] U16 — İsteğe bağlı: makine (sistem) PATH'inde aynı klasörü gösteren ikinci satırlar var: `C:\Python314\Scripts`, `C:\Python314`, `C:\Program Files\dotnet\`, `C:\Program Files\PowerShell\7\` ve `C:\Program Files\nodejs\`. Zararsızlar; isterseniz U14'teki gibi Sistem değişkenleri → Path → Düzenle'den bu beşini silebilirsiniz.
 
 ## Open questions
@@ -61,6 +59,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — Claude, audit 44 (tag `audit/2026-11-08-44`): range `audit/2026-11-08-43..877662c` (D52 by Codex, U15 closed by Claude). D52 follows the card: `LiteralProcessStart` with the specified order (start info, clear, caller variables, wrapper variables last), `ProcessRunner` and the runner script use it, the literal block is exact, both red tests exist, `CodexCliIntegrationSourceRegression.ps1` follows the moved encoding lines (logged as a supporting change), Context7 records the gap and the three vendor pages. P-50 decided: the metadata stop was D53's first-list defect, not D52's; --metadata-policy-only against the installed 877662c green (TALVORA MCP METADATA POLICY LIVE GREEN); the full installed smoke green (TALVORA MCP SMOKE GREEN); signed-in Full gate 70/0 Hepsi geçti.; CI 42476029267 success; live talvora_npm_run ["--version","a&echo","TALVORA_BATCH_PROBE"] → stdout `12.2.1` only. D53's acceptance now names the first metadata run after its install. No screen changed in the range; the design improvements stay in WL3 (eight items). Next: D53.
+
+- 2026-11-08 — D52 live follow-up: installed 877662c; npm metacharacter probe passed. Metadata smoke stopped on the pre-existing D53 description error; P-50 records the blocker. CI 42476029267 was in progress at the single check; full installed smoke remains pending.
 
 - 2026-11-08 — D52, executor Codex: shared literal process start preserves batch arguments for the interactive runner; source and installed npm probes red before the fix, shared infrastructure green after. Changed 20/0 and Full 70/0: Hepsi geçti. Context7 /dotnet/docs had no relevant passage; three Microsoft pages used. Installed commit and CI pending. Supporting change: CodexCliIntegrationSourceRegression checks the moved encoding setup. Gitea mirror skipped: sending a comment was not explicitly authorized.
   Self-review — cosmetics: no screen change; usability: existing arguments and output are retained; Turkish: no visible copy changed; correctness/security: batch metacharacter tests and both gates passed.
