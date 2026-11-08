@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T13:29:15Z",
-  "scope": "D57: the README pinning tests read the new Turkish README through .NET regular-expression \\u escapes",
+  "verifiedAtUtc": "2026-11-08T13:54:59Z",
+  "scope": "D59: stop the tray before switching the service and detect a restarted service PID",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 D57: no passage on regular-expression character escapes (queries \"regular expression character escapes unicode \\u\" and \"Character Escapes in Regular Expressions \\u nnnn UTF-16 code unit\" returned only C# string-literal and JSON escapes); gap recorded. The Microsoft Learn page below states that \\unnnn matches one UTF-16 code unit, so the single-quoted PowerShell pattern reaches [regex]::Matches unchanged."
+      "verified": "2026-11-08 D59: sc.exe stop reports STOP_PENDING before the Windows service reaches STOPPED; the installer checks queryex status and PID without changing its wait windows (query: \"Windows service stop ServiceController status: explain Windows service STOP_PENDING and STOPPED transitions and .NET Process.Kill(entireProcessTree: false) behavior for service PID on Windows\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/standard/base-types/character-escapes-in-regular-expressions"
+    "https://learn.microsoft.com/windows/win32/services/service-status-transitions",
+    "https://learn.microsoft.com/dotnet/api/system.diagnostics.process.kill"
   ]
 }

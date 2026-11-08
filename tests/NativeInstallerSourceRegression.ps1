@@ -587,6 +587,16 @@ $result = [pscustomobject]@{
         $installerService -match 'Kill\(entireProcessTree:\s*false\)' -and
         $installerService -notmatch 'process\.Kill\(entireProcessTree:\s*true\)'
     )
+    InstallerStopsTrayBeforeService = (
+        $installerFlow.IndexOf('serviceSwitchStarted = true;', [StringComparison]::Ordinal) -ge 0 -and
+        $installerFlow.IndexOf('await StopTrayProcessesAsync(cancellationToken);', [StringComparison]::Ordinal) -gt
+            $installerFlow.IndexOf('serviceSwitchStarted = true;', [StringComparison]::Ordinal) -and
+        $installerFlow.IndexOf('await StopServiceForUpgradeAsync(ServiceName, cancellationToken);', [StringComparison]::Ordinal) -gt
+            $installerFlow.IndexOf('await StopTrayProcessesAsync(cancellationToken);', [StringComparison]::Ordinal)
+    )
+    InstallerNamesRestartedService = (
+        $installerService.Contains('was started again by another process during the upgrade')
+    )
     InstallerUpgradeNeverDeletesCanonicalService = (
         $upgradeStopSection -match 'Kill\(entireProcessTree:\s*false\)' -and
         $upgradeStopSection -notmatch '"delete"' -and

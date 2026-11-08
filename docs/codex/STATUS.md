@@ -32,7 +32,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [ ] D59 — The tray's automatic recovery can no longer undo an install (P-53, audit 45; first)
+- [~] D59 — code and gates green; live pending: forced-race deploy, installed smokes and CI (P-53)
 - [ ] TW1 — talvora_tail_text can wait for a line (loop check 2026-11-08)
 - [ ] TW2 — Talvora keeps a short trace of agent tool calls (user decision 2026-11-08)
 - [ ] D55 — A relay runs one job inside the signed-in user's session (audit 43; after D52)
@@ -65,6 +65,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — D59, executor ChatGPT: InstallAsync stops the tray before stopping the service; both wait loops detect a new PID without altering the 8/30-second windows or rollback. RED: InstallerStopsTrayBeforeService and InstallerNamesRestartedService false; both pinned regression suites green. Changed 16/0; Full 70/0: Hepsi geçti. Context7 /dotnet/docs and official Windows service state/Process.Kill pages; forced-race deploy, installed smokes and CI pending.
+  Self-review — no visual or Turkish copy changes; service ACL, forced kill, recovery policy and rollback kept as written.
 
 - 2026-11-08 — Claude, audit 45 (tag `audit/2026-11-08-45`): range `audit/2026-11-08-44..5afa33a` (D53 and D54 by Codex, D58 by ChatGPT, the P-52 stop, Claude's README and loop-check docs) plus P-53. D53 follows the card (the article fix runs after "arbitrary" → "caller-supplied"; descriptions are normalized once per tool name, like the schema cache). D54 follows it step by step (`RunCliAsync` runs as the signed-in user, `scope` defaults to the user, JAVA_HOME and ANDROID_HOME come from the user's environment, the policy test takes every file by pattern). D58 follows it (fixtures replace `_events`, no live refresh in smoke mode, normal use unchanged). Commit texts and self-reviews fine. P-53 decided: a wait call through Talvora kept the old service from stopping within 8 s, the installer killed it and the tray's automatic recovery started it again (B7 was Claude's miss). Claude installed 5afa33a with no call running (stopped in under 1 s, `Install succeeded` 16:24:57); `--metadata-policy-only` and the full installed smoke green; CI 42481964947 and 42482990847 success: D54 and D58 done. Full gate as the user with D57 70/0 `Hepsi geçti.` (ControlCenter 16 s). D57 shipped by Claude (6c8c977: README, both tests red first and green after, normalized SHA-256 matches the reference, old `control-center*.png` removed; CI 42485400239 success). New: D59 first. AGENTS.md: B7 says how to wait for an install, the Deploy row too, D4 removed (D58 installed). RL3 stops the tray before the service. Removed: finished queue lines (D53, D54, D57, D58), cards D53, D54, D57, D58, Log entries before audit 44, `docs/codex/reference/d57`. The agent's uncommitted STATUS lines are kept.
 

@@ -112,8 +112,8 @@ public static async Task<HealthSnapshot> InstallAsync(
                 "Talvora"));
             progress.Report(new InstallProgress(34, "Çalışan Talvora kontrollü olarak değiştiriliyor..."));
             serviceSwitchStarted = true;
-            await StopServiceForUpgradeAsync(ServiceName, cancellationToken);
             await StopTrayProcessesAsync(cancellationToken);
+            await StopServiceForUpgradeAsync(ServiceName, cancellationToken);
 
             progress.Report(new InstallProgress(50, "Windows servisi yeni sürüme bağlanıyor..."));
             await CreateServiceAsync(serviceExecutable, installUser, cancellationToken);

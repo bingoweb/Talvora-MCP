@@ -152,6 +152,11 @@ private static async Task RemoveLegacyInstallationAsync(
                     return;
                 }
 
+                var currentProcessId = ParseServiceProcessId(status.StandardOutput);
+                if (currentProcessId > 0 && currentProcessId != processId)
+                    throw new InvalidOperationException(
+                        $"Windows service was started again by another process during the upgrade (old PID {processId}, new PID {currentProcessId}); registration preserved for rollback. Service={serviceName}");
+
                 await Task.Delay(250, cancellationToken);
             }
 
@@ -198,6 +203,11 @@ private static async Task RemoveLegacyInstallationAsync(
                     stopSucceeded = true;
                     return;
                 }
+
+                var currentProcessId = ParseServiceProcessId(status.StandardOutput);
+                if (currentProcessId > 0 && currentProcessId != processId)
+                    throw new InvalidOperationException(
+                        $"Windows service was started again by another process during the upgrade (old PID {processId}, new PID {currentProcessId}); registration preserved for rollback. Service={serviceName}");
 
                 await Task.Delay(250, cancellationToken);
             }
