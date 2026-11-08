@@ -323,6 +323,22 @@ internal static partial class SmokeScenarios
                     {
                         throw new InvalidOperationException("npm_run --version did not match node_info.");
                     }
+
+                    var literalNpmResult = await EnsureSuccess(byName["talvora_npm_run"], new()
+                    {
+                        ["workingDirectory"] = root,
+                        ["arguments"] = new[] { "--version", "a&echo", "TALVORA_BATCH_PROBE" },
+                        ["timeoutSeconds"] = 30,
+                    });
+                    if (literalNpmResult.StructuredContent is not { } literalNpmJson ||
+                        literalNpmJson.GetProperty("exitCode").GetInt32() != 0 ||
+                        !string.Equals((literalNpmJson.GetProperty("standardOutput").GetString() ?? string.Empty).Trim(),
+                            npmVersion, StringComparison.Ordinal) ||
+                        (literalNpmJson.GetProperty("standardOutput").GetString() ?? string.Empty)
+                            .Contains("TALVORA_BATCH_PROBE", StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException("D52: npm_run let cmd.exe interpret an argument.");
+                    }
                 }
                 
                 var pythonInfoResult = await EnsureSuccess(byName["talvora_python_info"], new());

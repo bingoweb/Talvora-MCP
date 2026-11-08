@@ -67,29 +67,16 @@ public static class ProcessRunner
         }
 
         var requestedArguments = arguments?.ToArray() ?? [];
-        var startInfo = CreateStartInfo(
+        var startInfo = LiteralProcessStart.Create(
             executable,
             cwd,
             requestedArguments,
+            environment,
+            clearEnvironment: false,
             out var temporaryCommandScript);
 
         try
         {
-            if (environment is not null)
-            {
-                foreach (var pair in environment)
-                {
-                    if (pair.Value is null)
-                    {
-                        startInfo.Environment.Remove(pair.Key);
-                    }
-                    else
-                    {
-                        startInfo.Environment[pair.Key] = pair.Value;
-                    }
-                }
-            }
-
             using var process = new Process { StartInfo = startInfo };
             var stopwatch = Stopwatch.StartNew();
 
@@ -180,7 +167,7 @@ public static class ProcessRunner
         }
         finally
         {
-            TryDeleteTemporaryCommandScript(temporaryCommandScript);
+            LiteralProcessStart.DeleteTemporaryCommandScript(temporaryCommandScript);
         }
     }
 
@@ -212,107 +199,6 @@ public static class ProcessRunner
         }
 
         return result;
-    }
-
-    private static ProcessStartInfo CreateStartInfo(
-        string executable,
-        string workingDirectory,
-        IReadOnlyList<string> arguments,
-        out string? temporaryCommandScript)
-    {
-        temporaryCommandScript = null;
-        var extension = Path.GetExtension(executable);
-        var isCommandScript = OperatingSystem.IsWindows() &&
-            (extension.Equals(".cmd", StringComparison.OrdinalIgnoreCase) ||
-             extension.Equals(".bat", StringComparison.OrdinalIgnoreCase));
-
-        if (!isCommandScript)
-        {
-            var direct = new ProcessStartInfo
-            {
-                FileName = executable,
-                WorkingDirectory = workingDirectory,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                StandardOutputEncoding = ConsoleOutputEncoding.Instance,
-                StandardErrorEncoding = ConsoleOutputEncoding.Instance,
-                CreateNoWindow = true,
-            };
-            foreach (var argument in arguments)
-            {
-                direct.ArgumentList.Add(argument);
-            }
-            return direct;
-        }
-
-        var commandProcessor = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.System),
-            "cmd.exe");
-
-        var variablePrefix = "TALVORA_" + Guid.NewGuid().ToString("N");
-        temporaryCommandScript = Path.Combine(
-            Path.GetTempPath(),
-            $"talvora-run-{Guid.NewGuid():N}.cmd");
-
-        var wrapper = new System.Text.StringBuilder();
-        wrapper.AppendLine("@echo off");
-        wrapper.AppendLine("setlocal EnableDelayedExpansion");
-        wrapper.Append($"\"!{variablePrefix}_SCRIPT!\"");
-        for (var index = 0; index < arguments.Count; index++)
-        {
-            wrapper.Append($" \"!{variablePrefix}_ARG_{index}!\"");
-        }
-        wrapper.AppendLine();
-
-        File.WriteAllText(
-            temporaryCommandScript,
-            wrapper.ToString(),
-            new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-
-        var script = new ProcessStartInfo
-        {
-            FileName = commandProcessor,
-            WorkingDirectory = workingDirectory,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = ConsoleOutputEncoding.Instance,
-            StandardErrorEncoding = ConsoleOutputEncoding.Instance,
-            CreateNoWindow = true,
-            Arguments = "/d /v:on /s /c \"\"" + temporaryCommandScript + "\"\"",
-        };
-
-        script.Environment[variablePrefix + "_SCRIPT"] = executable;
-        for (var index = 0; index < arguments.Count; index++)
-        {
-            script.Environment[$"{variablePrefix}_ARG_{index}"] =
-                EncodeBatchArgument(arguments[index]);
-        }
-
-        return script;
-    }
-
-    private static string EncodeBatchArgument(string value) =>
-        value.Replace(
-            "\"",
-            "\"\"",
-            StringComparison.Ordinal);
-
-    private static void TryDeleteTemporaryCommandScript(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return;
-        }
-
-        try
-        {
-            File.Delete(path);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-        }
     }
 
     private static void ValidateMaximumCapturedCharacters(

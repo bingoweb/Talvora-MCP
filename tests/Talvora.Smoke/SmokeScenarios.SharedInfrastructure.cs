@@ -1,4 +1,7 @@
 using System.Diagnostics;
+using System.Reflection;
+using System.Text;
+using System.Text.Json;
 using Talvora.Shared;
 
 internal static partial class SmokeScenarios
@@ -73,6 +76,53 @@ internal static partial class SmokeScenarios
                     $"stdout={embeddedQuoteBatch.StandardOutput}; " +
                     $"stderr={embeddedQuoteBatch.StandardError}");
             }
+
+            var runnerFolder = Path.Combine(root, "interactive");
+            Directory.CreateDirectory(runnerFolder);
+            var runnerPath = Path.Combine(runnerFolder, "runner.ps1");
+            var runnerScript = (string)typeof(InteractiveUserProcessRunner)
+                .GetField("RunnerScript", BindingFlags.NonPublic | BindingFlags.Static)!
+                .GetRawConstantValue()!;
+            await File.WriteAllTextAsync(runnerPath, runnerScript, new UTF8Encoding(false));
+            var pwsh = CommandResolver.Resolve(["pwsh.exe", "pwsh"], [@"C:\Program Files\PowerShell\7\pwsh.exe"])
+                ?? throw new InvalidOperationException("PowerShell 7 was not found.");
+            async Task CheckInteractiveBatch(string[] arguments, string[] expected)
+            {
+                var requestPath = Path.Combine(runnerFolder, "request.json");
+                var stdoutPath = Path.Combine(runnerFolder, "stdout.txt");
+                await File.WriteAllTextAsync(requestPath, JsonSerializer.Serialize(new
+                {
+                    Executable = batchPath,
+                    WorkingDirectory = root,
+                    Arguments = arguments,
+                    Environment = new Dictionary<string, string?>(),
+                    StandardOutputPath = stdoutPath,
+                    StandardErrorPath = Path.Combine(runnerFolder, "stderr.txt"),
+                    ResultPath = Path.Combine(runnerFolder, "result.json"),
+                    HelperAssemblyPath = typeof(InteractiveUserProcessRunner).Assembly.Location,
+                    MaximumPersistedCharacters = ProcessRunner.DefaultMaximumCapturedCharacters,
+                    DiscardStandardError = false,
+                    CodexProgressPath = (string?)null,
+                    ClaudeProgressPath = (string?)null,
+                    CloseStandardInput = true,
+                    StandardInputPath = (string?)null,
+                    ClaudeWorkspaceRoot = (string?)null,
+                }), new UTF8Encoding(false));
+                var run = await ProcessRunner.RunAsync(pwsh, root,
+                    ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                     "-File", runnerPath, "-RequestPath", requestPath], timeoutSeconds: 60);
+                var output = File.Exists(stdoutPath) ? await File.ReadAllTextAsync(stdoutPath) : "";
+                if (run.ExitCode != 0 || expected.Any(line => !output.Contains(line, StringComparison.Ordinal)))
+                {
+                    throw new InvalidOperationException("D52: the interactive runner did not preserve batch-file arguments.");
+                }
+            }
+            await CheckInteractiveBatch(
+                ["alpha beta", "a&b", "%PATH%", "x!y", "(z)", "", @"C:\tail\", "a|b"],
+                ["ARG1=alpha beta", "ARG2=a&b", "ARG3=%PATH%", "ARG4=x!y", "ARG5=(z)", @"ARG7=C:\tail\", "ARG8=a|b"]);
+            await CheckInteractiveBatch(
+                ["a\"b", "normal", "a<b", "a>b", "a&&b", "six", "seven", "eight"],
+                ["ARG1=a\"\"b", "ARG2=normal", "ARG3=a<b", "ARG4=a>b", "ARG5=a&&b"]);
 
             var powershell = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.System),

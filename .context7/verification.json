@@ -1,15 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-07T23:52:04Z",
-  "scope": "UR1/UR2 follow-up: the version probes of the *_info tools (ProcessRunner.RunCheckedAsync) also run as the signed-in user through SignedInUserToolchain.RunCheckedAsync",
+  "verifiedAtUtc": "2026-11-08T11:21:56Z",
+  "scope": "D52: preserve literal batch arguments in the interactive user runner",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 UR1/UR2: Context7 /dotnet/docs has no passage for CreateEnvironmentBlock (gap; Microsoft Learn used). CreateEnvironmentBlock retrieves the environment variables for the specified user, the block a process started as that user receives; the installed smoke showed talvora_node_info reporting the service account's npm 12.2.0 while talvora_npm_run, already running as the user, reported the user's npm 12.2.1, because the probes went through ProcessRunner.RunCheckedAsync. The helper keeps the same failure rule (non-zero exit or timeout throws). Query: CreateEnvironmentBlock user environment; process exit code check."
+      "verified": "2026-11-08 D52: Context7 has no relevant passage on batch parsing (gap; Microsoft Learn used). ArgumentList escapes arguments into a command line; cmd.exe interprets its own special characters. (query: \"ProcessStartInfo ArgumentList batch file cmd.exe argument parsing\")"
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/windows/win32/api/userenv/nf-userenv-createenvironmentblock",
-    "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasuserw"
+    "https://learn.microsoft.com/dotnet/api/system.diagnostics.processstartinfo.argumentlist",
+    "https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw",
+    "https://learn.microsoft.com/windows-server/administration/windows-commands/cmd"
   ]
 }

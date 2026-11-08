@@ -573,6 +573,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $sw = [Diagnostics.Stopwatch]::StartNew()
 $resultPath = Join-Path (Split-Path -Parent $RequestPath) 'result.json'
+$temporaryCommandScript = $null
 try {
     $request = Get-Content -Raw -LiteralPath $RequestPath | ConvertFrom-Json
     # .NET delete: Remove-Item also opens the parent folder, which the user may not read (S3).
@@ -580,33 +581,24 @@ try {
     [void][Reflection.Assembly]::LoadFrom(
         [string]$request.HelperAssemblyPath)
 
-    $psi = [Diagnostics.ProcessStartInfo]::new()
-    $psi.FileName = [string]$request.Executable
-    $psi.WorkingDirectory = [string]$request.WorkingDirectory
-    $psi.UseShellExecute = $false
-    $psi.RedirectStandardOutput = $true
-    $psi.RedirectStandardError = $true
+    # D52: the same start path as ProcessRunner, so a .cmd/.bat program receives every argument literally.
+    $environmentMap = [Collections.Generic.Dictionary[string,string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($property in $request.Environment.PSObject.Properties) {
+        $environmentMap[$property.Name] = if ($null -eq $property.Value) { $null } else { [string]$property.Value }
+    }
+    $temporaryCommandScript = $null
+    $psi = [Talvora.Shared.LiteralProcessStart]::Create(
+        [string]$request.Executable,
+        [string]$request.WorkingDirectory,
+        [string[]]@($request.Arguments),
+        $environmentMap,
+        $false,
+        [ref]$temporaryCommandScript)
     $stdinPath = [string]$request.StandardInputPath
     $psi.RedirectStandardInput = [bool]$request.CloseStandardInput -or
         -not [string]::IsNullOrWhiteSpace($stdinPath)
-    # W1: UTF-8 output (Codex) stays UTF-8; anything else is read through the OEM code page.
-    $psi.StandardOutputEncoding = [Talvora.Shared.ConsoleOutputEncoding]::Instance
-    $psi.StandardErrorEncoding = [Talvora.Shared.ConsoleOutputEncoding]::Instance
     if ($psi.RedirectStandardInput) {
         $psi.StandardInputEncoding = [Text.UTF8Encoding]::new($false)
-    }
-    $psi.CreateNoWindow = $true
-
-    foreach($arg in @($request.Arguments)) {
-        [void]$psi.ArgumentList.Add([string]$arg)
-    }
-
-    foreach($property in $request.Environment.PSObject.Properties) {
-        if($null -eq $property.Value) {
-            [void]$psi.Environment.Remove($property.Name)
-        } else {
-            $psi.Environment[$property.Name] = [string]$property.Value
-        }
     }
 
     $process = [Diagnostics.Process]::new()
@@ -678,6 +670,9 @@ catch {
         ElapsedMilliseconds = $sw.ElapsedMilliseconds
     } | ConvertTo-Json -Compress |
         Set-Content -LiteralPath $resultPath -Encoding utf8
+}
+finally {
+    [Talvora.Shared.LiteralProcessStart]::DeleteTemporaryCommandScript($temporaryCommandScript)
 }
 """;
 }

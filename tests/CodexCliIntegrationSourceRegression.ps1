@@ -20,6 +20,8 @@ $hostProgram = [IO.File]::ReadAllText(
     (Join-Path $root 'src\Talvora\Program.cs'))
 $runner = [IO.File]::ReadAllText(
     (Join-Path $root 'src\Talvora.Shared\InteractiveUserProcessRunner.cs'))
+$literalStart = [IO.File]::ReadAllText(
+    (Join-Path $root 'src\Talvora.Shared\LiteralProcessStart.cs'))
 $pump = [IO.File]::ReadAllText(
     (Join-Path $root 'src\Talvora.Shared\BoundedTextCapture.cs'))
 $installer = [IO.File]::ReadAllText(
@@ -126,8 +128,9 @@ $checks = [ordered]@{
         $source.Contains('CodexCliInvocationPolicy.SafeErrorSummary(') -and
         $source.Contains('discardStandardError: true') -and
         $policy.Contains('[TASK_PROMPT_REDACTED]') -and
-        $runner.Contains('StandardOutputEncoding = [Talvora.Shared.ConsoleOutputEncoding]::Instance') -and
-        $runner.Contains('StandardErrorEncoding = [Talvora.Shared.ConsoleOutputEncoding]::Instance') -and
+        $runner.Contains('[Talvora.Shared.LiteralProcessStart]::Create(') -and
+        $literalStart.Contains('StandardOutputEncoding = ConsoleOutputEncoding.Instance') -and
+        $literalStart.Contains('StandardErrorEncoding = ConsoleOutputEncoding.Instance') -and
         $runner.Contains('TextFileStore.ReadBoundedAsync(') -and
         $pump.Contains('var headLimit = maximumCharacters / 2') -and
         $pump.Contains('writer.FlushAsync(cancellationToken)') -and
