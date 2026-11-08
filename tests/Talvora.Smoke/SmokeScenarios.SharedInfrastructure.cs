@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Globalization;
+using System.IO.Pipes;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -149,6 +151,90 @@ internal static partial class SmokeScenarios
             await File.WriteAllTextAsync(runnerPath, runnerScript, new UTF8Encoding(false));
             var pwsh = CommandResolver.Resolve(["pwsh.exe", "pwsh"], [@"C:\Program Files\PowerShell\7\pwsh.exe"])
                 ?? throw new InvalidOperationException("PowerShell 7 was not found.");
+            var relayFolder = Path.Combine(root, "relay");
+            Directory.CreateDirectory(relayFolder);
+            async Task CheckRelayAsync(
+                string executable, string[] arguments, string? stdin,
+                int expectedExit, string[] expectedOutput, string expectedError,
+                bool exactOutput)
+            {
+                var identity = Guid.NewGuid().ToString("N");
+                var prefix = "talvora-relay-smoke-" + identity;
+                var requestPath = Path.Combine(relayFolder, identity + "-request.json");
+                var childPidPath = Path.Combine(relayFolder, identity + "-pid.txt");
+                var exitPath = Path.Combine(relayFolder, identity + "-exit.txt");
+                var request = new UserJobRelay.UserJobRequest(
+                    executable, root, arguments, new Dictionary<string, string?>(),
+                    false, prefix + "-in", prefix + "-out", prefix + "-err",
+                    childPidPath, exitPath);
+                await File.WriteAllTextAsync(requestPath, JsonSerializer.Serialize(request));
+                using var inputPipe = new NamedPipeServerStream(prefix + "-in",
+                    PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                using var outputPipe = new NamedPipeServerStream(prefix + "-out",
+                    PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                using var errorPipe = new NamedPipeServerStream(prefix + "-err",
+                    PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                using var connectTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                var connected = Task.WhenAll(
+                    inputPipe.WaitForConnectionAsync(connectTimeout.Token),
+                    outputPipe.WaitForConnectionAsync(connectTimeout.Token),
+                    errorPipe.WaitForConnectionAsync(connectTimeout.Token));
+                var running = Task.Run(() => UserJobRelay.Run(requestPath));
+                try
+                {
+                    var first = await Task.WhenAny(running, connected);
+                    if (first == running && running.IsFaulted)
+                        await running;
+                    await connected;
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("D55: relay did not connect all three pipes within 10 seconds.", ex);
+                }
+
+                using (var writer = new StreamWriter(
+                    inputPipe, new UTF8Encoding(false), bufferSize: 1024, leaveOpen: false))
+                {
+                    if (stdin is not null)
+                        await writer.WriteLineAsync(stdin);
+                    await writer.FlushAsync();
+                }
+                using var stdoutReader = new StreamReader(outputPipe, Encoding.UTF8);
+                using var stderrReader = new StreamReader(errorPipe, Encoding.UTF8);
+                var captured = await Task.WhenAll(
+                    stdoutReader.ReadToEndAsync(), stderrReader.ReadToEndAsync())
+                    .WaitAsync(TimeSpan.FromSeconds(15));
+                var code = await running.WaitAsync(TimeSpan.FromSeconds(15));
+                var stdout = captured[0].Trim();
+                var stderr = captured[1].Trim();
+                if (code != expectedExit ||
+                    (exactOutput
+                        ? stdout != expectedOutput[0]
+                        : expectedOutput.Any(line => !stdout.Contains(line, StringComparison.Ordinal))) ||
+                    stderr != expectedError ||
+                    !File.Exists(exitPath) ||
+                    !int.TryParse(await File.ReadAllTextAsync(exitPath), out var savedExit) ||
+                    savedExit != expectedExit ||
+                    !File.Exists(childPidPath) ||
+                    !int.TryParse(await File.ReadAllTextAsync(childPidPath),
+                        NumberStyles.Integer, CultureInfo.InvariantCulture, out var childPid) ||
+                    childPid <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"D55: relay streams, exit code or child PID were incorrect. Exit={code}; stdout={stdout}; stderr={stderr}");
+                }
+            }
+            await CheckRelayAsync(pwsh,
+                ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
+                 "$line = [Console]::In.ReadLine(); [Console]::Out.WriteLine('got:' + $line); [Console]::Error.WriteLine('relay-err'); exit 3"],
+                "ping", 3, ["got:ping"], "relay-err", exactOutput: true);
+            await CheckRelayAsync(batchPath,
+                ["alpha beta", "a&b", "%PATH%", "x!y", "(z)", "", @"C:\tail\", "a|b"],
+                null, 0,
+                ["ARG1=alpha beta", "ARG2=a&b", "ARG3=%PATH%", "ARG4=x!y",
+                 "ARG5=(z)", @"ARG7=C:\tail\", "ARG8=a|b"],
+                "", exactOutput: false);
+
             async Task CheckInteractiveBatch(string[] arguments, string[] expected)
             {
                 var requestPath = Path.Combine(runnerFolder, "request.json");

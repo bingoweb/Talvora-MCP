@@ -34,8 +34,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [x] D59 — installed d90bb6f; forced-race deploy and installed smokes green; CI 42487516284 success
 - [x] TW1 — installed 01dcf9a; both installed smokes green; CI 42488833981 success
-- [~] TW2 — code and gates green; live pending: deploy, whoami trace, installed smokes and CI
-- [ ] D55 — A relay runs one job inside the signed-in user's session (audit 43; after D52)
+- [x] TW2 — installed 0c9e222; whoami trace and both installed smokes green; CI 42490285622 success
+- [~] D55 — code and gates green; live pending: deploy, installed smokes and CI
 - [ ] D56 — Background jobs and dev servers run as the signed-in user (audit 43, user decision; after D55)
 - [ ] D45 — Çalışma günlüğü measures a session up to its last step (audit 42, data truth)
 - [ ] D50 — Çalışma günlüğü keeps every session (audit 42, data truth; after D45)
@@ -65,6 +65,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — D55, executor ChatGPT: UserJobRelay.Run connects three pipes and forwards live stdin/stdout/stderr with child PID/exit files; the exact RunnerScript and request contract are preserved. RED: relay NotImplementedException; GREEN: pwsh ping/exit 3, separate stderr, and args.cmd special-character argument fidelity; TALVORA SHARED INFRASTRUCTURE GREEN. Changed 17/0; Full 70/0: Hepsi geçti. Context7 /dotnet/docs pipe client and Process.StandardInput; Microsoft NamedPipeClientStream/CreateProcessAsUser pages. Install, installed smokes and CI pending. Gitea #9 comment 220.
+  Self-review — no tools wired until D56, no handle inheritance across sessions, no UI changes; disconnected outputs keep draining and temporary command scripts are cleaned.
 
 - 2026-11-08 — TW2, executor ChatGPT: async serialized call trace records nine redacted/hash-only fields, skips D41 own clients, and deletes files older than 14 days daily. RED: CS0246 missing ToolCallTrace; TW2_CALL_TRACE_GREEN and DESKTOP_PROGRESS_BEHAVIOR_GREEN. Changed 28/0; Full 70/0: Hepsi geçti. Context7 /dotnet/docs Utf8JsonWriter and SHA256.HashData, official JSON writer docs. Commit, deploy, whoami trace, installed smokes and CI pending. Gitea #9 comment 219.
   Self-review — no UI, output, environment values or file contents written to trace; no reader or setting; the notification-test runner only invokes the new isolated fixture.

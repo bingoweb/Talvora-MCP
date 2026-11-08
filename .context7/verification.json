@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T14:27:07Z",
-  "scope": "TW2: append-only tool-call trace using JSON lines and a short canonical SHA-256 fingerprint",
+  "verifiedAtUtc": "2026-11-08T14:45:49Z",
+  "scope": "D55: user-session process relay over three named pipes for stdin, stdout and stderr",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 TW2: Utf8JsonWriter writes bounded UTF-8 JSON object properties including explicit nulls; SHA256.HashData computes a digest and Convert.ToHexString renders hexadecimal (queries: \"System.Text.Json Utf8JsonWriter WriteStartObject WriteString WriteNumber WriteNull serialize UTF-8 JSON lines .NET 10\"; \"SHA256.HashData .NET 10 static HashData(ReadOnlySpan<byte>) and Convert.ToHexString for canonical JSON fingerprint\")."
+      "verified": "2026-11-08 D55: NamedPipeClientStream connects to named pipes with explicit PipeDirection and PipeOptions; redirected Process.StandardInput.BaseStream transfers live bytes, with Flush after each chunk. Queries: \".NET 10 NamedPipeClientStream constructor (serverName, pipeName, PipeDirection, PipeOptions) and Connect(int timeout) behavior; NamedPipeServerStream WaitForConnectionAsync cancellation, server/client direction pairings\" and \".NET Process.StandardInput.BaseStream Flush after writing bytes with redirected standard input, Stream.CopyToAsync & Process.StandardOutput.BaseStream, WaitForExit and pipe flush on EOF\"."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/use-utf8jsonwriter"
+    "https://learn.microsoft.com/dotnet/api/system.io.pipes.namedpipeclientstream",
+    "https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasuserw"
   ]
 }
