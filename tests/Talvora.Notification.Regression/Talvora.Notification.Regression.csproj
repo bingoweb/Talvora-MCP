@@ -10,5 +10,6 @@
     <ProjectReference Include="..\..\src\Talvora.Tray\Talvora.Tray.csproj" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 </Project>

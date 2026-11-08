@@ -40,7 +40,7 @@ When a bundled dependency, model, or managed integration changes, this notice mu
 
 The current locked package set includes:
 
-- `Microsoft.Build.Framework 17.14.28`
+- `Microsoft.Build.Framework 18.9.6`
 - `Microsoft.Build.Locator 1.11.2`
 - `Microsoft.CodeAnalysis.Analyzers 5.9.0`
 - `Microsoft.CodeAnalysis.Common 5.9.0`
@@ -62,6 +62,7 @@ The current locked package set includes:
 - `Microsoft.Extensions.Options 10.0.14`
 - `Microsoft.Extensions.Primitives 10.0.14`
 - `Microsoft.NET.ILLink.Tasks 10.0.14`
+- `Microsoft.NET.StringTools 18.9.6`
 - `Microsoft.VisualStudio.SolutionPersistence 1.0.52`
 - `System.Composition 10.0.14`
 - `System.Composition.AttributedModel 10.0.14`

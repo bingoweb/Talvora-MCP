@@ -4,9 +4,12 @@
     "net10.0-windows7.0": {
       "Microsoft.Build.Framework": {
         "type": "Direct",
-        "requested": "[17.14.28, )",
-        "resolved": "17.14.28",
-        "contentHash": "wRcyTzGV0LRAtFdrddtioh59Ky4/zbvyraP0cQkDzRSRkhgAQb0K88D/JNC6VHLIXanRi3mtV1jU0uQkBwmiVg=="
+        "requested": "[18.9.6, )",
+        "resolved": "18.9.6",
+        "contentHash": "P5y8IAhu6UyN6FtzfN4sCNZEQGyV6S4kSTBYldtzB9bzvgdCBBKjsS6epH5aJVFM0q1yJqa8RaTzr1iEJBwIMA==",
+        "dependencies": {
+          "Microsoft.NET.StringTools": "18.9.6"
+        }
       },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "Direct",
@@ -16,6 +19,12 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.14"
         }
+      },
+      "Microsoft.NET.StringTools": {
+        "type": "Direct",
+        "requested": "[18.9.6, )",
+        "resolved": "18.9.6",
+        "contentHash": "CNZfh4P65tHm1Wh/uuIbYfvHlPnb0dJ9SCaIZbXRzOMn+8JEorSqSdXdGRsrDbKBDJfNG6nmgleYhnfL2pd1oQ=="
       },
       "Microsoft.CodeAnalysis.Common": {
         "type": "Transitive",

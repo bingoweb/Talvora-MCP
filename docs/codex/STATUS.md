@@ -34,7 +34,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] CTX2 — installed 953fc7d; both installed MCP smokes green, CI success (audit 47); Claude checks the next card's push
 - [x] [C] PK1 — MCP C# SDK 2.4.0 and Tomlyn 2.11.0 (Claude after P-55: lock files and notices included)
-- [?] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (waiting for PK1; P-55)
+- [x] [C] PK2 — Microsoft.Build.Framework 18.9.6 follows the SDK's MSBuild (Claude after P-55; StringTools compile-only)
 - [ ] RL1 — Talvora's version is 0.0.x.x and comes from the release tag (user request 2026-11-08)
 - [ ] RL2 — A fresh Windows gets PowerShell 7 from the installer (user decision 2026-11-08)
 - [ ] RL3 — Talvora is in Apps & features and can be uninstalled (user request 2026-11-08)
@@ -58,6 +58,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — [C] PK2, executor Claude (P-55): `dotnet msbuild -version` 18.9.15, so `Microsoft.Build.Framework` 17.14.28 → 18.9.6. It brings `Microsoft.NET.StringTools` 18.9.6, and the build stopped with MSBL001 (Microsoft.Build.Locator: a MSBuild package without ExcludeAssets="runtime"); StringTools is now pinned 18.9.6 and referenced compile-only next to Microsoft.Build.Framework in src/Talvora and both regression projects. One `--force-evaluate` restore, three lock files moved (only these two packages); the service output still holds only Microsoft.Build.Locator.dll. Notices name both (packages=46). Context7 `/microsoft/msbuildlocator`.
 
 - 2026-11-08 — [C] PK1, executor Claude (P-55): `ModelContextProtocol` and `.AspNetCore` 2.3.1 → 2.4.0, `Tomlyn` 2.10.1 → 2.11.0 (the newest stable on 2026-11-08; 2.11.0 appeared after the card was written). One `dotnet restore Talvora.slnx --force-evaluate`: five lock files moved, only the MCP packages, Tomlyn and the project nodes that reference them; `--locked-mode` passes. THIRD-PARTY-NOTICES.md names the new versions (THIRD_PARTY_NOTICES_SOURCE_GREEN packages=45). Changed 66/0 `Hepsi geçti.` Context7 (asked directly): `/modelcontextprotocol/csharp-sdk/v2.3.0` UseStructuredContent/OutputSchemaType, `/xoofx/tomlyn/2.10.1` TomlSerializer; map rows show the index gaps. Full gate, deploy and installed smokes run with PK2 (one install).
 

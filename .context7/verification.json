@@ -1,19 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T19:14:17Z",
-  "scope": "PK1: MCP C# SDK 2.4.0 and Tomlyn 2.11.0 with their lock files and third-party notices",
+  "verifiedAtUtc": "2026-11-08T19:18:14Z",
+  "scope": "PK2: Microsoft.Build.Framework 18.9.6 follows the SDK's MSBuild 18.9.15; its new dependency Microsoft.NET.StringTools is compile-only",
   "libraries": [
     {
-      "libraryId": "/modelcontextprotocol/csharp-sdk/v2.3.0",
-      "verified": "2026-11-08 PK1: tools keep UseStructuredContent with OutputSchemaType on McpServerToolAttribute; 2.4.0 only fixes legacy schemas of delegating tools (#1928), which the installed metadata smoke checks (query: \"McpServerTool attribute UseStructuredContent OutputSchemaType structured tool result schema\")"
-    },
-    {
-      "libraryId": "/xoofx/tomlyn/2.10.1",
-      "verified": "2026-11-08 PK1: Talvora uses TomlSerializer.Deserialize<TomlTable> and TomlSerializer.Serialize(TomlTable), unchanged in 2.11.0, which only adds serializer options and newline/blank-line preservation (query: \"TomlSerializer Serialize TomlTable model to TOML text and Deserialize TomlTable\")"
+      "libraryId": "/microsoft/msbuildlocator",
+      "verified": "2026-11-08 PK2: every MSBuild package reference needs ExcludeAssets=\"runtime\" and PrivateAssets=\"all\" so MSBuildLocator loads the SDK's MSBuild; 18.9.6 brings Microsoft.NET.StringTools, which raised MSBL001 until it got the same reference (query: \"ExcludeAssets runtime for every MSBuild package reference with Microsoft.Build.Locator\")"
     }
   ],
-  "vendorSources": [
-    "https://github.com/modelcontextprotocol/csharp-sdk/releases/tag/v2.4.0",
-    "https://github.com/xoofx/Tomlyn/releases/tag/2.11.0"
-  ]
+  "vendorSources": []
 }
