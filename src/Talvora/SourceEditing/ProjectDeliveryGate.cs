@@ -56,6 +56,7 @@ internal static class ProjectDeliveryGate
             foreach (var (id, question) in questions)
             {
                 if (records.Any(record => record.Status == 200 &&
+                    !TalvoraLineTrafficMeter.IsOwnClient(record.Caller) &&
                     record.Ts <= now && record.LibraryId == id && record.Query == question))
                     continue;
                 throw Blocked($"Context7 evidence names a question Talvora did not record: {id} \"{question}\". Ask it with talvora_context7_docs and copy the question exactly.");
@@ -178,10 +179,11 @@ internal static class ProjectDeliveryGate
             {
                 throw Blocked("Every Context7 library entry must contain a canonical /org/project libraryId and verified guidance.");
             }
-            var match = QuestionPattern.Match(verified);
-            if (!match.Success)
+            var matches = QuestionPattern.Matches(verified);
+            if (matches.Count == 0)
                 throw Blocked("Context7 evidence verified guidance must include (query: \"question\").");
-            questions.Add((libraryId!, match.Groups[1].Value));
+            foreach (Match match in matches)
+                questions.Add((libraryId!, match.Groups[1].Value));
         }
         if (questions.Count == 0 && (!evidence.TryGetProperty("noLookup", out var noLookup) ||
             noLookup.ValueKind != JsonValueKind.String ||

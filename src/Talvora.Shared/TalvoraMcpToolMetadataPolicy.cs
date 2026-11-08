@@ -10,7 +10,7 @@ namespace Talvora.Shared;
 public static class TalvoraMcpToolMetadataPolicy
 {
     public const int ExpectedReviewedToolCount = 250;
-    public const int ExpectedOpenWorldToolCount = 83;
+    public const int ExpectedOpenWorldToolCount = 84;
     public const int ExpectedDestructiveToolCount = 106;
     public const int PreferredMaxDescriptionCharacters = 220;
 
@@ -25,6 +25,7 @@ public static class TalvoraMcpToolMetadataPolicy
             "talvora_choco_run",
             "talvora_choco_search",
             "talvora_choco_upgrade",
+            "talvora_context7_docs",
             "talvora_dart_run",
             "talvora_dev_server_get",
             "talvora_dev_server_start",

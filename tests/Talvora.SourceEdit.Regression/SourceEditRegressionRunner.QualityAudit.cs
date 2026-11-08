@@ -147,13 +147,19 @@ internal static partial class SourceEditRegressionRunner
                 ex.Message.Contains("TALVORA_DELIVERY_GATE_BLOCKED", StringComparison.Ordinal))
             {
                 if (expected is not null && !ex.Message.Contains(expected, StringComparison.Ordinal))
-                    throw new InvalidOperationException("CTX2: " + reason + ": " + ex.Message);
+                    throw new InvalidOperationException(
+                        (reason.StartsWith("D64", StringComparison.Ordinal) ? "D64: " : "CTX2: ") +
+                        reason + ": " + ex.Message);
                 return;
             }
-            throw new InvalidOperationException("CTX2: accepted " + reason);
+            throw new InvalidOperationException(
+                (reason.StartsWith("D64", StringComparison.Ordinal) ? "D64: " : "CTX2: ") +
+                "accepted " + reason);
         }
 
-        async Task WriteEvidenceAsync(string? noLookup = null, string? vendor = "https://git-scm.com/docs/git-diff")
+        async Task WriteEvidenceAsync(
+            string? noLookup = null, string? vendor = "https://git-scm.com/docs/git-diff",
+            string? secondQuestion = null)
         {
             Directory.CreateDirectory(Path.Combine(clone, ".context7"));
             var evidence = new Dictionary<string, object?>
@@ -162,7 +168,12 @@ internal static partial class SourceEditRegressionRunner
                 ["verifiedAtUtc"] = DateTimeOffset.UtcNow.ToString("O"),
                 ["scope"] = "CTX2 test of recorded questions",
                 ["libraries"] = noLookup is null
-                    ? new object[] { new { libraryId = id, verified = $"Git diff range (query: \"{question}\")" } }
+                    ? new object[] { new
+                    {
+                        libraryId = id,
+                        verified = $"Git diff range (query: \"{question}\")" +
+                            (secondQuestion is null ? "" : $" and additional docs (query: \"{secondQuestion}\")"),
+                    } }
                     : Array.Empty<object>(),
                 ["vendorSources"] = vendor is null ? Array.Empty<string>() : new[] { vendor },
             };
@@ -202,10 +213,25 @@ internal static partial class SourceEditRegressionRunner
                 await ledger.FlushAsync();
                 MustBlock("old or unsuccessful Context7 evidence", id + " \"" + question + "\"");
 
+                ledger.Record(new Context7LookupRecord(DateTimeOffset.UtcNow, "Talvora.Smoke",
+                    id, question, 200, 12, "0123456789abcdef"));
+                await ledger.FlushAsync();
+                MustBlock("D64: own-client lookup is not valid evidence",
+                    id + " \"" + question + "\"");
+
                 ledger.Record(new Context7LookupRecord(DateTimeOffset.UtcNow, "ChatGPT",
                     id, question, 200, 12, "0123456789abcdef"));
                 await ledger.FlushAsync();
             }
+            ProjectDeliveryGate.EnsureSatisfied(clone, push, ledgerPath);
+
+            const string secondQuestion = "git diff path filtering between commits and working trees";
+            await WriteEvidenceAsync(secondQuestion: secondQuestion);
+            await CommitAsync("Two claimed questions");
+            MustBlock("D64: second question has no proof", id + " \"" + secondQuestion + "\"");
+
+            await WriteEvidenceAsync();
+            await CommitAsync("Restored single question");
             ProjectDeliveryGate.EnsureSatisfied(clone, push, ledgerPath);
 
             await WriteEvidenceAsync("short");

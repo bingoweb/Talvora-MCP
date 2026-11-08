@@ -28,6 +28,8 @@ internal static partial class Program
             ("talvora_user_run", "dotnet",
                 ["run", "--project", "tests/Talvora.Smoke/Talvora.Smoke.csproj", "-c", "Release"],
                 "Talvora.Smoke bitti"),
+            ("talvora_user_process_start", "dotnet",
+                ["build"], "dotnet build arka planda başladı"),
         };
         foreach (var (tool, executable, argv, expected) in cases)
         {
@@ -50,7 +52,8 @@ internal static partial class Program
                 message.Kind is DesktopProgressKind.Completed or DesktopProgressKind.Failed);
             if (terminal?.Kind != DesktopProgressKind.Completed || terminal.Title != expected)
                 throw new InvalidOperationException(
-                    $"D62: {tool} {executable} should say '{expected}', observed {terminal?.Kind} '{terminal?.Title}'.");
+                    $"{(executable == "dotnet" && tool == "talvora_user_process_start" ? "D64" : "D62")}: " +
+                    $"{tool} {executable} should say '{expected}', observed {terminal?.Kind} '{terminal?.Title}'.");
         }
         Console.WriteLine("D62_DETACHED_START_IS_NOT_RESULT_GREEN");
     }

@@ -25,7 +25,7 @@ public static class Context7Tools
         Name = "talvora_context7_docs",
         Destructive = false,
         Idempotent = true,
-        OpenWorld = false,
+        OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraContext7Response)),
      Description("Ask Context7 one precise question about one library (an id from the project's Context7 map). Talvora records the question; Context7 evidence must name questions asked here.")]

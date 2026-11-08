@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T18:14:30Z",
-  "scope": "D63: the CI and delivery checks follow ProjectDeliveryGate (14-day age, noLookup, optional HTTPS vendor sources)",
+  "verifiedAtUtc": "2026-11-08T18:24:16Z",
+  "scope": "D64: exclude Talvora's own Context7 smoke records, validate every question, correct MCP metadata and detached start titles",
   "libraries": [],
-  "noLookup": "D63: aligns two repository scripts with the push gate; it relies on no external API.",
+  "noLookup": "D64: only updates Talvora's own gate, tool metadata and worklog code; no external API behavior is relied upon.",
   "vendorSources": []
 }

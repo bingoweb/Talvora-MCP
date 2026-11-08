@@ -118,11 +118,19 @@ internal static partial class WorklogSubject
                     "Kurulum paketi hazırlığı başlatılamadı"),
             };
         }
+        var subject = description.Subject;
+        if (string.IsNullOrWhiteSpace(subject))
+        {
+            var programName = Path.GetFileNameWithoutExtension(executable.Trim().Trim('"'));
+            var firstArgument = arguments.FirstOrDefault(arg => !arg.StartsWith("-", StringComparison.Ordinal));
+            subject = Shorten(programName +
+                (firstArgument is null ? "" : " " + firstArgument));
+        }
         return description with
         {
             Titles = new WorklogTitles(description.Titles.Running,
-                description.Subject + " arka planda başladı",
-                description.Subject + " başlatılamadı"),
+                subject + " arka planda başladı",
+                subject + " başlatılamadı"),
         };
     }
 
