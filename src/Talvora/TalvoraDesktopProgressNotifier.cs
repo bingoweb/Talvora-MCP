@@ -179,6 +179,12 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                     canonicalToolName);
 
             var failed = TryDescribeFailure(result, canonicalToolName);
+            // D46: a CI run that is still going is a finished check, never a failed step.
+            var ciStillRunning = failed && IsCiStillRunning(narrative, result);
+            if (ciStillRunning)
+            {
+                failed = false;
+            }
             try
             {
                 if (failed)
@@ -193,7 +199,19 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 }
                 else
                 {
-                    if (TryBuildDeferredCompletion(
+                    if (ciStillRunning)
+                    {
+                        TryEndWorklog(
+                            operationId,
+                            DesktopProgressKind.Completed,
+                            "GitHub denetimi sürüyor",
+                            "GitHub denetimi henüz bitmedi; sonucu bir sonraki adımda okunacak.",
+                            terminalEvidence is null
+                                ? null
+                                : terminalEvidence with { Result = "Sonuç: GitHub denetimi sürüyor" },
+                            stopwatch.Elapsed);
+                    }
+                    else if (TryBuildDeferredCompletion(
                             narrative,
                             result,
                             out var deferredTitle,
@@ -230,7 +248,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 TryEndWorklog(
                     operationId,
                     failed ? DesktopProgressKind.Failed : DesktopProgressKind.Completed,
-                    failed ? narrative.Titles.Failed : narrative.Titles.Succeeded,
+                    failed ? narrative.Titles.Failed : ciStillRunning ? "GitHub denetimi sürüyor" : narrative.Titles.Succeeded,
                     failed ? "Bu adım tamamlanamadı." : WorklogCopy.SucceededFallback,
                     initialEvidence,
                     stopwatch.Elapsed);

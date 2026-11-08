@@ -38,8 +38,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D55 — installed 86f21c9; both installed smokes green; CI 42491730064 success
 - [~] D56 — installed faf7e96; identity and both installed smokes green; CI 42493293311 success; live pending (Claude): service-profile cache audit after real use
 - [~] D45 — installed 0e8ec9c; Control Center and both installed MCP smokes green; CI 42494495085 success; visual check pending (Claude)
-- [~] D50 — code and gates green; live pending: install, installed Control Center smoke and CI; live check pending (Claude): two new sessions remain in history
-- [ ] D46 — A CI run that is still going is not a failed step (audit 42)
+- [~] D50 — installed 3ca9c72; Control Center smoke green; CI 42495652858 success; live check pending (Claude): two new sessions remain in history
+- [~] D46 — code and gates green; live pending: install, installed smoke and CI; Claude checks real post-push pending-CI worklog wording
 - [ ] D48 — A vault note belongs to the vault's owner (audit 42)
 - [ ] D49 — Plain Turkish service names, also for older registries (audit 42; after D46)
 - [ ] D47 — Plain Turkish for the remaining Control Center texts (audit 42; setup texts per the user's decision; table and test in docs/codex/reference/d47)
@@ -65,6 +65,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — D46, executor ChatGPT: Get-CiStatus.ps1 exit 2 now closes as Completed "GitHub denetimi sürüyor"; 0 succeeds, 1 fails with accurate titles. RED: exit 2 wrongly Failed; GREEN: D46_CI_STILL_RUNNING_GREEN and DESKTOP_PROGRESS_BEHAVIOR_GREEN. Changed 28/0, Full 70/0: Hepsi geçti. Context7 /modelcontextprotocol/csharp-sdk CallToolResult.StructuredContent and /dotnet/docs JsonElement.TryGetInt32; official API references. Install, installed smoke, CI and Claude real post-push check pending. Gitea #9 comment 224.
+  Self-review — no layout or unrelated Turkish copy; CI pending never paints a failure, real failure remains Failed, existing script exit codes and classifier unchanged.
 
 - 2026-11-08 — D50, executor ChatGPT: HistoryKey (SessionId + start) preserves same-project/actor sessions across append, reload and prune, with duplicate close deduplication and stable selection on reload/filter. RED: only latest session remained; GREEN: D50_HISTORY_KEEPS_EVERY_SESSION_GREEN, DESKTOP_PROGRESS_BEHAVIOR_GREEN; Changed 27/0, Full 70/0: Hepsi geçti. Context7 /dotnet/docs Enumerable.DistinctBy, official Microsoft reference. Install, installed Control Center smoke, CI and Claude two-session live check pending. Gitea #9 comment 223. Previously overwritten sessions cannot be recovered.
   Self-review — no layout or Turkish copy change; selection keeps the chosen entry; retention limits, stored JSON, session ID and desktop card unchanged.

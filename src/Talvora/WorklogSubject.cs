@@ -23,7 +23,7 @@ internal static partial class WorklogSubject
         ["Build-Windows-Installer.ps1"] = WorklogCopy.PackageBuild,
         ["Deploy-Windows-Installer.ps1"] = WorklogCopy.Deploy,
         ["Apply-DependabotPr.ps1"] = new("Paket güncellemesi hazırlanıyor", "Paket güncellemesi hazır", "Paket güncellemesi hazırlanamadı"),
-        ["Get-CiStatus.ps1"] = new("GitHub denetimi okunuyor", "GitHub denetimi okundu", "GitHub denetimi okunamadı"),
+        ["Get-CiStatus.ps1"] = new("GitHub denetimi okunuyor", "GitHub denetimi geçti", "GitHub denetimi başarısız"),
         ["Get-CodexContext.ps1"] = new("Görev bağlamı hazırlanıyor", "Görev bağlamı hazır", "Görev bağlamı hazırlanamadı"),
     };
 

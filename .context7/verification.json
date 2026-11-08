@@ -1,14 +1,19 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T15:31:11Z",
-  "scope": "D50: preserve separate worklog sessions of the same project and actor while deduplicating repeated close events",
+  "verifiedAtUtc": "2026-11-08T15:46:47Z",
+  "scope": "D46: mark a running GitHub CI check as a completed pending step rather than failed",
   "libraries": [
     {
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-11-08 D46: CallToolResult.StructuredContent is an optional System.Text.Json.JsonElement with the tool's structured payload. Context7 query: \"CallToolResult StructuredContent JsonElement property C# MCP return structured result\"."
+    },
+    {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 D50: Enumerable.DistinctBy keeps the first element with each key; after descending end-time ordering, this preserves the newest record for an identical HistoryKey while keeping different session starts. Context7 /dotnet/docs query: \"System.Linq.Enumerable.DistinctBy<TSource,TKey> keeps the first element for each distinct key in input order; sorting OrderByDescending before DistinctBy IEnumerable C# .NET 10\"."
+      "verified": "2026-11-08 D46: JsonElement.TryGetInt32(out int) reads a JSON numeric exit code safely; a non-number, missing code or non-int value is not treated as CI pending. Context7 query: \"JsonElement.TryGetInt32 method parsing integer JSON element, TryGetProperty case insensitive manual JSON C#\"."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.linq.enumerable.distinctby"
+    "https://learn.microsoft.com/dotnet/api/system.text.json.jsonelement.trygetint32",
+    "https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Protocol/CallToolResult.cs"
   ]
 }

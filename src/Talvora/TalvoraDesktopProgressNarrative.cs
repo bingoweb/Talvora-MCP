@@ -190,6 +190,31 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         return true;
     }
 
+    // D46: Get-CiStatus.ps1 exits 2 while the windows-ci run is still going (AGENTS.md step 10b).
+    private static bool IsCiStillRunning<T>(OperationNarrative narrative, T result) =>
+        string.Equals(narrative.Subject, "Get-CiStatus.ps1", StringComparison.OrdinalIgnoreCase) &&
+        ResultExitCode(result) == 2;
+
+    private static int? ResultExitCode<T>(T result)
+    {
+        try
+        {
+            var json = result is CallToolResult { StructuredContent: JsonElement structured }
+                ? structured
+                : JsonSerializer.SerializeToElement(result);
+            return json.ValueKind == JsonValueKind.Object &&
+                TryGetPropertyIgnoreCase(json, "exitCode", out var exitCode) &&
+                exitCode.ValueKind == JsonValueKind.Number &&
+                exitCode.TryGetInt32(out var code)
+                    ? code
+                    : null;
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
     private static bool ResultContainsText<T>(
         T result,
         string expected)
