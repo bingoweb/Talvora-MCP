@@ -100,17 +100,23 @@ public static partial class DeveloperTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraCommandResolveResponse)),
-     Description("Resolve an executable or command name using the Talvora service PATH and Windows PATHEXT. Returns every matching executable path when includeAll=true.")]
+     Description("Resolve a command on the signed-in user's PATH (scope=user, default) or the Talvora service PATH (scope=service) with Windows PATHEXT. Returns every match when includeAll=true.")]
     public static TalvoraCommandResolveResponse ResolveCommand(
         string command,
-        bool includeAll = true)
+        bool includeAll = true,
+        string scope = "user")
     {
         if (string.IsNullOrWhiteSpace(command))
         {
             throw new ArgumentException("Command is required.", nameof(command));
         }
 
-        var matches = CommandResolver.ResolveAll([command]);
+        var matches = scope switch
+        {
+            "user" => SignedInUserToolchain.ResolveAll([command]),
+            "service" => CommandResolver.ResolveAll([command]),
+            _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, "scope is user or service."),
+        };
         var result = includeAll ? matches : matches.Take(1).ToArray();
 
         return new TalvoraCommandResolveResponse(

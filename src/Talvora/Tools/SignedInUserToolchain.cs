@@ -21,6 +21,11 @@ internal static class SignedInUserToolchain
                 environment: WindowsSessionLauncher.GetActiveInteractiveUser().Environment)
             : CommandResolver.Resolve(commandNames, explicitCandidates);
 
+    internal static IReadOnlyList<string> ResolveAll(IEnumerable<string> commandNames) =>
+        RunsAsService
+            ? CommandResolver.ResolveAll(commandNames, environment: WindowsSessionLauncher.GetActiveInteractiveUser().Environment)
+            : CommandResolver.ResolveAll(commandNames);
+
     internal static string? Variable(string name)
     {
         var value = RunsAsService

@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T11:49:18Z",
-  "scope": "D53: normalize tool descriptions once and preserve complete sentences",
+  "verifiedAtUtc": "2026-11-08T12:39:11Z",
+  "scope": "D54: resolve tools and environment variables using the signed-in user's environment",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 D53: ConcurrentDictionary.GetOrAdd returns the existing or added value (query: \"ConcurrentDictionary GetOrAdd\"); RegexOptions.Compiled creates a compiled regular expression (query: \"RegexOptions Compiled\")."
+      "verified": "2026-11-08 D54: GetEnvironmentVariable can read a specified machine or user target; CreateEnvironmentBlock supplies the specified user environment (query: \"Environment.GetEnvironmentVariable EnvironmentVariableTarget User Machine\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.collections.concurrent.concurrentdictionary-2.getoradd",
-    "https://learn.microsoft.com/dotnet/standard/base-types/regular-expression-options"
+    "https://learn.microsoft.com/dotnet/api/system.environment.getenvironmentvariable",
+    "https://learn.microsoft.com/windows/win32/api/userenv/nf-userenv-createenvironmentblock"
   ]
 }

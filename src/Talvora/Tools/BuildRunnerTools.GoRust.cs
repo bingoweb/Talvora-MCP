@@ -118,7 +118,7 @@ public static partial class BuildRunnerTools
     {
         // RS1: report the signed-in user's toolchain, the one their builds use (never the service account's own).
         var cwd = Environment.SystemDirectory;
-        var where = await RunAsSignedInUserAsync(
+        var where = await RunCliAsync(
             "where.exe", cwd, ["cargo", "rustc", "rustup"], null, 30, cancellationToken);
         var found = where.StandardOutput.Split(
             ['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -136,13 +136,13 @@ public static partial class BuildRunnerTools
 
         if (cargo is not null)
         {
-            cargoVersion = (await RunAsSignedInUserAsync(
+            cargoVersion = (await RunCliAsync(
                 cargo, cwd, ["--version"], null, 30, cancellationToken)).StandardOutput.Trim();
         }
 
         if (rustc is not null)
         {
-            var verbose = (await RunAsSignedInUserAsync(
+            var verbose = (await RunCliAsync(
                 rustc, cwd, ["-vV"], null, 30, cancellationToken)).StandardOutput;
             rustcVersion = verbose.Split('\n', StringSplitOptions.TrimEntries).FirstOrDefault();
             host = ParseLineValue(verbose, "host: ");
@@ -150,9 +150,9 @@ public static partial class BuildRunnerTools
 
         if (rustup is not null)
         {
-            rustupVersion = (await RunAsSignedInUserAsync(
+            rustupVersion = (await RunCliAsync(
                 rustup, cwd, ["--version"], null, 30, cancellationToken)).StandardOutput.Trim();
-            activeToolchain = (await RunAsSignedInUserAsync(
+            activeToolchain = (await RunCliAsync(
                 rustup, cwd, ["show", "active-toolchain"], null, 30, cancellationToken)).StandardOutput.Trim();
         }
 
@@ -255,41 +255,13 @@ public static partial class BuildRunnerTools
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        return RunAsSignedInUserAsync(
+        return RunCliAsync(
             string.IsNullOrWhiteSpace(explicitExecutable) ? tool : explicitExecutable,
             NormalizeWorkingDirectory(workingDirectory),
             arguments,
             environment,
             timeoutSeconds,
             cancellationToken);
-    }
-
-    private static async Task<TalvoraCliCommandResponse> RunAsSignedInUserAsync(
-        string executable,
-        string workingDirectory,
-        IEnumerable<string> arguments,
-        Dictionary<string, string?>? environment,
-        int timeoutSeconds,
-        CancellationToken cancellationToken)
-    {
-        var result = await SignedInUserToolchain.RunAsync(
-            executable,
-            workingDirectory,
-            arguments,
-            environment,
-            timeoutSeconds,
-            cancellationToken).ConfigureAwait(false);
-
-        return new TalvoraCliCommandResponse(
-            result.ExitCode,
-            result.StandardOutput,
-            result.StandardError,
-            result.TimedOut,
-            result.ProcessId,
-            result.Executable,
-            result.WorkingDirectory,
-            result.Arguments,
-            result.ElapsedMilliseconds);
     }
 
     private static string? ResolveGo() =>

@@ -1284,9 +1284,10 @@ public static class TalvoraToolGuides
                   ("createBackup", "Preserve an original copy before changing a configuration file.")),
                 """{"path":"C:\\Users\\tayla\\Talvora-MCP\\artifacts\\example\\example.txt","search":"old","replacement":"new"}"""),
             ["talvora_resolve_command"] = new(
-                "Resolve an executable or command name using the Talvora service PATH and Windows PATHEXT. Returns every matching executable path when includeAll=true.",
+                "Resolve a command on the signed-in user's PATH (scope=user, default) or the Talvora service PATH (scope=service) with Windows PATHEXT. Returns every match when includeAll=true.",
                 P(("command", "Executable or supported command name to resolve or inspect."),
-                  ("includeAll", "Return every matching executable on PATH when true.")),
+                  ("includeAll", "Return every matching executable on PATH when true."),
+                  ("scope", "user (default): the signed-in user's PATH, where the developer tools run; service: the Talvora service PATH.")),
                 """{"command":"dotnet"}"""),
             ["talvora_run_process"] = new(
                 "Run a process under the Talvora LocalSystem service. Use talvora_user_run for work requiring the signed-in user's permissions.",

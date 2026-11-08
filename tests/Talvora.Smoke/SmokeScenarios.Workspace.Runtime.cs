@@ -350,6 +350,10 @@ internal static partial class SmokeScenarios
                     throw new InvalidOperationException("python_info did not report the installed Python runtime.");
                 }
                 
+                if (Talvora.Shared.CommandResolver.Resolve(["uv.exe", "uv"], []) is not null &&
+                    (!pythonInfoJson.GetProperty("uvAvailable").GetBoolean() ||
+                     !(pythonInfoJson.GetProperty("uvVersion").GetString() ?? "").StartsWith("uv ", StringComparison.Ordinal)))
+                    throw new InvalidOperationException("D54: python_info does not report the signed-in user's uv.");
                 var pythonExecutable = pythonInfoJson.GetProperty("interpreterExecutable").GetString()!;
                 
                 var pythonRunResult = await EnsureSuccess(byName["talvora_python_run"], new()

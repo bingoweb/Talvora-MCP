@@ -128,7 +128,7 @@ public static partial class RuntimeTools
     {
         return ResolvePython(requested)
             ?? throw new FileNotFoundException(
-                "Python was not found. Install Python through Talvora Chocolatey tools or provide pythonExecutable explicitly.");
+                "Python was not found for the signed-in user. Install it with talvora_uv_run (arguments: python, install) or pass pythonExecutable.");
     }
 
     private static PythonCommand? ResolvePython(

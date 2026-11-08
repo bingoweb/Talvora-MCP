@@ -237,6 +237,15 @@ internal static partial class SmokeScenarios
                 throw new InvalidOperationException($"RS1: {field} is the service account's own tool: {path}");
             }
         }
+        if (GetString(rust, "cargoExecutable") is { Length: > 0 } cargoExecutable)
+        {
+            var resolvedCargo = await EnsureSuccess(byName["talvora_resolve_command"], new() { ["command"] = "cargo" });
+            if (resolvedCargo.StructuredContent is not { } cargoJson ||
+                !cargoJson.GetProperty("found").GetBoolean() ||
+                cargoJson.GetProperty("paths").GetArrayLength() == 0 ||
+                !string.Equals(cargoJson.GetProperty("paths")[0].GetString(), cargoExecutable, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("D54: resolve_command does not see the signed-in user's cargo.");
+        }
         if (GetBoolean(rust, "rustcFound"))
         {
             await EnsureSuccess(byName["talvora_rustc_run"], new()

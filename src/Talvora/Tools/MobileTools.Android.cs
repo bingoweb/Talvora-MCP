@@ -189,18 +189,6 @@ public static partial class MobileTools
     {
         foreach (var variable in new[] { "ANDROID_HOME", "ANDROID_SDK_ROOT" })
         {
-            var machineValue = OperatingSystem.IsWindows()
-                ? Environment.GetEnvironmentVariable(
-                    variable,
-                    EnvironmentVariableTarget.Machine)
-                : null;
-
-            if (!string.IsNullOrWhiteSpace(machineValue) &&
-                Directory.Exists(machineValue))
-            {
-                return Path.GetFullPath(machineValue);
-            }
-
             var processValue = SignedInUserToolchain.Variable(variable);
             if (!string.IsNullOrWhiteSpace(processValue) &&
                 Directory.Exists(processValue))

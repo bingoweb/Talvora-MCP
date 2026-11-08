@@ -34,7 +34,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [x] D53 — installed 4d8bdfe; first metadata smoke and full installed smoke green; CI 42479997608 success (audit 43)
 - [?] D57 — waiting for Claude: P-52 (Full gate ControlCenter UI5 failure)
-- [ ] D54 — Command lookup, JAVA_HOME and ANDROID_HOME follow the signed-in user; the small UR follow-ups (audit 43)
+- [ ] D58 — The events smoke no longer races the live event refresh (P-52; first, it unblocks Full gates)
+- [ ] TW1 — talvora_tail_text can wait for a line (loop check 2026-11-08)
+- [ ] TW2 — Talvora keeps a short trace of agent tool calls (user decision 2026-11-08)
+- [~] D54 — install, installed smokes and CI pending (audit 43)
 - [ ] D55 — A relay runs one job inside the signed-in user's session (audit 43; after D52)
 - [ ] D56 — Background jobs and dev servers run as the signed-in user (audit 43, user decision; after D55)
 - [ ] D45 — Çalışma günlüğü measures a session up to its last step (audit 42, data truth)
@@ -65,6 +68,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — D54, executor Codex: command lookup defaults to the signed-in user, Java/Android prefer that environment, Python guidance uses uv and Rust shares the runner; dynamic source and uv smoke checks added. RED: installed cargo lookup and JAVA_HOME source check; modernization green, Changed 17/0, Full 70/0: Hepsi geçti. Context7 /dotnet/docs environment target; install and CI pending. Queue additions applied. Gitea mirror skipped: sending a comment was not explicitly authorized.
+  Self-review — cosmetics: no screen change; usability: user tools and settings are found consistently; Turkish: no Turkish copy changed; correctness/security: service scope retained explicitly and checks cover both toolchain paths.
 
 - 2026-11-08 — P-52, executor Codex: D57's two tests red before the reference copy and green after; normalized hash matched. Changed 13/0; Full stopped at unrelated UI5 empty-state smoke (69 checks, one failure). D57 partial work reverted; decision pending. D53 installed 4d8bdfe, first metadata and full installed smoke green, CI 42479997608 success. Gitea mirror skipped: sending a comment was not explicitly authorized.
 

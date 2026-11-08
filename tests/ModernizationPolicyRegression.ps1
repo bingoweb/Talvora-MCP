@@ -316,12 +316,14 @@ function Assert-SignedInUserToolchain([string]$Card, [string[]]$Files) {
         Assert-NotContains $runnerFile '"systemprofile"' "${Card}: $runnerFile still looks for a tool inside the service profile."
     }
 }
-Assert-SignedInUserToolchain 'UR1' @('src/Talvora/Tools/BuildRunnerTools.cs', 'src/Talvora/Tools/BuildRunnerTools.Shared.cs', 'src/Talvora/Tools/BuildRunnerTools.Dotnet.cs', 'src/Talvora/Tools/BuildRunnerTools.Node.cs', 'src/Talvora/Tools/BuildRunnerTools.JavaScriptExtras.cs', 'src/Talvora/Tools/BuildRunnerTools.Jvm.cs', 'src/Talvora/Tools/BuildRunnerTools.GoRust.cs')
+Assert-SignedInUserToolchain 'UR1' @(Get-ChildItem -LiteralPath (Join-Path $root 'src/Talvora/Tools') -Filter 'BuildRunnerTools*.cs' | ForEach-Object { 'src/Talvora/Tools/' + $_.Name })
 Assert-Contains 'src/Talvora/Tools/SignedInUserToolchain.cs' 'GetActiveInteractiveUser\(\)\.Environment' 'UR1: the toolchain helper must resolve in the signed-in user''s environment.'
-Assert-SignedInUserToolchain 'UR2' @('src/Talvora/Tools/MobileTools.cs', 'src/Talvora/Tools/MobileTools.Shared.cs', 'src/Talvora/Tools/MobileTools.Android.cs', 'src/Talvora/Tools/MobileTools.Flutter.cs')
+Assert-SignedInUserToolchain 'UR2' @(Get-ChildItem -LiteralPath (Join-Path $root 'src/Talvora/Tools') -Filter 'MobileTools*.cs' | ForEach-Object { 'src/Talvora/Tools/' + $_.Name })
 # UR3: talvora_vs_dev_environment (WindowsToolchainTools.VisualStudio.cs) stays with the service: it only returns Visual Studio's variables.
-Assert-SignedInUserToolchain 'UR3' @('src/Talvora/Tools/WindowsToolchainTools.cs', 'src/Talvora/Tools/WindowsToolchainTools.NativeBuild.cs', 'src/Talvora/Tools/WindowsToolchainTools.MsBuild.cs', 'src/Talvora/Tools/WindowsToolchainTools.Overview.cs', 'src/Talvora/Tools/WindowsToolchainTools.Release.cs', 'src/Talvora/Tools/WindowsToolchainTools.Sdk.cs', 'src/Talvora/Tools/WindowsToolchainTools.Binary.cs')
-Assert-SignedInUserToolchain 'UR4' @('src/Talvora/Tools/RuntimeTools.cs', 'src/Talvora/Tools/RuntimeTools.Shared.cs', 'src/Talvora/Tools/RuntimeTools.Docker.cs', 'src/Talvora/Tools/RuntimeTools.Python.cs', 'src/Talvora/Tools/RuntimeTools.Uv.cs')
+Assert-SignedInUserToolchain 'UR3' @(Get-ChildItem -LiteralPath (Join-Path $root 'src/Talvora/Tools') -Filter 'WindowsToolchainTools*.cs' | Where-Object Name -ne 'WindowsToolchainTools.VisualStudio.cs' | ForEach-Object { 'src/Talvora/Tools/' + $_.Name })
+Assert-SignedInUserToolchain 'UR4' @(Get-ChildItem -LiteralPath (Join-Path $root 'src/Talvora/Tools') -Filter 'RuntimeTools*.cs' | ForEach-Object { 'src/Talvora/Tools/' + $_.Name })
+Assert-NotContains 'src/Talvora/Tools/BuildRunnerTools.Jvm.cs' 'EnvironmentVariableTarget\.Machine' 'D54: the signed-in user''s JAVA_HOME wins; a user value overrides the machine value on Windows.'
+Assert-NotContains 'src/Talvora/Tools/MobileTools.Android.cs' 'EnvironmentVariableTarget\.Machine' 'D54: the signed-in user''s ANDROID_HOME wins; a user value overrides the machine value on Windows.'
 Assert-NotContains 'src/Talvora/Tools/RuntimeTools.Python.cs' '"pip"' 'UR4: talvora_python_info reports uv, not pip.'
 Assert-Contains 'src/Talvora/Tools/RuntimeTools.cs' 'bool UvAvailable,\s*string\? UvVersion\)' 'UR4: the Python info record carries uv availability.'
 Write-Host 'MODERNIZATION_POLICY_GREEN'

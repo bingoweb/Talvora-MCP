@@ -396,24 +396,17 @@ public static partial class BuildRunnerTools
         var seen = new HashSet<string>(
             StringComparer.OrdinalIgnoreCase);
 
-        if (OperatingSystem.IsWindows())
+        var processJavaHome =
+            SignedInUserToolchain.Variable("JAVA_HOME");
+        if (!string.IsNullOrWhiteSpace(processJavaHome) &&
+            Directory.Exists(processJavaHome))
         {
-            var machineJavaHome =
-                Environment.GetEnvironmentVariable(
-                    "JAVA_HOME",
-                    EnvironmentVariableTarget.Machine);
-
-            if (!string.IsNullOrWhiteSpace(machineJavaHome) &&
-                Directory.Exists(machineJavaHome))
+            var full = Path.GetFullPath(processJavaHome);
+            if (seen.Add(full))
             {
-                var full = Path.GetFullPath(machineJavaHome);
-                if (seen.Add(full))
-                {
-                    yield return full;
-                }
+                yield return full;
             }
         }
-
         var programFiles = SignedInUserToolchain.Folder(
             Environment.SpecialFolder.ProgramFiles);
         if (!string.IsNullOrWhiteSpace(programFiles))
@@ -451,17 +444,6 @@ public static partial class BuildRunnerTools
             }
         }
 
-        var processJavaHome =
-            SignedInUserToolchain.Variable("JAVA_HOME");
-        if (!string.IsNullOrWhiteSpace(processJavaHome) &&
-            Directory.Exists(processJavaHome))
-        {
-            var full = Path.GetFullPath(processJavaHome);
-            if (seen.Add(full))
-            {
-                yield return full;
-            }
-        }
     }
 
     private static Version ParseJdkDirectoryVersion(
