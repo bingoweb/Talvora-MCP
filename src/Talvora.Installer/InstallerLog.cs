@@ -14,7 +14,7 @@ namespace Talvora.Installer;
 
 internal static class InstallerLog
 {
-    private static string PathName =>
+    internal static string PathName =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
             "Talvora",

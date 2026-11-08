@@ -72,6 +72,7 @@ if ($immediateCleanupStart -lt 0 -or $writeStateStart -le $immediateCleanupStart
 $immediateCleanupSection = $installerCleanupState.Substring($immediateCleanupStart, $writeStateStart - $immediateCleanupStart)
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora.Installer')
+$installerForm = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\InstallerForm.cs'))
 $installerProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'))
 $powerShellPinPath = Join-Path $RepoRoot 'src\Talvora.Installer\powershell-pin.json'
 $powerShellSourcePath = Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.PowerShell.cs'
@@ -840,6 +841,20 @@ $result = [pscustomobject]@{
         $installerCleanupState -match 'MaximumInstalledVersionDirectories =\s*10_000' -and
         $installerCleanupState -match '\.Take\(MaximumInstalledVersionDirectories \+ 1\)' -and
         $installerCleanupState -match 'Installed-version cleanup reached its bounded scan limit'
+    )
+    # KUR1: the Santral setup window, its developer plate, no message boxes, no closing half way.
+    SetupWindowKeepsSantralLookAndDeveloperPlate = (
+        $installerProgram.Contains('DeveloperCredit = "Geliştiren: Taylan Soylu"') -and
+        $installerProgram.Contains('PlateLabel = "GELİŞTİREN"') -and
+        $installerProgram.Contains('PlateName = "TAYLAN SOYLU"') -and
+        $installerProgram.Contains('WindowTitle: "Talvora Kurulumu"') -and
+        $installerProgram.Contains('theme-preference.json') -and
+        $installerProgram.Contains('SystemInformation.HighContrast') -and
+        $installerProgram.Contains('Application.SetHighDpiMode(HighDpiMode.PerMonitorV2)') -and
+        $installerForm.Contains('e.CloseReason == CloseReason.UserClosing') -and
+        $installerForm.Contains('e.Cancel = true;') -and
+        $installerForm.Contains('await Task.Run(() => _operation(progress, option, CancellationToken.None))') -and
+        -not $installerForm.Contains('MessageBox.Show')
     )
 }
 

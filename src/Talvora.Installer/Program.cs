@@ -64,7 +64,7 @@ internal static class Program
         {
             MessageBox.Show(
                 "Talvora kurulumu yönetici yetkisi gerektirir.",
-                "Talvora Setup",
+                "Talvora Kurulumu",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
             return 3;
@@ -97,6 +97,7 @@ internal static class Program
             }
         }
 
+        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         using var form = new InstallerForm();

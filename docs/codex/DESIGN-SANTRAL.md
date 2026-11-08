@@ -123,3 +123,14 @@ Paper strip on `Sn.Slip`, perforation dots along the top edge, 1° tilt, soft sh
 | **[C] SN6** | Claude | Hizmetler, Hizmet ayrıntısı, Ayarlar stepper and shell chrome in the Santral language. |
 | **[C] SN8** | Claude | Measured failures per line and failed-call lights with an end spark; brass hover ring on sockets (audit 39, user choice). |
 | **[C] SN7** | Claude | Proof: both themes at 100/125/150/200 % DPI, high contrast, reduced motion, idle CPU, UIA names; remove `Tv.*` aliases and the retired Nabız/Chain controls; README screenshots. |
+
+## 10. Setup window (KUR1)
+
+`Talvora-Setup.exe` speaks the same language at 640 × 480, scaled per monitor DPI (`src/Talvora.Installer/InstallerForm.cs`, `SetupTheme.cs`, `SetupArt.cs`, `SetupControls.cs`; built and rendered by Claude, user request 2026-11-08).
+
+- Wordmark `TALVORA` + `KURULUM` (`KALDIRMA` when uninstalling), then a strip with two sockets: **KURULUM PAKETİ** (its version) and **BU BİLGİSAYAR** (the machine name), and a lamp with its word beside the second.
+- Progress is the **Plug-in** motion driven by the installer's real percent: the cord leaves the package's socket and its plug travels to the computer's socket. Success: the plug seats (140 ms), one **Call** light runs down the cord (900 ms), the lamp turns green and says `hazır`. Failure: the cord pulls back (450 ms), the lamp turns red, the window shows the message, the log path and `Yeniden dene`. Uninstalling runs the cord backwards. Lamp words: bekliyor · kuruluyor / güncelleniyor / kaldırılıyor · hazır / kaldırıldı · kurulamadı / güncellenemedi / kaldırılamadı.
+- Success and failure stay in the window (no message boxes). The window cannot be closed while the work runs and says why in its detail line.
+- Footer: a hairline rule, the developer's **maker plate** on the left — a small riveted brass plate engraved `GELİŞTİREN · TAYLAN SOYLU`, the way old switchboards carried their maker's name, kept quiet on purpose ("çok abartmadan"); screen readers hear "Geliştiren: Taylan Soylu" — and the ink buttons on the right (filled for the main action, outlined for the other).
+- Theme: the Control Center's own choice (`theme-preference.json`), otherwise Windows' app mode; the Windows 11 title bar takes the panel colour. High contrast uses system colours without texture, brass or motion; reduced motion changes states at once.
+- `NativeInstallerSourceRegression.ps1` (`SetupWindowKeepsSantralLookAndDeveloperPlate`) pins the plate, the title, the close guard, the theme sources and the DPI mode.
