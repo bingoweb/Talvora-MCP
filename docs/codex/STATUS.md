@@ -36,8 +36,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] TW1 — installed 01dcf9a; both installed smokes green; CI 42488833981 success
 - [x] TW2 — installed 0c9e222; whoami trace and both installed smokes green; CI 42490285622 success
 - [x] D55 — installed 86f21c9; both installed smokes green; CI 42491730064 success
-- [~] D56 — code and gates green; live pending: deploy, installed identity/smoke checks and CI; Claude audit checks service-profile caches
-- [ ] D45 — Çalışma günlüğü measures a session up to its last step (audit 42, data truth)
+- [~] D56 — installed faf7e96; identity and both installed smokes green; CI 42493293311 success; live pending (Claude): service-profile cache audit after real use
+- [~] D45 — code and gates green; live pending: install, installed Control Center smoke, CI; visual check pending (Claude)
 - [ ] D50 — Çalışma günlüğü keeps every session (audit 42, data truth; after D45)
 - [ ] D46 — A CI run that is still going is not a failed step (audit 42)
 - [ ] D48 — A vault note belongs to the vault's owner (audit 42)
@@ -65,6 +65,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — D45, executor ChatGPT: WorkEndedAtUtc uses bounded Enumerable.Max of timeline step-end timestamps; list/detail duration no longer includes the 90-second quiet tail. Stored EndedAtUtc, JSON and close remain unchanged. RED: 5 CS1061 errors; GREEN: D45_WORK_ENDS_WITH_LAST_STEP_GREEN (93 s close displays 3 s) and DESKTOP_PROGRESS_BEHAVIOR_GREEN; Changed 27/0, Full 70/0: Hepsi geçti. Context7 /dotnet/docs Enumerable.Max, Microsoft API reference. Install, installed Control Center smoke, CI and Claude visual check pending. Gitea #9 comment 222.
+  Self-review — no layout or Turkish copy changes; history list/detail show the correct duration, no-step fallback preserves the stored end, JSON schema and close behaviour remain unchanged.
 
 - 2026-11-08 — D56, executor ChatGPT: jobs and dev servers default to signed-in user with SID-scoped three-pipe relay, optional runAs=service LiteralProcessStart, protected folder, persisted RunAs (legacy=service), and owned pipe/script cleanup. RED: installed whoami job printed SYSTEM instead of signed-in user; six pinned tests green; Changed 20/0; Full 70/0: Hepsi geçti. Context7 /dotnet/docs pipe ACL and Process.Kill, Microsoft NamedPipeServerStreamAcl, named-pipe security and CreateProcessAsUserW docs. Install, installed smoke, CI and Claude post-use cache check pending. Gitea #9 comment 221.
   Self-review — no UI or tool/schema additions, existing output/rotation preserved; user/service selection, stop/delete, legacy records and SID isolation covered; Turkish-visible text unchanged.

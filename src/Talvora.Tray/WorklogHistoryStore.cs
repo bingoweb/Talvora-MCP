@@ -28,11 +28,28 @@ internal sealed record WorklogHistorySession(
     };
 
     // D43: the day once, then the time and the measured duration (the Olaylar page's day words).
+    // D45: the duration ends with the last step; the card closes 90 s later and that quiet tail is not work.
     [JsonIgnore]
-    public string ListTimeText => LocalTimeText.SessionShort(StartedAtUtc, EndedAtUtc, DateTimeOffset.Now);
+    public string ListTimeText => LocalTimeText.SessionShort(StartedAtUtc, WorkEndedAtUtc, DateTimeOffset.Now);
 
     [JsonIgnore]
-    public string DetailTimeText => LocalTimeText.SessionLong(StartedAtUtc, EndedAtUtc, DateTimeOffset.Now);
+    public string DetailTimeText => LocalTimeText.SessionLong(StartedAtUtc, WorkEndedAtUtc, DateTimeOffset.Now);
+
+    /// <summary>D45: the end of the newest step (timeline times are step ends), kept inside the session.</summary>
+    [JsonIgnore]
+    public DateTimeOffset WorkEndedAtUtc
+    {
+        get
+        {
+            if (Timeline is not { Count: > 0 })
+            {
+                return EndedAtUtc;
+            }
+
+            var last = Timeline.Max(entry => entry.TimestampUtc);
+            return last < StartedAtUtc ? StartedAtUtc : last > EndedAtUtc ? EndedAtUtc : last;
+        }
+    }
 
     [JsonIgnore]
     public IReadOnlyList<WorklogHistoryTimelineRow> TimelineRows =>

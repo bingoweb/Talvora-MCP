@@ -84,6 +84,7 @@ internal static partial class Program
         AssertUi12cTimeRuler();
         await AssertD25SessionRestartResetsTotalsAsync();
         AssertD43SessionTimeText();
+        AssertD45WorkEndsWithLastStep();
         AssertD39PenpotRedaction();
         await AssertD35LatestBackoffAsync();
         await AssertD41CallerIdentityAsync();
