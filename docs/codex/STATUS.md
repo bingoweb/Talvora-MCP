@@ -33,11 +33,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [x] D53 — installed 4d8bdfe; first metadata smoke and full installed smoke green; CI 42479997608 success (audit 43)
-- [?] D57 — waiting for Claude: P-52 (Full gate ControlCenter UI5 failure)
-- [ ] D58 — The events smoke no longer races the live event refresh (P-52; first, it unblocks Full gates)
+- [ ] [C] D57 — The new README goes live (Claude ships it; user decision 2026-11-08)
+- [~] D58 — source and gates green; live pending: install, installed smokes and CI (P-52)
 - [ ] TW1 — talvora_tail_text can wait for a line (loop check 2026-11-08)
 - [ ] TW2 — Talvora keeps a short trace of agent tool calls (user decision 2026-11-08)
-- [~] D54 — install, installed smokes and CI pending (audit 43)
+- [~] D54 — live pending: installer service stop failed, waiting for Claude: P-53; installed smokes and CI pending (audit 43)
 - [ ] D55 — A relay runs one job inside the signed-in user's session (audit 43; after D52)
 - [ ] D56 — Background jobs and dev servers run as the signed-in user (audit 43, user decision; after D55)
 - [ ] D45 — Çalışma günlüğü measures a session up to its last step (audit 42, data truth)
@@ -68,6 +68,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — D58, executor ChatGPT: UI5 smoke fixtures now replace EventsView's stored events, live refresh is skipped only in smoke mode, and the existing snapshot is awaited for deterministic testing. RED: UI5 seven-day empty state was not rendered. Built tray smoke 3/3; Changed 17/0; Full 70/0: Hepsi geçti. Context7 /dotnet/docs-desktop, Microsoft IsVisible. Install, installed smokes and CI pending. D54 P-53 service-stop blocker remains; prior D54 proposal/STATUS changes preserved.
+  Self-review — cosmetics and raw-log timer unchanged; normal events refresh unchanged; no new user-facing text. Mirrored to Gitea issue #9 comment 216.
+
+- 2026-11-08 — D54 live follow-up: installer for c671abb could not stop the old service and rolled back to 4d8bdfe, verified by healthz; P-53 records the failure. CI 42481964947 was in progress at the single check; installed smokes pending.
 
 - 2026-11-08 — D54, executor Codex: command lookup defaults to the signed-in user, Java/Android prefer that environment, Python guidance uses uv and Rust shares the runner; dynamic source and uv smoke checks added. RED: installed cargo lookup and JAVA_HOME source check; modernization green, Changed 17/0, Full 70/0: Hepsi geçti. Context7 /dotnet/docs environment target; install and CI pending. Queue additions applied. Gitea mirror skipped: sending a comment was not explicitly authorized.
   Self-review — cosmetics: no screen change; usability: user tools and settings are found consistently; Turkish: no Turkish copy changed; correctness/security: service scope retained explicitly and checks cover both toolchain paths.

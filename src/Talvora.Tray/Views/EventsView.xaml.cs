@@ -72,6 +72,14 @@ internal sealed partial class EventsView : System.Windows.Controls.UserControl
             Model.ApplyEvents(_events, DateTimeOffset.Now, _serviceNames);
     }
 
+    internal void ApplySmokeFixture(IReadOnlyList<ControlCenterEventRecord> events,
+        DateTimeOffset now, IReadOnlyDictionary<string, string> serviceNames)
+    {
+        _events = events;
+        _serviceNames = serviceNames;
+        Model.ApplyEvents(events, now, _serviceNames);
+    }
+
     internal async Task RefreshAsync(CancellationToken cancellationToken)
     {
         try

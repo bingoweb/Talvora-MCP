@@ -7,6 +7,19 @@ internal sealed partial class ShellWindow
 {
     private EventsView? _eventsView;
 
+    internal ControlCenterDashboardSnapshot CurrentDashboardSnapshot => _snapshot
+        ?? throw new InvalidOperationException("A dashboard snapshot is needed for the UI5 smoke.");
+
+    internal async Task EnsureDashboardSnapshotForSmokeAsync()
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(15);
+        while (_snapshot is null && DateTime.UtcNow < deadline)
+        {
+            await RefreshDashboardAsync();
+            if (_snapshot is null) await Task.Delay(100);
+        }
+    }
+
     private void EnsureUi5Page()
     {
         if (_eventsView is null)
@@ -18,14 +31,15 @@ internal sealed partial class ShellWindow
 
         if (_snapshot is { } snapshot)
             _eventsView.UpdateServices(snapshot);
-        _ = _eventsView.RefreshAsync(_lifetimeCts.Token);
+        if (!_smokeMode)
+            _ = _eventsView.RefreshAsync(_lifetimeCts.Token);
     }
 
     private void UpdateUi5Snapshot(ControlCenterDashboardSnapshot snapshot)
     {
         if (_eventsView is null) return;
         _eventsView.UpdateServices(snapshot);
-        if (_shellModel?.SelectedIndex == 4)
+        if (!_smokeMode && _shellModel?.SelectedIndex == 4)
             _ = _eventsView.RefreshAsync(_lifetimeCts.Token);
     }
 }

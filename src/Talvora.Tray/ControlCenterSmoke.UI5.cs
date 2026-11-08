@@ -12,6 +12,7 @@ internal static partial class ControlCenterSmoke
         if (window.EventsContentHost.Content is not Views.EventsView eventsView)
             throw new InvalidOperationException("UI5 events route did not open the new view.");
 
+        await window.EnsureDashboardSnapshotForSmokeAsync();
         await eventsView.RefreshAsync(CancellationToken.None);
         if (eventsView.ServiceFilterBox.SelectedItem is not
             ViewModels.EventServiceFilter { Id: null })
@@ -37,7 +38,9 @@ internal static partial class ControlCenterSmoke
             ["talvora-dev"] = "Talvora Dev",
             ["gitea"] = "Gitea",
         };
-        eventsView.Model.ApplyEvents([], now, serviceNames);
+        eventsView.ApplySmokeFixture([], now, serviceNames);
+        eventsView.UpdateServices(window.CurrentDashboardSnapshot);
+        window.UpdateLayout();
         eventsView.Model.IsLoading = true;
         window.UpdateLayout();
         if (eventsView.EmptyStateText.IsVisible)
@@ -53,10 +56,14 @@ internal static partial class ControlCenterSmoke
             eventsView.EmptyStateText.Text != "Bu filtrelerle eşleşen olay yok.")
             throw new InvalidOperationException("UI5 filtered empty state was not rendered.");
         eventsView.Model.SearchText = "";
-        eventsView.Model.ApplyEvents(fixture, now, serviceNames);
+        eventsView.ApplySmokeFixture(fixture, now, serviceNames);
+        eventsView.UpdateServices(window.CurrentDashboardSnapshot);
+        window.UpdateLayout();
         eventsView.ServiceFilterBox.SelectedItem = eventsView.Model.ServiceOptions.Single(option =>
             option.Id == "talvora-admin");
-        eventsView.Model.ApplyEvents(fixture, now.AddMinutes(1), serviceNames);
+        eventsView.ApplySmokeFixture(fixture, now.AddMinutes(1), serviceNames);
+        eventsView.UpdateServices(window.CurrentDashboardSnapshot);
+        window.UpdateLayout();
         if (eventsView.ServiceFilterBox.SelectedItem is not
                 ViewModels.EventServiceFilter { Id: "talvora-admin" } ||
             eventsView.Model.Groups.Sum(group => group.Items.Count) != 1)

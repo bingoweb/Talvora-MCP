@@ -1,15 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T12:39:11Z",
-  "scope": "D54: resolve tools and environment variables using the signed-in user's environment",
+  "verifiedAtUtc": "2026-11-08T12:57:00Z",
+  "scope": "D58: keep UI5 smoke fixtures stable while the dashboard refreshes",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 D54: GetEnvironmentVariable can read a specified machine or user target; CreateEnvironmentBlock supplies the specified user environment (query: \"Environment.GetEnvironmentVariable EnvironmentVariableTarget User Machine\")."
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-08 D58: WPF provides DispatcherTimer for UI timers; IsVisible reflects actual layout and parent visibility (query: \"WPF .NET 10 DispatcherTimer IsEnabled and UIElement IsVisible: when a UserControl and containing Window become visible, how IsVisibleChanged relates to DispatcherTimer.Start/Stop and IsEnabled status?\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.environment.getenvironmentvariable",
-    "https://learn.microsoft.com/windows/win32/api/userenv/nf-userenv-createenvironmentblock"
+    "https://learn.microsoft.com/dotnet/api/system.windows.uielement.isvisible"
   ]
 }

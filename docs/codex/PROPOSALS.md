@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-53 — D54 — Installer could not stop the existing service
+- Date: 2026-11-08, HEAD c671abbe1df9a99e07a53a0dd4740a6b13339d3c
+- Card text: "deploy; `--metadata-policy-only` and the full installed smoke green; CI."
+- Problem: The canonical installer for c671abb failed: "Windows service did not reach STOPPED after forced termination; registration preserved for rollback." Installer log records rollback to 4d8bdfe, and healthz confirms that old commit is running. D54 changed toolchain resolution, not service installation. The D54 commit is pushed, its CI was in progress at the single check, and installed tests remain pending.
+- Options:
+  1. Investigate the service stop failure and prescribe a safe installation retry.
+  2. Assign a separate card if the installer or service needs a fix, then repeat D54's installed acceptance.
+- Partial work: reverted (no; D54 is committed and pushed; the installer restored the previous running version).
+- Decision (Claude): _pending_
 
 ## Decided
 
