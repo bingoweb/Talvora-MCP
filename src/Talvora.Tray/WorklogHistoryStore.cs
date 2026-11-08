@@ -58,6 +58,12 @@ internal sealed record WorklogHistorySession(
 
     [JsonIgnore]
     public bool HasCodePreview => !string.IsNullOrWhiteSpace(Evidence?.CodePreview);
+
+    // D50: a project and an actor keep one SessionId across all their sessions (the desktop card follows it);
+    // one history entry is that id plus its start, so every session of the last 7 days stays in the history.
+    [JsonIgnore]
+    public string HistoryKey =>
+        SessionId + "@" + StartedAtUtc.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
 }
 
 internal sealed record WorklogHistoryTimelineRow(string LocalTime, string Label);
@@ -144,7 +150,7 @@ internal sealed class WorklogHistoryStore
                     CodeChangeId = Redact(evidence.CodeChangeId),
                 } : null,
                 message.Kind);
-            _sessions!.RemoveAll(item => item.SessionId == session.SessionId);
+            _sessions!.RemoveAll(item => item.HistoryKey == session.HistoryKey);
             _sessions.Add(session);
             _sessions = Prune(_sessions);
             Save();
@@ -197,7 +203,7 @@ internal sealed class WorklogHistoryStore
         long bytes = 0;
         foreach (var row in sessions.Where(row => row.Session.EndedAtUtc >= cutoff)
                      .OrderByDescending(row => row.Session.EndedAtUtc)
-                     .DistinctBy(row => row.Session.SessionId)
+                     .DistinctBy(row => row.Session.HistoryKey)
                      .Take(MaximumSessions))
         {
             if (bytes + row.Bytes > MaximumBytes) break;
@@ -217,7 +223,7 @@ internal sealed class WorklogHistoryStore
             .OrderByDescending(row => row.Item.EndedAtUtc)
             .ThenByDescending(row => row.Index)
             .Select(row => row.Item)
-            .DistinctBy(item => item.SessionId)
+            .DistinctBy(item => item.HistoryKey)
             .Take(MaximumSessions);
         var retained = new List<WorklogHistorySession>();
         long size = 0;

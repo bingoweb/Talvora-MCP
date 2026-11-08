@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T15:16:11Z",
-  "scope": "D45: visible worklog session duration ends with the last timeline step instead of quiet close",
+  "verifiedAtUtc": "2026-11-08T15:31:11Z",
+  "scope": "D50: preserve separate worklog sessions of the same project and actor while deduplicating repeated close events",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 D45: Enumerable.Max with a selector returns the largest DateTimeOffset among a nonempty session timeline's step-end timestamps; this time is clamped between the stored start and end. Context7 /dotnet/docs query: \"Enumerable.Max<TSource,TResult>(IEnumerable<TSource>, Func<TSource,TResult>) LINQ selecting DateTimeOffset maximum from timeline entries and nullable? reference DateTimeOffset struct comparison\"."
+      "verified": "2026-11-08 D50: Enumerable.DistinctBy keeps the first element with each key; after descending end-time ordering, this preserves the newest record for an identical HistoryKey while keeping different session starts. Context7 /dotnet/docs query: \"System.Linq.Enumerable.DistinctBy<TSource,TKey> keeps the first element for each distinct key in input order; sorting OrderByDescending before DistinctBy IEnumerable C# .NET 10\"."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.linq.enumerable.max"
+    "https://learn.microsoft.com/dotnet/api/system.linq.enumerable.distinctby"
   ]
 }

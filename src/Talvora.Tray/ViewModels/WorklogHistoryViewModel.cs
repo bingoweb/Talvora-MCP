@@ -64,7 +64,7 @@ internal sealed class WorklogHistoryViewModel : ObservableObject
 
     public void Reload()
     {
-        var previousSessionId = SelectedSession?.SessionId;
+        var previousKey = SelectedSession?.HistoryKey;
         var previousProject = ProjectFilter;
         var previousActor = ActorFilter;
         _all = _store.LoadRecent();
@@ -73,7 +73,7 @@ internal sealed class WorklogHistoryViewModel : ObservableObject
         ProjectFilter = ProjectOptions.Contains(previousProject) ? previousProject : "Tümü";
         ActorFilter = ActorOptions.Contains(previousActor) ? previousActor : "Tümü";
         ApplyFilters();
-        if (previousSessionId is not null) SelectSession(previousSessionId);
+        if (previousKey is not null) SelectedSession = Sessions.FirstOrDefault(s => s.HistoryKey == previousKey);
     }
 
     public void SelectSession(string sessionId) =>
@@ -91,7 +91,7 @@ internal sealed class WorklogHistoryViewModel : ObservableObject
 
     private void ApplyFilters()
     {
-        var selectedId = SelectedSession?.SessionId;
+        var selectedKey = SelectedSession?.HistoryKey;
         var matching = _all.Where(session =>
             (ProjectFilter == "Tümü" ||
              string.Equals(session.Header.ProjectName, ProjectFilter, StringComparison.CurrentCultureIgnoreCase)) &&
@@ -105,8 +105,8 @@ internal sealed class WorklogHistoryViewModel : ObservableObject
                  .Any(value => value?.Contains(SearchText.Trim(), StringComparison.CurrentCultureIgnoreCase) == true)));
         Sessions.Clear();
         foreach (var session in matching) Sessions.Add(session);
-        SelectedSession = selectedId is null ? null :
-            Sessions.FirstOrDefault(s => s.SessionId == selectedId);
+        SelectedSession = selectedKey is null ? null :
+            Sessions.FirstOrDefault(s => s.HistoryKey == selectedKey);
         OnPropertyChanged(nameof(IsEmpty));
     }
 }

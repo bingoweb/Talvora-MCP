@@ -37,8 +37,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] TW2 — installed 0c9e222; whoami trace and both installed smokes green; CI 42490285622 success
 - [x] D55 — installed 86f21c9; both installed smokes green; CI 42491730064 success
 - [~] D56 — installed faf7e96; identity and both installed smokes green; CI 42493293311 success; live pending (Claude): service-profile cache audit after real use
-- [~] D45 — code and gates green; live pending: install, installed Control Center smoke, CI; visual check pending (Claude)
-- [ ] D50 — Çalışma günlüğü keeps every session (audit 42, data truth; after D45)
+- [~] D45 — installed 0e8ec9c; Control Center and both installed MCP smokes green; CI 42494495085 success; visual check pending (Claude)
+- [~] D50 — code and gates green; live pending: install, installed Control Center smoke and CI; live check pending (Claude): two new sessions remain in history
 - [ ] D46 — A CI run that is still going is not a failed step (audit 42)
 - [ ] D48 — A vault note belongs to the vault's owner (audit 42)
 - [ ] D49 — Plain Turkish service names, also for older registries (audit 42; after D46)
@@ -65,6 +65,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — D50, executor ChatGPT: HistoryKey (SessionId + start) preserves same-project/actor sessions across append, reload and prune, with duplicate close deduplication and stable selection on reload/filter. RED: only latest session remained; GREEN: D50_HISTORY_KEEPS_EVERY_SESSION_GREEN, DESKTOP_PROGRESS_BEHAVIOR_GREEN; Changed 27/0, Full 70/0: Hepsi geçti. Context7 /dotnet/docs Enumerable.DistinctBy, official Microsoft reference. Install, installed Control Center smoke, CI and Claude two-session live check pending. Gitea #9 comment 223. Previously overwritten sessions cannot be recovered.
+  Self-review — no layout or Turkish copy change; selection keeps the chosen entry; retention limits, stored JSON, session ID and desktop card unchanged.
 
 - 2026-11-08 — D45, executor ChatGPT: WorkEndedAtUtc uses bounded Enumerable.Max of timeline step-end timestamps; list/detail duration no longer includes the 90-second quiet tail. Stored EndedAtUtc, JSON and close remain unchanged. RED: 5 CS1061 errors; GREEN: D45_WORK_ENDS_WITH_LAST_STEP_GREEN (93 s close displays 3 s) and DESKTOP_PROGRESS_BEHAVIOR_GREEN; Changed 27/0, Full 70/0: Hepsi geçti. Context7 /dotnet/docs Enumerable.Max, Microsoft API reference. Install, installed Control Center smoke, CI and Claude visual check pending. Gitea #9 comment 222.
   Self-review — no layout or Turkish copy changes; history list/detail show the correct duration, no-step fallback preserves the stored end, JSON schema and close behaviour remain unchanged.
