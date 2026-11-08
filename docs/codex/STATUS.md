@@ -49,7 +49,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## User queue
 
-- [ ] U15 — ChatGPT'de Talvora Dev ve Talvora Admin bağlayıcılarını yenileyin, Claude Desktop'ı da bir kez kapatıp açın: araç listesi değişti (`talvora_uv_run` geldi; `talvora_pip_install`, `talvora_pip_run` ve `talvora_python_venv_create` kalktı). `talvora_python_info`'nun çıktısı da değişti (UR4): yenilenmemiş istemci bu aracın yanıtını eski şemaya göre reddeder; Claude Desktop'ta bu görüldü. (UV1, UR4)
+- [x] U15 — ChatGPT'de Talvora Dev ve Talvora Admin bağlayıcıları yenilendi, Claude Desktop kapatılıp açıldı (kullanıcı, 2026-11-08). Claude'un kontrolü: Claude Desktop köprüsünde `talvora_python_info` artık hatasız yanıt veriyor (`uvAvailable: true`, uv 0.13.7) ve araç listesinde `talvora_uv_run` var. (UV1, UR4)
 - [ ] U16 — İsteğe bağlı: makine (sistem) PATH'inde aynı klasörü gösteren ikinci satırlar var: `C:\Python314\Scripts`, `C:\Python314`, `C:\Program Files\dotnet\`, `C:\Program Files\PowerShell\7\` ve `C:\Program Files\nodejs\`. Zararsızlar; isterseniz U14'teki gibi Sistem değişkenleri → Path → Düzenle'den bu beşini silebilirsiniz.
 
 ## Open questions
