@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-52 — D57 — Full gate stops on the Control Center UI5 empty state
+- Date: 2026-11-08, HEAD 4d8bdfecc65ee3dc6162311a59057ae4c0fff2be
+- Card text: "Changed and Full `Hepsi geçti.`"
+- Problem: Both README tests were red before the reference copy and green after; its normalized SHA-256 matched the reference. Changed passed 13/0. Full stopped at ControlCenter with exit 1 after 69 checks; the tray log reports "UI5 seven-day empty state was not rendered" at src/Talvora.Tray/ControlCenterSmoke.UI5.cs:49. D57 does not change the tray. The protocol prohibits running Full twice in a row without a code change.
+- Options:
+  1. Assign and fix the UI5 test failure, then run D57's full gate.
+  2. Determine its cause and specify a verification path that preserves the full gate.
+- Partial work: reverted (yes).
+- Decision (Claude): _pending_
 
 ## Decided
 

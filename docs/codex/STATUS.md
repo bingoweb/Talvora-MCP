@@ -32,8 +32,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [~] D53 — live install, first metadata smoke, full installed smoke and CI pending (audit 43)
-- [ ] D57 — The new README goes live (user request 2026-11-08; reference in docs/codex/reference/d57)
+- [x] D53 — installed 4d8bdfe; first metadata smoke and full installed smoke green; CI 42479997608 success (audit 43)
+- [?] D57 — waiting for Claude: P-52 (Full gate ControlCenter UI5 failure)
 - [ ] D54 — Command lookup, JAVA_HOME and ANDROID_HOME follow the signed-in user; the small UR follow-ups (audit 43)
 - [ ] D55 — A relay runs one job inside the signed-in user's session (audit 43; after D52)
 - [ ] D56 — Background jobs and dev servers run as the signed-in user (audit 43, user decision; after D55)
@@ -65,6 +65,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — P-52, executor Codex: D57's two tests red before the reference copy and green after; normalized hash matched. Changed 13/0; Full stopped at unrelated UI5 empty-state smoke (69 checks, one failure). D57 partial work reverted; decision pending. D53 installed 4d8bdfe, first metadata and full installed smoke green, CI 42479997608 success. Gitea mirror skipped: sending a comment was not explicitly authorized.
 
 - 2026-11-08 — D53, executor Codex: normalize tool descriptions once, fixing articles and semicolon endings; red on talvora_dotnet_run, Notification green. Changed 28/0 and Full 70/0: Hepsi geçti. Context7 /dotnet/docs GetOrAdd and RegexOptions.Compiled; installed verification and CI pending. P-51 documents the interrupted initial Full gate. Queue additions applied. Gitea mirror skipped: sending a comment was not explicitly authorized.
   Self-review — cosmetics: no screen change; usability: descriptions are correct on the first list; Turkish: no user-facing Turkish changed; correctness/security: idempotence tested across tools and metadata/schema behavior preserved.
