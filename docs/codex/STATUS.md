@@ -35,7 +35,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] CTX2 — installed 953fc7d; both installed MCP smokes green, CI success (audit 47); Claude checks the next card's push
 - [~] RL1 — b83b2f1 deployed with healthz and both MCP smokes green; CI 42517091038 successful; visual check pending (Claude)
 - [~] RL2 — PowerShell 7 preflight and MSI integrity gate implemented; live pending: verified MSI download, deployed HEAD, smokes, CI
-- [ ] RL3 — Talvora is in Apps & features and can be uninstalled (user request 2026-11-08)
+- [ ] [C] KUR1 — The setup window speaks Santral and carries the developer's maker plate (Claude; user request 2026-11-08; before RL3)
+- [?] RL3 — Talvora is in Apps & features and can be uninstalled (user request 2026-11-08; waits for Claude's [C] KUR1, which rebuilds `InstallerForm.cs`; Claude reopens this line and updates the card)
 - [ ] RL4 — A v0.0.x.x tag publishes the release (user decision 2026-11-08)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
