@@ -100,9 +100,9 @@ internal sealed class WorklogHistoryStore
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
     }
 
-    public void AppendTerminal(DesktopProgressMessage message)
+    public void AppendTerminal(DesktopProgressMessage message, bool unfinished = false)
     {
-        if (!message.SessionClosed ||
+        if ((!message.SessionClosed && !unfinished) ||
             message.WorklogFrame is not { } frame ||
             message.Lane != DesktopProgressLane.Worklog ||
             message.Kind is not (DesktopProgressKind.Completed or

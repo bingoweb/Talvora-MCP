@@ -33,8 +33,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [~] D46 — installed 7aa5165; Control Center and both installed MCP smokes green; CI success (audit 46); Claude checks real post-push pending-CI worklog wording
-- [~] D60 — code and gates green; live pending: install, installed MCP smokes and CI; Claude verifies one session across a 100-second quiet wait
-- [ ] D61 — A session that never closed still reaches Çalışma günlüğü (audit 46; after D60)
+- [~] D60 — installed a899938; both installed MCP smokes green; CI 42500049574 success; Claude verifies one session across a 100-second quiet wait
+- [~] D61 — code and gates green; live pending: install, Control Center smoke and CI; Claude checks pre-deploy steps remain in history
 - [ ] D62 — A detached start is not a result (audit 46; after D61)
 - [ ] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
 - [ ] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (after PK1)
@@ -61,6 +61,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — D61, executor ChatGPT: the tray retains each open session's last terminal step, flushes an old session on identity reuse, and drains the rest on Dispose; unfinished history uses D50's key and the original JSON/redaction rules. RED: missing WorklogOpenSessions CS0246. GREEN: D61_UNCLOSED_SESSION_REACHES_HISTORY_GREEN, DESKTOP_PROGRESS_BEHAVIOR_GREEN, MODERNIZATION_POLICY_GREEN; Changed 27/0, Full 70/0: Hepsi geçti. Context7 /dotnet/docs C# lock for Dictionary, official Microsoft reference. Install, installed Control Center smoke, CI and Claude live pre-deploy-history check pending. Gitea #9 comment 226.
+  Self-review — no service, protocol, stored-format, close-timing or UI changes; no disk writes on heartbeats; repeated normal close remains idempotent.
 
 - 2026-11-08 — D60, executor ChatGPT: quiet calls retain existing project/actor sessions with QuietCalls, shared key lookup, cancelled/rescheduled closure and injectable interval (production 90 s). RED: CS1739 missing interval, then 2 early closes during 1.2 s wait/400 ms idle. GREEN: D60_QUIET_WAIT_KEEPS_SESSION_GREEN, DESKTOP_PROGRESS_BEHAVIOR_GREEN, MODERNIZATION_POLICY_GREEN; Changed 28/0, Full 70/0: Hepsi geçti. Context7 /dotnet/docs CancellationTokenSource.Cancel/Task.Delay, Microsoft reference. Install, installed smokes, CI and Claude 100-second live check pending. Gitea #9 comment 225.
   Self-review — no UI or Turkish copy changes; quiet reads emit no step, overlapping waits do not close sessions, existing tools/results and 90-second production idle timeout stay unchanged.

@@ -86,6 +86,7 @@ internal static partial class Program
         AssertD43SessionTimeText();
         AssertD45WorkEndsWithLastStep();
         AssertD50HistoryKeepsEverySession();
+        AssertD61UnclosedSessionReachesHistory();
         AssertD39PenpotRedaction();
         await AssertD35LatestBackoffAsync();
         await AssertD41CallerIdentityAsync();

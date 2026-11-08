@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T16:21:45Z",
-  "scope": "D60: quiet read-only calls keep an existing worklog session open throughout long waits",
+  "verifiedAtUtc": "2026-11-08T16:42:19Z",
+  "scope": "D61: persist the last completed worklog step if the tray shuts down before session closure",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 D60: cancelling a CancellationTokenSource used by Task.Delay ends the awaited delay with TaskCanceledException, which is an OperationCanceledException; CloseLaterAsync already catches OperationCanceledException. Context7 /dotnet/docs query: \"CancellationTokenSource Cancel Task.Delay TaskCanceledException OperationCanceledException\"."
+      "verified": "2026-11-08 D61: C# lock gives exclusive access to a shared resource, so a single private lock protects the dictionary of open worklog sessions in Observe and Drain. Context7 /dotnet/docs query: \"lock statement thread synchronization Dictionary\"."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.threading.tasks.task.delay"
+    "https://learn.microsoft.com/dotnet/csharp/language-reference/statements/lock"
   ]
 }

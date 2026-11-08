@@ -62,6 +62,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
     // N3b sends a code preview once per change; later frames carry only its id.
     private readonly DesktopProgressCodeState _codeState = new();
     private readonly WorklogHistoryStore _historyStore;
+    private readonly WorklogOpenSessions _openSessions = new();
     private Task _placementSaveTask = Task.CompletedTask;
     private bool _isPinned;
     private int _anchorLeftPixels;
@@ -149,6 +150,10 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         message = _codeState.Restore(message);
         try
         {
+            foreach (var previous in _openSessions.Observe(message))
+            {
+                _historyStore.AppendTerminal(previous, unfinished: true);
+            }
             _historyStore.AppendTerminal(message);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or
@@ -821,6 +826,18 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         }
 
         _disposed = true;
+        foreach (var open in _openSessions.Drain())
+        {
+            try
+            {
+                _historyStore.AppendTerminal(open, unfinished: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or
+                System.Text.Json.JsonException or InvalidDataException)
+            {
+                TrayLog.Write("Worklog history persistence failed", ex);
+            }
+        }
         foreach (var window in _windows.Values.ToArray())
         {
             window.Close();
