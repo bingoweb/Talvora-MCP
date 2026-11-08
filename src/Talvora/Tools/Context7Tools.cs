@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -20,6 +21,14 @@ public static class Context7Tools
     private static readonly Regex LibraryIdPattern = new(
         @"^/[^/\s]+/[^/\s]+(/[^/\s]+)?$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex ApiKeyPattern = new(
+        @"^ctx7sk[-_A-Za-z0-9]{8,200}$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>CTX3: the user's Context7 API key. The file sits in the SYSTEM-only ledger folder; its value is sent only in the Authorization header and never logged or returned.</summary>
+    internal static string ApiKeyPath { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+        "Talvora", "Context7", "api-key");
 
     [McpServerTool(
         Name = "talvora_context7_docs",
@@ -28,7 +37,7 @@ public static class Context7Tools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraContext7Response)),
-     Description("Ask Context7 one precise question about one library (an id from the project's Context7 map). Talvora records the question; Context7 evidence must name questions asked here.")]
+     Description("Use this, never another Context7 app or plugin: ask one precise question about one library from the project's Context7 map. Talvora records it; the push gate accepts only questions asked here.")]
     public static Task<TalvoraContext7Response> DocsAsync(
         [Description("Context7 library id from docs/codex/CONTEXT7.md, e.g. /dotnet/docs.")] string libraryId,
         [Description("One precise 12–400 character question with at least three words, e.g. HttpClient Timeout and HttpMessageHandler for tests with a capped response read.")] string query,
@@ -42,12 +51,12 @@ public static class Context7Tools
             headers?["X-Talvora-Client"].ToString(),
             server.ClientInfo?.Name,
             headers?.UserAgent.ToString());
-        return FetchAsync(libraryId, query, Client, ledger, caller, cancellationToken);
+        return FetchAsync(libraryId, query, Client, ledger, caller, ReadApiKey(ApiKeyPath), cancellationToken);
     }
 
     internal static async Task<TalvoraContext7Response> FetchAsync(
         string libraryId, string query, HttpClient client, Context7Ledger ledger,
-        string? caller, CancellationToken cancellationToken = default)
+        string? caller, string? apiKey = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(libraryId) || !LibraryIdPattern.IsMatch(libraryId))
             throw new ArgumentException("Context7 libraryId must be /owner/library or /owner/library/version.", nameof(libraryId));
@@ -60,6 +69,8 @@ public static class Context7Tools
                   Uri.EscapeDataString(query) + "&type=txt";
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.UserAgent.ParseAdd("Talvora");
+        if (apiKey is not null)
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(30));
         HttpResponseMessage response;
@@ -112,11 +123,36 @@ public static class Context7Tools
             if (response.StatusCode == HttpStatusCode.NotFound)
                 throw new InvalidOperationException(
                     $"Context7 does not know {libraryId}; take the id from the project's Context7 map (HTTP 404).");
+            if (apiKey is not null &&
+                response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+                throw new InvalidOperationException(
+                    $"Context7 refused the API key in {ApiKeyPath} (HTTP {(int)response.StatusCode}); renew it at context7.com/dashboard.");
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                throw new InvalidOperationException(apiKey is null
+                    ? $"Context7 HTTP 429: the anonymous monthly quota is used up; Talvora sends the Context7 API key in {ApiKeyPath} when that file exists."
+                    : "Context7 HTTP 429: the API key's request quota is used up for now.");
             if (!response.IsSuccessStatusCode)
                 throw new InvalidOperationException($"Context7 HTTP {(int)response.StatusCode} for {libraryId}.");
             if (truncated)
                 text += "\n[Context7 response truncated at 64 KB]";
             return new TalvoraContext7Response(libraryId, query, text, body.Length);
+        }
+    }
+
+    /// <summary>CTX3: the key from <paramref name="path"/> when it holds exactly one Context7 key, otherwise null (anonymous lookups).</summary>
+    internal static string? ReadApiKey(string path)
+    {
+        try
+        {
+            var file = new FileInfo(path);
+            if (!file.Exists || file.Length is 0 or > 512)
+                return null;
+            var key = File.ReadAllText(path).Trim();
+            return ApiKeyPattern.IsMatch(key) ? key : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
         }
     }
 }

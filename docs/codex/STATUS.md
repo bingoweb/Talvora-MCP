@@ -19,7 +19,7 @@
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
 | Install path | `scripts/Deploy-Windows-Installer.ps1` (SYSTEM task; when called from inside Talvora it does not wait — poll `/healthz.sourceCommit`). Never run `Reset-And-Install.ps1` unless a card says so. |
-| Secrets | `C:\ProgramData\Talvora\Secrets\*` belong to the user's other projects. Never read, move, print or delete them. Listing names/ACLs is allowed. |
+| Secrets | `C:\ProgramData\Talvora\Secrets\*` belong to the user's other projects. Never read, move, print or delete them. Listing names/ACLs is allowed. `C:\ProgramData\Talvora\Context7\api-key` is the user's Context7 key (CTX3): `talvora_context7_docs` sends it; never read, print, copy or commit it. |
 | User preferences | Personal single-user workstation: no local MCP token (Q1). Cosmetics matter a lot: every visible change needs before/after PNGs. The worklog's vertical **code terminal** is the user's favourite feature — never break or shrink it. |
 
 ## In progress
@@ -58,6 +58,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-08 — [C] CTX3, executor Claude: the anonymous Context7 quota ran out (HTTP 429); `talvora_context7_docs` now sends the user's key from `C:\ProgramData\Talvora\Context7\api-key` as `Authorization: Bearer` (never logged or returned), a refused key and a 429 name the key file. Hardened (user 2026-11-08: ChatGPT sometimes used its own Context7 app): the tool description, the push gate's refusal and AGENTS.md (permanent prompt, CONTEXT7 PROTOCOL rules 2, 3 and 8) allow only `talvora_context7_docs`; unmapped libraries no longer send the agent to `resolve-library-id`. Red first (Notification regression CTX3), Notification suite green; Context7 `/upstash/context7`. Gate, deploy and the live keyed lookup follow in this session.
 - 2026-11-08 — RL2, executor ChatGPT: installer preflights existing PowerShell 7 before Talvora mutations, otherwise downloads pinned 7.6.9 x64 MSI and verifies SHA-256 50d33c7494aaf82b987cfd4de3f232d04f91fdd4c0deeca8a669cced3e7cf8f9 (official hashes.sha256); silent msiexec, safe failures and hidden --verify-powershell-download added.
   RED missing pin/preflight, then native installer C# fixture GREEN (injected availability avoids download; temporary wrong-hash MSI rejected). Pinned source/rollback/CI suites passed; signed-in Changed 26/0 and Full 71/0, Hepsi geçti. Context7: /dotnet/docs (stream and SHA256.HashData); vendor PowerShell release and MS install guide.
   Self-review — exact Turkish progress/errors and no screen layout changes; MSI is checked before execution, failures precede Talvora mutation, and existing PowerShell is not changed. Live download/deploy/smokes and CI pending committed HEAD. Gitea #9 comment 234.

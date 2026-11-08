@@ -203,6 +203,7 @@ internal static partial class SourceEditRegressionRunner
             await WriteEvidenceAsync();
             await CommitAsync("Unrecorded question");
             MustBlock("unrecorded question", id + " \"" + question + "\"");
+            MustBlock("unrecorded question names the only Context7 client", "ChatGPT's own Context7 app or any other Context7 client do not count");
 
             await using (var ledger = new Context7Ledger(ledgerPath))
             {

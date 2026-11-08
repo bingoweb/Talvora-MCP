@@ -1,21 +1,11 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T20:03:05.689Z",
-  "scope": "RL2: HTTPS streaming download and SHA-256 integrity validation for pinned PowerShell 7 MSI",
+  "verifiedAtUtc": "2026-11-08T20:45:51Z",
+  "scope": "CTX3: talvora_context7_docs sends the user's Context7 API key from the SYSTEM-only Context7 folder",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 RL2: HttpClient.GetAsync with ResponseHeadersRead streams a response to a file using a cancellation token (query: \"HttpClient GetAsync ResponseHeadersRead stream download to file asynchronous cancellation .NET 10\")"
-    },
-    {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 RL2: SHA256.HashData supports stream input for integrity verification (query: \"System.Security.Cryptography.SHA256 HashData Stream overload reading file stream and converting bytes to lowercase hex in C# .NET 10\")"
+      "libraryId": "/upstash/context7",
+      "verified": "2026-11-08 CTX3: the v2 context endpoint takes the key as an Authorization: Bearer <key> header (query: \"Context7 REST API v2 context endpoint Authorization Bearer API key header\")"
     }
-  ],
-  "vendorSources": [
-    "https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows",
-    "https://github.com/PowerShell/PowerShell/releases",
-    "https://github.com/PowerShell/PowerShell/releases/tag/v7.6.9",
-    "https://github.com/PowerShell/PowerShell/releases/download/v7.6.9/hashes.sha256"
   ]
 }

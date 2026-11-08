@@ -21,4 +21,4 @@ Maintained by Claude (CONTEXT7 PROTOCOL in AGENTS.md). Every id below was checke
 | uv (Python runs) | uv 0.13.x | `/astral-sh/uv` | https://docs.astral.sh/uv/ |
 | Visual Studio and Windows SDK tools | VS 2022 Build Tools | `/microsoftdocs/visualstudio-docs` | https://learn.microsoft.com/visualstudio/ |
 | Android tools | Android SDK command-line tools | `/websites/developer_android_develop` | https://developer.android.com/tools |
-| Context7 itself (CTX1) | v2 API | — (`GET https://context7.com/api/v2/context?libraryId=<id>&query=<question>&type=txt`) | https://context7.com/docs |
+| Context7 itself (CTX1, CTX3) | v2 API | `/upstash/context7` (`GET https://context7.com/api/v2/context?libraryId=<id>&query=<question>&type=txt` with `Authorization: Bearer <key>`; Talvora reads the user's key from `C:\ProgramData\Talvora\Context7\api-key`) | https://context7.com/docs |

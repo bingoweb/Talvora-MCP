@@ -59,7 +59,7 @@ internal static class ProjectDeliveryGate
                     !TalvoraLineTrafficMeter.IsOwnClient(record.Caller) &&
                     record.Ts <= now && record.LibraryId == id && record.Query == question))
                     continue;
-                throw Blocked($"Context7 evidence names a question Talvora did not record: {id} \"{question}\". Ask it with talvora_context7_docs and copy the question exactly.");
+                throw Blocked($"Context7 evidence names a question Talvora did not record: {id} \"{question}\". Questions asked in ChatGPT's own Context7 app or any other Context7 client do not count: ask it again with talvora_context7_docs and copy the question exactly.");
             }
         }
         finally
