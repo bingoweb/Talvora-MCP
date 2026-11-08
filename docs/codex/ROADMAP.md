@@ -30,9 +30,9 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-08 (46) · range `audit/2026-11-08-45..7aa5165` · result: D60, D61; D47–D49 to Claude
+### Audit 2026-11-08 (46) · range `audit/2026-11-08-45..7aa5165` · result: D60, D61, D62; D47–D49 to Claude
 
-ChatGPT's eight cards (D59, TW1, TW2, D55, D56, D45, D50, D46) follow their cards, and the TW2 trace shows no loop. D50 made two worklog faults visible: a long read-only wait closes the session (D60) and a session that is open at a deploy is lost (D61). D47, D48 and D49 are Claude's `[C]` items now (user decision); they wait below with WL3.
+ChatGPT's eight cards (D59, TW1, TW2, D55, D56, D45, D50, D46) follow their cards, and the TW2 trace shows no loop. D50 made two worklog faults visible: a long read-only wait closes the session (D60) and a session that is open at a deploy is lost (D61). The screen pass found that a detached start reads as its result (D62). D47, D48 and D49 are Claude's `[C]` items now (user decision); they wait below with WL3.
 
 ### D60 — A wait keeps its Çalışma günlüğü session
 
@@ -71,121 +71,27 @@ ChatGPT's eight cards (D59, TW1, TW2, D55, D56, D45, D50, D46) follow their card
 
 **Acceptance:** red first; the pinned test; Changed and Full `Hepsi geçti.`; deploy; installed Control Center smoke green; CI. Then `[~] live check pending (Claude): the steps before a deploy stay in Çalışma günlüğü`.
 
+### D62 — A detached start is not a result
+
+**Why:** audit 46 (data truth). `talvora_user_process_start` and `talvora_job_start` return as soon as the process has started, but `TalvoraDesktopProgressNarrative` describes them like a finished `talvora_user_run` (`"user_run" or "run_process" or "job_start" or "user_process_start"` share `WorklogSubject.ForExecutable`), so the step gets the script's success title. Every Full gate the agents start detached reads "Kalite kontrolü geçti · tam" at the moment it starts, minutes before its real result, and would read the same if it then failed (live on 7aa5165: the D46 session of 18:43 ends with that step at the gate's start); the detached installer build reads "Kurulum paketi hazırlandı" 21 ms after it began. The agents' installed smokes, run as `pwsh -Command "& dotnet run --project tests/Talvora.Smoke/…"`, end their sessions with "pwsh.exe bitti", a title that names the shell instead of what ran.
+
+**Files:** `src/Talvora/WorklogSubject.cs`, `src/Talvora/TalvoraDesktopProgressNarrative.cs`, `tests/Talvora.Notification.Regression/Program.D62.cs` (new) and `Program.cs` (its call), `.context7/verification.json`, `docs/codex/STATUS.md`. After D61. **Tests that read these files:** `tests/ModernizationPolicyRegression.ps1` (the narrative keeps `TALVORA_UPDATE_DETACHED` and `WorklogCopy.Deploy.Succeeded` and never contains its forbidden jargon words); run it right after the change.
+
+**Do (method):**
+1. Red first in `Program.D62.cs`, called from `Main` (full run) on its own line directly below the D60 call, through `RunToolCallAsync` with a successful stub result as the D46 test does, checking each completed step's title: (a) `talvora_user_process_start` with `executable` pwsh and `arguments` `["-NoProfile","-Command","& ./scripts/Invoke-QualityGate.ps1 -Scope Full *> artifacts/D62-gate.log; exit $LASTEXITCODE"]` → "Kalite kontrolü arka planda başladı · tam"; (b) the same arguments through `talvora_user_run` → "Kalite kontrolü geçti · tam" (unchanged); (c) `talvora_user_process_start` with `["-NoProfile","-Command","& ./scripts/Build-Windows-Installer.ps1 *> artifacts/D62-build.log"]` → "Kurulum paketi hazırlığı arka planda başladı"; (d) `talvora_user_run` with `["-NoProfile","-Command","& dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release -- --metadata-policy-only http://127.0.0.1:7676/mcp"]` → "Talvora.Smoke bitti"; (e) `talvora_job_start` with `executable` `C:\Windows\System32\whoami.exe` → "whoami.exe arka planda başladı". Messages start with `D62:`. Red: (a), (c), (d) and (e) show today's titles.
+2. `WorklogSubject.ForDetachedStart(string executable, IReadOnlyList<string> arguments)`: the same description as `ForExecutable`, with other success and failure titles (the running title stays). Two known scripts: `Invoke-QualityGate.ps1` → "Kalite kontrolü arka planda başladı" / "Kalite kontrolü başlatılamadı", keeping the `-Scope` suffix exactly as `ForScript` adds it (" · tam", " · hızlı"); `Build-Windows-Installer.ps1` → "Kurulum paketi hazırlığı arka planda başladı" / "Kurulum paketi hazırlığı başlatılamadı". Anything else: "{subject} arka planda başladı" / "{subject} başlatılamadı" with the description's subject.
+3. In `TalvoraDesktopProgressNarrative`, `job_start` and `user_process_start` use `ForDetachedStart`; `user_run` and `run_process` keep `ForExecutable`.
+4. `ForExecutable` names a `dotnet run` project: for `dotnet` with the verb `run` and a `--project <path>` argument, the subject is the project's file name without extension and the titles are `ForProgram(subject)` ("Talvora.Smoke çalışıyor", "Talvora.Smoke bitti", "Talvora.Smoke hata ile bitti"); for `pwsh` or `powershell` whose command text names no `.ps1` but contains `dotnet run … --project <path>` (a `[GeneratedRegex]`, culture-invariant, like `ScriptPattern`), the same description. Without `--project`, today's "dotnet run" stays.
+
+**Don't:** change bounded runs (`user_run`, `run_process`), the existing `KnownScripts` titles, the deploy's deferred completion, `dev_server_start` or the tray; add any word that `ModernizationPolicyRegression.ps1` forbids in the narrative.
+
+**Context7:** `/dotnet/docs`, query "GeneratedRegex attribute source generator RegexOptions.CultureInvariant"; record the one fact used.
+
+**Acceptance:** red first; the pinned test; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI. Then `[~] live check pending (Claude): a detached Full gate's step reads "Kalite kontrolü arka planda başladı · tam"`.
+
 ### Audit 2026-11-08 (42–43) · cards still open
 
 D46 is done (Claude checks its live wording at the next audit). D47, D48 and D49 are Claude's `[C]` items since audit 46 (user decision: Claude built and ran their literal blocks at audit 42, so the agent does not type them again); Claude ships them with WL3 after the agent's queue and re-checks each against the code of that day first. The agent skips them.
-
-### D45 — Çalışma günlüğü measures a session up to its last step
-
-**Why:** audit 42 finding 1 (data truth; Claude's D43). A worklog session closes 90 s after its last step and `EndedAtUtc` is that close, so every real session carries a 90–127 s quiet tail and D43 shows "1 dk 30 sn" for a ping that took a tenth of a second. The duration ends with the newest step (timeline times are step ends). The stored format does not change. The literal blocks below were built and run by Claude in a scratch clone (Release 0 warnings, Notification regression green, Full gate green).
-
-**Files:** `src/Talvora.Tray/WorklogHistoryStore.cs`, `tests/Talvora.Notification.Regression/Program.D45.cs` (new), `tests/Talvora.Notification.Regression/Program.cs`, `.context7/verification.json`.
-
-**Context7:** record the map's .NET entry with the one fact used (`Enumerable.Max` over `DateTimeOffset`), per CONTEXT7 PROTOCOL rule 1.
-
-#### Exact implementation
-
-Step 1 (red first). Create `Program.D45.cs`:
-
-```csharp
-using Talvora.Shared;
-using Talvora.Tray;
-
-internal static partial class Program
-{
-    /// <summary>D45: a session's duration ends with its last step, not with the card's quiet close 90 s later.</summary>
-    private static void AssertD45WorkEndsWithLastStep()
-    {
-        var offset = TimeSpan.FromHours(3);
-        var now = new DateTimeOffset(2026, 11, 7, 18, 0, 0, offset);
-        var start = new DateTimeOffset(2026, 11, 7, 15, 44, 23, offset);
-        var closed = start.AddSeconds(93);
-        var directory = Path.Combine(Path.GetTempPath(), "talvora-d45-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        try
-        {
-            var store = new WorklogHistoryStore(Path.Combine(directory, "worklog-sessions.jsonl"), () => now);
-            var frame = new DesktopWorklogFrame(
-                "d45", 2, closed,
-                new WorklogSessionHeader("Talvora-MCP", "ChatGPT · Dev"),
-                new WorklogStep(WorklogStepCategory.SourceEdit, WorklogStepState.Succeeded,
-                    "Düzenleme tamamlandı.", "1 dosya değişti", null, 3),
-                [new WorklogTimelineEntry(start.AddSeconds(3), WorklogStepState.Succeeded, "Düzenleme tamamlandı.", 3)],
-                new WorklogTotals(1, 93, 1, WorklogCheckState.Unknown, WorklogCheckState.Unknown),
-                null, 15);
-            store.AppendTerminal(new DesktopProgressMessage(
-                "d45", "talvora_apply_patch", "Düzenleme tamamlandı.", "",
-                DesktopProgressKind.Completed, closed, 3, null,
-                WorklogFrame: frame, SessionClosed: true));
-            var session = store.LoadRecent().Single(item => item.SessionId == "d45");
-            if (session.WorkEndedAtUtc != start.AddSeconds(3) ||
-                LocalTimeText.SessionShort(session.StartedAtUtc, session.WorkEndedAtUtc, now) != "Bugün 15:44 · 3 sn" ||
-                LocalTimeText.SessionLong(session.StartedAtUtc, session.WorkEndedAtUtc, now) !=
-                    "Bugün 15:44:23 → 15:44:26 · 3 sn")
-                throw new InvalidOperationException(
-                    $"D45: the work must end with the last step (15:44:26), got {session.WorkEndedAtUtc.ToOffset(offset):HH:mm:ss}.");
-            if ((session with { Timeline = [] }).WorkEndedAtUtc != session.EndedAtUtc)
-                throw new InvalidOperationException("D45: a session without steps keeps its stored end.");
-        }
-        finally
-        {
-            try
-            {
-                Directory.Delete(directory, recursive: true);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-            }
-        }
-        Console.WriteLine("D45_WORK_ENDS_WITH_LAST_STEP_GREEN");
-    }
-}
-```
-
-In `Program.cs` (`Main`, full run) add `AssertD45WorkEndsWithLastStep();` on its own line directly below `AssertD43SessionTimeText();`. Red: CS1061 (`WorkEndedAtUtc` does not exist yet).
-
-Step 2. `WorklogHistoryStore.cs`: replace
-
-```csharp
-    // D43: the day once, then the time and the measured duration (the Olaylar page's day words).
-    [JsonIgnore]
-    public string ListTimeText => LocalTimeText.SessionShort(StartedAtUtc, EndedAtUtc, DateTimeOffset.Now);
-
-    [JsonIgnore]
-    public string DetailTimeText => LocalTimeText.SessionLong(StartedAtUtc, EndedAtUtc, DateTimeOffset.Now);
-```
-
-with
-
-```csharp
-    // D43: the day once, then the time and the measured duration (the Olaylar page's day words).
-    // D45: the duration ends with the last step; the card closes 90 s later and that quiet tail is not work.
-    [JsonIgnore]
-    public string ListTimeText => LocalTimeText.SessionShort(StartedAtUtc, WorkEndedAtUtc, DateTimeOffset.Now);
-
-    [JsonIgnore]
-    public string DetailTimeText => LocalTimeText.SessionLong(StartedAtUtc, WorkEndedAtUtc, DateTimeOffset.Now);
-
-    /// <summary>D45: the end of the newest step (timeline times are step ends), kept inside the session.</summary>
-    [JsonIgnore]
-    public DateTimeOffset WorkEndedAtUtc
-    {
-        get
-        {
-            if (Timeline is not { Count: > 0 })
-            {
-                return EndedAtUtc;
-            }
-
-            var last = Timeline.Max(entry => entry.TimestampUtc);
-            return last < StartedAtUtc ? StartedAtUtc : last > EndedAtUtc ? EndedAtUtc : last;
-        }
-    }
-```
-
-**Don't:** change `EndedAtUtc`, the stored JSON, the 90-second close, the timeline rows or `LocalTimeText`.
-
-**Acceptance:** `D45_WORK_ENDS_WITH_LAST_STEP_GREEN`; signed-in Full `Hepsi geçti.`; build and deploy; installed Control Center smoke green; record `[~] visual check pending (Claude)` (Claude reads the real Çalışma günlüğü).
 
 ### D46 — A CI run that is still going is not a failed step
 
@@ -641,6 +547,7 @@ Step 3. Two existing tests pin texts this card changes; update them in the same 
 7. `WorklogHistoryView.xaml`, detail column, right under the `OutcomeLabel` line (audit 43, user decision 2026-11-08 "Evet, nedeni göster"; the data is already in `WorklogOutcome`): `{Binding Current.Outcome.PlainReason, TargetNullValue='', FallbackValue=''}` in `Tv.Type.Body` with `Tv.TextMuted`, then `{Binding Current.Outcome.NextStep, StringFormat='Sonraki adım: {0}', TargetNullValue='', FallbackValue=''}` in `Tv.Type.Caption`; both use the `HistoryOptionalText` collapse of item 1, so a completed session shows neither line.
 8. `WorklogHistoryView.xaml`: the "Kanıtlar" heading collapses when the session has no evidence (summary, result, files and code preview all empty), with the same trigger style; check the bound values on a real session without evidence first (audit 43 screen pass: the "scratchpad" session showed the heading alone).
 9. `WorklogHistoryView.xaml`: with search text and no matching session, the empty line reads "Aramayla eşleşen çalışma yok." instead of "Henüz kayıtlı çalışma yok." (README screen pass 2026-11-08). After WL3, Claude takes the README screenshots again before the first release.
+10. `WorklogHistoryView.xaml`, list card (audit 46 screen pass): the files part (" dosya değişti" after the bound count) collapses when `Totals.FilesChanged` is 0, the way `WorklogCardMapper.cs` leaves zero parts out of the desktop card, so a session without file changes reads "4 adım" instead of "4 adım · 0 dosya değişti".
 
 ## Releases and the public page (user request 2026-11-08)
 
