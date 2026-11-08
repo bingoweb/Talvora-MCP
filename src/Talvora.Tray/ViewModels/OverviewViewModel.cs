@@ -4,6 +4,7 @@ using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Talvora.Shared;
 using Talvora.Tray.Controls;
+using Talvora.Tray.Views;
 
 namespace Talvora.Tray.ViewModels;
 
@@ -110,9 +111,9 @@ internal sealed class OverviewViewModel : ObservableObject
         Description = message.Detail;
         StatusLine = "Son kontrol " + checkedAt.ToLocalTime().ToString("HH:mm:ss",
             System.Globalization.CultureInfo.GetCultureInfo("tr-TR")) +
-            " · " + (typeof(ControlCenterVersionService).Assembly
+            " · " + SettingsView.GetUi7AboutMetadata(typeof(ControlCenterVersionService).Assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                ?.InformationalVersion.Split('+')[0] ?? "Talvora");
+                ?.InformationalVersion).Version;
         ReadyCount = snapshot.ReadyCount;
         AttentionCount = snapshot.AttentionCount + snapshot.OfflineCount;
         OptionalCount = ordered.Count(row => row.Optional &&

@@ -1,9 +1,13 @@
 param(
-    [string] $RuntimeIdentifier = 'win-x64'
+    [string] $RuntimeIdentifier = 'win-x64',
+    [string] $ReleaseVersion = ''
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+if ($ReleaseVersion -ne '' -and $ReleaseVersion -cnotmatch '^0\.0\.\d{1,5}\.\d{1,5}$') {
+    throw "ReleaseVersion must be 0.0.x.x."
+}
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 Add-Type -AssemblyName System.IO.Compression
 
@@ -886,6 +890,9 @@ $serviceArgs = @(
     '--no-restore',
     '-o',$ServicePayload
 )
+if ($ReleaseVersion -ne '') {
+    $serviceArgs += "-p:TalvoraReleaseVersion=$ReleaseVersion"
+}
 & dotnet @serviceArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Talvora service publish failed: $LASTEXITCODE"
@@ -907,6 +914,9 @@ $trayArgs = @(
     '--no-restore',
     '-o',$TrayPayload
 )
+if ($ReleaseVersion -ne '') {
+    $trayArgs += "-p:TalvoraReleaseVersion=$ReleaseVersion"
+}
 & dotnet @trayArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Talvora tray publish failed: $LASTEXITCODE"
@@ -1190,6 +1200,9 @@ try {
         '--self-contained','true',
         '-o',$ArtifactsRoot
     )
+    if ($ReleaseVersion -ne '') {
+        $installerArgs += "-p:TalvoraReleaseVersion=$ReleaseVersion"
+    }
     & dotnet @installerArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Talvora installer publish failed: $LASTEXITCODE"
@@ -1204,6 +1217,11 @@ $InstallerExe = Join-Path $ArtifactsRoot 'Talvora-Setup.exe'
 if (-not (Test-Path -LiteralPath $InstallerExe -PathType Leaf)) {
     throw "Installer EXE was not produced: $InstallerExe"
 }
+if ($ReleaseVersion -ne '') {
+    $ReleaseInstallerExe = Join-Path $ArtifactsRoot "Talvora-Kurulum-$ReleaseVersion.exe"
+    Move-Item -LiteralPath $InstallerExe -Destination $ReleaseInstallerExe -Force
+    $InstallerExe = $ReleaseInstallerExe
+}
 
 $hash = (Get-FileHash -LiteralPath $InstallerExe -Algorithm SHA256).Hash
 $size = (Get-Item -LiteralPath $InstallerExe).Length
@@ -1213,9 +1231,11 @@ $InstallerManifestTemp = Join-Path $ArtifactsRoot (
     '.Talvora-Setup.manifest.' +
     [Guid]::NewGuid().ToString('N') +
     '.tmp')
+$ManifestVersion = if ($ReleaseVersion -ne '') { $ReleaseVersion } else { '0.0.0.0-dev' }
 $InstallerIdentity = [ordered]@{
     schemaVersion = 1
     product = 'Talvora Setup'
+    version = $ManifestVersion
     installerFileName = [IO.Path]::GetFileName($InstallerExe)
     sizeBytes = [long]$size
     sha256 = $hash.ToLowerInvariant()

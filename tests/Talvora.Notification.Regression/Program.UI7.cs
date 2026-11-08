@@ -44,9 +44,12 @@ internal static partial class Program
             "Talvora Kontrol Merkezi — Her şey yolunda.")
             throw new InvalidOperationException("UI7 tray tooltip must use the approved status text.");
 
-        var about = SettingsView.GetUi7AboutMetadata("3.0.0-dev+1234567890abcdef");
-        if (about.Version != "3.0.0-dev" ||
+        var about = SettingsView.GetUi7AboutMetadata("0.0.0.0-dev+1234567890abcdef");
+        var releaseAbout = SettingsView.GetUi7AboutMetadata("0.0.1.0+1234567890abcdef");
+        if (about.Version != "geliştirme sürümü" ||
             about.ShortCommit != "1234567" ||
+            releaseAbout.Version != "0.0.1.0" ||
+            releaseAbout.ShortCommit != "1234567" ||
             SettingsView.ReadmeUrl != "https://github.com/bingoweb/Talvora-MCP/blob/main/README.md" ||
             SettingsView.SecurityUrl != "https://github.com/bingoweb/Talvora-MCP/blob/main/SECURITY.md")
             throw new InvalidOperationException("UI7 About must expose version, short source commit and approved links.");

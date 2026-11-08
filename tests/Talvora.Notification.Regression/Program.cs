@@ -145,7 +145,7 @@ internal static partial class Program
         var trayVersion = typeof(ControlCenterVersionService).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion;
-        if (!serviceVersion.StartsWith("3.0.0-dev+", StringComparison.Ordinal) ||
+        if (!serviceVersion.StartsWith("0.0.0.0-dev+", StringComparison.Ordinal) ||
             !string.Equals(serviceVersion, trayVersion, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(

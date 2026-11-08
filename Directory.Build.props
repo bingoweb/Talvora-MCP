@@ -1,8 +1,10 @@
 <Project>
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <Version>3.0.0-dev</Version>
-    <InformationalVersion>$(Version)+$(SourceRevisionId)</InformationalVersion>
+    <Version Condition="'$(TalvoraReleaseVersion)' != ''">$(TalvoraReleaseVersion)</Version>
+    <Version Condition="'$(TalvoraReleaseVersion)' == ''">0.0.0.0</Version>
+    <InformationalVersion Condition="'$(TalvoraReleaseVersion)' != ''">$(TalvoraReleaseVersion)+$(SourceRevisionId)</InformationalVersion>
+    <InformationalVersion Condition="'$(TalvoraReleaseVersion)' == ''">0.0.0.0-dev+$(SourceRevisionId)</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -16,4 +18,7 @@
     <NuGetAuditLevel>high</NuGetAuditLevel>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
+  <Target Name="TalvoraCheckReleaseVersion" BeforeTargets="BeforeBuild" Condition="'$(TalvoraReleaseVersion)' != ''">
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(TalvoraReleaseVersion)', '^0\.0\.\d{1,5}\.\d{1,5}$'))" Text="TalvoraReleaseVersion must be 0.0.x.x; got '$(TalvoraReleaseVersion)'." />
+  </Target>
 </Project>

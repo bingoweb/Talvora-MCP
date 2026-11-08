@@ -1,8 +1,19 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T19:33:15Z",
-  "scope": "PK4: Dependabot keeps Microsoft.Build.Framework and Microsoft.NET.StringTools on the SDK's MSBuild 18.9 line",
-  "libraries": [],
-  "noLookup": "PK4: only the version bound of the file's existing Dependabot ignore entries changes; no new syntax or API.",
-  "vendorSources": []
+  "verifiedAtUtc": "2026-11-08T19:39:00.772Z",
+  "scope": "RL1: MSBuild version properties, assembly informational version, release-tag build arguments",
+  "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-08 RL1: -getProperty evaluates MSBuild properties and -p passes project property overrides (query: \"MSBuild dotnet msbuild -getProperty:Version -getProperty:InformationalVersion command line evaluation and -p property override syntax .NET SDK 10\")"
+    },
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-08 RL1: Version and InformationalVersion generate assembly attributes; disabling automatic SourceRevisionId suffix prevents duplication (query: \"NET SDK 10 assembly InformationalVersion and Version MSBuild properties AssemblyInformationalVersionAttribute SourceRevisionId IncludeSourceRevisionInInformationalVersion false behavior\")"
+    }
+  ],
+  "vendorSources": [
+    "https://learn.microsoft.com/visualstudio/msbuild/evaluate-items-and-properties",
+    "https://learn.microsoft.com/dotnet/core/project-sdk/msbuild-props"
+  ]
 }

@@ -33,7 +33,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [~] CTX2 — installed 953fc7d; both installed MCP smokes green, CI success (audit 47); Claude checks the next card's push
-- [ ] RL1 — Talvora's version is 0.0.x.x and comes from the release tag (user request 2026-11-08)
+- [~] RL1 — 0.0.x.x version contract built and tested; live pending: deployed HEAD, installed smokes, CI
 - [ ] RL2 — A fresh Windows gets PowerShell 7 from the installer (user decision 2026-11-08)
 - [ ] RL3 — Talvora is in Apps & features and can be uninstalled (user request 2026-11-08)
 - [ ] RL4 — A v0.0.x.x tag publishes the release (user decision 2026-11-08)
@@ -56,6 +56,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — RL1, executor ChatGPT: versions now derive from TalvoraReleaseVersion; development builds advertise 0.0.0.0-dev+commit, while About and Overview show "geliştirme sürümü". Installer accepts only 0.0.x.x, names release EXEs accordingly and records the version in its manifest; normal setup name unchanged.
+  RED initial Version test (3.0.0-dev), GREEN RELEASE_VERSION_GREEN and UI7; four pinned installer/modernization regressions green. Signed-in Changed 67/0 and Full 71/0, Hepsi geçti. Release EXE and manifest had FileVersion/version 0.0.0.1 and the test EXE was deleted. Context7: /dotnet/docs (two queries); official MSBuild property sources checked.
+  Installed service, overview/About live state and CI await this card's committed HEAD; no unrelated files changed. Gitea #9 comment 233.
 
 - 2026-11-08 — Claude, audit 49 (update check; tag `audit/2026-11-08-49`): range `audit/2026-11-08-48..154b616` (the P-55 stop by ChatGPT) and the user's request to re-check updates and modernization. P-55 decided: Claude shipped [C] PK1 (853d78a: MCP 2.4.0, Tomlyn 2.11.0, lock files, notices), [C] PK2 (7b20fd8: Microsoft.Build.Framework 18.9.6 plus a compile-only Microsoft.NET.StringTools after MSBL001), [C] PK3 (3df3070: setup-dotnet 6.1.0) and [C] PK4 (Dependabot ignored every Microsoft.Build.Framework 18.x as "incompatible until .NET 11" since 2026-10-07; the cause was MSBL001, so it now ignores only >=18.10.0 for both MSBuild packages, pinned by `ModernizationPolicyRegression.ps1`). RL4 now names the pinned action commits. Checks: every NuGet pin against nuget.org (the rest are the newest stable), `dotnet list package --vulnerable --include-transitive` and `--deprecated` (none), .NET release index (10.0.403/10.0.14 newest LTS; .NET 11 RC3), CI actions, PowerShell 7.6.9, Git 2.56.0, uv 0.13.7 (all current; map row Git 2.56). The installer project is outside Talvora.slnx and uses none of the moved packages (its locked restore passes). Signed-in Full gate in a clean clone 70/0 `Hepsi geçti.`; installer built and deployed at 3df3070; installed smokes green (metadata policy, semantic source edit, full). User decision: Talvora stays on .NET 10 LTS when .NET 11 (STS) comes out. Noted: a scratch clone lost its pack indexes during the work (cause not found); the main repository checked clean with `git fsck` and the three commits were moved over intact. Removed: finished queue lines and cards (PK1, PK2, PK3, PK4), the audit 48 section, Log entries before audit 48.
 
