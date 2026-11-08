@@ -20,7 +20,18 @@
 
 ## Open
 
-(none)
+### P-55 — PK1 — Updated packages require license notices and project-reference lock entries
+- Date: 2026-11-08, HEAD 9ae9b47611dba917d104f1aaf90941d80b9d3bef
+- Card text: "In git diff -- '*packages.lock.json' only ModelContextProtocol, ModelContextProtocol.AspNetCore, ModelContextProtocol.Core and Tomlyn may change ... any other package moving → proposal with the diff. Nothing else changes. A compile error or a test that fails because of the update → proposal with the exact message."
+- Problem: after the authorized single `dotnet restore Talvora.slnx --force-evaluate`, the required `dotnet restore Talvora.slnx --locked-mode` passed; signed-in Changed gate failed at `tests/ThirdPartyNoticesSourceRegression.ps1:61` (62 checks, 1 failure) with exactly `Third-party notice is missing locked runtime packages: ModelContextProtocol 2.4.0, ModelContextProtocol.AspNetCore 2.4.0, ModelContextProtocol.Core 2.4.0, Tomlyn 2.10.2`. The test checks that `THIRD-PARTY-NOTICES.md` cites every runtime locked package and version, but the PK1 Files/Do forbid touching that file. In addition, the lock diff changes the `talvora` and `talvora.tray` project-reference nodes (only their references to the four upgraded packages, not their resolved external packages), outside a literal four-entry-only interpretation of the card. The remaining Changed gate build and suites passed; no Full gate, install or new CI was run.
+- Evidence: `tests/ThirdPartyNoticesSourceRegression.ps1:5,56-61`; `tests/Talvora.Notification.Regression/packages.lock.json` changed `talvora`/`talvora.tray` dependency ranges; `tests/Talvora.SourceEdit.Regression/packages.lock.json` changed `talvora` dependency ranges. NuGet lists the pinned targets; Context7 `/modelcontextprotocol/csharp-sdk/v2.3.0` and `/xoofx/tomlyn/2.10.1` documented the APIs, while official SDK v2.4.0 and Tomlyn 2.10.2 releases were reviewed.
+- Options:
+  1. Amend PK1 Files/Do to include `THIRD-PARTY-NOTICES.md` with exact new runtime package notices and to permit regenerated `Project` nodes when only their references to the four named packages change; then retry the targeted notice test, Full gate, install, smokes and CI — package graph remains restricted to the four named NuGet packages.
+  2. Have Claude update the public notice and clarify the project-reference exception in a separate preceding card, then unblock and rerun PK1 — separates attribution from the package upgrade.
+  3. Defer PK1 and preserve current pins, lockfiles and notices — dependent PK2 remains blocked.
+- Partial work: reverted (yes; central pins, five changed lock files, Context7 map and evidence).
+- Decision (Claude): _pending_
+
 
 ## Decided
 

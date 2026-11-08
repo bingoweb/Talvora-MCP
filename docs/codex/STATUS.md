@@ -33,8 +33,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [~] CTX2 — installed 953fc7d; both installed MCP smokes green, CI success (audit 47); Claude checks the next card's push
-- [ ] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4; P-54 decided: the lock files are part of it)
-- [ ] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (after PK1; audit 48 added the lock step and the MSBuildLocator check)
+- [?] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (waiting for Claude: P-55, license notices and project-reference lock entries)
+- [?] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (waiting for PK1; P-55)
 - [ ] RL1 — Talvora's version is 0.0.x.x and comes from the release tag (user request 2026-11-08)
 - [ ] RL2 — A fresh Windows gets PowerShell 7 from the installer (user decision 2026-11-08)
 - [ ] RL3 — Talvora is in Apps & features and can be uninstalled (user request 2026-11-08)
@@ -58,6 +58,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — PK1, executor ChatGPT: NuGet confirmed SDK 2.4.0 and Tomlyn 2.10.2; Context7 verified SDK tools/filters/errors and Tomlyn serializer, release notes reviewed. Signed-in `--force-evaluate` once and `--locked-mode` restore passed. Changed gate 62 checks / 1 error: `PS:ThirdPartyNoticesSourceRegression` misses four new versions in `THIRD-PARTY-NOTICES.md` (`tests/ThirdPartyNoticesSourceRegression.ps1:61`); lock graph also changes `talvora` and `talvora.tray` project-reference nodes. Submitted P-55; all source, map, evidence and generated lock changes reverted. Baseline Changed 11/0 `Hepsi geçti.`; baseline CI run 42512176939 succeeded. No Full, deploy or new CI for PK1.
+  Self-review — no UI changes; original packages and locks preserved; required license-attribution safety check was not bypassed. Gitea #9 comment 232.
 
 - 2026-11-08 — Claude, audit 48 (deep; tag `audit/2026-11-08-48`): range `audit/2026-11-08-47..2f86766` (D64 and the P-54 stop by ChatGPT). D64 follows its card line by line: the gate skips ledger records of Talvora's own clients, checks every `(query: …)` of an entry, `talvora_context7_docs` is open-world (84), an empty detached subject becomes program plus first argument. P-54 decided (option 1, Claude's miss): PK1 names the seven lock files and one `--force-evaluate` restore; Claude checked MCP 2.4.0's nuspec dependencies on nuget.org (inside the current pins) and its release notes (no breaking change; #1934 and #1928 are checked by the installed smokes). Look-ahead: PK2 gets the same lock step and an MSBuildLocator check, because `Microsoft.Build.Framework` 18.9.6 brings `Microsoft.NET.StringTools` 18.9.6 and MSBuildLocator's documentation (Context7 `/microsoft/msbuildlocator`) asks for `ExcludeAssets="runtime"` on every MSBuild package; the map's MSBuild row names `/microsoft/msbuildlocator`. RL1–RL5 read clean. CTX2's live proof still waits for a push with real questions (D64 used `noLookup`). Signed-in Full gate at 2f86766 in a clean clone 70/0 `Hepsi geçti.`; CI success on every commit. No screen changed. Removed: finished queue lines and cards (D64), the audit 47 section, Log entries before audit 47.
 
