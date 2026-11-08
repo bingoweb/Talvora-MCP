@@ -15,7 +15,7 @@ Maintained by Claude (CONTEXT7 PROTOCOL in AGENTS.md). Every id below was checke
 | TOML | `Tomlyn` 2.11.0 | `/xoofx/tomlyn/2.10.1` — **gap** (2.10.2 and 2.11.0: release notes) | https://github.com/xoofx/Tomlyn |
 | YAML | `YamlDotNet` 18.1.0 | `/aaubry/yamldotnet/v16.3.0` — **gap** | https://github.com/aaubry/YamlDotNet/wiki |
 | Diffs | `DiffPlex` | `/mmanela/diffplex` | https://github.com/mmanela/diffplex |
-| Git CLI | Git for Windows 2.55 | `/websites/git-scm` | https://git-scm.com/docs |
+| Git CLI | Git for Windows 2.56 | `/websites/git-scm` | https://git-scm.com/docs |
 | GitHub Actions (release workflow, RL4) | `windows-latest` runner | `/websites/github_en_actions` | https://docs.github.com/actions |
 | MSBuild (PK2) | `Microsoft.Build.Framework` 18.9.6 and `Microsoft.NET.StringTools` 18.9.6 (both `ExcludeAssets="runtime"`; the SDK's MSBuild is 18.9.15) | `/dotnet/msbuild`; how-to pages: `/websites/learn_microsoft_visualstudio_msbuild`; Locator: `/microsoft/msbuildlocator` | https://learn.microsoft.com/visualstudio/msbuild/ |
 | uv (Python runs) | uv 0.13.x | `/astral-sh/uv` | https://docs.astral.sh/uv/ |

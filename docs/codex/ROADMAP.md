@@ -30,9 +30,9 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-08 (48, deep) · range `audit/2026-11-08-47..2f86766` plus P-54 · result: P-54 decided, PK1 and PK2 amended
+### Audit 2026-11-08 (49, update check) · range `audit/2026-11-08-48..154b616` plus P-55 · result: [C] PK1–PK4 shipped by Claude
 
-D64 follows its card. P-54 was Claude's miss (PK1 did not name the lock files); PK1 and PK2 now carry the lock step, and PK2 the MSBuildLocator check that 18.9.x's new `Microsoft.NET.StringTools` dependency may need.
+The user asked for a fresh check of updates and modernization. NuGet: 29 of 32 pins are the newest stable; MCP 2.4.0, Tomlyn 2.11.0 and Microsoft.Build.Framework 18.9.6 (the SDK's MSBuild line) are applied, with no vulnerable or deprecated package. .NET: 10.0.403 / 10.0.14 is the newest LTS; .NET 11 is an RC (STS) and Talvora stays on .NET 10 (user decision). CI: checkout v7.0.1 is current, setup-dotnet 6.1.0 applied. Machine: PowerShell 7.6.9, Git 2.56.0, uv 0.13.7 are current. MCP 2.4.0's Skills extension is experimental; not adopted.
 
 ### Audit 2026-11-08 (42–43) · cards still open
 
@@ -398,7 +398,7 @@ User: "github'da bulunan talvora mcp readme'si yani github arayüzünü tamamen 
 **Do:**
 1. Red first: `tests/ReleaseWorkflowRegression.ps1` reads `release.yml` and requires: the tag filter `v0.0.*.*`, `contents: write`, the tag check `^v0\.0\.\d{1,5}\.\d{1,5}$`, the `merge-base --is-ancestor` check against `origin/main`, the `docs/releases/` notes check, the windows-ci success check, the `-ReleaseVersion` build, the `SHA256SUMS.txt` step and `gh release create`; prints `RELEASE_WORKFLOW_GREEN`.
 2. `release.yml`: `on: push: tags: ['v0.0.*.*']` and `workflow_dispatch` with inputs `version` (string) and `dry_run` (boolean, default true); `permissions: contents: write, actions: read`; `concurrency: release-${{ github.ref_name }}`; `runs-on: windows-latest`. Steps:
-   - checkout with `fetch-depth: 0`; version = the tag without `v` (or the `version` input); fail unless it matches `^0\.0\.\d{1,5}\.\d{1,5}$`;
+   - checkout with `fetch-depth: 0`, using the same pinned commits as `windows-ci.yml` (`actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`, and `actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0` where .NET is set up); version = the tag without `v` (or the `version` input); fail unless it matches `^0\.0\.\d{1,5}\.\d{1,5}$`;
    - fail unless the commit is an ancestor of `origin/main`;
    - fail unless the `windows-ci` run of this commit concluded `success` (`gh run list --workflow windows-ci.yml --commit <sha> --json conclusion`, `GH_TOKEN: ${{ github.token }}`);
    - unless `dry_run`: fail with "Sürüm notu yok: docs/releases/<version>.md" when that file is missing;
@@ -452,31 +452,3 @@ User: "context7 kapısının projelerde gerçekten işe yarayıp yaramadığın�
 **Context7:** with `talvora_context7_docs` (CTX1): `/websites/git-scm`, query "git diff --name-only between a remote-tracking branch and HEAD"; record the fact used.
 
 **Acceptance:** red first; the pinned tests; Changed and Full `Hepsi geçti.`; deploy; installed smokes; CI. Then `[~] live check pending (Claude): the next card's push passes the new gate with recorded questions`. After that Claude brings the same CI check to TahtaPilot and Classroom (user decision 2026-11-08).
-
-## Toolchain modernization (user request 2026-11-08; Claude, one-off)
-
-User: "Talvora'da rust, uv modernizasyonu yapmamız anlamlı olur mu araştır", then "Evet, yaz" and "bu arada tüm bu modernizasyonu bu defalık sen yap". Research result: Talvora stays .NET (Roslyn and WPF cannot move, the C# and Rust MCP SDKs are both Tier 1, the work is process-bound); Rust is for new standalone components; the toolchain tools follow the uv/cargo rule. Claude's one-off items (UV1, RS1, RS2, D51, UR1–UR6) are done and live in git history. **PK1 and PK2 below are ordinary agent cards**: the agent implements them in queue order.
-
-### PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
-
-**Why:** `ModelContextProtocol` and `ModelContextProtocol.AspNetCore` 2.4.0 (2026-11-07) and `Tomlyn` 2.10.2 are out; Talvora pins 2.3.1 and 2.10.1. The 2.4.0 notes list no breaking change; the items that touch Talvora: protocol property names now match case-sensitively (#1934), legacy output schemas of delegating server tools are fixed (#1928), and the legacy OAuth metadata fallback needs an opt-in (#1952; Talvora's server uses no SDK OAuth, so nothing changes there).
-
-**Do:** `Directory.Packages.props`: both `ModelContextProtocol` lines to the newest 2.4.x stable on nuget.org when the card runs (2.4.0 on 2026-11-08; never a preview, never 2.5 or later), `Tomlyn` to 2.10.2. `docs/codex/CONTEXT7.md`: the MCP C# SDK row's version; the TOML row's version and id (`/xoofx/tomlyn/2.10.2` when Context7 lists it, otherwise `/xoofx/tomlyn` with a gap note). Then, once, as the signed-in user: `dotnet restore Talvora.slnx --force-evaluate` (P-54: this card authorises it, TOKEN ECONOMY D3), and `dotnet restore Talvora.slnx --locked-mode` must pass. In `git diff -- '*packages.lock.json'` only `ModelContextProtocol`, `ModelContextProtocol.AspNetCore`, `ModelContextProtocol.Core` and `Tomlyn` may change (Claude checked 2.4.0's dependencies: all inside the current central pins); any other package moving → proposal with the diff. Nothing else changes. A compile error or a test that fails because of the update → proposal with the exact message.
-
-**Files:** `Directory.Packages.props`, the seven `packages.lock.json` (`src/Talvora`, `src/Talvora.Shared`, `src/Talvora.Tray`, `src/Talvora.Installer`, `tests/Talvora.Notification.Regression`, `tests/Talvora.Smoke`, `tests/Talvora.SourceEdit.Regression`), `docs/codex/CONTEXT7.md`, `.context7/verification.json`, `docs/codex/STATUS.md`.
-
-**Context7:** with `talvora_context7_docs` (CTX1). Context7 indexes documentation, not release notes, and on 2026-11-08 its newest versions were `/modelcontextprotocol/csharp-sdk/v2.3.0` and `/xoofx/tomlyn/2.10.1` (gaps for 2.4.x and 2.10.2). Ask the versioned ids about the SDK calls Talvora relies on — "McpServerTool attribute UseStructuredContent and OutputSchemaType", "AddCallToolFilter and AddListToolsFilter filter delegates", "McpException message returned to the client" — then open the v2.4.0 release notes and check each against them (CONTEXT7 PROTOCOL rule 4). Vendor sources: `https://github.com/modelcontextprotocol/csharp-sdk/releases/tag/v2.4.0`, `https://github.com/xoofx/Tomlyn/releases`.
-
-**Acceptance:** the `--locked-mode` restore and signed-in Full `Hepsi geçti.`; install; `--metadata-policy-only` and the full installed smoke green (Deploy row; they check #1934 and #1928 — a difference → proposal quoting it, no tool code change); CI.
-
-### PK2 — `Microsoft.Build.Framework` follows the SDK's MSBuild (after PK1)
-
-**Why:** Talvora compiles against `Microsoft.Build.Framework` 17.14.28 (`ExcludeAssets="runtime"`); at run time MSBuildLocator loads the MSBuild of the installed .NET SDK 10.0.403, which is MSBuild 18.9.15 (`dotnet msbuild -version`). The compile reference follows the runtime MSBuild's line and is never newer than it; 18.10 and 18.11 are on nuget.org but newer than the SDK's MSBuild.
-
-**Do:** first run `dotnet msbuild -version` as the signed-in user; when it does not start with `18.9.` → proposal with the output (the SDK changed). Then `Directory.Packages.props`: `Microsoft.Build.Framework` 17.14.28 → 18.9.6 (the newest 18.9.x on 2026-11-08). `Microsoft.Build.Locator` 1.11.2 stays (current). Once, as the signed-in user, `dotnet restore Talvora.slnx --force-evaluate` (this card authorises it), then the `--locked-mode` restore must pass; the lock diff may move only `Microsoft.Build.Framework` and its new dependency `Microsoft.NET.StringTools` 18.9.6, in the lock files of the three projects that reference it (`src/Talvora`, `tests/Talvora.Notification.Regression`, `tests/Talvora.SourceEdit.Regression`). After the build, `src/Talvora/bin/Release/net10.0-windows/` must hold no `Microsoft.Build*.dll` besides `Microsoft.Build.Locator.dll` and no `Microsoft.NET.StringTools.dll`: MSBuildLocator loads the SDK's MSBuild, and its documentation (Context7 `/microsoft/msbuildlocator`) says to put `ExcludeAssets="runtime"` and `PrivateAssets="all"` on every MSBuild package reference. If `Microsoft.NET.StringTools.dll` appears or the build reports `MSBL001`: pin `Microsoft.NET.StringTools` 18.9.6 in `Directory.Packages.props`, add `<PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />` next to `Microsoft.Build.Framework` in those three project files, restore with `--force-evaluate` again and check the folder again. `docs/codex/CONTEXT7.md`: the MSBuild row's pinned version becomes 18.9.6.
-
-**Files:** `Directory.Packages.props`, the three project files and their `packages.lock.json`, `docs/codex/CONTEXT7.md`, `.context7/verification.json`, `docs/codex/STATUS.md`.
-
-**Context7:** with `talvora_context7_docs`: `/microsoft/msbuildlocator`, "ExcludeAssets runtime for every MSBuild package reference with Microsoft.Build.Locator"; vendor sources only when opened: `https://learn.microsoft.com/visualstudio/msbuild/find-and-use-msbuild-versions`, `https://www.nuget.org/packages/Microsoft.Build.Framework`.
-
-**Acceptance:** signed-in Full `Hepsi geçti.` (it runs the semantic source edit regression); install; `dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release -- --semantic-source-edit-only http://127.0.0.1:7676/mcp C:\Users\tayla\Talvora-MCP` → `TALVORA SEMANTIC SOURCE EDIT SMOKE GREEN`, and the full installed smoke green; CI.

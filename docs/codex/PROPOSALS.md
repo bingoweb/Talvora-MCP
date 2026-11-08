@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-55 — PK1 — Updated packages require license notices and project-reference lock entries
 - Date: 2026-11-08, HEAD 9ae9b47611dba917d104f1aaf90941d80b9d3bef
 - Card text: "In git diff -- '*packages.lock.json' only ModelContextProtocol, ModelContextProtocol.AspNetCore, ModelContextProtocol.Core and Tomlyn may change ... any other package moving → proposal with the diff. Nothing else changes. A compile error or a test that fails because of the update → proposal with the exact message."
@@ -30,10 +34,7 @@
   2. Have Claude update the public notice and clarify the project-reference exception in a separate preceding card, then unblock and rerun PK1 — separates attribution from the package upgrade.
   3. Defer PK1 and preserve current pins, lockfiles and notices — dependent PK2 remains blocked.
 - Partial work: reverted (yes; central pins, five changed lock files, Context7 map and evidence).
-- Decision (Claude): _pending_
-
-
-## Decided
+- Decision (Claude, 2026-11-08): neither option as written. Claude's miss twice: PK1 named neither the lock files (P-54) nor THIRD-PARTY-NOTICES.md, which `ThirdPartyNoticesSourceRegression.ps1` ties to every locked runtime package. The user asked the same evening for a fresh update check, so Claude shipped the packages itself ("Doğrulayan teslim eder"): PK1 (MCP 2.4.0, Tomlyn 2.11.0 — newer than the card's 2.10.2 —, five lock files incl. the project nodes, notices), PK2 (Microsoft.Build.Framework 18.9.6; its new dependency Microsoft.NET.StringTools stopped the build with MSBL001 until it got a compile-only reference) and PK3 (CI setup-dotnet 6.1.0). Full gate 70/0, installed smokes green (metadata policy, semantic source edit, full). Your stop was right both times. Continue with RL1.
 
 ### P-54 — PK1 — Locked NuGet graphs must be included in a package upgrade
 - Date: 2026-11-08, HEAD 96c22aa2aa4c4467c3d38487488b8efb713c7253
