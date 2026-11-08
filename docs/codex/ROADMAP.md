@@ -30,27 +30,9 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-08 (47, deep) · range `audit/2026-11-08-46..953fc7d` · result: [C] D63, D64
+### Audit 2026-11-08 (48, deep) · range `audit/2026-11-08-47..2f86766` plus P-54 · result: P-54 decided, PK1 and PK2 amended
 
-D60, D61, D62, CTX1 and CTX2 (ChatGPT) follow their cards, except that CTX2 changed the CI script's 14-day age rule to "today (UTC)" against its Don't and did not say so, and the gate's Delivery script still refused noLookup evidence (CTX2's card had not named it); Claude reproduced both and fixed them (D63). The deep pass found four smaller gaps (D64). D46, D60, D61 and D62 pass live in the stored worklog.
-
-### D64 — Context7 proof counts only the agent's own questions
-
-**Why:** audit 47 (deep). Four gaps in CTX1/CTX2 and D62: (1) the gate accepts any recorded question, also those of Talvora's own installed smoke, which asks `/dotnet/docs` "HttpClient Timeout and HttpMessageHandler for tests with a capped response read" after every deploy (ledger 2026-11-08: records at 17:37Z and 17:59Z), so evidence that copies that line passes without a question of its own; (2) only the first `(query: "…")` of an entry is checked; (3) `talvora_context7_docs` calls an outside service but is advertised closed-world (`OpenWorld = false`, missing from `TalvoraMcpToolMetadataPolicy.OpenWorldTools`), unlike `talvora_http_request`, `talvora_http_download`, `talvora_dns_lookup` and `talvora_tls_inspect`; (4) `WorklogSubject.ForDetachedStart` builds "{subject} arka planda başladı" from a subject that can be empty (a detached `dotnet build` with no target), giving " arka planda başladı".
-
-**Files:** `src/Talvora/SourceEditing/ProjectDeliveryGate.cs`, `src/Talvora/Tools/Context7Tools.cs`, `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`, `src/Talvora/WorklogSubject.cs`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.QualityAudit.cs`, `tests/Talvora.Notification.Regression/Program.D62.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** the four CTX2 named (`ModernizationPolicyRegression.ps1`, `StrictEvidenceJsonRegression.ps1`, `GitSafeDirectoryRegression.ps1`, `NativeInstallerSourceRegression.ps1`); the open-world count is checked by the `--metadata-policy-only` smoke (`SmokeScenarios.MetadataPolicy.cs`).
-
-**Do (method):**
-1. Red first. In `SourceEditRegressionRunner.QualityAudit.cs`, with the CTX2 fixtures: (a) evidence whose only matching ledger record has the caller `Talvora.Smoke` is blocked with the existing "did not record" message; (b) an entry with two `(query: "…")` of which only the first is recorded is blocked, and the message names the second. In `Program.D62.cs`: (c) `talvora_user_process_start` with `executable` `dotnet` and `arguments` `["build"]` → "dotnet build arka planda başladı". Messages start with `D64:`.
-2. Gate: skip ledger records whose caller `TalvoraLineTrafficMeter.IsOwnClient` recognises; check every `(query: "…")` of an entry (`Matches`), each against the ledger.
-3. `talvora_context7_docs`: `OpenWorld = true` on the attribute; the name joins `OpenWorldTools`; `ExpectedOpenWorldToolCount` 83 → 84.
-4. `ForDetachedStart`: when the description's subject is empty, the subject is the program name without extension plus its first argument that does not start with `-` ("dotnet build"), otherwise the program name alone.
-
-**Don't:** change the ledger format, the 24-hour window, the documentation-only rule, `Validate-Context7Gate.ps1` and `Validate-ProjectDeliveryGate.ps1` (Claude aligned both in D63) or any title other than the empty-subject case.
-
-**Context7:** gerekmiyor (only Talvora's own code paths change; no outside API is relied on) → `noLookup`.
-
-**Acceptance:** red first; the pinned tests; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` (it checks the open-world count) and the full installed smoke green; CI.
+D64 follows its card. P-54 was Claude's miss (PK1 did not name the lock files); PK1 and PK2 now carry the lock step, and PK2 the MSBuildLocator check that 18.9.x's new `Microsoft.NET.StringTools` dependency may need.
 
 ### Audit 2026-11-08 (42–43) · cards still open
 
@@ -479,18 +461,22 @@ User: "Talvora'da rust, uv modernizasyonu yapmamız anlamlı olur mu araştır",
 
 **Why:** `ModelContextProtocol` and `ModelContextProtocol.AspNetCore` 2.4.0 (2026-11-07) and `Tomlyn` 2.10.2 are out; Talvora pins 2.3.1 and 2.10.1. The 2.4.0 notes list no breaking change; the items that touch Talvora: protocol property names now match case-sensitively (#1934), legacy output schemas of delegating server tools are fixed (#1928), and the legacy OAuth metadata fallback needs an opt-in (#1952; Talvora's server uses no SDK OAuth, so nothing changes there).
 
-**Do:** `Directory.Packages.props`: both `ModelContextProtocol` lines to the newest 2.4.x stable on nuget.org when the card runs (2.4.0 on 2026-11-08; never a preview, never 2.5 or later), `Tomlyn` to 2.10.2. `docs/codex/CONTEXT7.md`: the MCP C# SDK row's version; the TOML row's version and id (`/xoofx/tomlyn/2.10.2` when Context7 lists it, otherwise `/xoofx/tomlyn` with a gap note). Nothing else changes. A compile error or a test that fails because of the update → proposal with the exact message.
+**Do:** `Directory.Packages.props`: both `ModelContextProtocol` lines to the newest 2.4.x stable on nuget.org when the card runs (2.4.0 on 2026-11-08; never a preview, never 2.5 or later), `Tomlyn` to 2.10.2. `docs/codex/CONTEXT7.md`: the MCP C# SDK row's version; the TOML row's version and id (`/xoofx/tomlyn/2.10.2` when Context7 lists it, otherwise `/xoofx/tomlyn` with a gap note). Then, once, as the signed-in user: `dotnet restore Talvora.slnx --force-evaluate` (P-54: this card authorises it, TOKEN ECONOMY D3), and `dotnet restore Talvora.slnx --locked-mode` must pass. In `git diff -- '*packages.lock.json'` only `ModelContextProtocol`, `ModelContextProtocol.AspNetCore`, `ModelContextProtocol.Core` and `Tomlyn` may change (Claude checked 2.4.0's dependencies: all inside the current central pins); any other package moving → proposal with the diff. Nothing else changes. A compile error or a test that fails because of the update → proposal with the exact message.
+
+**Files:** `Directory.Packages.props`, the seven `packages.lock.json` (`src/Talvora`, `src/Talvora.Shared`, `src/Talvora.Tray`, `src/Talvora.Installer`, `tests/Talvora.Notification.Regression`, `tests/Talvora.Smoke`, `tests/Talvora.SourceEdit.Regression`), `docs/codex/CONTEXT7.md`, `.context7/verification.json`, `docs/codex/STATUS.md`.
 
 **Context7:** with `talvora_context7_docs` (CTX1). Context7 indexes documentation, not release notes, and on 2026-11-08 its newest versions were `/modelcontextprotocol/csharp-sdk/v2.3.0` and `/xoofx/tomlyn/2.10.1` (gaps for 2.4.x and 2.10.2). Ask the versioned ids about the SDK calls Talvora relies on — "McpServerTool attribute UseStructuredContent and OutputSchemaType", "AddCallToolFilter and AddListToolsFilter filter delegates", "McpException message returned to the client" — then open the v2.4.0 release notes and check each against them (CONTEXT7 PROTOCOL rule 4). Vendor sources: `https://github.com/modelcontextprotocol/csharp-sdk/releases/tag/v2.4.0`, `https://github.com/xoofx/Tomlyn/releases`.
 
-**Acceptance:** restore and signed-in Full `Hepsi geçti.`; install; `--metadata-policy-only` and the full installed smoke green (Deploy row); CI.
+**Acceptance:** the `--locked-mode` restore and signed-in Full `Hepsi geçti.`; install; `--metadata-policy-only` and the full installed smoke green (Deploy row; they check #1934 and #1928 — a difference → proposal quoting it, no tool code change); CI.
 
 ### PK2 — `Microsoft.Build.Framework` follows the SDK's MSBuild (after PK1)
 
 **Why:** Talvora compiles against `Microsoft.Build.Framework` 17.14.28 (`ExcludeAssets="runtime"`); at run time MSBuildLocator loads the MSBuild of the installed .NET SDK 10.0.403, which is MSBuild 18.9.15 (`dotnet msbuild -version`). The compile reference follows the runtime MSBuild's line and is never newer than it; 18.10 and 18.11 are on nuget.org but newer than the SDK's MSBuild.
 
-**Do:** first run `dotnet msbuild -version` as the signed-in user; when it does not start with `18.9.` → proposal with the output (the SDK changed). Then `Directory.Packages.props`: `Microsoft.Build.Framework` 17.14.28 → 18.9.6 (the newest 18.9.x on 2026-11-08). `Microsoft.Build.Locator` 1.11.2 stays (current). Add a `docs/codex/CONTEXT7.md` row for MSBuild with the id Context7 returns for "msbuild" (or a gap note and the Microsoft Learn link).
+**Do:** first run `dotnet msbuild -version` as the signed-in user; when it does not start with `18.9.` → proposal with the output (the SDK changed). Then `Directory.Packages.props`: `Microsoft.Build.Framework` 17.14.28 → 18.9.6 (the newest 18.9.x on 2026-11-08). `Microsoft.Build.Locator` 1.11.2 stays (current). Once, as the signed-in user, `dotnet restore Talvora.slnx --force-evaluate` (this card authorises it), then the `--locked-mode` restore must pass; the lock diff may move only `Microsoft.Build.Framework` and its new dependency `Microsoft.NET.StringTools` 18.9.6, in the lock files of the three projects that reference it (`src/Talvora`, `tests/Talvora.Notification.Regression`, `tests/Talvora.SourceEdit.Regression`). After the build, `src/Talvora/bin/Release/net10.0-windows/` must hold no `Microsoft.Build*.dll` besides `Microsoft.Build.Locator.dll` and no `Microsoft.NET.StringTools.dll`: MSBuildLocator loads the SDK's MSBuild, and its documentation (Context7 `/microsoft/msbuildlocator`) says to put `ExcludeAssets="runtime"` and `PrivateAssets="all"` on every MSBuild package reference. If `Microsoft.NET.StringTools.dll` appears or the build reports `MSBL001`: pin `Microsoft.NET.StringTools` 18.9.6 in `Directory.Packages.props`, add `<PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />` next to `Microsoft.Build.Framework` in those three project files, restore with `--force-evaluate` again and check the folder again. `docs/codex/CONTEXT7.md`: the MSBuild row's pinned version becomes 18.9.6.
 
-**Context7:** search "msbuild"; vendor sources: `https://learn.microsoft.com/visualstudio/msbuild/find-and-use-msbuild-versions`, `https://www.nuget.org/packages/Microsoft.Build.Framework`.
+**Files:** `Directory.Packages.props`, the three project files and their `packages.lock.json`, `docs/codex/CONTEXT7.md`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+**Context7:** with `talvora_context7_docs`: `/microsoft/msbuildlocator`, "ExcludeAssets runtime for every MSBuild package reference with Microsoft.Build.Locator"; vendor sources only when opened: `https://learn.microsoft.com/visualstudio/msbuild/find-and-use-msbuild-versions`, `https://www.nuget.org/packages/Microsoft.Build.Framework`.
 
 **Acceptance:** signed-in Full `Hepsi geçti.` (it runs the semantic source edit regression); install; `dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release -- --semantic-source-edit-only http://127.0.0.1:7676/mcp C:\Users\tayla\Talvora-MCP` → `TALVORA SEMANTIC SOURCE EDIT SMOKE GREEN`, and the full installed smoke green; CI.

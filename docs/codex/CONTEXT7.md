@@ -17,7 +17,7 @@ Maintained by Claude (CONTEXT7 PROTOCOL in AGENTS.md). Every id below was checke
 | Diffs | `DiffPlex` | `/mmanela/diffplex` | https://github.com/mmanela/diffplex |
 | Git CLI | Git for Windows 2.55 | `/websites/git-scm` | https://git-scm.com/docs |
 | GitHub Actions (release workflow, RL4) | `windows-latest` runner | `/websites/github_en_actions` | https://docs.github.com/actions |
-| MSBuild (PK2) | `Microsoft.Build.Framework` 17.14.28 | `/dotnet/msbuild`; how-to pages: `/websites/learn_microsoft_visualstudio_msbuild` | https://learn.microsoft.com/visualstudio/msbuild/ |
+| MSBuild (PK2) | `Microsoft.Build.Framework` 17.14.28 | `/dotnet/msbuild`; how-to pages: `/websites/learn_microsoft_visualstudio_msbuild`; Locator: `/microsoft/msbuildlocator` | https://learn.microsoft.com/visualstudio/msbuild/ |
 | uv (Python runs) | uv 0.13.x | `/astral-sh/uv` | https://docs.astral.sh/uv/ |
 | Visual Studio and Windows SDK tools | VS 2022 Build Tools | `/microsoftdocs/visualstudio-docs` | https://learn.microsoft.com/visualstudio/ |
 | Android tools | Android SDK command-line tools | `/websites/developer_android_develop` | https://developer.android.com/tools |

@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-54 — PK1 — Locked NuGet graphs must be included in a package upgrade
 - Date: 2026-11-08, HEAD 96c22aa2aa4c4467c3d38487488b8efb713c7253
 - Card text: "Directory.Packages.props: both ModelContextProtocol lines ... Tomlyn to 2.10.2. docs/codex/CONTEXT7.md ... Nothing else changes." "Acceptance: restore and signed-in Full Hepsi geçti.; install; --metadata-policy-only and the full installed smoke green; CI."
@@ -29,6 +33,4 @@
   1. Amend PK1 to explicitly include the seven `packages.lock.json` files in its Files/Do, authorize a single `dotnet restore Talvora.slnx --force-evaluate` to update them, then verify `--locked-mode`, Full gate, installed smokes and CI; this changes the pinned dependency graph as needed.
   2. Defer PK1 and retain the current pins and lock graphs; acceptance remains blocked, and dependent PK2 waits.
 - Partial work: reverted (yes).
-- Decision (Claude): _pending_
-
-## Decided
+- Decision (Claude, 2026-11-08): option 1 — Claude's miss: in this repository a package upgrade always carries its lock files (restore is `--locked-mode`), and PK1 did not name them. PK1 now names the seven `packages.lock.json` files and one `dotnet restore Talvora.slnx --force-evaluate` as the signed-in user after the pin change; then the `--locked-mode` restore must pass. Only `ModelContextProtocol`, `ModelContextProtocol.AspNetCore`, `ModelContextProtocol.Core` and `Tomlyn` may move in the lock diff: Claude checked 2.4.0's nuspec dependencies on nuget.org, all inside the current central pins (`Microsoft.Extensions.AI.Abstractions` 10.11.0 included); any other package moving is a new proposal with the diff. The release notes' two Talvora-relevant changes (#1934 case-sensitive protocol property names, #1928 legacy output schemas) are checked by the installed smokes; a difference there is a proposal quoting it, never a tool code change. PK2 got the same lock step. Continue with PK1.
