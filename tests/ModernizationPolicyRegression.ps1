@@ -212,8 +212,9 @@ Assert-Contains 'scripts/Invoke-QualityGate.ps1' 'Talvora\.SourceEdit\.Regressio
 Assert-Contains '.github/workflows/windows-ci.yml' 'actions/checkout@[0-9a-f]{40}\s+#\s+v\d+\.\d+\.\d+' 'actions/checkout must be pinned to a full release SHA.'
 Assert-Contains '.github/workflows/windows-ci.yml' 'actions/setup-dotnet@[0-9a-f]{40}\s+#\s+v\d+\.\d+\.\d+' 'actions/setup-dotnet must be pinned to a full release SHA.'
 Assert-Contains '.github/dependabot.yml' 'package-ecosystem:\s*"dotnet-sdk"' 'Dependabot must keep global.json current.'
-Assert-Contains '.github/dependabot.yml' 'dependency-name:\s*"Microsoft\.Build\.Framework"' 'Dependabot must retain the net10-compatible Microsoft.Build.Framework guard.'
-Assert-Contains '.github/dependabot.yml' 'versions:\s*\r?\n\s*-\s*">=18\.0\.0"' 'Dependabot must ignore the incompatible Microsoft.Build.Framework 18.x line until the .NET 11 migration.'
+Assert-Contains '.github/dependabot.yml' 'dependency-name:\s*"Microsoft\.Build\.Framework"' 'Dependabot must keep the Microsoft.Build.Framework guard on the SDK''s MSBuild line.'
+Assert-Contains '.github/dependabot.yml' 'dependency-name:\s*"Microsoft\.Build\.Framework"\s*\r?\n\s*versions:\s*\r?\n\s*-\s*">=18\.10\.0"' 'Dependabot must not offer Microsoft.Build.Framework newer than the SDK''s MSBuild 18.9 (PK2, PK4).'
+Assert-Contains '.github/dependabot.yml' 'dependency-name:\s*"Microsoft\.NET\.StringTools"\s*\r?\n\s*versions:\s*\r?\n\s*-\s*">=18\.10\.0"' 'Dependabot must keep Microsoft.NET.StringTools on the same MSBuild line (PK4).'
 Assert-Contains 'scripts/Invoke-QualityGate.ps1' 'Get-ChildItem.*-LiteralPath.*tests.*-Filter.*\*\.ps1' 'The shared full gate must discover every PowerShell regression, including tunnel-client integration.'
 Assert-Contains '.context7/verification.json' '"schemaVersion"\s*:\s*1' 'Context7 evidence schema must remain versioned.'
 

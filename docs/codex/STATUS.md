@@ -36,6 +36,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] [C] PK1 — MCP C# SDK 2.4.0 and Tomlyn 2.11.0 (Claude after P-55: lock files and notices included)
 - [x] [C] PK2 — Microsoft.Build.Framework 18.9.6 follows the SDK's MSBuild (Claude after P-55; StringTools compile-only)
 - [x] [C] PK3 — CI uses actions/setup-dotnet 6.1.0 (Claude, update check 2026-11-08)
+- [x] [C] PK4 — Dependabot follows the SDK's MSBuild line (Claude, update check 2026-11-08)
 - [ ] RL1 — Talvora's version is 0.0.x.x and comes from the release tag (user request 2026-11-08)
 - [ ] RL2 — A fresh Windows gets PowerShell 7 from the installer (user decision 2026-11-08)
 - [ ] RL3 — Talvora is in Apps & features and can be uninstalled (user request 2026-11-08)
@@ -59,6 +60,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — [C] PK4, executor Claude: `.github/dependabot.yml` ignored every Microsoft.Build.Framework 18.x as "not compatible with net10.0-windows until .NET 11" (9713527, 2026-10-07). PK2 showed the cause was MSBL001 and fixed it with a compile-only Microsoft.NET.StringTools; the installed semantic source edit smoke is green on 18.9.6. The guard now ignores only >=18.10.0 (newer than the SDK's MSBuild 18.9.15) for both packages, and `ModernizationPolicyRegression.ps1` pins that. Context7: noLookup.
 
 - 2026-11-08 — [C] PK3, executor Claude: `actions/setup-dotnet` v6.0.0 → v6.1.0 (pinned to its release commit 0f4a354d; new optional inputs and security fixes only); `actions/checkout` is already the newest v7.0.1. Context7: noLookup.
 

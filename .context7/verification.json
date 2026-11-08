@@ -1,10 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T19:18:39Z",
-  "scope": "PK3: CI pins the official actions/setup-dotnet v6.1.0 release commit",
+  "verifiedAtUtc": "2026-11-08T19:33:15Z",
+  "scope": "PK4: Dependabot keeps Microsoft.Build.Framework and Microsoft.NET.StringTools on the SDK's MSBuild 18.9 line",
   "libraries": [],
-  "noLookup": "PK3: only the pinned commit of a GitHub action changes; no API is relied on.",
-  "vendorSources": [
-    "https://github.com/actions/setup-dotnet/releases/tag/v6.1.0"
-  ]
+  "noLookup": "PK4: only the version bound of the file's existing Dependabot ignore entries changes; no new syntax or API.",
+  "vendorSources": []
 }
