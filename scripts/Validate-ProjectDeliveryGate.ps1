@@ -21,8 +21,13 @@ function Assert-Fresh([object]$Evidence, [string]$Name) {
 
 $context7 = Read-Evidence $context7Path 'Context7'
 Assert-Fresh $context7 'Context7'
-if (@($context7.libraries).Count -eq 0) { throw 'Context7 delivery evidence requires at least one library.' }
-if (@($context7.vendorSources).Count -eq 0) { throw 'Context7 delivery evidence requires at least one official/vendor source.' }
+# CTX2: a lookup the card does not need is recorded as noLookup; vendor sources are optional and HTTPS only.
+if (@($context7.libraries).Count -eq 0 -and ([string]$context7.noLookup).Trim().Length -lt 20) { throw 'Context7 delivery evidence needs at least one library or a noLookup reason of at least 20 characters.' }
+if ($null -ne $context7.PSObject.Properties['vendorSources']) {
+    foreach ($source in @($context7.vendorSources)) {
+        if ($source -isnot [string] -or -not $source.StartsWith('https://', [StringComparison]::Ordinal)) { throw 'Context7 delivery evidence vendorSources must be HTTPS URLs.' }
+    }
+}
 
 $gitTools = [IO.File]::ReadAllText((Join-Path $root 'src\Talvora\Tools\GitTools.cs'))
 $dotnetTools = [IO.File]::ReadAllText((Join-Path $root 'src\Talvora\Tools\BuildRunnerTools.Dotnet.cs'))

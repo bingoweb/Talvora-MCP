@@ -38,6 +38,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D62 — installed 8d43853; both installed MCP smokes green; CI pending; Claude checks detached Full gate wording
 - [x] CTX1 — installed 13f0418; both installed MCP smokes green; CI 42505760996 success
 - [~] CTX2 — code and gates green; live pending: install, both MCP smokes and CI; Claude checks the next card's push
+- [x] [C] D63 — The CI and delivery checks follow the push gate (audit 47; Claude reproduced and fixed it)
 - [ ] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
 - [ ] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (after PK1)
 - [ ] RL1 — Talvora's version is 0.0.x.x and comes from the release tag (user request 2026-11-08)
@@ -63,6 +64,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — [C] D63, executor Claude: CTX2 had changed `scripts/Validate-Context7Gate.ps1` to "verifiedAtUtc must be today (UTC)" against its Don't; evidence verified two days ago was refused (reproduced). The 14-day comparison is back, exactly as before CTX2. RED: `StrictEvidenceJsonRegression.ps1` with evidence from two days ago failed "must be today"; GREEN: STRICT_EVIDENCE_JSON_GREEN (two days passes, fifteen days is refused), MODERNIZATION_POLICY_GREEN; signed-in Full gate in a clean clone 70/0 `Hepsi geçti.` Second fix, found by Claude's own gate run: `scripts/Validate-ProjectDeliveryGate.ps1` (the gate's Delivery check) still demanded at least one library and one vendor source, so every noLookup evidence failed the gate (CTX2's card had not named that script: Claude's miss); it now takes a library or a noLookup of 20+ characters and only HTTPS vendor sources (red then green in the same test). Context7: noLookup (two repository scripts). No runtime change, no deploy.
 
 - 2026-11-08 — CTX2, executor ChatGPT: push gate compares remote-tracking branch to HEAD, skips documentation-only pushes, reads committed Context7 evidence and matches exact questions to successful ledger records from the past 24 hours. Dotnet publish still checks working-tree format only. RED: CS1501 for missing gate overload; GREEN: CTX2_PUSH_EVIDENCE_GREEN, STRICT_EVIDENCE_JSON_GREEN, all four pinned tests, Changed 21/0 and Full 70/0: Hepsi geçti. Context7 /websites/git-scm, exact query "git diff --name-only between a remote-tracking branch and HEAD" recorded through Talvora; official git-scm.com git-diff page. Install, installed smokes and CI pending; Claude owns next-card live proof. Gitea #9 mirrored.
   Self-review — no visual changes; git push rejects missing, uncommitted, stale or unsuccessful query proof; documented noLookup and HTTPS format aligned in C# and CI; no changes to the HTTP tool, ledger retention or CI development-scope patterns.

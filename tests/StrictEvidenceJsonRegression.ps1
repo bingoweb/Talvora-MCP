@@ -95,6 +95,38 @@ try {
         & $fixtureGate *> $null
         if ($LASTEXITCODE -ne 0) { throw 'CTX2: valid library evidence failed.' }
 
+        # D63: the CI check keeps the 14-day age rule of ProjectDeliveryGate (CTX2: "Don't change the 14-day age rule").
+        $valid.verifiedAtUtc = [DateTime]::UtcNow.AddDays(-2).ToString('yyyy-MM-ddTHH:mm:ssZ')
+        [IO.File]::WriteAllText($contextPath, ($valid | ConvertTo-Json -Depth 5))
+        & $fixtureGate *> $null
+        if ($LASTEXITCODE -ne 0) { throw 'D63: evidence verified two days ago was refused; the limit is 14 days.' }
+        $valid.verifiedAtUtc = [DateTime]::UtcNow.AddDays(-15).ToString('yyyy-MM-ddTHH:mm:ssZ')
+        [IO.File]::WriteAllText($contextPath, ($valid | ConvertTo-Json -Depth 5))
+        AssertContext7Blocked 'older than 14 days'
+        $valid.verifiedAtUtc = $timestamp
+
+        # D63: the local delivery check accepts what the push gate accepts (noLookup, no vendor source) and still refuses plain HTTP.
+        $deliveryRoot = Join-Path $fixtureRoot 'delivery'
+        foreach ($folder in 'scripts', 'src/Talvora/Tools', 'src/Talvora/SourceEditing', '.context7') {
+            [IO.Directory]::CreateDirectory((Join-Path $deliveryRoot $folder)) | Out-Null
+        }
+        foreach ($file in 'scripts/Validate-ProjectDeliveryGate.ps1', 'src/Talvora/Tools/GitTools.cs', 'src/Talvora/Tools/BuildRunnerTools.Dotnet.cs', 'src/Talvora/SourceEditing/ProjectDeliveryGate.cs') {
+            [IO.File]::Copy((Join-Path $repoRoot $file), (Join-Path $deliveryRoot $file))
+        }
+        $deliveryGate = Join-Path $deliveryRoot 'scripts/Validate-ProjectDeliveryGate.ps1'
+        $deliveryPath = Join-Path $deliveryRoot '.context7/verification.json'
+        $delivery = @{ schemaVersion = 1; verifiedAtUtc = $timestamp; scope = 'D63 delivery fixture'; libraries = @(); noLookup = 'D63: only a repository script changes here'; vendorSources = @() }
+        [IO.File]::WriteAllText($deliveryPath, ($delivery | ConvertTo-Json -Depth 5))
+        & $deliveryGate *> $null
+        $delivery.vendorSources = @('http://example.invalid/doc')
+        [IO.File]::WriteAllText($deliveryPath, ($delivery | ConvertTo-Json -Depth 5))
+        $failure = $null
+        try { & $deliveryGate *> $null }
+        catch { $failure = $_.Exception }
+        if ($null -eq $failure -or -not $failure.Message.Contains('HTTPS', [StringComparison]::Ordinal)) {
+            throw 'D63: the delivery check accepted a vendor source that is not HTTPS.'
+        }
+
         [IO.File]::Delete((Join-Path $fixtureRoot 'src/Fixture.cs'))
         [IO.File]::Delete($contextPath)
         [IO.Directory]::CreateDirectory((Join-Path $fixtureRoot 'docs')) | Out-Null

@@ -1,14 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T17:50:38Z",
-  "scope": "CTX2: push gate checks committed changes and proves every Context7 question against the past 24 hours of ledger records",
-  "libraries": [
-    {
-      "libraryId": "/websites/git-scm",
-      "verified": "2026-11-08 CTX2: git diff between a remote-tracking ref and HEAD lists committed changes, and --name-only returns their paths (query: \"git diff --name-only between a remote-tracking branch and HEAD\")"
-    }
-  ],
-  "vendorSources": [
-    "https://git-scm.com/docs/git-diff"
-  ]
+  "verifiedAtUtc": "2026-11-08T18:14:30Z",
+  "scope": "D63: the CI and delivery checks follow ProjectDeliveryGate (14-day age, noLookup, optional HTTPS vendor sources)",
+  "libraries": [],
+  "noLookup": "D63: aligns two repository scripts with the push gate; it relies on no external API.",
+  "vendorSources": []
 }

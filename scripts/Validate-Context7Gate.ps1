@@ -75,7 +75,7 @@ try {
     }
     $now = [DateTimeOffset]::UtcNow
     if ($verifiedAt -gt $now.AddMinutes(15)) { throw 'Context7 evidence timestamp is unexpectedly in the future.' }
-    if ($verifiedAt.UtcDateTime.Date -ne $now.UtcDateTime.Date) { throw 'Context7 evidence verifiedAtUtc must be today (UTC).' }
+    if ($verifiedAt -lt $now.AddDays(-14)) { throw 'Context7 evidence is older than 14 days; query current documentation again.' }
 
     if ($evidence.libraries -isnot [array]) { throw 'Context7 evidence libraries must be an array.' }
     $libraries = @($evidence.libraries)
