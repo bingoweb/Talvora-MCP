@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using Talvora;
 using Talvora.SourceEditing;
+using Talvora.Shared;
 using Talvora.Tools;
 
 internal static partial class SourceEditRegressionRunner
@@ -10,6 +11,8 @@ internal static partial class SourceEditRegressionRunner
     {
         await VerifyDeliveryEvidenceAsync();
         Console.WriteLine("PASS delivery-evidence-rejects-invalid-and-oversized");
+        await VerifyCtx2PushEvidenceAsync();
+        Console.WriteLine("CTX2_PUSH_EVIDENCE_GREEN");
         await VerifyJobGenerationSidecarAsync();
         Console.WriteLine("PASS job-generation-sidecar-bounds");
         await VerifyJobSnapshotFailureDisposesFileAsync();
@@ -33,7 +36,7 @@ internal static partial class SourceEditRegressionRunner
             var timestamp = DateTimeOffset.UtcNow.ToString("O");
             async Task WriteContextAsync(
                 string id = "/dotnet/docs",
-                string? vendor = "Microsoft Learn .NET documentation checked.")
+                string? vendor = "https://learn.microsoft.com/dotnet/")
             {
                 await File.WriteAllTextAsync(
                     contextPath,
@@ -45,9 +48,9 @@ internal static partial class SourceEditRegressionRunner
                         libraries = new[] { new
                         {
                             libraryId = id,
-                            verified = "Verified supported .NET APIs.",
+                            verified = "Verified .NET APIs (query: \"HttpClient Timeout and HttpMessageHandler for tests with a capped response read\")",
                         } },
-                        vendorSources = new string?[] { vendor },
+                        vendorSources = vendor is null ? Array.Empty<string>() : new[] { vendor },
                     }));
             }
 
@@ -72,9 +75,7 @@ internal static partial class SourceEditRegressionRunner
             ProjectDeliveryGate.EnsureSatisfied(root);
 
             await WriteContextAsync(vendor: null);
-            ExpectBlocked(
-                () => ProjectDeliveryGate.EnsureSatisfied(root),
-                "null vendor source");
+            ProjectDeliveryGate.EnsureSatisfied(root);
 
             await WriteContextAsync(vendor: "   ");
             ExpectBlocked(
@@ -105,6 +106,129 @@ internal static partial class SourceEditRegressionRunner
         finally
         {
             Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static async Task VerifyCtx2PushEvidenceAsync()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "talvora-ctx2-" + Guid.NewGuid().ToString("N"));
+        var remote = Path.Combine(root, "remote.git");
+        var clone = Path.Combine(root, "clone");
+        var ledgerPath = Path.Combine(root, "ledger");
+        Directory.CreateDirectory(root);
+        const string id = "/websites/git-scm";
+        const string question = "git diff --name-only between a remote-tracking branch and HEAD";
+        var push = new[] { "push", "origin", "main" };
+
+        async Task GitAsync(string directory, params string[] args)
+        {
+            var safe = directory.Replace('\\', '/');
+            var result = await ProcessRunner.RunAsync("git", directory,
+                ["-c", $"safe.directory={safe}", .. args], timeoutSeconds: 30);
+            if (result.ExitCode != 0 || result.TimedOut)
+                throw new InvalidOperationException("CTX2: fixture git " +
+                    string.Join(" ", args) + " failed: " + result.StandardError);
+        }
+
+        async Task CommitAsync(string message)
+        {
+            await GitAsync(clone, "add", "-A");
+            await GitAsync(clone, "-c", "user.name=CTX2 Test",
+                "-c", "user.email=ctx2@example.invalid", "commit", "-m", message);
+        }
+
+        void MustBlock(string reason, string? expected = null)
+        {
+            try
+            {
+                ProjectDeliveryGate.EnsureSatisfied(clone, push, ledgerPath);
+            }
+            catch (ModelContextProtocol.McpException ex) when (
+                ex.Message.Contains("TALVORA_DELIVERY_GATE_BLOCKED", StringComparison.Ordinal))
+            {
+                if (expected is not null && !ex.Message.Contains(expected, StringComparison.Ordinal))
+                    throw new InvalidOperationException("CTX2: " + reason + ": " + ex.Message);
+                return;
+            }
+            throw new InvalidOperationException("CTX2: accepted " + reason);
+        }
+
+        async Task WriteEvidenceAsync(string? noLookup = null, string? vendor = "https://git-scm.com/docs/git-diff")
+        {
+            Directory.CreateDirectory(Path.Combine(clone, ".context7"));
+            var evidence = new Dictionary<string, object?>
+            {
+                ["schemaVersion"] = 1,
+                ["verifiedAtUtc"] = DateTimeOffset.UtcNow.ToString("O"),
+                ["scope"] = "CTX2 test of recorded questions",
+                ["libraries"] = noLookup is null
+                    ? new object[] { new { libraryId = id, verified = $"Git diff range (query: \"{question}\")" } }
+                    : Array.Empty<object>(),
+                ["vendorSources"] = vendor is null ? Array.Empty<string>() : new[] { vendor },
+            };
+            if (noLookup is not null)
+                evidence["noLookup"] = noLookup;
+            await File.WriteAllTextAsync(Path.Combine(clone, ".context7", "verification.json"),
+                JsonSerializer.Serialize(evidence));
+        }
+
+        try
+        {
+            await GitAsync(root, "init", "--bare", remote);
+            await GitAsync(root, "clone", remote, clone);
+            await GitAsync(clone, "checkout", "-b", "main");
+            await File.WriteAllTextAsync(Path.Combine(clone, "README.md"), "documentation\n");
+            Directory.CreateDirectory(Path.Combine(clone, "docs"));
+            await File.WriteAllTextAsync(Path.Combine(clone, "docs", "x.md"), "notes\n");
+            await CommitAsync("Docs only");
+            ProjectDeliveryGate.EnsureSatisfied(clone, push, ledgerPath);
+            await GitAsync(clone, "push", "-u", "origin", "main");
+
+            Directory.CreateDirectory(Path.Combine(clone, "src"));
+            await File.WriteAllTextAsync(Path.Combine(clone, "src", "a.cs"), "class A {}\n");
+            await CommitAsync("Source without evidence");
+            MustBlock("code with no committed evidence");
+
+            await WriteEvidenceAsync();
+            await CommitAsync("Unrecorded question");
+            MustBlock("unrecorded question", id + " \"" + question + "\"");
+
+            await using (var ledger = new Context7Ledger(ledgerPath))
+            {
+                ledger.Record(new Context7LookupRecord(DateTimeOffset.UtcNow.AddHours(-25), "ChatGPT",
+                    id, question, 200, 12, "0123456789abcdef"));
+                ledger.Record(new Context7LookupRecord(DateTimeOffset.UtcNow, "ChatGPT",
+                    id, question, 404, 12, "0123456789abcdef"));
+                await ledger.FlushAsync();
+                MustBlock("old or unsuccessful Context7 evidence", id + " \"" + question + "\"");
+
+                ledger.Record(new Context7LookupRecord(DateTimeOffset.UtcNow, "ChatGPT",
+                    id, question, 200, 12, "0123456789abcdef"));
+                await ledger.FlushAsync();
+            }
+            ProjectDeliveryGate.EnsureSatisfied(clone, push, ledgerPath);
+
+            await WriteEvidenceAsync("short");
+            await CommitAsync("No lookup too short");
+            MustBlock("noLookup shorter than 20 characters");
+
+            await WriteEvidenceAsync("CTX2: only renames a local variable");
+            await CommitAsync("Valid no-lookup reason");
+            ProjectDeliveryGate.EnsureSatisfied(clone, push, ledgerPath);
+
+            await WriteEvidenceAsync("CTX2: only renames a local variable", "http://example.invalid/docs");
+            await CommitAsync("Invalid vendor scheme");
+            MustBlock("non-HTTPS vendor source");
+
+            await WriteEvidenceAsync("CTX2: only renames a local variable");
+            MustBlock("working-tree evidence must not replace committed evidence");
+            ProjectDeliveryGate.EnsureSatisfied(clone);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
     }
 

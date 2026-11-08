@@ -42,6 +42,65 @@ try {
         if ($null -eq $failure -or -not $failure.Message.Contains('not valid JSON (strict)', [StringComparison]::Ordinal)) {
             throw 'Validate-Context7Gate.ps1 accepted evidence with a trailing comma.'
         }
+
+        function AssertContext7Blocked([string]$expected) {
+            $failure = $null
+            try { & $fixtureGate *> $null }
+            catch { $failure = $_.Exception }
+            if ($null -eq $failure -or -not $failure.Message.Contains($expected, [StringComparison]::Ordinal)) {
+                throw "CTX2: expected '$expected' but got '$($failure.Message)'."
+            }
+        }
+
+        $contextPath = Join-Path $fixtureRoot '.context7/verification.json'
+        $valid = @{
+            schemaVersion = 1
+            verifiedAtUtc = $timestamp
+            scope = 'CTX2 local proof fixture'
+            libraries = @()
+            noLookup = 'CTX2: only renames a local variable'
+            vendorSources = @()
+        }
+        [IO.File]::WriteAllText($contextPath, ($valid | ConvertTo-Json -Depth 5))
+        & $fixtureGate *> $null
+        if ($LASTEXITCODE -ne 0) { throw 'CTX2: valid noLookup evidence failed.' }
+
+        $valid.schemaVersion = '1'
+        [IO.File]::WriteAllText($contextPath, ($valid | ConvertTo-Json -Depth 5))
+        AssertContext7Blocked 'schemaVersion must be 1'
+        $valid.schemaVersion = 1
+        $valid.scope = 123
+        [IO.File]::WriteAllText($contextPath, ($valid | ConvertTo-Json -Depth 5))
+        AssertContext7Blocked 'verified project scope'
+        $valid.scope = 'CTX2 local proof fixture'
+
+        $valid.noLookup = 'short'
+        [IO.File]::WriteAllText($contextPath, ($valid | ConvertTo-Json -Depth 5))
+        AssertContext7Blocked 'noLookup must contain at least 20 characters'
+        $valid.noLookup = 'CTX2: only renames a local variable'
+        $valid.vendorSources = @('http://example.invalid/doc')
+        [IO.File]::WriteAllText($contextPath, ($valid | ConvertTo-Json -Depth 5))
+        AssertContext7Blocked 'vendorSources must be 0'
+
+        $valid.Remove('noLookup')
+        $valid.vendorSources = @()
+        $valid.libraries = @(@{
+            libraryId = '/websites/git-scm'
+            verified = 'Git diff documentation was checked.'
+        })
+        [IO.File]::WriteAllText($contextPath, ($valid | ConvertTo-Json -Depth 5))
+        AssertContext7Blocked 'verified guidance must include'
+        $valid.libraries[0].verified = 'Git diff range (query: "git diff --name-only between a remote-tracking branch and HEAD")'
+        [IO.File]::WriteAllText($contextPath, ($valid | ConvertTo-Json -Depth 5))
+        & $fixtureGate *> $null
+        if ($LASTEXITCODE -ne 0) { throw 'CTX2: valid library evidence failed.' }
+
+        [IO.File]::Delete((Join-Path $fixtureRoot 'src/Fixture.cs'))
+        [IO.File]::Delete($contextPath)
+        [IO.Directory]::CreateDirectory((Join-Path $fixtureRoot 'docs')) | Out-Null
+        [IO.File]::WriteAllText((Join-Path $fixtureRoot 'docs/x.md'), 'docs-only')
+        & $fixtureGate *> $null
+        if ($LASTEXITCODE -ne 0) { throw 'CTX2: documentation-only change required evidence.' }
     }
     finally {
         Pop-Location

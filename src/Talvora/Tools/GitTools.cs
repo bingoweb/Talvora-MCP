@@ -589,7 +589,7 @@ public static class GitTools
         if (IsPush(arguments))
         {
             ProjectDeliveryGate.EnsureSatisfied(
-                normalizedRepositoryPath);
+                normalizedRepositoryPath, arguments);
         }
 
         return RunWithWorkContractAsync(
@@ -702,7 +702,7 @@ public static class GitTools
         return fullPath;
     }
 
-    private static async Task<TalvoraGitRunResponse> RunGitCheckedAsync(
+    internal static async Task<TalvoraGitRunResponse> RunGitCheckedAsync(
         string workingDirectory,
         IEnumerable<string> arguments,
         Dictionary<string, string?>? environment = null,

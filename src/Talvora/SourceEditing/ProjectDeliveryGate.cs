@@ -1,6 +1,9 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Talvora.Shared;
+using Talvora.Tools;
 
 namespace Talvora.SourceEditing;
 
@@ -8,14 +11,115 @@ internal static class ProjectDeliveryGate
 {
     private const string Context7Evidence = ".context7/verification.json";
     private const int MaximumEvidenceFileBytes = 256 * 1024;
-    private static readonly TimeSpan MaximumEvidenceAge = TimeSpan.FromDays(14);
     private static readonly TimeSpan MaximumFutureSkew = TimeSpan.FromMinutes(15);
+    private static readonly Regex QuestionPattern = new(
+        @"\(query: ""([^""]+)""\)", RegexOptions.CultureInvariant);
 
-    public static void EnsureSatisfied(string workingDirectory)
+    public static void EnsureSatisfied(string workingDirectory, IReadOnlyList<string>? pushArguments = null)
     {
         var root = ResolveProjectRoot(workingDirectory);
-        ValidateContext7(root);
+        EnsureSatisfiedCore(root, pushArguments, null);
     }
+
+    internal static void EnsureSatisfied(
+        string workingDirectory, IReadOnlyList<string> pushArguments, string ledgerDirectory)
+    {
+        var root = ResolveProjectRoot(workingDirectory);
+        EnsureSatisfiedCore(root, pushArguments, ledgerDirectory);
+    }
+
+    private static void EnsureSatisfiedCore(
+        string root, IReadOnlyList<string>? pushArguments, string? ledgerDirectory)
+    {
+        if (pushArguments is null)
+        {
+            ValidateContext7(root, committed: false);
+            return;
+        }
+
+        var changed = GetPushChangedPaths(root, pushArguments);
+        if (changed.All(IsDocumentationPath))
+            return;
+
+        if (!changed.Contains(Context7Evidence, StringComparer.Ordinal))
+            throw Blocked($"Context7 evidence must be committed with source changes: {Context7Evidence}");
+
+        var questions = ValidateContext7(root, committed: true);
+        if (questions.Count == 0)
+            return;
+
+        var ledger = new Context7Ledger(ledgerDirectory);
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            var records = ledger.ReadSince(now.AddHours(-24));
+            foreach (var (id, question) in questions)
+            {
+                if (records.Any(record => record.Status == 200 &&
+                    record.Ts <= now && record.LibraryId == id && record.Query == question))
+                    continue;
+                throw Blocked($"Context7 evidence names a question Talvora did not record: {id} \"{question}\". Ask it with talvora_context7_docs and copy the question exactly.");
+            }
+        }
+        finally
+        {
+            ledger.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+    }
+
+    private static IReadOnlyList<string> GetPushChangedPaths(
+        string root, IReadOnlyList<string> pushArguments)
+    {
+        var index = -1;
+        for (var i = 0; i < pushArguments.Count; i++)
+        {
+            if (string.Equals(pushArguments[i], "push", StringComparison.OrdinalIgnoreCase))
+            {
+                index = i;
+                break;
+            }
+        }
+        var values = pushArguments.Skip(index + 1)
+            .Where(arg => !arg.StartsWith("-", StringComparison.Ordinal))
+            .ToArray();
+        var remote = values.Length > 0 ? values[0] : "origin";
+        var branch = values.Length > 1 ? values[1] :
+            RunGit(root, ["branch", "--show-current"]).Trim();
+        if (string.IsNullOrWhiteSpace(branch))
+            throw Blocked("Context7 push requires a current branch.");
+        var remoteRef = $"refs/remotes/{remote}/{branch}";
+        try
+        {
+            RunGit(root, ["rev-parse", "--verify", "--quiet", remoteRef]);
+        }
+        catch (InvalidOperationException)
+        {
+            return RunGit(root, ["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "HEAD"])
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+        return RunGit(root, ["diff", "--name-only", remoteRef, "HEAD"])
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private static string RunGit(string root, string[] arguments)
+    {
+        try
+        {
+            return GitTools.RunGitCheckedAsync(root, arguments)
+                .GetAwaiter().GetResult().StandardOutput;
+        }
+        catch (Exception exception) when (exception is not ModelContextProtocol.McpException)
+        {
+            throw new InvalidOperationException("Context7 Git inspection failed: " + exception.Message, exception);
+        }
+    }
+
+    private static bool IsDocumentationPath(string path) =>
+        path.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ||
+        path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith("docs/", StringComparison.Ordinal) ||
+        path.StartsWith(".context7/", StringComparison.Ordinal) ||
+        path.StartsWith(".talvora/", StringComparison.Ordinal);
 
     private static string ResolveProjectRoot(string workingDirectory)
     {
@@ -35,10 +139,11 @@ internal static class ProjectDeliveryGate
         throw Blocked("A Git project root is required before Talvora can publish or push a project.");
     }
 
-    private static void ValidateContext7(string root)
+    private static IReadOnlyList<(string Id, string Question)> ValidateContext7(
+        string root, bool committed)
     {
         var path = Path.Combine(root, Context7Evidence.Replace('/', Path.DirectorySeparatorChar));
-        using var document = ReadEvidence(path, "Context7");
+        using var document = committed ? ReadCommittedEvidence(root) : ReadEvidence(path, "Context7");
         var evidence = document.RootElement;
         if (evidence.ValueKind != JsonValueKind.Object)
         {
@@ -53,11 +158,13 @@ internal static class ProjectDeliveryGate
             throw Blocked("Context7 evidence must describe the verified project scope.");
         }
         if (!evidence.TryGetProperty("libraries", out var libraries) ||
-            libraries.ValueKind != JsonValueKind.Array ||
-            libraries.GetArrayLength() == 0)
+            libraries.ValueKind != JsonValueKind.Array)
         {
-            throw Blocked("Context7 evidence must contain at least one verified library.");
+            throw Blocked("Context7 evidence libraries must be an array.");
         }
+        if (libraries.GetArrayLength() > 12)
+            throw Blocked("Context7 evidence must list at most 12 libraries.");
+        var questions = new List<(string Id, string Question)>();
         foreach (var library in libraries.EnumerateArray())
         {
             if (library.ValueKind != JsonValueKind.Object)
@@ -71,15 +178,45 @@ internal static class ProjectDeliveryGate
             {
                 throw Blocked("Every Context7 library entry must contain a canonical /org/project libraryId and verified guidance.");
             }
+            var match = QuestionPattern.Match(verified);
+            if (!match.Success)
+                throw Blocked("Context7 evidence verified guidance must include (query: \"question\").");
+            questions.Add((libraryId!, match.Groups[1].Value));
         }
-        if (!evidence.TryGetProperty("vendorSources", out var vendorSources) ||
-            vendorSources.ValueKind != JsonValueKind.Array ||
-            vendorSources.GetArrayLength() == 0 ||
-            vendorSources.EnumerateArray().Any(source =>
-                source.ValueKind != JsonValueKind.String ||
-                string.IsNullOrWhiteSpace(source.GetString())))
+        if (questions.Count == 0 && (!evidence.TryGetProperty("noLookup", out var noLookup) ||
+            noLookup.ValueKind != JsonValueKind.String ||
+            (noLookup.GetString()?.Trim().Length ?? 0) < 20))
+            throw Blocked("Context7 evidence noLookup must contain at least 20 characters.");
+
+        if (evidence.TryGetProperty("vendorSources", out var vendorSources) &&
+            (vendorSources.ValueKind != JsonValueKind.Array ||
+             vendorSources.GetArrayLength() > 12 ||
+             vendorSources.EnumerateArray().Any(source =>
+                 source.ValueKind != JsonValueKind.String ||
+                 !source.GetString()!.StartsWith("https://", StringComparison.Ordinal))))
         {
-            throw Blocked("Context7 evidence must contain non-empty official/vendor source confirmations.");
+            throw Blocked("Context7 evidence vendorSources must be 0–12 HTTPS URLs.");
+        }
+        return questions;
+    }
+
+    private static JsonDocument ReadCommittedEvidence(string root)
+    {
+        string json;
+        try
+        {
+            json = RunGit(root, ["show", $"HEAD:{Context7Evidence}"]);
+        }
+        catch (InvalidOperationException)
+        {
+            throw Blocked($"Context7 evidence is missing in HEAD: {Context7Evidence}");
+        }
+        if (Encoding.UTF8.GetByteCount(json) > MaximumEvidenceFileBytes)
+            throw Blocked("Context7 evidence is missing, malformed, or too large.");
+        try { return JsonDocument.Parse(json); }
+        catch (JsonException ex)
+        {
+            throw Blocked($"Context7 evidence is not valid JSON: {ex.Message}");
         }
     }
 
@@ -141,9 +278,9 @@ internal static class ProjectDeliveryGate
         {
             throw Blocked($"{gate} evidence timestamp is unexpectedly in the future.");
         }
-        if (now - parsed > MaximumEvidenceAge)
+        if (parsed.UtcDateTime.Date != now.UtcDateTime.Date)
         {
-            throw Blocked($"{gate} evidence is older than 14 days and must be refreshed before delivery.");
+            throw Blocked($"{gate} evidence verifiedAtUtc must be today (UTC).");
         }
     }
 
@@ -156,7 +293,7 @@ internal static class ProjectDeliveryGate
         }
 
         var components = id.Split('/');
-        return components.Length >= 3 &&
+        return components.Length is 3 or 4 &&
             components[0].Length == 0 &&
             components.Skip(1).All(component =>
                 !string.IsNullOrWhiteSpace(component) &&

@@ -1,19 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T17:28:55Z",
-  "scope": "CTX1: Context7 GET uses a bounded streaming response and MCP tool dependency injection",
+  "verifiedAtUtc": "2026-11-08T17:50:38Z",
+  "scope": "CTX2: push gate checks committed changes and proves every Context7 question against the past 24 hours of ledger records",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 CTX1: HttpCompletionOption.ResponseHeadersRead avoids buffering the full response, and HttpClient.Timeout limits request time (query: \"HttpClient Timeout and HttpMessageHandler for tests with a capped response read\")"
-    },
-    {
-      "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "2026-11-08 CTX1: McpServer tool methods accept McpServer and registered DI services without exposing them as tool arguments (query: \"McpServerToolAttribute tool method parameters dependency injection IServiceProvider service classes and CancellationToken\")"
+      "libraryId": "/websites/git-scm",
+      "verified": "2026-11-08 CTX2: git diff between a remote-tracking ref and HEAD lists committed changes, and --name-only returns their paths (query: \"git diff --name-only between a remote-tracking branch and HEAD\")"
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpcompletionoption?view=net-10.0",
-    "https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md"
+    "https://git-scm.com/docs/git-diff"
   ]
 }

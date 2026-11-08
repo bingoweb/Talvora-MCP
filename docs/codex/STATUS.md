@@ -36,8 +36,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D60 — installed a899938; both installed MCP smokes green; CI 42500049574 success; Claude verifies one session across a 100-second quiet wait
 - [~] D61 — installed 7c211c5; Control Center and both installed MCP smokes green; CI 42501684534 success; Claude checks pre-deploy steps remain in history
 - [~] D62 — installed 8d43853; both installed MCP smokes green; CI pending; Claude checks detached Full gate wording
-- [~] CTX1 — code and Changed/Full gates green; live pending: install, both MCP smokes and CI
-- [ ] CTX2 — The push gate accepts only recorded Context7 questions (user request 2026-11-08; after CTX1)
+- [x] CTX1 — installed 13f0418; both installed MCP smokes green; CI 42505760996 success
+- [~] CTX2 — code and gates green; live pending: install, both MCP smokes and CI; Claude checks the next card's push
 - [ ] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
 - [ ] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (after PK1)
 - [ ] RL1 — Talvora's version is 0.0.x.x and comes from the release tag (user request 2026-11-08)
@@ -63,6 +63,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — CTX2, executor ChatGPT: push gate compares remote-tracking branch to HEAD, skips documentation-only pushes, reads committed Context7 evidence and matches exact questions to successful ledger records from the past 24 hours. Dotnet publish still checks working-tree format only. RED: CS1501 for missing gate overload; GREEN: CTX2_PUSH_EVIDENCE_GREEN, STRICT_EVIDENCE_JSON_GREEN, all four pinned tests, Changed 21/0 and Full 70/0: Hepsi geçti. Context7 /websites/git-scm, exact query "git diff --name-only between a remote-tracking branch and HEAD" recorded through Talvora; official git-scm.com git-diff page. Install, installed smokes and CI pending; Claude owns next-card live proof. Gitea #9 mirrored.
+  Self-review — no visual changes; git push rejects missing, uncommitted, stale or unsuccessful query proof; documented noLookup and HTTPS format aligned in C# and CI; no changes to the HTTP tool, ledger retention or CI development-scope patterns.
 
 - 2026-11-08 — CTX1, executor ChatGPT: added talvora_context7_docs (developer surface only) with a bounded 30-second Context7 GET, validated library/question, 64-KB response cap, and a serialized seven-field JSONL ledger with 14-day retention and ReadSince. RED: Context7Ledger/Context7Tools missing (CS0246/CS0103); GREEN: CTX1_CONTEXT7_LOOKUP_GREEN, all four pinned regressions, notification regression, Changed 29/0 and Full 70/0: Hepsi geçti. Context7 /dotnet/docs HttpClient response headers/timeout and /modelcontextprotocol/csharp-sdk tool DI; official Microsoft and MCP SDK references. Install, both installed smokes and CI pending. Gitea #9 comment 228.
   Self-review — no changes to talvora_http_request, TW2 trace or CTX2 evidence gate; the tool is quiet and dev-only, no credentials or response body reach the lookup ledger, and documentation changes contain tool counts only.

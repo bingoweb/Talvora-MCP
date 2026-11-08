@@ -59,8 +59,10 @@ try {
     try { [System.Text.Json.JsonDocument]::Parse($evidenceText).Dispose() }
     catch { throw "Context7 evidence is not valid JSON (strict): $($_.Exception.InnerException.Message)" }
     $evidence = $evidenceText | ConvertFrom-Json
-    if ([int]$evidence.schemaVersion -ne 1) { throw 'Context7 evidence schemaVersion must be 1.' }
-    if ([string]::IsNullOrWhiteSpace([string]$evidence.scope)) { throw 'Context7 evidence must describe the development scope.' }
+    if (($evidence.schemaVersion -isnot [long] -and $evidence.schemaVersion -isnot [int]) -or
+        $evidence.schemaVersion -ne 1) { throw 'Context7 evidence schemaVersion must be 1.' }
+    if ($evidence.scope -isnot [string] -or
+        [string]::IsNullOrWhiteSpace($evidence.scope)) { throw 'Context7 evidence must describe the verified project scope.' }
 
     $verifiedAt = if ($evidence.verifiedAtUtc -is [DateTime]) {
         [DateTimeOffset]$evidence.verifiedAtUtc
@@ -73,17 +75,40 @@ try {
     }
     $now = [DateTimeOffset]::UtcNow
     if ($verifiedAt -gt $now.AddMinutes(15)) { throw 'Context7 evidence timestamp is unexpectedly in the future.' }
-    if ($verifiedAt -lt $now.AddDays(-14)) { throw 'Context7 evidence is older than 14 days; query current documentation again.' }
+    if ($verifiedAt.UtcDateTime.Date -ne $now.UtcDateTime.Date) { throw 'Context7 evidence verifiedAtUtc must be today (UTC).' }
 
+    if ($evidence.libraries -isnot [array]) { throw 'Context7 evidence libraries must be an array.' }
     $libraries = @($evidence.libraries)
-    if ($libraries.Count -eq 0) { throw 'At least one Context7 library verification is required for development-scope changes.' }
-    if ($libraries.Count -gt 12) { throw 'Context7 evidence must list only this change (at most 12 libraries): replace the file instead of appending; older evidence stays in git history.' }
+    if ($libraries.Count -gt 12) { throw 'Context7 evidence must list at most 12 libraries.' }
     foreach ($library in $libraries) {
-        if ([string]::IsNullOrWhiteSpace([string]$library.libraryId) -or -not ([string]$library.libraryId).StartsWith('/')) { throw 'Each Context7 evidence entry must contain a canonical /org/project-style libraryId.' }
-        if ([string]::IsNullOrWhiteSpace([string]$library.verified)) { throw "Context7 evidence is missing the verified guidance for $($library.libraryId)." }
+        if ($null -eq $library -or $library -isnot [pscustomobject] -or
+            [string]::IsNullOrWhiteSpace([string]$library.libraryId) -or
+            [string]$library.libraryId -cnotmatch '^/[^/\s]+/[^/\s]+(/[^/\s]+)?$' -or
+            ([string]$library.libraryId).Contains('\') -or
+            [string]::IsNullOrWhiteSpace([string]$library.verified)) {
+            throw 'Every Context7 library entry must contain a canonical /org/project libraryId and verified guidance.'
+        }
+        if ([string]$library.verified -cnotmatch '\(query: "([^"]+)"\)') {
+            throw 'Context7 evidence verified guidance must include (query: "question").'
+        }
     }
-    if (@($evidence.vendorSources).Count -eq 0) { throw 'At least one official/vendor source check must accompany Context7 evidence.' }
-    if (@($evidence.vendorSources).Count -gt 12) { throw 'Context7 evidence must list only this change (at most 12 vendor sources): replace the file instead of appending.' }
+    if ($libraries.Count -eq 0 -and (
+        $evidence.noLookup -isnot [string] -or
+        ([string]$evidence.noLookup).Trim().Length -lt 20)) {
+        throw 'Context7 evidence noLookup must contain at least 20 characters.'
+    }
+    if ($null -ne $evidence.PSObject.Properties['vendorSources']) {
+        if ($evidence.vendorSources -isnot [array] -or
+            @($evidence.vendorSources).Count -gt 12) {
+            throw 'Context7 evidence vendorSources must be 0–12 HTTPS URLs.'
+        }
+        foreach ($source in @($evidence.vendorSources)) {
+            if ($source -isnot [string] -or
+                -not $source.StartsWith('https://', [StringComparison]::Ordinal)) {
+                throw 'Context7 evidence vendorSources must be 0–12 HTTPS URLs.'
+            }
+        }
+    }
 
     Write-Host 'CONTEXT7_QUALITY_GATE_GREEN'
 }
