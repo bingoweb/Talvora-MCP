@@ -34,8 +34,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] D46 — installed 7aa5165; Control Center and both installed MCP smokes green; CI success (audit 46); Claude checks real post-push pending-CI worklog wording
 - [~] D60 — installed a899938; both installed MCP smokes green; CI 42500049574 success; Claude verifies one session across a 100-second quiet wait
-- [~] D61 — code and gates green; live pending: install, Control Center smoke and CI; Claude checks pre-deploy steps remain in history
-- [ ] D62 — A detached start is not a result (audit 46; after D61)
+- [~] D61 — installed 7c211c5; Control Center and both installed MCP smokes green; CI 42501684534 success; Claude checks pre-deploy steps remain in history
+- [~] D62 — code and gates green; live pending: install, both MCP smokes and CI; Claude checks detached Full gate wording
 - [ ] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
 - [ ] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (after PK1)
 - [ ] RL1 — Talvora's version is 0.0.x.x and comes from the release tag (user request 2026-11-08)
@@ -61,6 +61,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — D62, executor ChatGPT: detached user_process_start/job_start now report launch, not final success; known quality/package script starts use precise Turkish titles and dotnet run --project uses the project name (direct or nested in pwsh). RED: detached quality gate falsely said passed. GREEN: D62_DETACHED_START_IS_NOT_RESULT_GREEN (6 cases), DESKTOP_PROGRESS_BEHAVIOR_GREEN, MODERNIZATION_POLICY_GREEN; Changed 28/0, Full 70/0: Hepsi geçti. Context7 /dotnet/docs GeneratedRegex with CultureInvariant, Microsoft reference. Install, both installed MCP smokes, CI and Claude real Full-gate live check pending. Gitea #9 comment 227.
+  Self-review — bounded runs, KnownScripts, deferred deploy completion, dev_server_start and tray unchanged; no final-result claims on detached launch, original scope suffix preserved.
 
 - 2026-11-08 — D61, executor ChatGPT: the tray retains each open session's last terminal step, flushes an old session on identity reuse, and drains the rest on Dispose; unfinished history uses D50's key and the original JSON/redaction rules. RED: missing WorklogOpenSessions CS0246. GREEN: D61_UNCLOSED_SESSION_REACHES_HISTORY_GREEN, DESKTOP_PROGRESS_BEHAVIOR_GREEN, MODERNIZATION_POLICY_GREEN; Changed 27/0, Full 70/0: Hepsi geçti. Context7 /dotnet/docs C# lock for Dictionary, official Microsoft reference. Install, installed Control Center smoke, CI and Claude live pre-deploy-history check pending. Gitea #9 comment 226.
   Self-review — no service, protocol, stored-format, close-timing or UI changes; no disk writes on heartbeats; repeated normal close remains idempotent.

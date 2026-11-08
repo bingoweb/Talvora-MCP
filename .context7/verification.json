@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T16:42:19Z",
-  "scope": "D61: persist the last completed worklog step if the tray shuts down before session closure",
+  "verifiedAtUtc": "2026-11-08T17:00:06Z",
+  "scope": "D62: a detached process start reports launch, not the final tool outcome, and dotnet run uses its project name",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 D61: C# lock gives exclusive access to a shared resource, so a single private lock protects the dictionary of open worklog sessions in Observe and Drain. Context7 /dotnet/docs query: \"lock statement thread synchronization Dictionary\"."
+      "verified": "2026-11-08 D62: a GeneratedRegex attribute on a partial Regex-returning method generates and caches the implementation at compile time; RegexOptions.CultureInvariant makes the dotnet run --project parser independent of locale. Context7 /dotnet/docs query: \"GeneratedRegex attribute source generator RegexOptions.CultureInvariant\"."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/csharp/language-reference/statements/lock"
+    "https://learn.microsoft.com/dotnet/standard/base-types/regular-expression-source-generators"
   ]
 }

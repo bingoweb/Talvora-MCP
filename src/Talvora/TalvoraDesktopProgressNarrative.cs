@@ -64,8 +64,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             var executable = GetArgumentText(arguments, "executable");
             return string.IsNullOrWhiteSpace(executable)
                 ? FromToolTitle(toolTitle)
-                : FromDescription(WorklogSubject.ForExecutable(
-                    executable, WorklogSubject.Strings(arguments, "arguments")));
+                : FromDescription(normalized is "job_start" or "user_process_start"
+                    ? WorklogSubject.ForDetachedStart(executable, WorklogSubject.Strings(arguments, "arguments"))
+                    : WorklogSubject.ForExecutable(executable, WorklogSubject.Strings(arguments, "arguments")));
         }
 
         if (normalized is "dotnet_build" or "dotnet_test" or "dotnet_restore" or "dotnet_publish")

@@ -97,6 +97,38 @@ internal static partial class WorklogSubject
         return new(ForProgram(scriptName), scriptName, OperationKind.Script);
     }
 
+    /// <summary>Detached start acknowledges launch, never the child's eventual outcome.</summary>
+    internal static Description ForDetachedStart(string executable, IReadOnlyList<string> arguments)
+    {
+        var description = ForExecutable(executable, arguments);
+        if (string.Equals(description.Subject, "Invoke-QualityGate.ps1", StringComparison.OrdinalIgnoreCase))
+        {
+            var titles = WithSubject(
+                new WorklogTitles(KnownScripts["Invoke-QualityGate.ps1"].Running,
+                    "Kalite kontrolü arka planda başladı", "Kalite kontrolü başlatılamadı"),
+                ScriptMode("Invoke-QualityGate.ps1", string.Join(' ', arguments)));
+            return description with { Titles = titles };
+        }
+        if (string.Equals(description.Subject, "Build-Windows-Installer.ps1", StringComparison.OrdinalIgnoreCase))
+        {
+            return description with
+            {
+                Titles = new WorklogTitles(description.Titles.Running,
+                    "Kurulum paketi hazırlığı arka planda başladı",
+                    "Kurulum paketi hazırlığı başlatılamadı"),
+            };
+        }
+        return description with
+        {
+            Titles = new WorklogTitles(description.Titles.Running,
+                description.Subject + " arka planda başladı",
+                description.Subject + " başlatılamadı"),
+        };
+    }
+
+    private static string? ProjectName(string path) =>
+        Shorten(Path.GetFileNameWithoutExtension(path.Replace('\\', '/').Trim('"')));
+
     /// <summary>Describes executable + argument vector runs (user_run, run_process, job_start, user_process_start).</summary>
     internal static Description ForExecutable(string executable, IReadOnlyList<string> arguments)
     {
@@ -107,9 +139,23 @@ internal static partial class WorklogSubject
             return ForScript(script, commandText);
         }
 
+        if ((program is "pwsh" or "powershell") &&
+            DotnetRunProjectPattern().Match(commandText) is { Success: true } match &&
+            ProjectName(match.Groups["project"].Value) is { } shellProject)
+        {
+            return new(ForProgram(shellProject), shellProject, OperationKind.Program);
+        }
+
         if (program == "dotnet" && arguments.Count > 0)
         {
             var verb = arguments[0].ToLowerInvariant();
+            var projectIndex = arguments.ToList().FindIndex(
+                argument => string.Equals(argument, "--project", StringComparison.OrdinalIgnoreCase));
+            if (verb == "run" && projectIndex >= 0 && projectIndex + 1 < arguments.Count &&
+                ProjectName(arguments[projectIndex + 1]) is { } runProject)
+            {
+                return new(ForProgram(runProject), runProject, OperationKind.Program);
+            }
             var target = Shorten(arguments.Skip(1).FirstOrDefault(argument => !argument.StartsWith('-')) is { } path
                 ? Path.GetFileName(path.Replace('\\', '/'))
                 : null);
@@ -174,4 +220,7 @@ internal static partial class WorklogSubject
 
     [GeneratedRegex(@"-Scope\s+(?<scope>\w+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ScopePattern();
+
+    [GeneratedRegex(@"(?<![\w.-])dotnet\s+run\b[^\r\n]*?--project\s+[""']?(?<project>[^\s""';&|<>]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex DotnetRunProjectPattern();
 }
