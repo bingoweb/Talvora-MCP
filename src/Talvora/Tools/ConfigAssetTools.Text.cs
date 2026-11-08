@@ -1,10 +1,12 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 using Talvora.Shared;
 using Talvora.SourceEditing;
@@ -77,17 +79,23 @@ public static partial class ConfigAssetTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraTextTailResponse)),
-     Description("Return the last lines of any accessible text file using bounded streaming. lineCount=0 requests the finite server maximum tail window. beforeLine is an exclusive 1-based upper bound; use nextBeforeLine to page backward. Useful for logs and build output. No path allow-list is applied.")]
-    public static TalvoraTextTailResponse TailText(
+     Description("Return the last lines of any accessible text file using bounded streaming. lineCount=0 requests the finite server maximum tail window. beforeLine is an exclusive 1-based upper bound; use nextBeforeLine to page backward. Useful for logs and build output. No path allow-list is applied. Set waitForPattern and waitSeconds to wait up to 100 seconds for a matching line.")]
+    public static async Task<TalvoraTextTailResponse> TailText(
         string path,
         int lineCount = 200,
         long beforeLine = 0,
+        string? waitForPattern = null,
+        int waitSeconds = 0,
         CancellationToken cancellationToken = default)
     {
         if (lineCount < 0 || beforeLine < 0)
         {
             throw new ArgumentOutOfRangeException(
                 "lineCount and beforeLine cannot be negative.");
+        }
+        if (waitSeconds is < 0 or > 100)
+        {
+            throw new ArgumentOutOfRangeException(nameof(waitSeconds));
         }
 
         var fullPath = Path.GetFullPath(path);
@@ -97,14 +105,49 @@ public static partial class ConfigAssetTools
                 : Math.Min(
                     lineCount,
                     AbsoluteTextResponseLines);
-        return BoundedTextTailReader.Read(
+        TalvoraTextTailResponse ReadTail() => BoundedTextTailReader.Read(
             fullPath,
             effectiveLineCount,
             beforeLine,
             AbsoluteTextResponseCharacters,
-            lineCount == 0 ||
-            lineCount > AbsoluteTextResponseLines,
+            lineCount == 0 || lineCount > AbsoluteTextResponseLines,
             cancellationToken);
+
+        if (waitForPattern is null || waitSeconds == 0)
+            return ReadTail();
+
+        var pattern = new Regex(waitForPattern, RegexOptions.CultureInvariant,
+            TimeSpan.FromSeconds(1));
+        var maximumWait = TimeSpan.FromSeconds(waitSeconds);
+        var elapsed = Stopwatch.StartNew();
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            TalvoraTextTailResponse? result = null;
+            try
+            {
+                result = ReadTail();
+            }
+            catch (FileNotFoundException) when (elapsed.Elapsed < maximumWait)
+            {
+            }
+            catch (DirectoryNotFoundException) when (elapsed.Elapsed < maximumWait)
+            {
+            }
+
+            if (result is not null && result.LinesRead > 0 &&
+                result.Text.Split(Environment.NewLine, StringSplitOptions.None)
+                    .Any(pattern.IsMatch))
+                return result;
+
+            var remaining = maximumWait - elapsed.Elapsed;
+            if (remaining <= TimeSpan.Zero)
+                return result ?? ReadTail();
+
+            await Task.Delay(
+                remaining < TimeSpan.FromSeconds(2) ? remaining : TimeSpan.FromSeconds(2),
+                cancellationToken);
+        }
     }
 
     [McpServerTool(

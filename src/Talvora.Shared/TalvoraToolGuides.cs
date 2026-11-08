@@ -73,10 +73,12 @@ public static class TalvoraToolGuides
                   ("startCharacter", "0-based character offset instead of a line.")),
                 """{"path":"C:\\Users\\tayla\\Talvora-MCP\\AGENTS.md","startLine":1,"lineCount":140}"""),
             ["talvora_tail_text"] = new(
-                "Read the last lines of a log or output file; poll it for detached runs.",
+                "Read the last lines of a log or output file; wait for a matching line during detached runs.",
                 P(("path", "Absolute file path."),
                   ("lineCount", "Number of last lines (keep small, e.g. 20)."),
-                  ("beforeLine", "Exclusive upper line bound for paging backwards; 0 = end of file.")),
+                  ("beforeLine", "Exclusive upper line bound for paging backwards; 0 = end of file."),
+                  ("waitForPattern", "Regular expression matched against each returned line (culture-invariant, 1-second timeout)."),
+                  ("waitSeconds", "Seconds to wait for a matching line (0-100; polling every 2 seconds).")),
                 """{"path":"C:\\Users\\tayla\\Talvora-MCP\\artifacts\\gate.log","lineCount":20}"""),
             ["talvora_list"] = new(
                 "List one folder's entries.",

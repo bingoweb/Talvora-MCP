@@ -2,11 +2,13 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using ModelContextProtocol.Client;
 using Talvora.Shared;
 
 internal static partial class SmokeScenarios
 {
-    internal static async Task RunSharedInfrastructureAsync()
+    internal static async Task RunSharedInfrastructureAsync(
+        IReadOnlyDictionary<string, McpClientTool>? byName = null)
     {
         var root = Path.Combine(
             Path.GetTempPath(),
@@ -16,6 +18,67 @@ internal static partial class SmokeScenarios
         try
         {
             await RunPrivacySecurityAsync(root);
+
+            if (byName is not null)
+            {
+                var tailTool = byName["talvora_tail_text"];
+                var tailPath = Path.Combine(root, "tail-wait.log");
+                await File.WriteAllTextAsync(tailPath, "Starting" + Environment.NewLine);
+                var writer = Task.Run(async () =>
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(3));
+                    await File.AppendAllTextAsync(tailPath, "Hepsi geçti." + Environment.NewLine);
+                });
+                var waitTimer = Stopwatch.StartNew();
+                try
+                {
+                    var matched = await SmokeSupport.EnsureSuccess(tailTool, new()
+                    {
+                        ["path"] = tailPath,
+                        ["lineCount"] = 10,
+                        ["waitForPattern"] = @"^Hepsi geçti\.$",
+                        ["waitSeconds"] = 10,
+                    });
+                    waitTimer.Stop();
+                    if (waitTimer.Elapsed < TimeSpan.FromSeconds(3) ||
+                        waitTimer.Elapsed > TimeSpan.FromSeconds(6) ||
+                        matched.StructuredContent is not { } matchedJson ||
+                        !matchedJson.GetProperty("text").GetString()!
+                            .Contains("Hepsi geçti.", StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException("TW1 matching tail wait did not return in 3-6 seconds.");
+                    }
+                }
+                finally
+                {
+                    await writer;
+                }
+
+                waitTimer.Restart();
+                var unmatched = await SmokeSupport.EnsureSuccess(tailTool, new()
+                {
+                    ["path"] = tailPath,
+                    ["lineCount"] = 10,
+                    ["waitForPattern"] = "^never-matches$",
+                    ["waitSeconds"] = 4,
+                });
+                waitTimer.Stop();
+                if (waitTimer.Elapsed < TimeSpan.FromSeconds(3.5) ||
+                    waitTimer.Elapsed > TimeSpan.FromSeconds(7) ||
+                    unmatched.StructuredContent is not { } unmatchedJson ||
+                    !unmatchedJson.GetProperty("text").GetString()!
+                        .Contains("Hepsi geçti.", StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("TW1 unmatched tail wait did not expire near waitSeconds.");
+                }
+
+                await SmokeSupport.EnsureError(tailTool, new()
+                {
+                    ["path"] = tailPath,
+                    ["waitForPattern"] = "any",
+                    ["waitSeconds"] = 101,
+                });
+            }
 
             var batchPath = Path.Combine(root, "args.cmd");
             await File.WriteAllTextAsync(

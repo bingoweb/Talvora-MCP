@@ -1,15 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T13:54:59Z",
-  "scope": "D59: stop the tray before switching the service and detect a restarted service PID",
+  "verifiedAtUtc": "2026-11-08T14:08:48Z",
+  "scope": "TW1: optional bounded regex wait for tail_text with cancellable two-second polling",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 D59: sc.exe stop reports STOP_PENDING before the Windows service reaches STOPPED; the installer checks queryex status and PID without changing its wait windows (query: \"Windows service stop ServiceController status: explain Windows service STOP_PENDING and STOPPED transitions and .NET Process.Kill(entireProcessTree: false) behavior for service PID on Windows\")."
+      "verified": "2026-11-08 TW1: Regex(string, RegexOptions, TimeSpan) bounds each match and RegexMatchTimeoutException reports timeout; Task.Delay(TimeSpan, CancellationToken) supports cancellable polling (queries: \".NET 10 Regex match timeout: RegexOptions.CultureInvariant and TimeSpan matchTimeout constructor, regex.IsMatch on individual strings and RegexMatchTimeoutException; how to enforce a one-second match timeout\"; \".NET 10 Task.Delay(TimeSpan, CancellationToken): cancellation propagation, periodic polling with a timeout measured by Stopwatch rather than extending deadline\")."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/windows/win32/services/service-status-transitions",
-    "https://learn.microsoft.com/dotnet/api/system.diagnostics.process.kill"
+    "https://learn.microsoft.com/dotnet/standard/base-types/best-practices-regex"
   ]
 }

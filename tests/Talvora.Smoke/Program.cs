@@ -305,7 +305,7 @@ if (devServerOnly)
     return;
 }
 
-await SmokeScenarios.RunSharedInfrastructureAsync();
+await SmokeScenarios.RunSharedInfrastructureAsync(byName);
 
 await SmokeScenarios.RunServiceAsync(byName);
 

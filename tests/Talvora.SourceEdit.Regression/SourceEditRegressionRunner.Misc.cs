@@ -1893,7 +1893,7 @@ internal static partial class SourceEditRegressionRunner
                 }
             }
             var tail =
-                ConfigAssetTools.TailText(
+                await ConfigAssetTools.TailText(
                     tailPath,
                     lineCount: 0);
             AssertEqual(
@@ -1913,7 +1913,7 @@ internal static partial class SourceEditRegressionRunner
                 "Tail response did not expose backward continuation metadata.");
 
             var earlierTail =
-                ConfigAssetTools.TailText(
+                await ConfigAssetTools.TailText(
                     tailPath,
                     lineCount: 0,
                     beforeLine:
@@ -1944,7 +1944,7 @@ internal static partial class SourceEditRegressionRunner
                     17) +
                 "TAIL");
             var giantTail =
-                ConfigAssetTools.TailText(
+                await ConfigAssetTools.TailText(
                     giantTailPath,
                     lineCount: 1);
             AssertEqual(
