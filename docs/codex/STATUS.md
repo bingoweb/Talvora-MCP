@@ -33,9 +33,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [~] CTX2 — installed 953fc7d; both installed MCP smokes green, CI success (audit 47); Claude checks the next card's push
-- [~] D64 — code and gates green; live pending: install, both installed MCP smokes and CI
-- [ ] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
-- [ ] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (after PK1)
+- [x] D64 — installed 96c22aa; metadata and full installed MCP smokes green; CI 42510491771 success
+- [?] PK1 — P-54: locked NuGet restore fails NU1004 unless the seven package lock files are refreshed, which the card does not authorize
+- [?] PK2 — blocked by PK1 / P-54; Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (after PK1)
 - [ ] RL1 — Talvora's version is 0.0.x.x and comes from the release tag (user request 2026-11-08)
 - [ ] RL2 — A fresh Windows gets PowerShell 7 from the installer (user decision 2026-11-08)
 - [ ] RL3 — Talvora is in Apps & features and can be uninstalled (user request 2026-11-08)
@@ -59,6 +59,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — PK1, executor ChatGPT: NuGet confirms MCP 2.4.0 and Tomlyn 2.10.2; Context7 `/modelcontextprotocol/csharp-sdk/v2.3.0` returned tool schemas, filters and McpException docs; `/xoofx/tomlyn/2.10.2` reported no indexed version. Official SDK v2.4.0 and Tomlyn 2.10.2 release notes checked. RED pin test: MCP 2.3.1 and Tomlyn 2.10.1; pinned updates led to NU1004 from `dotnet restore Talvora.slnx --locked-mode` because seven tracked package lock graphs still pin old versions. Changes to the pins reverted, no lock files touched. P-54 submitted for Claude decision; Full gate, deploy and CI for PK1 not run. Baseline Changed 8/0, Hepsi geçti. D64 CI 42510491771 success.
+  Self-review — no visual or Turkish UI changes; existing runtime and locks preserved; the requested upgrade cannot pass the mandatory locked restore without explicitly authorized lockfile updates.
 
 - 2026-11-08 — D64, executor ChatGPT: the push gate excludes Talvora-owned Context7 ledger records and validates every (query: "...") in each library entry; Context7 docs is open-world (84 reviewed tools), and empty detached-start subjects become program plus first non-option argument. RED: Talvora.Smoke-only evidence accepted and dotnet build reported an empty subject; GREEN: D64 source-edit and notification regressions, four pinned PS tests, Changed 18/0 and signed-in Full 70/0, Hepsi geçti. Context7 noLookup: Talvora-only implementation; no external API reliance. Install, installed smokes and CI pending. Gitea #9 comment 230.
   Self-review — no UI layout changes; detached tasks have correct Turkish names, all claimed questions require non-own success records, and the ledger format, CI scripts and 24-hour window were untouched.

@@ -20,6 +20,15 @@
 
 ## Open
 
-(none)
+### P-54 — PK1 — Locked NuGet graphs must be included in a package upgrade
+- Date: 2026-11-08, HEAD 96c22aa2aa4c4467c3d38487488b8efb713c7253
+- Card text: "Directory.Packages.props: both ModelContextProtocol lines ... Tomlyn to 2.10.2. docs/codex/CONTEXT7.md ... Nothing else changes." "Acceptance: restore and signed-in Full Hepsi geçti.; install; --metadata-policy-only and the full installed smoke green; CI."
+- Problem: after changing the three pins to MCP 2.4.0 and Tomlyn 2.10.2, the mandated `dotnet restore Talvora.slnx --locked-mode --nologo --verbosity quiet` failed. Exact output excerpt: `error NU1004: ModelContextProtocol.AspNetCore paket başvurusunun [2.3.1, ) olan sürümü [2.4.0, ) olarak değiştirildi.` Another `error NU1004` says `Kilit dosyası sürümü: [2.3.1, ), merkezi paket yönetimi sürümü: [2.4.0, ).` Seven tracked `packages.lock.json` files pin the prior graph; `scripts/Invoke-QualityGate.ps1:220-221` always restores with `--locked-mode`. `AGENTS.md:139` forbids regenerating lock files unless the card says so, while PK1 says nothing else changes. The package pin experiment was reverted; no lock files were modified.
+- Evidence: nuget.org index lists ModelContextProtocol/ModelContextProtocol.AspNetCore 2.4.0 and Tomlyn 2.10.2; Context7 `/modelcontextprotocol/csharp-sdk/v2.3.0` documented tools, filters and McpException; `/xoofx/tomlyn/2.10.2` reported a version-index gap. Official release notes: https://github.com/modelcontextprotocol/csharp-sdk/releases/tag/v2.4.0 and https://github.com/xoofx/Tomlyn/releases/tag/2.10.2.
+- Options:
+  1. Amend PK1 to explicitly include the seven `packages.lock.json` files in its Files/Do, authorize a single `dotnet restore Talvora.slnx --force-evaluate` to update them, then verify `--locked-mode`, Full gate, installed smokes and CI; this changes the pinned dependency graph as needed.
+  2. Defer PK1 and retain the current pins and lock graphs; acceptance remains blocked, and dependent PK2 waits.
+- Partial work: reverted (yes).
+- Decision (Claude): _pending_
 
 ## Decided
