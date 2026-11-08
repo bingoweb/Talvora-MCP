@@ -23,6 +23,53 @@ internal static partial class SmokeScenarios
 
             if (byName is not null)
             {
+                var context7 = byName["talvora_context7_docs"];
+                const string context7Question =
+                    "HttpClient Timeout and HttpMessageHandler for tests with a capped response read";
+                var answer = await SmokeSupport.EnsureSuccess(context7, new()
+                {
+                    ["libraryId"] = "/dotnet/docs",
+                    ["query"] = context7Question,
+                });
+                if (answer.StructuredContent is not { } answerJson ||
+                    !answerJson.TryGetProperty("text", out var answerText) ||
+                    string.IsNullOrWhiteSpace(answerText.GetString()))
+                    throw new InvalidOperationException("CTX1 live Context7 lookup returned no text.");
+
+                var evidencePath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "Talvora", "Context7", $"lookups-{DateTime.UtcNow:yyyy-MM-dd}.jsonl");
+                var evidenceFound = false;
+                for (var attempt = 0; attempt < 30; attempt++)
+                {
+                    try
+                    {
+                        var evidence = await SmokeSupport.ReadToolText(byName["talvora_read_text"], evidencePath);
+                        if (evidence.Contains(context7Question, StringComparison.Ordinal))
+                        {
+                            evidenceFound = true;
+                            break;
+                        }
+                    }
+                    catch (Exception) when (attempt < 29)
+                    {
+                        // The ledger writer is asynchronous; the first read may race the flush.
+                    }
+                    await Task.Delay(100);
+                }
+                if (!evidenceFound)
+                    throw new InvalidOperationException("CTX1 live Context7 question was not recorded.");
+
+                const string missingId = "/talvora-smoke/does-not-exist";
+                var missing = await SmokeSupport.EnsureError(context7, new()
+                {
+                    ["libraryId"] = missingId,
+                    ["query"] = context7Question,
+                });
+                if (!missing.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>()
+                    .Any(block => block.Text.Contains(missingId, StringComparison.Ordinal)))
+                    throw new InvalidOperationException("CTX1 live Context7 404 did not name the library.");
+
                 var tailTool = byName["talvora_tail_text"];
                 var tailPath = Path.Combine(root, "tail-wait.log");
                 await File.WriteAllTextAsync(tailPath, "Starting" + Environment.NewLine);

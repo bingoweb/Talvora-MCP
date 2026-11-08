@@ -248,6 +248,7 @@ public static class TalvoraToolTitles
         ["talvora_websocket_exchange"] = "WebSocket ile veri gönder",
         ["talvora_worklog_note"] = "Görev satırını ayarla",
         ["talvora_note_write"] = "Kasaya not yaz",
+        ["talvora_context7_docs"] = "Context7 belgelerine bak",
         ["talvora_windows_release_tools_info"] = "Paketleme araçları bilgisi",
         ["talvora_windows_sdk_info"] = "Windows SDK bilgisi",
         ["talvora_windows_toolchain_info"] = "Derleme araçları bilgisi",

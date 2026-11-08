@@ -170,6 +170,11 @@ public static class TalvoraToolGuides
                   ("content", "Markdown text, at most 64000 characters, no secrets."),
                   ("mode", "create (new note) or append (existing note).")),
                 """{"vaultRoot":"C:\\Users\\tayla\\Obsidian\\Taylan","path":"40 Oturum Notları/2026-11-01 Talvora OB1.md","content":"# OB1\n","mode":"create"}"""),
+            ["talvora_context7_docs"] = new(
+                "Ask Context7 one precise documentation question; the question is recorded as evidence.",
+                P(("libraryId", "A pinned id from docs/codex/CONTEXT7.md, e.g. /dotnet/docs."),
+                  ("query", "A precise 12–400 character question with at least three words.")),
+                """{"libraryId":"/dotnet/docs","query":"HttpClient Timeout and HttpMessageHandler for tests with a capped response read"}"""),
             ["talvora_gh_run"] = new(
                 "Run one GitHub CLI command as the signed-in user, with separate arguments.",
                 P(("workingDirectory", "Absolute repository root."),

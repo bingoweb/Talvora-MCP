@@ -36,6 +36,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<TalvoraDesktopProgressNotifier>();
 builder.Services.AddSingleton<TalvoraLineTrafficMeter>();
 builder.Services.AddSingleton<ToolCallTrace>(_ => new ToolCallTrace());
+builder.Services.AddSingleton<Context7Ledger>(_ => new Context7Ledger());
 builder.Services.AddHostedService<TalvoraSystemStorageMaintenanceService>();
 
 builder.Services
@@ -166,6 +167,7 @@ builder.Services
 
 var app = builder.Build();
 _ = app.Services.GetRequiredService<ToolCallTrace>();
+_ = app.Services.GetRequiredService<Context7Ledger>();
 app.UseLoopbackOriginGuard();
 ClaudeBackgroundJobTools.DesktopNotifier =
     app.Services.GetRequiredService<TalvoraDesktopProgressNotifier>();

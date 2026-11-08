@@ -63,7 +63,7 @@ Talvora yalnızca bu bilgisayarın içinden, `http://127.0.0.1:7676` adresinden 
 | `/mcp/dev` | geliştirme: kod, derleme, Git, işler |
 | `/mcp/admin` | yönetim: hizmetler, kayıt defteri, ortam, paketler |
 
-Şu an **249 araç** var: geliştirme yüzeyinde **212**, yönetim yüzeyinde **88**; **51** araç ikisinde ortak.
+Şu an **250 araç** var: geliştirme yüzeyinde **213**, yönetim yüzeyinde **88**; **51** araç ikisinde ortak.
 
 - **Codex:** Kurulum, Talvora'yı Codex'e temel araçlarıyla kendiliğinden tanıtır.
 - **Claude Code:** `claude mcp add --transport http talvora http://127.0.0.1:7676/mcp/dev`

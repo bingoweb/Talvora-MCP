@@ -906,6 +906,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             "read_bytes" or
             "tail_text" or
             "search_text" or
+            "context7_docs" or
             "knowledge_search" or
             "search" or
             "fetch" or

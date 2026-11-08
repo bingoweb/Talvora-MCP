@@ -106,6 +106,10 @@ internal static partial class SmokeScenarios
             development: true,
             administration: false);
         AssertSurface(
+            "talvora_context7_docs",
+            development: true,
+            administration: false);
+        AssertSurface(
             "talvora_uv_run",
             development: true,
             administration: false);

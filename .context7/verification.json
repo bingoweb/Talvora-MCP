@@ -1,14 +1,19 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T17:00:06Z",
-  "scope": "D62: a detached process start reports launch, not the final tool outcome, and dotnet run uses its project name",
+  "verifiedAtUtc": "2026-11-08T17:28:55Z",
+  "scope": "CTX1: Context7 GET uses a bounded streaming response and MCP tool dependency injection",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 D62: a GeneratedRegex attribute on a partial Regex-returning method generates and caches the implementation at compile time; RegexOptions.CultureInvariant makes the dotnet run --project parser independent of locale. Context7 /dotnet/docs query: \"GeneratedRegex attribute source generator RegexOptions.CultureInvariant\"."
+      "verified": "2026-11-08 CTX1: HttpCompletionOption.ResponseHeadersRead avoids buffering the full response, and HttpClient.Timeout limits request time (query: \"HttpClient Timeout and HttpMessageHandler for tests with a capped response read\")"
+    },
+    {
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-11-08 CTX1: McpServer tool methods accept McpServer and registered DI services without exposing them as tool arguments (query: \"McpServerToolAttribute tool method parameters dependency injection IServiceProvider service classes and CancellationToken\")"
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/standard/base-types/regular-expression-source-generators"
+    "https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpcompletionoption?view=net-10.0",
+    "https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/tools/tools.md"
   ]
 }

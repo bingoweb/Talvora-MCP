@@ -35,8 +35,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D46 — installed 7aa5165; Control Center and both installed MCP smokes green; CI success (audit 46); Claude checks real post-push pending-CI worklog wording
 - [~] D60 — installed a899938; both installed MCP smokes green; CI 42500049574 success; Claude verifies one session across a 100-second quiet wait
 - [~] D61 — installed 7c211c5; Control Center and both installed MCP smokes green; CI 42501684534 success; Claude checks pre-deploy steps remain in history
-- [~] D62 — code and gates green; live pending: install, both MCP smokes and CI; Claude checks detached Full gate wording
-- [ ] CTX1 — Talvora asks Context7 itself and keeps a record (user request 2026-11-08)
+- [~] D62 — installed 8d43853; both installed MCP smokes green; CI pending; Claude checks detached Full gate wording
+- [~] CTX1 — code and Changed/Full gates green; live pending: install, both MCP smokes and CI
 - [ ] CTX2 — The push gate accepts only recorded Context7 questions (user request 2026-11-08; after CTX1)
 - [ ] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
 - [ ] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (after PK1)
@@ -63,6 +63,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — CTX1, executor ChatGPT: added talvora_context7_docs (developer surface only) with a bounded 30-second Context7 GET, validated library/question, 64-KB response cap, and a serialized seven-field JSONL ledger with 14-day retention and ReadSince. RED: Context7Ledger/Context7Tools missing (CS0246/CS0103); GREEN: CTX1_CONTEXT7_LOOKUP_GREEN, all four pinned regressions, notification regression, Changed 29/0 and Full 70/0: Hepsi geçti. Context7 /dotnet/docs HttpClient response headers/timeout and /modelcontextprotocol/csharp-sdk tool DI; official Microsoft and MCP SDK references. Install, both installed smokes and CI pending. Gitea #9 comment 228.
+  Self-review — no changes to talvora_http_request, TW2 trace or CTX2 evidence gate; the tool is quiet and dev-only, no credentials or response body reach the lookup ledger, and documentation changes contain tool counts only.
 
 - 2026-11-08 — D62, executor ChatGPT: detached user_process_start/job_start now report launch, not final success; known quality/package script starts use precise Turkish titles and dotnet run --project uses the project name (direct or nested in pwsh). RED: detached quality gate falsely said passed. GREEN: D62_DETACHED_START_IS_NOT_RESULT_GREEN (6 cases), DESKTOP_PROGRESS_BEHAVIOR_GREEN, MODERNIZATION_POLICY_GREEN; Changed 28/0, Full 70/0: Hepsi geçti. Context7 /dotnet/docs GeneratedRegex with CultureInvariant, Microsoft reference. Install, both installed MCP smokes, CI and Claude real Full-gate live check pending. Gitea #9 comment 227.
   Self-review — bounded runs, KnownScripts, deferred deploy completion, dev_server_start and tray unchanged; no final-result claims on detached launch, original scope suffix preserved.
