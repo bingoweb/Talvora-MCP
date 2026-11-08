@@ -4,7 +4,15 @@
 
 ## Pending
 
-(none)
+### 2026-11-08 — Agent efficiency (ROADMAP → "Agent efficiency (loop check 2026-11-08)")
+
+Insert these lines into "Agent queue" **directly after the D57 line**, in this order:
+
+```
+- [ ] D58 — The events smoke no longer races the live event refresh (P-52; first, it unblocks Full gates)
+- [ ] TW1 — talvora_tail_text can wait for a line (loop check 2026-11-08)
+- [ ] TW2 — Talvora keeps a short trace of agent tool calls (user decision 2026-11-08)
+```
 
 ## Applied
 

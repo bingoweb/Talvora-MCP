@@ -120,7 +120,7 @@ exit ([Talvora.Shared.UserJobRelay]::Run($RequestPath))
 
 **Why:** user decision 2026-11-08 ("Evet, varsayılan sen ol"). `talvora_job_start` ("Start any executable as a long-running background development job under the Talvora LocalSystem service") and `talvora_dev_server_start` (through `JobTools.Start`) are the last developer launchers that run as LocalSystem. Live on 00a9616: `talvora_job_start {"executable":"cargo","arguments":["--version"]}` → "An error occurred trying to start process 'cargo' … Sistem belirtilen dosyayı bulamıyor." (since U14 cargo is only on the user's PATH); a SYSTEM `npm run dev`, `dotnet watch` or `go run` would refill the service-profile caches UR5 and UR6 removed and leave SYSTEM-owned files in a repository (the reason AGENTS.md routes builds to `talvora_user_run`).
 
-**Files:** `src/Talvora/Tools/JobTools.cs`, `src/Talvora/Tools/JobTools.Lifecycle.cs`, `src/Talvora/Tools/JobTools.Persistence.cs`, `src/Talvora/Tools/JobTools.StopDelete.cs`, `src/Talvora/Tools/DevServerTools.Lifecycle.cs`, `src/Talvora.Shared/InteractiveUserProcessRunner.cs`, `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`, `src/Talvora.Shared/TalvoraToolGuides.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.WatchJobGit.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. After D55.
+**Files:** `src/Talvora/Tools/JobTools.cs`, `src/Talvora/Tools/JobTools.Lifecycle.cs`, `src/Talvora/Tools/JobTools.Persistence.cs`, `src/Talvora/Tools/JobTools.StopDelete.cs`, `src/Talvora/Tools/DevServerTools.Lifecycle.cs`, `src/Talvora.Shared/InteractiveUserProcessRunner.cs`, `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`, `src/Talvora.Shared/TalvoraToolGuides.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.WatchJobGit.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. After D55. **Tests that read these files** (run them right after the change): `NativeInstallerSourceRegression.ps1` (`JobTools*.cs`, `DevServerTools*.cs`: the job tool names, `JobTools.Start`/`JobTools.Stop` in the dev-server tools, and never `runtime.Dispose()` right after `LiveJobs.TryRemove(jobId, out _)`, so dispose the pipes in the job's existing exit path); `CodexCliIntegrationSourceRegression.ps1`, `InteractiveRunnerParentAccessRegression.ps1`, `PrivacySecuritySourceRegression.ps1`, `R2StdinRegression.ps1` and `GitSafeDirectoryRegression.ps1` (`InteractiveUserProcessRunner.cs`).
 
 **Do:**
 1. Red first, in the installed smoke (`SmokeScenarios.Workspace.WatchJobGit.cs`, after the existing job steps): (a) `talvora_job_start {"executable": "C:\\Windows\\System32\\whoami.exe", "workingDirectory": root}`; call `talvora_job_get` every 500 ms for up to 30 s until `state` is no longer `Running`; the trimmed stdout from `talvora_job_read_output` must equal (case-insensitive) the trimmed stdout of `talvora_user_run {"executable": "C:\\Windows\\System32\\whoami.exe", "arguments": [], "workingDirectory": root}`; (b) the same job with `"runAs": "service"` must print `nt authority\system`; (c) when `talvora_rust_info` has a `cargoExecutable`: `talvora_job_start {"executable": "cargo", "arguments": ["--version"], "workingDirectory": root}` → stdout starts with `cargo `. Delete each job afterwards with `talvora_job_delete`. Messages start with `D56:`. Red against 00a9616: (a) prints `nt authority\system`, (b) rejects the unknown `runAs`, (c) cannot start.
@@ -825,11 +825,62 @@ Step 3. Two existing tests pin texts this card changes; update them in the same 
 8. `WorklogHistoryView.xaml`: the "Kanıtlar" heading collapses when the session has no evidence (summary, result, files and code preview all empty), with the same trigger style; check the bound values on a real session without evidence first (audit 43 screen pass: the "scratchpad" session showed the heading alone).
 9. `WorklogHistoryView.xaml`: with search text and no matching session, the empty line reads "Aramayla eşleşen çalışma yok." instead of "Henüz kayıtlı çalışma yok." (README screen pass 2026-11-08). After WL3, Claude takes the README screenshots again before the first release.
 
+## Agent efficiency (loop check 2026-11-08)
+
+User: "chatgpt'nin projeyi geliştirme esnasında gereksiz yere aynı testleri tekrar tekrar çalıştırması gibi süreci uzatacak bir döngüye girip girmediğini kontrol et". Claude read every tool call of the Codex sessions that ran D52/D53 (ChatGPT app, Talvora Dev connector) and W1–W4, the agents' gate logs of 2026-11-07 and the worklog. No real loop: every second gate or smoke run had a reason (a fix in between, a decided proposal, the first-list defect D53 fixed), and TOKEN ECONOMY B3 and D2 were kept. The cost is elsewhere: in the D52/D53 session 39 of 136 calls (29 %) only waited for a detached log (`sleep 45–50 s` plus a read), every call re-reading about 120 000 context tokens (16.9 M input tokens for two cards); about six calls per message looked up tool names; a Changed gate ran right before each Full gate; and a test that pins file text (`CodexCliIntegrationSourceRegression.ps1`) was found only by a failing gate in W1 and in D52. ChatGPT web sessions leave no command record at all (TW2). TOKEN ECONOMY gained A9, B1's last sentence, B7 and B8; the queued cards name the tests that read their files.
+
+### D58 — The events smoke no longer races the live event refresh
+
+**Why:** the Full gate's `ControlCenter` check stopped twice on 2026-11-08 at the UI5 smoke with different messages (P-51: "UI5 raw log timer must run when the panel is visible", `ControlCenterSmoke.UI5.cs:79`; P-52: "UI5 seven-day empty state was not rendered", line 49) and passed when run again on its own. Cause (code trace): the smoke awaits `eventsView.RefreshAsync`, which keeps this machine's real events of the last seven days in `_events`, then applies its fixture with `Model.ApplyEvents`; `EventsView.UpdateServices` (every dashboard snapshot) re-applies `_events` whenever it is not empty, and `ShellWindow.UI5.cs` starts `RefreshAsync` without awaiting it, so real events can replace the fixture between the apply and the check. Every stop costs a whole Full gate plus a proposal.
+
+**Files:** `src/Talvora.Tray/ControlCenterSmoke.UI5.cs`, `src/Talvora.Tray/Views/EventsView.xaml.cs`, `src/Talvora.Tray/Views/ShellWindow.UI5.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+**Do (method):**
+1. Red first, deterministic: in the UI5 smoke, right after each fixture is applied, call `eventsView.UpdateServices(<the window's current snapshot>)` and `window.UpdateLayout()`; with real events on the machine the empty-state check fails every time.
+2. Give the view one internal entry for a fixture that replaces `_events` and applies it the way `RefreshAsync` does, and use it everywhere the UI5 smoke now calls `eventsView.Model.ApplyEvents`, so a later `UpdateServices` re-applies the fixture. While the tray runs `--control-center-smoke`, `ShellWindow` starts no live `RefreshAsync` for the events view (the smoke drives it). Normal use is unchanged.
+3. Removing TOKEN ECONOMY D4 from AGENTS.md is Claude's job; say in the Log that D58 is installed.
+
+**Don't:** change what the user sees, the event store, the raw-log timer's behaviour or any other smoke.
+
+**Context7:** `/dotnet/docs-desktop`, query "DispatcherTimer IsEnabled UIElement IsVisible". Vendor source: `https://learn.microsoft.com/dotnet/api/system.windows.uielement.isvisible`.
+
+**Acceptance:** red first; the built tray's `--control-center-smoke` green three times in a row; Full `Hepsi geçti.`; deploy; the installed smokes; CI.
+
+### TW1 — `talvora_tail_text` can wait for a line
+
+**Why:** see the section above: waiting is the largest avoidable cost, and ChatGPT web has no sleep tool at all, so it can only call the read again.
+
+**Files:** `src/Talvora/Tools/ConfigAssetTools.Text.cs` (`TailText`), `src/Talvora.Shared/TalvoraToolGuides.cs`, `tests/Talvora.Smoke/SmokeScenarios.SharedInfrastructure.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `AppendTextEncodingSourceRegression.ps1` and `AppendTextNewlineSourceRegression.ps1` read `ConfigAssetTools.Text.cs`; run them right after the change.
+
+**Do (method):** two optional parameters, `waitForPattern` (a .NET regular expression, culture-invariant, one-second match timeout) and `waitSeconds` (0–100; anything else is an argument error). With both set, the tool reads the tail as today and returns as soon as one returned line matches; otherwise it reads again every 2 seconds until `waitSeconds` has passed or the call is cancelled, then returns the last read. A file that does not exist yet counts as "no match" until the time is up, then gives today's error. Without the two parameters nothing changes, and the output record never changes (clients keep their cached schema). The description gains one sentence about the wait and stays within the description bound; the guide lists both parameters. Red first in the shared-infrastructure smoke: a background writer appends `Hepsi geçti.` to a temporary file after 3 s and the call with `waitSeconds: 10` returns within 3–6 s with that line; with no match it returns after about `waitSeconds`; `waitSeconds: 101` is rejected.
+
+**Don't:** change the read without the new parameters, add an output field, or add another tool.
+
+**Context7:** `/dotnet/docs`, queries "Regex match timeout" and "Task.Delay cancellation token". Vendor source: `https://learn.microsoft.com/dotnet/standard/base-types/best-practices-regex`.
+
+**Acceptance:** red first; Full `Hepsi geçti.`; deploy; the installed smokes; CI. Claude then switches TOKEN ECONOMY B7 to the one-call wait.
+
+### TW2 — Talvora keeps a short trace of agent tool calls
+
+**Why:** user decision 2026-11-08 ("Evet, iz tutsun"): which heavy command a ChatGPT web session ran how often is recorded nowhere; the worklog keeps only step labels. With a trace, Claude can measure loops at audits.
+
+**Files:** `src/Talvora/Program.cs` (where every tool call runs), `src/Talvora/ToolCallTrace.cs` (new), `tests/Talvora.Notification.Regression/Program.TW2.cs` (new) and `Program.cs` (its call), `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+**Do (method):** after every tool call from a client other than Talvora's own (the same caller rule as D41: the installed smoke and the tray leave nothing), append one JSON line to `C:\ProgramData\Talvora\CallTrace\calls-<UTC yyyy-MM-dd>.jsonl` with: `ts` (UTC start, ISO 8601), `caller` (the identity D41 resolves), `tool`, `ms`, `outcome` (`ok`, `error` or `timedOut`, decided the way `ToolFailureGuidance` decides with the tool name), `exit` (the top-level `exitCode` when present, else null), `cwd` (the call's `workingDirectory`, `repositoryPath`, `workspaceRoot` or `root` argument when present, else null), `cmd` (only when the arguments hold `executable`, `script` or `arguments`: the executable or tool name followed by the arguments, passed through `FileLog.RedactSensitiveData` and cut to 160 characters; else null) and `args` (the first 16 hex characters of the SHA-256 of the arguments' canonical JSON, so identical calls can be counted without storing them). Writing is append-only and serialized; it never delays or fails the call (a write error is dropped). At service start and once a day, files older than 14 days are deleted. The folder keeps ProgramData's protected ACL. No output, environment value or file content is ever stored. No UI, tool or setting. Red first in `Program.TW2.cs` against a temporary folder: one call gives one line with these fields; a secret-looking argument is masked; two identical calls share `args`; a Talvora-own caller writes nothing; a file dated 15 days ago is removed by the retention pass.
+
+**Don't:** store outputs, environment values or file contents; add a reader tool; slow a call down.
+
+**Context7:** `/dotnet/docs`, queries "System.Text.Json Utf8JsonWriter" and "SHA256.HashData". Vendor source: `https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/use-utf8jsonwriter`.
+
+**Acceptance:** red first; Full `Hepsi geçti.`; deploy; live: after one `talvora_user_run` of `whoami.exe` through the connector, today's trace file holds that call (Claude reads it through Talvora at the next audit); the installed smokes; CI.
+
 ## Releases and the public page (user request 2026-11-08)
 
 User: "github'da bulunan talvora mcp readme'si yani github arayüzünü tamamen insan yazmış gibi en başından ele alarak tamamen en başından tekrar tasarla … ekran görüntülerini yenile, ayrıca artık stabil release'ler de oluşturmaya başlayalım. ne zaman release güncellemesi yapılacağına tamamen sen karar vereceksin. proje 0.0.x.x şeklinde olmalı ve windows kullanıcılarının rahatlıkla kurabileceği şekilde olmalı." User choices the same day: README in Turkish with a short English summary; the installer stays unsigned and the README explains the SmartScreen step; the installer installs PowerShell 7 itself; the Control Center shows a quiet new-version link once a day. Claude wrote the README (`docs/codex/reference/d57/README.md.txt`) and took the screenshots (`docs/media/kontrol-merkezi-gece.png`, `kontrol-merkezi-gunduz.png`, `calisma-gunlugu.png`, `kod-karti.png`). Releases: only Claude creates the `v0.0.x.x` tag and writes `docs/releases/<version>.md` (AGENTS.md rule 10b); the first one, 0.0.1.0, follows RL5 and the open D-cards.
 
 ### D57 — The new README goes live
+
+**Owner:** Claude (`[C]`): user decision 2026-11-08 "Doğrulayan teslim eder"; Claude wrote the README and checked both test patterns, so Claude ships this card. The agent skips it.
 
 **Why:** the README is redesigned (Claude's text, user decision above). Two tests pin the old layout: `tests/ToolManifestDocumentationRegression.ps1` (the badge, the ASCII diagrams, the endpoint table rows and "share **N reviewed tools**") and `tests/ThirdPartyNoticesSourceRegression.ps1` (three English phrases), so the README and the tests change in one commit.
 
@@ -855,7 +906,7 @@ Assert-DocumentCounts 'README summary' $readme '\u015Eu an \*\*(\d+) ara\u00E7\*
 
 **Why:** versions are `0.0.<feature>.<fix>` (user decision 2026-11-08). Today `Directory.Build.props` has `<Version>3.0.0-dev</Version>` and `InformationalVersion` = `$(Version)+$(SourceRevisionId)`, so `/healthz` reports `3.0.0-dev+<commit>`, the overview line ends with `3.0.0-dev` (`OverviewViewModel`, `InformationalVersion.Split('+')[0]`) and Ayarlar → Hakkında shows `3.0.0-dev` (`SettingsView.GetUi7AboutMetadata`).
 
-**Files:** `Directory.Build.props`, `scripts/Build-Windows-Installer.ps1`, `src/Talvora.Tray/Views/SettingsView.xaml.cs`, `src/Talvora.Tray/ViewModels/OverviewViewModel.cs`, `tests/ReleaseVersionRegression.ps1` (new; registered with the gate's PowerShell regressions), `tests/Talvora.Notification.Regression/Program.cs`, `tests/Talvora.Notification.Regression/Program.UI7.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+**Files:** `Directory.Build.props`, `scripts/Build-Windows-Installer.ps1`, `src/Talvora.Tray/Views/SettingsView.xaml.cs`, `src/Talvora.Tray/ViewModels/OverviewViewModel.cs`, `tests/ReleaseVersionRegression.ps1` (new; registered with the gate's PowerShell regressions), `tests/Talvora.Notification.Regression/Program.cs`, `tests/Talvora.Notification.Regression/Program.UI7.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `GitSafeDirectoryRegression.ps1`, `InstallerAstGrepMetadataRegression.ps1` and `NativeInstallerSourceRegression.ps1` (`Build-Windows-Installer.ps1`); `ModernizationPolicyRegression.ps1` (`Directory.Build.props`: the lock-file and NuGet-audit lines stay).
 
 **Do:**
 1. Red first:
@@ -887,7 +938,7 @@ Assert-DocumentCounts 'README summary' $readme '\u015Eu an \*\*(\d+) ara\u00E7\*
 
 **Why:** user decision 2026-11-08 ("Kendisi kursun"). Talvora's user-side tools need PowerShell 7 (`InteractiveUserProcessRunner`: "PowerShell 7 is required for interactive user execution."), Windows 10 and 11 ship only Windows PowerShell 5.1, and the installer never checks.
 
-**Files:** `src/Talvora.Installer/InstallerEngine.PowerShell.cs` (new), `src/Talvora.Installer/InstallerEngine.Flow.cs`, `src/Talvora.Installer/Program.cs`, `src/Talvora.Installer/powershell-pin.json` (new, embedded resource), `src/Talvora.Installer/Talvora.Installer.csproj`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+**Files:** `src/Talvora.Installer/InstallerEngine.PowerShell.cs` (new), `src/Talvora.Installer/InstallerEngine.Flow.cs`, `src/Talvora.Installer/Program.cs`, `src/Talvora.Installer/powershell-pin.json` (new, embedded resource), `src/Talvora.Installer/Talvora.Installer.csproj`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `NativeInstallerSourceRegression.ps1`, `InstallerRollbackStateRegression.ps1` and `CodexCliIntegrationSourceRegression.ps1` (`InstallerEngine*.cs`); `QualityGateChangedRegression.ps1` (`Talvora.Installer/Program.cs`).
 
 **Do:**
 1. `powershell-pin.json` = `{"version":"<v>","url":"https://github.com/PowerShell/PowerShell/releases/download/v<v>/PowerShell-<v>-win-x64.msi","sha256":"<64 lowercase hex>"}` for the newest stable 7.x on the day of the card (`https://api.github.com/repos/PowerShell/PowerShell/releases/latest`; the SHA-256 from that release's `hashes.sha256` asset). Record version and hash in the Log.
@@ -909,7 +960,7 @@ Assert-DocumentCounts 'README summary' $readme '\u015Eu an \*\*(\d+) ara\u00E7\*
 
 **Why:** a downloaded installer must also be removable from Windows Settings → Apps. Today nothing registers Talvora there and there is no uninstall (only the developer reset script). The install flow creates: the `Talvora` service, `C:\Program Files\Talvora\Versions\<commit>-<stamp>`, the install user's `HKU\<sid>\Software\Microsoft\Windows\CurrentVersion\Run` value `RunValueName`, the Start menu shortcut `Talvora Kontrol Merkezi.lnk`, the Codex entry in that user's `.codex\config.toml`, and `C:\ProgramData\Talvora` with its protected ACL.
 
-**Files:** `src/Talvora.Installer/InstallerEngine.Uninstall.cs` (new), `src/Talvora.Installer/InstallerEngine.Flow.cs`, `src/Talvora.Installer/Program.cs`, `src/Talvora.Installer/InstallerForm.cs`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+**Files:** `src/Talvora.Installer/InstallerEngine.Uninstall.cs` (new), `src/Talvora.Installer/InstallerEngine.Flow.cs`, `src/Talvora.Installer/Program.cs`, `src/Talvora.Installer/InstallerForm.cs`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `NativeInstallerSourceRegression.ps1`, `InstallerRollbackStateRegression.ps1` and `CodexCliIntegrationSourceRegression.ps1` (`InstallerEngine*.cs`); `QualityGateChangedRegression.ps1` (`Talvora.Installer/Program.cs`).
 
 **Do:**
 1. After a successful install: copy the running setup file to `C:\Program Files\Talvora\Talvora-Kurulum.exe` (overwrite) and write `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Talvora`: `DisplayName` "Talvora"; `DisplayVersion` (the informational version before `+`); `Publisher` "Taylan Soylu"; `DisplayIcon` "<installed tray exe>,0"; `InstallLocation` "C:\Program Files\Talvora"; `UninstallString` `"C:\Program Files\Talvora\Talvora-Kurulum.exe" --uninstall`; `QuietUninstallString` `"C:\Program Files\Talvora\Talvora-Kurulum.exe" --uninstall --silent`; `URLInfoAbout` "https://github.com/bingoweb/Talvora-MCP"; `NoModify` 1 and `NoRepair` 1 (DWORD); `EstimatedSize` (KB of `C:\Program Files\Talvora`, DWORD).
@@ -928,7 +979,7 @@ Assert-DocumentCounts 'README summary' $readme '\u015Eu an \*\*(\d+) ara\u00E7\*
 
 **Why:** user decision 2026-11-08: stable releases on GitHub, one installer and its SHA-256; Claude alone decides when, by pushing the tag after writing `docs/releases/<version>.md`.
 
-**Files:** `.github/workflows/release.yml` (new), `tests/ReleaseWorkflowRegression.ps1` (new; registered with the gate's PowerShell regressions), `.context7/verification.json`, `docs/codex/STATUS.md`.
+**Files:** `.github/workflows/release.yml` (new), `tests/ReleaseWorkflowRegression.ps1` (new; registered with the gate's PowerShell regressions), `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `ModernizationPolicyRegression.ps1` and `CiDocsOnlyRegression.ps1` read `windows-ci.yml` (leave it unchanged). Pin `actions/checkout` and `actions/setup-dotnet` in `release.yml` to the same `@<sha> # vX.Y.Z` lines `windows-ci.yml` uses (the project's pinning rule).
 
 **Do:**
 1. Red first: `tests/ReleaseWorkflowRegression.ps1` reads `release.yml` and requires: the tag filter `v0.0.*.*`, `contents: write`, the tag check `^v0\.0\.\d{1,5}\.\d{1,5}$`, the `merge-base --is-ancestor` check against `origin/main`, the `docs/releases/` notes check, the windows-ci success check, the `-ReleaseVersion` build, the `SHA256SUMS.txt` step and `gh release create`; prints `RELEASE_WORKFLOW_GREEN`.

@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-52 — D57 — Full gate stops on the Control Center UI5 empty state
 - Date: 2026-11-08, HEAD 4d8bdfecc65ee3dc6162311a59057ae4c0fff2be
 - Card text: "Changed and Full `Hepsi geçti.`"
@@ -28,9 +32,7 @@
   1. Assign and fix the UI5 test failure, then run D57's full gate.
   2. Determine its cause and specify a verification path that preserves the full gate.
 - Partial work: reverted (yes).
-- Decision (Claude): _pending_
-
-## Decided
+- Decision (Claude, 2026-11-08): option 2, and D57 changes hands. Cause (code trace): the UI5 smoke first awaits `eventsView.RefreshAsync`, which stores this machine's real events of the last seven days in `_events`, then applies its own fixture with `Model.ApplyEvents`; but `EventsView.UpdateServices`, called on every dashboard snapshot, re-applies `_events` whenever it is not empty, and `ShellWindow.UI5.cs` starts `RefreshAsync` without awaiting it, so either can replace the fixture with the real events between the apply and the check. Today's installs left real events, so the race shows; P-51's failure was the same family. Nothing in D57 caused it. D58 (queued first) removes the race. Until D58 is installed, TOKEN ECONOMY D4 holds: when the Full gate stops only at `ControlCenter` with a `UI5` message, run the built tray's `--control-center-smoke` once on its own; exit 0 makes the gate green (name both runs in the Log); a second failure is a proposal. D57: under the user's new working model (2026-11-08, "Doğrulayan teslim eder": Claude ships what it has written and tested), D57 is Claude's `[C]` item. In your next STATUS edit, change its line to `- [ ] [C] D57 — The new README goes live (Claude ships it; user decision 2026-11-08)` and never take it; Claude commits the README and the two test updates when your current card is done.
 
 ### P-51 — D53 — Full gate stops on the Control Center UI5 smoke
 - Date: 2026-11-08, HEAD e3cafc48503efa40889d1db4891960e9816d2524
