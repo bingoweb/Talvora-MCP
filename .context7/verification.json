@@ -1,12 +1,10 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T19:18:14Z",
-  "scope": "PK2: Microsoft.Build.Framework 18.9.6 follows the SDK's MSBuild 18.9.15; its new dependency Microsoft.NET.StringTools is compile-only",
-  "libraries": [
-    {
-      "libraryId": "/microsoft/msbuildlocator",
-      "verified": "2026-11-08 PK2: every MSBuild package reference needs ExcludeAssets=\"runtime\" and PrivateAssets=\"all\" so MSBuildLocator loads the SDK's MSBuild; 18.9.6 brings Microsoft.NET.StringTools, which raised MSBL001 until it got the same reference (query: \"ExcludeAssets runtime for every MSBuild package reference with Microsoft.Build.Locator\")"
-    }
-  ],
-  "vendorSources": []
+  "verifiedAtUtc": "2026-11-08T19:18:39Z",
+  "scope": "PK3: CI pins the official actions/setup-dotnet v6.1.0 release commit",
+  "libraries": [],
+  "noLookup": "PK3: only the pinned commit of a GitHub action changes; no API is relied on.",
+  "vendorSources": [
+    "https://github.com/actions/setup-dotnet/releases/tag/v6.1.0"
+  ]
 }

@@ -35,6 +35,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] CTX2 — installed 953fc7d; both installed MCP smokes green, CI success (audit 47); Claude checks the next card's push
 - [x] [C] PK1 — MCP C# SDK 2.4.0 and Tomlyn 2.11.0 (Claude after P-55: lock files and notices included)
 - [x] [C] PK2 — Microsoft.Build.Framework 18.9.6 follows the SDK's MSBuild (Claude after P-55; StringTools compile-only)
+- [x] [C] PK3 — CI uses actions/setup-dotnet 6.1.0 (Claude, update check 2026-11-08)
 - [ ] RL1 — Talvora's version is 0.0.x.x and comes from the release tag (user request 2026-11-08)
 - [ ] RL2 — A fresh Windows gets PowerShell 7 from the installer (user decision 2026-11-08)
 - [ ] RL3 — Talvora is in Apps & features and can be uninstalled (user request 2026-11-08)
@@ -58,6 +59,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — [C] PK3, executor Claude: `actions/setup-dotnet` v6.0.0 → v6.1.0 (pinned to its release commit 0f4a354d; new optional inputs and security fixes only); `actions/checkout` is already the newest v7.0.1. Context7: noLookup.
 
 - 2026-11-08 — [C] PK2, executor Claude (P-55): `dotnet msbuild -version` 18.9.15, so `Microsoft.Build.Framework` 17.14.28 → 18.9.6. It brings `Microsoft.NET.StringTools` 18.9.6, and the build stopped with MSBL001 (Microsoft.Build.Locator: a MSBuild package without ExcludeAssets="runtime"); StringTools is now pinned 18.9.6 and referenced compile-only next to Microsoft.Build.Framework in src/Talvora and both regression projects. One `--force-evaluate` restore, three lock files moved (only these two packages); the service output still holds only Microsoft.Build.Locator.dll. Notices name both (packages=46). Context7 `/microsoft/msbuildlocator`.
 
