@@ -30,502 +30,162 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Check 2026-11-08 (Claude, the full installed smoke while closing UV1 and RS1) · result: D51
+### Audit 2026-11-08 (43, deep, the uv/Rust/user-toolchain modernization) · range `audit/2026-11-08-42..154414b` plus every subsystem the move touches · result: D52–D56, [C] UR6 done, WL3 items 7–8
 
-Claude ran the full installed smoke against the installed d93a5ea: red. None of the stops comes from UV1 or RS1; the full run had not been made for weeks, because installs were checked with `--loopback-policy-live` only. Claude fixed every stop in a scratch clone, one run at a time, until the run went through to the end; D51 carries the result. From D51 on, every install runs the installed smokes (AGENTS.md Deploy row).
+The user asked for a deep bug check of the modernization ("bu geçiş ve modernizasyon sırasında oluşan bir bug, hata ya da eksik kalan bir şey var mı"): UV1, RS1, RS2, D51, UR1–UR5. Claude read every changed line, compared `InteractiveUserProcessRunner` with `ProcessRunner`, traced every program launch that still runs as LocalSystem and tried each suspicion on the installed 00a9616.
 
-### D51 — The full installed smoke is green again
+Correct and confirmed: `SignedInUserToolchain` keeps no token handle (the user context is a copied environment dictionary); D51 covers every tool whose top-level `exitCode` belongs to another process (the Codex and Claude job records keep theirs nested); the env tools already reach the signed-in user (`target=user`); nothing has written into the service profile since the 00a9616 install (newest writes 2026-11-07 22:13–22:47 UTC, install 23:57 UTC) and none of UR5's folders came back; the user is in `docker-users` (Docker Desktop was not running, so the engine itself could not be checked); 7676 missing from the TCP listener table is this Windows build (netstat lists 4 listeners in all), not Talvora; no other project's AGENTS.md names a removed pip tool; the Control Center's Çalışma günlüğü shows the moved tools with correct Turkish titles. Measured cost: each program that runs as the user now starts PowerShell first (≈0.4 s against ≈0.02 s direct), so an `*_info` call is 1–2 s slower; accepted.
 
-**Why:** the full installed smoke (`dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release -- http://127.0.0.1:7676/mcp C:\Users\tayla\Talvora-MCP`) is red against the installed d93a5ea, and `--metadata-policy-only` too. The stops, in run order:
-1. `talvora_find_files` returns paths relative to `root` by default (since 5ea89e7); the smoke compares the absolute path.
-2. This Windows build (10.0.26300) lists only 4–5 listening sockets in its TCP table (netstat, `IPGlobalProperties` and `Get-NetTCPConnection` agree) and never Talvora's 7676, so `talvora_tcp_listeners` cannot show Talvora's listener; `talvora_tcp_connections` shows the live 7676 connections.
-3. `talvora_job_stop` answers `{"found":true,"killIssued":true,"exited":true,"state":"Exited","exitCode":-1}` with `isError: true`. H3 (`ToolFailureGuidance.Apply`) counts every non-zero `exitCode` as the call's own failure, but this is the exit code of the job the call has just stopped. `talvora_dev_server_stop` stops the smoke's dev-server step the same way, `talvora_job_get` (a finished job with a non-zero exit) and `talvora_dev_server_get` behave the same, and Çalışma günlüğü shows such steps as failed.
-4. The smoke calls `talvora_git_log` with `maxCount`; the parameter is `maxCommits` (since 5ea89e7), and unknown arguments are rejected.
-5. `talvora_git_log` returns compact entries without `commit` by default; the smoke looks for the full HEAD id.
-6. The PowerShell step creates its working folder under `C:\ProgramData\Talvora`, which the signed-in user may not write, and runs a script that exits 7 on purpose through `EnsureSuccess`, which H3 rightly reports as an error result.
-7. The Codex discovery check accepts only `sandbox: workspace-write` (the balanced profile); the user's profile is trusted, so `talvora_codex_info` rightly reports `danger-full-access`.
-8. The Windows SDK probe calls each release tool with `/?` through `EnsureSuccess`; `makeappx /?` prints its usage and exits 1, which H3 rightly reports as an error result.
-9. `ExpectedDestructiveToolCount` is 98 while the live server marks 106 tools destructive (the constant was last set by Q2a; tools added since were not counted).
-Also, `SmokeSupport.EnsureSuccess` throws only "Tool failed: <name>" and hides the reason.
+Findings:
+1. **D52** — a `.cmd`/`.bat` program that runs as the user gets its arguments re-parsed by cmd.exe (live: `talvora_npm_run ["--version","a&echo","TALVORA_BATCH_PROBE"]` printed `12.2.1` and then `TALVORA_BATCH_PROBE`).
+2. **D53** — the first `tools/list` after every service start carries "an caller-supplied" wherever a description said "an arbitrary"; the second list is repaired because the wire policy normalizes the shared tool objects again. This is the `--metadata-policy-only` stop seen right after the 00a9616 install. Two more slips of the same function are live in every list: "any accessible" becomes "accessible" without an article (eleven tools), and `talvora_java_run`/`talvora_javac_run` end with "resolution;".
+3. **D54** — `talvora_resolve_command cargo` answers `found: false` (it looks at the service PATH; since U14 only the user's PATH has cargo); the machine `JAVA_HOME`/`ANDROID_HOME` and the newest Adoptium JDK win over the user's own value, although Windows gives the user's value precedence (latent: no user value is set here); the smoke never checks `talvora_python_info`'s uv fields; the UR policy test names its files one by one; the Python "not found" text points to Chocolatey; RS1's private runner duplicates `RunCliAsync`.
+4. **D55 + D56** — `talvora_job_start` and `talvora_dev_server_start` still start their program as LocalSystem. Live: `talvora_job_start {"executable":"cargo","arguments":["--version"]}` → "An error occurred trying to start process 'cargo' … Sistem belirtilen dosyayı bulamıyor."; a SYSTEM `npm run dev`, `dotnet watch` or `go run` would also refill the caches UR5 and UR6 removed and leave SYSTEM-owned files in a repository. User decision 2026-11-08 ("Evet, varsayılan sen ol"): jobs and dev servers run as the signed-in user by default, and `runAs: "service"` keeps LocalSystem for a job that needs it; while nobody is signed in, such a job cannot start. Windows does not hand handles to a process in another session (CreateProcessAsUser: handles are not inherited across sessions), so D55 adds a small relay that runs inside the user's session and D56 wires the job system to it. After D56 Claude adds the routing line to AGENTS.md.
+5. **[C] UR6 (done by Claude in this audit)** — UR5's list missed four service-profile caches, untouched since the install: NuGet v3-cache 791.7 MB, the pnpm store 775.4 MB, the pnpm cache 303.8 MB and `.android` 318.7 MB. The user chose "Hepsini sil"; a LocalSystem job deleted exactly these four (sizes re-measured first, unchanged); the full installed smoke afterwards printed `TALVORA MCP SMOKE GREEN` and none of the eleven deleted folders (UR5 and UR6) came back.
+6. **WL3 items 7–8 (Claude's look work)** — a failed session shows only "Başarısız" although its `PlainReason` and `NextStep` are in the data (user: "Evet, nedeni göster"); "Kanıtlar" stays as a lone heading when a session has no evidence.
 
-**Decision (Claude):** a tool that reports on a process this call did not run (`talvora_job_get`, `talvora_job_stop`, `talvora_dev_server_get`, `talvora_dev_server_stop`) returns that process's exit code as data; only `timedOut: true` or `success: false` make such a call fail. Every tool that runs its process within the call (`talvora_run_process`, `talvora_run_powershell`, `talvora_user_run`, `talvora_dev_server_start`, `talvora_dev_server_wait`, the build runners …) keeps H3 unchanged. The smoke follows the tools as they are: no tool changes its arguments or its output.
+Seen in passing, outside Talvora: `C:\Users\tayla\Repos\Classroom` and its `.git` are owned by SYSTEM since 2026-10-17, so the user's own git refuses the repository ("dubious ownership"); for Classroom's next audit.
 
-**Verified by Claude** in scratch clones of d93a5ea: the new regression stops with Step 1's message before Step 2 and prints `D51_REPORTED_EXIT_CODES_GREEN` after Step 5; the whole Notification regression and the smoke's `--codex-integration-policy-only` stay green; with Steps 6 and 7, `--metadata-policy-only` is green against the installed d93a5ea, and the full run reaches `TALVORA MCP SMOKE GREEN` when its `talvora_job_stop`, `talvora_job_get`, `talvora_dev_server_get` and `talvora_dev_server_stop` calls are taken the way Steps 2–5 make the server answer them. Against the installed d93a5ea it still stops at `talvora_job_stop` until the D51 build is installed (Step 7's red evidence).
+Queue: D52, D53, D54, D55, D56 first (D55 needs D52's `LiteralProcessStart`, D56 needs D55), then the audit-42 cards, PK1 and PK2.
 
-**Files:** `src/Talvora/StructuredResultFailure.cs`, `src/Talvora/ToolFailureGuidance.cs`, `src/Talvora/ToolResultTextPolicy.cs`, `src/Talvora/Program.cs`, `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `src/Talvora/TalvoraDesktopProgressEvidence.cs`, `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`, `tests/Talvora.Notification.Regression/Program.D51.cs` (new), `tests/Talvora.Notification.Regression/Program.cs`, `tests/Talvora.Smoke/SmokeSupport.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.Core.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.HttpNetwork.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.WatchJobGit.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.ProcessSearch.cs`, `tests/Talvora.Smoke/SmokeScenarios.ApplicationDevelopment.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+### D52 — Batch programs keep every argument literally when they run as the signed-in user
 
-**Tests that pin these lines** and stay green unchanged: `tests/ModernizationPolicyRegression.ps1` lines 54–55 (`StructuredResultFailure.cs` still contains `exitCode`; the notifier still calls `StructuredResultFailure.IsFailure`); the smoke compiles `StructuredResultFailure.cs` and `ToolResultTextPolicy.cs` directly (`tests/Talvora.Smoke/Talvora.Smoke.csproj`), and its source check `RunToolResultTextPolicy` still calls `ToolResultTextPolicy.Apply(result)`, which compiles because the tool name is optional.
+**Why:** since UR1–UR4 the build, mobile, runtime and Windows-toolchain runners start their program through `InteractiveUserProcessRunner`. Its `RunnerScript` builds the `ProcessStartInfo` by hand (`FileName` = the program, `ArgumentList`). For a `.cmd`/`.bat` program Windows starts cmd.exe, which parses the command line again: `&`, `|`, `<`, `>`, `^` and `%NAME%` inside an argument act as cmd syntax. `ProcessRunner`, the path these tools used before, starts batch programs through a `cmd /d /v:on /s /c` wrapper that hands every argument over as a delayed-expansion variable (`CreateStartInfo`, `EncodeBatchArgument`), and `SmokeScenarios.SharedInfrastructure` proves it with `args.cmd` (`a&b`, `%PATH%`, `x!y`, `(z)`, `a|b`, `a"b`, `a<b`, `a>b`, `a&&b`). Live on 00a9616: `talvora_npm_run {"arguments":["--version","a&echo","TALVORA_BATCH_PROBE"]}` → stdout `12.2.1`, then `TALVORA_BATCH_PROBE`. Real cases: `npm install pkg@>=1.2` writes a file named `=1.2` and installs the wrong range, `react@^18` loses its `^`, `flutter build --dart-define=URL=https://x/?a=1&b=2` runs `b=2` as a command. Affected: npm (`talvora_npm_run`, `_ci`, `_install`, `_run_script`), pnpm, Yarn, Gradle and gradlew, Maven and mvnw, Flutter, `dart.bat`, the Android `.bat` tools, and `talvora_user_run`/`talvora_uv_run` with a `.cmd` program.
 
-#### Exact implementation
+**Files:** `src/Talvora.Shared/LiteralProcessStart.cs` (new), `src/Talvora.Shared/ProcessRunner.cs`, `src/Talvora.Shared/InteractiveUserProcessRunner.cs`, `tests/Talvora.Smoke/SmokeScenarios.SharedInfrastructure.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.Runtime.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
 
-Step 1 (red first) — new file `tests/Talvora.Notification.Regression/Program.D51.cs`:
-
-```csharp
-using System.Collections.Concurrent;
-using System.Text.Json;
-using ModelContextProtocol.Protocol;
-using Talvora;
-using Talvora.Shared;
-
-internal static partial class Program
-{
-    /// <summary>D51: a status or stop tool reports another process's exit code as data; the call itself did not fail.</summary>
-    private static async Task AssertD51ReportedExitCodesAsync()
-    {
-        const string stopped = """{"found":true,"killIssued":true,"exited":true,"state":"Exited","exitCode":-1}""";
-        foreach (var tool in new[] { "talvora_job_get", "talvora_job_stop", "talvora_dev_server_get", "talvora_dev_server_stop" })
-        {
-            if (ToolFailureGuidance.Apply(tool, D51Result(stopped)).IsError is true)
-                throw new InvalidOperationException($"D51: {tool} reports another process's exit code; the call itself succeeded.");
-        }
-
-        foreach (var tool in new[] { "talvora_run_process", "talvora_dev_server_wait" })
-        {
-            if (ToolFailureGuidance.Apply(tool, D51Result("""{"exitCode":1}""")).IsError is not true)
-                throw new InvalidOperationException($"D51: {tool} ran the process in this call; a non-zero exit code stays an error (H3).");
-        }
-
-        if (!await D51StepFailedAsync("talvora_run_process", """{"exitCode":1}"""))
-            throw new InvalidOperationException("D51: a command that failed in this call is a failed step in Çalışma günlüğü.");
-        if (await D51StepFailedAsync("talvora_job_stop", stopped))
-            throw new InvalidOperationException("D51: a stopped job is not a failed step in Çalışma günlüğü.");
-
-        Console.WriteLine("D51_REPORTED_EXIT_CODES_GREEN");
+**Do:**
+1. Red first, two tests:
+   a. `SmokeScenarios.SharedInfrastructure.cs`, after the two `ProcessRunner` batch checks: run the same `args.cmd` with the same two argument lists through the interactive runner's own script as the current user (no session switch is needed for this). Read the script with `(string)typeof(InteractiveUserProcessRunner).GetField("RunnerScript", BindingFlags.NonPublic | BindingFlags.Static)!.GetRawConstantValue()!` and write it as `runner.ps1` (UTF-8 without BOM) into a new folder under `root`. Write `request.json` there with `JsonSerializer.Serialize` of an anonymous object whose members are exactly those of the private `Request` record: `Executable` = `batchPath`, `WorkingDirectory` = `root`, `Arguments`, `Environment` = an empty `Dictionary<string, string?>`, `StandardOutputPath`, `StandardErrorPath` and `ResultPath` (files in the new folder), `HelperAssemblyPath` = `typeof(InteractiveUserProcessRunner).Assembly.Location`, `MaximumPersistedCharacters` = `ProcessRunner.DefaultMaximumCapturedCharacters`, `DiscardStandardError` = false, `CodexProgressPath` = null, `ClaudeProgressPath` = null, `CloseStandardInput` = true, `StandardInputPath` = null, `ClaudeWorkspaceRoot` = null. Run pwsh (resolved like the runner: `CommandResolver.Resolve(["pwsh.exe", "pwsh"], [@"C:\Program Files\PowerShell\7\pwsh.exe"])`) with `-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File <runner.ps1> -RequestPath <request.json>` through `ProcessRunner.RunAsync` (60 s), read the stdout file and assert the same `ARG…` lines as the `ProcessRunner` checks; message `D52: the interactive runner did not preserve batch-file arguments.` Today it fails (cmd splits `a&b`).
+   b. `SmokeScenarios.Workspace.Runtime.cs`, right after the `npm_run --version` check: `talvora_npm_run {"workingDirectory": root, "arguments": ["--version", "a&echo", "TALVORA_BATCH_PROBE"], "timeoutSeconds": 30}` → exit 0, trimmed stdout equals `npmVersion`, stdout does not contain `TALVORA_BATCH_PROBE`; message `D52: npm_run let cmd.exe interpret an argument.` Red against the installed 00a9616.
+2. `LiteralProcessStart` (public static class in `Talvora.Shared`): move `ProcessRunner.CreateStartInfo`, `EncodeBatchArgument` and `TryDeleteTemporaryCommandScript` here and handle the environment inside:
+   - `public static ProcessStartInfo Create(string executable, string workingDirectory, IReadOnlyList<string> arguments, IReadOnlyDictionary<string, string?>? environment, bool clearEnvironment, out string? temporaryCommandScript)`. Order inside: build the start info exactly as `CreateStartInfo` does today but without the wrapper variables; then `Environment.Clear()` when `clearEnvironment`; then apply `environment` (a null value removes the variable, as `ProcessRunner` does today); last, for a batch program only, add the wrapper's `TALVORA_<guid>_SCRIPT` and `_ARG_<n>` variables, so neither the clear nor a caller's variable can remove them.
+   - `public static void DeleteTemporaryCommandScript(string? path)` = today's `TryDeleteTemporaryCommandScript`.
+   `ProcessRunner.RunAsync` calls `Create(executable, cwd, requestedArguments, environment, clearEnvironment: false, out var temporaryCommandScript)`, no longer applies `environment` itself, and its `finally` calls `DeleteTemporaryCommandScript`. `ProcessRunner`'s behaviour does not change (its batch checks stay green).
+3. `InteractiveUserProcessRunner.RunnerScript`: replace the hand-built start info (from `$psi = [Diagnostics.ProcessStartInfo]::new()` through the `ArgumentList` loop) and the later environment loop with this block; stdin, the pumps and the result document stay as they are:
+```powershell
+    # D52: the same start path as ProcessRunner, so a .cmd/.bat program receives every argument literally.
+    $environmentMap = [Collections.Generic.Dictionary[string,string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($property in $request.Environment.PSObject.Properties) {
+        $environmentMap[$property.Name] = if ($null -eq $property.Value) { $null } else { [string]$property.Value }
     }
-
-    private static async Task<bool> D51StepFailedAsync(string tool, string json)
-    {
-        var observed = new ConcurrentQueue<DesktopProgressMessage>();
-        var notifier = CreateNotifier(observed);
-        try
-        {
-            _ = await notifier.RunToolCallAsync(tool, null,
-                _ => ValueTask.FromResult(D51Result(json)), CancellationToken.None, "/mcp", "Claude");
-        }
-        finally
-        {
-            await notifier.DisposeAsync();
-        }
-        return observed.Any(message => message.Kind == DesktopProgressKind.Failed);
+    $temporaryCommandScript = $null
+    $psi = [Talvora.Shared.LiteralProcessStart]::Create(
+        [string]$request.Executable,
+        [string]$request.WorkingDirectory,
+        [string[]]@($request.Arguments),
+        $environmentMap,
+        $false,
+        [ref]$temporaryCommandScript)
+    $stdinPath = [string]$request.StandardInputPath
+    $psi.RedirectStandardInput = [bool]$request.CloseStandardInput -or
+        -not [string]::IsNullOrWhiteSpace($stdinPath)
+    if ($psi.RedirectStandardInput) {
+        $psi.StandardInputEncoding = [Text.UTF8Encoding]::new($false)
     }
-
-    private static CallToolResult D51Result(string json) => new()
-    {
-        Content = [new TextContentBlock { Text = json }],
-        StructuredContent = JsonDocument.Parse(json).RootElement.Clone(),
-    };
-}
 ```
+   and give the script's outer `try`/`catch` a `finally { [Talvora.Shared.LiteralProcessStart]::DeleteTemporaryCommandScript($temporaryCommandScript) }` (the variable is `$null` when the failure came first; the method ignores it).
 
-In `tests/Talvora.Notification.Regression/Program.cs`, after the line `        await AssertD41CallerIdentityAsync();` add the line `        await AssertD51ReportedExitCodesAsync();`. Run the Notification regression: it must stop with `D51: talvora_job_get reports another process's exit code; the call itself succeeded.` (the red evidence).
+**Don't:** change any tool's arguments, output or resolution; add a PATHEXT lookup to the runner (callers pass full paths); touch Remotion's own `npx.cmd` call inside its script.
 
-Step 2 — `src/Talvora/StructuredResultFailure.cs`, three replacements:
+**Context7:** `/dotnet/docs`, query "ProcessStartInfo ArgumentList batch file cmd.exe argument parsing"; when it has no passage, record the gap and use the vendor pages. Vendor sources: `https://learn.microsoft.com/dotnet/api/system.diagnostics.processstartinfo.argumentlist`, `https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw`, `https://learn.microsoft.com/windows-server/administration/windows-commands/cmd`.
 
-Replace
+**Acceptance:** 1a red on the source before the change and 1b red against the installed 00a9616; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI.
 
-```csharp
-    internal static bool IsFailure(JsonElement json) => Describe(json) is not null;
+### D53 — Tool descriptions are normalized once, in the right order, as whole sentences
 
-    internal static string? Describe(JsonElement json)
-    {
+**Why:** `TalvoraMcpToolMetadataPolicy.NormalizeDescription` replaces "an caller-supplied" → "a caller-supplied" before it replaces "arbitrary" → "caller-supplied", so one pass turns every "an arbitrary" into "an caller-supplied". `McpToolMetadataWirePolicy.Apply` writes the result back into the tool objects that every request shares (its own comment: "the Tool objects are shared by every surface's request"), so the second `tools/list` normalizes the text again and repairs it. The first client after each service start therefore receives about twenty broken descriptions (`talvora_dotnet_run`, `talvora_npm_run`, `talvora_go_run`, `talvora_cargo_run`, `talvora_java_run`, `talvora_http_request`, `talvora_flutter_run` …) and keeps them in its cache; on 2026-11-08 the installed `--metadata-policy-only` was that first client and stopped with "Live description contains grammar regression: talvora_dotnet_run", then passed on the rerun. Two more slips of the same function are live in every list: "any accessible" → "accessible" leaves the noun without an article ("Run Cargo with a caller-supplied argument vector in accessible working directory.", also `talvora_rustc_run`, `talvora_java_run`, `talvora_javac_run`, `talvora_npm_install`, `talvora_npm_ci`, `talvora_archive_list`, `_create`, `_extract`, `talvora_json_get`, `talvora_read_text_range`, `talvora_tail_text`, `talvora_xml_query`), and `NoAllowDenySentence` removes "no … allowlist is applied." after a semicolon, so `talvora_java_run` and `talvora_javac_run` end with "resolution;".
+
+**Files:** `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`, `src/Talvora/McpToolMetadataWirePolicy.cs`, `tests/Talvora.Notification.Regression/Program.D53.cs` (new), `tests/Talvora.Notification.Regression/Program.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+**Do:**
+1. Red first: `Program.D53.cs` with `AssertD53DescriptionsAsWholeSentences()`, called right after `AssertD51ReportedExitCodesAsync()`. For every public static method in the `Talvora` assembly with `[McpServerTool]` (a non-empty `Name`) and `[Description]`: `once = TalvoraMcpToolMetadataPolicy.NormalizeDescription(name, text)`, `twice = NormalizeDescription(name, once)`. Fail with `D53: <name> changes when normalized twice: <once> → <twice>` when they differ; with `D53: <name> reads: <once>` when `once` matches `\ban caller-supplied\b` (case-insensitive) or ends with `;`; and, when the source text contains "any accessible", when `once` does not contain "an accessible" as many times. Fail when fewer than 200 tools were checked. Print `D53_DESCRIPTIONS_GREEN`. Today it fails on the first "an arbitrary" tool.
+2. `NormalizeDescription`: move the `"an caller-supplied"` → `"a caller-supplied"` replacement to directly after the `"arbitrary"` → `"caller-supplied"` replacement; replace `"any accessible"` with `"an accessible"` (instead of `"accessible"`); add `SemicolonNoAllowDenyClause` = `;\s*no [^.]*\b(?:allow-?list|allowlist|deny-?list|denylist)\b[^.]*\.` (IgnoreCase, CultureInvariant, Compiled), replaced by `"."` before `NoAllowDenySentence` runs.
+3. `McpToolMetadataWirePolicy.Apply`: normalize each tool's description once per tool name and reuse it (a `ConcurrentDictionary<string, string?>` keyed by `tool.Name`, filled with `NormalizeDescription(tool.Name, tool.Description)` the first time, the way `DescribedInputSchemas` caches the schema), so a request never normalizes text a request produced.
+
+**Don't:** change any other description text, title, annotation or schema; change the smoke's grammar check.
+
+**Context7:** `/dotnet/docs`, queries "ConcurrentDictionary GetOrAdd" and "RegexOptions Compiled". Vendor sources: `https://learn.microsoft.com/dotnet/api/system.collections.concurrent.concurrentdictionary-2.getoradd`, `https://learn.microsoft.com/dotnet/standard/base-types/regular-expression-options`.
+
+**Acceptance:** red first; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI.
+
+### D54 — Command lookup, JAVA_HOME and ANDROID_HOME follow the signed-in user; the small UR follow-ups
+
+**Why:** (1) `talvora_resolve_command` resolves on the Talvora service PATH. Since U14 removed `C:\Users\tayla\.cargo\bin` from the machine PATH it answers `{"command":"cargo","found":false,"paths":[]}` (live, 2026-11-08) while `talvora_cargo_run` runs the user's cargo 1.99.1, so an agent that checks first concludes Rust is missing. (2) `EnumerateModernJavaHomes` (`BuildRunnerTools.Jvm.cs`) tries the machine `JAVA_HOME`, then the newest Eclipse Adoptium JDK, and the signed-in user's `JAVA_HOME` last; `ResolveAndroidSdkRoot` (`MobileTools.Android.cs`) tries the machine `ANDROID_HOME`/`ANDROID_SDK_ROOT` before the user's. Windows gives a user variable precedence over the machine one, and these tools now run in the user's environment, so a user-level `JAVA_HOME` or `ANDROID_HOME` is ignored (latent today: none is set). (3) The installed smoke never checks `talvora_python_info`'s `uvAvailable`/`uvVersion`. (4) `Assert-SignedInUserToolchain` names its files one by one, so a new `BuildRunnerTools.*.cs` would escape it. (5) `RequirePython`'s message sends the user to "Talvora Chocolatey tools", against the uv rule. (6) RS1's private `RunAsSignedInUserAsync` (`BuildRunnerTools.GoRust.cs`) duplicates `RunCliAsync` since UR1.
+
+**Files:** `src/Talvora/Tools/SignedInUserToolchain.cs`, `src/Talvora/Tools/DeveloperTools.Project.cs`, `src/Talvora/Tools/BuildRunnerTools.Jvm.cs`, `src/Talvora/Tools/MobileTools.Android.cs`, `src/Talvora/Tools/RuntimeTools.Python.cs`, `src/Talvora/Tools/BuildRunnerTools.GoRust.cs`, `src/Talvora.Shared/TalvoraToolGuides.cs`, `tests/ModernizationPolicyRegression.ps1`, `tests/Talvora.Smoke/SmokeScenarios.ApplicationDevelopment.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.Runtime.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+**Do:**
+1. Red first:
+   a. `SmokeScenarios.ApplicationDevelopment.cs`, after the RS1 check: when `talvora_rust_info` has a `cargoExecutable`, `talvora_resolve_command {"command":"cargo"}` must answer `found: true` with that path first (case-insensitive); message `D54: resolve_command does not see the signed-in user's cargo.` Red against 00a9616.
+   b. `tests/ModernizationPolicyRegression.ps1`: the four `Assert-SignedInUserToolchain` lines take every `BuildRunnerTools*.cs`, `MobileTools*.cs`, `RuntimeTools*.cs` and `WindowsToolchainTools*.cs` file under `src/Talvora/Tools` (`Get-ChildItem -Filter`, repository-relative paths, `WindowsToolchainTools.VisualStudio.cs` left out with the existing comment) instead of fixed lists; and two new lines: `Assert-NotContains 'src/Talvora/Tools/BuildRunnerTools.Jvm.cs' 'EnvironmentVariableTarget\.Machine' 'D54: the signed-in user''s JAVA_HOME wins; a user value overrides the machine value on Windows.'` and the same for `src/Talvora/Tools/MobileTools.Android.cs` with `ANDROID_HOME`. Both new lines are red today.
+   c. `SmokeScenarios.Workspace.Runtime.cs`, after `talvora_python_info`: when `CommandResolver.Resolve(["uv.exe", "uv"], [])` is not null, `uvAvailable` must be true and `uvVersion` must start with `uv `; message `D54: python_info does not report the signed-in user's uv.` (a new check, green on 00a9616).
+2. `SignedInUserToolchain.ResolveAll(IEnumerable<string> commandNames)`: as the service `CommandResolver.ResolveAll(commandNames, environment: WindowsSessionLauncher.GetActiveInteractiveUser().Environment)`, otherwise `CommandResolver.ResolveAll(commandNames)`.
+3. `talvora_resolve_command` gets `string scope = "user"`: `"user"` → `SignedInUserToolchain.ResolveAll([command])`; `"service"` → today's `CommandResolver.ResolveAll([command])`; anything else → `ArgumentOutOfRangeException(nameof(scope), scope, "scope is user or service.")`. The output record stays. Description (attribute and `TalvoraToolGuides`): "Resolve a command on the signed-in user's PATH (scope=user, default) or the Talvora service PATH (scope=service) with Windows PATHEXT. Returns every match when includeAll=true."; guide parameter `("scope", "user (default): the signed-in user's PATH, where the developer tools run; service: the Talvora service PATH.")`.
+4. `EnumerateModernJavaHomes`: first `SignedInUserToolchain.Variable("JAVA_HOME")` (when the folder exists), then the Adoptium JDKs, newest first; the `EnvironmentVariableTarget.Machine` read goes (the user's environment block already holds the machine value when the user has none). `ResolveAndroidSdkRoot`: for `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, `SignedInUserToolchain.Variable(variable)` first; the machine-target read goes; the candidate folders stay.
+5. `RequirePython`: "Python was not found for the signed-in user. Install it with talvora_uv_run (arguments: python, install) or pass pythonExecutable."
+6. `BuildRunnerTools.GoRust.cs`: every `RunAsSignedInUserAsync(` call becomes `RunCliAsync(` with the same arguments; delete `RunAsSignedInUserAsync`.
+
+**Don't:** change any output record, add a tool, or change another resolver.
+
+**Context7:** `/dotnet/docs`, query "Environment.GetEnvironmentVariable EnvironmentVariableTarget User Machine". Vendor sources: `https://learn.microsoft.com/dotnet/api/system.environment.getenvironmentvariable`, `https://learn.microsoft.com/windows/win32/api/userenv/nf-userenv-createenvironmentblock`.
+
+**Acceptance:** 1a and 1b red first; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI.
+
+### D55 — A relay runs one job inside the signed-in user's session
+
+**Why:** D56 runs background jobs and dev servers as the signed-in user (user decision 2026-11-08). The job system keeps a live process with stdin, stdout and stderr and rotating logs (`JobTools`), but LocalSystem cannot give pipe handles to a process in the user's session: `CreateProcessAsUser` does not inherit handles across sessions. The interactive runner solves this for bounded runs with files; a job needs live streams. A small relay inside the user's session starts the program with its own pipes and copies them to three named pipes the service listens on, so `JobTools` keeps its pumps, logs, stdin and stop unchanged.
+
+**Files:** `src/Talvora.Shared/UserJobRelay.cs` (new), `tests/Talvora.Smoke/SmokeScenarios.SharedInfrastructure.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. After D52.
+
+**Do:**
+1. Red first: a relay test in `SmokeScenarios.SharedInfrastructure.cs` against a `UserJobRelay.Run` that only throws `NotImplementedException`. Everything runs as the current user: create three `NamedPipeServerStream`s named `talvora-relay-smoke-<guid>-in` (`PipeDirection.Out`), `-out` and `-err` (`PipeDirection.In`), `PipeOptions.Asynchronous`; write a request (step 2) whose program is pwsh with `-NoLogo -NoProfile -NonInteractive -Command "$line = [Console]::In.ReadLine(); [Console]::Out.WriteLine('got:' + $line); [Console]::Error.WriteLine('relay-err'); exit 3"`; start `Task.Run(() => UserJobRelay.Run(requestPath))`; wait up to 10 s for the three connections; write `ping` and a newline to the stdin pipe and dispose it; read the out and err pipes to their end; assert out = `got:ping` and err = `relay-err` (trimmed), `Run` returned 3, the exit-code file holds `3`, the child-PID file holds a positive integer. Then the same `args.cmd` and the first `ProcessRunner` argument list through the relay (stdin pipe disposed at once) → the same `ARG…` lines on the out pipe. Messages start with `D55:`.
+2. `UserJobRelay` (public static class) with:
+   - `public sealed record UserJobRequest(string Executable, string WorkingDirectory, IReadOnlyList<string> Arguments, IReadOnlyDictionary<string, string?> Environment, bool ClearEnvironment, string StandardInputPipe, string StandardOutputPipe, string StandardErrorPipe, string ChildProcessIdPath, string ExitCodePath);` (`System.Text.Json` defaults).
+   - `public const string RunnerScript` with exactly:
+```powershell
+param(
+    [Parameter(Mandatory = $true)][string]$RequestPath,
+    [Parameter(Mandatory = $true)][string]$HelperAssemblyPath
+)
+$ErrorActionPreference = 'Stop'
+[void][Reflection.Assembly]::LoadFrom($HelperAssemblyPath)
+exit ([Talvora.Shared.UserJobRelay]::Run($RequestPath))
 ```
+   - `public static int Run(string requestPath)`: read, then delete the request file; connect `new NamedPipeClientStream(".", name, direction, PipeOptions.Asynchronous)` for stdin (`PipeDirection.In`), stdout and stderr (`PipeDirection.Out`), 15 000 ms each; `var startInfo = LiteralProcessStart.Create(request.Executable, request.WorkingDirectory, request.Arguments, request.Environment, request.ClearEnvironment, out var temporaryCommandScript); startInfo.RedirectStandardInput = true;` start it; write `process.Id` (invariant culture) to `ChildProcessIdPath`; three copy loops on `Task.Run`: the child's `StandardOutput.BaseStream` → stdout pipe and `StandardError.BaseStream` → stderr pipe (when a pipe write throws `IOException`, keep reading the child's stream into nothing until it ends, so the program never blocks on a full pipe); the stdin pipe → `process.StandardInput.BaseStream` with `Flush()` after every chunk, closing `process.StandardInput` when the pipe ends or throws. Then `process.WaitForExit()`, wait at most 5 s for the two output loops, write `process.ExitCode` to `ExitCodePath`, `LiteralProcessStart.DeleteTemporaryCommandScript(temporaryCommandScript)`, return the exit code. When the program cannot start: write the exception message to the stderr pipe, write exit code 1, return 1.
 
-with
+**Don't:** change any tool (D56 wires the relay); inherit handles across sessions; poll.
 
-```csharp
-    // D51: these tools report a process this call did not run (a background job or a dev server); that process's
-    // exit code is data, so only timedOut and success=false make such a call a failure.
-    private static readonly HashSet<string> ReportedProcessTools = new(StringComparer.Ordinal)
-    {
-        "job_get", "job_stop", "dev_server_get", "dev_server_stop",
-    };
+**Context7:** `/dotnet/docs`, queries "NamedPipeClientStream Connect timeout PipeDirection" and "Process StandardInput BaseStream Flush". Vendor sources: `https://learn.microsoft.com/dotnet/api/system.io.pipes.namedpipeclientstream`, `https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasuserw`.
 
-    internal static bool IsFailure(JsonElement json, string? toolName = null) => Describe(json, toolName) is not null;
+**Acceptance:** the relay test red first, then Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI.
 
-    internal static string? Describe(JsonElement json, string? toolName = null)
-    {
-```
+### D56 — Background jobs and dev servers run as the signed-in user
 
-Replace
+**Why:** user decision 2026-11-08 ("Evet, varsayılan sen ol"). `talvora_job_start` ("Start any executable as a long-running background development job under the Talvora LocalSystem service") and `talvora_dev_server_start` (through `JobTools.Start`) are the last developer launchers that run as LocalSystem. Live on 00a9616: `talvora_job_start {"executable":"cargo","arguments":["--version"]}` → "An error occurred trying to start process 'cargo' … Sistem belirtilen dosyayı bulamıyor." (since U14 cargo is only on the user's PATH); a SYSTEM `npm run dev`, `dotnet watch` or `go run` would refill the service-profile caches UR5 and UR6 removed and leave SYSTEM-owned files in a repository (the reason AGENTS.md routes builds to `talvora_user_run`).
 
-```csharp
-        if (TryGetPropertyIgnoreCase(json, "exitCode", out var exitCode) &&
-```
+**Files:** `src/Talvora/Tools/JobTools.cs`, `src/Talvora/Tools/JobTools.Lifecycle.cs`, `src/Talvora/Tools/JobTools.Persistence.cs`, `src/Talvora/Tools/JobTools.StopDelete.cs`, `src/Talvora/Tools/DevServerTools.Lifecycle.cs`, `src/Talvora.Shared/InteractiveUserProcessRunner.cs`, `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`, `src/Talvora.Shared/TalvoraToolGuides.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.WatchJobGit.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. After D55.
 
-with
+**Do:**
+1. Red first, in the installed smoke (`SmokeScenarios.Workspace.WatchJobGit.cs`, after the existing job steps): (a) `talvora_job_start {"executable": "C:\\Windows\\System32\\whoami.exe", "workingDirectory": root}`; call `talvora_job_get` every 500 ms for up to 30 s until `state` is no longer `Running`; the trimmed stdout from `talvora_job_read_output` must equal (case-insensitive) the trimmed stdout of `talvora_user_run {"executable": "C:\\Windows\\System32\\whoami.exe", "arguments": [], "workingDirectory": root}`; (b) the same job with `"runAs": "service"` must print `nt authority\system`; (c) when `talvora_rust_info` has a `cargoExecutable`: `talvora_job_start {"executable": "cargo", "arguments": ["--version"], "workingDirectory": root}` → stdout starts with `cargo `. Delete each job afterwards with `talvora_job_delete`. Messages start with `D56:`. Red against 00a9616: (a) prints `nt authority\system`, (b) rejects the unknown `runAs`, (c) cannot start.
+2. `JobTools.Start(..., string runAs = "user")` accepts `"user"` or `"service"`, otherwise `ArgumentOutOfRangeException(nameof(runAs), runAs, "runAs is user or service.")`. `"service"` is today's path, except that it builds its start info with `LiteralProcessStart.Create(executable, cwd, arguments, environment, clearEnvironment, out var temporaryCommandScript)` (D52) plus `RedirectStandardInput = true`, and deletes the temporary command script when the job's process has exited and in `talvora_job_delete`.
+3. `"user"`:
+   a. `var user = WindowsSessionLauncher.GetActiveInteractiveUser();` when nobody is signed in, throw `InvalidOperationException("runAs=user needs a signed-in Windows user; sign in or use runAs=service. " + inner.Message)`.
+   b. A bare executable resolves with `SignedInUserToolchain.Resolve([executable])` (the user's PATH and PATHEXT, so `npm` finds `npm.cmd`); a rooted path stays; nothing found → `FileNotFoundException($"{executable} was not found on the signed-in user's PATH.")`. A missing working directory defaults to `user.UserProfile`.
+   c. `<job folder>\user`: add `public static void ProtectDirectory(string path, string userSid)` to `InteractiveUserProcessRunner` (the ACL `CreateProtectedRunDirectory` sets today: LocalSystem full control, the user modify, inheritance protected) and let `CreateProtectedRunDirectory` call it; create the folder and protect it. Write `UserJobRelay.RunnerScript` there as `jobrunner.ps1` (UTF-8 without BOM) and the `UserJobRequest` as `request.json`, with `ChildProcessIdPath` = `user\child.pid` and `ExitCodePath` = `user\exit.code`.
+   d. Three pipes: `talvora-job-<jobId>-in` (`PipeDirection.Out` on the service side), `-out` and `-err` (`PipeDirection.In`), each `NamedPipeServerStreamAcl.Create(name, direction, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, security)`, where `security` allows LocalSystem `FullControl` and the user's SID `ReadWrite | Synchronize`, nothing else.
+   e. Start the relay with `WindowsSessionLauncher.StartProcess(pwsh, ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script, "-RequestPath", request, "-HelperAssemblyPath", typeof(UserJobRelay).Assembly.Location], user.SessionId, userFolder, environment: null, visible: false, newConsole: false, expectedUserSid: user.Sid)` (pwsh resolved the way `InteractiveUserProcessRunner` resolves it); wait at most 30 s for the three connections; otherwise kill the relay's process tree, dispose the pipes and throw `InvalidOperationException("The signed-in user's job relay did not connect.")`.
+   f. The runtime: `Process` = `Process.GetProcessById(launch.ProcessId)` (the relay, whose exit code is the program's, so state and `exitCode` work as today); `StandardInput` = `new StreamWriter(stdinPipe, new UTF8Encoding(false)) { AutoFlush = true }`; the two pumps read `new StreamReader(stdoutPipe, ConsoleOutputEncoding.Instance)` and `new StreamReader(stderrPipe, ConsoleOutputEncoding.Instance)` into the same log files with the same rotation; the runtime owns the three pipes and disposes them when the job exits, is stopped or deleted. `talvora_job_stop` kills the relay's process tree (the program is its child).
+   g. `job.json` stores `RunAs` ("user" or "service"); a job written before D56 reads as "service". No output record changes (`TalvoraJobStartResponse`, `TalvoraJobInfoResponse`, the dev-server records), so clients keep their cached schemas.
+4. `talvora_dev_server_start` gets `string runAs = "user"` and passes it to `JobTools.Start`.
+5. Texts: `talvora_job_start`'s description override in `TalvoraMcpToolMetadataPolicy` becomes "Start a long-running development job as the signed-in user (runAs=user, default) or under the Talvora Windows service (runAs=service). Use talvora_user_run for bounded commands."; its `[Description]` starts with the same first sentence and keeps the log sentence; `talvora_dev_server_start`'s first sentence becomes "Start any executable through Talvora's persistent job system, as the signed-in user unless runAs=service, and wait for optional TCP/HTTP readiness probes."; `TalvoraToolGuides` adds `("runAs", "user (default): the signed-in Windows user; service: the Talvora LocalSystem service, only for jobs that need it.")` to both tools.
+6. The smoke's existing job and dev-server steps stay unchanged and pass as the user; a step that needs LocalSystem because it writes under `C:\ProgramData\Talvora` gets `"runAs": "service"` alone, and the Log names it.
 
-```csharp
-        if (!ReportsAnotherProcess(toolName) &&
-            TryGetPropertyIgnoreCase(json, "exitCode", out var exitCode) &&
-```
+**Don't:** use handle inheritance across sessions; change an output schema, the log rotation or reading, or add a tool.
 
-Replace
+**Context7:** `/dotnet/docs`, queries "NamedPipeServerStreamAcl.Create PipeSecurity PipeAccessRule" and "Process.Kill entireProcessTree". Vendor sources: `https://learn.microsoft.com/dotnet/api/system.io.pipes.namedpipeserverstreamacl.create`, `https://learn.microsoft.com/windows/win32/ipc/named-pipe-security-and-access-rights`, `https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasuserw`.
 
-```csharp
-    private static bool TryGetPropertyIgnoreCase(
-```
-
-with
-
-```csharp
-    internal static bool ReportsAnotherProcess(string? toolName)
-    {
-        var name = toolName?.Trim() ?? string.Empty;
-        if (name.StartsWith("talvora_", StringComparison.OrdinalIgnoreCase))
-        {
-            name = name["talvora_".Length..];
-        }
-
-        return ReportedProcessTools.Contains(name);
-    }
-
-    private static bool TryGetPropertyIgnoreCase(
-```
-
-Step 3 — `src/Talvora/ToolFailureGuidance.cs`:
-
-Replace
-
-```csharp
-            result.StructuredContent is { } structured && StructuredResultFailure.IsFailure(structured);
-```
-
-with
-
-```csharp
-            result.StructuredContent is { } structured && StructuredResultFailure.IsFailure(structured, toolName);
-```
-
-Step 4 — `src/Talvora/ToolResultTextPolicy.cs` (two replacements) and `src/Talvora/Program.cs` (one):
-
-Replace
-
-```csharp
-    internal static CallToolResult Apply(CallToolResult result)
-```
-
-with
-
-```csharp
-    internal static CallToolResult Apply(CallToolResult result, string? toolName = null)
-```
-
-Replace
-
-```csharp
-            StructuredResultFailure.IsFailure(structured))
-```
-
-with
-
-```csharp
-            StructuredResultFailure.IsFailure(structured, toolName))
-```
-
-Replace
-
-```csharp
-            return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(result));
-```
-
-with
-
-```csharp
-            return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(result, request.Params?.Name));
-```
-
-Step 5 — `src/Talvora/TalvoraDesktopProgressNotifier.cs` (four replacements) and `src/Talvora/TalvoraDesktopProgressEvidence.cs` (one: the second caller of `TryDescribeFailure`, where `toolName` is already in scope):
-
-Replace
-
-```csharp
-            var failed = TryDescribeFailure(result);
-```
-
-with
-
-```csharp
-            var failed = TryDescribeFailure(result, canonicalToolName);
-```
-
-Replace
-
-```csharp
-    private static bool TryDescribeFailure<T>(T result)
-```
-
-with
-
-```csharp
-    private static bool TryDescribeFailure<T>(T result, string toolName)
-```
-
-Replace
-
-```csharp
-                StructuredResultFailure.IsFailure(structured))
-```
-
-with
-
-```csharp
-                StructuredResultFailure.IsFailure(structured, toolName))
-```
-
-Replace
-
-```csharp
-            return StructuredResultFailure.IsFailure(JsonSerializer.SerializeToElement(result));
-```
-
-with
-
-```csharp
-            return StructuredResultFailure.IsFailure(JsonSerializer.SerializeToElement(result), toolName);
-```
-
-Replace
-
-```csharp
-            if (!TryDescribeFailure(result) && TryGetPropertyIgnoreCase(json, "codeEvidence", out var codeEvidence) &&
-```
-
-with
-
-```csharp
-            if (!TryDescribeFailure(result, toolName) && TryGetPropertyIgnoreCase(json, "codeEvidence", out var codeEvidence) &&
-```
-
-The Notification regression now prints `D51_REPORTED_EXIT_CODES_GREEN`.
-
-Step 6 — `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`:
-
-Replace
-
-```csharp
-    public const int ExpectedDestructiveToolCount = 98;
-```
-
-with
-
-```csharp
-    public const int ExpectedDestructiveToolCount = 106;
-```
-
-Step 7 — the smoke. `tests/Talvora.Smoke/SmokeSupport.cs`:
-
-Replace
-
-```csharp
-            throw new InvalidOperationException($"Tool failed: {tool.Name}");
-```
-
-with
-
-```csharp
-            throw new InvalidOperationException(
-                $"Tool failed: {tool.Name}: {string.Join(" ", result.Content.OfType<TextContentBlock>().Select(block => block.Text))}");
-```
-
-`tests/Talvora.Smoke/SmokeScenarios.Workspace.Core.cs`:
-
-Replace
-
-```csharp
-                        string.Equals(foundPath.GetString(), developerPatchFile, StringComparison.OrdinalIgnoreCase)))
-```
-
-with
-
-```csharp
-                        string.Equals(foundPath.GetString(), Path.GetRelativePath(root, developerPatchFile), StringComparison.OrdinalIgnoreCase)))
-```
-
-`tests/Talvora.Smoke/SmokeScenarios.Workspace.HttpNetwork.cs`:
-
-Replace
-
-```csharp
-                var tcpListenersResult = await EnsureSuccess(byName["talvora_tcp_listeners"], new()
-                {
-                    ["localPort"] = 7676,
-                });
-                if (tcpListenersResult.StructuredContent is not { } tcpListenersJson ||
-                    tcpListenersJson.GetProperty("count").GetInt32() < 1 ||
-                    !tcpListenersJson.GetProperty("connections").EnumerateArray().Any(connection =>
-                        connection.GetProperty("localPort").GetInt32() == 7676 &&
-                        connection.GetProperty("processId").GetInt32() > 0))
-                {
-                    throw new InvalidOperationException("tcp_listeners did not report the Talvora listener.");
-```
-
-with
-
-```csharp
-                // D51: some Windows builds list only a few listeners in the TCP table (netstat, IPGlobalProperties and
-                // Get-NetTCPConnection alike), so the live Talvora socket is checked through its established connections.
-                await EnsureSuccess(byName["talvora_tcp_listeners"], new()
-                {
-                    ["localPort"] = 7676,
-                });
-                var tcpServerResult = await EnsureSuccess(byName["talvora_tcp_connections"], new()
-                {
-                    ["localPort"] = 7676,
-                    ["state"] = "ESTABLISHED",
-                });
-                if (tcpServerResult.StructuredContent is not { } tcpServerJson ||
-                    !tcpServerJson.GetProperty("connections").EnumerateArray().Any(connection =>
-                        connection.GetProperty("localPort").GetInt32() == 7676 &&
-                        connection.GetProperty("processId").GetInt32() > 0))
-                {
-                    throw new InvalidOperationException("tcp_connections did not report a Talvora connection.");
-```
-
-`tests/Talvora.Smoke/SmokeScenarios.Workspace.WatchJobGit.cs` (the `talvora_git_log` call):
-
-Replace
-
-```csharp
-                    ["maxCount"] = 5,
-```
-
-with
-
-```csharp
-                    ["maxCommits"] = 5,
-                    ["detail"] = "full",
-```
-
-`tests/Talvora.Smoke/SmokeScenarios.Workspace.ProcessSearch.cs` (three replacements):
-
-Replace
-
-```csharp
-        var powerShellRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "Talvora",
-            "PowerShell Smoke " + smokeId);
-```
-
-with
-
-```csharp
-        // D51: C:\ProgramData\Talvora is closed to the signed-in user; the smoke's own workspace (Public Documents)
-        // is open to the user and to LocalSystem, and the folder name keeps its space.
-        var powerShellRoot = Path.Combine(root, "PowerShell Smoke " + smokeId);
-```
-
-Replace
-
-```csharp
-            var powerShellResult = await EnsureSuccess(byName["talvora_run_powershell"], new()
-```
-
-with
-
-```csharp
-            // D51: the script exits 7 on purpose; H3 reports a script's own non-zero exit as an error result.
-            var powerShellResult = await byName["talvora_run_powershell"].CallAsync(new Dictionary<string, object?>
-```
-
-Replace
-
-```csharp
-            if (powerShellResult.StructuredContent is not { } psJson ||
-```
-
-with
-
-```csharp
-            if (powerShellResult.IsError is not true ||
-                powerShellResult.StructuredContent is not { } psJson ||
-```
-
-`tests/Talvora.Smoke/SmokeScenarios.ApplicationDevelopment.cs` (two replacements: the Codex discovery check and the Windows SDK probe loop):
-
-Replace
-
-```csharp
-        if (GetString(codex, "model") != "gpt-6.1-sol" ||
-            GetString(codex, "reasoningEffort") != "medium" ||
-            GetString(codex, "sandbox") != "workspace-write")
-```
-
-with
-
-```csharp
-        // D51: the sandbox follows the signed-in user's Codex profile (balanced: workspace-write; trusted: danger-full-access).
-        if (GetString(codex, "model") != "gpt-6.1-sol" ||
-            GetString(codex, "reasoningEffort") != "medium" ||
-            GetString(codex, "sandbox") is not ("workspace-write" or "danger-full-access"))
-```
-
-Replace
-
-```csharp
-                await EnsureSuccess(byName[toolName], new()
-                {
-                    ["workingDirectory"] = repositoryPath,
-                    ["arguments"] = new[] { "/?" },
-                    ["timeoutSeconds"] = 60,
-                });
-```
-
-with
-
-```csharp
-                // D51: with `/?` some SDK tools (makeappx) print their usage and exit 1, which H3 reports as an error
-                // result; the probe proves that the tool runs, not its exit code.
-                var probe = await byName[toolName].CallAsync(new Dictionary<string, object?>
-                {
-                    ["workingDirectory"] = repositoryPath,
-                    ["arguments"] = new[] { "/?" },
-                    ["timeoutSeconds"] = 60,
-                });
-                if (probe.StructuredContent is not { } probeJson ||
-                    !probeJson.TryGetProperty("exitCode", out _) ||
-                    probeJson.TryGetProperty("timedOut", out var probeTimedOut) && probeTimedOut.GetBoolean())
-                {
-                    throw new InvalidOperationException(
-                        $"{toolName} did not run: {string.Join(" ", probe.Content.OfType<TextContentBlock>().Select(block => block.Text))}");
-                }
-```
-
-Before the install, the full smoke with these changes stops at `Tool failed: talvora_job_stop: {"found":true,...,"exitCode":-1}` (the installed d93a5ea still flags it); after the install it passes.
-
-**Context7:** `/modelcontextprotocol/csharp-sdk`, query "CallToolResult IsError tool error" (`CallToolResult.IsError` marks a tool execution error inside a result; `StructuredContent` carries the data). Vendor sources: `https://github.com/modelcontextprotocol/csharp-sdk`, `https://modelcontextprotocol.io/specification/2025-06-18/server/tools`.
-
-**Acceptance:**
-1. Red: Step 1's message before Step 2.
-2. Signed-in Full gate `Hepsi geçti.`
-3. Install (Deploy row); `/healthz.sourceCommit` = HEAD.
-4. `--metadata-policy-only` → `TALVORA MCP METADATA POLICY LIVE GREEN` and the full installed smoke → `TALVORA MCP SMOKE GREEN` (both commands in the Deploy row). A stop at a step this card does not name → proposal with the exact message (EnsureSuccess now prints it); do not change that test.
-5. CI success.
-
-### Audit 2026-11-08 (42, deep, whole project) · range `audit/2026-11-07-41..97344f7` plus every subsystem · result: D45–D50, live checks of D37, D40–D44 and OB1 closed
-
-User request: "Talvora'yı derinlemesine denetle". Method: the range line by line against the cards (the literal-block cards compared file by file with Claude's audit 41 scratch clone), Claude's signed-in Full gate, CI, the runtime records since audit 41 (tray.log, Windows Application log, `/healthz/traffic`, the worklog history and the event store), the real Control Center read through UI Automation, then the subsystems audit 40 did not read line by line (source-edit commit and rollback core, interactive user runner, delivery and work-contract gates, HTTP download, registry store) and bug-class searches over `src` (culture-dependent casing, `async void`, sync-over-async).
-
-Range: D40, D41, D42, D35, D36, D37, D38, D39, D43, D44 and OB1 match their cards (D35 and D40–D44 byte for byte with the verified blocks, OB1's reference hashes match, D37's 23 pairs exact); one commit per card, Turkish subjects, red-first evidence real (the Application log holds D38's red run at 22:23). Claude's signed-in Full 70/0 `Hepsi geçti.`; CI success on all 11 commits; installed 97344f7 at 23:24. Accepted deviation: D35 also moved the source-range marker in `tests/TunnelClientUpdateRollbackRegression.ps1`, because the card changed a signature that test pins (Claude's card gap, logged by the agent).
-
-Live checks closed by Claude: D40 (Claude's Full gate left `worklog-sessions.jsonl` byte-identical and added only the Control Center smoke's own stage lines to tray.log; no IPC timeout since 15:24); D41 (a call through the installed bridge script is `core · Claude` on `/healthz/traffic` and a "Claude" worklog session; no smoke session since 17:33 across nine installs; the running Claude Desktop picks the header up at its next start); D42 (later installs ran the smoke green); D43 and D44 (captures in both themes; on the real Control Center the link opens Olaylar on "Onarımlar" and lists the repairs with "· 9 KEZ", "· 2 KEZ", "· 3 KEZ"); D37 (new texts live, "5 yönetilen hizmet kaydı yüklendi."); OB1 (the live note `40 Oturum Notları/2026-11-07 Talvora OB1.md` exists with the template properties, the secret note was refused and wrote nothing, CI 42410824919 success).
-
-| # | Severity | Where | Finding (verified) | Card |
-|---|---|---|---|---|
-| 1 | HIGH (data truth, Claude's D43) | Çalışma günlüğü | A worklog session closes 90 s after its last step and `EndedAtUtc` is that close; D43 measures to it, so every real session shows at least "1 dk 30 sn" (one ping: 23:36:48 → 23:38:18; every session in the history has a 90–127 s tail). | D45 |
-| 2 | MEDIUM (false failure) | `WorklogSubject`, desktop notifier | `Get-CiStatus.ps1` exits 2 while CI is still running (AGENTS.md 10b), and the agent checks right after every push: the session ends red with "GitHub denetimi okunamadı" (ChatGPT 23:26 after OB1; CI was green minutes later). Exit 1 (CI red) reads "okunamadı" too. | D46 |
-| 3 | MEDIUM (Turkish) | Tray texts | D37 changed 23 event texts; 75 more on main surfaces (repair results that become events, tray balloons and menu, service states, chain rows) still say MCP, readiness, health, runtime, browser smoke, Secure MCP Tunnel, Control plane. Seen live: "Gitea MCP zaten hazır / Sağlık ve readiness kontrolleri …". The setup wizard's own texts follow the user's decision (OpenAI names in parentheses; 38 more rows). | D47 |
-| 4 | LOW (consistency, Claude's OB1) | `NoteTools` | Notes and new folders are owned by `NT AUTHORITY\SYSTEM` (the live OB1 note); source edits keep the workspace owner. | D48 |
-| 5 | MEDIUM (Turkish) | Registry names | The real registry (written 2026-09-30) says "Talvora Core Service" and "Gitea MCP", components "Secure MCP Tunnel", "Penpot local MCP"; the smoke fixtures use "Talvora Çekirdeği" and "Gitea", so the captures hid it. | D49 |
-| 6 | PROCESS (Claude) | Card writing | D35 did not list a test that pins the signature it changed. Rule added to Claude's card checklist: grep `tests/` and the smokes for every signature and text a card changes and list those files (D47 lists two such tests). | — |
-| 7 | TEST GAP | D44 smoke | The light-theme capture of the repairs page is empty: the smoke feeds the count, not the Olaylar list, and asserts only the page and the chip. The real page lists the repairs (UI Automation). | [C] with the Olaylar empty state |
-| 8 | HIGH (data truth) | `WorklogHistoryStore`, session ids | One project and one actor keep one `SessionId` for all their sessions, and the history deduplicates by it: each new session replaces the previous one, so Çalışma günlüğü holds only the newest session per project and actor instead of every session of the last 7 days (a week of ChatGPT work on Talvora-MCP left one entry; Claude's 00:16 probe replaced the 23:36 one). | D50 |
-
-Screen pass, design improvements: the Çalışma günlüğü detail leaves 40 px holes for an empty task note and an empty result line; Olaylar shows a blank page when a filter or a search has no events; "Ham günlüğü göster" keeps its text while the raw log is open; each Çalışma günlüğü card reads its outcome twice ("Düzenleme tamamlandı." and "Tamamlandı").
-
-Checked and sound (no card): the source-edit commit core (revision checks before and after, `File.Replace` with a backup, flush, owner restore), the interactive user runner (protected run folder, reparse check, identity check, bounded output, whole-tree kill on timeout), the HTTP download tool (staging file, length check, hash, atomic replace), the delivery and work-contract gates (fail closed; they guard `talvora_git_run` only, by design: the agent's git goes through it), tray timers and `async void` handlers (all caught and logged), no culture-dependent `ToLower`/`ToUpper` in `src` (the culture-aware comparisons are the Turkish search and sort boxes).
-
-Notes: "son 24 saatte 14 otomatik onarım" holds 3 pre-D42 "zaten hazır" events (old key) that leave the window at 03:59 on 11-08; every automatic repair happened between 20:07 (11-06) and 08:42 (11-07) during the heavy install period, none since. The 1 November smoke sessions still in the worklog history ("devws ğüş …", "fx", "kopya", "yeni alt", "uzun_klasör_adı_5_…", "Türkçe klasör ğüşİı") expire with the 7-day retention on 11-08; Claude deleted the fake "Project A" session from audit 41. Elevated Task Manager kept the foreground, so Claude drove the Control Center through UI Automation instead of clicks.
+**Acceptance:** the three smoke checks red first against 00a9616; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI. Then `[~] live pending (Claude)`: at the next audit Claude checks that the service profile gained no developer cache after real use.
 
 ### D45 — Çalışma günlüğü measures a session up to its last step
 
@@ -1205,72 +865,12 @@ Step 3. Two existing tests pin texts this card changes; update them in the same 
 4. `EventsView.xaml`: while the raw log is open the toggle reads "Ham günlüğü gizle" (content and `AutomationProperties.Name`).
 5. `StepperCard.xaml` setup labels: "Talvora Dev tünel kimliği (tunnel ID)", "Talvora Admin tünel kimliği (tunnel ID)", "OpenAI Admin API anahtarı (Admin API key)" (label and automation name; the placeholder "Admin API key" stays).
 6. `ControlCenterSmoke.D44.cs`: after the click, assert that the Olaylar list holds the recovery event the smoke applied (feed it through the snapshot the Olaylar page reads); the light-theme capture of audit 42 showed an empty list.
+7. `WorklogHistoryView.xaml`, detail column, right under the `OutcomeLabel` line (audit 43, user decision 2026-11-08 "Evet, nedeni göster"; the data is already in `WorklogOutcome`): `{Binding Current.Outcome.PlainReason, TargetNullValue='', FallbackValue=''}` in `Tv.Type.Body` with `Tv.TextMuted`, then `{Binding Current.Outcome.NextStep, StringFormat='Sonraki adım: {0}', TargetNullValue='', FallbackValue=''}` in `Tv.Type.Caption`; both use the `HistoryOptionalText` collapse of item 1, so a completed session shows neither line.
+8. `WorklogHistoryView.xaml`: the "Kanıtlar" heading collapses when the session has no evidence (summary, result, files and code preview all empty), with the same trigger style; check the bound values on a real session without evidence first (audit 43 screen pass: the "scratchpad" session showed the heading alone).
 
 ## Toolchain modernization (user request 2026-11-08; Claude, one-off)
 
-User: "Talvora'da rust, uv modernizasyonu yapmamız anlamlı olur mu araştır", then "Evet, yaz" and "bu arada tüm bu modernizasyonu bu defalık sen yap". Research result: Talvora stays .NET (Roslyn and WPF cannot move, the C# and Rust MCP SDKs are both Tier 1, the work is process-bound); Rust is for new standalone components; the toolchain tools follow the uv/cargo rule. Claude implements these three items under the agent rules; the agent skips them (`[C]`).
-
-### UV1 — Python through uv: `talvora_uv_run` replaces the pip and venv tools (Claude)
-
-**Why:** user rule 2026-11-01 (uv for everything Python, never pip or venv). Talvora offered `talvora_pip_install`, `talvora_pip_run` and `talvora_python_venv_create` and no uv tool. They run as LocalSystem against the machine-wide `C:\Python315`, so a pip install lands in the system Python and a venv in a user repository is owned by SYSTEM, and they cannot see the user's uv (0.13.7, WinGet, user profile).
-
-**Do:** a new `talvora_uv_run` (Dev only; destructive, open-world) is `talvora_user_run` with the executable `uv`: the signed-in user, the same bounds and redaction. The three tools go with their guides, titles, metadata entries and `TalvoraPythonVenvResponse`. Counts: full 251→249, Dev 214→212, reviewed 249, open-world 85→83, destructive 100→98; README and ARCHITECTURE follow. Tests: `NativeInstallerSourceRegression.ps1` asserts the uv tool and its description; the count strings in `CodexCliIntegrationSourceRegression.ps1` and `FocusedMcpSurfaceSourceRegression.ps1`; the surface smoke asserts `talvora_uv_run` as Dev only; the runtime smoke runs `uv --version` through the tool when the signed-in user has uv (it replaces the pip and venv runs). `talvora_python_info` and `talvora_python_run` stay (the machine Python, as the service).
-
-**Acceptance:** red: `NativeInstallerSourceRegression.ps1` before the tool exists; signed-in Full `Hepsi geçti.`; install; the full installed smoke (it requires every manifest tool and runs uv) green; CI.
-
-### RS1 — Rust tools run as the signed-in user (Claude)
-
-**Why:** `talvora_cargo_run`, `talvora_rustc_run`, `talvora_rustup_run` and `talvora_rust_info` run as LocalSystem and resolve the service account's own rustup (`C:\WINDOWS\system32\config\systemprofile\.cargo\bin`, cargo 1.99.0), while the user builds with 1.99.1 from `%USERPROFILE%\.cargo\bin`: two toolchains, two crate caches, `target/` folders owned by SYSTEM.
-
-**Do:** `RunRustTool` runs through `InteractiveUserProcessRunner` as the active interactive user (a bare tool name resolves on that user's PATH; an explicit executable path stays allowed); `talvora_rust_info` resolves the tools with `where.exe` and reads their versions as that user; `ResolveRustTool` is removed. The installed smoke fails when `talvora_rust_info` reports a tool under the service account's profile.
-
-**Acceptance:** red: that smoke check against the installed 97344f7; signed-in Full `Hepsi geçti.`; install; installed smoke green; `talvora_rust_info` reports `%USERPROFILE%\.cargo\bin` and 1.99.1; CI.
-
-### RS2 — The service account's own Rust toolchain is removed (Claude; after RS1)
-
-**Why:** the Chocolatey package `rustup.install` 1.27.1 was installed as LocalSystem (`rustup-init -v -y`), which created `systemprofile\.cargo` and `systemprofile\.rustup` with a second toolchain; after RS1 nothing uses it.
-
-**Do (as LocalSystem through Talvora):** confirm that the service account's `rustup show home` is under `systemprofile`; run that rustup's `self uninstall -y` detached and wait for it; drop the package record with `choco uninstall rustup.install -y --skip-autouninstaller`. The machine PATH entry `C:\Users\tayla\.cargo\bin` (a user folder in the machine PATH; the user PATH already holds it) is a machine setting: the user removes it, Claude only reports it.
-
-**Acceptance:** `systemprofile\.cargo` and `systemprofile\.rustup` are gone; Chocolatey lists no `rustup.install`; `talvora_rust_info` and `cargo --version` as the user are unchanged (1.99.1).
-
-Follow-up (user 2026-11-08): Claude proposed four more modernizations; the user said "Evet, hepsini yaz", then, asked why ChatGPT should redo work Claude had already applied and compiled in a scratch clone, chose "Bu defalık sen yap". UR1–UR4 and D51 are Claude's one-off items; UR5 is Claude's later cleanup; PK1 and PK2 are the agent's.
-
-**Shared finding (UR1–UR4):** after RS1 the remaining developer tools still run through `ProcessRunner` as LocalSystem and resolve their programs with the service account's PATH and variables, so their output (`bin/`, `obj/`, `node_modules/`, build folders) belongs to SYSTEM (AGENTS.md forbids them for repository work for that reason) and their caches sit in the service profile. Measured as LocalSystem on 2026-11-08: NuGet packages 3.11 GB, npm cache 2.49 GB, npm global 0.02 GB, Go 0.54 GB and its build cache 0.11 GB, Dart pub 0.56 GB, pip cache 0.02 GB.
-
-**Shared method (UR1 adds the helper, UR2–UR4 reuse it):** `src/Talvora/Tools/SignedInUserToolchain.cs` resolves commands in the active user's environment block (`WindowsSessionLauncher.GetActiveInteractiveUser().Environment`, the same block `CreateEnvironmentBlock` gives that user's processes), reads variables from it and runs programs through `InteractiveUserProcessRunner` as that user. In each card's files: every `ProcessRunner.RunAsync(` becomes `SignedInUserToolchain.RunAsync(`, every `CommandResolver.Resolve(` becomes `SignedInUserToolchain.Resolve(`, every one-argument `Environment.GetEnvironmentVariable(` becomes `SignedInUserToolchain.Variable(`; reads with `EnvironmentVariableTarget.Machine` stay (machine values are the same for every account). `tests/ModernizationPolicyRegression.ps1` holds `Assert-SignedInUserToolchain <card> <files>` (no `ProcessRunner.Run*Async`, no service-PATH lookup, no one-argument process-environment read, no `Environment.GetFolderPath` and no "systemprofile" candidate in those files); each card adds its line first (red). As built: the helper switches to the user's session only when Talvora runs as LocalSystem and runs directly in its own account otherwise (tests and CI already are the user), maps the profile folders (USERPROFILE, APPDATA, LOCALAPPDATA) to the user's environment and also offers `RunCheckedAsync` for the *_info version probes. Claude verified the whole method in a scratch clone of a01ecb5: the policy check fails first with `UR1: src/Talvora/Tools/BuildRunnerTools.Shared.cs still runs a developer tool as the service account.`, `src/Talvora` builds without errors or warnings after the change, and the check prints `MODERNIZATION_POLICY_GREEN`.
-
-### UR1 — dotnet, Node, JVM and Go tools run as the signed-in user (Claude)
-
-**Files:** new `src/Talvora/Tools/SignedInUserToolchain.cs`; `BuildRunnerTools.Shared.cs` (the shared `RunCliAsync`, the dotnet, Node and npm resolvers, `DOTNET_ROOT`), `BuildRunnerTools.GoRust.cs` (`ResolveGo`; RS1's `RunAsSignedInUserAsync` calls the helper), `BuildRunnerTools.JavaScriptExtras.cs` (pnpm, Yarn, Bun), `BuildRunnerTools.Jvm.cs` (java, javac, Maven, Gradle, `JAVA_HOME`); `talvora_node_info`'s text says "the signed-in user's environment" (`BuildRunnerTools.Node.cs`, `TalvoraToolGuides.cs`); `tests/ModernizationPolicyRegression.ps1`; the installed smoke runs `talvora_go_run ["env","GOPATH"]` when Go is found and fails when the answer points into the service profile.
-
-**Acceptance:** red policy check; Changed and Full `Hepsi geçti.`; install; `--metadata-policy-only` and the full installed smoke green; CI.
-
-### UR2 — Flutter, Dart and Android tools run as the signed-in user (Claude)
-
-**Why, besides the shared finding:** an emulator started as LocalSystem cannot show its window in the user's session, and an adb server started as LocalSystem fights the user's own adb.
-
-**Files:** `MobileTools.Shared.cs` (its `RunCliAsync` and resolver), `MobileTools.Android.cs` (`ANDROID_HOME`/`ANDROID_SDK_ROOT` from the user's environment; the machine-target reads stay), `MobileTools.Flutter.cs`; the policy line.
-
-**Acceptance:** as UR1.
-
-### UR3 — MSBuild, CMake, Ninja and Windows SDK tools run as the signed-in user (Claude)
-
-**Files:** `WindowsToolchainTools.NativeBuild.cs` (its `RunCliAsync`, used by the MSBuild, CMake, Ninja, SDK and vswhere calls), `WindowsToolchainTools.MsBuild.cs`, `WindowsToolchainTools.Overview.cs`, `WindowsToolchainTools.Release.cs`; the policy line. `talvora_vs_dev_environment` stays as it is: it writes its wrapper into the service's temp folder and only returns Visual Studio's variables.
-
-**Acceptance:** as UR1.
-
-### UR4 — Python and Docker tools run as the signed-in user; `talvora_python_info` reports uv (Claude)
-
-**Files:** `RuntimeTools.Shared.cs` (`RunCommandAsync` and its resolver), `RuntimeTools.Docker.cs`, `RuntimeTools.Python.cs` (the pip probe becomes `uv --version` resolved for the user; texts say "the signed-in user" and "uv availability"), `RuntimeTools.cs` (`TalvoraPythonInfoResponse`: `PipAvailable`/`PipVersion` become `UvAvailable`/`UvVersion`), `TalvoraToolGuides.cs`; the policy line plus two checks (no `"pip"` in the Python tool; the record carries `UvAvailable`). Docker works as the user: the user is in `docker-users` and Docker Desktop runs in the user's session.
-
-**Acceptance:** as UR1; live `talvora_python_info` reports `uvAvailable: true` and `uv 0.13.7`.
-
-### UR5 — The service profile's developer caches are removed (Claude; after UR1–UR4, with the user's go-ahead)
-
-**Do (as LocalSystem through Talvora):** once UR1–UR4 are installed and the full installed smoke is green, measure the folders again (they must not have grown since the install), ask the user, then delete exactly `C:\WINDOWS\system32\config\systemprofile\.nuget\packages`, `…\AppData\Local\npm-cache`, `…\AppData\Roaming\npm`, `…\go`, `…\AppData\Local\go-build`, `…\AppData\Local\Pub\Cache` and `…\AppData\Local\pip`. Nothing else under the service profile.
-
-**Acceptance:** the folders are gone; the full installed smoke stays green; the user's own caches are untouched.
+User: "Talvora'da rust, uv modernizasyonu yapmamız anlamlı olur mu araştır", then "Evet, yaz" and "bu arada tüm bu modernizasyonu bu defalık sen yap". Research result: Talvora stays .NET (Roslyn and WPF cannot move, the C# and Rust MCP SDKs are both Tier 1, the work is process-bound); Rust is for new standalone components; the toolchain tools follow the uv/cargo rule. Claude's one-off items (UV1, RS1, RS2, D51, UR1–UR6) are done and live in git history. **PK1 and PK2 below are ordinary agent cards**: the agent implements them in queue order.
 
 ### PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
 
