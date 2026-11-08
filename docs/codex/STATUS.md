@@ -33,8 +33,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [~] CTX2 — installed 953fc7d; both installed MCP smokes green, CI success (audit 47); Claude checks the next card's push
-- [~] RL1 — 0.0.x.x version contract built and tested; live pending: deployed HEAD, installed smokes, CI
-- [ ] RL2 — A fresh Windows gets PowerShell 7 from the installer (user decision 2026-11-08)
+- [~] RL1 — b83b2f1 deployed with healthz and both MCP smokes green; CI 42517091038 successful; visual check pending (Claude)
+- [~] RL2 — PowerShell 7 preflight and MSI integrity gate implemented; live pending: verified MSI download, deployed HEAD, smokes, CI
 - [ ] RL3 — Talvora is in Apps & features and can be uninstalled (user request 2026-11-08)
 - [ ] RL4 — A v0.0.x.x tag publishes the release (user decision 2026-11-08)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
@@ -56,6 +56,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — RL2, executor ChatGPT: installer preflights existing PowerShell 7 before Talvora mutations, otherwise downloads pinned 7.6.9 x64 MSI and verifies SHA-256 50d33c7494aaf82b987cfd4de3f232d04f91fdd4c0deeca8a669cced3e7cf8f9 (official hashes.sha256); silent msiexec, safe failures and hidden --verify-powershell-download added.
+  RED missing pin/preflight, then native installer C# fixture GREEN (injected availability avoids download; temporary wrong-hash MSI rejected). Pinned source/rollback/CI suites passed; signed-in Changed 26/0 and Full 71/0, Hepsi geçti. Context7: /dotnet/docs (stream and SHA256.HashData); vendor PowerShell release and MS install guide.
+  Self-review — exact Turkish progress/errors and no screen layout changes; MSI is checked before execution, failures precede Talvora mutation, and existing PowerShell is not changed. Live download/deploy/smokes and CI pending committed HEAD. Gitea #9 comment 234.
 
 - 2026-11-08 — RL1, executor ChatGPT: versions now derive from TalvoraReleaseVersion; development builds advertise 0.0.0.0-dev+commit, while About and Overview show "geliştirme sürümü". Installer accepts only 0.0.x.x, names release EXEs accordingly and records the version in its manifest; normal setup name unchanged.
   RED initial Version test (3.0.0-dev), GREEN RELEASE_VERSION_GREEN and UI7; four pinned installer/modernization regressions green. Signed-in Changed 67/0 and Full 71/0, Hepsi geçti. Release EXE and manifest had FileVersion/version 0.0.0.1 and the test EXE was deleted. Context7: /dotnet/docs (two queries); official MSBuild property sources checked.

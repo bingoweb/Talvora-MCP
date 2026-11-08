@@ -20,6 +20,7 @@ public static async Task<HealthSnapshot> InstallAsync(
     {
         progress.Report(new InstallProgress(2, "Kurulum paketi hazırlanıyor..."));
         InstallerLog.Write("Install started");
+        await EnsurePowerShell7Async(progress, cancellationToken);
 
         var installUser = ResolveInstallUserContext();
 

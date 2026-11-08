@@ -17,5 +17,6 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Payload.zip" LogicalName="Talvora.Payload.zip" />
+    <EmbeddedResource Include="powershell-pin.json" LogicalName="Talvora.PowerShellPin.json" />
   </ItemGroup>
 </Project>

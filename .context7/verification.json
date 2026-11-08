@@ -1,19 +1,21 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T19:39:00.772Z",
-  "scope": "RL1: MSBuild version properties, assembly informational version, release-tag build arguments",
+  "verifiedAtUtc": "2026-11-08T20:03:05.689Z",
+  "scope": "RL2: HTTPS streaming download and SHA-256 integrity validation for pinned PowerShell 7 MSI",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 RL1: -getProperty evaluates MSBuild properties and -p passes project property overrides (query: \"MSBuild dotnet msbuild -getProperty:Version -getProperty:InformationalVersion command line evaluation and -p property override syntax .NET SDK 10\")"
+      "verified": "2026-11-08 RL2: HttpClient.GetAsync with ResponseHeadersRead streams a response to a file using a cancellation token (query: \"HttpClient GetAsync ResponseHeadersRead stream download to file asynchronous cancellation .NET 10\")"
     },
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 RL1: Version and InformationalVersion generate assembly attributes; disabling automatic SourceRevisionId suffix prevents duplication (query: \"NET SDK 10 assembly InformationalVersion and Version MSBuild properties AssemblyInformationalVersionAttribute SourceRevisionId IncludeSourceRevisionInInformationalVersion false behavior\")"
+      "verified": "2026-11-08 RL2: SHA256.HashData supports stream input for integrity verification (query: \"System.Security.Cryptography.SHA256 HashData Stream overload reading file stream and converting bytes to lowercase hex in C# .NET 10\")"
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/visualstudio/msbuild/evaluate-items-and-properties",
-    "https://learn.microsoft.com/dotnet/core/project-sdk/msbuild-props"
+    "https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows",
+    "https://github.com/PowerShell/PowerShell/releases",
+    "https://github.com/PowerShell/PowerShell/releases/tag/v7.6.9",
+    "https://github.com/PowerShell/PowerShell/releases/download/v7.6.9/hashes.sha256"
   ]
 }

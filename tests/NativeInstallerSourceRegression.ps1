@@ -73,6 +73,14 @@ $immediateCleanupSection = $installerCleanupState.Substring($immediateCleanupSta
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora.Installer')
 $installerProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'))
+$powerShellPinPath = Join-Path $RepoRoot 'src\Talvora.Installer\powershell-pin.json'
+$powerShellSourcePath = Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.PowerShell.cs'
+if (!(Test-Path -LiteralPath $powerShellPinPath -PathType Leaf) -or
+    !(Test-Path -LiteralPath $powerShellSourcePath -PathType Leaf)) {
+    throw 'RL2 requires a pinned PowerShell MSI and a preflight implementation.'
+}
+$powerShellPin = Get-Content -LiteralPath $powerShellPinPath -Raw | ConvertFrom-Json
+$powerShellProvisioner = [IO.File]::ReadAllText($powerShellSourcePath)
 $buildInstallerScript = [IO.File]::ReadAllText((Join-Path $RepoRoot 'scripts\Build-Windows-Installer.ps1'))
 $installScript = [IO.File]::ReadAllText((Join-Path $RepoRoot 'scripts\Install.ps1'))
 $windowsCiWorkflow = [IO.File]::ReadAllText((Join-Path $RepoRoot '.github\workflows\windows-ci.yml'))
@@ -101,6 +109,31 @@ $upgradeStopSection = $installerService.Substring(
     $restoreRecoveryStart - $upgradeStopStart)
 
 $result = [pscustomobject]@{
+    PowerShell7PinIsVersionedAndHasSha256 = (
+        [string]$powerShellPin.version -match '^7\.\d+\.\d+$' -and
+        [string]$powerShellPin.url -ceq ('https://github.com/PowerShell/PowerShell/releases/download/v' +
+            $powerShellPin.version + '/PowerShell-' + $powerShellPin.version + '-win-x64.msi') -and
+        [string]$powerShellPin.sha256 -cmatch '^[0-9a-f]{64}$' -and
+        $installerProject -match 'EmbeddedResource Include="powershell-pin\.json"'
+    )
+    PowerShell7PreflightPrecedesTalvoraChange = (
+        $installerFlow -match 'await EnsurePowerShell7Async\(progress, cancellationToken\)' -and
+        $installerFlow.IndexOf('await EnsurePowerShell7Async', [StringComparison]::Ordinal) -lt
+            $installerFlow.IndexOf('Yeni Talvora sürümü hazırlanıyor...', [StringComparison]::Ordinal) -and
+        $installerFlow.IndexOf('await EnsurePowerShell7Async', [StringComparison]::Ordinal) -lt
+            $installerFlow.IndexOf('Directory.CreateDirectory(versionsRoot)', [StringComparison]::Ordinal)
+    )
+    PowerShell7InstallerHasVerificationAndQuietMsi = (
+        $installerProgram -match '--verify-powershell-download' -and
+        $powerShellProvisioner -match 'Func<bool>' -and
+        $powerShellProvisioner -match 'TimeSpan\.FromMinutes\(10\)' -and
+        $powerShellProvisioner -match 'SHA256\.HashData' -and
+        $powerShellProvisioner -match 'msiexec\.exe' -and
+        $powerShellProvisioner -match 'ADD_PATH=1' -and
+        $powerShellProvisioner -match 'REGISTER_MANIFEST=1' -and
+        $powerShellProvisioner -match 'USE_MU=1' -and
+        $powerShellProvisioner -match 'ENABLE_MU=1'
+    )
     CanonicalDeployUsesIndependentSystemTask = (
         $deployInstallerScript -match 'Schedule\.Service' -and
         $deployInstallerScript -match 'RegisterTaskDefinition' -and
@@ -814,6 +847,62 @@ $result | Format-List
 
 if ($result.PSObject.Properties.Value -contains $false) {
     throw 'Native installer/tray source contract is incomplete.'
+}
+
+$testRoot = Join-Path ([IO.Path]::GetTempPath()) ('TalvoraPwshCheck-' + [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
+try {
+    $testSourcePath = Join-Path $testRoot 'PowerShellInstallerRegression.cs'
+    $msiFixturePath = Join-Path $testRoot 'untrusted.msi'
+    [IO.File]::WriteAllText($msiFixturePath, 'not a valid PowerShell MSI')
+    [IO.File]::WriteAllText($testSourcePath, @'
+#nullable enable
+using System;
+using System.Threading;
+
+namespace Talvora.Installer;
+
+internal sealed record InstallProgress(int Percent, string Message);
+internal static class InstallerLog
+{
+    public static void Write(string message, Exception? exception = null) {}
+}
+
+public static class PowerShellInstallerRegression
+{
+    public static bool ExistingPowerShellSkipsDownload()
+    {
+        var checks = 0;
+        InstallerEngine.EnsurePowerShell7Async(
+            new Progress<InstallProgress>(), CancellationToken.None,
+            () => { checks++; return true; }).GetAwaiter().GetResult();
+        return checks == 1;
+    }
+
+    public static bool WrongHashIsRejected(string path)
+    {
+        try
+        {
+            InstallerEngine.ValidatePowerShell7MsiHash(path, new string('0', 64));
+            return false;
+        }
+        catch (InvalidOperationException error)
+        {
+            return error.Message == "İndirilen PowerShell 7 paketi doğrulanamadı; güvenlik için kurulmadı.";
+        }
+    }
+}
+'@)
+    Add-Type -Path @($powerShellSourcePath, $testSourcePath) -ErrorAction Stop
+    if (-not [Talvora.Installer.PowerShellInstallerRegression]::ExistingPowerShellSkipsDownload()) {
+        throw 'An installed PowerShell 7 must bypass the download through the injectable probe.'
+    }
+    if (-not [Talvora.Installer.PowerShellInstallerRegression]::WrongHashIsRejected($msiFixturePath)) {
+        throw 'A mismatched PowerShell MSI digest must be rejected before installation.'
+    }
+}
+finally {
+    Remove-Item -LiteralPath $testRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 Write-Output 'NATIVE_INSTALLER_SOURCE_GREEN'

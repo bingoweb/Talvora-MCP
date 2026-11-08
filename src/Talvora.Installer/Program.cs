@@ -43,6 +43,23 @@ internal static class Program
             return 2;
         }
 
+        if (args.Any(arg => string.Equals(arg, "--verify-powershell-download", StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                var version = InstallerEngine.VerifyPowerShell7DownloadAsync(
+                    CancellationToken.None).GetAwaiter().GetResult();
+                Console.WriteLine($"PowerShell 7 {version} paketi doğrulandı.");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                InstallerLog.Write("PowerShell 7 download verification failed", ex);
+                Console.Error.WriteLine(ex.Message);
+                return 1;
+            }
+        }
+
         if (!IsAdministrator())
         {
             MessageBox.Show(
