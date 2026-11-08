@@ -80,9 +80,9 @@ foreach ($contract in $requiredNoticeContracts) {
 }
 
 $requiredReadmeContracts = @(
-    'Third-party software & license attribution',
     'THIRD-PARTY-NOTICES.md',
-    'locked NuGet runtime packages'
+    'kilitli NuGet paketlerinin',
+    '(LICENSE)'
 )
 
 foreach ($contract in $requiredReadmeContracts) {

@@ -49,23 +49,15 @@ function Assert-DocumentCounts {
 }
 
 # Check every count presentation, including badge, prose, diagrams and endpoint table.
-Assert-DocumentCounts 'README badge text' $readme 'alt="MCP (\d+) tools"' @($full)
-Assert-DocumentCounts 'README badge URL' $readme '/badge/MCP-(\d+)%20tools-' @($full)
-Assert-DocumentCounts 'README summary' $readme '\*\*(\d+) total\*\*, \*\*(\d+) Dev\*\*, \*\*(\d+) Admin\*\*, with \*\*(\d+) explicitly shared\*\*' @($full, $dev, $admin, $shared)
-Assert-DocumentCounts 'README focused diagram' $readme '(?m)^\s*(\d+) tools[ \t]+(\d+) tools[ \t]*\r?$' @($dev, $admin)
-Assert-DocumentCounts 'README full diagram' $readme '(?m)^\s*(\d+) tools[ \t]+(\d+) tools[ \t]+(\d+) tools[ \t]*\r?$' @($full, $dev, $admin)
+Assert-DocumentCounts 'README summary' $readme '\u015Eu an \*\*(\d+) ara\u00E7\*\* var: geli\u015Ftirme y\u00FCzeyinde \*\*(\d+)\*\*, y\u00F6netim y\u00FCzeyinde \*\*(\d+)\*\*; \*\*(\d+)\*\* ara\u00E7 ikisinde ortak\.' @($full, $dev, $admin, $shared)
 foreach ($entry in @(
     @{ Path = '/mcp'; Count = $full },
     @{ Path = '/mcp/dev'; Count = $dev },
     @{ Path = '/mcp/admin'; Count = $admin }
 )) {
-    $escaped = [regex]::Escape($entry.Path)
-    Assert-DocumentCounts ("README " + $entry.Path) $readme (
-        '(?m)^\| <code>' + $escaped + '</code> \|[^\r\n]*\*\*(\d+)\*\* \|\r?$') @($entry.Count)
     Assert-DocumentCounts ("ARCHITECTURE " + $entry.Path) $architecture (
         [regex]::Escape([string][char]96 + $entry.Path + [char]96) + ' \(\*\*(\d+) tools\*\*\)') @($entry.Count)
 }
-Assert-DocumentCounts 'README shared' $readme 'share \*\*(\d+) reviewed tools\*\*' @($shared)
 Assert-DocumentCounts 'ARCHITECTURE complete surface' $architecture 'complete (\d+)-tool capability set' @($full)
 Assert-DocumentCounts 'ARCHITECTURE shared' $architecture 'overlap on exactly (\d+) reviewed tools' @($shared)
 

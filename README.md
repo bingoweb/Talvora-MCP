@@ -1,150 +1,49 @@
 <p align="center">
-  <img src="assets/Talvora.png" alt="Talvora" width="112" />
+  <img src="assets/Talvora.png" alt="" width="88">
 </p>
 
 <h1 align="center">Talvora</h1>
 
-<p align="center">
-  <strong>A Windows-native MCP runtime for serious local development and administration.</strong><br />
-  One service. Focused Dev/Admin surfaces. Transactional source editing. A desktop Control Center that can actually diagnose and repair its managed components.
-</p>
+<p align="center">Yapay zekâ ajanlarına Windows bilgisayarında gerçek bir çalışma masası açan yerel MCP hizmeti.</p>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/kontrol-merkezi-gece.png">
+  <img src="docs/media/kontrol-merkezi-gunduz.png" alt="Talvora Kontrol Merkezi, Genel bakış: üstte bağlanan istemciler, altta bu bilgisayardaki bileşenler, aralarında çağrı taşıyan kablolar.">
+</picture>
+
+Merhaba, ben Taylan. Talvora'yı kendi bilgisayarım için yazdım. ChatGPT'nin, Claude'un ve Codex'in Windows'ta bir geliştirici gibi çalışmasını istiyordum: kodu okusun, değiştirsin, derlesin, testleri koşsun, bir hizmet takılınca bakıp düzeltsin. Bunları yaparken ne olup bittiğini de ekrandan izleyebileyim.
+
+Talvora arka planda bir Windows hizmeti olarak çalışır ve bu istemcilere MCP üzerinden araçlar sunar. Görev çubuğundaki Kontrol Merkezi her şeyin yolunda olup olmadığını gösterir. Yukarıdaki santralde üst sıra bağlanan istemciler, alt sıra bu bilgisayardaki bileşenler; ışıklar ve sayılar uydurma değil, gerçek ölçümlerden gelir. Bir ajan çalışırken masaüstünün köşesinde küçük bir kart açılır ve o an ne yaptığını satır satır anlatır.
+
+## Neler yapabiliyor
+
+**Kodu güvenle değiştirir.** Ajan bir dosyayı önce okur, sonra değişikliği tek parça hâlinde yazar. Dosya bu arada başka biri tarafından değiştirildiyse değişiklik reddedilir; yarım kalan bir yazma kendiliğinden geri alınır. C# için sembol düzeyinde yeniden adlandırma, tekrar eden büyük düzenlemeler için de söz dizimi ağacı üzerinden toplu düzenleme var.
+
+**Senin araçlarınla derler ve test eder.** .NET, Node.js, Python (uv ile), Rust (cargo ile), Go, Java, Flutter ve Android araçları oturum açmış kullanıcı olarak, senin PATH'inle ve senin ayarlarınla çalışır. Ortaya çıkan dosyalar da senin olur.
+
+**Windows'u yönetir.** Hizmetler, olay günlüğü, kayıt defteri, ortam değişkenleri, Chocolatey paketleri, ağ ve TLS denetimleri. Uzun süren işleri ve geliştirme sunucularını başlatır, izler, durdurur.
+
+**Git ve GitHub ile çalışır.** Durum, fark ve geçmişe bakar; gönderme ve çekme senin kimlik bilgilerinle olur.
+
+**Kendini izler ve onarır.** Kontrol Merkezi bozulan katmanı bulur, önce en küçük onarımı dener ve bileşen yeniden hazır olmadan "düzeldi" demez.
+
+## Bir ajan çalışırken
 
 <p align="center">
-  <a href="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml"><img alt="Windows CI" src="https://github.com/bingoweb/Talvora-MCP/actions/workflows/windows-ci.yml/badge.svg?branch=main"></a>
-  <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0B65C2?logo=windows11&logoColor=white">
-  <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white">
-  <img alt="MCP 249 tools" src="https://img.shields.io/badge/MCP-249%20tools-198754">
-  <img alt="Active development" src="https://img.shields.io/badge/status-active%20development-6C757D">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2EA44F"></a>
+  <img src="docs/media/kod-karti.png" alt="Masaüstündeki çalışma kartı: ajanın yaptığı değişikliğin amacı, yeri ve gerçek farkı, altında oturumun zaman şeridi ve teknik kayıt." width="480">
 </p>
 
-<p align="center">
-  <img src="docs/media/control-center.png" alt="Talvora Kontrol Merkezi — Gece" width="49%" />
-  <img src="docs/media/control-center-gun.png" alt="Talvora Kontrol Merkezi — Gün" width="49%" />
-</p>
+Talvora'da en çok kullandığım parça bu kart. Üstte ajanın kendi cümlesiyle ne yaptığı ve nerede yaptığı yazar, ortada değişikliğin gerçek farkı durur, alttaki şerit de oturumun zamanını ölçtüğü kadarıyla gösterir. Oturum bitince her şey Kontrol Merkezi'ndeki Çalışma günlüğü'nde kalır; hangi projede kimin ne yaptığını sonradan da açıp bakabilirsin.
 
-## Why Talvora exists
+<img src="docs/media/calisma-gunlugu.png" alt="Kontrol Merkezi, Çalışma günlüğü: solda oturumlar, sağda seçilen oturumun zaman çizelgesi ve kanıtları.">
 
-Talvora started from a practical problem: I wanted an AI coding client to work on a real Windows workstation as a development machine, not as a thin command wrapper and not as a pretend Linux sandbox.
+## Kurulum
 
-That means dealing with the things Windows development actually involves: services, interactive user sessions, long-running processes, source edits, Git, SDKs, package managers, Event Log, registry, installers, local databases, desktop applications and repairable background infrastructure.
+İlk kararlı sürüm (0.0.1.0) hazırlanıyor. Çıktığında [Releases](https://github.com/bingoweb/Talvora-MCP/releases) sayfasında tek bir kurulum dosyası olacak; PowerShell 7 eksikse onu da kendisi kuracak. O güne kadar Talvora'yı kaynaktan kurabilirsin.
 
-Talvora packages those workflows behind MCP without turning every operation into an opaque shell command. Common tasks have structured tools. Unusual tasks still have an escape hatch. The local runtime stays on loopback.
+Gerekenler: Windows 10 ya da 11 (64 bit), yönetici yetkisi, PowerShell 7, [global.json](global.json) dosyasındaki .NET SDK sürümü ve Chocolatey.
 
-The project is deliberately opinionated:
-
-- Windows is a first-class platform.
-- One canonical Windows Service owns the runtime.
-- One canonical installer owns deployment.
-- Chocolatey is the Windows package manager.
-- Structured tools improve reliability; they are not the capability ceiling.
-- A change is not finished until the installed runtime is verified.
-
-## Current state
-
-[HANDOFF.md](HANDOFF.md) is the short entry point; [STATUS](docs/codex/STATUS.md) is the live queue and [ROADMAP](docs/codex/ROADMAP.md) holds the open cards. Agent rules are in [AGENTS.md](AGENTS.md); finished work lives in git history.
-
-- **Lean MCP surface:** **249 total**, **212 Dev**, **88 Admin**, with **51 explicitly shared** tools. The former automatic memory and embedding subsystem has been removed.
-- One LocalSystem Windows Service owns loopback MCP; the native WPF Tray/Control Center observes health and manages lifecycle, diagnostic repair, events and redacted logs.
-- Source edits use revision checks, durable WAL/receipts, syntax validation, atomic commit, replay protection, rollback and recovery.
-- Desktop worklog cards retain the user's width, show real code evidence and progress, and expose a persistent session history.
-
-## Architecture
-
-~~~text
-                          ChatGPT Business
-                         /                \
-                 Talvora Dev          Talvora Admin
-                   212 tools             88 tools
-                         \              /
-                          Secure MCP Tunnel
-                                 |
-                                 v
-Local MCP clients ------>  Talvora Windows Service
-                            127.0.0.1:7676
-                                 |
-                  +--------------+--------------+
-                  |              |              |
-              /mcp           /mcp/dev       /mcp/admin
-            249 tools        212 tools        88 tools
-                  |
-        +----------------+----------------+----------------+
-        |                |                |                |
-   Source editing     Windows        Toolchains      Integrations
-   Git / builds       control        & jobs            & MCP
-        |
-        +---- Control Center / Tray
-              health · lifecycle · diagnostics · repair
-~~~
-
-The implementation keeps transport, capability and desktop management separate. The Windows Service is the canonical runtime. Dev/Admin are focused views over that same implementation. The Tray and Control Center observe and manage the runtime rather than replacing it.
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the implementation-level model.
-
-## Focused MCP surfaces
-
-Talvora exposes three local endpoints:
-
-| Endpoint | Purpose | Tools |
-| --- | --- | ---: |
-| <code>/mcp</code> | Complete capability surface | **249** |
-| <code>/mcp/dev</code> | Development, source editing, builds, Git, jobs, Penpot and Modal workflows | **212** |
-| <code>/mcp/admin</code> | Windows administration, services, registry, environment and machine management | **88** |
-
-Dev and Admin share **51 reviewed tools** for diagnostics and common fallback operations. The overlap is explicit and regression-tested; it is not accidental duplication.
-
-The counts in the badge, summary, diagrams and table are validated from the compiled manifest by `pwsh -NoProfile -File tests/ToolManifestDocumentationRegression.ps1`. The same check validates `docs/ARCHITECTURE.md` and runs in the quality gate.
-
-## Development and administration
-
-Read `talvora_read_source` before ordinary `talvora_apply_patch` edits. Use `talvora_apply_edits` for precomputed exact ranges, ast-grep structural editing for repetitive syntax transformations, and Roslyn semantic editing for C# symbol-aware changes. `talvora_agent_brief` supplies the workspace rules and active card.
-
-Tooling covers .NET/Windows SDK, Git/GitHub, JavaScript, Python, JVM, Go/Rust, mobile/ADB, Docker, SQLite/config formats, archives and networking. [Architecture](docs/ARCHITECTURE.md) documents each suite. Chocolatey is the production package manager; WinGet is excluded.
-
-Compact defaults: Git logs 20 short commits, file discovery 200 relative entries, search 100 matches/300-character lines. Raw Git, complete metadata and larger output remain explicit options; process output keeps head/tail and .NET build/test includes diagnostics.
-
-Repair diagnoses the failed layer, applies the smallest repair, then verifies readiness before escalating. It preserves explicit manual-stop intent. Tunnel control-plane/response delivery and Gitea backend/proxy/MCP/tunnel failures are diagnosed separately.
-
-## Integrations
-
-- **Gitea:** local Git server, Caddy, official Gitea MCP and optional Secure MCP Tunnel, with end-to-end health/repair.
-- **Penpot:** self-hosted design environment, local MCP bridge, status/overview/read/call tools and the service-hosted Talvora AI plugin.
-- **Modal:** native CLI, app and endpoint tools with locally managed deployment workflows.
-- **ChatGPT Business:** optional Secure MCP Tunnel for Dev/Admin; Talvora keeps its loopback listener. Local use needs no OpenAI API key. Run `TALVORA-BUSINESS-KUR.cmd` for optional connection setup.
-- **Codex:** the signed-in user's installed CLI and existing ChatGPT session; the installer limits only Codex's registration to eight Dev tools. Business connectors keep their complete surfaces.
-- **Remotion:** start with `talvora_remotion_guide`; detached run/status tools create projects, inspect compositions and render stills, MP4/WebM and GIF with desktop progress.
-
-### Optional Claude Code engine
-
-Use `talvora_claude_exec` for bounded requests or `talvora_claude_start` for longer work only when the user explicitly requests Claude Code. Codex tools and the user's developer profile retain their behavior.
-
-Install and log in as the signed-in user in their terminal:
-
-```powershell
-& ([scriptblock]::Create((irm https://claude.ai/install.ps1))) stable
-& "$env:USERPROFILE\.local\bin\claude.exe" auth login
-```
-
-`talvora_claude_info` reports installation/version/auth state without credentials. The bridge resolves `~/.local/bin/claude.exe` and the user's PATH, auth and environment; Claude runs with that user's privileges.
-
-```json
-talvora_claude_exec {"workingDirectory":"C:\\path\\to\\repo","prompt":"Bu kodu Claude Code ile düzenle: belirtilen hatayı düzelt.","permissionMode":"auto","timeoutSeconds":1800}
-talvora_claude_status {"jobId":"<jobId>","includeResult":true}
-```
-
-Omit `model`/`effort` to retain native defaults. Permission modes are `auto`, `default`, `acceptEdits`, `plan`, `dontAsk` and explicit `bypassPermissions`; native policy still applies, with no automatic bypass fallback. Denied actions, missing final results, timeouts and structured errors cannot report success.
-
-Native settings, CLAUDE.md, skills/hooks/plugins/MCP/network behavior are preserved. `extraArguments`, `additionalDirectories` and `environment` retain native options; coding-tool framing is reserved. `talvora_claude_run` accepts native subcommands. Login/TTY setup belongs in the user's terminal: no PTY/interactive stdin. Token output is withheld; results are redacted without argv/environment echoes.
-
-Use `talvora_claude_list`/`cancel` to inspect/cancel jobs and `resumeSessionId` to resume. Both engines share a protected registry: verified surviving processes become `orphaned`, others `failed`. Maximum four jobs, one per directory unless `allowParallel=true`; worklog heartbeat is 25 seconds.
-
-References: [CLI](https://code.claude.com/docs/en/cli-reference), [setup](https://code.claude.com/docs/en/setup), [programmatic execution](https://code.claude.com/docs/en/headless), [permissions](https://code.claude.com/docs/en/permissions).
-
-## Quick start
-
-Requirements: Windows 10/11 x64, an administrator-capable installation account, the SDK pinned by `global.json` for development, and Chocolatey.
-
-From an elevated terminal:
+Yönetici olarak açtığın bir terminalde:
 
 ```powershell
 git clone https://github.com/bingoweb/Talvora-MCP.git
@@ -152,57 +51,58 @@ cd Talvora-MCP
 .\TALVORA-KUR.cmd
 ```
 
-The canonical installer publishes the service and Tray/Control Center, then verifies the deployed MCP surface. Health: `http://127.0.0.1:7676/healthz`; MCP paths: `/mcp`, `/mcp/dev`, `/mcp/admin`.
+Kurulum hizmeti ve Kontrol Merkezi'ni yerleştirir, ardından kurulan sürümü uçtan uca dener. Program dosyaları `C:\Program Files\Talvora` altına, kayıtlar ve ayarlar `C:\ProgramData\Talvora` altına gider. Her şey yolundaysa `http://127.0.0.1:7676/healthz` adresi çalışan sürümü gösterir.
 
-### Safe reset
+## İstemcileri bağlamak
 
-`scripts/Reset-And-Install.ps1` is an optional destructive reset. Preview with `pwsh -File scripts/Reset-And-Install.ps1 -WhatIf`; real execution requires administrator rights and `-ConfirmReset`. `-IncludeUserData` is a separate opt-in.
+Talvora yalnızca bu bilgisayarın içinden, `http://127.0.0.1:7676` adresinden dinler ve üç kapı açar:
 
-A completed backup under `%ProgramData%\TalvoraBackups\` precedes deletion. `Secrets` is never opened, copied, archived or deleted. `Backups`, `Penpot*`, `ssh`, tunnel state and DPAPI files are preserved by default. Cleanup is limited to Talvora's named shortcuts/processes; personal similarly named items are preserved. See [development environment](docs/DEVELOPMENT-ENVIRONMENT.md).
-
-## Engineering quality
-
-Run `pwsh -NoProfile -File scripts/Invoke-QualityGate.ps1` for locked restore, Release build, PowerShell/policy checks, behavioral suites, live/installed MCP checks and desktop smoke. `-Scope Changed` selects affected checks. CI also builds and installs the canonical artifact; local interactive checks cover the real desktop and both themes.
-
-## Security and license
-
-The service runs as LocalSystem; focused endpoints organize discovery and are not privilege sandboxes. Persistent logs redact common credential forms; tunnel credentials are separate and protected in the interactive user context. General process/PowerShell tools remain available. Read [SECURITY.md](SECURITY.md) before exposing or redistributing Talvora.
-
-Original code and documentation use the [MIT License](LICENSE): commercial use and modification are permitted with the copyright/permission notice retained; software is supplied as is, without warranty.
-
-### Third-party software & license attribution
-
-Third parties retain their own licenses, copyrights and trademarks. [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) is the complete versioned inventory of locked NuGet runtime packages, self-contained .NET runtime packs and managed companions. Upstream notices remain authoritative.
-
-## Repository map
-
-| Path | Purpose |
+| Adres | Ne için |
 | --- | --- |
-| <code>src/Talvora</code> | MCP host and application/development tool implementations |
-| <code>src/Talvora.Shared</code> | shared contracts, focused-surface policy and canonical tool manifest |
-| <code>src/Talvora.Tray</code> | Tray, Control Center, repair/recovery and desktop UX |
-| <code>src/Talvora.Installer</code> | canonical native Windows installer |
-| <code>tests/Talvora.Smoke</code> | MCP surface and installed-runtime smoke validation |
-| <code>tests/Talvora.SourceEdit.Regression</code> | transactional source-edit regression suite |
-| <code>scripts</code> | installer, bootstrap, verification and operational scripts |
-| <code>docs</code> | architecture, development environment, engineering policy and source-edit architecture |
-| <code>docs/codex</code> | live agent queue, cards and decisions |
-| <code>docs/archive</code> | historical handoff and audits |
+| `/mcp` | bütün araçlar |
+| `/mcp/dev` | geliştirme: kod, derleme, Git, işler |
+| `/mcp/admin` | yönetim: hizmetler, kayıt defteri, ortam, paketler |
 
-## Design decisions
+Şu an **249 araç** var: geliştirme yüzeyinde **212**, yönetim yüzeyinde **88**; **51** araç ikisinde ortak.
 
-A few project choices are deliberate and unlikely to change casually:
+- **Codex:** Kurulum, Talvora'yı Codex'e temel araçlarıyla kendiliğinden tanıtır.
+- **Claude Code:** `claude mcp add --transport http talvora http://127.0.0.1:7676/mcp/dev`
+- **ChatGPT:** ChatGPT Business kullanıyorsan Kontrol Merkezi → Ayarlar ve kurulum'daki sihirbaz OpenAI'nin güvenli MCP tünelini kurar; Talvora Dev ve Talvora Admin, ChatGPT'de bağlayıcı olarak görünür. Yerel adres internete açılmaz. Sihirbaz bir OpenAI Admin API anahtarı ister.
+- MCP'yi HTTP üzerinden konuşan başka bir istemci de aynı adreslere bağlanabilir.
 
-- **Windows-native over cross-platform abstraction.**
-- **One service over a collection of hidden helper daemons.**
-- **Local-first over public ingress.**
-- **Chocolatey over multiple Windows package-manager paths.**
-- **Structured operations first, general execution still available.**
-- **Minimal repair before restart.**
-- **Exact installed-runtime verification before calling work complete.**
+## Kurmadan önce bil
 
-## Documentation
+Talvora, Windows'un en yetkili hesabı olan LocalSystem ile çalışır. Ona bağladığın bir ajan bu bilgisayarda dosya silmekten bir hizmeti durdurmaya, kayıt defterini değiştirmeye kadar neredeyse her şeyi yapabilir. Bunu bilerek böyle tasarladım; ama bu yüzden Talvora'yı yalnızca kendi geliştirme bilgisayarına kur ve yalnızca güvendiğin istemcileri bağla.
 
-- [Current state](HANDOFF.md) · [Live queue](docs/codex/STATUS.md) · [Architecture](docs/ARCHITECTURE.md)
-- [Development environment](docs/DEVELOPMENT-ENVIRONMENT.md) · [Engineering policy](docs/MODERNIZATION-POLICY.md)
-- [Source-edit architecture](docs/SOURCE-EDIT-ENGINE-ARCHITECTURE.md)
+- Hizmet yalnızca `127.0.0.1` adresini dinler. Ağdaki başka bir bilgisayar ona ulaşamaz, tarayıcıda açtığın bir site de onu çağıramaz.
+- Yerel bir parola yok: bu bilgisayarda çalışan her program bağlanabilir.
+- Günlüklerde parolalar, anahtarlar ve erişim jetonları maskelenir.
+
+Ayrıntılar [SECURITY.md](SECURITY.md) dosyasında.
+
+## Sürümler
+
+Sürüm numaraları `0.0.x.x` biçiminde. Üçüncü sayı yeni yetenekler geldiğinde, dördüncü sayı düzeltmelerde artar. Bir sürümü ancak bütün denetimler, GitHub'daki derleme ve kurulu sistem üzerindeki uçtan uca test geçtikten sonra yayımlıyorum. İlk sürümle birlikte Kontrol Merkezi günde bir kez yeni sürüm olup olmadığına bakacak ve varsa sessizce haber verecek; kendiliğinden hiçbir şey kurmayacak.
+
+## Kaynak koda bakmak isteyenler için
+
+| Klasör | İçinde ne var |
+| --- | --- |
+| `src/Talvora` | hizmet ve MCP araçları |
+| `src/Talvora.Shared` | ortak sözleşmeler, araç listesi, süreç çalıştırıcıları |
+| `src/Talvora.Tray` | görev çubuğu simgesi, Kontrol Merkezi ve çalışma kartı |
+| `src/Talvora.Installer` | kurulum programı |
+| `tests` | duman testleri ve gerileme testleri |
+| `docs` | mimari ve geliştirme ortamı notları |
+
+Her değişiklik `pwsh -NoProfile -File scripts/Invoke-QualityGate.ps1` kapısından geçer: kilitli paket geri yükleme, derleme, davranış testleri, kurulu hizmet üzerinde canlı denetimler ve masaüstü testi. Mimarinin ayrıntısı [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), geliştirme ortamı [docs/DEVELOPMENT-ENVIRONMENT.md](docs/DEVELOPMENT-ENVIRONMENT.md) dosyasında.
+
+## Lisans ve üçüncü taraf yazılımlar
+
+Kendi kodum MIT lisansıyla açık: [LICENSE](LICENSE). Talvora'nın kullandığı üçüncü taraf yazılımlar kendi lisanslarıyla gelir; kilitli NuGet paketlerinin, .NET çalışma zamanı paketlerinin ve eşlik eden araçların tam listesi [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) dosyasında.
+
+---
+
+### In English
+
+Talvora is a local MCP server for Windows. It runs as a Windows service and gives AI clients such as ChatGPT, Claude Code and Codex a set of structured tools for real development work: transactional source edits, builds and tests that run as the signed-in user, Windows administration, Git, background jobs and dev servers. A desktop Control Center shows its health, and a small card shows what an agent is doing while it works. The interface is in Turkish. Talvora runs with LocalSystem rights and listens on 127.0.0.1 only, so install it on your own development machine. Stable installers will be published under [Releases](https://github.com/bingoweb/Talvora-MCP/releases); the code is MIT licensed.
