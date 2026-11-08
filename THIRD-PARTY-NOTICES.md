@@ -91,9 +91,9 @@ Upstream:
 **License:** Apache-2.0  
 **Relationship:** bundled.
 
-- `ModelContextProtocol 2.3.1`
-- `ModelContextProtocol.AspNetCore 2.3.1`
-- `ModelContextProtocol.Core 2.3.1`
+- `ModelContextProtocol 2.4.0`
+- `ModelContextProtocol.AspNetCore 2.4.0`
+- `ModelContextProtocol.Core 2.4.0`
 
 Upstream: https://github.com/modelcontextprotocol/csharp-sdk
 
@@ -147,7 +147,7 @@ Upstream:
 | Package | Version | Upstream attribution | License |
 | --- | ---: | --- | --- |
 | `YamlDotNet` | 18.1.0 | Antoine Aubry and contributors | MIT |
-| `Tomlyn` | 2.10.1 | Alexandre Mutel and contributors | BSD-2-Clause |
+| `Tomlyn` | 2.11.0 | Alexandre Mutel and contributors | BSD-2-Clause |
 | `Google.Protobuf` | 3.30.2 | Google Inc. / Protocol Buffers contributors | BSD-3-Clause |
 | `Humanizer.Core` | 3.0.10 | Claire Novotny, Mehdi Khalili, and contributors | MIT |
 

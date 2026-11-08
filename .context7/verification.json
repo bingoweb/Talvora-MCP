@@ -1,8 +1,19 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T18:24:16Z",
-  "scope": "D64: exclude Talvora's own Context7 smoke records, validate every question, correct MCP metadata and detached start titles",
-  "libraries": [],
-  "noLookup": "D64: only updates Talvora's own gate, tool metadata and worklog code; no external API behavior is relied upon.",
-  "vendorSources": []
+  "verifiedAtUtc": "2026-11-08T19:14:17Z",
+  "scope": "PK1: MCP C# SDK 2.4.0 and Tomlyn 2.11.0 with their lock files and third-party notices",
+  "libraries": [
+    {
+      "libraryId": "/modelcontextprotocol/csharp-sdk/v2.3.0",
+      "verified": "2026-11-08 PK1: tools keep UseStructuredContent with OutputSchemaType on McpServerToolAttribute; 2.4.0 only fixes legacy schemas of delegating tools (#1928), which the installed metadata smoke checks (query: \"McpServerTool attribute UseStructuredContent OutputSchemaType structured tool result schema\")"
+    },
+    {
+      "libraryId": "/xoofx/tomlyn/2.10.1",
+      "verified": "2026-11-08 PK1: Talvora uses TomlSerializer.Deserialize<TomlTable> and TomlSerializer.Serialize(TomlTable), unchanged in 2.11.0, which only adds serializer options and newline/blank-line preservation (query: \"TomlSerializer Serialize TomlTable model to TOML text and Deserialize TomlTable\")"
+    }
+  ],
+  "vendorSources": [
+    "https://github.com/modelcontextprotocol/csharp-sdk/releases/tag/v2.4.0",
+    "https://github.com/xoofx/Tomlyn/releases/tag/2.11.0"
+  ]
 }

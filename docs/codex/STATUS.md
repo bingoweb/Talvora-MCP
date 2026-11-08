@@ -33,7 +33,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [~] CTX2 — installed 953fc7d; both installed MCP smokes green, CI success (audit 47); Claude checks the next card's push
-- [?] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (waiting for Claude: P-55, license notices and project-reference lock entries)
+- [x] [C] PK1 — MCP C# SDK 2.4.0 and Tomlyn 2.11.0 (Claude after P-55: lock files and notices included)
 - [?] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (waiting for PK1; P-55)
 - [ ] RL1 — Talvora's version is 0.0.x.x and comes from the release tag (user request 2026-11-08)
 - [ ] RL2 — A fresh Windows gets PowerShell 7 from the installer (user decision 2026-11-08)
@@ -58,6 +58,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — [C] PK1, executor Claude (P-55): `ModelContextProtocol` and `.AspNetCore` 2.3.1 → 2.4.0, `Tomlyn` 2.10.1 → 2.11.0 (the newest stable on 2026-11-08; 2.11.0 appeared after the card was written). One `dotnet restore Talvora.slnx --force-evaluate`: five lock files moved, only the MCP packages, Tomlyn and the project nodes that reference them; `--locked-mode` passes. THIRD-PARTY-NOTICES.md names the new versions (THIRD_PARTY_NOTICES_SOURCE_GREEN packages=45). Changed 66/0 `Hepsi geçti.` Context7 (asked directly): `/modelcontextprotocol/csharp-sdk/v2.3.0` UseStructuredContent/OutputSchemaType, `/xoofx/tomlyn/2.10.1` TomlSerializer; map rows show the index gaps. Full gate, deploy and installed smokes run with PK2 (one install).
 
 - 2026-11-08 — PK1, executor ChatGPT: NuGet confirmed SDK 2.4.0 and Tomlyn 2.10.2; Context7 verified SDK tools/filters/errors and Tomlyn serializer, release notes reviewed. Signed-in `--force-evaluate` once and `--locked-mode` restore passed. Changed gate 62 checks / 1 error: `PS:ThirdPartyNoticesSourceRegression` misses four new versions in `THIRD-PARTY-NOTICES.md` (`tests/ThirdPartyNoticesSourceRegression.ps1:61`); lock graph also changes `talvora` and `talvora.tray` project-reference nodes. Submitted P-55; all source, map, evidence and generated lock changes reverted. Baseline Changed 11/0 `Hepsi geçti.`; baseline CI run 42512176939 succeeded. No Full, deploy or new CI for PK1.
   Self-review — no UI changes; original packages and locks preserved; required license-attribution safety check was not bypassed. Gitea #9 comment 232.
