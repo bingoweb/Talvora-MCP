@@ -87,6 +87,7 @@ internal static partial class Program
         AssertD39PenpotRedaction();
         await AssertD35LatestBackoffAsync();
         await AssertD41CallerIdentityAsync();
+        await AssertTw2CallTraceAsync();
         await AssertD51ReportedExitCodesAsync();
         AssertD53DescriptionsAsWholeSentences();
         AssertD34TunnelHealthFile();

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting.WindowsServices;
 using ModelContextProtocol.AspNetCore;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.Diagnostics;
 using System.Security.AccessControl;
 using System.Security.Principal;
 
@@ -34,6 +35,7 @@ builder.WebHost.ConfigureKestrel(options => options.ListenLocalhost(7676));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<TalvoraDesktopProgressNotifier>();
 builder.Services.AddSingleton<TalvoraLineTrafficMeter>();
+builder.Services.AddSingleton<ToolCallTrace>(_ => new ToolCallTrace());
 builder.Services.AddHostedService<TalvoraSystemStorageMaintenanceService>();
 
 builder.Services
@@ -70,56 +72,78 @@ builder.Services
             request,
             cancellationToken) =>
         {
-            if (ToolArgumentValidator.TryCreateError(request) is { } invalidArguments)
-            {
-                return ToolFailureGuidance.Apply(request.Params?.Name, invalidArguments);
-            }
-
-            var notifier =
-                request.Services?.GetService<TalvoraDesktopProgressNotifier>();
-            var surfacePath = request.Services?.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>()
-                ?.HttpContext?.Request.Path.Value;
+            var startedAtUtc = DateTimeOffset.UtcNow;
+            var elapsed = Stopwatch.StartNew();
             var headers = request.Services?.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>()
                 ?.HttpContext?.Request.Headers;
             var clientName = TalvoraLineTrafficMeter.ResolveCallerName(
                 headers?["X-Talvora-Client"].ToString(),
                 request.Server.ClientInfo?.Name,
                 headers?.UserAgent.ToString());
-            Func<CancellationToken, ValueTask<CallToolResult>> operation =
-                token => next(request, token);
-            if (notifier is not null)
-            {
-                var inner = operation;
-                operation = token => notifier.RunToolCallAsync(
-                    request.Params.Name,
-                    request.Params.Arguments,
-                    inner,
-                    token,
-                    surfacePath,
-                    clientName);
-            }
-
-            CallToolResult result;
-            var ok = false;
+            CallToolResult? completed = null;
             try
             {
-                result = await operation(cancellationToken);
-                ok = result.IsError != true;
-            }
-            catch (Exception exception) when (
-                exception is not ModelContextProtocol.McpProtocolException &&
-                (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested))
-            {
-                // H3: the SDK would answer with only "An error occurred invoking '<tool>'."; the model needs the reason.
-                result = ToolFailureGuidance.FromException(request.Params?.Name, exception);
+                if (ToolArgumentValidator.TryCreateError(request) is { } invalidArguments)
+                {
+                    completed = ToolFailureGuidance.Apply(request.Params?.Name, invalidArguments);
+                    return completed;
+                }
+
+                var notifier =
+                    request.Services?.GetService<TalvoraDesktopProgressNotifier>();
+                var surfacePath = request.Services?.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>()
+                    ?.HttpContext?.Request.Path.Value;
+                Func<CancellationToken, ValueTask<CallToolResult>> operation =
+                    token => next(request, token);
+                if (notifier is not null)
+                {
+                    var inner = operation;
+                    operation = token => notifier.RunToolCallAsync(
+                        request.Params.Name,
+                        request.Params.Arguments,
+                        inner,
+                        token,
+                        surfacePath,
+                        clientName);
+                }
+
+                CallToolResult result;
+                var ok = false;
+                try
+                {
+                    result = await operation(cancellationToken);
+                    ok = result.IsError != true;
+                }
+                catch (Exception exception) when (
+                    exception is not ModelContextProtocol.McpProtocolException &&
+                    (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested))
+                {
+                    // H3: the SDK would answer with only "An error occurred invoking '<tool>'."; the model needs the reason.
+                    result = ToolFailureGuidance.FromException(request.Params?.Name, exception);
+                }
+                finally
+                {
+                    // SN1: every finished call lights its real line in the Control Center, failed ones included.
+                    request.Services?.GetService<TalvoraLineTrafficMeter>()?.Record(surfacePath, clientName, ok);
+                }
+
+                completed = ToolFailureGuidance.Apply(
+                    request.Params?.Name, ToolResultTextPolicy.Apply(result, request.Params?.Name));
+                return completed;
             }
             finally
             {
-                // SN1: every finished call lights its real line in the Control Center, failed ones included.
-                request.Services?.GetService<TalvoraLineTrafficMeter>()?.Record(surfacePath, clientName, ok);
+                try
+                {
+                    request.Services?.GetService<ToolCallTrace>()?.Record(
+                        startedAtUtc, clientName, request.Params?.Name ?? string.Empty,
+                        request.Params?.Arguments, elapsed.ElapsedMilliseconds, completed);
+                }
+                catch (Exception)
+                {
+                    // No trace failure can affect a tool response.
+                }
             }
-
-            return ToolFailureGuidance.Apply(request.Params?.Name, ToolResultTextPolicy.Apply(result, request.Params?.Name));
         });
 
         filters.AddListToolsFilter(next => async (
@@ -141,6 +165,7 @@ builder.Services
     .WithToolsFromAssembly();
 
 var app = builder.Build();
+_ = app.Services.GetRequiredService<ToolCallTrace>();
 app.UseLoopbackOriginGuard();
 ClaudeBackgroundJobTools.DesktopNotifier =
     app.Services.GetRequiredService<TalvoraDesktopProgressNotifier>();

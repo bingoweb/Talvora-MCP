@@ -33,8 +33,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [x] D59 — installed d90bb6f; forced-race deploy and installed smokes green; CI 42487516284 success
-- [~] TW1 — code and gates green; live pending: deploy, installed smokes and CI
-- [ ] TW2 — Talvora keeps a short trace of agent tool calls (user decision 2026-11-08)
+- [x] TW1 — installed 01dcf9a; both installed smokes green; CI 42488833981 success
+- [~] TW2 — code and gates green; live pending: deploy, whoami trace, installed smokes and CI
 - [ ] D55 — A relay runs one job inside the signed-in user's session (audit 43; after D52)
 - [ ] D56 — Background jobs and dev servers run as the signed-in user (audit 43, user decision; after D55)
 - [ ] D45 — Çalışma günlüğü measures a session up to its last step (audit 42, data truth)
@@ -65,6 +65,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — TW2, executor ChatGPT: async serialized call trace records nine redacted/hash-only fields, skips D41 own clients, and deletes files older than 14 days daily. RED: CS0246 missing ToolCallTrace; TW2_CALL_TRACE_GREEN and DESKTOP_PROGRESS_BEHAVIOR_GREEN. Changed 28/0; Full 70/0: Hepsi geçti. Context7 /dotnet/docs Utf8JsonWriter and SHA256.HashData, official JSON writer docs. Commit, deploy, whoami trace, installed smokes and CI pending. Gitea #9 comment 219.
+  Self-review — no UI, output, environment values or file contents written to trace; no reader or setting; the notification-test runner only invokes the new isolated fixture.
 
 - 2026-11-08 — TW1, executor ChatGPT: tail_text optionally waits for a regex-matching line with two-second cancellable polls, a one-second culture-invariant regex timeout and 0–100-second bounds; default output is unchanged. RED: the installed tool refused both new parameters. Pinned append encoding/newline regressions green; Changed 31/0; Full 70/0: Hepsi geçti. Context7 /dotnet/docs Regex and Task.Delay; official regex best practices. Install, installed smokes and CI pending. Gitea #9 comment 218.
   Supporting changes: the shared-infrastructure smoke receives live MCP tools through Program.cs; SourceEditRegressionRunner.Misc.cs awaits three calls (initial Changed compiler CS1061). Self-review: no visual, copy or unrelated tool changes.
