@@ -32,17 +32,17 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [ ] [C] D51 — The full installed smoke is green again (Claude, one-off, user 2026-11-08: "Bu defalık sen yap"; from D51 on every install runs the installed smokes, Deploy row)
+- [x] [C] D51 — The full installed smoke is green again (Claude, one-off; installed 00a9616: talvora_job_stop of a killed job returns exitCode -1 as data without isError; the unmodified full installed smoke prints TALVORA MCP SMOKE GREEN and --metadata-policy-only is green; CI 42427461230)
 - [ ] D45 — Çalışma günlüğü measures a session up to its last step (audit 42, data truth)
 - [ ] D50 — Çalışma günlüğü keeps every session (audit 42, data truth; after D45)
 - [ ] D46 — A CI run that is still going is not a failed step (audit 42)
 - [ ] D48 — A vault note belongs to the vault's owner (audit 42)
 - [ ] D49 — Plain Turkish service names, also for older registries (audit 42; after D46)
 - [ ] D47 — Plain Turkish for the remaining Control Center texts (audit 42; setup texts per the user's decision; table and test in docs/codex/reference/d47)
-- [ ] [C] UR1 — dotnet, Node, JVM and Go tools run as the signed-in user (Claude, one-off, user 2026-11-08)
-- [ ] [C] UR2 — Flutter, Dart and Android tools run as the signed-in user (Claude, one-off)
-- [ ] [C] UR3 — MSBuild, CMake, Ninja and Windows SDK tools run as the signed-in user (Claude, one-off)
-- [ ] [C] UR4 — Python and Docker tools run as the signed-in user; talvora_python_info reports uv (Claude, one-off)
+- [x] [C] UR1 — dotnet, Node, JVM and Go tools run as the signed-in user (Claude, one-off; installed 00a9616: talvora_go_run env GOPATH → C:\Users\tayla\go, the service's was C:\WINDOWS\system32\config\systemprofile\go; talvora_node_info npm 12.2.1, the user's, the service's was 12.2.0; full installed smoke green; CI 42427461230)
+- [x] [C] UR2 — Flutter, Dart and Android tools run as the signed-in user (Claude, one-off; installed 00a9616: the full installed smoke runs the Flutter, Dart and Android probes green as the user; CI 42427461230)
+- [x] [C] UR3 — MSBuild, CMake, Ninja and Windows SDK tools run as the signed-in user (Claude, one-off; installed 00a9616: the MSBuild, CMake and SDK /? probes of the full installed smoke green as the user; talvora_vs_dev_environment stays with the service; CI 42427461230)
+- [x] [C] UR4 — Python and Docker tools run as the signed-in user; talvora_python_info reports uv (Claude, one-off; installed 00a9616: talvora_python_info in a fresh session → uvAvailable true, uv 0.13.7; full installed smoke green; CI 42427461230)
 - [ ] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
 - [ ] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (after PK1)
 - [ ] [C] WL3 — Çalışma günlüğü and Olaylar polish (Claude; audit 42, user: later; after D45 and D50)
@@ -54,7 +54,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 ## User queue
 
 - [x] U14 — Makine (sistem) PATH değişkeninden `C:\Users\tayla\.cargo\bin` satırı kaldırıldı (kullanıcı, 2026-11-08). Claude'un kontrolü: makine PATH'i 32 satır ve diğer satırlar değişmedi (değer artık REG_SZ; hiçbir satırda % yok); kullanıcı PATH'inde satır duruyor; `talvora_rust_info` 1.99.1. (RS2)
-- [ ] U15 — ChatGPT'de Talvora Dev ve Talvora Admin bağlayıcılarını yenileyin, Claude Desktop'ı da bir kez kapatıp açın: araç listesi değişti (`talvora_uv_run` geldi; `talvora_pip_install`, `talvora_pip_run` ve `talvora_python_venv_create` kalktı). (UV1)
+- [ ] U15 — ChatGPT'de Talvora Dev ve Talvora Admin bağlayıcılarını yenileyin, Claude Desktop'ı da bir kez kapatıp açın: araç listesi değişti (`talvora_uv_run` geldi; `talvora_pip_install`, `talvora_pip_run` ve `talvora_python_venv_create` kalktı). `talvora_python_info`'nun çıktısı da değişti (UR4): yenilenmemiş istemci bu aracın yanıtını eski şemaya göre reddeder; Claude Desktop'ta bu görüldü. (UV1, UR4)
 - [ ] U16 — İsteğe bağlı: makine (sistem) PATH'inde aynı klasörü gösteren ikinci satırlar var: `C:\Python314\Scripts`, `C:\Python314`, `C:\Program Files\dotnet\`, `C:\Program Files\PowerShell\7\` ve `C:\Program Files\nodejs\`. Zararsızlar; isterseniz U14'teki gibi Sistem değişkenleri → Path → Düzenle'den bu beşini silebilirsiniz.
 
 ## Open questions
@@ -66,6 +66,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — D51 and UR1–UR4, executor Claude (one-off, user: "Bu defalık sen yap"). D51 (35115d8): status and stop tools report another process's exit code as data (StructuredResultFailure.ReportsAnotherProcess, the tool name passed through ToolFailureGuidance, ToolResultTextPolicy and the desktop notifier); the smoke follows find_files' relative paths, the TCP table seen through tcp_connections, git_log's maxCommits and full entries, a user-writable PowerShell folder and the script's own exit 7, the user's Codex profile and the SDK `/?` probes; ExpectedDestructiveToolCount 106; EnsureSuccess prints the reason. RED: the Notification regression stopped with "D51: talvora_job_get reports another process's exit code" before the fix. UR1–UR4 (ccdf712, 2c09da4, e68d23b, 6a7ea24, then 4f2cee4 and 00a9616): `SignedInUserToolchain` resolves, reads variables and profile folders and runs programs in the signed-in user's session when Talvora runs as LocalSystem, and directly in its own account otherwise (tests, CI); the Yarn candidate inside the service profile is gone; talvora_python_info reports uv. RED each time: `Assert-SignedInUserToolchain` named the first file that still ran a tool as the service account; live red for UR1: go env GOPATH answered the service profile. The first install (6a7ea24) showed one more fault in the full smoke: the *_info version probes went through ProcessRunner.RunCheckedAsync, still as LocalSystem (node_info npm 12.2.0 against npm_run 12.2.1); fixed with SignedInUserToolchain.RunCheckedAsync and a wider rule (`ProcessRunner.Run*Async`). Changed gates green per card; signed-in Full 70/0 `Hepsi geçti.` twice; installed 00a9616; --metadata-policy-only and the full installed smoke green; CI 42427461230. Observation for the next audit: the first --metadata-policy-only right after the service switch failed once with "Live description contains grammar regression: talvora_dotnet_run" and passed on the rerun (tools/list may answer before description normalization). Self-review: cosmetics — no screen changed; usability — every developer tool keeps its arguments and output, and the tools now find the user's own versions (npm 12.2.1, GOPATH, uv); Turkish — commit texts only; correctness and security — red-first per card, the full installed smoke green, nothing runs in or reads from the service profile in these files except the Visual Studio environment probe, which stays by design.
 
 - 2026-11-08 — Claude: UR1–UR5, PK1 and PK2 written (user: "Evet, hepsini yaz"). The user then chose "Bu defalık sen yap" for the work Claude had already applied and compiled in a scratch clone: D51 and UR1–UR4 are Claude's one-off items; PK1 and PK2 stay with the agent, after UR4. Measured as LocalSystem: 6.85 GB of developer caches in the service profile (UR5 removes them later, with the user's go-ahead).
 
