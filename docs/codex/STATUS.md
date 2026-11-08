@@ -32,12 +32,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [~] CTX2 — installed 953fc7d; both installed MCP smokes green, CI success (audit 47); Claude checks the next card's push
-- [~] RL1 — b83b2f1 deployed with healthz and both MCP smokes green; CI 42517091038 successful; visual check pending (Claude)
-- [~] RL2 — PowerShell 7 preflight and MSI integrity gate implemented; live pending: verified MSI download, deployed HEAD, smokes, CI
-- [x] [C] KUR1 — The setup window speaks Santral and carries the developer's maker plate (Claude; see Log)
-- [~] RL3 — Windows Apps registration and safe uninstall implemented; installed check and CI pending, real uninstall/reinstall plus visual check pending (Claude with user approval)
+- [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user, after D66
 - [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
+- [ ] D65 — Uninstalling removes Talvora's whole Codex entry with the installer's own parser (audit 50)
+- [ ] D66 — An uninstall never deletes a later reinstall's setup copy (audit 50)
+- [ ] D67 — PowerShell 7 downloads to a private, locked file and shows its progress (audit 50)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
 - [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
@@ -58,6 +57,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-09 — Claude, audit 50 (deep; tag `audit/2026-11-09-50`): range `audit/2026-11-08-49..2e7e6fd` — RL1–RL4 (ChatGPT), CTX3 and KUR1 (Claude). Rules: one Turkish commit per card with its `Card:`, files within each card, self-review blocks present. Context7: every question of RL1–RL4 is in the ledger with status 200 (RL3 and RL4 already through the user's key); the gate refused RL4's first push because its evidence named shorter questions than it had asked — the agent then asked exactly those and pushed. Lines read: RL3 uninstall order, Secrets and reparse guards are right; findings: the Codex cleanup orphans user sub-tables (D65), the reboot deletion is bound to the setup's fixed path so a reinstall before restarting loses its uninstaller (D66), the elevated PowerShell 7 download uses a predictable, unlocked file in the user's temp folder and shows no progress (D67). RL4: tag-only releases, env-passed inputs, ancestry, CI and notes checks, pins equal to windows-ci. Live: SYSTEM `--verify-powershell-download` green (32 s); installed 0b749e3 with metadata and full smokes green; Apps entry values as carded; CI green to 2e7e6fd; Control Center smoke PNGs show "geliştirme sürümü" in Hakkında and Genel bakış. Look-ahead: RL5 now names the rail dot (`NavRailItem.HasDot`), the state file, the smoke hook and a precise Context7 question. .NET 10.0.14 / SDK 10.0.403 still newest. Tasarım geliştirmeleri: PowerShell download progress (D67). Release: none (0.0.1.0 waits for RL4's dry run, RL5, D65–D67, D47–D49, WL3 and README screenshots). Asked the user nothing: every finding has one correct fix.
 - 2026-11-09 — RL4, executor ChatGPT: new pinned GitHub Actions release workflow for v0.0.*.* and manual dry_run; checks version/tag, origin/main ancestry, same-commit successful windows-ci and release notes. Builds one versioned EXE and lowercase SHA256SUMS.txt; gh release create only on approved tag pushes, never on manual dispatch.
   RED missing workflow, then RELEASE_WORKFLOW_GREEN, ModernizationPolicyRegression and CiDocsOnlyRegression GREEN. Signed-in Changed 13/0 and Full 72/0, Hepsi geçti. Context7 /websites/github_en_actions (tag filters, boolean dispatch); GitHub/gh CLI official docs. Gitea #9 comment 236.
   Self-review — no UI changes; manual dry_run defaults true; no tag/release created, least-privilege GH token, checksum/notes/CI gates. Live pending committed-HEAD windows-ci and nonpublishing workflow_dispatch dry run.
