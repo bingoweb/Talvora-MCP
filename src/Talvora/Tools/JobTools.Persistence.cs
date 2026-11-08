@@ -233,6 +233,10 @@ private static string GetJobsRoot()
         }
         finally
         {
+            // Release the user-session pipes in the existing exit path, not when
+            // LiveJobs removes a runtime still used by a concurrent stop/get.
+            runtime.DisposePipes();
+            LiteralProcessStart.DeleteTemporaryCommandScript(runtime.TemporaryCommandScript);
             // Do not dispose the shared Process wrapper here. A concurrent job_stop/get
             // call may still be completing against the same exited process. Removing
             // the runtime drops Talvora's long-lived reference; SafeHandle/GC cleanup
@@ -443,11 +447,14 @@ private static string GetJobsRoot()
             .ConfigureAwait(false);
         try
         {
-            return await JsonFileStore.ReadAsync<TalvoraJobMetadata>(
+            var metadata = await JsonFileStore.ReadAsync<TalvoraJobMetadata>(
                     path,
                     JsonOptions,
                     cancellationToken)
                 .ConfigureAwait(false);
+            return string.IsNullOrWhiteSpace(metadata.RunAs)
+                ? metadata with { RunAs = "service" }
+                : metadata;
         }
         finally
         {

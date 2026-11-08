@@ -229,6 +229,92 @@ internal static partial class SmokeScenarios
                 {
                     ["jobId"] = jobId,
                 });
+
+                // D56: the default job identity is the signed-in user, but service is explicit.
+                async Task<string> RunIdentityJobAsync(
+                    string executable, string[] arguments, string? runAs = null)
+                {
+                    var startArguments = new Dictionary<string, object?>
+                    {
+                        ["executable"] = executable,
+                        ["arguments"] = arguments,
+                        ["workingDirectory"] = root,
+                    };
+                    if (runAs is not null)
+                        startArguments["runAs"] = runAs;
+                    var started = await EnsureSuccess(byName["talvora_job_start"], startArguments);
+                    if (started.StructuredContent is not { } startJson)
+                        throw new InvalidOperationException("D56: job start had no structured result.");
+                    var id = startJson.GetProperty("jobId").GetString()
+                        ?? throw new InvalidOperationException("D56: job ID missing.");
+                    try
+                    {
+                        var exited = false;
+                        for (var attempt = 0; attempt < 60; attempt++)
+                        {
+                            await Task.Delay(500);
+                            var state = await EnsureSuccess(byName["talvora_job_get"], new()
+                            {
+                                ["jobId"] = id,
+                            });
+                            if (state.StructuredContent is { } jobJson &&
+                                !string.Equals(jobJson.GetProperty("state").GetString(),
+                                    "Running", StringComparison.OrdinalIgnoreCase))
+                            {
+                                exited = true;
+                                break;
+                            }
+                        }
+                        if (!exited)
+                            throw new InvalidOperationException("D56: job did not exit within 30 seconds.");
+                        var output = await EnsureSuccess(byName["talvora_job_read_output"], new()
+                        {
+                            ["jobId"] = id,
+                            ["stream"] = "stdout",
+                            ["offset"] = 0L,
+                            ["maxBytes"] = 0,
+                        });
+                        if (output.StructuredContent is not { } outputJson)
+                            throw new InvalidOperationException("D56: job output is missing.");
+                        return (outputJson.GetProperty("text").GetString() ?? "").Trim();
+                    }
+                    finally
+                    {
+                        await EnsureSuccess(byName["talvora_job_delete"], new()
+                        {
+                            ["jobId"] = id,
+                            ["stopIfRunning"] = true,
+                        });
+                    }
+                }
+
+                var whoamiPath = @"C:\Windows\System32\whoami.exe";
+                var signedIn = await EnsureSuccess(byName["talvora_user_run"], new()
+                {
+                    ["executable"] = whoamiPath,
+                    ["arguments"] = Array.Empty<string>(),
+                    ["workingDirectory"] = root,
+                });
+                var expectedUser = signedIn.StructuredContent is { } signedInJson
+                    ? (signedInJson.GetProperty("standardOutput").GetString() ?? "").Trim()
+                    : throw new InvalidOperationException("D56: user_run identity was missing.");
+                var defaultUser = await RunIdentityJobAsync(whoamiPath, []);
+                if (!string.Equals(defaultUser, expectedUser, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException(
+                        $"D56: default job ran as '{defaultUser}' instead of signed-in user '{expectedUser}'.");
+                var serviceUser = await RunIdentityJobAsync(whoamiPath, [], "service");
+                if (!string.Equals(serviceUser, @"nt authority\system", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("D56: runAs=service did not run as LocalSystem.");
+                var rustInfo = await EnsureSuccess(byName["talvora_rust_info"], new());
+                if (rustInfo.StructuredContent is { } rustJson &&
+                    rustJson.TryGetProperty("cargoExecutable", out var cargoValue) &&
+                    cargoValue.ValueKind == System.Text.Json.JsonValueKind.String &&
+                    !string.IsNullOrWhiteSpace(cargoValue.GetString()))
+                {
+                    var cargoOutput = await RunIdentityJobAsync("cargo", ["--version"]);
+                    if (!cargoOutput.StartsWith("cargo ", StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException("D56: cargo was not resolved on the signed-in user PATH.");
+                }
                 
                 var staleVictimExecutable = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.System),

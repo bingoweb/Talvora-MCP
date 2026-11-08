@@ -148,8 +148,7 @@ public static class TalvoraMcpToolMetadataPolicy
                 "Start a process in the logged-on user's interactive Windows session. " +
                 "Use talvora_user_run for a bounded command with captured output.",
             ["talvora_job_start"] =
-                "Start a long-running development job under the Talvora Windows service. " +
-                "Use talvora_user_run for bounded commands in the signed-in user context.",
+                "Start a long-running development job as the signed-in user (runAs=user, default) or under the Talvora Windows service (runAs=service). Use talvora_user_run for bounded commands.",
             ["talvora_http_mock_start"] =
                 "Start an in-process HTTP mock/webhook listener for integration testing. " +
                 "Use talvora_http_mock_reply to answer captured requests manually.",

@@ -489,6 +489,7 @@ public static class TalvoraToolGuides
                   ("workingDirectory", "Absolute work dir"),
                   ("environment", "Env var map"),
                   ("clearEnvironment", "Clear inherited env"),
+                  ("runAs", "user (default): the signed-in Windows user; service: the Talvora LocalSystem service, only for jobs that need it."),
                   ("tcpHost", "TCP probe host"),
                   ("tcpPort", "TCP probe port"),
                   ("httpUrl", "HTTP probe URL"),
@@ -922,12 +923,13 @@ public static class TalvoraToolGuides
                   ("generation", "Output rotation generation returned by an earlier output read.")),
                 """{"jobId":"h2b-example-nonexistent","stream":"stdout","maxBytes":1024}"""),
             ["talvora_job_start"] = new(
-                "Start a long-running development job under the Talvora Windows service. Use talvora_user_run for bounded commands in the signed-in user context.",
+                "Start a long-running development job as the signed-in user by default. Use talvora_user_run for bounded commands.",
                 P(("executable", "Executable path or command resolvable by Windows."),
                   ("arguments", "CLI arguments as an array of separate tokens."),
                   ("workingDirectory", "Absolute directory to run the command in."),
                   ("environment", "Environment-variable name/value map for the launched process."),
-                  ("clearEnvironment", "Omit inherited environment variables for the new process.")),
+                  ("clearEnvironment", "Omit inherited environment variables for the new process."),
+                  ("runAs", "user (default): the signed-in Windows user; service: the Talvora LocalSystem service, only for jobs that need it.")),
                 """{"executable":"C:\\Program Files\\PowerShell\\7\\pwsh.exe","arguments":["-NoProfile","-Command","Write-Output example"],"workingDirectory":"C:\\Users\\tayla\\Talvora-MCP\\artifacts\\example"}"""),
             ["talvora_job_stop"] = new(
                 "Stop a Talvora background job by job ID. By default terminates the complete child process tree. The underlying direct process tools remain available for caller-supplied PID control.",

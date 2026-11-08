@@ -1,15 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T14:45:49Z",
-  "scope": "D55: user-session process relay over three named pipes for stdin, stdout and stderr",
+  "verifiedAtUtc": "2026-11-08T15:03:40Z",
+  "scope": "D56: signed-in Windows user jobs and dev servers via protected named pipes; LocalSystem is explicit",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "2026-11-08 D55: NamedPipeClientStream connects to named pipes with explicit PipeDirection and PipeOptions; redirected Process.StandardInput.BaseStream transfers live bytes, with Flush after each chunk. Queries: \".NET 10 NamedPipeClientStream constructor (serverName, pipeName, PipeDirection, PipeOptions) and Connect(int timeout) behavior; NamedPipeServerStream WaitForConnectionAsync cancellation, server/client direction pairings\" and \".NET Process.StandardInput.BaseStream Flush after writing bytes with redirected standard input, Stream.CopyToAsync & Process.StandardOutput.BaseStream, WaitForExit and pipe flush on EOF\"."
+      "verified": "2026-11-08 D56: NamedPipeServerStreamAcl.Create accepts a PipeSecurity ACL for named-pipe servers, PipeAccessRule grants specific SIDs; Process.Kill(entireProcessTree: true) terminates child trees, followed by a wait. Context7 /dotnet/docs queries: \"NamedPipeServerStreamAcl.Create(PipeSecurity security) PipeAccessRule PipeAccessRights.ReadWrite Synchronize PipeDirection .NET Windows named pipe access\" and \"System.Diagnostics.Process.Kill(bool entireProcessTree) .NET 10 descendant processes, exceptions and wait for exit\"."
     }
   ],
   "vendorSources": [
-    "https://learn.microsoft.com/dotnet/api/system.io.pipes.namedpipeclientstream",
+    "https://learn.microsoft.com/dotnet/api/system.io.pipes.namedpipeserverstreamacl.create",
+    "https://learn.microsoft.com/windows/win32/ipc/named-pipe-security-and-access-rights",
     "https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasuserw"
   ]
 }

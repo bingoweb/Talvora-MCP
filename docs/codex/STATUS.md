@@ -35,8 +35,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D59 — installed d90bb6f; forced-race deploy and installed smokes green; CI 42487516284 success
 - [x] TW1 — installed 01dcf9a; both installed smokes green; CI 42488833981 success
 - [x] TW2 — installed 0c9e222; whoami trace and both installed smokes green; CI 42490285622 success
-- [~] D55 — code and gates green; live pending: deploy, installed smokes and CI
-- [ ] D56 — Background jobs and dev servers run as the signed-in user (audit 43, user decision; after D55)
+- [x] D55 — installed 86f21c9; both installed smokes green; CI 42491730064 success
+- [~] D56 — code and gates green; live pending: deploy, installed identity/smoke checks and CI; Claude audit checks service-profile caches
 - [ ] D45 — Çalışma günlüğü measures a session up to its last step (audit 42, data truth)
 - [ ] D50 — Çalışma günlüğü keeps every session (audit 42, data truth; after D45)
 - [ ] D46 — A CI run that is still going is not a failed step (audit 42)
@@ -65,6 +65,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-08 — D56, executor ChatGPT: jobs and dev servers default to signed-in user with SID-scoped three-pipe relay, optional runAs=service LiteralProcessStart, protected folder, persisted RunAs (legacy=service), and owned pipe/script cleanup. RED: installed whoami job printed SYSTEM instead of signed-in user; six pinned tests green; Changed 20/0; Full 70/0: Hepsi geçti. Context7 /dotnet/docs pipe ACL and Process.Kill, Microsoft NamedPipeServerStreamAcl, named-pipe security and CreateProcessAsUserW docs. Install, installed smoke, CI and Claude post-use cache check pending. Gitea #9 comment 221.
+  Self-review — no UI or tool/schema additions, existing output/rotation preserved; user/service selection, stop/delete, legacy records and SID isolation covered; Turkish-visible text unchanged.
 
 - 2026-11-08 — D55, executor ChatGPT: UserJobRelay.Run connects three pipes and forwards live stdin/stdout/stderr with child PID/exit files; the exact RunnerScript and request contract are preserved. RED: relay NotImplementedException; GREEN: pwsh ping/exit 3, separate stderr, and args.cmd special-character argument fidelity; TALVORA SHARED INFRASTRUCTURE GREEN. Changed 17/0; Full 70/0: Hepsi geçti. Context7 /dotnet/docs pipe client and Process.StandardInput; Microsoft NamedPipeClientStream/CreateProcessAsUser pages. Install, installed smokes and CI pending. Gitea #9 comment 220.
   Self-review — no tools wired until D56, no handle inheritance across sessions, no UI changes; disconnected outputs keep draining and temporary command scripts are cleaned.

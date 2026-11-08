@@ -19,7 +19,7 @@ public static partial class DevServerTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraDevServerStatusResponse)),
-     Description("Start any executable through Talvora's persistent job system and wait for optional TCP/HTTP readiness probes. No executable/argument/host/URL allowlist is applied. If both probes are configured, requireAll controls whether both or either must become ready.")]
+     Description("Start any executable through Talvora's persistent job system, as the signed-in user unless runAs=service, and wait for optional TCP/HTTP readiness probes. No executable/argument/host/URL allowlist is applied. If both probes are configured, requireAll controls whether both or either must become ready.")]
     public static async Task<TalvoraDevServerStatusResponse> Start(
         [Description("Executable path or command resolvable by Windows.")] string executable,
         string[]? arguments = null,
@@ -39,6 +39,7 @@ public static partial class DevServerTools
         int pollIntervalMilliseconds = 250,
         bool stopOnFailure = true,
         int logTailBytes = 16 * 1024,
+        string runAs = "user",
         CancellationToken cancellationToken = default)
     {
         ValidateProbeConfiguration(
@@ -69,6 +70,7 @@ public static partial class DevServerTools
             workingDirectory,
             environment,
             clearEnvironment,
+            runAs,
             cancellationToken);
 
         var metadata = new TalvoraDevServerMetadata(

@@ -2,6 +2,9 @@ using System.Collections.Concurrent;
 using System.ComponentModel;
 using Talvora.Shared;
 using System.Diagnostics;
+using System.IO.Pipes;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using ModelContextProtocol.Server;
@@ -17,19 +20,22 @@ public static partial class JobTools
         OpenWorld = true,
         UseStructuredContent = true,
         OutputSchemaType = typeof(TalvoraJobStartResponse)),
-     Description("Start any executable as a long-running background development job under the Talvora LocalSystem service. Arguments, working directory, and environment overrides are unrestricted. stdout/stderr are persisted under ProgramData so they can be read incrementally.")]
+     Description("Start a long-running development job as the signed-in user (runAs=user, default) or under the Talvora Windows service (runAs=service). stdout/stderr are persisted under ProgramData so they can be read incrementally.")]
     public static async Task<TalvoraJobStartResponse> Start(
         [Description("Executable path or command resolvable by Windows.")] string executable,
         string[]? arguments = null,
         string? workingDirectory = null,
         Dictionary<string, string?>? environment = null,
         bool clearEnvironment = false,
+        string runAs = "user",
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(executable))
         {
             throw new ArgumentException("Executable is required.", nameof(executable));
         }
+        if (runAs is not ("user" or "service"))
+            throw new ArgumentOutOfRangeException(nameof(runAs), runAs, "runAs is user or service.");
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -60,51 +66,107 @@ public static partial class JobTools
             0,
             cancellationToken).ConfigureAwait(false);
 
+        Process? process = null;
+        Task? stdoutPump = null;
+        Task? stderrPump = null;
+        NamedPipeServerStream? inputPipe = null;
+        NamedPipeServerStream? outputPipe = null;
+        NamedPipeServerStream? errorPipe = null;
+        StreamWriter? standardInput = null;
+        StreamReader? standardOutput = null;
+        StreamReader? standardError = null;
+        string? temporaryCommandScript = null;
         var cwd = string.IsNullOrWhiteSpace(workingDirectory)
             ? Environment.CurrentDirectory
             : Path.GetFullPath(workingDirectory);
 
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = executable,
-            WorkingDirectory = cwd,
-            UseShellExecute = false,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = ConsoleOutputEncoding.Instance,
-            StandardErrorEncoding = ConsoleOutputEncoding.Instance,
-            CreateNoWindow = true,
-        };
-
-        if (clearEnvironment)
-        {
-            startInfo.Environment.Clear();
-        }
-
-        foreach (var pair in environment ?? new Dictionary<string, string?>())
-        {
-            startInfo.Environment[pair.Key] = pair.Value;
-        }
-
-        foreach (var argument in arguments ?? [])
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
-        var process = new Process
-        {
-            StartInfo = startInfo,
-            EnableRaisingEvents = true,
-        };
-        Task? stdoutPump = null;
-        Task? stderrPump = null;
-
         try
         {
-            if (!process.Start())
+            if (runAs == "service")
             {
-                throw new InvalidOperationException($"Failed to start process: {executable}");
+                var startInfo = LiteralProcessStart.Create(
+                    executable, cwd, arguments ?? [], environment, clearEnvironment,
+                    out temporaryCommandScript);
+                startInfo.RedirectStandardInput = true;
+                process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+                if (!process.Start())
+                    throw new InvalidOperationException($"Failed to start process: {executable}");
+                standardInput = process.StandardInput;
+                standardOutput = process.StandardOutput;
+                standardError = process.StandardError;
+            }
+            else
+            {
+                InteractiveUserContext user;
+                try
+                {
+                    user = WindowsSessionLauncher.GetActiveInteractiveUser();
+                }
+                catch (InvalidOperationException inner)
+                {
+                    throw new InvalidOperationException(
+                        "runAs=user needs a signed-in Windows user; sign in or use runAs=service. " +
+                        inner.Message, inner);
+                }
+
+                if (string.IsNullOrWhiteSpace(workingDirectory))
+                    cwd = user.UserProfile ?? throw new InvalidOperationException(
+                        "The signed-in user's profile directory is unavailable.");
+                var resolved = Path.IsPathRooted(executable)
+                    ? executable
+                    : SignedInUserToolchain.Resolve([executable]);
+                if (string.IsNullOrWhiteSpace(resolved))
+                    throw new FileNotFoundException(
+                        $"{executable} was not found on the signed-in user's PATH.");
+                var userFolder = Path.Combine(jobDirectory, "user");
+                InteractiveUserProcessRunner.ProtectDirectory(userFolder, user.Sid);
+                var scriptPath = Path.Combine(userFolder, "jobrunner.ps1");
+                var requestPath = Path.Combine(userFolder, "request.json");
+                var prefix = "talvora-job-" + jobId;
+                await File.WriteAllTextAsync(scriptPath,
+                    UserJobRelay.RunnerScript, new UTF8Encoding(false), cancellationToken);
+                var request = new UserJobRelay.UserJobRequest(
+                    resolved, cwd, arguments ?? [], environment ?? new Dictionary<string, string?>(),
+                    clearEnvironment, prefix + "-in", prefix + "-out", prefix + "-err",
+                    Path.Combine(userFolder, "child.pid"), Path.Combine(userFolder, "exit.code"));
+                await File.WriteAllTextAsync(requestPath,
+                    JsonSerializer.Serialize(request), new UTF8Encoding(false), cancellationToken);
+
+                inputPipe = CreateJobPipe(prefix + "-in", PipeDirection.Out, user.Sid);
+                outputPipe = CreateJobPipe(prefix + "-out", PipeDirection.In, user.Sid);
+                errorPipe = CreateJobPipe(prefix + "-err", PipeDirection.In, user.Sid);
+                var pwsh = CommandResolver.Resolve(
+                    ["pwsh.exe", "pwsh"], [@"C:\Program Files\PowerShell\7\pwsh.exe"])
+                    ?? throw new FileNotFoundException(
+                        "PowerShell 7 is required for interactive user execution.");
+                var launch = WindowsSessionLauncher.StartProcess(
+                    pwsh,
+                    ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy",
+                     "Bypass", "-File", scriptPath, "-RequestPath", requestPath,
+                     "-HelperAssemblyPath", typeof(UserJobRelay).Assembly.Location],
+                    user.SessionId, userFolder, environment: null,
+                    visible: false, newConsole: false, expectedUserSid: user.Sid);
+                process = Process.GetProcessById(launch.ProcessId);
+                try
+                {
+                    using var connectionTimeout =
+                        CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    connectionTimeout.CancelAfter(TimeSpan.FromSeconds(30));
+                    await Task.WhenAll(
+                        inputPipe.WaitForConnectionAsync(connectionTimeout.Token),
+                        outputPipe.WaitForConnectionAsync(connectionTimeout.Token),
+                        errorPipe.WaitForConnectionAsync(connectionTimeout.Token));
+                }
+                catch (Exception ex) when (
+                    ex is OperationCanceledException or IOException or UnauthorizedAccessException)
+                {
+                    throw new InvalidOperationException(
+                        "The signed-in user's job relay did not connect.", ex);
+                }
+                standardInput = new StreamWriter(inputPipe, new UTF8Encoding(false))
+                    { AutoFlush = true };
+                standardOutput = new StreamReader(outputPipe, ConsoleOutputEncoding.Instance);
+                standardError = new StreamReader(errorPipe, ConsoleOutputEncoding.Instance);
             }
 
             var metadata = new TalvoraJobMetadata(
@@ -119,20 +181,26 @@ public static partial class JobTools
                 null,
                 stdoutPath,
                 stderrPath,
-                metadataPath);
+                metadataPath,
+                runAs,
+                temporaryCommandScript);
 
             await WriteMetadataAsync(metadata, cancellationToken);
 
-            stdoutPump = PumpReaderAsync(process.StandardOutput, stdoutPath);
-            stderrPump = PumpReaderAsync(process.StandardError, stderrPath);
+            stdoutPump = PumpReaderAsync(standardOutput!, stdoutPath);
+            stderrPump = PumpReaderAsync(standardError!, stderrPath);
 
             var runtime = new TalvoraJobRuntime
             {
                 Process = process,
-                StandardInput = process.StandardInput,
+                StandardInput = standardInput!,
                 Metadata = metadata,
                 StdoutPump = stdoutPump,
                 StderrPump = stderrPump,
+                InputPipe = inputPipe,
+                OutputPipe = outputPipe,
+                ErrorPipe = errorPipe,
+                TemporaryCommandScript = temporaryCommandScript,
             };
 
             if (!LiveJobs.TryAdd(jobId, runtime))
@@ -157,12 +225,34 @@ public static partial class JobTools
         catch
         {
             LiveJobs.TryRemove(jobId, out _);
-            await CleanupFailedStartAsync(process);
+            if (process is not null)
+                await CleanupFailedStartAsync(process);
+            inputPipe?.Dispose();
+            outputPipe?.Dispose();
+            errorPipe?.Dispose();
             await DrainFailedPumpsAsync(stdoutPump, stderrPump);
-            process.Dispose();
+            process?.Dispose();
+            LiteralProcessStart.DeleteTemporaryCommandScript(temporaryCommandScript);
             TryDeleteFailedJobDirectory(jobDirectory);
             throw;
         }
+    }
+
+    private static NamedPipeServerStream CreateJobPipe(
+        string name, PipeDirection direction, string userSid)
+    {
+        var security = new PipeSecurity();
+        security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+        security.AddAccessRule(new PipeAccessRule(
+            new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
+            PipeAccessRights.FullControl, AccessControlType.Allow));
+        security.AddAccessRule(new PipeAccessRule(
+            new SecurityIdentifier(userSid),
+            PipeAccessRights.ReadWrite | PipeAccessRights.Synchronize,
+            AccessControlType.Allow));
+        return NamedPipeServerStreamAcl.Create(name, direction, 1,
+            PipeTransmissionMode.Byte, PipeOptions.Asynchronous,
+            0, 0, security);
     }
 
     private static DateTime GetProcessStartedAtUtc(Process process)

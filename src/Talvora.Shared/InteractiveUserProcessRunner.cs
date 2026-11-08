@@ -482,6 +482,13 @@ Action<CodexCliEventResult>? onCodexProgress = null,
         }
         var runRoot = Path.Combine(runsRoot, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(runRoot);
+        ProtectDirectory(runRoot, userSid);
+        return runRoot;
+    }
+
+    public static void ProtectDirectory(string path, string userSid)
+    {
+        Directory.CreateDirectory(path);
         var sec = new DirectorySecurity();
         sec.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
         var inherit = InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit;
@@ -493,8 +500,7 @@ Action<CodexCliEventResult>? onCodexProgress = null,
             new SecurityIdentifier(userSid),
             FileSystemRights.Modify, inherit, PropagationFlags.None,
             AccessControlType.Allow));
-        new DirectoryInfo(runRoot).SetAccessControl(sec);
-        return runRoot;
+        new DirectoryInfo(path).SetAccessControl(sec);
     }
 
     private static void CleanupStaleRunDirectories(string runsRoot)

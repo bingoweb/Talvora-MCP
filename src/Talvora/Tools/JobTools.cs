@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.ComponentModel;
 using Talvora.Shared;
 using System.Diagnostics;
+using System.IO.Pipes;
 using System.Text;
 using System.Text.Json;
 using ModelContextProtocol.Server;
@@ -86,7 +87,9 @@ internal sealed record TalvoraJobMetadata(
     DateTime? ExitedAtUtc,
     string StdoutPath,
     string StderrPath,
-    string MetadataPath);
+    string MetadataPath,
+    string RunAs = "service",
+    string? TemporaryCommandScript = null);
 
 internal sealed class TalvoraJobRuntime : IDisposable
 {
@@ -95,10 +98,23 @@ internal sealed class TalvoraJobRuntime : IDisposable
     public required TalvoraJobMetadata Metadata { get; init; }
     public required Task StdoutPump { get; init; }
     public required Task StderrPump { get; init; }
+    public NamedPipeServerStream? InputPipe { get; init; }
+    public NamedPipeServerStream? OutputPipe { get; init; }
+    public NamedPipeServerStream? ErrorPipe { get; init; }
+    public string? TemporaryCommandScript { get; init; }
+
+    public void DisposePipes()
+    {
+        try { InputPipe?.Dispose(); } catch (IOException) { }
+        try { OutputPipe?.Dispose(); } catch (IOException) { }
+        try { ErrorPipe?.Dispose(); } catch (IOException) { }
+    }
 
     public void Dispose()
     {
         try { StandardInput.Dispose(); } catch (Exception ex) when (ex is IOException or ObjectDisposedException) { }
+        DisposePipes();
+        LiteralProcessStart.DeleteTemporaryCommandScript(TemporaryCommandScript);
         try { Process.Dispose(); } catch (ObjectDisposedException) { }
     }
 }

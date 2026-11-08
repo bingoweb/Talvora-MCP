@@ -226,6 +226,12 @@ public static partial class JobTools
                 $"Talvora job is still attached to the service and cannot be deleted yet: {jobId}");
         }
 
+        if (File.Exists(metadataPath))
+        {
+            var persisted = await ReadMetadataFileAsync(metadataPath, cancellationToken);
+            LiteralProcessStart.DeleteTemporaryCommandScript(persisted.TemporaryCommandScript);
+        }
+
         if (Directory.Exists(directory))
         {
             Directory.Delete(directory, recursive: true);
