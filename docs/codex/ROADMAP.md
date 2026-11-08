@@ -708,7 +708,7 @@ User: "context7 kapısının projelerde gerçekten işe yarayıp yaramadığın�
 
 **Context7:** with `talvora_context7_docs` (CTX1): `/websites/git-scm`, query "git diff --name-only between a remote-tracking branch and HEAD"; record the fact used.
 
-**Acceptance:** red first; the pinned tests; Changed and Full `Hepsi geçti.`; deploy; installed smokes; CI. Then `[~] live check pending (Claude): the next card's push passes the new gate with recorded questions`.
+**Acceptance:** red first; the pinned tests; Changed and Full `Hepsi geçti.`; deploy; installed smokes; CI. Then `[~] live check pending (Claude): the next card's push passes the new gate with recorded questions`. After that Claude brings the same CI check to TahtaPilot and Classroom (user decision 2026-11-08).
 
 ## Toolchain modernization (user request 2026-11-08; Claude, one-off)
 
