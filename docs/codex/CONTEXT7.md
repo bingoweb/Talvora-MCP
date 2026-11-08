@@ -16,3 +16,4 @@ Maintained by Claude (CONTEXT7 PROTOCOL in AGENTS.md). Every id below was checke
 | YAML | `YamlDotNet` 18.1.0 | `/aaubry/yamldotnet/v16.3.0` — **gap** | https://github.com/aaubry/YamlDotNet/wiki |
 | Diffs | `DiffPlex` | `/mmanela/diffplex` | https://github.com/mmanela/diffplex |
 | Git CLI | Git for Windows 2.55 | `/websites/git-scm` | https://git-scm.com/docs |
+| GitHub Actions (release workflow, RL4) | `windows-latest` runner | `/websites/github_en_actions` | https://docs.github.com/actions |

@@ -823,6 +823,147 @@ Step 3. Two existing tests pin texts this card changes; update them in the same 
 6. `ControlCenterSmoke.D44.cs`: after the click, assert that the Olaylar list holds the recovery event the smoke applied (feed it through the snapshot the Olaylar page reads); the light-theme capture of audit 42 showed an empty list.
 7. `WorklogHistoryView.xaml`, detail column, right under the `OutcomeLabel` line (audit 43, user decision 2026-11-08 "Evet, nedeni göster"; the data is already in `WorklogOutcome`): `{Binding Current.Outcome.PlainReason, TargetNullValue='', FallbackValue=''}` in `Tv.Type.Body` with `Tv.TextMuted`, then `{Binding Current.Outcome.NextStep, StringFormat='Sonraki adım: {0}', TargetNullValue='', FallbackValue=''}` in `Tv.Type.Caption`; both use the `HistoryOptionalText` collapse of item 1, so a completed session shows neither line.
 8. `WorklogHistoryView.xaml`: the "Kanıtlar" heading collapses when the session has no evidence (summary, result, files and code preview all empty), with the same trigger style; check the bound values on a real session without evidence first (audit 43 screen pass: the "scratchpad" session showed the heading alone).
+9. `WorklogHistoryView.xaml`: with search text and no matching session, the empty line reads "Aramayla eşleşen çalışma yok." instead of "Henüz kayıtlı çalışma yok." (README screen pass 2026-11-08). After WL3, Claude takes the README screenshots again before the first release.
+
+## Releases and the public page (user request 2026-11-08)
+
+User: "github'da bulunan talvora mcp readme'si yani github arayüzünü tamamen insan yazmış gibi en başından ele alarak tamamen en başından tekrar tasarla … ekran görüntülerini yenile, ayrıca artık stabil release'ler de oluşturmaya başlayalım. ne zaman release güncellemesi yapılacağına tamamen sen karar vereceksin. proje 0.0.x.x şeklinde olmalı ve windows kullanıcılarının rahatlıkla kurabileceği şekilde olmalı." User choices the same day: README in Turkish with a short English summary; the installer stays unsigned and the README explains the SmartScreen step; the installer installs PowerShell 7 itself; the Control Center shows a quiet new-version link once a day. Claude wrote the README (`docs/codex/reference/d57/README.md.txt`) and took the screenshots (`docs/media/kontrol-merkezi-gece.png`, `kontrol-merkezi-gunduz.png`, `calisma-gunlugu.png`, `kod-karti.png`). Releases: only Claude creates the `v0.0.x.x` tag and writes `docs/releases/<version>.md` (AGENTS.md rule 10b); the first one, 0.0.1.0, follows RL5 and the open D-cards.
+
+### D57 — The new README goes live
+
+**Why:** the README is redesigned (Claude's text, user decision above). Two tests pin the old layout: `tests/ToolManifestDocumentationRegression.ps1` (the badge, the ASCII diagrams, the endpoint table rows and "share **N reviewed tools**") and `tests/ThirdPartyNoticesSourceRegression.ps1` (three English phrases), so the README and the tests change in one commit.
+
+**Files:** `README.md`, `tests/ToolManifestDocumentationRegression.ps1`, `tests/ThirdPartyNoticesSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+**Do:**
+1. Red first, both tests against today's README:
+   - `ToolManifestDocumentationRegression.ps1`: remove the README assertions ('README badge text', 'README badge URL', 'README summary', 'README focused diagram', 'README full diagram', the `"README " + $entry.Path` assertion inside the loop, 'README shared') and add this one line where 'README badge text' was; the loop keeps its ARCHITECTURE assertion and the two ARCHITECTURE lines after it stay:
+```powershell
+Assert-DocumentCounts 'README summary' $readme '\u015Eu an \*\*(\d+) ara\u00E7\*\* var: geli\u015Ftirme y\u00FCzeyinde \*\*(\d+)\*\*, y\u00F6netim y\u00FCzeyinde \*\*(\d+)\*\*; \*\*(\d+)\*\* ara\u00E7 ikisinde ortak\.' @($full, $dev, $admin, $shared)
+```
+   - `ThirdPartyNoticesSourceRegression.ps1`: `$requiredReadmeContracts = @('THIRD-PARTY-NOTICES.md', 'kilitli NuGet paketlerinin', '(LICENSE)')`.
+   Claude checked the pattern: one match in the new README (249, 212, 88, 51), none in today's.
+2. Reference copy (AGENTS.md rule 5): `docs/codex/reference/d57/README.md.txt` → `README.md`, the whole file replaced in one `talvora_apply_patch`; verify the normalised-content SHA-256 against `docs/codex/reference/d57/SHA256SUMS.txt` (`91c38320286384377415c040ee61eaf70a031367e0b5b08cd7e2f5eb566f5b0f`).
+
+**Don't:** change a word of the README, the images or the ARCHITECTURE assertions; delete `docs/media/control-center.png` or `control-center-gun.png` (Claude removes them after this card).
+
+**Context7:** `/dotnet/docs`, query "regular expression character escapes \u"; when it has no passage, record the gap. Vendor source: `https://learn.microsoft.com/dotnet/standard/base-types/character-escapes-in-regular-expressions`.
+
+**Acceptance:** both tests red first; Changed and Full `Hepsi geçti.`; no deploy (nothing in the runtime changes); CI. GitHub shows the new page.
+
+### RL1 — Talvora's version is 0.0.x.x and comes from the release tag
+
+**Why:** versions are `0.0.<feature>.<fix>` (user decision 2026-11-08). Today `Directory.Build.props` has `<Version>3.0.0-dev</Version>` and `InformationalVersion` = `$(Version)+$(SourceRevisionId)`, so `/healthz` reports `3.0.0-dev+<commit>`, the overview line ends with `3.0.0-dev` (`OverviewViewModel`, `InformationalVersion.Split('+')[0]`) and Ayarlar → Hakkında shows `3.0.0-dev` (`SettingsView.GetUi7AboutMetadata`).
+
+**Files:** `Directory.Build.props`, `scripts/Build-Windows-Installer.ps1`, `src/Talvora.Tray/Views/SettingsView.xaml.cs`, `src/Talvora.Tray/ViewModels/OverviewViewModel.cs`, `tests/ReleaseVersionRegression.ps1` (new; registered with the gate's PowerShell regressions), `tests/Talvora.Notification.Regression/Program.cs`, `tests/Talvora.Notification.Regression/Program.UI7.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+**Do:**
+1. Red first:
+   - `tests/ReleaseVersionRegression.ps1`: `dotnet msbuild src/Talvora.Shared/Talvora.Shared.csproj -getProperty:Version -getProperty:InformationalVersion -p:TalvoraReleaseVersion=0.0.7.3 -p:SourceRevisionId=abc1234` → `0.0.7.3` and `0.0.7.3+abc1234`; without `TalvoraReleaseVersion` → `0.0.0.0` and `0.0.0.0-dev+abc1234`; `dotnet msbuild src/Talvora.Shared/Talvora.Shared.csproj -t:TalvoraCheckReleaseVersion -p:TalvoraReleaseVersion=1.2.3` exits non-zero and prints `0.0.x.x`; prints `RELEASE_VERSION_GREEN`.
+   - `Program.UI7.cs`: `GetUi7AboutMetadata("0.0.0.0-dev+1234567890abcdef")` must give `("geliştirme sürümü", "1234567")` and `GetUi7AboutMetadata("0.0.1.0+1234567890abcdef")` must give `("0.0.1.0", "1234567")` (replacing the `3.0.0-dev` expectation); `Program.cs` line 140 expects `0.0.0.0-dev+`.
+2. `Directory.Build.props`, replacing the two version lines:
+```xml
+    <Version Condition="'$(TalvoraReleaseVersion)' != ''">$(TalvoraReleaseVersion)</Version>
+    <Version Condition="'$(TalvoraReleaseVersion)' == ''">0.0.0.0</Version>
+    <InformationalVersion Condition="'$(TalvoraReleaseVersion)' != ''">$(TalvoraReleaseVersion)+$(SourceRevisionId)</InformationalVersion>
+    <InformationalVersion Condition="'$(TalvoraReleaseVersion)' == ''">0.0.0.0-dev+$(SourceRevisionId)</InformationalVersion>
+```
+   and, after the `PropertyGroup`:
+```xml
+  <Target Name="TalvoraCheckReleaseVersion" BeforeTargets="BeforeBuild" Condition="'$(TalvoraReleaseVersion)' != ''">
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(TalvoraReleaseVersion)', '^0\.0\.\d{1,5}\.\d{1,5}$'))" Text="TalvoraReleaseVersion must be 0.0.x.x; got '$(TalvoraReleaseVersion)'." />
+  </Target>
+```
+3. `Build-Windows-Installer.ps1` gets `[string] $ReleaseVersion = ''`. When it is set it must match `^0\.0\.\d{1,5}\.\d{1,5}$` (otherwise `throw "ReleaseVersion must be 0.0.x.x."`), every `dotnet` publish/build call the script makes gets `-p:TalvoraReleaseVersion=$ReleaseVersion`, the setup file is written as `artifacts/installer/Talvora-Kurulum-$ReleaseVersion.exe` and the manifest JSON gains `"version"`. Without it nothing changes (`Talvora-Setup.exe`, which `Deploy-Windows-Installer.ps1` uses).
+4. `GetUi7AboutMetadata`: a version part that starts with `0.0.0.0-dev` becomes `geliştirme sürümü`; everything else stays. `OverviewViewModel`'s status line uses `SettingsView.GetUi7AboutMetadata(informationalVersion).Version` instead of `Split('+')[0]`.
+
+**Don't:** change `/healthz` fields (its `version` keeps the full informational version), any tool, the deploy script, or the smoke's version fixtures (`ControlCenterSmoke.UI4.cs` keeps "3.0.0" as a managed service's sample version).
+
+**Context7:** `/dotnet/docs`, queries "MSBuild getProperty command line" and "assembly InformationalVersion Version property". Vendor sources: `https://learn.microsoft.com/visualstudio/msbuild/evaluate-items-and-properties`, `https://learn.microsoft.com/dotnet/core/project-sdk/msbuild-props`.
+
+**Acceptance:** red first; Changed and Full `Hepsi geçti.`; deploy: `/healthz` `version` starts with `0.0.0.0-dev+`, the overview line ends with `· geliştirme sürümü`, Hakkında shows `geliştirme sürümü` and the short commit; `scripts/Build-Windows-Installer.ps1 -ReleaseVersion 0.0.0.1` writes `Talvora-Kurulum-0.0.0.1.exe` whose file version is `0.0.0.1` (never run it; delete it afterwards); the installed smokes; CI.
+
+### RL2 — A fresh Windows gets PowerShell 7 from the installer
+
+**Why:** user decision 2026-11-08 ("Kendisi kursun"). Talvora's user-side tools need PowerShell 7 (`InteractiveUserProcessRunner`: "PowerShell 7 is required for interactive user execution."), Windows 10 and 11 ship only Windows PowerShell 5.1, and the installer never checks.
+
+**Files:** `src/Talvora.Installer/InstallerEngine.PowerShell.cs` (new), `src/Talvora.Installer/InstallerEngine.Flow.cs`, `src/Talvora.Installer/Program.cs`, `src/Talvora.Installer/powershell-pin.json` (new, embedded resource), `src/Talvora.Installer/Talvora.Installer.csproj`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+**Do:**
+1. `powershell-pin.json` = `{"version":"<v>","url":"https://github.com/PowerShell/PowerShell/releases/download/v<v>/PowerShell-<v>-win-x64.msi","sha256":"<64 lowercase hex>"}` for the newest stable 7.x on the day of the card (`https://api.github.com/repos/PowerShell/PowerShell/releases/latest`; the SHA-256 from that release's `hashes.sha256` asset). Record version and hash in the Log.
+2. In the install flow, before "Yeni Talvora sürümü hazırlanıyor...": when `C:\Program Files\PowerShell\7\pwsh.exe` exists or `pwsh.exe` resolves on the machine PATH, write "PowerShell 7 hazır." to the installer log and go on. Otherwise:
+   - progress "PowerShell 7 indiriliyor..." → download to `%TEMP%\Talvora-PowerShell-<v>.msi` (10-minute limit); failure → stop with "PowerShell 7 indirilemedi. İnternet bağlantını kontrol edip kurulumu yeniden başlat.";
+   - SHA-256 check; mismatch → delete the file and stop with "İndirilen PowerShell 7 paketi doğrulanamadı; güvenlik için kurulmadı.";
+   - progress "PowerShell 7 kuruluyor..." → `msiexec.exe /i "<msi>" /quiet /norestart ADD_PATH=1 REGISTER_MANIFEST=1 USE_MU=1 ENABLE_MU=1`; exit 0 or 3010 → delete the file and go on; anything else → stop with "PowerShell 7 kurulamadı (msiexec çıkış kodu {code}). PowerShell 7'yi https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows adresindeki adımlarla kurup Talvora kurulumunu yeniden başlat."
+   Every stop happens before anything of Talvora changes. `--silent` runs the same steps without a window and exits non-zero on a stop.
+3. A hidden switch `--verify-powershell-download` downloads and checks the pinned package, deletes it, prints "PowerShell 7 <v> paketi doğrulandı." and exits 0 (it installs nothing).
+4. `NativeInstallerSourceRegression.ps1`: the pin parses, its `url` contains its `version`, `sha256` is 64 hex characters; the "already present" decision is taken through an injectable probe (no download when it answers true); a wrong hash is rejected (temporary file).
+
+**Don't:** install anything else (Chocolatey, Git and the .NET SDK stay the user's choice) or touch an existing PowerShell 7.
+
+**Context7:** `/dotnet/docs`, queries "HttpClient download stream to file" and "SHA256 HashData stream". Vendor sources: `https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows`, `https://github.com/PowerShell/PowerShell/releases`.
+
+**Acceptance:** red first; Changed and Full `Hepsi geçti.`; deploy: the installer log says "PowerShell 7 hazır." on this machine; `Talvora-Setup.exe --verify-powershell-download` prints the verified line; the installed smokes; CI.
+
+### RL3 — Talvora is in Apps & features and can be uninstalled
+
+**Why:** a downloaded installer must also be removable from Windows Settings → Apps. Today nothing registers Talvora there and there is no uninstall (only the developer reset script). The install flow creates: the `Talvora` service, `C:\Program Files\Talvora\Versions\<commit>-<stamp>`, the install user's `HKU\<sid>\Software\Microsoft\Windows\CurrentVersion\Run` value `RunValueName`, the Start menu shortcut `Talvora Kontrol Merkezi.lnk`, the Codex entry in that user's `.codex\config.toml`, and `C:\ProgramData\Talvora` with its protected ACL.
+
+**Files:** `src/Talvora.Installer/InstallerEngine.Uninstall.cs` (new), `src/Talvora.Installer/InstallerEngine.Flow.cs`, `src/Talvora.Installer/Program.cs`, `src/Talvora.Installer/InstallerForm.cs`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+**Do:**
+1. After a successful install: copy the running setup file to `C:\Program Files\Talvora\Talvora-Kurulum.exe` (overwrite) and write `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Talvora`: `DisplayName` "Talvora"; `DisplayVersion` (the informational version before `+`); `Publisher` "Taylan Soylu"; `DisplayIcon` "<installed tray exe>,0"; `InstallLocation` "C:\Program Files\Talvora"; `UninstallString` `"C:\Program Files\Talvora\Talvora-Kurulum.exe" --uninstall`; `QuietUninstallString` `"C:\Program Files\Talvora\Talvora-Kurulum.exe" --uninstall --silent`; `URLInfoAbout` "https://github.com/bingoweb/Talvora-MCP"; `NoModify` 1 and `NoRepair` 1 (DWORD); `EstimatedSize` (KB of `C:\Program Files\Talvora`, DWORD).
+2. `--uninstall` opens a window titled "Talvora'yı kaldır" with the text "Talvora bu bilgisayardan kaldırılacak: Windows hizmeti, Kontrol Merkezi, Başlat menüsü kısayolu ve Codex kaydı silinir. Kontrol Merkezi'nden kurduğun ek bileşenler (Gitea, Penpot, ChatGPT tüneli) bu kaldırmaya dahil değildir.", an unticked check box "Kayıtları ve ayarları da sil (C:\ProgramData\Talvora)" and the buttons "Kaldır" and "Vazgeç". Progress: "Talvora hizmeti durduruluyor...", "Dosyalar siliniyor..."; end: "Talvora kaldırıldı." `--uninstall --silent` (plus `--remove-data` for the check box) runs without a window.
+3. Order: stop the `Talvora` service (wait at most 60 s) and delete it; stop the tray processes; delete the Run value, the Start menu shortcut and the Codex table the installer wrote (the rest of `config.toml` untouched); delete `C:\Program Files\Talvora` except the running `Talvora-Kurulum.exe`, which is removed with `MoveFileEx(path, null, MOVEFILE_DELAY_UNTIL_REBOOT)`; delete the Uninstall key. With the check box: delete everything under `C:\ProgramData\Talvora` **except `Secrets`**, which is never opened, moved or deleted.
+4. `--uninstall --what-if` prints the plan (one item per line, the same order) and changes nothing.
+5. `NativeInstallerSourceRegression.ps1`: the plan without data lists the service, the Run value, the shortcut, the Codex table, `C:\Program Files\Talvora` and the Uninstall key; with `--remove-data` it adds the `C:\ProgramData\Talvora` children and never `Secrets`; the Uninstall values are written as listed (through an injectable registry root).
+
+**Don't:** remove Gitea, Penpot or tunnel components, repositories, Chocolatey or PowerShell 7; touch `Secrets`.
+
+**Context7:** `/dotnet/docs`, query "Registry SetValue RegistryValueKind DWord". Vendor sources: `https://learn.microsoft.com/windows/win32/msi/uninstall-registry-key`, `https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-movefileexw`.
+
+**Acceptance:** red first; Changed and Full `Hepsi geçti.`; deploy: the Uninstall key holds the listed values and Settings → Apps lists "Talvora"; `"C:\Program Files\Talvora\Talvora-Kurulum.exe" --uninstall --what-if` prints the plan; the installed smokes; CI. The real uninstall and reinstall on this machine is Claude's live check at the next audit, with the user's go-ahead (`[~] live pending (Claude)`).
+
+### RL4 — A `v0.0.x.x` tag publishes the release
+
+**Why:** user decision 2026-11-08: stable releases on GitHub, one installer and its SHA-256; Claude alone decides when, by pushing the tag after writing `docs/releases/<version>.md`.
+
+**Files:** `.github/workflows/release.yml` (new), `tests/ReleaseWorkflowRegression.ps1` (new; registered with the gate's PowerShell regressions), `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+**Do:**
+1. Red first: `tests/ReleaseWorkflowRegression.ps1` reads `release.yml` and requires: the tag filter `v0.0.*.*`, `contents: write`, the tag check `^v0\.0\.\d{1,5}\.\d{1,5}$`, the `merge-base --is-ancestor` check against `origin/main`, the `docs/releases/` notes check, the windows-ci success check, the `-ReleaseVersion` build, the `SHA256SUMS.txt` step and `gh release create`; prints `RELEASE_WORKFLOW_GREEN`.
+2. `release.yml`: `on: push: tags: ['v0.0.*.*']` and `workflow_dispatch` with inputs `version` (string) and `dry_run` (boolean, default true); `permissions: contents: write, actions: read`; `concurrency: release-${{ github.ref_name }}`; `runs-on: windows-latest`. Steps:
+   - checkout with `fetch-depth: 0`; version = the tag without `v` (or the `version` input); fail unless it matches `^0\.0\.\d{1,5}\.\d{1,5}$`;
+   - fail unless the commit is an ancestor of `origin/main`;
+   - fail unless the `windows-ci` run of this commit concluded `success` (`gh run list --workflow windows-ci.yml --commit <sha> --json conclusion`, `GH_TOKEN: ${{ github.token }}`);
+   - unless `dry_run`: fail with "Sürüm notu yok: docs/releases/<version>.md" when that file is missing;
+   - the same toolchain setup steps `windows-ci.yml` uses before its installer build, then `pwsh -NoProfile -File scripts/Build-Windows-Installer.ps1 -ReleaseVersion <version>`;
+   - `SHA256SUMS.txt` with one line `<lowercase sha256>  Talvora-Kurulum-<version>.exe`;
+   - unless `dry_run`: `gh release create v<version> artifacts/installer/Talvora-Kurulum-<version>.exe SHA256SUMS.txt --title "Talvora <version>" --notes-file docs/releases/<version>.md --latest`.
+3. Live check: `gh workflow run release.yml -f version=0.0.0.1 -f dry_run=true`, then that run once (no waiting loop): it must build the installer and publish nothing; record the run id.
+
+**Don't:** create a tag or a release (AGENTS.md rule 10b), sign anything, upload other files, run the workflow without `dry_run`.
+
+**Context7:** `/websites/github_en_actions` (map row added with this card), queries "workflow push tags filter" and "workflow_dispatch inputs boolean". Vendor sources: `https://docs.github.com/actions/writing-workflows/workflow-syntax-for-github-actions`, `https://cli.github.com/manual/gh_release_create`.
+
+**Acceptance:** red first; Changed and Full `Hepsi geçti.`; CI; the dry run green. The first real release is Claude's.
+
+### RL5 — The Control Center says quietly when a new version is out
+
+**Why:** user decision 2026-11-08 ("Evet, sessiz bir bildirim"): once a day, a link, nothing installed by itself.
+
+**Files:** `src/Talvora.Tray/ReleaseCheckService.cs` (new), `src/Talvora.Tray/Views/SettingsView.xaml` and `.xaml.cs`, `src/Talvora.Tray/ViewModels/SettingsViewModel.cs`, the main window's sidebar item for "Ayarlar ve kurulum", `tests/Talvora.Notification.Regression/Program.RL5.cs` (new), `docs/codex/STATUS.md`, `.context7/verification.json`. After RL1.
+
+**Do:**
+1. Red first: `Program.RL5.cs` with a fake HTTP handler: a newer `tag_name` sets the "new version" state; the same, an older or an invalid tag does not; an `html_url` outside `https://github.com/bingoweb/Talvora-MCP/releases/` is ignored; a `geliştirme sürümü` build sends no request at all.
+2. `ReleaseCheckService`: when the tray's own version (RL1) is a release, 2 minutes after the tray starts and then every 24 hours: `GET https://api.github.com/repos/bingoweb/Talvora-MCP/releases/latest` with `User-Agent: Talvora/<version>`, `Accept: application/vnd.github+json`, 15 s timeout, no token. `tag_name` must match `^v0\.0\.\d+\.\d+$`; compare as `System.Version`; when newer, keep `{version, htmlUrl, checkedAtUtc}` in the tray's settings folder. Any failure is silent until the next 24 h (no event, no toast). A development build writes "Sürüm denetimi geliştirme sürümünde kapalı." once to the tray log and never calls GitHub.
+3. Ayarlar ve kurulum → Hakkında: under the version line, when a newer version is known: "Yeni sürüm hazır: <version>" (`Tv.Type.Body`) and a link button "Sürüm notlarını aç" that opens `htmlUrl` in the default browser. The sidebar item "Ayarlar ve kurulum" shows a 6 px dot in `Tv.Accent` beside its label while a newer version is known (`AutomationProperties.HelpText` "Yeni sürüm hazır"). No toast, no tray balloon; nothing downloads or installs.
+
+**Don't:** download or install anything, contact any other address, add a setting.
+
+**Context7:** `/dotnet/docs`, query "HttpClient timeout user agent". Vendor source: `https://docs.github.com/rest/releases/releases#get-the-latest-release`.
+
+**Acceptance:** red first; Changed and Full `Hepsi geçti.`; deploy: the tray log holds the development-build line and no request leaves; both-theme PNGs of Hakkında with a forced "new version" state (test hook) attached for Claude's visual check; the installed smokes; CI.
 
 ## Toolchain modernization (user request 2026-11-08; Claude, one-off)
 
