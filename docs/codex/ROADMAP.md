@@ -30,6 +30,27 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-11-08 (45) · range `audit/2026-11-08-44..5afa33a` plus P-53 · result: D59
+
+D53, D54 and D58 follow their cards; Claude installed 5afa33a and verified D54 and D58 live. P-53's cause is the order in which the installer stops things (D59). Claude shipped D57 (`[C]`).
+
+### D59 — The tray's automatic recovery can no longer undo an install
+
+**Why:** P-53: two installs rolled back on 2026-11-08 (c671abb at 15:45, 5afa33a at 16:03). A Talvora call was still running inside the service when the installer sent STOP, so the service did not stop within the installer's 8 seconds (`InstallerEngine.Service.cs:135`); the installer killed it (install.log 15:45:46 "terminating PID=7420", System event 7034 at 15:45:46.19). The tray was still running, because `InstallAsync` stops it only after the service (`InstallerEngine.Flow.cs:115–116`), and its automatic recovery (`TrayApplicationContext.MaintainTalvoraConnectionAsync` → `ControlCenterLifecycleService.StartAsync` → `sc start Talvora`; the signed-in user may start the service) started the old service again (Application "Service started successfully." 15:45:47.71, tray.log "Automatic Talvora recovery succeeded." 15:45:50.78). The installer's 30-second wait then never saw STOPPED and rolled back. TOKEN ECONOMY B7 no longer waits through Talvora during an install, but any slow stop (a user's long call, a busy service) still loses this race.
+
+**Files:** `src/Talvora.Installer/InstallerEngine.Flow.cs`, `src/Talvora.Installer/InstallerEngine.Service.cs`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files** (run them right after the change): `NativeInstallerSourceRegression.ps1` (`InstallerCanReplaceNonStoppableService` and `InstallerUpgradeNeverDeletesCanonicalService`: `serviceSwitchStarted = true`, `StopServiceForUpgradeAsync(ServiceName`, `"config"`, `"binPath="`, `Kill(entireProcessTree: false)` and no `"delete"` in the upgrade stop section all stay), `InstallerRollbackStateRegression.ps1` (Flow: `CaptureInstallerUserStateAsync` before `RegisterTrayStartup`, `RestoreInstallerUserStateAsync` after the rollback line).
+
+**Do (method):**
+1. Red first, in `NativeInstallerSourceRegression.ps1`, two new keys in the result object: `InstallerStopsTrayBeforeService`, true only when in `InstallerEngine.Flow.cs` the index of `await StopTrayProcessesAsync(cancellationToken);` is greater than the index of `serviceSwitchStarted = true;` and smaller than the index of `await StopServiceForUpgradeAsync(ServiceName, cancellationToken);`; and `InstallerNamesRestartedService`, true only when `InstallerEngine.Service.cs` contains `was started again by another process during the upgrade`. Both are red today.
+2. `InstallAsync`: move `await StopTrayProcessesAsync(cancellationToken);` to directly after `serviceSwitchStarted = true;`, so the tray is gone before the service is asked to stop. Nothing else in the order changes: the rollback already relaunches the previous tray (install.log 15:46:18 "Tray launch requested in session 1"), and a successful install launches the new one at 82 %.
+3. `StopServiceForUpgradeAsync`: in both wait loops, when a `queryex` result does not contain `STOPPED`, read its PID with `ParseServiceProcessId`; when that PID is above 0 and differs from the `processId` read at the start, throw at once `new InvalidOperationException($"Windows service was started again by another process during the upgrade (old PID {processId}, new PID {currentProcessId}); registration preserved for rollback. Service={serviceName}")`. The `finally` block stays (it restores the recovery policy).
+
+**Don't:** change the 8- and 30-second windows, the forced kill (its comment explains `entireProcessTree: false`), the tray's automatic recovery, the service ACL, `CreateServiceAsync` or the rollback.
+
+**Context7:** `/dotnet/docs`, query "Windows service stop ServiceController status" (it returns the Windows service pages). Vendor sources: `https://learn.microsoft.com/windows/win32/services/service-status-transitions`, `https://learn.microsoft.com/dotnet/api/system.diagnostics.process.kill`.
+
+**Acceptance:** red first; the pinned tests; Changed and Full `Hepsi geçti.`; deploy with the race forced (this card's Acceptance wins over TOKEN ECONOMY B7): right after the `Deploy-Windows-Installer.ps1` call returns, start one `talvora_user_run` of `C:\Program Files\PowerShell\7\pwsh.exe` with `["-NoProfile","-Command","Start-Sleep -Seconds 30"]` (`timeoutSeconds: 40`; it is expected to come back as an error when the old service stops), then read `/healthz` with short calls only. The install must succeed: `/healthz` serves HEAD; `C:\ProgramData\Talvora\Installer\install.log` shows `Service did not accept STOP` and then `Install succeeded. Commit=<HEAD>` with no rollback line; `%LOCALAPPDATA%\Talvora\Tray\tray.log` has no `Automatic Talvora recovery` line between them. If install.log has no `Service did not accept STOP` line, the sleep call did not overlap the stop: deploy once more the same way. Then the installed smokes; CI.
+
 ### Audit 2026-11-08 (43, deep, the uv/Rust/user-toolchain modernization) · range `audit/2026-11-08-42..154414b` plus every subsystem the move touches · result: D52–D56, [C] UR6 done, WL3 items 7–8
 
 The user asked for a deep bug check of the modernization ("bu geçiş ve modernizasyon sırasında oluşan bir bug, hata ya da eksik kalan bir şey var mı"): UV1, RS1, RS2, D51, UR1–UR5. Claude read every changed line, compared `InteractiveUserProcessRunner` with `ProcessRunner`, traced every program launch that still runs as LocalSystem and tried each suspicion on the installed 00a9616.
@@ -47,46 +68,6 @@ Findings:
 Seen in passing, outside Talvora: `C:\Users\tayla\Repos\Classroom` and its `.git` are owned by SYSTEM since 2026-10-17, so the user's own git refuses the repository ("dubious ownership"); for Classroom's next audit.
 
 Queue: D52, D53, D54, D55, D56 first (D55 needs D52's `LiteralProcessStart`, D56 needs D55), then the audit-42 cards, PK1 and PK2.
-
-### D53 — Tool descriptions are normalized once, in the right order, as whole sentences
-
-**Why:** `TalvoraMcpToolMetadataPolicy.NormalizeDescription` replaces "an caller-supplied" → "a caller-supplied" before it replaces "arbitrary" → "caller-supplied", so one pass turns every "an arbitrary" into "an caller-supplied". `McpToolMetadataWirePolicy.Apply` writes the result back into the tool objects that every request shares (its own comment: "the Tool objects are shared by every surface's request"), so the second `tools/list` normalizes the text again and repairs it. The first client after each service start therefore receives about twenty broken descriptions (`talvora_dotnet_run`, `talvora_npm_run`, `talvora_go_run`, `talvora_cargo_run`, `talvora_java_run`, `talvora_http_request`, `talvora_flutter_run` …) and keeps them in its cache; on 2026-11-08 the installed `--metadata-policy-only` was that first client and stopped with "Live description contains grammar regression: talvora_dotnet_run", then passed on the rerun. Two more slips of the same function are live in every list: "any accessible" → "accessible" leaves the noun without an article ("Run Cargo with a caller-supplied argument vector in accessible working directory.", also `talvora_rustc_run`, `talvora_java_run`, `talvora_javac_run`, `talvora_npm_install`, `talvora_npm_ci`, `talvora_archive_list`, `_create`, `_extract`, `talvora_json_get`, `talvora_read_text_range`, `talvora_tail_text`, `talvora_xml_query`), and `NoAllowDenySentence` removes "no … allowlist is applied." after a semicolon, so `talvora_java_run` and `talvora_javac_run` end with "resolution;".
-
-**Files:** `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`, `src/Talvora/McpToolMetadataWirePolicy.cs`, `tests/Talvora.Notification.Regression/Program.D53.cs` (new), `tests/Talvora.Notification.Regression/Program.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
-
-**Do:**
-1. Red first: `Program.D53.cs` with `AssertD53DescriptionsAsWholeSentences()`, called right after `AssertD51ReportedExitCodesAsync()`. For every public static method in the `Talvora` assembly with `[McpServerTool]` (a non-empty `Name`) and `[Description]`: `once = TalvoraMcpToolMetadataPolicy.NormalizeDescription(name, text)`, `twice = NormalizeDescription(name, once)`. Fail with `D53: <name> changes when normalized twice: <once> → <twice>` when they differ; with `D53: <name> reads: <once>` when `once` matches `\ban caller-supplied\b` (case-insensitive) or ends with `;`; and, when the source text contains "any accessible", when `once` does not contain "an accessible" as many times. Fail when fewer than 200 tools were checked. Print `D53_DESCRIPTIONS_GREEN`. Today it fails on the first "an arbitrary" tool.
-2. `NormalizeDescription`: move the `"an caller-supplied"` → `"a caller-supplied"` replacement to directly after the `"arbitrary"` → `"caller-supplied"` replacement; replace `"any accessible"` with `"an accessible"` (instead of `"accessible"`); add `SemicolonNoAllowDenyClause` = `;\s*no [^.]*\b(?:allow-?list|allowlist|deny-?list|denylist)\b[^.]*\.` (IgnoreCase, CultureInvariant, Compiled), replaced by `"."` before `NoAllowDenySentence` runs.
-3. `McpToolMetadataWirePolicy.Apply`: normalize each tool's description once per tool name and reuse it (a `ConcurrentDictionary<string, string?>` keyed by `tool.Name`, filled with `NormalizeDescription(tool.Name, tool.Description)` the first time, the way `DescribedInputSchemas` caches the schema), so a request never normalizes text a request produced.
-
-**Don't:** change any other description text, title, annotation or schema; change the smoke's grammar check.
-
-**Context7:** `/dotnet/docs`, queries "ConcurrentDictionary GetOrAdd" and "RegexOptions Compiled". Vendor sources: `https://learn.microsoft.com/dotnet/api/system.collections.concurrent.concurrentdictionary-2.getoradd`, `https://learn.microsoft.com/dotnet/standard/base-types/regular-expression-options`.
-
-**Acceptance:** red first; Changed and Full `Hepsi geçti.`; deploy; the first `--metadata-policy-only` right after the install is green (before the fix that first run stops on "an caller-supplied", P-50), then the full installed smoke green; CI.
-
-### D54 — Command lookup, JAVA_HOME and ANDROID_HOME follow the signed-in user; the small UR follow-ups
-
-**Why:** (1) `talvora_resolve_command` resolves on the Talvora service PATH. Since U14 removed `C:\Users\tayla\.cargo\bin` from the machine PATH it answers `{"command":"cargo","found":false,"paths":[]}` (live, 2026-11-08) while `talvora_cargo_run` runs the user's cargo 1.99.1, so an agent that checks first concludes Rust is missing. (2) `EnumerateModernJavaHomes` (`BuildRunnerTools.Jvm.cs`) tries the machine `JAVA_HOME`, then the newest Eclipse Adoptium JDK, and the signed-in user's `JAVA_HOME` last; `ResolveAndroidSdkRoot` (`MobileTools.Android.cs`) tries the machine `ANDROID_HOME`/`ANDROID_SDK_ROOT` before the user's. Windows gives a user variable precedence over the machine one, and these tools now run in the user's environment, so a user-level `JAVA_HOME` or `ANDROID_HOME` is ignored (latent today: none is set). (3) The installed smoke never checks `talvora_python_info`'s `uvAvailable`/`uvVersion`. (4) `Assert-SignedInUserToolchain` names its files one by one, so a new `BuildRunnerTools.*.cs` would escape it. (5) `RequirePython`'s message sends the user to "Talvora Chocolatey tools", against the uv rule. (6) RS1's private `RunAsSignedInUserAsync` (`BuildRunnerTools.GoRust.cs`) duplicates `RunCliAsync` since UR1.
-
-**Files:** `src/Talvora/Tools/SignedInUserToolchain.cs`, `src/Talvora/Tools/DeveloperTools.Project.cs`, `src/Talvora/Tools/BuildRunnerTools.Jvm.cs`, `src/Talvora/Tools/MobileTools.Android.cs`, `src/Talvora/Tools/RuntimeTools.Python.cs`, `src/Talvora/Tools/BuildRunnerTools.GoRust.cs`, `src/Talvora.Shared/TalvoraToolGuides.cs`, `tests/ModernizationPolicyRegression.ps1`, `tests/Talvora.Smoke/SmokeScenarios.ApplicationDevelopment.cs`, `tests/Talvora.Smoke/SmokeScenarios.Workspace.Runtime.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
-
-**Do:**
-1. Red first:
-   a. `SmokeScenarios.ApplicationDevelopment.cs`, after the RS1 check: when `talvora_rust_info` has a `cargoExecutable`, `talvora_resolve_command {"command":"cargo"}` must answer `found: true` with that path first (case-insensitive); message `D54: resolve_command does not see the signed-in user's cargo.` Red against 00a9616.
-   b. `tests/ModernizationPolicyRegression.ps1`: the four `Assert-SignedInUserToolchain` lines take every `BuildRunnerTools*.cs`, `MobileTools*.cs`, `RuntimeTools*.cs` and `WindowsToolchainTools*.cs` file under `src/Talvora/Tools` (`Get-ChildItem -Filter`, repository-relative paths, `WindowsToolchainTools.VisualStudio.cs` left out with the existing comment) instead of fixed lists; and two new lines: `Assert-NotContains 'src/Talvora/Tools/BuildRunnerTools.Jvm.cs' 'EnvironmentVariableTarget\.Machine' 'D54: the signed-in user''s JAVA_HOME wins; a user value overrides the machine value on Windows.'` and the same for `src/Talvora/Tools/MobileTools.Android.cs` with `ANDROID_HOME`. Both new lines are red today.
-   c. `SmokeScenarios.Workspace.Runtime.cs`, after `talvora_python_info`: when `CommandResolver.Resolve(["uv.exe", "uv"], [])` is not null, `uvAvailable` must be true and `uvVersion` must start with `uv `; message `D54: python_info does not report the signed-in user's uv.` (a new check, green on 00a9616).
-2. `SignedInUserToolchain.ResolveAll(IEnumerable<string> commandNames)`: as the service `CommandResolver.ResolveAll(commandNames, environment: WindowsSessionLauncher.GetActiveInteractiveUser().Environment)`, otherwise `CommandResolver.ResolveAll(commandNames)`.
-3. `talvora_resolve_command` gets `string scope = "user"`: `"user"` → `SignedInUserToolchain.ResolveAll([command])`; `"service"` → today's `CommandResolver.ResolveAll([command])`; anything else → `ArgumentOutOfRangeException(nameof(scope), scope, "scope is user or service.")`. The output record stays. Description (attribute and `TalvoraToolGuides`): "Resolve a command on the signed-in user's PATH (scope=user, default) or the Talvora service PATH (scope=service) with Windows PATHEXT. Returns every match when includeAll=true."; guide parameter `("scope", "user (default): the signed-in user's PATH, where the developer tools run; service: the Talvora service PATH.")`.
-4. `EnumerateModernJavaHomes`: first `SignedInUserToolchain.Variable("JAVA_HOME")` (when the folder exists), then the Adoptium JDKs, newest first; the `EnvironmentVariableTarget.Machine` read goes (the user's environment block already holds the machine value when the user has none). `ResolveAndroidSdkRoot`: for `ANDROID_HOME`, then `ANDROID_SDK_ROOT`, `SignedInUserToolchain.Variable(variable)` first; the machine-target read goes; the candidate folders stay.
-5. `RequirePython`: "Python was not found for the signed-in user. Install it with talvora_uv_run (arguments: python, install) or pass pythonExecutable."
-6. `BuildRunnerTools.GoRust.cs`: every `RunAsSignedInUserAsync(` call becomes `RunCliAsync(` with the same arguments; delete `RunAsSignedInUserAsync`.
-
-**Don't:** change any output record, add a tool, or change another resolver.
-
-**Context7:** `/dotnet/docs`, query "Environment.GetEnvironmentVariable EnvironmentVariableTarget User Machine". Vendor sources: `https://learn.microsoft.com/dotnet/api/system.environment.getenvironmentvariable`, `https://learn.microsoft.com/windows/win32/api/userenv/nf-userenv-createenvironmentblock`.
-
-**Acceptance:** 1a and 1b red first; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI.
 
 ### D55 — A relay runs one job inside the signed-in user's session
 
@@ -829,23 +810,6 @@ Step 3. Two existing tests pin texts this card changes; update them in the same 
 
 User: "chatgpt'nin projeyi geliştirme esnasında gereksiz yere aynı testleri tekrar tekrar çalıştırması gibi süreci uzatacak bir döngüye girip girmediğini kontrol et". Claude read every tool call of the Codex sessions that ran D52/D53 (ChatGPT app, Talvora Dev connector) and W1–W4, the agents' gate logs of 2026-11-07 and the worklog. No real loop: every second gate or smoke run had a reason (a fix in between, a decided proposal, the first-list defect D53 fixed), and TOKEN ECONOMY B3 and D2 were kept. The cost is elsewhere: in the D52/D53 session 39 of 136 calls (29 %) only waited for a detached log (`sleep 45–50 s` plus a read), every call re-reading about 120 000 context tokens (16.9 M input tokens for two cards); about six calls per message looked up tool names; a Changed gate ran right before each Full gate; and a test that pins file text (`CodexCliIntegrationSourceRegression.ps1`) was found only by a failing gate in W1 and in D52. ChatGPT web sessions leave no command record at all (TW2). TOKEN ECONOMY gained A9, B1's last sentence, B7 and B8; the queued cards name the tests that read their files.
 
-### D58 — The events smoke no longer races the live event refresh
-
-**Why:** the Full gate's `ControlCenter` check stopped twice on 2026-11-08 at the UI5 smoke with different messages (P-51: "UI5 raw log timer must run when the panel is visible", `ControlCenterSmoke.UI5.cs:79`; P-52: "UI5 seven-day empty state was not rendered", line 49) and passed when run again on its own. Cause (code trace): the smoke awaits `eventsView.RefreshAsync`, which keeps this machine's real events of the last seven days in `_events`, then applies its fixture with `Model.ApplyEvents`; `EventsView.UpdateServices` (every dashboard snapshot) re-applies `_events` whenever it is not empty, and `ShellWindow.UI5.cs` starts `RefreshAsync` without awaiting it, so real events can replace the fixture between the apply and the check. Every stop costs a whole Full gate plus a proposal.
-
-**Files:** `src/Talvora.Tray/ControlCenterSmoke.UI5.cs`, `src/Talvora.Tray/Views/EventsView.xaml.cs`, `src/Talvora.Tray/Views/ShellWindow.UI5.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
-
-**Do (method):**
-1. Red first, deterministic: in the UI5 smoke, right after each fixture is applied, call `eventsView.UpdateServices(<the window's current snapshot>)` and `window.UpdateLayout()`; with real events on the machine the empty-state check fails every time.
-2. Give the view one internal entry for a fixture that replaces `_events` and applies it the way `RefreshAsync` does, and use it everywhere the UI5 smoke now calls `eventsView.Model.ApplyEvents`, so a later `UpdateServices` re-applies the fixture. While the tray runs `--control-center-smoke`, `ShellWindow` starts no live `RefreshAsync` for the events view (the smoke drives it). Normal use is unchanged.
-3. Removing TOKEN ECONOMY D4 from AGENTS.md is Claude's job; say in the Log that D58 is installed.
-
-**Don't:** change what the user sees, the event store, the raw-log timer's behaviour or any other smoke.
-
-**Context7:** `/dotnet/docs-desktop`, query "DispatcherTimer IsEnabled UIElement IsVisible". Vendor source: `https://learn.microsoft.com/dotnet/api/system.windows.uielement.isvisible`.
-
-**Acceptance:** red first; the built tray's `--control-center-smoke` green three times in a row; Full `Hepsi geçti.`; deploy; the installed smokes; CI.
-
 ### TW1 — `talvora_tail_text` can wait for a line
 
 **Why:** see the section above: waiting is the largest avoidable cost, and ChatGPT web has no sleep tool at all, so it can only call the read again.
@@ -877,30 +841,6 @@ User: "chatgpt'nin projeyi geliştirme esnasında gereksiz yere aynı testleri t
 ## Releases and the public page (user request 2026-11-08)
 
 User: "github'da bulunan talvora mcp readme'si yani github arayüzünü tamamen insan yazmış gibi en başından ele alarak tamamen en başından tekrar tasarla … ekran görüntülerini yenile, ayrıca artık stabil release'ler de oluşturmaya başlayalım. ne zaman release güncellemesi yapılacağına tamamen sen karar vereceksin. proje 0.0.x.x şeklinde olmalı ve windows kullanıcılarının rahatlıkla kurabileceği şekilde olmalı." User choices the same day: README in Turkish with a short English summary; the installer stays unsigned and the README explains the SmartScreen step; the installer installs PowerShell 7 itself; the Control Center shows a quiet new-version link once a day. Claude wrote the README (`docs/codex/reference/d57/README.md.txt`) and took the screenshots (`docs/media/kontrol-merkezi-gece.png`, `kontrol-merkezi-gunduz.png`, `calisma-gunlugu.png`, `kod-karti.png`). Releases: only Claude creates the `v0.0.x.x` tag and writes `docs/releases/<version>.md` (AGENTS.md rule 10b); the first one, 0.0.1.0, follows RL5 and the open D-cards.
-
-### D57 — The new README goes live
-
-**Owner:** Claude (`[C]`): user decision 2026-11-08 "Doğrulayan teslim eder"; Claude wrote the README and checked both test patterns, so Claude ships this card. The agent skips it.
-
-**Why:** the README is redesigned (Claude's text, user decision above). Two tests pin the old layout: `tests/ToolManifestDocumentationRegression.ps1` (the badge, the ASCII diagrams, the endpoint table rows and "share **N reviewed tools**") and `tests/ThirdPartyNoticesSourceRegression.ps1` (three English phrases), so the README and the tests change in one commit.
-
-**Files:** `README.md`, `tests/ToolManifestDocumentationRegression.ps1`, `tests/ThirdPartyNoticesSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`.
-
-**Do:**
-1. Red first, both tests against today's README:
-   - `ToolManifestDocumentationRegression.ps1`: remove the README assertions ('README badge text', 'README badge URL', 'README summary', 'README focused diagram', 'README full diagram', the `"README " + $entry.Path` assertion inside the loop, 'README shared') and add this one line where 'README badge text' was; the loop keeps its ARCHITECTURE assertion and the two ARCHITECTURE lines after it stay:
-```powershell
-Assert-DocumentCounts 'README summary' $readme '\u015Eu an \*\*(\d+) ara\u00E7\*\* var: geli\u015Ftirme y\u00FCzeyinde \*\*(\d+)\*\*, y\u00F6netim y\u00FCzeyinde \*\*(\d+)\*\*; \*\*(\d+)\*\* ara\u00E7 ikisinde ortak\.' @($full, $dev, $admin, $shared)
-```
-   - `ThirdPartyNoticesSourceRegression.ps1`: `$requiredReadmeContracts = @('THIRD-PARTY-NOTICES.md', 'kilitli NuGet paketlerinin', '(LICENSE)')`.
-   Claude checked the pattern: one match in the new README (249, 212, 88, 51), none in today's.
-2. Reference copy (AGENTS.md rule 5): `docs/codex/reference/d57/README.md.txt` → `README.md`, the whole file replaced in one `talvora_apply_patch`; verify the normalised-content SHA-256 against `docs/codex/reference/d57/SHA256SUMS.txt` (`91c38320286384377415c040ee61eaf70a031367e0b5b08cd7e2f5eb566f5b0f`).
-
-**Don't:** change a word of the README, the images or the ARCHITECTURE assertions; delete `docs/media/control-center.png` or `control-center-gun.png` (Claude removes them after this card).
-
-**Context7:** `/dotnet/docs`, query "regular expression character escapes \u"; when it has no passage, record the gap. Vendor source: `https://learn.microsoft.com/dotnet/standard/base-types/character-escapes-in-regular-expressions`.
-
-**Acceptance:** both tests red first; Changed and Full `Hepsi geçti.`; no deploy (nothing in the runtime changes); CI. GitHub shows the new page.
 
 ### RL1 — Talvora's version is 0.0.x.x and comes from the release tag
 
@@ -938,7 +878,7 @@ Assert-DocumentCounts 'README summary' $readme '\u015Eu an \*\*(\d+) ara\u00E7\*
 
 **Why:** user decision 2026-11-08 ("Kendisi kursun"). Talvora's user-side tools need PowerShell 7 (`InteractiveUserProcessRunner`: "PowerShell 7 is required for interactive user execution."), Windows 10 and 11 ship only Windows PowerShell 5.1, and the installer never checks.
 
-**Files:** `src/Talvora.Installer/InstallerEngine.PowerShell.cs` (new), `src/Talvora.Installer/InstallerEngine.Flow.cs`, `src/Talvora.Installer/Program.cs`, `src/Talvora.Installer/powershell-pin.json` (new, embedded resource), `src/Talvora.Installer/Talvora.Installer.csproj`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `NativeInstallerSourceRegression.ps1`, `InstallerRollbackStateRegression.ps1` and `CodexCliIntegrationSourceRegression.ps1` (`InstallerEngine*.cs`); `QualityGateChangedRegression.ps1` (`Talvora.Installer/Program.cs`).
+**Files:** `src/Talvora.Installer/InstallerEngine.PowerShell.cs` (new), `src/Talvora.Installer/InstallerEngine.Flow.cs`, `src/Talvora.Installer/Program.cs`, `src/Talvora.Installer/powershell-pin.json` (new, embedded resource), `src/Talvora.Installer/Talvora.Installer.csproj`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `NativeInstallerSourceRegression.ps1` and `InstallerRollbackStateRegression.ps1` (the `InstallerEngine` flow and service files), `CodexCliIntegrationSourceRegression.ps1` (`InstallerEngine.CleanupState.cs`); `QualityGateChangedRegression.ps1` (`Talvora.Installer/Program.cs`).
 
 **Do:**
 1. `powershell-pin.json` = `{"version":"<v>","url":"https://github.com/PowerShell/PowerShell/releases/download/v<v>/PowerShell-<v>-win-x64.msi","sha256":"<64 lowercase hex>"}` for the newest stable 7.x on the day of the card (`https://api.github.com/repos/PowerShell/PowerShell/releases/latest`; the SHA-256 from that release's `hashes.sha256` asset). Record version and hash in the Log.
@@ -960,12 +900,12 @@ Assert-DocumentCounts 'README summary' $readme '\u015Eu an \*\*(\d+) ara\u00E7\*
 
 **Why:** a downloaded installer must also be removable from Windows Settings → Apps. Today nothing registers Talvora there and there is no uninstall (only the developer reset script). The install flow creates: the `Talvora` service, `C:\Program Files\Talvora\Versions\<commit>-<stamp>`, the install user's `HKU\<sid>\Software\Microsoft\Windows\CurrentVersion\Run` value `RunValueName`, the Start menu shortcut `Talvora Kontrol Merkezi.lnk`, the Codex entry in that user's `.codex\config.toml`, and `C:\ProgramData\Talvora` with its protected ACL.
 
-**Files:** `src/Talvora.Installer/InstallerEngine.Uninstall.cs` (new), `src/Talvora.Installer/InstallerEngine.Flow.cs`, `src/Talvora.Installer/Program.cs`, `src/Talvora.Installer/InstallerForm.cs`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `NativeInstallerSourceRegression.ps1`, `InstallerRollbackStateRegression.ps1` and `CodexCliIntegrationSourceRegression.ps1` (`InstallerEngine*.cs`); `QualityGateChangedRegression.ps1` (`Talvora.Installer/Program.cs`).
+**Files:** `src/Talvora.Installer/InstallerEngine.Uninstall.cs` (new), `src/Talvora.Installer/InstallerEngine.Flow.cs`, `src/Talvora.Installer/Program.cs`, `src/Talvora.Installer/InstallerForm.cs`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `NativeInstallerSourceRegression.ps1` and `InstallerRollbackStateRegression.ps1` (the `InstallerEngine` flow and service files), `CodexCliIntegrationSourceRegression.ps1` (`InstallerEngine.CleanupState.cs`); `QualityGateChangedRegression.ps1` (`Talvora.Installer/Program.cs`).
 
 **Do:**
 1. After a successful install: copy the running setup file to `C:\Program Files\Talvora\Talvora-Kurulum.exe` (overwrite) and write `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Talvora`: `DisplayName` "Talvora"; `DisplayVersion` (the informational version before `+`); `Publisher` "Taylan Soylu"; `DisplayIcon` "<installed tray exe>,0"; `InstallLocation` "C:\Program Files\Talvora"; `UninstallString` `"C:\Program Files\Talvora\Talvora-Kurulum.exe" --uninstall`; `QuietUninstallString` `"C:\Program Files\Talvora\Talvora-Kurulum.exe" --uninstall --silent`; `URLInfoAbout` "https://github.com/bingoweb/Talvora-MCP"; `NoModify` 1 and `NoRepair` 1 (DWORD); `EstimatedSize` (KB of `C:\Program Files\Talvora`, DWORD).
 2. `--uninstall` opens a window titled "Talvora'yı kaldır" with the text "Talvora bu bilgisayardan kaldırılacak: Windows hizmeti, Kontrol Merkezi, Başlat menüsü kısayolu ve Codex kaydı silinir. Kontrol Merkezi'nden kurduğun ek bileşenler (Gitea, Penpot, ChatGPT tüneli) bu kaldırmaya dahil değildir.", an unticked check box "Kayıtları ve ayarları da sil (C:\ProgramData\Talvora)" and the buttons "Kaldır" and "Vazgeç". Progress: "Talvora hizmeti durduruluyor...", "Dosyalar siliniyor..."; end: "Talvora kaldırıldı." `--uninstall --silent` (plus `--remove-data` for the check box) runs without a window.
-3. Order: stop the `Talvora` service (wait at most 60 s) and delete it; stop the tray processes; delete the Run value, the Start menu shortcut and the Codex table the installer wrote (the rest of `config.toml` untouched); delete `C:\Program Files\Talvora` except the running `Talvora-Kurulum.exe`, which is removed with `MoveFileEx(path, null, MOVEFILE_DELAY_UNTIL_REBOOT)`; delete the Uninstall key. With the check box: delete everything under `C:\ProgramData\Talvora` **except `Secrets`**, which is never opened, moved or deleted.
+3. Order: stop the tray processes first (D59: the tray's automatic recovery would start the service again); then stop the `Talvora` service (wait at most 60 s) and delete it; delete the Run value, the Start menu shortcut and the Codex table the installer wrote (the rest of `config.toml` untouched); delete `C:\Program Files\Talvora` except the running `Talvora-Kurulum.exe`, which is removed with `MoveFileEx(path, null, MOVEFILE_DELAY_UNTIL_REBOOT)`; delete the Uninstall key. With the check box: delete everything under `C:\ProgramData\Talvora` **except `Secrets`**, which is never opened, moved or deleted.
 4. `--uninstall --what-if` prints the plan (one item per line, the same order) and changes nothing.
 5. `NativeInstallerSourceRegression.ps1`: the plan without data lists the service, the Run value, the shortcut, the Codex table, `C:\Program Files\Talvora` and the Uninstall key; with `--remove-data` it adds the `C:\ProgramData\Talvora` children and never `Secrets`; the Uninstall values are written as listed (through an injectable registry root).
 

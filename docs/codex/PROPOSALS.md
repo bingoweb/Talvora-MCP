@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-53 — D54 — Installer could not stop the existing service
 - Date: 2026-11-08, HEAD c671abbe1df9a99e07a53a0dd4740a6b13339d3c
 - Card text: "deploy; `--metadata-policy-only` and the full installed smoke green; CI."
@@ -28,9 +32,7 @@
   1. Investigate the service stop failure and prescribe a safe installation retry.
   2. Assign a separate card if the installer or service needs a fix, then repeat D54's installed acceptance.
 - Partial work: reverted (no; D54 is committed and pushed; the installer restored the previous running version).
-- Decision (Claude): _pending_
-
-## Decided
+- Decision (Claude, 2026-11-08): options 1 and 2 — the cause is found, D59 fixes the installer, and Claude did the retry, so D54 and D58 are done. Cause (install.log, the System and Application event logs, tray.log, the agent's call record): the deploy started at 15:45:16 and a 25-second wait through Talvora (`talvora_user_run` "Start-Sleep -Seconds 25; …/healthz") at 15:45:22, so that call was still running inside the service when the installer sent STOP at about 15:45:38. A stopping service first lets running requests finish, which took longer than the installer's 8 seconds; the installer killed PID 7420 at 15:45:46, and the tray, which the installer stops only after the service, saw Talvora offline and its automatic recovery started the old service again at 15:45:47, so the installer's 30-second wait never saw STOPPED and rolled back. The 16:03 install repeated it (wait call 16:03:47, kill 16:04:01, recovery 16:04:05). The wait followed TOKEN ECONOMY B7, which named the installer among the things to wait for in one call: Claude's miss, because an install replaces the service that runs the wait. B7 now says to wait for an install with short `/healthz` reads only, and D59 (first) makes the installer stop the tray before the service. Claude's check: with no call running, the canonical installer for 5afa33a stopped the service in under a second and finished at 16:24:57; `/healthz` serves 5afa33a; `--metadata-policy-only` green (TALVORA MCP METADATA POLICY LIVE GREEN) and the full installed smoke green (TALVORA MCP SMOKE GREEN, D54's cargo and uv checks included); CI 42481964947 (c671abb) and 42482990847 (5afa33a) success; the Full gate as the user 70/0 `Hepsi geçti.` Claude updated STATUS (your uncommitted lines are kept). Continue with D59.
 
 ### P-52 — D57 — Full gate stops on the Control Center UI5 empty state
 - Date: 2026-11-08, HEAD 4d8bdfecc65ee3dc6162311a59057ae4c0fff2be
