@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T21:21:11Z",
-  "scope": "KUR1: the Santral setup window (WinForms custom drawing, per-monitor DPI, Windows 11 title bar colours)",
+  "verifiedAtUtc": "2026-11-08T21:51:10.404Z",
+  "scope": "RL3: Windows Uninstall registry values, DWORD metadata and reboot-scheduled setup removal",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-09 KUR1: a Windows Forms app declares its DPI awareness with Application.SetHighDpiMode before the first window is created (query: \"WinForms Application.SetHighDpiMode PerMonitorV2 must be called before the first window is created\")"
-    },
-    {
-      "libraryId": "/websites/learn_microsoft_en-us_windows_win32_api",
-      "verified": "2026-11-09 KUR1: DwmSetWindowAttribute takes a COLORREF for DWMWA_CAPTION_COLOR and DWMWA_TEXT_COLOR from Windows 11 build 22000; DWMWA_USE_IMMERSIVE_DARK_MODE is 20 (query: \"DwmSetWindowAttribute DWMWA_CAPTION_COLOR and DWMWA_TEXT_COLOR COLORREF on Windows 11 build 22000\")"
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-09 RL3: RegistryKey.CreateSubKey/SetValue with RegistryValueKind.DWord (query: \"Registry SetValue RegistryValueKind DWord registry local machine OpenSubKey CreateSubKey Windows .NET 10\")"
     }
+  ],
+  "vendorSources": [
+    "https://learn.microsoft.com/windows/win32/msi/uninstall-registry-key",
+    "https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-movefileexw"
   ]
 }

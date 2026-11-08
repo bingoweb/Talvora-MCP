@@ -73,6 +73,11 @@ $immediateCleanupSection = $installerCleanupState.Substring($immediateCleanupSta
 $trayProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Tray\Talvora.Tray.csproj'))
 $installerProgram = Read-ProjectSources (Join-Path $RepoRoot 'src\Talvora.Installer')
 $installerForm = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\InstallerForm.cs'))
+$uninstallPath = Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.Uninstall.cs'
+if (-not (Test-Path -LiteralPath $uninstallPath -PathType Leaf)) {
+    throw 'RL3 uninstall implementation must exist before Talvora is registered with Windows Apps.'
+}
+$uninstallSource = [IO.File]::ReadAllText($uninstallPath)
 $installerProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'))
 $powerShellPinPath = Join-Path $RepoRoot 'src\Talvora.Installer\powershell-pin.json'
 $powerShellSourcePath = Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.PowerShell.cs'
@@ -110,6 +115,34 @@ $upgradeStopSection = $installerService.Substring(
     $restoreRecoveryStart - $upgradeStopStart)
 
 $result = [pscustomobject]@{
+    UninstallRegistrationAndWindowWired = (
+        $installerFlow -match 'RegisterTalvoraUninstall' -and
+        $uninstallSource -match 'WriteUninstallRegistration' -and
+        $installerProgram -match '--uninstall' -and
+        $installerProgram -match '--what-if' -and
+        $installerProgram -match '--remove-data' -and
+        $installerProgram -match 'SetupMode.Uninstall' -and
+        $uninstallSource -match 'DisplayName' -and
+        $uninstallSource -match 'DisplayVersion' -and
+        $uninstallSource -match 'QuietUninstallString' -and
+        $uninstallSource -match 'RegistryValueKind.DWord'
+    )
+    UninstallPlanAndProtectedData = (
+        $uninstallSource -match 'BuildUninstallPlan' -and
+        $uninstallSource -match 'Talvora Kontrol Merkezi.lnk' -and
+        $uninstallSource -match 'mcp_servers.talvora_local' -and
+        $uninstallSource -match 'Secrets' -and
+        $uninstallSource -match 'StopTrayProcessesAsync' -and
+        $uninstallSource -match 'StopAndDeleteServiceAsync' -and
+        $uninstallSource -match 'MoveFileEx' -and
+        $uninstallSource -match 'RunValueName'
+    )
+    UninstallDataRemovalDoesNotRecreateLog = (
+        $uninstallSource.IndexOf('InstallerLog.Write("Uninstall succeeded.")', [StringComparison]::Ordinal) -gt 0 -and
+        $uninstallSource.IndexOf('InstallerLog.Write("Uninstall succeeded.")', [StringComparison]::Ordinal) -lt
+            $uninstallSource.IndexOf('if (removeData && Directory.Exists(dataRoot))', [StringComparison]::Ordinal) -and
+        $installerProgram -match 'isUninstall\s*&&\s*removeData'
+    )
     PowerShell7PinIsVersionedAndHasSha256 = (
         [string]$powerShellPin.version -match '^7\.\d+\.\d+$' -and
         [string]$powerShellPin.url -ceq ('https://github.com/PowerShell/PowerShell/releases/download/v' +
@@ -918,6 +951,141 @@ public static class PowerShellInstallerRegression
 }
 finally {
     Remove-Item -LiteralPath $testRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# RL3: compile and exercise the actual uninstall plan and registry-writing code
+# with a temporary user hive and temporary data tree; never touch HKLM or real data.
+$rl3FixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ('TalvoraUninstallCheck-' + [Guid]::NewGuid().ToString('N'))
+$rl3RegistryName = 'Software\TalvoraUninstallCheck-' + [Guid]::NewGuid().ToString('N')
+New-Item -ItemType Directory -Path $rl3FixtureRoot -Force | Out-Null
+try {
+    $rl3DataRoot = Join-Path $rl3FixtureRoot 'Data'
+    New-Item -ItemType Directory -Path (Join-Path $rl3DataRoot 'Secrets') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $rl3DataRoot 'Events') -Force | Out-Null
+    $rl3FixturePath = Join-Path $rl3FixtureRoot 'Rl3Contracts.cs'
+    [IO.File]::WriteAllText($rl3FixturePath, @'
+#nullable enable
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Win32;
+
+namespace Talvora.Shared.Rl3Fixture
+{
+    internal static class TextFileStore
+    {
+        public static Task<string> ReadBoundedAsync(string path, int limit, CancellationToken ct) =>
+            Task.FromResult(string.Empty);
+    }
+    internal static class AtomicFile
+    {
+        public static Task<bool> WriteAllTextAsync(string path, string text, System.Text.Encoding encoding,
+            bool createBackup, CancellationToken cancellationToken) => Task.FromResult(true);
+    }
+}
+namespace Talvora.Installer.Rl3Fixture
+{
+    internal sealed record InstallProgress(int Percent, string Message);
+    internal sealed record InstallUserContext(string UserProfile, string Sid);
+    internal static class InstallerLog
+    {
+        public static void Write(string message, Exception? exception = null) {}
+    }
+    internal static partial class InstallerEngine
+    {
+        private const string ServiceName = "Talvora";
+        private const string RunValueName = "TalvoraTray";
+        private const string McpUrl = "http://127.0.0.1:7676/mcp";
+        private const int MaximumInstallerUserStateFileBytes = 8 * 1024 * 1024;
+        private enum MoveFileFlags : uint { DelayUntilReboot = 4 }
+        private static bool MoveFileEx(string path, string? unused, MoveFileFlags flags) => true;
+        private static InstallUserContext ResolveInstallUserContext() =>
+            throw new NotSupportedException();
+        private static Task StopTrayProcessesAsync(CancellationToken ct) => Task.CompletedTask;
+        private static Task StopAndDeleteServiceAsync(string name, CancellationToken ct) => Task.CompletedTask;
+        private static RegistryKey OpenInstallUserRoot(InstallUserContext user, bool writable) =>
+            Registry.CurrentUser;
+        private static Task TryDeleteDirectoryAsync(string path, CancellationToken ct) => Task.CompletedTask;
+    }
+
+    public static class Rl3Contracts
+    {
+        public static string StripCodex(string content) =>
+            InstallerEngine.RemoveTalvoraCodexTable(content);
+
+        public static string[] Plan(string dataRoot, bool removeData) =>
+            InstallerEngine.BuildUninstallPlan(@"C:\Program Files\Talvora", dataRoot,
+                @"C:\ProgramData\Microsoft\Windows\Start Menu\Programs",
+                @"C:\Users\fixture", "S-1-5-21-fixture", removeData).ToArray();
+
+        public static void AssertRegistryValues(string fixtureRoot)
+        {
+            using var root = Registry.CurrentUser.CreateSubKey(fixtureRoot, writable: true)!;
+            const string install = @"C:\Program Files\Talvora";
+            const string tray = @"C:\Program Files\Talvora\Versions\example\Tray\Talvora.Tray.exe";
+            InstallerEngine.WriteUninstallRegistration(root, install, tray, "0.0.1.0+abcdef", 4096);
+            using var key = root.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Talvora")!;
+            if (key.GetValue("DisplayName") as string != "Talvora" ||
+                key.GetValue("DisplayVersion") as string != "0.0.1.0" ||
+                key.GetValue("Publisher") as string != "Taylan Soylu" ||
+                key.GetValue("DisplayIcon") as string != tray + ",0" ||
+                key.GetValue("InstallLocation") as string != install ||
+                key.GetValue("UninstallString") as string != '"' + install + @"\Talvora-Kurulum.exe" + '"' + " --uninstall" ||
+                key.GetValue("QuietUninstallString") as string != '"' + install + @"\Talvora-Kurulum.exe" + '"' + " --uninstall --silent" ||
+                key.GetValue("URLInfoAbout") as string != "https://github.com/bingoweb/Talvora-MCP" ||
+                (int)key.GetValue("NoModify")! != 1 ||
+                (int)key.GetValue("NoRepair")! != 1 ||
+                (int)key.GetValue("EstimatedSize")! != 4096 ||
+                key.GetValueKind("NoModify") != RegistryValueKind.DWord ||
+                key.GetValueKind("NoRepair") != RegistryValueKind.DWord ||
+                key.GetValueKind("EstimatedSize") != RegistryValueKind.DWord)
+                throw new InvalidOperationException("RL3 uninstall registry values do not match the contract.");
+        }
+    }
+}
+'@)
+    $rl3IsolatedSource = Join-Path $rl3FixtureRoot 'InstallerEngine.Uninstall.cs'
+    [IO.File]::WriteAllText($rl3IsolatedSource,
+        $uninstallSource.Replace('namespace Talvora.Installer;', 'namespace Talvora.Installer.Rl3Fixture;').
+            Replace('using Talvora.Shared;', 'using Talvora.Shared.Rl3Fixture;'))
+    Add-Type -Path @($rl3IsolatedSource, $rl3FixturePath) -ErrorAction Stop
+    $ordinary = @([Talvora.Installer.Rl3Fixture.Rl3Contracts]::Plan($rl3DataRoot, $false))
+    $withData = @([Talvora.Installer.Rl3Fixture.Rl3Contracts]::Plan($rl3DataRoot, $true))
+    if ($ordinary.Count -ne 6 -or
+        $ordinary[0] -notmatch 'Windows hizmeti: Talvora' -or
+        $ordinary[1] -notmatch 'Run' -or
+        $ordinary[2] -notmatch '\.lnk' -or
+        $ordinary[3] -notmatch 'mcp_servers\.talvora_local' -or
+        $ordinary[4] -notmatch 'C:\\Program Files\\Talvora' -or
+        $ordinary[5] -notmatch 'Uninstall\\Talvora') {
+        throw 'RL3 uninstall plan must list six precise operations in order.'
+    }
+    if ($withData.Count -ne 7 -or
+        $withData[-1] -notmatch 'Events' -or
+        (@($withData | Where-Object { $_ -match '(?i)[\\/]+Secrets([\\/]|$)' }).Count -ne 0)) {
+        throw 'RL3 remove-data plan must include only non-secret children.'
+    }
+    [Talvora.Installer.Rl3Fixture.Rl3Contracts]::AssertRegistryValues($rl3RegistryName)
+    $codexSample = "[mcp_servers.elsewhere]`r`nurl = `"other`"`r`n" +
+        "[mcp_servers.talvora_local]`r`nurl = `"http://127.0.0.1:7676/mcp/dev`"`r`nenabled_tools = []`r`n" +
+        "  [user.preferences] # keep me`r`nvalue = 42`r`n"
+    $codexTrimmed = [Talvora.Installer.Rl3Fixture.Rl3Contracts]::StripCodex($codexSample)
+    if (-not $codexTrimmed.Contains('[mcp_servers.elsewhere]') -or
+        -not $codexTrimmed.Contains('  [user.preferences] # keep me') -or
+        $codexTrimmed.Contains('[mcp_servers.talvora_local]')) {
+        throw 'RL3 may remove only the Talvora MCP table while preserving all other TOML tables.'
+    }
+    $customTalvora = "[mcp_servers.talvora_local]`nurl = `"https://example.invalid/custom`"`n"
+    if ([Talvora.Installer.Rl3Fixture.Rl3Contracts]::StripCodex($customTalvora) -cne $customTalvora) {
+        throw 'RL3 must preserve a user-edited Talvora table that does not match the installer URL.'
+    }
+}
+finally {
+    [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree($rl3RegistryName, $false)
+    Remove-Item -LiteralPath $rl3FixtureRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 Write-Output 'NATIVE_INSTALLER_SOURCE_GREEN'

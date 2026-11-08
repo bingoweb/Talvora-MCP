@@ -70,6 +70,18 @@ internal static class Program
             return 3;
         }
 
+        var isUninstall = args.Any(arg =>
+            string.Equals(arg, "--uninstall", StringComparison.OrdinalIgnoreCase));
+        var removeData = args.Any(arg =>
+            string.Equals(arg, "--remove-data", StringComparison.OrdinalIgnoreCase));
+        if (isUninstall && args.Any(arg =>
+                string.Equals(arg, "--what-if", StringComparison.OrdinalIgnoreCase)))
+        {
+            foreach (var item in InstallerEngine.GetCurrentUninstallPlan(removeData))
+                Console.WriteLine(item);
+            return 0;
+        }
+
         if (args.Any(arg => string.Equals(arg, "--silent", StringComparison.OrdinalIgnoreCase)))
         {
             try
@@ -84,15 +96,22 @@ internal static class Program
                     Thread.Sleep(deferMilliseconds);
                 }
 
-                InstallerEngine.InstallAsync(
-                    new Progress<InstallProgress>(progress =>
-                        InstallerLog.Write($"{progress.Percent}% {progress.Message}")),
-                    CancellationToken.None).GetAwaiter().GetResult();
+                var progress = new Progress<InstallProgress>(step =>
+                {
+                    if (!(isUninstall && removeData))
+                        InstallerLog.Write($"{step.Percent}% {step.Message}");
+                });
+                if (isUninstall)
+                    InstallerEngine.UninstallAsync(progress, removeData,
+                        CancellationToken.None).GetAwaiter().GetResult();
+                else
+                    InstallerEngine.InstallAsync(progress,
+                        CancellationToken.None).GetAwaiter().GetResult();
                 return 0;
             }
             catch (Exception ex)
             {
-                InstallerLog.Write("Silent install failed", ex);
+                InstallerLog.Write(isUninstall ? "Silent uninstall failed" : "Silent install failed", ex);
                 return 1;
             }
         }
@@ -100,7 +119,13 @@ internal static class Program
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        using var form = new InstallerForm();
+        using var form = isUninstall
+            ? new InstallerForm(SetupMode.Uninstall, async (progress, option, cancellationToken) =>
+            {
+                await InstallerEngine.UninstallAsync(progress, option, cancellationToken);
+                return null;
+            })
+            : new InstallerForm();
         Application.Run(form);
         return 0;
     }

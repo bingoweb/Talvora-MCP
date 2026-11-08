@@ -192,6 +192,7 @@ public static async Task<HealthSnapshot> InstallAsync(
                     cleanupError);
             }
 
+            RegisterTalvoraUninstall(installRoot, trayExecutable);
             progress.Report(new InstallProgress(100, "Talvora hazır."));
             InstallerLog.Write(
                 $"Install succeeded. Commit={sourceCommit} PID={health.ProcessId}");
