@@ -36,6 +36,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D60 — installed a899938; both installed MCP smokes green; CI 42500049574 success; Claude verifies one session across a 100-second quiet wait
 - [~] D61 — installed 7c211c5; Control Center and both installed MCP smokes green; CI 42501684534 success; Claude checks pre-deploy steps remain in history
 - [~] D62 — code and gates green; live pending: install, both MCP smokes and CI; Claude checks detached Full gate wording
+- [ ] CTX1 — Talvora asks Context7 itself and keeps a record (user request 2026-11-08)
+- [ ] CTX2 — The push gate accepts only recorded Context7 questions (user request 2026-11-08; after CTX1)
 - [ ] PK1 — MCP C# SDK 2.4.x and Tomlyn 2.10.2 (after UR4)
 - [ ] PK2 — Microsoft.Build.Framework follows the SDK's MSBuild, 18.9.6 (after PK1)
 - [ ] RL1 — Talvora's version is 0.0.x.x and comes from the release tag (user request 2026-11-08)
