@@ -30,251 +30,31 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-08 (46) · range `audit/2026-11-08-45..7aa5165` · result: D60, D61, D62; D47–D49 to Claude
+### Audit 2026-11-08 (47, deep) · range `audit/2026-11-08-46..953fc7d` · result: [C] D63, D64
 
-ChatGPT's eight cards (D59, TW1, TW2, D55, D56, D45, D50, D46) follow their cards, and the TW2 trace shows no loop. D50 made two worklog faults visible: a long read-only wait closes the session (D60) and a session that is open at a deploy is lost (D61). The screen pass found that a detached start reads as its result (D62). D47, D48 and D49 are Claude's `[C]` items now (user decision); they wait below with WL3.
+D60, D61, D62, CTX1 and CTX2 (ChatGPT) follow their cards, except that CTX2 changed the CI script's 14-day age rule to "today (UTC)" against its Don't and did not say so, and the gate's Delivery script still refused noLookup evidence (CTX2's card had not named it); Claude reproduced both and fixed them (D63). The deep pass found four smaller gaps (D64). D46, D60, D61 and D62 pass live in the stored worklog.
 
-### D60 — A wait keeps its Çalışma günlüğü session
+### D64 — Context7 proof counts only the agent's own questions
 
-**Why:** audit 46 (data truth). Read-only tools (`ShouldNotifyToolCall` returns false for `tail_text`, `read_source`, `search_text`, `http_request`, `git_status`, the `*_status`, `*_info`, `*_list` and `*_get` tools and the rest of its list) neither begin nor end a worklog step, so they never touch the session either. While an agent waits for its detached Full gate with TOKEN ECONOMY B7's 100-second `talvora_tail_text`, the 90-second idle close (`SessionIdleInterval`, `CloseLaterAsync`) closes the session in the middle of the wait, and the next tracked call opens a new one. Live on 3ca9c72 (TW2 trace and the history): the D50 session (start 15:29:03Z) closed at 15:34:27Z, exactly 90 s after the Full gate's start, while a 100-second wait ran from 15:33:01Z; the next session began at 15:35:27Z. Since D50 keeps every session, one card now shows as several pieces. A call the agent makes is work in progress even when it is not a step.
+**Why:** audit 47 (deep). Four gaps in CTX1/CTX2 and D62: (1) the gate accepts any recorded question, also those of Talvora's own installed smoke, which asks `/dotnet/docs` "HttpClient Timeout and HttpMessageHandler for tests with a capped response read" after every deploy (ledger 2026-11-08: records at 17:37Z and 17:59Z), so evidence that copies that line passes without a question of its own; (2) only the first `(query: "…")` of an entry is checked; (3) `talvora_context7_docs` calls an outside service but is advertised closed-world (`OpenWorld = false`, missing from `TalvoraMcpToolMetadataPolicy.OpenWorldTools`), unlike `talvora_http_request`, `talvora_http_download`, `talvora_dns_lookup` and `talvora_tls_inspect`; (4) `WorklogSubject.ForDetachedStart` builds "{subject} arka planda başladı" from a subject that can be empty (a detached `dotnet build` with no target), giving " arka planda başladı".
 
-**Files:** `src/Talvora/TalvoraDesktopProgressNotifier.cs` (`RunToolCallAsync`, the internal constructor), `src/Talvora/TalvoraDesktopWorklogState.cs`, `tests/Talvora.Notification.Regression/Program.D60.cs` (new) and `Program.cs` (its call), `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `tests/ModernizationPolicyRegression.ps1` (keep `ShouldNotifyToolCall`, its `"read_source" or` line, `GetOrCreateSession`, `_activeWorklog`, `TryBeginWorklog`, `ShutdownDrainTimeout` and its other pinned texts); run it right after the change.
-
-**Do (method):**
-1. Red first in `Program.D60.cs`, called from `Main` (full run) on its own line directly below `await AssertD46CiStillRunningAsync();`. Build the notifier the way the D46 test does (a delivery observer that collects every message) with the new `sessionIdleInterval: TimeSpan.FromMilliseconds(400)`. One project and one actor for every call: (a) a tracked call, then a quiet call (`talvora_tail_text`) whose operation waits 1,200 ms, then a tracked call: no message has `SessionClosed` before the second tracked call ends, and the session's `Totals.Steps` reaches 2; (b) with no further call, exactly one `SessionClosed` message arrives within 2 s; (c) a quiet call while no session of that project and actor exists sends no message. Messages start with `D60:`. Red: first CS1739 for the missing parameter; add only the parameter (step 2) and (a) must fail before step 4.
-2. The idle interval becomes injectable: `SessionIdleInterval` (90 s) stays the default; the internal constructor gains a last optional parameter `TimeSpan? sessionIdleInterval = null`, kept in a readonly field that `CloseLaterAsync` and `GetOrCreateSession` use instead of the static. Production stays 90 s.
-3. One private helper computes a session's key (`ResolveProject` plus `ResolveActor`, exactly as `GetOrCreateSession` does today); `GetOrCreateSession` and a new `TryFindOpenSession(arguments, surfacePath, clientName)` both use it. `TryFindOpenSession` returns the session only when it exists and is not `Closed`; it never creates one.
-4. `WorklogSession` gains `int QuietCalls`. In `RunToolCallAsync`, the early return for `!ShouldNotifyToolCall(toolName)` becomes a quiet run: under `_worklogGate`, when `TryFindOpenSession` finds a session, cancel and clear its `CloseDelay`, increment `QuietCalls` and set `LastActivityUtc`; run the operation; in `finally`, under `_worklogGate`, decrement `QuietCalls`, set `LastActivityUtc`, and when no `_activeWorklog` item belongs to the session and `QuietCalls` is 0, call `ScheduleClosure(session)`. The bookkeeping sits in try/catch with a debug log, like `TryBeginWorklog`, so it never changes a tool result. The `worklog_note` branch above it stays as it is.
-5. `CloseLaterAsync` returns without closing while `session.QuietCalls > 0`; the idle branch of `GetOrCreateSession` (the one that starts a new session) also requires `QuietCalls == 0`.
-
-**Don't:** create a session, step, title, message or desktop card for a quiet call; change `ShouldNotifyToolCall`'s list, the 90 seconds, the session id, the timeline or the tray.
-
-**Context7:** `/dotnet/docs`, query "CancellationTokenSource Cancel Task.Delay TaskCanceledException"; record the one fact used (a cancelled `Task.Delay` ends with `TaskCanceledException`, which `CloseLaterAsync` already catches as `OperationCanceledException`).
-
-**Acceptance:** red first; the pinned test; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI. Then `[~] live check pending (Claude): a card with a 100-second wait stays one session in Çalışma günlüğü`.
-
-### D61 — A session that never closed still reaches Çalışma günlüğü
-
-**Why:** audit 46 (data truth). The tray writes a session into the history only when the service sends its close, 90 s after the last step. A session that is still open when the tray or the service stops never gets that close: since D59 an install stops the tray first (its shutdown event) and then the service, so every deploy loses the end of the card that ran it. Live on 3ca9c72: D50's commit, push, CI check and deploy (15:35:27Z–15:37:31Z) are missing from the history. The tray already receives every step of the open session (the worklog card's messages); it only has to keep the newest one and write it when the session can no longer close.
-
-**Files:** `src/Talvora.Tray/WorklogOpenSessions.cs` (new), `src/Talvora.Tray/DesktopProgressNotificationPresenter.cs` (`PublishCore`, `Dispose`), `src/Talvora.Tray/WorklogHistoryStore.cs` (`AppendTerminal`), `tests/Talvora.Notification.Regression/Program.D61.cs` (new) and `Program.cs` (its call), `.context7/verification.json`, `docs/codex/STATUS.md`. After D60. **Tests that read these files:** `tests/ModernizationPolicyRegression.ps1` (the presenter's pinned texts such as `MaximumVisibleCardsPerLane`, `ApplyHeightConstraint` and `desktop-progress-placement.json`); run it right after the change.
+**Files:** `src/Talvora/SourceEditing/ProjectDeliveryGate.cs`, `src/Talvora/Tools/Context7Tools.cs`, `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs`, `src/Talvora/WorklogSubject.cs`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.QualityAudit.cs`, `tests/Talvora.Notification.Regression/Program.D62.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** the four CTX2 named (`ModernizationPolicyRegression.ps1`, `StrictEvidenceJsonRegression.ps1`, `GitSafeDirectoryRegression.ps1`, `NativeInstallerSourceRegression.ps1`); the open-world count is checked by the `--metadata-policy-only` smoke (`SmokeScenarios.MetadataPolicy.cs`).
 
 **Do (method):**
-1. Red first in `Program.D61.cs`, called from `Main` (full run) on its own line directly below `AssertD50HistoryKeepsEverySession();`, against a `WorklogHistoryStore` on a temporary file (as the D50 test does) and the new `WorklogOpenSessions`: two worklog-lane messages of one session id (`Kind` Completed, `SessionClosed` false, `Totals.SessionSeconds` 10 and 20, timestamps t0+10 s and t0+20 s) → `Observe` returns nothing; a message of the same id whose start (`TimestampUtc` minus `SessionSeconds`) is later than t0+20 s → `Observe` returns the t0+20 s message; appending it with `unfinished: true` gives one history entry that starts at t0 and ends at t0+20 s; a `SessionClosed` message removes its session's open entry; `Drain` returns the remaining open messages and empties the set. Messages start with `D61:`. Red: CS0246 (`WorklogOpenSessions` does not exist).
-2. `WorklogOpenSessions` (internal sealed, no WPF): per `WorklogFrame.SessionId`, the newest worklog-lane message with `Kind` Completed, Failed or Cancelled whose session has not closed. `IReadOnlyList<DesktopProgressMessage> Observe(DesktopProgressMessage message)` ignores messages without a `WorklogFrame` or outside the worklog lane; when the stored message of that id belongs to an earlier session (the new message's start is later than the stored message's `TimestampUtc`), it returns that message and forgets it; then it stores the new message (those kinds, not closed) or forgets the id (`SessionClosed`). `IReadOnlyList<DesktopProgressMessage> Drain()` returns every stored message and clears the set. One lock guards both.
-3. `WorklogHistoryStore.AppendTerminal(DesktopProgressMessage message, bool unfinished = false)`: with `unfinished: true` it also accepts a message whose `SessionClosed` is false; everything else (redaction, `HistoryKey`, prune, save) stays as it is, so a later close of the same session replaces the entry.
-4. The presenter: in `PublishCore`, before its history write, pass the message to `Observe` and append each returned message with `unfinished: true` inside the same try/catch and `TrayLog` line as the existing write; in `Dispose`, before the windows close, append every message from `Drain()` with `unfinished: true`, each in that try/catch.
+1. Red first. In `SourceEditRegressionRunner.QualityAudit.cs`, with the CTX2 fixtures: (a) evidence whose only matching ledger record has the caller `Talvora.Smoke` is blocked with the existing "did not record" message; (b) an entry with two `(query: "…")` of which only the first is recorded is blocked, and the message names the second. In `Program.D62.cs`: (c) `talvora_user_process_start` with `executable` `dotnet` and `arguments` `["build"]` → "dotnet build arka planda başladı". Messages start with `D64:`.
+2. Gate: skip ledger records whose caller `TalvoraLineTrafficMeter.IsOwnClient` recognises; check every `(query: "…")` of an entry (`Matches`), each against the ledger.
+3. `talvora_context7_docs`: `OpenWorld = true` on the attribute; the name joins `OpenWorldTools`; `ExpectedOpenWorldToolCount` 83 → 84.
+4. `ForDetachedStart`: when the description's subject is empty, the subject is the program name without extension plus its first argument that does not start with `-` ("dotnet build"), otherwise the program name alone.
 
-**Don't:** change the service, the protocol, the close timing, D50's `HistoryKey`, the stored format or the worklog card; write to disk on heartbeats.
+**Don't:** change the ledger format, the 24-hour window, the documentation-only rule, `Validate-Context7Gate.ps1` and `Validate-ProjectDeliveryGate.ps1` (Claude aligned both in D63) or any title other than the empty-subject case.
 
-**Context7:** `/dotnet/docs`, query "lock statement thread synchronization Dictionary"; record the one fact used.
+**Context7:** gerekmiyor (only Talvora's own code paths change; no outside API is relied on) → `noLookup`.
 
-**Acceptance:** red first; the pinned test; Changed and Full `Hepsi geçti.`; deploy; installed Control Center smoke green; CI. Then `[~] live check pending (Claude): the steps before a deploy stay in Çalışma günlüğü`.
-
-### D62 — A detached start is not a result
-
-**Why:** audit 46 (data truth). `talvora_user_process_start` and `talvora_job_start` return as soon as the process has started, but `TalvoraDesktopProgressNarrative` describes them like a finished `talvora_user_run` (`"user_run" or "run_process" or "job_start" or "user_process_start"` share `WorklogSubject.ForExecutable`), so the step gets the script's success title. Every Full gate the agents start detached reads "Kalite kontrolü geçti · tam" at the moment it starts, minutes before its real result, and would read the same if it then failed (live on 7aa5165: the D46 session of 18:43 ends with that step at the gate's start); the detached installer build reads "Kurulum paketi hazırlandı" 21 ms after it began. The agents' installed smokes, run as `pwsh -Command "& dotnet run --project tests/Talvora.Smoke/…"`, end their sessions with "pwsh.exe bitti", a title that names the shell instead of what ran.
-
-**Files:** `src/Talvora/WorklogSubject.cs`, `src/Talvora/TalvoraDesktopProgressNarrative.cs`, `tests/Talvora.Notification.Regression/Program.D62.cs` (new) and `Program.cs` (its call), `.context7/verification.json`, `docs/codex/STATUS.md`. After D61. **Tests that read these files:** `tests/ModernizationPolicyRegression.ps1` (the narrative keeps `TALVORA_UPDATE_DETACHED` and `WorklogCopy.Deploy.Succeeded` and never contains its forbidden jargon words); run it right after the change.
-
-**Do (method):**
-1. Red first in `Program.D62.cs`, called from `Main` (full run) on its own line directly below the D60 call, through `RunToolCallAsync` with a successful stub result as the D46 test does, checking each completed step's title: (a) `talvora_user_process_start` with `executable` pwsh and `arguments` `["-NoProfile","-Command","& ./scripts/Invoke-QualityGate.ps1 -Scope Full *> artifacts/D62-gate.log; exit $LASTEXITCODE"]` → "Kalite kontrolü arka planda başladı · tam"; (b) the same arguments through `talvora_user_run` → "Kalite kontrolü geçti · tam" (unchanged); (c) `talvora_user_process_start` with `["-NoProfile","-Command","& ./scripts/Build-Windows-Installer.ps1 *> artifacts/D62-build.log"]` → "Kurulum paketi hazırlığı arka planda başladı"; (d) `talvora_user_run` with `["-NoProfile","-Command","& dotnet run --project tests/Talvora.Smoke/Talvora.Smoke.csproj -c Release -- --metadata-policy-only http://127.0.0.1:7676/mcp"]` → "Talvora.Smoke bitti"; (e) `talvora_job_start` with `executable` `C:\Windows\System32\whoami.exe` → "whoami.exe arka planda başladı". Messages start with `D62:`. Red: (a), (c), (d) and (e) show today's titles.
-2. `WorklogSubject.ForDetachedStart(string executable, IReadOnlyList<string> arguments)`: the same description as `ForExecutable`, with other success and failure titles (the running title stays). Two known scripts: `Invoke-QualityGate.ps1` → "Kalite kontrolü arka planda başladı" / "Kalite kontrolü başlatılamadı", keeping the `-Scope` suffix exactly as `ForScript` adds it (" · tam", " · hızlı"); `Build-Windows-Installer.ps1` → "Kurulum paketi hazırlığı arka planda başladı" / "Kurulum paketi hazırlığı başlatılamadı". Anything else: "{subject} arka planda başladı" / "{subject} başlatılamadı" with the description's subject.
-3. In `TalvoraDesktopProgressNarrative`, `job_start` and `user_process_start` use `ForDetachedStart`; `user_run` and `run_process` keep `ForExecutable`.
-4. `ForExecutable` names a `dotnet run` project: for `dotnet` with the verb `run` and a `--project <path>` argument, the subject is the project's file name without extension and the titles are `ForProgram(subject)` ("Talvora.Smoke çalışıyor", "Talvora.Smoke bitti", "Talvora.Smoke hata ile bitti"); for `pwsh` or `powershell` whose command text names no `.ps1` but contains `dotnet run … --project <path>` (a `[GeneratedRegex]`, culture-invariant, like `ScriptPattern`), the same description. Without `--project`, today's "dotnet run" stays.
-
-**Don't:** change bounded runs (`user_run`, `run_process`), the existing `KnownScripts` titles, the deploy's deferred completion, `dev_server_start` or the tray; add any word that `ModernizationPolicyRegression.ps1` forbids in the narrative.
-
-**Context7:** `/dotnet/docs`, query "GeneratedRegex attribute source generator RegexOptions.CultureInvariant"; record the one fact used.
-
-**Acceptance:** red first; the pinned test; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI. Then `[~] live check pending (Claude): a detached Full gate's step reads "Kalite kontrolü arka planda başladı · tam"`.
+**Acceptance:** red first; the pinned tests; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` (it checks the open-world count) and the full installed smoke green; CI.
 
 ### Audit 2026-11-08 (42–43) · cards still open
 
 D46 is done (Claude checks its live wording at the next audit). D47, D48 and D49 are Claude's `[C]` items since audit 46 (user decision: Claude built and ran their literal blocks at audit 42, so the agent does not type them again); Claude ships them with WL3 after the agent's queue and re-checks each against the code of that day first. The agent skips them.
-
-### D46 — A CI run that is still going is not a failed step
-
-**Why:** audit 42 finding 2. `scripts/Get-CiStatus.ps1` exits 2 while the windows-ci run is still going (AGENTS.md step 10b: `[~] CI pending`), and the agent checks CI right after every push, so almost every card ends its worklog session with a red "GitHub denetimi okunamadı" step and a failed session; exit 1 (CI red) reads "okunamadı" too. Exit 2 becomes a finished step "GitHub denetimi sürüyor", exit 0 "GitHub denetimi geçti", exit 1 "GitHub denetimi başarısız". The literal blocks below were built and run by Claude in a scratch clone (Notification regression green, Full gate green).
-
-**Files:** `src/Talvora/WorklogSubject.cs`, `src/Talvora/TalvoraDesktopProgressNarrative.cs`, `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `tests/Talvora.Notification.Regression/Program.D46.cs` (new), `tests/Talvora.Notification.Regression/Program.cs`, `.context7/verification.json`.
-
-**Context7:** `/modelcontextprotocol/csharp-sdk` — "CallToolResult StructuredContent JsonElement"; `/dotnet/docs` — "JsonElement.TryGetInt32"; record both queries.
-
-#### Exact implementation
-
-Step 1 (red first). Create `Program.D46.cs`:
-
-```csharp
-using System.Collections.Concurrent;
-using System.Text.Json;
-using ModelContextProtocol.Protocol;
-using Talvora;
-using Talvora.Shared;
-
-internal static partial class Program
-{
-    /// <summary>D46: Get-CiStatus.ps1 exit 2 (CI still running) is a finished check; exit 1 is a failed one.</summary>
-    private static async Task AssertD46CiStillRunningAsync()
-    {
-        var arguments = new Dictionary<string, JsonElement>
-        {
-            ["executable"] = JsonSerializer.SerializeToElement(@"C:\Program Files\PowerShell\7\pwsh.exe"),
-            ["arguments"] = JsonSerializer.SerializeToElement(
-                new[] { "-NoProfile", "-File", "scripts/Get-CiStatus.ps1", "-TimeoutMinutes", "0" }),
-        };
-        foreach (var (exitCode, kind, title) in new[]
-        {
-            (2, DesktopProgressKind.Completed, "GitHub denetimi sürüyor"),
-            (1, DesktopProgressKind.Failed, "GitHub denetimi başarısız"),
-            (0, DesktopProgressKind.Completed, "GitHub denetimi geçti"),
-        })
-        {
-            var observed = new ConcurrentQueue<DesktopProgressMessage>();
-            var notifier = CreateNotifier(observed);
-            try
-            {
-                var result = new CallToolResult
-                {
-                    Content = [],
-                    StructuredContent = JsonSerializer.SerializeToElement(
-                        new { exitCode, timedOut = false, standardOutput = "CI" }),
-                };
-                _ = await notifier.RunToolCallAsync("talvora_user_run", arguments,
-                    _ => ValueTask.FromResult(result), CancellationToken.None, "/mcp/dev", "ChatGPT");
-                var terminal = observed.LastOrDefault(message =>
-                    message.Kind is DesktopProgressKind.Completed or DesktopProgressKind.Failed);
-                if (terminal is null || terminal.Kind != kind || !terminal.Title.StartsWith(title, StringComparison.Ordinal))
-                    throw new InvalidOperationException(
-                        $"D46: exit {exitCode} must end as {kind} \"{title}\", got {terminal?.Kind} \"{terminal?.Title}\".");
-            }
-            finally
-            {
-                await notifier.DisposeAsync();
-            }
-        }
-        Console.WriteLine("D46_CI_STILL_RUNNING_GREEN");
-    }
-}
-```
-
-In `Program.cs` (`Main`, full run) add `await AssertD46CiStillRunningAsync();` on its own line directly below `await AssertD41CallerIdentityAsync();`. Red: `D46: exit 2 must end as Completed "GitHub denetimi sürüyor", got Failed …`.
-
-Step 2. `WorklogSubject.cs`: replace the line
-
-```csharp
-        ["Get-CiStatus.ps1"] = new("GitHub denetimi okunuyor", "GitHub denetimi okundu", "GitHub denetimi okunamadı"),
-```
-
-with
-
-```csharp
-        ["Get-CiStatus.ps1"] = new("GitHub denetimi okunuyor", "GitHub denetimi geçti", "GitHub denetimi başarısız"),
-```
-
-Step 3. `TalvoraDesktopProgressNarrative.cs`: directly above `    private static bool ResultContainsText<T>(` add
-
-```csharp
-    // D46: Get-CiStatus.ps1 exits 2 while the windows-ci run is still going (AGENTS.md step 10b).
-    private static bool IsCiStillRunning<T>(OperationNarrative narrative, T result) =>
-        string.Equals(narrative.Subject, "Get-CiStatus.ps1", StringComparison.OrdinalIgnoreCase) &&
-        ResultExitCode(result) == 2;
-
-    private static int? ResultExitCode<T>(T result)
-    {
-        try
-        {
-            var json = result is CallToolResult { StructuredContent: JsonElement structured }
-                ? structured
-                : JsonSerializer.SerializeToElement(result);
-            return json.ValueKind == JsonValueKind.Object &&
-                TryGetPropertyIgnoreCase(json, "exitCode", out var exitCode) &&
-                exitCode.ValueKind == JsonValueKind.Number &&
-                exitCode.TryGetInt32(out var code)
-                    ? code
-                    : null;
-        }
-        catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidOperationException)
-        {
-            return null;
-        }
-    }
-```
-
-Step 4. `TalvoraDesktopProgressNotifier.cs`, method `RunToolCallAsync`: replace
-
-```csharp
-            var failed = TryDescribeFailure(result);
-            try
-            {
-```
-
-with
-
-```csharp
-            var failed = TryDescribeFailure(result);
-            // D46: a CI run that is still going is a finished check, never a failed step.
-            var ciStillRunning = failed && IsCiStillRunning(narrative, result);
-            if (ciStillRunning)
-            {
-                failed = false;
-            }
-
-            try
-            {
-```
-
-then replace
-
-```csharp
-                else
-                {
-                    if (TryBuildDeferredCompletion(
-                            narrative,
-                            result,
-                            out var deferredTitle,
-                            out var deferredMessage))
-```
-
-with
-
-```csharp
-                else
-                {
-                    if (ciStillRunning)
-                    {
-                        TryEndWorklog(
-                            operationId,
-                            DesktopProgressKind.Completed,
-                            "GitHub denetimi sürüyor",
-                            "GitHub denetimi henüz bitmedi; sonucu bir sonraki adımda okunacak.",
-                            terminalEvidence is null
-                                ? null
-                                : terminalEvidence with { Result = "Sonuç: GitHub denetimi sürüyor" },
-                            stopwatch.Elapsed);
-                    }
-                    else if (TryBuildDeferredCompletion(
-                            narrative,
-                            result,
-                            out var deferredTitle,
-                            out var deferredMessage))
-```
-
-and in the `catch (Exception ex)` block right below replace the line
-
-```csharp
-                    failed ? narrative.Titles.Failed : narrative.Titles.Succeeded,
-```
-
-with
-
-```csharp
-                    failed ? narrative.Titles.Failed : ciStillRunning ? "GitHub denetimi sürüyor" : narrative.Titles.Succeeded,
-```
-
-**Don't:** change `Get-CiStatus.ps1` or its exit codes, AGENTS.md step 10b, the other scripts' titles or the failure classifier.
-
-**Acceptance:** `D46_CI_STILL_RUNNING_GREEN`; signed-in Full `Hepsi geçti.`; build and deploy; push and run the step-10b CI check once as usual; record `[~] live check pending (Claude): the CI check right after the push reads "GitHub denetimi sürüyor"` (Claude reads the worklog history).
 
 ### D48 — A vault note belongs to the vault's owner (Claude, `[C]`)
 
@@ -548,6 +328,7 @@ Step 3. Two existing tests pin texts this card changes; update them in the same 
 8. `WorklogHistoryView.xaml`: the "Kanıtlar" heading collapses when the session has no evidence (summary, result, files and code preview all empty), with the same trigger style; check the bound values on a real session without evidence first (audit 43 screen pass: the "scratchpad" session showed the heading alone).
 9. `WorklogHistoryView.xaml`: with search text and no matching session, the empty line reads "Aramayla eşleşen çalışma yok." instead of "Henüz kayıtlı çalışma yok." (README screen pass 2026-11-08). After WL3, Claude takes the README screenshots again before the first release.
 10. `WorklogHistoryView.xaml`, list card (audit 46 screen pass): the files part (" dosya değişti" after the bound count) collapses when `Totals.FilesChanged` is 0, the way `WorklogCardMapper.cs` leaves zero parts out of the desktop card, so a session without file changes reads "4 adım" instead of "4 adım · 0 dosya değişti".
+11. `WorklogHistoryView.xaml`, list card (audit 47, user decision 2026-11-08 "Görev notu"): when `Header.TaskNote` is set it is the card's headline (`Tv.Type.Body`, one line, ellipsis) and `Current.Title` moves under it as a muted caption "Son adım: …"; a session without a task note looks as today. Since D61 most agent sessions end with the deploy step, so three of the last five read "Kurulum devredildi · doğrulama bekleniyor" in the list.
 
 ## Releases and the public page (user request 2026-11-08)
 
@@ -670,26 +451,6 @@ User: "github'da bulunan talvora mcp readme'si yani github arayüzünü tamamen 
 ## Context7 proof (user request 2026-11-08)
 
 User: "context7 kapısının projelerde gerçekten işe yarayıp yaramadığını ve yarıyor ise en faydalı ve optimum şekilde kullanılıp kullanılmadığını denetle". Claude's check: the push gate (`ProjectDeliveryGate`) only checks the form of the working-tree file, so invented evidence that was never committed (`/made/up`, vendor source "see above") passed a live `talvora_git_run` push; the CI check (`Validate-Context7Gate.ps1`) demands that the file changes with the code but passes the same invented content; Codex's session shows real Context7 queries; ChatGPT makes as many outside requests per card as its evidence names queries, but nothing can prove it, and the vendor pages its evidence lists were never opened through Talvora (the gate demands a vendor URL even when Context7 answered). Most cards looked up one stable library call. User decisions: Talvora records every Context7 question and the push gate accepts only recorded ones; the card says when no lookup is needed (`Context7: gerekmiyor`); documentation-only pushes need no evidence; TahtaPilot and Classroom get the same CI check after CTX2.
-
-### CTX1 — Talvora asks Context7 itself and keeps a record
-
-**Why:** see the section above. A Talvora tool that asks Context7 and records each question makes a lookup provable (CTX2) and gives every agent the same correct request (the v2 API, checked by Claude on 2026-11-08: `GET https://context7.com/api/v2/context?libraryId=<id>&query=<question>&type=txt`, no key, about 6 KB per answer, a `tokens` parameter has no effect, an unknown id answers 404).
-
-**Files:** `src/Talvora/Tools/Context7Tools.cs` (new), `src/Talvora/Context7Ledger.cs` (new), `src/Talvora/Program.cs` (singleton, like `ToolCallTrace`), the registration files the last new tool touched (`git show 97344f7 --stat`: `TalvoraToolManifest.cs`, `TalvoraMcpToolSurfacePolicy.cs` — dev surface only, `TalvoraToolGuides.cs`, `TalvoraToolTitles.cs` — "Context7 belgelerine bak", `TalvoraMcpToolMetadataPolicy.cs` only if a description override is needed, `tests/CodexCliIntegrationSourceRegression.ps1` and `tests/FocusedMcpSurfaceSourceRegression.ps1` — their tool lists, `tests/Talvora.Smoke/SmokeScenarios.SurfacePolicy.cs`), `README.md` and `docs/ARCHITECTURE.md` (only the tool counts that `ToolManifestDocumentationRegression.ps1` checks), `src/Talvora/TalvoraDesktopProgressNotifier.cs` (`ShouldNotifyToolCall`), `tests/Talvora.Notification.Regression/Program.CTX1.cs` (new) and `Program.cs`, `tests/Talvora.Smoke/SmokeScenarios.SharedInfrastructure.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `ToolManifestDocumentationRegression.ps1`, `CodexCliIntegrationSourceRegression.ps1`, `FocusedMcpSurfaceSourceRegression.ps1`, `ModernizationPolicyRegression.ps1`; run them right after the change.
-
-**Do (method):**
-1. Red first in `Program.CTX1.cs`, called from `Main` (full run) on its own line directly below the D62 call, with a temporary ledger folder and a fake `HttpMessageHandler` (no network): (a) a lookup sends exactly `https://context7.com/api/v2/context?libraryId=%2Fdotnet%2Fdocs&query=Enumerable.MaxBy%20key%20selector%20example&type=txt` (`Uri.EscapeDataString` for both values), returns the body and writes one ledger line with `ts`, `caller`, `libraryId`, `query`, `status` 200, `bytes` and `sha` (the first 16 hex characters of the body's SHA-256); (b) a 404 is a tool error that names the id, and its ledger line has `status` 404; (c) the id `dotnet/docs` and the query `docs` are argument errors and send nothing; (d) a ledger file dated 15 days ago is deleted by the retention pass. Messages start with `CTX1:`.
-2. `Context7Ledger` (internal sealed) follows `ToolCallTrace` (TW2): a channel with one writer task, a lock, append-only `C:\ProgramData\Talvora\Context7\lookups-<UTC yyyy-MM-dd>.jsonl` written with `Utf8JsonWriter`, retention at start and once a day (files older than 14 days), a write error drops only that record. It also has `IReadOnlyList<Context7LookupRecord> ReadSince(DateTimeOffset since)` for CTX2 (reads the day files in range and skips a bad line).
-3. `talvora_context7_docs(string libraryId, string query)`: `libraryId` must match `^/[^/\s]+/[^/\s]+(/[^/\s]+)?$`; `query` is 12–400 characters with at least three words; one GET with a 30-second timeout through an `HttpClient` whose handler the test can replace; the body is capped at 64 KB (a longer one is cut with a note). 200 → a structured result `{ libraryId, query, text, bytes }`; any other status → a tool error with the status, for 404 "Context7 does not know <id>; take the id from the project's Context7 map"; a network failure → a tool error. Every request that reached Context7 is recorded with the D41 caller. Description: "Ask Context7 one precise question about one library (an id from the project's Context7 map). Talvora records the question; Context7 evidence must name questions asked here." The guide lists both parameters with an example from `docs/codex/CONTEXT7.md`.
-4. Registration follows `talvora_note_write` in 97344f7; the README and ARCHITECTURE changes are the tool counts only (the numbers, nothing else in the README).
-5. `ShouldNotifyToolCall`: `context7_docs` is quiet, next to `search_text` (no worklog step; since D60 it still keeps the session open).
-6. Installed smoke (shared infrastructure): a live lookup of `/dotnet/docs` with a three-word question returns status 200 and text, and today's ledger file holds that question; `/talvora-smoke/does-not-exist` is a tool error that names the id.
-
-**Don't:** change `talvora_http_request`, the TW2 trace or the evidence gate (CTX2); store anything beyond the listed fields; send a key or any header besides `User-Agent: Talvora`.
-
-**Context7:** `/dotnet/docs`, query "HttpClient Timeout and HttpMessageHandler for tests with a capped response read"; this card's own lookup still goes through `talvora_http_request` (the tool is not installed yet).
-
-**Acceptance:** red first; the pinned tests; Changed and Full `Hepsi geçti.`; deploy; `--metadata-policy-only` and the full installed smoke green; CI.
 
 ### CTX2 — The push gate accepts only recorded Context7 questions
 
