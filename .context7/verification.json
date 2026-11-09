@@ -1,19 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-08T22:09:57.676Z",
-  "scope": "RL4: GitHub Actions tag push filter and workflow_dispatch boolean dry_run controls",
-  "libraries": [
-    {
-      "libraryId": "/websites/github_en_actions",
-      "verified": "2026-11-09 RL4: tag push filter patterns in GitHub Actions (query: \"workflow push tags filter\")"
-    },
-    {
-      "libraryId": "/websites/github_en_actions",
-      "verified": "2026-11-09 RL4: workflow_dispatch boolean input keeps its type in the inputs context (query: \"workflow_dispatch inputs boolean\")"
-    }
-  ],
-  "vendorSources": [
-    "https://docs.github.com/actions/writing-workflows/workflow-syntax-for-github-actions",
-    "https://cli.github.com/manual/gh_release_create"
-  ]
+  "verifiedAtUtc": "2026-11-09T04:15:49.127Z",
+  "scope": "D65: reuse Talvora's own TOML table scanner for uninstall cleanup",
+  "libraries": [],
+  "noLookup": "D65: only internal string handling in Talvora's existing TOML scanner; no external API was used",
+  "vendorSources": []
 }

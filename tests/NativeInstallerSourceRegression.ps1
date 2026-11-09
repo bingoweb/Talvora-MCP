@@ -1013,7 +1013,8 @@ namespace Talvora.Installer.Rl3Fixture
     public static class Rl3Contracts
     {
         public static string StripCodex(string content) =>
-            InstallerEngine.RemoveTalvoraCodexTable(content);
+            Talvora.Shared.CodexMcpConfiguration.RemoveTalvoraLocal(
+                content, "http://127.0.0.1:7676/mcp/dev");
 
         public static string[] Plan(string dataRoot, bool removeData) =>
             InstallerEngine.BuildUninstallPlan(@"C:\Program Files\Talvora", dataRoot,
@@ -1050,8 +1051,12 @@ namespace Talvora.Installer.Rl3Fixture
     $rl3IsolatedSource = Join-Path $rl3FixtureRoot 'InstallerEngine.Uninstall.cs'
     [IO.File]::WriteAllText($rl3IsolatedSource,
         $uninstallSource.Replace('namespace Talvora.Installer;', 'namespace Talvora.Installer.Rl3Fixture;').
-            Replace('using Talvora.Shared;', 'using Talvora.Shared.Rl3Fixture;'))
-    Add-Type -Path @($rl3IsolatedSource, $rl3FixturePath) -ErrorAction Stop
+            Replace('using Talvora.Shared;', "using Talvora.Shared;`nusing Talvora.Shared.Rl3Fixture;"))
+    $rl3CodexSource = Join-Path $rl3FixtureRoot 'CodexMcpConfiguration.cs'
+    [IO.File]::WriteAllText($rl3CodexSource,
+        "#nullable enable`nusing System;`nusing System.Collections.Generic;`n" +
+        [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Shared\CodexMcpConfiguration.cs')))
+    Add-Type -Path @($rl3IsolatedSource, $rl3FixturePath, $rl3CodexSource) -ErrorAction Stop
     $ordinary = @([Talvora.Installer.Rl3Fixture.Rl3Contracts]::Plan($rl3DataRoot, $false))
     $withData = @([Talvora.Installer.Rl3Fixture.Rl3Contracts]::Plan($rl3DataRoot, $true))
     if ($ordinary.Count -ne 6 -or
@@ -1077,6 +1082,33 @@ namespace Talvora.Installer.Rl3Fixture
         -not $codexTrimmed.Contains('  [user.preferences] # keep me') -or
         $codexTrimmed.Contains('[mcp_servers.talvora_local]')) {
         throw 'RL3 may remove only the Talvora MCP table while preserving all other TOML tables.'
+    }
+    $crlfCodex = (@(
+        'model = "gpt-5"'
+        '[mcp_servers.talvora_local]'
+        'url = "http://127.0.0.1:7676/mcp/dev"'
+        '[mcp_servers.talvora_local.env]'
+        'TALVORA_X = "1"'
+        '[mcp_servers.github]'
+        'command = "gh"'
+        '[notes]'
+        'text = """'
+        '[mcp_servers.talvora_local]'
+        'This is part of the note.'
+        '"""'
+    ) -join "`r`n") + "`r`n"
+    $crlfRetained = (@(
+        'model = "gpt-5"'
+        '[mcp_servers.github]'
+        'command = "gh"'
+        '[notes]'
+        'text = """'
+        '[mcp_servers.talvora_local]'
+        'This is part of the note.'
+        '"""'
+    ) -join "`r`n") + "`r`n"
+    if ([Talvora.Installer.Rl3Fixture.Rl3Contracts]::StripCodex($crlfCodex) -cne $crlfRetained) {
+        throw 'D65 must remove Talvora sub-tables but retain all other CRLF TOML bytes and multiline strings.'
     }
     $customTalvora = "[mcp_servers.talvora_local]`nurl = `"https://example.invalid/custom`"`n"
     if ([Talvora.Installer.Rl3Fixture.Rl3Contracts]::StripCodex($customTalvora) -cne $customTalvora) {

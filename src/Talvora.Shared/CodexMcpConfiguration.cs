@@ -12,11 +12,47 @@ public static class CodexMcpConfiguration
     {
         ArgumentNullException.ThrowIfNull(original);
         ArgumentException.ThrowIfNullOrWhiteSpace(mcpUrl);
-        var output = new StringBuilder(original.Length + 512);
-        var skipping = false;
-        string? multilineDelimiter = null;
+        var retained = RetainUnrelatedTables(original, null, out _);
+        var output = new StringBuilder(retained, retained.Length + 512);
         var newline = original.Contains("\r\n", StringComparison.Ordinal)
             ? "\r\n" : "\n";
+        if (output.Length > 0)
+        {
+            if (!retained.EndsWith(newline + newline, StringComparison.Ordinal))
+            {
+                if (!retained.EndsWith('\n'))
+                {
+                    output.Append(newline);
+                }
+                output.Append(newline);
+            }
+        }
+        output.Append("[mcp_servers.talvora_local]").Append(newline);
+        output.Append("url = \"").Append(mcpUrl).Append('"').Append(newline);
+        output.Append("enabled_tools = [").Append(newline);
+        output.Append("  \"talvora_source_edit_guide\", \"talvora_read_source\", \"talvora_apply_patch\",").Append(newline);
+        output.Append("  \"talvora_apply_edits\", \"talvora_structural_edit\", \"talvora_semantic_edit\",").Append(newline);
+        output.Append("  \"talvora_run_powershell\", \"talvora_git_run\",").Append(newline);
+        output.Append(']').Append(newline);
+        return output.ToString();
+    }
+
+    public static string RemoveTalvoraLocal(string original, string mcpUrl)
+    {
+        ArgumentNullException.ThrowIfNull(original);
+        ArgumentException.ThrowIfNullOrWhiteSpace(mcpUrl);
+        var retained = RetainUnrelatedTables(original, mcpUrl, out var matchesInstalledUrl);
+        return matchesInstalledUrl ? retained : original;
+    }
+
+    private static string RetainUnrelatedTables(
+        string original, string? expectedMcpUrl, out bool matchesInstalledUrl)
+    {
+        var output = new StringBuilder(original.Length);
+        var skipping = false;
+        var inTalvoraRootTable = false;
+        matchesInstalledUrl = false;
+        string? multilineDelimiter = null;
         for (var start = 0; start < original.Length;)
         {
             var lineFeed = original.IndexOf('\n', start);
@@ -36,6 +72,14 @@ public static class CodexMcpConfiguration
                         StringComparison.Ordinal) &&
                     string.Equals(tableParts[1], "talvora_local",
                         StringComparison.Ordinal);
+                inTalvoraRootTable = skipping && tableParts.Count == 2;
+            }
+            if (inTalvoraRootTable && expectedMcpUrl is not null &&
+                multilineDelimiter is null &&
+                string.Equals(line.Trim(), $"url = \"{expectedMcpUrl}\"",
+                    StringComparison.Ordinal))
+            {
+                matchesInstalledUrl = true;
             }
             if (!skipping)
             {
@@ -45,26 +89,6 @@ public static class CodexMcpConfiguration
             UpdateMultilineState(line, ref multilineDelimiter);
             start = end;
         }
-
-        if (output.Length > 0)
-        {
-            var retained = output.ToString();
-            if (!retained.EndsWith(newline + newline, StringComparison.Ordinal))
-            {
-                if (!retained.EndsWith('\n'))
-                {
-                    output.Append(newline);
-                }
-                output.Append(newline);
-            }
-        }
-        output.Append("[mcp_servers.talvora_local]").Append(newline);
-        output.Append("url = \"").Append(mcpUrl).Append('"').Append(newline);
-        output.Append("enabled_tools = [").Append(newline);
-        output.Append("  \"talvora_source_edit_guide\", \"talvora_read_source\", \"talvora_apply_patch\",").Append(newline);
-        output.Append("  \"talvora_apply_edits\", \"talvora_structural_edit\", \"talvora_semantic_edit\",").Append(newline);
-        output.Append("  \"talvora_run_powershell\", \"talvora_git_run\",").Append(newline);
-        output.Append(']').Append(newline);
         return output.ToString();
     }
 

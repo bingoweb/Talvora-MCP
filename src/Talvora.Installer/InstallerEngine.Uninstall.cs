@@ -7,7 +7,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Talvora.Shared;
@@ -205,32 +204,12 @@ internal static partial class InstallerEngine
 
         var original = await TextFileStore.ReadBoundedAsync(path,
             MaximumInstallerUserStateFileBytes, cancellationToken);
-        var updated = RemoveTalvoraCodexTable(original);
+        var updated = CodexMcpConfiguration.RemoveTalvoraLocal(original, McpUrl + "/dev");
         if (string.Equals(original, updated, StringComparison.Ordinal))
             return;
         _ = await AtomicFile.WriteAllTextAsync(path, updated,
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
             createBackup: true, cancellationToken);
-    }
-
-    internal static string RemoveTalvoraCodexTable(string original)
-    {
-        var headerPattern = new Regex(
-            @"^[ \t]*\[\[?[^\r\n\[\]]+\]\]?[ \t]*(?:\#[^\r\n]*)?\r?$",
-            RegexOptions.Multiline | RegexOptions.CultureInvariant);
-        var header = headerPattern.Matches(original).Cast<Match>().FirstOrDefault(match =>
-            string.Equals(match.Value.Trim().Split(']')[0].TrimStart(' ', '\t', '['),
-                "mcp_servers.talvora_local", StringComparison.Ordinal));
-        if (header is null)
-            return original;
-
-        var next = headerPattern.Match(original, header.Index + header.Length);
-        var end = next.Success ? next.Index : original.Length;
-        var section = original[header.Index..end];
-        // Do not delete a similarly named, user-owned table without the URL this installer writes.
-        if (!section.Contains($"url = \"{McpUrl}/dev\"", StringComparison.Ordinal))
-            return original;
-        return original.Remove(header.Index, end - header.Index);
     }
 
     private static async Task RemoveTalvoraProgramFilesAsync(
