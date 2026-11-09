@@ -1016,6 +1016,9 @@ namespace Talvora.Installer.Rl3Fixture
             Talvora.Shared.CodexMcpConfiguration.RemoveTalvoraLocal(
                 content, "http://127.0.0.1:7676/mcp/dev");
 
+        public static string RetireSetup(string installRoot) =>
+            InstallerEngine.RetireRunningSetup(installRoot);
+
         public static string[] Plan(string dataRoot, bool removeData) =>
             InstallerEngine.BuildUninstallPlan(@"C:\Program Files\Talvora", dataRoot,
                 @"C:\ProgramData\Microsoft\Windows\Start Menu\Programs",
@@ -1113,6 +1116,21 @@ namespace Talvora.Installer.Rl3Fixture
     $customTalvora = "[mcp_servers.talvora_local]`nurl = `"https://example.invalid/custom`"`n"
     if ([Talvora.Installer.Rl3Fixture.Rl3Contracts]::StripCodex($customTalvora) -cne $customTalvora) {
         throw 'RL3 must preserve a user-edited Talvora table that does not match the installer URL.'
+    }
+    $retireFolder = Join-Path $rl3FixtureRoot 'RetireSetup'
+    New-Item -ItemType Directory -Path $retireFolder -Force | Out-Null
+    $setupPath = Join-Path $retireFolder 'Talvora-Kurulum.exe'
+    [IO.File]::WriteAllText($setupPath, 'fixture setup')
+    $retiredPath = [Talvora.Installer.Rl3Fixture.Rl3Contracts]::RetireSetup($retireFolder)
+    $retiredFiles = @(Get-ChildItem -LiteralPath $retireFolder -File)
+    if ((Test-Path -LiteralPath $setupPath) -or
+        $retiredFiles.Count -ne 1 -or
+        $retiredFiles[0].Name -cnotmatch '^Talvora-Kurulum\.[0-9a-f]{32}\.kaldirildi$' -or
+        $retiredPath -cne $retiredFiles[0].FullName) {
+        throw 'D66 must retire only the running setup under its unique name.'
+    }
+    if ($uninstallSource -match 'MoveFileEx\s*\(\s*retainedSetup') {
+        throw 'D66 must not schedule the stable setup filename for deletion on reboot.'
     }
 }
 finally {

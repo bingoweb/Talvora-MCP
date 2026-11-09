@@ -234,7 +234,16 @@ internal static partial class InstallerEngine
 
         if (File.Exists(retainedSetup))
         {
-            if (!MoveFileEx(retainedSetup, null, MoveFileFlags.DelayUntilReboot))
+            var scheduledSetup = retainedSetup;
+            try
+            {
+                scheduledSetup = RetireRunningSetup(installRoot);
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                InstallerLog.Write("Talvora-Kurulum.exe yeniden adlandırılamadı; yeniden başlatmada silinecek.", error);
+            }
+            if (!MoveFileEx(scheduledSetup, null, MoveFileFlags.DelayUntilReboot))
                 throw new IOException("Talvora kurulum dosyası yeniden başlatmada silinemedi. " +
                     "Windows hatası: " + Marshal.GetLastWin32Error());
             if (!MoveFileEx(installRoot, null, MoveFileFlags.DelayUntilReboot))
@@ -245,5 +254,12 @@ internal static partial class InstallerEngine
         {
             Directory.Delete(installRoot);
         }
+    }
+
+    internal static string RetireRunningSetup(string installRoot)
+    {
+        var retiredPath = Path.Combine(installRoot, $"Talvora-Kurulum.{Guid.NewGuid():N}.kaldirildi");
+        File.Move(Path.Combine(installRoot, InstalledSetupFileName), retiredPath);
+        return retiredPath;
     }
 }

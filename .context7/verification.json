@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-09T04:15:49.127Z",
-  "scope": "D65: reuse Talvora's own TOML table scanner for uninstall cleanup",
-  "libraries": [],
-  "noLookup": "D65: only internal string handling in Talvora's existing TOML scanner; no external API was used",
+  "verifiedAtUtc": "2026-11-09T04:39:46.776Z",
+  "scope": "D66: MoveFileEx delayed deletion targets the path registered at reboot",
+  "libraries": [
+    {
+      "libraryId": "/websites/learn_microsoft_en-us_windows_win32_api",
+      "verified": "2026-11-09 D66: MoveFileEx queues deletion of the registered path until restart (query: \"MoveFileEx MOVEFILE_DELAY_UNTIL_REBOOT deletes the file at that path when the system restarts\")"
+    }
+  ],
   "vendorSources": []
 }

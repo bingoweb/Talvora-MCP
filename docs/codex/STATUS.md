@@ -34,8 +34,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user, after D66
 - [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
-- [~] D65 — Shared Codex uninstall scanner; live pending: committed installer deployment, installed smokes and windows-ci
-- [ ] D66 — An uninstall never deletes a later reinstall's setup copy (audit 50)
+- [x] D65 — Installed 21848ca, metadata and full MCP smokes GREEN, windows-ci 42561332554 GREEN
+- [~] D66 — Setup renamed before reboot deletion; live pending: committed installer deployment, installed smokes and windows-ci (real uninstall/reinstall/restart is Claude's)
 - [ ] D67 — PowerShell 7 downloads to a private, locked file and shows its progress (audit 50)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
@@ -57,10 +57,15 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-09 — D66, executor ChatGPT: uninstall renames the running setup to unique .kaldirildi before scheduling deletion, then schedules the directory; logs the original-path fallback on IO/access rename failure. Installation and uninstall order unchanged.
+  RED CS0117 (RetireRunningSetup absent), NativeInstallerSourceRegression GREEN; signed-in Changed 16/0 and Full 72/0, Hepsi geçti.
+  Context7 /websites/learn_microsoft_en-us_windows_win32_api (MoveFileEx path-based reboot deletion). Gitea #9 comment 239.
+  Self-review — no UI or extra file changes; original setup name remains free for reinstall. Live pending clean-HEAD deploy, installed smokes, CI; real uninstall/reinstall/restart belongs to Claude with the user.
+
 - 2026-11-09 — D65, executor ChatGPT: uninstall reuses the shared TOML scanner, removing the installed Codex root and sub-tables while preserving unrelated tables, CRLF and multiline strings; the Upsert writer remains unchanged.
   RED CS0117 (RemoveTalvoraLocal absent), then NativeInstallerSourceRegression and CodexCliIntegrationSourceRegression GREEN; signed-in Changed 19/0 and Full 72/0, Hepsi geçti.
   Context7 noLookup (own string handling). Installed --uninstall --what-if still lists the same six actions. Gitea #9 comment 238.
-  Self-review — no UI changes and no other Codex registration touched. Live pending clean-HEAD installer deploy, metadata/full installed smoke and GitHub windows-ci.
+  Self-review — no UI changes and no other Codex registration touched. Installed 21848ca: healthz sourceCommit exact; metadata policy and full MCP smoke GREEN; windows-ci 42561332554 GREEN.
 
 - 2026-11-09 — Claude, audit 50 (deep; tag `audit/2026-11-09-50`): range `audit/2026-11-08-49..2e7e6fd` — RL1–RL4 (ChatGPT), CTX3 and KUR1 (Claude). Rules: one Turkish commit per card with its `Card:`, files within each card, self-review blocks present. Context7: every question of RL1–RL4 is in the ledger with status 200 (RL3 and RL4 already through the user's key); the gate refused RL4's first push because its evidence named shorter questions than it had asked — the agent then asked exactly those and pushed. Lines read: RL3 uninstall order, Secrets and reparse guards are right; findings: the Codex cleanup orphans user sub-tables (D65), the reboot deletion is bound to the setup's fixed path so a reinstall before restarting loses its uninstaller (D66), the elevated PowerShell 7 download uses a predictable, unlocked file in the user's temp folder and shows no progress (D67). RL4: tag-only releases, env-passed inputs, ancestry, CI and notes checks, pins equal to windows-ci. Live: SYSTEM `--verify-powershell-download` green (32 s); installed 0b749e3 with metadata and full smokes green; Apps entry values as carded; CI green to 2e7e6fd; Control Center smoke PNGs show "geliştirme sürümü" in Hakkında and Genel bakış. Look-ahead: RL5 now names the rail dot (`NavRailItem.HasDot`), the state file, the smoke hook and a precise Context7 question. .NET 10.0.14 / SDK 10.0.403 still newest. Tasarım geliştirmeleri: PowerShell download progress (D67). Release: none (0.0.1.0 waits for RL4's dry run, RL5, D65–D67, D47–D49, WL3 and README screenshots). Asked the user nothing: every finding has one correct fix.
 - 2026-11-09 — RL4, executor ChatGPT: new pinned GitHub Actions release workflow for v0.0.*.* and manual dry_run; checks version/tag, origin/main ancestry, same-commit successful windows-ci and release notes. Builds one versioned EXE and lowercase SHA256SUMS.txt; gh release create only on approved tag pushes, never on manual dispatch.
