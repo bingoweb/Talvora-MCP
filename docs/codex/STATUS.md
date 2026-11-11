@@ -34,7 +34,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user at the next audit (user decision 2026-11-11), together with D66
 - [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
-- [ ] D67 — PowerShell 7 downloads to a private, locked file and shows its progress (audit 50; progress text clarified at audit 51)
+- [?] D67 — PowerShell 7 downloads to a private, locked file and shows its progress (waiting for Claude: P-54; pinned SDK 10.0.403 absent)
 - [ ] DEP19 — Tomlyn 2.11.1 from Dependabot PR #19 (audit 51)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
@@ -55,6 +55,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-11 — P-54, executor ChatGPT: D67 RED CS1503 and NativeInstallerSourceRegression GREEN after temporary implementation; all code/test changes reverted.
+  Signed-in Changed failed Restore: global.json requires SDK 10.0.403 (rollForward disabled), workstation has only 10.0.404; Full, installed checks and CI cannot be claimed. Waiting for Claude's separate toolchain decision; no SDK or pin change made. Gitea #9 comment 240.
 
 - 2026-11-11 — Claude, audit 51 (tag `audit/2026-11-11-51`): range `audit/2026-11-09-50..29b7d5e` — D65 and D66 (ChatGPT). Rules: one Turkish commit per card with its `Card:`, files within each card, literal steps followed, self-review blocks present. Context7: D66's question is in the ledger (2026-11-09, status 200) word for word; D65's `noLookup` matches its card. Lines read: D65 reuses the shared scanner, removes the root table and its sub-tables only when the root carries the installer URL, keeps CRLF and multiline strings; `Upsert` output unchanged. D66 renames the running setup before the reboot deletion, falls back with a log line, order unchanged. Live: `/healthz` = 29b7d5e; the agent's metadata and full smokes GREEN (2026-11-09 and again 2026-11-11); windows-ci green on both commits. D66 closed here because a second `Card: D66` commit is refused after its own commit. Findings: Dependabot PR #19 (Tomlyn 2.11.1) is red with NU1004 → DEP19; D67's progress text used `…` while the engine uses three dots → step 4 now names both texts exactly. Screens: no UI change in the range; Tasarım geliştirmeleri: the setup window's progress texts mix `...`/`…` and "hizmet"/"servis" → added to Claude's [C] D47. Asked the user: the real RL3/D66 uninstall → reinstall → restart waits for the next audit ("Sonraki denetimde"). Release: none (0.0.1.0 still waits for RL4's dry run, RL5, D67, DEP19, D47–D49, WL3, the RL3 live check and README screenshots). Cleanup: finished D65/D66 cards, decided proposals and Log entries before 2026-11-09 removed.
 - 2026-11-09 — D66, executor ChatGPT: uninstall renames the running setup to unique .kaldirildi before scheduling deletion, then schedules the directory; logs the original-path fallback on IO/access rename failure. Installation and uninstall order unchanged.
