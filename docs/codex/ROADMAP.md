@@ -30,41 +30,22 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-09 (50, deep) · range `audit/2026-11-08-49..2e7e6fd` (RL1–RL4, CTX3, KUR1) · cards D65–D67
+### Audit 2026-11-11 (51) · range `audit/2026-11-09-50..29b7d5e` (D65, D66) · card DEP19
 
-### D65 — Uninstalling removes Talvora's whole Codex entry with the installer's own parser
+### DEP19 — Tomlyn 2.11.1 from Dependabot PR #19
 
-**Why:** audit 50 finding 1. RL3's `RemoveTalvoraCodexTable` cuts only the `[mcp_servers.talvora_local]` table up to the next header with its own regex. A sub-table the user added, such as `[mcp_servers.talvora_local.env]`, survives the uninstall as an orphan (reproduced by Claude), which leaves Codex an MCP server entry without `url`, and a table-like line inside a multi-line string is treated as a header. The installer side already has the right scanner: `CodexMcpConfiguration.UpsertTalvoraLocal` skips every table whose first two key parts are `mcp_servers` and `talvora_local` and treats lines inside multi-line strings as data.
+**Why:** Dependabot PR #19 raises `Tomlyn` 2.11.0 → 2.11.1 (patch: "Fix CRLF escaping in multi-line basic strings"; Talvora's `talvora_toml_*` tools write TOML through it). The PR's own CI is red with `NU1004` because Dependabot changed only `Directory.Packages.props` and `src/Talvora/packages.lock.json`, while every test project locks Tomlyn as `CentralTransitive`. This is the DEP1 case.
 
-**Files:** `src/Talvora.Shared/CodexMcpConfiguration.cs`, `src/Talvora.Installer/InstallerEngine.Uninstall.cs`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `NativeInstallerSourceRegression.ps1` (its RL3 part compiles an isolated copy of `InstallerEngine.Uninstall.cs` and calls `RemoveTalvoraCodexTable`), `CodexCliIntegrationSourceRegression.ps1` (reads `CodexMcpConfiguration.cs`; keep the `UpsertTalvoraLocal(` call it checks), and the installed Codex smoke (`tests/Talvora.Smoke/SmokeScenarios.Codex.cs`), which compares `UpsertTalvoraLocal` output byte for byte.
-
-**Do:**
-1. Red first, in the RL3 part of `NativeInstallerSourceRegression.ps1`: compile `src/Talvora.Shared/CodexMcpConfiguration.cs` into the harness and call `CodexMcpConfiguration.RemoveTalvoraLocal(content, "http://127.0.0.1:7676/mcp/dev")` instead of `InstallerEngine.RemoveTalvoraCodexTable`. New fixture, CRLF line ends: a top-level `model = "gpt-5"`; `[mcp_servers.talvora_local]` with `url = "http://127.0.0.1:7676/mcp/dev"`; `[mcp_servers.talvora_local.env]` with `TALVORA_X = "1"`; `[mcp_servers.github]` with `command = "gh"`; and a table `[notes]` holding a multi-line basic string whose second line is `[mcp_servers.talvora_local]`. Expected: no line of either `talvora_local` table remains; `model`, `[mcp_servers.github]` and the whole `[notes]` table are byte-identical; CRLF stays. Keep the existing RL3 fixtures (a table without the installer's URL stays untouched).
-2. `CodexMcpConfiguration`: move the line loop of `UpsertTalvoraLocal` (table detection with `ReadTableParts`, the `skipping` flag, `UpdateMultilineState`) into one private method that returns the retained text, and use it from `UpsertTalvoraLocal` (its output must stay byte-identical) and from a new `public static string RemoveTalvoraLocal(string original, string mcpUrl)`. `RemoveTalvoraLocal` returns `original` unchanged unless the `[mcp_servers.talvora_local]` table itself has the line `url = "<mcpUrl>"`; otherwise it returns the retained text without the trailing blank-line padding or the new table that `UpsertTalvoraLocal` appends.
-3. `InstallerEngine.Uninstall.cs`: `RemoveTalvoraCodexTableAsync` calls `CodexMcpConfiguration.RemoveTalvoraLocal(original, McpUrl + "/dev")`; delete `RemoveTalvoraCodexTable` and its regex.
-
-**Don't:** change what `UpsertTalvoraLocal` writes; touch any other Codex table.
-
-**Context7:** gerekmiyor (string handling in Talvora's own TOML scanner; no external API).
-
-**Acceptance:** red first; Changed and Full `Hepsi geçti.`; `--uninstall --what-if` output unchanged; deploy and the installed smokes (the Codex smoke stays green); CI.
-
-### D66 — An uninstall never deletes a later reinstall's setup copy
-
-**Why:** audit 50 finding 2. RL3 schedules `C:\Program Files\Talvora\Talvora-Kurulum.exe` itself for deletion at the next restart (`MoveFileEx(path, null, MOVEFILE_DELAY_UNTIL_REBOOT)`). Windows stores that as a path in `PendingFileRenameOperations`, so when the user installs Talvora again before restarting, the new `Talvora-Kurulum.exe` is deleted at the next boot and Settings → Apps → Kaldır then points to a missing file.
-
-**Files:** `src/Talvora.Installer/InstallerEngine.Uninstall.cs`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `NativeInstallerSourceRegression.ps1` (RL3 part).
+**Files:** `Directory.Packages.props`, every `packages.lock.json` the script regenerates, `THIRD-PARTY-NOTICES.md` (the Tomlyn row: 2.11.0 → 2.11.1), `docs/codex/CONTEXT7.md` (the Tomlyn row only: `Tomlyn` 2.11.1, id unchanged `/xoofx/tomlyn/2.10.1`, gap text "2.10.2–2.11.1: release notes"), `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `ThirdPartyNoticesSourceRegression.ps1` (notices against the package pins); the Full gate restores in locked mode.
 
 **Do:**
-1. Red first: in the RL3 harness, a new `internal static string RetireRunningSetup(string installRoot)` is called on a temp folder holding a dummy `Talvora-Kurulum.exe`; afterwards `Talvora-Kurulum.exe` is gone, exactly one file matches `^Talvora-Kurulum\.[0-9a-f]{32}\.kaldirildi$` and the method returned its full path. A source check: no `MoveFileEx(retainedSetup` call remains.
-2. `RetireRunningSetup`: `File.Move(Path.Combine(installRoot, InstalledSetupFileName), Path.Combine(installRoot, $"Talvora-Kurulum.{Guid.NewGuid():N}.kaldirildi"))` and return the new path (a running image can be renamed on the same volume; it cannot be deleted). In `RemoveTalvoraProgramFilesAsync`, when the setup exists: call it, then `MoveFileEx(<returned path>, null, DelayUntilReboot)`, then `MoveFileEx(installRoot, null, DelayUntilReboot)`, in this order and with today's error texts. If the move throws `IOException` or `UnauthorizedAccessException`, write "Talvora-Kurulum.exe yeniden adlandırılamadı; yeniden başlatmada silinecek." to the installer log and schedule the original path as today.
-3. Nothing changes in the install flow: `RegisterTalvoraUninstall` writes a fresh `Talvora-Kurulum.exe`; the renamed file is the one removed at restart, and the folder's own removal at restart fails harmlessly while a reinstall is present.
+1. Start `scripts/Apply-DependabotPr.ps1 -Pr 19` detached (`talvora_user_process_start`, about 6 minutes) and poll `artifacts/dependabot/pr-19.result` until `READY` (or `FAILED`: read `pr-19.log`, then proposal).
+2. Update the two document rows above by hand; nothing else changes.
+3. Commit, push both remotes, then close PR #19 with `talvora_gh_run` (`pr close 19 --comment "main üzerinde uygulandı."`); never merge it on GitHub.
 
-**Don't:** edit `PendingFileRenameOperations` directly; change the uninstall order.
+**Context7:** gerekmiyor (patch release; no Tomlyn API that Talvora calls changes — `noLookup` with this reason).
 
-**Context7:** `/websites/learn_microsoft_en-us_windows_win32_api`, query "MoveFileEx MOVEFILE_DELAY_UNTIL_REBOOT deletes the file at that path when the system restarts". Vendor source: `https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-movefileexw` only if you open it.
-
-**Acceptance:** red first; Changed and Full `Hepsi geçti.`; deploy and the installed smokes; CI. The real uninstall → reinstall → restart check is Claude's, with the user (`[~] live pending (Claude)`).
+**Acceptance:** `READY`; signed-in Full `Hepsi geçti.`; deploy and the installed smokes (dependency graph changed); CI green on the commit; PR #19 closed. Commit text: "TOML kütüphanesi 2.11.1 sürümüne güncellendi", body one sentence, `Card: DEP19`.
 
 ### D67 — PowerShell 7 downloads to a private, locked file and shows its progress
 
@@ -76,7 +57,7 @@ D-cards go to the top of the agent queue. Newest audit first.
 1. Red first, in the RL2 harness: the MSI path's file name matches `^Talvora-PowerShell-7\.\d+\.\d+-[0-9a-f]{32}\.msi$`; creating the download file where a file already exists fails instead of overwriting; while the verified stream is open, opening the same file for writing throws `IOException`; `ValidatePowerShell7MsiHash` takes that open `FileStream` (the wrong-hash case keeps its message).
 2. `GetPowerShellMsiPath`: `Path.Combine(Path.GetTempPath(), $"Talvora-PowerShell-{version}-{Guid.NewGuid():N}.msi")`. The download writes with `FileMode.CreateNew`, `FileShare.None`.
 3. After the download: open `new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)`, compute SHA-256 from that stream (position 0), run `msiexec` while it stays open, dispose it after `msiexec` exits, then delete the file as today. `VerifyPowerShell7DownloadAsync` uses the same open-then-hash step.
-4. Progress: when the response has `Content-Length`, report `new InstallProgress(3, $"PowerShell 7 indiriliyor… %{percent}")` each time the whole percent changes (percent = downloaded × 100 / length, `CultureInfo.InvariantCulture`); without a length keep the single message. Copy with an 81,920-byte buffer loop instead of `CopyToAsync` to count bytes; keep the 10-minute deadline.
+4. Progress: when the response has `Content-Length`, report `new InstallProgress(3, $"PowerShell 7 indiriliyor… %{percent}")` each time the whole percent changes (percent = downloaded × 100 / length, `CultureInfo.InvariantCulture`); without a length report the single message `"PowerShell 7 indiriliyor…"`. Both use the one-character ellipsis `…` (U+2026), replacing today's three dots in this message only (audit 51: the other progress texts are Claude's in [C] D47); the percent sign stands before the number, as in Turkish. Copy with an 81,920-byte buffer loop instead of `CopyToAsync` to count bytes; keep the 10-minute deadline.
 5. `Program.cs`, `--verify-powershell-download` branch: `Console.OutputEncoding = new UTF8Encoding(false);` before writing.
 
 **Don't:** change the pin, the URL check, the timeout or the `msiexec` arguments.
@@ -341,6 +322,8 @@ Step 3. Two existing tests pin texts this card changes; update them in the same 
 **Don't:** change `TrayLog.Write` or `ILogger` lines, exception types, event categories or dedup keys; `BuildTunnelRuntimeDetail` (technical evidence under "Teknik kanıt"); the four match strings in `GetFriendlySetupError`; the setup labels in `StepperCard.xaml` (Claude's [C] WL3); the other probe details in `ManagedMcpProtocolProbeService.cs`; `ManagedMcpRecoveryDiscovery.cs` (D49 owns its names).
 
 **Acceptance:** `MAIN_SURFACE_TURKISH_GREEN` and `EVENT_TEXT_TURKISH_GREEN`; signed-in Full `Hepsi geçti.`; build and deploy; installed Control Center smoke green; record `[~] visual check pending (Claude)`.
+
+**Audit 51 addition (setup window texts):** the installer's progress texts mix three dots with `…` and "hizmet" with "servis" ("Talvora hizmeti durduruluyor..." next to "Talvora servisi başlatılıyor..."). When Claude ships D47, every progress text in `src/Talvora.Installer/*.cs` ends with `…` (U+2026) and says "servis", as the Control Center does; D67 already changes the PowerShell download text. Re-check `NativeInstallerSourceRegression.ps1` for pinned texts first.
 
 ### WL3 — Çalışma günlüğü and Olaylar polish (Claude)
 
