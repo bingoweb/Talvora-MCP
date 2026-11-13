@@ -1,12 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-13T20:05:43.774Z",
-  "scope": "WL4: optional Turkish purpose metadata on writable MCP calls",
-  "libraries": [
-    {
-      "libraryId": "/modelcontextprotocol/csharp-sdk",
-      "verified": "2026-11-13 WL4: MCP tool arguments are untrusted and not validated against InputSchema by the SDK; binding of unmatched parameters is confirmed by installed smoke (query: \"ModelContextProtocol C# SDK McpServerTool binding of call arguments that have no matching method parameter\")"
-    }
-  ],
-  "vendorSources": ["https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Server/McpServerTool.cs"]
+  "verifiedAtUtc": "2026-11-13T20:25:04.000Z",
+  "scope": "D70: smaller purpose schema property, no length rejection, purpose explained once in the server instructions",
+  "libraries": [],
+  "noLookup": "D70: only Talvora's own JSON schema text and argument validator change; no library or SDK behaviour is relied on beyond what WL4 already verified",
+  "vendorSources": []
 }

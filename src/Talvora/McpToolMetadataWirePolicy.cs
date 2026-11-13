@@ -149,9 +149,12 @@ internal static class McpToolMetadataWirePolicy
         new(StringComparer.Ordinal);
 
     internal const int MaximumPurposeCharacters = 140;
-    internal const string PurposeDescription =
-        "Bu adımın ne yaptığını ve neden yapıldığını anlatan tek satırlık Türkçe açıklama " +
-        "(en çok 140 karakter); masaüstü çalışma günlüğünde 'ne' satırı olarak görünür.";
+
+    /// <summary>WL4/D70: the server instructions (and AGENTS.md) explain <c>purpose</c> once.</summary>
+    internal const string PurposeInstructions =
+        "Every Talvora tool that is not read-only accepts an optional 'purpose' argument: one plain Turkish line " +
+        "(at most 140 characters) saying what this step does and why. The desktop worklog shows it as 'ne'; " +
+        "longer text is shortened, never rejected.";
 
     private static readonly ConcurrentDictionary<string, JsonElement> PurposeInputSchemas =
         new(StringComparer.Ordinal);
@@ -163,10 +166,11 @@ internal static class McpToolMetadataWirePolicy
             properties.ContainsKey("purpose"))
             return schema;
 
+        // D70: repeated on ~100 tools, so no per-tool description: a Turkish one was 389 bytes per tool on the
+        // wire and pushed /mcp/dev tools/list over its Q7 budget.
         properties["purpose"] = new JsonObject
         {
             ["type"] = "string",
-            ["description"] = PurposeDescription,
             ["maxLength"] = MaximumPurposeCharacters,
         };
         return JsonSerializer.SerializeToElement(node);

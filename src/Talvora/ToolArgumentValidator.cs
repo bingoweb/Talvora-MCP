@@ -7,7 +7,6 @@ namespace Talvora;
 internal static class ToolArgumentValidator
 {
     private const int MaximumListedProperties = 12;
-    private const int MaximumPurposeCharacters = 140;
 
     internal static CallToolResult? TryCreateError(
         RequestContext<CallToolRequestParams> request)
@@ -67,13 +66,10 @@ internal static class ToolArgumentValidator
         var purposeWithoutSchema = allowPurpose && !properties.ContainsKey("purpose");
         var purposeWrongType = purposeWithoutSchema && purposeProvided &&
             purpose.ValueKind != JsonValueKind.String;
-        var purposeTooLong = (allowPurpose || properties.ContainsKey("purpose")) &&
-            purposeProvided &&
-            purpose.ValueKind == JsonValueKind.String &&
-            purpose.GetString()!.Length > MaximumPurposeCharacters;
+        // D70: no length check: purpose is display text, the worklog shortens it, and it must never block a call.
 
         if (missing.Length == 0 && unknown.Length == 0 && wrongType.Length == 0 &&
-            !purposeWrongType && !purposeTooLong)
+            !purposeWrongType)
         {
             return null;
         }
@@ -83,7 +79,6 @@ internal static class ToolArgumentValidator
         if (unknown.Length > 0) parts.Add("unknown " + string.Join(", ", unknown.Select(u => $"'{u}'")));
         if (wrongType.Length > 0) parts.Add("wrong type " + string.Join(", ", wrongType));
         if (purposeWrongType) parts.Add("wrong type 'purpose' (expected string)");
-        if (purposeTooLong) parts.Add("purpose en çok 140 karakter olabilir");
 
         var expected = properties.Keys
             .OrderBy(k => Array.IndexOf(required, k) is var i && i >= 0 ? i : int.MaxValue)

@@ -38,6 +38,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] DEP21 — Tomlyn 2.11.1 with AI.Abstractions 10.x retained; deployed a57ec07, installed smokes and CI 43493491284 GREEN
 - [x] D69 — Normalize Git push destination refspecs; deployed b345f13, installed smokes and CI 43496330575 GREEN
 - [~] WL4 — Writable MCP tools expose Turkish purpose; live pending: installed smoke, CI and Claude visual check
+- [~] [C] D70 — The purpose field stays small and never blocks a call (audit 54; fixes WL4's red CI 43499460932); live pending: deploy, smokes, CI
 - [ ] WL5 — Titles and results say exactly what happened, measured (user request 2026-11-13)
 - [ ] WL6 — Background jobs, deploys and CI are followed to their real end, with a live line (user request 2026-11-13)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
@@ -60,6 +61,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-13 — [C] D70, executor Claude (audit 54): WL4 pushed /mcp/dev tools/list to 232 407 bytes (budget 203 776: CI run 43499460932 red, reproduced locally with `--surface-policy-live`) because its Turkish per-tool description cost 389 bytes on ~100 tools, and its validator rejected a purpose over 140 characters, also on `talvora_apply_patch`, where a long purpose used to be shortened. Now the property is `{"type":"string","maxLength":140}` (no per-tool description), the server instructions explain `purpose` once, and no length check blocks a call (the worklog shortens it with "…"); a wrong type and unknown arguments are still rejected. Red first: the updated WL4 regression failed on the old schema, green after. Signed-in Full 72/0, `Hepsi geçti.`; Context7 noLookup (own schema text and validator).
 - 2026-11-13 — WL4, executor ChatGPT: optional Turkish purpose schema for tools without readOnlyHint=true, validated string <=140 chars, other unknown arguments blocked; tool signatures unchanged. RED first, WL4_PURPOSE_METADATA_GREEN, ModernizationPolicy and ToolManifestDocumentation GREEN; signed-in Changed 28/0 and Full 72/0, Hepsi geçti. Context7 /modelcontextprotocol/csharp-sdk (unmatched arguments); Gitea #9 comment 250. Queue additions WL4–WL6 applied. Clean-HEAD installer, installed smoke and CI pending.
   Self-review — Cosmetics: existing desktop worklog uses the purpose as its 'ne' line; no new layout, empty/loading/error displays.
   Self-review — Usability: optional purpose appears only on writable tools; existing calls remain valid.

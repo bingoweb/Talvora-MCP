@@ -7,9 +7,9 @@ internal static partial class Program
 {
     private static void AssertWl4PurposeMetadata()
     {
-        const string description =
-            "Bu adımın ne yaptığını ve neden yapıldığını anlatan tek satırlık Türkçe açıklama " +
-            "(en çok 140 karakter); masaüstü çalışma günlüğünde 'ne' satırı olarak görünür.";
+        // D70: the property is repeated on ~100 tools, so it carries no description (the server instructions and
+        // AGENTS.md explain it once) and stays within the Q7 tools/list budget.
+        const int maximumPurposePropertyBytes = 40;
 
         static JsonElement InputSchema(string parameter) =>
             JsonSerializer.SerializeToElement(new
@@ -70,15 +70,16 @@ internal static partial class Program
             }
             if (!property.TryGetProperty("type", out var type) ||
                 type.GetString() != "string" ||
-                !property.TryGetProperty("description", out var help) ||
-                help.GetString() != description ||
+                property.TryGetProperty("description", out _) ||
                 !property.TryGetProperty("maxLength", out var max) ||
                 max.GetInt32() != 140 ||
                 (tool.InputSchema.TryGetProperty("required", out var required) &&
                  required.EnumerateArray().Any(item => item.GetString() == "purpose")))
             {
-                throw new InvalidOperationException("WL4: purpose must be optional, bounded and described in Turkish.");
+                throw new InvalidOperationException("WL4: purpose must be an optional string with maxLength 140 and no per-tool description (D70).");
             }
+            if (System.Text.Encoding.UTF8.GetByteCount(property.GetRawText()) > maximumPurposePropertyBytes)
+                throw new InvalidOperationException("D70: the purpose property must stay small; it is repeated on every writable tool (Q7 budget).");
 
             var requiredName = tool.Name == "talvora_run_process" ? "executable" : "repositoryPath";
             var arguments = new Dictionary<string, JsonElement>
@@ -91,10 +92,14 @@ internal static partial class Program
             if (ToolArgumentValidator.Validate(InputSchema(requiredName), arguments, allowPurpose: true) is not null ||
                 ToolArgumentValidator.Validate(InputSchema(requiredName), arguments) is null)
                 throw new InvalidOperationException("WL4: the runtime validator must accept purpose only on writable tools.");
+            // D70: a cosmetic field never blocks real work; the worklog shortens a long purpose with "…".
             arguments["purpose"] = JsonSerializer.SerializeToElement(new string('x', 141));
-            if (ToolArgumentValidator.Validate(tool.InputSchema, arguments) is null ||
-                ToolArgumentValidator.Validate(InputSchema(requiredName), arguments, allowPurpose: true) is null)
-                throw new InvalidOperationException("WL4: purpose longer than 140 characters must be rejected.");
+            if (ToolArgumentValidator.Validate(tool.InputSchema, arguments) is not null ||
+                ToolArgumentValidator.Validate(InputSchema(requiredName), arguments, allowPurpose: true) is not null)
+                throw new InvalidOperationException("D70: a purpose longer than 140 characters must be accepted (it is shortened for display).");
+            var shortened = WorklogNote.Normalize(new string('x', 141));
+            if (shortened is null || shortened.Length != 140 || !shortened.EndsWith('…'))
+                throw new InvalidOperationException("D70: a long purpose must be shortened to 140 characters with '…'.");
             arguments["purpose"] = JsonSerializer.SerializeToElement(123);
             if (ToolArgumentValidator.Validate(tool.InputSchema, arguments) is null ||
                 ToolArgumentValidator.Validate(InputSchema(requiredName), arguments, allowPurpose: true) is null)

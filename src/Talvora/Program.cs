@@ -50,6 +50,7 @@ builder.Services
         options.ServerInstructions =
             SourceEditRoutingContract.ServerInstructions + " " +
             RemotionTools.ServerInstructions + " " +
+            McpToolMetadataWirePolicy.PurposeInstructions + " " +
             "When a Talvora tool call fails, its result ends with 'How to call <tool>' and example arguments; correct the next call exactly as shown.";
     })
     .WithHttpTransport(options =>
