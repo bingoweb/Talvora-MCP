@@ -16,7 +16,11 @@ public sealed record TalvoraGitRunResponse(
     int ProcessId,
     string GitExecutable,
     string WorkingDirectory,
-    IReadOnlyList<string> Arguments);
+    IReadOnlyList<string> Arguments)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? StagedFileCount { get; init; }
+}
 
 public sealed record TalvoraGitInfoResponse(
     string RequestedPath,
@@ -629,12 +633,28 @@ public static class GitTools
                 arguments);
         }
 
-        return await RunGitAsync(
+        var response = await RunGitAsync(
             normalizedRepositoryPath,
             arguments,
             environment,
             timeoutSeconds,
             cancellationToken);
+        if (response.ExitCode != 0 || response.TimedOut ||
+            !string.Equals(GitArgumentParser.GetSubcommand(arguments), "add",
+                StringComparison.OrdinalIgnoreCase) ||
+            !arguments.Any(arg => arg is "-A" or "-u" or "." or "--all" or "--update"))
+            return response;
+
+        // WL5: exactly one read-only follow-up, with the same execution path and identity as git add.
+        var staged = await RunGitAsync(normalizedRepositoryPath,
+            ["diff", "--cached", "--name-only"], environment, timeoutSeconds, cancellationToken);
+        return staged.ExitCode == 0 && !staged.TimedOut
+            ? response with
+            {
+                StagedFileCount = staged.StandardOutput
+                    .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length,
+            }
+            : response;
     }
 
     private static bool IsPush(IReadOnlyList<string> arguments)

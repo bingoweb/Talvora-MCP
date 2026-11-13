@@ -56,7 +56,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             {
                 return new(OperationCategory.PackageBuild, WorklogCopy.PackageBuild);
             }
-            return FromToolTitle(toolTitle);
+            return new(OperationCategory.ProcessOperation, WorklogCopy.InlineCommand);
         }
 
         if (normalized is "user_run" or "run_process" or "job_start" or "user_process_start")
@@ -93,21 +93,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
 
         if (normalized == "git_run")
         {
-            var gitArgs = GetArgumentArray(arguments, "arguments");
-            var subcommand = GitArgumentParser.GetSubcommand(gitArgs)?.ToLowerInvariant();
-            var index = subcommand is null ? -1 : gitArgs.ToList().FindIndex(
-                argument => string.Equals(argument, subcommand, StringComparison.OrdinalIgnoreCase));
-            var operands = index < 0 ? [] : gitArgs.Skip(index + 1).Where(argument => !argument.StartsWith('-')).ToArray();
-            var target = operands.Length >= 2 ? $"{operands[0]}/{operands[1]}" : operands.FirstOrDefault();
-            return subcommand switch
-            {
-                "push" => new(OperationCategory.VersionControl, WorklogSubject.WithSubject(WorklogCopy.Push, target), target),
-                "commit" => new(OperationCategory.VersionControl, WorklogCopy.Commit),
-                "pull" or "fetch" => new(OperationCategory.VersionControl,
-                    WorklogSubject.WithSubject(WorklogCopy.OtherGit, $"{subcommand} {target}".Trim()), target),
-                null => new(OperationCategory.VersionControl, WorklogCopy.OtherGit),
-                _ => new(OperationCategory.VersionControl, WorklogSubject.WithSubject(WorklogCopy.OtherGit, subcommand), subcommand),
-            };
+            return FromDescription(WorklogSubject.ForGitArguments(GetArgumentArray(arguments, "arguments")));
         }
 
         if (normalized.Contains("service_", StringComparison.OrdinalIgnoreCase))
@@ -167,6 +153,23 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         string.IsNullOrWhiteSpace(toolTitle)
             ? new(OperationCategory.GenericExecution, WorklogCopy.Generic)
             : new(OperationCategory.GenericExecution, WorklogSubject.ForTool(toolTitle.Trim()));
+
+    private static string Wl5SucceededTitle<T>(
+        string tool, IDictionary<string, JsonElement>? arguments, T result,
+        string original)
+    {
+        if (tool != "git_run" ||
+            GitArgumentParser.GetSubcommand(GetArgumentArray(arguments, "arguments")) != "pull" ||
+            !ResultContainsText(result, "Already up to date"))
+            return original;
+        var gitArguments = GetArgumentArray(arguments, "arguments");
+        var index = gitArguments.ToList().FindIndex(item => item == "pull");
+        var operands = gitArguments.Skip(index + 1)
+            .Where(item => !item.StartsWith("-", StringComparison.Ordinal)).ToArray();
+        var target = operands.Length > 1 ? operands[0] + "/" + operands[1]
+            : operands.FirstOrDefault();
+        return string.IsNullOrWhiteSpace(target) ? "Zaten güncel" : "Zaten güncel · " + target;
+    }
 
     private static bool TryBuildDeferredCompletion<T>(
         OperationNarrative narrative,

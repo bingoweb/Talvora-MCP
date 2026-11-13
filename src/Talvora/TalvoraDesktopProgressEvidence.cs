@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
 using Talvora.Shared;
+using Talvora.Tools;
 
 namespace Talvora;
 
@@ -9,6 +10,15 @@ internal sealed partial class TalvoraDesktopProgressNotifier
 {
     private const int MaximumEvidenceFiles = 16;
     private const int MaximumPreviewCharacters = DesktopProgressProtocol.MaximumCodeCharacters - 128;
+
+    // The command belongs to technical evidence, not the visible 'fark' fact.
+    private static string? VisibleFactOnly(string? summary)
+    {
+        if (summary is null || summary.StartsWith("Komut: ", StringComparison.Ordinal))
+            return null;
+        var command = summary.IndexOf("  //  Komut: ", StringComparison.Ordinal);
+        return command >= 0 ? summary[..command] : summary;
+    }
 
     private static DesktopProgressEvidence? BuildInitialEvidence(
         string? toolName,
@@ -39,11 +49,39 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             return new DesktopProgressEvidence(Summary: summary);
         }
 
-        return null;
+        // WL5: the technical evidence names the program, not its flags or argument values.
+        string? command = null;
+        if (normalized == "git_run")
+        {
+            var subcommand = GitArgumentParser.GetSubcommand(GetArgumentArray(arguments, "arguments"));
+            command = "git" + (string.IsNullOrWhiteSpace(subcommand) ? "" : " " + subcommand);
+        }
+        else if (normalized == "run_powershell")
+        {
+            command = "pwsh.exe";
+        }
+        else if (normalized is "user_run" or "run_process" or "job_start" or "user_process_start")
+        {
+            var executable = GetArgumentText(arguments, "executable").Replace('\\', '/');
+            var file = Path.GetFileName(executable);
+            var name = Path.GetFileNameWithoutExtension(file).ToLowerInvariant();
+            if (!string.IsNullOrWhiteSpace(file))
+                command = name switch
+                {
+                    "pwsh" or "powershell" => "pwsh.exe",
+                    "npm" or "pnpm" or "yarn" or "bun" when
+                        GetArgumentArray(arguments, "arguments") is { Count: >= 2 } args &&
+                        args[0] == "run" && args[1] == "build" => name + " run build",
+                    _ => file,
+                };
+        }
+        return command is null ? null
+            : new DesktopProgressEvidence(Summary: "Komut: " + command);
     }
 
     private static DesktopProgressEvidence? BuildTerminalEvidence<T>(
-        DesktopProgressEvidence? initial, T result, string toolName)
+        DesktopProgressEvidence? initial, T result, string toolName,
+        IDictionary<string, JsonElement>? arguments, TimeSpan elapsed)
     {
         try
         {
@@ -52,7 +90,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                     ? structured : JsonSerializer.SerializeToElement(result);
             if (IsSourceEditTool(toolName) && TryGetPropertyIgnoreCase(json, "transaction", out var transaction) &&
                 transaction.ValueKind == JsonValueKind.Object) json = transaction;
-            var resultSummary = DescribeStructuredResult(json);
+            var resultSummary = DescribeStructuredResult(json, elapsed);
             var resultFiles = ExtractStructuredFiles(json);
             if (IsSourceEditTool(toolName))
             {
@@ -80,10 +118,29 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 codeEvidence.ValueKind == JsonValueKind.Object)
                 return JsonSerializer.Deserialize<DesktopProgressEvidence>(codeEvidence.GetRawText(),
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            var resultFact = DescribeResultFact(toolName, json);
+            var resultFact = DescribeWl5ResultFact(toolName, json, arguments) ??
+                DescribeResultFact(toolName, json);
+            if (!TryDescribeFailure(result, toolName))
+                resultSummary = "Sonuç: " + (resultFact ??
+                    "tamamlandı · " + WorklogSubject.FormatDuration(elapsed));
+            else if (toolName is "run_powershell" or "user_run")
+            {
+                var firstError = FactText(json, "standardError")?
+                    .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+                    .Select(line => FileLog.RedactSensitiveData(line.Trim()))
+                    .FirstOrDefault(line => !string.IsNullOrWhiteSpace(line));
+                if (firstError is not null)
+                {
+                    resultFact = LimitEvidenceText(firstError);
+                    resultSummary = "Sonuç: " + resultFact;
+                }
+            }
             if (initial is null && resultSummary is null && resultFact is null && resultFiles.Count == 0)
                 return null;
-            return new DesktopProgressEvidence(resultFact, resultFiles,
+            var summary = resultFact;
+            if (initial?.Summary is { } technical)
+                summary = string.IsNullOrWhiteSpace(summary) ? technical : summary + "  //  " + technical;
+            return new DesktopProgressEvidence(summary, resultFiles,
                 CodePreview: initial?.CodePreview, Result: resultSummary);
         }
         catch
@@ -414,7 +471,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         return builder.ToString().TrimEnd();
     }
 
-    private static string? DescribeStructuredResult(JsonElement json)
+    private static string? DescribeStructuredResult(JsonElement json, TimeSpan elapsed)
     {
         if (json.ValueKind != JsonValueKind.Object)
         {
@@ -426,7 +483,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         {
             if (success.GetBoolean())
             {
-                return "Sonuç: başarılı";
+                return "Sonuç: tamamlandı · " + WorklogSubject.FormatDuration(elapsed);
             }
 
             var failure = TryDescribeError(json);
@@ -440,7 +497,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             exitCode.TryGetInt32(out var code))
         {
             return code == 0
-                ? "Sonuç: başarılı"
+                ? "Sonuç: tamamlandı · " + WorklogSubject.FormatDuration(elapsed)
                 : $"Sonuç: tamamlanamadı  //  kod {code}";
         }
 

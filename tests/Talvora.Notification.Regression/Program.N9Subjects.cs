@@ -49,10 +49,10 @@ internal static partial class Program
             "Derleme başarılı · Talvora.csproj");
         Expect(await Complete("talvora_user_run",
                 Arguments(("executable", "npm.cmd"), ("arguments", new[] { "run", "build" })), plain),
-            "npm build bitti");
+            "Komut tamamlandı");
         Expect(await Complete("talvora_git_run",
                 Arguments(("arguments", new[] { "pull", "--ff-only", "origin", "main" })), plain),
-            "Git işlemi tamamlandı · pull origin/main");
+            "Uzak değişiklikler alındı · origin/main");
         Expect(await Complete("talvora_dotnet_build",
                 Arguments(("target", "C:\\repo\\Talvora.slnx")), new { exitCode = 0, summary = new { errors = 0, warnings = 2 } }),
             "Derleme başarılı · Talvora.slnx");
@@ -62,7 +62,7 @@ internal static partial class Program
             "Ortam değişkenini ayarla · tamamlandı");
         var failed = await Complete("talvora_run_powershell", Arguments(("script", "Get-Date")),
             new { exitCode = 1, timedOut = false, standardOutput = "", standardError = "x" });
-        Expect(failed, "PowerShell çalıştır · tamamlanamadı");
+        Expect(failed, "Komut hata ile bitti");
 
         var untitled = TalvoraToolManifest.Names.Where(name => TalvoraToolTitles.Get(name) is null).ToArray();
         if (untitled.Length > 0)

@@ -225,7 +225,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 BuildTerminalEvidence(
                     initialEvidence,
                     result,
-                    canonicalToolName);
+                    canonicalToolName,
+                    arguments,
+                    stopwatch.Elapsed);
 
             var failed = TryDescribeFailure(result, canonicalToolName);
             // D46: a CI run that is still going is a finished check, never a failed step.
@@ -279,7 +281,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                         TryEndWorklog(
                             operationId,
                             DesktopProgressKind.Completed,
-                            narrative.Titles.Succeeded,
+                            Wl5SucceededTitle(canonicalToolName, arguments, result, narrative.Titles.Succeeded),
                             WorklogCopy.SucceededFallback,
                             terminalEvidence,
                             stopwatch.Elapsed,

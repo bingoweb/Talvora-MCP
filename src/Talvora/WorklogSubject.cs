@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Talvora.Tools;
@@ -51,6 +52,18 @@ internal static partial class WorklogSubject
             : trimmed[..(MaximumSubjectCharacters - 1)] + "…";
     }
 
+    /// <summary>Formats a measured stopwatch duration without estimating any progress.</summary>
+    internal static string FormatDuration(TimeSpan elapsed)
+    {
+        var seconds = Math.Max(0, elapsed.TotalSeconds);
+        if (seconds < 60)
+            return seconds.ToString("0.0", CultureInfo.GetCultureInfo("tr-TR")) + " sn";
+        var rounded = (long)Math.Round(seconds, MidpointRounding.AwayFromZero);
+        if (rounded < 3600)
+            return rounded / 60 + " dk " + rounded % 60 + " sn";
+        return rounded / 3600 + " sa " + rounded % 3600 / 60 + " dk";
+    }
+
     /// <summary>The first *.ps1 file named in a command text (run_powershell script, -File argument).</summary>
     internal static string? ScriptFileName(string? commandText)
     {
@@ -94,7 +107,46 @@ internal static partial class WorklogSubject
             var mode = ScriptMode(scriptName, commandText);
             return new(WithSubject(known, mode), scriptName, kind);
         }
-        return new(ForProgram(scriptName), scriptName, OperationKind.Script);
+        return new(IsTestScript(commandText, scriptName)
+            ? WithSubject(WorklogCopy.TestScript, scriptName)
+            : ForProgram(scriptName), scriptName, OperationKind.Script);
+    }
+
+    private static bool IsTestScript(string commandText, string scriptName) =>
+        Regex.IsMatch(commandText,
+            @"(?:^|[\s""'&])(?:\.?[\\/])?tests[\\/](?:[^\s""']*[\\/])?" +
+            Regex.Escape(scriptName) + @"\b",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    private static bool IsTestProject(string name) =>
+        name.EndsWith(".Regression", StringComparison.OrdinalIgnoreCase) ||
+        name.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase);
+
+    private static Description ForTestProject(string name) =>
+        new(WithSubject(WorklogCopy.Tests, name), name, OperationKind.Tests);
+
+    internal static Description ForGitArguments(IReadOnlyList<string> arguments)
+    {
+        var subcommand = GitArgumentParser.GetSubcommand(arguments)?.ToLowerInvariant();
+        var index = subcommand is null ? -1 : arguments.ToList().FindIndex(
+            arg => string.Equals(arg, subcommand, StringComparison.OrdinalIgnoreCase));
+        var operands = index < 0 ? [] : arguments.Skip(index + 1)
+            .Where(arg => !arg.StartsWith("-", StringComparison.Ordinal) && arg != "--").ToArray();
+        var remote = operands.FirstOrDefault();
+        var destination = operands.Length > 1 ? remote + "/" + operands[1] : remote;
+        var titles = subcommand switch
+        {
+            "fetch" => WithSubject(WorklogCopy.GitFetch, remote),
+            "pull" => WithSubject(WorklogCopy.GitPull, destination),
+            "push" => WithSubject(WorklogCopy.Push, destination),
+            "diff" => WorklogCopy.GitDiff,
+            "add" => WorklogCopy.GitAdd,
+            "status" => WorklogCopy.GitStatus,
+            "log" => WorklogCopy.GitLog,
+            "commit" => WorklogCopy.Commit,
+            _ => WorklogCopy.OtherGit,
+        };
+        return new(titles, subcommand, OperationKind.Git);
     }
 
     /// <summary>Detached start acknowledges launch, never the child's eventual outcome.</summary>
@@ -151,7 +203,8 @@ internal static partial class WorklogSubject
             DotnetRunProjectPattern().Match(commandText) is { Success: true } match &&
             ProjectName(match.Groups["project"].Value) is { } shellProject)
         {
-            return new(ForProgram(shellProject), shellProject, OperationKind.Program);
+            return IsTestProject(shellProject) ? ForTestProject(shellProject)
+                : new(ForProgram(shellProject), shellProject, OperationKind.Program);
         }
 
         if (program == "dotnet" && arguments.Count > 0)
@@ -162,11 +215,15 @@ internal static partial class WorklogSubject
             if (verb == "run" && projectIndex >= 0 && projectIndex + 1 < arguments.Count &&
                 ProjectName(arguments[projectIndex + 1]) is { } runProject)
             {
-                return new(ForProgram(runProject), runProject, OperationKind.Program);
+                return IsTestProject(runProject) ? ForTestProject(runProject)
+                    : new(ForProgram(runProject), runProject, OperationKind.Program);
             }
             var target = Shorten(arguments.Skip(1).FirstOrDefault(argument => !argument.StartsWith('-')) is { } path
                 ? Path.GetFileName(path.Replace('\\', '/'))
                 : null);
+            if (verb == "test" && target is { } testTarget &&
+                ProjectName(testTarget) is { } testProject && IsTestProject(testProject))
+                return ForTestProject(testProject);
             return verb switch
             {
                 "build" => new(WithSubject(WorklogCopy.Build, target), target, OperationKind.Build),
@@ -179,7 +236,7 @@ internal static partial class WorklogSubject
 
         if (program == "git" && GitArgumentParser.GetSubcommand(arguments) is { } subcommand)
         {
-            return new(WithSubject(WorklogCopy.OtherGit, subcommand), subcommand, OperationKind.Git);
+            return ForGitArguments(arguments);
         }
 
         if (program is "npm" or "pnpm" or "yarn" or "bun" or "npx")
@@ -190,8 +247,7 @@ internal static partial class WorklogSubject
                 : arguments.FirstOrDefault(argument => !argument.StartsWith('-')) is { } first
                     ? $"{program} {first}"
                     : program;
-            var subject = Shorten(name)!;
-            return new(ForProgram(subject), subject, OperationKind.Program);
+            return new(WorklogCopy.InlineCommand, Shorten(name), OperationKind.Program);
         }
 
         if (program is "node" or "python" or "py" or "python3" &&
@@ -201,6 +257,8 @@ internal static partial class WorklogSubject
             return new(ForProgram(subject), subject, OperationKind.Program);
         }
 
+        if (program is "pwsh" or "powershell")
+            return new(WorklogCopy.InlineCommand, null, OperationKind.Program);
         var programName = Shorten(Path.GetFileName(executable.Trim().Trim('"')))!;
         return new(ForProgram(programName), programName, OperationKind.Program);
     }

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-13T20:25:04.000Z",
-  "scope": "D70: smaller purpose schema property, no length rejection, purpose explained once in the server instructions",
+  "verifiedAtUtc": "2026-11-13T21:15:25.876Z",
+  "scope": "WL5: measured Turkish worklog titles and facts parsed from captured process output",
   "libraries": [],
-  "noLookup": "D70: only Talvora's own JSON schema text and argument validator change; no library or SDK behaviour is relied on beyond what WL4 already verified",
+  "noLookup": "WL5: only Talvora's own captured command output, approved copy and stopwatch durations are parsed; no new library API or SDK behaviour is used",
   "vendorSources": []
 }

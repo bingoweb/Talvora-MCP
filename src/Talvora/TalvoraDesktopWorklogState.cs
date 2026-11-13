@@ -513,7 +513,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 session.Id, sequence, DateTimeOffset.UtcNow,
                 new WorklogSessionHeader(session.ProjectName, session.Actor, session.TaskNote),
                 new WorklogStep((WorklogStepCategory)session.Category,
-                    ToWorklogState(kind), title, isTerminal ? evidence?.Summary : session.ProgressFact, outcome,
+                    ToWorklogState(kind), title, isTerminal ? VisibleFactOnly(evidence?.Summary) : session.ProgressFact, outcome,
                     Math.Max(0, elapsed.TotalSeconds),
                     session.Purpose,
                     kind == DesktopProgressKind.Completed ? session.Changes : null),

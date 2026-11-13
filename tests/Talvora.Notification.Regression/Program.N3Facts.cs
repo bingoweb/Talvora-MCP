@@ -95,18 +95,18 @@ internal static partial class Program
 
         var commit = await Complete("talvora_git_run", new
         {
-            exitCode = 0, standardOutput = "[main a1b2c3d] fix(ui): actual subject\n 1 file changed",
+            exitCode = 0, standardOutput = "[main a1b2c3d] fix(ui): actual subject\n 1 file changed, 2 insertions(+), 1 deletion(-)",
             standardError = "", arguments = new[] { "commit", "-m", "requested subject" },
         }, Arguments(("arguments", new[] { "commit", "-m", "requested subject" })));
-        if (commit.WorklogFrame?.Current.FactLine != "a1b2c3d · fix(ui): actual subject")
-            throw new InvalidOperationException("N3: commit facts did not use the actual commit hash and subject.");
+        if (commit.WorklogFrame?.Current.FactLine != "a1b2c3d · 1 dosya · +2 −1")
+            throw new InvalidOperationException("N3: commit facts did not use the actual commit hash and measured line counts.");
 
         var push = await Complete("talvora_git_run", new
         {
-            exitCode = 0, standardOutput = "", standardError = "To https://example.invalid/repo\n abc..def main -> main",
+            exitCode = 0, standardOutput = "", standardError = "To https://example.invalid/repo\n abc1234..def5678 main -> main",
             arguments = new[] { "push", "github", "main" },
         }, Arguments(("arguments", new[] { "push", "github", "main" })));
-        if (push.WorklogFrame?.Current.FactLine != "github/main")
-            throw new InvalidOperationException("N3: push facts omitted the actual result destination.");
+        if (push.WorklogFrame?.Current.FactLine != "abc1234..def5678")
+            throw new InvalidOperationException("N3: push facts omitted the actual remote ref update.");
     }
 }

@@ -19,7 +19,15 @@ internal static class WorklogCopy
     internal static readonly WorklogTitles Deploy = new("Yeni sürüm kuruluyor", "Kurulum devredildi · doğrulama bekleniyor", "Yeni sürüm kurulamadı");
     internal static readonly WorklogTitles Commit = new("Değişiklikler kaydediliyor", "Değişiklikler kaydedildi", "Kayıt oluşturulamadı");
     internal static readonly WorklogTitles Push = new("Uzak depoya gönderiliyor", "Uzak depoya gönderildi", "Gönderim yapılamadı");
-    internal static readonly WorklogTitles OtherGit = new("Git işlemi yapılıyor", "Git işlemi tamamlandı", "Git işlemi tamamlanamadı");
+    internal static readonly WorklogTitles GitFetch = new("Uzak depo denetleniyor", "Uzak depo denetlendi", "Uzak depo denetlenemedi");
+    internal static readonly WorklogTitles GitPull = new("Uzak değişiklikler alınıyor", "Uzak değişiklikler alındı", "Uzak değişiklikler alınamadı");
+    internal static readonly WorklogTitles GitDiff = new("Değişiklikler inceleniyor", "Değişiklikler incelendi", "Değişiklikler incelenemedi");
+    internal static readonly WorklogTitles GitAdd = new("Dosyalar kayda hazırlanıyor", "Dosyalar kayda hazırlandı", "Dosyalar kayda hazırlanamadı");
+    internal static readonly WorklogTitles GitStatus = new("Çalışma alanı denetleniyor", "Çalışma alanı denetlendi", "Çalışma alanı denetlenemedi");
+    internal static readonly WorklogTitles GitLog = new("Geçmiş okunuyor", "Geçmiş okundu", "Geçmiş okunamadı");
+    internal static readonly WorklogTitles OtherGit = new("Depo işlemi yapılıyor", "Depo işlemi tamamlandı", "Depo işlemi tamamlanamadı");
+    internal static readonly WorklogTitles InlineCommand = new("Komut çalışıyor", "Komut tamamlandı", "Komut hata ile bitti");
+    internal static readonly WorklogTitles TestScript = new("Test betiği çalışıyor", "Test betiği geçti", "Test betiği başarısız");
     internal static readonly WorklogTitles Service = new("Servis işlemi yapılıyor", "Servis işlemi tamamlandı", "Servis istenen duruma geçmedi");
     internal static readonly WorklogTitles Package = new("Paket işlemi yapılıyor", "Paket işlemi tamamlandı", "Paket işlemi tamamlanamadı");
     internal static readonly WorklogTitles FileMutation = new("Dosyalar düzenleniyor", "Dosyalar düzenlendi", "Dosya işlemi tamamlanamadı");

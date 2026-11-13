@@ -46,6 +46,106 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         return added <= int.MaxValue && removed <= int.MaxValue ? ((int)added, (int)removed) : (null, null);
     }
 
+    /// <summary>WL5: facts from captured output or actual staged-file measurements only.</summary>
+    private static string? DescribeWl5ResultFact(
+        string tool, JsonElement json, IDictionary<string, JsonElement>? requestArguments)
+    {
+        var output = FactText(json, "standardOutput") ?? "";
+        var error = FactText(json, "standardError") ?? "";
+        var combined = output + "\n" + error;
+        if (tool is "user_run" or "run_process")
+        {
+            var program = Path.GetFileNameWithoutExtension(GetArgumentText(
+                requestArguments, "executable").Replace('\\', '/')).ToLowerInvariant();
+            var args = GetArgumentArray(requestArguments, "arguments");
+            if (program == "dotnet" && args.Any(arg =>
+                arg.Contains(".Regression", StringComparison.OrdinalIgnoreCase) ||
+                arg.Contains(".Tests", StringComparison.OrdinalIgnoreCase)))
+            {
+                var passed = Regex.Match(combined, @"\bPassed:\s*(?<n>\d+)", RegexOptions.IgnoreCase);
+                var failed = Regex.Match(combined, @"\bFailed:\s*(?<n>\d+)", RegexOptions.IgnoreCase);
+                if (passed.Success && failed.Success)
+                    return passed.Groups["n"].Value + " test geçti · " +
+                        failed.Groups["n"].Value + " başarısız";
+            }
+            return null;
+        }
+        if (tool != "git_run") return null;
+        var argv = GetArgumentArray(requestArguments, "arguments");
+        if (argv.Count == 0) argv = FactStrings(json, "arguments");
+        var subcommand = GitArgumentParser.GetSubcommand(argv)?.ToLowerInvariant();
+        var pos = subcommand is null ? -1 : argv.ToList().FindIndex(arg =>
+            string.Equals(arg, subcommand, StringComparison.OrdinalIgnoreCase));
+        var operands = pos < 0 ? [] : argv.Skip(pos + 1)
+            .Where(arg => !arg.StartsWith("-", StringComparison.Ordinal) && arg != "--").ToArray();
+
+        static string? Statistics(string text)
+        {
+            var stat = Regex.Match(text,
+                @"(?m)^\s*(?<files>\d+) files? changed(?:, (?<added>\d+) insertions?\(\+\))?(?:, (?<removed>\d+) deletions?\(-\))?\s*$",
+                RegexOptions.CultureInvariant);
+            if (stat.Success)
+                return stat.Groups["files"].Value + " dosya · +" +
+                    (stat.Groups["added"].Success ? stat.Groups["added"].Value : "0") +
+                    " −" + (stat.Groups["removed"].Success ? stat.Groups["removed"].Value : "0");
+            var rows = Regex.Matches(text,
+                @"(?m)^(?<added>\d+)\t(?<removed>\d+)\t[^\r\n]+$", RegexOptions.CultureInvariant);
+            if (rows.Count == 0) return null;
+            long adds = 0, removes = 0;
+            foreach (Match row in rows)
+            {
+                adds += long.Parse(row.Groups["added"].Value, CultureInfo.InvariantCulture);
+                removes += long.Parse(row.Groups["removed"].Value, CultureInfo.InvariantCulture);
+            }
+            return rows.Count + " dosya · +" + adds + " −" + removes;
+        }
+
+        switch (subcommand)
+        {
+            case "fetch":
+                var updates = Regex.Matches(combined,
+                    @"(?m)^\s*[+*]?\s*[0-9a-f]{4,40}\.\.{1,2}[0-9a-f]{4,40}\s+[^\r\n]+\s+->\s+\S+",
+                    RegexOptions.CultureInvariant).Count;
+                return updates == 0 ? "yeni commit yok" : updates + " dalda yeni commit";
+            case "pull":
+                return combined.Contains("Already up to date", StringComparison.OrdinalIgnoreCase)
+                    ? null : Statistics(combined);
+            case "diff":
+                return Statistics(combined);
+            case "add":
+                if (argv.Any(arg => arg is "-A" or "-u" or "." or "--all" or "--update"))
+                    return FactNumber(json, "stagedFileCount") is { } staged ? staged + " dosya" : null;
+                return operands.Length > 0 ? operands.Length + " dosya" : null;
+            case "status":
+                if (!argv.Any(arg => arg is "--short" or "-s" or "--porcelain" or "--porcelain=v1"))
+                    return null;
+                var changed = output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                    .Count(line => line.TrimEnd('\r').Length >= 3);
+                return changed == 0 ? "değişiklik yok" : changed + " değişmiş dosya";
+            case "log":
+                var commits = Regex.Matches(output,
+                    @"(?m)^commit [a-f0-9]{7,40}\b", RegexOptions.CultureInvariant).Count;
+                return commits > 0 ? commits + " commit" : null;
+            case "commit":
+                var header = Regex.Match(output,
+                    @"(?m)^\[[^\r\n\]]+ (?<hash>[0-9a-f]{7,40})\] ",
+                    RegexOptions.CultureInvariant);
+                var stats = Statistics(output);
+                return header.Success && stats is not null
+                    ? header.Groups["hash"].Value + " · " + stats : null;
+            case "push":
+                var refUpdate = Regex.Match(combined,
+                    @"(?m)^\s*[+*]?\s*(?<old>[0-9a-f]{7,40})\.\.{1,2}(?<new>[0-9a-f]{7,40})\s+[^\r\n]+\s+->\s+\S+",
+                    RegexOptions.CultureInvariant);
+                if (refUpdate.Success)
+                    return refUpdate.Groups["old"].Value[..7] + ".." + refUpdate.Groups["new"].Value[..7];
+                return combined.Contains("Everything up-to-date", StringComparison.OrdinalIgnoreCase)
+                    ? "zaten güncel" : null;
+            default:
+                return null;
+        }
+    }
+
     private static string? DescribeResultFact(string tool, JsonElement json)
     {
         var output = FactText(json, "standardOutput") ?? string.Empty;
@@ -97,29 +197,6 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (failed > 0)
                 return $"{failed} test başarısız" + (names.Length > 0 ? ": " + string.Join(", ", names.Take(3)) : "");
             return passed is not null ? $"{passed} test geçti" : null;
-        }
-        if (tool == "git_run" && succeeded)
-        {
-            var arguments = FactStrings(json, "arguments");
-            var subcommand = GitArgumentParser.GetSubcommand(arguments);
-            if (subcommand == "commit")
-            {
-                var match = Regex.Match(output, @"^\[[^\r\n\]]+ (?<hash>[0-9a-f]{7,40})\] (?<subject>[^\r\n]+)",
-                    RegexOptions.Multiline | RegexOptions.CultureInvariant);
-                if (match.Success)
-                {
-                    var subject = match.Groups["subject"].Value;
-                    return match.Groups["hash"].Value + " · " + subject[..Math.Min(subject.Length, 60)];
-                }
-            }
-            if (subcommand == "push")
-            {
-                var index = Array.IndexOf(arguments, subcommand);
-                // Destination facts require the result's explicit remote and branch.
-                if (index + 2 < arguments.Length && !arguments[index + 1].StartsWith('-') &&
-                    !arguments[index + 2].StartsWith('-'))
-                    return arguments[index + 1] + "/" + arguments[index + 2];
-            }
         }
         if (tool.StartsWith("service_", StringComparison.Ordinal))
         {
