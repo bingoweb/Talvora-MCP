@@ -8,8 +8,6 @@ updates:
       time: "06:00"
       timezone: "Europe/Istanbul"
     open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
     ignore:
       # Microsoft.Extensions.AI.Abstractions follows ModelContextProtocol's own dependency (10.x for 2.4.0).
       # Raise it together with a ModelContextProtocol update.
@@ -55,8 +53,6 @@ updates:
       time: "06:15"
       timezone: "Europe/Istanbul"
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
     ignore:
       # Talvora stays on .NET 10 LTS; .NET 11 is STS (user decision 2026-11-08).
       # The next major move is .NET 12 LTS, decided by Claude at an audit.
@@ -71,5 +67,3 @@ updates:
       time: "06:30"
       timezone: "Europe/Istanbul"
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"

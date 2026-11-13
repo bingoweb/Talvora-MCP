@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-11-13-53` = the audit 53 commit. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-11-13-54` = the audit 54 commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.404 exact pin (SDK3, 2026-11-13; runtime 10.0.15) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -34,11 +34,6 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user, together with D66 (postponed by the user 2026-11-13; before 0.0.1.0)
 - [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
-- [x] D68 — Protected installer staging, deployed f693395, installed smokes and CI 43488968971 GREEN
-- [x] DEP21 — Tomlyn 2.11.1 with AI.Abstractions 10.x retained; deployed a57ec07, installed smokes and CI 43493491284 GREEN
-- [x] D69 — Normalize Git push destination refspecs; deployed b345f13, installed smokes and CI 43496330575 GREEN
-- [~] WL4 — Writable MCP tools expose Turkish purpose; live pending: installed smoke, CI and Claude visual check
-- [~] [C] D70 — The purpose field stays small and never blocks a call (audit 54; fixes WL4's red CI 43499460932); live pending: deploy, smokes, CI
 - [ ] WL5 — Titles and results say exactly what happened, measured (user request 2026-11-13)
 - [ ] WL6 — Background jobs, deploys and CI are followed to their real end, with a live line (user request 2026-11-13)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
@@ -49,6 +44,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## User queue
 
+- [ ] U17 — Yalnızca gerekirse: bir sonraki ChatGPT oturumunda masaüstü kartında «ne» satırı hiç görünmezse, ChatGPT Talvora'nın araç listesini 13 Kasım öncesinden tutuyordur. ChatGPT'deki Talvora bağlayıcısının ayarlarından araç listesini yenileyin; yenileme seçeneği yoksa bağlayıcıyı bir kez kaldırıp yeniden ekleyin.
 - [ ] U16 — İsteğe bağlı: makine (sistem) PATH'inde aynı klasörü gösteren ikinci satırlar var: `C:\Python314\Scripts`, `C:\Python314`, `C:\Program Files\dotnet\`, `C:\Program Files\PowerShell\7\` ve `C:\Program Files\nodejs\`. Zararsızlar; isterseniz U14'teki gibi Sistem değişkenleri → Path → Düzenle'den bu beşini silebilirsiniz.
 
 ## Open questions
@@ -61,6 +57,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-13 — Claude, audit 54 (tag `audit/2026-11-13-54`): range `audit/2026-11-13-53..c6ea631` — D68, DEP21, D69, WL4 (ChatGPT) and Claude's card commit. Rules: one Turkish commit per card with its `Card:`, files within each card, self-review blocks present; WL4's session has no task note (`talvora_worklog_note` missing — the other three have one). Lines read: D68 stages under `Versions/.staging-<guid>` behind reparse checks, only the setup flow and the cleanup touch `Versions` (a leftover staging folder is removed by the next cleanup); DEP21 changes only Tomlyn entries, the 2.11.1 package equals nuget.org's catalog hash (the lock's contentHash differs from the raw .nupkg hash the same way for 2.11.0: NuGet hashes the unsigned content), PR #21 closed; D69 normalises `+`, `src:dst` and `refs/heads/`, four refspec forms blocked in the test. WL4: its schema/validator read-only source is the same; but the Turkish per-tool description pushed /mcp/dev tools/list to 232 407 B (Q7 budget 203 776; CI 43499460932 red, reproduced with `--surface-policy-live`), and its validator newly rejected a purpose over 140 characters, also on `talvora_apply_patch` → Claude's D70 (shipped). Live: a direct MCP call with `purpose` shows the 'ne' row on the real desktop card; Claude's own bridge did not send it because MCP clients keep the tool list from connect time → U17 (only if ChatGPT's cards stay without 'ne'). Context7: WL4's question is in the ledger (200) but used the unversioned id (card: `/v2.3.0`), and its vendor page was not fetched through Talvora (OLASI: ChatGPT's own browsing); D68/DEP21/D69 noLookup match their cards. Look-ahead: WL5 now says where command names go (`Komut: …` in the evidence Summary; they were not in the technical evidence for processes); WL6's gate lines are `START` only (the gate knows its total only at the end, so no fraction), the deploy step finishes from `pending-deploy.json` in the new service (no polling). Also: the three `labels: dependencies` blocks removed from dependabot.yml (the label does not exist; Dependabot warned in every PR). Admin tools/list margin is 1.6 KB: watch it on the next tool addition. Release: none. Asked the user nothing: every finding had one correct fix.
 - 2026-11-13 — [C] D70, executor Claude (audit 54): WL4 pushed /mcp/dev tools/list to 232 407 bytes (budget 203 776: CI run 43499460932 red, reproduced locally with `--surface-policy-live`) because its Turkish per-tool description cost 389 bytes on ~100 tools, and its validator rejected a purpose over 140 characters, also on `talvora_apply_patch`, where a long purpose used to be shortened. Now the property is `{"type":"string","maxLength":140}` (no per-tool description), the server instructions explain `purpose` once, and no length check blocks a call (the worklog shortens it with "…"); a wrong type and unknown arguments are still rejected. Red first: the updated WL4 regression failed on the old schema, green after. Signed-in Full 72/0, `Hepsi geçti.`; Context7 noLookup (own schema text and validator).
 - 2026-11-13 — WL4, executor ChatGPT: optional Turkish purpose schema for tools without readOnlyHint=true, validated string <=140 chars, other unknown arguments blocked; tool signatures unchanged. RED first, WL4_PURPOSE_METADATA_GREEN, ModernizationPolicy and ToolManifestDocumentation GREEN; signed-in Changed 28/0 and Full 72/0, Hepsi geçti. Context7 /modelcontextprotocol/csharp-sdk (unmatched arguments); Gitea #9 comment 250. Queue additions WL4–WL6 applied. Clean-HEAD installer, installed smoke and CI pending.
   Self-review — Cosmetics: existing desktop worklog uses the purpose as its 'ne' line; no new layout, empty/loading/error displays.

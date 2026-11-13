@@ -30,57 +30,7 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-13 (53, deep, whole project) · range `audit/2026-11-13-52..579bc10` (D67, P-56) plus the subsystems changed since audit 42 · cards D68, DEP21, D69
-
-### D68 — The elevated setup never stages Talvora's files in the user's own temp folder
-
-**Why:** audit 53 finding 1 (security, local elevation). `InstallAsync` (`src/Talvora.Installer/InstallerEngine.Flow.cs`) runs with `requireAdministrator`, but extracts the whole payload to `Path.GetTempPath()` + `Talvora-Setup-<guid>`, which for an interactive install is the signed-in user's own `%TEMP%`. Any process of that user, without elevation, can write there: it can replace `Service\Talvora.exe` (or a DLL next to it) between `ExtractPayload` and `CopyTree`, and the setup then copies it into `C:\Program Files\Talvora\Versions\…` and registers it as the LocalSystem service. The SYSTEM deploy task is not affected (its temp folder is `C:\Windows\SystemTemp`), but every user install from GitHub Releases is. D67 closed the same hole for the PowerShell MSI.
-
-**Files:** `src/Talvora.Installer/InstallerEngine.Flow.cs`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `NativeInstallerSourceRegression.ps1` (its source checks read `InstallerEngine.Flow.cs`), `QualityGateChangedRegression.ps1`.
-
-**Do:**
-1. Red first, in `NativeInstallerSourceRegression.ps1`: `InstallerEngine.Flow.cs` must not contain `Path.GetTempPath()`, and the staging folder must be built from `versionsRoot` with the prefix `.staging-` (a regex source check is enough; message `D68: setup must stage the payload under Program Files`).
-2. In `InstallAsync`, compute `programFiles`, `installRoot` and `versionsRoot` before extraction (move those three lines up), create `versionsRoot`, then refuse to continue when `installRoot` or `versionsRoot` carries `FileAttributes.ReparsePoint` (throw `IOException("Talvora kurulum klasörü bağlantı içeriyor; güvenli kurulum durduruldu.")`, the wording style of the uninstall guard). `tempRoot` becomes `Path.Combine(versionsRoot, ".staging-" + Guid.NewGuid().ToString("N"))`; everything after it (extract, `CopyTree`, the `finally` delete) stays as it is. The folder inherits the Program Files ACL (Users: read and execute only).
-3. Nothing else changes: a staging folder left behind by a crashed install is a non-active folder under `Versions`, so the next install's `CleanupObsoleteInstallationsAsync` already removes it; do not add special cleanup.
-
-**Don't:** change `CopyTree`, `ExtractPayload`, the version folder name, the rollback, or `GetPowerShellMsiPath` (D67).
-
-**Context7:** gerekmiyor (only the staging path moves; `Directory`, `File.GetAttributes` and `FileAttributes.ReparsePoint` are already used the same way in `InstallerEngine.Uninstall.cs`).
-
-**Acceptance:** red first; Changed and Full `Hepsi geçti.`; build the installer, deploy and the installed smokes (the deploy runs the changed flow); CI.
-
-### DEP21 — Tomlyn 2.11.1 without the Microsoft.Extensions.AI.Abstractions 11 jump (answers P-56)
-
-**Why:** Dependabot closed PR #19 and opened #21, which carries Tomlyn 2.11.0 → 2.11.1 together with `Microsoft.Extensions.AI.Abstractions` 10.11.0 → 11.0.0. Talvora references that package only to pin what `ModelContextProtocol` 2.4.0 was built against (`ModelContextProtocol.Core` depends on 10.11.0; no Talvora code uses it). A major version under a library compiled against 10.x can break at run time (missing members), so it stays on 10.x until a ModelContextProtocol release asks for 11. `Apply-DependabotPr.ps1` would take both changes, so it is not used here.
-
-**Files:** `Directory.Packages.props` (the Tomlyn line only), every `packages.lock.json` the restore regenerates, `THIRD-PARTY-NOTICES.md` (Tomlyn 2.11.0 → 2.11.1), `docs/codex/CONTEXT7.md` (the Tomlyn row: version 2.11.1, gap text "2.10.2–2.11.1: release notes"), `.github/dependabot.yml`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `ThirdPartyNoticesSourceRegression.ps1`, `ModernizationPolicyRegression.ps1` (reads `dependabot.yml`), `PlatformPackageLockstepRegression.ps1`.
-
-**Do:**
-1. Set Tomlyn to 2.11.1 in `Directory.Packages.props`, then, as the signed-in user, `dotnet restore Talvora.slnx --force-evaluate` and `dotnet restore src/Talvora.Installer/Talvora.Installer.csproj --force-evaluate` (the two restores `Update-DotnetPlatformPackages.ps1` runs). Only Tomlyn entries may change in the lock files; any other change → proposal.
-2. In `.github/dependabot.yml`, under the `nuget` entry's `ignore:` list, add `Microsoft.Extensions.AI.Abstractions` with `versions: [">=11.0.0"]` and a two-line comment: it follows ModelContextProtocol's own dependency (10.x for 2.4.0); raise it together with a ModelContextProtocol update.
-3. Update the notices and map rows above.
-4. After the push, close PR #21 with `talvora_gh_run` (`pr close 21 --comment "Tomlyn 2.11.1 main üzerinde uygulandı; Microsoft.Extensions.AI.Abstractions 11, MCP kütüphanesi ona geçene kadar bekliyor."`).
-
-**Context7:** gerekmiyor (patch release of Tomlyn; no API Talvora calls changes; `noLookup` with this reason).
-
-**Acceptance:** `ThirdPartyNoticesSourceRegression.ps1` and `ModernizationPolicyRegression.ps1` green; signed-in Full `Hepsi geçti.`; deploy and the installed smokes (dependency graph changed); CI; PR #21 closed. Commit: "TOML kütüphanesi 2.11.1 sürümüne güncellendi", `Card: DEP21`.
-
-### D69 — The push gate reads `HEAD:main` style pushes correctly
-
-**Why:** audit 53 finding 2 (gate gap, low). `ProjectDeliveryGate.GetPushChangedPaths` takes the second non-flag push argument as the branch name. For `git push origin HEAD:main` (or `+main`, or `HEAD:refs/heads/main`) it builds `refs/remotes/origin/HEAD:main`, the ref check fails, and it falls back to `diff-tree HEAD`: only the last commit is checked, so a source change in an earlier commit of the same push passes without evidence.
-
-**Files:** `src/Talvora/SourceEditing/ProjectDeliveryGate.cs`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.QualityAudit.cs` (the CTX2 scenario `VerifyCtx2PushEvidenceAsync`), `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** the SourceEdit regression (`CTX2_PUSH_EVIDENCE_GREEN`).
-
-**Do:**
-1. Red first: in the CTX2 fixture, two commits (a source change, then a docs-only change) pushed with the arguments `push origin HEAD:main` must be refused for missing evidence; today they pass.
-2. In `GetPushChangedPaths`, normalise the branch argument before building `remoteRef`: drop a leading `+`; when it contains `:`, keep the part after the last `:`; drop a leading `refs/heads/`. An empty result keeps today's `branch --show-current` fallback.
-3. The `diff-tree` fallback stays only for a remote branch that does not exist yet.
-
-**Don't:** touch the ledger matching, `IsDocumentationPath` or the evidence format; do not mirror this into the PowerShell gates (they do not parse push arguments).
-
-**Context7:** gerekmiyor (string handling of git's documented `+src:dst` refspec form; no library API).
-
-**Acceptance:** red first; the SourceEdit regression and signed-in Full `Hepsi geçti.`; deploy and the installed smokes (service code); CI.
+### Audit 2026-11-13 (54) · range `audit/2026-11-13-53..c6ea631` (D68, DEP21, D69, WL4) · no new agent card: Claude shipped D70 and sharpened WL5 and WL6 (below, "Precise desktop worklog")
 
 ### D48 — A vault note belongs to the vault's owner (Claude, `[C]`)
 
@@ -364,24 +314,6 @@ Step 3. Two existing tests pin texts this card changes; update them in the same 
 
 The user: "Talvora masaüstü bildiriminin tam, doğru ve hassas açıklamalar yapmasını istiyorum. tamamen türkçe ve gerçekten o anda ne yapıldığı ve sonu gerçek verilerle realtime olmalı." The rules, the copy and the measured facts are in `docs/codex/DESIGN-WORKLOG.md` §6.4 (authoritative; Claude's). No new visual element: every change is text in the existing title, `ne` and `sonuç` rows and the timeline labels, so no PNG review beyond the usual `[~] visual check pending (Claude)`.
 
-### WL4 — Every command-running tool takes a Turkish `purpose`
-
-**Why:** §6.4 rule 1. The notifier already reads `purpose` from any call's arguments (`TalvoraDesktopProgressNotifier.cs`, `GetArgumentText(arguments, "purpose")`) and shows it as the `ne` row, but only `talvora_apply_patch` (and one workspace command tool) declare it, so ChatGPT cannot send it for the calls that need it most (PowerShell, processes, git, builds, background jobs).
-
-**Files:** `src/Talvora/McpToolMetadataWirePolicy.cs`, `src/Talvora/ToolArgumentValidator.cs`, `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs` (only if it pins which tools may carry `purpose`), `tests/Talvora.Notification.Regression/` (new `Program.WL4.cs`, registered in the runner list), `tests/Talvora.Smoke/SmokeScenarios.Workspace.ProcessSearch.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** the Notification regression, the metadata-policy smoke (`--metadata-policy-only`), `ModernizationPolicyRegression.ps1` (it greps `purpose`), `ToolManifestDocumentationRegression.ps1`.
-
-**Do:**
-1. Red first: (a) a Notification regression case builds the wire `tools/list` result and asserts that every tool whose annotations do **not** say `readOnlyHint: true` has an optional string property `purpose` with the description "Bu adımın ne yaptığını ve neden yapıldığını anlatan tek satırlık Türkçe açıklama (en çok 140 karakter); masaüstü çalışma günlüğünde 'ne' satırı olarak görünür." and that read-only tools do not; (b) `ToolArgumentValidator` accepts `purpose` (string, ≤ 140 characters) on those tools and still rejects any other unknown argument.
-2. Add the property once, in the wire policy that already rewrites input schemas, for every tool without `readOnlyHint: true` that does not already declare `purpose`; never touch a tool's own C# signature. Make the validator check against the same rewritten schema (or accept exactly this one extra property for exactly those tools).
-3. The tool method must never receive `purpose`: verify (Context7 below, then the smoke) that the SDK ignores an argument with no matching parameter; if it does not, remove `purpose` from the arguments after the notifier has read it and before binding. If neither works → proposal.
-4. Smoke: one existing process scenario (`talvora_run_process` or `talvora_user_run`) passes `purpose` and still succeeds.
-
-**Don't:** change any tool's behaviour, title or description; add `purpose` to read-only tools; store `purpose` anywhere but the existing progress message (it is redacted and clipped there already).
-
-**Context7:** `/modelcontextprotocol/csharp-sdk`, query "ModelContextProtocol C# SDK McpServerTool binding of call arguments that have no matching method parameter" (id `/modelcontextprotocol/csharp-sdk/v2.3.0`, the newest indexed; 2.4.0 release notes for anything that may have changed).
-
-**Acceptance:** red first; the Notification regression green; signed-in Full `Hepsi geçti.`; deploy, metadata-policy and full installed smokes green; CI. Then Claude adds the AGENTS.md rule that every call of such a tool passes `purpose` (already written, active from WL4 on).
-
 ### WL5 — Titles and results say exactly what happened, measured
 
 **Why:** §6.4 rules 2–4 and its title table. Today an inline PowerShell command shows "pwsh.exe bitti", git steps show their subcommand ("Git işlemi tamamlandı · diff"), test scripts "… hata ile bitti", and most results are a bare "Sonuç: başarılı".
@@ -390,7 +322,7 @@ The user: "Talvora masaüstü bildiriminin tam, doğru ve hassas açıklamalar y
 
 **Do:**
 1. Red first, one case per §6.4 title-table row, built from real recorded outputs (copy short real output samples into the test: a `git pull` fast-forward summary, `Already up to date.`, a `git fetch` ref update line, a `git commit` header + summary line, a `git push` ref update line, `git status --short` lines, a `dotnet test` summary, a test script ending in `…_GREEN`, a thrown PowerShell error): title, `sonuç` and timeline label must equal the table exactly.
-2. Implement the table: an inline shell command is a command whose text names no `*.ps1` and no program file (today it falls back to the executable name); a test script is a `*.ps1` whose path contains `tests/` or `tests\`; a .NET test project is a `dotnet run/test` target whose project name ends in `.Regression` or `.Tests`. Executable names, subcommands and flags move to "Teknik kanıt" (they are already in the technical evidence; only remove them from titles and labels).
+2. Implement the table: an inline shell command is a command whose text names no `*.ps1` and no program file (today it falls back to the executable name); a test script is a `*.ps1` whose path contains `tests/` or `tests\`; a .NET test project is a `dotnet run/test` target whose project name ends in `.Regression` or `.Tests`. Executable names and subcommands leave titles and labels and go into the step's evidence `Summary` (the "Teknik kanıt" side, already used by `dotnet_build` as `Hedef: … // Yapı: …`): `Komut: {program dosyası}` plus, for git and package managers, the subcommand (`Komut: git diff`, `Komut: pwsh.exe`, `Komut: npm run build`), appended with `  //  ` when a Summary exists. Never the full command line, flags or argument values (they can carry secrets).
 3. Replace both bare `"Sonuç: başarılı"` lines in `TalvoraDesktopProgressEvidence.cs` with `Sonuç: tamamlandı · {süre}` unless a parsed fact exists, in which case `Sonuç: {fact}`. Duration format exactly as §6.4 rule 3 (Turkish decimal comma, `dk`, `sa`), one shared formatter.
 4. Parsing is best effort and never changes the call's result: an unparseable output falls back to `{süre}`; never show a number that was not printed or counted.
 
@@ -404,13 +336,13 @@ The user: "Talvora masaüstü bildiriminin tam, doğru ve hassas açıklamalar y
 
 **Why:** §6.4 background, deploy and CI rows and the live-line table. Today `talvora_user_process_start` ends the step as "… arka planda başladı", the deploy ends as "Kurulum devredildi · doğrulama bekleniyor" and a running CI as "GitHub denetimi sürüyor"; the real results never reach the card.
 
-**Files:** `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `src/Talvora/TalvoraDesktopWorklogState.cs`, `src/Talvora/WorklogSubject.cs`, new `src/Talvora/WorklogFollower.cs`, `scripts/Invoke-QualityGate.ps1` (two new output lines only), `tests/QualityGateRegression.ps1`, `tests/Talvora.Notification.Regression/` (new `Program.WL6.cs`), `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `QualityGateRegression.ps1` and `QualityGateChangedRegression.ps1` (gate output), the Notification regression, the installed smoke (desktop progress parts).
+**Files:** `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `src/Talvora/TalvoraDesktopWorklogState.cs`, `src/Talvora/WorklogSubject.cs`, new `src/Talvora/WorklogFollower.cs`, `src/Talvora/Program.cs` (the start-up hook only), `scripts/Invoke-QualityGate.ps1` (the `START` lines only), `tests/QualityGateRegression.ps1`, `tests/Talvora.Notification.Regression/` (new `Program.WL6.cs`), `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `QualityGateRegression.ps1` and `QualityGateChangedRegression.ps1` (gate output), the Notification regression, the installed smoke (desktop progress parts).
 
 **Do:**
-1. Gate output (red first in `QualityGateRegression.ps1`): before the first check print `PLAN {n}` where n = the number of `PASS`/`FAIL` lines this run will print, and before each check `START {Name}`. Nothing else in the gate changes; existing `PASS`/`FAIL`/summary lines stay byte for byte.
-2. A test asserts that every check name the gate can print has a row in the §6.4 stage-name table (keep the table as a C# dictionary in `WorklogFollower.cs`; the test reads the gate script's names).
+1. Gate output (red first in `QualityGateRegression.ps1`), additions only: `Invoke-QualityCheck` prints `START {Name}` before running a check unless `-QuietSuccess`; `Invoke-ParallelQualityChecks` prints `START ParallelPhase {n}` (n = `$Checks.Count`) before it starts the jobs (they run together and their `PASS` lines come only when the phase ends); the serial regression loop prints `START PowerShellRegressions` once before its first test. No total is printed up front (the gate only knows it at the end). Existing `PASS`/`FAIL`/`SKIP`/summary lines stay byte for byte.
+2. A test asserts that every name the gate can print in `START`/`PASS`/`FAIL` has a Turkish label in the §6.4 stage-name table: the literal check names, `ParallelPhase`, `PowerShellRegressions`, the service-dependent names built from `$serviceRegressions` (`HealthHandle`, `NativeInstallerRuntime`) and the pattern `PS:{Ad}` (a quiet PowerShell test that failed). Keep the table as a C# dictionary in `WorklogFollower.cs`; the test reads the gate script.
 3. Follower: when a background start returns a process id and the command redirects to a log file inside the workspace (`*> <path>` or `> <path>`), keep that step running and follow it: every 2 s read at most the last 64 KB of the log (shared read, never lock or write it), update the running fact with the §6.4 live line, and when the process exits, finish the step with the §6.4 final result and the measured duration. No log path → follow only the process exit (`{süre}` and exit result). Stop following after 2 hours (end the step as `İzleme süresi doldu` with the elapsed time) and when the service stops.
-4. Deploy: after `Deploy-Windows-Installer.ps1` returns its JSON, keep the step running and poll `http://127.0.0.1:7676/healthz` every 3 s from the new service (the notifier lives in the service, so start polling only from the new process: the old one is stopped by the installer — persist the pending deploy `{sourceCommit, startedAtUtc, sessionId}` in the existing worklog state so the new service process finishes the step at start-up). Finish as §6.4 within 10 minutes or fail with its reason.
+4. Deploy: the installer stops the service that runs the notifier, so the old process cannot see the result and the worklog state is in memory only. When `Deploy-Windows-Installer.ps1` returns its JSON with `launched: true`, keep the step running and write `C:\ProgramData\Talvora\Worklog\pending-deploy.json` (the folder inherits the ACL of `C:\ProgramData\Talvora`, which the installer already protects, so no ACL code; written with `AtomicFile`) holding the step's session id, operation id, the JSON's `sourceCommit` and `startedAtUtc`. At start-up the new service reads and deletes that file once (ignore it when older than 30 minutes) and finishes the same step with its own `sourceCommit`: equal → `Yeni sürüm çalışıyor · {kısa sürüm}` with the measured time since `startedAtUtc`; different (the installer rolled back) → failed, reason `Yeni sürüm kurulamadı; önceki sürüm çalışıyor.` No polling. The frame reuses the persisted session and operation ids; if the tray no longer holds that session it shows the frame as a new card (its behaviour for an unknown session), so the tray does not change. If no new service starts within 10 minutes, the tray's existing stale-card rule ends the card as today. The start-up hook goes into `src/Talvora/Program.cs` next to the other singletons (add it to Files).
 5. CI: when `Get-CiStatus.ps1` exits 2, keep the step running and re-run it with `-TimeoutMinutes 0` as the signed-in user every 30 s, at most 30 minutes, then finish per §6.4.
 6. A followed step counts as active work: the card never auto-dismisses while one is running (AGENTS.md desktop rules); the session stays open until the last followed step ends.
 

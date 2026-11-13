@@ -309,7 +309,7 @@ Target renders: `docs/codex/reference/worklog-phosphor/previews/01…08` (regene
 Measured on the 73 stored sessions before this section: 654 steps, the most frequent being "pwsh.exe bitti" (48); git steps read "Git işlemi tamamlandı · diff/add/fetch"; "Talvora.Smoke arka planda başladı" never got a result; 35 of 46 results were a bare "Sonuç: başarılı"; "Kurulum devredildi · doğrulama bekleniyor" appeared 18 times and its verified form never. The user chose (ledger 2026-11-13): both sources (agent `purpose` + Talvora's own measurements), background jobs followed to the end, live state from the job's own log, object names on the main line and command names only under "Teknik kanıt".
 
 **Rules (all cards WL4–WL6 follow them):**
-1. **Two sources, never mixed up.** `ne` = the agent's `purpose`, verbatim after redaction (§6.2). Title, `sonuç` and every number = what Talvora measured from the real call (arguments, exit result, output, files, clock). A missing `purpose` removes only the `ne` row.
+1. **Two sources, never mixed up.** `ne` = the agent's `purpose`, verbatim after redaction (§6.2). Title, `sonuç` and every number = what Talvora measured from the real call (arguments, exit result, output, files, clock). A missing `purpose` removes only the `ne` row. `purpose` never makes a call fail (D70): longer than 140 characters it is shortened with "…"; it is advertised on every tool that is not read-only as `{"type":"string","maxLength":140}` only, and the server instructions and AGENTS.md explain it once (a per-tool description cost 389 bytes × ~100 tools and broke the Q7 tools/list budget). MCP clients keep the tool list they fetched at connect time, so a client connected before WL4 sends no `purpose` until it refreshes its tool list.
 2. **No command names on the main line.** `pwsh.exe`, `git diff`, `dotnet`, `npm` and flags appear only under "Teknik kanıt". Object names stay: files, projects, remotes/branches, services, hosts, test scripts.
 3. **Every finished step has a measured result.** Never a bare "Sonuç: başarılı": at least `Sonuç: tamamlandı · {süre}`; with parsed facts, those facts (table below). Durations in Turkish form: `0,8 sn`, `12,4 sn`, `4 dk 12 sn`, `1 sa 3 dk`.
 4. **Nothing estimated.** A count, fraction or stage is shown only when the job itself printed it; otherwise only the elapsed time.
@@ -331,14 +331,14 @@ Measured on the 73 stored sessions before this section: 654 steps, the most freq
 | git push | (as §6) · {uzak/dal} | (as §6) · {uzak/dal} | (as §6) | `{eski7}..{yeni7}` from the ref update line, or `zaten güncel` |
 | other git subcommands | Depo işlemi yapılıyor | Depo işlemi tamamlandı | Depo işlemi tamamlanamadı | `{süre}`; subcommand under "Teknik kanıt" |
 | background start (`talvora_user_process_start`, `talvora_job_start`) | the started script's own running title (`KnownScripts` or the rows above) | → stays running until the process ends (WL6) | | live line (below) |
-| deploy (`Deploy-Windows-Installer.ps1`) | Yeni sürüm kuruluyor | Yeni sürüm çalışıyor · {kısa sürüm} | Yeni sürüm doğrulanamadı | WL6: `/healthz` `sourceCommit` equals the deployed commit → `{süre}`; 10 minutes without it → failed, reason "Yeni sürüm 10 dakika içinde yanıt vermedi." |
+| deploy (`Deploy-Windows-Installer.ps1`) | Yeni sürüm kuruluyor | Yeni sürüm çalışıyor · {kısa sürüm} | Yeni sürüm kurulamadı | WL6: the new service finishes the step at start-up from `pending-deploy.json` → `{süre}` since the deploy started; its commit differs (rollback) → failed, reason "Yeni sürüm kurulamadı; önceki sürüm çalışıyor." |
 | CI check that answered "still running" (`Get-CiStatus.ps1` exit 2) | GitHub denetimi sürüyor | GitHub denetimi geçti | GitHub denetimi başarısız | WL6: followed until the run completes (at most 30 minutes) → `{süre}` of the run; after 30 minutes the step ends as `GitHub denetimi henüz bitmemişti` (cancelled state) |
 
 **Live line of a followed background job** (shown as the running fact, refreshed at most every 2 s, from the job's own log, read-only and bounded to its last 64 KB):
 
 | Job | Live line | Final result |
 |---|---|---|
-| quality gate | `{bitmiş}/{plan} aşama · şu an: {aşama} · {hata} hata · {süre}` (needs the gate's `PLAN`/`START` lines, WL6) | `{n} kontrol · {m} hata · {süre}` from `N kontrol, M hata`; failed: `Kontrol başarısız: {aşama}` with the Turkish stage name |
+| quality gate | `şu an: {aşama} · {g} aşama geçti · {h} hata · {süre}`; during the parallel phase `şu an: Paralel testler ({n} kontrol birlikte)` (from the gate's `START` lines, WL6; no fraction: the gate knows its total only at the end) | `{n} kontrol · {m} hata · {süre}` from `N kontrol, M hata`; failed: `Kontrol başarısız: {aşama}` with the Turkish stage name |
 | installed smoke | `{süre}` | `TALVORA MCP SMOKE GREEN` → `Kurulu sürüm testi geçti · {süre}`; `… RED` → the named step |
 | metadata smoke | `{süre}` | `METADATA POLICY LIVE GREEN` → `Araç tanımları denetimi geçti · {süre}` |
 | installer build | `{süre}` | the final JSON → `{boyut MB} · SHA-256 {ilk 8}` |
@@ -364,6 +364,7 @@ Measured on the 73 stored sessions before this section: 654 steps, the most freq
 | HealthHandle | Sağlık ve tanıtıcı denetimi |
 | ControlCenter | Kontrol Merkezi testi |
 | BusinessBootstrap | Başlangıç kurulumu testi |
+| `PS:{Ad}` (a quiet PowerShell test that failed) | PowerShell test betiği · {Ad}.ps1 |
 
 ## 7. Visual spec — "Phosphor" (hacker terminal), superseding the earlier table (Claude, 2026-10-20)
 
