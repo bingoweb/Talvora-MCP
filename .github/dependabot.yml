@@ -52,6 +52,12 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      # Talvora stays on .NET 10 LTS; .NET 11 is STS (user decision 2026-11-08).
+      # The next major move is .NET 12 LTS, decided by Claude at an audit.
+      - dependency-name: "dotnet-sdk"
+        versions:
+          - ">= 11.0.0, < 12.0.0"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
