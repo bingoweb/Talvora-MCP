@@ -2,6 +2,7 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -37,10 +38,14 @@ internal static partial class InstallerEngine
         var path = GetPowerShellMsiPath(pin.Version);
         try
         {
-            progress.Report(new InstallProgress(3, "PowerShell 7 indiriliyor..."));
-            await DownloadPowerShell7MsiAsync(pin, path, cancellationToken);
-            progress.Report(new InstallProgress(5, "PowerShell 7 kuruluyor..."));
-            await InstallPowerShell7MsiAsync(path, cancellationToken);
+            await DownloadPowerShell7MsiAsync(pin, path, progress, cancellationToken);
+            using (var verifiedStream = new FileStream(
+                path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                ValidatePowerShell7MsiHash(verifiedStream, pin.Sha256);
+                progress.Report(new InstallProgress(5, "PowerShell 7 kuruluyor..."));
+                await InstallPowerShell7MsiAsync(path, cancellationToken);
+            }
         }
         finally
         {
@@ -54,7 +59,12 @@ internal static partial class InstallerEngine
         var path = GetPowerShellMsiPath(pin.Version);
         try
         {
-            await DownloadPowerShell7MsiAsync(pin, path, cancellationToken);
+            await DownloadPowerShell7MsiAsync(pin, path, null, cancellationToken);
+            using (var verifiedStream = new FileStream(
+                path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                ValidatePowerShell7MsiHash(verifiedStream, pin.Sha256);
+            }
             return pin.Version;
         }
         finally
@@ -100,10 +110,11 @@ internal static partial class InstallerEngine
     }
 
     private static string GetPowerShellMsiPath(string version) =>
-        Path.Combine(Path.GetTempPath(), $"Talvora-PowerShell-{version}.msi");
+        Path.Combine(Path.GetTempPath(), $"Talvora-PowerShell-{version}-{Guid.NewGuid():N}.msi");
 
     private static async Task DownloadPowerShell7MsiAsync(
-        PowerShellPin pin, string path, CancellationToken cancellationToken)
+        PowerShellPin pin, string path, IProgress<InstallProgress>? progress,
+        CancellationToken cancellationToken)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(TimeSpan.FromMinutes(10));
@@ -113,10 +124,31 @@ internal static partial class InstallerEngine
             using var response = await client.GetAsync(
                 pin.Url, HttpCompletionOption.ResponseHeadersRead, deadline.Token);
             response.EnsureSuccessStatusCode();
+            var contentLength = response.Content.Headers.ContentLength;
+            if (contentLength is not > 0)
+                progress?.Report(new InstallProgress(3, "PowerShell 7 indiriliyor…"));
             await using var source = await response.Content.ReadAsStreamAsync(deadline.Token);
             await using var destination = new FileStream(
-                path, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
-            await source.CopyToAsync(destination, deadline.Token);
+                path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+            var buffer = new byte[81920];
+            long downloaded = 0;
+            var lastPercent = -1;
+            int read;
+            while ((read = await source.ReadAsync(buffer, deadline.Token)) != 0)
+            {
+                await destination.WriteAsync(buffer.AsMemory(0, read), deadline.Token);
+                downloaded += read;
+                if (contentLength is > 0)
+                {
+                    var percent = (int)(downloaded * 100 / contentLength.Value);
+                    if (percent != lastPercent)
+                    {
+                        lastPercent = percent;
+                        progress?.Report(new InstallProgress(3,
+                            $"PowerShell 7 indiriliyor… %{percent.ToString(CultureInfo.InvariantCulture)}"));
+                    }
+                }
+            }
             await destination.FlushAsync(deadline.Token);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -128,12 +160,11 @@ internal static partial class InstallerEngine
         {
             throw new InvalidOperationException(DownloadError, error);
         }
-        ValidatePowerShell7MsiHash(path, pin.Sha256);
     }
 
-    internal static void ValidatePowerShell7MsiHash(string path, string expectedHash)
+    internal static void ValidatePowerShell7MsiHash(FileStream stream, string expectedHash)
     {
-        using var stream = File.OpenRead(path);
+        stream.Position = 0;
         var hash = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
         if (!string.Equals(hash, expectedHash, StringComparison.Ordinal))
             throw new InvalidOperationException(IntegrityError);

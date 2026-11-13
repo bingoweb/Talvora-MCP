@@ -34,7 +34,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user, together with D66 (postponed by the user 2026-11-13; before 0.0.1.0)
 - [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
-- [ ] D67 — PowerShell 7 downloads to a private, locked file and shows its progress (audit 50; P-54 decided: SDK3 moved the pin to 10.0.404)
+- [~] D67 — PowerShell 7 downloads to a private, locked file and shows its progress (implemented; live pending: packaged SYSTEM verifier, clean-HEAD deploy, installed smokes and CI)
 - [ ] DEP19 — Tomlyn 2.11.1 from Dependabot PR #19 (audit 51; P-55 decided: SDK3 moved the pin to 10.0.404)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
@@ -55,6 +55,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-13 — D67, executor ChatGPT: random MSI name and exclusive CreateNew; FileShare.Read remains open through hash and msiexec; whole-percent download progress and UTF-8 verifier. RED contract observed, NativeInstaller/COM and QualityGateChanged GREEN; signed-in Changed 26/0, Full 72/0, `Hepsi geçti.`. Context7 `/dotnet/docs`; Gitea #9 comment 243. Clean-HEAD packaging, SYSTEM verifier, deployed smoke and CI pending.
+  Self-review — Cosmetics: prescribed ellipsis and percent format only; other display states unchanged.
+  Self-review — Usability: 81920-byte download chunks report whole percentages; existing preflight kept.
+  Self-review — Turkish: specified text and UTF-8 console output preserved.
+  Self-review — Security: CreateNew/None, hash and install under read lock; unchanged pin, timeout, URL check and msiexec arguments.
 
 - 2026-11-13 — Claude, audit 52 (tag `audit/2026-11-13-52`): range `audit/2026-11-11-51..3cd0443` — P-54 (D67) and P-55 (DEP19), ChatGPT. Both stopped correctly: Microsoft's November .NET 10 security servicing (10.0.15, 16 CVEs) had replaced SDK 10.0.403 on the workstation, and `rollForward: disable` made every restore fail. Partial work reverted, no SDK installed, proposals in the right form. Decided: option 2 for both, shipped by Claude as [C] SDK3 (9f9cb14): signed-in Full 72/0, installer built from 9f9cb14, deployed, `/healthz` = 9f9cb14, metadata and full smokes GREEN, windows-ci 43479686754 GREEN. D67 and DEP19 back to `[ ]` unchanged (DEP19's script takes only the PR's version files, so the new locks do not conflict). Dependabot opened PR #20 (.NET 11.0.100): closed; `.github/dependabot.yml` now ignores dotnet-sdk 11.x (stay on .NET 10 LTS, user decision 2026-11-08). Asked the user: the RL3/D66 uninstall test was postponed again ("Başka zaman"). Screens: no UI change in the range. Release: none (0.0.1.0 waits for D67, DEP19, RL5, RL4's dry run, D47–D49, WL3, the RL3 live check and README screenshots).
 - 2026-11-13 — [C] SDK3, executor Claude (answers P-54/P-55): Microsoft's November .NET 10 security servicing had replaced SDK 10.0.403/runtime 10.0.14 on the workstation, so every restore failed. `global.json` 10.0.404 (MSBuild still 18.9.15), the 17 platform packages 10.0.15 via `Update-DotnetPlatformPackages.ps1` with all six lock files regenerated, THIRD-PARTY-NOTICES, MODERNIZATION-POLICY, ARCHITECTURE, CONTEXT7 map, dependabot comment and the Toolchain fact aligned. PLATFORM_PACKAGE_LOCKSTEP_GREEN, THIRD_PARTY_NOTICES_SOURCE_GREEN, MODERNIZATION_POLICY_GREEN; signed-in Full 72 kontrol, 0 hata, Hepsi geçti. Context7 noLookup (servicing only; Microsoft release metadata opened). Installer, installed smokes and CI follow in audit 52.

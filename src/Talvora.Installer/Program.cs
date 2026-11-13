@@ -45,6 +45,7 @@ internal static class Program
 
         if (args.Any(arg => string.Equals(arg, "--verify-powershell-download", StringComparison.OrdinalIgnoreCase)))
         {
+            Console.OutputEncoding = new UTF8Encoding(false);
             try
             {
                 var version = InstallerEngine.VerifyPowerShell7DownloadAsync(

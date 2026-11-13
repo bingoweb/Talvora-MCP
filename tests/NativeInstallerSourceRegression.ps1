@@ -168,6 +168,22 @@ $result = [pscustomobject]@{
         $powerShellProvisioner -match 'USE_MU=1' -and
         $powerShellProvisioner -match 'ENABLE_MU=1'
     )
+    PowerShell7MsiUsesExclusiveNewFile = (
+        $powerShellProvisioner -match 'Guid\.NewGuid\(\):N' -and
+        $powerShellProvisioner -match '(?s)FileMode\.CreateNew,\s*FileAccess\.Write,\s*FileShare\.None'
+    )
+    PowerShell7HashAndInstallKeepReadLock = (
+        $powerShellProvisioner -match '(?s)FileMode\.Open,\s*FileAccess\.Read,\s*FileShare\.Read' -and
+        $powerShellProvisioner -match 'ValidatePowerShell7MsiHash\(verifiedStream, pin\.Sha256\)' -and
+        $powerShellProvisioner -match 'ValidatePowerShell7MsiHash\(FileStream stream,' -and
+        $installerProgram -match 'Console\.OutputEncoding = new UTF8Encoding\(false\);'
+    )
+    PowerShell7DownloadReportsWholePercent = (
+        $powerShellProvisioner -match 'ContentLength' -and
+        $powerShellProvisioner -match 'new byte\[81920\]' -and
+        $powerShellProvisioner -match 'CultureInfo\.InvariantCulture' -and
+        $powerShellProvisioner -match 'PowerShell 7 indiriliyor… %\{percent\.ToString\(CultureInfo\.InvariantCulture\)\}'
+    )
     CanonicalDeployUsesIndependentSystemTask = (
         $deployInstallerScript -match 'Schedule\.Service' -and
         $deployInstallerScript -match 'RegisterTaskDefinition' -and
@@ -906,6 +922,9 @@ try {
     [IO.File]::WriteAllText($testSourcePath, @'
 #nullable enable
 using System;
+using System.IO;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace Talvora.Installer;
@@ -918,6 +937,51 @@ internal static class InstallerLog
 
 public static class PowerShellInstallerRegression
 {
+    public static bool RandomMsiPathHasExpectedName()
+    {
+        var method = typeof(InstallerEngine).GetMethod(
+            "GetPowerShellMsiPath", BindingFlags.Static | BindingFlags.NonPublic)!;
+        var first = (string)method.Invoke(null, new object[] { "7.6.9" })!;
+        var second = (string)method.Invoke(null, new object[] { "7.6.9" })!;
+        return first != second && Regex.IsMatch(Path.GetFileName(first),
+            @"^Talvora-PowerShell-7\.\d+\.\d+-[0-9a-f]{32}\.msi$");
+    }
+
+    public static bool ExistingDownloadFileCannotBeOverwritten(string path)
+    {
+        try
+        {
+            using var file = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            return false;
+        }
+        catch (IOException)
+        {
+            return File.ReadAllText(path) == "not a valid PowerShell MSI";
+        }
+    }
+
+    public static bool VerifiedStreamBlocksWrites(string path)
+    {
+        using var verifiedStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        try
+        {
+            using var writer = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite);
+            return false;
+        }
+        catch (IOException)
+        {
+            try
+            {
+                InstallerEngine.ValidatePowerShell7MsiHash(verifiedStream, new string('0', 64));
+                return false;
+            }
+            catch (InvalidOperationException error)
+            {
+                return error.Message == "İndirilen PowerShell 7 paketi doğrulanamadı; güvenlik için kurulmadı.";
+            }
+        }
+    }
+
     public static bool ExistingPowerShellSkipsDownload()
     {
         var checks = 0;
@@ -929,9 +993,10 @@ public static class PowerShellInstallerRegression
 
     public static bool WrongHashIsRejected(string path)
     {
+        using var verifiedStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         try
         {
-            InstallerEngine.ValidatePowerShell7MsiHash(path, new string('0', 64));
+            InstallerEngine.ValidatePowerShell7MsiHash(verifiedStream, new string('0', 64));
             return false;
         }
         catch (InvalidOperationException error)
@@ -942,11 +1007,42 @@ public static class PowerShellInstallerRegression
 }
 '@)
     Add-Type -Path @($powerShellSourcePath, $testSourcePath) -ErrorAction Stop
+    if (-not [Talvora.Installer.PowerShellInstallerRegression]::RandomMsiPathHasExpectedName()) {
+        throw 'PowerShell MSI download must use an unpredictable 32-digit lowercase hex name.'
+    }
+    if (-not [Talvora.Installer.PowerShellInstallerRegression]::ExistingDownloadFileCannotBeOverwritten($msiFixturePath)) {
+        throw 'An existing PowerShell MSI download file must not be overwritten.'
+    }
+    if (-not [Talvora.Installer.PowerShellInstallerRegression]::VerifiedStreamBlocksWrites($msiFixturePath)) {
+        throw 'A verified PowerShell MSI must remain locked against writers while hashing.'
+    }
     if (-not [Talvora.Installer.PowerShellInstallerRegression]::ExistingPowerShellSkipsDownload()) {
         throw 'An installed PowerShell 7 must bypass the download through the injectable probe.'
     }
     if (-not [Talvora.Installer.PowerShellInstallerRegression]::WrongHashIsRejected($msiFixturePath)) {
         throw 'A mismatched PowerShell MSI digest must be rejected before installation.'
+    }
+    $windowsInstaller = New-Object -ComObject WindowsInstaller.Installer
+    try {
+        $readableMsiPath = Join-Path $testRoot 'locked-read.msi'
+        $newDatabase = $windowsInstaller.OpenDatabase($readableMsiPath, 3)
+        $newDatabase.Commit()
+        [void][Runtime.InteropServices.Marshal]::ReleaseComObject($newDatabase)
+        $verifiedMsi = [IO.FileStream]::new(
+            $readableMsiPath, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+        try {
+            $readonlyDatabase = $windowsInstaller.OpenDatabase($readableMsiPath, 0)
+            if ($null -eq $readonlyDatabase) {
+                throw 'Windows Installer must open the MSI for reading while the verified stream stays locked.'
+            }
+            [void][Runtime.InteropServices.Marshal]::ReleaseComObject($readonlyDatabase)
+        }
+        finally {
+            $verifiedMsi.Dispose()
+        }
+    }
+    finally {
+        [void][Runtime.InteropServices.Marshal]::ReleaseComObject($windowsInstaller)
     }
 }
 finally {
