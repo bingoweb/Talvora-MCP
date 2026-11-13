@@ -84,8 +84,16 @@ internal static class ProjectDeliveryGate
             .Where(arg => !arg.StartsWith("-", StringComparison.Ordinal))
             .ToArray();
         var remote = values.Length > 0 ? values[0] : "origin";
-        var branch = values.Length > 1 ? values[1] :
-            RunGit(root, ["branch", "--show-current"]).Trim();
+        var branch = values.Length > 1 ? values[1] : "";
+        if (branch.StartsWith("+", StringComparison.Ordinal))
+            branch = branch[1..];
+        var separator = branch.LastIndexOf(':');
+        if (separator >= 0)
+            branch = branch[(separator + 1)..];
+        if (branch.StartsWith("refs/heads/", StringComparison.Ordinal))
+            branch = branch["refs/heads/".Length..];
+        if (string.IsNullOrWhiteSpace(branch))
+            branch = RunGit(root, ["branch", "--show-current"]).Trim();
         if (string.IsNullOrWhiteSpace(branch))
             throw Blocked("Context7 push requires a current branch.");
         var remoteRef = $"refs/remotes/{remote}/{branch}";

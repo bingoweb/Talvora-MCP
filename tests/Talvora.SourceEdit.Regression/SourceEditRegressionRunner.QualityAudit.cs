@@ -250,6 +250,21 @@ internal static partial class SourceEditRegressionRunner
             await WriteEvidenceAsync("CTX2: only renames a local variable");
             MustBlock("working-tree evidence must not replace committed evidence");
             ProjectDeliveryGate.EnsureSatisfied(clone);
+
+            await CommitAsync("D69 restore valid evidence baseline");
+            await GitAsync(clone, "push", "origin", "main");
+            await File.AppendAllTextAsync(Path.Combine(clone, "src", "a.cs"),
+                "// D69: source change without new evidence\n");
+            await CommitAsync("D69 source change without evidence");
+            await File.AppendAllTextAsync(Path.Combine(clone, "docs", "x.md"),
+                "D69 documentation-only follow-up\n");
+            await CommitAsync("D69 documentation-only latest commit");
+            foreach (var refspec in new[] { "HEAD:main", "+main", "HEAD:refs/heads/main", "HEAD:" })
+            {
+                push[2] = refspec;
+                MustBlock("D69: source change hidden behind documentation-only tip in " + refspec,
+                    "Context7 evidence must be committed");
+            }
         }
         finally
         {

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-13T19:19:00.953Z",
-  "scope": "DEP21: Tomlyn 2.11.1 patch release with no Talvora API change",
+  "verifiedAtUtc": "2026-11-13T19:44:56.540Z",
+  "scope": "D69: parse Git push destination refspecs before comparing changed paths",
   "libraries": [],
-  "noLookup": "DEP21: Tomlyn patch release 2.11.0 to 2.11.1 changes no API called by Talvora; no framework behavior needs new lookup",
+  "noLookup": "D69: only local string parsing of Git's documented +src:dst refspec form changes; no library API behavior changed",
   "vendorSources": []
 }

@@ -35,8 +35,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user, together with D66 (postponed by the user 2026-11-13; before 0.0.1.0)
 - [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
 - [x] D68 — Protected installer staging, deployed f693395, installed smokes and CI 43488968971 GREEN
-- [~] DEP21 — Tomlyn 2.11.1 with AI.Abstractions 10.x retained; installed smokes and CI pending
-- [ ] D69 — The push gate reads `HEAD:main` style pushes correctly (audit 53)
+- [x] DEP21 — Tomlyn 2.11.1 with AI.Abstractions 10.x retained; deployed a57ec07, installed smokes and CI 43493491284 GREEN
+- [~] D69 — Normalize Git push destination refspecs; live pending: clean-HEAD deployment, installed smokes and CI
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
 - [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
@@ -57,7 +57,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
-- 2026-11-13 — DEP21, executor ChatGPT: Tomlyn 2.11.1 pin, three Tomlyn-only lock file updates, Dependabot ignore for AI.Abstractions 11; Microsoft.Extensions.AI.Abstractions remains 10.11.0. RED locked-mode NU1004; both forced restores; Notices, ModernizationPolicy, PlatformLockstep GREEN; signed-in Changed 68/0 and Full 72/0, Hepsi geçti.; Context7 noLookup (Tomlyn patch API unchanged); Gitea #9 comment 247. Clean-HEAD installer, installed smokes, PR #21 closure and CI pending.
+- 2026-11-13 — D69, executor ChatGPT: normalize +src:dst and refs/heads/ destination before remote-branch diff; preserve missing-remote fallback. Two-commit RED test observed gate accepting HEAD:main despite older source change; CTX2_PUSH_EVIDENCE_GREEN for HEAD:main, +main, HEAD:refs/heads/main and empty target. Signed-in Changed 18/0 and Full 72/0, Hepsi geçti.; Context7 noLookup (string parsing only); Gitea #9 comment 249. Clean-HEAD deploy, installed smokes and CI pending.
+  Self-review — Cosmetics: no visible UI change; existing error strings retained.
+  Self-review — Usability: all tested push forms inspect the full outgoing range, not only the tip.
+  Self-review — Turkish: no user-facing text changed.
+  Self-review — Security: Context7 ledger matching and evidence format untouched; fallback preserved.
+
+- 2026-11-13 — DEP21, executor ChatGPT: Tomlyn 2.11.1 pin, three Tomlyn-only lock file updates, Dependabot ignore for AI.Abstractions 11; Microsoft.Extensions.AI.Abstractions remains 10.11.0. RED locked-mode NU1004; both forced restores; Notices, ModernizationPolicy, PlatformLockstep GREEN; signed-in Changed 68/0 and Full 72/0, Hepsi geçti.; Context7 noLookup (Tomlyn patch API unchanged); Gitea #9 comment 247. Deployed a57ec07; installed metadata and MCP smokes GREEN; PR #21 closed; CI 43493491284 GREEN.
   Self-review — Cosmetics: no UI change; no loading, empty, or error copy altered.
   Self-review — Usability: TOML tools keep their existing commands and output.
   Self-review — Turkish: no user-facing text changed; planned PR comment uses the card's exact Turkish.
