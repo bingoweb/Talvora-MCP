@@ -84,6 +84,23 @@ try {
     if (-not $passed -or $script:GateChecks -ne 1) {
         throw 'Successful steps must execute and count exactly once.'
     }
+    $started = @(& {
+        Invoke-QualityCheck -Name 'WL6FixtureStart' -Action { Write-Output 'Still running' } | Out-Null
+    } 6>&1) -join [Environment]::NewLine
+    if ($started -notmatch 'START WL6FixtureStart') {
+        throw ('WL6: quality gate must print START before executing a nonquiet check. Captured: ' + $started)
+    }
+    $quiet = @(& {
+        Invoke-QualityCheck -Name 'WL6FixtureQuiet' -Action { Write-Output 'Still running' } -QuietSuccess | Out-Null
+    } 6>&1) -join [Environment]::NewLine
+    if ($quiet -match 'START WL6FixtureQuiet') {
+        throw 'WL6: quiet checks must not print standalone START lines.'
+    }
+    $gateText = [IO.File]::ReadAllText($gatePath)
+    if ($gateText -notmatch 'START ParallelPhase' -or $gateText -notmatch 'START PowerShellRegressions') {
+        throw 'WL6: parallel and serial phases must announce their starts.'
+    }
+    $script:GateChecks = 1
 
     $failed = Invoke-QualityCheck -Name 'SourceEdit' -Action {
         throw 'Injected source-edit regression failure'

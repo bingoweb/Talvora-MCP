@@ -44,7 +44,7 @@ internal static partial class Program
             {
                 Content = [],
                 StructuredContent = JsonSerializer.SerializeToElement(
-                    new { success = true, exitCode = 0, processId = 1234 }),
+                    new { success = true, exitCode = 0 }),
             };
             _ = await notifier.RunToolCallAsync(tool, arguments,
                 _ => ValueTask.FromResult(result), CancellationToken.None, "/mcp/dev", "ChatGPT");

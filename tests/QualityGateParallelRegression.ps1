@@ -52,7 +52,8 @@ try {
     foreach ($expected in @('PASS SlowPass', 'FAIL FirstFail', 'FIRST_FAIL_TAIL', 'FAIL SecondFail', 'SECOND_FAIL_TAIL', 'FAIL Missing', 'exit code 3', 'exit code 4')) {
         if (-not $text.Contains($expected)) { throw "Parallel phase output is missing '$expected'." }
     }
-    if ($text.Contains('QuietPass') -or $text.Contains('ParallelPhase')) { throw 'Quiet passes and a failed phase must not print PASS lines.' }
+    if ($text.Contains('QuietPass') -or $text.Contains('PASS ParallelPhase')) { throw 'Quiet passes and a failed phase must not print PASS lines.' }
+    if (-not $text.Contains('START ParallelPhase 5')) { throw 'WL6: even a failed parallel phase must announce its start with the real check count.' }
     if ($text.IndexOf('FAIL FirstFail') -gt $text.IndexOf('FAIL SecondFail')) { throw 'Results must be reported in the listed order.' }
     foreach ($index in 1..4) {
         if (-not (Test-Path -LiteralPath (Join-Path $script:GateCaptureRoot "$index.log"))) { throw "Check $index has no log." }

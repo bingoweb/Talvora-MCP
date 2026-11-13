@@ -160,6 +160,35 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         }
     }
 
+    /// <summary>WL6: a followed tool remains active until its own process really finishes.</summary>
+    private void TryUpdateFollowedWorklog(string operationId, string fact, TimeSpan elapsed)
+    {
+        try
+        {
+            lock (_worklogGate)
+            {
+                if (!_activeWorklog.TryGetValue(operationId, out var current)) return;
+                var session = current.Session;
+                var latest = _activeWorklog.Values
+                    .Where(item => ReferenceEquals(item.Session, session))
+                    .MaxBy(static item => item.Sequence);
+                if (latest?.Sequence != current.Sequence) return;
+                session.ProgressFact = fact;
+                session.LastActivityUtc = DateTimeOffset.UtcNow;
+                session.Elapsed = elapsed;
+                session.Kind = DesktopProgressKind.Running;
+                session.Title = current.Narrative.Titles.Running;
+                session.ToolName = current.ToolName;
+                Enqueue(session.Id, current.ToolName, session.Title,
+                    session.Message, DesktopProgressKind.Running, elapsed, current.Evidence);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Followed worklog progress could not be published.");
+        }
+    }
+
     private void EndWorklog(
         string operationId, DesktopProgressKind kind,
         string title, string message,

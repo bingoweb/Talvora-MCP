@@ -182,6 +182,28 @@ var isWindowsService =
 
 if (isWindowsService)
 {
+    // The installer ends the old notifier. Only the newly started service can
+    // confirm the original deploy step, using the persisted session identifiers.
+    app.Lifetime.ApplicationStarted.Register(() =>
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await app.Services.GetRequiredService<TalvoraDesktopProgressNotifier>()
+                    .ReplayPendingDeploymentAsync(WorklogFollower.PendingDeployPath,
+                        TalvoraRuntimeMetadata.Load().SourceCommit);
+            }
+            catch (Exception ex)
+            {
+                app.Logger.LogWarning(ex, "Pending deploy worklog could not be replayed at startup.");
+            }
+        });
+    });
+}
+
+if (isWindowsService)
+{
     try
     {
         var root = Path.Combine(

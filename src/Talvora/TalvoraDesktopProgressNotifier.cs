@@ -236,6 +236,24 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             {
                 failed = false;
             }
+            var startedAtUtc = DateTimeOffset.UtcNow - stopwatch.Elapsed;
+            try
+            {
+                if (ciStillRunning &&
+                    TryStartFollowedCi(operationId, narrative, arguments, startedAtUtc))
+                    return result;
+                if (!failed &&
+                    TryStartFollowedBackground(operationId, canonicalToolName,
+                        arguments, result, startedAtUtc))
+                    return result;
+                if (!failed && await TryPersistFollowedDeployAsync(
+                        operationId, narrative, result, startedAtUtc))
+                    return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Worklog follow-up could not be started.");
+            }
             try
             {
                 if (failed)
@@ -988,6 +1006,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             return;
         }
 
+        _followStopCts.Cancel();
         var deliveryStopped = false;
         _progressDeliveryQueue.Writer.TryComplete();
         _terminalDeliveryQueue.Writer.TryComplete();
@@ -1033,6 +1052,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             _deliveryStopCts.Dispose();
             _deliverySignal.Dispose();
         }
+        _followStopCts.Dispose();
     }
 
     [LibraryImport("kernel32.dll", SetLastError = true)]

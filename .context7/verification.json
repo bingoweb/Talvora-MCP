@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-13T21:15:25.876Z",
-  "scope": "WL5: measured Turkish worklog titles and facts parsed from captured process output",
-  "libraries": [],
-  "noLookup": "WL5: only Talvora's own captured command output, approved copy and stopwatch durations are parsed; no new library API or SDK behaviour is used",
-  "vendorSources": []
+  "verifiedAtUtc": "2026-11-13T21:46:05.176Z",
+  "scope": "WL6: follow process logs using shared read-while-writing FileStream and observed process exits",
+  "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "Open a growing file with FileStream(FileAccess.Read, FileShare.ReadWrite) and read only the bounded tail; ReadAsync may return fewer bytes than requested, so loop until EOF (query: \"FileStream FileShare.ReadWrite read the end of a file another process is still writing .NET 10\")."
+    }
+  ],
+  "vendorSources": ["https://github.com/dotnet/docs/blob/main/docs/standard/io/handling-io-errors.md"]
 }

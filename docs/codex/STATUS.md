@@ -34,8 +34,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user, together with D66 (postponed by the user 2026-11-13; before 0.0.1.0)
 - [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
-- [~] WL5 — Measured Turkish titles/results built; live pending: deployed smokes, CI and Claude visual check; P-57 governs frozen N5 preview wording
-- [ ] WL6 — Background jobs, deploys and CI are followed to their real end, with a live line (user request 2026-11-13)
+- [~] WL5 — Measured Turkish titles/results installed at 3ce8e66; metadata and full MCP smokes GREEN; CI 43510238063 GREEN. P-57 and Claude visual check pending
+- [~] WL6 — Real-time process/log/CI/deploy followers built; signed-in Changed 30/0 and Full 72/0 GREEN; live install/CI and Claude visual review pending
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
 - [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
@@ -56,6 +56,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-14 — WL6, executor ChatGPT: gate START lines, Turkish stages and 64 KiB live log/process follower; signed-in CI checks every 30 s, persisted deploy replay on new service startup. TDD RED for START, follower and timeout; WL6_FOLLOWER_GREEN, QualityGateRegression, QualityGateChanged, QualityGateParallel and Notification GREEN; Changed 30/0 and Full 72/0, Hepsi geçti. Context7 /dotnet/docs (FileShare.ReadWrite); Gitea #9 comment 252. Clean-HEAD install/smokes, CI and Claude's real desktop visual review pending; first install upgrades an older service without the pending-deploy writer.
+  Self-review — Cosmetics: existing card layout and terminal unchanged; real gate stages use only printed START/PASS/FAIL records.
+  Self-review — Usability: followed sessions stay active and finish only at observed exit; missing and timed-out results are not called success.
+  Self-review — Turkish: duration, stage, success, failure and timeout labels reviewed against DESIGN-WORKLOG 6.4.
+  Self-review — Correctness: shared 64 KiB reads, 2-hour/30-minute limits, idempotent 30-minute deploy replay and signed-in CI proven by regression.
 
 - 2026-11-13 — WL5, executor ChatGPT: accurate Turkish titles and measured outputs for Git, PowerShell, test scripts and .NET tests; command names only in technical evidence; one real staged diff after git add. RED inline title observed, WL5_MEASURED_RESULTS_GREEN, Notification GREEN; signed-in Changed 29/0 and Full 72/0, Hepsi geçti.; Context7 noLookup, Gitea #9 comment 251. P-57: N5 SHA-256 locks the required preview string edits; original approved fixture preserved. Clean-HEAD deployment, installed smokes and CI pending; Claude visual check outstanding.
   Self-review — Cosmetics: no layout or visual primitives changed; frozen N5 reference kept intact pending P-57.

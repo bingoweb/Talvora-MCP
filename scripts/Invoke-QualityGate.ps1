@@ -28,6 +28,7 @@ function Invoke-QualityCheck {
     $script:GateChecks++
     $logPath = Join-Path $script:GateCaptureRoot ([string]$script:GateChecks + '.log')
     $timer = [Diagnostics.Stopwatch]::StartNew()
+    if (-not $QuietSuccess) { Write-Host "START $Name" }
     try {
         & $Action *> $logPath
         if (-not $?) { throw 'The step reported an unsuccessful PowerShell status.' }
@@ -57,6 +58,7 @@ function Invoke-ParallelQualityChecks {
         [int] $ThrottleLimit = [Math]::Max(2, [Environment]::ProcessorCount)
     )
     $timer = [Diagnostics.Stopwatch]::StartNew()
+    Write-Host ("START ParallelPhase {0}" -f $Checks.Count)
     $running = foreach ($check in $Checks) {
         $script:GateChecks++
         $logPath = Join-Path $script:GateCaptureRoot ([string]$script:GateChecks + '.log')
@@ -283,6 +285,7 @@ try {
             [pscustomobject]@{ HealthHandle = $false; NativeInstallerRuntime = $false }
         }
         $regressionTimer = [Diagnostics.Stopwatch]::StartNew()
+        $serialStarted = $false
         foreach ($test in $selected) {
             if ($test.Name -notin $serialRegressions -and $test.Name -notin $serviceRegressions) { continue }
             if ($test.Name -eq 'HealthHandleRegression.ps1' -and
@@ -300,6 +303,10 @@ try {
             $checkName = if ($serviceDependent) {
                 $test.BaseName.Replace('Regression','')
             } else { 'PS:' + $test.BaseName }
+            if (-not $serialStarted) {
+                Write-Host 'START PowerShellRegressions'
+                $serialStarted = $true
+            }
             $canContinue = Invoke-QualityCheck $checkName {
                 Invoke-ExternalChecked pwsh @('-NoLogo','-NoProfile','-NonInteractive','-File',$path)
             } -QuietSuccess:(-not $serviceDependent)
