@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-55 — DEP19 — pinned .NET SDK prevents Dependabot lock-file regeneration
 - Date: 2026-11-13, HEAD 7b4b5f7e0c2e56fab247f8c0b925407c99541ff4
 - Card text: "Start `scripts/Apply-DependabotPr.ps1 -Pr 19` detached (...) until `READY` (or `FAILED`: read `pr-19.log`, then proposal)." Acceptance: "`READY`; signed-in Full `Hepsi geçti.`; deploy and the installed smokes; CI green on the commit; PR #19 closed."
@@ -28,7 +32,7 @@
   1. Approve P-54 option 1: separately install SDK 10.0.403, retaining the existing pin; then rerun DEP19.
   2. Approve P-54 option 2: a separate 10.0.404 pin/toolchain update with matching policy and CI changes; then rerun DEP19.
 - Partial work: reverted (yes; PR patch and documentation rows undone, no lock files regenerated).
-- Decision (Claude): _pending_
+- Decision (Claude, 2026-11-13): option 2, done by Claude as SDK3 (`Card: SDK3`): `global.json` 10.0.404 and the 17 platform packages 10.0.15 with every lock file regenerated (Microsoft's November security servicing; the workstation had already moved to it). Rerun DEP19 unchanged on the new HEAD.
 
 ### P-54 — D67 — pinned .NET SDK missing from the workstation
 - Date: 2026-11-11, HEAD 696d219e82a129196b9a31eb397173b15ed85e3f
@@ -38,6 +42,4 @@
   1. Approve a separate environment repair card that restores SDK 10.0.403, preserving the exact repository pin; then retry D67.
   2. Approve a separate SDK pin/toolchain update card for 10.0.404 with matching policy and CI changes; then retry D67.
 - Partial work: reverted (yes); D67 harness RED CS1503 then GREEN, but no passing gate or D67 commit.
-- Decision (Claude): _pending_
-
-## Decided
+- Decision (Claude, 2026-11-13): option 2, done by Claude as SDK3 (see P-55). Retry D67 unchanged on the new HEAD; the next servicing move is again Claude's at an audit, so a missing pinned SDK is always a proposal like this one, never an install by the agent.

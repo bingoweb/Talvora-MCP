@@ -17,7 +17,7 @@
 | Audit baseline | Newest Claude audit tag `audit/2026-11-11-51` = the audit 51 commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
-| Toolchain | .NET SDK 10.0.403 exact pin (SDK2; runtime 10.0.14) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
+| Toolchain | .NET SDK 10.0.404 exact pin (SDK3, 2026-11-13; runtime 10.0.15) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
 | Install path | `scripts/Deploy-Windows-Installer.ps1` (SYSTEM task; when called from inside Talvora it does not wait — poll `/healthz.sourceCommit`). Never run `Reset-And-Install.ps1` unless a card says so. |
 | Secrets | `C:\ProgramData\Talvora\Secrets\*` belong to the user's other projects. Never read, move, print or delete them. Listing names/ACLs is allowed. `C:\ProgramData\Talvora\Context7\api-key` is the user's Context7 key (CTX3): `talvora_context7_docs` sends it; never read, print, copy or commit it. |
 | User preferences | Personal single-user workstation: no local MCP token (Q1). Cosmetics matter a lot: every visible change needs before/after PNGs. The worklog's vertical **code terminal** is the user's favourite feature — never break or shrink it. |
@@ -34,8 +34,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user at the next audit (user decision 2026-11-11), together with D66
 - [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
-- [?] D67 — PowerShell 7 downloads to a private, locked file and shows its progress (waiting for Claude: P-54; pinned SDK 10.0.403 absent)
-- [?] DEP19 — Tomlyn 2.11.1 from Dependabot PR #19 (audit 51; waiting for Claude: P-55, SDK 10.0.403 unavailable)
+- [ ] D67 — PowerShell 7 downloads to a private, locked file and shows its progress (audit 50; P-54 decided: SDK3 moved the pin to 10.0.404)
+- [ ] DEP19 — Tomlyn 2.11.1 from Dependabot PR #19 (audit 51; P-55 decided: SDK3 moved the pin to 10.0.404)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
 - [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
@@ -56,6 +56,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-13 — [C] SDK3, executor Claude (answers P-54/P-55): Microsoft's November .NET 10 security servicing had replaced SDK 10.0.403/runtime 10.0.14 on the workstation, so every restore failed. `global.json` 10.0.404 (MSBuild still 18.9.15), the 17 platform packages 10.0.15 via `Update-DotnetPlatformPackages.ps1` with all six lock files regenerated, THIRD-PARTY-NOTICES, MODERNIZATION-POLICY, ARCHITECTURE, CONTEXT7 map, dependabot comment and the Toolchain fact aligned. PLATFORM_PACKAGE_LOCKSTEP_GREEN, THIRD_PARTY_NOTICES_SOURCE_GREEN, MODERNIZATION_POLICY_GREEN; signed-in Full 72 kontrol, 0 hata, Hepsi geçti. Context7 noLookup (servicing only; Microsoft release metadata opened). Installer, installed smokes and CI follow in audit 52.
 - 2026-11-13 — P-55, executor ChatGPT: DEP19 Apply-DependabotPr FAILED at restore (-2147450725): the pinned SDK 10.0.403 is missing (only 10.0.404 installed). Partial changes reverted; no package update, deployment or PR close.
   Signed-in Changed: 11 checks, 0 errors, `Hepsi geçti.`; baseline windows-ci green: 43086450913. No Context7 lookup (proposal only). Waiting for Claude's toolchain decision; Gitea #9 comment 241.
 

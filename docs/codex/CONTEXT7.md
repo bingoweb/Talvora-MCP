@@ -4,7 +4,7 @@ Maintained by Claude (CONTEXT7 PROTOCOL in AGENTS.md). Every id below was checke
 
 | Area | Pinned | Context7 id | Official (vendorSources) |
 |---|---|---|---|
-| .NET / C# / SDK and CLI | .NET SDK 10.0.403 | `/dotnet/docs`; runtime source: `/dotnet/runtime` | https://learn.microsoft.com/dotnet/ |
+| .NET / C# / SDK and CLI | .NET SDK 10.0.404 | `/dotnet/docs`; runtime source: `/dotnet/runtime` | https://learn.microsoft.com/dotnet/ |
 | ASP.NET Core (MCP HTTP host) | .NET 10 | `/dotnet/aspnetcore.docs` | https://learn.microsoft.com/aspnet/core/ |
 | MCP C# SDK | `ModelContextProtocol` 2.4.0 | `/modelcontextprotocol/csharp-sdk`; newest indexed version `/modelcontextprotocol/csharp-sdk/v2.3.0` — **gap** (2.4.0: release notes) | https://github.com/modelcontextprotocol/csharp-sdk |
 | Roslyn | `Microsoft.CodeAnalysis.*` | `/dotnet/roslyn` | https://learn.microsoft.com/dotnet/csharp/roslyn-sdk/ |

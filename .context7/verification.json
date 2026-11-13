@@ -1,12 +1,10 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-09T04:39:46.776Z",
-  "scope": "D66: MoveFileEx delayed deletion targets the path registered at reboot",
-  "libraries": [
-    {
-      "libraryId": "/websites/learn_microsoft_en-us_windows_win32_api",
-      "verified": "2026-11-09 D66: MoveFileEx queues deletion of the registered path until restart (query: \"MoveFileEx MOVEFILE_DELAY_UNTIL_REBOOT deletes the file at that path when the system restarts\")"
-    }
-  ],
-  "vendorSources": []
+  "verifiedAtUtc": "2026-11-13T18:04:51.000Z",
+  "scope": "SDK3: .NET 10 November servicing (SDK 10.0.404, runtime and platform packages 10.0.15)",
+  "libraries": [],
+  "noLookup": "SDK3: servicing patch of the pinned SDK and platform packages; no API the code calls changes, versions checked on Microsoft's release metadata",
+  "vendorSources": [
+    "https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json"
+  ]
 }
