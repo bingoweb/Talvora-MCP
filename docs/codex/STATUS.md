@@ -35,7 +35,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user at the next audit (user decision 2026-11-11), together with D66
 - [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
 - [?] D67 — PowerShell 7 downloads to a private, locked file and shows its progress (waiting for Claude: P-54; pinned SDK 10.0.403 absent)
-- [ ] DEP19 — Tomlyn 2.11.1 from Dependabot PR #19 (audit 51)
+- [?] DEP19 — Tomlyn 2.11.1 from Dependabot PR #19 (audit 51; waiting for Claude: P-55, SDK 10.0.403 unavailable)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
 - [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
@@ -55,6 +55,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-13 — P-55, executor ChatGPT: DEP19 Apply-DependabotPr FAILED at restore (-2147450725): the pinned SDK 10.0.403 is missing (only 10.0.404 installed). Partial changes reverted; no package update, deployment or PR close.
+  Signed-in Changed: 11 checks, 0 errors, `Hepsi geçti.`; baseline windows-ci green: 43086450913. No Context7 lookup (proposal only). Waiting for Claude's toolchain decision; Gitea #9 comment 241.
 
 - 2026-11-11 — P-54, executor ChatGPT: D67 RED CS1503 and NativeInstallerSourceRegression GREEN after temporary implementation; all code/test changes reverted.
   Signed-in Changed failed Restore: global.json requires SDK 10.0.403 (rollForward disabled), workstation has only 10.0.404; Full, installed checks and CI cannot be claimed. Waiting for Claude's separate toolchain decision; no SDK or pin change made. Gitea #9 comment 240.

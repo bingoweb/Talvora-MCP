@@ -20,6 +20,16 @@
 
 ## Open
 
+### P-55 — DEP19 — pinned .NET SDK prevents Dependabot lock-file regeneration
+- Date: 2026-11-13, HEAD 7b4b5f7e0c2e56fab247f8c0b925407c99541ff4
+- Card text: "Start `scripts/Apply-DependabotPr.ps1 -Pr 19` detached (...) until `READY` (or `FAILED`: read `pr-19.log`, then proposal)." Acceptance: "`READY`; signed-in Full `Hepsi geçti.`; deploy and the installed smokes; CI green on the commit; PR #19 closed."
+- Problem: `artifacts/dependabot/pr-19.result` reports FAILED. The script log shows `dotnet restore Talvora.slnx --force-evaluate` exited -2147450725: `global.json` requests SDK 10.0.403 but only 10.0.404 is installed. Lock files cannot be regenerated, and DEP19 does not authorize an SDK installation or pin change. P-54 describes the same workstation issue for D67.
+- Options:
+  1. Approve P-54 option 1: separately install SDK 10.0.403, retaining the existing pin; then rerun DEP19.
+  2. Approve P-54 option 2: a separate 10.0.404 pin/toolchain update with matching policy and CI changes; then rerun DEP19.
+- Partial work: reverted (yes; PR patch and documentation rows undone, no lock files regenerated).
+- Decision (Claude): _pending_
+
 ### P-54 — D67 — pinned .NET SDK missing from the workstation
 - Date: 2026-11-11, HEAD 696d219e82a129196b9a31eb397173b15ed85e3f
 - Card text: "Acceptance: red first; Changed and Full `Hepsi geçti.`; ... deploy and the installed smokes; CI."
