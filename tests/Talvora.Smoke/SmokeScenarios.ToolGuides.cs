@@ -4,12 +4,19 @@ using System.Text.Json;
 
 internal static partial class SmokeScenarios
 {
+    // D77: Talvora's own client name; TalvoraLineTrafficMeter.IsOwnClient keeps "Talvora." callers off the
+    // Santral counters and the desktop worklog.
+    internal const string OwnSmokeClient = "Talvora.Smoke";
+
     // H1: every guide matches the live schema, its example passes Talvora's own argument validator, its parameter
     // lines reach the wire, and a failed call carries the guide.
     internal static async Task RunToolGuidesLiveAsync(string serverRoot)
     {
         var root = serverRoot.TrimEnd('/');
         using var http = new HttpClient(new HttpClientHandler { UseProxy = false });
+        // D77: these raw calls are Talvora's own; without a name the dev line counted them as ChatGPT traffic and
+        // the desktop showed a ChatGPT "cmd.exe hata ile bitti" card (user decisions 2026-11-07, audit 40/41).
+        http.DefaultRequestHeaders.Add("X-Talvora-Client", OwnSmokeClient);
         var full = await ReadToolsListAsync(http, root + "/mcp");
         var tools = full.Tools.EnumerateArray().ToDictionary(
             tool => tool.GetProperty("name").GetString()!, tool => tool, StringComparer.Ordinal);

@@ -24,6 +24,7 @@ internal static partial class SmokeScenarios
 
         var root = serverRoot.TrimEnd('/');
         using var http = new HttpClient(new HttpClientHandler { UseProxy = false });
+        http.DefaultRequestHeaders.Add("X-Talvora-Client", OwnSmokeClient);
         var full = await ReadToolsListAsync(http, root + "/mcp");
         var development = await ReadToolsListAsync(http, root + "/mcp/dev");
         var administration = await ReadToolsListAsync(http, root + "/mcp/admin");

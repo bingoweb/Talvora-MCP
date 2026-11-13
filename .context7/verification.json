@@ -1,12 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-13T23:07:18.000Z",
-  "scope": "D75: the Control Center rail's new-version dot moves into the item's own grid so it is never clipped, a smoke check for clipping, and the worklog card's fact row reads durum while a step runs or waits",
-  "libraries": [
-    {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-14 D75: Canvas is the only WPF layout element that lets children draw outside its bounds; a Grid clips them, so the dot must lie inside the rail item's own grid (query: \"WPF VisualTreeHelper.GetClip returns the clip region of a Visual including layout clipping when an element is arranged smaller than its desired size\")"
-    }
-  ],
+  "verifiedAtUtc": "2026-11-13T23:28:15.000Z",
+  "scope": "D77: the installed smoke's raw HTTP calls send Talvora's own client name so they are not counted or shown as ChatGPT work",
+  "libraries": [],
+  "noLookup": "D77: test-only change; the smoke adds Talvora's own X-Talvora-Client header, no library behaviour is relied on",
   "vendorSources": []
 }
