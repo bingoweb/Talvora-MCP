@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-13T19:01:09.033Z",
-  "scope": "D68: elevated installer stages extracted payload under Program Files",
+  "verifiedAtUtc": "2026-11-13T19:19:00.953Z",
+  "scope": "DEP21: Tomlyn 2.11.1 patch release with no Talvora API change",
   "libraries": [],
-  "noLookup": "D68: only the staging path moves; Directory.CreateDirectory, File.GetAttributes and FileAttributes.ReparsePoint are already used the same way in InstallerEngine.Uninstall.cs",
+  "noLookup": "DEP21: Tomlyn patch release 2.11.0 to 2.11.1 changes no API called by Talvora; no framework behavior needs new lookup",
   "vendorSources": []
 }

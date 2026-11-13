@@ -34,8 +34,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user, together with D66 (postponed by the user 2026-11-13; before 0.0.1.0)
 - [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
-- [~] D68 — Setup payload staged under protected Program Files; live pending: clean-HEAD installer deployment, installed smokes and CI
-- [ ] DEP21 — Tomlyn 2.11.1 without the Microsoft.Extensions.AI.Abstractions 11 jump (audit 53; answers P-56)
+- [x] D68 — Protected installer staging, deployed f693395, installed smokes and CI 43488968971 GREEN
+- [~] DEP21 — Tomlyn 2.11.1 with AI.Abstractions 10.x retained; installed smokes and CI pending
 - [ ] D69 — The push gate reads `HEAD:main` style pushes correctly (audit 53)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
@@ -57,7 +57,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
-- 2026-11-13 — D68, executor ChatGPT: setup staging moved to Versions/.staging-GUID under Program Files; both installRoot and versionsRoot reject reparse points. RED source regression first, NativeInstaller and QualityGateChanged GREEN; signed-in Changed 16/0, Full 72/0, Hepsi geçti.; Context7 noLookup (existing Directory/File.GetAttributes API); Gitea #9 comment 246. Clean-HEAD installer, deployed smoke and CI pending.
+- 2026-11-13 — DEP21, executor ChatGPT: Tomlyn 2.11.1 pin, three Tomlyn-only lock file updates, Dependabot ignore for AI.Abstractions 11; Microsoft.Extensions.AI.Abstractions remains 10.11.0. RED locked-mode NU1004; both forced restores; Notices, ModernizationPolicy, PlatformLockstep GREEN; signed-in Changed 68/0 and Full 72/0, Hepsi geçti.; Context7 noLookup (Tomlyn patch API unchanged); Gitea #9 comment 247. Clean-HEAD installer, installed smokes, PR #21 closure and CI pending.
+  Self-review — Cosmetics: no UI change; no loading, empty, or error copy altered.
+  Self-review — Usability: TOML tools keep their existing commands and output.
+  Self-review — Turkish: no user-facing text changed; planned PR comment uses the card's exact Turkish.
+  Self-review — Security: diff is Tomlyn-only in NuGet locks; AI.Abstractions stays 10.x for MCP 2.4.0.
+
+- 2026-11-13 — D68, executor ChatGPT: setup staging moved to Versions/.staging-GUID under Program Files; both installRoot and versionsRoot reject reparse points. RED source regression first, NativeInstaller and QualityGateChanged GREEN; signed-in Changed 16/0, Full 72/0, Hepsi geçti.; Context7 noLookup (existing Directory/File.GetAttributes API); Gitea #9 comment 246. Deployed f693395, installed metadata and full MCP smokes GREEN, CI 43488968971 GREEN.
   Self-review — Cosmetics: no visual change; only the card's Turkish error text added.
   Self-review — Usability: staging now inherits Program Files directory protections, existing setup flow retained.
   Self-review — Turkish: error text follows the card exactly; diacritics checked.

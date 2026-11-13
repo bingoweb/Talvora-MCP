@@ -11,6 +11,11 @@ updates:
     labels:
       - "dependencies"
     ignore:
+      # Microsoft.Extensions.AI.Abstractions follows ModelContextProtocol's own dependency (10.x for 2.4.0).
+      # Raise it together with a ModelContextProtocol update.
+      - dependency-name: "Microsoft.Extensions.AI.Abstractions"
+        versions:
+          - ">=11.0.0"
       # Microsoft.Build.Framework and Microsoft.NET.StringTools follow the SDK's own MSBuild
       # (global.json 10.0.404 ships MSBuild 18.9.15); both are compile-only references (PK2).
       # Raise this bound together with the SDK feature band (`dotnet msbuild -version`).

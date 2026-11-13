@@ -334,7 +334,7 @@
           "ModelContextProtocol.AspNetCore": "[2.4.0, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
           "Talvora.Shared": "[0.0.0, )",
-          "Tomlyn": "[2.11.0, )",
+          "Tomlyn": "[2.11.1, )",
           "YamlDotNet": "[18.1.0, )"
         }
       },
@@ -593,9 +593,9 @@
       },
       "Tomlyn": {
         "type": "CentralTransitive",
-        "requested": "[2.11.0, )",
-        "resolved": "2.11.0",
-        "contentHash": "TCXTieJ1M/YsWqkh8c7+bSjNf1uJdW74LPdFRrGiRBtBFHJW/O3ZN42d/Tp/EoXyZ3fnVVag3I20tjg3PfukLQ=="
+        "requested": "[2.11.1, )",
+        "resolved": "2.11.1",
+        "contentHash": "ePC5kPidQngNoOi7jCDeRo5hbXS5uV3o4CAzz5QaxkDo1IhgM0QtGinuI03tqj8/Dl/FigRG4gRiatUsV3pcrA=="
       },
       "YamlDotNet": {
         "type": "CentralTransitive",

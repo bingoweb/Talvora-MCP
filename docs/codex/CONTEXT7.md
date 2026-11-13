@@ -14,7 +14,7 @@ Maintained by Claude (CONTEXT7 PROTOCOL in AGENTS.md). Every id below was checke
 | WPF (animation, controls, XAML) | .NET 10 WPF | `/dotnet/docs-desktop` | https://learn.microsoft.com/dotnet/desktop/wpf/ |
 | WinForms (setup window, KUR1) | .NET 10 WinForms | `/dotnet/docs-desktop` | https://learn.microsoft.com/dotnet/desktop/winforms/ |
 | Win32 API (DWM title bar, KUR1) | Windows 11 | `/websites/learn_microsoft_en-us_windows_win32_api` | https://learn.microsoft.com/windows/win32/api/ |
-| TOML | `Tomlyn` 2.11.0 | `/xoofx/tomlyn/2.10.1` — **gap** (2.10.2 and 2.11.0: release notes) | https://github.com/xoofx/Tomlyn |
+| TOML | `Tomlyn` 2.11.1 | `/xoofx/tomlyn/2.10.1` — **gap** (2.10.2–2.11.1: release notes) | https://github.com/xoofx/Tomlyn |
 | YAML | `YamlDotNet` 18.1.0 | `/aaubry/yamldotnet/v16.3.0` — **gap** | https://github.com/aaubry/YamlDotNet/wiki |
 | Diffs | `DiffPlex` | `/mmanela/diffplex` | https://github.com/mmanela/diffplex |
 | Git CLI | Git for Windows 2.56 | `/websites/git-scm` | https://git-scm.com/docs |
