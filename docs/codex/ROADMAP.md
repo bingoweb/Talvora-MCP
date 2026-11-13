@@ -30,7 +30,104 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-13 (54) · range `audit/2026-11-13-53..c6ea631` (D68, DEP21, D69, WL4) · no new agent card: Claude shipped D70 and sharpened WL5 and WL6 (below, "Precise desktop worklog")
+### Audit 2026-11-14 (55, deep) · range `audit/2026-11-13-54..87628f8` (WL5, WL6, RL5) · D71–D74 and D76 for the agent; Claude shipped `[C]` D75
+
+Evidence for D71–D73 comes from the real worklog history (`%LOCALAPPDATA%\Talvora\ControlCenter\worklog-sessions.jsonl`, sessions of 2026-11-13 21:59–22:26 UTC) and from Claude's live run on 2026-11-14 (a followed Full gate with a failed `git fetch` and a `git status` during it). The rules these cards implement are in `docs/codex/DESIGN-WORKLOG.md` §6.4 rules 5–8 and its tables (Claude updated them in this audit). None of them changes the tray or the frame protocol.
+
+### D71 — A deploy continues the agent's card instead of splitting it (WL6 follow-up)
+
+**Why:** after RL5's deploy the new service replayed the deploy step into a second in-memory session that has the agent's session id: `ReplayPendingDeploymentAsync` stores it as `_sessions["deploy:" + id]`, and the agent's next call creates its normal session (key = project root + actor, same id, because the id is the hash of that key). `CreateWorklogFrame`, `PrepareCodeEvidence` and `IsWorklogSessionClosed` find a session by id with `FirstOrDefault`, so from then on every frame of the agent was built from the stale replay session: timeline frozen at "Yeni sürüm çalışıyor · 87628f8", `Steps` 1, no `ne`, no live line, no task note. 90 s after the replay ended that session counted as closed, so every later frame carried `SessionClosed: true`: the tray retired the card after each step and stored one history entry per step. Real history: the CI step after the deploy ended as "GitHub denetimi geçti" with the deploy row as its only timeline row and `steps 1`. It lasts until the service restarts, so the whole next card is affected.
+
+**Files:** `src/Talvora/WorklogFollower.cs`, `src/Talvora/TalvoraDesktopWorklogState.cs`, `tests/Talvora.Notification.Regression/Program.WL6.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** the Notification regression; `tests/ModernizationPolicyRegression.ps1` requires `GetOrCreateSession`, `_activeWorklog`, `session.Failure`, `session.Cancellation` and `SHA256.HashData` to stay in `TalvoraDesktopWorklogState.cs` (keep those names).
+
+**Do:**
+1. Red first in `Program.WL6.cs`, with the notifier's delivery observer: a session (one actor, one project) with three finished steps, two changed files and a task note runs the deploy step; a second notifier instance (the "new service") replays the pending file. Assert the replay frame continues that session: same id, `Totals.Steps` 4, `FilesChanged` 2, the task note, the timeline newest first = the deploy row followed by the three earlier rows. Then a new step from the same actor and project: its frames show its purpose, `Steps` 5, five timeline rows and `SessionClosed` false; a followed step started afterwards puts its live fact into the frame. Also assert that the notifier never holds two sessions with the same id. Tests run as the signed-in user and cannot write `C:\ProgramData\Talvora\Worklog`: give the writer side the same path parameter the replay already takes (an internal property or constructor argument whose default is `WorklogFollower.PendingDeployPath`) and use a temporary file in the test.
+2. `PendingDeploy` carries what the next frame needs to continue the session: the session key exactly as `ResolveSessionIdentity` builds it, `BeganUtc`, `Steps`, the timeline entries (at most `DesktopProgressProtocol.MaximumTimelineEntries`), the task note, the changed-file paths (at most 500) and the last build and test states. `TakePendingDeployAsync` accepts files up to 256 KB (today 16 KB); every other check stays.
+3. `ReplayPendingDeploymentAsync` restores that session under its key (never under `"deploy:" + id`) and finishes the deploy step in it, so the agent's next calls find it through `GetOrCreateSession`. If a session with that key already exists (a call arrived first), the deploy step is finished in that session instead. A pending file without a key (written by any build before D71, so also by the deploy of this card itself) is replayed into a session that is removed from `_sessions` right after its terminal frame is queued.
+4. Finding a session by id must return the one live session: keep sessions unique by id (for example a guard that never adds a second session with an existing id, or one dictionary by id kept together with `_sessions`). No `FirstOrDefault` over possible duplicates.
+
+**Don't:** change the tray, the frame protocol or `Deploy-Windows-Installer.ps1`; poll anything; persist anything except the fields in step 2.
+
+**Context7:** gerekmiyor (Talvora's own session bookkeeping and its own JSON file).
+
+**Acceptance:** red first; Notification regression and `ModernizationPolicyRegression.ps1` green; signed-in Full `Hepsi geçti.`; deploy (this deploy itself replays an old keyless file: its card must still end as "Yeni sürüm çalışıyor · {kısa sürüm}") and both installed smokes; CI; `[~] visual check pending (Claude)` (Claude reads the deploy of the next card in Çalışma günlüğü: one session, its earlier steps kept).
+
+### D72 — Followed jobs end with plain, measured results and never hide the agent's other steps (WL6 follow-up)
+
+**Why:** four defects in WL6's follower (§6.4 rules 6 and 7 and the live-line table now say what is right):
+(a) A step that ends while a followed job is still running never becomes the card's current step: `EndWorklog` sees the followed job as "still running" and publishes its running title instead, so the finished step's result, `sonuç` and code preview never reach the card (the code terminal misses every diff applied during a followed gate, or during a CI follow of up to 30 minutes), and a failure in that time stays pending and later replaces the followed job's own result. Live, audit 55: a failed `git fetch` and a `git status` during a followed gate reached only the timeline.
+(b) `FinishProcess`'s fallback writes "çıkış kodu N · {süre}" into the visible fact (AGENTS.md: no exit codes in user-facing copy); a failing smoke or metadata smoke ends with the generic title "İşlem hata ile bitti"; a passing smoke repeats its title in the fact ("Kurulu sürüm testi geçti" + "Kurulu sürüm testi geçti · …").
+(c) CI: the fact is the time Talvora followed the check (real history: "GitHub denetimi geçti · 35,1 sn" for a run of several minutes); a `Get-CiStatus.ps1` that throws (gh signed out, network) exits 1 and is reported as "GitHub denetimi başarısız"; the failure reason is the raw first output line ("CI başarısız (failure): https://…").
+(d) Gate live line: after a stage's own `PASS` the live line keeps that stage while the following quiet checks run (live: "şu an: Yükleyici çalışma testi" during the remaining PowerShell tests).
+
+**Files:** `src/Talvora/WorklogFollower.cs`, `src/Talvora/TalvoraDesktopWorklogState.cs`, `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `scripts/Get-CiStatus.ps1`, `tests/Talvora.Notification.Regression/Program.WL6.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** the Notification regression (`Program.D46.cs` runs `Get-CiStatus.ps1` arguments; `Program.WL6.cs` fakes its output "CI başarılı"); `ModernizationPolicyRegression.ps1` (names listed in D71); `QualityGateRegression.ps1` (gate lines, unchanged here).
+
+**Do:**
+1. Red first in `Program.WL6.cs`, one case each for (a)–(d), including: a source edit that ends while a followed gate runs is published with its own title, fact and code preview; a failed step during a followed job does not replace the followed job's final result; a 30-minute CI follow does not stop a later step from becoming current.
+2. (a) Followed steps are background work. In `EndWorklog`, the "another step is still running" check and the pending failure and cancellation ignore followed steps: a step that ends while only followed steps remain is published exactly like a normal end (title, fact, evidence and code preview, changes), and the session is not scheduled for closure while a followed step remains. A followed step refreshes its live line only while no newer step has started in its session; when it ends, its final result is published (it is then the newest event) and no earlier foreground failure replaces it. Mark followed operations explicitly (for example a flag on the active item set by the follow start), never by tool name.
+3. (b) `FinishProcess`: the fact is `{süre}`; the exit code goes only into the evidence `Result` in today's technical form (`Sonuç: tamamlanamadı  //  kod {n}`). Installed smoke: success title "Kurulu sürüm testi geçti", fact `{süre}`; `TALVORA MCP SMOKE RED` → title "Kurulu sürüm testi başarısız", reason "Kurulu sürüm testi bir adımda durdu; ayrıntı günlükte.", the first non-empty line after the RED line (redacted, at most 160 characters) in the evidence `Result`. Metadata smoke: "Araç tanımları denetimi geçti" / "Araç tanımları denetimi başarısız", reason "Araç tanımları denetimi bir adımda durdu; ayrıntı günlükte." (the smoke prints the same RED line in both modes).
+4. (c) `Get-CiStatus.ps1`: `gh run list` also asks `startedAt,updatedAt`; the verdict lines become `CI başarılı ({süre}): <url>` and `CI başarısız ({conclusion}, {süre}): <url>`, where `{süre}` is `updatedAt − startedAt` in §6.4 rule 3 form (`0,8 sn`, `12,4 sn`, `4 dk 12 sn`, `1 sa 3 dk`; Turkish decimal comma). Nothing else in the script changes (exit codes, the other lines, the failing-line filter). The follower takes the fact from that parenthesis. Exit 1 is a CI failure only when the output's first line starts with `CI başarısız`: reason "GitHub denetimi başarısız oldu; ayrıntılar CI günlüğünde.", the first failing line (redacted, at most 160 characters) in the evidence `Result`. Any other non-zero, non-2 result is retried at the next 30-second check; three such results in a row end the step as cancelled, title "GitHub denetiminin sonucu alınamadı", reason "GitHub'a ulaşılamadı; sonuç bir sonraki denetimde okunacak."
+5. (d) `LiveFact`: `{aşama}` is the newest `START` that has no `PASS`/`FAIL` line of its own after it; when that stage has already finished, the newest enclosing `START` that is still open (e.g. `PowerShellRegressions`) is shown; with none open, the newest `START`. Counting stays as today.
+
+**Don't:** change the tray, the frame protocol, the gate's existing lines or `Get-CiStatus.ps1`'s exit codes; add polling beyond today's 2 s log read and 30 s CI check; show any number the job did not print or Talvora did not measure.
+
+**Context7:** `gh` is not in the map: check the `startedAt` and `updatedAt` JSON fields of `gh run list` on `https://cli.github.com/manual/gh_run_list` (CONTEXT7 PROTOCOL rule 2: record the page in `vendorSources` and add `Context7 map candidate: gh <version>` to the Log entry).
+
+**Acceptance:** red first; Notification regression green; signed-in Full `Hepsi geçti.`; deploy and both installed smokes; CI; `[~] visual check pending (Claude)` (Claude edits a file during a followed gate and watches the card).
+
+### D73 — WL5's facts come only from a successful answer; gate scope labels; P-57 (WL5 follow-up)
+
+**Why:**
+(a) `DescribeWl5ResultFact` ignores the exit result, so a failed step gets a success-shaped fact: a failed `git fetch` reads "yeni commit yok", a failed `git status --short` "değişiklik yok", a failed `git add <paths>` "{n} dosya". `git fetch -q` prints nothing and still reads "yeni commit yok". `git status --short --branch` counts its `## main...origin/main` line as a changed file (live, audit 55: a clean tree gave `## main...origin/main`). The WL5 tests cover only exit 0.
+(b) `BuildTerminalEvidence` now appends every initial evidence summary to the fact, so a `dotnet_build`/`dotnet_test` step's card reads "0 hata · 2 uyarı  //  Hedef: …  //  Yapı: Release" in its `sonuç` row (`VisibleFactOnly` removes only `Komut: …`); before WL5 it read "0 hata · 2 uyarı". §6.4 rules 2 and 5.
+(c) `ScriptMode` labels a gate without `-Scope` "hızlı", but the gate's default scope is `Full` (real history: RL5's 164-second full gate read "Kalite kontrolü geçti · hızlı"); `-Scope Changed` gets no label. §6.1 now: none or `Full` → "tam", `Fast` → "hızlı", `Changed` → "değişenler".
+(d) P-57 is decided: option 1 (below).
+
+**Files:** `src/Talvora/TalvoraDesktopProgressFacts.cs`, `src/Talvora/TalvoraDesktopProgressEvidence.cs`, `src/Talvora/WorklogSubject.cs`, `src/Talvora.Tray/Worklog/WorklogPreviewScenarios.cs`, `docs/codex/reference/worklog-phosphor/src/WorklogPreviewScenarios.cs`, `docs/codex/reference/worklog-phosphor/SHA256SUMS.txt` (that file's line only), `tests/Talvora.Notification.Regression/Program.WL5.cs`, `tests/Talvora.Notification.Regression/Program.N9Subjects.cs` (gate scope rows), `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** the Notification regression (N9Subjects pins the gate titles: update exactly the rows (c) changes); `ModernizationPolicyRegression.ps1` compares `WorklogPreviewScenarios.cs` and its reference copy with `SHA256SUMS.txt`; the Control Center smoke renders the previews.
+
+**Do:**
+1. Red first in `Program.WL5.cs`: failed `git fetch`, `git status --short` and `git add a.cs` (exit 128 with real stderr such as `fatal: 'x' does not appear to be a git repository`) → no parsed fact; `git fetch -q` with exit 0 and empty output → `Sonuç: tamamlandı · {süre}` and no fact; `git status --short --branch` with `## main...origin/main` and ` M a.cs` → "1 değişmiş dosya", and with only the `##` line → "değişiklik yok"; a successful `dotnet_build` keeps exactly the fact it had before WL5 (no `Hedef:`); gate titles for no `-Scope`, `Full`, `Fast` and `Changed`.
+2. Parse facts only when the call succeeded (exit code 0, not timed out, not an error result). `fetch` with `-q` or `--quiet` → no fact. `status` counts only entry lines (skip lines that start with `## `).
+3. In `BuildTerminalEvidence` only the `Komut: …` summary is appended to the terminal summary; any other initial summary (`Hedef: … // Yapı: …` of `dotnet_build`/`dotnet_test`) is left out as before WL5.
+4. `ScriptMode`: none or `Full` → "tam", `Fast` → "hızlı", `Changed` → "değişenler".
+5. P-57, option 1: in `src/Talvora.Tray/Worklog/WorklogPreviewScenarios.cs` and in its reference copy `docs/codex/reference/worklog-phosphor/src/WorklogPreviewScenarios.cs`, replace each of the four "Git işlemi tamamlandı · pull origin/main" with "Uzak değişiklikler alındı · origin/main" and change nothing else; then replace that file's line in `docs/codex/reference/worklog-phosphor/SHA256SUMS.txt` with the normalised hash of the new content (AGENTS.md rule 5 method). The two files must stay identical.
+
+**Don't:** change any other title, the card, redaction or any other preview string; add git calls.
+
+**Context7:** gerekmiyor (parsing of Talvora's own captured outputs and its own title table).
+
+**Acceptance:** red first; Notification regression and `ModernizationPolicyRegression.ps1` green; signed-in Full `Hepsi geçti.`; deploy and both installed smokes; CI; `[~] visual check pending (Claude)`.
+
+### D74 — The release check reads GitHub's whole answer (RL5 follow-up)
+
+**Why:** `ReleaseCheckService.CheckOnceAsync` ignores every answer over 16 384 bytes. GitHub's latest-release JSON carries the release notes and every asset with its uploader: measured 2026-11-14, `cli/cli`'s latest release is 43 460 bytes (22 assets, 4 503-character notes), about 1.6 KB per asset. Talvora's release has two assets and Turkish notes with an English summary, so a longer note passes 16 KB, and then the check fails silently on every run: the new-version notice never appears.
+
+**Files:** `src/Talvora.Tray/ReleaseCheckService.cs`, `tests/Talvora.Notification.Regression/Program.RL5.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`.
+
+**Do:** red first in `Program.RL5.cs`: a fake answer of about 40 KB (a long `body`, a newer `tag_name`, an approved `html_url`) sets the new-version state; an answer over 262 144 bytes is ignored. Then raise the bound to 262 144 bytes; keep reading incrementally into a buffer of that size plus one byte and keep ignoring anything larger.
+
+**Don't:** change the address, headers, timeout, schedule, cache or texts.
+
+**Context7:** gerekmiyor (a size constant in Talvora's own reader).
+
+**Acceptance:** red first; Notification regression green; signed-in Full `Hepsi geçti.`; deploy and both installed smokes; CI.
+
+### D76 — The Control Center smoke always shows its own window
+
+**Why:** the gate's ControlCenter check (`Start-Process … --control-center-smoke -WindowStyle Hidden`) failed twice with `UI5 raw log timer must run when the panel is visible.` (tray log 2026-11-08 14:52 and 2026-11-14 01:51). Both runs logged "keyboard focus not granted to the hidden smoke window"; the 116 runs that logged "keyboard focus kept" all passed. So in those two runs the shell window was not visible when the UI5 assertions ran (the raw-log timer only runs while its view `IsVisible`). The likely cause is the hidden start-up state Windows hands to a process's first shown window; whatever the cause, the smoke must make its own window visible before it asserts anything about visibility. A flaky ControlCenter check stops agent cards that changed nothing there.
+
+**Files:** `src/Talvora.Tray/ControlCenterSmoke.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** the gate's ControlCenter check runs this smoke.
+
+**Do:**
+1. Red first: a test-only switch for the smoke, the environment variable `TALVORA_CONTROL_CENTER_SMOKE_START_HIDDEN=1`, hides the shell window right after the smoke has shown it (`window.Hide()`). Run the smoke with it: today it fails at the UI5 assertion (red).
+2. Add one visibility guard that runs after the shell window is shown and before the first assertion: when the window is not visible or is minimized, set `WindowState` to `Normal`, call `Show()` without activating it, wait for one render pass (`Dispatcher.Invoke` at `DispatcherPriority.Render` or `ContentRendered`), then write one tray log line: "Control Center smoke window made visible again." Nothing else changes: the window keeps the position the smoke gives it today.
+3. Run the smoke with the switch again: green. Run it three times without the switch, started with `Start-Process -WindowStyle Hidden` exactly as the gate does: green each time.
+
+**Don't:** change the gate script, other smoke assertions or the window position; weaken the UI5 assertion; leave the switch active outside the smoke.
+
+**Context7:** `/dotnet/docs-desktop`, query "WPF Window.Show ShowActivated false and WindowState Normal to make a hidden window visible without activation .NET 10".
+
+**Acceptance:** red first with the switch; green with the switch and for three hidden starts; signed-in Full `Hepsi geçti.`; CI.
 
 ### D48 — A vault note belongs to the vault's owner (Claude, `[C]`)
 
@@ -310,48 +407,6 @@ Step 3. Two existing tests pin texts this card changes; update them in the same 
 10. `WorklogHistoryView.xaml`, list card (audit 46 screen pass): the files part (" dosya değişti" after the bound count) collapses when `Totals.FilesChanged` is 0, the way `WorklogCardMapper.cs` leaves zero parts out of the desktop card, so a session without file changes reads "4 adım" instead of "4 adım · 0 dosya değişti".
 11. `WorklogHistoryView.xaml`, list card (audit 47, user decision 2026-11-08 "Görev notu"): when `Header.TaskNote` is set it is the card's headline (`Tv.Type.Body`, one line, ellipsis) and `Current.Title` moves under it as a muted caption "Son adım: …"; a session without a task note looks as today. Since D61 most agent sessions end with the deploy step, so three of the last five read "Kurulum devredildi · doğrulama bekleniyor" in the list.
 
-## Precise desktop worklog (user request 2026-11-13)
-
-The user: "Talvora masaüstü bildiriminin tam, doğru ve hassas açıklamalar yapmasını istiyorum. tamamen türkçe ve gerçekten o anda ne yapıldığı ve sonu gerçek verilerle realtime olmalı." The rules, the copy and the measured facts are in `docs/codex/DESIGN-WORKLOG.md` §6.4 (authoritative; Claude's). No new visual element: every change is text in the existing title, `ne` and `sonuç` rows and the timeline labels, so no PNG review beyond the usual `[~] visual check pending (Claude)`.
-
-### WL5 — Titles and results say exactly what happened, measured
-
-**Why:** §6.4 rules 2–4 and its title table. Today an inline PowerShell command shows "pwsh.exe bitti", git steps show their subcommand ("Git işlemi tamamlandı · diff"), test scripts "… hata ile bitti", and most results are a bare "Sonuç: başarılı".
-
-**Files:** `src/Talvora/WorklogSubject.cs`, `src/Talvora/WorklogCopy.cs`, `src/Talvora/TalvoraDesktopProgressFacts.cs`, `src/Talvora/TalvoraDesktopProgressEvidence.cs`, `src/Talvora/TalvoraDesktopProgressNarrative.cs`, `src/Talvora/Tools/GitTools*.cs` (only for the one follow-up `git diff --cached --name-only` after `git add -A/./-u`, run through the same runner and identity as the call), `src/Talvora.Tray/Worklog/WorklogPreviewScenarios.cs` (preview strings that show the old titles), `tests/Talvora.Notification.Regression/Program.N9Subjects.cs`, `tests/Talvora.Notification.Regression/Program.D62.cs`, new `tests/Talvora.Notification.Regression/Program.WL5.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** the Notification regression (N9Subjects and D62 pin today's titles: update exactly the rows §6.4 replaces), the Control Center smoke (worklog previews).
-
-**Do:**
-1. Red first, one case per §6.4 title-table row, built from real recorded outputs (copy short real output samples into the test: a `git pull` fast-forward summary, `Already up to date.`, a `git fetch` ref update line, a `git commit` header + summary line, a `git push` ref update line, `git status --short` lines, a `dotnet test` summary, a test script ending in `…_GREEN`, a thrown PowerShell error): title, `sonuç` and timeline label must equal the table exactly.
-2. Implement the table: an inline shell command is a command whose text names no `*.ps1` and no program file (today it falls back to the executable name); a test script is a `*.ps1` whose path contains `tests/` or `tests\`; a .NET test project is a `dotnet run/test` target whose project name ends in `.Regression` or `.Tests`. Executable names and subcommands leave titles and labels and go into the step's evidence `Summary` (the "Teknik kanıt" side, already used by `dotnet_build` as `Hedef: … // Yapı: …`): `Komut: {program dosyası}` plus, for git and package managers, the subcommand (`Komut: git diff`, `Komut: pwsh.exe`, `Komut: npm run build`), appended with `  //  ` when a Summary exists. Never the full command line, flags or argument values (they can carry secrets).
-3. Replace both bare `"Sonuç: başarılı"` lines in `TalvoraDesktopProgressEvidence.cs` with `Sonuç: tamamlandı · {süre}` unless a parsed fact exists, in which case `Sonuç: {fact}`. Duration format exactly as §6.4 rule 3 (Turkish decimal comma, `dk`, `sa`), one shared formatter.
-4. Parsing is best effort and never changes the call's result: an unparseable output falls back to `{süre}`; never show a number that was not printed or counted.
-
-**Don't:** change the visual card, the `ne`/`nerede`/`fark` rows, redaction, or any title §6.4 does not list; never add a git call other than the one in Files.
-
-**Context7:** gerekmiyor (parsing of Talvora's own captured outputs; git's documented output lines are taken from real samples in the test).
-
-**Acceptance:** red first; Notification regression green; signed-in Full `Hepsi geçti.`; deploy and both installed smokes; CI; `[~] visual check pending (Claude)` (Claude reads a real session in Çalışma günlüğü).
-
-### WL6 — Background jobs, deploys and CI are followed to their real end, with a live line
-
-**Why:** §6.4 background, deploy and CI rows and the live-line table. Today `talvora_user_process_start` ends the step as "… arka planda başladı", the deploy ends as "Kurulum devredildi · doğrulama bekleniyor" and a running CI as "GitHub denetimi sürüyor"; the real results never reach the card.
-
-**Files:** `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `src/Talvora/TalvoraDesktopWorklogState.cs`, `src/Talvora/WorklogSubject.cs`, new `src/Talvora/WorklogFollower.cs`, `src/Talvora/Program.cs` (the start-up hook only), `scripts/Invoke-QualityGate.ps1` (the `START` lines only), `tests/QualityGateRegression.ps1`, `tests/Talvora.Notification.Regression/` (new `Program.WL6.cs`), `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `QualityGateRegression.ps1` and `QualityGateChangedRegression.ps1` (gate output), the Notification regression, the installed smoke (desktop progress parts).
-
-**Do:**
-1. Gate output (red first in `QualityGateRegression.ps1`), additions only: `Invoke-QualityCheck` prints `START {Name}` before running a check unless `-QuietSuccess`; `Invoke-ParallelQualityChecks` prints `START ParallelPhase {n}` (n = `$Checks.Count`) before it starts the jobs (they run together and their `PASS` lines come only when the phase ends); the serial regression loop prints `START PowerShellRegressions` once before its first test. No total is printed up front (the gate only knows it at the end). Existing `PASS`/`FAIL`/`SKIP`/summary lines stay byte for byte.
-2. A test asserts that every name the gate can print in `START`/`PASS`/`FAIL` has a Turkish label in the §6.4 stage-name table: the literal check names, `ParallelPhase`, `PowerShellRegressions`, the service-dependent names built from `$serviceRegressions` (`HealthHandle`, `NativeInstallerRuntime`) and the pattern `PS:{Ad}` (a quiet PowerShell test that failed). Keep the table as a C# dictionary in `WorklogFollower.cs`; the test reads the gate script.
-3. Follower: when a background start returns a process id and the command redirects to a log file inside the workspace (`*> <path>` or `> <path>`), keep that step running and follow it: every 2 s read at most the last 64 KB of the log (shared read, never lock or write it), update the running fact with the §6.4 live line, and when the process exits, finish the step with the §6.4 final result and the measured duration. No log path → follow only the process exit (`{süre}` and exit result). Stop following after 2 hours (end the step as `İzleme süresi doldu` with the elapsed time) and when the service stops.
-4. Deploy: the installer stops the service that runs the notifier, so the old process cannot see the result and the worklog state is in memory only. When `Deploy-Windows-Installer.ps1` returns its JSON with `launched: true`, keep the step running and write `C:\ProgramData\Talvora\Worklog\pending-deploy.json` (the folder inherits the ACL of `C:\ProgramData\Talvora`, which the installer already protects, so no ACL code; written with `AtomicFile`) holding the step's session id, operation id, the JSON's `sourceCommit` and `startedAtUtc`. At start-up the new service reads and deletes that file once (ignore it when older than 30 minutes) and finishes the same step with its own `sourceCommit`: equal → `Yeni sürüm çalışıyor · {kısa sürüm}` with the measured time since `startedAtUtc`; different (the installer rolled back) → failed, reason `Yeni sürüm kurulamadı; önceki sürüm çalışıyor.` No polling. The frame reuses the persisted session and operation ids; if the tray no longer holds that session it shows the frame as a new card (its behaviour for an unknown session), so the tray does not change. If no new service starts within 10 minutes, the tray's existing stale-card rule ends the card as today. The start-up hook goes into `src/Talvora/Program.cs` next to the other singletons (add it to Files).
-5. CI: when `Get-CiStatus.ps1` exits 2, keep the step running and re-run it with `-TimeoutMinutes 0` as the signed-in user every 30 s, at most 30 minutes, then finish per §6.4.
-6. A followed step counts as active work: the card never auto-dismisses while one is running (AGENTS.md desktop rules); the session stays open until the last followed step ends.
-
-**Don't:** run anything the agent did not start except the read-only log reads, `/healthz` and `Get-CiStatus.ps1`; show a fraction or stage the log did not print; change the visual card.
-
-**Context7:** `/dotnet/docs`, query "FileStream FileShare.ReadWrite read the end of a file another process is still writing .NET 10".
-
-**Acceptance:** red first (gate lines, stage-name coverage, a follower test against a fake log that grows and a fake process that exits, a deploy test that finishes from persisted state); signed-in Full `Hepsi geçti.` (the gate prints the new lines); deploy (the new service finishes its own deploy step) and both installed smokes; CI; `[~] visual check pending (Claude)` (Claude watches a real gate run on the card).
-
 ## Releases and the public page (user request 2026-11-08)
 
 User: "github'da bulunan talvora mcp readme'si yani github arayüzünü tamamen insan yazmış gibi en başından ele alarak tamamen en başından tekrar tasarla … ekran görüntülerini yenile, ayrıca artık stabil release'ler de oluşturmaya başlayalım. ne zaman release güncellemesi yapılacağına tamamen sen karar vereceksin. proje 0.0.x.x şeklinde olmalı ve windows kullanıcılarının rahatlıkla kurabileceği şekilde olmalı." User choices the same day: README in Turkish with a short English summary; the installer stays unsigned and the README explains the SmartScreen step; the installer installs PowerShell 7 itself; the Control Center shows a quiet new-version link once a day. Claude wrote the README (`docs/codex/reference/d57/README.md.txt`) and took the screenshots (`docs/media/kontrol-merkezi-gece.png`, `kontrol-merkezi-gunduz.png`, `calisma-gunlugu.png`, `kod-karti.png`). Releases: only Claude creates the `v0.0.x.x` tag and writes `docs/releases/<version>.md` (AGENTS.md rule 10b); the first one, 0.0.1.0, follows RL5 and the open D-cards.
@@ -398,20 +453,3 @@ User: "github'da bulunan talvora mcp readme'si yani github arayüzünü tamamen 
 **Context7:** `/websites/github_en_actions` (map row added with this card), queries "workflow push tags filter" and "workflow_dispatch inputs boolean". Vendor sources: `https://docs.github.com/actions/writing-workflows/workflow-syntax-for-github-actions`, `https://cli.github.com/manual/gh_release_create`.
 
 **Acceptance:** red first; Changed and Full `Hepsi geçti.`; CI; the dry run green. The first real release is Claude's.
-
-### RL5 — The Control Center says quietly when a new version is out
-
-**Why:** user decision 2026-11-08 ("Evet, sessiz bir bildirim"): once a day, a link, nothing installed by itself.
-
-**Files:** `src/Talvora.Tray/ReleaseCheckService.cs` (new), `src/Talvora.Tray/Views/SettingsView.xaml` and `.xaml.cs`, `src/Talvora.Tray/ViewModels/SettingsViewModel.cs`, `src/Talvora.Tray/Controls/NavRailItem.cs` and `.xaml`, `src/Talvora.Tray/Views/ShellWindow.xaml` (`NavSettings`), `src/Talvora.Tray/ViewModels/ShellViewModel.cs`, `src/Talvora.Tray/ControlCenterSmoke.cs` (test hook), `tests/Talvora.Notification.Regression/Program.RL5.cs` (new), `docs/codex/STATUS.md`, `.context7/verification.json`. After RL1.
-
-**Do:**
-1. Red first: `Program.RL5.cs` with a fake HTTP handler: a newer `tag_name` sets the "new version" state; the same, an older or an invalid tag does not; an `html_url` outside `https://github.com/bingoweb/Talvora-MCP/releases/` is ignored; a `geliştirme sürümü` build sends no request at all.
-2. `ReleaseCheckService`: when the tray's own version (RL1) is a release, 2 minutes after the tray starts and then every 24 hours: `GET https://api.github.com/repos/bingoweb/Talvora-MCP/releases/latest` with `User-Agent: Talvora/<version>`, `Accept: application/vnd.github+json`, 15 s timeout, no token. `tag_name` must match `^v0\.0\.\d+\.\d+$`; compare as `System.Version`; when newer, keep `{version, htmlUrl, checkedAtUtc}` in `%LOCALAPPDATA%\Talvora\ControlCenter\release-check.json` (written with `JsonFileStore.WriteAsync`, read back when the tray starts). Any failure is silent until the next 24 h (no event, no toast). A development build writes "Sürüm denetimi geliştirme sürümünde kapalı." once to the tray log and never calls GitHub.
-3. Ayarlar ve kurulum → Hakkında: under the version line, when a newer version is known: "Yeni sürüm hazır: <version>" (`Tv.Type.Body`) and a link button "Sürüm notlarını aç" that opens `htmlUrl` in the default browser. The sidebar item shows a dot while a newer version is known: `NavRailItem` gets a `HasDot` dependency property (bool, default false); its template adds, in the icon's grid column, `<Ellipse x:Name="Dot" Width="6" Height="6" Fill="{DynamicResource Tv.Accent}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,14,-3,0" Visibility="Collapsed" IsHitTestVisible="False" />` and a template trigger `HasDot` = `True` → `Dot` visible, so the dot sits on the icon whether the rail is expanded or not. `ShellViewModel` exposes `IsNewVersionKnown` and `NewVersionHelpText` ("Yeni sürüm hazır" or empty) from `ReleaseCheckService`; `ShellWindow.xaml` binds `NavSettings`'s `HasDot` and `AutomationProperties.HelpText` to them. No toast, no tray balloon; nothing downloads or installs.
-
-**Don't:** download or install anything, contact any other address, add a setting.
-
-**Context7:** `/dotnet/docs`, query "HttpClient Timeout with DefaultRequestHeaders UserAgent and Accept for one GET request in .NET 10". Vendor source: `https://docs.github.com/rest/releases/releases#get-the-latest-release`.
-
-**Acceptance:** red first; Changed and Full `Hepsi geçti.`; deploy: the tray log holds the development-build line and no request leaves; both-theme PNGs of Hakkında and the rail with a forced "new version" state: in `--control-center-smoke` only, `TALVORA_CONTROL_CENTER_SMOKE_NEW_VERSION` (e.g. `0.0.9.9`) forces that state and the smoke saves the variants `ui7-about-new-version-initial` and `-alternate` attached for Claude's visual check; the installed smokes; CI.

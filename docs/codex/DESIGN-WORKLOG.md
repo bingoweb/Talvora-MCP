@@ -252,7 +252,7 @@ The user's complaint, verbatim in spirit: *"İşlem yürütülüyor… hangi iş
 
 | Step | Title (running → succeeded) | Subject source |
 |---|---|---|
-| quality gate (`Invoke-QualityGate.ps1`, any runner) | Kalite kontrolü çalışıyor · tam → Kalite kontrolü geçti · tam | script name; `-Scope Full` → "tam", Fast/none → "hızlı" |
+| quality gate (`Invoke-QualityGate.ps1`, any runner) | Kalite kontrolü çalışıyor · tam → Kalite kontrolü geçti · tam | script name; `-Scope Full` or no `-Scope` → "tam" (the gate's default scope is `Full`), `-Scope Fast` → "hızlı", `-Scope Changed` → "değişenler" (audit 55: a full gate started without `-Scope` read "hızlı") |
 | installer build / deploy / Dependabot / CI / context scripts | Kurulum paketi hazırlanıyor, Yeni sürüm kuruluyor, Paket güncellemesi hazırlanıyor, GitHub denetimi okunuyor, Görev bağlamı hazırlanıyor (and their done/failed forms) | script name (`WorklogSubject.KnownScripts`) |
 | any other script | `Build-Foo.ps1 çalışıyor → bitti → hata ile bitti` | script file name |
 | `dotnet build/test/restore/publish` (tool or runner) | Derleniyor · Talvora.slnx → Derleme başarılı · Talvora.slnx | target/project file name |
@@ -287,7 +287,7 @@ Under the title the card answers the user's four questions in fixed rows (labels
 | `ne` | optional `purpose` argument of `talvora_apply_patch` — the agent's own words, one line, ≤ 140 chars, redacted | the step has a purpose |
 | `nerede` | per committed file: file name › declarations its hunks touched (`DeclarationLine.PlaceName` of the hunk-header context: type, function/method, PowerShell function, Markdown heading). Max 3 rows + "+N dosya daha" | succeeded source edit with real receipt counts |
 | `fark` | `+added −removed · N dosya` summed from the engine receipts | same as `nerede` |
-| `sonuç` | the existing real fact line (build/test/git/gate/service/package/Remotion) | no `nerede` rows |
+| `sonuç` | the existing real fact line (build/test/git/gate/service/package/Remotion). While the step is running or waiting, the same row is labelled `durum`, because its value is then the live state (WL6's live line, Codex progress, "Yanıt bekleniyor"); D75, Claude, `ResultLabel` in `WorklogCardView.xaml` | no `nerede` rows |
 
 Agent-written text (`görev`, `ne`) is labelled as such by its position, is never invented by Talvora, and is shown verbatim after redaction. If an agent does not send it, the rows are simply absent. AGENTS.md now requires both (CONTINUE PROTOCOL step 5 and the mechanics table).
 
@@ -313,6 +313,10 @@ Measured on the 73 stored sessions before this section: 654 steps, the most freq
 2. **No command names on the main line.** `pwsh.exe`, `git diff`, `dotnet`, `npm` and flags appear only under "Teknik kanıt". Object names stay: files, projects, remotes/branches, services, hosts, test scripts.
 3. **Every finished step has a measured result.** Never a bare "Sonuç: başarılı": at least `Sonuç: tamamlandı · {süre}`; with parsed facts, those facts (table below). Durations in Turkish form: `0,8 sn`, `12,4 sn`, `4 dk 12 sn`, `1 sa 3 dk`.
 4. **Nothing estimated.** A count, fraction or stage is shown only when the job itself printed it; otherwise only the elapsed time.
+5. **Facts only from a successful, complete answer** (audit 55, D73). A parsed fact (`yeni commit yok`, `değişiklik yok`, `{n} dosya`, counts) is shown only when the call succeeded; a failed step shows its reason and no parsed fact. Quiet output (`git fetch -q`) proves nothing, so it gets no fact. The visible fact never carries technical text: only the `Komut: …` part is appended to the evidence summary, and `VisibleFactOnly` removes it.
+6. **Followed jobs are background work** (audit 55, D72). A step that ends while a followed job is still running is shown like any finished step (title, `sonuç`, `nerede`/`fark`, code terminal); the followed job never takes the card back from a newer step and never delays or replaces another step's result. Its live line refreshes only while no newer step has started; its own final result is shown when it ends. The card stays open while any followed job runs.
+7. **Exit codes never reach the main line** (AGENTS.md desktop rules). A followed job's fact is `{süre}`; the exit code stays in the technical result (`Sonuç: tamamlanamadı  //  kod {n}`).
+8. **A deploy continues the same card** (audit 55, D71). The new service restores the agent's session from `pending-deploy.json` (its key, start, steps, timeline, task note, changed files) and finishes the deploy step in it; the agent's next calls continue that session. Two sessions with the same id never exist.
 
 **Titles and measured facts (replaces the matching rows of §6 and §6.1):**
 
@@ -332,17 +336,17 @@ Measured on the 73 stored sessions before this section: 654 steps, the most freq
 | other git subcommands | Depo işlemi yapılıyor | Depo işlemi tamamlandı | Depo işlemi tamamlanamadı | `{süre}`; subcommand under "Teknik kanıt" |
 | background start (`talvora_user_process_start`, `talvora_job_start`) | the started script's own running title (`KnownScripts` or the rows above) | → stays running until the process ends (WL6) | | live line (below) |
 | deploy (`Deploy-Windows-Installer.ps1`) | Yeni sürüm kuruluyor | Yeni sürüm çalışıyor · {kısa sürüm} | Yeni sürüm kurulamadı | WL6: the new service finishes the step at start-up from `pending-deploy.json` → `{süre}` since the deploy started; its commit differs (rollback) → failed, reason "Yeni sürüm kurulamadı; önceki sürüm çalışıyor." |
-| CI check that answered "still running" (`Get-CiStatus.ps1` exit 2) | GitHub denetimi sürüyor | GitHub denetimi geçti | GitHub denetimi başarısız | WL6: followed until the run completes (at most 30 minutes) → `{süre}` of the run; after 30 minutes the step ends as `GitHub denetimi henüz bitmemişti` (cancelled state) |
+| CI check that answered "still running" (`Get-CiStatus.ps1` exit 2) | GitHub denetimi sürüyor | GitHub denetimi geçti | GitHub denetimi başarısız | WL6: followed until the run completes (at most 30 minutes) → `{süre}` of the run itself, read from `Get-CiStatus.ps1`'s verdict line (`CI başarılı ({süre}): …`, D72), never the time Talvora followed it; failed → reason "GitHub denetimi başarısız oldu; ayrıntılar CI günlüğünde.", the first failing line in the technical result; a check that could not run (exit 1 without `CI başarısız`, three times in a row) → cancelled "GitHub denetiminin sonucu alınamadı" with reason "GitHub'a ulaşılamadı; sonuç bir sonraki denetimde okunacak."; after 30 minutes the step ends as `GitHub denetimi henüz bitmemişti` (cancelled state) |
 
 **Live line of a followed background job** (shown as the running fact, refreshed at most every 2 s, from the job's own log, read-only and bounded to its last 64 KB):
 
 | Job | Live line | Final result |
 |---|---|---|
-| quality gate | `şu an: {aşama} · {g} aşama geçti · {h} hata · {süre}`; during the parallel phase `şu an: Paralel testler ({n} kontrol birlikte)` (from the gate's `START` lines, WL6; no fraction: the gate knows its total only at the end) | `{n} kontrol · {m} hata · {süre}` from `N kontrol, M hata`; failed: `Kontrol başarısız: {aşama}` with the Turkish stage name |
-| installed smoke | `{süre}` | `TALVORA MCP SMOKE GREEN` → `Kurulu sürüm testi geçti · {süre}`; `… RED` → the named step |
-| metadata smoke | `{süre}` | `METADATA POLICY LIVE GREEN` → `Araç tanımları denetimi geçti · {süre}` |
+| quality gate | `şu an: {aşama} · {g} aşama geçti · {h} hata · {süre}`; during the parallel phase `şu an: Paralel testler ({n} kontrol birlikte)` (from the gate's `START` lines, WL6; no fraction: the gate knows its total only at the end). `{aşama}` is the newest `START` without its own `PASS`/`FAIL` line yet; once that stage has finished, the enclosing open one (`PowerShellRegressions`) is shown (D72) | `{n} kontrol · {m} hata · {süre}` from `N kontrol, M hata`; failed: `Kontrol başarısız: {aşama}` with the Turkish stage name |
+| installed smoke | `{süre}` | `TALVORA MCP SMOKE GREEN` → title `Kurulu sürüm testi geçti`, fact `{süre}`; `TALVORA MCP SMOKE RED` → title `Kurulu sürüm testi başarısız`, reason "Kurulu sürüm testi bir adımda durdu; ayrıntı günlükte.", the first line after the RED line (redacted, clipped) in the technical result (D72) |
+| metadata smoke | `{süre}` | `METADATA POLICY LIVE GREEN` → title `Araç tanımları denetimi geçti`, fact `{süre}`; RED → title `Araç tanımları denetimi başarısız`, reason "Araç tanımları denetimi bir adımda durdu; ayrıntı günlükte." (D72) |
 | installer build | `{süre}` | the final JSON → `{boyut MB} · SHA-256 {ilk 8}` |
-| anything else | `{süre}` | exit result + `{süre}` |
+| anything else | `{süre}` | the step's own succeeded/failed title, fact `{süre}`; the exit code only in the technical result (D72) |
 
 **Turkish stage names of the quality gate** (the only place these English check names become visible; a test pins that every check name in `Invoke-QualityGate.ps1` has a row):
 

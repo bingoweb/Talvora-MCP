@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-11-13-54` = the audit 54 commit. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-11-14-55` = the audit 55 commit. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.404 exact pin (SDK3, 2026-11-13; runtime 10.0.15) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -33,10 +33,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user, together with D66 (postponed by the user 2026-11-13; before 0.0.1.0)
-- [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
-- [~] WL5 — Measured Turkish titles/results installed at 3ce8e66; metadata and full MCP smokes GREEN; CI 43510238063 GREEN. P-57 and Claude visual check pending
-- [~] WL6 — Installed 1901c01, metadata/full MCP smokes GREEN, GitHub CI 43515151788 GREEN; Claude visual review pending
-- [~] RL5 — Quiet release checker built; signed-in Changed 28/0 and Full 72/0 GREEN; two-theme About+rail PNGs captured; installed smokes/CI and Claude visual review pending
+- [~] RL4 — Tag-triggered release workflow built and tested; live pending (Claude): the workflow_dispatch dry run 43524562927 that Claude started at audit 55 (no real release)
+- [ ] D71 — A deploy continues the agent's card instead of splitting it (audit 55; WL6 follow-up)
+- [ ] D72 — Followed jobs end with plain, measured results and never hide the agent's other steps (audit 55; WL6 follow-up)
+- [ ] D73 — WL5's facts only from a successful answer; gate scope labels; P-57 (audit 55; WL5 follow-up)
+- [ ] D74 — The release check reads GitHub's whole answer (audit 55; RL5 follow-up)
+- [ ] D76 — The Control Center smoke always shows its own window (audit 55)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
 - [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
 - [ ] [C] D47 — Plain Turkish for the remaining Control Center texts (Claude since audit 46; setup texts per the user's decision; table and test in docs/codex/reference/d47)
@@ -44,7 +46,6 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## User queue
 
-- [ ] U17 — Yalnızca gerekirse: bir sonraki ChatGPT oturumunda masaüstü kartında «ne» satırı hiç görünmezse, ChatGPT Talvora'nın araç listesini 13 Kasım öncesinden tutuyordur. ChatGPT'deki Talvora bağlayıcısının ayarlarından araç listesini yenileyin; yenileme seçeneği yoksa bağlayıcıyı bir kez kaldırıp yeniden ekleyin.
 - [ ] U16 — İsteğe bağlı: makine (sistem) PATH'inde aynı klasörü gösteren ikinci satırlar var: `C:\Python314\Scripts`, `C:\Python314`, `C:\Program Files\dotnet\`, `C:\Program Files\PowerShell\7\` ve `C:\Program Files\nodejs\`. Zararsızlar; isterseniz U14'teki gibi Sistem değişkenleri → Path → Düzenle'den bu beşini silebilirsiniz.
 
 ## Open questions
@@ -56,6 +57,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-14 — Claude, audit 55 (deep; tag `audit/2026-11-14-55`): range `audit/2026-11-13-54..87628f8` — WL5, WL6, RL5 (ChatGPT). Rules: one Turkish commit per card with its `Card:`, files within the cards, self-review blocks and task notes present; WL6 and RL5 asked mapped Context7 ids, WL5's noLookup matches its card. Checks: signed-in Full 72/0 `Hepsi geçti.` on 87628f8; installed 87628f8 metadata, surface (Q7 dev 198 153 B, admin 70 098 B) and full smokes green; CI green for all three. Real history and a live followed Full gate: titles, `ne`, the live line ("şu an: Paralel testler (58 kontrol birlikte) · 6 aşama geçti · 0 hata"), the installer and deploy results and a failed gate's "Kontrol başarısız: Kontrol Merkezi testi" all reach the card. Findings: D71 (the deploy replay keeps a second session with the agent's id; every later frame came from it and was marked closed: history 2026-11-13 22:20–22:26), D72 (a followed job hides finished steps and their code preview; exit codes on the main line; smoke titles; CI duration and check errors; stale live stage), D73 (facts on failed git steps, the `dotnet_build` fact carries `Hedef:`, a gate without `-Scope` reads "hızlı"; P-57 option 1), D74 (RL5 ignores answers over 16 KB; cli/cli's latest release is 43 KB), D76 (the smoke's UI5 check fails when its window stays hidden: 2 of 118 runs, one in this audit). Claude's [C] D75 fixes RL5's clipped rail dot (Claude's own card values) and labels a running step's fact row `durum`. Specs: DESIGN-WORKLOG §6.1 gate labels, §6.2 `durum`, §6.4 rules 5–8 and tables; DESIGN-SANTRAL rail dot. Claude started the RL4 dry run 43524562927. U17 closed: ChatGPT sends `purpose` (WL6 and RL5 sessions). Release: none (0.0.1.0 waits for D47–D49, WL3, the RL3 live check, the RL4 dry run and README screenshots). Asked the user nothing: every finding had one correct fix (D72's background rule follows the user's "the code terminal must never break").
+- 2026-11-14 — [C] D75, executor Claude (audit 55): RL5's 6 px new-version dot sat in the 24 px icon column with a −3 px margin; the collapsed rail leaves that grid narrower than 24 px, so it clipped the dot to a 2 px sliver in both themes (RL5's own captures). The dot now lives in the item template's own grid (`HorizontalAlignment="Left"`, `Margin="31,14,0,0"`); the Control Center smoke asserts that no element between the dot and its rail item clips it (red first: "clipped by Grid"; green after) and brings the release-notes link into its capture. The worklog card's fact row reads `durum` while a step runs or waits and `sonuç` once it ends (`ResultLabel`; N5 reference copy and SHA256SUMS updated; previews rendered). Signed-in Full 72/0 `Hepsi geçti.`; Context7 `/dotnet/docs-desktop` (a Grid clips children outside its bounds; only Canvas lets them draw outside).
+  Self-review — Cosmetics: the dot is whole at the gear's top-right in both themes; `durum` and `sonuç` fit the 58 px label column (running, waiting and finished previews checked).
+  Self-review — Usability: the dot stays on the icon with the rail collapsed or expanded; screen readers still hear "Yeni sürüm hazır".
+  Self-review — Turkish: `durum` lower case like the other row labels; no other text changed.
+  Self-review — Correctness: smoke red then green; ModernizationPolicyRegression green with the new reference hash; no logic changed.
 
 - 2026-11-14 — RL5, executor ChatGPT: quiet 2-minute/24-hour no-token GitHub latest-release check for release builds only; validated v0.0.n.n + approved URL cached locally, no download/install/toast. RED absent service then RL5_RELEASE_CHECK_GREEN (HTTP fake, cache, invalid tags, unsafe URLs and dev zero network); Changed 28/0 and Full 72/0 Hepsi geçti.; Context7 /dotnet/docs (HttpClient), Gitea #9 comment 253. Real Control Center smoke GREEN, development log suppression verified; screenshots artifacts/rl5-control-center-ui7-about-new-version-{initial,alternate}.png. Clean-HEAD deploy, installed smokes, CI and Claude visual check pending.
   Self-review — Cosmetics: only the prescribed 6px accent dot, About Body text and release link; both themes captured, no card or terminal changes.
