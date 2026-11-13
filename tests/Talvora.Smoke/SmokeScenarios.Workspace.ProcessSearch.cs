@@ -22,6 +22,7 @@ await EnsureSuccess(byName["talvora_write_text"], new()
             ["executable"] = "cmd.exe",
             ["arguments"] = new[] { "/d", "/c", "echo", "talvora-smoke" },
             ["timeoutSeconds"] = 30,
+            ["purpose"] = "Smoke testinde komut aracının Türkçe amaç açıklamasını doğruluyorum.",
         });
 
         // D51: C:\ProgramData\Talvora is closed to the signed-in user; the smoke's own workspace (Public Documents)

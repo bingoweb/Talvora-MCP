@@ -29,6 +29,12 @@ internal static class McpToolMetadataWirePolicy
                 tool.InputSchema = DescribedInputSchemas.GetOrAdd(
                     tool.Name, _ => WithParameterDescriptions(source, guide.Parameters));
             }
+            if (!readOnly)
+            {
+                var source = tool.InputSchema;
+                tool.InputSchema = PurposeInputSchemas.GetOrAdd(
+                    tool.Name, _ => WithPurpose(source));
+            }
 
             tool.Annotations = new ToolAnnotations
             {
@@ -141,6 +147,30 @@ internal static class McpToolMetadataWirePolicy
 
     private static readonly ConcurrentDictionary<string, JsonElement> DescribedInputSchemas =
         new(StringComparer.Ordinal);
+
+    internal const int MaximumPurposeCharacters = 140;
+    internal const string PurposeDescription =
+        "Bu adımın ne yaptığını ve neden yapıldığını anlatan tek satırlık Türkçe açıklama " +
+        "(en çok 140 karakter); masaüstü çalışma günlüğünde 'ne' satırı olarak görünür.";
+
+    private static readonly ConcurrentDictionary<string, JsonElement> PurposeInputSchemas =
+        new(StringComparer.Ordinal);
+
+    internal static JsonElement WithPurpose(JsonElement schema)
+    {
+        var node = JsonNode.Parse(schema.GetRawText());
+        if (node?["properties"] is not JsonObject properties ||
+            properties.ContainsKey("purpose"))
+            return schema;
+
+        properties["purpose"] = new JsonObject
+        {
+            ["type"] = "string",
+            ["description"] = PurposeDescription,
+            ["maxLength"] = MaximumPurposeCharacters,
+        };
+        return JsonSerializer.SerializeToElement(node);
+    }
 
     // H1: parameters without a description get the guide's line; an existing [Description] always wins.
     private static JsonElement WithParameterDescriptions(

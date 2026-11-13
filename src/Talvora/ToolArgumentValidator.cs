@@ -7,6 +7,7 @@ namespace Talvora;
 internal static class ToolArgumentValidator
 {
     private const int MaximumListedProperties = 12;
+    private const int MaximumPurposeCharacters = 140;
 
     internal static CallToolResult? TryCreateError(
         RequestContext<CallToolRequestParams> request)
@@ -19,7 +20,8 @@ internal static class ToolArgumentValidator
             return null; // Unknown tool: keep the SDK's own answer.
         }
 
-        var message = Validate(tool.ProtocolTool.InputSchema, request.Params!.Arguments);
+        var message = Validate(tool.ProtocolTool.InputSchema, request.Params!.Arguments,
+            allowPurpose: tool.ProtocolTool.Annotations?.ReadOnlyHint != true);
         return message is null
             ? null
             : new CallToolResult
@@ -31,7 +33,8 @@ internal static class ToolArgumentValidator
 
     internal static string? Validate(
         JsonElement schema,
-        IDictionary<string, JsonElement>? arguments)
+        IDictionary<string, JsonElement>? arguments,
+        bool allowPurpose = false)
     {
         var args = arguments ?? new Dictionary<string, JsonElement>();
         var properties = schema.ValueKind == JsonValueKind.Object &&
@@ -54,13 +57,23 @@ internal static class ToolArgumentValidator
         var missing = required.Where(n => !args.ContainsKey(n)).ToArray();
         var unknown = allowsAdditional
             ? []
-            : args.Keys.Where(k => !properties.ContainsKey(k)).ToArray();
+            : args.Keys.Where(k => !properties.ContainsKey(k) &&
+                !(allowPurpose && k == "purpose")).ToArray();
         var wrongType = args
             .Where(a => properties.TryGetValue(a.Key, out var ps) && !TypeMatches(ps, a.Value))
             .Select(a => $"'{a.Key}' (expected {TypeLabel(properties[a.Key])})")
             .ToArray();
+        var purposeProvided = args.TryGetValue("purpose", out var purpose);
+        var purposeWithoutSchema = allowPurpose && !properties.ContainsKey("purpose");
+        var purposeWrongType = purposeWithoutSchema && purposeProvided &&
+            purpose.ValueKind != JsonValueKind.String;
+        var purposeTooLong = (allowPurpose || properties.ContainsKey("purpose")) &&
+            purposeProvided &&
+            purpose.ValueKind == JsonValueKind.String &&
+            purpose.GetString()!.Length > MaximumPurposeCharacters;
 
-        if (missing.Length == 0 && unknown.Length == 0 && wrongType.Length == 0)
+        if (missing.Length == 0 && unknown.Length == 0 && wrongType.Length == 0 &&
+            !purposeWrongType && !purposeTooLong)
         {
             return null;
         }
@@ -69,6 +82,8 @@ internal static class ToolArgumentValidator
         if (missing.Length > 0) parts.Add("missing " + string.Join(", ", missing.Select(m => $"'{m}'")));
         if (unknown.Length > 0) parts.Add("unknown " + string.Join(", ", unknown.Select(u => $"'{u}'")));
         if (wrongType.Length > 0) parts.Add("wrong type " + string.Join(", ", wrongType));
+        if (purposeWrongType) parts.Add("wrong type 'purpose' (expected string)");
+        if (purposeTooLong) parts.Add("purpose en çok 140 karakter olabilir");
 
         var expected = properties.Keys
             .OrderBy(k => Array.IndexOf(required, k) is var i && i >= 0 ? i : int.MaxValue)

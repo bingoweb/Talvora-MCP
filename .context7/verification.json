@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-13T19:44:56.540Z",
-  "scope": "D69: parse Git push destination refspecs before comparing changed paths",
-  "libraries": [],
-  "noLookup": "D69: only local string parsing of Git's documented +src:dst refspec form changes; no library API behavior changed",
-  "vendorSources": []
+  "verifiedAtUtc": "2026-11-13T20:05:43.774Z",
+  "scope": "WL4: optional Turkish purpose metadata on writable MCP calls",
+  "libraries": [
+    {
+      "libraryId": "/modelcontextprotocol/csharp-sdk",
+      "verified": "2026-11-13 WL4: MCP tool arguments are untrusted and not validated against InputSchema by the SDK; binding of unmatched parameters is confirmed by installed smoke (query: \"ModelContextProtocol C# SDK McpServerTool binding of call arguments that have no matching method parameter\")"
+    }
+  ],
+  "vendorSources": ["https://github.com/modelcontextprotocol/csharp-sdk/blob/main/src/ModelContextProtocol.Core/Server/McpServerTool.cs"]
 }

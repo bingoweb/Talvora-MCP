@@ -20,6 +20,11 @@ internal static partial class Program
         TrayLog.PathOverrideForTests = Path.Combine(isolatedRoot, "tray.log");
         WorklogHistoryStore.DefaultPathOverrideForTests = Path.Combine(isolatedRoot, "worklog-sessions.jsonl");
 
+        if (Environment.GetCommandLineArgs().Contains("--wl4-only", StringComparer.Ordinal))
+        {
+            AssertWl4PurposeMetadata();
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--ui7-only", StringComparer.Ordinal))
         {
             AssertUi7TrayAndAbout();
@@ -96,6 +101,7 @@ internal static partial class Program
         await AssertCtx1Context7Async();
         await AssertCtx3Context7KeyAsync();
         await AssertTw2CallTraceAsync();
+        AssertWl4PurposeMetadata();
         await AssertD51ReportedExitCodesAsync();
         AssertD53DescriptionsAsWholeSentences();
         AssertD34TunnelHealthFile();
