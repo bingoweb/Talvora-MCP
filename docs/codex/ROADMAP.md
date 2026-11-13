@@ -30,7 +30,7 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-14 (55, deep) · range `audit/2026-11-13-54..87628f8` (WL5, WL6, RL5) · D71–D74 and D76 for the agent; Claude shipped `[C]` D75
+### Audit 2026-11-14 (55, deep) · range `audit/2026-11-13-54..87628f8` (WL5, WL6, RL5) · D71–D74, D76 and D78 for the agent; Claude shipped `[C]` D75 and D77
 
 Evidence for D71–D73 comes from the real worklog history (`%LOCALAPPDATA%\Talvora\ControlCenter\worklog-sessions.jsonl`, sessions of 2026-11-13 21:59–22:26 UTC) and from Claude's live run on 2026-11-14 (a followed Full gate with a failed `git fetch` and a `git status` during it). The rules these cards implement are in `docs/codex/DESIGN-WORKLOG.md` §6.4 rules 5–8 and its tables (Claude updated them in this audit). None of them changes the tray or the frame protocol.
 
@@ -129,6 +129,23 @@ Evidence for D71–D73 comes from the real worklog history (`%LOCALAPPDATA%\Talv
 **Context7:** `/dotnet/docs-desktop`, query "WPF Window.Show ShowActivated false and WindowState Normal to make a hidden window visible without activation .NET 10".
 
 **Acceptance:** red first with the switch; green with the switch and for three hidden starts; signed-in Full `Hepsi geçti.`; CI.
+
+### D78 — A documentation push never hides an unverified code push from CI
+
+**Why:** `windows-ci.yml` runs in one concurrency group per branch with `cancel-in-progress: true`, and its "Classify the change" step decides documentation-only from the push's own range (`event.before..event.after`). Audit 55, live: Claude pushed 18cae76 (a test change) and then f8165d3 (STATUS only). The 18cae76 run was cancelled; the f8165d3 run classified its range as documentation-only and skipped the build and every test (30 s). `Get-CiStatus.ps1` accepts "the newest run that contains this commit" for a cancelled run, so 18cae76 would have read green although CI never built it (Claude re-ran the cancelled run by hand). An agent that pushes a card commit and then a STATUS-only commit gets the same false green.
+
+**Files:** `.github/workflows/windows-ci.yml`, `scripts/Get-CiStatus.ps1`, `tests/CiDocsOnlyRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `CiDocsOnlyRegression.ps1` and `ModernizationPolicyRegression.ps1` read `windows-ci.yml`; the Notification regression runs `Get-CiStatus.ps1` arguments (`Program.D46.cs`); D72 also changes `Get-CiStatus.ps1` (its verdict lines): if D72 is already in, keep its lines.
+
+**Do:**
+1. Red first in `CiDocsOnlyRegression.ps1`: assert that `windows-ci.yml` does not cancel a running pipeline (`cancel-in-progress: false`), and that `Get-CiStatus.ps1`, on its cancelled-run path, reads the deciding run's jobs (`gh run view <id> --json jobs`) and requires the step "Validate build and all test suites (including SourceEdit)" to have concluded `success`.
+2. `windows-ci.yml`: `cancel-in-progress: false`, so every push runs to its end (a documentation-only run takes about 30 s; the repository is public, so the minutes cost nothing). Keep the concurrency group, so runs of one branch queue instead of overlapping.
+3. `Get-CiStatus.ps1`: when the run that decides a commit is not that commit's own run (the cancelled-run path), accept it only if that step concluded `success`; a skipped step proves nothing for this commit → print "CI: {kısa hash} çalışması iptal edildi; onu kapsayan yeni çalışma kodu derlemedi." and exit 2. Everything else in the script stays.
+
+**Don't:** change the classification rules, the build and test steps or the other workflows.
+
+**Context7:** `/websites/github_en_actions` (mapped by RL4), query "concurrency cancel-in-progress false queues runs of the same group"; the `jobs[].steps[].conclusion` fields of `gh run view --json jobs` on `https://cli.github.com/manual/gh_run_view` (`gh` is not in the map: CONTEXT7 PROTOCOL rule 2, with a `Context7 map candidate` line).
+
+**Acceptance:** red first; `CiDocsOnlyRegression.ps1` and the Notification regression green; signed-in Full `Hepsi geçti.`; CI.
 
 ### D48 — A vault note belongs to the vault's owner (Claude, `[C]`)
 
@@ -430,27 +447,3 @@ User: "github'da bulunan talvora mcp readme'si yani github arayüzünü tamamen 
 **Context7:** `/dotnet/docs`, query "Registry SetValue RegistryValueKind DWord". Vendor sources: `https://learn.microsoft.com/windows/win32/msi/uninstall-registry-key`, `https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-movefileexw`.
 
 **Acceptance:** red first; Changed and Full `Hepsi geçti.`; deploy: the Uninstall key holds the listed values and Settings → Apps lists "Talvora"; `"C:\Program Files\Talvora\Talvora-Kurulum.exe" --uninstall --what-if` prints the plan; the installed smokes; CI. The real uninstall and reinstall on this machine is Claude's live check at the next audit, with the user's go-ahead (`[~] live pending (Claude)`).
-
-### RL4 — A `v0.0.x.x` tag publishes the release
-
-**Why:** user decision 2026-11-08: stable releases on GitHub, one installer and its SHA-256; Claude alone decides when, by pushing the tag after writing `docs/releases/<version>.md`.
-
-**Files:** `.github/workflows/release.yml` (new), `tests/ReleaseWorkflowRegression.ps1` (new; registered with the gate's PowerShell regressions), `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `ModernizationPolicyRegression.ps1` and `CiDocsOnlyRegression.ps1` read `windows-ci.yml` (leave it unchanged). Pin `actions/checkout` and `actions/setup-dotnet` in `release.yml` to the same `@<sha> # vX.Y.Z` lines `windows-ci.yml` uses (the project's pinning rule).
-
-**Do:**
-1. Red first: `tests/ReleaseWorkflowRegression.ps1` reads `release.yml` and requires: the tag filter `v0.0.*.*`, `contents: write`, the tag check `^v0\.0\.\d{1,5}\.\d{1,5}$`, the `merge-base --is-ancestor` check against `origin/main`, the `docs/releases/` notes check, the windows-ci success check, the `-ReleaseVersion` build, the `SHA256SUMS.txt` step and `gh release create`; prints `RELEASE_WORKFLOW_GREEN`.
-2. `release.yml`: `on: push: tags: ['v0.0.*.*']` and `workflow_dispatch` with inputs `version` (string) and `dry_run` (boolean, default true); `permissions: contents: write, actions: read`; `concurrency: release-${{ github.ref_name }}`; `runs-on: windows-latest`. Steps:
-   - checkout with `fetch-depth: 0`, using the same pinned commits as `windows-ci.yml` (`actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`, and `actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0` where .NET is set up); version = the tag without `v` (or the `version` input); fail unless it matches `^0\.0\.\d{1,5}\.\d{1,5}$`;
-   - fail unless the commit is an ancestor of `origin/main`;
-   - fail unless the `windows-ci` run of this commit concluded `success` (`gh run list --workflow windows-ci.yml --commit <sha> --json conclusion`, `GH_TOKEN: ${{ github.token }}`);
-   - unless `dry_run`: fail with "Sürüm notu yok: docs/releases/<version>.md" when that file is missing;
-   - the same toolchain setup steps `windows-ci.yml` uses before its installer build, then `pwsh -NoProfile -File scripts/Build-Windows-Installer.ps1 -ReleaseVersion <version>`;
-   - `SHA256SUMS.txt` with one line `<lowercase sha256>  Talvora-Kurulum-<version>.exe`;
-   - unless `dry_run`: `gh release create v<version> artifacts/installer/Talvora-Kurulum-<version>.exe SHA256SUMS.txt --title "Talvora <version>" --notes-file docs/releases/<version>.md --latest`.
-3. Live check: `gh workflow run release.yml -f version=0.0.0.1 -f dry_run=true`, then that run once (no waiting loop): it must build the installer and publish nothing; record the run id.
-
-**Don't:** create a tag or a release (AGENTS.md rule 10b), sign anything, upload other files, run the workflow without `dry_run`.
-
-**Context7:** `/websites/github_en_actions` (map row added with this card), queries "workflow push tags filter" and "workflow_dispatch inputs boolean". Vendor sources: `https://docs.github.com/actions/writing-workflows/workflow-syntax-for-github-actions`, `https://cli.github.com/manual/gh_release_create`.
-
-**Acceptance:** red first; Changed and Full `Hepsi geçti.`; CI; the dry run green. The first real release is Claude's.
