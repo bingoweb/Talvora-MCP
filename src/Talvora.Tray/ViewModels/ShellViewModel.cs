@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -29,6 +30,7 @@ internal sealed class ShellViewModel : ObservableObject
     private string _paletteQuery = string.Empty;
     private int? _attentionCount;
     private IReadOnlyList<ShellCommand> _serviceCommands = [];
+    private readonly ReleaseCheckService _releaseCheck = ReleaseCheckService.Instance;
 
     public ShellViewModel(Func<Task> refresh)
     {
@@ -48,6 +50,8 @@ internal sealed class ShellViewModel : ObservableObject
             IsRailExpanded = _manualExpanded.Value;
         });
         RefreshCommand = new AsyncRelayCommand(refresh);
+        PropertyChangedEventManager.AddHandler(
+            _releaseCheck, OnReleaseCheckChanged, nameof(ReleaseCheckService.Current));
         FilterPalette();
     }
 
@@ -90,6 +94,14 @@ internal sealed class ShellViewModel : ObservableObject
 
     public bool HasHealth => AttentionCount.HasValue;
     public bool HasAttention => AttentionCount > 0;
+    public bool IsNewVersionKnown => _releaseCheck.Current is not null;
+    public string NewVersionHelpText => IsNewVersionKnown ? "Yeni sürüm hazır" : string.Empty;
+
+    private void OnReleaseCheckChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(IsNewVersionKnown));
+        OnPropertyChanged(nameof(NewVersionHelpText));
+    }
 
     public string PaletteQuery
     {

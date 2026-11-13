@@ -50,10 +50,16 @@ internal static partial class ControlCenterSmoke
                 AssertWindowDpi(window);
                 AssertRenderedSurfaceIsNotBlank(window);
                 AssertStitchNavigation(window);
+                var forcedRelease = Environment.GetEnvironmentVariable(
+                    "TALVORA_CONTROL_CENTER_SMOKE_NEW_VERSION");
+                if (!string.IsNullOrWhiteSpace(forcedRelease))
+                    ReleaseCheckService.Instance.ForceNewVersionForSmoke(forcedRelease);
                 AssertUi3VisualFixture(window, "initial");
                 AssertUi4VisualFixture(window, "initial");
                 await AssertUi5VisualFixtureAsync(window, "initial");
                 AssertUi6VisualFixture(window, "initial");
+                if (!string.IsNullOrWhiteSpace(forcedRelease))
+                    AssertRl5VisualFixture(window, "initial", forcedRelease);
 
                 // UI1: swap the running window's real palette and restore it, without reopening.
                 var initialPreference = TalvoraThemeManager.Preference;
@@ -69,6 +75,8 @@ internal static partial class ControlCenterSmoke
                 AssertUi4VisualFixture(window, "alternate");
                 await AssertUi5VisualFixtureAsync(window, "alternate");
                 AssertUi6VisualFixture(window, "alternate");
+                if (!string.IsNullOrWhiteSpace(forcedRelease))
+                    AssertRl5VisualFixture(window, "alternate", forcedRelease);
                 TrayLog.Write("Control Center smoke stage: worklog history");
                 window.ShellModel.SelectPage(2);
                 AssertWorklogHistorySelection(window, "worklog-session-alternate");
@@ -140,6 +148,29 @@ internal static partial class ControlCenterSmoke
 
         _ = application.Run();
         return result;
+    }
+
+    private static void AssertRl5VisualFixture(
+        ShellWindow window, string theme, string forcedVersion)
+    {
+        window.ShellModel.SelectPage(5);
+        window.UpdateLayout();
+        if (!window.ShellModel.IsNewVersionKnown ||
+            !window.NavSettings.HasDot ||
+            AutomationProperties.GetHelpText(window.NavSettings) != "Yeni sürüm hazır" ||
+            window.SettingsContentHost.Content is not Views.SettingsView settings ||
+            !settings.Model.HasNewVersion ||
+            settings.Model.NewVersionText != "Yeni sürüm hazır: " + forcedVersion ||
+            settings.FindName("NewVersionTextBlock") is not System.Windows.Controls.TextBlock announcement ||
+            settings.FindName("ReleaseNotesLink") is not Wpf.Ui.Controls.Anchor link ||
+            link.NavigateUri !=
+                "https://github.com/bingoweb/Talvora-MCP/releases/tag/v" + forcedVersion)
+            throw new InvalidOperationException("RL5: About text, release-notes link or accessible settings rail dot is missing.");
+        announcement.BringIntoView();
+        window.UpdateLayout();
+        if (!announcement.IsVisible || !link.IsVisible)
+            throw new InvalidOperationException("RL5: new release and link must both be visible in About.");
+        SaveVisualSnapshotIfRequested(window, "ui7-about-new-version-" + theme);
     }
 
     private static void AssertFluentResources(ControlCenterApplication application)

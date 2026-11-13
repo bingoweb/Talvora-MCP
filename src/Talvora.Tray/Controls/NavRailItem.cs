@@ -12,8 +12,11 @@ public sealed class NavRailItem : System.Windows.Controls.RadioButton
         DependencyProperty.Register(nameof(Symbol), typeof(SymbolRegular), typeof(NavRailItem), new PropertyMetadata(SymbolRegular.Home24));
     public static readonly DependencyProperty IsExpandedProperty =
         DependencyProperty.Register(nameof(IsExpanded), typeof(bool), typeof(NavRailItem), new PropertyMetadata(false));
+    public static readonly DependencyProperty HasDotProperty =
+        DependencyProperty.Register(nameof(HasDot), typeof(bool), typeof(NavRailItem), new PropertyMetadata(false));
 
     public string Label { get => (string)GetValue(LabelProperty); set => SetValue(LabelProperty, value); }
     public SymbolRegular Symbol { get => (SymbolRegular)GetValue(SymbolProperty); set => SetValue(SymbolProperty, value); }
     public bool IsExpanded { get => (bool)GetValue(IsExpandedProperty); set => SetValue(IsExpandedProperty, value); }
+    public bool HasDot { get => (bool)GetValue(HasDotProperty); set => SetValue(HasDotProperty, value); }
 }

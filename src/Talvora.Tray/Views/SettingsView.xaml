@@ -152,6 +152,18 @@
                                    TextWrapping="Wrap" Style="{StaticResource Tv.Type.Body}"
                                    AutomationProperties.Name="Sürüm" />
                     </Grid>
+                    <Grid Margin="0,0,0,16" Visibility="{Binding HasNewVersion, Converter={StaticResource SettingsBool}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="220" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock x:Name="NewVersionTextBlock" Text="{Binding NewVersionText}" Style="{StaticResource Tv.Type.Body}"
+                                       TextWrapping="Wrap" Margin="0,0,0,8" />
+                            <ui:Anchor x:Name="ReleaseNotesLink" Content="Sürüm notlarını aç" NavigateUri="{Binding NewVersionHtmlUrl}"
+                                       AutomationProperties.Name="Sürüm notlarını aç" />
+                        </StackPanel>
+                    </Grid>
                     <Grid Margin="0,0,0,16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />

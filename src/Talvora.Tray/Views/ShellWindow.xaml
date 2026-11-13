@@ -74,7 +74,9 @@
                     <StackPanel Grid.Row="2">
                         <TextBlock Text="SİSTEM" Style="{StaticResource Tv.Type.Overline}" Margin="24,8,0,8"
                                    Visibility="{Binding IsRailExpanded, Converter={StaticResource ShellBool}}" />
-                        <controls:NavRailItem x:Name="NavSettings" Tag="5" Label="Ayarlar ve kurulum" Symbol="Settings24" IsExpanded="{Binding IsRailExpanded}" Checked="OnRailChecked" />
+                        <controls:NavRailItem x:Name="NavSettings" Tag="5" Label="Ayarlar ve kurulum" Symbol="Settings24"
+                                              IsExpanded="{Binding IsRailExpanded}" HasDot="{Binding IsNewVersionKnown}"
+                                              AutomationProperties.HelpText="{Binding NewVersionHelpText}" Checked="OnRailChecked" />
                         <StackPanel Orientation="Horizontal" Margin="24,8,12,16" AutomationProperties.Name="Nabız">
                             <Ellipse Width="8" Height="8" VerticalAlignment="Center">
                                 <Ellipse.Style><Style TargetType="Ellipse">

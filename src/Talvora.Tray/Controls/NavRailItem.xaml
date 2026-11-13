@@ -31,12 +31,19 @@
                             <Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                             <ui:SymbolIcon Symbol="{TemplateBinding Symbol}" FontSize="24"
                                            Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center" />
+                            <Ellipse x:Name="Dot" Width="6" Height="6" Grid.Column="0"
+                                     Fill="{DynamicResource Tv.Accent}" HorizontalAlignment="Right"
+                                     VerticalAlignment="Top" Margin="0,14,-3,0"
+                                     Visibility="Collapsed" IsHitTestVisible="False" />
                             <TextBlock x:Name="LabelText" Grid.Column="1" Text="{TemplateBinding Label}" Margin="16,0,0,0"
                                        Style="{StaticResource Tv.Type.BodyStrong}" Foreground="{TemplateBinding Foreground}"
                                        VerticalAlignment="Center" />
                         </Grid>
                     </Grid>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="HasDot" Value="True">
+                            <Setter TargetName="Dot" Property="Visibility" Value="Visible" />
+                        </Trigger>
                         <Trigger Property="IsExpanded" Value="False"><Setter TargetName="LabelText" Property="Visibility" Value="Collapsed" /></Trigger>
                         <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Selection" Property="Background" Value="{DynamicResource Tv.SurfaceRaised}" /></Trigger>
                         <Trigger Property="IsChecked" Value="True">

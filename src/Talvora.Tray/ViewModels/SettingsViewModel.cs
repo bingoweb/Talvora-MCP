@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.ComponentModel;
 
 namespace Talvora.Tray.ViewModels;
 
@@ -22,10 +23,28 @@ internal sealed class SettingsViewModel : ObservableObject
     private IReadOnlyList<SettingsSetupStep> _steps = [];
     private bool _allComplete;
     private SettingsPreferences _preferences = SettingsPreferences.Default;
+    private readonly ReleaseCheckService _releaseCheck = ReleaseCheckService.Instance;
 
     public SettingsViewModel()
     {
         UpdateSetup(false, new ControlCenterSetupState(false, true, true, 0, [], "", ""));
+        PropertyChangedEventManager.AddHandler(
+            _releaseCheck, OnReleaseCheckChanged, nameof(ReleaseCheckService.Current));
+    }
+
+    public bool HasNewVersion => _releaseCheck.Current is not null;
+    public string NewVersionText => HasNewVersion
+        ? "Yeni sürüm hazır: " + _releaseCheck.Current!.Version
+        : string.Empty;
+    public Uri? NewVersionHtmlUrl => _releaseCheck.Current is { } release &&
+        ReleaseCheckService.IsApprovedReleaseUrl(release.HtmlUrl)
+            ? new Uri(release.HtmlUrl, UriKind.Absolute) : null;
+
+    private void OnReleaseCheckChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(HasNewVersion));
+        OnPropertyChanged(nameof(NewVersionText));
+        OnPropertyChanged(nameof(NewVersionHtmlUrl));
     }
 
     public IReadOnlyList<SettingsSetupStep> Steps

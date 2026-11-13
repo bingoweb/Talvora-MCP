@@ -35,8 +35,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user, together with D66 (postponed by the user 2026-11-13; before 0.0.1.0)
 - [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
 - [~] WL5 — Measured Turkish titles/results installed at 3ce8e66; metadata and full MCP smokes GREEN; CI 43510238063 GREEN. P-57 and Claude visual check pending
-- [~] WL6 — Real-time process/log/CI/deploy followers built; signed-in Changed 30/0 and Full 72/0 GREEN; live install/CI and Claude visual review pending
-- [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
+- [~] WL6 — Installed 1901c01, metadata/full MCP smokes GREEN, GitHub CI 43515151788 GREEN; Claude visual review pending
+- [~] RL5 — Quiet release checker built; signed-in Changed 28/0 and Full 72/0 GREEN; two-theme About+rail PNGs captured; installed smokes/CI and Claude visual review pending
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
 - [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
 - [ ] [C] D47 — Plain Turkish for the remaining Control Center texts (Claude since audit 46; setup texts per the user's decision; table and test in docs/codex/reference/d47)
@@ -56,6 +56,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-14 — RL5, executor ChatGPT: quiet 2-minute/24-hour no-token GitHub latest-release check for release builds only; validated v0.0.n.n + approved URL cached locally, no download/install/toast. RED absent service then RL5_RELEASE_CHECK_GREEN (HTTP fake, cache, invalid tags, unsafe URLs and dev zero network); Changed 28/0 and Full 72/0 Hepsi geçti.; Context7 /dotnet/docs (HttpClient), Gitea #9 comment 253. Real Control Center smoke GREEN, development log suppression verified; screenshots artifacts/rl5-control-center-ui7-about-new-version-{initial,alternate}.png. Clean-HEAD deploy, installed smokes, CI and Claude visual check pending.
+  Self-review — Cosmetics: only the prescribed 6px accent dot, About Body text and release link; both themes captured, no card or terminal changes.
+  Self-review — Usability: quiet notice links to the actual release page, with UIA help text; nothing downloads, installs or demands a setting.
+  Self-review — Turkish: approved texts “Yeni sürüm hazır”, “Sürüm notlarını aç” and dev-suppression log verified.
+  Self-review — Security/correctness: strict tag/URL/version tests; HTTPS fixed endpoint, no redirects or token, bounded response and 15s timeout; no development network calls.
 
 - 2026-11-14 — WL6, executor ChatGPT: gate START lines, Turkish stages and 64 KiB live log/process follower; signed-in CI checks every 30 s, persisted deploy replay on new service startup. TDD RED for START, follower and timeout; WL6_FOLLOWER_GREEN, QualityGateRegression, QualityGateChanged, QualityGateParallel and Notification GREEN; Changed 30/0 and Full 72/0, Hepsi geçti. Context7 /dotnet/docs (FileShare.ReadWrite); Gitea #9 comment 252. Clean-HEAD install/smokes, CI and Claude's real desktop visual review pending; first install upgrades an older service without the pending-deploy writer.
   Self-review — Cosmetics: existing card layout and terminal unchanged; real gate stages use only printed START/PASS/FAIL records.

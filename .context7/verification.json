@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-13T21:46:05.176Z",
-  "scope": "WL6: follow process logs using shared read-while-writing FileStream and observed process exits",
+  "verifiedAtUtc": "2026-11-13T22:12:27.908Z",
+  "scope": "RL5: read-only latest-release discovery using .NET 10 HttpClient with User-Agent, Accept and a 15-second timeout",
   "libraries": [
     {
       "libraryId": "/dotnet/docs",
-      "verified": "Open a growing file with FileStream(FileAccess.Read, FileShare.ReadWrite) and read only the bounded tail; ReadAsync may return fewer bytes than requested, so loop until EOF (query: \"FileStream FileShare.ReadWrite read the end of a file another process is still writing .NET 10\")."
+      "verified": "Configure one HttpClient with DefaultRequestHeaders.UserAgent and Accept, an explicit Timeout, and a single fixed HTTPS GET endpoint without any token (query: \"HttpClient Timeout with DefaultRequestHeaders UserAgent and Accept for one GET request in .NET 10\")."
     }
   ],
-  "vendorSources": ["https://github.com/dotnet/docs/blob/main/docs/standard/io/handling-io-errors.md"]
+  "vendorSources": ["https://docs.github.com/rest/releases/releases#get-the-latest-release"]
 }

@@ -20,6 +20,11 @@ internal static partial class Program
         TrayLog.PathOverrideForTests = Path.Combine(isolatedRoot, "tray.log");
         WorklogHistoryStore.DefaultPathOverrideForTests = Path.Combine(isolatedRoot, "worklog-sessions.jsonl");
 
+        if (Environment.GetCommandLineArgs().Contains("--rl5-only", StringComparer.Ordinal))
+        {
+            await AssertRl5ReleaseCheckAsync();
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--wl6-only", StringComparer.Ordinal))
         {
             await AssertWl6FollowerAsync();
@@ -94,6 +99,7 @@ internal static partial class Program
         await AssertN9SubjectsAsync();
         await AssertWl5MeasuredTitlesAsync();
         await AssertWl6FollowerAsync();
+        await AssertRl5ReleaseCheckAsync();
         await AssertN8NotificationsInChildAsync();
         await AssertN10ChangesAsync();
         await AssertWl1StepDurationAsync();
