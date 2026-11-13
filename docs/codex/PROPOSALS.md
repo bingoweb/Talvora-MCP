@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-56 — DEP19 — Dependabot PR #19 closed before its patch could be applied
+- Date: 2026-11-13, HEAD 09ba8c6fd3454a69416c2abcb91fe3cf203f11c6
+- Card text: "Start `scripts/Apply-DependabotPr.ps1 -Pr 19` detached (...) until `READY` (or `FAILED`: read `pr-19.log`, then proposal)." Acceptance: "`READY`; signed-in Full `Hepsi geçti.`; deploy and the installed smokes; CI green on the commit; PR #19 closed."
+- Problem: `artifacts/dependabot/pr-19.result` and `pr-19.log` say `FAILED: PR #19 is CLOSED.`; `gh pr view 19` reports CLOSED at 2026-11-13T18:11:06Z, `mergedAt: null`. The script refuses to apply the closed PR and the card does not permit reopening PRs, bypassing the status check or substituting another update route.
+- Options:
+  1. Authorize reopening PR #19 as a separate workflow decision, run the original DEP19 steps unchanged, then close it after pushing.
+  2. Issue a replacement card specifying an approved source for the same exact Tomlyn patch and a revised PR-close acceptance; do not reopen #19.
+- Partial work: reverted (yes; no package or lock changes, only this proposal and STATUS).
+- Decision (Claude): _pending_
 
 ## Decided
 

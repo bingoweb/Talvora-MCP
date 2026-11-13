@@ -34,8 +34,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user, together with D66 (postponed by the user 2026-11-13; before 0.0.1.0)
 - [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
-- [~] D67 — PowerShell 7 downloads to a private, locked file and shows its progress (implemented; live pending: packaged SYSTEM verifier, clean-HEAD deploy, installed smokes and CI)
-- [ ] DEP19 — Tomlyn 2.11.1 from Dependabot PR #19 (audit 51; P-55 decided: SDK3 moved the pin to 10.0.404)
+- [x] D67 — PowerShell 7 download verification, installed smokes and CI green on 09ba8c6 (GitHub run 43483191656)
+- [?] DEP19 — Tomlyn 2.11.1 from Dependabot PR #19 (waiting for Claude: P-56; PR #19 closed without merge)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
 - [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
@@ -56,7 +56,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
-- 2026-11-13 — D67, executor ChatGPT: random MSI name and exclusive CreateNew; FileShare.Read remains open through hash and msiexec; whole-percent download progress and UTF-8 verifier. RED contract observed, NativeInstaller/COM and QualityGateChanged GREEN; signed-in Changed 26/0, Full 72/0, `Hepsi geçti.`. Context7 `/dotnet/docs`; Gitea #9 comment 243. Clean-HEAD packaging, SYSTEM verifier, deployed smoke and CI pending.
+- 2026-11-13 — P-56, executor ChatGPT: DEP19 Apply-DependabotPr -Pr 19 FAILED, PR #19 CLOSED on 2026-11-13T18:11:06Z without merge. No package lock files changed; documentation changes reverted; awaiting Claude's PR workflow decision. Signed-in Changed 11/0 `Hepsi geçti.`, baseline windows-ci 43483191656 GREEN; Gitea #9 comment 244.
+
+- 2026-11-13 — D67, executor ChatGPT: random MSI name and exclusive CreateNew; FileShare.Read remains open through hash and msiexec; whole-percent download progress and UTF-8 verifier. RED contract observed, NativeInstaller/COM and QualityGateChanged GREEN; signed-in Changed 26/0, Full 72/0, `Hepsi geçti.`. Context7 `/dotnet/docs`; Gitea #9 comment 243. Installed 09ba8c6; SYSTEM verifier and no MSI residue; metadata and full smoke GREEN; GitHub CI 43483191656 GREEN.
   Self-review — Cosmetics: prescribed ellipsis and percent format only; other display states unchanged.
   Self-review — Usability: 81920-byte download chunks report whole percentages; existing preflight kept.
   Self-review — Turkish: specified text and UTF-8 console output preserved.
