@@ -166,11 +166,33 @@ internal static partial class ControlCenterSmoke
             link.NavigateUri !=
                 "https://github.com/bingoweb/Talvora-MCP/releases/tag/v" + forcedVersion)
             throw new InvalidOperationException("RL5: About text, release-notes link or accessible settings rail dot is missing.");
-        announcement.BringIntoView();
+        AssertRailDotIsWhole(window.NavSettings);
+        link.BringIntoView();
         window.UpdateLayout();
         if (!announcement.IsVisible || !link.IsVisible)
             throw new InvalidOperationException("RL5: new release and link must both be visible in About.");
         SaveVisualSnapshotIfRequested(window, "ui7-about-new-version-" + theme);
+    }
+
+    /// <summary>D75: the 6 px new-version dot is drawn whole; no element between it and the rail item clips it.</summary>
+    private static void AssertRailDotIsWhole(Controls.NavRailItem item)
+    {
+        if (item.Template.FindName("Dot", item) is not System.Windows.Shapes.Ellipse dot ||
+            !dot.IsVisible || dot.ActualWidth < 6 || dot.ActualHeight < 6)
+            throw new InvalidOperationException("RL5: the settings rail dot is not shown at its full 6 px size.");
+        var itemBounds = new Rect(item.RenderSize);
+        var dotInItem = dot.TransformToAncestor(item).TransformBounds(new Rect(dot.RenderSize));
+        if (!itemBounds.Contains(dotInItem))
+            throw new InvalidOperationException("RL5: the settings rail dot lies outside its rail item.");
+        for (DependencyObject? node = dot; node is Visual visual && !ReferenceEquals(node, item);
+             node = VisualTreeHelper.GetParent(node))
+        {
+            if (VisualTreeHelper.GetClip(visual) is not { } clip)
+                continue;
+            var dotInNode = dot.TransformToAncestor(visual).TransformBounds(new Rect(dot.RenderSize));
+            if (!clip.Bounds.Contains(dotInNode))
+                throw new InvalidOperationException("RL5: the settings rail dot is clipped by " + visual.GetType().Name + ".");
+        }
     }
 
     private static void AssertFluentResources(ControlCenterApplication application)

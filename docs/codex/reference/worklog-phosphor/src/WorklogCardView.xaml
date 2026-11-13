@@ -117,6 +117,19 @@
                 <Setter Property="Margin" Value="0,1,0,1" />
             </Style>
 
+            <!-- D75: while a step runs or waits, its fact line is the live state ("durum"); once it ends, its result ("sonuç"). -->
+            <Style x:Key="ResultLabel" TargetType="TextBlock" BasedOn="{StaticResource AnswerLabel}">
+                <Setter Property="Text" Value="sonuç" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding State}" Value="Running">
+                        <Setter Property="Text" Value="durum" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding State}" Value="Waiting">
+                        <Setter Property="Text" Value="durum" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
             <DataTemplate x:Key="DiffLineTemplate" DataType="{x:Type wl:DiffLine}">
                 <Border x:Name="Row" Background="Transparent" Padding="0,0,6,0">
                     <Grid>
@@ -257,7 +270,7 @@
                     <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,1,0,1" Style="{StaticResource Wl.TextBase}" TextWrapping="NoWrap"
                                Visibility="{Binding HasChanges, Converter={StaticResource BoolToVisibility}}"><Run Text="{Binding ChangeAdded, Mode=OneWay}" Foreground="{DynamicResource Wl.Green}" /><Run Text="{Binding ChangeRemoved, Mode=OneWay}" Foreground="{DynamicResource Wl.Red}" /><Run Text="{Binding ChangeFiles, Mode=OneWay}" Foreground="{DynamicResource Wl.Muted}" /></TextBlock>
 
-                    <TextBlock Grid.Row="3" Text="sonuç" Style="{StaticResource AnswerLabel}"
+                    <TextBlock Grid.Row="3" Style="{StaticResource ResultLabel}"
                                Visibility="{Binding ResultLine, Converter={StaticResource NullToCollapsed}}" />
                     <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,1,0,1" Text="{Binding ResultLine}" Style="{StaticResource Wl.TextBase}"
                                LineHeight="17" Visibility="{Binding ResultLine, Converter={StaticResource NullToCollapsed}}" />

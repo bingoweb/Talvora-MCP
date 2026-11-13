@@ -31,14 +31,15 @@
                             <Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                             <ui:SymbolIcon Symbol="{TemplateBinding Symbol}" FontSize="24"
                                            Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center" />
-                            <Ellipse x:Name="Dot" Width="6" Height="6" Grid.Column="0"
-                                     Fill="{DynamicResource Tv.Accent}" HorizontalAlignment="Right"
-                                     VerticalAlignment="Top" Margin="0,14,-3,0"
-                                     Visibility="Collapsed" IsHitTestVisible="False" />
                             <TextBlock x:Name="LabelText" Grid.Column="1" Text="{TemplateBinding Label}" Margin="16,0,0,0"
                                        Style="{StaticResource Tv.Type.BodyStrong}" Foreground="{TemplateBinding Foreground}"
                                        VerticalAlignment="Center" />
                         </Grid>
+                        <!-- D75: the new-version dot sits on the icon's top-right corner. It lives in the item's own grid,
+                             because the collapsed rail leaves the icon column narrower than 24 px and that grid clips it. -->
+                        <Ellipse x:Name="Dot" Width="6" Height="6" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                 Margin="31,14,0,0" Fill="{DynamicResource Tv.Accent}"
+                                 Visibility="Collapsed" IsHitTestVisible="False" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="HasDot" Value="True">

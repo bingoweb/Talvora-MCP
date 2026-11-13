@@ -1,9 +1,9 @@
 # SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
-# Updated by Claude 2026-11-01 for the time ruler (UI12c; DESIGN-WORKLOG §7b).
+# Updated by Claude 2026-11-01 for the time ruler (UI12c; DESIGN-WORKLOG §7b) and 2026-11-14 for the "durum" label (D75; §6.2).
 07673b7808f6434881b358c11a77b08a18627f70a83ec4e15069add241d8bf23  src/DesktopProgressNotificationWindow.cs
 9ce414a94482db8da0dc80cce316f09cf662f2133dcfd302547b8bb7b8715324  src/UnifiedDiffViewParser.cs
 8043543db12bf6403449676c1bd0d121bc9a41622e1b60727c35e67b1978f86e  src/WorklogCardMapper.cs
-11b350779c20e760bdb92412bdfef234beea18c436a49d26b91da3b16d0181f3  src/WorklogCardView.xaml
+82f207b12c11d4375a537d382fc879fb6399d71c1075c65eae1bef93f14afc06  src/WorklogCardView.xaml
 e1a02c899c5122570c66b8c5e5050676014fa95b65e7333daa1430aa31aec0bd  src/WorklogCardView.xaml.cs
 a46d83d1b6c2d7d3894564aa1e3e6733e78567157585b3d8fb12475b79b46d3c  src/WorklogCardViewModel.cs
 4abdecf95b40689246b2e996c952b5242cb222b6022baf924c8593e0c1017d67  src/WorklogPreviewScenarios.cs

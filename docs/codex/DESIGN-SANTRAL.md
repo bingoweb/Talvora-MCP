@@ -97,6 +97,7 @@ Paper strip on `Sn.Slip`, perforation dots along the top edge, 1° tilt, soft sh
 - **Hizmet ayrıntısı**: header shows the socket and its outside line with the cable state; actions unchanged; "Teknik kanıt" on `Sn.PanelSunken` in Mono.
 - **Ayarlar ve kurulum**: stepper drawn as a cable plugging into three sockets (Talvora çekirdeği · Güvenli tüneller · ChatGPT Business bağlantısı); texts unchanged.
 - **Shell**: wordmark `TALVORA` + `KONTROL MERKEZİ` light, clock in Mono, rail on `Sn.Panel` with brass selection bar (3 px `Sn.Brass`), window title stays "Talvora Kontrol Merkezi".
+- **New-version dot** (RL5, fixed by D75): while a newer release is known, `Ayarlar ve kurulum` shows a 6 px `Tv.Accent` dot on its icon's top-right corner, item-relative (`HorizontalAlignment="Left"`, `Margin="31,14,0,0"` in the item template's own grid), so the collapsed rail never clips it; screen readers hear "Yeni sürüm hazır" (the item's help text). The Control Center smoke checks that no element between the dot and its rail item clips it.
 
 ## 8. Copy (additions to copy deck §9)
 

@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-13T22:12:27.908Z",
-  "scope": "RL5: read-only latest-release discovery using .NET 10 HttpClient with User-Agent, Accept and a 15-second timeout",
+  "verifiedAtUtc": "2026-11-13T23:07:18.000Z",
+  "scope": "D75: the Control Center rail's new-version dot moves into the item's own grid so it is never clipped, a smoke check for clipping, and the worklog card's fact row reads durum while a step runs or waits",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs",
-      "verified": "Configure one HttpClient with DefaultRequestHeaders.UserAgent and Accept, an explicit Timeout, and a single fixed HTTPS GET endpoint without any token (query: \"HttpClient Timeout with DefaultRequestHeaders UserAgent and Accept for one GET request in .NET 10\")."
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-14 D75: Canvas is the only WPF layout element that lets children draw outside its bounds; a Grid clips them, so the dot must lie inside the rail item's own grid (query: \"WPF VisualTreeHelper.GetClip returns the clip region of a Visual including layout clipping when an element is arranged smaller than its desired size\")"
     }
   ],
-  "vendorSources": ["https://docs.github.com/rest/releases/releases#get-the-latest-release"]
+  "vendorSources": []
 }
