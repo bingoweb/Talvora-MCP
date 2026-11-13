@@ -30,41 +30,57 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-11 (51) · range `audit/2026-11-09-50..29b7d5e` (D65, D66) · card DEP19
+### Audit 2026-11-13 (53, deep, whole project) · range `audit/2026-11-13-52..579bc10` (D67, P-56) plus the subsystems changed since audit 42 · cards D68, DEP21, D69
 
-### DEP19 — Tomlyn 2.11.1 from Dependabot PR #19
+### D68 — The elevated setup never stages Talvora's files in the user's own temp folder
 
-**Why:** Dependabot PR #19 raises `Tomlyn` 2.11.0 → 2.11.1 (patch: "Fix CRLF escaping in multi-line basic strings"; Talvora's `talvora_toml_*` tools write TOML through it). The PR's own CI is red with `NU1004` because Dependabot changed only `Directory.Packages.props` and `src/Talvora/packages.lock.json`, while every test project locks Tomlyn as `CentralTransitive`. This is the DEP1 case.
+**Why:** audit 53 finding 1 (security, local elevation). `InstallAsync` (`src/Talvora.Installer/InstallerEngine.Flow.cs`) runs with `requireAdministrator`, but extracts the whole payload to `Path.GetTempPath()` + `Talvora-Setup-<guid>`, which for an interactive install is the signed-in user's own `%TEMP%`. Any process of that user, without elevation, can write there: it can replace `Service\Talvora.exe` (or a DLL next to it) between `ExtractPayload` and `CopyTree`, and the setup then copies it into `C:\Program Files\Talvora\Versions\…` and registers it as the LocalSystem service. The SYSTEM deploy task is not affected (its temp folder is `C:\Windows\SystemTemp`), but every user install from GitHub Releases is. D67 closed the same hole for the PowerShell MSI.
 
-**Files:** `Directory.Packages.props`, every `packages.lock.json` the script regenerates, `THIRD-PARTY-NOTICES.md` (the Tomlyn row: 2.11.0 → 2.11.1), `docs/codex/CONTEXT7.md` (the Tomlyn row only: `Tomlyn` 2.11.1, id unchanged `/xoofx/tomlyn/2.10.1`, gap text "2.10.2–2.11.1: release notes"), `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `ThirdPartyNoticesSourceRegression.ps1` (notices against the package pins); the Full gate restores in locked mode.
-
-**Do:**
-1. Start `scripts/Apply-DependabotPr.ps1 -Pr 19` detached (`talvora_user_process_start`, about 6 minutes) and poll `artifacts/dependabot/pr-19.result` until `READY` (or `FAILED`: read `pr-19.log`, then proposal).
-2. Update the two document rows above by hand; nothing else changes.
-3. Commit, push both remotes, then close PR #19 with `talvora_gh_run` (`pr close 19 --comment "main üzerinde uygulandı."`); never merge it on GitHub.
-
-**Context7:** gerekmiyor (patch release; no Tomlyn API that Talvora calls changes — `noLookup` with this reason).
-
-**Acceptance:** `READY`; signed-in Full `Hepsi geçti.`; deploy and the installed smokes (dependency graph changed); CI green on the commit; PR #19 closed. Commit text: "TOML kütüphanesi 2.11.1 sürümüne güncellendi", body one sentence, `Card: DEP19`.
-
-### D67 — PowerShell 7 downloads to a private, locked file and shows its progress
-
-**Why:** audit 50 finding 3 (hardening and one usability gap). RL2 runs elevated but writes `Talvora-PowerShell-<version>.msi` under `Path.GetTempPath()`, which for the interactive setup is the user's own `%TEMP%`: the name is predictable (a link planted at that name would make the elevated download write elsewhere) and the file is closed between the SHA-256 check and `msiexec`, so a process of the same user could swap it after the check. During the ~30 s download the window shows only "PowerShell 7 indiriliyor…" without movement. The hidden `--verify-powershell-download` prints "do­ruland²" when its output is redirected.
-
-**Files:** `src/Talvora.Installer/InstallerEngine.PowerShell.cs`, `src/Talvora.Installer/Program.cs` (the `--verify-powershell-download` branch only), `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `NativeInstallerSourceRegression.ps1` (RL2 part with its Add-Type harness), `QualityGateChangedRegression.ps1` (`Talvora.Installer/Program.cs`).
+**Files:** `src/Talvora.Installer/InstallerEngine.Flow.cs`, `tests/NativeInstallerSourceRegression.ps1`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `NativeInstallerSourceRegression.ps1` (its source checks read `InstallerEngine.Flow.cs`), `QualityGateChangedRegression.ps1`.
 
 **Do:**
-1. Red first, in the RL2 harness: the MSI path's file name matches `^Talvora-PowerShell-7\.\d+\.\d+-[0-9a-f]{32}\.msi$`; creating the download file where a file already exists fails instead of overwriting; while the verified stream is open, opening the same file for writing throws `IOException`; `ValidatePowerShell7MsiHash` takes that open `FileStream` (the wrong-hash case keeps its message).
-2. `GetPowerShellMsiPath`: `Path.Combine(Path.GetTempPath(), $"Talvora-PowerShell-{version}-{Guid.NewGuid():N}.msi")`. The download writes with `FileMode.CreateNew`, `FileShare.None`.
-3. After the download: open `new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)`, compute SHA-256 from that stream (position 0), run `msiexec` while it stays open, dispose it after `msiexec` exits, then delete the file as today. `VerifyPowerShell7DownloadAsync` uses the same open-then-hash step.
-4. Progress: when the response has `Content-Length`, report `new InstallProgress(3, $"PowerShell 7 indiriliyor… %{percent}")` each time the whole percent changes (percent = downloaded × 100 / length, `CultureInfo.InvariantCulture`); without a length report the single message `"PowerShell 7 indiriliyor…"`. Both use the one-character ellipsis `…` (U+2026), replacing today's three dots in this message only (audit 51: the other progress texts are Claude's in [C] D47); the percent sign stands before the number, as in Turkish. Copy with an 81,920-byte buffer loop instead of `CopyToAsync` to count bytes; keep the 10-minute deadline.
-5. `Program.cs`, `--verify-powershell-download` branch: `Console.OutputEncoding = new UTF8Encoding(false);` before writing.
+1. Red first, in `NativeInstallerSourceRegression.ps1`: `InstallerEngine.Flow.cs` must not contain `Path.GetTempPath()`, and the staging folder must be built from `versionsRoot` with the prefix `.staging-` (a regex source check is enough; message `D68: setup must stage the payload under Program Files`).
+2. In `InstallAsync`, compute `programFiles`, `installRoot` and `versionsRoot` before extraction (move those three lines up), create `versionsRoot`, then refuse to continue when `installRoot` or `versionsRoot` carries `FileAttributes.ReparsePoint` (throw `IOException("Talvora kurulum klasörü bağlantı içeriyor; güvenli kurulum durduruldu.")`, the wording style of the uninstall guard). `tempRoot` becomes `Path.Combine(versionsRoot, ".staging-" + Guid.NewGuid().ToString("N"))`; everything after it (extract, `CopyTree`, the `finally` delete) stays as it is. The folder inherits the Program Files ACL (Users: read and execute only).
+3. Nothing else changes: a staging folder left behind by a crashed install is a non-active folder under `Versions`, so the next install's `CleanupObsoleteInstallationsAsync` already removes it; do not add special cleanup.
 
-**Don't:** change the pin, the URL check, the timeout or the `msiexec` arguments.
+**Don't:** change `CopyTree`, `ExtractPayload`, the version folder name, the rollback, or `GetPowerShellMsiPath` (D67).
 
-**Context7:** `/dotnet/docs`, query "FileStream FileShare.Read denies other processes write access while the handle stays open .NET 10". Vendor source: none needed.
+**Context7:** gerekmiyor (only the staging path moves; `Directory`, `File.GetAttributes` and `FileAttributes.ReparsePoint` are already used the same way in `InstallerEngine.Uninstall.cs`).
 
-**Acceptance:** red first; Changed and Full `Hepsi geçti.`; as SYSTEM, `Talvora-Kurulum.exe --verify-powershell-download` prints "PowerShell 7 7.6.9 paketi doğrulandı." readably and leaves no `Talvora-PowerShell-*.msi` in the temp folder; while the verified stream is open, `(New-Object -ComObject WindowsInstaller.Installer).OpenDatabase(<path>, 0)` succeeds (proof that Windows Installer can still read the locked file) — run this in the harness, never a real `msiexec /i`; deploy and the installed smokes; CI.
+**Acceptance:** red first; Changed and Full `Hepsi geçti.`; build the installer, deploy and the installed smokes (the deploy runs the changed flow); CI.
+
+### DEP21 — Tomlyn 2.11.1 without the Microsoft.Extensions.AI.Abstractions 11 jump (answers P-56)
+
+**Why:** Dependabot closed PR #19 and opened #21, which carries Tomlyn 2.11.0 → 2.11.1 together with `Microsoft.Extensions.AI.Abstractions` 10.11.0 → 11.0.0. Talvora references that package only to pin what `ModelContextProtocol` 2.4.0 was built against (`ModelContextProtocol.Core` depends on 10.11.0; no Talvora code uses it). A major version under a library compiled against 10.x can break at run time (missing members), so it stays on 10.x until a ModelContextProtocol release asks for 11. `Apply-DependabotPr.ps1` would take both changes, so it is not used here.
+
+**Files:** `Directory.Packages.props` (the Tomlyn line only), every `packages.lock.json` the restore regenerates, `THIRD-PARTY-NOTICES.md` (Tomlyn 2.11.0 → 2.11.1), `docs/codex/CONTEXT7.md` (the Tomlyn row: version 2.11.1, gap text "2.10.2–2.11.1: release notes"), `.github/dependabot.yml`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `ThirdPartyNoticesSourceRegression.ps1`, `ModernizationPolicyRegression.ps1` (reads `dependabot.yml`), `PlatformPackageLockstepRegression.ps1`.
+
+**Do:**
+1. Set Tomlyn to 2.11.1 in `Directory.Packages.props`, then, as the signed-in user, `dotnet restore Talvora.slnx --force-evaluate` and `dotnet restore src/Talvora.Installer/Talvora.Installer.csproj --force-evaluate` (the two restores `Update-DotnetPlatformPackages.ps1` runs). Only Tomlyn entries may change in the lock files; any other change → proposal.
+2. In `.github/dependabot.yml`, under the `nuget` entry's `ignore:` list, add `Microsoft.Extensions.AI.Abstractions` with `versions: [">=11.0.0"]` and a two-line comment: it follows ModelContextProtocol's own dependency (10.x for 2.4.0); raise it together with a ModelContextProtocol update.
+3. Update the notices and map rows above.
+4. After the push, close PR #21 with `talvora_gh_run` (`pr close 21 --comment "Tomlyn 2.11.1 main üzerinde uygulandı; Microsoft.Extensions.AI.Abstractions 11, MCP kütüphanesi ona geçene kadar bekliyor."`).
+
+**Context7:** gerekmiyor (patch release of Tomlyn; no API Talvora calls changes; `noLookup` with this reason).
+
+**Acceptance:** `ThirdPartyNoticesSourceRegression.ps1` and `ModernizationPolicyRegression.ps1` green; signed-in Full `Hepsi geçti.`; deploy and the installed smokes (dependency graph changed); CI; PR #21 closed. Commit: "TOML kütüphanesi 2.11.1 sürümüne güncellendi", `Card: DEP21`.
+
+### D69 — The push gate reads `HEAD:main` style pushes correctly
+
+**Why:** audit 53 finding 2 (gate gap, low). `ProjectDeliveryGate.GetPushChangedPaths` takes the second non-flag push argument as the branch name. For `git push origin HEAD:main` (or `+main`, or `HEAD:refs/heads/main`) it builds `refs/remotes/origin/HEAD:main`, the ref check fails, and it falls back to `diff-tree HEAD`: only the last commit is checked, so a source change in an earlier commit of the same push passes without evidence.
+
+**Files:** `src/Talvora/SourceEditing/ProjectDeliveryGate.cs`, `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.QualityAudit.cs` (the CTX2 scenario `VerifyCtx2PushEvidenceAsync`), `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** the SourceEdit regression (`CTX2_PUSH_EVIDENCE_GREEN`).
+
+**Do:**
+1. Red first: in the CTX2 fixture, two commits (a source change, then a docs-only change) pushed with the arguments `push origin HEAD:main` must be refused for missing evidence; today they pass.
+2. In `GetPushChangedPaths`, normalise the branch argument before building `remoteRef`: drop a leading `+`; when it contains `:`, keep the part after the last `:`; drop a leading `refs/heads/`. An empty result keeps today's `branch --show-current` fallback.
+3. The `diff-tree` fallback stays only for a remote branch that does not exist yet.
+
+**Don't:** touch the ledger matching, `IsDocumentationPath` or the evidence format; do not mirror this into the PowerShell gates (they do not parse push arguments).
+
+**Context7:** gerekmiyor (string handling of git's documented `+src:dst` refspec form; no library API).
+
+**Acceptance:** red first; the SourceEdit regression and signed-in Full `Hepsi geçti.`; deploy and the installed smokes (service code); CI.
 
 ### D48 — A vault note belongs to the vault's owner (Claude, `[C]`)
 
@@ -324,6 +340,8 @@ Step 3. Two existing tests pin texts this card changes; update them in the same 
 **Acceptance:** `MAIN_SURFACE_TURKISH_GREEN` and `EVENT_TEXT_TURKISH_GREEN`; signed-in Full `Hepsi geçti.`; build and deploy; installed Control Center smoke green; record `[~] visual check pending (Claude)`.
 
 **Audit 51 addition (setup window texts):** the installer's progress texts mix three dots with `…` and "hizmet" with "servis" ("Talvora hizmeti durduruluyor..." next to "Talvora servisi başlatılıyor..."). When Claude ships D47, every progress text in `src/Talvora.Installer/*.cs` ends with `…` (U+2026) and says "servis", as the Control Center does; D67 already changes the PowerShell download text. Re-check `NativeInstallerSourceRegression.ps1` for pinned texts first.
+
+**Audit 53 addition (seen on the real screens 2026-11-13):** Olaylar shows "Yönetim Merkezi hazır" (`TrayApplicationContext.cs`) while the product is "Kontrol Merkezi" → "Kontrol Merkezi hazır"; "Kayıtlı servis/görev zinciri ve güvenli tünel birlikte işlendi." (`ControlCenterLifecycleService.cs`) → "Servis, görev ve güvenli tünel birlikte başlatıldı."; Çalışma günlüğü lists a finished session with the headline "GitHub denetimi sürüyor" under "Tamamlandı" (`TalvoraDesktopProgressNotifier.cs`, the terminal title when CI was still running) → "GitHub denetimi henüz bitmemişti" for that terminal title only (the live card keeps "sürüyor"); Genel bakış repeats "4/5 bileşen hazır…" as "4 hazır · 1 kapalı" right below it → drop the second line (Claude's look work).
 
 ### WL3 — Çalışma günlüğü and Olaylar polish (Claude)
 

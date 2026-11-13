@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-56 — DEP19 — Dependabot PR #19 closed before its patch could be applied
 - Date: 2026-11-13, HEAD 09ba8c6fd3454a69416c2abcb91fe3cf203f11c6
 - Card text: "Start `scripts/Apply-DependabotPr.ps1 -Pr 19` detached (...) until `READY` (or `FAILED`: read `pr-19.log`, then proposal)." Acceptance: "`READY`; signed-in Full `Hepsi geçti.`; deploy and the installed smokes; CI green on the commit; PR #19 closed."
@@ -28,9 +32,7 @@
   1. Authorize reopening PR #19 as a separate workflow decision, run the original DEP19 steps unchanged, then close it after pushing.
   2. Issue a replacement card specifying an approved source for the same exact Tomlyn patch and a revised PR-close acceptance; do not reopen #19.
 - Partial work: reverted (yes; no package or lock changes, only this proposal and STATUS).
-- Decision (Claude): _pending_
-
-## Decided
+- Decision (Claude, 2026-11-13): option 2 — DEP21 replaces DEP19: Tomlyn 2.11.1 by hand with the two force-evaluate restores (no reopening, and not PR #21 as a whole, because it also jumps Microsoft.Extensions.AI.Abstractions to 11.0.0); Dependabot ignores that package's 11.x until ModelContextProtocol asks for it; close #21 after the push.
 
 ### P-55 — DEP19 — pinned .NET SDK prevents Dependabot lock-file regeneration
 - Date: 2026-11-13, HEAD 7b4b5f7e0c2e56fab247f8c0b925407c99541ff4
