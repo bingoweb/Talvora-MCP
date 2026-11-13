@@ -34,7 +34,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] RL3 — installed 0b749e3: Apps entry values, `--what-if`, smokes and CI checked at audit 50; live pending (Claude): the real uninstall → reinstall → restart with the user, together with D66 (postponed by the user 2026-11-13; before 0.0.1.0)
 - [~] RL4 — Tag-triggered release workflow built and tested; live pending: windows-ci and workflow_dispatch dry run (no real release)
-- [ ] D68 — The elevated setup never stages Talvora's files in the user's own temp folder (audit 53, security)
+- [~] D68 — Setup payload staged under protected Program Files; live pending: clean-HEAD installer deployment, installed smokes and CI
 - [ ] DEP21 — Tomlyn 2.11.1 without the Microsoft.Extensions.AI.Abstractions 11 jump (audit 53; answers P-56)
 - [ ] D69 — The push gate reads `HEAD:main` style pushes correctly (audit 53)
 - [ ] RL5 — The Control Center says quietly when a new version is out (user decision 2026-11-08; after RL1)
@@ -56,6 +56,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-13 — D68, executor ChatGPT: setup staging moved to Versions/.staging-GUID under Program Files; both installRoot and versionsRoot reject reparse points. RED source regression first, NativeInstaller and QualityGateChanged GREEN; signed-in Changed 16/0, Full 72/0, Hepsi geçti.; Context7 noLookup (existing Directory/File.GetAttributes API); Gitea #9 comment 246. Clean-HEAD installer, deployed smoke and CI pending.
+  Self-review — Cosmetics: no visual change; only the card's Turkish error text added.
+  Self-review — Usability: staging now inherits Program Files directory protections, existing setup flow retained.
+  Self-review — Turkish: error text follows the card exactly; diacritics checked.
+  Self-review — Security: reparse directory guards and protected staging path verified, cleanup/rollback untouched.
 
 - 2026-11-13 — Claude, audit 53 (deep, whole project; tag `audit/2026-11-13-53`): range `audit/2026-11-13-52..579bc10` — D67 and P-56 (ChatGPT) — plus the subsystems changed since the last whole-project audit 42 (installer RL1–RL3/KUR1/D65–D67, release workflow, CTX1–CTX3 ledger, key and push gate). D67 follows its card (random MSI name, CreateNew, hash on the open FileShare.Read handle kept through msiexec, percent progress, UTF-8 output); its Context7 question is in the ledger (2026-11-13, 200). Live probes: Host header filter (foreign host 400), Origin guard (foreign and null 403), MCP with a foreign host 400; pipe ACLs (SYSTEM + session user, server identity checked); ProgramData\Talvora closed to the unelevated user; search regex timeout 2 s; archive extraction contained; key never logged; no culture-sensitive casing; every tray `async void` handler reaches the dispatcher handler. Tray log: the October tunnel/update error waves are gone; the rare 'frame payload was truncated' is a write timeout whose frame is re-sent (harmless). Findings: the elevated setup stages its payload in the user's %TEMP% → D68 (security); `push origin HEAD:main` checks only the last commit → D69; P-56 → DEP21 (Tomlyn only; Microsoft.Extensions.AI.Abstractions stays 10.x for ModelContextProtocol 2.4.0). Known limit, no card: Talvora's own SYSTEM tools could write the Context7 ledger, so audits keep comparing evidence with the ledger. Screens (Genel bakış, Çalışma günlüğü, Olaylar, Gece vardiyası): clean; texts for Claude's [C] D47 (audit 53 addition). Asked the user nothing: every finding has one correct fix. Release: none.
 - 2026-11-13 — P-56, executor ChatGPT: DEP19 Apply-DependabotPr -Pr 19 FAILED, PR #19 CLOSED on 2026-11-13T18:11:06Z without merge. No package lock files changed; documentation changes reverted; awaiting Claude's PR workflow decision. Signed-in Changed 11/0 `Hepsi geçti.`, baseline windows-ci 43483191656 GREEN; Gitea #9 comment 244.

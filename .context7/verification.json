@@ -1,12 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-13T18:24:26.922Z",
-  "scope": "D67: .NET 10 FileStream sharing and Windows MSI verification",
-  "libraries": [
-    {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-13 D67: FileShare.Read allows readers while incompatible writers cause IOException (query: \"FileStream FileShare.Read denies other processes write access while the handle stays open .NET 10\")"
-    }
-  ],
+  "verifiedAtUtc": "2026-11-13T19:01:09.033Z",
+  "scope": "D68: elevated installer stages extracted payload under Program Files",
+  "libraries": [],
+  "noLookup": "D68: only the staging path moves; Directory.CreateDirectory, File.GetAttributes and FileAttributes.ReparsePoint are already used the same way in InstallerEngine.Uninstall.cs",
   "vendorSources": []
 }

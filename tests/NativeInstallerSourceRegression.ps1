@@ -845,6 +845,15 @@ $result = [pscustomobject]@{
         $installerProgram -match 'versionId' -and
         $installerProgram -match 'CleanupObsoleteInstallations'
     )
+    D68SetupStagesPayloadUnderProgramFiles = (
+        $installerFlow -notmatch 'Path\.GetTempPath\(\)' -and
+        $installerFlow -match '(?s)var tempRoot = Path\.Combine\(\s*versionsRoot,\s*"\.staging-" \+ Guid\.NewGuid\(\)\.ToString\("N"\)\)' -and
+        $installerFlow -match 'File\.GetAttributes\(installRoot\).*FileAttributes\.ReparsePoint' -and
+        $installerFlow -match 'File\.GetAttributes\(versionsRoot\).*FileAttributes\.ReparsePoint' -and
+        $installerFlow.Contains('Talvora kurulum klasörü bağlantı içeriyor; güvenli kurulum durduruldu.') -and
+        $installerFlow.IndexOf('Directory.CreateDirectory(versionsRoot)', [StringComparison]::Ordinal) -lt
+            $installerFlow.IndexOf('ExtractPayload(tempRoot)', [StringComparison]::Ordinal)
+    )
     InstallerSupportsRollback = (
         $installerProgram -match 'rolling back' -and
         $installerProgram -match 'previousServiceExecutable'
@@ -908,6 +917,10 @@ $result = [pscustomobject]@{
 }
 
 $result | Format-List
+
+if (-not $result.D68SetupStagesPayloadUnderProgramFiles) {
+    throw 'D68: setup must stage the payload under Program Files'
+}
 
 if ($result.PSObject.Properties.Value -contains $false) {
     throw 'Native installer/tray source contract is incomplete.'

@@ -23,10 +23,17 @@ public static async Task<HealthSnapshot> InstallAsync(
         await EnsurePowerShell7Async(progress, cancellationToken);
 
         var installUser = ResolveInstallUserContext();
+        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var installRoot = Path.Combine(programFiles, "Talvora");
+        var versionsRoot = Path.Combine(installRoot, "Versions");
+        Directory.CreateDirectory(versionsRoot);
+        if ((File.GetAttributes(installRoot) & FileAttributes.ReparsePoint) != 0 ||
+            (File.GetAttributes(versionsRoot) & FileAttributes.ReparsePoint) != 0)
+            throw new IOException("Talvora kurulum klasörü bağlantı içeriyor; güvenli kurulum durduruldu.");
 
         var tempRoot = Path.Combine(
-            Path.GetTempPath(),
-            "Talvora-Setup-" + Guid.NewGuid().ToString("N"));
+            versionsRoot,
+            ".staging-" + Guid.NewGuid().ToString("N"));
 
         Directory.CreateDirectory(tempRoot);
 
@@ -47,9 +54,6 @@ public static async Task<HealthSnapshot> InstallAsync(
                 throw new InvalidOperationException("Kurulum paketinde source commit bilgisi yok.");
             }
 
-            var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            var installRoot = Path.Combine(programFiles, "Talvora");
-            var versionsRoot = Path.Combine(installRoot, "Versions");
             var versionId = sourceCommit + "-" + DateTime.UtcNow.ToString(
                 "yyyyMMddHHmmssfff",
                 System.Globalization.CultureInfo.InvariantCulture);
@@ -63,7 +67,6 @@ public static async Task<HealthSnapshot> InstallAsync(
             previousTrayExecutable = ReadTrayStartupExecutable(installUser);
 
             progress.Report(new InstallProgress(8, "Yeni Talvora sürümü hazırlanıyor..."));
-            Directory.CreateDirectory(versionsRoot);
             Directory.CreateDirectory(serviceRoot);
             Directory.CreateDirectory(trayRoot);
 
