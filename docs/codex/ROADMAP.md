@@ -360,6 +360,66 @@ Step 3. Two existing tests pin texts this card changes; update them in the same 
 10. `WorklogHistoryView.xaml`, list card (audit 46 screen pass): the files part (" dosya değişti" after the bound count) collapses when `Totals.FilesChanged` is 0, the way `WorklogCardMapper.cs` leaves zero parts out of the desktop card, so a session without file changes reads "4 adım" instead of "4 adım · 0 dosya değişti".
 11. `WorklogHistoryView.xaml`, list card (audit 47, user decision 2026-11-08 "Görev notu"): when `Header.TaskNote` is set it is the card's headline (`Tv.Type.Body`, one line, ellipsis) and `Current.Title` moves under it as a muted caption "Son adım: …"; a session without a task note looks as today. Since D61 most agent sessions end with the deploy step, so three of the last five read "Kurulum devredildi · doğrulama bekleniyor" in the list.
 
+## Precise desktop worklog (user request 2026-11-13)
+
+The user: "Talvora masaüstü bildiriminin tam, doğru ve hassas açıklamalar yapmasını istiyorum. tamamen türkçe ve gerçekten o anda ne yapıldığı ve sonu gerçek verilerle realtime olmalı." The rules, the copy and the measured facts are in `docs/codex/DESIGN-WORKLOG.md` §6.4 (authoritative; Claude's). No new visual element: every change is text in the existing title, `ne` and `sonuç` rows and the timeline labels, so no PNG review beyond the usual `[~] visual check pending (Claude)`.
+
+### WL4 — Every command-running tool takes a Turkish `purpose`
+
+**Why:** §6.4 rule 1. The notifier already reads `purpose` from any call's arguments (`TalvoraDesktopProgressNotifier.cs`, `GetArgumentText(arguments, "purpose")`) and shows it as the `ne` row, but only `talvora_apply_patch` (and one workspace command tool) declare it, so ChatGPT cannot send it for the calls that need it most (PowerShell, processes, git, builds, background jobs).
+
+**Files:** `src/Talvora/McpToolMetadataWirePolicy.cs`, `src/Talvora/ToolArgumentValidator.cs`, `src/Talvora.Shared/TalvoraMcpToolMetadataPolicy.cs` (only if it pins which tools may carry `purpose`), `tests/Talvora.Notification.Regression/` (new `Program.WL4.cs`, registered in the runner list), `tests/Talvora.Smoke/SmokeScenarios.Workspace.ProcessSearch.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** the Notification regression, the metadata-policy smoke (`--metadata-policy-only`), `ModernizationPolicyRegression.ps1` (it greps `purpose`), `ToolManifestDocumentationRegression.ps1`.
+
+**Do:**
+1. Red first: (a) a Notification regression case builds the wire `tools/list` result and asserts that every tool whose annotations do **not** say `readOnlyHint: true` has an optional string property `purpose` with the description "Bu adımın ne yaptığını ve neden yapıldığını anlatan tek satırlık Türkçe açıklama (en çok 140 karakter); masaüstü çalışma günlüğünde 'ne' satırı olarak görünür." and that read-only tools do not; (b) `ToolArgumentValidator` accepts `purpose` (string, ≤ 140 characters) on those tools and still rejects any other unknown argument.
+2. Add the property once, in the wire policy that already rewrites input schemas, for every tool without `readOnlyHint: true` that does not already declare `purpose`; never touch a tool's own C# signature. Make the validator check against the same rewritten schema (or accept exactly this one extra property for exactly those tools).
+3. The tool method must never receive `purpose`: verify (Context7 below, then the smoke) that the SDK ignores an argument with no matching parameter; if it does not, remove `purpose` from the arguments after the notifier has read it and before binding. If neither works → proposal.
+4. Smoke: one existing process scenario (`talvora_run_process` or `talvora_user_run`) passes `purpose` and still succeeds.
+
+**Don't:** change any tool's behaviour, title or description; add `purpose` to read-only tools; store `purpose` anywhere but the existing progress message (it is redacted and clipped there already).
+
+**Context7:** `/modelcontextprotocol/csharp-sdk`, query "ModelContextProtocol C# SDK McpServerTool binding of call arguments that have no matching method parameter" (id `/modelcontextprotocol/csharp-sdk/v2.3.0`, the newest indexed; 2.4.0 release notes for anything that may have changed).
+
+**Acceptance:** red first; the Notification regression green; signed-in Full `Hepsi geçti.`; deploy, metadata-policy and full installed smokes green; CI. Then Claude adds the AGENTS.md rule that every call of such a tool passes `purpose` (already written, active from WL4 on).
+
+### WL5 — Titles and results say exactly what happened, measured
+
+**Why:** §6.4 rules 2–4 and its title table. Today an inline PowerShell command shows "pwsh.exe bitti", git steps show their subcommand ("Git işlemi tamamlandı · diff"), test scripts "… hata ile bitti", and most results are a bare "Sonuç: başarılı".
+
+**Files:** `src/Talvora/WorklogSubject.cs`, `src/Talvora/WorklogCopy.cs`, `src/Talvora/TalvoraDesktopProgressFacts.cs`, `src/Talvora/TalvoraDesktopProgressEvidence.cs`, `src/Talvora/TalvoraDesktopProgressNarrative.cs`, `src/Talvora/Tools/GitTools*.cs` (only for the one follow-up `git diff --cached --name-only` after `git add -A/./-u`, run through the same runner and identity as the call), `src/Talvora.Tray/Worklog/WorklogPreviewScenarios.cs` (preview strings that show the old titles), `tests/Talvora.Notification.Regression/Program.N9Subjects.cs`, `tests/Talvora.Notification.Regression/Program.D62.cs`, new `tests/Talvora.Notification.Regression/Program.WL5.cs`, `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** the Notification regression (N9Subjects and D62 pin today's titles: update exactly the rows §6.4 replaces), the Control Center smoke (worklog previews).
+
+**Do:**
+1. Red first, one case per §6.4 title-table row, built from real recorded outputs (copy short real output samples into the test: a `git pull` fast-forward summary, `Already up to date.`, a `git fetch` ref update line, a `git commit` header + summary line, a `git push` ref update line, `git status --short` lines, a `dotnet test` summary, a test script ending in `…_GREEN`, a thrown PowerShell error): title, `sonuç` and timeline label must equal the table exactly.
+2. Implement the table: an inline shell command is a command whose text names no `*.ps1` and no program file (today it falls back to the executable name); a test script is a `*.ps1` whose path contains `tests/` or `tests\`; a .NET test project is a `dotnet run/test` target whose project name ends in `.Regression` or `.Tests`. Executable names, subcommands and flags move to "Teknik kanıt" (they are already in the technical evidence; only remove them from titles and labels).
+3. Replace both bare `"Sonuç: başarılı"` lines in `TalvoraDesktopProgressEvidence.cs` with `Sonuç: tamamlandı · {süre}` unless a parsed fact exists, in which case `Sonuç: {fact}`. Duration format exactly as §6.4 rule 3 (Turkish decimal comma, `dk`, `sa`), one shared formatter.
+4. Parsing is best effort and never changes the call's result: an unparseable output falls back to `{süre}`; never show a number that was not printed or counted.
+
+**Don't:** change the visual card, the `ne`/`nerede`/`fark` rows, redaction, or any title §6.4 does not list; never add a git call other than the one in Files.
+
+**Context7:** gerekmiyor (parsing of Talvora's own captured outputs; git's documented output lines are taken from real samples in the test).
+
+**Acceptance:** red first; Notification regression green; signed-in Full `Hepsi geçti.`; deploy and both installed smokes; CI; `[~] visual check pending (Claude)` (Claude reads a real session in Çalışma günlüğü).
+
+### WL6 — Background jobs, deploys and CI are followed to their real end, with a live line
+
+**Why:** §6.4 background, deploy and CI rows and the live-line table. Today `talvora_user_process_start` ends the step as "… arka planda başladı", the deploy ends as "Kurulum devredildi · doğrulama bekleniyor" and a running CI as "GitHub denetimi sürüyor"; the real results never reach the card.
+
+**Files:** `src/Talvora/TalvoraDesktopProgressNotifier.cs`, `src/Talvora/TalvoraDesktopWorklogState.cs`, `src/Talvora/WorklogSubject.cs`, new `src/Talvora/WorklogFollower.cs`, `scripts/Invoke-QualityGate.ps1` (two new output lines only), `tests/QualityGateRegression.ps1`, `tests/Talvora.Notification.Regression/` (new `Program.WL6.cs`), `.context7/verification.json`, `docs/codex/STATUS.md`. **Tests that read these files:** `QualityGateRegression.ps1` and `QualityGateChangedRegression.ps1` (gate output), the Notification regression, the installed smoke (desktop progress parts).
+
+**Do:**
+1. Gate output (red first in `QualityGateRegression.ps1`): before the first check print `PLAN {n}` where n = the number of `PASS`/`FAIL` lines this run will print, and before each check `START {Name}`. Nothing else in the gate changes; existing `PASS`/`FAIL`/summary lines stay byte for byte.
+2. A test asserts that every check name the gate can print has a row in the §6.4 stage-name table (keep the table as a C# dictionary in `WorklogFollower.cs`; the test reads the gate script's names).
+3. Follower: when a background start returns a process id and the command redirects to a log file inside the workspace (`*> <path>` or `> <path>`), keep that step running and follow it: every 2 s read at most the last 64 KB of the log (shared read, never lock or write it), update the running fact with the §6.4 live line, and when the process exits, finish the step with the §6.4 final result and the measured duration. No log path → follow only the process exit (`{süre}` and exit result). Stop following after 2 hours (end the step as `İzleme süresi doldu` with the elapsed time) and when the service stops.
+4. Deploy: after `Deploy-Windows-Installer.ps1` returns its JSON, keep the step running and poll `http://127.0.0.1:7676/healthz` every 3 s from the new service (the notifier lives in the service, so start polling only from the new process: the old one is stopped by the installer — persist the pending deploy `{sourceCommit, startedAtUtc, sessionId}` in the existing worklog state so the new service process finishes the step at start-up). Finish as §6.4 within 10 minutes or fail with its reason.
+5. CI: when `Get-CiStatus.ps1` exits 2, keep the step running and re-run it with `-TimeoutMinutes 0` as the signed-in user every 30 s, at most 30 minutes, then finish per §6.4.
+6. A followed step counts as active work: the card never auto-dismisses while one is running (AGENTS.md desktop rules); the session stays open until the last followed step ends.
+
+**Don't:** run anything the agent did not start except the read-only log reads, `/healthz` and `Get-CiStatus.ps1`; show a fraction or stage the log did not print; change the visual card.
+
+**Context7:** `/dotnet/docs`, query "FileStream FileShare.ReadWrite read the end of a file another process is still writing .NET 10".
+
+**Acceptance:** red first (gate lines, stage-name coverage, a follower test against a fake log that grows and a fake process that exits, a deploy test that finishes from persisted state); signed-in Full `Hepsi geçti.` (the gate prints the new lines); deploy (the new service finishes its own deploy step) and both installed smokes; CI; `[~] visual check pending (Claude)` (Claude watches a real gate run on the card).
+
 ## Releases and the public page (user request 2026-11-08)
 
 User: "github'da bulunan talvora mcp readme'si yani github arayüzünü tamamen insan yazmış gibi en başından ele alarak tamamen en başından tekrar tasarla … ekran görüntülerini yenile, ayrıca artık stabil release'ler de oluşturmaya başlayalım. ne zaman release güncellemesi yapılacağına tamamen sen karar vereceksin. proje 0.0.x.x şeklinde olmalı ve windows kullanıcılarının rahatlıkla kurabileceği şekilde olmalı." User choices the same day: README in Turkish with a short English summary; the installer stays unsigned and the README explains the SmartScreen step; the installer installs PowerShell 7 itself; the Control Center shows a quiet new-version link once a day. Claude wrote the README (`docs/codex/reference/d57/README.md.txt`) and took the screenshots (`docs/media/kontrol-merkezi-gece.png`, `kontrol-merkezi-gunduz.png`, `calisma-gunlugu.png`, `kod-karti.png`). Releases: only Claude creates the `v0.0.x.x` tag and writes `docs/releases/<version>.md` (AGENTS.md rule 10b); the first one, 0.0.1.0, follows RL5 and the open D-cards.

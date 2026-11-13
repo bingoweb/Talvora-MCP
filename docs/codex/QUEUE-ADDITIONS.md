@@ -4,7 +4,15 @@
 
 ## Pending
 
-(none)
+### 2026-11-13 — Precise desktop worklog (ROADMAP → "Precise desktop worklog (user request 2026-11-13)")
+
+Insert these lines into "Agent queue" **directly after the D69 line**, in this order:
+
+```
+- [ ] WL4 — Every command-running tool takes a Turkish `purpose` (user request 2026-11-13)
+- [ ] WL5 — Titles and results say exactly what happened, measured (user request 2026-11-13)
+- [ ] WL6 — Background jobs, deploys and CI are followed to their real end, with a live line (user request 2026-11-13)
+```
 
 ## Applied
 

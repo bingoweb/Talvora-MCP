@@ -304,6 +304,67 @@ Target renders: `docs/codex/reference/worklog-phosphor/previews/01…08` (regene
 
 **Polish (audit 2026-10-23 (12), card D18):** finished cards keep a quiet 2 px line in their state colour where the live line runs while working (55 %, off in high contrast); a one-step session does not repeat its title as the only timeline row; file tabs appear only for two or more files; a `@@ FILE x` + `+++ b/x` pair is one file; hunk headers stay on one line (≤ 48 chars); the diff header shows the time of the code change, not of the latest frame; "nerede" names the declaration above the first changed line. Showcase of the live case: `previews/09-one-step-receipt.png`. Until D18 runs, the updated files and previews live in `docs/codex/reference/worklog-phosphor-next/`; D18 promotes them.
 
+### 6.4 Precise, measured and live (Claude, 2026-11-13 — user request "tam, doğru ve hassas … gerçekten o anda ne yapıldığı ve sonu gerçek verilerle realtime")
+
+Measured on the 73 stored sessions before this section: 654 steps, the most frequent being "pwsh.exe bitti" (48); git steps read "Git işlemi tamamlandı · diff/add/fetch"; "Talvora.Smoke arka planda başladı" never got a result; 35 of 46 results were a bare "Sonuç: başarılı"; "Kurulum devredildi · doğrulama bekleniyor" appeared 18 times and its verified form never. The user chose (ledger 2026-11-13): both sources (agent `purpose` + Talvora's own measurements), background jobs followed to the end, live state from the job's own log, object names on the main line and command names only under "Teknik kanıt".
+
+**Rules (all cards WL4–WL6 follow them):**
+1. **Two sources, never mixed up.** `ne` = the agent's `purpose`, verbatim after redaction (§6.2). Title, `sonuç` and every number = what Talvora measured from the real call (arguments, exit result, output, files, clock). A missing `purpose` removes only the `ne` row.
+2. **No command names on the main line.** `pwsh.exe`, `git diff`, `dotnet`, `npm` and flags appear only under "Teknik kanıt". Object names stay: files, projects, remotes/branches, services, hosts, test scripts.
+3. **Every finished step has a measured result.** Never a bare "Sonuç: başarılı": at least `Sonuç: tamamlandı · {süre}`; with parsed facts, those facts (table below). Durations in Turkish form: `0,8 sn`, `12,4 sn`, `4 dk 12 sn`, `1 sa 3 dk`.
+4. **Nothing estimated.** A count, fraction or stage is shown only when the job itself printed it; otherwise only the elapsed time.
+
+**Titles and measured facts (replaces the matching rows of §6 and §6.1):**
+
+| Step | Running | Succeeded | Failed | Measured fact (`sonuç`) |
+|---|---|---|---|---|
+| inline shell command (no script or program file in it) | Komut çalışıyor | Komut tamamlandı | Komut hata ile bitti | `{süre}`; failed: first error line (§5.3) |
+| test script (`*.ps1` under `tests/`) | Test betiği çalışıyor · {dosya} | Test betiği geçti · {dosya} | Test betiği başarısız · {dosya} | passed: last output line when it ends in `_GREEN` → `{süre}`; failed: the first line of the thrown message |
+| .NET test project (`dotnet run/test` of a project whose name ends in `.Regression` or `.Tests`) | Testler çalışıyor · {proje} | Testler geçti · {proje} | Testler başarısız · {proje} | `dotnet test` summary → `{n} test geçti · {m} başarısız`; otherwise `{süre}` |
+| git fetch | Uzak depo denetleniyor · {uzak} | Uzak depo denetlendi · {uzak} | Uzak depo denetlenemedi · {uzak} | `{n} dalda yeni commit` from the `a..b  x -> y` lines, or `yeni commit yok` |
+| git pull | Uzak değişiklikler alınıyor · {uzak/dal} | Uzak değişiklikler alındı · {uzak/dal} | Uzak değişiklikler alınamadı · {uzak/dal} | `Already up to date` → title `Zaten güncel · {uzak/dal}`; fast-forward → `{n} dosya · +{a} −{b}` from the summary line |
+| git diff | Değişiklikler inceleniyor | Değişiklikler incelendi | Değişiklikler incelenemedi | `{n} dosya · +{a} −{b}` when the output has a `--stat` summary or numstat lines; else `{süre}` |
+| git add | Dosyalar kayda hazırlanıyor | Dosyalar kayda hazırlandı | Dosyalar kayda hazırlanamadı | `{n} dosya` = number of explicit path arguments; for `-A`, `.` or `-u`, the count from `git diff --cached --name-only` run once after the call |
+| git status | Çalışma alanı denetleniyor | Çalışma alanı denetlendi | Çalışma alanı denetlenemedi | `{n} değişmiş dosya` or `değişiklik yok` (porcelain/short output lines) |
+| git log | Geçmiş okunuyor | Geçmiş okundu | Geçmiş okunamadı | `{n} commit` (commit header lines) |
+| git commit | (as §6) | Değişiklikler kaydedildi | (as §6) | `{kısa hash} · {n} dosya · +{a} −{b}` from `[dal hash]` and the summary line |
+| git push | (as §6) · {uzak/dal} | (as §6) · {uzak/dal} | (as §6) | `{eski7}..{yeni7}` from the ref update line, or `zaten güncel` |
+| other git subcommands | Depo işlemi yapılıyor | Depo işlemi tamamlandı | Depo işlemi tamamlanamadı | `{süre}`; subcommand under "Teknik kanıt" |
+| background start (`talvora_user_process_start`, `talvora_job_start`) | the started script's own running title (`KnownScripts` or the rows above) | → stays running until the process ends (WL6) | | live line (below) |
+| deploy (`Deploy-Windows-Installer.ps1`) | Yeni sürüm kuruluyor | Yeni sürüm çalışıyor · {kısa sürüm} | Yeni sürüm doğrulanamadı | WL6: `/healthz` `sourceCommit` equals the deployed commit → `{süre}`; 10 minutes without it → failed, reason "Yeni sürüm 10 dakika içinde yanıt vermedi." |
+| CI check that answered "still running" (`Get-CiStatus.ps1` exit 2) | GitHub denetimi sürüyor | GitHub denetimi geçti | GitHub denetimi başarısız | WL6: followed until the run completes (at most 30 minutes) → `{süre}` of the run; after 30 minutes the step ends as `GitHub denetimi henüz bitmemişti` (cancelled state) |
+
+**Live line of a followed background job** (shown as the running fact, refreshed at most every 2 s, from the job's own log, read-only and bounded to its last 64 KB):
+
+| Job | Live line | Final result |
+|---|---|---|
+| quality gate | `{bitmiş}/{plan} aşama · şu an: {aşama} · {hata} hata · {süre}` (needs the gate's `PLAN`/`START` lines, WL6) | `{n} kontrol · {m} hata · {süre}` from `N kontrol, M hata`; failed: `Kontrol başarısız: {aşama}` with the Turkish stage name |
+| installed smoke | `{süre}` | `TALVORA MCP SMOKE GREEN` → `Kurulu sürüm testi geçti · {süre}`; `… RED` → the named step |
+| metadata smoke | `{süre}` | `METADATA POLICY LIVE GREEN` → `Araç tanımları denetimi geçti · {süre}` |
+| installer build | `{süre}` | the final JSON → `{boyut MB} · SHA-256 {ilk 8}` |
+| anything else | `{süre}` | exit result + `{süre}` |
+
+**Turkish stage names of the quality gate** (the only place these English check names become visible; a test pins that every check name in `Invoke-QualityGate.ps1` has a row):
+
+| Check | Görünen ad |
+|---|---|
+| Restore | Paketlerin geri yüklenmesi |
+| Build | Derleme |
+| PowerShellParse | PowerShell sözdizimi |
+| PackageManager | Paket yöneticisi kuralları |
+| Context7 | Context7 kanıtı |
+| Delivery | Teslim kapısı |
+| SourceEditSemantic | Kod düzenleme motoru (anlamsal) |
+| SourceEdit | Kod düzenleme motoru |
+| Notification | Masaüstü bildirim testleri |
+| ParallelPhase | Paralel testler |
+| PowerShellRegressions | PowerShell test betikleri |
+| IntegrationPolicy | Entegrasyon kuralları |
+| NativeInstallerRuntime | Yükleyici çalışma testi |
+| HealthHandle | Sağlık ve tanıtıcı denetimi |
+| ControlCenter | Kontrol Merkezi testi |
+| BusinessBootstrap | Başlangıç kurulumu testi |
+
 ## 7. Visual spec — "Phosphor" (hacker terminal), superseding the earlier table (Claude, 2026-10-20)
 
 **The authoritative design is code, not prose:** `docs/codex/reference/worklog-phosphor/src/*` — eight files written and **compiled by Claude** in a scratch WPF project with the same settings as `Talvora.Tray` (net10.0-windows, UseWPF + UseWindowsForms, TreatWarningsAsErrors, AssemblyName `Talvora.Tray`): 0 warnings, 0 errors. `docs/codex/reference/worklog-phosphor/previews/*.png` are the target renders (150 %), including a real window capture. Card N5 copies these files verbatim. Where any text in this document disagrees with those files, **the files win**.
