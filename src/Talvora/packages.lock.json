@@ -64,9 +64,9 @@
       },
       "Microsoft.Extensions.AI.Abstractions": {
         "type": "Direct",
-        "requested": "[10.11.0, )",
-        "resolved": "10.11.0",
-        "contentHash": "h4DX/TdJU4fk1GGaf19n6Kujkj6VXbGeL4UEOsQ8+ZJC5fVApPauokCtvBP684BYbczUYZQNfo1mbmyHG4WVSg=="
+        "requested": "[11.0.0, )",
+        "resolved": "11.0.0",
+        "contentHash": "UYZTudmTrGykWIRzcO/TKauTx/+L/h4MYpUBODCG7aIybRVkv2y6uhVwG6UHRS6uTzRqg0K8IJprC9/QhMZGsw=="
       },
       "Microsoft.Extensions.Hosting.WindowsServices": {
         "type": "Direct",
@@ -104,9 +104,9 @@
       },
       "Tomlyn": {
         "type": "Direct",
-        "requested": "[2.11.0, )",
-        "resolved": "2.11.0",
-        "contentHash": "TCXTieJ1M/YsWqkh8c7+bSjNf1uJdW74LPdFRrGiRBtBFHJW/O3ZN42d/Tp/EoXyZ3fnVVag3I20tjg3PfukLQ=="
+        "requested": "[2.11.1, )",
+        "resolved": "2.11.1",
+        "contentHash": "ePC5kPidQngNoOi7jCDeRo5hbXS5uV3o4CAzz5QaxkDo1IhgM0QtGinuI03tqj8/Dl/FigRG4gRiatUsV3pcrA=="
       },
       "YamlDotNet": {
         "type": "Direct",
