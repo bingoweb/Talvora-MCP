@@ -39,12 +39,12 @@ Talvora'da en çok kullandığım parça bu kart. En üstte ajanın üzerinde ç
 
 ## Kurulum
 
-En son sürümün kurulum dosyası [Releases](https://github.com/bingoweb/Talvora-MCP/releases/latest) sayfasında: şu an `Talvora-Kurulum-0.0.1.1.exe`. İndirip çalıştırman yeterli. Kurulum yönetici izni ister, Windows hizmetini, Kontrol Merkezi'ni ve Başlat menüsü kısayolunu yerleştirir; PowerShell 7 yoksa Microsoft'un resmi paketini indirip doğrulayarak onu da kurar. Gerekenler: Windows 10 ya da 11 (64 bit) ve yönetici yetkisi. Program dosyaları `C:\Program Files\Talvora` altına, kayıtlar ve ayarlar `C:\ProgramData\Talvora` altına gider; her şey yolundaysa `http://127.0.0.1:7676/healthz` adresi çalışan sürümü gösterir.
+En son sürümün kurulum dosyası [Releases](https://github.com/bingoweb/Talvora-MCP/releases/latest) sayfasında: şu an `Talvora-Kurulum-0.0.1.2.exe`. İndirip çalıştırman yeterli. Kurulum yönetici izni ister, Windows hizmetini, Kontrol Merkezi'ni ve Başlat menüsü kısayolunu yerleştirir; PowerShell 7 yoksa Microsoft'un resmi paketini indirip doğrulayarak onu da kurar. Gerekenler: Windows 10 ya da 11 (64 bit) ve yönetici yetkisi. Program dosyaları `C:\Program Files\Talvora` altına, kayıtlar ve ayarlar `C:\ProgramData\Talvora` altına gider; her şey yolundaysa `http://127.0.0.1:7676/healthz` adresi çalışan sürümü gösterir.
 
 Kurulum dosyası henüz imzalı değil. Windows bu yüzden ilk açılışta bir uyarı gösterebilir: **Ek bilgi**'ye, sonra **Yine de çalıştır**'a bas. İstersen önce dosyanın SHA-256 değerini aynı sayfadaki `SHA256SUMS.txt` ile karşılaştır:
 
 ```powershell
-Get-FileHash .\Talvora-Kurulum-0.0.1.1.exe -Algorithm SHA256
+Get-FileHash .\Talvora-Kurulum-0.0.1.2.exe -Algorithm SHA256
 ```
 
 Kaldırmak için Windows Ayarları'ndaki yüklü uygulamalar listesinde Talvora'yı seçip kaldır. Kontrol Merkezi'nden sonradan kurduğun ek bileşenler (Gitea, Penpot, ChatGPT tüneli) bu kaldırmaya dahil değildir.
@@ -84,7 +84,8 @@ Talvora, Windows'un en yetkili hesabı olan LocalSystem ile çalışır. Ona ba�
 
 - Hizmet yalnızca `127.0.0.1` adresini dinler. Ağdaki başka bir bilgisayar ona ulaşamaz, tarayıcıda açtığın bir site de onu çağıramaz.
 - Yerel bir parola yok: bu bilgisayarda çalışan her program bağlanabilir.
-- Günlüklerde parolalar, anahtarlar ve erişim jetonları maskelenir.
+- Günlüklerde ve ekrandaki çalışma günlüğünde parolalar, anahtarlar ve erişim jetonları maskelenir; ajana dönen komut çıktısı ise olduğu gibi kalır.
+- Gizli anahtarların durduğu klasörü (`C:\ProgramData\Talvora\Secrets`) ve Context7 anahtarını Talvora'nın dosya araçları okumaz; bu klasörü ya da onu içeren bir klasörü silmeye, taşımaya, dışarı kopyalamaya da izin vermez. Bu yalnızca kazalara karşı bir önlem: PowerShell aracı bilinçli bir işlem için yine her yere ulaşır.
 
 Ayrıntılar [SECURITY.md](SECURITY.md) dosyasında.
 
@@ -113,4 +114,4 @@ Kendi kodum MIT lisansıyla açık: [LICENSE](LICENSE). Talvora'nın kullandığ
 
 ### In English
 
-Talvora is a local MCP server for Windows. It runs as a Windows service and gives AI clients such as ChatGPT, Claude Code and Codex a set of structured tools for real development work: transactional source edits, builds and tests that run as the signed-in user, Windows administration, Git, background jobs and dev servers. A desktop Control Center shows its health, and a small card shows what an agent is doing while it works. The interface is in Turkish. Talvora runs with LocalSystem rights and listens on 127.0.0.1 only, so install it on your own development machine. Download the installer from [Releases](https://github.com/bingoweb/Talvora-MCP/releases/latest) (currently `Talvora-Kurulum-0.0.1.1.exe`); it is not signed yet, so Windows SmartScreen may ask you to confirm. Versions are `0.0.feature.fix`, released in batches once the changes are verified (security and crash fixes at once), each with Turkish notes and a short English summary; the Control Center checks for a new release once a day and never installs anything by itself. The code is MIT licensed.
+Talvora is a local MCP server for Windows. It runs as a Windows service and gives AI clients such as ChatGPT, Claude Code and Codex a set of structured tools for real development work: transactional source edits, builds and tests that run as the signed-in user, Windows administration, Git, background jobs and dev servers. A desktop Control Center shows its health, and a small card shows what an agent is doing while it works. The interface is in Turkish. Talvora runs with LocalSystem rights and listens on 127.0.0.1 only, so install it on your own development machine. Download the installer from [Releases](https://github.com/bingoweb/Talvora-MCP/releases/latest) (currently `Talvora-Kurulum-0.0.1.2.exe`); it is not signed yet, so Windows SmartScreen may ask you to confirm. Versions are `0.0.feature.fix`, released in batches once the changes are verified (security and crash fixes at once), each with Turkish notes and a short English summary; the Control Center checks for a new release once a day and never installs anything by itself. The code is MIT licensed.

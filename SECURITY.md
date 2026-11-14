@@ -41,6 +41,12 @@ The Control Center raw-log viewer applies the same redaction layer to logs produ
 
 Do not place source bodies, request bodies, credentials, authentication headers, environment secrets, or private keys into new persistent audit records unless a narrowly scoped diagnostic explicitly requires it and the value is sanitized first.
 
+Tool results are returned as the command or file produced them; redaction applies to logs, the call trace and the on-screen work log, never to what an agent asked to see.
+
+## Secret folder guard
+
+Talvora's generic file tools do not read or search `%ProgramData%\Talvora\Secrets` and the Context7 key file, and they refuse to delete, move, copy out or archive them or a folder that contains them. Names stay listable and writes stay possible. The guard prevents accidental exposure in an agent's chat; it is not a barrier against a deliberate caller, because process and PowerShell tools stay unrestricted by design.
+
 ## Interactive process secrets
 
 Interactive-user process execution keeps its full environment and argument capabilities. When an environment contains credentials, the temporary request document is deleted by the interactive helper immediately after deserialization. Per-run lease files distinguish active runs from stale crash remnants so cleanup does not remove a live process handoff.
