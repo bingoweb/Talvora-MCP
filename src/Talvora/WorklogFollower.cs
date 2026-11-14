@@ -19,7 +19,8 @@ internal static class WorklogFollower
     internal enum JobKind { Other, QualityGate, Smoke, MetadataSmoke, InstallerBuild }
 
     internal sealed record Outcome(
-        bool Succeeded, string Title, string? Fact, string? Reason, bool TimedOut = false);
+        bool Succeeded, string Title, string? Fact, string? Reason,
+        bool TimedOut = false, string? TechnicalResult = null);
     internal sealed record PendingDeploy(
         string SessionId, string OperationId, string SourceCommit,
         DateTimeOffset StartedAtUtc, string Actor, string? ProjectName)
@@ -145,7 +146,24 @@ internal static class WorklogFollower
             @"(?m)^START\s+(?<name>[A-Za-z]+)(?:\s+(?<count>\d+))?\s*$",
             RegexOptions.CultureInvariant);
         if (stages.Count == 0) return elapsed;
-        var latest = stages[^1];
+        var open = new List<Match>();
+        foreach (Match entry in Regex.Matches(log,
+            @"(?m)^(?<kind>START|PASS|FAIL)\s+(?<name>[A-Za-z]+)(?:\s+(?<count>\d+))?",
+            RegexOptions.CultureInvariant))
+        {
+            if (entry.Groups["kind"].Value == "START")
+            {
+                open.Add(entry);
+            }
+            else
+            {
+                var index = open.FindLastIndex(item => string.Equals(
+                    item.Groups["name"].Value, entry.Groups["name"].Value,
+                    StringComparison.Ordinal));
+                if (index >= 0) open.RemoveAt(index);
+            }
+        }
+        var latest = open.Count == 0 ? stages[^1] : open[^1];
         var stage = StageLabel(latest.Groups["name"].Value);
         if (stage is null) return elapsed;
         var passed = Regex.Matches(log, @"(?m)^PASS\s+", RegexOptions.CultureInvariant).Count;
@@ -180,14 +198,20 @@ internal static class WorklogFollower
                     fact, label is not null ? "Kontrol başarısız: " + label : null);
             }
         }
-        if (kind == JobKind.Smoke && log.Contains("TALVORA MCP SMOKE GREEN", StringComparison.Ordinal))
-            return new Outcome(validExit, validExit ? "Kurulu sürüm testi geçti" :
-                "Kurulu sürüm testi başarısız", "Kurulu sürüm testi geçti · " + duration, null);
-        if (kind == JobKind.MetadataSmoke &&
-            log.Contains("METADATA POLICY LIVE GREEN", StringComparison.Ordinal))
-            return new Outcome(validExit, validExit ? "Araç tanımları denetimi geçti" :
-                "Araç tanımları denetimi başarısız",
-                "Araç tanımları denetimi geçti · " + duration, null);
+        if (kind is JobKind.Smoke or JobKind.MetadataSmoke)
+        {
+            var smoke = kind == JobKind.Smoke;
+            var succeeded = validExit && log.Contains(
+                smoke ? "TALVORA MCP SMOKE GREEN" : "METADATA POLICY LIVE GREEN",
+                StringComparison.Ordinal);
+            return new Outcome(succeeded, smoke
+                    ? succeeded ? "Kurulu sürüm testi geçti" : "Kurulu sürüm testi başarısız"
+                    : succeeded ? "Araç tanımları denetimi geçti" : "Araç tanımları denetimi başarısız",
+                duration, succeeded ? null : smoke
+                    ? "Kurulu sürüm testi bir adımda durdu; ayrıntı günlükte."
+                    : "Araç tanımları denetimi bir adımda durdu; ayrıntı günlükte.",
+                TechnicalResult: succeeded ? null : SmokeFailureLine(log));
+        }
         if (kind == JobKind.InstallerBuild && validExit)
         {
             var json = Regex.Match(log,
@@ -200,8 +224,23 @@ internal static class WorklogFollower
         }
         return new Outcome(validExit,
             validExit ? "İşlem tamamlandı" : "İşlem hata ile bitti",
-            (exitCode is { } code ? "çıkış kodu " + code + " · " : "") + duration,
-            exitCode is null ? "İşlemin çıkış kodu doğrulanamadı." : null);
+            duration,
+            exitCode is null ? "İşlemin çıkış kodu doğrulanamadı." : null,
+            TechnicalResult: !validExit && exitCode is { } code
+                ? "Sonuç: tamamlanamadı  //  kod " + code : null);
+    }
+
+    private static string? SmokeFailureLine(string log)
+    {
+        const string marker = "TALVORA MCP SMOKE RED";
+        var index = log.IndexOf(marker, StringComparison.Ordinal);
+        if (index < 0) return null;
+        var line = log[(index + marker.Length)..]
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(value => value.Trim()).FirstOrDefault(value => value.Length > 0);
+        if (line is null) return null;
+        var safe = FileLog.RedactSensitiveData(line);
+        return safe.Length > 160 ? safe[..160] : safe;
     }
 
     internal static async Task<Outcome> FollowProcessAsync(
@@ -237,15 +276,35 @@ internal static class WorklogFollower
         Func<CancellationToken, Task<(int ExitCode, string Output)>> check,
         DateTimeOffset started, TimeSpan interval, TimeSpan limit, CancellationToken token)
     {
+        var unavailable = 0;
         while (DateTimeOffset.UtcNow - started < limit)
         {
             await Task.Delay(interval, token);
             var (exit, output) = await check(token);
             if (exit == 0)
-                return new Outcome(true, "GitHub denetimi geçti", Duration(started), null);
-            if (exit != 2)
+            {
+                var match = Regex.Match(output, @"(?m)^CI başarılı \((?<duration>[^)\r\n]+)\):");
+                return new Outcome(true, "GitHub denetimi geçti",
+                    match.Success ? match.Groups["duration"].Value : null, null);
+            }
+            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => line.Trim()).ToArray();
+            if (exit == 1 && lines.Length > 0 &&
+                lines[0].StartsWith("CI başarısız", StringComparison.Ordinal))
+            {
+                var match = Regex.Match(lines[0],
+                    @"^CI başarısız \([^,]+,\s*(?<duration>[^)]+)\):");
+                var detail = lines.Skip(1).FirstOrDefault(line => line.Length > 0);
+                var safe = detail is null ? null : FileLog.RedactSensitiveData(detail);
                 return new Outcome(false, "GitHub denetimi başarısız",
-                    Duration(started), output.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault());
+                    match.Success ? match.Groups["duration"].Value : null,
+                    "GitHub denetimi başarısız oldu; ayrıntılar CI günlüğünde.",
+                    TechnicalResult: safe is { Length: > 160 } ? safe[..160] : safe);
+            }
+            unavailable = exit == 2 ? 0 : unavailable + 1;
+            if (unavailable >= 3)
+                return new Outcome(false, "GitHub denetiminin sonucu alınamadı", null,
+                    "GitHub'a ulaşılamadı; sonuç bir sonraki denetimde okunacak.", true);
         }
         return new Outcome(false, "GitHub denetimi henüz bitmemişti", Duration(started), null, true);
     }
@@ -337,6 +396,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         var kind = WorklogFollower.Classify(arguments);
         var workspace = GetArgumentText(args, "workingDirectory");
         var log = WorklogFollower.ResolveLogPath(arguments, workspace);
+        MarkFollowedWorklog(operationId);
         _ = Task.Run(async () =>
         {
             try
@@ -370,7 +430,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                     outcome.Reason ?? (outcome.Succeeded
                         ? WorklogCopy.SucceededFallback : "İşlem hata ile bitti."),
                     new DesktopProgressEvidence(Summary: outcome.Fact,
-                        Result: outcome.Fact is null ? null : "Sonuç: " + outcome.Fact),
+                        Result: outcome.TechnicalResult is { } detail
+                            ? detail.StartsWith("Sonuç: ", StringComparison.Ordinal)
+                                ? detail : "Sonuç: " + detail
+                            : outcome.Fact is null ? null : "Sonuç: " + outcome.Fact),
                     DateTimeOffset.UtcNow - started);
             }
             catch (OperationCanceledException) when (_followStopCts.IsCancellationRequested)
@@ -399,6 +462,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         if (!Directory.Exists(workspace) || !File.Exists(executable) ||
             !File.Exists(Path.Combine(workspace, "scripts", "Get-CiStatus.ps1")))
             return false;
+        MarkFollowedWorklog(operationId);
         _ = Task.Run(async () =>
         {
             try
@@ -420,7 +484,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                     outcome.Title,
                     outcome.Reason ?? WorklogCopy.SucceededFallback,
                     new DesktopProgressEvidence(Summary: outcome.Fact,
-                        Result: outcome.Fact is null ? null : "Sonuç: " + outcome.Fact),
+                        Result: outcome.TechnicalResult is { } detail
+                            ? "Sonuç: " + detail
+                            : outcome.Fact is null ? null : "Sonuç: " + outcome.Fact),
                     DateTimeOffset.UtcNow - started);
             }
             catch (OperationCanceledException) when (_followStopCts.IsCancellationRequested)
@@ -480,6 +546,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         {
             await WorklogFollower.WritePendingDeployAsync(
                 PendingDeployWritePath, pending, _followStopCts.Token);
+            MarkFollowedWorklog(operationId);
             TryUpdateFollowedWorklog(operationId,
                 WorklogSubject.FormatDuration(DateTimeOffset.UtcNow - started),
                 DateTimeOffset.UtcNow - started);

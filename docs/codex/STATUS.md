@@ -33,7 +33,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [~] D71 — A deploy continues the agent's card instead of splitting it (visual check pending (Claude))
-- [ ] D72 — Followed jobs end with plain, measured results and never hide the agent's other steps (audit 55; WL6 follow-up)
+- [~] D72 — Followed jobs end with plain, measured results and never hide the agent's other steps (visual check pending (Claude))
 - [ ] D73 — WL5's facts only from a successful answer; gate scope labels; P-57 (audit 55; WL5 follow-up)
 - [ ] D74 — The release check reads GitHub's whole answer (audit 55; RL5 follow-up)
 - [ ] D76 — The Control Center smoke always shows its own window (audit 55)
@@ -57,6 +57,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-14 — D72, executor ChatGPT: followed jobs no longer hide a newer step's title, purpose, result or committed code preview, and keep the card open; late follower progress cannot retake the card. The job outcome shows measured elapsed time, smoke errors are named and redacted, and the gate reports the current unfinished stage. CI shows GitHub's startedAt-to-updatedAt duration and retries three unverified checks.
+  RED: WL6 exposed stale gate stage; GREEN: WL6 plus complete Notification regression, ModernizationPolicyRegression and QualityGateRegression; Changed 17/0, signed-in Full 72/0, both Hepsi geçti. Existing D71 CI run 43573309277 green.
+  Context7 map candidate: gh 2.103.3; https://cli.github.com/manual/gh_run_list documents startedAt and updatedAt (no mapped library). Clean-HEAD deploy, installed smokes and D72 CI follow the commit; Gitea #9 mirror.
+  Self-review — Cosmetics: tray, layout, terminal and frame protocol unchanged.
+  Self-review — Usability: an ongoing gate or CI follow no longer hides finished edits and results.
+  Self-review — Turkish: the card's approved failure titles, reasons and measured duration format are preserved.
+  Self-review — Correctness: failure details are redacted and clipped, no exit codes on the main line; Claude visual check pending.
 - 2026-11-14 — D71, executor ChatGPT: deploy snapshot now restores the project/actor session, 3 previous steps, two changed files, task note, build and test states; session-id lookup is unique, legacy keyless replay retires its temporary session. Writer path can be set for tests; pending JSON limit is 256 KB.
   RED: WL6 failed on a retained legacy replay session; GREEN: WL6 and full Notification regression, ModernizationPolicyRegression; Changed 17/0 and signed-in Full 72/0, both `Hepsi geçti.`; Context7 noLookup (Talvora session and JSON only). Clean-HEAD deploy, installed smokes and CI follow this commit; mirror their results to Gitea #9.
   Self-review — Cosmetics: no tray, layout or frame-protocol changes.

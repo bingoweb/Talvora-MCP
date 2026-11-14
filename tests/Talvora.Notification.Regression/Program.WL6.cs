@@ -331,11 +331,159 @@ internal static partial class Program
                     ended.WorklogFrame?.Current.FactLine is null)
                     throw new InvalidOperationException("WL6: a followed real process must finish with its own Turkish title and measured result.");
             }
+            await AssertD72FollowerAsync(workspace, temporary);
         }
         finally
         {
             Directory.Delete(temporary, recursive: true);
         }
         Console.WriteLine("WL6_FOLLOWER_GREEN");
+    }
+
+    private static async Task AssertD72FollowerAsync(string workspace, string temporary)
+    {
+        static Dictionary<string, JsonElement> Args(params (string Name, object Value)[] values) =>
+            values.ToDictionary(value => value.Name, value => JsonSerializer.SerializeToElement(value.Value));
+        static string? Technical(WorklogFollower.Outcome value) =>
+            (string?)value.GetType().GetProperty("TechnicalResult")?.GetValue(value);
+        var started = DateTimeOffset.UtcNow.AddSeconds(-2);
+        var enclosing = WorklogFollower.LiveFact(WorklogFollower.JobKind.QualityGate,
+            "START PowerShellRegressions\nSTART HealthHandle\nPASS HealthHandle 1.1 sn\n",
+            started);
+        if (!enclosing.Contains("şu an: PowerShell test betikleri", StringComparison.Ordinal))
+            throw new InvalidOperationException("D72(d): the last passed stage must give way to the still-open enclosing stage.");
+        var last = WorklogFollower.LiveFact(WorklogFollower.JobKind.QualityGate,
+            "START HealthHandle\nPASS HealthHandle 1.1 sn\n", started);
+        if (!last.Contains("şu an: Sağlık ve tanıtıcı denetimi", StringComparison.Ordinal))
+            throw new InvalidOperationException("D72(d): with no open stage, fall back to the last started one.");
+
+        var failed = await WorklogFollower.FollowProcessAsync(
+            _ => Task.FromResult<int?>(7), null, WorklogFollower.JobKind.Other, _ => { },
+            started, TimeSpan.FromMilliseconds(5), TimeSpan.FromMinutes(2), CancellationToken.None);
+        if (failed.Succeeded || failed.Fact is null || failed.Fact.Contains("çıkış kodu", StringComparison.Ordinal) ||
+            Technical(failed) != "Sonuç: tamamlanamadı  //  kod 7")
+            throw new InvalidOperationException("D72(b): a failed job exposes the code only in technical evidence.");
+
+        var smokeLog = Path.Combine(temporary, "d72-smoke.log");
+        await File.WriteAllTextAsync(smokeLog,
+            "TALVORA MCP SMOKE RED\nFAIL metadata policy: secret=SECRET-123 " +
+            new string('x', 220) + "\n");
+        var smoke = await WorklogFollower.FollowProcessAsync(
+            _ => Task.FromResult<int?>(1), smokeLog, WorklogFollower.JobKind.Smoke, _ => { },
+            started, TimeSpan.FromMilliseconds(5), TimeSpan.FromMinutes(2), CancellationToken.None);
+        var meta = await WorklogFollower.FollowProcessAsync(
+            _ => Task.FromResult<int?>(1), smokeLog, WorklogFollower.JobKind.MetadataSmoke, _ => { },
+            started, TimeSpan.FromMilliseconds(5), TimeSpan.FromMinutes(2), CancellationToken.None);
+        if (smoke.Title != "Kurulu sürüm testi başarısız" ||
+            smoke.Reason != "Kurulu sürüm testi bir adımda durdu; ayrıntı günlükte." ||
+            meta.Title != "Araç tanımları denetimi başarısız" ||
+            meta.Reason != "Araç tanımları denetimi bir adımda durdu; ayrıntı günlükte." ||
+            Technical(smoke) is not { Length: 160 } ||
+            Technical(smoke)!.Contains("SECRET-123", StringComparison.Ordinal))
+            throw new InvalidOperationException("D72(b): smoke errors must have approved titles, reasons and redacted bounded details.");
+        await File.WriteAllTextAsync(smokeLog, "TALVORA MCP SMOKE GREEN\n");
+        var smokeGreen = await WorklogFollower.FollowProcessAsync(
+            _ => Task.FromResult<int?>(0), smokeLog, WorklogFollower.JobKind.Smoke, _ => { },
+            started, TimeSpan.FromMilliseconds(5), TimeSpan.FromMinutes(2), CancellationToken.None);
+        if (smokeGreen.Title != "Kurulu sürüm testi geçti" ||
+            smokeGreen.Fact!.Contains("Kurulu sürüm testi", StringComparison.Ordinal))
+            throw new InvalidOperationException("D72(b): a passing smoke must show only its elapsed time as the fact.");
+
+        var ciCount = 0;
+        var measuredCi = await WorklogFollower.FollowCiAsync(
+            _ => Task.FromResult((++ciCount == 1 ? 2 : 0,
+                "CI başarılı (4 dk 12 sn): https://github.com/bingoweb/Talvora-MCP/actions/runs/1")),
+            started, TimeSpan.FromMilliseconds(5), TimeSpan.FromMinutes(30), CancellationToken.None);
+        if (!measuredCi.Succeeded || measuredCi.Fact != "4 dk 12 sn")
+            throw new InvalidOperationException("D72(c): CI must show the run duration, not the follower duration.");
+        var ciFailure = await WorklogFollower.FollowCiAsync(
+            _ => Task.FromResult((1, "CI başarısız (failure, 1 sa 3 dk): https://example.com\nFAIL first line")),
+            started, TimeSpan.FromMilliseconds(5), TimeSpan.FromMinutes(30), CancellationToken.None);
+        if (ciFailure.Title != "GitHub denetimi başarısız" ||
+            ciFailure.Fact != "1 sa 3 dk" ||
+            ciFailure.Reason != "GitHub denetimi başarısız oldu; ayrıntılar CI günlüğünde." ||
+            Technical(ciFailure) != "FAIL first line")
+            throw new InvalidOperationException("D72(c): a completed failed CI must use the measured duration and technical failure.");
+        var unavailableCalls = 0;
+        var unavailable = await WorklogFollower.FollowCiAsync(
+            _ => Task.FromResult((++unavailableCalls == 2 ? 5 : 1, "gh: network failure")),
+            started, TimeSpan.FromMilliseconds(5), TimeSpan.FromMinutes(30), CancellationToken.None);
+        if (unavailableCalls != 3 || !unavailable.TimedOut ||
+            unavailable.Title != "GitHub denetiminin sonucu alınamadı" ||
+            unavailable.Reason != "GitHub'a ulaşılamadı; sonuç bir sonraki denetimde okunacak.")
+            throw new InvalidOperationException("D72(c): three consecutive unverified CI checks must cancel, not claim a failed run.");
+
+        var project = Path.Combine(temporary, "d72-project");
+        Directory.CreateDirectory(Path.Combine(project, ".git"));
+        var observed = new ConcurrentQueue<DesktopProgressMessage>();
+        await using (var notifier = CreateNotifier(observed))
+        {
+            var ciArgs = Args(("executable", @"C:\Program Files\PowerShell\7\pwsh.exe"),
+                ("workingDirectory", workspace),
+                ("arguments", new[] { "-NoProfile", "-File", "scripts/Get-CiStatus.ps1", "-TimeoutMinutes", "0" }));
+            await notifier.RunToolCallAsync<object>("talvora_user_run", ciArgs,
+                _ => ValueTask.FromResult<object>(new { exitCode = 2, standardOutput = "CI: running" }),
+                CancellationToken.None, "/mcp/dev", "ChatGPT");
+            const string diff = "@@ FILE Demo.cs\n--- a/Demo.cs\n+++ b/Demo.cs\n@@ -1 +1 @@\n-old\n+new\n";
+            await notifier.RunToolCallAsync<object>("talvora_apply_patch",
+                Args(("workspaceRoot", workspace), ("patch", "test"), ("purpose", "Dosya düzenlemesi kaydediliyor")),
+                _ => ValueTask.FromResult<object>(new
+                {
+                    success = true, status = "committed",
+                    files = new[] { new { operation = "update", newPath = "Demo.cs",
+                        addedLines = 1, removedLines = 1, codePreview = diff } },
+                }), CancellationToken.None, "/mcp/dev", "ChatGPT");
+            var patchMessage = observed.LastOrDefault(m =>
+                m.ToolName == "apply_patch" && m.Kind == DesktopProgressKind.Completed);
+            if (patchMessage?.WorklogFrame?.Current.Purpose != "Dosya düzenlemesi kaydediliyor" ||
+                patchMessage.WorklogFrame.Current.Changes?.Count != 1 ||
+                patchMessage.Evidence?.CodePreview != diff || patchMessage.SessionClosed)
+                throw new InvalidOperationException("D72(a): a finished edit must show its own purpose, changes and diff during a CI follow.");
+        }
+
+        var gateMessages = new ConcurrentQueue<DesktopProgressMessage>();
+        await using (var notifier = CreateNotifier(gateMessages))
+        {
+            var gateLog = Path.Combine(project, "d72-gate.log");
+            var processArgs = new[] { "-NoProfile", "-Command",
+                "Start-Sleep -Seconds 4; 'START Restore','PASS Restore 0.1 sn','2 kontrol, 0 hata','Hepsi geçti.' *> '" +
+                    gateLog + "'; # Invoke-QualityGate.ps1" };
+            var startInfo = new System.Diagnostics.ProcessStartInfo(@"C:\Program Files\PowerShell\7\pwsh.exe")
+            {
+                WorkingDirectory = workspace, UseShellExecute = false, CreateNoWindow = true,
+            };
+            foreach (var arg in processArgs) startInfo.ArgumentList.Add(arg);
+            using var job = System.Diagnostics.Process.Start(startInfo)!;
+            await notifier.RunToolCallAsync<object>("talvora_user_process_start",
+                Args(("executable", startInfo.FileName), ("arguments", processArgs),
+                    ("workingDirectory", project), ("purpose", "Kalite kapısı arka planda izleniyor")),
+                _ => ValueTask.FromResult<object>(new { success = true, processId = job.Id }),
+                CancellationToken.None, "/mcp/dev", "ChatGPT");
+            await notifier.RunToolCallAsync<object>("talvora_git_run",
+                Args(("repositoryPath", project), ("arguments", new[] { "fetch", "origin" }),
+                    ("purpose", "Uzak depo denetleniyor")),
+                _ => ValueTask.FromResult<object>(new { exitCode = 128, standardError = "fatal: unreachable" }),
+                CancellationToken.None, "/mcp/dev", "ChatGPT");
+            var failedGit = gateMessages.LastOrDefault(m => m.Kind == DesktopProgressKind.Failed);
+            if (failedGit?.WorklogFrame?.Current.Purpose != "Uzak depo denetleniyor")
+                throw new InvalidOperationException("D72(a): a failed foreground step must appear while the gate is followed.");
+            await Task.Delay(2200);
+            if (gateMessages.Any(m => m.Sequence > failedGit.Sequence &&
+                m.Kind == DesktopProgressKind.Running &&
+                m.Title.Contains("Kalite kontrolü", StringComparison.Ordinal)))
+                throw new InvalidOperationException("D72(a): the old background job must not retake the card after a newer step.");
+            await job.WaitForExitAsync();
+            for (var i = 0; i < 50 && !gateMessages.Any(m =>
+                     m.Kind == DesktopProgressKind.Completed &&
+                     m.Title.Contains("Kalite kontrolü", StringComparison.Ordinal)); i++)
+                await Task.Delay(50);
+            var gateFinished = gateMessages.LastOrDefault(m =>
+                m.Kind == DesktopProgressKind.Completed &&
+                m.Title.Contains("Kalite kontrolü", StringComparison.Ordinal));
+            if (gateFinished?.Title.StartsWith("Kalite kontrolü geçti", StringComparison.Ordinal) != true ||
+                gateFinished.WorklogFrame?.Timeline.Count != 2 ||
+                gateFinished.WorklogFrame.Current.FactLine?.Contains("2 kontrol", StringComparison.Ordinal) != true)
+                throw new InvalidOperationException("D72(a): the followed gate's final success must not be replaced by an earlier failed step.");
+        }
     }
 }

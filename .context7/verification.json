@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T07:46:25.909Z",
-  "scope": "D71: restore one deployment worklog session from its local pending JSON snapshot",
+  "verifiedAtUtc": "2026-11-14T08:14:42.526Z",
+  "scope": "D72: measured CI run timing and background worklog outcome presentation",
   "libraries": [],
-  "noLookup": "D71: Talvora's own session bookkeeping and JSON file; no external library API is relied on",
-  "vendorSources": []
+  "noLookup": "D72: GitHub CLI gh 2.103.3 is not mapped in Context7; the official gh run list manual documents startedAt and updatedAt",
+  "vendorSources": ["https://cli.github.com/manual/gh_run_list"]
 }

@@ -12,15 +12,15 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     private sealed record ActiveWorklogItem(
         string ToolName, OperationNarrative Narrative,
         DesktopProgressEvidence? Evidence, long Sequence,
-        WorklogSession Session);
+        WorklogSession Session, bool Followed = false);
 
     private sealed record PendingFailure(
         string ToolName, string Title, string Message,
-        DesktopProgressEvidence? Evidence);
+        DesktopProgressEvidence? Evidence, string? Purpose);
 
     private sealed record PendingCancellation(
         string ToolName, string Title, string Message,
-        DesktopProgressEvidence? Evidence);
+        DesktopProgressEvidence? Evidence, string? Purpose);
 
     private sealed class WorklogSession(
         string id, string actor, string? projectName)
@@ -33,6 +33,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         public DateTimeOffset LastActivityUtc { get; set; } = DateTimeOffset.UtcNow;
         public List<WorklogTimelineEntry> Timeline { get; } = [];
         public int Steps { get; set; }
+        public long LastStartedSequence { get; set; }
         public HashSet<string> ChangedFiles { get; } = new(StringComparer.OrdinalIgnoreCase);
         public WorklogCheckState LastBuild { get; set; } = WorklogCheckState.Unknown;
         public WorklogCheckState LastTests { get; set; } = WorklogCheckState.Unknown;
@@ -131,8 +132,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             session.Closed = false;
             session.LastActivityUtc = DateTimeOffset.UtcNow;
             session.Category = narrative.Category;
+            var sequence = ++_worklogSequence;
+            session.LastStartedSequence = sequence;
             _activeWorklog[operationId] = new ActiveWorklogItem(
-                toolName, narrative, evidence, ++_worklogSequence, session);
+                toolName, narrative, evidence, sequence, session);
             PublishSession(session, toolName, narrative.Titles.Running,
                 WorklogCopy.RunningFallback, DesktopProgressKind.Started,
                 elapsed, evidence, narrative.Purpose);
@@ -163,6 +166,15 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         }
     }
 
+    private void MarkFollowedWorklog(string operationId)
+    {
+        lock (_worklogGate)
+        {
+            if (_activeWorklog.TryGetValue(operationId, out var active))
+                _activeWorklog[operationId] = active with { Followed = true };
+        }
+    }
+
     /// <summary>WL6: a followed tool remains active until its own process really finishes.</summary>
     private void TryUpdateFollowedWorklog(string operationId, string fact, TimeSpan elapsed)
     {
@@ -172,10 +184,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             {
                 if (!_activeWorklog.TryGetValue(operationId, out var current)) return;
                 var session = current.Session;
-                var latest = _activeWorklog.Values
-                    .Where(item => ReferenceEquals(item.Session, session))
-                    .MaxBy(static item => item.Sequence);
-                if (latest?.Sequence != current.Sequence) return;
+                if (session.LastStartedSequence != current.Sequence) return;
                 session.ProgressFact = fact;
                 session.LastActivityUtc = DateTimeOffset.UtcNow;
                 session.Elapsed = elapsed;
@@ -223,18 +232,18 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (kind == DesktopProgressKind.Failed)
             {
                 session.Failure = new PendingFailure(
-                    ended.ToolName, title, message, evidence);
+                    ended.ToolName, title, message, evidence, ended.Narrative.Purpose);
             }
             else if (kind == DesktopProgressKind.Cancelled)
             {
                 session.Cancellation = new PendingCancellation(
-                    ended.ToolName, title, message, evidence);
+                    ended.ToolName, title, message, evidence, ended.Narrative.Purpose);
             }
 
             var latest = _activeWorklog.Values
-                .Where(item => ReferenceEquals(item.Session, session))
+                .Where(item => ReferenceEquals(item.Session, session) && !item.Followed)
                 .MaxBy(static item => item.Sequence);
-            if (latest is not null)
+            if (latest is not null && !ended.Followed)
             {
                 session.Category = latest.Narrative.Category;
                 PublishSession(session, latest.ToolName,
@@ -246,17 +255,22 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             }
 
             session.Category = ended.Narrative.Category;
-            if (session.Failure is { } failed)
+            if (ended.Followed)
+            {
+                PublishSession(session, ended.ToolName, title,
+                    message, kind, elapsed, evidence, ended.Narrative.Purpose, changes);
+            }
+            else if (session.Failure is { } failed)
             {
                 PublishSession(session, failed.ToolName, failed.Title,
                     failed.Message, DesktopProgressKind.Failed,
-                    elapsed, failed.Evidence);
+                    elapsed, failed.Evidence, failed.Purpose);
             }
             else if (session.Cancellation is { } cancelled)
             {
                 PublishSession(session, cancelled.ToolName, cancelled.Title,
                     cancelled.Message, DesktopProgressKind.Cancelled,
-                    elapsed, cancelled.Evidence);
+                    elapsed, cancelled.Evidence, cancelled.Purpose);
             }
             else
             {
@@ -266,7 +280,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             }
             session.Failure = null;
             session.Cancellation = null;
-            ScheduleClosure(session);
+            if (!_activeWorklog.Values.Any(item => ReferenceEquals(item.Session, session)))
+                ScheduleClosure(session);
         }
     }
 
