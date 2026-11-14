@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T17:52:47.578Z",
-  "scope": "D84: protect secret locations in generic file tools and expand log redaction",
+  "verifiedAtUtc": "2026-11-14T18:23:26.158Z",
+  "scope": "D82: deploy follow-up independent of the caller output limit",
   "libraries": [],
-  "noLookup": "D84: Talvora's own path checks; the Windows final-path call already exists in KnowledgeTools.cs.",
+  "noLookup": "D82: Talvora's own output parsing and deploy script; no external API behaviour needed.",
   "vendorSources": []
 }

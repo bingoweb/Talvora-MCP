@@ -231,16 +231,16 @@ if ([string]::IsNullOrWhiteSpace($taskInstanceGuid)) {
 if (-not $WaitForCompletion) {
     [pscustomobject]@{
         launched = $true
+        sourceCommit = $sourceCommit
+        taskInstance = $taskInstanceGuid
         waitForCompletion = $false
         taskName = $taskName
         installer = $installerFullPath
         manifest = $manifestFullPath
         sha256 = $sha256
-        sourceCommit = $sourceCommit
         sourceHeadCommit = $sourceHeadCommit
         sourceIndexTree = $sourceIndexTree
         runtimeInputsSha256 = $runtimeInputsSha256
-        taskInstance = $taskInstanceGuid
         note = 'Installer is running outside the Talvora service process tree. Reconnect and validate system_info/version-root after the service switch.'
     } | ConvertTo-Json -Compress
     return
@@ -285,17 +285,17 @@ if ($exitCode -ne 0) {
 
 [pscustomobject]@{
     launched = $true
+    sourceCommit = $sourceCommit
+    taskInstance = $taskInstanceGuid
     waitForCompletion = $true
     completed = $true
     taskName = $taskName
     installer = $installerFullPath
     manifest = $manifestFullPath
     sha256 = $sha256
-    sourceCommit = $sourceCommit
     sourceHeadCommit = $sourceHeadCommit
     sourceIndexTree = $sourceIndexTree
     runtimeInputsSha256 = $runtimeInputsSha256
-    taskInstance = $taskInstanceGuid
     lastTaskResult = $exitCode
     lastRunTime = $registered.LastRunTime
 } | ConvertTo-Json -Compress

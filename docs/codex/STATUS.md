@@ -32,8 +32,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [~] D84 — Secret locations closed to the file tools; wider log masking (audit 58, user decision); clean-HEAD deployment, live tool checks and CI pending after commit
-- [ ] D82 — The deploy follow-up does not depend on the caller's output limit (audit 58)
+- [x] D84 — Secret locations closed to the file tools; wider log masking (audit 58, user decision); deployed 92b5b4f, both smokes, live tool checks and CI 43625025408 green
+- [~] D82 — The deploy follow-up does not depend on the caller's output limit (audit 58); visual check pending (Claude) after clean-HEAD deployment at maxOutputCharacters 600
 - [ ] D83 — Test and build titles for cargo, uv and Python test runs (audit 58)
 - [x] [C] D85 — The installer starts msiexec from System32; Turkish service description (audit 58)
 - [x] [C] D86 — Çalışma günlüğü shows each fact once; tray menu Turkish (audit 58)
@@ -55,6 +55,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-14 — D82, executor ChatGPT: both deploy hand-offs now emit launched/sourceCommit/taskInstance first. The follower extracts those fields from compacted output and logs one Information message when no hand-off is present. The pending file format, completion and titles are unchanged.
+  Red: D82 compacted-600 test had no pending file; green D82_DEPLOY_COMPACT_GREEN (including negative and whitespace cases). Complete Notification regression DESKTOP_PROGRESS_BEHAVIOR_GREEN, CanonicalDeployArtifactIdentity and NativeInstallerSource regressions green.
+  Signed-in Changed 30/0 and Full 73/0, Hepsi geçti. Context7 noLookup (own output parser and deploy script).
+  Clean-HEAD installer, maxOutputCharacters=600 deployed runtime, metadata/full smokes and CI follow this single commit; Claude verifies the completed deploy worklog title (a previous-version process starts the first deployment).
 - 2026-11-14 — D84, executor ChatGPT: ProtectedSecretPaths compares lexical and existing final paths without opening real protected entries. Generic file tools reject secret paths; text search skips them; FileLog masks Context7 keys, CLI values and named tokens. Red first (ctx7sk fixture and missing helper); green D84_PROTECTED_PATHS_GREEN, junction green, 8.3 skipped (disabled on volume). No actual secret content read.
   Full SourceEdit regression TALVORA SOURCE EDIT REGRESSION GREEN; PrivacySecurity and ToolManifest regressions green. Signed-in Changed 39/0 and Full 73/0, Hepsi geçti. Context7 noLookup (own checks, existing Windows final-path API).
   Clean-HEAD installer, installed metadata/full smokes, two live safe probes and CI follow this single commit.

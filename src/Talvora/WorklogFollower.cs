@@ -511,19 +511,17 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     {
         if (narrative.Category != OperationCategory.Deployment) return false;
         var output = FactText(ResultJson(result), "standardOutput");
-        if (string.IsNullOrWhiteSpace(output)) return false;
-        var line = Regex.Match(output,
-            @"(?m)^\s*(?<json>\{[^\r\n]*""launched""\s*:\s*true[^\r\n]*\})\s*$");
-        if (!line.Success) return false;
-        string? target;
-        try
+        var launched = !string.IsNullOrWhiteSpace(output) &&
+            Regex.IsMatch(output, @"""launched""\s*:\s*true(?=\s*[,}])");
+        var commit = Regex.Match(output ?? string.Empty,
+            @"""sourceCommit""\s*:\s*""(?<commit>[0-9a-fA-F]{7,64})""");
+        if (!launched || !commit.Success)
         {
-            using var json = JsonDocument.Parse(line.Groups["json"].Value);
-            target = json.RootElement.TryGetProperty("sourceCommit", out var commit)
-                ? commit.GetString() : null;
+            _logger.LogInformation(
+                "Deploy hand-off not found in the tool result; the deploy step stays unconfirmed.");
+            return false;
         }
-        catch (JsonException) { return false; }
-        if (target is null || target.Length < 7) return false;
+        var target = commit.Groups["commit"].Value;
         WorklogFollower.PendingDeploy? pending = null;
         lock (_worklogGate)
         {
