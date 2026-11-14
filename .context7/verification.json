@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T08:53:15.616Z",
-  "scope": "D74: bounded incremental GitHub latest-release JSON reading",
-  "libraries": [],
-  "noLookup": "D74: size constant adjustment in Talvora's own incremental reader; no external API lookup needed",
+  "verifiedAtUtc": "2026-11-14T09:12:12.108Z",
+  "scope": "D76: WPF Control Center smoke visibility recovery without window activation",
+  "libraries": [
+    {
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-14 D76: WPF Window.Hide is reversible via Window.Show and ShowActivated false prevents activation when showing a window (query: \"WPF Window.Show ShowActivated false and WindowState Normal to make a hidden window visible without activation .NET 10\")"
+    }
+  ],
   "vendorSources": []
 }

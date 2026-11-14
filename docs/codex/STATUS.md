@@ -35,8 +35,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D71 — A deploy continues the agent's card instead of splitting it (visual check pending (Claude))
 - [~] D72 — Followed jobs end with plain, measured results and never hide the agent's other steps (visual check pending (Claude))
 - [~] D73 — WL5's facts only from a successful answer; gate scope labels; P-57 (visual check pending (Claude))
-- [~] D74 — The release check reads GitHub's whole answer (CI pending; visual check pending (Claude))
-- [ ] D76 — The Control Center smoke always shows its own window (audit 55)
+- [~] D74 — The release check reads GitHub's whole answer (visual check pending (Claude))
+- [~] D76 — The Control Center smoke always shows its own window (CI pending; visual check pending (Claude))
 - [ ] D78 — A documentation push never hides an unverified code push from CI (audit 55)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
 - [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
@@ -57,6 +57,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-14 — D76, executor ChatGPT: the Control Center's own smoke-only environment switch TALVORA_CONTROL_CENTER_SMOKE_START_HIDDEN=1 hides the window immediately after it is shown. Before the first visual assertion, a hidden or minimized window is restored to Normal, shown without activation (ShowActivated false) and given one DispatcherPriority.Render pass. The recovery writes exactly "Control Center smoke window made visible again." to the tray log. Other assertions, start position, gate scripts and normal Control Center behavior are unchanged.
+  RED: the forced-hidden live smoke exited 1 with "Control Center window did not become visible" at the existing earlier visibility assertion (before UI5). GREEN: the same forced-hidden smoke exited 0, with a measured recovery log and visual smoke success; three independent Start-Process -WindowStyle Hidden runs with the switch unset all exited 0. Changed 17/0 and signed-in Full 72/0, both Hepsi geçti.; ControlCenter green.
+  Context7 /dotnet/docs-desktop (query: "WPF Window.Show ShowActivated false and WindowState Normal to make a hidden window visible without activation .NET 10"): ShowActivated false prevents activation, and hidden windows may be reopened via Show. D74 Windows CI run 43578544496 green in 5 dk 21 sn. Clean-HEAD build, installed smokes and CI follow the commit; Gitea #9 mirror.
+  Self-review — Cosmetics: window position, styling, layout, chrome and smoke screenshots unchanged.
+  Self-review — Usability: hidden startup no longer causes unrelated Control Center validation to fail.
+  Self-review — Turkish: no user-facing copy changed; only the card's prescribed diagnostic log line was added.
+  Self-review — Correctness: only the smoke path handles recovery; no weakened assertions, and the switch is absent outside smoke; Claude visual check pending.
 - 2026-11-14 — D74, executor ChatGPT: the incremental GitHub latest-release reader now accepts at most 262,144 bytes using a 262,145-byte buffer to reject an over-limit response. No URL, headers, timeout, schedule, cache, strings or appearance changed. The RL5 fake now supplies a 40 KB release body and checks that a newer approved tag is stored, while a response above 256 KB leaves the last accepted state unchanged.
   RED: a 40 KB valid release failed with the old 16 KB bound. GREEN: RL5 focused and full Notification regression; Changed 16/0 and signed-in Full 72/0, both Hepsi geçti. Context7 noLookup (Talvora's own size constant). D73 Windows CI run 43577234990 green in 5 dk 24 sn. Clean-HEAD installer, installed live smokes and D74 CI follow this commit; Gitea #9 mirror.
   Self-review — Cosmetics: no theme, layout or release-notice text changed.

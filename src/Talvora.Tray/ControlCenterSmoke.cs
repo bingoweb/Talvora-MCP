@@ -34,6 +34,15 @@ internal static partial class ControlCenterSmoke
                         "Control Center main window was not created.");
                 }
 
+                if (!window.IsVisible || window.WindowState == WindowState.Minimized)
+                {
+                    window.WindowState = WindowState.Normal;
+                    window.ShowActivated = false;
+                    window.Show();
+                    window.Dispatcher.Invoke(DispatcherPriority.Render, new Action(() => { }));
+                    TrayLog.Write("Control Center smoke window made visible again.");
+                }
+
                 if (!window.IsVisible)
                 {
                     throw new InvalidOperationException(
@@ -143,6 +152,9 @@ internal static partial class ControlCenterSmoke
         application.Dispatcher.BeginInvoke(() =>
         {
             application.ShowControlCenter();
+            if (Environment.GetEnvironmentVariable("TALVORA_CONTROL_CENTER_SMOKE_START_HIDDEN") == "1" &&
+                application.MainWindow is ShellWindow window)
+                window.Hide();
             timer.Start();
         });
 
