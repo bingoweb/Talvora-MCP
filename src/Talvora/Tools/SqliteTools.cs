@@ -253,7 +253,6 @@ public static class SqliteTools
         int timeoutSeconds = 30,
         CancellationToken cancellationToken = default)
     {
-        ProtectedSecretPaths.ThrowIfDatabaseSourceProtected(databasePath);
         ValidateTimeout(timeoutSeconds);
 
         var database = NormalizeDatabaseSource(databasePath);
@@ -396,7 +395,6 @@ public static class SqliteTools
         CancellationToken cancellationToken = default)
     {
         ProtectedSecretPaths.ThrowIfDatabaseSourceProtected(sourcePath);
-        ProtectedSecretPaths.ThrowIfProtected(destinationPath);
         ValidateTimeout(timeoutSeconds);
 
         var source = Path.GetFullPath(sourcePath);

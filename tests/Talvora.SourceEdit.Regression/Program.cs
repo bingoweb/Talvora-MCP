@@ -8,6 +8,13 @@ Talvora.SourceEditing.SourceEditRuntime.UseStateRootForTests(
     Path.Combine(regressionState, semanticOnly ? "SourceEdit-Semantic" : "SourceEdit"));
 Talvora.SourceEditing.AstGrepToolchainManager.CacheRoot = Path.Combine(regressionState, "Toolchains");
 
+if (args.Contains("--d89-only", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.D89ProportionateGuardAsync();
+    Console.WriteLine("D89_PROPORTIONATE_GUARD_GREEN");
+    return;
+}
+
 if (args.Contains("--d87-only", StringComparer.OrdinalIgnoreCase))
 {
     await SourceEditRegressionRunner.D87ProtectedPathsAsync();

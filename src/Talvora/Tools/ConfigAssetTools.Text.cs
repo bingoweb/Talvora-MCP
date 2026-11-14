@@ -166,7 +166,6 @@ public static partial class ConfigAssetTools
         bool appendNewLine = false,
         CancellationToken cancellationToken = default)
     {
-        ProtectedSecretPaths.ThrowIfProtected(path);
         var fullPath = Path.GetFullPath(path);
         SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
             fullPath,

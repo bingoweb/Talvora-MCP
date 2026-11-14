@@ -281,8 +281,9 @@ public static partial class DeveloperTools
         }
         else if (Directory.Exists(fullRoot))
         {
+            // D89: entries are checked one by one only when the walk can reach the secret set.
             candidates = EnumerateTree(fullRoot, recursive, followReparsePoints, errors, cancellationToken,
-                skipProtected: true);
+                skipProtected: followReparsePoints || ProtectedSecretPaths.ContainsProtected(fullRoot));
         }
         else
         {

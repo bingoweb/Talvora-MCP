@@ -47,7 +47,6 @@ public static class FileTools
     [McpServerTool(Name = "talvora_write_text", Destructive = true, Idempotent = true, OpenWorld = true), Description("Compatibility whole-file UTF-8 writer for ordinary/non-workspace files. Do not use it for development-workspace source editing: talvora_apply_patch is the PRIMARY/default editor, while talvora_apply_edits is only for already-known exact ranges; workspace source/text writes are rejected with SOURCE_EDIT_POLICY_VIOLATION.")]
     public static async Task<object> WriteText(string path, string content, CancellationToken cancellationToken = default)
     {
-        ProtectedSecretPaths.ThrowIfProtected(path);
         var fullPath = Path.GetFullPath(path);
         SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
             fullPath,
@@ -199,7 +198,6 @@ public static class FileTools
         CancellationToken cancellationToken = default)
     {
         ProtectedSecretPaths.ThrowIfProtected(source);
-        ProtectedSecretPaths.ThrowIfProtected(destination);
         cancellationToken.ThrowIfCancellationRequested();
         var sourcePath = NormalizePath(source);
         var destinationPath = NormalizePath(destination);
@@ -239,12 +237,6 @@ public static class FileTools
         }
 
         var manifest = BuildDirectoryManifest(sourcePath, cancellationToken);
-        foreach (var directory in manifest.Directories)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var relative = Path.GetRelativePath(sourcePath, directory);
-            ProtectedSecretPaths.ThrowIfProtected(Path.Combine(destinationPath, relative));
-        }
         foreach (var file in manifest.Files)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -256,7 +248,6 @@ public static class FileTools
                 Path.Combine(
                     destinationPath,
                     relative);
-            ProtectedSecretPaths.ThrowIfProtected(target);
             SourceMutationPolicy.EnsureGenericDestinationMutationAllowed(
                 target,
                 "talvora_copy",
@@ -344,7 +335,6 @@ public static class FileTools
         CancellationToken cancellationToken = default)
     {
         ProtectedSecretPaths.ThrowIfProtected(source);
-        ProtectedSecretPaths.ThrowIfProtected(destination);
         cancellationToken.ThrowIfCancellationRequested();
         var sourcePath = NormalizePath(source);
         var destinationPath = NormalizePath(destination);

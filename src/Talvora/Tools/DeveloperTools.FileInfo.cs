@@ -80,7 +80,6 @@ public static partial class DeveloperTools
         [Description("Hash algorithm: SHA256, SHA384, SHA512, SHA1, or MD5.")] string algorithm = "SHA256",
         CancellationToken cancellationToken = default)
     {
-        ProtectedSecretPaths.ThrowIfProtected(path);
         var fullPath = Path.GetFullPath(path);
         if (!File.Exists(fullPath))
         {

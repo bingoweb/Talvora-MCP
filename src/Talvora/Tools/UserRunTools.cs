@@ -69,10 +69,9 @@ public static class UserRunTools
             user.User,
             cwd,
             result.ElapsedMilliseconds,
-            ToolOutputCompactor.Compact(
-                FileLog.RedactSensitiveData(result.StandardOutput), maxOutputCharacters),
-            ToolOutputCompactor.Compact(
-                FileLog.RedactSensitiveData(result.StandardError), maxOutputCharacters),
+            // D89: the agent gets exactly what the command printed, like run_powershell; logs stay masked.
+            ToolOutputCompactor.Compact(result.StandardOutput, maxOutputCharacters),
+            ToolOutputCompactor.Compact(result.StandardError, maxOutputCharacters),
             result.StandardOutputTotalCharacters,
             result.StandardErrorTotalCharacters);
     }

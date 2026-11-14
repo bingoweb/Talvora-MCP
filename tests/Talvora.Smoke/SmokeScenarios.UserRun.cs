@@ -42,5 +42,25 @@ internal static partial class SmokeScenarios
             throw new InvalidOperationException(
                 $"User-run must return the signed-in user. Identity={user}; whoami={actual}.");
         }
+
+        // D89: the agent gets exactly what the command printed (like run_powershell); only logs are masked.
+        const string printed = "api_key=d89-visible-0123456789";
+        var echo = await client.CallToolAsync(
+            "talvora_user_run",
+            new Dictionary<string, object?>
+            {
+                ["executable"] = "cmd.exe",
+                ["arguments"] = new[] { "/d", "/c", "echo " + printed },
+                ["workingDirectory"] = Path.GetFullPath(repositoryPath),
+                ["timeoutSeconds"] = 30,
+            });
+        var echoed = echo.StructuredContent is { } echoStructured
+            ? echoStructured.GetProperty("standardOutput").GetString() ?? string.Empty
+            : string.Empty;
+        if (echo.IsError is true || !echoed.Contains(printed, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"User-run must return the command output unmasked. Output={echoed.Trim()}.");
+        }
     }
 }

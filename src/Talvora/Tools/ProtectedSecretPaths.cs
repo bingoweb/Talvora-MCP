@@ -22,6 +22,9 @@ internal static class ProtectedSecretPaths
     // Isolated regressions replace the set. Never use actual secret contents in tests.
     internal static IReadOnlyList<string>? EntriesOverrideForTests;
 
+    // D89: lets a regression prove that an ordinary search does not open every entry for the guard.
+    internal static int FinalPathResolutionsForTests;
+
     internal static void ThrowIfProtected(string path, IReadOnlyList<string>? protectedEntries = null)
     {
         if (IsProtected(path, protectedEntries))
@@ -74,6 +77,15 @@ internal static class ProtectedSecretPaths
 
     internal static void ThrowIfContainsProtected(string directory)
     {
+        if (ContainsProtected(directory))
+        {
+            throw new UnauthorizedAccessException(DeniedMessage);
+        }
+    }
+
+    /// <summary>True when a protected entry lies inside <paramref name="directory"/> (given or final form).</summary>
+    internal static bool ContainsProtected(string directory)
+    {
         var fullDirectory = Path.GetFullPath(directory);
         var finalDirectory = ResolveFinalPathOrParent(fullDirectory);
         foreach (var entry in EntriesOverrideForTests ?? DefaultEntries)
@@ -85,9 +97,10 @@ internal static class ProtectedSecretPaths
                 IsSameOrBelow(finalEntry, fullDirectory) ||
                 IsSameOrBelow(finalEntry, finalDirectory))
             {
-                throw new UnauthorizedAccessException(DeniedMessage);
+                return true;
             }
         }
+        return false;
     }
 
     private static bool IsSameOrBelow(string path, string entry)
@@ -134,6 +147,7 @@ internal static class ProtectedSecretPaths
 
     private static string ResolveExistingFinalPath(string path)
     {
+        Interlocked.Increment(ref FinalPathResolutionsForTests);
         using var handle = CreateFileW(
             Win32Path.Extended(path),
             desiredAccess: 0x00000080u,

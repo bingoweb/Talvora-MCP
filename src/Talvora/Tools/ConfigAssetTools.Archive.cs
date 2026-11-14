@@ -109,7 +109,6 @@ public static partial class ConfigAssetTools
         string compression = "optimal")
     {
         ProtectedSecretPaths.ThrowIfProtected(sourceDirectory);
-        ProtectedSecretPaths.ThrowIfProtected(archivePath);
         var source = Path.GetFullPath(sourceDirectory);
         if (!Directory.Exists(source))
         {
@@ -208,7 +207,6 @@ public static partial class ConfigAssetTools
         CancellationToken cancellationToken = default)
     {
         ProtectedSecretPaths.ThrowIfProtected(archivePath);
-        ProtectedSecretPaths.ThrowIfProtected(destinationDirectory);
         var entryLimit =
             ResolveArchiveEntryCountLimit(
                 maxEntries);
@@ -292,7 +290,6 @@ public static partial class ConfigAssetTools
                     Path.Combine(
                         destination,
                         relative));
-            ProtectedSecretPaths.ThrowIfProtected(target);
             if (!allowOutsideDestination &&
                 !string.Equals(
                     target,

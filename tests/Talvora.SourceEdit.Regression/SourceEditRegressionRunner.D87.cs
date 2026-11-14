@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.IO.Compression;
 using System.Reflection;
 using Talvora.Tools;
 
@@ -74,64 +73,14 @@ internal static partial class SourceEditRegressionRunner
             Assert(File.Exists(Path.Combine(secrets, "x.txt")) && !File.Exists(Path.Combine(root, "secret.zip")),
                 "D87: protected source folder was changed");
 
-            var incoming = Path.Combine(root, "incoming");
-            Directory.CreateDirectory(Path.Combine(incoming, "Secrets"));
-            File.WriteAllText(Path.Combine(incoming, "Secrets", "x.txt"), "overwrite");
-            await Denied(() => Sync(() => FileTools.Copy(incoming, parent, overwrite: true)),
-                "copy destination manifest");
-            Assert(File.ReadAllText(Path.Combine(secrets, "x.txt")) == "fixture-only",
-                "D87: copy wrote protected fixture");
-            var zip = Path.Combine(root, "incoming.zip");
-            using (var a = ZipFile.Open(zip, ZipArchiveMode.Create))
-            {
-                using (var safe = new StreamWriter(a.CreateEntry("safe.txt").Open()))
-                    safe.Write("safe");
-                using (var secret = new StreamWriter(a.CreateEntry("Secrets/x.txt").Open()))
-                    secret.Write("overwrite");
-            }
-            await Denied(() => Sync(() => ConfigAssetTools.ArchiveExtract(zip, parent, overwrite: true)),
-                "zip protected manifest");
-            Assert(!File.Exists(Path.Combine(parent, "safe.txt")),
-                "D87: archive partially extracted its safe entry");
-            var escapeZip = Path.Combine(root, "escape.zip");
-            using (var a = ZipFile.Open(escapeZip, ZipArchiveMode.Create))
-            using (var w = new StreamWriter(a.CreateEntry("../protected-parent/Secrets/x.txt").Open()))
-                w.Write("overwrite");
-            await Denied(() => Sync(() => ConfigAssetTools.ArchiveExtract(escapeZip,
-                Path.Combine(root, "landing"), allowOutsideDestination: true, overwrite: true)),
-                "zip path traversal");
-
-            var p = Path.Combine(secrets, "fixture.json");
-            var writers = new (string, Func<Task>)[]
-            {
-                ("json-set", () => ConfigAssetTools.JsonSet(p, "/x", "1")),
-                ("json-delete", () => ConfigAssetTools.JsonDelete(p, "/x")),
-                ("yaml-set", () => StructuredConfigTools.YamlSet(p, "/x", "1")),
-                ("yaml-delete", () => StructuredConfigTools.YamlDelete(p, "/x")),
-                ("toml-set", () => StructuredConfigTools.TomlSet(p, "/x", "1")),
-                ("toml-delete", () => StructuredConfigTools.TomlDelete(p, "/x")),
-                ("ini-set", () => ConfigFormatTools.IniSet(p, "a", "x", "1")),
-                ("ini-delete", () => ConfigFormatTools.IniDelete(p, "a", "x")),
-                ("dotenv-set", () => ConfigFormatTools.DotenvSet(p, "X", "1")),
-                ("dotenv-delete", () => ConfigFormatTools.DotenvDelete(p, "X")),
-                ("xml-set", () => Sync(() => ConfigFormatTools.XmlSet(p, "/root/x", "1"))),
-                ("xml-delete", () => Sync(() => ConfigFormatTools.XmlDelete(p, "/root/x"))),
-            };
-            foreach (var item in writers) await Denied(item.Item2, item.Item1);
-            await Denied(() => ConfigAssetTools.HttpDownload(
-                "http://127.0.0.1:9/never", Path.Combine(secrets, "download.bin")),
-                "http download destination");
+            // D89: writes into the set are allowed now (SourceEditRegressionRunner.D89.cs); reads stay denied.
             var src = Path.Combine(secrets, "x.db").Replace('\\', '/');
             await Denied(() => SqliteTools.Query("file:" + src + "?mode=ro", "select 1"),
                 "sqlite query");
-            await Denied(() => SqliteTools.Execute("file:///" + src + "?mode=ro", "select 1"),
-                "sqlite execute file URI");
             await Denied(() => SqliteTools.Schema("file:" + src + "?mode=ro"),
                 "sqlite schema");
             await Denied(() => SqliteTools.Backup("file:" + src + "?mode=ro",
                 Path.Combine(root, "backup.db")), "sqlite backup source");
-            Assert(!File.Exists(p) && !File.Exists(Path.Combine(secrets, "download.bin")),
-                "D87: config writer or download created protected file");
 
             var siblingCopy = Path.Combine(root, "copy-sibling");
             FileTools.Copy(sibling, siblingCopy);

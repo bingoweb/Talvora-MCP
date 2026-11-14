@@ -103,7 +103,6 @@ public static partial class DeveloperTools
         long? offset = null,
         CancellationToken cancellationToken = default)
     {
-        ProtectedSecretPaths.ThrowIfProtected(path);
         if (append && offset is not null)
         {
             throw new ArgumentException("append and offset cannot be used together.");

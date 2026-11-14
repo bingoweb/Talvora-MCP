@@ -189,7 +189,6 @@ public static partial class ConfigFormatTools
         string delimiter = "=",
         CancellationToken cancellationToken = default)
     {
-        ProtectedSecretPaths.ThrowIfProtected(path);
         ValidateConfigKey(key);
         if (delimiter is not ("=" or ":"))
         {
@@ -364,7 +363,6 @@ public static partial class ConfigFormatTools
         bool caseSensitive = false,
         CancellationToken cancellationToken = default)
     {
-        ProtectedSecretPaths.ThrowIfProtected(path);
         ValidateConfigKey(key);
 
         var targetSection = section ?? string.Empty;
