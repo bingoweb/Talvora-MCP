@@ -168,6 +168,7 @@ public static partial class ConfigFormatTools
         bool? exported = null,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         ValidateConfigKey(key);
         if (value.Contains('\r') || value.Contains('\n'))
         {
@@ -297,6 +298,7 @@ public static partial class ConfigFormatTools
         bool caseSensitive = true,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         ValidateConfigKey(key);
 
         var fullPath = Path.GetFullPath(path);

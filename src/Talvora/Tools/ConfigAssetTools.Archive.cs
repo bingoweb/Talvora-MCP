@@ -115,6 +115,7 @@ public static partial class ConfigAssetTools
         {
             throw new DirectoryNotFoundException($"Archive source directory was not found: {source}");
         }
+        ProtectedSecretPaths.ThrowIfContainsProtected(source);
 
         var destination = Path.GetFullPath(archivePath);
         if (File.Exists(destination) && !overwrite)
@@ -291,6 +292,7 @@ public static partial class ConfigAssetTools
                     Path.Combine(
                         destination,
                         relative));
+            ProtectedSecretPaths.ThrowIfProtected(target);
             if (!allowOutsideDestination &&
                 !string.Equals(
                     target,

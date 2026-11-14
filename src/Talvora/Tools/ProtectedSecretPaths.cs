@@ -19,6 +19,9 @@ internal static class ProtectedSecretPaths
             "Talvora", "Context7", "api-key"),
     ];
 
+    // Isolated regressions replace the set. Never use actual secret contents in tests.
+    internal static IReadOnlyList<string>? EntriesOverrideForTests;
+
     internal static void ThrowIfProtected(string path, IReadOnlyList<string>? protectedEntries = null)
     {
         if (IsProtected(path, protectedEntries))
@@ -30,7 +33,7 @@ internal static class ProtectedSecretPaths
     internal static bool IsProtected(string path, IReadOnlyList<string>? protectedEntries = null)
     {
         var fullPath = Path.GetFullPath(path);
-        var entries = protectedEntries ?? DefaultEntries;
+        var entries = protectedEntries ?? EntriesOverrideForTests ?? DefaultEntries;
         var fullEntries = entries.Select(Path.GetFullPath).ToArray();
 
         if (fullEntries.Any(entry => IsSameOrBelow(fullPath, entry)))
@@ -49,11 +52,52 @@ internal static class ProtectedSecretPaths
         return false;
     }
 
+    internal static void ThrowIfDatabaseSourceProtected(string databaseSource)
+    {
+        if (databaseSource == ":memory:" ||
+            databaseSource.StartsWith("|DataDirectory|", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var path = databaseSource;
+        if (path.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+        {
+            path = path[5..].Split('?', 2)[0];
+            path = Uri.UnescapeDataString(path).Replace('/', '\\');
+            var withoutLeadingSlashes = path.TrimStart('\\');
+            if (withoutLeadingSlashes.Length >= 2 &&
+                char.IsLetter(withoutLeadingSlashes[0]) &&
+                withoutLeadingSlashes[1] == ':')
+                path = withoutLeadingSlashes;
+        }
+        ThrowIfProtected(path);
+    }
+
+    internal static void ThrowIfContainsProtected(string directory)
+    {
+        var fullDirectory = Path.GetFullPath(directory);
+        var finalDirectory = ResolveFinalPathOrParent(fullDirectory);
+        foreach (var entry in EntriesOverrideForTests ?? DefaultEntries)
+        {
+            var fullEntry = Path.GetFullPath(entry);
+            var finalEntry = ResolveFinalPathOrParent(fullEntry);
+            if (IsSameOrBelow(fullEntry, fullDirectory) ||
+                IsSameOrBelow(fullEntry, finalDirectory) ||
+                IsSameOrBelow(finalEntry, fullDirectory) ||
+                IsSameOrBelow(finalEntry, finalDirectory))
+            {
+                throw new UnauthorizedAccessException(DeniedMessage);
+            }
+        }
+    }
+
     private static bool IsSameOrBelow(string path, string entry)
     {
         var directory = Path.TrimEndingDirectorySeparator(entry);
+        var prefix = Path.EndsInDirectorySeparator(directory)
+            ? directory
+            : directory + Path.DirectorySeparatorChar;
         return string.Equals(path, directory, StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith(directory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+            path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
     }
 
     // For a missing child, resolve the nearest existing parent and append only its missing segments.
@@ -61,8 +105,22 @@ internal static class ProtectedSecretPaths
     {
         var candidate = path;
         var missing = new Stack<string>();
-        while (!File.Exists(candidate) && !Directory.Exists(candidate))
+        while (true)
         {
+            if (File.Exists(candidate) || Directory.Exists(candidate))
+            {
+                try
+                {
+                    var resolved = ResolveExistingFinalPath(candidate);
+                    while (missing.Count > 0)
+                        resolved = Path.Combine(resolved, missing.Pop());
+                    return Path.GetFullPath(resolved);
+                }
+                catch (Exception ex) when (ex is Win32Exception or IOException or UnauthorizedAccessException)
+                {
+                    // Treat paths that cannot be opened as unresolved segments.
+                }
+            }
             var parent = Path.GetDirectoryName(candidate);
             if (string.IsNullOrEmpty(parent) ||
                 string.Equals(parent, candidate, StringComparison.OrdinalIgnoreCase))
@@ -72,13 +130,6 @@ internal static class ProtectedSecretPaths
             missing.Push(Path.GetFileName(candidate));
             candidate = parent;
         }
-
-        var finalPath = ResolveExistingFinalPath(candidate);
-        while (missing.Count > 0)
-        {
-            finalPath = Path.Combine(finalPath, missing.Pop());
-        }
-        return Path.GetFullPath(finalPath);
     }
 
     private static string ResolveExistingFinalPath(string path)

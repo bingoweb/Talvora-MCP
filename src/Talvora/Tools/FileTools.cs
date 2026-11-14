@@ -79,6 +79,7 @@ public static class FileTools
         }
         if (Directory.Exists(fullPath))
         {
+            ProtectedSecretPaths.ThrowIfContainsProtected(fullPath);
             Directory.Delete(fullPath, recursive: true);
             return new { path = fullPath, deleted = true, kind = "directory" };
         }
@@ -209,6 +210,7 @@ public static class FileTools
         }
 
         var isDirectory = (sourceAttributes & FileAttributes.Directory) != 0;
+        if (isDirectory) ProtectedSecretPaths.ThrowIfContainsProtected(sourcePath);
         if (PathsEqual(sourcePath, destinationPath))
         {
             throw new IOException("Source and destination must be different paths.");
@@ -237,6 +239,12 @@ public static class FileTools
         }
 
         var manifest = BuildDirectoryManifest(sourcePath, cancellationToken);
+        foreach (var directory in manifest.Directories)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var relative = Path.GetRelativePath(sourcePath, directory);
+            ProtectedSecretPaths.ThrowIfProtected(Path.Combine(destinationPath, relative));
+        }
         foreach (var file in manifest.Files)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -248,6 +256,7 @@ public static class FileTools
                 Path.Combine(
                     destinationPath,
                     relative);
+            ProtectedSecretPaths.ThrowIfProtected(target);
             SourceMutationPolicy.EnsureGenericDestinationMutationAllowed(
                 target,
                 "talvora_copy",
@@ -346,6 +355,7 @@ public static class FileTools
         }
 
         var isDirectory = (sourceAttributes & FileAttributes.Directory) != 0;
+        if (isDirectory) ProtectedSecretPaths.ThrowIfContainsProtected(sourcePath);
         if (PathsEqual(sourcePath, destinationPath))
         {
             throw new IOException("Source and destination must be different paths.");

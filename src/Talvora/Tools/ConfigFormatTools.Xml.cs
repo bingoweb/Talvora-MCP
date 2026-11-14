@@ -161,6 +161,7 @@ public static partial class ConfigFormatTools
         Dictionary<string, string>? namespaces = null,
         int expectedMatches = -1)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         if (expectedMatches < -1)
         {
             throw new ArgumentOutOfRangeException(
@@ -243,6 +244,7 @@ public static partial class ConfigFormatTools
         Dictionary<string, string>? namespaces = null,
         int expectedMatches = -1)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         if (expectedMatches < -1)
         {
             throw new ArgumentOutOfRangeException(

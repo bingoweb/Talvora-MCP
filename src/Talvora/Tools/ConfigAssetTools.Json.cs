@@ -76,6 +76,7 @@ private static readonly JsonSerializerOptions CompactJsonOptions =
         bool createBackup = false,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         var fullPath = Path.GetFullPath(path);
         SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
             fullPath,
@@ -130,6 +131,7 @@ private static readonly JsonSerializerOptions CompactJsonOptions =
         bool createBackup = false,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         var fullPath = Path.GetFullPath(path);
         SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
             fullPath,

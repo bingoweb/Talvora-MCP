@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T18:45:07.731Z",
-  "scope": "D83: Cargo, uv and Python test/build worklog titles and state",
+  "verifiedAtUtc": "2026-11-14T20:31:58.258Z",
+  "scope": "D87: secret guard for broken junctions, folder operations, writers and database sources",
   "libraries": [],
-  "noLookup": "D83: Talvora's own title table and command argument classification; no external SDK behaviour needed.",
+  "noLookup": "D87: Talvora's own path checks; existing Windows final-path call is reused without new external APIs.",
   "vendorSources": []
 }

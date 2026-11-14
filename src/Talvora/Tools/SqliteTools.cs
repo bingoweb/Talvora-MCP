@@ -127,7 +127,7 @@ public static class SqliteTools
         int timeoutSeconds = 30,
         CancellationToken cancellationToken = default)
     {
-        if (databasePath != ":memory:") ProtectedSecretPaths.ThrowIfProtected(databasePath);
+        ProtectedSecretPaths.ThrowIfDatabaseSourceProtected(databasePath);
         if (maxRows < 0 || rowOffset < 0)
         {
             throw new ArgumentOutOfRangeException(
@@ -253,7 +253,7 @@ public static class SqliteTools
         int timeoutSeconds = 30,
         CancellationToken cancellationToken = default)
     {
-        if (databasePath != ":memory:") ProtectedSecretPaths.ThrowIfProtected(databasePath);
+        ProtectedSecretPaths.ThrowIfDatabaseSourceProtected(databasePath);
         ValidateTimeout(timeoutSeconds);
 
         var database = NormalizeDatabaseSource(databasePath);
@@ -326,7 +326,7 @@ public static class SqliteTools
         int timeoutSeconds = 30,
         CancellationToken cancellationToken = default)
     {
-        if (databasePath != ":memory:") ProtectedSecretPaths.ThrowIfProtected(databasePath);
+        ProtectedSecretPaths.ThrowIfDatabaseSourceProtected(databasePath);
         ValidateTimeout(timeoutSeconds);
 
         var database = NormalizeDatabaseSource(databasePath);
@@ -395,7 +395,7 @@ public static class SqliteTools
         int timeoutSeconds = 30,
         CancellationToken cancellationToken = default)
     {
-        ProtectedSecretPaths.ThrowIfProtected(sourcePath);
+        ProtectedSecretPaths.ThrowIfDatabaseSourceProtected(sourcePath);
         ProtectedSecretPaths.ThrowIfProtected(destinationPath);
         ValidateTimeout(timeoutSeconds);
 

@@ -33,6 +33,7 @@ public static partial class ConfigAssetTools
         bool explicitAdmin = false,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(destinationPath);
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
             throw new ArgumentException("A valid absolute URI is required.", nameof(url));

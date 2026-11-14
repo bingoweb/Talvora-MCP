@@ -55,6 +55,7 @@ public static partial class StructuredConfigTools
         bool createBackup = false,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         var fullPath = Path.GetFullPath(path);
         var originalEncoding =
             SourceTextCodec.ReadEncodingDescriptor(
@@ -98,6 +99,7 @@ public static partial class StructuredConfigTools
         bool createBackup = false,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         var fullPath = Path.GetFullPath(path);
         var originalEncoding =
             SourceTextCodec.ReadEncodingDescriptor(
