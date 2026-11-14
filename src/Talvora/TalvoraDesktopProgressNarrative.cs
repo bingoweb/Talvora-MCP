@@ -153,7 +153,16 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         {
             var file = WorklogSubject.FileName(WorklogSubject.Text(arguments, "path") ??
                 WorklogSubject.Text(arguments, "source") ?? WorklogSubject.Text(arguments, "destination"));
-            return new(OperationCategory.FileMutation, WorklogSubject.WithSubject(WorklogCopy.FileMutation, file), file);
+            var titles = normalized switch
+            {
+                "delete" => WorklogCopy.FileDelete,
+                "copy" => WorklogCopy.FileCopy,
+                "move" => WorklogCopy.FileMove,
+                "write_text" => WorklogCopy.FileWrite,
+                "append_text" => WorklogCopy.FileAppend,
+                _ => WorklogCopy.FileMutation,
+            };
+            return new(OperationCategory.FileMutation, WorklogSubject.WithSubject(titles, file), file);
         }
 
         if (normalized.Contains("tunnel", StringComparison.OrdinalIgnoreCase) ||

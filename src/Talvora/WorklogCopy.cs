@@ -38,6 +38,11 @@ internal static class WorklogCopy
     internal static readonly WorklogTitles Service = new("Servis işlemi yapılıyor", "Servis işlemi tamamlandı", "Servis istenen duruma geçmedi");
     internal static readonly WorklogTitles Package = new("Paket işlemi yapılıyor", "Paket işlemi tamamlandı", "Paket işlemi tamamlanamadı");
     internal static readonly WorklogTitles FileMutation = new("Dosyalar düzenleniyor", "Dosyalar düzenlendi", "Dosya işlemi tamamlanamadı");
+    internal static readonly WorklogTitles FileDelete = new("Siliniyor", "Silindi", "Silinemedi");
+    internal static readonly WorklogTitles FileCopy = new("Kopyalanıyor", "Kopyalandı", "Kopyalanamadı");
+    internal static readonly WorklogTitles FileMove = new("Taşınıyor", "Taşındı", "Taşınamadı");
+    internal static readonly WorklogTitles FileWrite = new("Dosya yazılıyor", "Dosya yazıldı", "Dosya yazılamadı");
+    internal static readonly WorklogTitles FileAppend = new("Dosyaya ekleniyor", "Dosyaya eklendi", "Dosyaya eklenemedi");
     internal static readonly WorklogTitles Network = new("Bağlantı denetleniyor", "Bağlantı denetlendi", "Bağlantı kurulamadı");
     internal static readonly WorklogTitles Process = new("Program çalışıyor", "Program bitti", "Program hata ile bitti");
     internal static readonly WorklogTitles Codex = new("Codex çalışıyor", "Codex görevi tamamlandı", "Codex görevi tamamlanamadı");
