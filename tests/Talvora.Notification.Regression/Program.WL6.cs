@@ -118,6 +118,182 @@ internal static partial class Program
                 if (replayed?.WorklogFrame?.SessionId != "saved-session" ||
                     replayed.Title != "Yeni sürüm çalışıyor · abcdef1")
                     throw new InvalidOperationException("WL6: the restarted notifier must reuse persisted session ID and measured result.");
+                var legacySessions = (System.Collections.IDictionary)typeof(TalvoraDesktopProgressNotifier)
+                    .GetField("_sessions", System.Reflection.BindingFlags.NonPublic |
+                        System.Reflection.BindingFlags.Instance)!.GetValue(notifier)!;
+                if (legacySessions.Count != 0)
+                    throw new InvalidOperationException("D71: a keyless legacy replay must not leave a stale session behind.");
+            }
+
+            static Dictionary<string, JsonElement> D71Args(params (string Name, object Value)[] values) =>
+                values.ToDictionary(value => value.Name, value => JsonSerializer.SerializeToElement(value.Value));
+            var project = Path.Combine(temporary, "D71-project");
+            Directory.CreateDirectory(Path.Combine(project, ".git"));
+            var projectArgs = D71Args(("workspaceRoot", project));
+            var originalMessages = new ConcurrentQueue<DesktopProgressMessage>();
+            string originalSessionId;
+            WorklogFollower.PendingDeploy savedSession;
+            await using (var original = CreateNotifier(originalMessages))
+            {
+                await original.RunToolCallAsync<object>("talvora_worklog_note",
+                    D71Args(("workspaceRoot", project), ("text", "D71 — Aynı oturum sürsün")),
+                    _ => ValueTask.FromResult<object>(new { accepted = true }),
+                    CancellationToken.None, "/mcp/dev", "ChatGPT");
+                await original.RunToolCallAsync<object>("talvora_apply_patch",
+                    D71Args(("workspaceRoot", project), ("patch", "two files"),
+                        ("purpose", "İki dosya güncelleniyor")),
+                    _ => ValueTask.FromResult<object>(new
+                    {
+                        success = true, status = "committed",
+                        files = new object[]
+                        {
+                            new { operation = "update", newPath = Path.Combine(project, "a.cs"), addedLines = 1, removedLines = 0 },
+                            new { operation = "update", newPath = Path.Combine(project, "b.cs"), addedLines = 1, removedLines = 0 },
+                        },
+                    }), CancellationToken.None, "/mcp/dev", "ChatGPT");
+                await original.RunToolCallAsync<object>("talvora_dotnet_build",
+                    projectArgs, _ => ValueTask.FromResult<object>(new { success = true, exitCode = 0 }),
+                    CancellationToken.None, "/mcp/dev", "ChatGPT");
+                await original.RunToolCallAsync<object>("talvora_dotnet_test",
+                    projectArgs, _ => ValueTask.FromResult<object>(new { success = true, exitCode = 0 }),
+                    CancellationToken.None, "/mcp/dev", "ChatGPT");
+
+                var before = originalMessages.Last(message =>
+                    message.Kind == DesktopProgressKind.Completed).WorklogFrame!;
+                originalSessionId = before.SessionId;
+                if (before.Totals.Steps != 3 || before.Totals.FilesChanged != 2 ||
+                    before.Totals.LastBuild != WorklogCheckState.Succeeded ||
+                    before.Totals.LastTests != WorklogCheckState.Succeeded ||
+                    before.Header.TaskNote != "D71 — Aynı oturum sürsün")
+                    throw new InvalidOperationException("D71 setup: initial agent worklog must hold three steps, two files and a note.");
+
+                var pathProperty = typeof(TalvoraDesktopProgressNotifier)
+                    .GetProperty("PendingDeployWritePath",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (pathProperty is null)
+                    throw new InvalidOperationException("D71: deploy writer needs a testable pending-file path.");
+                pathProperty.SetValue(original, pendingPath);
+                await original.RunToolCallAsync<object>("talvora_run_powershell",
+                    D71Args(("workspaceRoot", project), ("script", "& ./scripts/Deploy-Windows-Installer.ps1"),
+                        ("purpose", "Yeni sürüm kuruluyor")),
+                    _ => ValueTask.FromResult<object>(new
+                    {
+                        exitCode = 0,
+                        standardOutput = "{\"launched\":true,\"sourceCommit\":\"abcdef1234567890\"}\n",
+                        standardError = "",
+                    }), CancellationToken.None, "/mcp/dev", "ChatGPT");
+                if (!File.Exists(pendingPath))
+                    throw new InvalidOperationException("D71: deploy did not persist its session.");
+                savedSession = await WorklogFollower.TakePendingDeployAsync(pendingPath, CancellationToken.None)
+                    ?? throw new InvalidOperationException("D71: deploy snapshot was unreadable.");
+                if (savedSession.SessionKey != Path.GetFullPath(project) + "\u0000ChatGPT · Dev" ||
+                    savedSession.BeganUtc == default || savedSession.Steps != 3 ||
+                    savedSession.Timeline.Length != 3 || savedSession.ChangedFiles.Length != 2 ||
+                    savedSession.TaskNote != "D71 — Aynı oturum sürsün" ||
+                    savedSession.LastBuild != WorklogCheckState.Succeeded ||
+                    savedSession.LastTests != WorklogCheckState.Succeeded)
+                    throw new InvalidOperationException("D71: persisted snapshot lost the original session facts.");
+                var bounded = savedSession with
+                {
+                    ChangedFiles = Enumerable.Range(0, 500)
+                        .Select(index => "src/long-path-" + index.ToString("D4") +
+                            new string('x', 80) + ".cs").ToArray(),
+                };
+                await WorklogFollower.WritePendingDeployAsync(pendingPath, bounded, CancellationToken.None);
+                if (new FileInfo(pendingPath).Length is <= 16_384 or > 262_144)
+                    throw new InvalidOperationException("D71 setup: large snapshot must fit only the new 256 KB limit.");
+                var large = await WorklogFollower.TakePendingDeployAsync(pendingPath, CancellationToken.None);
+                if (large?.ChangedFiles.Length != 500)
+                    throw new InvalidOperationException("D71: a valid snapshot larger than 16 KB must be accepted.");
+                await WorklogFollower.WritePendingDeployAsync(pendingPath, savedSession, CancellationToken.None);
+            }
+
+            var resumedMessages = new ConcurrentQueue<DesktopProgressMessage>();
+            await using (var resumed = CreateNotifier(resumedMessages))
+            {
+                await resumed.ReplayPendingDeploymentAsync(pendingPath, "abcdef1234567890");
+                var deploy = resumedMessages.Last(message =>
+                    message.Kind == DesktopProgressKind.Completed).WorklogFrame!;
+                if (deploy.SessionId != originalSessionId || deploy.Totals.Steps != 4 ||
+                    deploy.Totals.FilesChanged != 2 || deploy.Timeline.Count != 4 ||
+                    deploy.Header.TaskNote != "D71 — Aynı oturum sürsün" ||
+                    deploy.Totals.LastBuild != WorklogCheckState.Succeeded ||
+                    deploy.Totals.LastTests != WorklogCheckState.Succeeded ||
+                    deploy.Timeline[0].Label != "Yeni sürüm çalışıyor · abcdef1" ||
+                    !deploy.Timeline.Skip(1).Select(row => row.Label).SequenceEqual(
+                        originalMessages.Last(message =>
+                            message.Kind == DesktopProgressKind.Completed).WorklogFrame!
+                            .Timeline.Select(row => row.Label)))
+                    throw new InvalidOperationException("D71: replay must restore the original session, four steps and newest-first history.");
+
+                await resumed.RunToolCallAsync<object>("talvora_git_run",
+                    D71Args(("repositoryPath", project), ("arguments", new[] { "status", "--short" }),
+                        ("purpose", "Dağıtım sonrası Git durumu denetleniyor")),
+                    _ => ValueTask.FromResult<object>(new { exitCode = 0, standardOutput = "", standardError = "" }),
+                    CancellationToken.None, "/mcp/dev", "ChatGPT");
+                var next = resumedMessages.Last(message =>
+                    message.Kind == DesktopProgressKind.Completed).WorklogFrame!;
+                if (next.SessionId != originalSessionId || next.Totals.Steps != 5 ||
+                    next.Timeline.Count != 5 || next.Totals.FilesChanged != 2 ||
+                    next.Current.Purpose != "Dağıtım sonrası Git durumu denetleniyor" ||
+                    resumedMessages.Last(message => message.Kind == DesktopProgressKind.Completed).SessionClosed)
+                    throw new InvalidOperationException("D71: next agent step must continue the live session with its purpose and five rows.");
+
+                var sessions = (System.Collections.IDictionary)typeof(TalvoraDesktopProgressNotifier)
+                    .GetField("_sessions", System.Reflection.BindingFlags.NonPublic |
+                        System.Reflection.BindingFlags.Instance)!.GetValue(resumed)!;
+                var ids = sessions.Values.Cast<object>().Select(session =>
+                    (string)session.GetType().GetProperty("Id")!.GetValue(session)!).ToArray();
+                if (ids.Length != ids.Distinct(StringComparer.Ordinal).Count())
+                    throw new InvalidOperationException("D71: the notifier holds two sessions with one id.");
+
+                var followedStart = new System.Diagnostics.ProcessStartInfo(
+                    @"C:\Program Files\PowerShell\7\pwsh.exe")
+                {
+                    WorkingDirectory = temporary, UseShellExecute = false, CreateNoWindow = true,
+                };
+                var followedArgs = new[] { "-NoProfile", "-Command", "Start-Sleep -Seconds 3" };
+                foreach (var argument in followedArgs) followedStart.ArgumentList.Add(argument);
+                using var followedProcess = System.Diagnostics.Process.Start(followedStart)!;
+                await resumed.RunToolCallAsync<object>("talvora_user_process_start",
+                    D71Args(("executable", followedStart.FileName), ("arguments", followedArgs),
+                        ("workingDirectory", project), ("purpose", "Arka plan işi izleniyor")),
+                    _ => ValueTask.FromResult<object>(new { success = true, processId = followedProcess.Id }),
+                    CancellationToken.None, "/mcp/dev", "ChatGPT");
+                for (var attempt = 0; attempt < 40 &&
+                    !resumedMessages.Any(message => message.Kind == DesktopProgressKind.Running &&
+                        message.WorklogFrame?.Totals.Steps == 5 &&
+                        message.WorklogFrame.Current.FactLine is not null);
+                    attempt++) await Task.Delay(50);
+                var liveFrame = resumedMessages.LastOrDefault(message =>
+                    message.Kind == DesktopProgressKind.Running &&
+                    message.WorklogFrame?.Totals.Steps == 5 &&
+                    message.WorklogFrame.Current.FactLine is not null)?.WorklogFrame;
+                if (liveFrame?.SessionId != originalSessionId ||
+                    liveFrame.Current.Purpose != "Arka plan işi izleniyor")
+                    throw new InvalidOperationException("D71: the followed step lost its live fact or session.");
+                await followedProcess.WaitForExitAsync();
+            }
+
+            var racedMessages = new ConcurrentQueue<DesktopProgressMessage>();
+            await using (var raced = CreateNotifier(racedMessages))
+            {
+                await raced.RunToolCallAsync<object>("talvora_git_run",
+                    D71Args(("repositoryPath", project), ("arguments", new[] { "status", "--short" })),
+                    _ => ValueTask.FromResult<object>(new { exitCode = 0, standardOutput = "", standardError = "" }),
+                    CancellationToken.None, "/mcp/dev", "ChatGPT");
+                await WorklogFollower.WritePendingDeployAsync(pendingPath, savedSession, CancellationToken.None);
+                await raced.ReplayPendingDeploymentAsync(pendingPath, "abcdef1234567890");
+                var racedReplay = racedMessages.Last(message =>
+                    message.Kind == DesktopProgressKind.Completed).WorklogFrame!;
+                var racedSessions = (System.Collections.IDictionary)typeof(TalvoraDesktopProgressNotifier)
+                    .GetField("_sessions", System.Reflection.BindingFlags.NonPublic |
+                        System.Reflection.BindingFlags.Instance)!.GetValue(raced)!;
+                if (racedReplay.SessionId != originalSessionId ||
+                    racedReplay.Totals.Steps != 2 || racedReplay.Timeline.Count != 2 ||
+                    racedReplay.Timeline[0].Label != "Yeni sürüm çalışıyor · abcdef1" ||
+                    racedSessions.Count != 1)
+                    throw new InvalidOperationException("D71: replay must finish in a live session when the new call arrived first.");
             }
 
             var childLog = Path.Combine(temporary, "child.log");

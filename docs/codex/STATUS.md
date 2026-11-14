@@ -32,7 +32,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [ ] D71 — A deploy continues the agent's card instead of splitting it (audit 55; WL6 follow-up)
+- [~] D71 — A deploy continues the agent's card instead of splitting it (visual check pending (Claude))
 - [ ] D72 — Followed jobs end with plain, measured results and never hide the agent's other steps (audit 55; WL6 follow-up)
 - [ ] D73 — WL5's facts only from a successful answer; gate scope labels; P-57 (audit 55; WL5 follow-up)
 - [ ] D74 — The release check reads GitHub's whole answer (audit 55; RL5 follow-up)
@@ -57,6 +57,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-14 — D71, executor ChatGPT: deploy snapshot now restores the project/actor session, 3 previous steps, two changed files, task note, build and test states; session-id lookup is unique, legacy keyless replay retires its temporary session. Writer path can be set for tests; pending JSON limit is 256 KB.
+  RED: WL6 failed on a retained legacy replay session; GREEN: WL6 and full Notification regression, ModernizationPolicyRegression; Changed 17/0 and signed-in Full 72/0, both `Hepsi geçti.`; Context7 noLookup (Talvora session and JSON only). Clean-HEAD deploy, installed smokes and CI follow this commit; mirror their results to Gitea #9.
+  Self-review — Cosmetics: no tray, layout or frame-protocol changes.
+  Self-review — Usability: deploy keeps previous steps and the agent's live task line.
+  Self-review — Turkish: no user-facing strings were added or changed.
+  Self-review — Correctness: temporary legacy sessions are removed; new-service race and 500-path, 256 KB boundary covered; Claude visual check pending.
 - 2026-11-14 — Claude, after audit 55: the user decided that the real uninstall → reinstall → restart test is never done ("kaldırma ve yeniden kurma denemesi hiç yapmayacağız"). RL3 and D66 are closed on what was verified at audit 50 (the Apps & features entry and its values, `--uninstall --what-if`, `NativeInstallerSourceRegression.ps1`, installed smokes, CI); the test is no longer a 0.0.1.0 prerequisite and is not offered again. Ledger updated.
 - 2026-11-14 — [C] D77, executor Claude (audit 55): `--surface-policy-live` sent its H1/H3/H4 calls and the Q7 `tools/list` reads on a raw `HttpClient` without a client name, so Talvora counted them as ChatGPT traffic on the dev line (Santral: 2 calls, 1 failure at 23:21:22 UTC) and the H4 `cmd.exe /d /c exit 3` became a ChatGPT failure card on the desktop and in Çalışma günlüğü (sessions of 2026-11-13 20:31 and 22:35 UTC and 2026-11-14 23:21 UTC). Both raw clients now send `X-Talvora-Client: Talvora.Smoke` (`TalvoraLineTrafficMeter.IsOwnClient` keeps `Talvora.` callers off the meter, the worklog and the call trace). Red: the traffic snapshot showed the two ChatGPT calls; green: a new run left `nextSeq` at 2 and no card. Test-only; Context7 noLookup.
   Self-review — Cosmetics: no screen changed; the fake red card no longer appears.

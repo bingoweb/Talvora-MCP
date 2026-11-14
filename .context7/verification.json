@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-13T23:28:15.000Z",
-  "scope": "D77: the installed smoke's raw HTTP calls send Talvora's own client name so they are not counted or shown as ChatGPT work",
+  "verifiedAtUtc": "2026-11-14T07:46:25.909Z",
+  "scope": "D71: restore one deployment worklog session from its local pending JSON snapshot",
   "libraries": [],
-  "noLookup": "D77: test-only change; the smoke adds Talvora's own X-Talvora-Client header, no library behaviour is relied on",
+  "noLookup": "D71: Talvora's own session bookkeeping and JSON file; no external library API is relied on",
   "vendorSources": []
 }

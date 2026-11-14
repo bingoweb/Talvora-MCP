@@ -26,6 +26,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         string id, string actor, string? projectName)
     {
         public string Id { get; } = id;
+        public string? Key { get; init; }
         public string Actor { get; } = actor;
         public string? ProjectName { get; } = projectName;
         public DateTimeOffset BeganUtc { get; set; } = DateTimeOffset.UtcNow;
@@ -60,6 +61,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, WorklogSession> _sessions =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, WorklogSession> _sessionsById =
+        new(StringComparer.Ordinal);
     private long _worklogSequence;
 
     private void TryBeginWorklog(
@@ -336,7 +339,11 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         {
             var id = Convert.ToHexString(
                 SHA256.HashData(Encoding.UTF8.GetBytes(key))).ToLowerInvariant();
-            session = new WorklogSession(id, actor, projectName);
+            if (!_sessionsById.TryGetValue(id, out session))
+            {
+                session = new WorklogSession(id, actor, projectName) { Key = key };
+                _sessionsById[id] = session;
+            }
             _sessions[key] = session;
         }
         else if (session.Closed ||
@@ -494,8 +501,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     {
         lock (_worklogGate)
         {
-            var session = _sessions.Values.FirstOrDefault(item => item.Id == sessionId);
-            if (session is null) return evidence;
+            if (!_sessionsById.TryGetValue(sessionId, out var session)) return evidence;
             if ((kind == DesktopProgressKind.Completed || evidence?.CodeChangeId is not null) &&
                 !string.IsNullOrEmpty(evidence?.CodePreview))
             {
@@ -526,9 +532,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     {
         lock (_worklogGate)
         {
-            var session = _sessions.Values.FirstOrDefault(
-                item => string.Equals(item.Id, sessionId, StringComparison.Ordinal));
-            if (session is null)
+            if (!_sessionsById.TryGetValue(sessionId, out var session))
             {
                 return null;
             }
@@ -564,9 +568,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     {
         lock (_worklogGate)
         {
-            return _sessions.Values.Any(session =>
-                string.Equals(session.Id, sessionId, StringComparison.Ordinal) &&
-                session.Closed);
+            return _sessionsById.TryGetValue(sessionId, out var session) &&
+                session.Closed;
         }
     }
 

@@ -22,7 +22,17 @@ internal static class WorklogFollower
         bool Succeeded, string Title, string? Fact, string? Reason, bool TimedOut = false);
     internal sealed record PendingDeploy(
         string SessionId, string OperationId, string SourceCommit,
-        DateTimeOffset StartedAtUtc, string Actor, string? ProjectName);
+        DateTimeOffset StartedAtUtc, string Actor, string? ProjectName)
+    {
+        public string? SessionKey { get; init; }
+        public DateTimeOffset BeganUtc { get; init; }
+        public int Steps { get; init; }
+        public WorklogTimelineEntry[] Timeline { get; init; } = [];
+        public string? TaskNote { get; init; }
+        public string[] ChangedFiles { get; init; } = [];
+        public WorklogCheckState LastBuild { get; init; } = WorklogCheckState.Unknown;
+        public WorklogCheckState LastTests { get; init; } = WorklogCheckState.Unknown;
+    }
 
     private static readonly Dictionary<string, string> Stages = new(StringComparer.Ordinal)
     {
@@ -255,7 +265,7 @@ internal static class WorklogFollower
         if (!File.Exists(path)) return null;
         try
         {
-            if (new FileInfo(path).Length > 16_384) return null;
+            if (new FileInfo(path).Length > 256 * 1024) return null;
             var json = await File.ReadAllTextAsync(path, token);
             var pending = JsonSerializer.Deserialize<PendingDeploy>(json);
             return pending is not null &&
@@ -291,6 +301,7 @@ internal static class WorklogFollower
 internal sealed partial class TalvoraDesktopProgressNotifier
 {
     private readonly CancellationTokenSource _followStopCts = new();
+    internal string PendingDeployWritePath { get; set; } = WorklogFollower.PendingDeployPath;
 
     private static JsonElement ResultJson<T>(T result) =>
         result is ModelContextProtocol.Protocol.CallToolResult
@@ -452,13 +463,23 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         {
             if (_activeWorklog.TryGetValue(operationId, out var active))
                 pending = new WorklogFollower.PendingDeploy(active.Session.Id, operationId,
-                    target, started, active.Session.Actor, active.Session.ProjectName);
+                    target, started, active.Session.Actor, active.Session.ProjectName)
+                {
+                    SessionKey = active.Session.Key,
+                    BeganUtc = active.Session.BeganUtc,
+                    Steps = active.Session.Steps,
+                    Timeline = active.Session.Timeline.Take(DesktopProgressProtocol.MaximumTimelineEntries).ToArray(),
+                    TaskNote = active.Session.TaskNote,
+                    ChangedFiles = active.Session.ChangedFiles.Take(500).ToArray(),
+                    LastBuild = active.Session.LastBuild,
+                    LastTests = active.Session.LastTests,
+                };
         }
         if (pending is null) return false;
         try
         {
             await WorklogFollower.WritePendingDeployAsync(
-                WorklogFollower.PendingDeployPath, pending, _followStopCts.Token);
+                PendingDeployWritePath, pending, _followStopCts.Token);
             TryUpdateFollowedWorklog(operationId,
                 WorklogSubject.FormatDuration(DateTimeOffset.UtcNow - started),
                 DateTimeOffset.UtcNow - started);
@@ -478,15 +499,43 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         var pending = await WorklogFollower.TakePendingDeployAsync(path, token);
         if (pending is null) return;
         var outcome = WorklogFollower.CompleteDeploy(pending, runningCommit);
+        string? transientKey = null;
+        WorklogSession session;
         lock (_worklogGate)
         {
-            var session = new WorklogSession(pending.SessionId, pending.Actor,
-                pending.ProjectName)
+            if (!string.IsNullOrWhiteSpace(pending.SessionKey))
             {
-                BeganUtc = pending.StartedAtUtc,
-                Category = OperationCategory.Deployment,
-            };
-            _sessions["deploy:" + pending.SessionId] = session;
+                if (!_sessions.TryGetValue(pending.SessionKey, out session!))
+                {
+                    if (!_sessionsById.TryGetValue(pending.SessionId, out session!))
+                    {
+                        session = new WorklogSession(pending.SessionId, pending.Actor,
+                            pending.ProjectName)
+                        {
+                            Key = pending.SessionKey,
+                            BeganUtc = pending.BeganUtc,
+                            Steps = pending.Steps,
+                            LastBuild = pending.LastBuild,
+                            LastTests = pending.LastTests,
+                            TaskNote = pending.TaskNote,
+                        };
+                        session.Timeline.AddRange((pending.Timeline ?? []).Take(
+                            DesktopProgressProtocol.MaximumTimelineEntries));
+                        session.ChangedFiles.UnionWith((pending.ChangedFiles ?? []).Take(500));
+                        _sessionsById[session.Id] = session;
+                    }
+                    _sessions[pending.SessionKey] = session;
+                }
+            }
+            else if (!_sessionsById.TryGetValue(pending.SessionId, out session!))
+            {
+                transientKey = "deploy:" + pending.SessionId;
+                session = new WorklogSession(pending.SessionId, pending.Actor,
+                    pending.ProjectName) { BeganUtc = pending.StartedAtUtc };
+                _sessions[transientKey] = session;
+                _sessionsById[session.Id] = session;
+            }
+            session.Category = OperationCategory.Deployment;
             _activeWorklog[pending.OperationId] = new ActiveWorklogItem(
                 "run_powershell",
                 new OperationNarrative(OperationCategory.Deployment, WorklogCopy.Deploy),
@@ -499,5 +548,19 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             new DesktopProgressEvidence(Summary: outcome.Fact,
                 Result: outcome.Fact is null ? null : "Sonuç: " + outcome.Fact),
             elapsed);
+        if (transientKey is not null)
+        {
+            lock (_worklogGate)
+            {
+                if (_sessions.TryGetValue(transientKey, out var stored) &&
+                    ReferenceEquals(stored, session))
+                    _sessions.Remove(transientKey);
+                if (_sessionsById.TryGetValue(session.Id, out var indexed) &&
+                    ReferenceEquals(indexed, session))
+                    _sessionsById.Remove(session.Id);
+                session.CloseDelay?.Cancel();
+                session.CloseDelay = null;
+            }
+        }
     }
 }
