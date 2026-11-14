@@ -33,6 +33,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [ ] D79 — Finished-form titles for the tools that still fall back to their MCP title (audit 56)
+- [x] [C] D80 — WL1's duration check allows the timer tick of a 400 ms delay (audit 56)
 - [~] [C] D48 — A vault note belongs to the vault's owner (live pending (Claude): the installed note owner after the batch deploy)
 - [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
 - [ ] [C] D47 — Plain Turkish for the remaining Control Center texts (Claude since audit 46; setup texts per the user's decision; table and test in docs/codex/reference/d47)
@@ -54,6 +55,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-14 — [C] D80, executor Claude (after audit 56): WL1's regression waits 400 ms in a fake build and required at least 0.4 s; once it read 0.3996 s (Task.Delay follows the coarse system tick, the step clock is precise), so the Changed gate of D48 failed in a suite D48 does not touch (3 reruns green). The lower bound is now 0.35 s: the check still proves a measured duration (an unmeasured step is null, a fake one 0). Test-only; Notification regression and signed-in Changed 13/0 `Hepsi geçti.`; the next Full gate (D49) covers it. Context7 noLookup.
+  Self-review — Cosmetics: none.
+  Self-review — Usability: none (test-only).
+  Self-review — Turkish: none.
+  Self-review — Correctness: the upper bound (10 s) and the null check stay; only the timer tolerance changed.
 - 2026-11-14 — [C] D48, executor Claude (after audit 56): `talvora_note_write` now gives a new note and every folder it creates the vault root's owner (`FileOwnership.TryGetOwner`/`TrySetOwner`, as source edits keep their workspace owner); refusals, the 64,000-character limit, `AtomicFile` and `FileOwnership` are unchanged. Red: live, `40 Oturum Notları/2026-11-07 Talvora OB1.md` is owned by `NT AUTHORITY\SYSTEM` (the signed-in test cannot be red: a note it writes already belongs to the user). Green: SourceEdit regression with the new D48 assertion (new note in two new folders, all three owned by the vault owner); signed-in Changed 15/0 and Full 72/0 `Hepsi geçti.`. Context7 `/dotnet/docs` (GetAccessControl/SetAccessControl on FileInfo and DirectoryInfo; ledger 2026-11-14). Seen during Changed: WL1's 400 ms step read 0.3996 s once (timer granularity; 3 reruns green) → Claude's D80. Deploy, the live owner check and CI follow the batch (D80, D49, D47, WL3).
   Self-review — Cosmetics: no screen changed.
   Self-review — Usability: notes agents write into the vault can be edited, moved and deleted by the user without an administrator prompt.

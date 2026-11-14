@@ -26,7 +26,9 @@ internal static partial class Program
                 },
                 CancellationToken.None);
             var entry = messages.Last(message => message.WorklogFrame is { Timeline.Count: > 0 }).WorklogFrame!.Timeline[0];
-            if (entry.DurationSeconds is not { } seconds || seconds < 0.4 || seconds > 10)
+            // D80: Task.Delay follows the coarse system tick, so the precise clock may read a few ms less than 400 ms
+            // (seen: 0.3996 s); the check proves a measured duration, not the timer's accuracy.
+            if (entry.DurationSeconds is not { } seconds || seconds < 0.35 || seconds > 10)
                 throw new InvalidOperationException($"WL1: a finished step must carry its measured duration, got {entry.DurationSeconds}.");
         }
         finally

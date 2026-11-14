@@ -1,12 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T11:51:42.000Z",
-  "scope": "D48: vault notes and the folders they create keep the vault owner",
-  "libraries": [
-    {
-      "libraryId": "/dotnet/docs",
-      "verified": "2026-11-14 D48: on .NET a file's or directory's security descriptor is read with FileSystemAclExtensions.GetAccessControl and written back with SetAccessControl (FileInfo/FileSecurity, DirectoryInfo/DirectorySecurity); FileOwnership already uses this pattern for SetOwner (query: \"FileSystemSecurity.SetOwner SecurityIdentifier set file and directory owner with FileInfo.SetAccessControl on Windows .NET 10\")"
-    }
-  ],
+  "verifiedAtUtc": "2026-11-14T12:04:51.000Z",
+  "scope": "D80: WL1 regression tolerance for the timer tick of a 400 ms delay",
+  "libraries": [],
+  "noLookup": "D80: one bound in Talvora's own regression test; no external API lookup needed",
   "vendorSources": []
 }
