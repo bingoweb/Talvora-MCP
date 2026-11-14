@@ -64,6 +64,65 @@
                 </MultiDataTrigger>
             </Style.Triggers>
         </Style>
+        <!-- WL3: an empty optional line leaves no hole in the detail column. -->
+        <Style x:Key="HistoryOptionalText" TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.Body}">
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Style.Triggers>
+                <Trigger Property="Text" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </Trigger>
+                <Trigger Property="Text" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="HistoryOptionalCaption" TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.Caption}">
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Style.Triggers>
+                <Trigger Property="Text" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </Trigger>
+                <Trigger Property="Text" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <!-- WL3: the outcome is an 8 px dot on the card's caption line. -->
+        <Style x:Key="HistoryOutcomeDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="Height" Value="8" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="{DynamicResource Tv.Attention}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Kind}" Value="Completed">
+                    <Setter Property="Fill" Value="{DynamicResource Tv.Ready}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="Failed">
+                    <Setter Property="Fill" Value="{DynamicResource Tv.Offline}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="Cancelled">
+                    <Setter Property="Fill" Value="{DynamicResource Tv.TextMuted}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <!-- WL3: "0 dosya değişti" is never printed; the desktop card leaves zero parts out the same way. -->
+        <Style x:Key="HistoryFilesPart" TargetType="StackPanel">
+            <Setter Property="Orientation" Value="Horizontal" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Totals.FilesChanged}" Value="0">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="HistoryEvidenceHeading" TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.Subtitle}">
+            <Setter Property="Margin" Value="0,24,0,8" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasEvidence}" Value="False">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
     <Grid Margin="24">
         <Grid.RowDefinitions>
@@ -127,22 +186,34 @@
                                 <StackPanel>
                                     <TextBlock Style="{StaticResource HistoryProject}" />
                                     <TextBlock Text="{Binding Header.ActorName}" Style="{StaticResource Tv.Type.Caption}" />
-                                    <TextBlock Text="{Binding Current.Title}" Style="{StaticResource Tv.Type.Body}"
-                                               TextWrapping="Wrap" Margin="0,8,0,8" />
-                                    <TextBlock Text="{Binding OutcomeLabel}" Style="{StaticResource Tv.Type.BodyStrong}" />
-                                    <TextBlock Text="{Binding ListTimeText}" Style="{StaticResource Tv.Type.Caption}" />
+                                    <!-- WL3 (user decision 2026-11-08 "Görev notu"): the task note leads, the last step follows. -->
+                                    <TextBlock Text="{Binding ListHeadline}" Style="{StaticResource Tv.Type.Body}"
+                                               TextTrimming="CharacterEllipsis" Margin="0,8,0,0"
+                                               ToolTip="{Binding ListHeadline}" />
+                                    <TextBlock Text="{Binding ListLastStep}" Style="{StaticResource HistoryOptionalCaption}"
+                                               Foreground="{DynamicResource Tv.TextMuted}" TextWrapping="NoWrap"
+                                               TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <Ellipse Style="{StaticResource HistoryOutcomeDot}" />
+                                        <TextBlock Text="{Binding OutcomeLabel}" Style="{StaticResource Tv.Type.Caption}" />
+                                        <TextBlock Text=" · " Style="{StaticResource Tv.Type.Caption}" />
+                                        <TextBlock Text="{Binding ListTimeText}" Style="{StaticResource Tv.Type.Caption}" />
+                                    </StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding Totals.Steps}" Style="{StaticResource Tv.Type.Caption}" />
-                                        <TextBlock Text=" adım · " Style="{StaticResource Tv.Type.Caption}" />
-                                        <TextBlock Text="{Binding Totals.FilesChanged}" Style="{StaticResource Tv.Type.Caption}" />
-                                        <TextBlock Text=" dosya değişti" Style="{StaticResource Tv.Type.Caption}" />
+                                        <TextBlock Text=" adım" Style="{StaticResource Tv.Type.Caption}" />
+                                        <StackPanel Style="{StaticResource HistoryFilesPart}">
+                                            <TextBlock Text=" · " Style="{StaticResource Tv.Type.Caption}" />
+                                            <TextBlock Text="{Binding Totals.FilesChanged}" Style="{StaticResource Tv.Type.Caption}" />
+                                            <TextBlock Text=" dosya değişti" Style="{StaticResource Tv.Type.Caption}" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-                <TextBlock Text="Henüz kayıtlı çalışma yok." Style="{StaticResource Tv.Type.Body}"
+                <TextBlock Text="{Binding EmptyText}" Style="{StaticResource Tv.Type.Body}"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
                            IsHitTestVisible="False"
                            Visibility="{Binding IsEmpty, Converter={StaticResource HistoryBool}}" />
@@ -157,14 +228,18 @@
                     <StackPanel DataContext="{Binding SelectedSession}">
                         <TextBlock Style="{StaticResource HistoryProjectTitle}" />
                         <TextBlock Text="{Binding Header.ActorName}" Style="{StaticResource Tv.Type.Body}" />
-                        <TextBlock Text="{Binding Header.TaskNote}" Style="{StaticResource Tv.Type.Body}"
-                                   TextWrapping="Wrap" Margin="0,8,0,0" />
+                        <TextBlock Text="{Binding Header.TaskNote}" Style="{StaticResource HistoryOptionalText}"
+                                   Margin="0,8,0,0" />
                         <TextBlock Text="{Binding Current.Title}" Style="{StaticResource Tv.Type.BodyStrong}"
                                    TextWrapping="Wrap" Margin="0,16,0,0" />
-                        <TextBlock Text="{Binding Current.FactLine}" Style="{StaticResource Tv.Type.Body}"
-                                   TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Current.FactLine}" Style="{StaticResource HistoryOptionalText}" />
                         <TextBlock Text="{Binding OutcomeLabel}" Style="{StaticResource Tv.Type.BodyStrong}"
                                    Foreground="{DynamicResource Tv.Accent}" Margin="0,8,0,0" />
+                        <!-- WL3 (user decision 2026-11-08 "Evet, nedeni göster"): why it ended so, and what comes next. -->
+                        <TextBlock Text="{Binding Current.Outcome.PlainReason, TargetNullValue='', FallbackValue=''}"
+                                   Style="{StaticResource HistoryOptionalText}" Foreground="{DynamicResource Tv.TextMuted}" />
+                        <TextBlock Text="{Binding Current.Outcome.NextStep, StringFormat='Sonraki adım: {0}', TargetNullValue='', FallbackValue=''}"
+                                   Style="{StaticResource HistoryOptionalCaption}" />
                         <TextBlock Text="{Binding DetailTimeText}" Style="{StaticResource Tv.Type.Caption}"
                                    Margin="0,8,0,0" />
                         <TextBlock Text="Zaman çizelgesi" Style="{StaticResource Tv.Type.Subtitle}" Margin="0,24,0,8" />
@@ -180,11 +255,9 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <TextBlock Text="Kanıtlar" Style="{StaticResource Tv.Type.Subtitle}" Margin="0,24,0,8" />
-                        <TextBlock Text="{Binding Evidence.Summary}" Style="{StaticResource Tv.Type.Body}"
-                                   TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding Evidence.Result}" Style="{StaticResource Tv.Type.Body}"
-                                   TextWrapping="Wrap" />
+                        <TextBlock Text="Kanıtlar" Style="{StaticResource HistoryEvidenceHeading}" />
+                        <TextBlock Text="{Binding Evidence.Summary}" Style="{StaticResource HistoryOptionalText}" />
+                        <TextBlock Text="{Binding Evidence.Result}" Style="{StaticResource HistoryOptionalText}" />
                         <ItemsControl ItemsSource="{Binding Evidence.Files}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>

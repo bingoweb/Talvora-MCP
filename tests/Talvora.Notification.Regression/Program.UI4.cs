@@ -25,8 +25,9 @@ internal static partial class Program
             ], "", "", 1, 1, 0);
         var model = new ServicesViewModel();
         model.ApplySnapshot(source, now, _ => false);
+        // WL3: a service that needs attention comes first, the ready ones after it.
         if (model.Rows.Count != 2 || model.FilteredRows.Count != 2 ||
-            model.Rows[0].Name != "Talvora Çekirdeği")
+            model.Rows[0].Name != "Talvora Admin" || model.Rows[1].Name != "Talvora Çekirdeği")
             throw new InvalidOperationException("UI4 service list did not map the snapshot.");
         model.SearchText = "Admin";
         if (model.FilteredRows.Count != 1 || model.FilteredRows[0].Name != "Talvora Admin")

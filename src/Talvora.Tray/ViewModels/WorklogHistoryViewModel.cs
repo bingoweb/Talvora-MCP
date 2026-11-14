@@ -62,6 +62,12 @@ internal sealed class WorklogHistoryViewModel : ObservableObject
     public bool HasSelection => SelectedSession is not null;
     public bool IsEmpty => Sessions.Count == 0;
 
+    // WL3: an empty list says why: nothing recorded yet, or nothing matches the search or the filters.
+    public string EmptyText =>
+        _all.Count == 0 ? "Henüz kayıtlı çalışma yok." :
+        !string.IsNullOrWhiteSpace(SearchText) ? "Aramayla eşleşen çalışma yok." :
+        "Bu filtrelerle eşleşen çalışma yok.";
+
     public void Reload()
     {
         var previousKey = SelectedSession?.HistoryKey;
@@ -108,5 +114,6 @@ internal sealed class WorklogHistoryViewModel : ObservableObject
         SelectedSession = selectedKey is null ? null :
             Sessions.FirstOrDefault(s => s.HistoryKey == selectedKey);
         OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(EmptyText));
     }
 }

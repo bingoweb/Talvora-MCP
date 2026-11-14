@@ -11,6 +11,9 @@
             <Setter Property="Background" Value="{DynamicResource Tv.SurfaceRaised}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource Tv.Border}"/>
             <Setter Property="Padding" Value="12,7"/>
+            <!-- WL3: the toggle says what a click does next. -->
+            <Setter Property="Content" Value="Ham günlüğü göster"/>
+            <Setter Property="AutomationProperties.Name" Value="Ham günlüğü göster"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
@@ -29,6 +32,12 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Content" Value="Ham günlüğü gizle"/>
+                    <Setter Property="AutomationProperties.Name" Value="Ham günlüğü gizle"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
         <Style x:Key="EventFilterChip" TargetType="RadioButton">
             <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
@@ -78,10 +87,9 @@
             <TextBlock Text="Olaylar" Style="{StaticResource Tv.Type.Title}"
                        DockPanel.Dock="Left" VerticalAlignment="Center"/>
             <ToggleButton x:Name="RawLogToggle" DockPanel.Dock="Right"
-                          Content="Ham günlüğü göster" IsChecked="{Binding RawLogVisible, Mode=TwoWay}"
+                          IsChecked="{Binding RawLogVisible, Mode=TwoWay}"
                           MinHeight="36" MinWidth="168" Cursor="Hand"
-                          Style="{StaticResource RawLogSecondaryToggle}"
-                          AutomationProperties.Name="Ham günlüğü göster"/>
+                          Style="{StaticResource RawLogSecondaryToggle}"/>
         </DockPanel>
         <Grid Grid.Row="1" Margin="0,0,0,16">
             <Grid.RowDefinitions>

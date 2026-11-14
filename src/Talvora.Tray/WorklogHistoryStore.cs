@@ -59,6 +59,21 @@ internal sealed record WorklogHistorySession(
     [JsonIgnore]
     public bool HasCodePreview => !string.IsNullOrWhiteSpace(Evidence?.CodePreview);
 
+    // WL3 (user decision 2026-11-08 "Görev notu"): a session with a task note is listed under that note.
+    [JsonIgnore]
+    public string ListHeadline =>
+        string.IsNullOrWhiteSpace(Header.TaskNote) ? Current.Title : Header.TaskNote.Trim();
+
+    [JsonIgnore]
+    public string? ListLastStep =>
+        string.IsNullOrWhiteSpace(Header.TaskNote) ? null : "Son adım: " + Current.Title;
+
+    // WL3: the evidence heading shows only when there is evidence to read.
+    [JsonIgnore]
+    public bool HasEvidence =>
+        !string.IsNullOrWhiteSpace(Evidence?.Summary) || !string.IsNullOrWhiteSpace(Evidence?.Result) ||
+        Evidence?.Files is { Count: > 0 } || HasCodePreview;
+
     // D50: a project and an actor keep one SessionId across all their sessions (the desktop card follows it);
     // one history entry is that id plus its start, so every session of the last 7 days stays in the history.
     [JsonIgnore]

@@ -100,17 +100,17 @@
                                            Style="{StaticResource Tv.Type.Caption}"
                                            Foreground="{DynamicResource Tv.TextMuted}"
                                            TextWrapping="Wrap" Margin="0,0,0,8"/>
-                                <TextBlock x:Name="DevTunnelLabel" Text="Talvora Dev tunnel ID"
+                                <TextBlock x:Name="DevTunnelLabel" Text="Talvora Dev tünel kimliği (tunnel ID)"
                                            Style="{StaticResource Tv.Type.Caption}" Margin="0,8,0,4"/>
                                 <ui:TextBox x:Name="DevTunnelInput" MinHeight="36" MaxLength="39"
                                             PlaceholderText="tunnel_..."
-                                            AutomationProperties.Name="Talvora Dev tunnel ID"/>
-                                <TextBlock x:Name="AdminTunnelLabel" Text="Talvora Admin tunnel ID"
+                                            AutomationProperties.Name="Talvora Dev tünel kimliği (tunnel ID)"/>
+                                <TextBlock x:Name="AdminTunnelLabel" Text="Talvora Admin tünel kimliği (tunnel ID)"
                                            Style="{StaticResource Tv.Type.Caption}" Margin="0,8,0,4"/>
                                 <ui:TextBox x:Name="AdminTunnelInput" MinHeight="36" MaxLength="39"
                                             PlaceholderText="tunnel_..."
-                                            AutomationProperties.Name="Talvora Admin tunnel ID"/>
-                                <TextBlock Text="Tunnel OpenAI tarafında zaten oluşturulduysa ID'yi buraya yapıştırın."
+                                            AutomationProperties.Name="Talvora Admin tünel kimliği (tunnel ID)"/>
+                                <TextBlock Text="Tüneller OpenAI tarafında zaten oluşturulduysa kimliklerini (tunnel ID) buraya yapıştırın."
                                            Style="{StaticResource Tv.Type.Caption}"
                                            TextWrapping="Wrap" Foreground="{DynamicResource Tv.TextMuted}"
                                            Margin="0,8,0,0"/>
@@ -144,11 +144,11 @@
                         <Expander Header="Teknik ayrıntılar" IsExpanded="True"
                                   Foreground="{DynamicResource Tv.Text}" Margin="0,8,0,0">
                             <StackPanel Margin="0,8,0,0">
-                                <TextBlock Text="OpenAI Admin API key" Style="{StaticResource Tv.Type.Caption}"
+                                <TextBlock Text="OpenAI Admin API anahtarı (Admin API key)" Style="{StaticResource Tv.Type.Caption}"
                                            Margin="0,0,0,4"/>
                                 <ui:PasswordBox x:Name="AdminKeyInput" MinHeight="36"
                                                 PasswordChar="●" PlaceholderText="Admin API key"
-                                                AutomationProperties.Name="OpenAI Admin API key"/>
+                                                AutomationProperties.Name="OpenAI Admin API anahtarı (Admin API key)"/>
                             </StackPanel>
                         </Expander>
                         <ui:Button x:Name="AdminSubmitButton" Content="Kaydet ve kurulumu tamamla"

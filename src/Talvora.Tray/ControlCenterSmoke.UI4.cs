@@ -39,6 +39,10 @@ internal static partial class ControlCenterSmoke
         window.UpdateLayout();
         if (services.Model.FilteredRows.Count != states.Length)
             throw new InvalidOperationException("UI4 service list omitted one fixture.");
+        // WL3: services that need attention first, switched-off optional ones last, names in Turkish order.
+        var order = string.Join(" | ", services.Model.FilteredRows.Select(row => row.Name));
+        if (order != "Talvora Admin | Gitea | Talvora Çekirdeği | Talvora Dev | Penpot")
+            throw new InvalidOperationException("WL3: Hizmetler order is wrong: " + order);
         SaveVisualSnapshotIfRequested(window, "ui4-services-" + variant);
 
         services.OpenDetail(states[2]);

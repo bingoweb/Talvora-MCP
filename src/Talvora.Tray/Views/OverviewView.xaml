@@ -61,14 +61,10 @@
                                AutomationProperties.LiveSetting="Polite"/>
                     <TextBlock Text="{Binding Description}" Style="{StaticResource Tv.Type.Body}"
                                Foreground="{DynamicResource Sn.InkMuted}" TextWrapping="Wrap" Margin="0,4,0,0"/>
-                    <!-- Counts and the check time on separate lines: a version string must never break mid-word. -->
-                    <!-- D44: the repair count is a link to Olaylar → Onarımlar; on a narrow window it wraps to its own line. -->
+                    <!-- The check time on its own line: a version string must never break mid-word. -->
+                    <!-- D44: the repair count is a link to Olaylar → Onarımlar. WL3 (audit 53): the counts line that repeated
+                         the description ("4 hazır · 1 kapalı" under "4/5 bileşen hazır") is gone. -->
                     <WrapPanel Margin="0,8,0,0">
-                        <TextBlock Text="{Binding Summary}" Style="{StaticResource Tv.Type.Mono}"
-                                   Foreground="{DynamicResource Sn.InkMuted}"/>
-                        <TextBlock Text=" · " Style="{StaticResource Tv.Type.Mono}"
-                                   Foreground="{DynamicResource Sn.InkMuted}"
-                                   Visibility="{Binding HasRecovery, Converter={StaticResource OverviewBool}}"/>
                         <Button Click="OnShowRepairs" Cursor="Hand" FocusVisualStyle="{x:Null}" Margin="-4,-2,0,-2"
                                 Visibility="{Binding HasRecovery, Converter={StaticResource OverviewBool}}"
                                 AutomationProperties.Name="{Binding RecoveryText}"

@@ -63,13 +63,14 @@ internal sealed class ServicesViewModel : ObservableObject
         Func<ManagedMcpRegistration, bool> isManuallyStopped)
     {
         Rows.Clear();
+        var rows = new List<ServiceRowViewModel>();
         foreach (var source in snapshot.Mcps)
         {
             var manuallyStopped = isManuallyStopped(source.Registration);
             var optional = ManagedMcpAggregateHealthPolicy.IsIgnored(
                 source.Registration, source.Health, manuallyStopped);
             var state = OverviewViewModel.VisualState(source.Health, optional);
-            Rows.Add(new ServiceRowViewModel(
+            rows.Add(new ServiceRowViewModel(
                 source,
                 source.Registration.DisplayName,
                 GetRole(source.Registration),
@@ -85,6 +86,18 @@ internal sealed class ServicesViewModel : ObservableObject
                     (source.Registration.Id.StartsWith("talvora-", StringComparison.OrdinalIgnoreCase)
                         ? McpLogoResolver.TryResolve("talvora") : null)));
         }
+        // WL3: services that need attention first, then the ready ones, then the optional ones that are
+        // switched off; each group by name in Turkish order (an optional service that is off is not a problem).
+        var turkish = StringComparer.Create(System.Globalization.CultureInfo.GetCultureInfo("tr-TR"), ignoreCase: true);
+        foreach (var row in rows
+                     .OrderBy(row => row.State switch
+                     {
+                         ComponentVisualState.Ready => 1,
+                         ComponentVisualState.Neutral => 2,
+                         _ => 0,
+                     })
+                     .ThenBy(row => row.Name, turkish))
+            Rows.Add(row);
         IsLoading = false;
         Filter();
     }

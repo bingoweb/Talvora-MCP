@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T13:03:11.000Z",
-  "scope": "D47: plain Turkish for the remaining Control Center, tray, setup and worklog texts",
-  "libraries": [],
-  "noLookup": "D47: Turkish strings in Talvora's own sources and tests; interpolation holes, log lines and match strings unchanged; no external API involved",
+  "verifiedAtUtc": "2026-11-14T13:14:10.000Z",
+  "scope": "WL3: Çalışma günlüğü, Olaylar, Hizmetler, setup labels and the overview counts line",
+  "libraries": [
+    {
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-14 WL3: a locally set value outranks style triggers and style setters, so the raw-log toggle's Content and automation name moved from local attributes into the style, whose IsChecked trigger then switches them (query: \"WPF dependency property value precedence local value overrides style trigger setter\")"
+    }
+  ],
   "vendorSources": []
 }

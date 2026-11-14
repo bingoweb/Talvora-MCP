@@ -22,8 +22,8 @@ internal static partial class ControlCenterSmoke
 
         var card = settings.SetupCard;
         if (!card.IsVisible || card.ActualWidth < 32 ||
-            AutomationProperties.GetName(card.DevIdBox) != "Talvora Dev tunnel ID" ||
-            AutomationProperties.GetName(card.AdminPasswordBox) != "OpenAI Admin API key")
+            AutomationProperties.GetName(card.DevIdBox) != "Talvora Dev tünel kimliği (tunnel ID)" ||
+            AutomationProperties.GetName(card.AdminPasswordBox) != "OpenAI Admin API anahtarı (Admin API key)")
             throw new InvalidOperationException("UI6 setup inputs are not accessible.");
 
         SaveVisualSnapshotIfRequested(window, "ui6-settings-" + theme);

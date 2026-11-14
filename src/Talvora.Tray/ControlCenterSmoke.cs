@@ -67,6 +67,7 @@ internal static partial class ControlCenterSmoke
                 AssertUi4VisualFixture(window, "initial");
                 await AssertUi5VisualFixtureAsync(window, "initial");
                 AssertUi6VisualFixture(window, "initial");
+                AssertWl3HistoryPolish(window, "initial");
                 if (!string.IsNullOrWhiteSpace(forcedRelease))
                     AssertRl5VisualFixture(window, "initial", forcedRelease);
 
@@ -84,6 +85,7 @@ internal static partial class ControlCenterSmoke
                 AssertUi4VisualFixture(window, "alternate");
                 await AssertUi5VisualFixtureAsync(window, "alternate");
                 AssertUi6VisualFixture(window, "alternate");
+                AssertWl3HistoryPolish(window, "alternate");
                 if (!string.IsNullOrWhiteSpace(forcedRelease))
                     AssertRl5VisualFixture(window, "alternate", forcedRelease);
                 TrayLog.Write("Control Center smoke stage: worklog history");
