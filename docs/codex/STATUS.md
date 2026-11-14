@@ -35,7 +35,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D71 — A deploy continues the agent's card instead of splitting it (visual check pending (Claude))
 - [~] D72 — Followed jobs end with plain, measured results and never hide the agent's other steps (visual check pending (Claude))
 - [~] D73 — WL5's facts only from a successful answer; gate scope labels; P-57 (visual check pending (Claude))
-- [ ] D74 — The release check reads GitHub's whole answer (audit 55; RL5 follow-up)
+- [~] D74 — The release check reads GitHub's whole answer (CI pending; visual check pending (Claude))
 - [ ] D76 — The Control Center smoke always shows its own window (audit 55)
 - [ ] D78 — A documentation push never hides an unverified code push from CI (audit 55)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
@@ -57,6 +57,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-14 — D74, executor ChatGPT: the incremental GitHub latest-release reader now accepts at most 262,144 bytes using a 262,145-byte buffer to reject an over-limit response. No URL, headers, timeout, schedule, cache, strings or appearance changed. The RL5 fake now supplies a 40 KB release body and checks that a newer approved tag is stored, while a response above 256 KB leaves the last accepted state unchanged.
+  RED: a 40 KB valid release failed with the old 16 KB bound. GREEN: RL5 focused and full Notification regression; Changed 16/0 and signed-in Full 72/0, both Hepsi geçti. Context7 noLookup (Talvora's own size constant). D73 Windows CI run 43577234990 green in 5 dk 24 sn. Clean-HEAD installer, installed live smokes and D74 CI follow this commit; Gitea #9 mirror.
+  Self-review — Cosmetics: no theme, layout or release-notice text changed.
+  Self-review — Usability: longer release notes no longer suppress a valid new-version notice.
+  Self-review — Turkish: no visible strings changed.
+  Self-review — Correctness: byte-for-byte upper bound and unchanged state on oversized reply tested; Claude visual check pending.
 - 2026-11-14 — D73, executor ChatGPT: WL5 captured-output facts are parsed only from successful completed Git calls; failed fetch/status/add no longer claim success, quiet fetch has no inferred fact, and status ignores the branch header. Non-command initial summaries no longer leak into the visible build/test fact; cmd /c inline scripts and Full/Fast/Changed/default gate labels follow the approved titles. P-57 option 1 replaced exactly four Git pull labels in both preview copies; normalized SHA-256 17f4da58b329247f8153c5b52239c7d8671e3abcdf2383fac7a9691b922c3389 matches the reference.
   RED: the new WL5 tests caught a failed fetch reporting "yeni commit yok"; GREEN: WL5, complete Notification regression (including N3 failed-build diagnostics), ModernizationPolicyRegression, Changed 17/0 and signed-in Full 72/0, both Hepsi geçti. D72 Windows CI run 43575555784 green in 5 dk 23 sn. Context7 noLookup (Talvora's own captured output parsing and title table).
   Self-review — Cosmetics: no layout changes; preview labels only where P-57 specifies.

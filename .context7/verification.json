@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T08:36:06.116Z",
-  "scope": "D73: WL5 captured-output facts, gate-scope titles, inline cmd and P-57 preview text",
+  "verifiedAtUtc": "2026-11-14T08:53:15.616Z",
+  "scope": "D74: bounded incremental GitHub latest-release JSON reading",
   "libraries": [],
-  "noLookup": "D73: internal output parsing and Talvora's own title table; no external library API",
+  "noLookup": "D74: size constant adjustment in Talvora's own incremental reader; no external API lookup needed",
   "vendorSources": []
 }

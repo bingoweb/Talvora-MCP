@@ -153,7 +153,7 @@ internal sealed class ReleaseCheckService : INotifyPropertyChanged, IDisposable
                 LatestReleaseUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             if (!response.IsSuccessStatusCode) return;
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var buffer = new byte[16_385];
+            var buffer = new byte[262_145];
             var length = 0;
             while (length < buffer.Length)
             {
@@ -161,7 +161,7 @@ internal sealed class ReleaseCheckService : INotifyPropertyChanged, IDisposable
                 if (count == 0) break;
                 length += count;
             }
-            if (length > 16_384) return;
+            if (length > 262_144) return;
             using var json = JsonDocument.Parse(buffer.AsMemory(0, length));
             var root = json.RootElement;
             if (root.ValueKind != JsonValueKind.Object ||

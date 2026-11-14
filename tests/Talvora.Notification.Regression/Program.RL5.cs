@@ -9,6 +9,8 @@ internal static partial class Program
     {
         internal string Tag = "v0.0.2.0";
         internal string Url = "https://github.com/bingoweb/Talvora-MCP/releases/tag/v0.0.2.0";
+        internal string Body = "";
+        internal int PayloadBytes;
         internal int Calls;
         internal string? UserAgent;
         internal string? Accept;
@@ -25,7 +27,9 @@ internal static partial class Program
             {
                 tag_name = Tag,
                 html_url = Url,
+                body = Body,
             });
+            PayloadBytes = Encoding.UTF8.GetByteCount(payload);
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(payload, Encoding.UTF8, "application/json"),
@@ -76,6 +80,25 @@ internal static partial class Program
                 if (service.Current is not null)
                     throw new InvalidOperationException("RL5: non-newer, invalid or unsafe GitHub release must not show a notification: " + invalid);
             }
+
+            mock.Body = new string('n', 40_000);
+            mock.Tag = "v0.0.3.0";
+            mock.Url = "https://github.com/bingoweb/Talvora-MCP/releases/tag/v0.0.3.0";
+            await service.CheckOnceAsync(CancellationToken.None);
+            if (mock.PayloadBytes is < 39_000 or > 45_000 ||
+                service.Current?.Version != "0.0.3.0" ||
+                service.Current?.HtmlUrl != mock.Url || !File.Exists(cache))
+                throw new InvalidOperationException(
+                    "D74: a 40 KB GitHub release response with long notes must set the newer release state.");
+
+            var accepted = service.Current;
+            mock.Body = new string('n', 262_145);
+            mock.Tag = "v0.0.4.0";
+            mock.Url = "https://github.com/bingoweb/Talvora-MCP/releases/tag/v0.0.4.0";
+            await service.CheckOnceAsync(CancellationToken.None);
+            if (mock.PayloadBytes <= 262_144 || service.Current != accepted)
+                throw new InvalidOperationException(
+                    "D74: a GitHub release response over 256 KB must be ignored without changing current state.");
 
             using var devHttp = new HttpClient(mock, disposeHandler: false);
             using var development = new ReleaseCheckService(devHttp, "0.0.0.0-dev+abc1234", cache);
