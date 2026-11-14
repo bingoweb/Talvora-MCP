@@ -14,7 +14,7 @@ internal static partial class Program
         async Task Check(
             string scenario, string tool, Dictionary<string, JsonElement> arguments,
             object result, string running, string finished, string? measured = null,
-            string? command = null)
+            string? command = null, bool noParsedFact = false)
         {
             var recorded = new ConcurrentQueue<DesktopProgressMessage>();
             await using var notifier = CreateNotifier(recorded);
@@ -29,6 +29,14 @@ internal static partial class Program
             if (measured is not null && ended.WorklogFrame?.Current.FactLine != measured)
                 throw new InvalidOperationException(
                     $"WL5 {scenario}: measured '{ended.WorklogFrame?.Current.FactLine}' instead of '{measured}'.");
+            if (noParsedFact && (ended.WorklogFrame?.Current.FactLine is not null ||
+                ended.Evidence?.Summary is { } fact && !fact.StartsWith("Komut: ", StringComparison.Ordinal)))
+                throw new InvalidOperationException(
+                    $"D73 {scenario}: no parsed success fact is allowed: '{ended.WorklogFrame?.Current.FactLine}' / '{ended.Evidence?.Summary}'.");
+            if (noParsedFact && ended.Kind == DesktopProgressKind.Completed &&
+                ended.Evidence?.Result?.StartsWith("Sonuç: tamamlandı · ", StringComparison.Ordinal) != true)
+                throw new InvalidOperationException(
+                    $"D73 {scenario}: a successful quiet result must use the measured elapsed time.");
             if (command is not null && ended.Evidence?.Summary?.Contains(command, StringComparison.Ordinal) != true)
                 throw new InvalidOperationException(
                     $"WL5 {scenario}: technical evidence missing '{command}': '{ended.Evidence?.Summary}'.");
@@ -80,6 +88,19 @@ internal static partial class Program
             Args(("arguments", new[] { "fetch", "origin" })), noOutput,
             "Uzak depo denetleniyor · origin", "Uzak depo denetlendi · origin",
             "yeni commit yok");
+        var failedGit = new { exitCode = 128, standardOutput = "", standardError = "fatal: 'x' does not appear to be a git repository" };
+        await Check("D73 failed fetch", "talvora_git_run",
+            Args(("arguments", new[] { "fetch", "origin" })), failedGit,
+            "Uzak depo denetleniyor · origin", "Uzak depo denetlenemedi · origin",
+            command: "Komut: git fetch", noParsedFact: true);
+        await Check("D73 quiet fetch", "talvora_git_run",
+            Args(("arguments", new[] { "fetch", "-q", "origin" })), noOutput,
+            "Uzak depo denetleniyor · origin", "Uzak depo denetlendi · origin",
+            command: "Komut: git fetch", noParsedFact: true);
+        await Check("D73 quiet long fetch", "talvora_git_run",
+            Args(("arguments", new[] { "fetch", "--quiet", "origin" })), noOutput,
+            "Uzak depo denetleniyor · origin", "Uzak depo denetlendi · origin",
+            noParsedFact: true);
         await Check("git pull up to date", "talvora_git_run",
             Args(("arguments", new[] { "pull", "--ff-only", "origin", "main" })),
             new { exitCode = 0, standardOutput = "Already up to date.\n", standardError = "" },
@@ -98,6 +119,10 @@ internal static partial class Program
         await Check("git add explicit", "talvora_git_run",
             Args(("arguments", new[] { "add", "--", "a.cs", "b.cs" })), noOutput,
             "Dosyalar kayda hazırlanıyor", "Dosyalar kayda hazırlandı", "2 dosya");
+        await Check("D73 failed add", "talvora_git_run",
+            Args(("arguments", new[] { "add", "--", "a.cs" })), failedGit,
+            "Dosyalar kayda hazırlanıyor", "Dosyalar kayda hazırlanamadı",
+            noParsedFact: true);
         await Check("git add all staged", "talvora_git_run",
             Args(("arguments", new[] { "add", "-A" })),
             new { exitCode = 0, standardOutput = "", standardError = "", stagedFileCount = 3 },
@@ -111,6 +136,18 @@ internal static partial class Program
             Args(("arguments", new[] { "status", "--short" })), noOutput,
             "Çalışma alanı denetleniyor", "Çalışma alanı denetlendi",
             "değişiklik yok");
+        await Check("D73 failed status", "talvora_git_run",
+            Args(("arguments", new[] { "status", "--short" })), failedGit,
+            "Çalışma alanı denetleniyor", "Çalışma alanı denetlenemedi",
+            noParsedFact: true);
+        await Check("D73 status branch and file", "talvora_git_run",
+            Args(("arguments", new[] { "status", "--short", "--branch" })),
+            new { exitCode = 0, standardOutput = "## main...origin/main\n M a.cs\n", standardError = "" },
+            "Çalışma alanı denetleniyor", "Çalışma alanı denetlendi", "1 değişmiş dosya");
+        await Check("D73 status branch clean", "talvora_git_run",
+            Args(("arguments", new[] { "status", "--short", "--branch" })),
+            new { exitCode = 0, standardOutput = "## main...origin/main\n", standardError = "" },
+            "Çalışma alanı denetleniyor", "Çalışma alanı denetlendi", "değişiklik yok");
         await Check("git log", "talvora_git_run",
             Args(("arguments", new[] { "log", "-2" })),
             new { exitCode = 0, standardOutput = "commit abcdef123\nAuthor: Test\n\ncommit abcdef456\nAuthor: Test\n", standardError = "" },
@@ -141,6 +178,25 @@ internal static partial class Program
             Args(("script", "throw 'Betiğin ilk hata satırı'")),
             new { exitCode = 1, standardOutput = "", standardError = "Betiğin ilk hata satırı\n   at line 2\n" },
             "Komut çalışıyor", "Komut hata ile bitti");
+        await Check("D73 cmd inline failure", "talvora_user_run",
+            Args(("executable", "cmd.exe"), ("arguments", new[] { "/d", "/c", "exit", "3" })),
+            new { exitCode = 3, standardOutput = "", standardError = "command failed" },
+            "Komut çalışıyor", "Komut hata ile bitti", command: "Komut: cmd.exe");
+        await Check("D73 dotnet build measured only", "talvora_dotnet_build",
+            Args(("target", "C:\\repo\\Talvora.slnx"), ("configuration", "Release")),
+            new { exitCode = 0, summary = new { errors = 0, warnings = 2 } },
+            "Derleniyor · Talvora.slnx", "Derleme başarılı · Talvora.slnx",
+            "0 hata · 2 uyarı");
+        var gateArguments = new[] { "-NoProfile", "-File", "scripts/Invoke-QualityGate.ps1" };
+        foreach (var (scope, suffix) in new[] { ("", "tam"), ("Full", "tam"), ("Fast", "hızlı"), ("Changed", "değişenler") })
+        {
+            var options = scope.Length == 0 ? gateArguments : [.. gateArguments, "-Scope", scope];
+            await Check("D73 gate " + (scope.Length == 0 ? "default" : scope), "talvora_user_run",
+                Args(("executable", "pwsh.exe"), ("arguments", options)),
+                new { exitCode = 0, standardOutput = "8 kontrol, 0 hata\nHepsi geçti.\n", standardError = "" },
+                "Kalite kontrolü çalışıyor · " + suffix,
+                "Kalite kontrolü geçti · " + suffix, "8 kontrol · 0 hata");
+        }
 
         // The count for git add -A is measured by the real read-only staged diff, never guessed.
         var repository = Path.Combine(Path.GetTempPath(), "talvora-wl5-add-" + Guid.NewGuid().ToString("N"));

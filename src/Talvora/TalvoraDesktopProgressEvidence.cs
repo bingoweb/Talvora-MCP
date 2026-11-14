@@ -118,9 +118,13 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 codeEvidence.ValueKind == JsonValueKind.Object)
                 return JsonSerializer.Deserialize<DesktopProgressEvidence>(codeEvidence.GetRawText(),
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            var resultFact = DescribeWl5ResultFact(toolName, json, arguments) ??
-                DescribeResultFact(toolName, json);
-            if (!TryDescribeFailure(result, toolName))
+            var succeeded = !TryDescribeFailure(result, toolName);
+            var resultFact = succeeded
+                ? DescribeWl5ResultFact(toolName, json, arguments) ??
+                    DescribeResultFact(toolName, json)
+                : toolName is "dotnet_build" or "dotnet_test" or "msbuild_run" or "test_report_summary"
+                    ? DescribeResultFact(toolName, json) : null;
+            if (succeeded)
                 resultSummary = "Sonuç: " + (resultFact ??
                     "tamamlandı · " + WorklogSubject.FormatDuration(elapsed));
             else if (toolName is "run_powershell" or "user_run")
@@ -138,7 +142,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (initial is null && resultSummary is null && resultFact is null && resultFiles.Count == 0)
                 return null;
             var summary = resultFact;
-            if (initial?.Summary is { } technical)
+            if (initial?.Summary is { } technical &&
+                technical.StartsWith("Komut: ", StringComparison.Ordinal))
                 summary = string.IsNullOrWhiteSpace(summary) ? technical : summary + "  //  " + technical;
             return new DesktopProgressEvidence(summary, resultFiles,
                 CodePreview: initial?.CodePreview, Result: resultSummary);

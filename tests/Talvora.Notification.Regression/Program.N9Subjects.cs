@@ -39,6 +39,16 @@ internal static partial class Program
                 Arguments(("executable", "pwsh"), ("arguments", new[] { "-NoProfile", "-File", "scripts/Invoke-QualityGate.ps1", "-Scope", "Full" }),
                     ("workingDirectory", "C:\\repo")), ok),
             "Kalite kontrolü geçti · tam", "56 kontrol · 0 hata");
+        foreach (var (scope, expected) in new[] { ("", "tam"), ("Fast", "hızlı"), ("Changed", "değişenler") })
+        {
+            var argv = scope.Length == 0
+                ? new[] { "-NoProfile", "-File", "scripts/Invoke-QualityGate.ps1" }
+                : new[] { "-NoProfile", "-File", "scripts/Invoke-QualityGate.ps1", "-Scope", scope };
+            Expect(await Complete("talvora_user_run",
+                    Arguments(("executable", "pwsh"), ("arguments", argv),
+                        ("workingDirectory", "C:\\repo")), ok),
+                "Kalite kontrolü geçti · " + expected, "56 kontrol · 0 hata");
+        }
 
         var plain = new { exitCode = 0, timedOut = false, standardOutput = "", standardError = "" };
         Expect(await Complete("talvora_run_powershell",

@@ -112,7 +112,7 @@ internal static class WorklogPreviewScenarios
             new(WorklogRowState.Succeeded, "16:20", "Derleme başarılı · Talvora.csproj", 18.9),
             new(WorklogRowState.Succeeded, "16:18", "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya", 0.9),
             new(WorklogRowState.Failed, "16:17", "Kod değişikliği uygulanamadı · dosya değişmişti", 0.3),
-            new(WorklogRowState.Succeeded, "16:15", "Git işlemi tamamlandı · pull origin/main", 2.7),
+            new(WorklogRowState.Succeeded, "16:15", "Uzak değişiklikler alındı · origin/main", 2.7),
             new(WorklogRowState.Succeeded, "16:14", "Görev bağlamı hazır", 1.1),
             new(WorklogRowState.Succeeded, "16:12", "Paketler hazır", 7.6),
         ]);
@@ -120,7 +120,7 @@ internal static class WorklogPreviewScenarios
         Signal(model, "16:25:40", 820, 0,
             (15, 7.6, WorklogStepState.Succeeded, "Paketler hazır"),
             (125, 1.1, WorklogStepState.Succeeded, "Görev bağlamı hazır"),
-            (185, 2.7, WorklogStepState.Succeeded, "Git işlemi tamamlandı · pull origin/main"),
+            (185, 2.7, WorklogStepState.Succeeded, "Uzak değişiklikler alındı · origin/main"),
             (300, 0.3, WorklogStepState.Failed, "Kod değişikliği uygulanamadı · dosya değişmişti"),
             (370, 0.9, WorklogStepState.Succeeded, "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya"),
             (470, 18.9, WorklogStepState.Succeeded, "Derleme başarılı · Talvora.csproj"),
@@ -208,11 +208,11 @@ internal static class WorklogPreviewScenarios
         model.SetTimeline(
         [
             new(WorklogRowState.Succeeded, "16:18", "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya", 0.9),
-            new(WorklogRowState.Succeeded, "16:15", "Git işlemi tamamlandı · pull origin/main", 2.7),
+            new(WorklogRowState.Succeeded, "16:15", "Uzak değişiklikler alındı · origin/main", 2.7),
         ]);
         Stats(model, 2, 164, 2);
         Signal(model, "16:18:10", 164, 0,
-            (20, 2.7, WorklogStepState.Succeeded, "Git işlemi tamamlandı · pull origin/main"),
+            (20, 2.7, WorklogStepState.Succeeded, "Uzak değişiklikler alındı · origin/main"),
             (160, 0.9, WorklogStepState.Succeeded, "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya"));
         return model;
     }

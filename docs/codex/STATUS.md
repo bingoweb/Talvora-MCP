@@ -34,7 +34,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] D71 — A deploy continues the agent's card instead of splitting it (visual check pending (Claude))
 - [~] D72 — Followed jobs end with plain, measured results and never hide the agent's other steps (visual check pending (Claude))
-- [ ] D73 — WL5's facts only from a successful answer; gate scope labels; P-57 (audit 55; WL5 follow-up)
+- [~] D73 — WL5's facts only from a successful answer; gate scope labels; P-57 (visual check pending (Claude))
 - [ ] D74 — The release check reads GitHub's whole answer (audit 55; RL5 follow-up)
 - [ ] D76 — The Control Center smoke always shows its own window (audit 55)
 - [ ] D78 — A documentation push never hides an unverified code push from CI (audit 55)
@@ -57,6 +57,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-14 — D73, executor ChatGPT: WL5 captured-output facts are parsed only from successful completed Git calls; failed fetch/status/add no longer claim success, quiet fetch has no inferred fact, and status ignores the branch header. Non-command initial summaries no longer leak into the visible build/test fact; cmd /c inline scripts and Full/Fast/Changed/default gate labels follow the approved titles. P-57 option 1 replaced exactly four Git pull labels in both preview copies; normalized SHA-256 17f4da58b329247f8153c5b52239c7d8671e3abcdf2383fac7a9691b922c3389 matches the reference.
+  RED: the new WL5 tests caught a failed fetch reporting "yeni commit yok"; GREEN: WL5, complete Notification regression (including N3 failed-build diagnostics), ModernizationPolicyRegression, Changed 17/0 and signed-in Full 72/0, both Hepsi geçti. D72 Windows CI run 43575555784 green in 5 dk 23 sn. Context7 noLookup (Talvora's own captured output parsing and title table).
+  Self-review — Cosmetics: no layout changes; preview labels only where P-57 specifies.
+  Self-review — Usability: failed Git commands no longer show misleading success facts; real failed-build error counts and filenames remain visible.
+  Self-review — Turkish: four exact P-57 strings, gate labels and approved cmd titles applied; no unrelated copy changed.
+  Self-review — Correctness: tests cover quiet output, failed commands, branch header and measured build result; Claude visual check pending. Clean-HEAD deploy, installed smoke and CI follow the commit; Gitea #9 mirror.
 - 2026-11-14 — D72, executor ChatGPT: followed jobs no longer hide a newer step's title, purpose, result or committed code preview, and keep the card open; late follower progress cannot retake the card. The job outcome shows measured elapsed time, smoke errors are named and redacted, and the gate reports the current unfinished stage. CI shows GitHub's startedAt-to-updatedAt duration and retries three unverified checks.
   RED: WL6 exposed stale gate stage; GREEN: WL6 plus complete Notification regression, ModernizationPolicyRegression and QualityGateRegression; Changed 17/0, signed-in Full 72/0, both Hepsi geçti. Existing D71 CI run 43573309277 green.
   Context7 map candidate: gh 2.103.3; https://cli.github.com/manual/gh_run_list documents startedAt and updatedAt (no mapped library). Clean-HEAD deploy, installed smokes and D72 CI follow the commit; Gitea #9 mirror.

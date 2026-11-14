@@ -50,6 +50,13 @@ internal sealed partial class TalvoraDesktopProgressNotifier
     private static string? DescribeWl5ResultFact(
         string tool, JsonElement json, IDictionary<string, JsonElement>? requestArguments)
     {
+        if (tool is "git_run" or "user_run" or "run_process" &&
+            (FactNumber(json, "exitCode") != 0 ||
+            (TryGetPropertyIgnoreCase(json, "timedOut", out var timeout) &&
+             timeout.ValueKind == JsonValueKind.True) ||
+            (TryGetPropertyIgnoreCase(json, "success", out var success) &&
+             success.ValueKind == JsonValueKind.False)))
+            return null;
         var output = FactText(json, "standardOutput") ?? "";
         var error = FactText(json, "standardError") ?? "";
         var combined = output + "\n" + error;
@@ -103,6 +110,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         switch (subcommand)
         {
             case "fetch":
+                if (argv.Any(arg => arg is "-q" or "--quiet")) return null;
                 var updates = Regex.Matches(combined,
                     @"(?m)^\s*[+*]?\s*[0-9a-f]{4,40}\.\.{1,2}[0-9a-f]{4,40}\s+[^\r\n]+\s+->\s+\S+",
                     RegexOptions.CultureInvariant).Count;
@@ -120,7 +128,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 if (!argv.Any(arg => arg is "--short" or "-s" or "--porcelain" or "--porcelain=v1"))
                     return null;
                 var changed = output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                    .Count(line => line.TrimEnd('\r').Length >= 3);
+                    .Count(line => line.TrimEnd('\r').Length >= 3 &&
+                        !line.StartsWith("## ", StringComparison.Ordinal));
                 return changed == 0 ? "değişiklik yok" : changed + " değişmiş dosya";
             case "log":
                 var commits = Regex.Matches(output,

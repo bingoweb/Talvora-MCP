@@ -75,7 +75,7 @@ internal static partial class WorklogSubject
         return match.Success ? match.Groups["name"].Value : null;
     }
 
-    /// <summary>pwsh -File X.ps1 -Scope Full → "tam"; -Scope Fast → "hızlı" (Invoke-QualityGate only).</summary>
+    /// <summary>Invoke-QualityGate.ps1 defaults to full; its scope selects the visible label.</summary>
     private static string? ScriptMode(string scriptName, string commandText)
     {
         if (!string.Equals(scriptName, "Invoke-QualityGate.ps1", StringComparison.OrdinalIgnoreCase))
@@ -88,9 +88,10 @@ internal static partial class WorklogSubject
             {
                 "full" => "tam",
                 "fast" => "hızlı",
+                "changed" => "değişenler",
                 _ => null,
             }
-            : "hızlı";
+            : "tam";
     }
 
     /// <summary>A script run: approved titles for known scripts, "{file} çalışıyor" otherwise.</summary>
@@ -257,6 +258,13 @@ internal static partial class WorklogSubject
             return new(ForProgram(subject), subject, OperationKind.Program);
         }
 
+        if (program is "cmd" &&
+            arguments.Any(arg => arg.Equals("/c", StringComparison.OrdinalIgnoreCase) ||
+                arg.Equals("/k", StringComparison.OrdinalIgnoreCase)) &&
+            ScriptFileName(commandText) is null &&
+            !Regex.IsMatch(commandText,
+                @"(?i)\b[\w.-]+\.(?:exe|cmd|bat|com|py|js)\b", RegexOptions.CultureInvariant))
+            return new(WorklogCopy.InlineCommand, null, OperationKind.Program);
         if (program is "pwsh" or "powershell")
             return new(WorklogCopy.InlineCommand, null, OperationKind.Program);
         var programName = Shorten(Path.GetFileName(executable.Trim().Trim('"')))!;

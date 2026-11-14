@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T08:14:42.526Z",
-  "scope": "D72: measured CI run timing and background worklog outcome presentation",
+  "verifiedAtUtc": "2026-11-14T08:36:06.116Z",
+  "scope": "D73: WL5 captured-output facts, gate-scope titles, inline cmd and P-57 preview text",
   "libraries": [],
-  "noLookup": "D72: GitHub CLI gh 2.103.3 is not mapped in Context7; the official gh run list manual documents startedAt and updatedAt",
-  "vendorSources": ["https://cli.github.com/manual/gh_run_list"]
+  "noLookup": "D73: internal output parsing and Talvora's own title table; no external library API",
+  "vendorSources": []
 }
