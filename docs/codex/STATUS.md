@@ -33,8 +33,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [x] D84 — Secret locations closed to the file tools; wider log masking (audit 58, user decision); deployed 92b5b4f, both smokes, live tool checks and CI 43625025408 green
-- [~] D82 — The deploy follow-up does not depend on the caller's output limit (audit 58); visual check pending (Claude) after clean-HEAD deployment at maxOutputCharacters 600
-- [ ] D83 — Test and build titles for cargo, uv and Python test runs (audit 58)
+- [~] D82 — The deploy follow-up does not depend on the caller's output limit (audit 58); CI 43626764348 green, visual check pending (Claude) after clean-HEAD deployment at maxOutputCharacters 600
+- [~] D83 — Test and build titles for cargo, uv and Python test runs (audit 58); visual check pending (Claude) after clean-HEAD deployment and CI
 - [x] [C] D85 — The installer starts msiexec from System32; Turkish service description (audit 58)
 - [x] [C] D86 — Çalışma günlüğü shows each fact once; tray menu Turkish (audit 58)
 - [x] [C] REL-0.0.1.1 — Fix release with D85 (security fix); cut on 2026-11-14 at the user's request (one-off exception to one release a day)
@@ -55,6 +55,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-14 — D83, executor ChatGPT: one command classifier now maps cargo test/nextest, cargo build, uv run pytest / python -m unittest, Python module tests, and pytest executable to approved Turkish titles and OperationKind. Other cargo/uv commands use their approved named triples and first-word subject. Cargo/uv/python MCP tools are ProcessOperation; executable tools preserve their categories. Session build/test result state now follows the OperationKind; detached launches do not claim finished tests. Generic tool titles, npm/dotnet/git and Python non-tests stay unchanged.
+  Red: cargo test was a Program with "cargo bitti"; green D83_COMMAND_NARRATIVES_GREEN (25 cases, success/failure, category, state, measured duration, detached launch, generic fallback). Complete Notification regression DESKTOP_PROGRESS_BEHAVIOR_GREEN; ModernizationPolicy MODERNIZATION_POLICY_GREEN. Signed-in Changed 29/0 and Full 73/0, Hepsi geçti. Context7 noLookup (own copy and parser). D82 CI 43626764348 green checked at baseline.
+  Clean-HEAD installer, installed metadata/full MCP smokes and D83 CI follow this single commit. Claude will review actual cargo test and uv run pytest titles in the next audit.
 - 2026-11-14 — D82, executor ChatGPT: both deploy hand-offs now emit launched/sourceCommit/taskInstance first. The follower extracts those fields from compacted output and logs one Information message when no hand-off is present. The pending file format, completion and titles are unchanged.
   Red: D82 compacted-600 test had no pending file; green D82_DEPLOY_COMPACT_GREEN (including negative and whitespace cases). Complete Notification regression DESKTOP_PROGRESS_BEHAVIOR_GREEN, CanonicalDeployArtifactIdentity and NativeInstallerSource regressions green.
   Signed-in Changed 30/0 and Full 73/0, Hepsi geçti. Context7 noLookup (own output parser and deploy script).

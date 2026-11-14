@@ -219,9 +219,14 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (kind == DesktopProgressKind.Completed && IsSourceEditTool(ended.ToolName) &&
                 evidence?.Files is { } changedFiles)
                 session.ChangedFiles.UnionWith(changedFiles);
-            if (ended.ToolName == "dotnet_build")
+            // A detached launch does not prove that its eventual build or tests finished.
+            var checkedKind = ended.ToolName is "job_start" or "user_process_start"
+                ? null : ended.Narrative.Kind;
+            if (ended.ToolName == "dotnet_build" ||
+                checkedKind == WorklogSubject.OperationKind.Build)
                 session.LastBuild = kind == DesktopProgressKind.Completed ? WorklogCheckState.Succeeded : WorklogCheckState.Failed;
-            if (ended.ToolName == "dotnet_test")
+            if (ended.ToolName == "dotnet_test" ||
+                checkedKind == WorklogSubject.OperationKind.Tests)
                 session.LastTests = kind == DesktopProgressKind.Completed ? WorklogCheckState.Succeeded : WorklogCheckState.Failed;
             session.Timeline.Insert(0, new WorklogTimelineEntry(
                 session.LastActivityUtc, ToWorklogState(kind), title, Math.Max(0, elapsed.TotalSeconds)));

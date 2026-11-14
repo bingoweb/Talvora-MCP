@@ -20,6 +20,11 @@ internal static partial class Program
         TrayLog.PathOverrideForTests = Path.Combine(isolatedRoot, "tray.log");
         WorklogHistoryStore.DefaultPathOverrideForTests = Path.Combine(isolatedRoot, "worklog-sessions.jsonl");
 
+        if (Environment.GetCommandLineArgs().Contains("--d83-only", StringComparer.Ordinal))
+        {
+            await AssertD83CommandNarrativesAsync();
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--d82-only", StringComparer.Ordinal))
         {
             await AssertD82CompactDeployAsync();
@@ -108,6 +113,7 @@ internal static partial class Program
         await AssertN3FactsAsync();
         await AssertN9SubjectsAsync();
         await AssertD79TitlesAsync();
+        await AssertD83CommandNarrativesAsync();
         await AssertWl5MeasuredTitlesAsync();
         await AssertWl6FollowerAsync();
         await AssertD82CompactDeployAsync();

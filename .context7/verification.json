@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T18:23:26.158Z",
-  "scope": "D82: deploy follow-up independent of the caller output limit",
+  "verifiedAtUtc": "2026-11-14T18:45:07.731Z",
+  "scope": "D83: Cargo, uv and Python test/build worklog titles and state",
   "libraries": [],
-  "noLookup": "D82: Talvora's own output parsing and deploy script; no external API behaviour needed.",
+  "noLookup": "D83: Talvora's own title table and command argument classification; no external SDK behaviour needed.",
   "vendorSources": []
 }

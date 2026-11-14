@@ -27,7 +27,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         OperationCategory Category,
         WorklogTitles Titles,
         string? Subject = null,
-        string? Purpose = null);
+        string? Purpose = null,
+        WorklogSubject.OperationKind? Kind = null);
 
     /// <summary>
     /// Category, tense-correct titles and the step's subject (DESIGN-WORKLOG §6.1). Every title names
@@ -68,6 +69,18 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         if (normalized == "workspace_inspect")
         {
             return new(OperationCategory.GenericExecution, WorklogCopy.WorkspaceInspect);
+        }
+
+        if (normalized is "cargo_run" or "uv_run" or "python_run")
+        {
+            var executable = normalized switch
+            {
+                "cargo_run" => "cargo",
+                "uv_run" => "uv",
+                _ => "python",
+            };
+            return FromDescription(WorklogSubject.ForExecutable(
+                executable, WorklogSubject.Strings(arguments, "arguments")), forceProcessCategory: true);
         }
 
         if (normalized == "run_powershell")
@@ -159,8 +172,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         return FromToolTitle(toolTitle);
     }
 
-    private static OperationNarrative FromDescription(WorklogSubject.Description description) =>
-        new(description.Kind switch
+    private static OperationNarrative FromDescription(
+        WorklogSubject.Description description, bool forceProcessCategory = false)
+    {
+        var category = description.Kind switch
             {
                 WorklogSubject.OperationKind.Build or WorklogSubject.OperationKind.Tests or
                     WorklogSubject.OperationKind.Restore or WorklogSubject.OperationKind.Publish =>
@@ -169,9 +184,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 WorklogSubject.OperationKind.PackageBuild => OperationCategory.PackageBuild,
                 WorklogSubject.OperationKind.Deploy => OperationCategory.Deployment,
                 _ => OperationCategory.ProcessOperation,
-            },
-            description.Titles,
-            description.Subject);
+            };
+        return new(forceProcessCategory ? OperationCategory.ProcessOperation : category,
+            description.Titles, description.Subject, Kind: description.Kind);
+    }
 
     /// <summary>Unknown steps say what the tool is (its approved Turkish MCP title), never "İşlem yürütülüyor".</summary>
     private static OperationNarrative FromToolTitle(string? toolTitle) =>

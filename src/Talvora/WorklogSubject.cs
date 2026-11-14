@@ -190,6 +190,49 @@ internal static partial class WorklogSubject
     private static string? ProjectName(string path) =>
         Shorten(Path.GetFileNameWithoutExtension(path.Replace('\\', '/').Trim('"')));
 
+    /// <summary>Recognizes test and build commands without changing unrelated executable naming.</summary>
+    internal static Description? ClassifyCommand(string program, IReadOnlyList<string> arguments)
+    {
+        var executable = Path.GetFileNameWithoutExtension(program.Trim().Trim('"')).ToLowerInvariant();
+        var firstWord = arguments.FirstOrDefault(argument =>
+            !argument.StartsWith("-", StringComparison.Ordinal) &&
+            !argument.StartsWith("+", StringComparison.Ordinal));
+        static bool Is(string? value, string expected) =>
+            string.Equals(value, expected, StringComparison.OrdinalIgnoreCase);
+        static bool TestPair(IReadOnlyList<string> args, int start = 0)
+        {
+            for (var i = start; i + 1 < args.Count; i++)
+            {
+                if (Is(args[i], "-m") && (Is(args[i + 1], "pytest") || Is(args[i + 1], "unittest")))
+                    return true;
+            }
+            return false;
+        }
+        if (executable == "cargo")
+        {
+            if (Is(firstWord, "test") || Is(firstWord, "nextest"))
+                return new(WorklogCopy.Tests, null, OperationKind.Tests);
+            if (Is(firstWord, "build"))
+                return new(WorklogCopy.Build, null, OperationKind.Build);
+            var subject = Shorten(firstWord);
+            return new(WithSubject(WorklogCopy.CargoRun, subject), subject, OperationKind.Program);
+        }
+        if (executable == "uv")
+        {
+            var index = arguments.ToList().FindIndex(argument => Is(argument, "run"));
+            if (Is(firstWord, "run") && index >= 0 &&
+                (arguments.Skip(index + 1).Any(arg => Is(arg, "pytest")) ||
+                    TestPair(arguments, index + 1)))
+                return new(WorklogCopy.Tests, null, OperationKind.Tests);
+            var subject = Shorten(firstWord);
+            return new(WithSubject(WorklogCopy.UvRun, subject), subject, OperationKind.Program);
+        }
+        if ((executable is "python" or "python3" or "py" && TestPair(arguments)) ||
+            executable == "pytest")
+            return new(WorklogCopy.Tests, null, OperationKind.Tests);
+        return null;
+    }
+
     /// <summary>Describes executable + argument vector runs (user_run, run_process, job_start, user_process_start).</summary>
     internal static Description ForExecutable(string executable, IReadOnlyList<string> arguments)
     {
@@ -250,6 +293,9 @@ internal static partial class WorklogSubject
                     : program;
             return new(WorklogCopy.InlineCommand, Shorten(name), OperationKind.Program);
         }
+
+        if (ClassifyCommand(program, arguments) is { } recognized)
+            return recognized;
 
         if (program is "node" or "python" or "py" or "python3" &&
             arguments.FirstOrDefault(argument => !argument.StartsWith('-')) is { } file)
