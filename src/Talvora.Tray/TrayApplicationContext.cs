@@ -86,7 +86,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             Enabled = false,
         };
 
-        var openControlCenterItem = new ToolStripMenuItem("Kontrol Merkezini aç");
+        var openControlCenterItem = new ToolStripMenuItem("Kontrol Merkezi'ni aç");
         openControlCenterItem.Click += (_, _) =>
             _controlCenterApplication.ShowControlCenter();
 
@@ -100,7 +100,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
         _refreshTalvoraItem.Click += async (_, _) =>
             await RefreshTalvoraStatusAsync(showNotification: true);
 
-        var talvoraMenu = new ToolStripMenuItem("Talvora MCP");
+        var talvoraMenu = new ToolStripMenuItem("Talvora Çekirdeği");
         talvoraMenu.DropDownItems.Add(_talvoraStatusItem);
         talvoraMenu.DropDownItems.Add(new ToolStripSeparator());
         talvoraMenu.DropDownItems.Add(_reconnectItem);
@@ -110,9 +110,9 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
         {
             Enabled = false,
         };
-        _openGiteaItem = new ToolStripMenuItem("Gitea'yı Aç");
+        _openGiteaItem = new ToolStripMenuItem("Gitea'yı aç");
         _openGiteaItem.Click += (_, _) => OpenGitea();
-        _restartGiteaItem = new ToolStripMenuItem("Gitea'yı Yeniden Başlat");
+        _restartGiteaItem = new ToolStripMenuItem("Gitea'yı yeniden başlat");
         _restartGiteaItem.Click += async (_, _) => await RestartGiteaAsync();
         _refreshGiteaItem = new ToolStripMenuItem("Durumu yenile");
         _refreshGiteaItem.Click += async (_, _) =>
@@ -411,7 +411,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 if (recoveredSeriousIncident)
                 {
                     NotifyRecoveryResolved(
-                        "Talvora MCP",
+                        "Talvora Çekirdeği",
                         "Servis ve güvenli bağlantı yeniden hazır.");
                 }
 
@@ -490,7 +490,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 if (recoveredSeriousIncident)
                 {
                     NotifyRecoveryResolved(
-                        "Talvora MCP",
+                        "Talvora Çekirdeği",
                         "Servis ile Dev ve Admin güvenli bağlantıları otomatik olarak düzeltildi.");
                 }
             }
@@ -530,7 +530,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
 
                 HandleRecoveryFailure(
                     _talvoraRecoveryState,
-                    "Talvora MCP",
+                    "Talvora Çekirdeği",
                     failure,
                     ex.Message);
             }
@@ -566,7 +566,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
 
             HandleRecoveryFailure(
                 _talvoraRecoveryState,
-                "Talvora MCP",
+                "Talvora Çekirdeği",
                 failure,
                 ex.Message);
         }

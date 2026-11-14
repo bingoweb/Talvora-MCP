@@ -257,8 +257,10 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <TextBlock Text="Kanıtlar" Style="{StaticResource HistoryEvidenceHeading}" />
-                        <TextBlock Text="{Binding Evidence.Summary}" Style="{StaticResource HistoryOptionalText}" />
-                        <TextBlock Text="{Binding Evidence.Result}" Style="{StaticResource HistoryOptionalText}" />
+                        <!-- D86: only what the step line above does not say; the command on its own muted line. -->
+                        <TextBlock Text="{Binding EvidenceFact}" Style="{StaticResource HistoryOptionalText}" />
+                        <TextBlock Text="{Binding EvidenceResult}" Style="{StaticResource HistoryOptionalText}" />
+                        <TextBlock Text="{Binding EvidenceCommand}" Style="{StaticResource HistoryOptionalCaption}" />
                         <ItemsControl ItemsSource="{Binding Evidence.Files}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>

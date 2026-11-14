@@ -32,6 +32,14 @@ internal static partial class ControlCenterSmoke
                 new WorklogTotals(3, 40, 2, WorklogCheckState.Succeeded, WorklogCheckState.Failed),
                 new DesktopProgressEvidence(Summary: "2 dosya değişti", Files: ["src/Talvora/WorklogSubject.cs"]),
                 DesktopProgressKind.Failed);
+            // D86: a real commit step (2026-11-14): the same fact as step line, evidence summary and result.
+            AppendWl3Session(store, now.AddMinutes(-2), "d86-commit", null,
+                new WorklogStep(WorklogStepCategory.VersionControl, WorklogStepState.Succeeded,
+                    "Değişiklikler kaydedildi", CommitFact, new WorklogOutcome(null, "", null), 0.2),
+                new WorklogTotals(4, 106, 1, WorklogCheckState.Unknown, WorklogCheckState.Unknown),
+                new DesktopProgressEvidence(Summary: CommitFact + "  //  Komut: git commit",
+                    Result: "Sonuç: " + CommitFact),
+                DesktopProgressKind.Completed);
 
             var page = new Views.WorklogHistoryView(store);
             page.Reload();
@@ -85,6 +93,19 @@ internal static partial class ControlCenterSmoke
                 throw new InvalidOperationException("WL3: a failed session must show its reason, next step and evidence.");
             SaveVisualSnapshotIfRequested(window, "wl3-detail-failed-" + variant);
 
+            // D86: "Kanıtlar" says only what the step line does not: the fact once, the command on its own line.
+            list.SelectedItem = page.Model.Sessions.Single(session => session.SessionId == "d86-commit");
+            window.UpdateLayout();
+            var commitTexts = FindVisualChildren<TextBlock>(detail).Where(text => text.IsVisible)
+                .Select(text => text.Text).ToArray();
+            if (commitTexts.Count(text => text == CommitFact) != 1 ||
+                !commitTexts.Contains("Komut: git commit") ||
+                commitTexts.Any(text => text.Contains("  //  ", StringComparison.Ordinal) ||
+                    text.Contains("Sonuç: " + CommitFact, StringComparison.Ordinal)))
+                throw new InvalidOperationException(
+                    "D86: a commit step must show its fact once and its command as its own line, without '  //  '.");
+            SaveVisualSnapshotIfRequested(window, "d86-detail-commit-" + variant);
+
             // Item 9: an empty search result says so instead of "nothing recorded yet".
             page.Model.SearchText = "eşleşmeyen arama";
             window.UpdateLayout();
@@ -105,6 +126,8 @@ internal static partial class ControlCenterSmoke
     // D81: as long as the real D76 note that pushed the list sideways on 2026-11-14.
     private const string LongTaskNote =
         "D76 — Kontrol Merkezi canlı testinde pencerenin görünür kalmasını sağla ve gizli başlangıçta yeniden göster";
+
+    private const string CommitFact = "a05b675 · 1 dosya · +6 −1";
 
     private static void AppendWl3Session(WorklogHistoryStore store, DateTimeOffset at, string id, string? taskNote,
         WorklogStep current, WorklogTotals totals, DesktopProgressEvidence? evidence, DesktopProgressKind kind)

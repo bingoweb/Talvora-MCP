@@ -69,10 +69,81 @@ internal sealed record WorklogHistorySession(
         string.IsNullOrWhiteSpace(Header.TaskNote) ? null : "Son adım: " + Current.Title;
 
     // WL3: the evidence heading shows only when there is evidence to read.
+    // D86: and only for what the step line does not already say.
     [JsonIgnore]
     public bool HasEvidence =>
-        !string.IsNullOrWhiteSpace(Evidence?.Summary) || !string.IsNullOrWhiteSpace(Evidence?.Result) ||
+        EvidenceFact is not null || EvidenceResult is not null || EvidenceCommand is not null ||
         Evidence?.Files is { Count: > 0 } || HasCodePreview;
+
+    // D86: "fact  //  Komut: git commit" is the step's fact plus its technical command (DesktopProgressEvidence).
+    private const string EvidenceSeparator = "  //  ";
+    private const string CommandPrefix = "Komut: ";
+    private const string ResultPrefix = "Sonuç: ";
+
+    private string? SummaryFact
+    {
+        get
+        {
+            var summary = Evidence?.Summary;
+            if (string.IsNullOrWhiteSpace(summary) || summary.StartsWith(CommandPrefix, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            var command = summary.IndexOf(EvidenceSeparator + CommandPrefix, StringComparison.Ordinal);
+            var fact = (command >= 0 ? summary[..command] : summary)
+                .Replace(EvidenceSeparator, " · ", StringComparison.Ordinal).Trim();
+            return fact.Length == 0 ? null : fact;
+        }
+    }
+
+    /// <summary>D86: the evidence fact, unless the step line under the title already says it.</summary>
+    [JsonIgnore]
+    public string? EvidenceFact =>
+        SummaryFact is { } fact && !SameText(fact, Current.FactLine) ? fact : null;
+
+    /// <summary>D86: the technical command on its own muted line ("Komut: git commit").</summary>
+    [JsonIgnore]
+    public string? EvidenceCommand
+    {
+        get
+        {
+            var summary = Evidence?.Summary;
+            if (string.IsNullOrWhiteSpace(summary))
+            {
+                return null;
+            }
+
+            if (summary.StartsWith(CommandPrefix, StringComparison.Ordinal))
+            {
+                return summary.Trim();
+            }
+
+            var command = summary.IndexOf(EvidenceSeparator + CommandPrefix, StringComparison.Ordinal);
+            return command >= 0 ? summary[(command + EvidenceSeparator.Length)..].Trim() : null;
+        }
+    }
+
+    /// <summary>D86: the result line, unless it repeats the step line or the evidence fact.</summary>
+    [JsonIgnore]
+    public string? EvidenceResult
+    {
+        get
+        {
+            var result = Evidence?.Result?.Replace(EvidenceSeparator, " · ", StringComparison.Ordinal).Trim();
+            if (string.IsNullOrEmpty(result))
+            {
+                return null;
+            }
+
+            var said = result.StartsWith(ResultPrefix, StringComparison.Ordinal) ? result[ResultPrefix.Length..] : result;
+            return SameText(said, Current.FactLine) || SameText(said, SummaryFact) ? null : result;
+        }
+    }
+
+    private static bool SameText(string? left, string? right) =>
+        !string.IsNullOrWhiteSpace(left) && !string.IsNullOrWhiteSpace(right) &&
+        string.Equals(left.Trim(), right.Trim(), StringComparison.Ordinal);
 
     // D50: a project and an actor keep one SessionId across all their sessions (the desktop card follows it);
     // one history entry is that id plus its start, so every session of the last 7 days stays in the history.

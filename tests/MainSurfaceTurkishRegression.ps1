@@ -144,6 +144,11 @@ $old = @(
     'Kayıtlı servis ve zamanlanmış görev zinciri işlendi.'
     '"Yerel MCP"'
     '"Talvora hizmeti durduruluyor..."'
+    # D86: the tray menu and the recovery notices.
+    '"Kontrol Merkezini aç"'
+    '"Gitea''yı Aç"'
+    '"Gitea''yı Yeniden Başlat"'
+    '"Talvora MCP"'
 )
 
 $new = @(
@@ -262,6 +267,11 @@ $new = @(
     '"Servis ve zamanlanmış görevi birlikte "'
     '"Yerel servis"'
     '"Talvora servisi durduruluyor..."'
+    # D86: the tray menu and the recovery notices.
+    '"Kontrol Merkezi''ni aç"'
+    '"Gitea''yı aç"'
+    '"Gitea''yı yeniden başlat"'
+    'new ToolStripMenuItem("Talvora Çekirdeği")'
 )
 
 foreach ($item in $old) {
