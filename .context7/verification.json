@@ -1,12 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T09:12:12.108Z",
-  "scope": "D76: WPF Control Center smoke visibility recovery without window activation",
+  "verifiedAtUtc": "2026-11-14T09:52:36.294Z",
+  "scope": "D78: GitHub Actions run concurrency and cancelled-run build-step validation",
   "libraries": [
     {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-14 D76: WPF Window.Hide is reversible via Window.Show and ShowActivated false prevents activation when showing a window (query: \"WPF Window.Show ShowActivated false and WindowState Normal to make a hidden window visible without activation .NET 10\")"
+      "libraryId": "/websites/github_en_actions",
+      "verified": "2026-11-14 D78: GitHub Actions concurrency prevents simultaneous runs in one group, and only cancel-in-progress true cancels a running run (query: \"GitHub Actions concurrency cancel-in-progress false queues runs of the same group\")"
     }
   ],
-  "vendorSources": []
+  "vendorSources": [
+    "https://cli.github.com/manual/gh_run_view"
+  ]
 }

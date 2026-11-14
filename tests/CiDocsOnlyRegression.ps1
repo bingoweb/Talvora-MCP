@@ -42,4 +42,22 @@ foreach ($step in $steps[($docsIndex + 1)..($steps.Count - 1)]) {
     }
 }
 
+if ($workflow -notmatch '(?m)^  cancel-in-progress: false\s*$') {
+    throw 'D78: a new documentation push must not cancel an already running windows-ci pipeline.'
+}
+
+$ciStatus = [IO.File]::ReadAllText((Join-Path $repoRoot 'scripts/Get-CiStatus.ps1'))
+$cancelledPath = [regex]::Match($ciStatus, '(?ms)^if \(\$run\.conclusion -eq ''cancelled''\) \{\r?\n(?<body>.*?)^\}')
+if (-not $cancelledPath.Success) { throw 'D78: cancelled-run handling is missing.' }
+$cancelledBody = $cancelledPath.Groups['body'].Value
+if ($cancelledBody -notmatch '& gh run view \$run\.databaseId --repo \$repository --json jobs') {
+    throw 'D78: a cancelled run must read the deciding run jobs from gh run view.'
+}
+if ($cancelledBody -notmatch [regex]::Escape('Validate build and all test suites (including SourceEdit)') -or
+    $cancelledBody -notmatch "\.conclusion -eq 'success'" -or
+    $cancelledBody -notmatch [regex]::Escape('çalışması iptal edildi; onu kapsayan yeni çalışma kodu derlemedi.') -or
+    $cancelledBody -notmatch '\bexit 2\b') {
+    throw 'D78: a cancelled run may be replaced only by a run whose full build-and-tests step succeeded.'
+}
+
 Write-Output 'CI_DOCS_ONLY_GREEN'

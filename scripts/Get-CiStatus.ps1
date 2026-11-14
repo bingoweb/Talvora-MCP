@@ -49,6 +49,17 @@ if ($run.conclusion -eq 'cancelled') {
         & git -C $repoRoot merge-base --is-ancestor $sha $_.headSha 2>$null; $LASTEXITCODE -eq 0 } | Select-Object -First 1
     if (-not $run) { Write-Host "CI: $($sha.Substring(0, 7)) çalışması iptal edildi; onu içeren yeni bir çalışma yok."; exit 2 }
     if ($run.status -ne 'completed') { Write-Host "CI: çalışma iptal edildi, onu içeren yeni çalışma hâlâ '$($run.status)': $($run.url)"; exit 2 }
+    $jobJson = & gh run view $run.databaseId --repo $repository --json jobs
+    if ($LASTEXITCODE -ne 0) { throw 'gh run view failed (is gh signed in for this user?).' }
+    $jobs = @(($jobJson | ConvertFrom-Json).jobs)
+    $validated = @($jobs | ForEach-Object { $_.steps } | Where-Object {
+        $_.name -eq 'Validate build and all test suites (including SourceEdit)' -and
+        $_.conclusion -eq 'success'
+    }).Count -gt 0
+    if (-not $validated) {
+        Write-Host "CI: $($sha.Substring(0, 7)) çalışması iptal edildi; onu kapsayan yeni çalışma kodu derlemedi."
+        exit 2
+    }
 }
 if ($run.conclusion -eq 'success') { Write-Host "CI başarılı ($(Format-CiDuration $run)): $($run.url)"; exit 0 }
 

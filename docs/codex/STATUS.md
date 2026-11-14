@@ -36,8 +36,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D72 — Followed jobs end with plain, measured results and never hide the agent's other steps (visual check pending (Claude))
 - [~] D73 — WL5's facts only from a successful answer; gate scope labels; P-57 (visual check pending (Claude))
 - [~] D74 — The release check reads GitHub's whole answer (visual check pending (Claude))
-- [~] D76 — The Control Center smoke always shows its own window (CI pending; visual check pending (Claude))
-- [ ] D78 — A documentation push never hides an unverified code push from CI (audit 55)
+- [~] D76 — The Control Center smoke always shows its own window (visual check pending (Claude))
+- [~] D78 — A documentation push never hides an unverified code push from CI (CI pending)
 - [ ] [C] D48 — A vault note belongs to the vault's owner (Claude since audit 46: built at audit 42; after the agent's queue)
 - [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
 - [ ] [C] D47 — Plain Turkish for the remaining Control Center texts (Claude since audit 46; setup texts per the user's decision; table and test in docs/codex/reference/d47)
@@ -53,10 +53,19 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Findings for Claude
 
+- .github/workflows/windows-ci.yml:12 — GitHub's current concurrency documentation says cancel-in-progress false preserves a running job, but the default single pending slot can still replace an earlier pending run; queue: max would be a separate, unapproved change.
+
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
 
+- 2026-11-14 — D78, executor ChatGPT: branch-scoped windows-ci concurrency now uses cancel-in-progress false, preserving already running code CI while later documentation pushes queue. When Get-CiStatus sees a cancelled commit and chooses a successor, it reads gh run view <id> --json jobs and accepts the successor only if "Validate build and all test suites (including SourceEdit)" concluded success; skipped or missing proof prints the card's exact Turkish message and exits 2. Existing workflow classification, test steps and D72 duration reporting remain unchanged.
+  RED: the CI documentation regression first failed because a running pipeline could be cancelled, then failed because successor jobs were not inspected. GREEN: CiDocsOnlyRegression, ModernizationPolicyRegression, full Notification regression, Changed 15/0 and signed-in Full 72/0, both Hepsi geçti. D76 Windows CI run 43580078151 green in 3 dk 32 sn; the live gh run view jobs output confirmed the full-test step's conclusion=success.
+  Context7 /websites/github_en_actions (query: "GitHub Actions concurrency cancel-in-progress false queues runs of the same group"): false prevents cancellation of active jobs. Context7 map candidate: gh 2.103.3; https://cli.github.com/manual/gh_run_view verifies the jobs JSON field. CI-only change; the installed runtime is unchanged. GitHub CI for D78 follows the commit; Gitea #9 mirror.
+  Self-review — Cosmetics: no user-interface, tray or desktop visual changes.
+  Self-review — Usability: a docs-only successor can no longer falsely verify an unbuilt code commit.
+  Self-review — Turkish: the exact prescribed cancelled-run message is present; existing messages unchanged.
+  Self-review — Correctness: the cancelled-run fallback requires the real build/test step; normal-run verdict and D72 durations are preserved.
 - 2026-11-14 — D76, executor ChatGPT: the Control Center's own smoke-only environment switch TALVORA_CONTROL_CENTER_SMOKE_START_HIDDEN=1 hides the window immediately after it is shown. Before the first visual assertion, a hidden or minimized window is restored to Normal, shown without activation (ShowActivated false) and given one DispatcherPriority.Render pass. The recovery writes exactly "Control Center smoke window made visible again." to the tray log. Other assertions, start position, gate scripts and normal Control Center behavior are unchanged.
   RED: the forced-hidden live smoke exited 1 with "Control Center window did not become visible" at the existing earlier visibility assertion (before UI5). GREEN: the same forced-hidden smoke exited 0, with a measured recovery log and visual smoke success; three independent Start-Process -WindowStyle Hidden runs with the switch unset all exited 0. Changed 17/0 and signed-in Full 72/0, both Hepsi geçti.; ControlCenter green.
   Context7 /dotnet/docs-desktop (query: "WPF Window.Show ShowActivated false and WindowState Normal to make a hidden window visible without activation .NET 10"): ShowActivated false prevents activation, and hidden windows may be reopened via Show. D74 Windows CI run 43578544496 green in 5 dk 21 sn. Clean-HEAD build, installed smokes and CI follow the commit; Gitea #9 mirror.
