@@ -1,8 +1,10 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T14:23:29.578Z",
-  "scope": "D79: finished-form titles for tools using their MCP title as fallback",
+  "verifiedAtUtc": "2026-11-14T16:48:03.000Z",
+  "scope": "D85: the installer starts msiexec.exe from System32; Turkish Windows service description",
   "libraries": [],
-  "noLookup": "D79: Talvora's own title table; no external APIs were needed.",
-  "vendorSources": []
+  "noLookup": "D85: Context7 (/dotnet/docs, /dotnet/runtime) has no CreateProcess search order; checked on the vendor page: a file name without a directory is searched first in the directory the application loaded from, then in the parent's current directory.",
+  "vendorSources": [
+    "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw"
+  ]
 }

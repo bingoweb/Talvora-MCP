@@ -172,6 +172,15 @@ $result = [pscustomobject]@{
         $powerShellProvisioner -match 'Guid\.NewGuid\(\):N' -and
         $powerShellProvisioner -match '(?s)FileMode\.CreateNew,\s*FileAccess\.Write,\s*FileShare\.None'
     )
+    # D85: a bare "msiexec.exe" is searched in the installer's own folder (Downloads) first.
+    D85MsiexecStartsFromSystem32 = (
+        $powerShellProvisioner -match 'new ProcessStartInfo\(Path\.Combine\(Environment\.SystemDirectory, "msiexec\.exe"\)\)' -and
+        $powerShellProvisioner -notmatch 'new ProcessStartInfo\("msiexec\.exe"\)'
+    )
+    D85ServiceDescriptionTurkish = (
+        $installerService.Contains('"Talvora''nın yerel servisi: yapay zekâ ajanlarına bu bilgisayarda gerçek bir çalışma masası açar."') -and
+        -not $installerService.Contains('automatic resilient service')
+    )
     PowerShell7HashAndInstallKeepReadLock = (
         $powerShellProvisioner -match '(?s)FileMode\.Open,\s*FileAccess\.Read,\s*FileShare\.Read' -and
         $powerShellProvisioner -match 'ValidatePowerShell7MsiHash\(verifiedStream, pin\.Sha256\)' -and

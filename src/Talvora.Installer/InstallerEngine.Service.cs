@@ -440,7 +440,7 @@ private static async Task RemoveLegacyInstallationAsync(
             cancellationToken,
             "description",
             ServiceName,
-            "Talvora Local MCP - LocalSystem automatic resilient service");
+            "Talvora'nın yerel servisi: yapay zekâ ajanlarına bu bilgisayarda gerçek bir çalışma masası açar.");
 
         await RunScAsync(
             allowNonZero: false,

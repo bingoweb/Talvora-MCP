@@ -172,7 +172,8 @@ internal static partial class InstallerEngine
 
     private static async Task InstallPowerShell7MsiAsync(string path, CancellationToken cancellationToken)
     {
-        var start = new ProcessStartInfo("msiexec.exe")
+        // D85: a bare name is searched in the installer's own folder (usually Downloads) first.
+        var start = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "msiexec.exe"))
         {
             UseShellExecute = false,
             CreateNoWindow = true,
