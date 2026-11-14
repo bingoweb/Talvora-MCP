@@ -105,7 +105,7 @@ internal static class ControlCenterDashboardService
                 registration,
                 ControlCenterHealthState.Offline,
                 "Durduruldu",
-                "Bu MCP bu Windows oturumu için elle durduruldu.");
+                "Bu hizmet bu Windows oturumu için elle durduruldu.");
         }
 
         if (string.Equals(
@@ -233,7 +233,7 @@ internal static class ControlCenterDashboardService
                         : "İsteğe bağlı • kapalı",
                     registration.AutoStart
                         ? protocol.Detail
-                        : "Bu MCP isteğe bağlıdır; kaynak tüketmemesi için kapalı tutuluyor. Gerektiğinde Başlat ile açabilirsiniz.");
+                        : "Bu hizmet isteğe bağlıdır; kaynak tüketmemesi için kapalı tutuluyor. Gerektiğinde Başlat ile açabilirsiniz.");
             }
 
             if (registration.ProtocolProbe.BrowserSmokeRequired &&
@@ -243,7 +243,7 @@ internal static class ControlCenterDashboardService
                     registration,
                     ControlCenterHealthState.Attention,
                     "Tarayıcı doğrulaması bekleniyor",
-                    "MCP hazır; mevcut çalışma için gerçek tarayıcı açma ve sayfa görüntüsü doğrulaması henüz tamamlanmadı.");
+                    "Hizmet hazır; bu çalışma için tarayıcı açma ve sayfa görüntüsü denetimi henüz bitmedi.");
             }
 
             var tunnelAssessment =
@@ -302,7 +302,7 @@ internal static class ControlCenterDashboardService
                 registration,
                 ControlCenterHealthState.Attention,
                 "Sağlık kontrolü bekleniyor",
-                "Bu MCP için henüz bir sağlık kontrolü tanımlı değil.");
+                "Bu hizmet için henüz bir sağlık denetimi tanımlı değil.");
         }
 
         try
@@ -341,7 +341,7 @@ internal static class ControlCenterDashboardService
                 "Erişilemiyor",
                 ex is OperationCanceledException
                     ? "Sağlık kontrolü zaman aşımına uğradı."
-                    : "Yerel MCP sağlık kontrolüne ulaşılamadı.");
+                    : "Yerel hizmetin sağlık denetimine ulaşılamadı.");
         }
     }
 

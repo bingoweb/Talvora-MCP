@@ -118,7 +118,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
         _refreshGiteaItem.Click += async (_, _) =>
             await RefreshGiteaStatusAsync(showNotification: true);
 
-        var giteaMenu = new ToolStripMenuItem("Gitea MCP");
+        var giteaMenu = new ToolStripMenuItem("Gitea");
         giteaMenu.DropDownItems.Add(_giteaStatusItem);
         giteaMenu.DropDownItems.Add(new ToolStripSeparator());
         giteaMenu.DropDownItems.Add(_openGiteaItem);
@@ -255,7 +255,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             ControlCenterEventStore.Record(
                 ControlCenterEventSeverity.Info,
                 "system",
-                "Yönetim Merkezi hazır",
+                "Kontrol Merkezi hazır",
                 $"{registry.Mcps.Count} yönetilen hizmet kaydı yüklendi.",
                 dedupKey: "system:control-center-startup");
 
@@ -324,7 +324,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             ControlCenterEventStore.Record(
                 ControlCenterEventSeverity.Error,
                 "startup",
-                "Yönetim Merkezi başlangıç hazırlığı başarısız",
+                "Kontrol Merkezi başlangıçta hazırlanamadı",
                 "Yönetilen hizmet kayıtları ya da otomatik kurtarma hazırlanamadı.",
                 dedupKey: "startup:registry-recovery-failed");
         }
@@ -393,7 +393,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 SetTalvoraStatus(new TalvoraStatus(
                     TalvoraConnectionState.Offline,
                     "Talvora elle durduruldu",
-                    "Yönetim Merkezi üzerinden Başlat seçilene kadar otomatik kurtarma devre dışı."));
+                    "Kontrol Merkezi'nden Başlat'a basılana kadar otomatik kurtarma kapalı."));
                 return;
             }
 
@@ -412,7 +412,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 {
                     NotifyRecoveryResolved(
                         "Talvora MCP",
-                        "Servis ve güvenli MCP tüneli yeniden hazır.");
+                        "Servis ve güvenli bağlantı yeniden hazır.");
                 }
 
                 return;
@@ -436,7 +436,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                     SetTalvoraStatus(new TalvoraStatus(
                         TalvoraConnectionState.LocalOnly,
                         "Talvora otomatik onarılıyor...",
-                        "Yerel servis ve güvenli MCP tüneli yeniden hazırlanıyor."));
+                        "Yerel servis ve güvenli bağlantı yeniden hazırlanıyor."));
 
                     var registration = _talvoraRegistration ??
                         await ResolveManagedRegistrationAsync("talvora");
@@ -456,7 +456,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                     SetTalvoraStatus(new TalvoraStatus(
                         TalvoraConnectionState.LocalOnly,
                         "Talvora bağlantıları otomatik onarılıyor...",
-                        "Dev ve Admin güvenli MCP tünelleri yeniden hazırlanıyor."));
+                        "Dev ve Admin güvenli bağlantıları yeniden hazırlanıyor."));
 
                     await ControlCenterLifecycleService
                         .ReconnectTalvoraConnectionsAsync(
@@ -491,7 +491,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 {
                     NotifyRecoveryResolved(
                         "Talvora MCP",
-                        "Servis ile Dev ve Admin güvenli MCP tünelleri otomatik olarak düzeltildi.");
+                        "Servis ile Dev ve Admin güvenli bağlantıları otomatik olarak düzeltildi.");
                 }
             }
             catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
@@ -525,7 +525,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                         ? "Talvora hazır"
                         : "Talvora servisi otomatik kurtarma bekliyor",
                     localHealthy
-                        ? "Yerel MCP servisi hazır. Dev ve Admin bağlantıları ayrı izleniyor."
+                        ? "Yerel Talvora servisi hazır. Dev ve Admin bağlantıları ayrı izleniyor."
                         : $"Otomatik yeniden deneme {failure.RetryDelay.TotalSeconds:F0} saniye sonra."));
 
                 HandleRecoveryFailure(
@@ -597,7 +597,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 var stopped = new TalvoraStatus(
                     TalvoraConnectionState.Offline,
                     "Talvora elle durduruldu",
-                    "Yönetim Merkezi üzerinden Başlat seçilene kadar otomatik kurtarma devre dışı.");
+                    "Kontrol Merkezi'nden Başlat'a basılana kadar otomatik kurtarma kapalı.");
                 SetTalvoraStatus(stopped);
 
                 if (showNotification)
@@ -669,7 +669,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             SetTalvoraStatus(new TalvoraStatus(
                 TalvoraConnectionState.LocalOnly,
                 "Talvora bağlantıları yenileniyor...",
-                "Dev ve Admin güvenli MCP tünelleri hazırlanıyor."));
+                "Dev ve Admin güvenli bağlantıları hazırlanıyor."));
 
             await ControlCenterLifecycleService
                 .ReconnectTalvoraConnectionsAsync(_lifetimeCts.Token);
@@ -688,7 +688,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
 
             ShowNotification(
                 "Talvora bağlantısı hazır",
-                "Dev ve Admin güvenli MCP tünelleri yeniden bağlandı.",
+                "Dev ve Admin güvenli bağlantıları yeniden kuruldu.",
                 ToolTipIcon.Info);
         }
         catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
@@ -755,8 +755,8 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 _giteaTimer.Interval = 30_000;
                 SetGiteaStatus(new GiteaStatus(
                     GiteaConnectionState.Offline,
-                    "Gitea MCP elle durduruldu",
-                    "Yönetim Merkezi üzerinden Başlat seçilene kadar otomatik kurtarma devre dışı."));
+                    "Gitea elle durduruldu",
+                    "Kontrol Merkezi'nden Başlat'a basılana kadar otomatik kurtarma kapalı."));
                 return;
             }
 
@@ -774,8 +774,8 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 if (recoveredSeriousIncident)
                 {
                     NotifyRecoveryResolved(
-                        "Gitea MCP",
-                        "Gitea, Caddy, MCP sunucusu ve güvenli tünel yeniden hazır.");
+                        "Gitea",
+                        "Gitea, Caddy, araç sunucusu ve güvenli tünel yeniden hazır.");
                 }
 
                 return;
@@ -793,7 +793,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             SetGiteaActionsEnabled(false);
             SetGiteaStatus(new GiteaStatus(
                 GiteaConnectionState.Restarting,
-                "Gitea MCP otomatik onarılıyor...",
+                "Gitea otomatik onarılıyor…",
                 "Sorunlu katman tanılanıyor; mümkünse yalnız ilgili bileşen yeniden hazırlanacak."));
 
             try
@@ -804,7 +804,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 if (registration is null)
                 {
                     throw new InvalidOperationException(
-                        "Gitea MCP yönetim kaydı bulunamadı.");
+                        "Gitea yönetim kaydı bulunamadı.");
                 }
 
                 var repair = await ControlCenterRepairService.RepairAsync(
@@ -817,7 +817,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 if (status.State != GiteaConnectionState.Running)
                 {
                     throw new InvalidOperationException(
-                        $"Otomatik kurtarma tamamlandı ancak Gitea MCP hazır değil: {status.Detail}");
+                        $"Otomatik kurtarma bitti ama Gitea hazır değil: {status.Detail}");
                 }
 
                 var recoveredSeriousIncident =
@@ -838,8 +838,8 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                 if (recoveredSeriousIncident)
                 {
                     NotifyRecoveryResolved(
-                        "Gitea MCP",
-                        "Gitea MCP zinciri otomatik olarak düzeltildi.");
+                        "Gitea",
+                        "Gitea zinciri otomatik olarak düzeltildi.");
                 }
             }
             catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
@@ -850,7 +850,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             {
                 SetGiteaStatus(new GiteaStatus(
                     GiteaConnectionState.Restarting,
-                    "Gitea MCP üzerinde işlem sürüyor...",
+                    "Gitea üzerinde işlem sürüyor…",
                     "Kullanıcı tarafından başlatılmış yaşam döngüsü işlemi tamamlanıyor."));
                 return;
             }
@@ -878,7 +878,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
 
                 HandleRecoveryFailure(
                     _giteaRecoveryState,
-                    "Gitea MCP",
+                    "Gitea",
                     failure,
                     ex.Message);
             }
@@ -909,12 +909,12 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
 
             SetGiteaStatus(new GiteaStatus(
                 GiteaConnectionState.Degraded,
-                "Gitea MCP durumu hazırlanıyor",
+                "Gitea durumu hazırlanıyor",
                 $"Otomatik yeniden deneme {failure.RetryDelay.TotalSeconds:F0} saniye sonra."));
 
             HandleRecoveryFailure(
                 _giteaRecoveryState,
-                "Gitea MCP",
+                "Gitea",
                 failure,
                 ex.Message);
         }
@@ -945,8 +945,8 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             {
                 var stopped = new GiteaStatus(
                     GiteaConnectionState.Offline,
-                    "Gitea MCP elle durduruldu",
-                    "Yönetim Merkezi üzerinden Başlat seçilene kadar otomatik kurtarma devre dışı.");
+                    "Gitea elle durduruldu",
+                    "Kontrol Merkezi'nden Başlat'a basılana kadar otomatik kurtarma kapalı.");
                 SetGiteaStatus(stopped);
 
                 if (showNotification)
@@ -1020,7 +1020,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
             SetGiteaStatus(new GiteaStatus(
                 GiteaConnectionState.Restarting,
                 "Gitea yeniden başlatılıyor...",
-                "Talvora MCP üzerinden servis zinciri yeniden hazırlanıyor."));
+                "Talvora servis zincirini yeniden hazırlıyor."));
 
             var status = await GiteaTrayClient.RestartAsync(
                 _lifetimeCts.Token);
@@ -1135,7 +1135,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                             registration,
                             ControlCenterHealthState.Offline,
                             "Durduruldu",
-                            "Bu MCP bu Windows oturumu için elle durduruldu.");
+                            "Bu hizmet bu Windows oturumu için elle durduruldu.");
                     continue;
                 }
                 var tunnelAssessment =
@@ -1240,7 +1240,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                     {
                         NotifyRecoveryResolved(
                             registration.DisplayName,
-                            "MCP zinciri ve gerekli bağlantılar yeniden hazır.",
+                            "Hizmet zinciri ve gerekli bağlantılar yeniden hazır.",
                             registration.Id);
                     }
 
@@ -1287,7 +1287,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                     {
                         NotifyRecoveryResolved(
                             registration.DisplayName,
-                            "MCP zinciri otomatik olarak düzeltildi.",
+                            "Hizmet zinciri otomatik olarak düzeltildi.",
                             registration.Id);
                     }
                 }
@@ -1614,7 +1614,7 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
 
         ShowNotification(
             $"{displayName}: müdahale gerekiyor",
-            "Otomatik kurtarma birkaç kez başarısız oldu. Yönetim Merkezi ayrıntıları gösterecek.",
+            "Otomatik kurtarma birkaç kez başarısız oldu. Ayrıntılar Kontrol Merkezi'nde.",
             ToolTipIcon.Warning);
 
         _controlCenterApplication.ShowControlCenter();

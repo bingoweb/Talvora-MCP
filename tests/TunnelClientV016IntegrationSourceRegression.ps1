@@ -62,12 +62,12 @@ Assert-Contains $health 'RequiresRuntimeRenewal' 'runtime renewal must distingui
 
 Assert-Contains $componentHealth 'GetTunnelDiagnosticStatesAsync' 'Control Center must consume detailed tunnel diagnostics'
 Assert-Contains $componentHealth 'Detailed tunnel health timed out.' 'supplemental diagnostics timeout must not fail the full Control Center refresh'
-Assert-Contains $componentHealth '"Tunnel runtime"' 'Control Center must expose the tunnel runtime generation'
-Assert-Contains $componentHealth '"Control plane"' 'Control Center must expose control-plane health'
+Assert-Contains $componentHealth '"Tünel çalışma katmanı"' 'Control Center must expose the tunnel runtime generation'
+Assert-Contains $componentHealth '"Yönetim katmanı"' 'Control Center must expose control-plane health'
 Assert-Contains $componentHealth '"Yanıt teslimi"' 'Control Center must expose response-delivery health'
 Assert-Contains $componentHealth '"İstek kuyruğu"' 'Control Center must expose queue health'
 Assert-Contains $componentHealth '"İş dağıtıcı"' 'Control Center must expose dispatcher health'
-Assert-Contains $componentHealth '"Tünel MCP gözlemi"' 'Control Center must expose tunnel-side MCP observations'
+Assert-Contains $componentHealth '"Tünel gözlemi"' 'Control Center must expose tunnel-side MCP observations'
 
 Assert-Contains $repair 'tunnelHealth is { RequiresRuntimeRenewal: true }' 'repair must renew the runtime only for actionable response-delivery degradation'
 Assert-Contains $repair 'tunnel-client already owns retry and' 'repair must document why control-plane network faults are left to tunnel-client backoff'

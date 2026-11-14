@@ -263,7 +263,7 @@ internal sealed class OverviewViewModel : ObservableObject
     };
 
     private static string GetRole(ManagedMcpRegistration registration) =>
-        string.Equals(registration.Id, "talvora", StringComparison.OrdinalIgnoreCase) ? "Yerel MCP" :
+        string.Equals(registration.Id, "talvora", StringComparison.OrdinalIgnoreCase) ? "Yerel servis" :
         string.Equals(registration.Id, "penpot", StringComparison.OrdinalIgnoreCase) ? "İsteğe bağlı" :
         string.Equals(registration.Id, "gitea", StringComparison.OrdinalIgnoreCase) ? "Yerel zincir" :
         registration.Tunnel is not null ? "Tünel" : "Tasarım";

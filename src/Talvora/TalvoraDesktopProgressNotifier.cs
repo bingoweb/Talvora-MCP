@@ -273,11 +273,11 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                         TryEndWorklog(
                             operationId,
                             DesktopProgressKind.Completed,
-                            "GitHub denetimi sürüyor",
+                            "GitHub denetimi henüz bitmemişti",
                             "GitHub denetimi henüz bitmedi; sonucu bir sonraki adımda okunacak.",
                             terminalEvidence is null
                                 ? null
-                                : terminalEvidence with { Result = "Sonuç: GitHub denetimi sürüyor" },
+                                : terminalEvidence with { Result = "Sonuç: GitHub denetimi henüz bitmemişti" },
                             stopwatch.Elapsed);
                     }
                     else if (TryBuildDeferredCompletion(
@@ -317,7 +317,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 TryEndWorklog(
                     operationId,
                     failed ? DesktopProgressKind.Failed : DesktopProgressKind.Completed,
-                    failed ? narrative.Titles.Failed : ciStillRunning ? "GitHub denetimi sürüyor" : narrative.Titles.Succeeded,
+                    failed ? narrative.Titles.Failed : ciStillRunning ? "GitHub denetimi henüz bitmemişti" : narrative.Titles.Succeeded,
                     failed ? "Bu adım tamamlanamadı." : WorklogCopy.SucceededFallback,
                     initialEvidence,
                     stopwatch.Elapsed);

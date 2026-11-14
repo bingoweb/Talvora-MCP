@@ -134,7 +134,7 @@ internal static class ControlCenterRepairService
             return new ManagedMcpRepairResult(
                 "Doğrulama",
                 $"{registration.DisplayName} zaten hazır",
-                "Sağlık ve readiness kontrolleri onarım gerektiren bir arıza göstermedi.",
+                "Sağlık ve hazırlık denetimleri onarım gerektiren bir arıza göstermedi.",
                 Escalated: false,
                 observedState,
                 observedState);
@@ -380,9 +380,9 @@ internal static class ControlCenterRepairService
                 if (smoke.Ready && smoke.BrowserSmokePassed)
                 {
                     return (
-                        "Browser doğrulamasını yenile",
-                        $"{registration.DisplayName} browser doğrulaması yenilendi",
-                        "Çalışan MCP/browser zinciri kesilmeden gerçek browser smoke yeniden doğrulandı.");
+                        "Tarayıcı denetimini yenile",
+                        $"{registration.DisplayName} tarayıcı denetimi yenilendi",
+                        "Çalışan bağlantı kesilmeden tarayıcıyla gerçek bir sayfa yeniden denendi.");
                 }
 
                 throw new InvalidOperationException(
@@ -419,7 +419,7 @@ internal static class ControlCenterRepairService
                         return (
                             "Yalnız güvenli tüneli yeniden bağla",
                             $"{registration.DisplayName} tüneli yeniden bağlandı",
-                            "Yerel MCP/browser zinciri kesilmeden yalnız Secure MCP Tunnel yeniden hazırlandı.");
+                            "Yerel hizmet kesilmeden yalnızca güvenli tünel yeniden hazırlandı.");
                     }
 
                     throw new InvalidOperationException(
@@ -465,7 +465,7 @@ internal static class ControlCenterRepairService
                         return (
                             "Yalnız tünel çalışma katmanını yenile",
                             $"{registration.DisplayName} tünel tanısı düzeldi",
-                            "Control-plane veya yanıt teslimi katmanındaki bozulma nedeniyle yalnız Secure MCP Tunnel runtime yenilendi; yerel MCP/browser zinciri korunuyor.");
+                            "OpenAI tarafındaki yanıt iletimi aksadığı için yalnızca güvenli tünelin çalışma katmanı yenilendi; yerel hizmet kesilmedi.");
                     }
 
                     throw new InvalidOperationException(

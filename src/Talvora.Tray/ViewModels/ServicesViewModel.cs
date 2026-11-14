@@ -90,7 +90,7 @@ internal sealed class ServicesViewModel : ObservableObject
     }
 
     private static string GetRole(ManagedMcpRegistration reg) =>
-        string.Equals(reg.Id, "talvora", StringComparison.OrdinalIgnoreCase) ? "Yerel MCP" :
+        string.Equals(reg.Id, "talvora", StringComparison.OrdinalIgnoreCase) ? "Yerel servis" :
         string.Equals(reg.Id, "gitea", StringComparison.OrdinalIgnoreCase) ? "Yerel zincir" :
         reg.Id is "talvora-dev" or "talvora-admin" ? "Tünel" :
         !reg.AutoStart ? "İsteğe bağlı" :

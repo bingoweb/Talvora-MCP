@@ -21,14 +21,14 @@ internal static class ControlCenterAdminCredentialStore
 
         if (trimmed.Length < 20)
         {
-            throw new ArgumentException("OpenAI Admin API key biçimi geçersiz.");
+            throw new ArgumentException("OpenAI Admin API anahtarının (Admin API key) biçimi geçersiz.");
         }
 
         foreach (var character in trimmed)
         {
             if (char.IsWhiteSpace(character))
             {
-                throw new ArgumentException("OpenAI Admin API key biçimi geçersiz.");
+                throw new ArgumentException("OpenAI Admin API anahtarının (Admin API key) biçimi geçersiz.");
             }
         }
 
@@ -61,7 +61,7 @@ internal static class ControlCenterAdminCredentialStore
             ex is IOException or UnauthorizedAccessException)
         {
             throw new InvalidOperationException(
-                "Kaydedilmiş OpenAI Admin API key silinemedi.", ex);
+                "Kaydedilmiş OpenAI Admin API anahtarı (Admin API key) silinemedi.", ex);
         }
     }
 

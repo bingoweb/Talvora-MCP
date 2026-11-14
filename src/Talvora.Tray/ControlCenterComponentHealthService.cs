@@ -85,7 +85,7 @@ internal static class ControlCenterComponentHealthService
                     new ManagedMcpComponentRegistration
                     {
                         Id = "tunnel-runtime-health",
-                        DisplayName = "Tunnel runtime",
+                        DisplayName = "Tünel çalışma katmanı",
                         Kind = "tunnel-health",
                         Required = false,
                     },
@@ -212,12 +212,12 @@ internal static class ControlCenterComponentHealthService
     private static string GetTunnelHealthDisplayName(string id) =>
         id.ToLowerInvariant() switch
         {
-            "control-plane" => "Control plane",
+            "control-plane" => "Yönetim katmanı",
             "response-delivery" => "Yanıt teslimi",
             "queue" => "İstek kuyruğu",
             "dispatcher" => "İş dağıtıcı",
-            "mcp" => "Tünel MCP gözlemi",
-            "oauth" => "OAuth discovery",
+            "mcp" => "Tünel gözlemi",
+            "oauth" => "OAuth keşfi",
             "proxy" => "Proxy",
             "cloudflared" => "Cloudflared",
             "harpoon" => "Harpoon",
@@ -257,8 +257,8 @@ internal static class ControlCenterComponentHealthService
                     : new ManagedMcpComponentState(
                         component,
                         ControlCenterHealthState.Offline,
-                        "MCP erişilemiyor",
-                        protocolProbe?.Detail ?? "MCP protokol sağlık kontrolü tanımlı değil."));
+                        "Araç sunucusuna ulaşılamıyor",
+                        protocolProbe?.Detail ?? "Araç protokolü için sağlık denetimi tanımlı değil."));
         }
 
         if (string.Equals(
@@ -348,7 +348,7 @@ internal static class ControlCenterComponentHealthService
                 component,
                 ControlCenterHealthState.Attention,
                 "Durum bilgisi sınırlı",
-                "Bu bileşen için doğrudan sağlık uç noktası (endpoint) bulunmuyor."));
+                "Bu bileşenin doğrudan bir sağlık adresi yok."));
     }
 
     private static async Task<ManagedMcpComponentState> GetTunnelStateAsync(
@@ -380,7 +380,7 @@ internal static class ControlCenterComponentHealthService
                 component,
                 ControlCenterHealthState.Attention,
                 "Tünel kimliği doğrulanamadı",
-                "Structured tunnel runtime durumu okunamadı.");
+                "Tünelin ayrıntılı çalışma durumu okunamadı.");
         }
 
         if (!runtimeStatus.Ready)

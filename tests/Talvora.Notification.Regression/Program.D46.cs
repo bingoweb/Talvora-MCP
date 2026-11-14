@@ -17,7 +17,7 @@ internal static partial class Program
         };
         foreach (var (exitCode, kind, title) in new[]
         {
-            (2, DesktopProgressKind.Completed, "GitHub denetimi sürüyor"),
+            (2, DesktopProgressKind.Completed, "GitHub denetimi henüz bitmemişti"),
             (1, DesktopProgressKind.Failed, "GitHub denetimi başarısız"),
             (0, DesktopProgressKind.Completed, "GitHub denetimi geçti"),
         })

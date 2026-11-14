@@ -101,7 +101,7 @@ internal static class ManagedMcpProtocolProbeService
         if (probe is null)
         {
             return Failed(
-                "MCP protokol sağlık kontrolü tanımlı değil.",
+                "Araç protokolü için sağlık denetimi tanımlı değil.",
                 browserSmokeRan: false);
         }
 

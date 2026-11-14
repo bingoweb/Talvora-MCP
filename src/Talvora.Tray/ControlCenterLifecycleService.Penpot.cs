@@ -50,7 +50,7 @@ internal static partial class ControlCenterLifecycleService
         return new ManagedMcpLifecycleResult(
             ManagedMcpLifecycleOperation.Start,
             "Penpot başlatıldı",
-            "Penpot arayüzü ve yerel MCP bileşeni kullanıma hazırlandı.");
+            "Penpot arayüzü ve yerel araç sunucusu kullanıma hazırlandı.");
     }
 
     private static async Task<ManagedMcpLifecycleResult> StopPenpotAsync(
@@ -85,7 +85,7 @@ internal static partial class ControlCenterLifecycleService
         if (localFailure is not null)
         {
             throw new InvalidOperationException(
-                "Penpot yerel MCP bileşeni tamamen durdurulamadı.",
+                "Penpot yerel araç sunucusu tamamen durdurulamadı.",
                 localFailure);
         }
 
@@ -99,7 +99,7 @@ internal static partial class ControlCenterLifecycleService
         return new ManagedMcpLifecycleResult(
             ManagedMcpLifecycleOperation.Stop,
             "Penpot durduruldu",
-            "Penpot arayüzü ve yerel MCP bileşeni kapatıldı; kalıcı veriler korundu.");
+            "Penpot arayüzü ve yerel araç sunucusu kapatıldı; kalıcı veriler korundu.");
     }
 
     private static async Task<ManagedMcpLifecycleResult> RestartPenpotAsync(
@@ -111,7 +111,7 @@ internal static partial class ControlCenterLifecycleService
         return new ManagedMcpLifecycleResult(
             ManagedMcpLifecycleOperation.Restart,
             "Penpot yeniden başlatıldı",
-            "Penpot arayüzü ve yerel MCP bileşeni yeniden hazırlandı.");
+            "Penpot arayüzü ve yerel araç sunucusu yeniden hazırlandı.");
     }
 
     private static async Task StopPenpotAfterFailedStartBestEffortAsync(

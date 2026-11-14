@@ -125,21 +125,21 @@ internal static class ControlCenterSetupService
         {
             summary = "Güvenli tünel temel kurulumu eksik";
             detail =
-                "Yeniden kullanılabilir Runtime API key ve tunnel-client kurulumu bulunamadı. " +
+                "Yeniden kullanılabilir çalışma anahtarı (Runtime API key) ve bağlantı istemcisi kurulumu bulunamadı. " +
                 "Mevcut ChatGPT Business tünel temel kurulumunu tamamladıktan sonra Talvora otomatik devam edecek.";
         }
         else if (needsAdmin)
         {
-            summary = "Yeni MCP tüneli için tek bilgi gerekiyor";
+            summary = "Yeni güvenli tünel için tek bilgi gerekiyor";
             detail =
-                "OpenAI Admin API key yalnız yeni tüneli oluşturmak için kullanılacak. " +
+                "OpenAI Admin API anahtarı (Admin API key) yalnızca yeni tüneli oluşturmak için kullanılacak. " +
                 "Yönetici anahtarı artık saklanmıyor; yalnızca kurulum sırasında kullanılıyor.";
         }
         else
         {
             summary = "Eksik güvenli tünel otomatik hazırlanacak";
             detail =
-                "Gerekli credential ve scope hazır. Talvora tüneli oluşturup profili bağlayabilir.";
+                "Gerekli anahtar ve yetkiler hazır. Talvora tüneli oluşturup profili bağlayabilir.";
         }
 
         return new ControlCenterSetupState(
@@ -239,7 +239,7 @@ internal static class ControlCenterSetupService
             if (!allMissingTunnelIdsSupplied)
             {
                 throw new InvalidOperationException(
-                    "Eksik tunnel kayıtları için mevcut tunnel ID veya OpenAI Admin API key gerekiyor.");
+                    "Eksik tünel kayıtları için mevcut tünel kimliği (tunnel ID) ya da OpenAI Admin API anahtarı (Admin API key) gerekiyor.");
             }
         }
 
@@ -295,7 +295,7 @@ internal static class ControlCenterSetupService
             ControlCenterEventStore.Record(
                 ControlCenterEventSeverity.Info,
                 "setup",
-                "Yönetim Merkezi kurulumu tamamlandı",
+                "Kontrol Merkezi kurulumu tamamlandı",
                 "Mevcut güvenli bağlantılar kuruldu.",
                 dedupKey: "setup:completed");
 
@@ -307,7 +307,7 @@ internal static class ControlCenterSetupService
             if (adminKeyBuffer is not { Length: > 0 })
             {
                 throw new InvalidOperationException(
-                    "Yeni tünel oluşturmak için OpenAI Admin API key gerekiyor.");
+                    "Yeni tünel oluşturmak için OpenAI Admin API anahtarı (Admin API key) gerekiyor.");
             }
 
         }
@@ -325,7 +325,7 @@ internal static class ControlCenterSetupService
             if (after.RuntimeFoundationMissing)
             {
                 throw new InvalidOperationException(
-                    "Güvenli MCP tünel temel kurulumu henüz tamamlanmadı.");
+                    "Güvenli tünel temel kurulumu henüz tamamlanmadı.");
             }
 
             throw new InvalidOperationException(
@@ -335,7 +335,7 @@ internal static class ControlCenterSetupService
         ControlCenterEventStore.Record(
             ControlCenterEventSeverity.Info,
             "setup",
-            "Yönetim Merkezi kurulumu tamamlandı",
+            "Kontrol Merkezi kurulumu tamamlandı",
             "Eksik güvenli bağlantı ayarları hazırlandı.",
             dedupKey: "setup:completed");
 
@@ -350,5 +350,5 @@ internal static class ControlCenterSetupService
             PendingTunnelCount: 0,
             MissingTunnelRegistrationIds: Array.Empty<string>(),
             Summary: "Kurulum tamam",
-            Detail: "Yönetilen MCP bağlantıları için gerekli temel yapılandırma hazır.");
+            Detail: "Yönetilen hizmet bağlantıları için gerekli temel yapılandırma hazır.");
 }

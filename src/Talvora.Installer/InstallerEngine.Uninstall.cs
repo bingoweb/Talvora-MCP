@@ -138,7 +138,7 @@ internal static partial class InstallerEngine
 
         try
         {
-            progress.Report(new InstallProgress(10, "Talvora hizmeti durduruluyor..."));
+            progress.Report(new InstallProgress(10, "Talvora servisi durduruluyor..."));
             await StopTrayProcessesAsync(cancellationToken);
             await StopAndDeleteServiceAsync(ServiceName, cancellationToken);
 

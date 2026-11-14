@@ -77,7 +77,7 @@ internal sealed class ServiceDetailViewModel : ObservableObject
         Description = FileLog.RedactSensitiveData(source.Registration.Description);
         Role = source.Registration.Tunnel is not null ||
             source.Registration.Id is "talvora-dev" or "talvora-admin" ? "Tünel" :
-            source.Registration.Id.Equals("talvora", StringComparison.OrdinalIgnoreCase) ? "Yerel MCP" :
+            source.Registration.Id.Equals("talvora", StringComparison.OrdinalIgnoreCase) ? "Yerel servis" :
             source.Registration.AutoStart ? "Yerel zincir" : "İsteğe bağlı";
         State = OverviewViewModel.VisualState(source.Health,
             ManagedMcpAggregateHealthPolicy.IsIgnored(source.Registration, source.Health, manuallyStopped));

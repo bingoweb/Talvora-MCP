@@ -84,7 +84,7 @@ internal static class GiteaTrayClient
         {
             return new GiteaStatus(
                 GiteaConnectionState.Degraded,
-                "Gitea çalışıyor, MCP sunucusu hazır değil",
+                "Gitea çalışıyor, araç sunucusu hazır değil",
                 mcp.Detail);
         }
 
@@ -95,7 +95,7 @@ internal static class GiteaTrayClient
         {
             return new GiteaStatus(
                 GiteaConnectionState.Degraded,
-                "Gitea MCP health açık, protokol hazır değil",
+                "Gitea araç sunucusu açık, protokolü hazır değil",
                 protocol.Detail);
         }
 
@@ -104,14 +104,14 @@ internal static class GiteaTrayClient
         {
             return new GiteaStatus(
                 GiteaConnectionState.Degraded,
-                "Gitea MCP çalışıyor, tünel hazır değil",
+                "Gitea araç sunucusu çalışıyor, tünel hazır değil",
                 tunnel.Detail);
         }
 
         return new GiteaStatus(
             GiteaConnectionState.Running,
-            "Gitea MCP hazır",
-            "Gitea, Caddy, MCP sunucusu ve güvenli tünel sağlıklı.");
+            "Gitea hazır",
+            "Gitea, Caddy, araç sunucusu ve güvenli tünel sağlıklı.");
     }
 
     public static async Task<GiteaStatus> StartAsync(
@@ -157,8 +157,8 @@ internal static class GiteaTrayClient
             {
                 return new GiteaStatus(
                     GiteaConnectionState.Offline,
-                    "Gitea MCP durduruldu",
-                    "Gitea MCP zinciri bu Windows oturumu için elle durduruldu.");
+                    "Gitea durduruldu",
+                    "Gitea zinciri bu Windows oturumu için elle durduruldu.");
             }
 
             await Task.Delay(400, cancellationToken);
@@ -170,11 +170,11 @@ internal static class GiteaTrayClient
         return final.Success
             ? new GiteaStatus(
                 GiteaConnectionState.Offline,
-                "Gitea MCP durduruldu",
-                "Gitea MCP zinciri bu Windows oturumu için elle durduruldu.")
+                "Gitea durduruldu",
+                "Gitea zinciri bu Windows oturumu için elle durduruldu.")
             : new GiteaStatus(
                 GiteaConnectionState.Degraded,
-                "Gitea MCP tam olarak durdurulamadı",
+                "Gitea tam olarak durdurulamadı",
                 final.Detail);
     }
 
@@ -229,12 +229,12 @@ internal static class GiteaTrayClient
                 return new GiteaRepairOutcome(
                     targeted,
                     diagnosis.Strategy,
-                    $"{diagnosis.Strategy} uygulandı; Gitea zinciri tam readiness doğrulamasını geçti.",
+                    $"{diagnosis.Strategy} uygulandı; Gitea zinciri bütün hazırlık denetimlerini geçti.",
                     Escalated: false);
             }
 
             targetedFailure = new InvalidOperationException(
-                $"Hedefli Gitea onarımı readiness sağlamadı: {targeted.Detail}");
+                $"Hedefli Gitea onarımı yetmedi: {targeted.Detail}");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -264,7 +264,7 @@ internal static class GiteaTrayClient
         return new GiteaRepairOutcome(
             restarted,
             diagnosis.Strategy + " → tam zincir yeniden başlatma",
-            "Hedefli onarım readiness sağlamadı; kontrollü tam zincir yeniden başlatma ile Gitea yeniden hazırlandı.",
+            "Hedefli onarım yetmedi; Gitea zinciri sırayla yeniden başlatılarak hazırlandı.",
             Escalated: true);
     }
 
@@ -302,7 +302,7 @@ internal static class GiteaTrayClient
         {
             return (
                 "repair-mcp",
-                "Gitea MCP sunucusu ve tünelini yenile");
+                "Gitea araç sunucusunu ve tünelini yenile");
         }
 
         var protocol = await ProbeMcpProtocolAsync(cancellationToken);
@@ -310,7 +310,7 @@ internal static class GiteaTrayClient
         {
             return (
                 "repair-mcp",
-                "Gitea MCP protokol zincirini yenile");
+                "Gitea araç protokolünü yenile");
         }
 
         var tunnel = await ProbeTunnelAsync(cancellationToken);
@@ -362,7 +362,7 @@ internal static class GiteaTrayClient
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return (false, $"{component} health kontrolü zaman aşımına uğradı.");
+            return (false, $"{component} sağlık denetimi zaman aşımına uğradı.");
         }
         catch (HttpRequestException)
         {
@@ -380,7 +380,7 @@ internal static class GiteaTrayClient
         {
             return (
                 false,
-                "Gitea MCP protokol kaydı bulunamadı.");
+                "Gitea araç protokolü kaydı bulunamadı.");
         }
 
         var result =
@@ -391,7 +391,7 @@ internal static class GiteaTrayClient
         return result.Ready
             ? (
                 true,
-                $"Gitea MCP initialize + tools/list hazır. Araç sayısı: {result.ToolCount}.")
+                $"Gitea araç sunucusu yanıt veriyor. Araç sayısı: {result.ToolCount}.")
             : (
                 false,
                 result.Detail);
@@ -407,7 +407,7 @@ internal static class GiteaTrayClient
 
         if (!File.Exists(healthUrlPath))
         {
-            return (false, "Secure MCP Tunnel çalışma bilgisi bulunamadı.");
+            return (false, "Güvenli tünelin çalışma bilgisi bulunamadı.");
         }
 
         string baseUrl;
@@ -428,12 +428,12 @@ internal static class GiteaTrayClient
             InvalidDataException or
             UnauthorizedAccessException)
         {
-            return (false, "Secure MCP Tunnel durumu okunamadı.");
+            return (false, "Güvenli tünelin durumu okunamadı.");
         }
 
         if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
         {
-            return (false, "Secure MCP Tunnel health adresi geçersiz.");
+            return (false, "Güvenli tünelin sağlık adresi geçersiz.");
         }
 
         try
@@ -448,16 +448,16 @@ internal static class GiteaTrayClient
                 cancellationToken);
 
             return health.IsSuccessStatusCode && ready.IsSuccessStatusCode
-                ? (true, "Secure MCP Tunnel hazır.")
-                : (false, "Secure MCP Tunnel henüz hazır değil.");
+                ? (true, "Güvenli tünel hazır.")
+                : (false, "Güvenli tünel henüz hazır değil.");
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return (false, "Secure MCP Tunnel health kontrolü zaman aşımına uğradı.");
+            return (false, "Güvenli tünelin sağlık denetimi zaman aşımına uğradı.");
         }
         catch (HttpRequestException)
         {
-            return (false, "Secure MCP Tunnel erişilemiyor.");
+            return (false, "Güvenli tünele ulaşılamıyor.");
         }
     }
 
@@ -494,13 +494,13 @@ internal static class GiteaTrayClient
         }
         if (tunnel.Success)
         {
-            active.Add("Secure MCP Tunnel");
+            active.Add("Güvenli tünel");
         }
 
         return active.Count == 0
             ? (
                 true,
-                "Gitea MCP zincirinin tüm health/readiness yüzeyleri kapalı.")
+                "Gitea zincirinin bütün sağlık denetimleri kapalı.")
             : (
                 false,
                 "Durdurma sonrasında hâlâ çalışan bileşenler: " +
@@ -536,7 +536,7 @@ internal static class GiteaTrayClient
         if (result.IsError is true)
         {
             throw new InvalidOperationException(
-                "Talvora MCP, Gitea yaşam döngüsü işlemini tamamlayamadı.");
+                "Talvora, Gitea işlemini tamamlayamadı.");
         }
 
         if (result.StructuredContent is { } structured &&

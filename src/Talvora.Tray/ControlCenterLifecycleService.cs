@@ -303,7 +303,7 @@ internal static partial class ControlCenterLifecycleService
                 EnsureGiteaReady(started, "başlatma");
                 return new ManagedMcpLifecycleResult(
                     operation,
-                    "Gitea MCP başlatıldı",
+                    "Gitea başlatıldı",
                     started.Detail);
 
             case ManagedMcpLifecycleOperation.Stop:
@@ -314,12 +314,12 @@ internal static partial class ControlCenterLifecycleService
                     if (stopped.State != GiteaConnectionState.Offline)
                     {
                         throw new InvalidOperationException(
-                            "Gitea MCP zinciri tamamen durmadı.");
+                            "Gitea zinciri tamamen durmadı.");
                     }
 
                     return new ManagedMcpLifecycleResult(
                         operation,
-                        "Gitea MCP durduruldu",
+                        "Gitea durduruldu",
                         stopped.Detail);
                 }
                 catch
@@ -334,7 +334,7 @@ internal static partial class ControlCenterLifecycleService
                 EnsureGiteaReady(restarted, "yeniden başlatma");
                 return new ManagedMcpLifecycleResult(
                     operation,
-                    "Gitea MCP yeniden başlatıldı",
+                    "Gitea yeniden başlatıldı",
                     restarted.Detail);
 
             default:
@@ -484,9 +484,16 @@ internal static partial class ControlCenterLifecycleService
                         $"{registration.DisplayName} durduruldu",
                     _ => $"{registration.DisplayName} yeniden başlatıldı",
                 },
-                tunnelAssessment.Required
-                    ? "Kayıtlı servis/görev zinciri ve güvenli tünel birlikte işlendi."
-                    : "Kayıtlı servis ve zamanlanmış görev zinciri işlendi.");
+                // D47: the detail says what moved together, with the same verb as the title above it.
+                (tunnelAssessment.Required
+                    ? "Servis ve güvenli tüneli birlikte "
+                    : "Servis ve zamanlanmış görevi birlikte ") +
+                operation switch
+                {
+                    ManagedMcpLifecycleOperation.Start => "başlatıldı.",
+                    ManagedMcpLifecycleOperation.Stop => "durduruldu.",
+                    _ => "yeniden başlatıldı.",
+                });
         }
         catch
         {

@@ -36,7 +36,7 @@ internal static class BusinessTunnelClient
         if (!File.Exists(ConfigPath))
         {
             throw new FileNotFoundException(
-                "ChatGPT Business tunnel yapılandırması bulunamadı.",
+                "ChatGPT Business tünel ayarları bulunamadı.",
                 ConfigPath);
         }
 
@@ -52,7 +52,7 @@ internal static class BusinessTunnelClient
             string.IsNullOrWhiteSpace(config.TunnelClient) ||
             string.IsNullOrWhiteSpace(config.StateRoot))
         {
-            throw new InvalidOperationException("ChatGPT Business tunnel yapılandırması geçersiz.");
+            throw new InvalidOperationException("ChatGPT Business tünel ayarları geçersiz.");
         }
 
         return config;
@@ -65,13 +65,13 @@ internal static class BusinessTunnelClient
             return new TalvoraStatus(
                 TalvoraConnectionState.Offline,
                 "Talvora erişilemiyor",
-                "Yerel MCP servisi çalışmıyor.");
+                "Yerel Talvora servisi çalışmıyor.");
         }
 
         return new TalvoraStatus(
             TalvoraConnectionState.Ready,
             "Talvora hazır",
-            "Yerel MCP servisi hazır. Dev ve Admin güvenli tünelleri ayrı izleniyor.");
+            "Yerel Talvora servisi hazır. Dev ve Admin güvenli bağlantıları ayrı izleniyor.");
     }
 
     public static async Task<bool> IsLocalMcpHealthyAsync(CancellationToken cancellationToken)
@@ -102,13 +102,13 @@ internal static class BusinessTunnelClient
         if (!await IsLocalMcpHealthyAsync(cancellationToken))
         {
             throw new InvalidOperationException(
-                "Yerel Talvora MCP servisi çalışmıyor. Önce Talvora servisini başlatın.");
+                "Yerel Talvora servisi çalışmıyor. Önce Talvora servisini başlatın.");
         }
 
         var config = LoadConfig();
         if (!File.Exists(config.TunnelClient))
         {
-            throw new FileNotFoundException("OpenAI tunnel-client bulunamadı.", config.TunnelClient);
+            throw new FileNotFoundException("OpenAI bağlantı istemcisi (tunnel-client) bulunamadı.", config.TunnelClient);
         }
 
         Directory.CreateDirectory(config.StateRoot);
@@ -176,7 +176,7 @@ internal static class BusinessTunnelClient
                 await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
             }
 
-            throw new TimeoutException("ChatGPT Business tunnel 90 saniye içinde hazır olmadı.");
+            throw new TimeoutException("ChatGPT Business tüneli 90 saniye içinde hazır olmadı.");
         }
         finally
         {
@@ -306,7 +306,7 @@ internal static class BusinessTunnelClient
         if (result.TimedOut)
         {
             throw new TimeoutException(
-                $"tunnel-client komutu {timeout.TotalSeconds:F0} saniye içinde tamamlanmadı.");
+                $"Bağlantı istemcisi (tunnel-client) komutu {timeout.TotalSeconds:F0} saniye içinde tamamlanmadı.");
         }
 
         return result;

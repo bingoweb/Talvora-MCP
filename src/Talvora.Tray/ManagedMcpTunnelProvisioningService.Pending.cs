@@ -279,7 +279,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
             if (string.IsNullOrWhiteSpace(adminKey))
             {
                 throw new InvalidOperationException(
-                    "Belirsiz pending tünel create sonucunu reconcile etmek için OpenAI Admin API key gerekiyor.");
+                    "Yarım kalan tünel oluşturma işleminin sonucunu doğrulamak için OpenAI Admin API anahtarı (Admin API key) gerekiyor.");
             }
 
             var reconciled = await FindPendingRemoteTunnelAsync(
@@ -307,7 +307,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
         if (string.IsNullOrWhiteSpace(adminKey))
         {
             throw new InvalidOperationException(
-                "Yeni tünel oluşturmak için OpenAI Admin API key gerekiyor.");
+                "Yeni tünel oluşturmak için OpenAI Admin API anahtarı (Admin API key) gerekiyor.");
         }
 
         pending = pending with

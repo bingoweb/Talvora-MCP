@@ -187,14 +187,14 @@ internal sealed partial class ShellWindow
                 "tunnel ID",
                 StringComparison.CurrentCultureIgnoreCase))
         {
-            return "Mevcut tunnel ID geçersiz veya bu MCP kaydıyla bağlanamadı. OpenAI tunnel kaydını ve ID biçimini kontrol edin.";
+            return "Mevcut tünel kimliği (tunnel ID) geçersiz ya da bu hizmetin kaydıyla bağlanamadı. OpenAI'deki tünel kaydını ve kimliğin biçimini kontrol edin.";
         }
 
         if (exception.Message.Contains(
                 "Admin API key",
                 StringComparison.CurrentCultureIgnoreCase))
         {
-            return "Yeni tünel oluşturmak için geçerli OpenAI Admin API key gerekiyor.";
+            return "Yeni tünel oluşturmak için geçerli bir OpenAI Admin API anahtarı (Admin API key) gerekiyor.";
         }
 
         if (exception.Message.Contains(
@@ -204,7 +204,7 @@ internal sealed partial class ShellWindow
                 "temel kurulum",
                 StringComparison.CurrentCultureIgnoreCase))
         {
-            return "Güvenli MCP tünelinin Runtime temel kurulumu eksik. Mevcut Business tünel kurulumunu tamamlayıp yeniden deneyin.";
+            return "Güvenli tünelin temel kurulumu eksik (Runtime API key). Mevcut ChatGPT Business tünel kurulumunu tamamlayıp yeniden deneyin.";
         }
 
         return "Kurulum tamamlanamadı. Son olay ve ham günlük ayrıntılarını kontrol edin.";

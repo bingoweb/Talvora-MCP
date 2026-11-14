@@ -73,7 +73,7 @@ Assert-Contract (
     $runningIndex -gt $tunnelIndex
 ) 'Gitea Running must require MCP HTTP health, protocol initialize/tools readiness, then tunnel readiness.'
 Assert-Contract (
-    $statusBody.Contains('Gitea MCP health açık, protokol hazır değil')
+    $statusBody.Contains('Gitea araç sunucusu açık, protokolü hazır değil')
 ) 'Protocol failure must degrade Gitea status instead of returning Running.'
 
 foreach ($required in @(

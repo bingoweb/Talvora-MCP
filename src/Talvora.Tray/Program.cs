@@ -245,7 +245,7 @@ internal static class Program
                         managedMcpId,
                         StringComparison.OrdinalIgnoreCase))
                     ?? throw new InvalidOperationException(
-                        $"Managed MCP kaydı bulunamadı: {managedMcpId}");
+                        $"Yönetilen hizmet kaydı bulunamadı: {managedMcpId}");
 
                 var repair = ControlCenterRepairService
                     .RepairAsync(
@@ -291,7 +291,7 @@ internal static class Program
                         managedMcpId,
                         StringComparison.OrdinalIgnoreCase))
                     ?? throw new InvalidOperationException(
-                        $"Managed MCP kaydı bulunamadı: {managedMcpId}");
+                        $"Yönetilen hizmet kaydı bulunamadı: {managedMcpId}");
 
                 var updated = ManagedMcpTunnelProvisioningService
                     .EnsureLatestClientAndReconnectIfNeededAsync(
@@ -358,7 +358,7 @@ internal static class Program
                         managedMcpId,
                         StringComparison.OrdinalIgnoreCase))
                     ?? throw new InvalidOperationException(
-                        $"Managed MCP kaydı bulunamadı: {managedMcpId}");
+                        $"Yönetilen hizmet kaydı bulunamadı: {managedMcpId}");
 
                 var probe = ManagedMcpProtocolProbeService
                     .WaitUntilReadyAsync(

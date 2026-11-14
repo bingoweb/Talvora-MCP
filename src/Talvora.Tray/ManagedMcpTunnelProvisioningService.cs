@@ -98,7 +98,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 HasRuntimeCredential: false,
                 HasAdminCredential: false,
                 CanAutoProvision: false,
-                Summary: "Bu MCP için tünel gerekmiyor.");
+                Summary: "Bu hizmet için tünel gerekmiyor.");
         }
 
         var configPath = ResolveConfigPath(registration);
@@ -122,11 +122,11 @@ internal static partial class ManagedMcpTunnelProvisioningService
         var summary = hasTunnelId && hasConfig && hasRuntime
             ? "Tünel yapılandırması hazır."
             : !hasReusableRuntime
-                ? "Yeniden kullanılabilir Runtime API key bulunamadı."
+                ? "Yeniden kullanılabilir çalışma anahtarı (Runtime API key) bulunamadı."
                 : !hasTunnelId &&
                   !hasPendingTunnelId &&
                   !hasAdmin
-                    ? "Yeni tünel oluşturmak için OpenAI Admin API key gerekiyor."
+                    ? "Yeni tünel oluşturmak için OpenAI Admin API anahtarı (Admin API key) gerekiyor."
                     : "Tünel otomatik olarak hazırlanabilir.";
 
         return new TunnelProvisioningAssessment(
@@ -224,7 +224,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
         var reference = FindReusableRuntimeSource(registry)
             ?? throw new InvalidOperationException(
-                "Yeniden kullanılabilir güvenli MCP tünel Runtime API key kaynağı bulunamadı.");
+                "Yeniden kullanılabilir güvenli tünel çalışma anahtarı (Runtime API key) kaynağı bulunamadı.");
 
         string? runtimeKey = null;
         string? adminKey = null;
@@ -311,7 +311,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
         if (!IsTunnelId(normalizedTunnelId))
         {
             throw new ArgumentException(
-                "Tunnel ID biçimi geçersiz.",
+                "Tünel kimliğinin (tunnel ID) biçimi geçersiz.",
                 nameof(tunnelId));
         }
 
@@ -326,7 +326,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
 
         var reference = FindReusableRuntimeSource(registry)
             ?? throw new InvalidOperationException(
-                "Yeniden kullanılabilir güvenli MCP tünel Runtime API key kaynağı bulunamadı.");
+                "Yeniden kullanılabilir güvenli tünel çalışma anahtarı (Runtime API key) kaynağı bulunamadı.");
 
         string? runtimeKey = null;
         try
@@ -366,7 +366,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
         var configPath = ResolveConfigPath(registration);
         var root = Path.GetDirectoryName(configPath)
             ?? throw new InvalidOperationException(
-                "Tunnel config dizini çözümlenemedi.");
+                "Tünel ayar klasörü bulunamadı.");
         var stateRoot = string.IsNullOrWhiteSpace(tunnel.StateRoot)
             ? Path.Combine(root, "state")
             : Path.GetFullPath(tunnel.StateRoot);
@@ -890,7 +890,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 ProcessRunning: false,
                 Healthy: false,
                 IdentityMatches: false,
-                Detail: "Tünel runtime durumu okunamadı: " +
+                Detail: "Tünelin çalışma durumu okunamadı: " +
                     CollapseSafe(
                         result.StandardError,
                         result.StandardOutput));
@@ -904,7 +904,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
                 ProcessRunning: false,
                 Healthy: false,
                 IdentityMatches: false,
-                Detail: "Tünel runtime durumu geçerli JSON içermiyor.");
+                Detail: "Tünelin çalışma durumu okunamadı (geçerli JSON değil).");
         }
 
         using var document = JsonDocument.Parse(json);
@@ -1139,7 +1139,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
         if (result.ExitCode != 0)
         {
             throw new InvalidOperationException(
-                $"Mevcut tünel scope bilgisi okunamadı: {CollapseSafe(result.StandardError, result.StandardOutput, runtimeKey)}");
+                $"Mevcut tünelin yetki bilgisi okunamadı: {CollapseSafe(result.StandardError, result.StandardOutput, runtimeKey)}");
         }
 
         var json = ExtractJson(result.StandardOutput)
@@ -1328,7 +1328,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
         }
 
         throw new TimeoutException(
-            "Yeni güvenli MCP tüneli 90 saniye içinde hazır olmadı.");
+            "Yeni güvenli tünel 90 saniye içinde hazır olmadı.");
     }
 
     private static async Task<ProcessExecutionResult> RunClientAsync(
@@ -1343,7 +1343,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
         if (!File.Exists(clientPath))
         {
             throw new FileNotFoundException(
-                "OpenAI tunnel-client bulunamadı.",
+                "OpenAI bağlantı istemcisi (tunnel-client) bulunamadı.",
                 clientPath);
         }
 
@@ -1385,7 +1385,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
         if (result.TimedOut)
         {
             throw new TimeoutException(
-                $"tunnel-client komutu {timeout.TotalSeconds:F0} saniye içinde tamamlanmadı.");
+                $"Bağlantı istemcisi (tunnel-client) komutu {timeout.TotalSeconds:F0} saniye içinde tamamlanmadı.");
         }
 
         return result;
@@ -1396,7 +1396,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
         if (!File.Exists(configPath))
         {
             throw new FileNotFoundException(
-                "Tunnel bağlantı yapılandırması bulunamadı.",
+                "Tünel bağlantı ayarları bulunamadı.",
                 configPath);
         }
 
@@ -1413,7 +1413,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
             string.IsNullOrWhiteSpace(config.StateRoot))
         {
             throw new InvalidOperationException(
-                "Tunnel bağlantı yapılandırması geçersiz.");
+                "Tünel bağlantı ayarları geçersiz.");
         }
 
         return config;
@@ -2028,7 +2028,7 @@ internal static partial class ManagedMcpTunnelProvisioningService
         Path.Combine(
             Path.GetDirectoryName(configPath)
                 ?? throw new InvalidOperationException(
-                    "Tunnel config dizini çözümlenemedi."),
+                    "Tünel ayar klasörü bulunamadı."),
             "runtime-key.dpapi");
 
     private static bool IsTunnelId(string? value) =>

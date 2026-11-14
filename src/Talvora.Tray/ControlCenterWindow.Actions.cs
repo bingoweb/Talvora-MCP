@@ -107,7 +107,7 @@ internal sealed partial class ShellWindow
                 "gitea",
                 StringComparison.OrdinalIgnoreCase))
         {
-            return "Gitea MCP zinciri ve güvenli bağlantısı birlikte durdurulacak.";
+            return "Gitea zinciri ve güvenli bağlantısı birlikte durdurulacak.";
         }
 
         return registration.Tunnel is not null
