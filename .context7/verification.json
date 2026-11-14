@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T13:14:10.000Z",
-  "scope": "WL3: Çalışma günlüğü, Olaylar, Hizmetler, setup labels and the overview counts line",
+  "verifiedAtUtc": "2026-11-14T13:25:21.000Z",
+  "scope": "D81: the worklog history list never scrolls sideways; a long task note is trimmed in its card",
   "libraries": [
     {
       "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-14 WL3: a locally set value outranks style triggers and style setters, so the raw-log toggle's Content and automation name moved from local attributes into the style, whose IsChecked trigger then switches them (query: \"WPF dependency property value precedence local value overrides style trigger setter\")"
+      "verified": "2026-11-14 D81: HorizontalScrollBarVisibility is an attached property on ListBox, and Disabled (not Auto) is the recommended value; with it the items get the viewport width, so the card's TextTrimming can apply (query: \"WPF ListBox ScrollViewer.HorizontalScrollBarVisibility Disabled constrains item width so TextTrimming works\")"
     }
   ],
   "vendorSources": []

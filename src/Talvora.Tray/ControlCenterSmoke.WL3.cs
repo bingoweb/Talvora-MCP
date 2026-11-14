@@ -19,7 +19,7 @@ internal static partial class ControlCenterSmoke
         {
             var store = new WorklogHistoryStore(System.IO.Path.Combine(directory, "worklog-sessions.jsonl"));
             var now = DateTimeOffset.UtcNow;
-            AppendWl3Session(store, now.AddMinutes(-9), "wl3-note", "D79 — Bitmiş başlıklar",
+            AppendWl3Session(store, now.AddMinutes(-9), "wl3-note", LongTaskNote,
                 new WorklogStep(WorklogStepCategory.SourceEdit, WorklogStepState.Succeeded,
                     "Proje talimatları alındı", null, new WorklogOutcome(null, "", null), 2),
                 new WorklogTotals(1, 2, 0, WorklogCheckState.Unknown, WorklogCheckState.Unknown),
@@ -46,13 +46,20 @@ internal static partial class ControlCenterSmoke
 
             // Item 11: a task note is the card's headline; the last step moves under it.
             var noteTexts = VisibleTexts(noteCard);
-            if (!noteTexts.Contains("D79 — Bitmiş başlıklar") ||
+            if (!noteTexts.Contains(LongTaskNote) ||
                 !noteTexts.Contains("Son adım: Proje talimatları alındı"))
                 throw new InvalidOperationException("WL3: a session with a task note must list the note and its last step.");
             // Item 10: no "0 dosya değişti"; item 2: one caption line with the outcome dot.
             if (noteTexts.Contains(" dosya değişti") || !VisibleTexts(failedCard).Contains(" dosya değişti"))
                 throw new InvalidOperationException("WL3: the files part must show only when files changed.");
             AssertWl3Dot(noteCard, "Tv.Ready", "completed");
+            // D81: a long task note is shortened with an ellipsis inside the card; the list never scrolls sideways.
+            var listScroll = FindVisualChild<System.Windows.Controls.ScrollViewer>(list)
+                ?? throw new InvalidOperationException("D81: the history list has no scroll viewer.");
+            if (listScroll.ExtentWidth > listScroll.ViewportWidth + 0.5 ||
+                listScroll.ComputedHorizontalScrollBarVisibility == Visibility.Visible)
+                throw new InvalidOperationException(
+                    $"D81: the history list scrolls sideways ({listScroll.ExtentWidth:0} > {listScroll.ViewportWidth:0}).");
             AssertWl3Dot(failedCard, "Tv.Offline", "failed");
             SaveVisualSnapshotIfRequested(window, "wl3-list-" + variant);
 
@@ -94,6 +101,10 @@ internal static partial class ControlCenterSmoke
             System.IO.Directory.Delete(directory, recursive: true);
         }
     }
+
+    // D81: as long as the real D76 note that pushed the list sideways on 2026-11-14.
+    private const string LongTaskNote =
+        "D76 — Kontrol Merkezi canlı testinde pencerenin görünür kalmasını sağla ve gizli başlangıçta yeniden göster";
 
     private static void AppendWl3Session(WorklogHistoryStore store, DateTimeOffset at, string id, string? taskNote,
         WorklogStep current, WorklogTotals totals, DesktopProgressEvidence? evidence, DesktopProgressKind kind)

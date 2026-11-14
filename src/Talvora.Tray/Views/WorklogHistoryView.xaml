@@ -175,6 +175,7 @@
                          ItemContainerStyle="{StaticResource HistoryRow}"
                          BorderThickness="0" Background="Transparent"
                          ScrollViewer.CanContentScroll="True"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          VirtualizingPanel.IsVirtualizing="True"
                          VirtualizingPanel.VirtualizationMode="Recycling"
                          AutomationProperties.Name="Çalışma oturumları">
