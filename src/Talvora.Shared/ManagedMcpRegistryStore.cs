@@ -107,7 +107,7 @@ public static class ManagedMcpRegistryStore
                         cancellationToken).ConfigureAwait(false);
 
                 ValidateRegistration(registration);
-                registrations.Add(registration);
+                registrations.Add(ManagedMcpDisplayNames.Normalize(registration));
             }
             catch (Exception ex) when (
                 ex is IOException or
@@ -148,7 +148,8 @@ public static class ManagedMcpRegistryStore
                 cancellationToken).ConfigureAwait(false);
 
         ValidateDocument(document);
-        return document;
+        // D49: a registry written before D49 keeps its old names on disk; every reader gets the plain ones.
+        return document with { Mcps = document.Mcps.Select(ManagedMcpDisplayNames.Normalize).ToList() };
     }
 
     public static async Task WriteAsync(

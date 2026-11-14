@@ -19,7 +19,7 @@ internal sealed class TalvoraManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDi
         return new ManagedMcpRegistration
         {
             Id = Id,
-            DisplayName = "Talvora Core Service",
+            DisplayName = "Talvora Çekirdeği",
             Description = "Ana Talvora motoru. Dev ve Admin ChatGPT bağlantıları bu Windows servisini kullanır.",
             Endpoint = TalvoraConstants.McpUrl,
             HealthEndpoint = TalvoraConstants.HealthUrl,
@@ -88,7 +88,7 @@ internal sealed class TalvoraFocusedManagedMcpRecoveryDiscovery(
                 new ManagedMcpComponentRegistration
                 {
                     Id = "tunnel",
-                    DisplayName = "Secure MCP Tunnel",
+                    DisplayName = "Güvenli tünel",
                     Kind = "tunnel",
                     Name = tunnel.Alias,
                 },
@@ -146,8 +146,8 @@ internal sealed class GiteaManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDisc
         return new ManagedMcpRegistration
         {
             Id = Id,
-            DisplayName = "Gitea MCP",
-            Description = "Yerel Gitea, Caddy, resmi Gitea MCP sunucusu ve güvenli tünel zinciri.",
+            DisplayName = "Gitea",
+            Description = "Yerel Gitea, Caddy, resmi Gitea araç sunucusu ve güvenli tünel zinciri.",
             Endpoint = "http://127.0.0.1:8081/mcp",
             HealthEndpoint = "http://127.0.0.1:8081/healthz",
             AutoStart = true,
@@ -181,7 +181,7 @@ internal sealed class GiteaManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDisc
                 new ManagedMcpComponentRegistration
                 {
                     Id = "mcp-server",
-                    DisplayName = "Gitea MCP sunucusu",
+                    DisplayName = "Gitea araç sunucusu",
                     Kind = "scheduled-task",
                     Name = "Gitea MCP Server",
                     HealthEndpoint = "http://127.0.0.1:8081/healthz",
@@ -189,7 +189,7 @@ internal sealed class GiteaManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDisc
                 new ManagedMcpComponentRegistration
                 {
                     Id = "tunnel",
-                    DisplayName = "Secure MCP Tunnel",
+                    DisplayName = "Güvenli tünel",
                     Kind = "scheduled-task",
                     Name = "Gitea MCP Tunnel",
                 },
@@ -264,7 +264,7 @@ internal sealed class PenpotManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDis
         {
             Id = Id,
             DisplayName = "Penpot",
-            Description = "İsteğe bağlı yerel Penpot tasarım platformu ve resmi Penpot MCP sunucusu.",
+            Description = "İsteğe bağlı yerel Penpot tasarım platformu ve resmi Penpot araç sunucusu.",
             Endpoint = "http://127.0.0.1:4401/mcp",
             HealthEndpoint = "http://127.0.0.1:9001/",
             AutoStart = false,
@@ -284,14 +284,14 @@ internal sealed class PenpotManagedMcpRecoveryDiscovery : IManagedMcpRecoveryDis
                 new ManagedMcpComponentRegistration
                 {
                     Id = "local-mcp-task",
-                    DisplayName = "Penpot local MCP",
+                    DisplayName = "Penpot yerel araç sunucusu",
                     Kind = "scheduled-task",
                     Name = "Talvora Penpot MCP",
                 },
                 new ManagedMcpComponentRegistration
                 {
                     Id = "mcp",
-                    DisplayName = "Penpot MCP",
+                    DisplayName = "Penpot araç sunucusu",
                     Kind = "mcp-protocol",
                     HealthEndpoint = "http://127.0.0.1:4401/mcp",
                 },

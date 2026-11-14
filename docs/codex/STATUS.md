@@ -35,7 +35,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D79 — Finished-form titles for the tools that still fall back to their MCP title (audit 56)
 - [x] [C] D80 — WL1's duration check allows the timer tick of a 400 ms delay (audit 56)
 - [~] [C] D48 — A vault note belongs to the vault's owner (live pending (Claude): the installed note owner after the batch deploy)
-- [ ] [C] D49 — Plain Turkish service names, also for older registries (Claude since audit 46; after D46)
+- [~] [C] D49 — Plain Turkish service names, also for older registries (visual check pending (Claude): Hizmetler after the batch deploy)
 - [ ] [C] D47 — Plain Turkish for the remaining Control Center texts (Claude since audit 46; setup texts per the user's decision; table and test in docs/codex/reference/d47)
 - [ ] [C] WL3 — Çalışma günlüğü and Olaylar polish (Claude; audit 42, user: later; after D45 and D50; audit 43 adds items 7–8)
 
@@ -55,6 +55,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-14 — [C] D49, executor Claude (after audit 56): the registry written 2026-09-30 still names the core "Talvora Core Service" and Gitea "Gitea MCP", with components "Secure MCP Tunnel", "Gitea MCP sunucusu", "Penpot local MCP" and "Penpot MCP", so Hizmetler and every event built from `registration.DisplayName` ("Gitea MCP zaten hazır") showed them. `ManagedMcpDisplayNames.Normalize` now gives every reader the plain names ("Talvora Çekirdeği", "Gitea", "Güvenli tünel", "Gitea araç sunucusu", "Penpot yerel araç sunucusu", "Penpot araç sunucusu" and the two descriptions) in `ManagedMcpRegistryStore.TryReadAsync` and the recovery manifests; the file on disk changes only when the tray saves it itself. Discovery writes the plain names for new registries; ids, folders, scheduled tasks and Windows service names are unchanged. Red: CS0103 (the new D49 test before `ManagedMcpDisplayNames` existed); green: `D49_PLAIN_SERVICE_NAMES_GREEN`, Notification regression, signed-in Full 72/0 `Hepsi geçti.` (the first Full run was cut off when the previous Claude session ended; rerun complete). Context7 `/dotnet/docs` (a `with` expression is a shallow copy, so `Normalize` builds a new Components list; ledger 2026-11-14). Deploy, the Hizmetler capture and CI follow with D48 and D80.
+  Self-review — Cosmetics: names only; no layout change.
+  Self-review — Usability: the same service reads the same plain name in Hizmetler, its detail page, the chain rows and Olaylar.
+  Self-review — Turkish: "araç sunucusu" replaces "MCP sunucusu" as the copy deck asks; Talvora Dev and Admin keep their names.
+  Self-review — Correctness: normalisation happens after validation and only maps exact old strings; unknown names pass through; the smoke fixture's Gitea row follows.
 - 2026-11-14 — [C] D80, executor Claude (after audit 56): WL1's regression waits 400 ms in a fake build and required at least 0.4 s; once it read 0.3996 s (Task.Delay follows the coarse system tick, the step clock is precise), so the Changed gate of D48 failed in a suite D48 does not touch (3 reruns green). The lower bound is now 0.35 s: the check still proves a measured duration (an unmeasured step is null, a fake one 0). Test-only; Notification regression and signed-in Changed 13/0 `Hepsi geçti.`; the next Full gate (D49) covers it. Context7 noLookup.
   Self-review — Cosmetics: none.
   Self-review — Usability: none (test-only).

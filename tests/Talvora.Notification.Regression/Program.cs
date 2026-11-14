@@ -114,6 +114,7 @@ internal static partial class Program
         await AssertD35LatestBackoffAsync();
         await AssertD41CallerIdentityAsync();
         await AssertD46CiStillRunningAsync();
+        await AssertD49PlainServiceNamesAsync();
         await AssertD60QuietWaitKeepsSessionAsync();
         await AssertD62DetachedStartIsNotResultAsync();
         await AssertCtx1Context7Async();

@@ -1,8 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T12:04:51.000Z",
-  "scope": "D80: WL1 regression tolerance for the timer tick of a 400 ms delay",
-  "libraries": [],
-  "noLookup": "D80: one bound in Talvora's own regression test; no external API lookup needed",
+  "verifiedAtUtc": "2026-11-14T12:07:15.000Z",
+  "scope": "D49: registry names normalised to plain Turkish when the registry is read",
+  "libraries": [
+    {
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-14 D49: a with expression copies the record and changes only the listed properties, leaving the original unchanged; the copy is shallow, so Normalize builds a new Components list instead of editing the shared one (query: \"C# record with expression nondestructive mutation of init-only properties and list properties\")"
+    }
+  ],
   "vendorSources": []
 }

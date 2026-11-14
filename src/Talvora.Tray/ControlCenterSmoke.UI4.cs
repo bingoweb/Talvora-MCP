@@ -65,7 +65,7 @@ internal static partial class ControlCenterSmoke
         SaveVisualSnapshotIfRequested(window, "ui4-detail-" + variant);
         if (detail.OpenWebButton.IsVisible)
             throw new InvalidOperationException("UI4 shows the Gitea open action on another service.");
-        detail.Model.ApplyState(State(Registration("gitea", "Gitea MCP"), ControlCenterHealthState.Ready, "Hazır"),
+        detail.Model.ApplyState(State(Registration("gitea", "Gitea"), ControlCenterHealthState.Ready, "Hazır"),
             DateTimeOffset.Now, manuallyStopped: false);
         window.UpdateLayout();
         if (!detail.OpenWebButton.IsVisible || !detail.Model.CanOpenWeb)
