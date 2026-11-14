@@ -19,6 +19,7 @@ Maintained by Claude (CONTEXT7 PROTOCOL in AGENTS.md). Every id below was checke
 | Diffs | `DiffPlex` | `/mmanela/diffplex` | https://github.com/mmanela/diffplex |
 | Git CLI | Git for Windows 2.56 | `/websites/git-scm` | https://git-scm.com/docs |
 | GitHub Actions (release workflow, RL4) | `windows-latest` runner | `/websites/github_en_actions` | https://docs.github.com/actions |
+| GitHub CLI (`Get-CiStatus.ps1`, `talvora_gh_run`) | gh 2.103.3 | none checked: use the official manual (CONTEXT7 PROTOCOL rule 2, no map-candidate line needed) | https://cli.github.com/manual/ |
 | MSBuild (PK2) | `Microsoft.Build.Framework` 18.9.6 and `Microsoft.NET.StringTools` 18.9.6 (both `ExcludeAssets="runtime"`; the SDK's MSBuild is 18.9.15) | `/dotnet/msbuild`; how-to pages: `/websites/learn_microsoft_visualstudio_msbuild`; Locator: `/microsoft/msbuildlocator` | https://learn.microsoft.com/visualstudio/msbuild/ |
 | uv (Python runs) | uv 0.13.x | `/astral-sh/uv` | https://docs.astral.sh/uv/ |
 | Visual Studio and Windows SDK tools | VS 2022 Build Tools | `/microsoftdocs/visualstudio-docs` | https://learn.microsoft.com/visualstudio/ |
