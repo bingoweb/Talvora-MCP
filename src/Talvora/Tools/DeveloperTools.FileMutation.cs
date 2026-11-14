@@ -34,6 +34,7 @@ public static partial class DeveloperTools
         bool createBackup = false,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         if (string.IsNullOrEmpty(search))
         {
             throw new ArgumentException("Search value cannot be empty.", nameof(search));

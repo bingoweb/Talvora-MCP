@@ -23,6 +23,7 @@ public static partial class ConfigFormatTools
         int maxResults = 200,
         long resultOffset = 0)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         if (string.IsNullOrWhiteSpace(xpath))
         {
             throw new ArgumentException(

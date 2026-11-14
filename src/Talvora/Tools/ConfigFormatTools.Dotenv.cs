@@ -23,6 +23,7 @@ public static partial class ConfigFormatTools
         [Description("Number of matching entries to skip before returning this page.")] int resultOffset = 0,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         ValidateListWindow(
             maxResults,
             resultOffset);
@@ -124,6 +125,7 @@ public static partial class ConfigFormatTools
         bool caseSensitive = true,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         ValidateConfigKey(key);
 
         var fullPath = Path.GetFullPath(path);

@@ -18,6 +18,7 @@ internal static partial class SourceEditRegressionRunner
             ("ob1-vault-note-writer", RunVaultNoteWriterAsync),
             ("atomic-publish-concurrent-first-writers", AtomicPublishConcurrentFirstWritersAsync),
             ("redaction-is-idempotent", RedactionIsIdempotentAsync),
+            ("d84-protected-paths", D84ProtectedPathsAsync),
             ("receipt-real-line-counts", RunReceiptCountsAsync),
             ("ownership-preservation", RunOwnershipContractsAsync),
             ("git-work-contract", RunWorkContractAsync),

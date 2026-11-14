@@ -28,6 +28,7 @@ public static partial class DeveloperTools
         int count = 0,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         if (offset < 0 || count < 0)
         {
             throw new ArgumentOutOfRangeException("offset and count cannot be negative.");
@@ -102,6 +103,7 @@ public static partial class DeveloperTools
         long? offset = null,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         if (append && offset is not null)
         {
             throw new ArgumentException("append and offset cannot be used together.");

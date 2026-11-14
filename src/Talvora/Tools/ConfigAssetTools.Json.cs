@@ -33,6 +33,7 @@ private static readonly JsonSerializerOptions CompactJsonOptions =
         bool indented = true,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         var fullPath = Path.GetFullPath(path);
         var root = await ParseJsonFileAsync(fullPath, cancellationToken);
         var tokens = ParsePointer(pointer);

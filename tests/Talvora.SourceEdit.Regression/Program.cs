@@ -8,6 +8,14 @@ Talvora.SourceEditing.SourceEditRuntime.UseStateRootForTests(
     Path.Combine(regressionState, semanticOnly ? "SourceEdit-Semantic" : "SourceEdit"));
 Talvora.SourceEditing.AstGrepToolchainManager.CacheRoot = Path.Combine(regressionState, "Toolchains");
 
+if (args.Contains("--d84-only", StringComparer.OrdinalIgnoreCase))
+{
+    await SourceEditRegressionRunner.D84MaskingAsync();
+    await SourceEditRegressionRunner.D84ProtectedPathsAsync();
+    Console.WriteLine("D84_PROTECTED_PATHS_GREEN");
+    return;
+}
+
 if (args.Contains("--toolchain-q2a-only", StringComparer.OrdinalIgnoreCase))
 {
     await SourceEditRegressionRunner.RunToolchainConsolidationAsync();

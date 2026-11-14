@@ -21,14 +21,17 @@ public static class SourceEditTools
         int lineCount = 0,
         int startCharacter = 0,
         int maxCharacters = SourceTextStreamingReader.DefaultReadMaxCharacters,
-        CancellationToken cancellationToken = default) =>
-        SourceEditRuntime.Engine.ReadSourceAsync(
+        CancellationToken cancellationToken = default)
+    {
+        ProtectedSecretPaths.ThrowIfProtected(path);
+        return SourceEditRuntime.Engine.ReadSourceAsync(
             path,
             startLine,
             startCharacter,
             lineCount,
             maxCharacters,
             cancellationToken);
+    }
 
     [McpServerTool(
         Name = "talvora_apply_patch",

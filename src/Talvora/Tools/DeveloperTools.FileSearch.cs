@@ -168,6 +168,7 @@ public static partial class DeveloperTools
         [Description("Number of matching occurrences to skip before returning this page.")] long matchOffset = 0,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(root);
         if (string.IsNullOrEmpty(query))
         {
             throw new ArgumentException("Search query cannot be empty.", nameof(query));
@@ -280,7 +281,8 @@ public static partial class DeveloperTools
         }
         else if (Directory.Exists(fullRoot))
         {
-            candidates = EnumerateTree(fullRoot, recursive, followReparsePoints, errors, cancellationToken);
+            candidates = EnumerateTree(fullRoot, recursive, followReparsePoints, errors, cancellationToken,
+                skipProtected: true);
         }
         else
         {
@@ -547,7 +549,8 @@ public static partial class DeveloperTools
         bool recursive,
         bool followReparsePoints,
         List<string> errors,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool skipProtected = false)
     {
         var queue = new Queue<DirectoryInfo>();
         var visited = new HashSet<string>(PathComparer);
@@ -581,6 +584,10 @@ public static partial class DeveloperTools
             foreach (var child in children)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (skipProtected && ProtectedSecretPaths.IsProtected(child.FullName))
+                {
+                    continue;
+                }
                 yield return child;
 
                 if (!recursive || (child.Attributes & FileAttributes.Directory) == 0)

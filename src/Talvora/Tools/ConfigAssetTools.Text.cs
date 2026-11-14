@@ -29,6 +29,7 @@ public static partial class ConfigAssetTools
         int startCharacter = 0,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         if (startLine < 1)
         {
             throw new ArgumentOutOfRangeException(nameof(startLine));
@@ -88,6 +89,7 @@ public static partial class ConfigAssetTools
         int waitSeconds = 0,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         if (lineCount < 0 || beforeLine < 0)
         {
             throw new ArgumentOutOfRangeException(
@@ -164,6 +166,7 @@ public static partial class ConfigAssetTools
         bool appendNewLine = false,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         var fullPath = Path.GetFullPath(path);
         SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
             fullPath,

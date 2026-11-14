@@ -31,6 +31,23 @@ internal static partial class SourceEditRegressionRunner
         var structured = FileLog.RedactSensitiveData("[password=" + "TalvoraInBrackets" + "] done");
         Assert(!structured.Contains("TalvoraInBrackets", StringComparison.Ordinal) && structured.EndsWith("] done", StringComparison.Ordinal),
             "A closing bracket after the value must stay outside the redaction: " + structured);
+        foreach (var (input, expected) in new[]
+        {
+            ("ctx7sk-fixture_0123456789abcdef", "[REDACTED]"),
+            ("--token abc123", "--token [REDACTED]"),
+            ("--password=hunter2", "--password=[REDACTED]"),
+            ("--runtime-api-key env:CONTROL_PLANE_API_KEY", "--runtime-api-key env:CONTROL_PLANE_API_KEY"),
+            ("gh auth login --with-token", "gh auth login --with-token"),
+            ("//registry.npmjs.org/:_authToken=npm_abc123", "//registry.npmjs.org/:_authToken=[REDACTED]"),
+            ("token=abc", "token=[REDACTED]"),
+            ("authToken=abc", "authToken=[REDACTED]"),
+            ("--API_KEY=s3cr3t", "--API_KEY=[REDACTED]"),
+        })
+        {
+            var masked = FileLog.RedactSensitiveData(input);
+            AssertEqual(expected, masked, "D84 masking output mismatch.");
+            AssertEqual(masked, FileLog.RedactSensitiveData(masked), "D84 masking must be idempotent.");
+        }
         return Task.CompletedTask;
     }
 }

@@ -10,7 +10,7 @@ public static class FileLog
     private static readonly UTF8Encoding Utf8NoBom =
         new(encoderShouldEmitUTF8Identifier: false);
     private static readonly Regex NamedSecretRegex = new(
-        @"\b(?<name>authorization|proxy-authorization|api[-_ ]?key|access[-_ ]?token|refresh[-_ ]?token|id[-_ ]?token|client[-_ ]?secret|password|passwd|pwd|secret|credential)\b(?<separator>\s*[:=]\s*)(?!\[REDACTED\](?:[\s,;}\]]|$))(?:""[^""]*""|'[^']*'|(?:[^\s,;}\]]|\](?=[^\s,;}\]]))+)",
+        @"\b(?<name>authorization|proxy-authorization|api[-_ ]?key|access[-_ ]?token|refresh[-_ ]?token|id[-_ ]?token|client[-_ ]?secret|password|passwd|pwd|secret|credential|token|authToken|_authToken)\b(?<separator>\s*[:=]\s*)(?!\[REDACTED\](?:[\s,;}\]]|$))(?:""[^""]*""|'[^']*'|(?:[^\s,;}\]]|\](?=[^\s,;}\]]))+)",
         RegexOptions.Compiled |
         RegexOptions.CultureInvariant |
         RegexOptions.IgnoreCase);
@@ -32,6 +32,12 @@ public static class FileLog
         @"\b(?:ak|as|wk|ws|oc|ov)-[A-Za-z0-9._~-]{8,}\b",
         RegexOptions.Compiled |
         RegexOptions.CultureInvariant);
+    private static readonly Regex Context7KeyRegex = new(
+        @"\bctx7sk[-_A-Za-z0-9]{8,}",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex CommandFlagSecretRegex = new(
+        @"(?<![\w-])(?<flag>--(?:token|api-key|api_key|apikey|password|passwd|secret|client-secret|access-token|auth-token|runtime-api-key))(?<separator>\s+|=)(?<value>(?!env:|\[REDACTED\](?=\s|$))\S+)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     private static readonly Regex JwtRegex = new(
         @"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b",
         RegexOptions.Compiled |
@@ -102,6 +108,12 @@ public static class FileLog
         redacted = NamedSecretRegex.Replace(
             redacted,
             "${name}${separator}[REDACTED]");
+        redacted = CommandFlagSecretRegex.Replace(
+            redacted,
+            "${flag}${separator}[REDACTED]");
+        redacted = Context7KeyRegex.Replace(
+            redacted,
+            "[REDACTED]");
         redacted = OpenAiKeyRegex.Replace(
             redacted,
             "[REDACTED]");

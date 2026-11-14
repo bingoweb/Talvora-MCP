@@ -26,6 +26,7 @@ public static class FileTools
         string path,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         var response =
             await ConfigAssetTools.ReadTextRange(
                 path,
@@ -46,6 +47,7 @@ public static class FileTools
     [McpServerTool(Name = "talvora_write_text", Destructive = true, Idempotent = true, OpenWorld = true), Description("Compatibility whole-file UTF-8 writer for ordinary/non-workspace files. Do not use it for development-workspace source editing: talvora_apply_patch is the PRIMARY/default editor, while talvora_apply_edits is only for already-known exact ranges; workspace source/text writes are rejected with SOURCE_EDIT_POLICY_VIOLATION.")]
     public static async Task<object> WriteText(string path, string content, CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         var fullPath = Path.GetFullPath(path);
         SourceMutationPolicy.EnsureLegacyTextMutationAllowed(
             fullPath,
@@ -65,6 +67,7 @@ public static class FileTools
     [McpServerTool(Name = "talvora_delete", Destructive = true, OpenWorld = true), Description("General filesystem delete. Development-workspace source/text file deletion must use talvora_apply_patch so revision/WAL/rollback guarantees are preserved; direct source-file deletion is rejected. Directory and non-workspace deletion remain supported.")]
     public static object Delete(string path)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         var fullPath = Path.GetFullPath(path);
         if (File.Exists(fullPath))
         {
@@ -194,6 +197,8 @@ public static class FileTools
         bool explicitAdmin = false,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(source);
+        ProtectedSecretPaths.ThrowIfProtected(destination);
         cancellationToken.ThrowIfCancellationRequested();
         var sourcePath = NormalizePath(source);
         var destinationPath = NormalizePath(destination);
@@ -329,6 +334,8 @@ public static class FileTools
         bool explicitAdmin = false,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(source);
+        ProtectedSecretPaths.ThrowIfProtected(destination);
         cancellationToken.ThrowIfCancellationRequested();
         var sourcePath = NormalizePath(source);
         var destinationPath = NormalizePath(destination);

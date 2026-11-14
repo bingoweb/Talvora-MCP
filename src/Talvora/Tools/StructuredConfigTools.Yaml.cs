@@ -28,6 +28,7 @@ public static partial class StructuredConfigTools
         bool indented = true,
         CancellationToken cancellationToken = default)
     {
+        ProtectedSecretPaths.ThrowIfProtected(path);
         var fullPath = Path.GetFullPath(path);
         var root = await ParseYamlFileAsync(fullPath, cancellationToken);
         return BuildGetResponse(
