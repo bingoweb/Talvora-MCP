@@ -120,11 +120,31 @@ public static class NoteTools
                 throw new ArgumentException("mode create ya da append olmalı.", nameof(mode));
         }
 
+        // D48: folders this note creates get the vault owner too (the service writes as LocalSystem).
+        var createdDirectories = new List<string>();
+        for (var directory = Path.GetDirectoryName(fullPath);
+             directory is not null && directory.Length > root.Length && !Directory.Exists(directory);
+             directory = Path.GetDirectoryName(directory))
+        {
+            createdDirectories.Add(directory);
+        }
+
         await AtomicFile.WriteAllTextAsync(
             fullPath,
             text,
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
             cancellationToken: cancellationToken);
+
+        // D48: the note belongs to the vault's owner, as source edits keep their workspace owner.
+        if (Talvora.SourceEditing.FileOwnership.TryGetOwner(root) is { } owner)
+        {
+            foreach (var directory in createdDirectories)
+            {
+                Talvora.SourceEditing.FileOwnership.TrySetOwner(directory, owner);
+            }
+
+            Talvora.SourceEditing.FileOwnership.TrySetOwner(fullPath, owner);
+        }
 
         return new TalvoraNoteWriteResponse(Path.GetRelativePath(root, fullPath), mode, content.Length);
     }

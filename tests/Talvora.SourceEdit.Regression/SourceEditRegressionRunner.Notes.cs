@@ -22,6 +22,14 @@ internal static partial class SourceEditRegressionRunner
                 await File.ReadAllTextAsync(Path.Combine(root, "40 Oturum Notları", "İlk not.md")),
                 "OB1: append adds after the existing text.");
 
+            // D48: a note in a new folder; the folder and the note carry the vault's owner.
+            await NoteTools.WriteAsync(root, "Yeni klasör/Alt/not.md", "# Not\n", "create");
+            var vaultOwner = Talvora.SourceEditing.FileOwnership.TryGetOwner(root);
+            Assert(vaultOwner is not null &&
+                vaultOwner == Talvora.SourceEditing.FileOwnership.TryGetOwner(Path.Combine(root, "Yeni klasör")) &&
+                vaultOwner == Talvora.SourceEditing.FileOwnership.TryGetOwner(Path.Combine(root, "Yeni klasör", "Alt", "not.md")),
+                "D48: a new note and its new folders belong to the vault owner.");
+
             await AssertNoteRefusedAsync(root, "a.md", "api_key=abcdef123456", "create", "OB1: secrets are refused.");
             await AssertNoteRefusedAsync(root, "b.md", "şifre: Gizli123", "create", "OB1: Turkish password lines are refused.");
             await AssertNoteRefusedAsync(root, "c.md", "-----BEGIN OPENSSH PRIVATE KEY-----", "create", "OB1: private keys are refused.");

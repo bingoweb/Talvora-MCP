@@ -1,14 +1,12 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T09:52:36.294Z",
-  "scope": "D78: GitHub Actions run concurrency and cancelled-run build-step validation",
+  "verifiedAtUtc": "2026-11-14T11:51:42.000Z",
+  "scope": "D48: vault notes and the folders they create keep the vault owner",
   "libraries": [
     {
-      "libraryId": "/websites/github_en_actions",
-      "verified": "2026-11-14 D78: GitHub Actions concurrency prevents simultaneous runs in one group, and only cancel-in-progress true cancels a running run (query: \"GitHub Actions concurrency cancel-in-progress false queues runs of the same group\")"
+      "libraryId": "/dotnet/docs",
+      "verified": "2026-11-14 D48: on .NET a file's or directory's security descriptor is read with FileSystemAclExtensions.GetAccessControl and written back with SetAccessControl (FileInfo/FileSecurity, DirectoryInfo/DirectorySecurity); FileOwnership already uses this pattern for SetOwner (query: \"FileSystemSecurity.SetOwner SecurityIdentifier set file and directory owner with FileInfo.SetAccessControl on Windows .NET 10\")"
     }
   ],
-  "vendorSources": [
-    "https://cli.github.com/manual/gh_run_view"
-  ]
+  "vendorSources": []
 }
