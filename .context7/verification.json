@@ -1,12 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T13:25:21.000Z",
-  "scope": "D81: the worklog history list never scrolls sideways; a long task note is trimmed in its card",
-  "libraries": [
-    {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-14 D81: HorizontalScrollBarVisibility is an attached property on ListBox, and Disabled (not Auto) is the recommended value; with it the items get the viewport width, so the card's TextTrimming can apply (query: \"WPF ListBox ScrollViewer.HorizontalScrollBarVisibility Disabled constrains item width so TextTrimming works\")"
-    }
-  ],
+  "verifiedAtUtc": "2026-11-14T14:23:29.578Z",
+  "scope": "D79: finished-form titles for tools using their MCP title as fallback",
+  "libraries": [],
+  "noLookup": "D79: Talvora's own title table; no external APIs were needed.",
   "vendorSources": []
 }

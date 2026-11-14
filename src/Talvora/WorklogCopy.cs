@@ -26,6 +26,11 @@ internal static class WorklogCopy
     internal static readonly WorklogTitles GitStatus = new("Çalışma alanı denetleniyor", "Çalışma alanı denetlendi", "Çalışma alanı denetlenemedi");
     internal static readonly WorklogTitles GitLog = new("Geçmiş okunuyor", "Geçmiş okundu", "Geçmiş okunamadı");
     internal static readonly WorklogTitles OtherGit = new("Depo işlemi yapılıyor", "Depo işlemi tamamlandı", "Depo işlemi tamamlanamadı");
+    internal static readonly WorklogTitles AgentBrief = new("Proje talimatları alınıyor", "Proje talimatları alındı", "Proje talimatları alınamadı");
+    internal static readonly WorklogTitles GhRun = new("GitHub komutu çalışıyor", "GitHub komutu tamamlandı", "GitHub komutu hata ile bitti");
+    internal static readonly WorklogTitles Ping = new("Bağlantı denetleniyor", "Bağlantı denetlendi", "Bağlantı denetlenemedi");
+    internal static readonly WorklogTitles NoteWrite = new("Kasaya not yazılıyor", "Kasaya not yazıldı", "Kasaya not yazılamadı");
+    internal static readonly WorklogTitles WorkspaceInspect = new("Proje inceleniyor", "Proje incelendi", "Proje incelenemedi");
     internal static readonly WorklogTitles InlineCommand = new("Komut çalışıyor", "Komut tamamlandı", "Komut hata ile bitti");
     internal static readonly WorklogTitles TestScript = new("Test betiği çalışıyor", "Test betiği geçti", "Test betiği başarısız");
     internal static readonly WorklogTitles Service = new("Servis işlemi yapılıyor", "Servis işlemi tamamlandı", "Servis istenen duruma geçmedi");

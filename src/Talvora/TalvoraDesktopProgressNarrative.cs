@@ -45,6 +45,31 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             return new(OperationCategory.GenericExecution, WorklogCopy.Claude);
         }
 
+        if (normalized == "agent_brief")
+        {
+            return new(OperationCategory.GenericExecution, WorklogCopy.AgentBrief);
+        }
+        if (normalized == "gh_run")
+        {
+            var subject = WorklogSubject.GhSubcommand(GetArgumentArray(arguments, "arguments"));
+            return new(OperationCategory.ProcessOperation,
+                WorklogSubject.WithSubject(WorklogCopy.GhRun, subject), subject);
+        }
+        if (normalized == "ping")
+        {
+            return new(OperationCategory.GenericExecution, WorklogCopy.Ping);
+        }
+        if (normalized == "note_write")
+        {
+            var subject = WorklogSubject.FileName(WorklogSubject.Text(arguments, "path"));
+            return new(OperationCategory.GenericExecution,
+                WorklogSubject.WithSubject(WorklogCopy.NoteWrite, subject), subject);
+        }
+        if (normalized == "workspace_inspect")
+        {
+            return new(OperationCategory.GenericExecution, WorklogCopy.WorkspaceInspect);
+        }
+
         if (normalized == "run_powershell")
         {
             var script = GetArgumentText(arguments, "script");

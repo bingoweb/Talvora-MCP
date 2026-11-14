@@ -286,8 +286,17 @@ internal static partial class WorklogSubject
     internal static string? FileName(string? path) =>
         string.IsNullOrWhiteSpace(path) ? null : Shorten(Path.GetFileName(path.Replace('\\', '/').TrimEnd('/')));
 
+    internal static string? GhSubcommand(IReadOnlyList<string> arguments) =>
+        Shorten(string.Join(' ', arguments
+            .Where(argument => !argument.StartsWith("-", StringComparison.Ordinal) &&
+                GhWordPattern().IsMatch(argument))
+            .Take(2)));
+
     internal static string? Host(string? url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : null;
+
+    [GeneratedRegex(@"^\p{L}+(?:-\p{L}+)*$", RegexOptions.CultureInvariant)]
+    private static partial Regex GhWordPattern();
 
     [GeneratedRegex(@"(?<![\w.-])(?<name>[A-Za-z0-9._-]+\.ps1)\b", RegexOptions.CultureInvariant)]
     private static partial Regex ScriptPattern();
