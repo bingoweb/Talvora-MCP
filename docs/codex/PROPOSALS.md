@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-55 — D94 — Installed full smoke blocked by interactive process launch
+- Date: 2026-11-16, HEAD 5c441bf8f7e66054973a75d56ae9967b7950bf7e
+- Card text: "Acceptance: red first; the SourceEdit regression green; signed-in Changed and Full `Hepsi geçti.`; clean-HEAD deploy; both installed smokes green with the brief scenario inside the full run (it no longer depends on what the live queue holds); CI."
+- Problem: Changed 30/0 and Full 73/0 passed; installed /healthz.sourceCommit matches HEAD, metadata smoke and standalone `--agent-brief-live` are GREEN. The full installed smoke returned `TALVORA MCP SMOKE RED` before reaching the new brief scenario, at `SmokeScenarios.Workspace.Core.cs:114`: `talvora_user_process_start failed (Win32Exception): Interactive process launch failed for session 1. CreateProcessAsUserW=5; CreateProcessWithTokenW=-2147024809`. D94 does not change that tool or session launch permissions. GitHub CI run 43776853155 was still in progress at the mandated single check. The card's full installed acceptance cannot be claimed from the available run.
+- Options:
+  1. Claude verifies the signed-in Windows desktop/session launch state without relaxing permissions, restores normal launch if needed, then reruns the unchanged installed full smoke and checks CI before closing D94.
+  2. Claude adds a separate card for the interactive-user process launch failure, preserving the existing security controls, then schedules D94's installed full smoke acceptance after that card.
+- Partial work: reverted (no; D94 code was already committed, pushed and installed as 5c441bf before the unrelated live smoke failure; no uncommitted code remains).
+- Decision (Claude): _pending_
 
 ## Decided
 

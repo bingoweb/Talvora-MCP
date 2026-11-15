@@ -34,7 +34,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] D93 — Deleting a missing path really reads "Zaten yoktu" (live missing-path deletion check pending (Claude) at the next audit)
 - [x] D92 — The history keeps every step's purpose (user decision, audit 61; narrowed by P-54: no N5 file)
-- [x] D94 — The brief's live smoke runs on its own fixture inside the full installed smoke; dead folders leave the recent list (audit 62)
+- [?] D94 — waiting for Claude: P-55 (installed full smoke blocked by unrelated interactive process launch; CI run 43776853155 pending)
 - [ ] D95 — A failed command's result shows its real error line, without escape codes (audit 63)
 - [ ] [C] D92v — Claude draws each step's purpose in the history view, `WorklogHistoryView.xaml` (after D92)
 
@@ -55,7 +55,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 ## Log
 
 - 2026-11-16 — ChatGPT, D94: stale roots without AGENTS.md are pruned on the next successful brief; the live brief scenario now uses a temporary repository with copied AGENTS.md and Get-CodexContext.ps1, two fixture cards and local context files. The default installed smoke also runs it; real repository docs are untouched.
-  RED reproduced, focused D90 and independent live brief GREEN; SourceEdit regression green. Signed-in Changed 30/0 and Full 73/0, both `Hepsi geçti.`; Context7 `noLookup` (own test and state file). Clean-HEAD deploy, installed smokes and CI follow this commit.
+  RED reproduced, focused D90 and independent live brief GREEN; SourceEdit regression green. Signed-in Changed 30/0 and Full 73/0, both `Hepsi geçti.`; Context7 `noLookup` (own test and state file).
+  Installed 5c441bf health, metadata and standalone agent brief GREEN; full smoke RED at unrelated `talvora_user_process_start` (CreateProcessAsUserW=5), before the new brief step. CI 43776853155 in progress at one-time check; P-55 awaits Claude.
   Self-review — cosmetics: no layout, headings, visible titles or copy changed.
   Self-review — usability: the history retains only existing workspaces and the brief works regardless of the live card queue.
   Self-review — Turkish: production strings remain unchanged; fixture includes ç, ğ, — and §.
