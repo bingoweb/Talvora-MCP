@@ -194,7 +194,8 @@ public static class AgentBriefTools
             var canonicalRoot = existing.FirstOrDefault(entry =>
                 string.Equals(entry.Root, root, StringComparison.OrdinalIgnoreCase))?.Root ?? root;
             var recent = existing.Where(entry =>
-                    !string.Equals(entry.Root, root, StringComparison.OrdinalIgnoreCase))
+                    !string.Equals(entry.Root, root, StringComparison.OrdinalIgnoreCase) &&
+                    File.Exists(Path.Combine(entry.Root, "AGENTS.md")))
                 .Take(MaxRecentWorkspaces - 1)
                 .ToList();
             recent.Insert(0, new RecentWorkspace(canonicalRoot, DateTimeOffset.UtcNow));

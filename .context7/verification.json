@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-15T23:24:23.357Z",
-  "scope": "D92: preserve the purpose of each worklog step in timeline and stored history rows",
+  "verifiedAtUtc": "2026-11-15T23:43:42.051Z",
+  "scope": "D94: self-contained agent brief live smoke and pruning stale recent workspace roots",
   "libraries": [],
-  "noLookup": "D92: Talvora's own records; no external API calls or version-sensitive dependencies.",
+  "noLookup": "D94: own test fixture and recent-workspace state file; no external API lookup is needed.",
   "vendorSources": []
 }

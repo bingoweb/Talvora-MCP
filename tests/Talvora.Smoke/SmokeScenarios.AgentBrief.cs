@@ -6,6 +6,45 @@ internal static partial class SmokeScenarios
     internal static async Task RunAgentBriefLiveAsync(
         string serverRoot, string repositoryPath)
     {
+        var sourceRoot = Path.GetFullPath(repositoryPath);
+        var fixtureRoot = Path.Combine(Path.GetTempPath(),
+            "Talvora-AgentBrief-Fixture-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var scripts = Path.Combine(fixtureRoot, "scripts");
+            var docs = Path.Combine(fixtureRoot, "docs", "codex");
+            Directory.CreateDirectory(scripts);
+            Directory.CreateDirectory(docs);
+            File.Copy(Path.Combine(sourceRoot, "AGENTS.md"),
+                Path.Combine(fixtureRoot, "AGENTS.md"));
+            File.Copy(Path.Combine(sourceRoot, "scripts", "Get-CodexContext.ps1"),
+                Path.Combine(scripts, "Get-CodexContext.ps1"));
+            File.WriteAllText(Path.Combine(docs, "STATUS.md"),
+                "# Test fixture\n\n## In progress\n\nIn progress: (none)\n\n" +
+                "## Agent queue\n\n- [ ] D94 — Fixture ç ğ — §1\n\n" +
+                "## User queue\n\n(none)\n\n## Log\n\n- Fixture test session.\n");
+            File.WriteAllText(Path.Combine(docs, "ROADMAP.md"),
+                "### D94 — Fixture ç ğ — §1\n\n" +
+                "**Why:** A live brief uses its own repository fixture.\n\n" +
+                "### A2 — Explicit fixture ç ğ — §2\n\n" +
+                "**Why:** An explicit card is resolved from this fixture.\n");
+            File.WriteAllText(Path.Combine(docs, "QUEUE-ADDITIONS.md"),
+                "## Pending\n\n(none)\n");
+            File.WriteAllText(Path.Combine(docs, "PROPOSALS.md"),
+                "## Open\n\n(none)\n");
+
+            await RunAgentBriefFixtureAsync(serverRoot, fixtureRoot);
+        }
+        finally
+        {
+            if (Directory.Exists(fixtureRoot))
+                Directory.Delete(fixtureRoot, recursive: true);
+        }
+    }
+
+    private static async Task RunAgentBriefFixtureAsync(
+        string serverRoot, string repositoryPath)
+    {
         await using var client = await McpClient.CreateAsync(
             new HttpClientTransport(new HttpClientTransportOptions
             {

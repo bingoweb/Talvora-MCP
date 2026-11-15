@@ -328,6 +328,10 @@ await SmokeScenarios.RunApplicationDevelopmentAsync(
     smokeId,
     repositoryPath);
 
+var agentBriefServerRoot = endpoint.EndsWith("/mcp", StringComparison.Ordinal)
+    ? endpoint[..^"/mcp".Length] : endpoint;
+await SmokeScenarios.RunAgentBriefLiveAsync(agentBriefServerRoot, repositoryPath);
+
 Console.WriteLine("TALVORA MCP SMOKE GREEN");
 Console.WriteLine($"endpoint={endpoint}");
 Console.WriteLine($"tools={string.Join(',', required)}");

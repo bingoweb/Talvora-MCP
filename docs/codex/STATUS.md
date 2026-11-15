@@ -34,7 +34,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] D93 — Deleting a missing path really reads "Zaten yoktu" (live missing-path deletion check pending (Claude) at the next audit)
 - [x] D92 — The history keeps every step's purpose (user decision, audit 61; narrowed by P-54: no N5 file)
-- [ ] D94 — The brief's live smoke runs on its own fixture inside the full installed smoke; dead folders leave the recent list (audit 62)
+- [x] D94 — The brief's live smoke runs on its own fixture inside the full installed smoke; dead folders leave the recent list (audit 62)
 - [ ] D95 — A failed command's result shows its real error line, without escape codes (audit 63)
 - [ ] [C] D92v — Claude draws each step's purpose in the history view, `WorklogHistoryView.xaml` (after D92)
 
@@ -54,6 +54,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-16 — ChatGPT, D94: stale roots without AGENTS.md are pruned on the next successful brief; the live brief scenario now uses a temporary repository with copied AGENTS.md and Get-CodexContext.ps1, two fixture cards and local context files. The default installed smoke also runs it; real repository docs are untouched.
+  RED reproduced, focused D90 and independent live brief GREEN; SourceEdit regression green. Signed-in Changed 30/0 and Full 73/0, both `Hepsi geçti.`; Context7 `noLookup` (own test and state file). Clean-HEAD deploy, installed smokes and CI follow this commit.
+  Self-review — cosmetics: no layout, headings, visible titles or copy changed.
+  Self-review — usability: the history retains only existing workspaces and the brief works regardless of the live card queue.
+  Self-review — Turkish: production strings remain unchanged; fixture includes ç, ğ, — and §.
+  Self-review — correctness and security: newest-first, ten roots, case-insensitive keys and atomic writes remain; temporary fixtures are cleaned in finally, with no writes to repository docs.
 - 2026-11-16 — ChatGPT, D92: every completed step's normalized purpose is stored on its own timeline entry, persisted with redaction in JSONL and exposed on `TimelineRows`; legacy entries read with null. Added three-step notifier/history test, `--d92-only` and full registration.
   RED reproduced; focused D92, full Notification, ModernizationPolicy and ControlCenter smoke green. Signed-in Changed 29/0 and Full 73/0, both `Hepsi geçti.`; Context7 `noLookup` (own records). Clean-HEAD deployment, both installed smokes and CI follow this commit.
   Self-review — cosmetics: no visual files, layouts, motion or existing titles changed; D92v stays with Claude.

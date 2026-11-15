@@ -58,6 +58,15 @@ internal static partial class SourceEditRegressionRunner
             Assert(afterDeletion == prefix + $" Workspaces briefed recently: {ordinary}.",
                 "D90: an AGENTS.md that was later deleted must disappear from suggestions: " + afterDeletion);
 
+            await AgentBriefTools.Get(ordinary);
+            using (var document = JsonDocument.Parse(File.ReadAllText(historyFile)))
+            {
+                var roots = document.RootElement.EnumerateArray()
+                    .Select(entry => entry.GetProperty("root").GetString()).ToArray();
+                Assert(!roots.Any(root => string.Equals(root, mixed, StringComparison.OrdinalIgnoreCase)),
+                    "D94 RED: a successful brief must remove previously recorded roots without AGENTS.md.");
+            }
+
             var recent = new List<string>();
             for (var i = 0; i < 12; i++)
             {
