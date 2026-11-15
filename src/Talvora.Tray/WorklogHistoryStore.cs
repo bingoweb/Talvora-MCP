@@ -54,7 +54,7 @@ internal sealed record WorklogHistorySession(
     [JsonIgnore]
     public IReadOnlyList<WorklogHistoryTimelineRow> TimelineRows =>
         Timeline.Select(entry => new WorklogHistoryTimelineRow(
-            entry.TimestampUtc.ToLocalTime().ToString("HH:mm:ss"), entry.Label)).ToArray();
+            entry.TimestampUtc.ToLocalTime().ToString("HH:mm:ss"), entry.Label, entry.Purpose)).ToArray();
 
     [JsonIgnore]
     public bool HasCodePreview => !string.IsNullOrWhiteSpace(Evidence?.CodePreview);
@@ -152,7 +152,7 @@ internal sealed record WorklogHistorySession(
         SessionId + "@" + StartedAtUtc.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
 }
 
-internal sealed record WorklogHistoryTimelineRow(string LocalTime, string Label);
+internal sealed record WorklogHistoryTimelineRow(string LocalTime, string Label, string? Purpose = null);
 
 /// <summary>Single-user, bounded JSONL store. Only completed sessions enter history.</summary>
 internal sealed class WorklogHistoryStore
@@ -225,7 +225,11 @@ internal sealed class WorklogHistoryStore
                         Places = change.Places.Select(place => Redact(place)!).ToArray(),
                     }).ToArray(),
                 },
-                frame.Timeline.Select(row => row with { Label = Redact(row.Label)! }).ToArray(),
+                frame.Timeline.Select(row => row with
+                {
+                    Label = Redact(row.Label)!,
+                    Purpose = Redact(row.Purpose),
+                }).ToArray(),
                 frame.Totals,
                 message.Evidence is { } evidence ? evidence with
                 {

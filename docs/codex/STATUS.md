@@ -33,7 +33,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [~] D93 — Deleting a missing path really reads "Zaten yoktu" (live missing-path deletion check pending (Claude) at the next audit)
-- [ ] D92 — The history keeps every step's purpose (user decision, audit 61; narrowed by P-54: no N5 file)
+- [x] D92 — The history keeps every step's purpose (user decision, audit 61; narrowed by P-54: no N5 file)
 - [ ] D94 — The brief's live smoke runs on its own fixture inside the full installed smoke; dead folders leave the recent list (audit 62)
 - [ ] D95 — A failed command's result shows its real error line, without escape codes (audit 63)
 - [ ] [C] D92v — Claude draws each step's purpose in the history view, `WorklogHistoryView.xaml` (after D92)
@@ -54,6 +54,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-16 — ChatGPT, D92: every completed step's normalized purpose is stored on its own timeline entry, persisted with redaction in JSONL and exposed on `TimelineRows`; legacy entries read with null. Added three-step notifier/history test, `--d92-only` and full registration.
+  RED reproduced; focused D92, full Notification, ModernizationPolicy and ControlCenter smoke green. Signed-in Changed 29/0 and Full 73/0, both `Hepsi geçti.`; Context7 `noLookup` (own records). Clean-HEAD deployment, both installed smokes and CI follow this commit.
+  Self-review — cosmetics: no visual files, layouts, motion or existing titles changed; D92v stays with Claude.
+  Self-review — usability: separate purposes survive multiple steps, a saved session and `TimelineRows`; old records remain readable.
+  Self-review — Turkish: existing copy is unchanged; the sample purposes use correct Turkish characters.
+  Self-review — correctness and security: missing purposes remain null, serialized purposes are redacted and existing history retention is unchanged.
 - 2026-11-16 — ChatGPT, D93: `ResultDeletedIsFalse` reads `deleted=false` from the first JSON-object text block when structured content is absent; other result paths remain. RED reproduced; D91 focused and full Notification regression green.
   Signed-in Changed 17/0 and Full 73/0, both `Hepsi geçti.`; Context7 `noLookup` (own worklog title logic). Clean-HEAD deploy, installed smokes and GitHub CI follow this single commit; Claude checks a real missing-path deletion at the next audit.
   Self-review — cosmetics: only the approved success title is selected; no layout or styling changes.

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-15T23:05:39.676Z",
-  "scope": "D93: missing-path delete title reads JSON false from the first object in CallToolResult text content",
+  "verifiedAtUtc": "2026-11-15T23:24:23.357Z",
+  "scope": "D92: preserve the purpose of each worklog step in timeline and stored history rows",
   "libraries": [],
-  "noLookup": "D93: Talvora's own worklog title logic; no external API calls or version-sensitive dependencies.",
+  "noLookup": "D92: Talvora's own records; no external API calls or version-sensitive dependencies.",
   "vendorSources": []
 }

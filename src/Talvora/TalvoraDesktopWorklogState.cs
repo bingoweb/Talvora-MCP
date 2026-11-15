@@ -229,7 +229,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 checkedKind == WorklogSubject.OperationKind.Tests)
                 session.LastTests = kind == DesktopProgressKind.Completed ? WorklogCheckState.Succeeded : WorklogCheckState.Failed;
             session.Timeline.Insert(0, new WorklogTimelineEntry(
-                session.LastActivityUtc, ToWorklogState(kind), title, Math.Max(0, elapsed.TotalSeconds)));
+                session.LastActivityUtc, ToWorklogState(kind), title, Math.Max(0, elapsed.TotalSeconds),
+                ended.Narrative.Purpose));
             if (session.Timeline.Count > DesktopProgressProtocol.MaximumTimelineEntries)
             {
                 session.Timeline.RemoveAt(session.Timeline.Count - 1);

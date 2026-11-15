@@ -105,7 +105,8 @@ public sealed record WorklogOutcome(
 
 // WL1: DurationSeconds is the measured stopwatch time of that tool call; null when nothing was measured (never estimated).
 public sealed record WorklogTimelineEntry(
-    DateTimeOffset TimestampUtc, WorklogStepState State, string Label, double? DurationSeconds = null);
+    DateTimeOffset TimestampUtc, WorklogStepState State, string Label, double? DurationSeconds = null,
+    string? Purpose = null);
 
 public sealed record WorklogTotals(
     int Steps, double SessionSeconds, int FilesChanged,
