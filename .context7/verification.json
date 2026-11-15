@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-15T10:07:25.269Z",
-  "scope": "D91: successful delete worklog title reports already missing when the tool returns deleted false",
+  "verifiedAtUtc": "2026-11-15T23:05:39.676Z",
+  "scope": "D93: missing-path delete title reads JSON false from the first object in CallToolResult text content",
   "libraries": [],
-  "noLookup": "D91: Talvora's own worklog title selection and tool result field; no external API changes.",
+  "noLookup": "D93: Talvora's own worklog title logic; no external API calls or version-sensitive dependencies.",
   "vendorSources": []
 }

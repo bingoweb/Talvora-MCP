@@ -235,6 +235,24 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             var json = result is CallToolResult { StructuredContent: JsonElement structured }
                 ? structured
                 : JsonSerializer.SerializeToElement(result);
+            if (result is CallToolResult { StructuredContent: null } callToolResult)
+            {
+                foreach (var block in callToolResult.Content.OfType<TextContentBlock>())
+                {
+                    try
+                    {
+                        using var document = JsonDocument.Parse(block.Text);
+                        if (document.RootElement.ValueKind != JsonValueKind.Object)
+                            continue;
+                        json = document.RootElement.Clone();
+                        break;
+                    }
+                    catch (JsonException)
+                    {
+                        // Non-JSON text cannot report that deletion was skipped.
+                    }
+                }
+            }
             return json.ValueKind == JsonValueKind.Object &&
                 TryGetPropertyIgnoreCase(json, "deleted", out var deleted) &&
                 deleted.ValueKind == JsonValueKind.False;

@@ -33,6 +33,30 @@ internal static partial class Program
                         new { path, deleted = false, kind = "missing" }),
                 },
                 "Zaten yoktu · " + missingName),
+            new D91Case("text content missing", path,
+                new CallToolResult
+                {
+                    Content = [new TextContentBlock
+                    {
+                        Text = JsonSerializer.Serialize(new { path, deleted = false, kind = "missing" }),
+                    }],
+                },
+                "Zaten yoktu · " + missingName),
+            new D91Case("text content deleted true", path,
+                new CallToolResult
+                {
+                    Content = [new TextContentBlock
+                    {
+                        Text = JsonSerializer.Serialize(new { path, deleted = true, kind = "file" }),
+                    }],
+                },
+                "Silindi · " + missingName),
+            new D91Case("text content not JSON", path,
+                new CallToolResult
+                {
+                    Content = [new TextContentBlock { Text = "not JSON" }],
+                },
+                "Silindi · " + missingName),
         };
 
         var builder = typeof(TalvoraDesktopProgressNotifier).GetMethod(
