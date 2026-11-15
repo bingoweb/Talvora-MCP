@@ -31,6 +31,48 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-11-16 (63) · range `audit/2026-11-15-62..7d3a5c6` (empty: no agent work since audit 62) · D95 for the agent
+
+### D95 — A failed command's result shows its real error line
+
+**Why:** audit 63, measured on the installed 8ff0b07. For a failed `talvora_run_powershell` or `talvora_user_run` step, `BuildTerminalEvidence` (`TalvoraDesktopProgressEvidence.cs`, the `run_powershell`/`user_run` branch added by WL5) puts the first non-empty line of `standardError` into "Sonuç" and into the evidence summary. Real outputs put something else there. A real `talvora_user_run` of `pwsh.exe -NoProfile -File tests/Throw-Test.ps1` (a script ending in `throw 'D93 RED: …'`) stored "Sonuç: `ESC[31;1m`Exception: `ESC[0m`C:\…\tests\Throw-Test.ps1:3`ESC[0m`" in the history: PowerShell 7 writes its error view to the redirected stderr with ANSI colour sequences, its first line is the script location, and the thrown message is its last line. Python's unittest writes every test line to stderr, so the stored record of 2026-11-14 13:55 reads "Test betiği başarısız · Test-Stok.ps1" with "Sonuç: test_adet_eklenir (…) ... ok", a passing test. cargo, uv and git also print progress lines to stderr before the error. DESIGN-WORKLOG §6.4 asks for "the first line of the thrown message" (test script) and the "first error line" (inline command). WL5's test used a made-up stderr (`"Betiğin ilk hata satırı\n   at line 2\n"`), never the shape PowerShell really writes, so every red-first run of a PowerShell test shows escape codes and a path on the live card.
+
+**Files:** `src/Talvora/TalvoraDesktopProgressEvidence.cs` (the failed `run_powershell`/`user_run` branch of `BuildTerminalEvidence` and one new private helper), `tests/Talvora.Notification.Regression/Program.D95.cs` (new), `tests/Talvora.Notification.Regression/Program.cs` (`--d95-only` and the whole run, registered like D91), `docs/codex/STATUS.md`, `.context7/verification.json`. **Tests that read these files:** the whole Notification regression (WL5 "PowerShell failure" and "D73 cmd inline failure", N9, D79 and D83 build one-line stderr samples; they keep their results), `tests/ModernizationPolicyRegression.ps1` (four text checks on `TalvoraDesktopProgressEvidence.cs`: `RedactSensitivePreviewLine`, no `MaximumPreviewLines`, `MaximumPreviewCharacters = DesktopProgressProtocol.MaximumCodeCharacters`, `BuildStructuredEditEvidence`; keep them true).
+
+**Do:**
+1. Red first: `Program.D95.cs` runs failed steps through the notifier the way WL5's `Check` does, each as `talvora_user_run` with executable `pwsh.exe`, arguments `-NoProfile -File tests/Throw-Test.ps1` and `exitCode = 1`, with these `standardError` texts (C# literals, copy them exactly):
+   - a. PowerShell's error view as measured:
+     ```
+     "\u001B[31;1mException: \u001B[0mC:\\repo\\tests\\Throw-Test.ps1:3\u001B[0m\r\n\u001B[31;1m\u001B[0m\u001B[36;1mLine |\u001B[0m\r\n\u001B[31;1m\u001B[0m\u001B[36;1m\u001B[36;1m   3 | \u001B[0m \u001B[36;1mthrow 'D95 RED: örnek hata'\u001B[0m\r\n\u001B[31;1m\u001B[0m\u001B[36;1m\u001B[36;1m\u001B[0m\u001B[36;1m\u001B[0m\u001B[36;1m     | \u001B[31;1m ~~~~~~~~~~~~~~~~~~~~~~~~~~~\u001B[0m\r\n\u001B[31;1m\u001B[0m\u001B[36;1m\u001B[36;1m\u001B[0m\u001B[36;1m\u001B[0m\u001B[36;1m\u001B[31;1m\u001B[31;1m\u001B[36;1m     | \u001B[31;1mD95 RED: örnek hata\u001B[0m\r\n"
+     ```
+     → title "Test betiği başarısız · Throw-Test.ps1", `Evidence.Result` exactly "Sonuç: D95 RED: örnek hata", and no U+001B in `Evidence.Result` or `Evidence.Summary`.
+   - b. Text a with every `\u001B[…m` sequence removed → the same result.
+   - c. Python unittest as measured:
+     ```
+     "test_a_ok (__main__.T.test_a_ok) ... ok\ntest_b_stock (__main__.T.test_b_stock) ... FAIL\n\n======================================================================\nFAIL: test_b_stock (__main__.T.test_b_stock)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"<string>\", line 4, in test_b_stock\nAssertionError: -1 != 0\n\n----------------------------------------------------------------------\nRan 2 tests in 0.001s\n\nFAILED (failures=1)\n"
+     ```
+     → "Sonuç: test_b_stock (__main__.T.test_b_stock) ... FAIL".
+   - d. Text c followed by text a (unittest, then the script throws) → "Sonuç: D95 RED: örnek hata".
+   - e. Progress before the error:
+     ```
+     "   Compiling demo v0.1.0 (C:\\repo)\nerror[E0425]: cannot find value `x` in this scope\nerror: could not compile `demo` (bin \"demo\") due to 1 previous error\n"
+     ```
+     → "Sonuç: error[E0425]: cannot find value `x` in this scope".
+   - f. `"step one\nstep two\n"` → "Sonuç: step two".
+   All six fail today, because the first line is taken.
+2. In that branch, choose the line in this order, then redact and limit it exactly as today:
+   1. Remove ANSI CSI sequences from the whole `standardError` with the pattern `\x1B\[[0-?]*[ -/]*[@-~]`, split it into lines, trim each line and drop empty ones.
+   2. PowerShell error view: when one line equals `Line |`, take the line right after the last line matching `^\|\s*~+$`, without its leading `|` and the spaces after it (the first line of the thrown message). When there is no such line, or it is empty, go on with 3.
+   3. Otherwise the first line that matches `\b(?:error|errors|fail|failed|failure|failures|fatal|exception)\b` (ignore case, culture invariant) or contains `hata`, `Hata`, `HATA`, `başarısız`, `Başarısız` or `BAŞARISIZ`, and does not end with `... ok`.
+   4. Otherwise the last line.
+   Claude checked this order on the six texts above and on the existing one-line samples ("Betiğin ilk hata satırı", "command failed", "x", "failure", "fixture failure"): each gives the expected line.
+
+**Don't:** strip escape codes or change text anywhere else (live lines, code previews, successful results, other tools), change any title, the plain reason (`WorklogFailureClassifier`, DESIGN-WORKLOG §5.3), `LimitEvidenceText`'s limit or the redaction, or any of the eight N5 files pinned by `docs/codex/reference/worklog-phosphor/SHA256SUMS.txt`.
+
+**Context7:** `Context7: gerekmiyor (Talvora's own worklog text; the real output samples are in this card)` → `noLookup`.
+
+**Acceptance:** red first; the Notification regression and `ModernizationPolicyRegression.ps1` green; signed-in Changed and Full `Hepsi geçti.`; clean-HEAD deploy and both installed smokes; CI. Mark `[~] live check pending (Claude)`: your own session reaches the history file only after 90 s without calls, so Claude runs a failing test script through the installed service at the next audit and reads the stored "Sonuç".
+
 ### Audit 2026-11-15 (62) · range `audit/2026-11-15-61..9c3537e` (D90, D91, P-54 by ChatGPT) · D93, D94 for the agent; D92 narrowed by P-54
 
 ### D93 — Deleting a missing path really reads "Zaten yoktu"
