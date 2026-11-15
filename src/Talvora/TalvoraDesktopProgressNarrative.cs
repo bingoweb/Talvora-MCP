@@ -208,6 +208,13 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         string tool, IDictionary<string, JsonElement>? arguments, T result,
         string original)
     {
+        if (tool == "delete" && ResultDeletedIsFalse(result) &&
+            original.StartsWith(WorklogCopy.FileDelete.Succeeded, StringComparison.Ordinal))
+        {
+            // Keep the exact existing subject suffix, if any.
+            return WorklogCopy.FileDeleteAlreadyMissing +
+                original[WorklogCopy.FileDelete.Succeeded.Length..];
+        }
         if (tool != "git_run" ||
             GitArgumentParser.GetSubcommand(GetArgumentArray(arguments, "arguments")) != "pull" ||
             !ResultContainsText(result, "Already up to date"))
@@ -219,6 +226,24 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         var target = operands.Length > 1 ? operands[0] + "/" + operands[1]
             : operands.FirstOrDefault();
         return string.IsNullOrWhiteSpace(target) ? "Zaten güncel" : "Zaten güncel · " + target;
+    }
+
+    private static bool ResultDeletedIsFalse<T>(T result)
+    {
+        try
+        {
+            var json = result is CallToolResult { StructuredContent: JsonElement structured }
+                ? structured
+                : JsonSerializer.SerializeToElement(result);
+            return json.ValueKind == JsonValueKind.Object &&
+                TryGetPropertyIgnoreCase(json, "deleted", out var deleted) &&
+                deleted.ValueKind == JsonValueKind.False;
+        }
+        catch (Exception)
+        {
+            // A missing or unreadable field cannot claim that deletion was skipped.
+            return false;
+        }
     }
 
     private static bool TryBuildDeferredCompletion<T>(

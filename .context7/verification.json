@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-15T09:50:39.922Z",
-  "scope": "D90: agent brief errors on missing AGENTS.md, returns other projects' instructions, records bounded recent workspaces atomically",
+  "verifiedAtUtc": "2026-11-15T10:07:25.269Z",
+  "scope": "D91: successful delete worklog title reports already missing when the tool returns deleted false",
   "libraries": [],
-  "noLookup": "D90: Talvora's own brief logic and JSON state file; no external framework or SDK behavior changes.",
+  "noLookup": "D91: Talvora's own worklog title selection and tool result field; no external API changes.",
   "vendorSources": []
 }

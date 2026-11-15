@@ -39,6 +39,7 @@ internal static class WorklogCopy
     internal static readonly WorklogTitles Package = new("Paket işlemi yapılıyor", "Paket işlemi tamamlandı", "Paket işlemi tamamlanamadı");
     internal static readonly WorklogTitles FileMutation = new("Dosyalar düzenleniyor", "Dosyalar düzenlendi", "Dosya işlemi tamamlanamadı");
     internal static readonly WorklogTitles FileDelete = new("Siliniyor", "Silindi", "Silinemedi");
+    internal const string FileDeleteAlreadyMissing = "Zaten yoktu";
     internal static readonly WorklogTitles FileCopy = new("Kopyalanıyor", "Kopyalandı", "Kopyalanamadı");
     internal static readonly WorklogTitles FileMove = new("Taşınıyor", "Taşındı", "Taşınamadı");
     internal static readonly WorklogTitles FileWrite = new("Dosya yazılıyor", "Dosya yazıldı", "Dosya yazılamadı");
