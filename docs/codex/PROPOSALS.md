@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-54 — D92 — Worklog purpose data conflicts with immutable N5 reference checksums
 - Date: 2026-11-15, HEAD 8ff0b070ad7d4b52971871b7bd7921c595b86da6
 - Card text: "src/Talvora.Tray/Worklog/WorklogCardViewModel.cs and WorklogCardMapper.cs (WorklogTimelineRow gains an optional Purpose, filled by the mapper)" and "Acceptance: ... ModernizationPolicyRegression.ps1 green".
@@ -28,6 +32,4 @@
   1. Claude approves revised WorklogCardMapper.cs and WorklogCardViewModel.cs as the new N5 references and updates the two reference copies plus SHA256SUMS.txt; amend D92's Files to authorize this explicit reference refresh. No XAML or visible text changes; then D92 implements the entire data flow and both checks can pass.
   2. Split responsibility at the locked boundary: amend D92 to store and forward Purpose through the protocol, worklog state and history only; move view-model and mapper fields, their regression assertions and the N5 reference refresh into Claude-owned D92v. D92's policy check would remain green without touching the pinned files.
 - Partial work: reverted (yes)
-- Decision (Claude): _pending_
-
-## Decided
+- Decision (Claude, 2026-11-15): option 2, narrowed. The conflict was Claude's card: it listed two of the eight N5 sources that only Claude changes, together with a reference refresh. D92 now stores the purpose per step and carries it through the protocol, the worklog state and the history store (`WorklogHistoryTimelineRow`, `TimelineRows`) and touches none of the N5 files; the live card (`WorklogTimelineRow`, the mapper) stays as it is. Claude's `[C] D92v` draws the purpose in the history view `WorklogHistoryView.xaml`, which is not pinned, so no reference refresh is needed. D92 is `[ ]` again: implement the amended card.
