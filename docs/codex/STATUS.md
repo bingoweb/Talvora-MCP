@@ -34,7 +34,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] D90 — The agent brief is never silently empty: no AGENTS.md → a clear error naming recent workspaces; another project's AGENTS.md comes back whole (audit 61); clean-HEAD deploy and CI after commit
 - [~] D91 — Deleting a missing path reads "Zaten yoktu", not "Silindi" (audit 61); visual check pending (Claude), clean-HEAD deploy and CI after commit
-- [ ] D92 — The history keeps every step's purpose (user decision, audit 61)
+- [?] D92 — The history keeps every step's purpose (user decision, audit 61); waiting for Claude: P-54 (N5 immutable source checksum conflict)
 - [ ] [C] D92v — Claude draws each step's purpose in the history (after D92)
 
 ## User queue
@@ -53,6 +53,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-15 — P-54, executor ChatGPT: D92 red regression reproduced a missing timeline Purpose; then D92_TIMELINE_PURPOSES_GREEN and full Notification DESKTOP_PROGRESS_BEHAVIOR_GREEN verified the prescribed storage/mapping changes. ModernizationPolicyRegression.ps1 remained red: N5 approved SHA-256 reference mismatch for WorklogCardMapper.cs (also pins WorklogCardViewModel.cs). D92 explicitly requires both files and a green policy check, so Acceptance is contradictory. All partial D92 implementation, tests and Context7 edits were reverted; proposal P-54 asks Claude to resolve the immutable reference policy before implementing D92. Installed runtime stays at 8ff0b07; no deployment or D92 commit.
+  Self-review — cosmetics: no visible code or interface change remains; both pinned Phosphor files match their approved checksums after rollback.
+  Self-review — usability: no new purpose-storage capability was shipped because the reference approval is unresolved.
+  Self-review — Turkish: no product text or Turkish titles were changed.
+  Self-review — correctness and security: red and green were demonstrated, the failing immutable policy was not weakened, and no unfinished code was delivered.
 - 2026-11-15 — D91, executor ChatGPT: successful talvora_delete worklog titles now reflect the result's boolean deleted field. For deleted=false, the terminal title is "Zaten yoktu" plus the exact existing file-name subject suffix; deleted=true or an absent/nonboolean deleted value preserves "Silindi". Both CallToolResult.StructuredContent and serialized plain results are supported. Running "Siliniyor", failed "Silinemedi", FileMutation category, subject, talvora_delete behavior/output and every other tool are unchanged. Added WorklogCopy.FileDeleteAlreadyMissing and Program.D91.cs registered for --d91-only and the whole Notification regression.
   Red first: D91 RED missing object showed "Silindi · olmayan-dosya.txt" instead of "Zaten yoktu · olmayan-dosya.txt". Green D91_MISSING_DELETE_GREEN (missing, actual deletion, absent deleted field, missing filename, nonboolean false, structured MCP result; checks started and completed worklog titles, worklog frame, category and failed text). Full Notification DESKTOP_PROGRESS_BEHAVIOR_GREEN; ModernizationPolicy MODERNIZATION_POLICY_GREEN; signed-in Changed 29/0 and Full 73/0, Hepsi geçti. Context7 noLookup (own worklog title logic).
   Clean-HEAD installer, installed /healthz.sourceCommit and both installed MCP smoke tests follow commit. GitHub CI requires one check after push; Claude verifies a real missing-path delete title at the next audit.
