@@ -78,13 +78,19 @@ internal static partial class SmokeScenarios
         Directory.CreateDirectory(emptyRoot);
         try
         {
-            var withoutAgent = await CallAsync(client, emptyRoot);
-            if (withoutAgent.GetProperty("agentsSections").GetString() != "" ||
-                withoutAgent.GetProperty("context").GetString() != "" ||
-                withoutAgent.GetProperty("truncated").GetBoolean())
+            // Read the expected error directly; CallAsync insists on structured success.
+            var withoutAgent = await client.CallToolAsync("talvora_agent_brief",
+                new Dictionary<string, object?> { ["workspaceRoot"] = emptyRoot });
+            var missingError = string.Join(" ", withoutAgent.Content
+                .OfType<ModelContextProtocol.Protocol.TextContentBlock>()
+                .Select(block => block.Text));
+            if (withoutAgent.IsError is not true ||
+                !missingError.Contains("No AGENTS.md in " + emptyRoot, StringComparison.Ordinal) ||
+                !missingError.Contains("Workspaces briefed recently: ", StringComparison.Ordinal) ||
+                !missingError.Contains(root, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
-                    "Workspace without AGENTS.md must return empty sections.");
+                    "Workspace without AGENTS.md must return an error naming the repository.");
             }
 
             File.WriteAllText(Path.Combine(emptyRoot, "AGENTS.md"),

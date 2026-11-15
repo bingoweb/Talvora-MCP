@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-14T21:56:29.302Z",
-  "scope": "D88: descriptive Turkish titles for file delete, copy, move, write and append worklog steps",
+  "verifiedAtUtc": "2026-11-15T09:50:39.922Z",
+  "scope": "D90: agent brief errors on missing AGENTS.md, returns other projects' instructions, records bounded recent workspaces atomically",
   "libraries": [],
-  "noLookup": "D88: Talvora's own approved title table and file tool classification; no external library behavior is used.",
+  "noLookup": "D90: Talvora's own brief logic and JSON state file; no external framework or SDK behavior changes.",
   "vendorSources": []
 }

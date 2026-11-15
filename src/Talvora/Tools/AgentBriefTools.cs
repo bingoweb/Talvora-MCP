@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 using Talvora.Shared;
@@ -15,6 +16,11 @@ public sealed record TalvoraAgentBriefResponse(
 public static class AgentBriefTools
 {
     private const int MaxTotalCharacters = 60_000;
+    private const int MaxRecentWorkspaces = 10;
+    private static readonly SemaphoreSlim RecentWorkspaceGate = new(1, 1);
+    private static readonly JsonSerializerOptions RecentJsonOptions = new(JsonSerializerDefaults.Web);
+    internal static string? RecentWorkspacesPathOverrideForTests;
+    private sealed record RecentWorkspace(string Root, DateTimeOffset LastUsedUtc);
     private const string TrimMarker =
         "\n[brief trimmed here: the rest of STATUS is in docs/codex/STATUS.md]";
     private static readonly string[] RequiredHeadings =
@@ -51,10 +57,12 @@ public static class AgentBriefTools
         }
 
         var agentsPath = Path.Combine(root, "AGENTS.md");
-        var sections = File.Exists(agentsPath)
-            ? ExtractSections(await File.ReadAllTextAsync(
-                agentsPath, cancellationToken))
-            : string.Empty;
+        if (!File.Exists(agentsPath))
+        {
+            throw new FileNotFoundException(DescribeMissingAgents(root));
+        }
+        var sections = ExtractSections(await File.ReadAllTextAsync(agentsPath, cancellationToken));
+        await RecordRecentWorkspaceAsync(root);
         var context = string.Empty;
         var scriptPath = Path.Combine(
             root, "scripts", "Get-CodexContext.ps1");
@@ -134,6 +142,78 @@ public static class AgentBriefTools
                 : agents.Length;
             selected.Add(agents[current.Index..end].TrimEnd('\r', '\n'));
         }
-        return string.Join("\n\n", selected);
+        return selected.Count == 0 ? agents : string.Join("\n\n", selected);
+    }
+
+    private static string RecentWorkspacesPath =>
+        RecentWorkspacesPathOverrideForTests ??
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "Talvora", "AgentBrief", "recent-workspaces.json");
+
+    private static List<RecentWorkspace> ReadRecentWorkspaces(string path)
+    {
+        try
+        {
+            if (!File.Exists(path)) return [];
+            return JsonSerializer.Deserialize<List<RecentWorkspace>>(File.ReadAllText(path), RecentJsonOptions)
+                ?? [];
+        }
+        catch (Exception)
+        {
+            // Briefs still work if the optional list cannot be read.
+            return [];
+        }
+    }
+
+    private static string DescribeMissingAgents(string root)
+    {
+        var message = $"No AGENTS.md in {root}. workspaceRoot must be the repository folder that holds AGENTS.md.";
+        var alternatives = ReadRecentWorkspaces(RecentWorkspacesPath)
+            .Select(entry => entry.Root)
+            .Where(candidate => !string.Equals(candidate, root, StringComparison.OrdinalIgnoreCase) &&
+                File.Exists(Path.Combine(candidate, "AGENTS.md")))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(5)
+            .ToArray();
+        return alternatives.Length == 0
+            ? message
+            : message + " Workspaces briefed recently: " + string.Join("; ", alternatives) + ".";
+    }
+
+    private static async Task RecordRecentWorkspaceAsync(string root)
+    {
+        var path = RecentWorkspacesPath;
+        var tempPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        var enteredGate = false;
+        try
+        {
+            await RecentWorkspaceGate.WaitAsync();
+            enteredGate = true;
+            var existing = ReadRecentWorkspaces(path);
+            // Keep the original spelling of a root seen earlier; comparison is case insensitive.
+            var canonicalRoot = existing.FirstOrDefault(entry =>
+                string.Equals(entry.Root, root, StringComparison.OrdinalIgnoreCase))?.Root ?? root;
+            var recent = existing.Where(entry =>
+                    !string.Equals(entry.Root, root, StringComparison.OrdinalIgnoreCase))
+                .Take(MaxRecentWorkspaces - 1)
+                .ToList();
+            recent.Insert(0, new RecentWorkspace(canonicalRoot, DateTimeOffset.UtcNow));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await File.WriteAllTextAsync(tempPath, JsonSerializer.Serialize(recent, RecentJsonOptions));
+            if (File.Exists(path))
+                File.Replace(tempPath, path, destinationBackupFileName: null);
+            else
+                File.Move(tempPath, path);
+        }
+        catch (Exception)
+        {
+            // Recent-workspace hints are best effort; a blocked state directory never blocks a brief.
+        }
+        finally
+        {
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); }
+            catch (Exception) { /* No impact on the brief. */ }
+            if (enteredGate) RecentWorkspaceGate.Release();
+        }
     }
 }
