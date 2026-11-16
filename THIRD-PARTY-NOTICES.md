@@ -75,9 +75,9 @@ The current locked package set includes:
 
 The self-contained installer also carries the matching Windows runtime packs:
 
-- `Microsoft.NETCore.App.Runtime.win-x64 10.0.12`
-- `Microsoft.WindowsDesktop.App.Runtime.win-x64 10.0.12`
-- `Microsoft.AspNetCore.App.Runtime.win-x64 10.0.12`
+- `Microsoft.NETCore.App.Runtime.win-x64 10.0.15`
+- `Microsoft.WindowsDesktop.App.Runtime.win-x64 10.0.15`
+- `Microsoft.AspNetCore.App.Runtime.win-x64 10.0.15`
 
 **Important:** The .NET runtime contains third-party components. Upstream third-party notices remain applicable in addition to the MIT license of the primary projects.
 
