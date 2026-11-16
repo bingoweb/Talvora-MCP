@@ -30,21 +30,21 @@ Talvora arka planda bir Windows hizmeti olarak çalışır ve bu istemcilere MCP
 ## Bir ajan çalışırken
 
 <p align="center">
-  <img src="docs/media/kod-karti.png" alt="Masaüstündeki çalışma kartı: görev notu, ajanın yaptığı değişikliğin amacı, yeri ve gerçek farkı, önceki adımlar, altında oturumun zaman şeridi ve teknik kayıt." width="560">
+  <img src="docs/media/kod-karti.png" alt="Masaüstündeki çalışma kartı: görev notu, ajanın yaptığı değişikliğin amacı, yeri ve gerçek farkı, önceki adımlar ve her birinin açıklaması, altında oturumun zaman şeridi ve teknik kayıt." width="560">
 </p>
 
-Talvora'da en çok kullandığım parça bu kart. En üstte ajanın üzerinde çalıştığı görev, altında kendi cümlesiyle ne yaptığı ve nerede yaptığı yazar; ortada değişikliğin gerçek farkı durur, alttaki şerit de oturumun zamanını ölçtüğü kadarıyla gösterir. Oturum bitince her şey Kontrol Merkezi'ndeki Çalışma günlüğü'nde kalır; hangi projede kimin ne yaptığını, bir adım neden başarısız olduğunu sonradan da açıp bakabilirsin.
+Talvora'da en çok kullandığım parça bu kart. En üstte ajanın üzerinde çalıştığı görev, altında kendi cümlesiyle ne yaptığı ve nerede yaptığı yazar; ortada değişikliğin gerçek farkı durur, önceki adımlar da kendi açıklamalarıyla listede kalır; alttaki şerit oturumun zamanını ölçtüğü kadarıyla gösterir. Aynı anda iki projede iş varsa kart yalnızca bir adım başlarken ya da biterken el değiştirir. Oturum bitince her şey Kontrol Merkezi'ndeki Çalışma günlüğü'nde kalır; hangi projede kimin ne yaptığını, bir adım neden başarısız olduğunu sonradan da açıp bakabilirsin.
 
 <img src="docs/media/calisma-gunlugu.png" alt="Kontrol Merkezi, Çalışma günlüğü: solda oturumlar, sağda seçilen oturumun zaman çizelgesi ve kanıtları.">
 
 ## Kurulum
 
-En son sürümün kurulum dosyası [Releases](https://github.com/bingoweb/Talvora-MCP/releases/latest) sayfasında: şu an `Talvora-Kurulum-0.0.1.2.exe`. İndirip çalıştırman yeterli. Kurulum yönetici izni ister, Windows hizmetini, Kontrol Merkezi'ni ve Başlat menüsü kısayolunu yerleştirir; PowerShell 7 yoksa Microsoft'un resmi paketini indirip doğrulayarak onu da kurar. Gerekenler: Windows 10 ya da 11 (64 bit) ve yönetici yetkisi. Program dosyaları `C:\Program Files\Talvora` altına, kayıtlar ve ayarlar `C:\ProgramData\Talvora` altına gider; her şey yolundaysa `http://127.0.0.1:7676/healthz` adresi çalışan sürümü gösterir.
+En son sürümün kurulum dosyası [Releases](https://github.com/bingoweb/Talvora-MCP/releases/latest) sayfasında: şu an `Talvora-Kurulum-0.0.1.3.exe`. İndirip çalıştırman yeterli. Kurulum yönetici izni ister, Windows hizmetini, Kontrol Merkezi'ni ve Başlat menüsü kısayolunu yerleştirir; PowerShell 7 yoksa Microsoft'un resmi paketini indirip doğrulayarak onu da kurar. Gerekenler: Windows 10 ya da 11 (64 bit) ve yönetici yetkisi. Program dosyaları `C:\Program Files\Talvora` altına, kayıtlar ve ayarlar `C:\ProgramData\Talvora` altına gider; her şey yolundaysa `http://127.0.0.1:7676/healthz` adresi çalışan sürümü gösterir.
 
 Kurulum dosyası henüz imzalı değil. Windows bu yüzden ilk açılışta bir uyarı gösterebilir: **Ek bilgi**'ye, sonra **Yine de çalıştır**'a bas. İstersen önce dosyanın SHA-256 değerini aynı sayfadaki `SHA256SUMS.txt` ile karşılaştır:
 
 ```powershell
-Get-FileHash .\Talvora-Kurulum-0.0.1.2.exe -Algorithm SHA256
+Get-FileHash .\Talvora-Kurulum-0.0.1.3.exe -Algorithm SHA256
 ```
 
 Kaldırmak için Windows Ayarları'ndaki yüklü uygulamalar listesinde Talvora'yı seçip kaldır. Kontrol Merkezi'nden sonradan kurduğun ek bileşenler (Gitea, Penpot, ChatGPT tüneli) bu kaldırmaya dahil değildir.
