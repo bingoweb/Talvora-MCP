@@ -174,7 +174,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (marker >= 0 && marker + 1 < lines.Length &&
                 lines[marker + 1].StartsWith('|'))
             {
-                var thrown = lines[marker + 1][1..].TrimStart();
+                var thrown = string.Join(" ", lines.Skip(marker + 1)
+                    .TakeWhile(static line => line.StartsWith('|'))
+                    .Select(static line => line[1..].TrimStart()));
                 if (!string.IsNullOrEmpty(thrown))
                     return thrown;
             }

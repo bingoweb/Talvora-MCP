@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-16T20:13:20.186Z",
-  "scope": "D102: retain a task note after a closed session is reopened, without a ghost old-step frame",
+  "verifiedAtUtc": "2026-11-16T20:29:41.000Z",
+  "scope": "D103: preserve every wrapped PowerShell error continuation line after the diagnostic marker",
   "libraries": [],
-  "noLookup": "D102: internal session bookkeeping, note activity and idle closure only; no external API lookup is required.",
+  "noLookup": "D103: Talvora-owned PowerShell stderr text parsing with measured output supplied by the card; no external library or API lookup is needed.",
   "vendorSources": []
 }

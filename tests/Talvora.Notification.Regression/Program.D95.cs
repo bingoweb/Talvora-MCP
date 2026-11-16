@@ -18,6 +18,14 @@ internal static partial class Program
             "   3 |  throw 'D95 RED: örnek hata'\r\n" +
             "     |  ~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n" +
             "     | D95 RED: örnek hata\r\n";
+        const string powerShellLong =
+            "\u001B[31;1mException: \u001B[0mC:\\repo\\tests\\Long.ps1:1\u001B[0m\r\n" +
+            "\u001B[31;1m\u001B[0m\u001B[36;1mLine |\u001B[0m\r\n" +
+            "\u001B[31;1m\u001B[0m\u001B[36;1m\u001B[36;1m   1 | \u001B[0m \u001B[36;1mthrow \"Bu uzun hata iletisi bilerek yazildi: derleme adiminda ikinci \u001B[0m \u0007\u001B[0m\r\n" +
+            "\u001B[31;1m\u001B[0m\u001B[36;1m\u001B[36;1m\u001B[0m\u001B[36;1m\u001B[0m\u001B[36;1m     | \u001B[31;1m ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\u001B[0m\r\n" +
+            "\u001B[31;1m\u001B[0m\u001B[36;1m\u001B[36;1m\u001B[0m\u001B[36;1m\u001B[0m\u001B[36;1m\u001B[31;1m\u001B[31;1m\u001B[36;1m     | \u001B[31;1mBu uzun hata iletisi bilerek yazildi: derleme adiminda ikinci proje bulunamadi ve kurulum paketi olusturulamadi;\u001B[0m\r\n" +
+            "\u001B[31;1m\u001B[0m\u001B[36;1m\u001B[36;1m\u001B[0m\u001B[36;1m\u001B[0m\u001B[36;1m\u001B[31;1m\u001B[31;1m\u001B[36;1m\u001B[31;1m\u001B[36;1m     | \u001B[31;1mlutfen proje yolunu, surum numarasini ve calisma klasorunu yeniden kontrol edin, ardindan komutu tekrar\u001B[0m\r\n" +
+            "\u001B[31;1m\u001B[0m\u001B[36;1m\u001B[36;1m\u001B[0m\u001B[36;1m\u001B[0m\u001B[36;1m\u001B[31;1m\u001B[31;1m\u001B[36;1m\u001B[31;1m\u001B[36;1m\u001B[31;1m\u001B[36;1m     | \u001B[31;1mcalistirin.\u001B[0m\r\n";
         const string pythonUnittest =
             "test_a_ok (__main__.T.test_a_ok) ... ok\n" +
             "test_b_stock (__main__.T.test_b_stock) ... FAIL\n\n" +
@@ -39,6 +47,8 @@ internal static partial class Program
         {
             ("PowerShell ANSI", powerShellColored, "Sonuç: D95 RED: örnek hata"),
             ("PowerShell plain", powerShellPlain, "Sonuç: D95 RED: örnek hata"),
+            ("PowerShell wrapped ANSI", powerShellLong,
+                "Sonuç: Bu uzun hata iletisi bilerek yazildi: derleme adiminda ikinci proje bulunamadi ve kurulum paketi olusturulamadi; lutfen proje yolunu, surum numarasini ve calisma klasorunu yeniden kontrol edin, ardindan komutu tekrar calistirin."),
             ("Python unittest", pythonUnittest,
                 "Sonuç: test_b_stock (__main__.T.test_b_stock) ... FAIL"),
             ("Python then PowerShell", pythonUnittest + powerShellColored,

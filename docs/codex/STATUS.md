@@ -37,7 +37,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D99 — The card changes session only when a step starts or ends (visual live check pending Claude)
 - [~] D101 — A step Talvora still follows never shows "Yanıt bekleniyor" (real followed CI card check pending Claude)
 - [~] D102 — The task note survives a session that reopens (live reopened-session card check pending Claude)
-- [ ] D103 — A long PowerShell error keeps its whole message
+- [~] D103 — A long PowerShell error keeps its whole message (real wrapped-error card check pending Claude)
 - [ ] PK5 — Roslyn 5.12.0 from Dependabot PR #22
 - [x] [C] D104v — Claude: each "geçmiş" row of the card shows its "ne", numbers keep their units, no "ara 0,0 sn" (2b6947b: installed, both smokes, CI 43867211084, live card 15:46)
 - [x] [C] D105v — Claude: the card window can no longer be minimized into a 160×28 strip (9c1ad0b: installed, both smokes, CI 43871911295, live card 16:08)
@@ -58,6 +58,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-16 — ChatGPT, D103: the PowerShell-specific stderr parser joins every adjacent `|` continuation line after the last `~~~` marker into one complete diagnostic, stripping its `|` and leading spaces. No other D95 rule, ordering, title, plain reason, redaction, 420-character evidence limit, or pinned N5 file changed.
+  RED: the exact pwsh 7.6.10 ANSI stderr from the card was added as D95's seventh case; the prior parser stopped after "kurulum paketi olusturulamadi;" and omitted the remaining two lines. GREEN: all seven D95 cases, including the full 230-character diagnostic, pass; full Notification (D95, D103, D98, D99, D100, D101, D102) and ModernizationPolicy green. Signed-in Changed 17 checks/0 failures and Full 73/0, both `Hepsi geçti.`. Context7 `noLookup` (Talvora-owned stderr parsing, measured output supplied by card). Clean-HEAD installer, installed metadata/full MCP smokes and CI follow this commit; Claude checks a real wrapped-error desktop worklog at the next audit.
+  Self-review — cosmetics: no window, XAML, spacing, palette, typography, layout, code terminal or N5 pinned file changed.
+  Self-review — usability: the error's cause and remedial instructions remain together as one readable result instead of stopping mid-sentence.
+  Self-review — Turkish: existing plain Turkish "Sonuç:" prefix and every other visible title stay unchanged.
+  Self-review — correctness and security: the join is restricted to consecutive `|` lines after the existing PowerShell marker; fallback parsers, ANSI removal and length/redaction protections remain intact.
 - 2026-11-16 — ChatGPT, D102: setting a worklog task note refreshes its session's LastActivityUtc and schedules the normal idle close when no step is active. If a session has reopened and has no new step, the note is retained without republishing the previous session's terminal title. If only a note was written and no new step begins, the session closes silently instead of emitting a misleading zero-step frame; the next actual step publishes the note in its header. Notes on an already visible worklog card still publish immediately.
   RED: an idle-closed session's new note emitted a zero-step frame containing the old step's title; a second RED proved the same ghost frame reappeared on idle closure if no step followed the note. GREEN: focused D102 covers a real idle close using a 350 ms interval, note-only reopening, the next step's preserved note/one-row timeline, immediate updates on an existing card, and silent abandonment. Full Notification (including D100, D60, D101, D99) and ModernizationPolicy green. Signed-in Changed 29/0 and Full 73/0, both `Hepsi geçti.`. Context7 `noLookup` (internal session bookkeeping). Clean-HEAD installer, installed metadata/full smoke and CI follow this commit; Claude checks the live reopened-session worklog card at the next audit.
   Self-review — cosmetics: no XAML, window, palette, typography, layout, code terminal visuals, placement or pinned N5 files changed.
