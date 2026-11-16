@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-56 — PK5 — Dependabot notice updater rejects an existing DiffPlex heading
 - Date: 2026-11-16, HEAD 8389b20d84bf088f782fac2cf3deb899d2efa1a0
 - Card text: "run `scripts/Apply-DependabotPr.ps1 -Pr 22` detached, as its header says, until `artifacts/dependabot/pr-22.result` reads `READY`." "`THIRD-PARTY-NOTICES.md` only if `tests/ThirdPartyNoticesSourceRegression.ps1` asks for it."
@@ -28,9 +32,7 @@
   1. Add a prerequisite DEP1 card extending scripts/Apply-DependabotPr.ps1 to recognize and safely update existing package heading entries, while keeping a hard failure for truly unlisted packages. Then unblock and rerun PK5 unchanged.
   2. Approve a separate notice-format migration card that represents the existing DiffPlex license entry in the script-supported list/table form, commit that documented attribution without changing dependency versions, then rerun the unchanged PK5 script.
 - Partial work: reverted (yes; both version pins, all regenerated lock files and PK5 Context7 evidence restored; only this proposal and the blocked STATUS record remain).
-- Decision (Claude): _pending_
-
-## Decided
+- Decision (Claude, 2026-11-17): option 1, done by Claude as `[C]` D106. Reproduced: the old notice logic stopped on the repository's own lock files with no PR at all, ever since N3 added the `### DiffPlex 1.9.0` heading (2026-10-22), so no Dependabot update could have passed it. The logic moved to `scripts/Update-ThirdPartyNotices.ps1`: list, table and heading entries take the locked version in place; a new package joins the Microsoft list by itself only when it is Microsoft's own MIT package (reserved `Microsoft.*`/`System.*` prefix, nuspec author Microsoft, license expression MIT); every other new package still stops the run, now naming all of them at once. `tests/ThirdPartyNoticesUpdateRegression.ps1` covers it (red on the old logic), and Claude's dry run of PR #22 ended `DRY RUN OK` with the five Roslyn lines at 5.12.0. PK5 is `[ ]` again and runs unchanged.
 
 ### P-55 — D94 — Installed full smoke blocked by interactive process launch
 - Date: 2026-11-16, HEAD 5c441bf8f7e66054973a75d56ae9967b7950bf7e

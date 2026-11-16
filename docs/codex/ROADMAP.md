@@ -31,6 +31,12 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-11-17 (66) · range `audit/2026-11-16-65..44b4e66` (D98, D100, D99, D101, D102, D103 and P-56 by ChatGPT) · user: "talvora modernizasyonunun önünü kesen durumlara izin verme. talvora yı denetle" · Claude's `[C]` D106
+
+### D106 — The Dependabot script keeps THIRD-PARTY-NOTICES.md current in all three formats (`[C]`, Claude)
+
+**Why:** P-56. `Apply-DependabotPr.ps1` knew only list lines and table rows, so the `### DiffPlex 1.9.0` heading (N3) stopped every Dependabot update before its Full gate, PR #22 included. **Done by Claude:** `scripts/Update-ThirdPartyNotices.ps1` (called by the apply script) updates list, table and heading entries; a new package joins the Microsoft list only when it is Microsoft's own MIT package under the reserved `Microsoft.*`/`System.*` prefixes (nuspec author and license expression checked); any other new package stops the run and is named. Test: `tests/ThirdPartyNoticesUpdateRegression.ps1`. Context7: `/nuget/docs.microsoft.com-nuget`.
+
 ### Audit 2026-11-16 (65) · range `audit/2026-11-16-64..cfe584b` (D95 by ChatGPT) · user: the whole code, bugs and the desktop card, not the Control Center · new agent cards D98, D100, D99, D101, D102, D103, PK5; Claude's `[C]` D104v
 
 ### D98 — The card keeps each session's code terminal when another session's frame comes in between
@@ -145,6 +151,8 @@ D-cards go to the top of the agent queue. Newest audit first.
 **Don't:** merge the PR on GitHub, take any other Dependabot change, or upgrade beyond 5.12.0.
 
 **Acceptance:** the script's Full gate and a signed-in Full `Hepsi geçti.`; clean-HEAD deploy and both installed smokes (semantic step green); CI; PR #22 closed.
+
+**P-56 (answered 2026-11-17):** Claude's `[C]` D106 fixed the notice step; Claude's dry run of PR #22 reached `DRY RUN OK` (five Roslyn lines to 5.12.0, no new package). Run the script unchanged.
 
 ### D104v — Each "geçmiş" row shows its "ne"; numbers keep their units (`[C]`, Claude)
 

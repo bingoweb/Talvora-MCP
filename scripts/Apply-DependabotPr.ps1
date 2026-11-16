@@ -78,38 +78,9 @@ try {
     Invoke-Checked dotnet @('build', 'Talvora.slnx', '-c', 'Release', '--no-restore', '-v', 'q', '-nologo')
 
     # THIRD-PARTY-NOTICES.md lists every locked runtime package with its exact version
-    # (tests/ThirdPartyNoticesSourceRegression.ps1). A listed package gets its new version in
-    # place; a package that is not listed yet needs a license review, so the script stops.
-    $noticePath = Join-Path $repoRoot 'THIRD-PARTY-NOTICES.md'
-    $noticeBytes = [IO.File]::ReadAllBytes($noticePath)
-    $hasBom = $noticeBytes.Length -ge 3 -and $noticeBytes[0] -eq 0xEF -and $noticeBytes[1] -eq 0xBB -and $noticeBytes[2] -eq 0xBF
-    $notice = [IO.File]::ReadAllText($noticePath)
-    $updated = $notice
-    foreach ($lockPath in @('src/Talvora/packages.lock.json', 'src/Talvora.Tray/packages.lock.json')) {
-        $lock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json
-        foreach ($tfm in $lock.dependencies.PSObject.Properties) {
-            foreach ($package in $tfm.Value.PSObject.Properties) {
-                $resolved = $package.Value.PSObject.Properties['resolved']
-                if ($null -eq $resolved -or [string]::IsNullOrWhiteSpace([string]$resolved.Value)) { continue }
-                $id = [regex]::Escape($package.Name)
-                # Two notice formats: list lines "- `Id 1.2.3`" and table rows "| `Id` | 1.2.3 | ...".
-                $patterns = @(
-                    ('(?im)^(- `' + $id + ' )[^`\r\n]+(`)'),
-                    ('(?im)^(\| `' + $id + '` \| )[^|\r\n]+?( \|)'))
-                $found = $false
-                foreach ($pattern in $patterns) {
-                    if ([regex]::IsMatch($updated, $pattern)) {
-                        $found = $true
-                        $updated = [regex]::Replace($updated, $pattern, '${1}' + [string]$resolved.Value + '${2}')
-                    }
-                }
-                if (-not $found) {
-                    throw "THIRD-PARTY-NOTICES.md has no line for $($package.Name); a new runtime package needs a license review (Findings for Claude)."
-                }
-            }
-        }
-    }
-    if ($updated -ne $notice) { [IO.File]::WriteAllText($noticePath, $updated, [Text.UTF8Encoding]::new($hasBom)) }
+    # (tests/ThirdPartyNoticesSourceRegression.ps1). Update-ThirdPartyNotices.ps1 writes the new
+    # versions in place and stops when a new package needs a license review (P-56).
+    & (Join-Path $PSScriptRoot 'Update-ThirdPartyNotices.ps1') | ForEach-Object { Write-Log "$_" }
 
     $changed = @(& git status --porcelain | ForEach-Object { $_.Substring(3) })
     Write-Log ("Changed files: " + ($changed -join ', '))

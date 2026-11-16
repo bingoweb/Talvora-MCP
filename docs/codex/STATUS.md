@@ -38,7 +38,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D101 — A step Talvora still follows never shows "Yanıt bekleniyor" (real followed CI card check pending Claude)
 - [~] D102 — The task note survives a session that reopens (live reopened-session card check pending Claude)
 - [~] D103 — A long PowerShell error keeps its whole message (real wrapped-error card check pending Claude)
-- [?] PK5 — Roslyn 5.12.0 from Dependabot PR #22 (waiting for Claude: P-56 — DEP1 script rejects existing DiffPlex notice heading)
+- [ ] PK5 — Roslyn 5.12.0 from Dependabot PR #22 (P-56 answered by D106: run the script unchanged)
+- [~] [C] D106 — Claude: the Dependabot script keeps THIRD-PARTY-NOTICES.md current in all three formats (P-56; CI pending)
 - [x] [C] D104v — Claude: each "geçmiş" row of the card shows its "ne", numbers keep their units, no "ara 0,0 sn" (2b6947b: installed, both smokes, CI 43867211084, live card 15:46)
 - [x] [C] D105v — Claude: the card window can no longer be minimized into a 160×28 strip (9c1ad0b: installed, both smokes, CI 43871911295, live card 16:08)
 
@@ -58,6 +59,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-17 — Claude, `[C]` D106 (audit 66; P-56; user: "talvora modernizasyonunun önünü kesen durumlara izin verme"): the notice step of `Apply-DependabotPr.ps1` moved to `scripts/Update-ThirdPartyNotices.ps1`. It updates list, table and heading entries (the `### DiffPlex 1.9.0` heading had stopped every Dependabot update since N3, 2026-10-22), adds a new package to the Microsoft list only when it is Microsoft's own MIT package (reserved prefix, nuspec author, license expression) and otherwise stops naming every package that needs a license review. RED: the new `tests/ThirdPartyNoticesUpdateRegression.ps1` failed on the old logic with the repository's own lock files ("no line for DiffPlex"); GREEN 5/5. Dry run of PR #22 in a scratch clone: `DRY RUN OK`, five Roslyn lines to 5.12.0. Context7 `/nuget/docs.microsoft.com-nuget` (license expression, folder layout, prefix reservation; new map row). `docs/MODERNIZATION-POLICY.md` describes the new rule. Executor: Claude.
+  Self-review — cosmetics: nothing visible changed; the card and the Control Center are untouched.
+  Self-review — usability: a Dependabot update now runs through to READY unless a genuinely new third-party package needs a license review, and then one stop names all of them.
+  Self-review — Turkish: no user-facing text changed.
+  Self-review — correctness and security: the inventory guard is as strict as before for unknown packages and stricter for Microsoft-prefixed ones (author and license are checked); the notice is written only when every package is accounted for.
 - 2026-11-16 — ChatGPT, PK5 blocked (P-56): the prescribed scripts/Apply-DependabotPr.ps1 -Pr 22 applied the two Roslyn 5.12.0 pins, regenerated all required lock files, passed locked solution and installer restores, PlatformPackageLockstep, and the Release solution build with 0 warnings/0 errors. The script then stopped before its Full gate with `FAILED: THIRD-PARTY-NOTICES.md has no line for DiffPlex`. DiffPlex 1.9.0 is already attributed at THIRD-PARTY-NOTICES.md:27 using a Markdown heading; the DEP1 script at lines 100-112 recognizes only list and table rows. The notices regression independently found the five Roslyn 5.12.0 inventory lines needing updates. No semantic-edit or installed-smoke failure occurred; those stages were not reached. All generated package and lock-file changes were reverted through revision-checked Talvora patches, and Context7 evidence was restored because this is a proposal-only change. Proposal P-56 requests authorization to correct the DEP1 notice format mismatch before retrying PK5; PR #22 remains open and no dependency upgrade was committed, pushed or deployed.
   Self-review — cosmetics: no visual, window, code-terminal or UI changes.
   Self-review — usability: no shipped behavior changed; the currently installed service stays on the last verified commit.

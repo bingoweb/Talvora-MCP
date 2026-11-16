@@ -1,8 +1,16 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-16T20:29:41.000Z",
-  "scope": "D103: preserve every wrapped PowerShell error continuation line after the diagnostic marker",
-  "libraries": [],
-  "noLookup": "D103: Talvora-owned PowerShell stderr text parsing with measured output supplied by the card; no external library or API lookup is needed.",
+  "verifiedAtUtc": "2026-11-16T21:18:00.000Z",
+  "scope": "D106: scripts/Update-ThirdPartyNotices.ps1 keeps THIRD-PARTY-NOTICES.md current for Apply-DependabotPr.ps1 (list, table and heading entries; Microsoft's own MIT packages join the Microsoft list, every other new package stops for a license review)",
+  "libraries": [
+    {
+      "libraryId": "/nuget/docs.microsoft.com-nuget",
+      "verified": "2026-11-17 D106: a nuspec declares its license as <license type=expression>MIT</license> with an SPDX id, authors is a comma-separated list, and package folders are {lower id}/{lower version}/{lower id}.nuspec (query: \"nuspec license element of type expression with an SPDX identifier such as MIT, and the lowercase id, version and id.nuspec file layout of NuGet package folders\")"
+    },
+    {
+      "libraryId": "/nuget/docs.microsoft.com-nuget",
+      "verified": "2026-11-17 D106: nuget.org rejects new packages under a reserved prefix unless they come from its owner, but older packages under the prefix may belong to others, so the script also requires the Microsoft author (query: \"nuget.org package ID prefix reservation: only the prefix owner can publish packages under a reserved prefix such as Microsoft.* or System.*, and the verified checkmark\")"
+    }
+  ],
   "vendorSources": []
 }
