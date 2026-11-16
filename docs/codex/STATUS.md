@@ -40,7 +40,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D103 — A long PowerShell error keeps its whole message
 - [ ] PK5 — Roslyn 5.12.0 from Dependabot PR #22
 - [x] [C] D104v — Claude: each "geçmiş" row of the card shows its "ne", numbers keep their units, no "ara 0,0 sn" (2b6947b: installed, both smokes, CI 43867211084, live card 15:46)
-- [~] [C] D105v — Claude: the card window can no longer be minimized into a 160×28 strip (audit 65 live check) — deploy, installed smokes, CI and the live card check follow this commit
+- [x] [C] D105v — Claude: the card window can no longer be minimized into a 160×28 strip (9c1ad0b: installed, both smokes, CI 43871911295, live card 16:08)
 
 ## User queue
 
@@ -58,6 +58,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-16 — Claude, D105v verified on the installed runtime: 9c1ad0b installed 13:03 UTC (`/healthz`), metadata smoke `TALVORA MCP METADATA POLICY LIVE GREEN`, full smoke `TALVORA MCP SMOKE GREEN`, CI 43871911295 green. Live at 16:08: Claude's screenshot tool again minimized the new, not yet allowed tray, and the card came straight back at its pinned place in full size (639×335 px, not iconic, style `0x160C0000` without the minimize and maximize boxes).
 - 2026-11-16 — Claude, `[C]` D105v (audit 65 live check): the desktop card window drops its minimize and maximize boxes once its handle exists (`WS_MINIMIZEBOX`, `WS_MAXIMIZEBOX`; the border still resizes it), refuses `SC_MINIMIZE` and `SC_MAXIMIZE`, and when something minimizes it anyway it comes back through the dispatcher with `SW_SHOWNOACTIVATE`, so it never takes the focus. The reference copy and `SHA256SUMS.txt` follow; DESIGN-WORKLOG §3 rules.
   Red first: `Program.D105v.cs` failed on style `0x160F0000` (both boxes); green after the change, in its own child process (`--d105v-only`) because a process can hold one WPF Application and the placement test already makes one (the first Changed run went red on exactly that). Signed-in gate: Changed 28/0 and Full 73/0, both `Hepsi geçti.`. Context7 `noLookup` (long-stable Win32 window styles). Deploy, both installed smokes, CI and a live card check follow this commit.
   Self-review — cosmetics: nothing drawn changes; the card keeps its border resize, chrome and topmost placement.
