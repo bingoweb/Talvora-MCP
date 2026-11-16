@@ -51,10 +51,14 @@ internal sealed record WorklogHistorySession(
         }
     }
 
+    // D92v: every source stores the timeline newest first; the history reads oldest first (user decision 2026-11-16
+    // "Eskiden yeniye"). Enumerable.Reverse keeps the insertion order exact and never reverses the stored list in place.
+    // The measured stopwatch time prints like the live card's history rows; unmeasured steps print nothing.
     [JsonIgnore]
     public IReadOnlyList<WorklogHistoryTimelineRow> TimelineRows =>
-        Timeline.Select(entry => new WorklogHistoryTimelineRow(
-            entry.TimestampUtc.ToLocalTime().ToString("HH:mm:ss"), entry.Label, entry.Purpose)).ToArray();
+        Enumerable.Reverse(Timeline).Select(entry => new WorklogHistoryTimelineRow(
+            entry.TimestampUtc.ToLocalTime().ToString("HH:mm:ss"), entry.Label, entry.Purpose,
+            entry.DurationSeconds is { } seconds ? Worklog.WorklogMeasure.Format(seconds) : null)).ToArray();
 
     [JsonIgnore]
     public bool HasCodePreview => !string.IsNullOrWhiteSpace(Evidence?.CodePreview);
@@ -152,7 +156,8 @@ internal sealed record WorklogHistorySession(
         SessionId + "@" + StartedAtUtc.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
 }
 
-internal sealed record WorklogHistoryTimelineRow(string LocalTime, string Label, string? Purpose = null);
+internal sealed record WorklogHistoryTimelineRow(
+    string LocalTime, string Label, string? Purpose = null, string? DurationText = null);
 
 /// <summary>Single-user, bounded JSONL store. Only completed sessions enter history.</summary>
 internal sealed class WorklogHistoryStore

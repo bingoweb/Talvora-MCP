@@ -37,7 +37,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [?] D94 — waiting for Claude: P-55 (installed full smoke blocked by unrelated interactive process launch; CI run 43776853155 pending)
 - [x] [C] D96 — The installed smoke's session probe no longer trips Microsoft Defender (audit 64, answers P-55)
 - [ ] D95 — A failed command's result shows its real error line, without escape codes (audit 63)
-- [ ] [C] D92v — Claude draws each step's purpose in the history view, `WorklogHistoryView.xaml` (after D92)
+- [~] [C] D92v — Claude draws each step's purpose and measured time in the history view, oldest step first (user decision audit 64); deploy and installed smokes follow this commit
 
 ## User queue
 
@@ -55,6 +55,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-16 — Claude, `[C]` D92v (user decisions 2026-11-15 "Her adımda saklansın" and, asked in audit 64, 2026-11-16 "Eskiden yeniye"): `WorklogHistoryView.xaml` draws each timeline step as a grid: time · label (wraps; the old horizontal row cut long labels off at the detail card's edge) · the measured time on the right (`WorklogMeasure.Format`, nothing when unmeasured), with the step's own `ne` as a quiet second line (faint "ne", muted purpose, absent when none). `WorklogHistorySession.TimelineRows` reads the stored newest-first timeline with `Enumerable.Reverse`, so the history reads oldest step first; the store and the live card keep newest first. DESIGN-WORKLOG §8 describes the row; no N5 file changed.
+  Red first: the `ControlCenterSmoke` D92v fixture (one purpose, one 3 s duration, one long label, stored newest first) failed "visible purpose lines: 0", then "the timeline must read oldest step first"; green in both themes; the D92 regression now expects the history rows oldest first and is green. Signed-in Full gate 73/0 `Hepsi geçti.`. Context7 `noLookup` (own XAML patterns). Deploy and installed smokes follow this commit (audit 64 Log).
+  Self-review — cosmetics: tokens only (`Tv.Type.Mono`, `Body`, `Caption`, `Tv.TextMuted`, `Tv.TextFaint`; 2, 8 and 12 DIP like the rest of the view); before and after renders checked in both themes at 2× zoom.
+  Self-review — usability: a long step no longer hides its end, each step says why it ran and how long it took, and a session reads from its first step to its last.
+  Self-review — Turkish: "ne" is the live card's label; the fixture texts with ç, ğ, ı, ş and ü render correctly.
+  Self-review — correctness and security: purposes were already redacted when stored (D92); the view only reads existing fields; the live card is unchanged.
 - 2026-11-16 — Claude, `[C]` D96 (audit 64, answers P-55): the full installed smoke's session probe started `powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand …` in the user's session. Microsoft Defender's machine-learning rule `Trojan:Win32/Commando.B!ml` blocked it (Defender/Operational 1116 and 1117 on 2026-11-14 at 15:21 and 15:24 and on 2026-11-16 at 02:52:06; `Get-MpThreatDetection`: a command-line resource started by SYSTEM, nothing quarantined), so `CreateProcessAsUserW` returned 5, D94's full smoke went red and the user got three severe alerts. The verdict changes with the encoded text (the D92 and D93 runs passed). The probe now runs `pwsh.exe -NoProfile -Command` with a plain script and the marker path as a single-quoted literal, the shape of the agents' daily detached runs.
   Red: the three recorded detections (no new alert was provoked on purpose). Green: full installed smoke on 5c441bf 03:07–03:10 `TALVORA MCP SMOKE GREEN` with D94's brief scenario inside, no Defender detection since 03:07. Signed-in Full gate (tree with D96 and D92v) 73/0 `Hepsi geçti.`. Test-only, so no Context7 evidence (`Validate-Context7Gate.ps1` patterns).
   Self-review — cosmetics: nothing visible changes.

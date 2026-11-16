@@ -59,7 +59,8 @@ internal static partial class Program
             store.AppendTerminal(last with { SessionClosed = true });
             var saved = new WorklogHistoryStore(historyPath).LoadRecent().Single();
             AssertPurposes(saved.Timeline, expected, "saved session");
-            AssertPurposes(saved.TimelineRows, expected, "history rows");
+            // D92v (user decision 2026-11-16 "Eskiden yeniye"): the history rows read oldest step first.
+            AssertPurposes(saved.TimelineRows, Enumerable.Reverse(expected).ToArray(), "history rows");
 
             // Earlier JSONL entries never had a timeline purpose property.
             var legacy = JsonNode.Parse(File.ReadAllText(historyPath))!.AsObject();

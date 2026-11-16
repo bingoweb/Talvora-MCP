@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-15T23:43:42.051Z",
-  "scope": "D94: self-contained agent brief live smoke and pruning stale recent workspace roots",
+  "verifiedAtUtc": "2026-11-16T00:23:03.000Z",
+  "scope": "D92v: the history timeline draws each step's purpose and measured time, oldest step first",
   "libraries": [],
-  "noLookup": "D94: own test fixture and recent-workspace state file; no external API lookup is needed.",
+  "noLookup": "D92v: own XAML layout with the Grid, TextBlock and DataTrigger patterns this view already uses; no external API lookup is needed.",
   "vendorSources": []
 }

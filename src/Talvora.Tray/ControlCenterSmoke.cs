@@ -332,10 +332,12 @@ internal static partial class ControlCenterSmoke
                     new Talvora.Shared.WorklogStep(Talvora.Shared.WorklogStepCategory.SourceEdit,
                         Talvora.Shared.WorklogStepState.Succeeded, "Düzenleme tamamlandı.",
                         "1 dosya değişti", null, 3),
-                    [new Talvora.Shared.WorklogTimelineEntry(now.AddSeconds(-3),
-                        Talvora.Shared.WorklogStepState.Running, "Düzenleme başladı."),
-                     new Talvora.Shared.WorklogTimelineEntry(now,
-                        Talvora.Shared.WorklogStepState.Succeeded, "Düzenleme tamamlandı.")],
+                    // Newest first, as every worklog source stores its timeline (D92v draws it oldest first).
+                    [new Talvora.Shared.WorklogTimelineEntry(now,
+                        Talvora.Shared.WorklogStepState.Succeeded, "Düzenleme tamamlandı.",
+                        DurationSeconds: 3, Purpose: D92vPurpose),
+                     new Talvora.Shared.WorklogTimelineEntry(now.AddSeconds(-3),
+                        Talvora.Shared.WorklogStepState.Running, D92vLongLabel)],
                     new Talvora.Shared.WorklogTotals(2, 3, 1,
                         Talvora.Shared.WorklogCheckState.Succeeded, Talvora.Shared.WorklogCheckState.Succeeded),
                     null, 15);
@@ -370,6 +372,7 @@ internal static partial class ControlCenterSmoke
             window.UpdateLayout();
             if (hint.IsVisible)
                 throw new InvalidOperationException("WL2: the empty-state hint must hide once a session is chosen.");
+            AssertD92vStepPurposes(page, snapshot);
             SaveVisualSnapshotIfRequested(window, snapshot);
         }
         finally

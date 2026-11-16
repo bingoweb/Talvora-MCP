@@ -87,6 +87,30 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+        <!-- D92v: the agent's own "ne" under a timeline step (DESIGN-WORKLOG §6.2); absent when the step had none. -->
+        <Style x:Key="HistoryStepPurposeRow" TargetType="Grid">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Purpose}" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Purpose}" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <!-- D92v: the step's measured stopwatch time (WorklogMeasure.Format); nothing when it was not measured. -->
+        <Style x:Key="HistoryStepDuration" TargetType="TextBlock" BasedOn="{StaticResource Tv.Type.Mono}">
+            <Setter Property="Foreground" Value="{DynamicResource Tv.TextMuted}" />
+            <Setter Property="Margin" Value="12,2,0,0" />
+            <Style.Triggers>
+                <Trigger Property="Text" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </Trigger>
+                <Trigger Property="Text" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         <!-- WL3: the outcome is an 8 px dot on the card's caption line. -->
         <Style x:Key="HistoryOutcomeDot" TargetType="Ellipse">
             <Setter Property="Width" Value="8" />
@@ -244,15 +268,40 @@
                         <TextBlock Text="{Binding DetailTimeText}" Style="{StaticResource Tv.Type.Caption}"
                                    Margin="0,8,0,0" />
                         <TextBlock Text="Zaman çizelgesi" Style="{StaticResource Tv.Type.Subtitle}" Margin="0,24,0,8" />
+                        <!-- D92v (user decision 2026-11-15 "Her adımda saklansın"): every step keeps its own "ne" as a
+                             quiet second line and its measured time on the right, like the live card; a long label wraps
+                             inside the card instead of running past its edge (a horizontal panel never wrapped it). -->
                         <ItemsControl ItemsSource="{Binding TimelineRows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                        <TextBlock Text="{Binding LocalTime}"
-                                                   Style="{StaticResource Tv.Type.Mono}" />
-                                        <TextBlock Text="{Binding Label}" Style="{StaticResource Tv.Type.Body}"
-                                                   Margin="12,0,0,0" TextWrapping="Wrap" />
-                                    </StackPanel>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding LocalTime}" Style="{StaticResource Tv.Type.Mono}"
+                                                   Margin="0,2,0,0" />
+                                        <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                            <TextBlock Text="{Binding Label}" Style="{StaticResource Tv.Type.Body}"
+                                                       TextWrapping="Wrap" />
+                                            <Grid Style="{StaticResource HistoryStepPurposeRow}" Margin="0,2,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="ne" Style="{StaticResource Tv.Type.Caption}" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Purpose}"
+                                                           Style="{StaticResource Tv.Type.Caption}"
+                                                           Foreground="{DynamicResource Tv.TextMuted}"
+                                                           TextWrapping="Wrap" Margin="8,0,0,0"
+                                                           AutomationProperties.AutomationId="HistoryStepPurpose" />
+                                            </Grid>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding DurationText}"
+                                                   Style="{StaticResource HistoryStepDuration}"
+                                                   AutomationProperties.AutomationId="HistoryStepDuration" />
+                                    </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
