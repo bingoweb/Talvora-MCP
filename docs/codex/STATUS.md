@@ -39,7 +39,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D102 — The task note survives a session that reopens
 - [ ] D103 — A long PowerShell error keeps its whole message
 - [ ] PK5 — Roslyn 5.12.0 from Dependabot PR #22
-- [~] [C] D104v — Claude: each "geçmiş" row of the card shows its "ne", numbers keep their units, no "ara 0,0 sn" (audit 65; user decision "Her geçmiş satırında") — deploy, installed smokes, CI and the live card check follow this commit
+- [x] [C] D104v — Claude: each "geçmiş" row of the card shows its "ne", numbers keep their units, no "ara 0,0 sn" (2b6947b: installed, both smokes, CI 43867211084, live card 15:46)
+- [ ] [C] D105v — Claude: the card window can no longer be minimized into a 160×28 strip (audit 65 live check)
 
 ## User queue
 
@@ -57,6 +58,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-16 — Claude, D104v verified on the installed runtime: 2b6947b installed 12:32 UTC (`/healthz`), metadata smoke `TALVORA MCP METADATA POLICY LIVE GREEN`, full smoke `TALVORA MCP SMOKE GREEN` (two earlier runs stopped on Claude's own arguments: a path that lost its backslashes and the detached worktree, which `git_branches` cannot name), CI 43867211084 green. Live card at 15:46 (two `talvora_user_run` steps with purposes): the first step's "ne" stands under its "geçmiş" row and the ruler prints no "ara" for a 0.2 s gap. Found in the same check: the card window carries the minimize box (style `0x360F0000`); Claude's screenshot tool, run before the new tray was allowed, minimized it, and the card stayed a 160×28 strip without a taskbar button until its lifetime ended → `[C]` D105v, and D99 restores a reused minimized window.
 - 2026-11-16 — Claude, `[C]` D104v (audit 65; user decision 2026-11-16 "Her geçmiş satırında"): each "geçmiş" row of the desktop card draws its step's own purpose as a quiet second line (`ne` in `Wl.Faint`, the text in `Wl.Muted`, 11 px, wrapping under its own text, nothing without a purpose), from the frame's `WorklogTimelineEntry.Purpose` (D92) through `WorklogTimelineRow.Purpose`. Talvora's own card texts keep a number with its digit groups and its word (no-break space) and never break a short token at its slash (word joiner): `WorklogTypography.KeepTogether` behind `TitleMain`, `TitleDetail`, `ResultLine` and `WorklogTimelineRow.DisplayLabel`; stored, copied and history texts are unchanged, and the agent's words are drawn as written. The ruler prints `ara` only from 1 s. Preview fixtures carry purposes; the four changed N5 files, their reference copies and `SHA256SUMS.txt` move together; DESIGN-WORKLOG §7b.
   Red first: `Program.D104v.cs` did not compile (no `Purpose`, `HasPurpose`, `DisplayLabel` on the row); green after the change (`--d104v-only`, with UI12c). All ten preview scenarios rendered and checked, high contrast included. Signed-in gate: Changed 28/0 and Full 73/0, both `Hepsi geçti.`. Context7 `noLookup` (own XAML and display text). Deploy, both installed smokes, CI and a live card check follow this commit.
   Self-review — cosmetics: card tokens and sizes only (`Wl.Faint`, `Wl.Muted`, 11 px under the 11.5 px label, 15 px line height, 8 DIP after `ne`); a wrapped purpose hangs under its own text; the word joiner draws no glyph in Cascadia Mono.
