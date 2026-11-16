@@ -20,6 +20,11 @@ internal static partial class Program
         TrayLog.PathOverrideForTests = Path.Combine(isolatedRoot, "tray.log");
         WorklogHistoryStore.DefaultPathOverrideForTests = Path.Combine(isolatedRoot, "worklog-sessions.jsonl");
 
+        if (Environment.GetCommandLineArgs().Contains("--d101-only", StringComparer.Ordinal))
+        {
+            await AssertD101FollowedStepsStayFreshAsync();
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--d99-wpf-only", StringComparer.Ordinal))
         {
             await AssertD99CardReuseAsync();
@@ -174,6 +179,7 @@ internal static partial class Program
         await AssertD95CommandErrorLinesAsync();
         AssertD98InterleavedCodeSessions();
         await AssertD100FolderlessCallsFollowActorSessionAsync();
+        await AssertD101FollowedStepsStayFreshAsync();
         await AssertWl5MeasuredTitlesAsync();
         await AssertWl6FollowerAsync();
         await AssertD82CompactDeployAsync();

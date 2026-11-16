@@ -274,13 +274,15 @@ internal static class WorklogFollower
 
     internal static async Task<Outcome> FollowCiAsync(
         Func<CancellationToken, Task<(int ExitCode, string Output)>> check,
-        DateTimeOffset started, TimeSpan interval, TimeSpan limit, CancellationToken token)
+        DateTimeOffset started, TimeSpan interval, TimeSpan limit, CancellationToken token,
+        Action<string>? onProgress = null)
     {
         var unavailable = 0;
         while (DateTimeOffset.UtcNow - started < limit)
         {
             await Task.Delay(interval, token);
             var (exit, output) = await check(token);
+            onProgress?.Invoke("GitHub denetimi sürüyor · " + Duration(started));
             if (exit == 0)
             {
                 var match = Regex.Match(output, @"(?m)^CI başarılı \((?<duration>[^)\r\n]+)\):");
@@ -477,7 +479,9 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                     return (checkedRun.ExitCode,
                         checkedRun.StandardOutput + "\n" + checkedRun.StandardError);
                 }, started, WorklogFollower.CiInterval, WorklogFollower.CiLimit,
-                _followStopCts.Token);
+                _followStopCts.Token,
+                fact => TryUpdateFollowedWorklog(operationId, fact,
+                    DateTimeOffset.UtcNow - started));
                 TryEndWorklog(operationId,
                     outcome.TimedOut ? DesktopProgressKind.Cancelled
                         : outcome.Succeeded ? DesktopProgressKind.Completed : DesktopProgressKind.Failed,

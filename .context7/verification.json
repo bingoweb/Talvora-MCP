@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-16T14:46:17.598Z",
-  "scope": "D99: the tray reuses its visible card on step transitions and ignores other sessions' progress frames",
+  "verifiedAtUtc": "2026-11-16T15:11:00.611Z",
+  "scope": "D101: report live CI poll progress and extend freshness for followed CI and deploy hand-over",
   "libraries": [],
-  "noLookup": "D99: internal tray presentation and WPF window reuse only; no external API lookup is required.",
+  "noLookup": "D101: own background follower polling and desktop worklog framing; no external libraries or APIs changed.",
   "vendorSources": []
 }

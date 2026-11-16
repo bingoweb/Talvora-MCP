@@ -189,7 +189,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 session.LastActivityUtc = DateTimeOffset.UtcNow;
                 session.Elapsed = elapsed;
                 session.Kind = DesktopProgressKind.Running;
-                session.Title = current.Narrative.Titles.Running;
+                session.Title = current.Followed &&
+                    string.Equals(current.Narrative.Subject, "Get-CiStatus.ps1",
+                        StringComparison.OrdinalIgnoreCase)
+                    ? "GitHub denetimi sürüyor" : current.Narrative.Titles.Running;
                 session.ToolName = current.ToolName;
                 Enqueue(session.Id, current.ToolName, session.Title,
                     session.Message, DesktopProgressKind.Running, elapsed, current.Evidence);
@@ -594,6 +597,16 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 ? new WorklogOutcome(null,
                     kind == DesktopProgressKind.Completed ? string.Empty : message, null)
                 : null;
+            // D101: a followed CI poll can take 30 s plus a 90 s command;
+            // the service may likewise disappear temporarily during a deploy hand-over.
+            // All other steps retain their actor's ordinary freshness interval.
+            var followedLongStep = kind == DesktopProgressKind.Running &&
+                _activeWorklog.Values.Any(item =>
+                    item.Followed && ReferenceEquals(item.Session, session) &&
+                    item.Sequence == session.LastStartedSequence &&
+                    (item.Narrative.Category == OperationCategory.Deployment ||
+                     string.Equals(item.Narrative.Subject, "Get-CiStatus.ps1",
+                         StringComparison.OrdinalIgnoreCase)));
             return new DesktopWorklogFrame(
                 session.Id, sequence, DateTimeOffset.UtcNow,
                 new WorklogSessionHeader(session.ProjectName, session.Actor, session.TaskNote),
@@ -607,7 +620,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                     Math.Max(0, (DateTimeOffset.UtcNow - session.BeganUtc).TotalSeconds),
                     session.ChangedFiles.Count, session.LastBuild, session.LastTests),
                 evidence is null ? null : evidence with { CodePreview = null },
-                session.Actor switch
+                followedLongStep ? 120 : session.Actor switch
                 {
                     "Codex" => 20,
                     "Claude" => 60,

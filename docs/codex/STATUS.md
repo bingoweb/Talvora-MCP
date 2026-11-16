@@ -35,7 +35,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D98 — The card keeps each session's code terminal when another session's frame comes in between (live interleaved-session history check pending Claude)
 - [~] D100 — A call without a working folder joins the same agent's open card (live history check pending Claude)
 - [~] D99 — The card changes session only when a step starts or ends (visual live check pending Claude)
-- [ ] D101 — A step Talvora still follows never shows "Yanıt bekleniyor"
+- [~] D101 — A step Talvora still follows never shows "Yanıt bekleniyor" (real followed CI card check pending Claude)
 - [ ] D102 — The task note survives a session that reopens
 - [ ] D103 — A long PowerShell error keeps its whole message
 - [ ] PK5 — Roslyn 5.12.0 from Dependabot PR #22
@@ -58,6 +58,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-16 — ChatGPT, D101: FollowCiAsync now reports a measured "GitHub denetimi sürüyor · {elapsed}" progress fact after each CI poll without changing poll cadence, timeout, success, failure or cancellation. The notifier forwards these updates with the live title "GitHub denetimi sürüyor". While the session's current step is a followed CI check or pending deploy hand-over, its worklog frames use ExpectedNextUpdateSeconds=120; all other steps retain their actor's existing 15/20/60-second budget. The N5 window stale rule is untouched.
+  RED: simulated deploy hand-over emitted a running frame with a 15-second budget (expected 120); the CI three-poll progress test initially did not compile without the callback. GREEN: focused D101 real notifier frames for deploy and CI, three scaled-down CI checks with one measured progress update each, and ordinary ChatGPT 15-second frames. Full Notification (WL6, D46, D82, D99, D100, D98) and ModernizationPolicy green. Signed-in Changed 29 checks/0 failures and Full 73/0, both `Hepsi geçti.`. Context7 `noLookup` (own follower loop). Clean-HEAD installer, installed metadata/full MCP smokes and CI follow this commit. Claude checks a real followed CI card at the next audit.
+  Self-review — cosmetics: no XAML, window, layout, palette, typography, placement, code terminal or pinned N5 files changed.
+  Self-review — usability: the card reports measured CI poll progress and no longer treats an actively followed deploy or CI step as an idle actor.
+  Self-review — Turkish: the running CI title and fact are existing plain-Turkish wording; no other copy changed.
+  Self-review — correctness and security: polls, 90-second per-check budget, 30-minute follow limit, deploy hand-over and completion decisions are unchanged; all test files and temporary follow outputs are isolated from the user's real CI and deploy state.
 - 2026-11-16 — ChatGPT, D99: the tray's one visible card now changes session only on a non-closing Started, Completed, Failed or Cancelled frame. Another session's Running, Info or SessionClosed frame still reaches the code cache, open-session tracking and history but does not touch the visible window. A handoff reuses the existing WPF window, restores it if minimized, and keeps each session's code-preview choice; its Closed handler uses the window's current SessionId, including manual dismissal. N8 switches, window lifetimes, placement, pinning and the one-card budget are unchanged.
   RED proved an unrelated B Running frame replaced A's window (different WPF object). GREEN: D99 pure decision states plus real WPF handoff/identity/history/manual-dismissal checks. The old N2 regression asserted separate windows for different projects; its one assertion was updated to the approved reusable-card rule. Full Notification and ModernizationPolicy green, including N8, N2 and D98. Signed-in Changed 28/0 and Full 73/0, both `Hepsi geçti.`; Context7 `noLookup` (tray-only presentation). Clean-HEAD deploy, installed metadata/full smokes and CI follow this commit; Claude checks real two-session card behavior at the next audit.
   Self-review — cosmetics: no pinned N5 files, XAML, layout, palette, typography, placement, pinning or code terminal design changed.
