@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using ModelContextProtocol.Protocol;
 using Talvora.Shared;
 using Talvora.Tools;
@@ -129,13 +130,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                     "tamamlandı · " + WorklogSubject.FormatDuration(elapsed));
             else if (toolName is "run_powershell" or "user_run")
             {
-                var firstError = FactText(json, "standardError")?
-                    .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-                    .Select(line => FileLog.RedactSensitiveData(line.Trim()))
-                    .FirstOrDefault(line => !string.IsNullOrWhiteSpace(line));
-                if (firstError is not null)
+                var errorLine = SelectFailedCommandErrorLine(FactText(json, "standardError"));
+                if (errorLine is not null)
                 {
-                    resultFact = LimitEvidenceText(firstError);
+                    resultFact = LimitEvidenceText(errorLine);
                     resultSummary = "Sonuç: " + resultFact;
                 }
             }
@@ -153,6 +151,43 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             // Reporting remains best effort; never substitute requested counts for missing results.
             return null;
         }
+    }
+
+    private static string? SelectFailedCommandErrorLine(string? standardError)
+    {
+        if (string.IsNullOrWhiteSpace(standardError))
+            return null;
+
+        var withoutAnsi = Regex.Replace(standardError,
+            @"\x1B\[[0-?]*[ -/]*[@-~]", "");
+        var lines = withoutAnsi.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(static line => line.Trim())
+            .Where(static line => !string.IsNullOrWhiteSpace(line))
+            .ToArray();
+        if (lines.Length == 0)
+            return null;
+
+        if (lines.Contains("Line |", StringComparer.Ordinal))
+        {
+            var marker = Array.FindLastIndex(lines, static line =>
+                Regex.IsMatch(line, @"^\|\s*~+$", RegexOptions.CultureInvariant));
+            if (marker >= 0 && marker + 1 < lines.Length &&
+                lines[marker + 1].StartsWith('|'))
+            {
+                var thrown = lines[marker + 1][1..].TrimStart();
+                if (!string.IsNullOrEmpty(thrown))
+                    return thrown;
+            }
+        }
+
+        return lines.FirstOrDefault(static line =>
+            !line.EndsWith("... ok", StringComparison.OrdinalIgnoreCase) &&
+            (Regex.IsMatch(line,
+                @"\b(?:error|errors|fail|failed|failure|failures|fatal|exception)\b",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) ||
+             new[] { "hata", "Hata", "HATA", "başarısız", "Başarısız", "BAŞARISIZ" }
+                 .Any(word => line.Contains(word, StringComparison.Ordinal))))
+            ?? lines[^1];
     }
 
     private static string? CommittedPreview(JsonElement json)

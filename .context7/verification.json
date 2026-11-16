@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-16T00:23:03.000Z",
-  "scope": "D92v: the history timeline draws each step's purpose and measured time, oldest step first",
+  "verifiedAtUtc": "2026-11-16T09:00:59.104Z",
+  "scope": "D95: select real failed command error lines from ANSI-colored PowerShell and mixed stderr output",
   "libraries": [],
-  "noLookup": "D92v: own XAML layout with the Grid, TextBlock and DataTrigger patterns this view already uses; no external API lookup is needed.",
+  "noLookup": "D95: Talvora's own worklog text; the card provides real error output samples, and no external APIs are involved.",
   "vendorSources": []
 }
