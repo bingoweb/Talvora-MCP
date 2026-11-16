@@ -38,7 +38,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D101 — A step Talvora still follows never shows "Yanıt bekleniyor" (real followed CI card check pending Claude)
 - [~] D102 — The task note survives a session that reopens (live reopened-session card check pending Claude)
 - [~] D103 — A long PowerShell error keeps its whole message (real wrapped-error card check pending Claude)
-- [ ] PK5 — Roslyn 5.12.0 from Dependabot PR #22
+- [?] PK5 — Roslyn 5.12.0 from Dependabot PR #22 (waiting for Claude: P-56 — DEP1 script rejects existing DiffPlex notice heading)
 - [x] [C] D104v — Claude: each "geçmiş" row of the card shows its "ne", numbers keep their units, no "ara 0,0 sn" (2b6947b: installed, both smokes, CI 43867211084, live card 15:46)
 - [x] [C] D105v — Claude: the card window can no longer be minimized into a 160×28 strip (9c1ad0b: installed, both smokes, CI 43871911295, live card 16:08)
 
@@ -58,6 +58,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-16 — ChatGPT, PK5 blocked (P-56): the prescribed scripts/Apply-DependabotPr.ps1 -Pr 22 applied the two Roslyn 5.12.0 pins, regenerated all required lock files, passed locked solution and installer restores, PlatformPackageLockstep, and the Release solution build with 0 warnings/0 errors. The script then stopped before its Full gate with `FAILED: THIRD-PARTY-NOTICES.md has no line for DiffPlex`. DiffPlex 1.9.0 is already attributed at THIRD-PARTY-NOTICES.md:27 using a Markdown heading; the DEP1 script at lines 100-112 recognizes only list and table rows. The notices regression independently found the five Roslyn 5.12.0 inventory lines needing updates. No semantic-edit or installed-smoke failure occurred; those stages were not reached. All generated package and lock-file changes were reverted through revision-checked Talvora patches, and Context7 evidence was restored because this is a proposal-only change. Proposal P-56 requests authorization to correct the DEP1 notice format mismatch before retrying PK5; PR #22 remains open and no dependency upgrade was committed, pushed or deployed.
+  Self-review — cosmetics: no visual, window, code-terminal or UI changes.
+  Self-review — usability: no shipped behavior changed; the currently installed service stays on the last verified commit.
+  Self-review — Turkish: no user-facing copy was changed.
+  Self-review — correctness and security: the third-party license inventory guard remains enforced; no new package, script bypass, unsafe Git reset or partial lock files remain.
 - 2026-11-16 — ChatGPT, D103: the PowerShell-specific stderr parser joins every adjacent `|` continuation line after the last `~~~` marker into one complete diagnostic, stripping its `|` and leading spaces. No other D95 rule, ordering, title, plain reason, redaction, 420-character evidence limit, or pinned N5 file changed.
   RED: the exact pwsh 7.6.10 ANSI stderr from the card was added as D95's seventh case; the prior parser stopped after "kurulum paketi olusturulamadi;" and omitted the remaining two lines. GREEN: all seven D95 cases, including the full 230-character diagnostic, pass; full Notification (D95, D103, D98, D99, D100, D101, D102) and ModernizationPolicy green. Signed-in Changed 17 checks/0 failures and Full 73/0, both `Hepsi geçti.`. Context7 `noLookup` (Talvora-owned stderr parsing, measured output supplied by card). Clean-HEAD installer, installed metadata/full MCP smokes and CI follow this commit; Claude checks a real wrapped-error desktop worklog at the next audit.
   Self-review — cosmetics: no window, XAML, spacing, palette, typography, layout, code terminal or N5 pinned file changed.

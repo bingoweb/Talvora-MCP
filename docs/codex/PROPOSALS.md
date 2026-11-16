@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-56 — PK5 — Dependabot notice updater rejects an existing DiffPlex heading
+- Date: 2026-11-16, HEAD 8389b20d84bf088f782fac2cf3deb899d2efa1a0
+- Card text: "run `scripts/Apply-DependabotPr.ps1 -Pr 22` detached, as its header says, until `artifacts/dependabot/pr-22.result` reads `READY`." "`THIRD-PARTY-NOTICES.md` only if `tests/ThirdPartyNoticesSourceRegression.ps1` asks for it."
+- Problem: The prescribed script successfully pinned both Roslyn workspaces to 5.12.0, regenerated locks, passed locked solution and installer restores and Release build (0 warnings, 0 errors), but returned FAILED before its Full gate: "THIRD-PARTY-NOTICES.md has no line for DiffPlex; a new runtime package needs a license review (Findings for Claude)." This is a false missing-package result: THIRD-PARTY-NOTICES.md:27 already attributes "### DiffPlex 1.9.0" with upstream, Apache-2.0 license and relationship. scripts/Apply-DependabotPr.ps1:100-112 accepts only "- `Id version`" or "| `Id` | version |" but not the existing heading format. The notices test detects five Roslyn 5.12.0 inventory lines that the script would normally refresh. Fixing this requires an additional change to the DEP1 script (outside PK5 Files) or separate pre-approved notice-format migration; the script refuses to run while that notice is dirty. PK5 acceptance (READY, Full gate, installed semantic smoke and PR closure) cannot be completed without a decision.
+- Options:
+  1. Add a prerequisite DEP1 card extending scripts/Apply-DependabotPr.ps1 to recognize and safely update existing package heading entries, while keeping a hard failure for truly unlisted packages. Then unblock and rerun PK5 unchanged.
+  2. Approve a separate notice-format migration card that represents the existing DiffPlex license entry in the script-supported list/table form, commit that documented attribution without changing dependency versions, then rerun the unchanged PK5 script.
+- Partial work: reverted (yes; both version pins, all regenerated lock files and PK5 Context7 evidence restored; only this proposal and the blocked STATUS record remain).
+- Decision (Claude): _pending_
 
 ## Decided
 
