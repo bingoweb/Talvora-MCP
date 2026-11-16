@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-16T12:53:57.000Z",
-  "scope": "D105v: the desktop worklog card window has no minimize or maximize box and returns on screen without taking the focus when something minimizes it",
+  "verifiedAtUtc": "2026-11-16T13:31:11.512Z",
+  "scope": "D98: retain a separate recent code preview and change time for up to 16 desktop worklog sessions",
   "libraries": [],
-  "noLookup": "D105v: long-stable Win32 window styles and ShowWindow commands Talvora already uses next to its WPF card; no package API is involved.",
+  "noLookup": "D98: own in-memory tray state with no external libraries or API dependencies.",
   "vendorSources": []
 }

@@ -32,7 +32,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [ ] D98 — The card keeps each session's code terminal when another session's frame comes in between
+- [~] D98 — The card keeps each session's code terminal when another session's frame comes in between (live interleaved-session history check pending Claude)
 - [ ] D100 — A call without a working folder joins the same agent's open card
 - [ ] D99 — The card changes session only when a step starts or ends
 - [ ] D101 — A step Talvora still follows never shows "Yanıt bekleniyor"
@@ -58,6 +58,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-16 — ChatGPT, D98: the tray code cache retains each session's latest committed preview, title and measured change time across interleaved worklog frames. A bounded 16-session LRU evicts the oldest unused session; an id-less frame clears only its own session. The existing N3b single-session behavior and OperationId fallback remain.
+  RED reproduced a disappearing code pane after an unrelated session's frame. Focused D98, whole Notification including unchanged N3b GREEN; signed-in Changed 29/0 and Full 73/0, both `Hepsi geçti.`; Context7 `noLookup` (own in-memory tray state). Clean-HEAD deploy, installed metadata/full smokes and CI follow this commit; Claude checks the three-call live interleaving and stored codePreview at the next audit.
+  Self-review — cosmetics: no XAML, layout, palette, pinned N5 sources, or visible strings changed.
+  Self-review — usability: code terminals survive interleaved calls, keep the original code change time, and clear independently per session.
+  Self-review — Turkish: no new user-visible text; existing strings remain unchanged.
+  Self-review — correctness and security: only tray-local code evidence is cached, at most 16 sessions; matching code ids are required for restoration, and the service, protocol and history store remain untouched.
 - 2026-11-16 — Claude, D105v verified on the installed runtime: 9c1ad0b installed 13:03 UTC (`/healthz`), metadata smoke `TALVORA MCP METADATA POLICY LIVE GREEN`, full smoke `TALVORA MCP SMOKE GREEN`, CI 43871911295 green. Live at 16:08: Claude's screenshot tool again minimized the new, not yet allowed tray, and the card came straight back at its pinned place in full size (639×335 px, not iconic, style `0x160C0000` without the minimize and maximize boxes).
 - 2026-11-16 — Claude, `[C]` D105v (audit 65 live check): the desktop card window drops its minimize and maximize boxes once its handle exists (`WS_MINIMIZEBOX`, `WS_MAXIMIZEBOX`; the border still resizes it), refuses `SC_MINIMIZE` and `SC_MAXIMIZE`, and when something minimizes it anyway it comes back through the dispatcher with `SW_SHOWNOACTIVATE`, so it never takes the focus. The reference copy and `SHA256SUMS.txt` follow; DESIGN-WORKLOG §3 rules.
   Red first: `Program.D105v.cs` failed on style `0x160F0000` (both boxes); green after the change, in its own child process (`--d105v-only`) because a process can hold one WPF Application and the placement test already makes one (the first Changed run went red on exactly that). Signed-in gate: Changed 28/0 and Full 73/0, both `Hepsi geçti.`. Context7 `noLookup` (long-stable Win32 window styles). Deploy, both installed smokes, CI and a live card check follow this commit.
