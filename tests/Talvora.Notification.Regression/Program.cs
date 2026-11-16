@@ -20,6 +20,17 @@ internal static partial class Program
         TrayLog.PathOverrideForTests = Path.Combine(isolatedRoot, "tray.log");
         WorklogHistoryStore.DefaultPathOverrideForTests = Path.Combine(isolatedRoot, "worklog-sessions.jsonl");
 
+        if (Environment.GetCommandLineArgs().Contains("--d99-wpf-only", StringComparer.Ordinal))
+        {
+            await AssertD99CardReuseAsync();
+            Console.WriteLine("D99_CARD_REUSE_GREEN");
+            return 0;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--d99-only", StringComparer.Ordinal))
+        {
+            await AssertD99CardReuseInChildAsync();
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--d100-only", StringComparer.Ordinal))
         {
             await AssertD100FolderlessCallsFollowActorSessionAsync();
@@ -174,6 +185,7 @@ internal static partial class Program
         AssertUi12cTimeRuler();
         AssertD104vCardText();
         await AssertD105vCardStaysOnScreenInChildAsync();
+        await AssertD99CardReuseInChildAsync();
         await AssertD25SessionRestartResetsTotalsAsync();
         AssertD43SessionTimeText();
         AssertD45WorkEndsWithLastStep();
@@ -1476,11 +1488,11 @@ internal static partial class Program
                         });
                         if (application.Windows
                             .OfType<DesktopProgressNotificationWindow>()
-                            .Any(item => item.SessionId == "n2-session-b" &&
-                                ReferenceEquals(item, sharedWindow)))
+                            .SingleOrDefault(item => item.SessionId == "n2-session-b") is not { } projectBWindow ||
+                            !ReferenceEquals(projectBWindow, sharedWindow))
                         {
                             throw new InvalidOperationException(
-                                "N2 different projects shared the same window instance.");
+                                "D99: a new project step did not reuse the same visible card.");
                         }
                     }
                     catch (Exception ex)

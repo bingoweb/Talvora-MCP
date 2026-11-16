@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-16T14:16:27.562Z",
-  "scope": "D100: folder-less calls reuse the same actor's latest open worklog session, including quiet reads",
+  "verifiedAtUtc": "2026-11-16T14:46:17.598Z",
+  "scope": "D99: the tray reuses its visible card on step transitions and ignores other sessions' progress frames",
   "libraries": [],
-  "noLookup": "D100: Talvora's own session bookkeeping and actor matching; no external library or API lookup is needed.",
+  "noLookup": "D99: internal tray presentation and WPF window reuse only; no external API lookup is required.",
   "vendorSources": []
 }

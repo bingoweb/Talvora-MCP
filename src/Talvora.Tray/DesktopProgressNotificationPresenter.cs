@@ -189,6 +189,19 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         }
 
         var sessionId = frame.SessionId;
+        var shown = _windows.Values.FirstOrDefault(
+            window => window.IsVisible && window.LastLane == frame.Lane);
+        // D99: other sessions' heartbeats and close notices still reach code/history above,
+        // but only a real step transition may replace the session shown in this lane.
+        if (!WorklogCardFocus.ShouldPresent(shown?.SessionId, message))
+            return;
+        if (shown is not null && shown.SessionId != sessionId &&
+            !_windows.ContainsKey(sessionId))
+        {
+            _windows.Remove(shown.SessionId);
+            _windows[sessionId] = shown;
+            _previewBySession.TryAdd(sessionId, preferences.ShowCodePreview);
+        }
         if (!_windows.TryGetValue(
                 sessionId,
                 out var window))
@@ -220,16 +233,21 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                 pinned => HandlePinStateChangeRequested(window, pinned);
             window.Closed += (_, _) =>
             {
+                // A reused window belongs to its currently displayed session, not the
+                // session that first caused it to be created.
+                var currentSessionId = window.SessionId;
                 if (window.WasManuallyClosed)
                 {
                     _presentationState.MarkManualDismissed(
-                        sessionId,
+                        currentSessionId,
                         window.LastLane,
                         window.IsTerminal);
                 }
 
-                _windows.Remove(sessionId);
-                _previewBySession.Remove(sessionId);
+                if (_windows.TryGetValue(currentSessionId, out var mapped) &&
+                    ReferenceEquals(mapped, window))
+                    _windows.Remove(currentSessionId);
+                _previewBySession.Remove(currentSessionId);
                 if (_windows.Count == 0 && !_isPinned)
                 {
                     _automaticScreenDeviceName = null;
@@ -255,6 +273,8 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
                     ? evidence with { CodePreview = null }
                     : null,
             };
+        if (window.WindowState == WindowState.Minimized)
+            window.WindowState = WindowState.Normal;
         window.Update(displayFrame,
             showPreview ? _codeState.CodeChangedUtc : null,
             Worklog.WorklogDetails.From(message));

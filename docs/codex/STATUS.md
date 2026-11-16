@@ -34,7 +34,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] D98 — The card keeps each session's code terminal when another session's frame comes in between (live interleaved-session history check pending Claude)
 - [~] D100 — A call without a working folder joins the same agent's open card (live history check pending Claude)
-- [ ] D99 — The card changes session only when a step starts or ends
+- [~] D99 — The card changes session only when a step starts or ends (visual live check pending Claude)
 - [ ] D101 — A step Talvora still follows never shows "Yanıt bekleniyor"
 - [ ] D102 — The task note survives a session that reopens
 - [ ] D103 — A long PowerShell error keeps its whole message
@@ -58,6 +58,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-16 — ChatGPT, D99: the tray's one visible card now changes session only on a non-closing Started, Completed, Failed or Cancelled frame. Another session's Running, Info or SessionClosed frame still reaches the code cache, open-session tracking and history but does not touch the visible window. A handoff reuses the existing WPF window, restores it if minimized, and keeps each session's code-preview choice; its Closed handler uses the window's current SessionId, including manual dismissal. N8 switches, window lifetimes, placement, pinning and the one-card budget are unchanged.
+  RED proved an unrelated B Running frame replaced A's window (different WPF object). GREEN: D99 pure decision states plus real WPF handoff/identity/history/manual-dismissal checks. The old N2 regression asserted separate windows for different projects; its one assertion was updated to the approved reusable-card rule. Full Notification and ModernizationPolicy green, including N8, N2 and D98. Signed-in Changed 28/0 and Full 73/0, both `Hepsi geçti.`; Context7 `noLookup` (tray-only presentation). Clean-HEAD deploy, installed metadata/full smokes and CI follow this commit; Claude checks real two-session card behavior at the next audit.
+  Self-review — cosmetics: no pinned N5 files, XAML, layout, palette, typography, placement, pinning or code terminal design changed.
+  Self-review — usability: unrelated progress cannot steal the card; real step transitions reuse its window without a new entrance animation.
+  Self-review — Turkish: no new visible text; existing names, titles and controls remain unchanged.
+  Self-review — correctness and security: ignored frames are cached and persisted before the focus decision; the one-card safety trim and existing privacy/redaction rules remain; manual dismissal affects only the current session.
 - 2026-11-16 — ChatGPT, D100: folder-less calls now reuse the latest active or recently used open session of their own actor; this shared ResolveSessionIdentity behavior applies to normal steps and quiet reads. Calls with a named folder or project override keep the existing project selection; the session ID formula, actor names and idle interval stay unchanged.
   RED reproduced a project patch followed by a folder-less PowerShell call splitting into different session IDs. GREEN: focused D100 (project session reuse and timeline, no-session global fallback, other-actor isolation, newest project, expired session and folder-less quiet read), full Notification including D25/D41/D50/D60, ModernizationPolicy. Signed-in Changed 29/0 and Full 73/0, both `Hepsi geçti.`. Context7 `noLookup` (own worklog bookkeeping). Clean-HEAD deployment, installed metadata/full smokes and CI follow this commit; Claude checks the real worklog session at the next audit.
   Self-review — cosmetics: no XAML, typography, palette, cards or code terminal visuals changed; only session association.
