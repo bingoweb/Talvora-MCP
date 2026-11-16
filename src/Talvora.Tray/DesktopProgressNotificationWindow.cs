@@ -28,6 +28,18 @@ internal sealed class DesktopProgressNotificationWindow : Window
     private const double DefaultCodeMaxHeight = 420;
     private const int WmEnterSizeMove = 0x0231;
     private const int WmExitSizeMove = 0x0232;
+    private const int WmSysCommand = 0x0112;
+    private const long ScMinimize = 0xF020;
+    private const long ScMaximize = 0xF030;
+    private const int GwlStyle = -16;
+    private const long WsMaximizeBox = 0x00010000;
+    private const long WsMinimizeBox = 0x00020000;
+    private const int SwShowNoActivate = 4;
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpNoZOrder = 0x0004;
+    private const uint SwpNoActivate = 0x0010;
+    private const uint SwpFrameChanged = 0x0020;
 
     private readonly WorklogCardView view;
     private readonly WorklogCardViewModel model = new();
@@ -124,6 +136,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
             }
         };
         SourceInitialized += (_, _) => AttachNativeWindowHook();
+        StateChanged += (_, _) => KeepOnScreen();
         Loaded += (_, _) => AnimateIn();
         Closed += (_, _) =>
         {
@@ -376,6 +389,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
         {
             windowSource = HwndSource.FromHwnd(handle);
             windowSource?.AddHook(WindowMessageHook);
+            RemoveMinimizeAndMaximizeBoxes(handle);
         }
     }
 
@@ -385,8 +399,59 @@ internal sealed class DesktopProgressNotificationWindow : Window
         windowSource = null;
     }
 
+    /// <summary>
+    /// D105v: the card has no taskbar button, so a minimized card would stay a 160×28 strip until its session ends.
+    /// It carries no minimize or maximize box (the border still resizes it) and refuses both commands below.
+    /// </summary>
+    private static void RemoveMinimizeAndMaximizeBoxes(IntPtr handle)
+    {
+        var style = GetWindowLongPtr(handle, GwlStyle).ToInt64();
+        var trimmed = style & ~(WsMinimizeBox | WsMaximizeBox);
+        if (trimmed == style)
+        {
+            return;
+        }
+
+        _ = SetWindowLongPtr(handle, GwlStyle, new IntPtr(trimmed));
+        _ = SetWindowPos(handle, IntPtr.Zero, 0, 0, 0, 0,
+            SwpNoSize | SwpNoMove | SwpNoZOrder | SwpNoActivate | SwpFrameChanged);
+    }
+
+    /// <summary>D105v: when something minimizes the card anyway, it comes back at once without taking the focus.</summary>
+    private void KeepOnScreen()
+    {
+        if (isClosing || WindowState == WindowState.Normal)
+        {
+            return;
+        }
+
+        Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+        {
+            if (isClosing || WindowState == WindowState.Normal)
+            {
+                return;
+            }
+
+            var handle = new WindowInteropHelper(this).Handle;
+            if (WindowState == WindowState.Minimized && handle != IntPtr.Zero)
+            {
+                _ = ShowWindow(handle, SwShowNoActivate);
+            }
+            else
+            {
+                WindowState = WindowState.Normal;
+            }
+        }));
+    }
+
     private IntPtr WindowMessageHook(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        if (message == WmSysCommand && (wParam.ToInt64() & 0xFFF0) is ScMinimize or ScMaximize)
+        {
+            handled = true;
+            return IntPtr.Zero;
+        }
+
         if (message == WmEnterSizeMove)
         {
             resizeStartWidth = ActualWidth;
@@ -400,4 +465,19 @@ internal sealed class DesktopProgressNotificationWindow : Window
 
         return IntPtr.Zero;
     }
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    private static extern IntPtr GetWindowLongPtr(IntPtr windowHandle, int index);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+    private static extern IntPtr SetWindowLongPtr(IntPtr windowHandle, int index, IntPtr value);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowPos")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(
+        IntPtr windowHandle, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
+
+    [DllImport("user32.dll", EntryPoint = "ShowWindow")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ShowWindow(IntPtr windowHandle, int command);
 }

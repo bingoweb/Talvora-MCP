@@ -20,6 +20,12 @@ internal static partial class Program
         TrayLog.PathOverrideForTests = Path.Combine(isolatedRoot, "tray.log");
         WorklogHistoryStore.DefaultPathOverrideForTests = Path.Combine(isolatedRoot, "worklog-sessions.jsonl");
 
+        if (Environment.GetCommandLineArgs().Contains("--d105v-only", StringComparer.Ordinal))
+        {
+            await AssertD105vCardStaysOnScreenAsync();
+            Console.WriteLine("D105V_CARD_STAYS_ON_SCREEN_GREEN");
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--d104v-only", StringComparer.Ordinal))
         {
             AssertD104vCardText();
@@ -155,6 +161,7 @@ internal static partial class Program
         AssertSn1LineTraffic();
         AssertUi12cTimeRuler();
         AssertD104vCardText();
+        await AssertD105vCardStaysOnScreenInChildAsync();
         await AssertD25SessionRestartResetsTotalsAsync();
         AssertD43SessionTimeText();
         AssertD45WorkEndsWithLastStep();

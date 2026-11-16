@@ -93,6 +93,7 @@ Rules (card):
 - Width default 440 DIP (min 360, max 720); height **grows with content** up to 60 % of the work area, then the timeline scrolls; user resize persists (existing behaviour) and is applied to every card, not only code cards.
 - The same window instance is reused for the whole session (no window recreation between steps → no flicker). When the card changes session (§4.1, D99), the same window shows the other session in place: no close and reopen, the new title types in (§7b "type").
 - Hover pauses auto-dismiss (existing). Click on the card body (not buttons) opens the Control Center "Çalışma günlüğü" page at this session (N7). `Esc` closes. Drag pins (existing contract).
+- The card is never minimized or maximized (D105v, audit 65): its window has no minimize or maximize box and refuses both commands, and when something minimizes it anyway it comes back at once without taking the focus. It has no taskbar button, so a minimized card would be lost as a 160×28 strip for its whole session.
 - Minimum font size 11 DIP; body text ≥ 4.5:1 contrast on `#101722`.
 
 ## 4. Information model (protocol v4)

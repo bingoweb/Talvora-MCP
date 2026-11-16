@@ -1,6 +1,6 @@
 # SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
-# Updated by Claude 2026-11-01 for the time ruler (UI12c; DESIGN-WORKLOG §7b) and 2026-11-14 for the "durum" label (D75; §6.2), and 2026-11-16 for the history rows' "ne" line and the number typography (D104v; §7b).
-07673b7808f6434881b358c11a77b08a18627f70a83ec4e15069add241d8bf23  src/DesktopProgressNotificationWindow.cs
+# Updated by Claude 2026-11-01 for the time ruler (UI12c; DESIGN-WORKLOG §7b) and 2026-11-14 for the "durum" label (D75; §6.2), and 2026-11-16 for the history rows' "ne" line and the number typography (D104v; §7b), and the same day for the card window that cannot be minimized (D105v; §3).
+b5f87fa3477c7931111903cb9ee4e3ad3adad11e59685910094bd34578f57768  src/DesktopProgressNotificationWindow.cs
 9ce414a94482db8da0dc80cce316f09cf662f2133dcfd302547b8bb7b8715324  src/UnifiedDiffViewParser.cs
 aae2699e258ed6cca4a4a159840fd24690ec01732e503ec1ed78849b207a35e9  src/WorklogCardMapper.cs
 de0eeb1fbc35636840a88d966557de58d1baeb7d07ba97d2776722c564e19acc  src/WorklogCardView.xaml
