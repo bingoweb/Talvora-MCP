@@ -10,7 +10,7 @@ The user only types:
 Talvora'ya devam et
 ```
 
-Codex applies `AGENTS.md` → **CONTINUE PROTOCOL**: takes the first `[ ]` item of `docs/codex/STATUS.md` → "Agent queue", implements it per its card (every open card is in `docs/codex/ROADMAP.md`), runs `scripts/Invoke-QualityGate.ps1`, commits once, pushes to `origin` and `github`, and reports in Turkish. If Codex is opened in another folder, the `talvora-devam` skill routes it here.
+Codex applies `AGENTS.md` → **CONTINUE PROTOCOL**: takes the first open item of `docs/codex/STATUS.md` → "Agent queue" (at a `[C]` line it stops with "Sıra Claude'da: <item>"), implements it per its card (every open card is in `docs/codex/ROADMAP.md`), runs `scripts/Invoke-QualityGate.ps1`, commits once, pushes to `origin` and `github`, and reports in Turkish. If Codex is opened in another folder, the `talvora-devam` skill routes it here.
 
 The same shortcut works in a **ChatGPT chat with the Talvora connector** — see "ChatGPT + Talvora" below.
 
@@ -58,7 +58,7 @@ Talvora: read docs/codex/STATUS.md and tell me briefly, in Turkish: finished car
 ## Answering an open question
 
 ```
-Talvora: answer to STATUS "Open questions" → <Q-ID>: <answer>. Record it in docs/codex/STATUS.md (move the question with its answer into the Log, in English), unblock the affected queue item ([?] → [ ]), update the card text if the answer changes it, one commit with a plain Turkish subject such as "<Q-ID> sorusu yanıtlandı". Do not start a queue item. Confirm to me in Turkish.
+Talvora: answer to STATUS "Open questions" → <Q-ID>: <answer>. Record it in docs/codex/STATUS.md (move the question with its answer into the Log, in English), leave the queue and the cards unchanged (Claude applies the answer at the next audit), one commit with a plain Turkish subject such as "<Q-ID> sorusu yanıtlandı". Do not start a queue item. Confirm to me in Turkish.
 ```
 
 ## Audit fixes (after Claude's audit)
