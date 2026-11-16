@@ -20,6 +20,13 @@ internal static partial class Program
         TrayLog.PathOverrideForTests = Path.Combine(isolatedRoot, "tray.log");
         WorklogHistoryStore.DefaultPathOverrideForTests = Path.Combine(isolatedRoot, "worklog-sessions.jsonl");
 
+        if (Environment.GetCommandLineArgs().Contains("--d104v-only", StringComparer.Ordinal))
+        {
+            AssertD104vCardText();
+            AssertUi12cTimeRuler();
+            Console.WriteLine("D104V_CARD_TEXT_GREEN");
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--d95-only", StringComparer.Ordinal))
         {
             await AssertD95CommandErrorLinesAsync();
@@ -147,6 +154,7 @@ internal static partial class Program
         await AssertWl1StepDurationAsync();
         AssertSn1LineTraffic();
         AssertUi12cTimeRuler();
+        AssertD104vCardText();
         await AssertD25SessionRestartResetsTotalsAsync();
         AssertD43SessionTimeText();
         AssertD45WorkEndsWithLastStep();

@@ -76,9 +76,11 @@ internal static class WorklogPreviewScenarios
         model.Purpose = "Bekleyen kod sınırı 5'ten 50'ye çıkıyor; sıra dolunca ekran 429 ile beklemeye alınıyor";
         model.SetTimeline(
         [
-            new(WorklogRowState.Succeeded, "14:01", "Kaynaklar incelendi · 12 dosya", 0.6),
+            new(WorklogRowState.Succeeded, "14:01", "Kaynaklar incelendi · 12 dosya", 0.6,
+                "Bekleyen kod sınırının tutulduğu yer aranıyor"),
             new(WorklogRowState.Muted, "14:01", "Okuma başarısız · yanlış parametre", 0.2),
-            new(WorklogRowState.Succeeded, "13:58", "Testler geçti · 1 837 test", 41.3),
+            new(WorklogRowState.Succeeded, "13:58", "Testler geçti · 1 837 test", 41.3,
+                "Değişiklikten önce testlerin temiz geçtiği doğrulanıyor"),
         ]);
         Code(model, "diff · 14:02:11",
             "+++ b/backend/routes/kiosk-routes.js\n" +
@@ -108,11 +110,15 @@ internal static class WorklogPreviewScenarios
         model.FactLine = "56 kontrol · 0 hata";
         model.SetTimeline(
         [
-            new(WorklogRowState.Succeeded, "16:25", "Kalite kontrolü geçti · tam", 312.4),
-            new(WorklogRowState.Succeeded, "16:20", "Derleme başarılı · Talvora.csproj", 18.9),
-            new(WorklogRowState.Succeeded, "16:18", "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya", 0.9),
+            new(WorklogRowState.Succeeded, "16:25", "Kalite kontrolü geçti · tam", 312.4,
+                "D12 için tüm kalite kontrolleri çalıştırılıyor"),
+            new(WorklogRowState.Succeeded, "16:20", "Derleme başarılı · Talvora.csproj", 18.9,
+                "Değişikliğin derlendiği doğrulanıyor"),
+            new(WorklogRowState.Succeeded, "16:18", "Kod değişikliği uygulandı · GitTools.cs ve 1 dosya", 0.9,
+                "git pull artık oturum kullanıcısının SSH anahtarını kullanıyor"),
             new(WorklogRowState.Failed, "16:17", "Kod değişikliği uygulanamadı · dosya değişmişti", 0.3),
-            new(WorklogRowState.Succeeded, "16:15", "Uzak değişiklikler alındı · origin/main", 2.7),
+            new(WorklogRowState.Succeeded, "16:15", "Uzak değişiklikler alındı · origin/main", 2.7,
+                "Yerel main dalı Gitea ile eşitleniyor"),
             new(WorklogRowState.Succeeded, "16:14", "Görev bağlamı hazır", 1.1),
             new(WorklogRowState.Succeeded, "16:12", "Paketler hazır", 7.6),
         ]);
@@ -137,7 +143,8 @@ internal static class WorklogPreviewScenarios
         model.SetTimeline(
         [
             new(WorklogRowState.Failed, "17:44", "Derleme başarısız · Talvora.Tray.csproj · 3 hata", 18.4),
-            new(WorklogRowState.Succeeded, "17:43", "Kod değişikliği uygulandı · ControlCenterWindow.cs", 0.8),
+            new(WorklogRowState.Succeeded, "17:43", "Kod değişikliği uygulandı · ControlCenterWindow.cs", 0.8,
+                "Pencere başlığı \"Kontrol Merkezi\" oluyor"),
         ]);
         Code(model, "diff · 17:43:02",
             "+++ b/src/Talvora.Tray/ControlCenterWindow.cs\n" +

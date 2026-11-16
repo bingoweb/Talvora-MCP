@@ -449,13 +449,15 @@ read as time. The ruler replaces it, still between the code pane and the status 
 | Running block | cyan block from `frame time − Current.ElapsedSeconds` to frame time | `Current.ElapsedSeconds` (stopwatch of the running call) |
 | Failure caret | 8×5 DIP red triangle above every failed block, so a 2 DIP failure stays findable | step state |
 | Clock | 1 DIP axis line; 1×4 ticks on whole local minutes (axis ≤ 10 min), 5 min (≤ 1 h) or 15 min; labels `:mm` for minute ticks, `HH:mm` otherwise; `HH:mm` start at the left edge and end flush right; a tick label that would come within 8 DIP of another, or repeats an edge minute, is skipped, never shortened | frame timestamp, local time zone |
-| Legend | `■ iş 5:39 · 4 adım` (green square) · `▼ 1 hata` (only with failures) · `┈ ara 3:25` (only when **every** finished step on the axis was measured) — 11 px, `Wl.Muted` text | work = **union** of the measured intervals (parallel steps count once), adım = drawn blocks, ara = axis − work |
+| Legend | `■ iş 5:39 · 4 adım` (green square) · `▼ 1 hata` (only with failures) · `┈ ara 3:25` (only when **every** finished step on the axis was measured and the gap is at least 1 s, D104v) — 11 px, `Wl.Muted` text | work = **union** of the measured intervals (parallel steps count once), adım = drawn blocks, ara = axis − work |
 
 Steps without a measurement are not drawn; with no measured step the ruler is hidden. Motion: only a newly arrived block draws
 in from its left edge (260 ms, cubic ease-out); off under reduced motion, high contrast or when hidden. The preview harness
 builds each fixture as a protocol frame and draws it with the mapper's own functions.
 
 **UI12d (audit 36 polish):** the ruler legend counts finished steps like the status bar and names a running step separately ("2 adım · 1 sürüyor"); all measured seconds round to the nearest value ("14 sn" for 13.7 s, "1:00" for 59.6 s); when both ends of the ruler fall in the same minute the end labels show seconds ("22:12:01 … 22:12:16").
+
+**D104v (audit 65; user decision 2026-11-16 "Her geçmiş satırında"):** each "geçmiş" row carries its step's own purpose as the quiet `ne` line of the History row above. Talvora's own texts on the card (command line, `sonuç` line, history labels) keep a number with its digit groups and the word after it on one line (no-break space: "3 hata", "1 837 test") and never break a short token at its slash (word joiner: "origin/main"); this is display only, the stored, copied and history texts stay as received, and the agent's own words (`ne`, `# görev`) are drawn as written. A session that was all work prints no `ara`.
 
 Built by Claude on 2026-11-01 (WL1 + UI12 + UI12b + D24 + UI12c + UI12d). The preview harness (`Talvora.Tray.exe --worklog-preview <dir>`) renders every state; fixture durations there are labelled design fixtures, while the live card reads only WL1 measurements.
 

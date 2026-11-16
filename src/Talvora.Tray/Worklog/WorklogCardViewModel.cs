@@ -37,10 +37,17 @@ public enum DiffLineKind
 
 /// <summary>
 /// One shell-history row (DESIGN-WORKLOG §7b). <see cref="DurationSeconds"/> is the measured stopwatch time of that
-/// tool call (WL1); null means nothing was measured, and then neither a number nor a bar is drawn.
+/// tool call (WL1); null means nothing was measured, and then neither a number nor a bar is drawn. <see cref="Purpose"/>
+/// is the agent's own words for that step (D92), drawn as a quiet "ne" line under the label (D104v); none, no line.
 /// </summary>
-public sealed record WorklogTimelineRow(WorklogRowState State, string Time, string Label, double? DurationSeconds = null)
+public sealed record WorklogTimelineRow(
+    WorklogRowState State, string Time, string Label, double? DurationSeconds = null, string? Purpose = null)
 {
+    /// <summary>The label as drawn: numbers stay with their word, a short token never breaks at its slash (D104v).</summary>
+    public string DisplayLabel => WorklogTypography.KeepTogether(Label);
+
+    public bool HasPurpose => !string.IsNullOrWhiteSpace(Purpose);
+
     public string Tag => State switch
     {
         WorklogRowState.Running => "▸",
@@ -108,6 +115,46 @@ public static class WorklogMeasure
         return span.TotalHours >= 1
             ? span.ToString(@"h\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture)
             : span.ToString(@"mm\:ss", System.Globalization.CultureInfo.InvariantCulture);
+    }
+}
+
+/// <summary>
+/// Display-only typography for Talvora's own card texts (D104v, DESIGN-WORKLOG §7b): a number keeps its digit groups and
+/// the word after it on one line ("3 hata", "1 837 test", "0,9 sn"), and a short token never breaks at its slash
+/// ("origin/main"). The stored and copied texts never change; the agent's own words ("ne") are drawn as written.
+/// </summary>
+public static class WorklogTypography
+{
+    private const char NoBreakSpace = (char)0x00A0;
+    private const char WordJoiner = (char)0x2060;
+
+    public static string KeepTogether(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text ?? string.Empty;
+        }
+
+        var builder = new System.Text.StringBuilder(text.Length + 8);
+        for (var index = 0; index < text.Length; index++)
+        {
+            var character = text[index];
+            var previous = index > 0 ? text[index - 1] : ' ';
+            var next = index + 1 < text.Length ? text[index + 1] : ' ';
+            if (character == ' ' && char.IsDigit(previous) && char.IsLetterOrDigit(next))
+            {
+                builder.Append(NoBreakSpace);
+                continue;
+            }
+
+            builder.Append(character);
+            if (character == '/' && !char.IsWhiteSpace(previous) && !char.IsWhiteSpace(next) && next != '/')
+            {
+                builder.Append(WordJoiner);
+            }
+        }
+
+        return builder.ToString();
     }
 }
 
@@ -311,11 +358,13 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
         }
     }
 
-    /// <summary>"Kod değişikliği uygulandı" of "Kod değişikliği uygulandı · GitTools.cs" (semibold).</summary>
-    public string TitleMain => Title.Split(" · ", 2)[0];
+    /// <summary>"Kod değişikliği uygulandı" of "Kod değişikliği uygulandı · GitTools.cs" (semibold; D104v typography).</summary>
+    public string TitleMain => WorklogTypography.KeepTogether(Title.Split(" · ", 2)[0]);
 
-    /// <summary>" · GitTools.cs" (regular weight, muted) or empty.</summary>
-    public string TitleDetail => Title.Contains(" · ", StringComparison.Ordinal) ? " · " + Title.Split(" · ", 2)[1] : string.Empty;
+    /// <summary>" · GitTools.cs" (regular weight, muted) or empty; "3 hata" stays on one line (D104v).</summary>
+    public string TitleDetail => Title.Contains(" · ", StringComparison.Ordinal)
+        ? " · " + WorklogTypography.KeepTogether(Title.Split(" · ", 2)[1])
+        : string.Empty;
 
     public string? FactLine
     {
@@ -335,8 +384,8 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
     /// <summary>"ne" row: the agent's own words for what this step changes (apply_patch purpose).</summary>
     public string? Purpose { get => purpose; set => Set(ref purpose, value); }
 
-    /// <summary>"sonuç" row: the real fact line, unless "nerede/fark" already show the change.</summary>
-    public string? ResultLine => HasChanges ? null : FactLine;
+    /// <summary>"sonuç" row: the real fact line, unless "nerede/fark" already show the change (D104v typography).</summary>
+    public string? ResultLine => HasChanges || FactLine is null ? null : WorklogTypography.KeepTogether(FactLine);
 
     public bool HasChanges => ChangeRows.Count > 0;
 

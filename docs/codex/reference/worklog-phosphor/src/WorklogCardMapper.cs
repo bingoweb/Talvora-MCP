@@ -75,7 +75,8 @@ public static class WorklogCardMapper
                 },
                 entry.TimestampUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture),
                 entry.Label,
-                entry.DurationSeconds))
+                entry.DurationSeconds,
+                entry.Purpose))
             .ToArray());
 
         model.SignalSpanSeconds = SignalSpan(frame);
@@ -135,7 +136,8 @@ public static class WorklogCardMapper
     /// <summary>
     /// The ruler's printed numbers (UI12c). Work is the union of the measured intervals, so parallel steps count once.
     /// The gap (axis length − work) is printed only when every finished step on the axis was measured; otherwise the
-    /// unmeasured steps would be miscounted as idle time.
+    /// unmeasured steps would be miscounted as idle time. Under one measured second it is not printed (D104v): a session
+    /// that was all work has no gap to show ("ara 0,0 sn").
     /// </summary>
     public static SignalLegend BuildSignalLegend(DesktopWorklogFrame frame)
     {
@@ -158,11 +160,12 @@ public static class WorklogCardMapper
         var running = intervals.Count(interval => interval.State == WorklogRowState.Running);
         var finished = intervals.Length - running;
         var complete = frame.Timeline.All(entry => entry.DurationSeconds is not null || entry.State == WorklogStepState.Running);
+        var gap = Math.Max(0, span - work);
         return new SignalLegend(
             start.ToLocalTime().DateTime,
             $"iş {WorklogMeasure.Format(work)} · {finished} adım" + (running > 0 ? $" · {running} sürüyor" : string.Empty),
             failures > 0 ? $"{failures} hata" : null,
-            complete && span > 0 ? $"ara {WorklogMeasure.Format(Math.Max(0, span - work))}" : null);
+            complete && span > 0 && gap >= 1 ? $"ara {WorklogMeasure.Format(gap)}" : null);
     }
 
     private static IEnumerable<(DateTimeOffset Begin, DateTimeOffset End, WorklogRowState State, string Label, double Seconds)> MeasuredIntervals(

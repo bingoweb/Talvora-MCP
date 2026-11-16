@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-16T09:00:59.104Z",
-  "scope": "D95: select real failed command error lines from ANSI-colored PowerShell and mixed stderr output",
+  "verifiedAtUtc": "2026-11-16T12:23:27.000Z",
+  "scope": "D104v: the desktop worklog card draws each history row's own purpose, keeps numbers with their words and prints the ruler gap only from one second",
   "libraries": [],
-  "noLookup": "D95: Talvora's own worklog text; the card provides real error output samples, and no external APIs are involved.",
+  "noLookup": "D104v: Talvora's own WPF card layout and display text; existing XAML patterns of the card, no external API is involved.",
   "vendorSources": []
 }
