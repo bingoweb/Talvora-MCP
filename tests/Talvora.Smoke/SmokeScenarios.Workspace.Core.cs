@@ -90,39 +90,30 @@ internal static partial class SmokeScenarios
                     throw new InvalidOperationException("session_get did not return the selected active session.");
                 }
                 
-                var markerPathBase64 = Convert.ToBase64String(
-                    System.Text.Encoding.Unicode.GetBytes(interactiveSessionMarker));
-                var sessionProbeScript = $$"""
-                    $path = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('{{markerPathBase64}}'))
-                    $payload = [ordered]@{
-                        user = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-                        sessionId = [Diagnostics.Process]::GetCurrentProcess().SessionId
-                    }
-                    [IO.File]::WriteAllText(
-                        $path,
-                        ($payload | ConvertTo-Json -Compress),
-                        [Text.UTF8Encoding]::new($false))
-                    """;
-                var encodedSessionProbe = Convert.ToBase64String(
-                    System.Text.Encoding.Unicode.GetBytes(sessionProbeScript));
+                // D96: Microsoft Defender's machine-learning rule Trojan:Win32/Commando.B!ml blocked the earlier
+                // "powershell.exe -ExecutionPolicy Bypass -EncodedCommand" probe as malware (2026-11-14 and
+                // 2026-11-16), so the launch failed with CreateProcessAsUserW=5 and the user got a severe alert.
+                // The probe now has the plain "pwsh -NoProfile -Command" shape of the agents' daily detached runs.
+                var markerLiteral = interactiveSessionMarker.Replace("'", "''", StringComparison.Ordinal);
+                var sessionProbeScript =
+                    "$payload = [ordered]@{ user = [Security.Principal.WindowsIdentity]::GetCurrent().Name; " +
+                    "sessionId = [Diagnostics.Process]::GetCurrentProcess().SessionId }; " +
+                    $"[IO.File]::WriteAllText('{markerLiteral}', ($payload | ConvertTo-Json -Compress), " +
+                    "[Text.UTF8Encoding]::new($false))";
                 var interactivePowerShell = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.System),
-                    "WindowsPowerShell",
-                    "v1.0",
-                    "powershell.exe");
-                
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                    "PowerShell",
+                    "7",
+                    "pwsh.exe");
+
                 var userProcessResult = await EnsureSuccess(byName["talvora_user_process_start"], new()
                 {
                     ["executable"] = interactivePowerShell,
                     ["arguments"] = new[]
                     {
-                        "-NoLogo",
                         "-NoProfile",
-                        "-NonInteractive",
-                        "-ExecutionPolicy",
-                        "Bypass",
-                        "-EncodedCommand",
-                        encodedSessionProbe,
+                        "-Command",
+                        sessionProbeScript,
                     },
                     ["sessionId"] = activeSessionId,
                     ["workingDirectory"] = root,

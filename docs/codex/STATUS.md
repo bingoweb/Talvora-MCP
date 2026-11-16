@@ -35,6 +35,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D93 — Deleting a missing path really reads "Zaten yoktu" (live missing-path deletion check pending (Claude) at the next audit)
 - [x] D92 — The history keeps every step's purpose (user decision, audit 61; narrowed by P-54: no N5 file)
 - [?] D94 — waiting for Claude: P-55 (installed full smoke blocked by unrelated interactive process launch; CI run 43776853155 pending)
+- [x] [C] D96 — The installed smoke's session probe no longer trips Microsoft Defender (audit 64, answers P-55)
 - [ ] D95 — A failed command's result shows its real error line, without escape codes (audit 63)
 - [ ] [C] D92v — Claude draws each step's purpose in the history view, `WorklogHistoryView.xaml` (after D92)
 
@@ -54,6 +55,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-16 — Claude, `[C]` D96 (audit 64, answers P-55): the full installed smoke's session probe started `powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand …` in the user's session. Microsoft Defender's machine-learning rule `Trojan:Win32/Commando.B!ml` blocked it (Defender/Operational 1116 and 1117 on 2026-11-14 at 15:21 and 15:24 and on 2026-11-16 at 02:52:06; `Get-MpThreatDetection`: a command-line resource started by SYSTEM, nothing quarantined), so `CreateProcessAsUserW` returned 5, D94's full smoke went red and the user got three severe alerts. The verdict changes with the encoded text (the D92 and D93 runs passed). The probe now runs `pwsh.exe -NoProfile -Command` with a plain script and the marker path as a single-quoted literal, the shape of the agents' daily detached runs.
+  Red: the three recorded detections (no new alert was provoked on purpose). Green: full installed smoke on 5c441bf 03:07–03:10 `TALVORA MCP SMOKE GREEN` with D94's brief scenario inside, no Defender detection since 03:07. Signed-in Full gate (tree with D96 and D92v) 73/0 `Hepsi geçti.`. Test-only, so no Context7 evidence (`Validate-Context7Gate.ps1` patterns).
+  Self-review — cosmetics: nothing visible changes.
+  Self-review — usability: the installed smoke no longer fails at random on its own probe or raises Defender alerts on the user's machine.
+  Self-review — Turkish: no user-facing text changes.
+  Self-review — correctness and security: the probe still proves user and session from inside the launched process; no guard, permission or Defender setting was touched.
 - 2026-11-16 — ChatGPT, D94: stale roots without AGENTS.md are pruned on the next successful brief; the live brief scenario now uses a temporary repository with copied AGENTS.md and Get-CodexContext.ps1, two fixture cards and local context files. The default installed smoke also runs it; real repository docs are untouched.
   RED reproduced, focused D90 and independent live brief GREEN; SourceEdit regression green. Signed-in Changed 30/0 and Full 73/0, both `Hepsi geçti.`; Context7 `noLookup` (own test and state file).
   Installed 5c441bf health, metadata and standalone agent brief GREEN; full smoke RED at unrelated `talvora_user_process_start` (CreateProcessAsUserW=5), before the new brief step. CI 43776853155 in progress at one-time check; P-55 awaits Claude.
