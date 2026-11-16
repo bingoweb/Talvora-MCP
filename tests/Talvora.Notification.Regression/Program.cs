@@ -20,6 +20,11 @@ internal static partial class Program
         TrayLog.PathOverrideForTests = Path.Combine(isolatedRoot, "tray.log");
         WorklogHistoryStore.DefaultPathOverrideForTests = Path.Combine(isolatedRoot, "worklog-sessions.jsonl");
 
+        if (Environment.GetCommandLineArgs().Contains("--d100-only", StringComparer.Ordinal))
+        {
+            await AssertD100FolderlessCallsFollowActorSessionAsync();
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--d98-only", StringComparer.Ordinal))
         {
             AssertD98InterleavedCodeSessions();
@@ -157,6 +162,7 @@ internal static partial class Program
         await AssertD92EveryStepPurposeAsync();
         await AssertD95CommandErrorLinesAsync();
         AssertD98InterleavedCodeSessions();
+        await AssertD100FolderlessCallsFollowActorSessionAsync();
         await AssertWl5MeasuredTitlesAsync();
         await AssertWl6FollowerAsync();
         await AssertD82CompactDeployAsync();

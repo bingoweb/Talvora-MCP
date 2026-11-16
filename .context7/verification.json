@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-16T13:31:11.512Z",
-  "scope": "D98: retain a separate recent code preview and change time for up to 16 desktop worklog sessions",
+  "verifiedAtUtc": "2026-11-16T14:16:27.562Z",
+  "scope": "D100: folder-less calls reuse the same actor's latest open worklog session, including quiet reads",
   "libraries": [],
-  "noLookup": "D98: own in-memory tray state with no external libraries or API dependencies.",
+  "noLookup": "D100: Talvora's own session bookkeeping and actor matching; no external library or API lookup is needed.",
   "vendorSources": []
 }

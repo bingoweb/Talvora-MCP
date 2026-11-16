@@ -401,13 +401,44 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         return _sessions.TryGetValue(key, out var session) && !session.Closed ? session : null;
     }
 
-    private static (string Key, string Actor, string? ProjectName) ResolveSessionIdentity(
+    private (string Key, string Actor, string? ProjectName) ResolveSessionIdentity(
         IDictionary<string, JsonElement>? arguments, string? surfacePath,
         string? clientName, string? projectOverride)
     {
         var (projectRoot, projectName) = ResolveProject(arguments, projectOverride);
         var actor = ResolveActor(surfacePath, clientName);
+        // D100: a folder-less call belongs to this actor's most recently active open session.
+        // Named folders and explicit project overrides continue to resolve by their own roots.
+        if (projectRoot is null && string.IsNullOrWhiteSpace(projectOverride) &&
+            !HasNamedProjectArgument(arguments))
+        {
+            var now = DateTimeOffset.UtcNow;
+            var open = _sessions.Values
+                .Where(session => !session.Closed &&
+                    string.Equals(session.Actor, actor, StringComparison.Ordinal) &&
+                    (_activeWorklog.Values.Any(item => ReferenceEquals(item.Session, session)) ||
+                     now - session.LastActivityUtc <= _sessionIdleInterval))
+                .MaxBy(session => session.LastActivityUtc);
+            if (open?.Key is { } openKey)
+                return (openKey, actor, open.ProjectName);
+        }
         return (string.Concat(projectRoot ?? "global", "\u0000", actor), actor, projectName);
+    }
+
+    private static bool HasNamedProjectArgument(IDictionary<string, JsonElement>? arguments)
+    {
+        if (arguments is null) return false;
+        foreach (var key in new[]
+                 {
+                     "workspaceRoot", "workingDirectory", "repositoryPath", "root", "path", "destination", "source",
+                 })
+        {
+            if (arguments.TryGetValue(key, out var value) &&
+                value.ValueKind == JsonValueKind.String &&
+                !string.IsNullOrWhiteSpace(value.GetString()))
+                return true;
+        }
+        return false;
     }
 
     /// <summary>talvora_worklog_note: set the session's task line and show it at once if a card is up.</summary>

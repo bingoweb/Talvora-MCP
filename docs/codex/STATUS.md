@@ -33,7 +33,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [~] D98 — The card keeps each session's code terminal when another session's frame comes in between (live interleaved-session history check pending Claude)
-- [ ] D100 — A call without a working folder joins the same agent's open card
+- [~] D100 — A call without a working folder joins the same agent's open card (live history check pending Claude)
 - [ ] D99 — The card changes session only when a step starts or ends
 - [ ] D101 — A step Talvora still follows never shows "Yanıt bekleniyor"
 - [ ] D102 — The task note survives a session that reopens
@@ -58,6 +58,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-16 — ChatGPT, D100: folder-less calls now reuse the latest active or recently used open session of their own actor; this shared ResolveSessionIdentity behavior applies to normal steps and quiet reads. Calls with a named folder or project override keep the existing project selection; the session ID formula, actor names and idle interval stay unchanged.
+  RED reproduced a project patch followed by a folder-less PowerShell call splitting into different session IDs. GREEN: focused D100 (project session reuse and timeline, no-session global fallback, other-actor isolation, newest project, expired session and folder-less quiet read), full Notification including D25/D41/D50/D60, ModernizationPolicy. Signed-in Changed 29/0 and Full 73/0, both `Hepsi geçti.`. Context7 `noLookup` (own worklog bookkeeping). Clean-HEAD deployment, installed metadata/full smokes and CI follow this commit; Claude checks the real worklog session at the next audit.
+  Self-review — cosmetics: no XAML, typography, palette, cards or code terminal visuals changed; only session association.
+  Self-review — usability: an agent's folder-less command or quiet read stays on the same open project card rather than splitting its own timeline.
+  Self-review — Turkish: user-facing strings and existing actor labels remain unchanged.
+  Self-review — correctness and security: unrelated actors never share a session; explicit project roots still win, and the existing timeout, session hashing, safety rules and pinned N5 files remain untouched.
 - 2026-11-16 — ChatGPT, D98: the tray code cache retains each session's latest committed preview, title and measured change time across interleaved worklog frames. A bounded 16-session LRU evicts the oldest unused session; an id-less frame clears only its own session. The existing N3b single-session behavior and OperationId fallback remain.
   RED reproduced a disappearing code pane after an unrelated session's frame. Focused D98, whole Notification including unchanged N3b GREEN; signed-in Changed 29/0 and Full 73/0, both `Hepsi geçti.`; Context7 `noLookup` (own in-memory tray state). Clean-HEAD deploy, installed metadata/full smokes and CI follow this commit; Claude checks the three-call live interleaving and stored codePreview at the next audit.
   Self-review — cosmetics: no XAML, layout, palette, pinned N5 sources, or visible strings changed.
