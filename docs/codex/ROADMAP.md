@@ -31,7 +31,7 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-17 (66) · range `audit/2026-11-16-65..44b4e66` (D98, D100, D99, D101, D102, D103 and P-56 by ChatGPT) · user: "talvora modernizasyonunun önünü kesen durumlara izin verme. talvora yı denetle" · new agent card D107; Claude's `[C]` D106 (P-56); PK5 (audit 65) unblocked
+### Audit 2026-11-17 (66) · range `audit/2026-11-16-65..44b4e66` (D98, D100, D99, D101, D102, D103 and P-56 by ChatGPT) · user: "talvora modernizasyonunun önünü kesen durumlara izin verme. talvora yı denetle" · new agent cards D107, D108; Claude's `[C]` D106 (P-56); PK5 (audit 65) unblocked
 
 ### D107 — .NET SDK patches go through one script
 
@@ -40,7 +40,7 @@ D-cards go to the top of the agent queue. Newest audit first.
 **Files:** `scripts/Update-DotnetSdkPatch.ps1` (new), `scripts/Apply-DependabotPr.ps1`, `scripts/Update-ThirdPartyNotices.ps1`, `tests/ThirdPartyNoticesSourceRegression.ps1`, `tests/DotnetSdkPatchRegression.ps1` (new), `docs/MODERNIZATION-POLICY.md` (the "SDK updates" paragraph), `docs/codex/STATUS.md`, `.context7/verification.json`. **Tests that read these files:** `tests/PlatformPackageLockstepRegression.ps1`, `tests/ThirdPartyNoticesSourceRegression.ps1`, `tests/ThirdPartyNoticesUpdateRegression.ps1` (green unchanged), `tests/ModernizationPolicyRegression.ps1`, `tests/QualityGateRegression.ps1`; CI's SDK check in `.github/workflows/windows-ci.yml` (an SDK change must come with changed lock files) stays as it is.
 
 **Do:**
-1. Red first: `tests/DotnetSdkPatchRegression.ps1` runs the new script with `-SkipRestore` against a temporary copy (fixture `global.json`, `Directory.Packages.props` with the platform family, a notice with the three runtime pack lines) and a fake dotnet root (`-DotnetRoot`) holding `sdk/<version>/Microsoft.NETCoreSdk.BundledVersions.props`: (a) without `-Version` the newest installed patch of `global.json`'s feature band is chosen (10.0.404 pinned, 10.0.405 and 10.0.500 installed → 10.0.405); (b) `global.json`'s version, every platform package and the three runtime pack lines take that SDK's `BundledNETCoreAppPackageVersion`; (c) another feature band or major (10.0.500, 11.0.100) stops with a message saying Claude decides feature bands and majors; (d) a requested version that is not installed stops and names https://dotnet.microsoft.com/download/dotnet/10.0; (e) nothing newer installed → no file changes and the message "SDK <version> is already the newest patch of its band".
+1. Red first: `tests/DotnetSdkPatchRegression.ps1` runs the new script with `-SkipRestore` against a temporary copy (fixture `global.json`, `Directory.Packages.props` with the platform family, a notice with the three runtime pack lines) and a fake dotnet root (`-DotnetRoot`) holding `sdk/<version>/Microsoft.NETCoreSdk.BundledVersions.props`: (a) without `-Version` the newest installed patch of `global.json`'s feature band is chosen (10.0.404 pinned, 10.0.405 and 10.0.500 installed → 10.0.405); (b) `global.json`'s version, every platform package and the three runtime pack lines take that SDK's `BundledNETCoreAppPackageVersion`; (c) another feature band or major (10.0.500, 11.0.100) stops with a message saying Claude decides feature bands and majors; (d) a requested version that is not installed stops and names https://dotnet.microsoft.com/download/dotnet/10.0; (e) the script is idempotent: it brings `global.json`, the platform family and the runtime pack lines to the chosen SDK even when `global.json` already names it (after `Apply-DependabotPr.ps1` applied the PR), and when all three already match it changes nothing and prints "SDK <version> is already the newest patch of its band".
 2. `Update-DotnetSdkPatch.ps1 [-Version <x.y.z>] [-SkipRestore] [-DotnetRoot <path>]` (default root: the folder of the `dotnet` on PATH): choose the version as above (same major.minor, same hundreds digit of the patch), read `BundledNETCoreAppPackageVersion` from that SDK's `Microsoft.NETCoreSdk.BundledVersions.props`, write `global.json` keeping `rollForward: disable`, its BOM and newlines, run `Update-DotnetPlatformPackages.ps1 -Version <runtime>` (with `-SkipRestore` when given), then `Update-ThirdPartyNotices.ps1 -RuntimeVersion <runtime>`, and print `SDK <old> -> <new>, runtime <old> -> <new>`. It never installs anything.
 3. `Update-ThirdPartyNotices.ps1` gets `-RuntimeVersion`: the three runtime pack list entries (`Microsoft.NETCore.App.Runtime.win-x64`, `Microsoft.WindowsDesktop.App.Runtime.win-x64`, `Microsoft.AspNetCore.App.Runtime.win-x64`) take it. `ThirdPartyNoticesSourceRegression.ps1` fails when those three versions differ from the platform family's version in `Directory.Packages.props` (the family moves with the runtime patch).
 4. `Apply-DependabotPr.ps1`: when the PR's diff changes `global.json`, call `Update-DotnetSdkPatch.ps1 -Version <the PR's SDK version>` right after `git apply` (it brings the platform packages, notice and restores along); the rest of the script stays as it is.
@@ -51,6 +51,22 @@ D-cards go to the top of the agent queue. Newest audit first.
 **Context7:** `/dotnet/docs`, one precise query each: `global.json` `sdk.version` with `rollForward: disable`, and where an SDK records its bundled runtime version (`Microsoft.NETCoreSdk.BundledVersions.props`, `BundledNETCoreAppPackageVersion`). If Context7 has no answer for the props file, read it in `C:\Program Files\dotnet\sdk\10.0.404\` and say so in the Log.
 
 **Acceptance:** red first; the new test, both notice tests and the lockstep test green; on the real repository `Update-DotnetSdkPatch.ps1 -SkipRestore` with no newer patch installed changes nothing and says so; signed-in Changed and Full `Hepsi geçti.`; CI. No deploy (scripts only).
+
+### D108 — Dependabot's GitHub Actions PRs go through the apply script
+
+**Why:** audit 66 look-ahead; MODERNIZATION FLOW 1 lets the agent apply open Dependabot PRs itself. `.github/dependabot.yml` also updates GitHub Actions weekly, but `Apply-DependabotPr.ps1` takes only `Directory.Packages.props` and `global.json` from a PR and stops with "PR #<n> does not change …" for an Actions PR, which would stop the flow.
+
+**Files:** `scripts/Apply-DependabotPr.ps1`, `tests/DependabotApplyRegression.ps1` (new), `docs/MODERNIZATION-POLICY.md` (the "Dependabot PRs" paragraph), `docs/codex/STATUS.md`, `.context7/verification.json`. **Tests that read these files:** `tests/QualityGateRegression.ps1`, `tests/ModernizationPolicyRegression.ps1` and `tests/ReleaseWorkflowRegression.ps1` (they check the workflow pins; keep them green unchanged).
+
+**Do:**
+1. Red first: `tests/DependabotApplyRegression.ps1` feeds the script's path selection a local diff (a `-PatchFile` parameter or a small function the test can call, no GitHub access) that changes one `uses:` line of `.github/workflows/windows-ci.yml` to another full commit SHA with its `# vX.Y.Z` comment: today it stops, afterwards the hunk is applied. A `uses:` line pinned to a tag or a short SHA, or without the release comment, still stops (docs/MODERNIZATION-POLICY.md: actions stay pinned to immutable full commit SHAs with release comments).
+2. The script also takes `.github/workflows/*.yml` from the PR. When only workflow files changed it skips the restores, the lock files and the notice step but still runs the Full gate and prints `READY`. A PR that changes nothing the script takes still stops as today.
+
+**Don't:** edit a workflow by hand, change CI, or take any other path from a PR.
+
+**Context7:** `Context7: gerekmiyor (Talvora's own script; the pinning rule is already in docs/MODERNIZATION-POLICY.md)` → `noLookup`.
+
+**Acceptance:** red first; the new test green; signed-in Changed and Full `Hepsi geçti.`; CI. No deploy (scripts only).
 
 ### PK5 — Roslyn 5.12.0 from Dependabot PR #22
 
