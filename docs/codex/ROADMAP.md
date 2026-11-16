@@ -31,7 +31,13 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
-### Audit 2026-11-16 (63) · range `audit/2026-11-15-62..7d3a5c6` (empty: no agent work since audit 62) · D95 for the agent
+### Audit 2026-11-16 (64) · range `audit/2026-11-16-63..8790f05` (D93, D92, D94, P-55 by ChatGPT) · no new agent card; Claude shipped `[C]` D96 (P-55: Defender blocked the smoke's encoded probe) and `[C]` D92v; D95 is next
+
+### D97v — The history's timeline marks each step's state (`[C]`, Claude)
+
+**Why:** audit 64 screen pass. The history's "Zaman çizelgesi" draws failed, cancelled and running steps exactly like finished ones; only the words differ, so one failure in a long session is hard to find. The live card marks each row with its state (✓ ✗ ▸ ■, DESIGN-WORKLOG §7b), and the history list already shows an 8 px outcome dot (`HistoryOutcomeDot`: `Tv.Ready`, `Tv.Attention`).
+
+**Plan (Claude, look only):** a state mark before each row's time in the outcome dot's tokens, the step's words unchanged; `TimelineRows` carries the state; `ControlCenterSmoke` checks one mark per state in both themes. Files: `src/Talvora.Tray/Views/WorklogHistoryView.xaml`, `src/Talvora.Tray/WorklogHistoryStore.cs`, `src/Talvora.Tray/ControlCenterSmoke.D92v.cs`; no N5 file. The agent never takes this line.
 
 ### D95 — A failed command's result shows its real error line
 
@@ -72,57 +78,3 @@ D-cards go to the top of the agent queue. Newest audit first.
 **Context7:** `Context7: gerekmiyor (Talvora's own worklog text; the real output samples are in this card)` → `noLookup`.
 
 **Acceptance:** red first; the Notification regression and `ModernizationPolicyRegression.ps1` green; signed-in Changed and Full `Hepsi geçti.`; clean-HEAD deploy and both installed smokes; CI. Mark `[~] live check pending (Claude)`: your own session reaches the history file only after 90 s without calls, so Claude runs a failing test script through the installed service at the next audit and reads the stored "Sonuç".
-
-### Audit 2026-11-15 (62) · range `audit/2026-11-15-61..9c3537e` (D90, D91, P-54 by ChatGPT) · D93, D94 for the agent; D92 narrowed by P-54
-
-### D93 — Deleting a missing path really reads "Zaten yoktu"
-
-**Why:** audit 62, live on the installed 8ff0b07 (it contains D91): `talvora_delete` of a missing path returned `{"deleted":false,"kind":"missing"}`, and the stored worklog still read "Silindi · olmayan-dosya.txt". The notifier receives the `CallToolResult` the server built (`Program.cs` → `AddCallToolFilter` → `RunToolCallAsync`). `talvora_delete` has no `UseStructuredContent`, so its JSON sits as text in one `TextContentBlock` and `StructuredContent` is null. `ResultDeletedIsFalse` then serializes the whole `CallToolResult`, finds no top-level `deleted` and keeps "Silindi". D91's test built a plain object and a `CallToolResult` with `StructuredContent`, never the shape a real call has.
-
-**Files:** `src/Talvora/TalvoraDesktopProgressNarrative.cs` (`ResultDeletedIsFalse`), `tests/Talvora.Notification.Regression/Program.D91.cs` (new cases in `AssertD91MissingDeleteNarrativeAsync`; it already runs with `--d91-only` and in the whole regression), `docs/codex/STATUS.md`, `.context7/verification.json`. **Tests that read these files:** the whole Notification regression (D88, D91, WL5, WL6 and the rest).
-
-**Do:**
-1. Red first: add the real shape to D91's test, a `CallToolResult` whose `Content` is one `TextContentBlock` holding `JsonSerializer.Serialize(new { path, deleted = false, kind = "missing" })` with no `StructuredContent`, which must read "Zaten yoktu · <name>"; the same with `deleted = true` must read "Silindi · <name>"; a text block that is not JSON must read "Silindi · <name>". The first case fails today.
-2. In `ResultDeletedIsFalse`, when the result is a `CallToolResult` without `StructuredContent`, parse the text of its first `TextContentBlock` whose text is a JSON object and read `deleted` there. Only a JSON `false` counts, as before. Keep the structured-content path and the serialized-object path.
-
-**Don't:** change `talvora_delete` itself (no `UseStructuredContent`, no output schema: the tool list and the metadata policy stay as they are), `ResultContainsText`, any other title or text.
-
-**Context7:** `Context7: gerekmiyor (Talvora's own worklog title logic)` → `noLookup`.
-
-**Acceptance:** red first; the Notification regression green; signed-in Changed and Full `Hepsi geçti.`; clean-HEAD deploy and both installed smokes; CI. Mark `[~] live check pending (Claude)`: your own session is written to the worklog file only after 90 s without calls, so Claude checks a real missing-path delete at the next audit.
-
-### D94 — The brief's live smoke runs on its own fixture, inside the full installed smoke
-
-**Why:** audit 62. D90 changed `tests/Talvora.Smoke/SmokeScenarios.AgentBrief.cs`, but `--agent-brief-live` is in no procedure (AGENTS.md → Deploy row runs `--metadata-policy-only` and the full run), so the change never ran. Claude ran it on the installed 8ff0b07: `TALVORA MCP SMOKE RED`, "agent_brief context lost the character 'ç'.". The scenario reads the live repository. With no open agent card the context is only "AGENT QUEUE EMPTY - STOP" and the user queue (570 characters, no 'ç' and no '§'), and the active-card step cannot pass either, so the smoke is red exactly when Claude audits. Its explicit-card step also asks for card `A2`, which left ROADMAP with the cleanup of 2026-11-07: Claude's second run, with D93 open, went red there, so on the live repository it cannot pass at all. Every agent session starts with this tool. Same audit: the recent-workspace list (D90) never drops a folder whose `AGENTS.md` is gone. Each run of this smoke records two temporary folders, so after a few deploys the ten places hold dead entries and real projects fall out of the hint.
-
-**Files:** `tests/Talvora.Smoke/SmokeScenarios.AgentBrief.cs`, `tests/Talvora.Smoke/Program.cs` (the full run also runs the brief scenario), `src/Talvora/Tools/AgentBriefTools.cs` (`RecordRecentWorkspaceAsync` only), `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.D90.cs` (new case), `docs/codex/STATUS.md`, `.context7/verification.json`. **Tests that read these files:** the SourceEdit regression (`--d90-only` and the whole run), both installed smokes.
-
-**Do:**
-1. Red first: in the D90 runner, a recorded root whose `AGENTS.md` was deleted must be gone from the stored list after the next successful brief of another root. Today it stays.
-2. `RecordRecentWorkspaceAsync` keeps only entries whose `AGENTS.md` still exists, plus the root it records. The other list rules stay: ten entries, newest first, case-insensitive, atomic write, a failed write never fails the brief.
-3. The scenario builds its own repository in a temp folder: the real `AGENTS.md` and `scripts/Get-CodexContext.ps1` copied from the repository path, plus fixture `docs/codex/STATUS.md` (an `## Agent queue` with one open card), `docs/codex/ROADMAP.md` (that card and a second card for the explicit-card step, their text containing ç, ğ, — and §) and the other files the script reads (`QUEUE-ADDITIONS.md`, `PROPOSALS.md`). Every existing check runs against this fixture; the empty-folder step (with its "Workspaces briefed recently" check, now naming the fixture) and the oversized step stay. Everything is removed in `finally`.
-4. The full installed run (`Talvora.Smoke <endpoint> <repository>`) also runs the brief scenario (its server root is the endpoint without `/mcp`), so the Deploy row's run covers it. `--agent-brief-live` keeps working on its own.
-
-**Don't:** change the brief's output, its error text, the seven headings, the 60,000 cap or the tool's metadata; write into the real repository's `docs/` from the smoke.
-
-**Context7:** `Context7: gerekmiyor (own test and state file)` → `noLookup`.
-
-**Acceptance:** red first; the SourceEdit regression green; signed-in Changed and Full `Hepsi geçti.`; clean-HEAD deploy; both installed smokes green with the brief scenario inside the full run (it no longer depends on what the live queue holds); CI.
-
-### D92 — The history keeps every step's purpose
-
-**Why:** user decision, audit 61 ("Her adımda saklansın"): Çalışma günlüğü's history keeps only the last step's purpose (`current.purpose`); every earlier step loses its "ne". In three days 32 steps read only "Komut tamamlandı" in the history, although ChatGPT passes purposes (11 of its 14 sessions since 2026-11-14 kept one on their last step). This card stores and carries the purpose; Claude draws it in `[C] D92v`.
-
-**Decision P-54 (Claude, 2026-11-15):** the live card's files stay out of this card. The purpose is stored per step and reaches the history view through `TimelineRows`; Claude draws it in `WorklogHistoryView.xaml` (not pinned) in `[C] D92v`.
-
-**Files:** `src/Talvora.Shared/DesktopProgressProtocol.cs` (`WorklogTimelineEntry` gains `string? Purpose = null` as its last parameter), `src/Talvora/TalvoraDesktopWorklogState.cs` (the entry inserted when a step ends gets that step's `ended.Narrative.Purpose`), `src/Talvora.Tray/WorklogHistoryStore.cs` (`WorklogHistoryTimelineRow` gains `Purpose`; `TimelineRows` fills it), `tests/Talvora.Notification.Regression/` (new `Program.D92.cs` and its registration), `docs/codex/STATUS.md`, `.context7/verification.json`. **Tests that read these files:** the whole Notification regression (WL1, D40, D45, D50, D61, N7, N8, UI12c and the rest), the ControlCenter smoke (`ControlCenterSmoke.cs`, `ControlCenterSmoke.WL3.cs`), `ModernizationPolicyRegression.ps1` (it pins the eight N5 worklog sources by checksum; this card touches none of them).
-
-**Do:**
-1. Red first: a D92 test runs three steps through the notifier, two with different purposes and one without, and checks that each timeline entry carries its own step's purpose (null for the one without), that a session written to and read back from the history store keeps them, that an old stored line whose timeline entries have no `purpose` reads with null, and that `TimelineRows` carries them.
-2. Add the field and fill it where the entry is created. The Claude and Codex engine timelines (`TalvoraDesktopClaudeWorklog.cs`, `TalvoraDesktopCodexWorklog.cs`) keep null.
-
-**Don't:** touch the eight N5 sources pinned by `docs/codex/reference/worklog-phosphor/SHA256SUMS.txt` (`WorklogCardViewModel.cs` and `WorklogCardMapper.cs` among them, P-54): the live card stays as it is. Don't change any XAML or visible text (D92v), any title, `current.purpose`, `WorklogNote.Normalize` (140 characters), or the history file's name or other fields.
-
-**Context7:** `Context7: gerekmiyor (Talvora's own records)` → `noLookup`.
-
-**Acceptance:** red first; the Notification regression, the ControlCenter smoke and `ModernizationPolicyRegression.ps1` green; signed-in Changed and Full `Hepsi geçti.`; clean-HEAD deploy and both installed smokes; CI. Nothing on screen changes in this card.

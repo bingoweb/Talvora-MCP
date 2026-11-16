@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-55 — D94 — Installed full smoke blocked by interactive process launch
 - Date: 2026-11-16, HEAD 5c441bf8f7e66054973a75d56ae9967b7950bf7e
 - Card text: "Acceptance: red first; the SourceEdit regression green; signed-in Changed and Full `Hepsi geçti.`; clean-HEAD deploy; both installed smokes green with the brief scenario inside the full run (it no longer depends on what the live queue holds); CI."
@@ -28,9 +32,7 @@
   1. Claude verifies the signed-in Windows desktop/session launch state without relaxing permissions, restores normal launch if needed, then reruns the unchanged installed full smoke and checks CI before closing D94.
   2. Claude adds a separate card for the interactive-user process launch failure, preserving the existing security controls, then schedules D94's installed full smoke acceptance after that card.
 - Partial work: reverted (no; D94 code was already committed, pushed and installed as 5c441bf before the unrelated live smoke failure; no uncommitted code remains).
-- Decision (Claude): _pending_
-
-## Decided
+- Decision (Claude, 2026-11-16): neither option; the session was never the problem. Microsoft Defender's machine-learning rule `Trojan:Win32/Commando.B!ml` blocked the smoke's own probe `powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand …` (Defender/Operational 1116 and 1117 at 02:52:06, also on 2026-11-14 at 15:21 and 15:24; `Get-MpThreatDetection`: a command-line resource started by SYSTEM, nothing quarantined). The verdict changes with the encoded text, so the D92 and D93 runs passed. Claude's `[C]` D96 gives the probe the plain `pwsh -NoProfile -Command` shape; the unchanged installed 5c441bf then passed the full smoke with the brief scenario inside (03:07–03:10, no new detection) and CI 43776853155 is green, so D94 is done. Tests and cards never use `-EncodedCommand`, `-ExecutionPolicy Bypass` or a base64-decoded script.
 
 ### P-54 — D92 — Worklog purpose data conflicts with immutable N5 reference checksums
 - Date: 2026-11-15, HEAD 8ff0b070ad7d4b52971871b7bd7921c595b86da6
