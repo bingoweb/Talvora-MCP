@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-16T15:11:00.611Z",
-  "scope": "D101: report live CI poll progress and extend freshness for followed CI and deploy hand-over",
+  "verifiedAtUtc": "2026-11-16T20:13:20.186Z",
+  "scope": "D102: retain a task note after a closed session is reopened, without a ghost old-step frame",
   "libraries": [],
-  "noLookup": "D101: own background follower polling and desktop worklog framing; no external libraries or APIs changed.",
+  "noLookup": "D102: internal session bookkeeping, note activity and idle closure only; no external API lookup is required.",
   "vendorSources": []
 }

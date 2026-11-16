@@ -340,8 +340,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 }
                 session.Closed = true;
                 session.CloseDelay = null;
-                Enqueue(session.Id, session.ToolName, session.Title,
-                    session.Message, session.Kind, session.Elapsed, session.Evidence);
+                // A note-only reopened session has no new step to publish or persist.
+                if (session.Steps > 0)
+                    Enqueue(session.Id, session.ToolName, session.Title,
+                        session.Message, session.Kind, session.Elapsed, session.Evidence);
             }
         }
         catch (OperationCanceledException)
@@ -457,8 +459,16 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             lock (_worklogGate)
             {
                 var session = GetOrCreateSession(arguments, surfacePath, clientName, null);
+                var hasActiveStep = _activeWorklog.Values.Any(
+                    item => ReferenceEquals(item.Session, session));
+                // A reopened session still holds the old step's title until its first new step.
+                var awaitingFirstStep = !hasActiveStep && session.Steps == 0 &&
+                    session.Timeline.Count == 0;
                 session.TaskNote = note;
-                if (!string.IsNullOrEmpty(session.Title))
+                session.LastActivityUtc = DateTimeOffset.UtcNow;
+                if (!hasActiveStep)
+                    ScheduleClosure(session);
+                if (!awaitingFirstStep && !string.IsNullOrEmpty(session.Title))
                 {
                     Enqueue(session.Id, session.ToolName, session.Title,
                         session.Message, session.Kind, session.Elapsed, session.Evidence);

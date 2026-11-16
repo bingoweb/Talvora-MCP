@@ -36,7 +36,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [~] D100 — A call without a working folder joins the same agent's open card (live history check pending Claude)
 - [~] D99 — The card changes session only when a step starts or ends (visual live check pending Claude)
 - [~] D101 — A step Talvora still follows never shows "Yanıt bekleniyor" (real followed CI card check pending Claude)
-- [ ] D102 — The task note survives a session that reopens
+- [~] D102 — The task note survives a session that reopens (live reopened-session card check pending Claude)
 - [ ] D103 — A long PowerShell error keeps its whole message
 - [ ] PK5 — Roslyn 5.12.0 from Dependabot PR #22
 - [x] [C] D104v — Claude: each "geçmiş" row of the card shows its "ne", numbers keep their units, no "ara 0,0 sn" (2b6947b: installed, both smokes, CI 43867211084, live card 15:46)
@@ -58,6 +58,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-16 — ChatGPT, D102: setting a worklog task note refreshes its session's LastActivityUtc and schedules the normal idle close when no step is active. If a session has reopened and has no new step, the note is retained without republishing the previous session's terminal title. If only a note was written and no new step begins, the session closes silently instead of emitting a misleading zero-step frame; the next actual step publishes the note in its header. Notes on an already visible worklog card still publish immediately.
+  RED: an idle-closed session's new note emitted a zero-step frame containing the old step's title; a second RED proved the same ghost frame reappeared on idle closure if no step followed the note. GREEN: focused D102 covers a real idle close using a 350 ms interval, note-only reopening, the next step's preserved note/one-row timeline, immediate updates on an existing card, and silent abandonment. Full Notification (including D100, D60, D101, D99) and ModernizationPolicy green. Signed-in Changed 29/0 and Full 73/0, both `Hepsi geçti.`. Context7 `noLookup` (internal session bookkeeping). Clean-HEAD installer, installed metadata/full smoke and CI follow this commit; Claude checks the live reopened-session worklog card at the next audit.
+  Self-review — cosmetics: no XAML, window, palette, typography, layout, code terminal visuals, placement or pinned N5 files changed.
+  Self-review — usability: the task note survives a reopen while neither the old terminal title nor a zero-step ghost card appears.
+  Self-review — Turkish: all user-facing titles and note normalization remain unchanged.
+  Self-review — correctness and security: the 140-character limit, idle interval, quiet-call rules, actor isolation, session identity and normal step history are unchanged.
 - 2026-11-16 — ChatGPT, D101: FollowCiAsync now reports a measured "GitHub denetimi sürüyor · {elapsed}" progress fact after each CI poll without changing poll cadence, timeout, success, failure or cancellation. The notifier forwards these updates with the live title "GitHub denetimi sürüyor". While the session's current step is a followed CI check or pending deploy hand-over, its worklog frames use ExpectedNextUpdateSeconds=120; all other steps retain their actor's existing 15/20/60-second budget. The N5 window stale rule is untouched.
   RED: simulated deploy hand-over emitted a running frame with a 15-second budget (expected 120); the CI three-poll progress test initially did not compile without the callback. GREEN: focused D101 real notifier frames for deploy and CI, three scaled-down CI checks with one measured progress update each, and ordinary ChatGPT 15-second frames. Full Notification (WL6, D46, D82, D99, D100, D98) and ModernizationPolicy green. Signed-in Changed 29 checks/0 failures and Full 73/0, both `Hepsi geçti.`. Context7 `noLookup` (own follower loop). Clean-HEAD installer, installed metadata/full MCP smokes and CI follow this commit. Claude checks a real followed CI card at the next audit.
   Self-review — cosmetics: no XAML, window, layout, palette, typography, placement, code terminal or pinned N5 files changed.
