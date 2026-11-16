@@ -91,7 +91,7 @@ Rules:
 
 Rules (card):
 - Width default 440 DIP (min 360, max 720); height **grows with content** up to 60 % of the work area, then the timeline scrolls; user resize persists (existing behaviour) and is applied to every card, not only code cards.
-- The same window instance is reused for the whole session (no window recreation between steps → no flicker). A new session replaces the old terminal card in place with a 180 ms cross-fade.
+- The same window instance is reused for the whole session (no window recreation between steps → no flicker). When the card changes session (§4.1, D99), the same window shows the other session in place: no close and reopen, the new title types in (§7b "type").
 - Hover pauses auto-dismiss (existing). Click on the card body (not buttons) opens the Control Center "Çalışma günlüğü" page at this session (N7). `Esc` closes. Drag pins (existing contract).
 - Minimum font size 11 DIP; body text ≥ 4.5:1 contrast on `#101722`.
 
@@ -142,7 +142,9 @@ public sealed record WorklogTotals(
 - Actor: from the MCP request: surface path (`/mcp/dev` → "ChatGPT · Dev", `/mcp/admin` → "ChatGPT · Yönetim" when the client is the tunnel) and `clientInfo.name` of the initialize/request context when available (Codex CLI identifies itself — verify with Context7 what the C# SDK exposes for stateless requests). Background jobs set the actor explicitly ("Codex", "Claude").
 - Project: from tool arguments (`workspaceRoot`, `workingDirectory`, `repositoryPath`, `root`, `path`) → nearest folder with `.git` or a project manifest → folder name. Never show full paths in the plain area.
 - Parallel calls inside one session update the same card; the title follows the most recent *running* step; finished parallel steps go to the timeline. No "paralel adım" wording.
-- The presenter keys windows by `SessionId`; the "one visible worklog card" budget stays.
+- **A call that names no folder** (none of the project arguments above) joins the same actor's open session: the one with the newest activity among those not closed whose last activity is under 90 s old or that have a running step. With none open it uses the actor's `"global"` session as before (D100; user decision 2026-11-16 "Ajanın açık kartına katılsın").
+- **One card, several sessions** (D99; user decision 2026-11-16 "Adım başı/sonunda geçsin"). The "one visible worklog card" budget stays and the card shows one session at a time. A frame of another session takes the card only when it starts a step (`Started`) or ends one (`Completed`, `Failed`, `Cancelled`); a session-close frame, a heartbeat, a followed job's progress or a task-note refresh never does. A frame that does not take the card still reaches that session's history and code cache. With no card visible, any accepted frame opens one as before. Manual close keeps suppressing that session until it ends (§5.1).
+- The tray keeps the latest code change of **each** session (D98), so a frame of another session never empties the code terminal of the session on the card.
 
 ### 4.2 Facts only from real results (fixes W7, W8, W15)
 
@@ -180,6 +182,8 @@ File list in the fact line: at most 2 names + "ve N dosya"; total count is alway
 ### 5.2 Stale detection (fixes W13)
 
 `ExpectedNextUpdateSeconds` is set by the producer (tool heartbeat 5 s → 15; Codex job 4 s → 20; Claude job 25 s → 60). Tray shows "Yanıt bekleniyor" only after `2 × ExpectedNextUpdateSeconds` without a frame, with the real last-update time.
+
+A step Talvora still follows after the tool call returned never turns into "Yanıt bekleniyor": the wait is Talvora's, not the agent's (D101). A followed GitHub check reports its measured time at every poll, and its frames allow for one poll interval plus the check's own time limit; the last frame before a deploy hands over to the new service allows for the restart (the pending deploy's own limit).
 
 ### 5.3 Failure reasons (fixes W2)
 
@@ -406,7 +410,7 @@ in the table, and anything without a source is not drawn.
 | Task line | `# görev …` (unchanged) | `Header.TaskNote` |
 | Command line | `$ ` + title, typed in at 18 ms per character (max 360 ms) when the title changes; block cursor blinks only while running; finished: `$ title   41 sn sürdü` (no-break spaces keep it on one line) | `Current.Title`; duration = the folded history row's `DurationSeconds` (WL1, stopwatch of that call); the row itself is not repeated in the history |
 | Answers | `ne / nerede / fark / sonuç` (content unchanged) | §6.2 |
-| History | shell history rows `✓ 14:02  label ········ 0,9 sn ▮▮▮▮`; mark coloured by state; dotted leader; real duration right-aligned; bar after it | `Timeline[i].TimestampUtc`, `.State`, `.Label`, `.DurationSeconds` (WL1). No `DurationSeconds` → no number and no bar |
+| History | shell history rows `✓ 14:02  label ········ 0,9 sn ▮▮▮▮`; mark coloured by state; dotted leader; real duration right-aligned; bar after it. **D104v** (user decision 2026-11-16 "Her geçmiş satırında"): under the label, the step's own purpose as a quiet second line `ne  …` (`ne` in `Wl.Faint`, the text in `Wl.Muted`, 11 px, wrapping under the label column, never cut); no second line when the step had no purpose | `Timeline[i].TimestampUtc`, `.State`, `.Label`, `.DurationSeconds` (WL1), `.Purpose` (D92). No `DurationSeconds` → no number and no bar |
 | Signal bars | width = `round(56 × log10(1 + 10·s) / log10(1 + 6000))` DIP, min 2 DIP, max 56 DIP (fixed log scale: 0.1 s ≈ 4 DIP, 1 s ≈ 15 DIP, 10 s ≈ 30 DIP, 10 min = 56 DIP), height 6 DIP, colour = row state at 70 % | `DurationSeconds` only |
 | Code pane | a tmux split: one box-drawing border line `─ diff ── kiosk-routes.js +3 −1 ── 14:02:11 ─` then the existing diff rows; hunk headers show the **whole** declaration and wrap (no `…` cut in the view) | `Evidence.CodePreview`, parser |
 | Status bar | 22 DIP tmux bar at the bottom, edge to edge: left `[talvora] 0:<project>*` (the actor is already in the prompt row), right `mm:ss · n adım · k dosya` (zero counts omitted, no glyph) and `ayrıntılar ▸` when evidence exists; background by state (running `#12301F`, success `#0F3A22`, failure `#3A1018`, waiting/cancelled `#3A2A0E`), text `#D8FFE7` | `Totals.SessionSeconds`, `Totals.Steps`, `Totals.FilesChanged`. While **running** the clock advances from `SessionSeconds + (now − frame.TimestampUtc)` (wall clock since the measured value); in any other state it is frozen at the frame value |
