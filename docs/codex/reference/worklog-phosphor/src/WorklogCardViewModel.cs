@@ -293,10 +293,10 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
     /// <summary>"nerede" rows, at most three; the rest is counted in <see cref="MoreChangedFiles"/>.</summary>
     public ObservableCollection<WorklogChangeRow> ChangeRows { get; } = [];
 
-    /// <summary>Session time ruler (§7b UI12c); only measured steps, so an empty list hides the ruler.</summary>
+    /// <summary>Session time ruler (§7b UI12c); only measured steps; it keeps every block, but the ruler shows from two blocks on (D112v).</summary>
     public ObservableCollection<SignalPeak> Signal { get; } = [];
 
-    public bool HasSignal => Signal.Count > 0;
+    public bool HasSignal => Signal.Count >= 2;
 
     /// <summary>"── oturum " or, when older steps fell out of the 30-step window, "── son 30 adım ".</summary>
     public string SignalCaption { get => signalCaption; set => Set(ref signalCaption, value); }

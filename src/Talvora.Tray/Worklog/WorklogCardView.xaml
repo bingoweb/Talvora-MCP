@@ -371,7 +371,7 @@
                 </Border>
 
                 <!-- Session time ruler (§7b UI12c "zaman cetveli"): measured steps on one linear real-time axis, real clock
-                     labels and the measured totals beside it; hidden without data. -->
+                     labels and the measured totals beside it; shown from two blocks on (D112v). -->
                 <StackPanel Margin="0,11,0,0" Visibility="{Binding HasSignal, Converter={StaticResource BoolToVisibility}}">
                     <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions>

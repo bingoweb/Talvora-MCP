@@ -453,7 +453,9 @@ read as time. The ruler replaces it, still between the code pane and the status 
 | Clock | 1 DIP axis line; 1×4 ticks on whole local minutes (axis ≤ 10 min), 5 min (≤ 1 h) or 15 min; labels `:mm` for minute ticks, `HH:mm` otherwise; `HH:mm` start at the left edge and end flush right; a tick label that would come within 8 DIP of another, or repeats an edge minute, is skipped, never shortened | frame timestamp, local time zone |
 | Legend | `■ iş 5:39 · 4 adım` (green square) · `▼ 1 hata` (only with failures) · `┈ ara 3:25` (only when **every** finished step on the axis was measured and the gap is at least 1 s, D104v) — 11 px, `Wl.Muted` text | work = **union** of the measured intervals (parallel steps count once), adım = drawn blocks, ara = axis − work |
 
-Steps without a measurement are not drawn; with no measured step the ruler is hidden. Motion: only a newly arrived block draws
+Steps without a measurement are not drawn; with fewer than two blocks (measured finished steps, plus the running step once it
+has a measured elapsed time) the whole ruler, legend included, stays hidden, so a one-step card does not repeat its headline; it
+appears whole, without a draw-in, when the second block arrives (user 2026-11-17, audit 69: "İkinci adımla gelsin"; D112v). Motion: only a newly arrived block draws
 in from its left edge (260 ms, cubic ease-out); off under reduced motion, high contrast or when hidden. The preview harness
 builds each fixture as a protocol frame and draws it with the mapper's own functions.
 

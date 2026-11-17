@@ -53,6 +53,11 @@ internal static partial class Program
             AssertD109vPanelFit();
             return 0;
         }
+        if (Environment.GetCommandLineArgs().Contains("--d112v-only", StringComparer.Ordinal))
+        {
+            AssertD112vRulerNeedsTwoBlocks();
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--d109v-wpf-only", StringComparer.Ordinal))
         {
             await AssertD109vSwitchAsync();
@@ -221,6 +226,7 @@ internal static partial class Program
         await AssertWl1StepDurationAsync();
         AssertSn1LineTraffic();
         AssertUi12cTimeRuler();
+        AssertD112vRulerNeedsTwoBlocks();
         AssertD104vCardText();
         await AssertD105vCardStaysOnScreenInChildAsync();
         await AssertD99CardReuseInChildAsync();

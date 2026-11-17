@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-17T18:43:10.058Z",
-  "scope": "D110: prevent .NET SDK downgrade and feature-band changes and leave rejected Dependabot SDK patches with a clean tree",
+  "verifiedAtUtc": "2026-11-17T19:19:22.000Z",
+  "scope": "D112v: the worklog card's session time ruler shows only from two blocks on, so a one-step card does not repeat its headline",
   "libraries": [],
-  "noLookup": "D110: Talvora's own scripts and tests; the SDK version rules are documented in MODERNIZATION-POLICY.md and were verified in D107.",
+  "noLookup": "D112v: a count threshold on an existing view-model property and its existing WPF binding; no new framework or library API is used.",
   "vendorSources": []
 }
