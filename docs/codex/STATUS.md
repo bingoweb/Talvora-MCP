@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-11-17-68` = the last commit of audit 68. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-11-17-68` = the review commit of audit 68 (Claude's D109v and the close-out follow it). Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.404 exact pin (SDK3, 2026-11-13; runtime 10.0.15) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -32,7 +32,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [~] live pending (Claude): D109v — the card's bottom bar lists the open sessions, tmux-style (clean-HEAD deploy, installed smokes, live capture, CI)
+- [x] D109v — the card's bottom bar lists the open sessions, tmux-style (6376264 + CI follow-up d5da542; installed 6376264, both installed smokes GREEN, live switch checked; CI 44121840623 green)
 - [ ] D110 — the SDK updater never leaves the band or moves back; a refused SDK PR leaves the tree clean (audit 68)
 
 ## User queue
@@ -59,6 +59,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
   Self-review — usability: a click switches the same card at once; no entry click reaches the card's drag or Çalışma günlüğü path; hand cursor only on switchable entries.
   Self-review — Turkish: `Açık oturumlar`, `bu kart`, `sürüyor`, `sessiz`, `tamamlandı`, `hata verdi`, `iptal edildi`, `Kartı bu oturuma geçirir`, as DESIGN-WORKLOG §7b says.
   Self-review — correctness and security: no new IPC, setting or permission; the click path logs and never throws; the registry stays bounded by the lifetimes.
+  Live (installed 6376264, clean-HEAD installer): `TALVORA MCP METADATA POLICY LIVE GREEN`, `TALVORA MCP SMOKE GREEN`. Two real Claude sessions (a running job in Talvora-MCP, a command in Kalem) showed `[talvora] 0:Talvora-MCP# 1:Kalem*` on the 639 DIP card, spoken `Açık oturumlar: Talvora-MCP, sürüyor; Kalem, bu kart` with the help text; invoking `Talvora-MCP, sürüyor` through UI Automation switched the same card at once (`0:Talvora-MCP* 1:Kalem`). The worklog has no light theme; high contrast checked on preview 12. CI 44120372335 red: the runner has no client-area animation, so the motion controls failed → follow-up d5da542 runs them only where motion can play (hakem·sonnet: ship), CI 44121840623 green.
 - 2026-11-17 — Claude, audit 68 (range `audit/2026-11-17-67..4c9deb4`: PK5, D107, D108, D109 by ChatGPT). Every commit inside its card's Files with one `Card:` trailer and green CI; Context7 evidence matches Talvora's ledger (PK5 two `/dotnet/roslyn`, D107 two `/dotnet/docs` queries; D108 and D109 `noLookup` as their cards say); PR #22 closed with `Yerelde uygulandı: 34530f4`. Signed-in Full gate on 4c9deb4: 76/0 `Hepsi geçti.` D109 closed: clean-HEAD installer of 4c9deb4, both installed smokes GREEN (`artifacts/D109-meta.log`, `D109-smoke.log`), CI 44076076237.
   Reviews (hakem·opus ×2): PK5, D108 and D109 ship. D107: Apply checks the SDK band after applying the PR (a band or major PR passes), the updater can move the pin back without `-Version`, a refused SDK PR leaves `global.json` dirty, and the no-change return skips the lock refresh → agent card D110. D109: its WPF test stayed green with the manual-dismissal lift and the expired-tab refusal removed, and switching to a silent session showed it live for one stale budget → both covered by `[C]` D109v.
   OLASI: D107's `vendorSources` lists two learn.microsoft.com pages, but Talvora's call trace shows no page fetch in that window and Context7 answered both queries (CONTEXT7 PROTOCOL rule 6: none when Context7 answered).
