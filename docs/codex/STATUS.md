@@ -14,7 +14,7 @@
 | Commit identity | `Taylan Soylu <6751394+bingoweb@users.noreply.github.com>` (do not change) |
 | Push | **Authorized** (Q3, 2026-10-18): after each card `git push origin main` and `git push github main`; never force. |
 | Gitea tracker | Mirror each card's Log entry as **one text comment** on Gitea issue **#9** (`taylan/Talvora-MCP`). No attachments. If the comment cannot be posted (connector approval, Gitea down), write `Gitea mirror skipped: <reason>` in the Log entry and continue — never stop or ask the user for it. |
-| Audit baseline | Newest Claude audit tag `audit/2026-11-17-67` = the last commit of audit 67. Claude creates and moves `audit/*` tags; the agent never does. |
+| Audit baseline | Newest Claude audit tag `audit/2026-11-17-68` = the last commit of audit 68. Claude creates and moves `audit/*` tags; the agent never does. |
 | Executors | Codex **or** ChatGPT with the Talvora connector — identical rules (AGENTS.md → WHO MUST FOLLOW THESE RULES). Log entries name the executor. |
 | Runtime | Windows service `Talvora` (LocalSystem), `127.0.0.1:7676`, installed under `C:\Program Files\Talvora\Versions\<commit>-<stamp>`; tray `Talvora.Tray.exe` in the user session. |
 | Toolchain | .NET SDK 10.0.404 exact pin (SDK3, 2026-11-13; runtime 10.0.15) with matching locked NuGet graphs (K0 done). PowerShell 7 required by the interactive runner. |
@@ -32,11 +32,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [x] PK5 — Roslyn 5.12.0 from Dependabot PR #22 (34530f4; installed smokes GREEN; CI 43988913080 green)
-- [x] D107 — .NET SDK patches go through one script (e71884a; CI 43992079820 green)
-- [x] D108 — Dependabot's GitHub Actions PRs go through the apply script (5c929d0; CI 43994503330 green)
-- [~] live pending: D109 — tray open sessions and switch (local tests green; clean-HEAD install, installed smokes, CI pending)
 - [C] D109v — the card's bottom bar lists the open sessions, tmux-style (Claude ships it after D109)
+- [ ] D110 — the SDK updater never leaves the band or moves back; a refused SDK PR leaves the tree clean (audit 68)
 
 ## User queue
 
@@ -54,6 +51,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-17 — Claude, audit 68 (range `audit/2026-11-17-67..4c9deb4`: PK5, D107, D108, D109 by ChatGPT). Every commit inside its card's Files with one `Card:` trailer and green CI; Context7 evidence matches Talvora's ledger (PK5 two `/dotnet/roslyn`, D107 two `/dotnet/docs` queries; D108 and D109 `noLookup` as their cards say); PR #22 closed with `Yerelde uygulandı: 34530f4`. Signed-in Full gate on 4c9deb4: 76/0 `Hepsi geçti.` D109 closed: clean-HEAD installer of 4c9deb4, both installed smokes GREEN (`artifacts/D109-meta.log`, `D109-smoke.log`), CI 44076076237.
+  Reviews (hakem·opus ×2): PK5, D108 and D109 ship. D107: Apply checks the SDK band after applying the PR (a band or major PR passes), the updater can move the pin back without `-Version`, a refused SDK PR leaves `global.json` dirty, and the no-change return skips the lock refresh → agent card D110. D109: its WPF test stayed green with the manual-dismissal lift and the expired-tab refusal removed, and switching to a silent session showed it live for one stale budget → both covered by `[C]` D109v.
+  OLASI: D107's `vendorSources` lists two learn.microsoft.com pages, but Talvora's call trace shows no page fetch in that window and Context7 answered both queries (CONTEXT7 PROTOCOL rule 6: none when Context7 answered).
+  Release: none (0.0.1.3 was cut today, at most one a day); D109v is a new behaviour, so 0.0.2.0 is due at the next audit.
+  Cleanup: finished queue lines and the cards PK5, D107, D108, D109 removed (`git show 4c9deb4:<path>`); no artifact older than 7 days. Vault: no ready idea, empty inbox. Skill scripts now read `[~] live pending: <id>` lines.
 - 2026-11-17 — ChatGPT, D109: Added WorklogSessionTabs with stable lowest-free indices, monotonic frame sequence, state/quiet-time aging and terminal lifetimes (3/8/5 minutes; silent 8 minutes). Presenter records eligible background sessions, exposes GetSessionTabs/ShowSession and reuses the existing window; manual dismissal can be lifted without changing presentation rules. No pinned worklog visual files or shared protocol were edited.
   Tests: RED CS1061 ForgetManualDismissal missing; GREEN --d109-only, --d109-wpf-only, D99 and D100 unchanged, signed-in Changed 28/0 and Full 76/0 (Hepsi geçti.).
   Context7: noLookup (Talvora's own tray logic over its own records; no external API). Post-commit: clean-HEAD installer/deploy, both installed smokes, Windows CI pending.
