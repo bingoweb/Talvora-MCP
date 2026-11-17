@@ -20,10 +20,8 @@ namespace Talvora.Tray;
 /// </summary>
 internal sealed class DesktopProgressNotificationWindow : Window
 {
-    private static readonly TimeSpan SucceededLifetime = TimeSpan.FromMinutes(3);
-    private static readonly TimeSpan FailedLifetime = TimeSpan.FromMinutes(8);
-    private static readonly TimeSpan CancelledLifetime = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan StaleCheckInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan MinimumRemainingLifetime = TimeSpan.FromSeconds(1);
     private const double DefaultWidth = 460;
     private const double DefaultCodeMaxHeight = 420;
     private const int WmEnterSizeMove = 0x0231;
@@ -50,7 +48,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
     private DateTimeOffset? lastCodeChangedUtc;
     private WorklogDetails? lastDetails;
     private DateTimeOffset lastFrameReceivedUtc;
-    private TimeSpan dismissAfter = SucceededLifetime;
+    private TimeSpan dismissAfter = WorklogSessionTabs.SucceededLifetime;
     private bool isPointerOver;
     private bool isPinned;
     private bool isClosing;
@@ -104,6 +102,17 @@ internal sealed class DesktopProgressNotificationWindow : Window
             WorklogDetailsPreference.Save(model.IsDetailsOpen);
         };
         view.CopyDetailsRequested += (_, _) => CopyText(model.DetailsCopyText, "Desktop worklog details could not be copied.");
+        view.SessionEntryInvoked += sessionId =>
+        {
+            try
+            {
+                SessionSource?.ShowSession(sessionId);
+            }
+            catch (Exception ex)
+            {
+                TrayLog.Write($"Desktop worklog session switch failed. Session={sessionId}", ex);
+            }
+        };
         view.PreviewMouseLeftButtonDown += OnCardMouseLeftButtonDown;
         Content = view;
 
@@ -160,32 +169,74 @@ internal sealed class DesktopProgressNotificationWindow : Window
 
     public bool WasManuallyClosed => manualClose;
 
+    /// <summary>The tray's open sessions and the switch behind the status bar's window list (D109v); none = own session only.</summary>
+    internal IWorklogSessionSource? SessionSource { get; set; }
+
     public bool IsTerminal => lastFrame?.Current.State is
         WorklogStepState.Succeeded or WorklogStepState.Failed or WorklogStepState.Cancelled;
 
     /// <summary>Shows a real frame. The only entry point for content.</summary>
-    public void Update(DesktopWorklogFrame frame, DateTimeOffset? codeChangedUtc = null, WorklogDetails? details = null)
+    /// <remarks>
+    /// <paramref name="receivedUtc"/> is given when the frame is not new (D109v: a switch to a session's stored
+    /// newest frame); its stale budget and a terminal frame's lifetime then count from that time, not from now.
+    /// </remarks>
+    public void Update(
+        DesktopWorklogFrame frame,
+        DateTimeOffset? codeChangedUtc = null,
+        WorklogDetails? details = null,
+        DateTimeOffset? receivedUtc = null)
     {
         ArgumentNullException.ThrowIfNull(frame);
         CancelPendingAutomaticClose();
+        var now = DateTimeOffset.UtcNow;
         lastFrame = frame;
-        lastFrameReceivedUtc = DateTimeOffset.UtcNow;
-        LastUpdatedUtc = lastFrameReceivedUtc;
+        lastFrameReceivedUtc = receivedUtc ?? now;
+        LastUpdatedUtc = now;
         SessionId = frame.SessionId;
         LastLane = frame.Lane;
         isStale = false;
         lastCodeChangedUtc = codeChangedUtc;
         lastDetails = details;
-        WorklogCardMapper.Apply(model, frame, Environment.MachineName, stale: false, codeChangedUtc, details);
+        var tabs = CurrentSessionTabs();
+        // D109v: a switch (the only caller giving a receive time) shows the stored frame at once, without any motion.
+        RenderWithoutMotionWhen(
+            receivedUtc is not null,
+            () => WorklogCardMapper.Apply(model, frame, Environment.MachineName, stale: false, codeChangedUtc, details, tabs));
         AutomationProperties.SetName(this, $"Talvora çalışma günlüğü: {frame.Current.Title}");
 
         dismissAfter = frame.Current.State switch
         {
-            WorklogStepState.Failed => FailedLifetime,
-            WorklogStepState.Cancelled => CancelledLifetime,
-            _ => SucceededLifetime,
+            WorklogStepState.Failed => WorklogSessionTabs.FailedLifetime,
+            WorklogStepState.Cancelled => WorklogSessionTabs.CancelledLifetime,
+            _ => WorklogSessionTabs.SucceededLifetime,
         };
+        if (receivedUtc is { } received && IsTerminal)
+        {
+            // A clock set back makes "now - received" negative: the remaining time is never longer than the lifetime.
+            var elapsed = now - received;
+            var remaining = dismissAfter - (elapsed > TimeSpan.Zero ? elapsed : TimeSpan.Zero);
+            dismissAfter = remaining > MinimumRemainingLifetime ? remaining : MinimumRemainingLifetime;
+        }
+
+        if (receivedUtc is not null)
+        {
+            // A silent session shows "Yanıt bekleniyor" at once too: no typing for it either.
+            RenderWithoutMotionWhen(true, () => EvaluateStale(tabs));
+        }
+
         RestartDismissTimer();
+    }
+
+    private void RenderWithoutMotionWhen(bool withoutMotion, Action render)
+    {
+        if (withoutMotion)
+        {
+            view.ApplyWithoutMotion(render);
+        }
+        else
+        {
+            render();
+        }
     }
 
     /// <summary>User-chosen width; the user's height becomes the code terminal's maximum (§3.1).</summary>
@@ -209,7 +260,27 @@ internal sealed class DesktopProgressNotificationWindow : Window
 
     public void MarkInteracted() => LastUpdatedUtc = DateTimeOffset.UtcNow;
 
+    /// <summary>The tabs the tray keeps open, for the session this window shows; none without a source or outside the Worklog lane.</summary>
+    private IReadOnlyList<WorklogSessionTab>? CurrentSessionTabs() =>
+        SessionSource is { } source && LastLane == DesktopProgressLane.Worklog
+            ? source.GetSessionTabs(DateTimeOffset.UtcNow, SessionId)
+            : null;
+
     private void CheckForStaleWork()
+    {
+        if (isClosing || lastFrame is null)
+        {
+            return;
+        }
+
+        // D109v: the list changes without any frame of this card (a silent or expired session), so it is read on
+        // every tick, also for a terminal or already stale card.
+        var tabs = CurrentSessionTabs();
+        model.WindowList = WorklogCardMapper.MapWindowList(tabs ?? [], lastFrame.Header.ProjectName);
+        EvaluateStale(tabs);
+    }
+
+    private void EvaluateStale(IReadOnlyList<WorklogSessionTab>? tabs)
     {
         if (isClosing || isStale || lastFrame is null || IsTerminal)
         {
@@ -223,7 +294,7 @@ internal sealed class DesktopProgressNotificationWindow : Window
         }
 
         isStale = true;
-        WorklogCardMapper.Apply(model, lastFrame, Environment.MachineName, stale: true, lastCodeChangedUtc, lastDetails);
+        WorklogCardMapper.Apply(model, lastFrame, Environment.MachineName, stale: true, lastCodeChangedUtc, lastDetails, tabs);
     }
 
     private void OnCardMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

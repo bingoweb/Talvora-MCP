@@ -103,6 +103,22 @@
         </Setter>
     </Style>
 
+    <!-- D109v: an entry of the status bar's window list; the hit area is its text plus 4 DIP each side, nothing moves or lights up. -->
+    <Style x:Key="Wl.WindowEntry" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="4,0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="Wl.LinkButton" TargetType="Button" BasedOn="{StaticResource Wl.IconButton}">
         <Setter Property="Width" Value="Auto" />
         <Setter Property="Padding" Value="4,0" />

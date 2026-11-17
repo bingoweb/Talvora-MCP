@@ -29,6 +29,9 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
     private int typedCount;
     private int typeStep;
     private string? firstRowKey;
+    private string? windowListSignature;
+    private bool instantFrame;
+    private bool instantRefresh;
 
     public WorklogCardView()
     {
@@ -78,6 +81,9 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
 
     /// <summary>The user asked to copy the "ayrıntılar" rows (N6).</summary>
     public event EventHandler? CopyDetailsRequested;
+
+    /// <summary>The user clicked an entry of the window list that is not the shown session (D109v); carries its session id.</summary>
+    internal event Action<string>? SessionEntryInvoked;
 
     /// <summary>Maximum height of the code terminal (set by the window from the work area / user size).</summary>
     public double CodeMaxHeight
@@ -139,7 +145,102 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
                 ShadowDepth = 0,
                 Opacity = 0.28,
             };
+        RebuildWindowList(force: true);
         UpdateMotion();
+    }
+
+    /// <summary>
+    /// D109v: one button per entry of the model's window list, in index order. The panel decides how many fit.
+    /// An identical list (same signature) is not rebuilt unless the contrast changed.
+    /// </summary>
+    private void RebuildWindowList(bool force)
+    {
+        var list = subscribed?.WindowList;
+        if (list is null)
+        {
+            windowListSignature = null;
+            WindowListPanel.Children.Clear();
+            WindowListPanel.TotalCount = 0;
+            return;
+        }
+
+        if (!force && string.Equals(list.Signature, windowListSignature, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        windowListSignature = list.Signature;
+        var entryStyle = (Style)FindResource("Wl.WindowEntry");
+        var textStyle = (Style)FindResource("Wl.TextBase");
+        WindowListPanel.Children.Clear();
+        foreach (var entry in list.Entries)
+        {
+            var label = new System.Windows.Controls.TextBlock
+            {
+                Text = entry.Text,
+                Style = textStyle,
+                FontSize = 11,
+                TextWrapping = TextWrapping.NoWrap,
+                FontWeight = entry.IsShown ? FontWeights.SemiBold : FontWeights.Normal,
+                Opacity = highContrastActive || entry.IsShown ? 1.0 : 0.7,
+            };
+            label.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "Wl.StatusText");
+            var button = new System.Windows.Controls.Button
+            {
+                Style = entryStyle,
+                Content = label,
+                Cursor = entry.IsShown ? System.Windows.Input.Cursors.Arrow : System.Windows.Input.Cursors.Hand,
+            };
+            System.Windows.Automation.AutomationProperties.SetName(button, entry.AutomationName);
+            if (entry.HelpText is not null)
+            {
+                System.Windows.Automation.AutomationProperties.SetHelpText(button, entry.HelpText);
+            }
+
+            WorklogWindowListPanel.SetRank(button, entry.Rank);
+            var sessionId = entry.SessionId;
+            var isShown = entry.IsShown;
+            button.Click += (_, _) =>
+            {
+                if (!isShown && sessionId.Length > 0)
+                {
+                    SessionEntryInvoked?.Invoke(sessionId);
+                }
+            };
+            WindowListPanel.Children.Add(button);
+        }
+
+        WindowListPanel.TotalCount = list.TotalSessions;
+        WindowListPanel.MoreOpacity = highContrastActive ? 1.0 : 0.7;
+        System.Windows.Automation.AutomationProperties.SetName(WindowListPanel, list.AutomationName);
+        WindowListPanel.InvalidateVisual();
+    }
+
+    /// <summary>
+    /// D109v: runs <paramref name="apply"/> (the model update of a switched-to frame) so that the card shows that frame
+    /// at once: the title is whole, and neither the typing, the row-in, the arrival flash of a new block nor the
+    /// transition moment of a final state plays for it. Scoped to this call and to the refresh it queues (a Loaded-priority
+    /// callback that runs after the call): a frame of the switched-to session that reaches the UI thread before that
+    /// refresh runs joins this motion-free refresh, so it gets no row-in or arrival either, once; every later update
+    /// keeps its motion.
+    /// </summary>
+    internal void ApplyWithoutMotion(Action apply)
+    {
+        ArgumentNullException.ThrowIfNull(apply);
+
+        var previous = instantFrame;
+        instantFrame = true;
+        try
+        {
+            apply();
+        }
+        finally
+        {
+            instantFrame = previous;
+        }
+
+        // A title that did not change raises nothing; settle one that is still typing from an earlier update.
+        ShowTitle(animate: false);
     }
 
     /// <summary>Set by the window: pinned shows the "unpin" glyph.</summary>
@@ -174,6 +275,7 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
         ShowTitle(animate: false);
         UpdateClock();
         DrawSignal(animateNewest: false);
+        RebuildWindowList(force: true);
         UpdateMotion();
     }
 
@@ -182,7 +284,7 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
         switch (e.PropertyName)
         {
             case nameof(WorklogCardViewModel.Title):
-                ShowTitle(animate: true);
+                ShowTitle(animate: !instantFrame);
                 break;
             case nameof(WorklogCardViewModel.State):
                 OnStateChanged();
@@ -191,6 +293,9 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
                 break;
             case nameof(WorklogCardViewModel.AnimationsEnabled):
                 UpdateMotion();
+                break;
+            case nameof(WorklogCardViewModel.WindowList):
+                RebuildWindowList(force: false);
                 break;
             case nameof(WorklogCardViewModel.SessionSeconds) or nameof(WorklogCardViewModel.ClockAnchorUtc) or
                 nameof(WorklogCardViewModel.Steps) or nameof(WorklogCardViewModel.FilesChanged):
@@ -439,6 +544,8 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
     // so all events of a batch collapse into one refresh after layout.
     private void OnTimelineChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        // D109v: the refresh a switched-to frame queues draws it without motion (it runs after the scope has ended).
+        instantRefresh |= instantFrame;
         if (refreshPending)
         {
             return;
@@ -451,16 +558,19 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
     private void RefreshCollections()
     {
         refreshPending = false;
+        var instant = instantRefresh;
+        instantRefresh = false;
         if (subscribed is null)
         {
             return;
         }
 
-        DrawSignal(animateNewest: true);
+        DrawSignal(animateNewest: !instant);
 
-        // §7b "row-in": the newest history row slides down 8 px and fades in, only when a new row arrived.
+        // §7b "row-in": the newest history row slides down 8 px and fades in, only when a new row arrived
+        // (a switched-to frame (D109v) is shown, not announced, so it never counts as an arrival).
         var key = RowKey(subscribed);
-        var arrived = key is not null && firstRowKey is not null && key != firstRowKey;
+        var arrived = !instant && key is not null && firstRowKey is not null && key != firstRowKey;
         if (key is not null)
         {
             firstRowKey = key;
@@ -488,7 +598,7 @@ public partial class WorklogCardView : System.Windows.Controls.UserControl
         var state = subscribed?.State;
         var previous = lastState;
         lastState = state;
-        if (state == previous || !MotionAllowed)
+        if (state == previous || instantFrame || !MotionAllowed)
         {
             return;
         }

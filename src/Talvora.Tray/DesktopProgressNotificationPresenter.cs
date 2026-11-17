@@ -13,7 +13,7 @@ using FormsScreen = System.Windows.Forms.Screen;
 
 namespace Talvora.Tray;
 
-internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
+internal sealed partial class DesktopProgressNotificationPresenter : IDisposable, Worklog.IWorklogSessionSource
 {
     private const int MaximumVisibleCardsPerLane = 1;
     private const int MaximumPlacementDocumentBytes = 16 * 1024;
@@ -86,6 +86,9 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             : Path.GetFullPath(placementPath);
         RestorePlacement();
     }
+
+    /// <summary>The time a published message counts as observed; a test hook, the tray always uses the system clock.</summary>
+    internal Func<DateTimeOffset> Clock { get; set; } = static () => DateTimeOffset.UtcNow;
 
     public void Publish(DesktopProgressMessage message)
     {
@@ -176,7 +179,11 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             return;
         }
 
-        _sessionTabs.Observe(message, DateTimeOffset.UtcNow, _codeState.CodeChangedUtc);
+        // D109v: a session that left its lifetime is forgotten here too, so its number frees up while no card is
+        // visible; the snapshot comes first so that a number it frees goes to a session observed right after it.
+        var now = Clock();
+        _ = _sessionTabs.Snapshot(now, ShownWorklogSessionId());
+        _sessionTabs.Observe(message, now, _codeState.CodeChangedUtc);
 
         if (_presentationState.Evaluate(message) !=
             DesktopProgressPresentationDecision.Accept)
@@ -212,7 +219,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             _automaticScreenDeviceName ??=
                 FormsScreen.FromPoint(
                     FormsCursor.Position).DeviceName;
-            window = new DesktopProgressNotificationWindow();
+            window = new DesktopProgressNotificationWindow { SessionSource = this };
             // Keep the approved desktop card reference unchanged. Distinguish a
             // body click from the existing window drag using its move-completed event.
             var pointerDown = FormsCursor.Position;
@@ -261,14 +268,15 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             _previewBySession[sessionId] = preferences.ShowCodePreview;
         }
 
-        PresentWindow(window, message, frame, _codeState.CodeChangedUtc);
+        PresentWindow(window, message, frame, _codeState.CodeChangedUtc, receivedUtc: null);
     }
 
     private void PresentWindow(
         DesktopProgressNotificationWindow window,
         DesktopProgressMessage message,
         DesktopWorklogFrame frame,
-        DateTimeOffset? codeChangedUtc)
+        DateTimeOffset? codeChangedUtc,
+        DateTimeOffset? receivedUtc)
     {
         var sessionId = frame.SessionId;
         var preferences = SettingsPreferencesStore.Current;
@@ -291,7 +299,8 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             window.WindowState = WindowState.Normal;
         window.Update(displayFrame,
             showPreview ? codeChangedUtc : null,
-            Worklog.WorklogDetails.From(message));
+            Worklog.WorklogDetails.From(message),
+            receivedUtc);
 
         if (!window.IsVisible)
         {
@@ -302,31 +311,47 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         Reposition();
     }
 
-    internal IReadOnlyList<WorklogSessionTab> GetSessionTabs(DateTimeOffset nowUtc)
-    {
-        var shownSessionId = _windows.Values.FirstOrDefault(
+    private string? ShownWorklogSessionId() =>
+        _windows.Values.FirstOrDefault(
             window => window.IsVisible && window.LastLane == DesktopProgressLane.Worklog)?.SessionId;
-        return _sessionTabs.Snapshot(nowUtc, shownSessionId);
-    }
 
-    internal bool ShowSession(string sessionId)
+    internal IReadOnlyList<WorklogSessionTab> GetSessionTabs(DateTimeOffset nowUtc) =>
+        _sessionTabs.Snapshot(nowUtc, ShownWorklogSessionId());
+
+    /// <summary>The tabs for the session a card window is about to show (D109v: the card passes its own session).</summary>
+    public IReadOnlyList<WorklogSessionTab> GetSessionTabs(DateTimeOffset nowUtc, string? shownSessionId) =>
+        _sessionTabs.Snapshot(nowUtc, shownSessionId);
+
+    /// <summary>A click on a window-list entry (D109v): never throws.</summary>
+    public bool ShowSession(string sessionId) => ShowSession(sessionId, DateTimeOffset.UtcNow);
+
+    internal bool ShowSession(string sessionId, DateTimeOffset nowUtc)
     {
-        var shown = _windows.Values.FirstOrDefault(
-            window => window.IsVisible && window.LastLane == DesktopProgressLane.Worklog);
-        if (shown is null || string.Equals(shown.SessionId, sessionId, StringComparison.Ordinal) ||
-            !GetSessionTabs(DateTimeOffset.UtcNow).Any(tab => tab.SessionId == sessionId) ||
-            !_sessionTabs.TryGetNewest(sessionId, out var message, out var codeChangedUtc) ||
-            message.WorklogFrame is not { } frame)
+        try
         {
+            var shown = _windows.Values.FirstOrDefault(
+                window => window.IsVisible && window.LastLane == DesktopProgressLane.Worklog);
+            if (shown is null || string.Equals(shown.SessionId, sessionId, StringComparison.Ordinal) ||
+                !GetSessionTabs(nowUtc).Any(tab => tab.SessionId == sessionId) ||
+                !_sessionTabs.TryGetNewest(
+                    sessionId, out var message, out var codeChangedUtc, out var observedUtc) ||
+                message.WorklogFrame is not { } frame)
+            {
+                return false;
+            }
+
+            _windows.Remove(shown.SessionId);
+            _windows[sessionId] = shown;
+            _previewBySession.TryAdd(sessionId, SettingsPreferencesStore.Current.ShowCodePreview);
+            _presentationState.ForgetManualDismissal(sessionId);
+            PresentWindow(shown, message, frame, codeChangedUtc, observedUtc);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            TrayLog.Write($"Desktop progress notification session switch failed. Session={sessionId}", ex);
             return false;
         }
-
-        _windows.Remove(shown.SessionId);
-        _windows[sessionId] = shown;
-        _previewBySession.TryAdd(sessionId, SettingsPreferencesStore.Current.ShowCodePreview);
-        _presentationState.ForgetManualDismissal(sessionId);
-        PresentWindow(shown, message, frame, codeChangedUtc);
-        return true;
     }
 
     private void TrimVisibleCards()

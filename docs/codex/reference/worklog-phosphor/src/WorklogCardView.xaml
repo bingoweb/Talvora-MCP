@@ -481,8 +481,17 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Style="{StaticResource Wl.TextBase}" FontSize="11" TextWrapping="NoWrap" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource Wl.StatusText}"><Run Text="[talvora] " FontWeight="SemiBold" /><Run Text="{Binding SessionName, Mode=OneWay}" /></TextBlock>
+                        <Grid VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Wl.TextBase}" FontSize="11" TextWrapping="NoWrap" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource Wl.StatusText}"><Run Text="[talvora] " FontWeight="SemiBold" /></TextBlock>
+                            <wl:WorklogWindowListPanel x:Name="WindowListPanel" Grid.Column="1" Margin="-4,0,0,0" ClipToBounds="True"
+                                                       VerticalAlignment="Center" TextElement.FontFamily="{StaticResource Wl.Mono}"
+                                                       TextElement.FontSize="11" TextElement.Foreground="{DynamicResource Wl.StatusText}" />
+                        </Grid>
                         <TextBlock x:Name="WaitDots" Grid.Column="1" Text="· · ·  " Style="{StaticResource Wl.TextBase}" FontSize="11"
                                    TextWrapping="NoWrap" VerticalAlignment="Center" Foreground="{DynamicResource Wl.Amber}"
                                    Visibility="Collapsed" />

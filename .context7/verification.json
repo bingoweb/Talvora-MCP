@@ -1,8 +1,18 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-17T11:34:40.756Z",
-  "scope": "D109: tray-side open session registry, time-based tab statuses, and switching existing worklog card to an observed session",
-  "libraries": [],
-  "noLookup": "D109: Talvora's own tray logic over its own protocol records; no external API is involved.",
-  "vendorSources": []
+  "verifiedAtUtc": "2026-11-17T15:26:47.549Z",
+  "scope": "D109v: tmux-style window list in the worklog card's status bar (custom WPF Panel that measures which entries fit, FormattedText for the +k count, a Group automation peer) and the click that switches the card to another open session",
+  "libraries": [
+    {
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-17 D109v: a custom Panel overrides MeasureOverride and ArrangeOverride and measures and arranges its own children; a property registered with AffectsMeasure re-runs layout when it changes (query: \"Custom WPF Panel MeasureOverride calling child Measure, ArrangeOverride calling child Arrange, FrameworkPropertyMetadataOptions.AffectsMeasure\")"
+    },
+    {
+      "libraryId": "/dotnet/docs-desktop",
+      "verified": "2026-11-17 D109v: a custom element overrides OnCreateAutomationPeer and its peer's GetAutomationControlTypeCore and GetClassNameCore, and a Button carries AutomationProperties.Name and AutomationProperties.HelpText (query: \"OnCreateAutomationPeer FrameworkElementAutomationPeer GetAutomationControlTypeCore AutomationControlType.Group, AutomationProperties.Name HelpText Button\")"
+    }
+  ],
+  "vendorSources": [
+    "https://learn.microsoft.com/en-us/dotnet/api/system.windows.media.formattedtext.-ctor?view=windowsdesktop-10.0"
+  ]
 }

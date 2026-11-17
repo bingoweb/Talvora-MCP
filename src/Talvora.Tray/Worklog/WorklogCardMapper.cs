@@ -11,13 +11,14 @@ public static class WorklogCardMapper
 {
     private static readonly CultureInfo Turkish = CultureInfo.GetCultureInfo("tr-TR");
 
-    public static void Apply(
+    internal static void Apply(
         WorklogCardViewModel model,
         DesktopWorklogFrame frame,
         string machineName,
         bool stale,
         DateTimeOffset? codeChangedUtc = null,
-        WorklogDetails? details = null)
+        WorklogDetails? details = null,
+        IReadOnlyList<WorklogSessionTab>? sessionTabs = null)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(frame);
@@ -86,7 +87,7 @@ public static class WorklogCardMapper
             ? $"── son {frame.Timeline.Count} adım "
             : "── oturum ";
         model.Footer = FormatFooter(frame.Totals);
-        model.SessionName = $"0:{(string.IsNullOrWhiteSpace(project) ? "talvora" : project)}*";
+        model.WindowList = MapWindowList(sessionTabs ?? [], project);
         model.Steps = frame.Totals.Steps;
         model.FilesChanged = frame.Totals.FilesChanged;
         model.SessionSeconds = frame.Totals.SessionSeconds;
@@ -107,6 +108,129 @@ public static class WorklogCardMapper
                 lines);
         }
     }
+
+    /// <summary>
+    /// The status bar's window list (§7b "Window list", D109v): one tmux-style entry per open session, the shown one
+    /// plus up to three others. A session the tray has not observed is never invented: without a shown tab the
+    /// shown entry falls back to the frame's own project.
+    /// </summary>
+    internal static WorklogWindowList MapWindowList(
+        IReadOnlyList<WorklogSessionTab> tabs,
+        string? shownProjectName)
+    {
+        ArgumentNullException.ThrowIfNull(tabs);
+
+        if (!tabs.Any(static tab => tab.IsShown))
+        {
+            var name = string.IsNullOrWhiteSpace(shownProjectName) ? FallbackProjectName : shownProjectName.Trim();
+            var shownDisplay = CutName(name);
+            return new WorklogWindowList(
+                [new WorklogWindowEntry(0, string.Empty, $"0:{shownDisplay}*", true, 0, $"{name}, bu kart", null)],
+                1,
+                $"Açık oturumlar: {name}, bu kart");
+        }
+
+        var ordered = tabs.OrderBy(static tab => tab.Index).ToArray();
+        var shownTab = ordered.First(static tab => tab.IsShown);
+        var baseNames = ordered.Select(static tab => BaseName(tab.ProjectName)).ToArray();
+        var named = ordered.Select((tab, position) =>
+        {
+            var baseName = baseNames[position];
+            var isShown = ReferenceEquals(tab, shownTab);
+            var duplicate = baseNames.Count(other => string.Equals(other, baseName, StringComparison.OrdinalIgnoreCase)) > 1;
+            var actor = duplicate ? ActorWord(tab.ActorName) : string.Empty;
+            var display = CutName(baseName);
+            var spoken = baseName;
+            if (actor.Length > 0)
+            {
+                display += "·" + actor;
+                spoken += " (" + actor + ")";
+            }
+
+            var flag = isShown
+                ? "*"
+                : tab.State switch
+                {
+                    WorklogSessionTabState.Running => "#",
+                    WorklogSessionTabState.Silent => "~",
+                    WorklogSessionTabState.Failed => "!",
+                    _ => string.Empty,
+                };
+            var stateWord = isShown
+                ? "bu kart"
+                : tab.State switch
+                {
+                    WorklogSessionTabState.Running => "sürüyor",
+                    WorklogSessionTabState.Silent => "sessiz",
+                    WorklogSessionTabState.Succeeded => "tamamlandı",
+                    WorklogSessionTabState.Failed => "hata verdi",
+                    _ => "iptal edildi",
+                };
+            return (Tab: tab, IsShown: isShown, Text: $"{tab.Index}:{display}{flag}", Spoken: $"{spoken}, {stateWord}");
+        }).ToArray();
+
+        // Priority of the others: Running, Silent, Failed, then the rest; ties by index (the input is in index order).
+        var others = named
+            .Where(static item => !item.IsShown)
+            .Select(static (item, position) => (Item: item, Position: position))
+            .OrderBy(static pair => pair.Item.Tab.State switch
+            {
+                WorklogSessionTabState.Running => 0,
+                WorklogSessionTabState.Silent => 1,
+                WorklogSessionTabState.Failed => 2,
+                _ => 3,
+            })
+            .ThenBy(static pair => pair.Position)
+            .Take(MaximumOtherEntries)
+            .Select(static (pair, rank) => (pair.Item, Rank: rank + 1))
+            .ToArray();
+
+        var shownItem = named.First(static item => item.IsShown);
+        var entries = new List<(int Index, WorklogWindowEntry Entry)>
+        {
+            (shownItem.Tab.Index, ToEntry(shownItem, 0)),
+        };
+        entries.AddRange(others.Select(pair => (pair.Item.Tab.Index, ToEntry(pair.Item, pair.Rank))));
+
+        return new WorklogWindowList(
+            entries.OrderBy(static pair => pair.Index).Select(static pair => pair.Entry).ToArray(),
+            tabs.Count,
+            "Açık oturumlar: " + string.Join("; ", named.Select(static item => item.Spoken)));
+
+        static WorklogWindowEntry ToEntry(
+            (WorklogSessionTab Tab, bool IsShown, string Text, string Spoken) item,
+            int rank) =>
+            new(
+                item.Tab.Index,
+                item.Tab.SessionId,
+                item.Text,
+                item.IsShown,
+                rank,
+                item.Spoken,
+                item.IsShown ? null : "Kartı bu oturuma geçirir");
+    }
+
+    private const string FallbackProjectName = "talvora";
+    private const int MaximumNameLength = 16;
+    private const int MaximumOtherEntries = 3;
+
+    /// <summary>A name over 16 text elements keeps its first 15 and ends in "…"; a surrogate pair or a combining mark is never split.</summary>
+    private static string CutName(string name)
+    {
+        var elements = new StringInfo(name);
+        return elements.LengthInTextElements > MaximumNameLength
+            ? elements.SubstringByTextElements(0, MaximumNameLength - 1) + "…"
+            : name;
+    }
+
+    private static string BaseName(string? projectName) =>
+        string.IsNullOrWhiteSpace(projectName) ? FallbackProjectName : projectName.Trim();
+
+    /// <summary>First word of the actor ("ChatGPT · Dev" → "chatgpt"); empty when there is none.</summary>
+    private static string ActorWord(string? actorName) =>
+        (actorName ?? string.Empty).Replace('·', ' ')
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault()?.ToLowerInvariant() ?? string.Empty;
 
     /// <summary>
     /// Session time ruler (§7b UI12c): every step with a measured duration (WL1) is a block on one linear real-time

@@ -134,7 +134,18 @@ internal sealed class WorklogSessionTabs
     internal bool TryGetNewest(
         string sessionId,
         out DesktopProgressMessage message,
-        out DateTimeOffset? codeChangedUtc)
+        out DateTimeOffset? codeChangedUtc) =>
+        TryGetNewest(sessionId, out message, out codeChangedUtc, out _);
+
+    /// <summary>
+    /// The newest message of a session the registry still holds, with the code-change time and the time the tray
+    /// observed it (D109v: a card switched to it counts the session's lifetime from then).
+    /// </summary>
+    internal bool TryGetNewest(
+        string sessionId,
+        out DesktopProgressMessage message,
+        out DateTimeOffset? codeChangedUtc,
+        out DateTimeOffset observedUtc)
     {
         lock (_gate)
         {
@@ -142,11 +153,13 @@ internal sealed class WorklogSessionTabs
             {
                 message = observation.Message;
                 codeChangedUtc = observation.CodeChangedUtc;
+                observedUtc = observation.ObservedUtc;
                 return true;
             }
 
             message = null!;
             codeChangedUtc = null;
+            observedUtc = default;
             return false;
         }
     }

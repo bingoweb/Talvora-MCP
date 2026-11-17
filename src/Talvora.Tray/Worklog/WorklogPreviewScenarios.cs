@@ -29,6 +29,8 @@ internal static class WorklogPreviewScenarios
             ("08-high-contrast", RunningEdit(), true),
             ("09-one-step-receipt", OneStepReceipt(), false),
             ("10-details-open", DetailsOpen(), false),
+            ("11-two-sessions", TwoSessions(), false),
+            ("12-two-sessions-high-contrast", TwoSessions(), true),
         ];
     }
 
@@ -181,6 +183,32 @@ internal static class WorklogPreviewScenarios
         var model = Base("Classroom", "codex", WorklogVisualState.Waiting, "Yanıt bekleniyor");
         model.FactLine = "Codex 1 dk 10 sn'dir yeni bilgi göndermedi · son:\u00a014:21:03";
         Stats(model, 31, 1082, 0);
+        return model;
+    }
+
+    /// <summary>D109v: a running ChatGPT card whose status bar lists four open sessions, built by the mapper's own rules.</summary>
+    private static WorklogCardViewModel TwoSessions()
+    {
+        var model = Base("Talvora-MCP", "chatgpt·dev", WorklogVisualState.Running, "Kod değişikliği uygulanıyor · GitTools.cs ve 1 dosya");
+        model.TaskNote = "D12 — git pull oturum kullanıcısıyla çalışsın";
+        model.Purpose = "git pull artık oturum kullanıcısının SSH anahtarını kullanıyor";
+        model.SetTimeline(
+        [
+            new(WorklogRowState.Succeeded, "16:15", "Uzak değişiklikler alındı · origin/main", 2.7,
+                "Yerel main dalı Gitea ile eşitleniyor"),
+            new(WorklogRowState.Succeeded, "16:14", "Görev bağlamı hazır", 1.1),
+        ]);
+        Stats(model, 3, 164, 2);
+        Signal(model, "16:18:10", 164, 2.4,
+            (20, 2.7, WorklogStepState.Succeeded, "Uzak değişiklikler alındı · origin/main"),
+            (60, 1.1, WorklogStepState.Succeeded, "Görev bağlamı hazır"));
+        model.WindowList = WorklogCardMapper.MapWindowList(
+        [
+            new WorklogSessionTab(0, "preview-0", "Talvora-MCP", "ChatGPT · Dev", WorklogSessionTabState.Running, true),
+            new WorklogSessionTab(1, "preview-1", "fatura-hesabi", "codex", WorklogSessionTabState.Running, false),
+            new WorklogSessionTab(2, "preview-2", "Kalem", "claude", WorklogSessionTabState.Failed, false),
+            new WorklogSessionTab(3, "preview-3", "Classroom", "codex", WorklogSessionTabState.Succeeded, false),
+        ], "Talvora-MCP");
         return model;
     }
 
@@ -412,7 +440,7 @@ internal static class WorklogPreviewScenarios
         new()
         {
             Prompt = $"talvora@MSI:~/{project}",
-            SessionName = $"0:{project}*",
+            WindowList = WorklogCardMapper.MapWindowList([], project),
             Actor = actor,
             State = state,
             Title = title,

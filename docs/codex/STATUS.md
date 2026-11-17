@@ -32,7 +32,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [C] D109v — the card's bottom bar lists the open sessions, tmux-style (Claude ships it after D109)
+- [~] live pending (Claude): D109v — the card's bottom bar lists the open sessions, tmux-style (clean-HEAD deploy, installed smokes, live capture, CI)
 - [ ] D110 — the SDK updater never leaves the band or moves back; a refused SDK PR leaves the tree clean (audit 68)
 
 ## User queue
@@ -51,6 +51,14 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-17 — Claude, `[C]` D109v: the status bar lists the open sessions tmux-style (new `WorklogWindowListPanel` fits the shown entry plus up to three others by priority and draws `+k`; flags `* # ~ !`; names cut at 16 text elements; spoken as `Açık oturumlar: …`); a click on another entry calls `ShowSession`, which now passes the time the tray received the frame (a silent session shows `Yanıt bekleniyor` at once, a terminal one keeps only the rest of its lifetime, no motion); PublishCore forgets left tabs before it observes; the window's lifetimes read `WorklogSessionTabs`. Also covers D109's review gaps (manual-dismissal lift, expired-tab refusal). Previews 11 and 12 added; eight reference copies and SHA256SUMS refreshed; ModernizationPolicyRegression pins the lifetimes in `WorklogSessionTabs.cs` and the received-time rule in its new form.
+  Tests: red CS0246 (`IWorklogSessionSource` missing), then a failing assertion for each review fix; green `--d109v-only`, `--d109v-wpf-only`, D109, D99, full notification regression `DESKTOP_PROGRESS_BEHAVIOR_GREEN`; signed-in Changed 27/0 and Full 76/0 `Hepsi geçti.`
+  Context7: `/dotnet/docs-desktop` (custom Panel measure/arrange; automation peer with Name and HelpText); FormattedText `pixelsPerDip` from the vendor page, Context7 had no answer.
+  hakem·opus: fix first (a switch typed the title in; a freed number was not reused; two guards untested; clock-back clamp; cut by text elements) → fixed; re-review ship, its two untested motion paths now tested. Built by usta·sonnet to Claude's spec.
+  Self-review — cosmetics: previews show `[talvora] 0:Talvora-MCP* 1:fatura-hesabi# +2` at 460 DIP; shown entry semibold, others at 70 %, high contrast in the system text colour; nothing moves.
+  Self-review — usability: a click switches the same card at once; no entry click reaches the card's drag or Çalışma günlüğü path; hand cursor only on switchable entries.
+  Self-review — Turkish: `Açık oturumlar`, `bu kart`, `sürüyor`, `sessiz`, `tamamlandı`, `hata verdi`, `iptal edildi`, `Kartı bu oturuma geçirir`, as DESIGN-WORKLOG §7b says.
+  Self-review — correctness and security: no new IPC, setting or permission; the click path logs and never throws; the registry stays bounded by the lifetimes.
 - 2026-11-17 — Claude, audit 68 (range `audit/2026-11-17-67..4c9deb4`: PK5, D107, D108, D109 by ChatGPT). Every commit inside its card's Files with one `Card:` trailer and green CI; Context7 evidence matches Talvora's ledger (PK5 two `/dotnet/roslyn`, D107 two `/dotnet/docs` queries; D108 and D109 `noLookup` as their cards say); PR #22 closed with `Yerelde uygulandı: 34530f4`. Signed-in Full gate on 4c9deb4: 76/0 `Hepsi geçti.` D109 closed: clean-HEAD installer of 4c9deb4, both installed smokes GREEN (`artifacts/D109-meta.log`, `D109-smoke.log`), CI 44076076237.
   Reviews (hakem·opus ×2): PK5, D108 and D109 ship. D107: Apply checks the SDK band after applying the PR (a band or major PR passes), the updater can move the pin back without `-Version`, a refused SDK PR leaves `global.json` dirty, and the no-change return skips the lock refresh → agent card D110. D109: its WPF test stayed green with the manual-dismissal lift and the expired-tab refusal removed, and switching to a silent session showed it live for one stale budget → both covered by `[C]` D109v.
   OLASI: D107's `vendorSources` lists two learn.microsoft.com pages, but Talvora's call trace shows no page fetch in that window and Context7 answered both queries (CONTEXT7 PROTOCOL rule 6: none when Context7 answered).

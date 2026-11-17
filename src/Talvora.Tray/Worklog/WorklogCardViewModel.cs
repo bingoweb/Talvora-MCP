@@ -276,7 +276,7 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
     private string signalCaption = "── oturum ";
     private double signalSpanSeconds;
     private SignalLegend? signalLegend;
-    private string sessionName = string.Empty;
+    private WorklogWindowList windowList = WorklogCardMapper.MapWindowList([], null);
     private int steps;
     private int filesChanged;
     private double sessionSeconds;
@@ -443,8 +443,8 @@ public sealed class WorklogCardViewModel : INotifyPropertyChanged
         ? "   " + WorklogMeasure.Format(seconds).Replace(' ', '\u00a0') + "\u00a0sürdü"
         : string.Empty;
 
-    /// <summary>tmux window name, "0:Classroom*".</summary>
-    public string SessionName { get => sessionName; set => Set(ref sessionName, value); }
+    /// <summary>tmux window list of the status bar, "0:Classroom* 1:Kalem!" (D109v).</summary>
+    internal WorklogWindowList WindowList { get => windowList; set => Set(ref windowList, value); }
 
     /// <summary>Real step count of the session (Totals.Steps).</summary>
     public int Steps { get => steps; set => Set(ref steps, value); }

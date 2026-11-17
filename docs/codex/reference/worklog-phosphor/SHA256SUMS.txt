@@ -1,10 +1,10 @@
 # SHA-256 of the file content after normalising CRLF to LF and removing a UTF-8 BOM (see AGENTS.md rule 5 reference copies).
-# Updated by Claude 2026-11-01 for the time ruler (UI12c; DESIGN-WORKLOG §7b) and 2026-11-14 for the "durum" label (D75; §6.2), and 2026-11-16 for the history rows' "ne" line and the number typography (D104v; §7b), and the same day for the card window that cannot be minimized (D105v; §3).
-b5f87fa3477c7931111903cb9ee4e3ad3adad11e59685910094bd34578f57768  src/DesktopProgressNotificationWindow.cs
+# Updated by Claude 2026-11-01 for the time ruler (UI12c; DESIGN-WORKLOG §7b) and 2026-11-14 for the "durum" label (D75; §6.2), and 2026-11-16 for the history rows' "ne" line and the number typography (D104v; §7b), and the same day for the card window that cannot be minimized (D105v; §3), and 2026-11-17 for the window list (D109v; §7b).
+f2d39ee68752d9a03303d674ac74468158a1bbd075dce440eb76657b530e16d0  src/DesktopProgressNotificationWindow.cs
 9ce414a94482db8da0dc80cce316f09cf662f2133dcfd302547b8bb7b8715324  src/UnifiedDiffViewParser.cs
-aae2699e258ed6cca4a4a159840fd24690ec01732e503ec1ed78849b207a35e9  src/WorklogCardMapper.cs
-de0eeb1fbc35636840a88d966557de58d1baeb7d07ba97d2776722c564e19acc  src/WorklogCardView.xaml
-e1a02c899c5122570c66b8c5e5050676014fa95b65e7333daa1430aa31aec0bd  src/WorklogCardView.xaml.cs
-0e46dd11af430826a73559c201f67f46c1509f5550d9bcf2c16508eaf15fcea3  src/WorklogCardViewModel.cs
-09b96bba63d54b083141d82fcd21e1e0b3bd31733dec065350a9cc19f2aa9e21  src/WorklogPreviewScenarios.cs
-a5df883dfae6144927c23a0f00bb5b9e1cfb7e2bb5bb6931c44554c519cf8313  src/WorklogTheme.xaml
+4abe45d885af54eefa100968ad3cb7a47ef8ee40f3689c2526f334f5143b89eb  src/WorklogCardMapper.cs
+ec470b2b67a633ba8f94ffbe2e465a5c0d3326a152af67cb6f366106368e9ef7  src/WorklogCardView.xaml
+8bd3b6cac60ca9389aca91d8a9bb12369f56a4c3977dc63ad145fb3dcae4723e  src/WorklogCardView.xaml.cs
+a9626c3aaa4eb6cb74c07d04c01ea42e1a7ffeb23d47c061d5e62bca35f176de  src/WorklogCardViewModel.cs
+cf6f358e0d711f9f7e0b864aed49db2d15333121611f62bbd97182cd81548be2  src/WorklogPreviewScenarios.cs
+99cf1f3b88040bdd184557c1a03db633bf82b4b59e2b6199a11ce752509befd7  src/WorklogTheme.xaml
