@@ -1,16 +1,19 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-17T00:27:44.938Z",
-  "scope": "PK5: update Microsoft.CodeAnalysis.CSharp.Workspaces and Microsoft.CodeAnalysis.Workspaces.MSBuild to 5.12.0; preserve Roslyn semantic project loading and symbol rename API usage",
+  "verifiedAtUtc": "2026-11-17T00:55:08.915Z",
+  "scope": "D107: select installed SDK patches only within current feature band, keep exact global.json SDK pin, derive bundled runtime patch from SDK props, and synchronize platform packages and runtime notices",
   "libraries": [
     {
-      "libraryId": "/dotnet/roslyn",
-      "verified": "MSBuildWorkspace.Create() is a parameterless static factory returning MSBuildWorkspace for MSBuild project loading in Roslyn 5.12 (query: \"Roslyn 5.12 MSBuildWorkspace.Create() without arguments for loading C# projects through MSBuildWorkspace: creation signature and MSBuild locator setup\")"
+      "libraryId": "/dotnet/docs",
+      "verified": "global.json sdk.version with rollForward disable requires an exact SDK match; x.y.znn SDK patch uses z as feature band and nn as servicing patch (query: \"For .NET SDK 10 global.json sdk.version exact pin and rollForward disable, how is SDK resolution constrained when only a later patch of the same feature band is installed?\")"
     },
     {
-      "libraryId": "/dotnet/roslyn",
-      "verified": "Renamer.RenameSymbolAsync accepts Solution, ISymbol, SymbolRenameOptions, string and optional CancellationToken and returns Task<Solution> in Roslyn 5.12 (query: \"Roslyn 5.12 Renamer.RenameSymbolAsync(Solution, ISymbol, SymbolRenameOptions, string, CancellationToken): signature and return type\")"
+      "libraryId": "/dotnet/docs",
+      "verified": "SDK feature bands are hundreds in patch number. Docs did not expose BundledNETCoreAppPackageVersion file; verified locally at C:\\Program Files\\dotnet\\sdk\\10.0.404\\Microsoft.NETCoreSdk.BundledVersions.props where BundledNETCoreAppPackageVersion=10.0.15 (query: \"For .NET SDK 10, where is Microsoft.NETCoreSdk.BundledVersions.props under sdk/<version> and what is the meaning of BundledNETCoreAppPackageVersion for the bundled runtime patch?\")"
     }
   ],
-  "vendorSources": []
+  "vendorSources": [
+    "https://learn.microsoft.com/en-us/dotnet/core/tools/global-json",
+    "https://learn.microsoft.com/en-us/dotnet/core/porting/versioning-sdk-msbuild-vs"
+  ]
 }

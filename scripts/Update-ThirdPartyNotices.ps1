@@ -2,7 +2,9 @@
 param(
     [string] $NoticePath,
     [string[]] $LockPath,
-    [string] $PackagesRoot
+    [string] $PackagesRoot,
+    [ValidatePattern('^\d+\.\d+\.\d+$')]
+    [string] $RuntimeVersion
 )
 # Brings THIRD-PARTY-NOTICES.md in line with the locked runtime packages, the inventory that
 # tests/ThirdPartyNoticesSourceRegression.ps1 checks. Apply-DependabotPr.ps1 (DEP1) calls it.
@@ -64,6 +66,23 @@ $hasBom = $noticeBytes.Length -ge 3 -and $noticeBytes[0] -eq 0xEF -and $noticeBy
 $notice = [IO.File]::ReadAllText($NoticePath)
 $newline = if ($notice.Contains("`r`n")) { "`r`n" } else { "`n" }
 $updated = $notice
+
+if ($RuntimeVersion) {
+    foreach ($pack in @(
+        'Microsoft.NETCore.App.Runtime.win-x64',
+        'Microsoft.WindowsDesktop.App.Runtime.win-x64',
+        'Microsoft.AspNetCore.App.Runtime.win-x64'
+    )) {
+        $pattern = '(?m)^(- `' + [regex]::Escape($pack) + ' )(\d+\.\d+\.\d+)(`)(?=\r?$)'
+        if (-not [regex]::IsMatch($updated, $pattern)) {
+            throw "THIRD-PARTY-NOTICES.md is missing the runtime pack: $pack."
+        }
+        $updated = [regex]::Replace($updated, $pattern, {
+            param($m)
+            $m.Groups[1].Value + $RuntimeVersion + $m.Groups[3].Value
+        })
+    }
+}
 $additions = [Collections.Generic.List[object]]::new()
 $review = [Collections.Generic.List[string]]::new()
 foreach ($package in $locked.Values) {

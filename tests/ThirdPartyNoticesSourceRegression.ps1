@@ -79,6 +79,22 @@ foreach ($contract in $requiredNoticeContracts) {
     }
 }
 
+$packagesText = [IO.File]::ReadAllText((Join-Path $repoRoot 'Directory.Packages.props'))
+$platformVersionMatch = [regex]::Match($packagesText, '<PackageVersion Include="Microsoft\.Data\.Sqlite" Version="(\d+\.\d+\.\d+)"')
+if (-not $platformVersionMatch.Success) { throw 'The central platform package version is missing.' }
+$runtimeVersion = $platformVersionMatch.Groups[1].Value
+foreach ($pack in @(
+    'Microsoft.NETCore.App.Runtime.win-x64',
+    'Microsoft.WindowsDesktop.App.Runtime.win-x64',
+    'Microsoft.AspNetCore.App.Runtime.win-x64'
+)) {
+    $line = '(?m)^- `' + [regex]::Escape($pack) + ' (\d+\.\d+\.\d+)`(?=\r?$)'
+    $matches = [regex]::Matches($notice, $line)
+    if ($matches.Count -ne 1 -or $matches[0].Groups[1].Value -cne $runtimeVersion) {
+        throw "Runtime pack $pack must match the platform family version $runtimeVersion."
+    }
+}
+
 $requiredReadmeContracts = @(
     'THIRD-PARTY-NOTICES.md',
     'kilitli NuGet paketlerinin',

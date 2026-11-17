@@ -23,6 +23,7 @@ Talvora is maintained as a modern-by-default Windows/.NET MCP system.
 **Exit criteria:** clean locked restore, release build with zero warnings/errors, every project has a lock file, CI uses the same graph.
 
 **SDK updates (including Dependabot):** install the exact proposed stable SDK, retain `rollForward: disable`, then run `dotnet restore Talvora.slnx --force-evaluate` and `dotnet restore src/Talvora.Installer/Talvora.Installer.csproj --force-evaluate` without environment overrides. Include every changed `packages.lock.json` with `global.json` in the same PR; do not bump unrelated packages or force a downgrade. Verify both restores again with `--locked-mode` and run `dotnet build Talvora.slnx -c Release --no-restore`. CI rejects SDK changes without added/modified project lock files before restore. PR checks compare the merge base to the PR head; push checks compare the event's before/after revisions (or the empty tree for a new branch), so multi-commit updates are checked together. Missing revisions fail with a diagnostic rather than silently skipping the check.
+Use `scripts/Update-DotnetSdkPatch.ps1` to apply only an installed patch within the current SDK feature band, synchronizing the bundled runtime, central platform packages, lock files and runtime notices; Claude decides feature-band or major changes.
 
 ### MOD-02 — Dependency modernization and API compatibility
 

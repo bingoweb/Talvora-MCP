@@ -70,6 +70,13 @@ try {
     Invoke-Checked git @('apply', '--3way', $patchFile)
     Remove-Item -LiteralPath $patchFile
 
+    if (@($patch | Where-Object { $_ -eq 'diff --git a/global.json b/global.json' }).Count -gt 0) {
+        $sdkVersion = [string]((Get-Content -LiteralPath (Join-Path $repoRoot 'global.json') -Raw | ConvertFrom-Json).sdk.version)
+        Write-Log "> scripts/Update-DotnetSdkPatch.ps1 -Version $sdkVersion"
+        & (Join-Path $PSScriptRoot 'Update-DotnetSdkPatch.ps1') -Version $sdkVersion |
+            ForEach-Object { Write-Log "$_" }
+    }
+
     Invoke-Checked dotnet @('restore', 'Talvora.slnx', '--force-evaluate', '--nologo', '-v', 'q')
     Invoke-Checked dotnet @('restore', 'src/Talvora.Installer/Talvora.Installer.csproj', '--force-evaluate', '--nologo', '-v', 'q')
     Invoke-Checked pwsh @('-NoProfile', '-File', 'tests/PlatformPackageLockstepRegression.ps1')
