@@ -4,7 +4,8 @@ param(
     [int] $Pr,
     [switch] $DryRun,
     [string] $PatchFile,
-    [switch] $SelectOnly
+    [switch] $SelectOnly,
+    [string] $DotnetRoot
 )
 # Prepares a Dependabot PR's version change on local main the Talvora way: only the version
 # files are taken from the PR, then EVERY packages.lock.json is regenerated (Dependabot cannot
@@ -75,6 +76,7 @@ catch {
     exit 3
 }
 
+$appliedByScript = $false
 Push-Location $repoRoot
 try {
     Set-Content -LiteralPath $logPath -Value "Apply-DependabotPr -Pr $Pr started $([DateTime]::UtcNow.ToString('u')) pid $PID" -Encoding utf8
@@ -124,11 +126,16 @@ try {
     if ($selectedSections.Count -eq 0) {
         throw "PR #$Pr does not change Directory.Packages.props, global.json or .github/workflows/*.yml."
     }
+    $fromSdkVersion = $null
+    if ($selectedPaths -ccontains 'global.json') {
+        $fromSdkVersion = [string]((Get-Content -LiteralPath (Join-Path $repoRoot 'global.json') -Raw | ConvertFrom-Json).sdk.version)
+    }
     $selectedPatch = [string]::Concat($selectedSections.ToArray())
     if (-not $selectedPatch.EndsWith([string][char]10)) { $selectedPatch += [string][char]10 }
     $patchToApply = Join-Path ([IO.Path]::GetTempPath()) "talvora-dependabot-$Pr.patch"
     [IO.File]::WriteAllText($patchToApply, $selectedPatch, [Text.UTF8Encoding]::new($false))
     Invoke-Checked git @('apply', '--3way', $patchToApply)
+    $appliedByScript = $true
     Remove-Item -LiteralPath $patchToApply
 
     if ($SelectOnly) {
@@ -143,8 +150,10 @@ try {
     if ($hasPackageFiles) {
         if ($selectedPaths -ccontains 'global.json') {
             $sdkVersion = [string]((Get-Content -LiteralPath (Join-Path $repoRoot 'global.json') -Raw | ConvertFrom-Json).sdk.version)
-            Write-Log "> scripts/Update-DotnetSdkPatch.ps1 -Version $sdkVersion"
-            & (Join-Path $PSScriptRoot 'Update-DotnetSdkPatch.ps1') -Version $sdkVersion |
+            Write-Log "> scripts/Update-DotnetSdkPatch.ps1 -FromVersion $fromSdkVersion -Version $sdkVersion"
+            $sdkArguments = @{ Version = $sdkVersion; FromVersion = $fromSdkVersion }
+            if ($DotnetRoot) { $sdkArguments.DotnetRoot = $DotnetRoot }
+            & (Join-Path $PSScriptRoot 'Update-DotnetSdkPatch.ps1') @sdkArguments |
                 ForEach-Object { Write-Log "$_" }
         }
 
@@ -178,6 +187,9 @@ try {
 }
 catch {
     $failure = "FAILED: $($_.Exception.Message)"
+    if ($appliedByScript) {
+        Invoke-Checked git @('restore', '--staged', '--worktree', '--', '.', ':!docs/codex/STATUS.md', ':!.context7/verification.json')
+    }
     Write-Log $failure
     Set-Content -LiteralPath $resultPath -Value $failure -Encoding utf8
     exit 1

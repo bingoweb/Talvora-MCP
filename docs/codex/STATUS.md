@@ -33,7 +33,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [x] D109v — the card's bottom bar lists the open sessions, tmux-style (6376264 + CI follow-up d5da542; installed 6376264, both installed smokes GREEN, live switch checked; CI 44121840623 green)
-- [ ] D110 — the SDK updater never leaves the band or moves back; a refused SDK PR leaves the tree clean (audit 68)
+- [~] CI pending: D110 — SDK patches never downgrade or change bands; refused SDK PR restores its own changes (local acceptance green)
 
 ## User queue
 
@@ -51,6 +51,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-17 — ChatGPT, D110: SDK patch updater now checks major/feature-band and downgrade against the pre-PR -FromVersion (default current pin); an already-aligned normal run still invokes platform refresh while -SkipRestore returns early. Dependabot apply stores the old pin before git apply, forwards optional -DotnetRoot for fixtures, and rolls back only after a successful apply when later steps fail; pre-existing tracked edits remain untouched.
+  Tests: RED downgrade attempted and missing -DotnetRoot; GREEN DotnetSdkPatchRegression 9 cases, DependabotApplyRegression 12 cases (including rejected SDK PR clean-tree and user-edit preservation), ThirdPartyNoticesUpdateRegression 5, ModernizationPolicyRegression, real 10.0.404 -SkipRestore no tracked version changes; signed-in Changed 15/0, Full 76/0 (Hepsi geçti.).
+  Context7: noLookup (Talvora-owned scripts and tests, the version rule was documented and verified for D107). No SDK installed; no deploy (scripts/tests only); Windows CI pending after push.
+  Self-review — cosmetics: no visual changes.
+  Self-review — usability: rejected Dependabot SDK proposals no longer block the next work item with a dirty tree.
+  Self-review — Turkish: no new user-facing UI text; scripts keep their documented failure receipts.
+  Self-review — correctness and security: all refusal checks precede writes, pre-apply errors never trigger restore, and fixture tests verify all bytes remain intact after a refused SDK update.
 - 2026-11-17 — Claude, `[C]` D109v: the status bar lists the open sessions tmux-style (new `WorklogWindowListPanel` fits the shown entry plus up to three others by priority and draws `+k`; flags `* # ~ !`; names cut at 16 text elements; spoken as `Açık oturumlar: …`); a click on another entry calls `ShowSession`, which now passes the time the tray received the frame (a silent session shows `Yanıt bekleniyor` at once, a terminal one keeps only the rest of its lifetime, no motion); PublishCore forgets left tabs before it observes; the window's lifetimes read `WorklogSessionTabs`. Also covers D109's review gaps (manual-dismissal lift, expired-tab refusal). Previews 11 and 12 added; eight reference copies and SHA256SUMS refreshed; ModernizationPolicyRegression pins the lifetimes in `WorklogSessionTabs.cs` and the received-time rule in its new form.
   Tests: red CS0246 (`IWorklogSessionSource` missing), then a failing assertion for each review fix; green `--d109v-only`, `--d109v-wpf-only`, D109, D99, full notification regression `DESKTOP_PROGRESS_BEHAVIOR_GREEN`; signed-in Changed 27/0 and Full 76/0 `Hepsi geçti.`
   Context7: `/dotnet/docs-desktop` (custom Panel measure/arrange; automation peer with Name and HelpText); FormattedText `pixelsPerDip` from the vendor page, Context7 had no answer.

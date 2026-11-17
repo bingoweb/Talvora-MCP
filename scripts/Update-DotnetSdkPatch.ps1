@@ -2,6 +2,8 @@
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
     [string] $Version,
+    [ValidatePattern('^\d+\.\d+\.\d+$')]
+    [string] $FromVersion,
     [switch] $SkipRestore,
     [string] $DotnetRoot
 )
@@ -24,6 +26,8 @@ if ($global.sdk.rollForward -cne 'disable') {
 }
 $oldSdk = [string]$global.sdk.version
 if ($oldSdk -notmatch '^(\d+)\.(\d+)\.(\d+)$') { throw "Invalid pinned SDK version: $oldSdk" }
+$fromSdk = if ($FromVersion) { $FromVersion } else { $oldSdk }
+if ($fromSdk -notmatch '^(\d+)\.(\d+)\.(\d+)$') { throw "Invalid pinned SDK version: $fromSdk" }
 $major = [int]$Matches[1]
 $minor = [int]$Matches[2]
 $feature = [int][Math]::Floor([int]$Matches[3] / 100)
@@ -68,6 +72,9 @@ else {
     }
     $chosen = $inBand[0].Version
 }
+if ([version]$chosen -lt [version]$fromSdk) {
+    throw "SDK $chosen is older than the pinned $fromSdk; the updater never moves the pin back."
+}
 
 $bundledPath = Join-Path $sdkRoot (Join-Path $chosen 'Microsoft.NETCoreSdk.BundledVersions.props')
 if (-not (Test-Path -LiteralPath $bundledPath -PathType Leaf)) {
@@ -98,6 +105,10 @@ foreach ($pack in $runtimePacks) {
 }
 $platformAligned = @($platform | Where-Object { $_.Groups[2].Value -cne $runtime }).Count -eq 0
 if ($oldSdk -ceq $chosen -and $platformAligned -and $noticesAligned) {
+    if (-not $SkipRestore) {
+        $platformUpdater = Join-Path $PSScriptRoot 'Update-DotnetPlatformPackages.ps1'
+        & $platformUpdater -Version $runtime
+    }
     Write-Output "SDK $chosen is already the newest patch of its band"
     return
 }

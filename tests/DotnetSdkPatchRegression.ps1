@@ -113,6 +113,17 @@ function Assert-Refused {
     Assert-Alignment '10.0.404' '10.0.15'
 }
 
+function Get-FixtureSignature {
+    @(
+        Get-ChildItem -LiteralPath $fixture -File -Recurse |
+            Sort-Object FullName |
+            ForEach-Object {
+                $_.FullName.Substring($fixture.Length) + ':' +
+                    [Convert]::ToBase64String([IO.File]::ReadAllBytes($_.FullName))
+            }
+    ) -join '|'
+}
+
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 $cases = 0
 try {
@@ -156,6 +167,56 @@ try {
     $after = @($paths | ForEach-Object { [Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $fixture $_))) })
     Assert-Case (($before -join '|') -ceq ($after -join '|')) 'Idempotent run changed fixture bytes.'
     Assert-Case (($again -join ' ') -match 'SDK 10\.0\.405 is already the newest patch of its band') 'Idempotent receipt missing.'
+    $cases++
+    # D110 (a, b): an installed older patch can never downgrade the current pin.
+    $olderDotnet = Join-Path $work 'older-dotnet'
+    $olderSdkPath = Join-Path $olderDotnet 'sdk\10.0.404'
+    New-Item -ItemType Directory -Force -Path $olderSdkPath | Out-Null
+    Copy-Item -LiteralPath (Join-Path $fakeDotnet 'sdk\10.0.404\Microsoft.NETCoreSdk.BundledVersions.props') -Destination (Join-Path $olderSdkPath 'Microsoft.NETCoreSdk.BundledVersions.props')
+    foreach ($explicit in @($false, $true)) {
+        Reset-Fixture -SdkVersion '10.0.405' -RuntimeVersion '10.0.16'
+        $argsForSdk = @{ SkipRestore = $true; DotnetRoot = $olderDotnet }
+        if ($explicit) { $argsForSdk.Version = '10.0.404' }
+        $beforeSignature = Get-FixtureSignature
+        $errorText = ''
+        try { & (Join-Path $fixture 'scripts\Update-DotnetSdkPatch.ps1') @argsForSdk | Out-Null }
+        catch { $errorText = $_.Exception.Message }
+        Assert-Case ($errorText -ceq 'SDK 10.0.404 is older than the pinned 10.0.405; the updater never moves the pin back.') "Downgrade was not refused: $errorText"
+        Assert-Case ((Get-FixtureSignature) -ceq $beforeSignature) 'Rejected downgrade changed fixture files.'
+        Assert-Alignment '10.0.405' '10.0.16'
+        $cases++
+    }
+
+    # D110 (c): -FromVersion is the original pin, even after a proposed diff changed global.json.
+    Reset-Fixture -SdkVersion '10.0.500' -RuntimeVersion '10.0.20'
+    $beforeSignature = Get-FixtureSignature
+    $errorText = ''
+    try {
+        & (Join-Path $fixture 'scripts\Update-DotnetSdkPatch.ps1') -FromVersion '10.0.404' -Version '10.0.500' -SkipRestore -DotnetRoot $fakeDotnet | Out-Null
+    }
+    catch { $errorText = $_.Exception.Message }
+    Assert-Case ($errorText -like '*Claude decides feature bands and majors.*') "FromVersion did not refuse a new feature band: $errorText"
+    Assert-Case ((Get-FixtureSignature) -ceq $beforeSignature) 'Rejected band change modified fixture files.'
+    Assert-Alignment '10.0.500' '10.0.20'
+    $cases++
+
+    # D110 (d): aligned pins only skip the updater when -SkipRestore is present.
+    Reset-Fixture -SdkVersion '10.0.405' -RuntimeVersion '10.0.16'
+    $markerPath = Join-Path $fixture 'platform-update-called.txt'
+    $stub = @'
+[CmdletBinding()]
+param([string] $Version, [switch] $SkipRestore)
+$marker = Join-Path (Split-Path -Parent $PSScriptRoot) 'platform-update-called.txt'
+[IO.File]::WriteAllText($marker, $Version)
+'@
+    [IO.File]::WriteAllText((Join-Path $fixture 'scripts\Update-DotnetPlatformPackages.ps1'), $stub, $utf8)
+    $skipped = @(& (Join-Path $fixture 'scripts\Update-DotnetSdkPatch.ps1') -SkipRestore -DotnetRoot $fakeDotnet)
+    Assert-Case (-not (Test-Path -LiteralPath $markerPath)) 'SkipRestore must return before platform update.'
+    Assert-Case (($skipped -join ' ') -match 'SDK 10\.0\.405 is already the newest patch of its band') 'SkipRestore aligned receipt missing.'
+    $normal = @(& (Join-Path $fixture 'scripts\Update-DotnetSdkPatch.ps1') -DotnetRoot $fakeDotnet)
+    Assert-Case ((Test-Path -LiteralPath $markerPath) -and ([IO.File]::ReadAllText($markerPath) -ceq '10.0.16')) 'Aligned normal run must run platform updater to refresh locks.'
+    Assert-Case (($normal -join ' ') -match 'SDK 10\.0\.405 is already the newest patch of its band') 'Aligned normal receipt missing.'
+    Assert-Alignment '10.0.405' '10.0.16'
     $cases++
     Write-Output "DOTNET_SDK_PATCH_GREEN cases=$cases"
 }

@@ -1,18 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-17T15:26:47.549Z",
-  "scope": "D109v: tmux-style window list in the worklog card's status bar (custom WPF Panel that measures which entries fit, FormattedText for the +k count, a Group automation peer) and the click that switches the card to another open session",
-  "libraries": [
-    {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-17 D109v: a custom Panel overrides MeasureOverride and ArrangeOverride and measures and arranges its own children; a property registered with AffectsMeasure re-runs layout when it changes (query: \"Custom WPF Panel MeasureOverride calling child Measure, ArrangeOverride calling child Arrange, FrameworkPropertyMetadataOptions.AffectsMeasure\")"
-    },
-    {
-      "libraryId": "/dotnet/docs-desktop",
-      "verified": "2026-11-17 D109v: a custom element overrides OnCreateAutomationPeer and its peer's GetAutomationControlTypeCore and GetClassNameCore, and a Button carries AutomationProperties.Name and AutomationProperties.HelpText (query: \"OnCreateAutomationPeer FrameworkElementAutomationPeer GetAutomationControlTypeCore AutomationControlType.Group, AutomationProperties.Name HelpText Button\")"
-    }
-  ],
-  "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/api/system.windows.media.formattedtext.-ctor?view=windowsdesktop-10.0"
-  ]
+  "verifiedAtUtc": "2026-11-17T18:43:10.058Z",
+  "scope": "D110: prevent .NET SDK downgrade and feature-band changes and leave rejected Dependabot SDK patches with a clean tree",
+  "libraries": [],
+  "noLookup": "D110: Talvora's own scripts and tests; the SDK version rules are documented in MODERNIZATION-POLICY.md and were verified in D107.",
+  "vendorSources": []
 }

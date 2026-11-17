@@ -120,6 +120,76 @@ function Invoke-FixtureCase {
     return $true
 }
 
+function Invoke-SdkFixtureCase {
+    param(
+        [string] $Name,
+        [string] $ProposedSdk,
+        [bool] $InstallProposed,
+        [bool] $UserDirty,
+        [string] $ExpectedFailure
+    )
+    $fixture = Join-Path $work ('sdk-' + $Name)
+    New-Item -ItemType Directory -Force -Path $fixture | Out-Null
+    Invoke-GitChecked $fixture @('init', '-b', 'main') | Out-Null
+    Write-Text (Join-Path $fixture '.gitignore') ('artifacts/' + [Environment]::NewLine)
+    Write-Text (Join-Path $fixture 'README.md') ('Original readme' + [Environment]::NewLine)
+    Write-Text (Join-Path $fixture 'global.json') '{"sdk":{"version":"10.0.404","rollForward":"disable","allowPrerelease":false}}'
+    foreach ($file in @(
+        'Apply-DependabotPr.ps1',
+        'Update-DotnetSdkPatch.ps1',
+        'Update-DotnetPlatformPackages.ps1',
+        'Update-ThirdPartyNotices.ps1'
+    )) {
+        Write-Text (Join-Path $fixture ('scripts/' + $file)) (
+            [IO.File]::ReadAllText((Join-Path $repoRoot ('scripts/' + $file)))
+        )
+    }
+    Invoke-GitChecked $fixture @('add', '--', '.') | Out-Null
+    Invoke-GitChecked $fixture @('-c', 'user.name=Regression', '-c', 'user.email=regression@example.invalid', 'commit', '-m', 'SDK baseline') | Out-Null
+
+    $fakeDotnet = Join-Path $work ($Name + '-dotnet')
+    $versions = @('10.0.404')
+    if ($InstallProposed) { $versions += $ProposedSdk }
+    foreach ($version in $versions) {
+        $sdkFolder = Join-Path $fakeDotnet ('sdk/' + $version)
+        New-Item -ItemType Directory -Force -Path $sdkFolder | Out-Null
+        $runtime = if ($version -ceq '10.0.500') { '10.0.20' } else { '10.0.15' }
+        Write-Text (Join-Path $sdkFolder 'Microsoft.NETCoreSdk.BundledVersions.props') (
+            '<Project><PropertyGroup><BundledNETCoreAppPackageVersion>' + $runtime +
+            '</BundledNETCoreAppPackageVersion></PropertyGroup></Project>'
+        )
+    }
+
+    $globalFile = Join-Path $fixture 'global.json'
+    $originalGlobal = [IO.File]::ReadAllText($globalFile)
+    Write-Text $globalFile ($originalGlobal.Replace('10.0.404', $ProposedSdk))
+    $patchPath = Join-Path $work ($Name + '-sdk.patch')
+    $diff = @(Invoke-GitChecked $fixture @('diff', '--'))
+    Write-Text $patchPath (($diff -join [Environment]::NewLine) + [Environment]::NewLine)
+    Invoke-GitChecked $fixture @('checkout', '--', '.') | Out-Null
+
+    if ($UserDirty) {
+        Write-Text (Join-Path $fixture 'README.md') ('User pending edits' + [Environment]::NewLine)
+    }
+    $script = Join-Path $fixture 'scripts/Apply-DependabotPr.ps1'
+    $output = @(& pwsh -NoProfile -File $script -Pr 1 -PatchFile $patchPath -DotnetRoot $fakeDotnet 2>&1)
+    $exit = $LASTEXITCODE
+    $resultFile = Join-Path $fixture 'artifacts/dependabot/pr-1.result'
+    Assert-Case (Test-Path -LiteralPath $resultFile -PathType Leaf) "$($Name): no result file (exit $exit); $($output -join '; ')"
+    $result = [IO.File]::ReadAllText($resultFile).Trim()
+    Assert-Case ($exit -eq 1 -and $result.StartsWith('FAILED: ') -and
+        $result.Contains($ExpectedFailure)) "$($Name): expected refusal missing: $result"
+    $gitStatus = @(& git -C $fixture status --porcelain)
+    if ($LASTEXITCODE -ne 0) { throw "$($Name): git status failed." }
+    $expectedStatus = if ($UserDirty) { ' M README.md' } else { '' }
+    Assert-Case ((($gitStatus -join '') -ceq $expectedStatus)) "$($Name): unexpected dirty tree: $($gitStatus -join '; ')"
+    Assert-Case ([IO.File]::ReadAllText($globalFile) -ceq $originalGlobal) "$($Name): the refused patch changed global.json."
+    if ($UserDirty) {
+        Assert-Case ([IO.File]::ReadAllText((Join-Path $fixture 'README.md')).Contains('User pending edits')) "$($Name): user's tracked change was lost."
+    }
+    return $true
+}
+
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 $cases = 0
 try {
@@ -140,6 +210,9 @@ try {
     if (Invoke-FixtureCase 'unrelated-workflow-line' '' 'name' $false 'name: Changed CI') { $cases++ }
     if (Invoke-FixtureCase 'new-major' (('c' * 40) + ' # v8.0.0') '' $false 'PR #1 moves actions/checkout to a new major version; Claude decides majors.') { $cases++ }
     if (Invoke-FixtureCase 'readme-only' '' 'readme' $false 'PR #1 does not change') { $cases++ }
+    if (Invoke-SdkFixtureCase 'new-band' '10.0.500' $true $false 'Claude decides feature bands and majors.') { $cases++ }
+    if (Invoke-SdkFixtureCase 'not-installed' '10.0.405' $false $false 'SDK 10.0.405 is not installed.') { $cases++ }
+    if (Invoke-SdkFixtureCase 'user-edits' '10.0.405' $false $true 'Working tree must be clean') { $cases++ }
     Write-Output "DEPENDABOT_APPLY_GREEN cases=$cases"
 }
 finally {
