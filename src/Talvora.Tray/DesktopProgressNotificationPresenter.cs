@@ -63,6 +63,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
     private readonly DesktopProgressCodeState _codeState = new();
     private readonly WorklogHistoryStore _historyStore;
     private readonly WorklogOpenSessions _openSessions = new();
+    private readonly WorklogSessionTabs _sessionTabs = new();
     private Task _placementSaveTask = Task.CompletedTask;
     private bool _isPinned;
     private int _anchorLeftPixels;
@@ -175,6 +176,8 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             return;
         }
 
+        _sessionTabs.Observe(message, DateTimeOffset.UtcNow, _codeState.CodeChangedUtc);
+
         if (_presentationState.Evaluate(message) !=
             DesktopProgressPresentationDecision.Accept)
         {
@@ -258,6 +261,17 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
             _previewBySession[sessionId] = preferences.ShowCodePreview;
         }
 
+        PresentWindow(window, message, frame, _codeState.CodeChangedUtc);
+    }
+
+    private void PresentWindow(
+        DesktopProgressNotificationWindow window,
+        DesktopProgressMessage message,
+        DesktopWorklogFrame frame,
+        DateTimeOffset? codeChangedUtc)
+    {
+        var sessionId = frame.SessionId;
+        var preferences = SettingsPreferencesStore.Current;
         if (_hasPreferredSize)
         {
             window.ApplyPreferredSize(_preferredWidthDip, _preferredHeightDip);
@@ -276,7 +290,7 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
         if (window.WindowState == WindowState.Minimized)
             window.WindowState = WindowState.Normal;
         window.Update(displayFrame,
-            showPreview ? _codeState.CodeChangedUtc : null,
+            showPreview ? codeChangedUtc : null,
             Worklog.WorklogDetails.From(message));
 
         if (!window.IsVisible)
@@ -286,6 +300,33 @@ internal sealed partial class DesktopProgressNotificationPresenter : IDisposable
 
         TrimVisibleCards();
         Reposition();
+    }
+
+    internal IReadOnlyList<WorklogSessionTab> GetSessionTabs(DateTimeOffset nowUtc)
+    {
+        var shownSessionId = _windows.Values.FirstOrDefault(
+            window => window.IsVisible && window.LastLane == DesktopProgressLane.Worklog)?.SessionId;
+        return _sessionTabs.Snapshot(nowUtc, shownSessionId);
+    }
+
+    internal bool ShowSession(string sessionId)
+    {
+        var shown = _windows.Values.FirstOrDefault(
+            window => window.IsVisible && window.LastLane == DesktopProgressLane.Worklog);
+        if (shown is null || string.Equals(shown.SessionId, sessionId, StringComparison.Ordinal) ||
+            !GetSessionTabs(DateTimeOffset.UtcNow).Any(tab => tab.SessionId == sessionId) ||
+            !_sessionTabs.TryGetNewest(sessionId, out var message, out var codeChangedUtc) ||
+            message.WorklogFrame is not { } frame)
+        {
+            return false;
+        }
+
+        _windows.Remove(shown.SessionId);
+        _windows[sessionId] = shown;
+        _previewBySession.TryAdd(sessionId, SettingsPreferencesStore.Current.ShowCodePreview);
+        _presentationState.ForgetManualDismissal(sessionId);
+        PresentWindow(shown, message, frame, codeChangedUtc);
+        return true;
     }
 
     private void TrimVisibleCards()

@@ -92,6 +92,11 @@ internal sealed class DesktopProgressPresentationState
         }
     }
 
+    internal void ForgetManualDismissal(string sessionId)
+    {
+        _dismissedWorklogOperationIds.Remove(sessionId);
+    }
+
     public static void AssertContract()
     {
         var state = new DesktopProgressPresentationState();
@@ -164,6 +169,17 @@ internal sealed class DesktopProgressPresentationState
         {
             throw new InvalidOperationException(
                 "Desktop progress manual dismissal did not suppress the same generation.");
+        }
+
+        state.ForgetManualDismissal(dismissed.OperationId);
+        if (state.Evaluate(dismissed with
+                {
+                    Kind = DesktopProgressKind.Running,
+                    Sequence = 12,
+                }) != DesktopProgressPresentationDecision.Accept)
+        {
+            throw new InvalidOperationException(
+                "Desktop progress manual dismissal could not be lifted for the same generation.");
         }
 
         var nextGeneration = Create(

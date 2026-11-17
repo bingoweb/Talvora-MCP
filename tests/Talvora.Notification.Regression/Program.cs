@@ -36,6 +36,17 @@ internal static partial class Program
             Console.WriteLine("D99_CARD_REUSE_GREEN");
             return 0;
         }
+        if (Environment.GetCommandLineArgs().Contains("--d109-only", StringComparer.Ordinal))
+        {
+            AssertD109SessionTabs();
+            return 0;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--d109-wpf-only", StringComparer.Ordinal))
+        {
+            await AssertD109ShowSessionAsync();
+            Console.WriteLine("D109_SHOW_SESSION_GREEN");
+            return 0;
+        }
         if (Environment.GetCommandLineArgs().Contains("--d99-only", StringComparer.Ordinal))
         {
             await AssertD99CardReuseInChildAsync();
@@ -183,6 +194,7 @@ internal static partial class Program
         await AssertD92EveryStepPurposeAsync();
         await AssertD95CommandErrorLinesAsync();
         AssertD98InterleavedCodeSessions();
+        AssertD109SessionTabs();
         await AssertD100FolderlessCallsFollowActorSessionAsync();
         await AssertD102ReopenedTaskNoteAsync();
         await AssertD101FollowedStepsStayFreshAsync();
@@ -198,6 +210,7 @@ internal static partial class Program
         AssertD104vCardText();
         await AssertD105vCardStaysOnScreenInChildAsync();
         await AssertD99CardReuseInChildAsync();
+        await AssertD109ShowSessionInChildAsync();
         await AssertD25SessionRestartResetsTotalsAsync();
         AssertD43SessionTimeText();
         AssertD45WorkEndsWithLastStep();

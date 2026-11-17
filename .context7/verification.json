@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-17T01:13:10.605Z",
-  "scope": "D108: select GitHub Actions Dependabot workflow pins using local patch validation; retain SHA and same-major rules",
+  "verifiedAtUtc": "2026-11-17T11:34:40.756Z",
+  "scope": "D109: tray-side open session registry, time-based tab statuses, and switching existing worklog card to an observed session",
   "libraries": [],
-  "noLookup": "D108: Talvora-owned script and regression tests; immutable SHA pinning rule is already documented in docs/MODERNIZATION-POLICY.md",
+  "noLookup": "D109: Talvora's own tray logic over its own protocol records; no external API is involved.",
   "vendorSources": []
 }

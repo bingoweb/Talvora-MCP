@@ -34,8 +34,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [x] PK5 — Roslyn 5.12.0 from Dependabot PR #22 (34530f4; installed smokes GREEN; CI 43988913080 green)
 - [x] D107 — .NET SDK patches go through one script (e71884a; CI 43992079820 green)
-- [~] CI pending: D108 — Dependabot's GitHub Actions PRs go through the apply script (local acceptance complete)
-- [ ] D109 — the tray keeps the open sessions for the card's bottom bar (audit 67; data for D109v)
+- [x] D108 — Dependabot's GitHub Actions PRs go through the apply script (5c929d0; CI 43994503330 green)
+- [~] live pending: D109 — tray open sessions and switch (local tests green; clean-HEAD install, installed smokes, CI pending)
 - [C] D109v — the card's bottom bar lists the open sessions, tmux-style (Claude ships it after D109)
 
 ## User queue
@@ -54,6 +54,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-17 — ChatGPT, D109: Added WorklogSessionTabs with stable lowest-free indices, monotonic frame sequence, state/quiet-time aging and terminal lifetimes (3/8/5 minutes; silent 8 minutes). Presenter records eligible background sessions, exposes GetSessionTabs/ShowSession and reuses the existing window; manual dismissal can be lifted without changing presentation rules. No pinned worklog visual files or shared protocol were edited.
+  Tests: RED CS1061 ForgetManualDismissal missing; GREEN --d109-only, --d109-wpf-only, D99 and D100 unchanged, signed-in Changed 28/0 and Full 76/0 (Hepsi geçti.).
+  Context7: noLookup (Talvora's own tray logic over its own records; no external API). Post-commit: clean-HEAD installer/deploy, both installed smokes, Windows CI pending.
+  Self-review — cosmetics: no visible change; bottom bar belongs to D109v.
+  Self-review — usability: tab index/reuse, stale indicator and explicit session switching are available for D109v without altering today's card focus.
+  Self-review — Turkish: no new visible strings.
+  Self-review — correctness and security: N8 filter still gates observations, frame sequence prevents regression, expiry protects the shown session; personal untracked settings untouched.
 - 2026-11-17 — ChatGPT, D108: Added workflow diff selection to Apply-DependabotPr.ps1 (-PatchFile/-SelectOnly); only full SHA and same-major uses: edits pass, and workflow-only PRs skip package work but keep the Full gate. Replaced literal workflow SHA checks with a shared-pin contract; no workflow YAML changed.
   Tests: RED fixture could not run -PatchFile/-SelectOnly; GREEN DependabotApplyRegression 9 cases, ReleaseWorkflowRegression, ModernizationPolicyRegression and QualityGateRegression. Signed-in Changed 15/0 and Full 76/0 (Hepsi geçti.).
   Context7: noLookup (Talvora-owned script and tests; already specified in MODERNIZATION-POLICY.md). No deploy (scripts only). Windows CI pending after push.
