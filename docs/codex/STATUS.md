@@ -33,8 +33,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [x] PK5 — Roslyn 5.12.0 from Dependabot PR #22 (34530f4; installed smokes GREEN; CI 43988913080 green)
-- [~] CI pending: D107 — .NET SDK patches go through one script (local acceptance complete; windows-ci after push)
-- [ ] D108 — Dependabot's GitHub Actions PRs go through the apply script (audit 66 look-ahead; MODERNIZATION FLOW 1)
+- [x] D107 — .NET SDK patches go through one script (e71884a; CI 43992079820 green)
+- [~] CI pending: D108 — Dependabot's GitHub Actions PRs go through the apply script (local acceptance complete)
 - [ ] D109 — the tray keeps the open sessions for the card's bottom bar (audit 67; data for D109v)
 - [C] D109v — the card's bottom bar lists the open sessions, tmux-style (Claude ships it after D109)
 
@@ -54,6 +54,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-17 — ChatGPT, D108: Added workflow diff selection to Apply-DependabotPr.ps1 (-PatchFile/-SelectOnly); only full SHA and same-major uses: edits pass, and workflow-only PRs skip package work but keep the Full gate. Replaced literal workflow SHA checks with a shared-pin contract; no workflow YAML changed.
+  Tests: RED fixture could not run -PatchFile/-SelectOnly; GREEN DependabotApplyRegression 9 cases, ReleaseWorkflowRegression, ModernizationPolicyRegression and QualityGateRegression. Signed-in Changed 15/0 and Full 76/0 (Hepsi geçti.).
+  Context7: noLookup (Talvora-owned script and tests; already specified in MODERNIZATION-POLICY.md). No deploy (scripts only). Windows CI pending after push.
+  Self-review — cosmetics: no visible changes.
+  Self-review — usability: valid minor/patch action updates no longer need manual SHA or test edits.
+  Self-review — Turkish: no user-visible product text changed.
+  Self-review — correctness and security: tag and short SHA, missing release comments, non-uses edits, new action majors and unrelated-only patches are rejected before git apply; temp fixture repositories were removed.
 - 2026-11-17 — ChatGPT, D107: Added SDK patch updater, Dependabot global.json hook, runtime-pack notice alignment, source regression and policy sentence; only scripts/tests/docs changed.
   Tests: RED missing script, GREEN 5 fixture cases, 6 pinned checks green, signed-in Changed 14/0 and Full 75/0 (Hepsi geçti.); real -SkipRestore: SDK 10.0.404 already newest, no tracked package files changed.
   Context7: /dotnet/docs confirmed global.json exact pin and feature bands; bundled runtime property verified in installed 10.0.404 SDK props (10.0.15); two queries recorded.

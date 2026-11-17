@@ -1,19 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-17T00:55:08.915Z",
-  "scope": "D107: select installed SDK patches only within current feature band, keep exact global.json SDK pin, derive bundled runtime patch from SDK props, and synchronize platform packages and runtime notices",
-  "libraries": [
-    {
-      "libraryId": "/dotnet/docs",
-      "verified": "global.json sdk.version with rollForward disable requires an exact SDK match; x.y.znn SDK patch uses z as feature band and nn as servicing patch (query: \"For .NET SDK 10 global.json sdk.version exact pin and rollForward disable, how is SDK resolution constrained when only a later patch of the same feature band is installed?\")"
-    },
-    {
-      "libraryId": "/dotnet/docs",
-      "verified": "SDK feature bands are hundreds in patch number. Docs did not expose BundledNETCoreAppPackageVersion file; verified locally at C:\\Program Files\\dotnet\\sdk\\10.0.404\\Microsoft.NETCoreSdk.BundledVersions.props where BundledNETCoreAppPackageVersion=10.0.15 (query: \"For .NET SDK 10, where is Microsoft.NETCoreSdk.BundledVersions.props under sdk/<version> and what is the meaning of BundledNETCoreAppPackageVersion for the bundled runtime patch?\")"
-    }
-  ],
-  "vendorSources": [
-    "https://learn.microsoft.com/en-us/dotnet/core/tools/global-json",
-    "https://learn.microsoft.com/en-us/dotnet/core/porting/versioning-sdk-msbuild-vs"
-  ]
+  "verifiedAtUtc": "2026-11-17T01:13:10.605Z",
+  "scope": "D108: select GitHub Actions Dependabot workflow pins using local patch validation; retain SHA and same-major rules",
+  "libraries": [],
+  "noLookup": "D108: Talvora-owned script and regression tests; immutable SHA pinning rule is already documented in docs/MODERNIZATION-POLICY.md",
+  "vendorSources": []
 }

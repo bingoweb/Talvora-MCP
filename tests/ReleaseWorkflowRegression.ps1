@@ -50,12 +50,21 @@ Assert-Pattern '--latest' 'The release must be marked latest.'
 Assert-Pattern 'if:\s+steps\.release\.outputs\.dry_run\s*!=\s*''true''' 'Real publishing must be skipped in dry runs.'
 Assert-Pattern 'github\.event_name.*workflow_dispatch' 'Manual dispatch must have an explicit dry-run safety gate.'
 
-foreach ($pin in @(
-    'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1',
-    'actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0'
-)) {
-    if (-not $windowsCi.Contains($pin) -or -not $release.Contains($pin)) {
-        throw "RL4: release and CI must use the same pinned action: $pin"
+$pinPattern = '^(?<action>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)@[0-9a-f]{40} # v\d+\.\d+\.\d+$'
+$knownPins = @{}
+foreach ($workflowText in @($windowsCi, $release)) {
+    $usesLines = [regex]::Matches($workflowText, '(?m)^\s*(?:-\s*)?uses:\s*(?<pin>[^\r\n]+)$')
+    foreach ($line in $usesLines) {
+        $pin = $line.Groups['pin'].Value.Trim()
+        $match = [regex]::Match($pin, $pinPattern)
+        if (-not $match.Success) {
+            throw "RL4: workflow action must use a full SHA and vX.Y.Z comment: $pin"
+        }
+        $action = $match.Groups['action'].Value
+        if ($knownPins.ContainsKey($action) -and $knownPins[$action] -cne $pin) {
+            throw "RL4: release and CI must use the same pinned action: $pin"
+        }
+        $knownPins[$action] = $pin
     }
 }
 
