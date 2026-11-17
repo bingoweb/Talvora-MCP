@@ -43,11 +43,11 @@ The current locked package set includes:
 - `Microsoft.Build.Framework 18.9.6`
 - `Microsoft.Build.Locator 1.11.2`
 - `Microsoft.CodeAnalysis.Analyzers 5.9.0`
-- `Microsoft.CodeAnalysis.Common 5.9.0`
-- `Microsoft.CodeAnalysis.CSharp 5.9.0`
-- `Microsoft.CodeAnalysis.CSharp.Workspaces 5.9.0`
-- `Microsoft.CodeAnalysis.Workspaces.Common 5.9.0`
-- `Microsoft.CodeAnalysis.Workspaces.MSBuild 5.9.0`
+- `Microsoft.CodeAnalysis.Common 5.12.0`
+- `Microsoft.CodeAnalysis.CSharp 5.12.0`
+- `Microsoft.CodeAnalysis.CSharp.Workspaces 5.12.0`
+- `Microsoft.CodeAnalysis.Workspaces.Common 5.12.0`
+- `Microsoft.CodeAnalysis.Workspaces.MSBuild 5.12.0`
 - `Microsoft.Data.Sqlite 10.0.15`
 - `Microsoft.Data.Sqlite.Core 10.0.15`
 - `Microsoft.Extensions.AI.Abstractions 10.11.0`
