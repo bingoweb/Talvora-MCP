@@ -31,6 +31,45 @@
 
 D-cards go to the top of the agent queue. Newest audit first.
 
+### Audit 2026-11-17 (67) · user: "Evet, kart yaz" (vault idea "Kart alt çubuğunda süren öteki oturumlar") · new agent card D109, Claude's `[C]` D109v
+
+### D109 — the tray keeps the open sessions for the card's bottom bar
+
+**Why:** user decision 2026-11-17 (audit 67). Since D99 the one desktop card shows one session, and work in another project (a second agent, a followed CI run) goes on unseen. The card's bottom bar will list every open session the way tmux lists windows, `[talvora] 0:Talvora-MCP* 1:fatura-hesabi#` (`docs/codex/DESIGN-WORKLOG.md` §7b, "Window list"). The bar lives in the eight checksum-pinned worklog files, so this card builds only the data in the tray and Claude's `[C]` D109v draws it. Nothing visible changes in this card.
+
+**Files:** `src/Talvora.Tray/WorklogSessionTabs.cs` (new), `src/Talvora.Tray/DesktopProgressNotificationPresenter.cs`, `tests/Talvora.Notification.Regression/Program.D109.cs` (new), `tests/Talvora.Notification.Regression/Program.cs` (register the scenario), `docs/codex/STATUS.md`, `.context7/verification.json`. **Never edit** the eight files listed in `docs/codex/reference/worklog-phosphor/SHA256SUMS.txt` (`tests/ModernizationPolicyRegression.ps1` checks them; D109v changes them). **Tests that read these files:** `Program.D99.cs` and `Program.D100.cs` (keep them green unchanged).
+
+**Do:**
+1. Red first: `Program.D109.cs` builds real `DesktopProgressMessage` records with a `DesktopWorklogFrame` (`message.Lane` Worklog; start from `WorklogTestFrames.Running(sessionId, preview, sequence)` at the end of `Program.cs` and set state, project, actor and expected update with `with` expressions), feeds them to a `WorklogSessionTabs` with explicit times, and checks:
+   (a) index: the first session observed gets 0 and the next 1; once a `Snapshot` taken after the first one's lifetime has dropped it, a new session gets 0 (the lowest free number) and the second keeps 1;
+   (b) state comes from `frame.Current.State` of the session's newest frame by `Sequence`; a frame whose `Sequence` is lower than the highest already observed for that session changes nothing, and an equal or higher one is taken and restarts the counts below; `Running` and `Waiting` give `Running`, and `Succeeded`, `Failed`, `Cancelled` give the state of the same name;
+   (c) a `Running` tab whose newest frame was observed longer ago than `max(10, frame.ExpectedNextUpdateSeconds) × 2` seconds (the card's stale budget) is `Silent`;
+   (d) a tab leaves the snapshot when its newest frame is `Succeeded` and was observed more than 3 minutes ago, `Failed` more than 8 minutes ago, `Cancelled` more than 5 minutes ago, or the tab is `Silent` and its newest frame was observed more than 8 minutes ago;
+   (e) `SessionClosed` alone removes nothing (the lifetime above still decides);
+   (f) the shown session (the `Snapshot` argument) has `IsShown` true and stays in the snapshot even past its lifetime; a shown id that was never observed adds nothing;
+   (g) a message whose `message.Lane` is not `Worklog`, or that has no frame, changes nothing; the snapshot is ordered by `Index`; `ProjectName` and `ActorName` are the newest frame's `Header` values, unchanged.
+2. `WorklogSessionTabs` (`internal sealed`, guarded by one lock like `WorklogOpenSessions`):
+   - `Observe(DesktopProgressMessage message, DateTimeOffset observedUtc)`;
+   - `Snapshot(DateTimeOffset nowUtc, string? shownSessionId)` returns `IReadOnlyList<WorklogSessionTab>` and forgets the tabs that left (never the shown one), so their numbers become free; `Observe` never forgets a tab;
+   - `internal static readonly TimeSpan` `SucceededLifetime` (3 min), `FailedLifetime` (8 min) and `CancelledLifetime` (5 min), equal to the card window's three private lifetimes (D109v makes the window read these so they cannot drift), and `SilentLifetime` (8 min), which is new (DESIGN-WORKLOG "Window list"; the window itself never closes a stale running card).
+   - `internal sealed record WorklogSessionTab(int Index, string SessionId, string? ProjectName, string ActorName, WorklogSessionTabState State, bool IsShown)` and `internal enum WorklogSessionTabState { Running, Silent, Succeeded, Failed, Cancelled }`.
+3. `DesktopProgressNotificationPresenter`: one `WorklogSessionTabs` field. In `PublishCore`, right after the N8 preference check (the `QuietMode` / `FailureAndAgentOnly` return) and before `_presentationState.Evaluate`, call `Observe(message, DateTimeOffset.UtcNow)`, so heartbeats, step ends and close notices of sessions D99 keeps off the card still reach it. Sessions the N8 settings keep from opening a card stay out of the list on purpose. Add `internal IReadOnlyList<WorklogSessionTab> GetSessionTabs(DateTimeOffset nowUtc)`, which passes the `SessionId` of the visible Worklog-lane window (`IsVisible` and `LastLane == DesktopProgressLane.Worklog`) as the shown session, or null when none is visible. Nothing calls it yet.
+4. `Program.cs`: call `AssertD109SessionTabs()` in the full run right after `AssertD98InterleavedCodeSessions();`, and add a `--d109-only` switch shaped like `--d100-only`.
+
+**Don't:** edit the eight pinned files, the service (`src/Talvora/`), the protocol (`src/Talvora.Shared/`), `WorklogCardFocus`, `WorklogOpenSessions` or the history store; add a timer, a setting, a string or anything visible.
+
+**Context7:** `Context7: gerekmiyor (Talvora's own tray logic over its own protocol records; no external API)` → `noLookup`.
+
+**Acceptance:** red first; `Talvora.Notification.Regression` green with the new scenario and `--d109-only` exiting 0; the D99 and D100 scenarios green unchanged; signed-in Changed and Full `Hepsi geçti.`; clean-HEAD deploy and both installed smokes; CI. Nothing visible changes, so no PNGs.
+
+### D109v — the bottom bar lists the open sessions (`[C]`: Claude ships it)
+
+**Why:** the look half of D109 (user decision 2026-11-17). The bar lives in the eight checksum-pinned worklog files, so Claude builds it; after D109 the agent stops at this line with `Sıra Claude'da: D109v`.
+
+**What Claude ships:** DESIGN-WORKLOG §7b "Window list". The presenter gives each card window a provider that calls `GetSessionTabs`; the window applies the tabs on every `Update` and on its 5 s stale tick; `WorklogCardMapper` builds the entries (flags, duplicate names, `…`, the choice of up to three others, `+<k>`, the automation name) and the view fits as many as the bar allows before the right side; the window's three lifetimes read `WorklogSessionTabs`; a preview scenario `11-two-sessions`; the eight reference copies and `SHA256SUMS.txt` refreshed in the same commit.
+
+**Acceptance (Claude):** red first in `Talvora.Notification.Regression`; signed-in Full gate; clean-HEAD deploy and both installed smokes; the live card captured with two real sessions in both themes and in high contrast; `hakem` before the commit; CI.
+
 ### Audit 2026-11-17 (66) · range `audit/2026-11-16-65..44b4e66` (D98, D100, D99, D101, D102, D103 and P-56 by ChatGPT) · user: "talvora modernizasyonunun önünü kesen durumlara izin verme. talvora yı denetle" · new agent cards D107, D108; Claude's `[C]` D106 (P-56); PK5 (audit 65) unblocked
 
 ### D107 — .NET SDK patches go through one script

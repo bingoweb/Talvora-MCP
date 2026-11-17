@@ -28,13 +28,15 @@ In progress: (none)
 
 ## Agent queue
 
-Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · `[?]` blocked on an open question · `[-]` won't do.
+Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · `[?]` blocked on an open question · `[-]` won't do · `[C]` Claude's item: the agent stops there and reports `Sıra Claude'da: <item>`.
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [ ] PK5 — Roslyn 5.12.0 from Dependabot PR #22 (P-56 answered by D106: run the script unchanged; Claude's dry run reached DRY RUN OK)
 - [ ] D107 — .NET SDK patches go through one script (audit 66; MODERNIZATION FLOW 3)
 - [ ] D108 — Dependabot's GitHub Actions PRs go through the apply script (audit 66 look-ahead; MODERNIZATION FLOW 1)
+- [ ] D109 — the tray keeps the open sessions for the card's bottom bar (audit 67; data for D109v)
+- [C] D109v — the card's bottom bar lists the open sessions, tmux-style (Claude ships it after D109)
 
 ## User queue
 
@@ -52,6 +54,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-17 — Claude, cards D109 and `[C]` D109v (audit 67 follow-up; user: "Evet, kart yaz" for the vault idea "Kart alt çubuğunda süren öteki oturumlar", now `durum: karta döndü`): the card's bottom bar will list every open session the way tmux lists windows (`DESIGN-WORKLOG.md` §7b "Window list": `*` this card, `#` running, `~` silent, `!` failed; entries leave 3/8/5 min after success/failure/cancel, a silent one 8 min after its newest frame). D109 (agent) builds `WorklogSessionTabs` in the tray and feeds it from `PublishCore`; `[C]` D109v (Claude) draws it in the eight checksum-pinned worklog files. Switching sessions by clicking an entry stays a separate decision. prova·sonnet: two rounds, six stops fixed.
 - 2026-11-17 — Claude, audit 67 (user: "Talvora'yı denetle"; tag `audit/2026-11-17-67`; range `audit/2026-11-17-66..fadc8d8`: no agent commit and no worklog session since audit 66): health check 13 OK, signed-in Full gate 74/0 on fadc8d8, CI 43965322623 green, installed dda859f (= v0.0.1.3; fadc8d8 is docs-only). No release: nothing user-visible since v0.0.1.3.
   AGENTS.md brought to the current project template (user decision 2026-11-17, "Sıradaki denetimlerde"): an open `[C]` line stops the agent (`Sıra Claude'da: <item>`), REPORTING TO CLAUDE, ownership rules 12–14, Sync/GitHub/Revert/Infrastructure/tool-refused rows, commit and push mechanics, `B<n>` baseline items, non-fast-forward push, "next open item" instead of "next `[ ]`"; CODEX-PROMPT line 13 and the open-question prompt follow. Kept on purpose: delegation only with the user's explicit permission, a queued `[C]` card locks no files, the ChatGPT custom-instructions block (AGENTS.md wins where they differ), no numbered sections 1–9. A plain `pull --ff-only` needs no `explicitAdmin` (W8). Brief sections 41,249 chars (check WARN above 40,000; `talvora_agent_brief` cuts at 60,000).
   Cards rehearsed in two rounds: PK5 fine (stale `artifacts/dependabot/pr-22.result` of 2026-11-16 deleted; Context7 = the two Roslyn queries); D107 test copies the three scripts with lock-file fixtures, `-Version` from `global.json` after `git apply`; D108 rewritten: `-PatchFile`/`-SelectOnly` seam in a fresh repository per case, pin rule `# vX.Y.Z` as `ModernizationPolicyRegression.ps1` requires, a major check, and `tests/ReleaseWorkflowRegression.ps1` (it pinned both action SHAs literally, so the first Actions PR would have failed) now checks equal full-SHA pins in both workflows.
