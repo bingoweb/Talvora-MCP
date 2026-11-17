@@ -645,6 +645,9 @@ internal static partial class Program
                 }
 
                 void Flush() => D109vPumpUntil(() => false, TimeSpan.FromMilliseconds(400));
+                // Controls that expect motion to play run only where it can (no client-area animation or high contrast: none plays).
+                var motionPlays = SystemParameters.ClientAreaAnimation && !SystemParameters.HighContrast;
+                if (!motionPlays) Console.WriteLine("D109V_MOTION_CONTROLS_SKIPPED");
                 string Typed(WorklogCardView view) => view.TitleMainRun.Text + view.TitleDetailRun.Text;
                 FrameworkElement? FirstRow(WorklogCardView view) =>
                     view.History.ItemContainerGenerator.ContainerFromIndex(0) as FrameworkElement;
@@ -659,11 +662,11 @@ internal static partial class Program
                 // Control: an ordinary update with a new first row still plays the row-in.
                 presenter.Publish(Custom("M2", "İkinci adım · b.cs", "ikinci yeni satır", DesktopProgressKind.Running));
                 Flush();
-                Require(FirstRow(motionView)?.RenderTransform is TranslateTransform,
+                if (motionPlays) Require(FirstRow(motionView)?.RenderTransform is TranslateTransform,
                     "an ordinary update keeps the row-in motion (control)");
                 // Control: an ordinary title change still types in.
                 presenter.Publish(Custom("M2", "Üçüncü adım · c.cs", "ikinci yeni satır", DesktopProgressKind.Running));
-                Require(Typed(motionView) != motionModel.TitleMain + motionModel.TitleDetail,
+                if (motionPlays) Require(Typed(motionView) != motionModel.TitleMain + motionModel.TitleDetail,
                     "an ordinary title change still types in (control)");
                 Flush();
 
@@ -681,7 +684,7 @@ internal static partial class Program
 
                 // 6b. A switch to a finished session plays no transition moment (sweep, failure jitter).
                 presenter.Publish(Custom("M3", "Bitti adım · g.cs", "satır g", DesktopProgressKind.Completed, WorklogStepState.Succeeded));
-                Require(motionView.SweepBand.Opacity == 1, "an ordinary success plays the sweep (control)");
+                if (motionPlays) Require(motionView.SweepBand.Opacity == 1, "an ordinary success plays the sweep (control)");
                 Flush();
                 motionView.SweepShift.BeginAnimation(TranslateTransform.XProperty, null);
                 motionView.SweepBand.Opacity = 0;
@@ -694,7 +697,7 @@ internal static partial class Program
                     "a switch to a succeeded session plays no sweep");
 
                 presenter.Publish(Custom("M5", "Hata adım · i.cs", "satır i", DesktopProgressKind.Failed, WorklogStepState.Failed));
-                Require(motionView.CardShift.HasAnimatedProperties, "an ordinary failure plays the jitter (control)");
+                if (motionPlays) Require(motionView.CardShift.HasAnimatedProperties, "an ordinary failure plays the jitter (control)");
                 Flush();
                 motionView.CardShift.BeginAnimation(TranslateTransform.XProperty, null);
                 motionView.StatusBar.BeginAnimation(UIElement.OpacityProperty, null);
@@ -714,7 +717,7 @@ internal static partial class Program
                 Flush();
                 presenter.Publish(Custom("M9", SameTitle, "satır m", DesktopProgressKind.Started));
                 Expect(motionCard, "M9", "M9 takes the card");
-                Require(Typed(motionView) != motionModel.TitleMain + motionModel.TitleDetail,
+                if (motionPlays) Require(Typed(motionView) != motionModel.TitleMain + motionModel.TitleDetail,
                     "the title of M9 is still typing (control)");
                 Require(presenter.ShowSession("M8"), "M8 (same title) is switched to");
                 Expect(motionCard, "M8", "switch to M8");
