@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-17T19:19:22.000Z",
-  "scope": "D112v: the worklog card's session time ruler shows only from two blocks on, so a one-step card does not repeat its headline",
+  "verifiedAtUtc": "2026-11-22T13:43:29.487Z",
+  "scope": "D125: failed worklog steps carry their classified real reason and next step through all terminal frames",
   "libraries": [],
-  "noLookup": "D112v: a count threshold on an existing view-model property and its existing WPF binding; no new framework or library API is used.",
+  "noLookup": "D125: repository-internal types and BCL exception types already handled in the codebase; no new external API is used.",
   "vendorSources": []
 }

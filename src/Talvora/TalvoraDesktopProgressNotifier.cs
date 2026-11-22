@@ -258,13 +258,17 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
             {
                 if (failed)
                 {
+                    var outcome = result is CallToolResult call
+                        ? WorklogFailureClassifier.Describe(call, canonicalToolName)
+                        : new WorklogOutcome(WorklogFailureKind.Other, "Bu adım tamamlanamadı.", null);
                     TryEndWorklog(
                         operationId,
                         DesktopProgressKind.Failed,
                         EnrichTerminalTitle(canonicalToolName, narrative.Titles.Failed, terminalEvidence),
-                        result is CallToolResult call ? WorklogFailureClassifier.Describe(call, canonicalToolName) : "Bu adım tamamlanamadı.",
+                        outcome.PlainReason,
                         terminalEvidence,
-                        stopwatch.Elapsed);
+                        stopwatch.Elapsed,
+                        outcome: outcome);
                 }
                 else
                 {
@@ -336,15 +340,17 @@ internal sealed partial class TalvoraDesktopProgressNotifier :
                 stopwatch.Elapsed);
             throw;
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            var outcome = WorklogFailureClassifier.DescribeException(exception, canonicalToolName);
             TryEndWorklog(
                 operationId,
                 DesktopProgressKind.Failed,
                 narrative.Titles.Failed,
-                "Bu adım tamamlanamadı.",
+                outcome.PlainReason,
                 initialEvidence,
-                stopwatch.Elapsed);
+                stopwatch.Elapsed,
+                outcome: outcome);
             throw;
         }
         finally

@@ -227,6 +227,7 @@ internal static partial class Program
         AssertSn1LineTraffic();
         AssertUi12cTimeRuler();
         AssertD112vRulerNeedsTwoBlocks();
+        await AssertD125FailureOutcomesAsync();
         AssertD104vCardText();
         await AssertD105vCardStaysOnScreenInChildAsync();
         await AssertD99CardReuseInChildAsync();
@@ -623,7 +624,7 @@ internal static partial class Program
                     new { success = false, error = new { code = "EXPECTED_REVISION_MISMATCH" } }),
             };
             if (!WorklogFailureClassifier.Describe(errorResult, "apply_patch")
-                    .StartsWith("Dosya bu arada değişmişti", StringComparison.Ordinal))
+                    .PlainReason.StartsWith("Dosya bu arada değişmişti", StringComparison.Ordinal))
             {
                 throw new InvalidOperationException("N1 revision conflict reason mismatch.");
             }

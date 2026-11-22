@@ -60,7 +60,7 @@ internal static class StructuredResultFailure
         return ReportedProcessTools.Contains(name);
     }
 
-    private static bool TryGetPropertyIgnoreCase(
+    internal static bool TryGetPropertyIgnoreCase(
         JsonElement json, string name, out JsonElement value)
     {
         foreach (var property in json.EnumerateObject())

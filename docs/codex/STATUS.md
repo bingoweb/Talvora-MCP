@@ -24,7 +24,7 @@
 
 ## In progress
 
-In progress: D125 — a failed step tells its real reason and, where there is one, the next step
+In progress: (none)
 
 ## Agent queue
 
@@ -32,7 +32,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
-- [ ] D125 — a failed step tells its real reason and, where there is one, the next step (audit 70)
+- [~] D125 — a failed step tells its real reason and, where there is one, the next step (audit 70; live pending (Claude): stored failed-step outcome and failed-card visual check after installation)
 - [ ] D126 — git run by the service honours the signed-in user's global ignore file (after ChatGPT's stop before D125)
 - [ ] D111 — a failed Dependabot apply never leaves a half-applied tree or a RUNNING result (audit 69)
 - [ ] D113 — ast-grep 0.51.3: the bundled structural-edit engine leaves the vulnerable range (update audit 2026-11-22)
@@ -67,6 +67,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-22 — ChatGPT, D125: failed returned results and thrown exceptions now produce typed WorklogOutcome values with the exact reason and next action from DESIGN-WORKLOG §5.3. The notifier persists the outcome across a failed session's later frames; a new session resets it. The modern card structure uses one exception switch, shared error-code handling, readonly fixed outcomes, case-insensitive exitCode from StructuredResultFailure and invariant formatting. RED: run_process exit 1 was a generic failure with no kind; GREEN: D125_FAILURE_OUTCOMES_GREEN and DESKTOP_PROGRESS_BEHAVIOR_GREEN (19 table cases), signed-in Full gate twice after the card revision, last result 76 checks, 0 errors, 'Hepsi geçti.' Context7: noLookup (existing internal types and BCL exceptions). Delivery: clean-HEAD installer build, deployment and installed smokes follow this one commit; stored real-failure history and card visual review remain Claude's pending checks; CI checked after push.
+  Self-review — cosmetics: no layout, tray, colours, animations or labels added; the existing failure and next-step fields receive structured content.
+  Self-review — usability: failed steps now show the concrete plain-language reason and the available next action, retained when the failed session is republished.
+  Self-review — Turkish: every new user-visible sentence follows the exact design table, without tool names or raw exceptions.
+  Self-review — correctness and security: errors remain errors to callers, evidence and protocol limits stay unchanged, protected-secret failures disclose no raw exception text.
 - 2026-11-22 — Claude, D125 and D126 rehearsed again under the modern-method bar (user: "bağımsız ajanlar prova lar için daha önce modern yaklaşım sergilemeleri gerektiğini bildirmiştim"; prova now checks it as step 6): D125 prescribes static readonly outcome fields, one exception switch with a shared error-code helper, record-equality test cases and `string.Create(CultureInfo.InvariantCulture, …)`, and makes `StructuredResultFailure.TryGetPropertyIgnoreCase` internal; D126 prescribes `System.Threading.Lock`, `TimeProvider` stamps, a list pattern with `Path.Join`, `Split` with `TrimEntries` and a collection-expression `AddArgument`.
 - 2026-11-22 — Claude, card D126 (user: "Evet, D126'yı yaz"): git run by the service adds `-c core.excludesFile=<path>` resolved from the signed-in user's own git configuration (default `~/.config/git/ignore`), so a file the user ignores globally never makes a tree look dirty to the agent; verified fact: git's `core.excludesFile` default and `~/` expansion (`/git/git`). Queued right after D125. prova: two rounds, FINE.
 - 2026-11-22 — Claude, after ChatGPT stopped before D125 (13:20–13:22 UTC). Cause: `talvora_git_status` runs git as LocalSystem, which does not read the signed-in user's global ignore (`~/.config/git/ignore` lists `**/.claude/settings.local.json`), so Claude Code's local permission file looked like an untracked change; CONTINUE PROTOCOL step 2 said only "stop and ask", and ChatGPT tried to reach Claude twice through `talvora_claude_exec` (both failed, exit 1) instead of reporting in the chat. Fixed: `.gitignore` lists `.claude/settings.local.json`; AGENTS.md REPORTING TO CLAUDE now says what to do with a blocker before a commit (report in the chat, no proposal, never `talvora_claude_*`/`talvora_codex_*`), and every "stop and ask" points there. D125 can start: "Talvora'ya devam et".

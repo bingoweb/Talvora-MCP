@@ -16,7 +16,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
 
     private sealed record PendingFailure(
         string ToolName, string Title, string Message,
-        DesktopProgressEvidence? Evidence, string? Purpose);
+        DesktopProgressEvidence? Evidence, string? Purpose,
+        WorklogOutcome? Outcome = null);
 
     private sealed record PendingCancellation(
         string ToolName, string Title, string Message,
@@ -49,6 +50,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         public int QuietCalls { get; set; }
         public CancellationTokenSource? CloseDelay { get; set; }
         public PendingFailure? Failure { get; set; }
+        public WorklogOutcome? Outcome { get; set; }
         public PendingCancellation? Cancellation { get; set; }
         public string? TaskNote { get; set; }
         public string? Purpose { get; set; }
@@ -104,11 +106,12 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         string operationId, DesktopProgressKind kind,
         string title, string message,
         DesktopProgressEvidence? evidence, TimeSpan elapsed,
-        IReadOnlyList<WorklogFileChange>? changes = null)
+        IReadOnlyList<WorklogFileChange>? changes = null,
+        WorklogOutcome? outcome = null)
     {
         try
         {
-            EndWorklog(operationId, kind, title, message, evidence, elapsed, changes);
+            EndWorklog(operationId, kind, title, message, evidence, elapsed, changes, outcome);
         }
         catch (Exception ex)
         {
@@ -208,7 +211,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         string operationId, DesktopProgressKind kind,
         string title, string message,
         DesktopProgressEvidence? evidence, TimeSpan elapsed,
-        IReadOnlyList<WorklogFileChange>? changes = null)
+        IReadOnlyList<WorklogFileChange>? changes = null,
+        WorklogOutcome? outcome = null)
     {
         lock (_worklogGate)
         {
@@ -241,7 +245,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (kind == DesktopProgressKind.Failed)
             {
                 session.Failure = new PendingFailure(
-                    ended.ToolName, title, message, evidence, ended.Narrative.Purpose);
+                    ended.ToolName, title, message, evidence, ended.Narrative.Purpose, outcome);
             }
             else if (kind == DesktopProgressKind.Cancelled)
             {
@@ -267,13 +271,13 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (ended.Followed)
             {
                 PublishSession(session, ended.ToolName, title,
-                    message, kind, elapsed, evidence, ended.Narrative.Purpose, changes);
+                    message, kind, elapsed, evidence, ended.Narrative.Purpose, changes, outcome);
             }
             else if (session.Failure is { } failed)
             {
                 PublishSession(session, failed.ToolName, failed.Title,
                     failed.Message, DesktopProgressKind.Failed,
-                    elapsed, failed.Evidence, failed.Purpose);
+                    elapsed, failed.Evidence, failed.Purpose, outcome: failed.Outcome);
             }
             else if (session.Cancellation is { } cancelled)
             {
@@ -298,7 +302,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         WorklogSession session, string toolName, string title,
         string message, DesktopProgressKind kind,
         TimeSpan elapsed, DesktopProgressEvidence? evidence,
-        string? purpose = null, IReadOnlyList<WorklogFileChange>? changes = null)
+        string? purpose = null, IReadOnlyList<WorklogFileChange>? changes = null,
+        WorklogOutcome? outcome = null)
     {
         session.Purpose = purpose;
         session.Changes = changes;
@@ -309,6 +314,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         session.Kind = kind;
         session.Elapsed = elapsed;
         session.Evidence = evidence;
+        session.Outcome = kind == DesktopProgressKind.Failed ? outcome : null;
         Enqueue(session.Id, toolName, title, session.Message,
             kind, elapsed, evidence);
     }
@@ -391,6 +397,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             session.Purpose = null;
             session.ProgressFact = null;
             session.Failure = null;
+            session.Outcome = null;
             session.Cancellation = null;
             session.TaskNote = null;
             session.LatestCodeEvidence = null;
@@ -604,8 +611,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             var isTerminal = kind is DesktopProgressKind.Completed or
                 DesktopProgressKind.Failed or DesktopProgressKind.Cancelled;
             var outcome = isTerminal
-                ? new WorklogOutcome(null,
-                    kind == DesktopProgressKind.Completed ? string.Empty : message, null)
+                ? kind == DesktopProgressKind.Failed && session.Outcome is { } stored
+                    ? stored
+                    : new WorklogOutcome(null,
+                        kind == DesktopProgressKind.Completed ? string.Empty : message, null)
                 : null;
             // D101: a followed CI poll can take 30 s plus a 90 s command;
             // the service may likewise disappear temporarily during a deploy hand-over.
