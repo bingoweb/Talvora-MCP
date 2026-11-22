@@ -250,6 +250,22 @@ Measured on 2026-11-22: Talvora registers 18 `talvora_stitch_*` tools (16 in `St
 
 **Acceptance:** red step 1 first; the SourceEdit regression green with the new check; signed-in Full gate `Hepsi geçti.`; deploy, both installed smokes; one call of the installed `talvora_hostinger_mcp_status` after the deploy returns `"ready":true` and `"credentialConfigured":true`; record it in the Log; CI.
 
+### D124 — `talvora_delete` gets the `explicitAdmin` option its own refusal promises
+
+**Why:** found by Makine-Bakimi's T1 on 2026-11-22 (its P-14): `talvora_delete` on `C:\ProgramData\Talvora\Tools\Hostinger\hostinger-mcp-client.mjs` was refused with `SOURCE_EDIT_POLICY_VIOLATION … generic mutators retain full capability when their explicitAdmin option is deliberately enabled for administration`, because that folder has a `package.json` and counts as a development workspace; but `FileTools.Delete` (`src/Talvora/Tools/FileTools.cs` 66–67) takes only `path`, while `Copy` (197) and `Move` (334) take `bool explicitAdmin = false`. An agent doing administration then has no permitted route. Delete gets the same option, with the same meaning.
+
+**Files:** `src/Talvora/Tools/FileTools.cs` (`Delete` and its tool description at 66), `src/Talvora/SourceEditing/SourceMutationPolicy.cs` (`EnsureLegacySourceFileDeleteAllowed`, 76), `src/Talvora.Shared/TalvoraToolGuides.cs` (the `talvora_delete` guide, 475–), `tests/Talvora.SourceEdit.Regression/SourceEditRegressionRunner.N3bCode.cs` (next to the `explicitAdmin: true` copy and move checks, 40–45), `docs/codex/STATUS.md`, `.context7/verification.json`.
+
+**Do:**
+1. Red first in `N3bCode.cs`, right after the `moved` check: `ExpectPolicyViolation(() => FileTools.Delete(fixture.PathInWorkspace("renamed.txt")))` (the existing helper, `SourceEditRegressionRunner.Misc.cs` 2704) and the file still exists; `FileTools.Delete(fixture.PathInWorkspace("renamed.txt"), explicitAdmin: true)` must delete it (`File.Exists` false afterwards). It fails to compile until step 2.
+2. `Delete(string path, bool explicitAdmin = false)`; `EnsureLegacySourceFileDeleteAllowed` gains a third parameter `bool explicitAdmin` (its only caller is `FileTools.Delete`, line 73) and returns at once when `explicitAdmin` is true, exactly as `EnsureGenericFileMoveAllowed` does with its flag; everything else (protected secret paths first, directory deletion, return shape) is unchanged. The description gains one sentence in the words Copy and Move use: `explicitAdmin=true deliberately keeps the unrestricted administrative delete capability.` The guide entry names the new parameter the way the `talvora_copy` guide names its.
+
+**Don't:** change the default (`false`), `ProtectedSecretPaths`, Copy or Move, or how a workspace is detected.
+
+**Context7:** gerekmiyor (an internal parameter following the repository's own Copy/Move pattern) → `noLookup` until CTX4.
+
+**Acceptance:** red step 1 first; the SourceEdit regression green; signed-in Full gate `Hepsi geçti.`; deploy, both installed smokes; the installed tool list shows `talvora_delete` with an `explicitAdmin` boolean in its input schema (record it); CI.
+
 ### Context7 gate review 2026-11-18 (user: "context7 kapısı gerçekten gerekli mi… en verimli şekilde kullanılıyor mu… gerekirse kartlar oluştur") · new agent cards CTX4, CTX5
 
 Measured over Talvora, Classroom and TahtaPilot, 2026-11-01 to 11-18: of 48 evidence entries compared with their diffs, 11 covered a fact a wrong guess could break, 29 asked about an API the repository already called, 8 were defective; no lookup changed an implementation; since 2026-11-08 two commits in three carried only a `noLookup` record (46 here). The user chose "Hafiflet": the lookup tool, the map and the ledger stay, a card still says whether a lookup is needed, and evidence is written and checked only when a lookup was made.
