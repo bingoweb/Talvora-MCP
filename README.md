@@ -26,10 +26,10 @@ Bir şey bozulursa Kontrol Merkezi bozulan parçayı bulur, önce en küçük on
 ## Bir ajan çalışırken
 
 <p align="center">
-  <img src="docs/media/kod-karti.png" alt="Masaüstündeki çalışma kartı: görev notu, ajanın yaptığı değişikliğin amacı, yeri ve gerçek farkı, önceki adımlar ve her birinin açıklaması, altında oturumun zaman şeridi ve teknik kayıt." width="560">
+  <img src="docs/media/kod-karti.png" alt="Masaüstündeki çalışma kartı: görev notu, ajanın yaptığı değişikliğin amacı, yeri ve gerçek farkı, önceki adımlar ve her birinin açıklaması, altında oturumun zaman şeridi, teknik kayıt ve en altta açık oturumların listesi." width="560">
 </p>
 
-En çok kullandığım parça bu kart. Bir ajan çalışmaya başlayınca masaüstünün köşesinde açılır: üstte görev, altında ajanın kendi cümlesiyle ne yaptığı, ortada değişikliğin kendisi. Oturum bitince her şey Kontrol Merkezi'ndeki Çalışma günlüğü'nde kalır; bir adımın neden başarısız olduğuna sonradan da bakabilirsin.
+En çok kullandığım parça bu kart. Bir ajan çalışmaya başlayınca masaüstünün köşesinde açılır: üstte görev, altında ajanın kendi cümlesiyle ne yaptığı, ortada değişikliğin kendisi. Aynı anda birkaç projede iş yürüyorsa kartın alt çubuğu hepsini sıralar; birine tıklayınca kart o oturuma geçer. Oturum bitince her şey Kontrol Merkezi'ndeki Çalışma günlüğü'nde kalır; bir adımın neden başarısız olduğuna sonradan da bakabilirsin.
 
 <img src="docs/media/calisma-gunlugu.png" alt="Kontrol Merkezi, Çalışma günlüğü: solda oturumlar, sağda seçilen oturumun zaman çizelgesi ve kanıtları.">
 
