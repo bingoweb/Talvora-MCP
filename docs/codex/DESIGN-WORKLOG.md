@@ -188,20 +188,26 @@ A step Talvora still follows after the tool call returned never turns into "Yan�
 
 ### 5.3 Failure reasons (fixes W2)
 
-Classify the real error once in the service (`WorklogFailureClassifier`) from the structured result / exception type, then pick the Turkish text:
+Classify the real error once in the service (`WorklogFailureClassifier`: `Describe` for a returned result, `DescribeException` for a thrown exception, both returning `WorklogOutcome`), then pick the Turkish text. Rows are checked in this order (D125, audit 70):
 
 | `WorklogFailureKind` | Detected from | Plain reason | Next step |
 |---|---|---|---|
-| `InvalidArguments` | `ArgumentException`, schema/binding errors | İstek eksik ya da hatalı bilgi içeriyordu. | Ajan isteği düzeltip yeniden deneyebilir. |
-| `StaleRevision` | source edit error code for revision mismatch | Dosya bu arada değişmişti; eski hâline göre değişiklik yapılmadı. | Ajan güncel hâli okuyup yeniden deneyecek. |
-| `NotFound` | `FileNotFound`/`DirectoryNotFound`/`KeyNotFound` | Aranan dosya ya da kayıt bulunamadı. | — |
-| `AccessDenied` | `UnauthorizedAccessException` | Windows bu işleme izin vermedi. | — |
-| `BuildErrors` | build diagnostics > 0 errors | Derleme {n} hata verdi. | Ajan hataları düzeltebilir; kodunuz kaydedildiği hâliyle duruyor. |
-| `TestFailures` | test summary failed > 0 | {n} test başarısız oldu. | — |
-| `Timeout` | `timedOut: true` | İşlem zaman sınırını aştı ve tamamlanmış sayılmıyor. | — |
-| `DeliveryGate` | `ProjectDeliveryGate` refusal | Teslim kontrolü eksik kanıt nedeniyle gönderimi durdurdu. | Kanıt dosyaları güncellenince tekrar denenebilir. |
-| `PermissionDenied` (agents) | Claude permission denials | Claude izin gerektiren adımları yapamadı. | İzin modunu değiştirerek yeniden başlatılabilir. |
-| `Unknown` | anything else | Bu adım tamamlanamadı. | — |
+| `StaleRevision` | `error.code` `EXPECTED_REVISION_MISMATCH`, `SOURCE_EDIT_CONFLICT` | Dosya bu arada değişmişti; eski hâline göre değişiklik yapılmadı. Kodunuz değişmedi. | Ajan güncel hâli okuyup yeniden deneyecek. |
+| `InvalidArguments` | `error.code` `PATCH_PARSE_ERROR`, `PATCH_CONTEXT_NOT_FOUND`, `PATCH_CONTEXT_AMBIGUOUS`, `PATCH_OVERLAPPING_EDITS` | Değişiklik isteği dosyanın güncel hâliyle eşleşmedi. Kodunuz değişmedi. | Ajan isteği düzeltip yeniden deneyebilir. |
+| `Other` | `error.code` `SOURCE_VALIDATION_FAILED` | Değişiklik sözdizimi kontrolünden geçmedi. Kodunuz değişmedi. | Ajan hatayı düzeltip yeniden deneyebilir. |
+| `Timeout` | `timedOut: true`, a thrown `TimeoutException` | İşlem zaman sınırını aştı ve tamamlanmış sayılmıyor. | — |
+| `BuildErrors` | tool `dotnet_build` | Derleme hata verdi. | Ajan hataları düzeltebilir; kodunuz kaydedildiği hâliyle duruyor. |
+| `TestFailures` | tool `dotnet_test` | Testlerin bir kısmı başarısız oldu. | — |
+| `DeliveryGate` | `TALVORA_DELIVERY_GATE_BLOCKED` or `WorkContract:` in the result | Teslim kontrolü eksik kanıt nedeniyle gönderimi durdurdu. | Kanıt dosyaları güncellenince tekrar denenebilir. |
+| `Other` | a non-zero `exitCode` (not the job/dev-server status tools) | Komut {n} çıkış koduyla bitti. | — |
+| `AccessDenied` | the protected-secret `UnauthorizedAccessException` | Bu konum gizli anahtarlara ayrılmış; Talvora burayı okumaz ve değiştirmez. Hiçbir şeye dokunulmadı. | — |
+| `AccessDenied` | any other `UnauthorizedAccessException` | Windows bu işleme izin vermedi. | — |
+| `AccessDenied` | `SOURCE_EDIT_POLICY_VIOLATION` | Bu dosya bir proje klasöründe; Talvora proje dosyalarını yalnızca kod değişikliği olarak değiştirir. Dosyaya dokunulmadı. | Ajan aynı işi kod değişikliği olarak yeniden yapabilir. |
+| `NotFound` | `agent_brief` with `FileNotFoundException` | Bu klasörde proje talimatı (AGENTS.md) yok. | Ajan talimatın bulunduğu proje klasörünü seçip yeniden isteyebilir. |
+| `NotFound` | `FileNotFoundException`, `DirectoryNotFoundException` | Aranan dosya ya da klasör bulunamadı. | — |
+| `Other` | anything else | Bu adım tamamlanamadı. | — |
+
+The Claude engine's own job card (`TalvoraDesktopClaudeWorklog`) keeps its sentence for permission denials: "Claude izin gerektiren adımları yapamadı."
 
 The raw (redacted) error message goes to "Ayrıntılar". "What is protected" (AGENTS.md) uses exactly these sentences and only when verified: rejected source edit → append "Kodunuz değişmedi." to `PlainReason`; failed build/test → the `NextStep` text in the table already states it; every other kind → no protection sentence. No other protection wording.
 

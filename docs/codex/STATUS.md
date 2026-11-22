@@ -32,6 +32,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
+- [ ] D125 — a failed step tells its real reason and, where there is one, the next step (audit 70)
 - [ ] D111 — a failed Dependabot apply never leaves a half-applied tree or a RUNNING result (audit 69)
 - [ ] D113 — ast-grep 0.51.3: the bundled structural-edit engine leaves the vulnerable range (update audit 2026-11-22)
 - [ ] D114 — PowerShell 7.6.10 for machines that get PowerShell from the installer
@@ -48,7 +49,6 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] CTX4 — Context7 evidence only when a lookup was made: the push gate and both gate scripts accept a change that leaves the evidence file untouched (user decision 2026-11-18)
 - [ ] CTX5 — the installed smoke asks Context7 live at most once a day
 - [C] D118v — README and `docs/media` screenshots retaken without Penpot, both themes; DESIGN-SANTRAL and DESIGN-CONTROL-CENTER without Penpot (Claude; needs D118 installed)
-- [x] D112v — a one-step card shows no time ruler; it appears with the second block (22e02a2; installed 22e02a2, both installed smokes GREEN, live one-step and two-step cards checked; CI 44158989904 green)
 
 ## User queue
 
@@ -66,6 +66,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-22 — Claude, audit 70 (user: "talvora yı denetle"), range `audit/2026-11-17-69..a9f5d09`: no agent commit since audit 69 (the history shows ChatGPT and Codex only fetching the brief for Talvora-MCP on 11-22); chain health 12 OK, 1 WARN (AGENTS sections 41,313 chars, within the profile's ~41,000), CI green throughout. Screen pass on the live card: D112v (no ruler on a one-step session) and D109v (session list `0:sinif-panosu# 1:fatura-hesabi*`) hold. Finding from the stored history: all 11 failed sessions since 11-17 show the generic "Bu adım tamamlanamadı." with no kind and no next step (classifier blind to exit codes and thrown exceptions; outcome hard-wired to `(null, message, null)`) → D125 at the top of the queue; DESIGN-WORKLOG §5.3 now holds exactly D125's table. prova: two rounds, FINE after the live check became Claude's `[~]`. Release 0.0.2.0 verified on `cfa52bf`: signed-in Full gate `76 kontrol, 0 hata · Hepsi geçti.` (fresh clone), CI 45025731023 green, installer built from it (SourceCommit cfa52bf, SHA-256 AF50F313…F19F) installed, `/healthz` cfa52bf, `TALVORA MCP METADATA POLICY LIVE GREEN`, `TALVORA MCP SMOKE GREEN`; tag `v0.0.2.0`. GitHub sayfası: kart paragrafı ve görüntüsü oturum listesiyle yenilendi (release commit). Removed: the D112v queue line, one decided proposal (P-56), older audit section headers in ROADMAP, 184 `artifacts/` entries older than seven days (3.6 MB). Idea notes: none ready.
 - 2026-11-22 — Claude, release 0.0.2.0 prepared (audit 70; user chose "Şimdi yayımla"): `docs/releases/0.0.2.0.md` (new capability D109/D109v: the bottom bar lists open sessions and switches on click; fixes D112v and the PK5 Roslyn update), README card paragraph and alt text name the session list, `docs/media/kod-karti.png` retaken from the live card (two real demo sessions, losslessly recompressed 1.87 MB → 46 KB). Verification follows in the next entry.
 - 2026-11-22 — Claude, cards after the update audit (user: "stitch hiç kullanmıyorum kökten temizle"). Stitch leaves Talvora: D121 removes the 18 `talvora_stitch_*` tools and their policies, guides, titles, health probe and test entries; D122 has the installer remove `C:\ProgramData\Talvora\Tools\Stitch` with a marker. Measured: every Stitch call as the signed-in user already failed (`MODULE_NOT_FOUND`: the folder is readable only by SYSTEM and Administrators). D123 hands Hostinger's token as `HOSTINGER_API_TOKEN` (README: `API_TOKEN` is a deprecated alias); the package upgrade to 4.15.0 and Stitch's files in the user's profile are Makine-Bakimi cards. D117 fixed before it runs: `ExpectedOpenWorldToolCount` 84 → 80 and the destructive count were missing from its list. README checked: it names neither Stitch nor Hostinger, no change. No audit tag. Added later the same day: D124, `talvora_delete` gets the `explicitAdmin` option its refusal text promises (Makine-Bakimi T1's P-14 was refused on a ProgramData file next to a `package.json`).
 
