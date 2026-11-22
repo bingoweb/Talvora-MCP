@@ -36,8 +36,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D126 — git run by the service honours the signed-in user's global ignore file (installed metadata/smoke and isolated-repo live check green; GitHub CI 45032327184 green)
 - [x] D111 — a failed Dependabot apply never leaves a half-applied tree or a RUNNING result (audit 69; GitHub CI 45040101059 green; script/test-only card, no deployment)
 - [x] D113 — ast-grep 0.51.3: the bundled structural-edit engine leaves the vulnerable range (installed e3fcac6; version 0.51.3, both installed smokes and CI 45054245830 green)
-- [~] D114 — PowerShell 7.7.0 from the official zip for machines that get PowerShell from the installer (signed-in Full gate green; clean-HEAD installer, deployment, both installed smokes and CI follow this commit)
-- [ ] D127 — .NET 11: SDK 11.0.100, `net11.0-windows`, C# 15 (user decision 2026-11-22)
+- [x] D114 — PowerShell 7.7.0 official zip (installed 098f3ba, both installed smokes green, GitHub CI 45071840580 green)
+- [?] D127 — .NET 11: SDK 11.0.100, `net11.0-windows`, C# 15 (waiting for Claude: P-57; NuGet NU1510 from four direct package references)
 - [ ] D115 — a tunnel-only Gitea failure never restarts the healthy Gitea chain
 - [ ] D116 — Talvora runs the Gitea tunnel itself: newest tunnel-client, no VBScript, no hand pin (user decision 2026-11-22)
 - [ ] D117 — Penpot leaves the server, the shared contracts and the tool surface (user decision 2026-11-22)
@@ -73,6 +73,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-23 — ChatGPT, P-57 (D127 blocked): The official .NET SDK 11.0.100 installer SHA-512 matched the card, its SYSTEM install exited 0, and `dotnet --list-sdks` showed both 10.0.404 and 11.0.100. RED: ModernizationPolicyRegression rejected the original .NET 10 pin. The 17-package platform update failed at solution restore with four NU1510 warnings-as-errors for direct PackageReference entries in Talvora.Tray.csproj and Talvora.Notification.Regression.csproj, contrary to D127's stated precondition. D127 partial repository changes and lock updates were reverted using talvora_apply_patch; machine SDK 11 remains installed. Context7: noLookup (D127 vendor evidence in card). No D127 full gate, deployment or CI; P-57 asks Claude to revise the card before the migration can continue.
+  Self-review — cosmetics: no product UI or desktop changes.
+  Self-review — usability: the installed Talvora service remains on its unchanged .NET 10 build.
+  Self-review — Turkish: no new product-facing text; operational messages are unchanged.
+  Self-review — correctness and security: the four restore diagnostics are preserved as evidence; dependency warnings were not suppressed and SDK 10 was retained.
 - 2026-11-23 — ChatGPT, D114: replaced the 7.6.9 MSI preflight with the official 7.7.0 win-x64 ZIP, extracted from the SHA256-verified locked stream into a unique sibling directory before an atomic directory move, and recorded installer ownership in talvora-installed.json. Machine Path reads unexpanded values, preserves ExpandString and broadcasts an environment change; uninstall checks both the marker and pwsh.exe file version before touching PowerShell, and restores PATH if folder removal fails. The official 115,330,228-byte ZIP was downloaded once under artifacts/D114; SHA-256 7c74e03b20a75b59715847439d046a6214b1863ee79b187872980f139bb4a05f matched the pin; the file is not tracked. RED: NativeInstallerSourceRegression rejected the old MSI URL. GREEN: NativeInstallerSourceRegression including ZIP extraction, existing-folder and missing-pwsh protection, PATH rules, version ownership and locked archive; signed-in Full gate 76 checks, zero errors, 'Hepsi geçti.' Context7: noLookup (Claude verified the official release and .NET/Windows API approach). The normal direct installer-project build needs Build-Windows-Installer.ps1 to generate its embedded Payload.zip; that canonical build, deployment, both installed smokes and GitHub CI are pending this commit. This machine already has PowerShell 7, so the installed preflight skips the new extraction branch.
   Self-review — cosmetics: no tray, Control Center, worklog or layout changes; only installer internals and existing copy.
   Self-review — usability: new-machine PowerShell installation uses one verified ZIP while existing PowerShell remains untouched.
