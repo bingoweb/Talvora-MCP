@@ -1,3 +1,4 @@
+#nullable enable
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -22,7 +23,8 @@ internal static partial class InstallerEngine
 
     internal static IReadOnlyList<string> BuildUninstallPlan(
         string installRoot, string programDataRoot, string startMenuRoot,
-        string userProfile, string userSid, bool removeData)
+        string userProfile, string userSid, bool removeData,
+        string? talvoraPowerShellFolder)
     {
         var actions = new List<string>
         {
@@ -34,6 +36,8 @@ internal static partial class InstallerEngine
             "Kurulum dosyaları: " + installRoot,
             @"Uygulamalar kaydı: HKLM\" + UninstallRegistryPath,
         };
+        if (talvoraPowerShellFolder is not null)
+            actions.Add("PowerShell 7 (Talvora kurdu): " + talvoraPowerShellFolder);
         if (removeData && Directory.Exists(programDataRoot))
         {
             foreach (var entry in Directory.EnumerateFileSystemEntries(programDataRoot, "*",
@@ -121,9 +125,11 @@ internal static partial class InstallerEngine
             Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Talvora");
         var dataRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Talvora");
+        var talvoraPowerShell = FindTalvoraPowerShellToRemove(
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), out _);
         return BuildUninstallPlan(installRoot, dataRoot,
             Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),
-            installUser.UserProfile, installUser.Sid, removeData);
+            installUser.UserProfile, installUser.Sid, removeData, talvoraPowerShell);
     }
 
     internal static async Task UninstallAsync(
@@ -159,6 +165,38 @@ internal static partial class InstallerEngine
 
             progress.Report(new InstallProgress(60, "Dosyalar siliniyor..."));
             await RemoveTalvoraProgramFilesAsync(installRoot, cancellationToken);
+
+            var powerShellFolder = FindTalvoraPowerShellToRemove(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                out var pathEntryAdded);
+            if (powerShellFolder is not null)
+            {
+                var removedPath = false;
+                try
+                {
+                    if (pathEntryAdded)
+                    {
+                        RemoveMachinePathEntry(powerShellFolder);
+                        removedPath = true;
+                    }
+                    Directory.Delete(powerShellFolder, recursive: true);
+                }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                {
+                    if (removedPath)
+                    {
+                        try
+                        {
+                            _ = AddMachinePathEntry(powerShellFolder);
+                        }
+                        catch (Exception restoreError)
+                        {
+                            InstallerLog.Write("PowerShell 7 machine PATH restore failed", restoreError);
+                        }
+                    }
+                    InstallerLog.Write("PowerShell 7 uninstall left the owned folder in place", error);
+                }
+            }
 
             Registry.LocalMachine.DeleteSubKeyTree(UninstallRegistryPath,
                 throwOnMissingSubKey: false);

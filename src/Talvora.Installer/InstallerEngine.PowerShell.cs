@@ -1,9 +1,10 @@
 #nullable enable
 using System;
-using System.ComponentModel;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -35,41 +36,71 @@ internal static partial class InstallerEngine
         }
 
         var pin = ReadPowerShellPin();
-        var path = GetPowerShellMsiPath(pin.Version);
+        var path = GetPowerShellPackagePath(pin.Version);
         try
         {
-            await DownloadPowerShell7MsiAsync(pin, path, progress, cancellationToken);
+            await DownloadPowerShell7PackageAsync(pin, path, progress, cancellationToken);
             using (var verifiedStream = new FileStream(
                 path, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                ValidatePowerShell7MsiHash(verifiedStream, pin.Sha256);
+                ValidatePowerShell7PackageHash(verifiedStream, pin.Sha256);
                 progress.Report(new InstallProgress(5, "PowerShell 7 kuruluyor..."));
-                await InstallPowerShell7MsiAsync(path, cancellationToken);
+                ExtractPowerShell7Zip(verifiedStream,
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
+            }
+
+            var folder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "PowerShell", "7");
+            bool pathEntryAdded;
+            try
+            {
+                pathEntryAdded = AddMachinePathEntry(folder);
+            }
+            catch (Exception error)
+            {
+                InstallerLog.Write("PowerShell 7 machine PATH update failed", error);
+                pathEntryAdded = false;
+            }
+            if (pathEntryAdded)
+            {
+                var marker = Path.Combine(folder, "talvora-installed.json");
+                var temporary = marker + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                try
+                {
+                    File.WriteAllText(temporary, "{\"version\":\"7.7.0\",\"pathEntryAdded\":true}");
+                    File.Move(temporary, marker, overwrite: true);
+                }
+                finally
+                {
+                    if (File.Exists(temporary))
+                        File.Delete(temporary);
+                }
             }
         }
         finally
         {
-            DeletePowerShellMsi(path);
+            DeletePowerShellPackage(path);
         }
     }
 
     internal static async Task<string> VerifyPowerShell7DownloadAsync(CancellationToken cancellationToken)
     {
         var pin = ReadPowerShellPin();
-        var path = GetPowerShellMsiPath(pin.Version);
+        var path = GetPowerShellPackagePath(pin.Version);
         try
         {
-            await DownloadPowerShell7MsiAsync(pin, path, null, cancellationToken);
+            await DownloadPowerShell7PackageAsync(pin, path, null, cancellationToken);
             using (var verifiedStream = new FileStream(
                 path, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                ValidatePowerShell7MsiHash(verifiedStream, pin.Sha256);
+                ValidatePowerShell7PackageHash(verifiedStream, pin.Sha256);
             }
             return pin.Version;
         }
         finally
         {
-            DeletePowerShellMsi(path);
+            DeletePowerShellPackage(path);
         }
     }
 
@@ -102,17 +133,17 @@ internal static partial class InstallerEngine
         var sha256 = pin.GetProperty("sha256").GetString() ?? string.Empty;
         if (!Regex.IsMatch(version, @"^7\.\d+\.\d+$", RegexOptions.CultureInvariant) ||
             !string.Equals(url,
-                $"https://github.com/PowerShell/PowerShell/releases/download/v{version}/PowerShell-{version}-win-x64.msi",
+                $"https://github.com/PowerShell/PowerShell/releases/download/v{version}/PowerShell-{version}-win-x64.zip",
                 StringComparison.Ordinal) ||
             !Regex.IsMatch(sha256, "^[0-9a-f]{64}$", RegexOptions.CultureInvariant))
             throw new InvalidOperationException("PowerShell 7 sürüm doğrulama bilgisi geçersiz.");
         return new PowerShellPin(version, url, sha256);
     }
 
-    private static string GetPowerShellMsiPath(string version) =>
-        Path.Combine(Path.GetTempPath(), $"Talvora-PowerShell-{version}-{Guid.NewGuid():N}.msi");
+    private static string GetPowerShellPackagePath(string version) =>
+        Path.Combine(Path.GetTempPath(), $"Talvora-PowerShell-{version}-{Guid.NewGuid():N}.zip");
 
-    private static async Task DownloadPowerShell7MsiAsync(
+    private static async Task DownloadPowerShell7PackageAsync(
         PowerShellPin pin, string path, IProgress<InstallProgress>? progress,
         CancellationToken cancellationToken)
     {
@@ -162,7 +193,7 @@ internal static partial class InstallerEngine
         }
     }
 
-    internal static void ValidatePowerShell7MsiHash(FileStream stream, string expectedHash)
+    internal static void ValidatePowerShell7PackageHash(FileStream stream, string expectedHash)
     {
         stream.Position = 0;
         var hash = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
@@ -170,46 +201,111 @@ internal static partial class InstallerEngine
             throw new InvalidOperationException(IntegrityError);
     }
 
-    private static async Task InstallPowerShell7MsiAsync(string path, CancellationToken cancellationToken)
+    internal static void ExtractPowerShell7Zip(FileStream lockedZip, string programFilesRoot)
     {
-        // D85: a bare name is searched in the installer's own folder (usually Downloads) first.
-        var start = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "msiexec.exe"))
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-        foreach (var part in new[] {
-            "/i", path, "/quiet", "/norestart", "ADD_PATH=1",
-            "REGISTER_MANIFEST=1", "USE_MU=1", "ENABLE_MU=1"
-        })
-            start.ArgumentList.Add(part);
+        var powerShellRoot = Path.Combine(programFilesRoot, "PowerShell");
+        var finalFolder = Path.Combine(powerShellRoot, "7");
+        if (Directory.Exists(finalFolder))
+            throw PowerShellZipError(@"C:\Program Files\PowerShell\7 klasörü zaten var");
 
-        Process? process;
+        Directory.CreateDirectory(powerShellRoot);
+        var stagingFolder = Path.Combine(powerShellRoot, $"7.talvora-{Guid.NewGuid():N}");
         try
         {
-            process = Process.Start(start);
+            using (var archive = new ZipArchive(lockedZip, ZipArchiveMode.Read, leaveOpen: true))
+                archive.ExtractToDirectory(stagingFolder);
+            if (!File.Exists(Path.Combine(stagingFolder, "pwsh.exe")))
+                throw PowerShellZipError("paket içinde pwsh.exe yok");
+            File.WriteAllText(Path.Combine(stagingFolder, "talvora-installed.json"),
+                "{\"version\":\"7.7.0\",\"pathEntryAdded\":false}");
+            Directory.Move(stagingFolder, finalFolder);
         }
-        catch (Exception error) when (error is Win32Exception or InvalidOperationException)
+        catch (Exception error)
         {
-            throw PowerShellMsiError(-1, error);
-        }
-        if (process is null)
-            throw PowerShellMsiError(-1);
-
-        using (process)
-        {
-            await process.WaitForExitAsync(cancellationToken);
-            if (process.ExitCode is not (0 or 3010))
-                throw PowerShellMsiError(process.ExitCode);
+            if (Directory.Exists(stagingFolder))
+                Directory.Delete(stagingFolder, recursive: true);
+            if (error is InvalidOperationException invalid &&
+                invalid.Message.StartsWith("PowerShell 7 kurulamadı:", StringComparison.Ordinal))
+                throw;
+            throw PowerShellZipError($"paket açılamadı ({error.Message})", error);
         }
     }
 
-    private static InvalidOperationException PowerShellMsiError(int code, Exception? inner = null) =>
-        new($"PowerShell 7 kurulamadı (msiexec çıkış kodu {code}). " +
-            $"PowerShell 7'yi {InstallHelp} adresindeki adımlarla kurup " +
-            "Talvora kurulumunu yeniden başlat.", inner);
+    internal static string? AppendPathEntry(string rawPath, string entry)
+    {
+        var wanted = NormalizePathEntry(entry);
+        foreach (var part in rawPath.Split(';'))
+        {
+            if (string.Equals(NormalizePathEntry(part), wanted,
+                    StringComparison.OrdinalIgnoreCase))
+                return null;
+        }
+        return string.IsNullOrEmpty(rawPath)
+            ? entry
+            : rawPath.TrimEnd(';') + ";" + entry;
+    }
 
-    private static void DeletePowerShellMsi(string path)
+    internal static string? RemovePathEntry(string rawPath, string entry)
+    {
+        var wanted = NormalizePathEntry(entry);
+        var parts = rawPath.Split(';');
+        var retained = new System.Collections.Generic.List<string>();
+        var removed = false;
+        foreach (var part in parts)
+        {
+            if (string.Equals(NormalizePathEntry(part), wanted,
+                    StringComparison.OrdinalIgnoreCase))
+                removed = true;
+            else
+                retained.Add(part);
+        }
+        return removed ? string.Join(';', retained) : null;
+    }
+
+    private static string NormalizePathEntry(string entry) =>
+        entry.Trim().Trim('"').Trim().TrimEnd('\\');
+
+    internal static bool ShouldRemoveTalvoraPowerShell(
+        string markerVersion, string? installedFileVersion) =>
+        !string.IsNullOrWhiteSpace(markerVersion) &&
+        installedFileVersion is not null &&
+        installedFileVersion.StartsWith(markerVersion + ".", StringComparison.Ordinal);
+
+    internal static string? FindTalvoraPowerShellToRemove(
+        string programFilesRoot, out bool pathEntryAdded)
+    {
+        pathEntryAdded = false;
+        var folder = Path.Combine(programFilesRoot, "PowerShell", "7");
+        var marker = Path.Combine(folder, "talvora-installed.json");
+        if (!File.Exists(marker))
+            return null;
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(marker));
+            var version = document.RootElement.GetProperty("version").GetString() ?? "";
+            var recordedPath = document.RootElement.GetProperty("pathEntryAdded").GetBoolean();
+            var executable = Path.Combine(folder, "pwsh.exe");
+            var installedVersion = File.Exists(executable)
+                ? FileVersionInfo.GetVersionInfo(executable).FileVersion
+                : null;
+            if (!ShouldRemoveTalvoraPowerShell(version, installedVersion))
+                return null;
+            pathEntryAdded = recordedPath;
+            return folder;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException
+            or JsonException or KeyNotFoundException)
+        {
+            InstallerLog.Write("PowerShell 7 installation marker could not be verified", error);
+            return null;
+        }
+    }
+
+    private static InvalidOperationException PowerShellZipError(
+        string reason, Exception? inner = null) =>
+        new($"PowerShell 7 kurulamadı: {reason}. PowerShell 7'yi {InstallHelp} adresindeki adımlarla kurup Talvora kurulumunu yeniden başlat.", inner);
+
+    private static void DeletePowerShellPackage(string path)
     {
         try
         {
@@ -218,7 +314,7 @@ internal static partial class InstallerEngine
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
-            InstallerLog.Write("PowerShell 7 temporary MSI cleanup failed", error);
+            InstallerLog.Write("PowerShell 7 temporary ZIP cleanup failed", error);
         }
     }
 }

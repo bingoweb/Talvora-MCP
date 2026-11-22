@@ -81,12 +81,15 @@ $uninstallSource = [IO.File]::ReadAllText($uninstallPath)
 $installerProject = [IO.File]::ReadAllText((Join-Path $RepoRoot 'src\Talvora.Installer\Talvora.Installer.csproj'))
 $powerShellPinPath = Join-Path $RepoRoot 'src\Talvora.Installer\powershell-pin.json'
 $powerShellSourcePath = Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.PowerShell.cs'
+$machinePathSourcePath = Join-Path $RepoRoot 'src\Talvora.Installer\InstallerEngine.MachinePath.cs'
 if (!(Test-Path -LiteralPath $powerShellPinPath -PathType Leaf) -or
-    !(Test-Path -LiteralPath $powerShellSourcePath -PathType Leaf)) {
-    throw 'RL2 requires a pinned PowerShell MSI and a preflight implementation.'
+    !(Test-Path -LiteralPath $powerShellSourcePath -PathType Leaf) -or
+    !(Test-Path -LiteralPath $machinePathSourcePath -PathType Leaf)) {
+    throw 'RL2 requires a pinned PowerShell zip and a preflight implementation.'
 }
 $powerShellPin = Get-Content -LiteralPath $powerShellPinPath -Raw | ConvertFrom-Json
 $powerShellProvisioner = [IO.File]::ReadAllText($powerShellSourcePath)
+$machinePathSource = [IO.File]::ReadAllText($machinePathSourcePath)
 $buildInstallerScript = [IO.File]::ReadAllText((Join-Path $RepoRoot 'scripts\Build-Windows-Installer.ps1'))
 $installScript = [IO.File]::ReadAllText((Join-Path $RepoRoot 'scripts\Install.ps1'))
 $windowsCiWorkflow = [IO.File]::ReadAllText((Join-Path $RepoRoot '.github\workflows\windows-ci.yml'))
@@ -146,7 +149,7 @@ $result = [pscustomobject]@{
     PowerShell7PinIsVersionedAndHasSha256 = (
         [string]$powerShellPin.version -match '^7\.\d+\.\d+$' -and
         [string]$powerShellPin.url -ceq ('https://github.com/PowerShell/PowerShell/releases/download/v' +
-            $powerShellPin.version + '/PowerShell-' + $powerShellPin.version + '-win-x64.msi') -and
+            $powerShellPin.version + '/PowerShell-' + $powerShellPin.version + '-win-x64.zip') -and
         [string]$powerShellPin.sha256 -cmatch '^[0-9a-f]{64}$' -and
         $installerProject -match 'EmbeddedResource Include="powershell-pin\.json"'
     )
@@ -157,25 +160,27 @@ $result = [pscustomobject]@{
         $installerFlow.IndexOf('await EnsurePowerShell7Async', [StringComparison]::Ordinal) -lt
             $installerFlow.IndexOf('Directory.CreateDirectory(versionsRoot)', [StringComparison]::Ordinal)
     )
-    PowerShell7InstallerHasVerificationAndQuietMsi = (
+    PowerShell7InstallerHasVerificationAndZipExtraction = (
         $installerProgram -match '--verify-powershell-download' -and
         $powerShellProvisioner -match 'Func<bool>' -and
         $powerShellProvisioner -match 'TimeSpan\.FromMinutes\(10\)' -and
         $powerShellProvisioner -match 'SHA256\.HashData' -and
-        $powerShellProvisioner -match 'msiexec\.exe' -and
-        $powerShellProvisioner -match 'ADD_PATH=1' -and
-        $powerShellProvisioner -match 'REGISTER_MANIFEST=1' -and
-        $powerShellProvisioner -match 'USE_MU=1' -and
-        $powerShellProvisioner -match 'ENABLE_MU=1'
+        $powerShellProvisioner -match 'ZipArchive' -and
+        $powerShellProvisioner -match '7\.talvora-' -and
+        $powerShellProvisioner -match 'Directory\.Move'
     )
-    PowerShell7MsiUsesExclusiveNewFile = (
+    PowerShell7ZipUsesExclusiveNewFile = (
         $powerShellProvisioner -match 'Guid\.NewGuid\(\):N' -and
         $powerShellProvisioner -match '(?s)FileMode\.CreateNew,\s*FileAccess\.Write,\s*FileShare\.None'
     )
-    # D85: a bare "msiexec.exe" is searched in the installer's own folder (Downloads) first.
-    D85MsiexecStartsFromSystem32 = (
-        $powerShellProvisioner -match 'new ProcessStartInfo\(Path\.Combine\(Environment\.SystemDirectory, "msiexec\.exe"\)\)' -and
-        $powerShellProvisioner -notmatch 'new ProcessStartInfo\("msiexec\.exe"\)'
+    PowerShellFileHasNoMsiexecOrLibraryImport = (
+        $powerShellProvisioner -notmatch 'msiexec' -and
+        $powerShellProvisioner -notmatch 'LibraryImport'
+    )
+    MachinePathKeepsExpandStringAndBroadcasts = (
+        $machinePathSource -match 'DoNotExpandEnvironmentNames' -and
+        $machinePathSource -match 'ExpandString' -and
+        $machinePathSource -match 'SendMessageTimeoutW'
     )
     D85ServiceDescriptionTurkish = (
         $installerService.Contains('"Talvora''nın yerel servisi: yapay zekâ ajanlarına bu bilgisayarda gerçek bir çalışma masası açar."') -and
@@ -183,8 +188,8 @@ $result = [pscustomobject]@{
     )
     PowerShell7HashAndInstallKeepReadLock = (
         $powerShellProvisioner -match '(?s)FileMode\.Open,\s*FileAccess\.Read,\s*FileShare\.Read' -and
-        $powerShellProvisioner -match 'ValidatePowerShell7MsiHash\(verifiedStream, pin\.Sha256\)' -and
-        $powerShellProvisioner -match 'ValidatePowerShell7MsiHash\(FileStream stream,' -and
+        $powerShellProvisioner -match 'ValidatePowerShell7PackageHash\(verifiedStream, pin\.Sha256\)' -and
+        $powerShellProvisioner -match 'ValidatePowerShell7PackageHash\(FileStream stream,' -and
         $installerProgram -match 'Console\.OutputEncoding = new UTF8Encoding\(false\);'
     )
     PowerShell7DownloadReportsWholePercent = (
@@ -939,13 +944,15 @@ $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('TalvoraPwshCheck-' + [Guid]::
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 try {
     $testSourcePath = Join-Path $testRoot 'PowerShellInstallerRegression.cs'
-    $msiFixturePath = Join-Path $testRoot 'untrusted.msi'
-    [IO.File]::WriteAllText($msiFixturePath, 'not a valid PowerShell MSI')
+    $zipFixturePath = Join-Path $testRoot 'untrusted.zip'
+    [IO.File]::WriteAllText($zipFixturePath, 'not a valid PowerShell ZIP')
     [IO.File]::WriteAllText($testSourcePath, @'
 #nullable enable
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -956,17 +963,22 @@ internal static class InstallerLog
 {
     public static void Write(string message, Exception? exception = null) {}
 }
+internal static partial class InstallerEngine
+{
+    internal static bool AddMachinePathEntry(string entry) => true;
+    internal static void RemoveMachinePathEntry(string entry) {}
+}
 
 public static class PowerShellInstallerRegression
 {
-    public static bool RandomMsiPathHasExpectedName()
+    public static bool RandomZipPathHasExpectedName()
     {
         var method = typeof(InstallerEngine).GetMethod(
-            "GetPowerShellMsiPath", BindingFlags.Static | BindingFlags.NonPublic)!;
-        var first = (string)method.Invoke(null, new object[] { "7.6.9" })!;
-        var second = (string)method.Invoke(null, new object[] { "7.6.9" })!;
+            "GetPowerShellPackagePath", BindingFlags.Static | BindingFlags.NonPublic)!;
+        var first = (string)method.Invoke(null, new object[] { "7.7.0" })!;
+        var second = (string)method.Invoke(null, new object[] { "7.7.0" })!;
         return first != second && Regex.IsMatch(Path.GetFileName(first),
-            @"^Talvora-PowerShell-7\.\d+\.\d+-[0-9a-f]{32}\.msi$");
+            @"^Talvora-PowerShell-7\.\d+\.\d+-[0-9a-f]{32}\.zip$");
     }
 
     public static bool ExistingDownloadFileCannotBeOverwritten(string path)
@@ -978,7 +990,7 @@ public static class PowerShellInstallerRegression
         }
         catch (IOException)
         {
-            return File.ReadAllText(path) == "not a valid PowerShell MSI";
+            return File.ReadAllText(path) == "not a valid PowerShell ZIP";
         }
     }
 
@@ -994,7 +1006,7 @@ public static class PowerShellInstallerRegression
         {
             try
             {
-                InstallerEngine.ValidatePowerShell7MsiHash(verifiedStream, new string('0', 64));
+                InstallerEngine.ValidatePowerShell7PackageHash(verifiedStream, new string('0', 64));
                 return false;
             }
             catch (InvalidOperationException error)
@@ -1018,7 +1030,7 @@ public static class PowerShellInstallerRegression
         using var verifiedStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         try
         {
-            InstallerEngine.ValidatePowerShell7MsiHash(verifiedStream, new string('0', 64));
+            InstallerEngine.ValidatePowerShell7PackageHash(verifiedStream, new string('0', 64));
             return false;
         }
         catch (InvalidOperationException error)
@@ -1026,45 +1038,159 @@ public static class PowerShellInstallerRegression
             return error.Message == "İndirilen PowerShell 7 paketi doğrulanamadı; güvenlik için kurulmadı.";
         }
     }
+
+    private static string CreateFixtureZip(string root, string name, bool includePwsh)
+    {
+        Directory.CreateDirectory(root);
+        var path = Path.Combine(root, name);
+        using (var archive = ZipFile.Open(path, ZipArchiveMode.Create))
+        using (var writer = new StreamWriter(archive.CreateEntry(
+            includePwsh ? "pwsh.exe" : "unrelated.txt").Open()))
+            writer.Write("fixture content");
+        return path;
+    }
+
+    public static bool ExtractCreatesOnlyFinalFolder(string root)
+    {
+        var zip = CreateFixtureZip(root, "good.zip", true);
+        var programFiles = Path.Combine(root, "ProgramFiles");
+        using (var locked = new FileStream(zip, FileMode.Open, FileAccess.Read, FileShare.Read))
+            InstallerEngine.ExtractPowerShell7Zip(locked, programFiles);
+        var folder = Path.Combine(programFiles, "PowerShell", "7");
+        return File.Exists(Path.Combine(folder, "pwsh.exe")) &&
+            File.ReadAllText(Path.Combine(folder, "talvora-installed.json")) ==
+                "{\"version\":\"7.7.0\",\"pathEntryAdded\":false}" &&
+            Directory.GetDirectories(Path.Combine(programFiles, "PowerShell"), "7.talvora-*").Length == 0;
+    }
+
+    public static bool ExtractRefusesExistingFolder(string root)
+    {
+        var zip = CreateFixtureZip(root, "good.zip", true);
+        var programFiles = Path.Combine(root, "ProgramFiles");
+        var folder = Path.Combine(programFiles, "PowerShell", "7");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "keep.txt"), "do not overwrite");
+        try
+        {
+            using var locked = new FileStream(zip, FileMode.Open, FileAccess.Read, FileShare.Read);
+            InstallerEngine.ExtractPowerShell7Zip(locked, programFiles);
+            return false;
+        }
+        catch (InvalidOperationException error)
+        {
+            return error.Message.Contains(@"C:\Program Files\PowerShell\7 klasörü zaten var") &&
+                File.ReadAllText(Path.Combine(folder, "keep.txt")) == "do not overwrite";
+        }
+    }
+
+    public static bool ExtractMissingPwshCleansStaging(string root)
+    {
+        var zip = CreateFixtureZip(root, "incomplete.zip", false);
+        var programFiles = Path.Combine(root, "ProgramFiles");
+        try
+        {
+            using var locked = new FileStream(zip, FileMode.Open, FileAccess.Read, FileShare.Read);
+            InstallerEngine.ExtractPowerShell7Zip(locked, programFiles);
+            return false;
+        }
+        catch (InvalidOperationException error)
+        {
+            var shellRoot = Path.Combine(programFiles, "PowerShell");
+            return error.Message.Contains("paket içinde pwsh.exe yok") &&
+                !Directory.Exists(Path.Combine(shellRoot, "7")) &&
+                Directory.GetDirectories(shellRoot, "7.talvora-*").Length == 0;
+        }
+    }
+
+    public static bool AppendPathAppendsOnce()
+    {
+        const string original = @"%SystemRoot%\System32";
+        const string folder = @"C:\Program Files\PowerShell\7";
+        var updated = InstallerEngine.AppendPathEntry(original, folder);
+        return updated == original + ";" + folder &&
+            InstallerEngine.AppendPathEntry(updated!, folder) is null;
+    }
+
+    public static bool AppendPathIgnoresCaseAndTrailingSlash()
+    {
+        const string folder = @"C:\Program Files\PowerShell\7";
+        var original = @"C:\Windows;" + "\"" + @"c:\program FILES\powershell\7\" + "\"";
+        return InstallerEngine.AppendPathEntry(original, folder) is null;
+    }
+
+    public static bool AppendPathKeepsEnvironmentVariables()
+    {
+        const string original = @"%SystemRoot%\System32";
+        return InstallerEngine.AppendPathEntry(original, @"C:\PowerShell\7") ==
+            original + @";C:\PowerShell\7";
+    }
+
+    public static bool RemovePathTargetsOnlyEntry()
+    {
+        const string original = @"%SystemRoot%\System32;C:\PowerShell\7;C:\Other";
+        return InstallerEngine.RemovePathEntry(original, @"C:\PowerShell\7") ==
+            @"%SystemRoot%\System32;C:\Other" &&
+            InstallerEngine.RemovePathEntry(original, @"C:\PowerShell\8") is null;
+    }
+
+    public static bool ShouldRemoveVersionMatches() =>
+        InstallerEngine.ShouldRemoveTalvoraPowerShell("7.7.0", "7.7.0.0");
+
+    public static bool ShouldNotRemoveNewerVersion() =>
+        !InstallerEngine.ShouldRemoveTalvoraPowerShell("7.7.0", "7.8.0.0");
+
+    public static bool ShouldNotRemoveMissingPwsh() =>
+        !InstallerEngine.ShouldRemoveTalvoraPowerShell("7.7.0", null);
+
+    public static bool ZipArchiveReadsWhileHashLockHeld(string root)
+    {
+        var zip = CreateFixtureZip(root, "locked.zip", true);
+        var hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(zip))).ToLowerInvariant();
+        using var locked = new FileStream(zip, FileMode.Open, FileAccess.Read, FileShare.Read);
+        InstallerEngine.ValidatePowerShell7PackageHash(locked, hash);
+        using var archive = new ZipArchive(locked, ZipArchiveMode.Read, leaveOpen: true);
+        return archive.GetEntry("pwsh.exe") is not null;
+    }
 }
 '@)
     Add-Type -Path @($powerShellSourcePath, $testSourcePath) -ErrorAction Stop
-    if (-not [Talvora.Installer.PowerShellInstallerRegression]::RandomMsiPathHasExpectedName()) {
-        throw 'PowerShell MSI download must use an unpredictable 32-digit lowercase hex name.'
+    if (-not [Talvora.Installer.PowerShellInstallerRegression]::RandomZipPathHasExpectedName()) {
+        throw 'PowerShell zip download must use an unpredictable 32-digit lowercase hex name.'
     }
-    if (-not [Talvora.Installer.PowerShellInstallerRegression]::ExistingDownloadFileCannotBeOverwritten($msiFixturePath)) {
-        throw 'An existing PowerShell MSI download file must not be overwritten.'
+    if (-not [Talvora.Installer.PowerShellInstallerRegression]::ExistingDownloadFileCannotBeOverwritten($zipFixturePath)) {
+        throw 'An existing PowerShell zip download file must not be overwritten.'
     }
-    if (-not [Talvora.Installer.PowerShellInstallerRegression]::VerifiedStreamBlocksWrites($msiFixturePath)) {
-        throw 'A verified PowerShell MSI must remain locked against writers while hashing.'
+    if (-not [Talvora.Installer.PowerShellInstallerRegression]::VerifiedStreamBlocksWrites($zipFixturePath)) {
+        throw 'A verified PowerShell zip must remain locked against writers while hashing.'
     }
     if (-not [Talvora.Installer.PowerShellInstallerRegression]::ExistingPowerShellSkipsDownload()) {
         throw 'An installed PowerShell 7 must bypass the download through the injectable probe.'
     }
-    if (-not [Talvora.Installer.PowerShellInstallerRegression]::WrongHashIsRejected($msiFixturePath)) {
-        throw 'A mismatched PowerShell MSI digest must be rejected before installation.'
+    if (-not [Talvora.Installer.PowerShellInstallerRegression]::WrongHashIsRejected($zipFixturePath)) {
+        throw 'A mismatched PowerShell zip digest must be rejected before installation.'
     }
-    $windowsInstaller = New-Object -ComObject WindowsInstaller.Installer
-    try {
-        $readableMsiPath = Join-Path $testRoot 'locked-read.msi'
-        $newDatabase = $windowsInstaller.OpenDatabase($readableMsiPath, 3)
-        $newDatabase.Commit()
-        [void][Runtime.InteropServices.Marshal]::ReleaseComObject($newDatabase)
-        $verifiedMsi = [IO.FileStream]::new(
-            $readableMsiPath, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
-        try {
-            $readonlyDatabase = $windowsInstaller.OpenDatabase($readableMsiPath, 0)
-            if ($null -eq $readonlyDatabase) {
-                throw 'Windows Installer must open the MSI for reading while the verified stream stays locked.'
-            }
-            [void][Runtime.InteropServices.Marshal]::ReleaseComObject($readonlyDatabase)
-        }
-        finally {
-            $verifiedMsi.Dispose()
+    $fixtureType = [Talvora.Installer.PowerShellInstallerRegression]
+    $extractCases = @(
+        @{ Name = 'ExtractCreatesOnlyFinalFolder'; Folder = 'extract-success' }
+        @{ Name = 'ExtractRefusesExistingFolder'; Folder = 'extract-existing' }
+        @{ Name = 'ExtractMissingPwshCleansStaging'; Folder = 'extract-without-pwsh' }
+        @{ Name = 'ZipArchiveReadsWhileHashLockHeld'; Folder = 'locked-zip' }
+    )
+    foreach ($case in $extractCases) {
+        $caseRoot = Join-Path $testRoot $case.Folder
+        if (-not $fixtureType.GetMethod($case.Name).Invoke($null, [object[]]@([string]$caseRoot))) {
+            throw "PowerShell zip runtime contract failed: $($case.Name)"
         }
     }
-    finally {
-        [void][Runtime.InteropServices.Marshal]::ReleaseComObject($windowsInstaller)
+    foreach ($method in @(
+        'AppendPathAppendsOnce', 'AppendPathIgnoresCaseAndTrailingSlash',
+        'AppendPathKeepsEnvironmentVariables', 'RemovePathTargetsOnlyEntry',
+        'ShouldRemoveVersionMatches', 'ShouldNotRemoveNewerVersion',
+        'ShouldNotRemoveMissingPwsh'
+    )) {
+        if (-not $fixtureType.GetMethod($method).Invoke($null, @())) {
+            throw "PowerShell PATH or ownership contract failed: $method"
+        }
     }
 }
 finally {
@@ -1126,6 +1252,13 @@ namespace Talvora.Installer.Rl3Fixture
         private static RegistryKey OpenInstallUserRoot(InstallUserContext user, bool writable) =>
             Registry.CurrentUser;
         private static Task TryDeleteDirectoryAsync(string path, CancellationToken ct) => Task.CompletedTask;
+        private static string? FindTalvoraPowerShellToRemove(string root, out bool pathEntryAdded)
+        {
+            pathEntryAdded = false;
+            return null;
+        }
+        private static void RemoveMachinePathEntry(string entry) {}
+        private static bool AddMachinePathEntry(string entry) => true;
     }
 
     public static class Rl3Contracts
@@ -1140,7 +1273,7 @@ namespace Talvora.Installer.Rl3Fixture
         public static string[] Plan(string dataRoot, bool removeData) =>
             InstallerEngine.BuildUninstallPlan(@"C:\Program Files\Talvora", dataRoot,
                 @"C:\ProgramData\Microsoft\Windows\Start Menu\Programs",
-                @"C:\Users\fixture", "S-1-5-21-fixture", removeData).ToArray();
+                @"C:\Users\fixture", "S-1-5-21-fixture", removeData, null).ToArray();
 
         public static void AssertRegistryValues(string fixtureRoot)
         {

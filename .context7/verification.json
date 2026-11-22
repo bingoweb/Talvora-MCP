@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-22T16:23:40.811Z",
-  "scope": "D113: verified ast-grep 0.51.3 npm platform packages and executables replace vulnerable 0.45.3",
+  "verifiedAtUtc": "2026-11-22T21:17:53.043Z",
+  "scope": "D114: PowerShell 7.7.0 SHA256-pinned ZIP installation, machine PATH ownership and uninstall cleanup",
   "libraries": [],
-  "noLookup": "D113: Claude verified the platform npm SRI and binary SHA-256 values and completed a clean dry run against vendor releases and advisories; no new library API is introduced.",
+  "noLookup": "D114: Claude verified PowerShell 7.7.0 official ZIP release and SHA-256, including the tested .NET ZIP and Windows registry API approach; no additional Context7 lookup is required by the card.",
   "vendorSources": []
 }
