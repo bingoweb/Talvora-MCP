@@ -1,24 +1,24 @@
 {
   "schemaVersion": 1,
-  "version": "0.45.3",
+  "version": "0.51.3",
   "platforms": {
     "win-x64": {
       "packageName": "@ast-grep/cli-win32-x64-msvc",
-      "tarball": "https://registry.npmjs.org/@ast-grep/cli-win32-x64-msvc/-/cli-win32-x64-msvc-0.45.3.tgz",
-      "integrity": "sha512-UZrpVbjLQqQIRxWqeMcwyLSIhlDZyhYb8SinssM38Oo6mEB2jMfHCEoigay9UOZTfUR268n72BBV48nW2h+QwA==",
-      "executableSha256": "DAFF0F5963FAAB7617045833132A3538C85EEE65F3AFEEDF347F829A7B8D83FB"
+      "tarball": "https://registry.npmjs.org/@ast-grep/cli-win32-x64-msvc/-/cli-win32-x64-msvc-0.51.3.tgz",
+      "integrity": "sha512-gd1o0An798IaJvsVbv5nSe2mxFsNqetW8owxijOw5KSb70mbLgyZnCV0fdm5cYmVG9QBabn3iyXzcNv8C7B+tw==",
+      "executableSha256": "3B416132A62C85793D655B5967CDB724B91148EF707140EBE1074B2233E53399"
     },
     "win-arm64": {
       "packageName": "@ast-grep/cli-win32-arm64-msvc",
-      "tarball": "https://registry.npmjs.org/@ast-grep/cli-win32-arm64-msvc/-/cli-win32-arm64-msvc-0.45.3.tgz",
-      "integrity": "sha512-X0+81Mgr8zsH6hu4Pqdr5h1IyAFUWbKS1PMkKT6awYiiTo/1uhVM/6WzJ+ohOQPmMTyt4poyyg46u2E4WzKECg==",
-      "executableSha256": "8B881D2E98C303F0F90AD6D2A9422DFE89AB32552873A49C7F35899138E813B7"
+      "tarball": "https://registry.npmjs.org/@ast-grep/cli-win32-arm64-msvc/-/cli-win32-arm64-msvc-0.51.3.tgz",
+      "integrity": "sha512-l5Zm3AX6A23NqmEN90+9YqDvOqR/Nye0BYlGWAPAyBHhsBXKQlkpPP9gfWXUe23NVPfeoBTcqDcrzQEnArJijw==",
+      "executableSha256": "CEE3AF753D2EF6CEF3FA58EFADA6F2F1C315A30ADD28D21F8A3FF66BA93128AA"
     },
     "win-x86": {
       "packageName": "@ast-grep/cli-win32-ia32-msvc",
-      "tarball": "https://registry.npmjs.org/@ast-grep/cli-win32-ia32-msvc/-/cli-win32-ia32-msvc-0.45.3.tgz",
-      "integrity": "sha512-W4H27lU/xzzIOvRo4vDTjzq91PioLCjupR7jLmLVkAqAkX2YiNRixf8NjMcQgzAgr33jUsMlyutiTElLgi1O9g==",
-      "executableSha256": "6610FD6C366C1BD7FB1D13973569F3701EE9A0FCA581BB9DE4CD0601107FC585"
+      "tarball": "https://registry.npmjs.org/@ast-grep/cli-win32-ia32-msvc/-/cli-win32-ia32-msvc-0.51.3.tgz",
+      "integrity": "sha512-zXH0oxdLl0/VvBAX9Cvp2VUlzjSgj7fPeSbcEbAtRCGOe5m//+yC05mcde68wcJOiaZE3oGis2PYrMCSc6xIrw==",
+      "executableSha256": "3A7297672C9D07013D352DC1C417A0A837B49B3F55FAFDFB38D4043B61D71586"
     }
   }
 }

@@ -34,8 +34,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 - [~] D125 — a failed step tells its real reason and, where there is one, the next step (audit 70; live pending (Claude): stored failed-step outcome and failed-card visual check after installation)
 - [x] D126 — git run by the service honours the signed-in user's global ignore file (installed metadata/smoke and isolated-repo live check green; GitHub CI 45032327184 green)
-- [~] D111 — a failed Dependabot apply never leaves a half-applied tree or a RUNNING result (audit 69; CI pending after GitHub push; script/test-only card, no deployment)
-- [ ] D113 — ast-grep 0.51.3: the bundled structural-edit engine leaves the vulnerable range (update audit 2026-11-22)
+- [x] D111 — a failed Dependabot apply never leaves a half-applied tree or a RUNNING result (audit 69; GitHub CI 45040101059 green; script/test-only card, no deployment)
+- [~] D113 — ast-grep 0.51.3: the bundled structural-edit engine leaves the vulnerable range (update audit 2026-11-22; CI pending after GitHub push; installer/live checks follow the commit)
 - [ ] D114 — PowerShell 7.6.10 for machines that get PowerShell from the installer
 - [ ] D115 — a tunnel-only Gitea failure never restarts the healthy Gitea chain
 - [ ] D116 — Talvora runs the Gitea tunnel itself: newest tunnel-client, no VBScript, no hand pin (user decision 2026-11-22)
@@ -67,6 +67,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-22 — ChatGPT, D113: upgraded the pinned native ast-grep toolchain from 0.45.3 to 0.51.3 for win-x64, win-arm64, and win-x86 using Claude-verified npm SRI and executable SHA-256 values; updated the structural-engine architecture references and the MIT third-party notice. RED: InstallerAstGrepMetadataRegression rejected the prior win-x64 version. GREEN: InstallerAstGrepMetadataRegression (three platforms, corrupt-package rejection), NativeInstallerSourceRegression, ast-grep pin-only regression; signed-in Full quality gate 76 checks, 0 errors, 'Hepsi geçti.' Context7: noLookup (official package hashes and release/advisory checks in the card, no new external API). Clean-HEAD installer build, Windows deployment, both installed smokes, installed binary version verification and CI follow this commit.
+  Self-review — cosmetics: no UI, tray, layout, or visual change; only pinned native toolchain metadata and documentation.
+  Self-review — usability: structural edits continue through the existing source-edit engine, with the updated bundled executable.
+  Self-review — Turkish: no user-visible product copy was added or changed.
+  Self-review — correctness and security: SHA-512 tarball integrity, SHA-256 executable integrity and tamper rejection remain enforced; vulnerable 0.45.3 is replaced with card-approved 0.51.3.
 - 2026-11-22 — ChatGPT, D111: the Dependabot patch runner now marks itself as having applied changes immediately before git apply --3way; a failed or conflicted apply attempts the pre-existing scoped restore. It writes FAILED to the log and result before restore; a failed restore updates both with its reason instead of leaving RUNNING. The temporary patch is removed in finally. RED: conflict fixture left UU global.json. GREEN: DependabotApplyRegression 15 cases (conflict rollback, index.lock restore failure, SDK downgrade and existing cases), DotnetSdkPatchRegression 9, ThirdPartyNoticesUpdateRegression 5, ModernizationPolicyRegression; signed-in Changed 14 checks and Full 76 checks, zero failures, "Hepsi geçti." Context7: noLookup (only Talvora PowerShell script and previously measured Git behavior). No deployment: scripts/tests only. CI checked after push.
   Self-review — cosmetics: no visible UI, layout, or desktop notification changes.
   Self-review — usability: every failed Dependabot run ends with a decisive FAILED result, including rollback errors.

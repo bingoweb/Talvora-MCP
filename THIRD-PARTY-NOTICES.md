@@ -174,6 +174,7 @@ The following projects are not Talvora-owned. They are separate products or comp
 | Penpot | 2.18.0 | KALEIDOS SUBSIDIARY SL | MPL-2.0 | optional self-hosted design integration |
 | Penpot MCP | 2.18.0 source tree | KALEIDOS SUBSIDIARY SL / Penpot contributors | MPL-2.0 | optional local Penpot MCP integration |
 | OpenAI Secure MCP Tunnel client | v0.0.16 | OpenAI | Apache-2.0 | optional outbound transport for ChatGPT Business and managed companion tunnels |
+| ast-grep | 0.51.3 | Herrington Darkholme and ast-grep contributors | MIT | bundled structural-edit engine (installer `Service\tools\ast-grep`) |
 | Modal SDK / CLI | 1.5.5 | Modal Labs | Apache-2.0 | optional external SDK/CLI integration |
 
 Additional notes:

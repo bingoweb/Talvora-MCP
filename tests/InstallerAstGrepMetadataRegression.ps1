@@ -19,8 +19,8 @@ foreach ($name in @('Get-PinnedAstGrepMetadata','Assert-PinnedAstGrepTarball',
 }
 foreach ($rid in @('win-x64','win-arm64','win-x86')) {
     $pin = Get-PinnedAstGrepMetadata -Rid $rid
-    if ($pin.version -ne '0.45.3' -or
-        -not $pin.tarball.EndsWith("-0.45.3.tgz", [StringComparison]::Ordinal) -or
+    if ($pin.version -ne '0.51.3' -or
+        -not $pin.tarball.EndsWith("-0.51.3.tgz", [StringComparison]::Ordinal) -or
         $pin.executableSha256 -notmatch '^[A-Fa-f0-9]{64}$' -or
         -not $pin.integrity.StartsWith('sha512-', [StringComparison]::Ordinal)) {
         throw "Invalid pinned metadata for $rid."

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-22T15:40:18.078Z",
-  "scope": "D111: failed Dependabot patch application always records FAILED and attempts bounded rollback",
+  "verifiedAtUtc": "2026-11-22T16:23:40.811Z",
+  "scope": "D113: verified ast-grep 0.51.3 npm platform packages and executables replace vulnerable 0.45.3",
   "libraries": [],
-  "noLookup": "D111: existing project PowerShell script, with Git apply/restore failures already measured on this machine and documented in the card; no new external CLI API is used.",
+  "noLookup": "D113: Claude verified the platform npm SRI and binary SHA-256 values and completed a clean dry run against vendor releases and advisories; no new library API is introduced.",
   "vendorSources": []
 }
