@@ -77,6 +77,7 @@ catch {
 }
 
 $appliedByScript = $false
+$patchToApply = $null
 Push-Location $repoRoot
 try {
     Set-Content -LiteralPath $logPath -Value "Apply-DependabotPr -Pr $Pr started $([DateTime]::UtcNow.ToString('u')) pid $PID" -Encoding utf8
@@ -134,9 +135,8 @@ try {
     if (-not $selectedPatch.EndsWith([string][char]10)) { $selectedPatch += [string][char]10 }
     $patchToApply = Join-Path ([IO.Path]::GetTempPath()) "talvora-dependabot-$Pr.patch"
     [IO.File]::WriteAllText($patchToApply, $selectedPatch, [Text.UTF8Encoding]::new($false))
-    Invoke-Checked git @('apply', '--3way', $patchToApply)
     $appliedByScript = $true
-    Remove-Item -LiteralPath $patchToApply
+    Invoke-Checked git @('apply', '--3way', $patchToApply)
 
     if ($SelectOnly) {
         $pathsText = @($selectedPaths | Sort-Object -Unique) -join ', '
@@ -187,14 +187,24 @@ try {
 }
 catch {
     $failure = "FAILED: $($_.Exception.Message)"
-    if ($appliedByScript) {
-        Invoke-Checked git @('restore', '--staged', '--worktree', '--', '.', ':!docs/codex/STATUS.md', ':!.context7/verification.json')
-    }
     Write-Log $failure
     Set-Content -LiteralPath $resultPath -Value $failure -Encoding utf8
+    if ($appliedByScript) {
+        try {
+            Invoke-Checked git @('restore', '--staged', '--worktree', '--', '.', ':!docs/codex/STATUS.md', ':!.context7/verification.json')
+        }
+        catch {
+            $failure += "; restore failed: $($_.Exception.Message)"
+            Write-Log $failure
+            Set-Content -LiteralPath $resultPath -Value $failure -Encoding utf8
+        }
+    }
     exit 1
 }
 finally {
+    if ($patchToApply) {
+        Remove-Item -LiteralPath $patchToApply -ErrorAction SilentlyContinue
+    }
     & git update-ref -d "refs/talvora/dependabot-pr-$Pr" 2>$null
     Pop-Location
     $runLock.Dispose()

@@ -126,7 +126,9 @@ function Invoke-SdkFixtureCase {
         [string] $ProposedSdk,
         [bool] $InstallProposed,
         [bool] $UserDirty,
-        [string] $ExpectedFailure
+        [string] $ExpectedFailure,
+        [string] $MainSdk = '',
+        [bool] $IndexLocked = $false
     )
     $fixture = Join-Path $work ('sdk-' + $Name)
     New-Item -ItemType Directory -Force -Path $fixture | Out-Null
@@ -168,12 +170,22 @@ function Invoke-SdkFixtureCase {
     Write-Text $patchPath (($diff -join [Environment]::NewLine) + [Environment]::NewLine)
     Invoke-GitChecked $fixture @('checkout', '--', '.') | Out-Null
 
+    if ($MainSdk) {
+        $originalGlobal = $originalGlobal.Replace('10.0.404', $MainSdk)
+        Write-Text $globalFile $originalGlobal
+        Invoke-GitChecked $fixture @('add', '--', 'global.json') | Out-Null
+        Invoke-GitChecked $fixture @('-c', 'user.name=Regression', '-c', 'user.email=regression@example.invalid', 'commit', '-m', 'Updated main SDK') | Out-Null
+    }
+
     if ($UserDirty) {
         Write-Text (Join-Path $fixture 'README.md') ('User pending edits' + [Environment]::NewLine)
     }
     $script = Join-Path $fixture 'scripts/Apply-DependabotPr.ps1'
+    $indexLock = Join-Path $fixture '.git/index.lock'
+    if ($IndexLocked) { New-Item -ItemType File -Force -Path $indexLock | Out-Null }
     $output = @(& pwsh -NoProfile -File $script -Pr 1 -PatchFile $patchPath -DotnetRoot $fakeDotnet 2>&1)
     $exit = $LASTEXITCODE
+    if ($IndexLocked) { Remove-Item -LiteralPath $indexLock -Force }
     $resultFile = Join-Path $fixture 'artifacts/dependabot/pr-1.result'
     Assert-Case (Test-Path -LiteralPath $resultFile -PathType Leaf) "$($Name): no result file (exit $exit); $($output -join '; ')"
     $result = [IO.File]::ReadAllText($resultFile).Trim()
@@ -213,6 +225,9 @@ try {
     if (Invoke-SdkFixtureCase 'new-band' '10.0.500' $true $false 'Claude decides feature bands and majors.') { $cases++ }
     if (Invoke-SdkFixtureCase 'not-installed' '10.0.405' $false $false 'SDK 10.0.405 is not installed.') { $cases++ }
     if (Invoke-SdkFixtureCase 'user-edits' '10.0.405' $false $true 'Working tree must be clean') { $cases++ }
+    if (Invoke-SdkFixtureCase 'conflict' '10.0.406' $false $false 'git apply --3way' '10.0.405') { $cases++ }
+    if (Invoke-SdkFixtureCase 'index-locked' '10.0.405' $false $false 'restore failed: ' '' $true) { $cases++ }
+    if (Invoke-SdkFixtureCase 'downgrade' '10.0.403' $true $false 'SDK 10.0.403 is older than the pinned 10.0.404; the updater never moves the pin back.') { $cases++ }
     Write-Output "DEPENDABOT_APPLY_GREEN cases=$cases"
 }
 finally {

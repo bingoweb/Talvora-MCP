@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-22T14:14:57.231Z",
-  "scope": "D126: service Git commands use the signed-in user's global excludes path without changing remote credential routing",
+  "verifiedAtUtc": "2026-11-22T15:40:18.078Z",
+  "scope": "D111: failed Dependabot patch application always records FAILED and attempts bounded rollback",
   "libraries": [],
-  "noLookup": "D126: core.excludesFile default, tilde expansion, and Git config semantics were verified by Claude against the Git vendor documentation; only existing BCL and Talvora APIs are used.",
+  "noLookup": "D111: existing project PowerShell script, with Git apply/restore failures already measured on this machine and documented in the card; no new external CLI API is used.",
   "vendorSources": []
 }

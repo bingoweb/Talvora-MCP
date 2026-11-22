@@ -33,8 +33,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [~] D125 — a failed step tells its real reason and, where there is one, the next step (audit 70; live pending (Claude): stored failed-step outcome and failed-card visual check after installation)
-- [~] D126 — git run by the service honours the signed-in user's global ignore file (live pending: installed smokes and isolated-repo git status; CI pending)
-- [ ] D111 — a failed Dependabot apply never leaves a half-applied tree or a RUNNING result (audit 69)
+- [x] D126 — git run by the service honours the signed-in user's global ignore file (installed metadata/smoke and isolated-repo live check green; GitHub CI 45032327184 green)
+- [~] D111 — a failed Dependabot apply never leaves a half-applied tree or a RUNNING result (audit 69; CI pending after GitHub push; script/test-only card, no deployment)
 - [ ] D113 — ast-grep 0.51.3: the bundled structural-edit engine leaves the vulnerable range (update audit 2026-11-22)
 - [ ] D114 — PowerShell 7.6.10 for machines that get PowerShell from the installer
 - [ ] D115 — a tunnel-only Gitea failure never restarts the healthy Gitea chain
@@ -67,6 +67,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-22 — ChatGPT, D111: the Dependabot patch runner now marks itself as having applied changes immediately before git apply --3way; a failed or conflicted apply attempts the pre-existing scoped restore. It writes FAILED to the log and result before restore; a failed restore updates both with its reason instead of leaving RUNNING. The temporary patch is removed in finally. RED: conflict fixture left UU global.json. GREEN: DependabotApplyRegression 15 cases (conflict rollback, index.lock restore failure, SDK downgrade and existing cases), DotnetSdkPatchRegression 9, ThirdPartyNoticesUpdateRegression 5, ModernizationPolicyRegression; signed-in Changed 14 checks and Full 76 checks, zero failures, "Hepsi geçti." Context7: noLookup (only Talvora PowerShell script and previously measured Git behavior). No deployment: scripts/tests only. CI checked after push.
+  Self-review — cosmetics: no visible UI, layout, or desktop notification changes.
+  Self-review — usability: every failed Dependabot run ends with a decisive FAILED result, including rollback errors.
+  Self-review — Turkish: no new product-facing strings; scripts retain their existing operational output.
+  Self-review — correctness and security: clean-tree and selection refusals are unchanged; only post-apply failures invoke the existing scoped restore, preserving user edits.
 - 2026-11-22 — ChatGPT, D126: added GitUserExcludes to resolve the signed-in user's global excludes path, with the documented default, XDG/config override, 60-second monotonic cache and argument insertion following safe-directory options. Only service-run Git commands receive the extra option; interactive credentialed Git routing and safe.directory are unchanged. RED: CS0103 GitUserExcludes absent in 13 test references. GREEN: d126-user-global-excludes; full Talvora.SourceEdit.Regression GREEN; GitSafeDirectoryRegression GIT_CREDENTIAL_CONTEXT_SOURCE_GREEN and GIT_SAFE_DIRECTORY_SOURCE_GREEN; signed-in Full gate 76 checks, 0 errors, "Hepsi geçti." Context7: noLookup (Claude verified core.excludesFile behavior in vendor documentation; existing Talvora/BCL APIs). Installer, deployment, installed MCP smokes, isolated-repository live acceptance, and GitHub CI follow the clean-HEAD commit.
   Self-review — cosmetics: no visual, layout, tray or copy changes.
   Self-review — usability: service Git sees the same global ignore entries as the signed-in user, avoiding false dirty-tree stops.
