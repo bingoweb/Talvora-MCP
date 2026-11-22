@@ -33,8 +33,17 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [ ] D111 — a failed Dependabot apply never leaves a half-applied tree or a RUNNING result (audit 69)
+- [ ] D113 — ast-grep 0.51.3: the bundled structural-edit engine leaves the vulnerable range (update audit 2026-11-22)
+- [ ] D114 — PowerShell 7.6.10 for machines that get PowerShell from the installer
+- [ ] D115 — a tunnel-only Gitea failure never restarts the healthy Gitea chain
+- [ ] D116 — Talvora runs the Gitea tunnel itself: newest tunnel-client, no VBScript, no hand pin (user decision 2026-11-22)
+- [ ] D117 — Penpot leaves the server, the shared contracts and the tool surface (user decision 2026-11-22)
+- [ ] D118 — Penpot leaves the tray, the Control Center and the managed-MCP registry
+- [ ] D119 — the installer removes what Talvora put on the machine for Penpot
+- [ ] D120 — Remotion 4.0.545 and its current licence page
 - [ ] CTX4 — Context7 evidence only when a lookup was made: the push gate and both gate scripts accept a change that leaves the evidence file untouched (user decision 2026-11-18)
 - [ ] CTX5 — the installed smoke asks Context7 live at most once a day
+- [C] D118v — README and `docs/media` screenshots retaken without Penpot, both themes; DESIGN-SANTRAL and DESIGN-CONTROL-CENTER without Penpot (Claude; needs D118 installed)
 - [x] D112v — a one-step card shows no time ruler; it appears with the second block (22e02a2; installed 22e02a2, both installed smokes GREEN, live one-step and two-step cards checked; CI 44158989904 green)
 
 ## User queue
@@ -52,6 +61,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-22 — Claude, update audit (user: "openai tunel de falan bir güncelleme var mı, talvora nın kullandığı tüm araçları, kütüphaneleri güncelleme için kontrol et … altından gir üstünden çık sonra chatgpt için kartları oluştur"; later "talvora nın github sayfası … gereksiz aşırı detaylardan arınmış, yapay zeka değil insan eliyle yapılmış bir sayfa olmalı" and "artık talvora github sayfası her güncellemede mutlaka elden geçirilmeli"; no audit tag). Checked every pinned or downloaded dependency against its vendor: NuGet, .NET, GitHub Actions, MCP SDK current (two Dependabot updates due); OpenAI tunnel-client 0.0.17–0.0.21 change nothing Talvora calls and Dev/Admin already run 0.0.21; the live server speaks MCP 2025-06-18, 2025-11-25 and 2026-07-28 and every tool carries the three ChatGPT hints. Found: ast-grep 0.45.3 inside a critical advisory (D113), the PowerShell pin one servicing release behind (D114), the Gitea tunnel outage of 11-21/22 and the repair loop it caused (root cause: VBScript removed by a machine-maintenance card; D115, D116), Remotion's retired licence link (D120). User decisions: Penpot leaves Talvora with every trace (D117–D119, Claude's D118v); Talvora owns the Gitea tunnel. Claude shipped the GitHub page rewrite in this commit: README without tool counts, folder table, gate and release-process detail; `ToolManifestDocumentationRegression.ps1` now checks only `docs/ARCHITECTURE.md`; AGENTS.md rules 5 and 10b say so. hakem·sonnet: SHIP, two wording notes applied. Removed `docs/codex/reference/d47` (finished card, no reader). Outside this repository: Gitea 28.4.0, gitea-mcp 1.13.0, Docker's Penpot leftovers and the later VBScript removal go to Makine-Bakimi. GitHub sayfası: yeniden yazıldı.
 
 - 2026-11-18 — Claude, Context7 gate review (user: "projelerimizde context7 kapısı gerçekten gerekli mi, kalite katıyor mu, en verimli şekilde kullanılıyor mu… gerekirse kartlar oluştur"; no audit tag, no code change). Measured over Talvora, Classroom and TahtaPilot since 2026-11-01: 48 evidence entries compared with their diffs gave 11 load-bearing, 29 for APIs the repository already called, 8 defective; no lookup changed an implementation; the external-API defects that escaped were caught by reviews, real runs and CI; here 46 of 134 evidence commits carry only `noLookup`; the ledger holds 220 questions, 154 of them from the installed smoke. The user chose "Hafiflet": evidence only when a lookup was made. New agent cards CTX4 (gate, both scripts, their tests, the AGENTS.md protocol text) and CTX5 (smoke asks live once a day), queued behind D111, which stays as written (it still records `noLookup`). ROADMAP → definition of done item 5 reworded so it holds before and after CTX4. Claude's card rule changed the same day: a lookup is named only for a first use in the repository or a version move.
 

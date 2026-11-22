@@ -1,12 +1,10 @@
 [CmdletBinding()]
 param(
-    [string] $ReadmePath,
     [string] $ArchitecturePath
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repoRoot = Split-Path -Parent $PSScriptRoot
-if (-not $ReadmePath) { $ReadmePath = Join-Path $repoRoot 'README.md' }
 if (-not $ArchitecturePath) { $ArchitecturePath = Join-Path $repoRoot 'docs/ARCHITECTURE.md' }
 
 # Compile the canonical sources even in a docs-only checkout without build outputs or a restored SDK project.
@@ -26,7 +24,6 @@ $dev = [Talvora.Shared.TalvoraMcpToolSurfacePolicy]::GetToolNames(
 $admin = [Talvora.Shared.TalvoraMcpToolSurfacePolicy]::GetToolNames(
     [Talvora.Shared.TalvoraMcpToolSurface]::Administration).Count
 $shared = [Talvora.Shared.TalvoraMcpToolSurfacePolicy]::GetSharedToolNames().Count
-$readme = [IO.File]::ReadAllText($ReadmePath)
 $architecture = [IO.File]::ReadAllText($ArchitecturePath)
 
 function Assert-DocumentCounts {
@@ -48,8 +45,7 @@ function Assert-DocumentCounts {
     }
 }
 
-# Check every count presentation, including badge, prose, diagrams and endpoint table.
-Assert-DocumentCounts 'README summary' $readme '\u015Eu an \*\*(\d+) ara\u00E7\*\* var: geli\u015Ftirme y\u00FCzeyinde \*\*(\d+)\*\*, y\u00F6netim y\u00FCzeyinde \*\*(\d+)\*\*; \*\*(\d+)\*\* ara\u00E7 ikisinde ortak\.' @($full, $dev, $admin, $shared)
+# The architecture document is the one place that states tool counts; README.md, the public page, carries none (user decision 2026-11-22).
 foreach ($entry in @(
     @{ Path = '/mcp'; Count = $full },
     @{ Path = '/mcp/dev'; Count = $dev },
