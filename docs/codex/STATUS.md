@@ -50,6 +50,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D124 — `talvora_delete` gets the `explicitAdmin` option its own refusal promises
 - [ ] CTX4 — Context7 evidence only when a lookup was made: the push gate and both gate scripts accept a change that leaves the evidence file untouched (user decision 2026-11-18)
 - [ ] CTX5 — the installed smoke asks Context7 live at most once a day
+- [ ] D128 — the gate stops on old constructs in changed lines (`modern-tara`; needs Makine-Bakimi G10)
+- [ ] D129 — modern constructs in `src/Talvora/Tools` (needs D127, D128)
+- [ ] D130 — modern constructs in the rest of `src/Talvora`
+- [ ] D131 — modern constructs in `Talvora.Shared`, `Talvora.Tray` and `Talvora.Installer`
+- [ ] D132 — modern constructs in the C# test projects
 - [C] D118v — README and `docs/media` screenshots retaken without Penpot, both themes; DESIGN-SANTRAL and DESIGN-CONTROL-CENTER without Penpot (Claude; needs D118 installed)
 
 ## User queue
@@ -68,6 +73,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-22 — Claude, card batch 2 (modern gate): `modern-tara` is published as its own repository (Gitea `taylan/modern-tara`, private; GitHub `bingoweb/modern-tara`, public, release v0.2.0 with build-provenance attestations; user decision 2026-11-22). New D128: the gate runs it on changed lines (`Modern` check, stops only on high-confidence `modern` findings; CI uses the pinned action; a repository `.editorconfig` gives `dotnet format`, the IDE and the tool the same style options). New D129–D132: folder-by-folder cleanup of 467 high-confidence findings (Tools 142, the rest of the service, Shared/Tray/Installer, the C# tests), each after D127, using the analyzers' own code fixes. All rehearsed until FINE. They wait for Makine-Bakimi G10, which installs the tool on this PC.
 - 2026-11-22 — Claude, card batch (modern bar, user decisions 2026-11-22): D114 rewritten before it was taken: PowerShell 7.7.0 (STS) from the official SHA256-pinned zip, since Microsoft ships no MSI for 7.7; the installer unpacks it, adds the machine `Path` entry and removes both on uninstall through a marker inside the folder. New D127: .NET 11 (SDK 11.0.100 installed by the card as the one sanctioned SYSTEM step, `net11.0-windows`, 17 platform packages 11.0.0, MSBuild packages on the SDK's own line, notices, fixtures and texts). Both rehearsed until FINE. Next: the changed-lines modern gate card after `modern-tara` is published, then folder-by-folder cleanup cards. Claude's own follow-up: `docs/codex/CONTEXT7.md` still names SDK 10.0.404 (agent rule 12 keeps it Claude's); fixed after D127 lands.
 - 2026-11-22 — ChatGPT, D113: upgraded the pinned native ast-grep toolchain from 0.45.3 to 0.51.3 for win-x64, win-arm64, and win-x86 using Claude-verified npm SRI and executable SHA-256 values; updated the structural-engine architecture references and the MIT third-party notice. RED: InstallerAstGrepMetadataRegression rejected the prior win-x64 version. GREEN: InstallerAstGrepMetadataRegression (three platforms, corrupt-package rejection), NativeInstallerSourceRegression, ast-grep pin-only regression; signed-in Full quality gate 76 checks, 0 errors, 'Hepsi geçti.' Context7: noLookup (official package hashes and release/advisory checks in the card, no new external API). Clean-HEAD installer build, Windows deployment, both installed smokes, installed binary version verification and CI follow this commit.
   Self-review — cosmetics: no UI, tray, layout, or visual change; only pinned native toolchain metadata and documentation.

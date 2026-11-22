@@ -188,6 +188,89 @@ Measured from the stored history (`%LOCALAPPDATA%\Talvora\ControlCenter\worklog-
 
 **Acceptance:** `dotnet --list-sdks` shows `11.0.100`; `PlatformPackageLockstepRegression.ps1` and `ModernizationPolicyRegression.ps1` green; signed-in Full gate `Hepsi geçti.` (detached); build the installer, deploy, both installed smokes; `/healthz` `sourceCommit` = the card commit; CI on `windows-latest` (its image lists SDK 11.0.100 since 2026-11-16).
 
+### D128 — the gate stops on old constructs in changed lines
+
+**Why:** the user's rule (2026-11-22): new code uses the newest construct, and every project's gate enforces it on changed lines with the scan tool `modern-tara`, taken from its own repository (`bingoweb/modern-tara`). The gate stops only on high-confidence `modern` findings; `needs-newer` and low-confidence findings are warnings. On this PC the tool is installed into `%LOCALAPPDATA%\Programs\modern-tara` and put on the user `Path` by Makine-Bakimi card G10; CI uses the tool's GitHub Action.
+
+**Needs:** `modern-tara` on the signed-in user's `Path` (`talvora_user_run {"executable":"modern-tara","arguments":["--version"],…}` prints `modern-tara 0.2.0` or newer). Otherwise mark `[?] D128 bekleniyor (Makine-Bakimi G10)` and stop.
+
+**Files:** `scripts/Invoke-QualityGate.ps1`, `tests/QualityGateModernRegression.ps1` (new), `.editorconfig` (new), `.github/workflows/windows-ci.yml`, `docs/codex/STATUS.md`, `.context7/verification.json`.
+
+**Decisions:**
+1. `Invoke-QualityGate.ps1`, right after the `Delivery` check (line ~239) and before the regressions. A new helper `Get-ModernTaraPath` returns `$env:MODERN_TARA` when it is set and the file exists, else `(Get-Command modern-tara -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1).Source`, else `$null`. Then: `$modernTara = Get-ModernTaraPath`; when it is `$null`, `Write-Host 'SKIP Modern (modern-tara bulunamadı; CI eylemi denetler)'` outside any check (so it is visible, and nothing fails); otherwise `if ($canContinue) { $canContinue = Invoke-QualityCheck 'Modern' { Invoke-ExternalChecked $modernTara $modernArgs } }` with `$modernArgs = @('scan','--repo',$repoRoot,'--git-safe','--gate','--json',(Join-Path $script:GateCaptureRoot 'modern.json'))`, plus `'--range',"$Base..HEAD"` when `$Base` is not empty. The JSON goes to that file, so the check's log holds only the tool's summary lines (stderr); exit 1 (an old construct) or 2 (a tool error) fails the check.
+2. `.editorconfig` (new, repository root), exactly these lines, so `dotnet format`, the IDE and `modern-tara` agree: `root = true`, blank, `[*.cs]`, then `csharp_style_namespace_declarations = file_scoped:suggestion`, `csharp_style_prefer_primary_constructors = true:suggestion`, `dotnet_style_prefer_collection_expression = when_types_loosely_match:suggestion`, `csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion`, `csharp_style_prefer_switch_expression = true:suggestion`, `csharp_style_prefer_pattern_matching = true:suggestion`, `csharp_style_prefer_not_pattern = true:suggestion`, `csharp_style_pattern_matching_over_as_with_null_check = true:suggestion`, `csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion`, `csharp_style_prefer_range_operator = true:suggestion`, `csharp_style_prefer_index_operator = true:suggestion`, `csharp_prefer_system_threading_lock = true:suggestion`, `csharp_style_prefer_simple_property_accessors = true:suggestion`, `dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion`, `dotnet_style_collection_initializer = true:suggestion`. Suggestions never fail the build (`TreatWarningsAsErrors` stays as it is).
+3. `.github/workflows/windows-ci.yml`, after the "Validate build and all test suites" step (line ~104), exactly: `- name: Modern constructs on changed lines` / `if: steps.changes.outputs.docs_only != 'true'` / `uses: bingoweb/modern-tara@a90801f64329e41e3d76f7dbd86704313dcd13b8 # v0.2.0` (the action computes the push or pull-request range itself and writes its summary into the job page).
+4. `tests/QualityGateModernRegression.ps1` (source checks, the style of the other `*SourceRegression.ps1`): the gate defines `Get-ModernTaraPath`, honours `MODERN_TARA`, prints the exact SKIP line outside `Invoke-QualityCheck`, registers `'Modern'` after `'Delivery'`, passes `--git-safe`, `--gate` and `--json`, adds `--range` only with `$Base`; `.editorconfig` holds `root = true`, `[*.cs]` and the fifteen options of decision 2; the workflow pins `bingoweb/modern-tara` by a 40-hex SHA with a `# v0.2.0` comment. Exit 0 and one line `QUALITY_GATE_MODERN_GREEN`.
+
+**Don't:** fail the gate when the tool is missing; pass `--all-lines`; treat warnings as failures; change other checks.
+
+**Context7:** gerekmiyor (the tool's own CLI and exit codes are documented in its repository's `docs/USAGE.md`: 0 pass, 1 a high-confidence `modern` finding, 2 a tool error) → `noLookup` until CTX4.
+
+**Acceptance:** `tests/QualityGateModernRegression.ps1` green; signed-in Full gate `Hepsi geçti.` with a `PASS Modern` line (not SKIP); CI green with the new step's summary on the job page.
+
+### D129 — modern constructs in `src/Talvora/Tools`
+
+**Why:** the user's rule (2026-11-22): older code is modernised folder by folder in small cards. `modern-tara` finds 142 high-confidence old constructs in this folder (most: `ToList()`/`ToArray()` chains where a collection expression fits, IDE0305; `new Regex` where `[GeneratedRegex]` fits, SYSLIB1045; hand-written range checks, CA1512).
+
+**Needs:** D127 (.NET 11) and D128 done, and `modern-tara` on the user `Path`; otherwise mark `[?] D129 bekleniyor (D127, D128)` and stop.
+
+**Files:** `src/Talvora/Tools/**/*.cs`, `src/Talvora/Talvora.csproj` (only if a `LibraryImport` fix needs `AllowUnsafeBlocks`), the `tests/*.ps1` assertions that pin the old text of a rewritten line (update only that literal to the new construct, same assertion meaning; name each file in the Log), `docs/codex/STATUS.md`, `.context7/verification.json`.
+
+**Decisions:**
+1. Measure, detached with AGENTS.md's background technique (create `artifacts\D129` first; a whole-folder C# scan takes several minutes): `modern-tara scan --repo . --git-safe --files "src/Talvora/Tools/**/*.cs" --all-lines --gate --json artifacts\D129\before.json`. Before the fixes it ends with exit 1; that is expected.
+2. Apply the analyzers' own code fixes to that folder only, detached: `dotnet format style Talvora.slnx --diagnostics IDE0019 IDE0020 IDE0028 IDE0038 IDE0041 IDE0056 IDE0057 IDE0066 IDE0078 IDE0083 IDE0090 IDE0161 IDE0290 IDE0300 IDE0301 IDE0302 IDE0303 IDE0304 IDE0305 IDE0306 IDE0330 IDE0360 --severity info --include src/Talvora/Tools/ --no-restore` and `dotnet format analyzers Talvora.slnx --diagnostics CA1510 CA1511 CA1512 CA1513 CA1839 CA1854 CA1860 CA1863 CA1870 CA1877 CA2263 SYSLIB1045 SYSLIB1054 --severity info --include src/Talvora/Tools/ --no-restore` (the same lists `modern-tara` checks; `.editorconfig` from D128 gives both the same style options). Rescan; fix what remains by hand with the construct each finding names. Behaviour, messages, JSON shapes and tool names stay identical.
+3. These findings stay, each listed with file:line and reason under "Findings for Claude": a fix that would change behaviour (a lock object also used with `Monitor.*`); a `[DllImport]` whose `SYSLIB1054` code fix does not apply (converting it by hand is a marshalling decision); and any file that a test compiles alone with `Add-Type` (grep `Add-Type` in `tests/`): `Add-Type` runs no source generator, so `[GeneratedRegex]` and `[LibraryImport]` would break it.
+
+**Don't:** touch files outside the Files list; reformat code that has no finding; fix `low` or `needs-newer` findings.
+
+**Context7:** gerekmiyor (the fixes are the analyzers' own code fixes on the installed SDK) → `noLookup` until CTX4.
+
+**Acceptance:** the step 1 command exits 0 (`modern-tara: gate passed`), or exit 1 where every remaining high-confidence finding is one of decision 3's listed cases; signed-in Full gate `Hepsi geçti.`; build the installer, deploy, both installed smokes; CI.
+
+### D130 — modern constructs in the rest of `src/Talvora`
+
+**Why:** as D129, for the service outside `Tools` (about 120 high-confidence findings, most in `SourceEditing`, `WorklogFollower.cs`, `TalvoraDesktopProgressFacts.cs`). `PenpotAiPlugin` is left out: D117 removes it.
+
+**Needs:** D129 done; otherwise mark `[?] D130 bekleniyor (D129)` and stop.
+
+**Read:** card D129 in this file (its decisions, Don't, Context7 and Acceptance apply here with the changes below).
+
+**Files:** `src/Talvora/**/*.cs` except `src/Talvora/Tools/**` and `src/Talvora/PenpotAiPlugin/**`, `src/Talvora/Talvora.csproj` (only for `AllowUnsafeBlocks`), `docs/codex/STATUS.md`, `.context7/verification.json`.
+
+**Decisions:** D129's three decisions with `--files "src/Talvora/**/*.cs"` (after D129 `Tools` has no findings left, and `PenpotAiPlugin` holds no `.cs`), `--include src/Talvora/` and `--exclude src/Talvora/Tools/` for both `dotnet format` calls; artifacts under `artifacts\D130\`. The scan also covers `Tools`: a remaining finding there that D129's Log lists as a decision-3 case counts as allowed for this card's acceptance too.
+
+**Don't, Context7, Acceptance:** as D129 (the gate result counts only the files of this card).
+
+### D131 — modern constructs in `Talvora.Shared`, `Talvora.Tray` and `Talvora.Installer`
+
+**Why:** as D129, for the shared library, the tray and the installer (about 100 high-confidence findings, among them `[DllImport]` declarations where `[LibraryImport]` fits, SYSLIB1054).
+
+**Needs:** D130 done; otherwise mark `[?] D131 bekleniyor (D130)` and stop.
+
+**Read:** card D129 in this file (its decisions, Don't, Context7 and Acceptance apply here with the changes below).
+
+**Files:** `src/Talvora.Shared/**/*.cs`, `src/Talvora.Tray/**/*.cs`, `src/Talvora.Installer/**/*.cs`, their three csproj files (only for `AllowUnsafeBlocks`), `docs/codex/STATUS.md`, `.context7/verification.json`.
+
+**Decisions:** D129's three decisions with `--files "src/Talvora.Shared/**/*.cs" "src/Talvora.Tray/**/*.cs" "src/Talvora.Installer/**/*.cs"`; `dotnet format` runs once per project folder (`--include src/Talvora.Shared/`, then `src/Talvora.Tray/`, then `src/Talvora.Installer/`; the installer is outside `Talvora.slnx`, so use `src/Talvora.Installer/Talvora.Installer.csproj` as the workspace there; `Talvora.slnx` for the other two); artifacts under `artifacts\D131\`. Decision 3's `Add-Type` rule matters most here: `NativeInstallerSourceRegression.ps1` compiles installer sources alone (around its lines 1031 and 1180) and reads `InstallerEngine.CleanupState.cs` text by anchors, and `ToolManifestDocumentationRegression.ps1` compiles two `Talvora.Shared` files: those files keep `[DllImport]` and `new Regex`.
+
+**Don't, Context7:** as D129.
+
+**Acceptance:** as D129, plus the installer UI opened once from the fresh build with no visible change (`[~] visual check pending (Claude)`).
+
+### D132 — modern constructs in the C# test projects
+
+**Why:** as D129, for `tests/**/*.cs` (about 70 findings). The repository's only JavaScript is the Penpot plugin, which D117 removes.
+
+**Needs:** D131 done; otherwise mark `[?] D132 bekleniyor (D131)` and stop.
+
+**Read:** card D129 in this file (its decisions, Don't, Context7 and Acceptance apply here with the changes below).
+
+**Files:** `tests/**/*.cs`, the test csproj files (only for `AllowUnsafeBlocks`), `docs/codex/STATUS.md`, `.context7/verification.json`.
+
+**Decisions:** D129's three decisions with `--files "tests/**/*.cs"` and `dotnet format Talvora.slnx … --include tests/`. Test names, fixture strings and asserted texts stay exactly as they are.
+
+**Don't, Context7, Acceptance:** as D129.
+
 ### D115 — a tunnel-only Gitea failure never restarts the healthy Gitea chain
 
 **Why:** from 2026-11-21 22:59 to 11-22 02:20 the "Gitea MCP Tunnel" task could not start anything (its `wscript.exe` launcher lost VBScript). `GiteaTrayClient.RepairAsync` (lines 198–270) ran its targeted `repair-tunnel`, waited 45 s and then escalated unconditionally to the full chain restart (lines 248–262): 62 attempts in 3 h 18 min stopped and started the healthy `gitea` and `caddy` services and the "Gitea MCP Server" task, which cannot fix a tunnel. The decision must look at the layers first.
