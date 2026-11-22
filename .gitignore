@@ -18,3 +18,6 @@ src/Talvora.Installer/Payload.zip
 *.key
 secrets/
 **/secrets/
+
+# Claude Code local permissions (the service-run git does not see the user global ignore)
+.claude/settings.local.json
