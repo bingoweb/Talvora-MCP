@@ -36,7 +36,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D126 — git run by the service honours the signed-in user's global ignore file (installed metadata/smoke and isolated-repo live check green; GitHub CI 45032327184 green)
 - [x] D111 — a failed Dependabot apply never leaves a half-applied tree or a RUNNING result (audit 69; GitHub CI 45040101059 green; script/test-only card, no deployment)
 - [~] D113 — ast-grep 0.51.3: the bundled structural-edit engine leaves the vulnerable range (update audit 2026-11-22; CI pending after GitHub push; installer/live checks follow the commit)
-- [ ] D114 — PowerShell 7.6.10 for machines that get PowerShell from the installer
+- [ ] D114 — PowerShell 7.7.0 from the official zip for machines that get PowerShell from the installer (user decision 2026-11-22)
+- [ ] D127 — .NET 11: SDK 11.0.100, `net11.0-windows`, C# 15 (user decision 2026-11-22)
 - [ ] D115 — a tunnel-only Gitea failure never restarts the healthy Gitea chain
 - [ ] D116 — Talvora runs the Gitea tunnel itself: newest tunnel-client, no VBScript, no hand pin (user decision 2026-11-22)
 - [ ] D117 — Penpot leaves the server, the shared contracts and the tool surface (user decision 2026-11-22)
@@ -67,6 +68,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-22 — Claude, card batch (modern bar, user decisions 2026-11-22): D114 rewritten before it was taken: PowerShell 7.7.0 (STS) from the official SHA256-pinned zip, since Microsoft ships no MSI for 7.7; the installer unpacks it, adds the machine `Path` entry and removes both on uninstall through a marker inside the folder. New D127: .NET 11 (SDK 11.0.100 installed by the card as the one sanctioned SYSTEM step, `net11.0-windows`, 17 platform packages 11.0.0, MSBuild packages on the SDK's own line, notices, fixtures and texts). Both rehearsed until FINE. Next: the changed-lines modern gate card after `modern-tara` is published, then folder-by-folder cleanup cards. Claude's own follow-up: `docs/codex/CONTEXT7.md` still names SDK 10.0.404 (agent rule 12 keeps it Claude's); fixed after D127 lands.
 - 2026-11-22 — ChatGPT, D113: upgraded the pinned native ast-grep toolchain from 0.45.3 to 0.51.3 for win-x64, win-arm64, and win-x86 using Claude-verified npm SRI and executable SHA-256 values; updated the structural-engine architecture references and the MIT third-party notice. RED: InstallerAstGrepMetadataRegression rejected the prior win-x64 version. GREEN: InstallerAstGrepMetadataRegression (three platforms, corrupt-package rejection), NativeInstallerSourceRegression, ast-grep pin-only regression; signed-in Full quality gate 76 checks, 0 errors, 'Hepsi geçti.' Context7: noLookup (official package hashes and release/advisory checks in the card, no new external API). Clean-HEAD installer build, Windows deployment, both installed smokes, installed binary version verification and CI follow this commit.
   Self-review — cosmetics: no UI, tray, layout, or visual change; only pinned native toolchain metadata and documentation.
   Self-review — usability: structural edits continue through the existing source-edit engine, with the updated bundled executable.
