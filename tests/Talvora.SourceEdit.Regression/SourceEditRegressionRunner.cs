@@ -22,6 +22,7 @@ internal static partial class SourceEditRegressionRunner
             ("d87-secret-guard", D87ProtectedPathsAsync),
             ("d89-proportionate-guard", D89ProportionateGuardAsync),
             ("d90-agent-brief", D90AgentBriefAsync),
+            ("d126-user-global-excludes", D126UserGlobalExcludesAsync),
             ("receipt-real-line-counts", RunReceiptCountsAsync),
             ("ownership-preservation", RunOwnershipContractsAsync),
             ("git-work-contract", RunWorkContractAsync),

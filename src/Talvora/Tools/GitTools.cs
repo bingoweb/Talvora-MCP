@@ -784,7 +784,10 @@ public static class GitTools
             result = await ProcessRunner.RunAsync(
                 git,
                 workingDirectory,
-                requestedArguments,
+                GitUserExcludes.AddArgument(
+                    requestedArguments,
+                    await GitUserExcludes.ResolveForSignedInUserAsync(
+                        git, cancellationToken).ConfigureAwait(false)),
                 environment,
                 timeoutSeconds,
                 cancellationToken).ConfigureAwait(false);
@@ -1006,7 +1009,7 @@ public static class GitTools
                 StringComparison.Ordinal);
     }
 
-    private static Task<ProcessExecutionResult> RunGitServiceAsync(
+    private static async Task<ProcessExecutionResult> RunGitServiceAsync(
         string git,
         string workingDirectory,
         IReadOnlyList<string> arguments,
@@ -1016,13 +1019,16 @@ public static class GitTools
             workingDirectory,
             arguments);
 
-        return ProcessRunner.RunAsync(
+        return await ProcessRunner.RunAsync(
             git,
             workingDirectory,
-            requestedArguments,
+            GitUserExcludes.AddArgument(
+                requestedArguments,
+                await GitUserExcludes.ResolveForSignedInUserAsync(
+                    git, cancellationToken).ConfigureAwait(false)),
             environment: null,
             timeoutSeconds: 30,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
     }
 
     private static string[] AddSafeDirectoryArgument(

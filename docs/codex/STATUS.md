@@ -33,7 +33,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 > **Only open work lives in these documents** (user decision 2026-11-07). At every audit Claude removes finished queue lines, Log entries older than the previous audit, answered findings, finished cards and decided proposals that no open card names. Git keeps all of it: `git show audit/<tag>^:<path>` is a file as it was before that audit's cleanup (first cleanup: `audit/2026-11-07-40`). The agent may tick a line `[x]` and leave it there.
 
 - [~] D125 — a failed step tells its real reason and, where there is one, the next step (audit 70; live pending (Claude): stored failed-step outcome and failed-card visual check after installation)
-- [ ] D126 — git run by the service honours the signed-in user's global ignore file (after ChatGPT's stop before D125)
+- [~] D126 — git run by the service honours the signed-in user's global ignore file (live pending: installed smokes and isolated-repo git status; CI pending)
 - [ ] D111 — a failed Dependabot apply never leaves a half-applied tree or a RUNNING result (audit 69)
 - [ ] D113 — ast-grep 0.51.3: the bundled structural-edit engine leaves the vulnerable range (update audit 2026-11-22)
 - [ ] D114 — PowerShell 7.6.10 for machines that get PowerShell from the installer
@@ -67,6 +67,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-22 — ChatGPT, D126: added GitUserExcludes to resolve the signed-in user's global excludes path, with the documented default, XDG/config override, 60-second monotonic cache and argument insertion following safe-directory options. Only service-run Git commands receive the extra option; interactive credentialed Git routing and safe.directory are unchanged. RED: CS0103 GitUserExcludes absent in 13 test references. GREEN: d126-user-global-excludes; full Talvora.SourceEdit.Regression GREEN; GitSafeDirectoryRegression GIT_CREDENTIAL_CONTEXT_SOURCE_GREEN and GIT_SAFE_DIRECTORY_SOURCE_GREEN; signed-in Full gate 76 checks, 0 errors, "Hepsi geçti." Context7: noLookup (Claude verified core.excludesFile behavior in vendor documentation; existing Talvora/BCL APIs). Installer, deployment, installed MCP smokes, isolated-repository live acceptance, and GitHub CI follow the clean-HEAD commit.
+  Self-review — cosmetics: no visual, layout, tray or copy changes.
+  Self-review — usability: service Git sees the same global ignore entries as the signed-in user, avoiding false dirty-tree stops.
+  Self-review — Turkish: no new user-visible wording; existing messages are unchanged.
+  Self-review — correctness and security: git config is queried only for core.excludesFile; no user HOME environment override, no credential-routing changes, no repository or secret content copied.
 - 2026-11-22 — ChatGPT, D125: failed returned results and thrown exceptions now produce typed WorklogOutcome values with the exact reason and next action from DESIGN-WORKLOG §5.3. The notifier persists the outcome across a failed session's later frames; a new session resets it. The modern card structure uses one exception switch, shared error-code handling, readonly fixed outcomes, case-insensitive exitCode from StructuredResultFailure and invariant formatting. RED: run_process exit 1 was a generic failure with no kind; GREEN: D125_FAILURE_OUTCOMES_GREEN and DESKTOP_PROGRESS_BEHAVIOR_GREEN (19 table cases), signed-in Full gate twice after the card revision, last result 76 checks, 0 errors, 'Hepsi geçti.' Context7: noLookup (existing internal types and BCL exceptions). Delivery: clean-HEAD installer build, deployment and installed smokes follow this one commit; stored real-failure history and card visual review remain Claude's pending checks; CI checked after push.
   Self-review — cosmetics: no layout, tray, colours, animations or labels added; the existing failure and next-step fields receive structured content.
   Self-review — usability: failed steps now show the concrete plain-language reason and the available next action, retained when the failed session is republished.
