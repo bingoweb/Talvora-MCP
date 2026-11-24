@@ -38,6 +38,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D113 — ast-grep 0.51.3: the bundled structural-edit engine leaves the vulnerable range (installed e3fcac6; version 0.51.3, both installed smokes and CI 45054245830 green)
 - [x] D114 — PowerShell 7.7.0 official zip (installed 098f3ba, both installed smokes green, GitHub CI 45071840580 green)
 - [ ] D127 — .NET 11: SDK 11.0.100, `net11.0-windows`, C# 15 (P-57 decided: the nine shared-framework packages leave the project files)
+- [ ] D133 — the worklog follows the shared CI wait tool `ci-bekle` (user decision 2026-11-24)
+- [ ] D134 — `Get-CiStatus.ps1` and its worklog path retire (needs D133)
 - [ ] D115 — a tunnel-only Gitea failure never restarts the healthy Gitea chain
 - [ ] D116 — Talvora runs the Gitea tunnel itself: newest tunnel-client, no VBScript, no hand pin (user decision 2026-11-22)
 - [ ] D117 — Penpot leaves the server, the shared contracts and the tool surface (user decision 2026-11-22)
@@ -72,6 +74,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-25 — Claude, D133 and D134 queued after D127 (user decision 2026-11-24: the agent waits for GitHub CI of every push until it finishes and reports the result itself; one shared Rust tool `ci-bekle` replaces Get-CiStatus, AGENTS.md 10b switched in d5f1c1d). D133 teaches the worklog the detached ci-bekle start (recognition by the executable name, `--log` path relative to `--repo-dir`, result from the log's last `EXIT:` line, the existing CI titles, no "İzleme süresi doldu" overwrite); D134 removes `scripts/Get-CiStatus.ps1`, `tests/CiDocsOnlyRegression.ps1` and the old follow path with its tests. Green and red log samples were measured with the installed ci-bekle on 2026-11-24. prova: two rounds, 9 stops then 1 (a line range), fixed; FINE.
 
 - 2026-11-24 — Claude, P-57 decided, D127 revised and queued again: .NET 11 puts nine `Microsoft.Extensions` abstraction packages into the shared framework, so the four direct references (Tray, Notification.Regression) and the nine central versions go, the platform family shrinks to 8 (guards `-lt 8` in the two update scripts and the lockstep test), and the nine notice and Dependabot lines are deleted; NU1510 is never silenced. The SDK step is skipped because 11.0.100 is already installed. prova: FINE. GitHub sayfası: değişiklik gerekmedi.
 
