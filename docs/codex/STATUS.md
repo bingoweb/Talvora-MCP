@@ -50,7 +50,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [ ] D124 — `talvora_delete` gets the `explicitAdmin` option its own refusal promises
 - [ ] CTX4 — Context7 evidence only when a lookup was made: the push gate and both gate scripts accept a change that leaves the evidence file untouched (user decision 2026-11-18)
 - [ ] CTX5 — the installed smoke asks Context7 live at most once a day
-- [ ] D128 — the gate stops on old constructs in changed lines (`modern-tara`; needs Makine-Bakimi G10)
+- [ ] D128 — the gate stops on old constructs in changed lines (`modern-tara` 0.6.0: the gate's Modern check and the CI action)
 - [ ] D129 — modern constructs in `src/Talvora/Tools` (needs D127, D128)
 - [ ] D130 — modern constructs in the rest of `src/Talvora`
 - [ ] D131 — modern constructs in `Talvora.Shared`, `Talvora.Tray` and `Talvora.Installer`
@@ -72,6 +72,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-24 — Claude, D128 rewritten for `modern-tara` 0.6.0 (installed on this PC; Makine-Bakimi G10 no longer needed): the gate's `Modern` check scans the work tree against HEAD as one command line, fails on exit 1 and on exit 2 (a touched stack skipped or unscanned) and on a missing tool, skips only on GitHub Actions; CI gets the action pinned by SHA with `version: v0.6.0`, and Dependabot leaves that pin to Claude. Measured: 4 changed C# files scan in 49 s, C# and PowerShell both scan here, so no `--allow-skipped`. D129's rule lists follow 0.6.0; D130–D132 inherit them. AGENTS.md gains MODERN CODE (scan before each commit), CONTINUE PROTOCOL step 7 starts with that scan. Queue place unchanged (user decision 2026-11-23). prova: FINE. GitHub sayfası: değişiklik gerekmedi.
 
 - 2026-11-23 — ChatGPT, P-57 (D127 blocked): The official .NET SDK 11.0.100 installer SHA-512 matched the card, its SYSTEM install exited 0, and `dotnet --list-sdks` showed both 10.0.404 and 11.0.100. RED: ModernizationPolicyRegression rejected the original .NET 10 pin. The 17-package platform update failed at solution restore with four NU1510 warnings-as-errors for direct PackageReference entries in Talvora.Tray.csproj and Talvora.Notification.Regression.csproj, contrary to D127's stated precondition. D127 partial repository changes and lock updates were reverted using talvora_apply_patch; machine SDK 11 remains installed. Context7: noLookup (D127 vendor evidence in card). No D127 full gate, deployment or CI; P-57 asks Claude to revise the card before the migration can continue.
   Self-review — cosmetics: no product UI or desktop changes.
