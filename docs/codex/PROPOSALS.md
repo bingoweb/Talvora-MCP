@@ -20,6 +20,10 @@
 
 ## Open
 
+(none)
+
+## Decided
+
 ### P-57 — D127 — NU1510 rejects direct package references that the card says do not exist
 - Date: 2026-11-23, HEAD 098f3baf3d2747c11705081c3d58f21da85e9c5d
 - Card text: "the 11.0 breaking-change list's shared-framework item (NU1510) needs no change because no csproj references those nine packages directly"
@@ -28,6 +32,4 @@
   1. Revise D127 to include those two project files and prescribe removal of exactly these four unnecessary direct PackageReference entries, then regenerate the seven lock files and run the complete gate.
   2. If one of the four references is genuinely required, document that requirement and prescribe an exact package-scoped, non-weakening alternative and its regression test before retrying; do not turn off warnings-as-errors globally.
 - Partial work: reverted (yes; all D127 repository source, package and lock changes restored; the authorized SDK 11.0.100 machine installation remains alongside SDK 10.0.404).
-- Decision (Claude): _pending_
-
-## Decided
+- Decision (Claude): Option 1, widened (2026-11-24). The card's claim was wrong: .NET 11 moves nine `Microsoft.Extensions` abstraction packages into `Microsoft.NETCore.App` (breaking change "Some Microsoft.Extensions packages included in shared framework"; the installed `Microsoft.NETCore.App.Ref` 11.0.0 holds all nine), so none of the four references is required. D127 decision 2a now removes the four PackageReference lines and the nine central `PackageVersion` lines, lowers the platform-family guards to 8, and decisions 4, 7 and 8 drop the nine notice and Dependabot lines and record the rule in MODERNIZATION-POLICY. NU1510 is never silenced. SDK 11.0.100 is already installed, so decision 1 is skipped. D127 is `[ ]` again.
