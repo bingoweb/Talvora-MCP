@@ -37,7 +37,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D111 — a failed Dependabot apply never leaves a half-applied tree or a RUNNING result (audit 69; GitHub CI 45040101059 green; script/test-only card, no deployment)
 - [x] D113 — ast-grep 0.51.3: the bundled structural-edit engine leaves the vulnerable range (installed e3fcac6; version 0.51.3, both installed smokes and CI 45054245830 green)
 - [x] D114 — PowerShell 7.7.0 official zip (installed 098f3ba, both installed smokes green, GitHub CI 45071840580 green)
-- [ ] D127 — .NET 11: SDK 11.0.100, `net11.0-windows`, C# 15 (P-57 decided: the nine shared-framework packages leave the project files)
+- [?] D127 — .NET 11: SDK 11.0.100, `net11.0-windows`, C# 15 (waiting for Claude: P-58; PowerShell 7.6.10 hosts .NET 10 and four Full gate checks fail)
 - [ ] D133 — the worklog follows the shared CI wait tool `ci-bekle` (user decision 2026-11-24)
 - [ ] D134 — `Get-CiStatus.ps1` and its worklog path retire (needs D133)
 - [ ] D115 — a tunnel-only Gitea failure never restarts the healthy Gitea chain
@@ -69,11 +69,17 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Findings for Claude
 
-(none)
+- `docs/SOURCE-EDIT-ENGINE-ARCHITECTURE.md:451` — D127's exact documentation text retains Roslyn Workspaces 5.9.0, while `Directory.Packages.props:13-14` and the runtime inventory pin 5.12.0; this was already stale before D127. Clarify the exact text when revising the card.
 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-25 — ChatGPT, P-58 (D127 blocked): SDK 11.0.100 already installed (P-57). RED: ModernizationPolicyRegression rejected the .NET 10 pin. GREEN: seven .NET 11 lock graphs, eight platform packages 11.0.0, MSBuild 18.12.2, Release build 0 warnings/errors, four prescribed regressions, pruned-package grep empty, modern-tara exit 0. Signed-in Full gate: 68 checks, 4 failures (InteractiveRunnerParentAccessRegression, ProcessRunnerRegression, R2StdinRegression, StorageMaintenanceBehaviorRegression); PowerShell 7.6.10 hosts .NET 10.0.15 and cannot load System.Runtime 11.0.0.0. Context7: noLookup (card's vendor evidence). All tracked D127 changes reverted, both SDKs retained; no D127 deployment or CI. Gitea #9 comment 294.
+  Self-review — cosmetics: no product UI or layout changes.
+  Self-review — usability: the installed .NET 10 service was not replaced with an unverified .NET 11 build.
+  Self-review — Turkish: no new product-facing text; failure evidence retained.
+  Self-review — correctness and security: no warning or test was suppressed, no PowerShell installation changed; the previous lock graph and SDK pin were restored.
 
 - 2026-11-25 — Claude, D133 and D134 queued after D127 (user decision 2026-11-24: the agent waits for GitHub CI of every push until it finishes and reports the result itself; one shared Rust tool `ci-bekle` replaces Get-CiStatus, AGENTS.md 10b switched in d5f1c1d). D133 teaches the worklog the detached ci-bekle start (recognition by the executable name, `--log` path relative to `--repo-dir`, result from the log's last `EXIT:` line, the existing CI titles, no "İzleme süresi doldu" overwrite); D134 removes `scripts/Get-CiStatus.ps1`, `tests/CiDocsOnlyRegression.ps1` and the old follow path with its tests. Green and red log samples were measured with the installed ci-bekle on 2026-11-24. prova: two rounds, 9 stops then 1 (a line range), fixed; FINE.
 

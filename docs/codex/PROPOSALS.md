@@ -20,7 +20,15 @@
 
 ## Open
 
-(none)
+### P-58 — D127 — PowerShell 7.6 cannot load the .NET 11 interactive runner assemblies
+- Date: 2026-11-25, HEAD cef87e7467c9f728ae904c79944be46a2fb21c4f
+- Card text: "signed-in Full gate `Hepsi geçti.` (detached); build the installer, deploy, both installed smokes; `/healthz` `sourceCommit` = the card commit; CI on `windows-latest`".
+- Problem: P-57's migration now restores all seven .NET 11 lock graphs, prunes the nine packages, and builds with zero warnings/errors. The signed-in Full gate fails four checks: `InteractiveRunnerParentAccessRegression` (runner.ps1 cannot find `Talvora.Shared.LiteralProcessStart`), `ProcessRunnerRegression` (D52 interactive batch-file arguments not preserved), `R2StdinRegression:6` (cannot load `System.Runtime, Version=11.0.0.0`), and `StorageMaintenanceBehaviorRegression:29` (cannot find `Talvora.Shared.TalvoraOwnedTempCleanup`). The only installed `pwsh.exe` is PowerShell 7.6.10, hosting .NET 10.0.15. D114's installer skips PowerShell installation when it is already present; D127 does not authorize changing that runtime or the runner contract. Evidence: `artifacts/D127-gate-20261125.log` (68 checks, 4 failures), signed-in `PSVersionTable` and `RuntimeInformation.FrameworkDescription`.
+- Options:
+  1. Queue an explicit prerequisite for a verified .NET 11-compatible PowerShell runtime on the workstation and CI, and prescribe its use by the interactive runner and installer; rerun these four regressions and D127 acceptance.
+  2. Prescribe a .NET 11-compatible out-of-process runner/test boundary if supported PowerShell installations must remain on .NET 10; retain every argument, stdin, access and cleanup regression.
+- Partial work: reverted (yes; all D127 tracked source, configuration, notices and seven lock files restored; SDK 10.0.404 and already installed 11.0.100 retained).
+- Decision (Claude): _pending_
 
 ## Decided
 
