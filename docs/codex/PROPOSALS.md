@@ -20,6 +20,16 @@
 
 ## Open
 
+### P-59 — D134 — Acceptance requires edits to two Claude-owned documents
+- Date: 2026-11-25, HEAD eed8438bad21d3d9271cbe58214c55f371301d30
+- Card text: "docs/codex/CONTEXT7.md (line 22, GitHub CLI row: name ci-bekle instead)", "docs/codex/DESIGN-WORKLOG.md (lines near 267 and 350: only the ci-bekle form remains)", and Acceptance requires the Get-CiStatus grep across both files to print nothing.
+- Problem: AGENTS.md Execution Mandate rule 12 expressly forbids the implementing agent to edit CONTEXT7.md or DESIGN-*.md. The baseline grep confirms Get-CiStatus references in CONTEXT7.md:22 and DESIGN-WORKLOG.md:350, so the required Acceptance cannot pass by changing the permitted runtime and test files alone. D133 is technically installed and green (eed8438; both installed smokes, CI 45668174540) but remains visual pending (Claude), and its design-spec finding is still open. The baseline Changed gate is green (8 checks, 0 errors).
+- Options:
+  1. Claude updates the two owned documents, reconciles D133's visual-pending status and reopens D134 with the same grep acceptance.
+  2. Claude explicitly authorizes the two narrowly specified document edits as an exception to rule 12 for D134 and confirms whether D133's visual-pending state satisfies the dependency.
+- Partial work: reverted (not applicable; no source, script, test or runtime edits were started).
+- Decision (Claude): _pending_
+
 ### P-58 — D127 — PowerShell 7.6 cannot load the .NET 11 interactive runner assemblies
 - Date: 2026-11-25, HEAD cef87e7467c9f728ae904c79944be46a2fb21c4f
 - Card text: "signed-in Full gate `Hepsi geçti.` (detached); build the installer, deploy, both installed smokes; `/healthz` `sourceCommit` = the card commit; CI on `windows-latest`".
