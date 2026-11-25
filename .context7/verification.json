@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-25T17:34:36.5174400Z",
-  "scope": "D133: follow ci-bekle logs in the desktop worklog",
+  "verifiedAtUtc": "2026-11-25T18:12:36.9672126Z",
+  "scope": "D115: Gitea tunnel-only repair escalation",
   "libraries": [],
-  "noLookup": "D133: no new library or platform API; Claude measured the log format with the installed ci-bekle on 2026-11-24.",
+  "noLookup": "D115: Talvora's own repair decision; no new API.",
   "vendorSources": []
 }

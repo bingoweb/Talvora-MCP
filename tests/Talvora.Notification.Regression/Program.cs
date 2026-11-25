@@ -198,6 +198,7 @@ internal static partial class Program
         ManagedMcpAggregateHealthPolicy.AssertContract();
         AssertUnifiedVersionContract();
         AssertUpstreamRecoveryContract();
+        AssertD115GiteaRepairEscalationRule();
         await AssertWorkVisibilityFilteringAsync();
         AssertN1ManifestCopy();
         await AssertN1WorklogCopyAsync();

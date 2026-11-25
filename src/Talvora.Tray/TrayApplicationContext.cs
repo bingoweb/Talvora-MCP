@@ -854,6 +854,34 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
                     "Kullanıcı tarafından başlatılmış yaşam döngüsü işlemi tamamlanıyor."));
                 return;
             }
+            catch (GiteaTunnelOnlyFailureException ex)
+            {
+                var failure = _giteaRecoveryState.RegisterFailure(nowUtc);
+
+                TrayLog.Write(
+                    $"Automatic Gitea recovery failed. Attempt={failure.ConsecutiveFailures}; RetryIn={failure.RetryDelay.TotalSeconds:F0}s",
+                    ex);
+                ControlCenterEventStore.Record(
+                    ControlCenterEventSeverity.Warning,
+                    "recovery",
+                    "Gitea otomatik kurtarma denemesi başarısız",
+                    $"Deneme {failure.ConsecutiveFailures}; {failure.RetryDelay.TotalSeconds:F0} saniye sonra yeniden denenecek.",
+                    "gitea",
+                    "recovery:gitea:tunnel-only");
+
+                SetGiteaStatus(new GiteaStatus(
+                    status.State == GiteaConnectionState.Offline
+                        ? GiteaConnectionState.Offline
+                        : GiteaConnectionState.Degraded,
+                    "Gitea MCP otomatik kurtarma bekliyor",
+                    $"Otomatik yeniden deneme {failure.RetryDelay.TotalSeconds:F0} saniye sonra."));
+
+                HandleRecoveryFailure(
+                    _giteaRecoveryState,
+                    "Gitea",
+                    failure,
+                    ex.Message);
+            }
             catch (Exception ex)
             {
                 var failure = _giteaRecoveryState.RegisterFailure(nowUtc);

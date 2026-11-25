@@ -24,6 +24,21 @@ internal sealed record GiteaRepairOutcome(
     string Detail,
     bool Escalated);
 
+internal readonly record struct GiteaChainProbe(
+    bool Backend, bool Proxy, bool McpServer, bool Protocol, bool Tunnel);
+
+internal enum GiteaRepairEscalation
+{
+    NotNeeded,
+    TunnelOnlyFailure,
+    FullChainRestart,
+}
+
+internal sealed class GiteaTunnelOnlyFailureException(string message, Exception? inner)
+    : InvalidOperationException(message, inner)
+{
+}
+
 internal static class GiteaTrayClient
 {
     private const string BackendHealthUrl = "http://127.0.0.1:3001/api/healthz";
@@ -245,6 +260,28 @@ internal static class GiteaTrayClient
             targetedFailure = ex;
         }
 
+        var probe = await ProbeChainAsync(cancellationToken);
+        var escalation = DecideRepairEscalation(probe);
+        if (escalation == GiteaRepairEscalation.NotNeeded)
+        {
+            var status = await GetStatusAsync(cancellationToken);
+            return new GiteaRepairOutcome(
+                status,
+                diagnosis.Strategy,
+                $"{diagnosis.Strategy} uygulandı; Gitea zinciri bütün hazırlık denetimlerini geçti.",
+                Escalated: false);
+        }
+
+        if (escalation == GiteaRepairEscalation.TunnelOnlyFailure)
+        {
+            TrayLog.Write(
+                $"Targeted Gitea repair did not restore readiness. Strategy={diagnosis.Strategy}; tunnel-only failure, chain restart skipped.",
+                targetedFailure);
+            throw new GiteaTunnelOnlyFailureException(
+                "Gitea çalışıyor, ancak ChatGPT'ye açılan güvenli tüneli kurulamadı. Gitea yeniden başlatılmadı; tünel birkaç dakika sonra yeniden denenecek.",
+                targetedFailure);
+        }
+
         TrayLog.Write(
             $"Targeted Gitea repair did not restore readiness. Strategy={diagnosis.Strategy}; escalating to full chain restart.",
             targetedFailure);
@@ -322,6 +359,27 @@ internal static class GiteaTrayClient
         }
 
         return (null, "Doğrulama");
+    }
+
+    internal static GiteaRepairEscalation DecideRepairEscalation(GiteaChainProbe probe) =>
+        probe switch
+        {
+            { Backend: true, Proxy: true, McpServer: true, Protocol: true, Tunnel: true } =>
+                GiteaRepairEscalation.NotNeeded,
+            { Backend: true, Proxy: true, McpServer: true, Protocol: true, Tunnel: false } =>
+                GiteaRepairEscalation.TunnelOnlyFailure,
+            _ => GiteaRepairEscalation.FullChainRestart,
+        };
+
+    private static async Task<GiteaChainProbe> ProbeChainAsync(CancellationToken cancellationToken)
+    {
+        var backend = await ProbeAsync(BackendHealthUrl, "Gitea", cancellationToken);
+        var proxy = await ProbeAsync(ProxyHealthUrl, "Caddy", cancellationToken);
+        var mcp = await ProbeAsync(McpHealthUrl, "Gitea MCP sunucusu", cancellationToken);
+        var protocol = await ProbeMcpProtocolAsync(cancellationToken);
+        var tunnel = await ProbeTunnelAsync(cancellationToken);
+        return new GiteaChainProbe(backend.Success, proxy.Success, mcp.Success,
+            protocol.Success, tunnel.Success);
     }
 
     private static async Task<GiteaStatus> WaitForReadyAsync(

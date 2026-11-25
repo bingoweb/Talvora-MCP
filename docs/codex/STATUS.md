@@ -40,7 +40,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [?] D127 — .NET 11: SDK 11.0.100, `net11.0-windows`, C# 15 (waiting for Claude: P-58; PowerShell 7.6.10 hosts .NET 10 and four Full gate checks fail)
 - [~] D133 — the worklog follows the shared CI wait tool `ci-bekle` (visual pending (Claude): the CI card of the next real push in the live worklog, running, green and red forms)
 - [?] D134 — `Get-CiStatus.ps1` and its worklog path retire (waiting for Claude: P-59; Claude-owned document edits and D133 visual-pending dependency)
-- [ ] D115 — a tunnel-only Gitea failure never restarts the healthy Gitea chain
+- [~] D115 — a tunnel-only Gitea failure never restarts the healthy Gitea chain (live pending (Claude): next audit verifies tray.log contains no full-chain restart after a tunnel-only failure)
 - [ ] D116 — Talvora runs the Gitea tunnel itself: newest tunnel-client, no VBScript, no hand pin (user decision 2026-11-22)
 - [ ] D117 — Penpot leaves the server, the shared contracts and the tool surface (user decision 2026-11-22)
 - [ ] D118 — Penpot leaves the tray, the Control Center and the managed-MCP registry
@@ -75,6 +75,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-25 — ChatGPT, D115: post-targeted-repair probes classify all five layers before escalation; a healthy chain returns without restarting, tunnel-only failure throws the prescribed exception and keeps the existing retry/backoff under `recovery:gitea:tunnel-only`, other failures retain the full restart. RED: CS0246 GiteaChainProbe, CS0103 GiteaRepairEscalation, CS0117 DecideRepairEscalation. GREEN: all 32 combinations D115_GITEA_ESCALATION_GREEN, DESKTOP_PROGRESS_BEHAVIOR_GREEN, CONTROL_CENTER_REPAIR_SOURCE_GREEN, GITEA_STOP_CHAIN_TERMINAL_GREEN, GITEA_PROTOCOL_READINESS_GREEN; modern-tara exit 0; signed-in Full gate 76 checks, 0 errors, 'Hepsi geçti.' Context7: noLookup (own decision, no new API). Prior D133 installed eed8438, both smokes and CI 45668174540 green; P-59 CI 45672135105 green. Clean-HEAD installer, deployment, both smokes and CI follow this commit; next-audit tray.log check remains Claude's.
+  Self-review — cosmetics: no layout, icon, timing, or code-terminal changes.
+  Self-review — usability: a tunnel-only failure no longer disrupts healthy local services; automatic retries retain existing backoff.
+  Self-review — Turkish: the exception uses the card's exact copy, all existing status and retry text is unchanged.
+  Self-review — correctness and security: all five probes evaluated, cancellation preserved, full restart still available only for other failures; no lifecycle script or scheduled-task changes.
 
 - 2026-11-25 — ChatGPT, P-59 (D134 blocked): D133 installed eed8438, both installed smokes green, windows-ci 45668174540 green (3m34s), worktree clean. Baseline signed-in Changed gate 8 checks, 0 errors; origin/main CI green. D134's required zero-hit grep cannot pass while `CONTEXT7.md:22` and `DESIGN-WORKLOG.md:350` retain the old script reference; AGENTS.md rule 12 forbids agent edits to those documents. D133 is still visual pending (Claude). P-59 requests the owned document changes or an explicit scoped exception and dependency clarification. No D134 source/test edits, deployment or runtime changes.
   Self-review — cosmetics: no visual or layout changes.

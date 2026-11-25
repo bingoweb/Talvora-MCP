@@ -57,6 +57,21 @@ Assert-Contains $gitea '"repair-mcp"' 'Gitea MCP runtime has a targeted repair s
 Assert-Contains $gitea '"repair-tunnel"' 'Gitea tunnel has a targeted repair strategy'
 Assert-Contains $gitea 'escalating to full chain restart' 'Gitea targeted repair escalates only after readiness remains broken'
 
+$repairStart = $gitea.IndexOf('public static async Task<GiteaRepairOutcome> RepairAsync(', [StringComparison]::Ordinal)
+if ($repairStart -lt 0) {
+    throw 'Control Center repair contract failed: Gitea repair range was not found'
+}
+$repairEnd = $gitea.IndexOf('private static async Task<(string? Operation, string Strategy)>', $repairStart, [StringComparison]::Ordinal)
+if ($repairEnd -le $repairStart) {
+    throw 'Control Center repair contract failed: Gitea repair range was not found'
+}
+$repairBody = $gitea.Substring($repairStart, $repairEnd - $repairStart)
+$escalation = $repairBody.IndexOf('DecideRepairEscalation(', [StringComparison]::Ordinal)
+$restart = $repairBody.IndexOf('BuildLifecycleScript("restart")', [StringComparison]::Ordinal)
+if ($escalation -lt 0 -or $restart -le $escalation) {
+    throw 'Control Center repair contract failed: Gitea chain escalation must be decided before a full restart'
+}
+
 $giteaAttemptStart = $tray.IndexOf(
     'if (!_giteaRecoveryState.CanAttempt(nowUtc))',
     [StringComparison]::Ordinal)
