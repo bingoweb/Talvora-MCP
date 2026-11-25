@@ -93,9 +93,9 @@ public static class TalvoraToolGuides
                   ("environment", "Extra environment variables {\"NAME\":\"value\"}."),
                   ("timeoutSeconds", "Kill the run after this many seconds."),
                   ("maxOutputCharacters", "Upper bound of returned output.")),
-                """{"executable":"C:\\Program Files\\PowerShell\\7\\pwsh.exe","arguments":["-NoProfile","-File","scripts/Get-CiStatus.ps1","-TimeoutMinutes","0"],"workingDirectory":"C:\\Users\\tayla\\Talvora-MCP"}"""),
+                """{"executable":"git","arguments":["status","--short"],"workingDirectory":"C:\\Users\\tayla\\Talvora-MCP"}"""),
             ["talvora_user_process_start"] = new(
-                "Start a long run as the signed-in user without waiting. Redirect its output to a file inside the command and read it with talvora_tail_text.",
+                "Start a long run as the signed-in user without waiting. Redirect its output to a file inside the command and read it with talvora_tail_text. A tool that writes its own log, such as ci-bekle.exe with --log, needs no redirect: start it directly and follow that log with talvora_tail_text until its EXIT: line.",
                 P(("executable", "Program name or absolute path."),
                   ("arguments", "Array of separate arguments."),
                   ("workingDirectory", "Absolute folder to run in."),

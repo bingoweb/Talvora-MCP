@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-22T21:17:53.043Z",
-  "scope": "D114: PowerShell 7.7.0 SHA256-pinned ZIP installation, machine PATH ownership and uninstall cleanup",
+  "verifiedAtUtc": "2026-11-25T17:34:36.5174400Z",
+  "scope": "D133: follow ci-bekle logs in the desktop worklog",
   "libraries": [],
-  "noLookup": "D114: Claude verified PowerShell 7.7.0 official ZIP release and SHA-256, including the tested .NET ZIP and Windows registry API approach; no additional Context7 lookup is required by the card.",
+  "noLookup": "D133: no new library or platform API; Claude measured the log format with the installed ci-bekle on 2026-11-24.",
   "vendorSources": []
 }

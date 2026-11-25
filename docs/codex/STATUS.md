@@ -38,7 +38,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D113 — ast-grep 0.51.3: the bundled structural-edit engine leaves the vulnerable range (installed e3fcac6; version 0.51.3, both installed smokes and CI 45054245830 green)
 - [x] D114 — PowerShell 7.7.0 official zip (installed 098f3ba, both installed smokes green, GitHub CI 45071840580 green)
 - [?] D127 — .NET 11: SDK 11.0.100, `net11.0-windows`, C# 15 (waiting for Claude: P-58; PowerShell 7.6.10 hosts .NET 10 and four Full gate checks fail)
-- [ ] D133 — the worklog follows the shared CI wait tool `ci-bekle` (user decision 2026-11-24)
+- [~] D133 — the worklog follows the shared CI wait tool `ci-bekle` (visual pending (Claude): the CI card of the next real push in the live worklog, running, green and red forms)
 - [ ] D134 — `Get-CiStatus.ps1` and its worklog path retire (needs D133)
 - [ ] D115 — a tunnel-only Gitea failure never restarts the healthy Gitea chain
 - [ ] D116 — Talvora runs the Gitea tunnel itself: newest tunnel-client, no VBScript, no hand pin (user decision 2026-11-22)
@@ -69,11 +69,18 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Findings for Claude
 
+- `docs/codex/ROADMAP.md` D133 Files / `AGENTS.md` Execution Mandate rule 12 — D133 lists edits to the CI rows in DESIGN-WORKLOG.md, but rule 12 reserves design-spec edits to Claude; the prescribed code/copy is implemented and the design document is left untouched for Claude to reconcile during the visual audit.
 - `docs/SOURCE-EDIT-ENGINE-ARCHITECTURE.md:451` — D127's exact documentation text retains Roslyn Workspaces 5.9.0, while `Directory.Packages.props:13-14` and the runtime inventory pin 5.12.0; this was already stale before D127. Clarify the exact text when revising the card.
 
 (The agent adds one line per observation outside the current card: `file:line — what was seen`. Do not fix them.)
 
 ## Log
+
+- 2026-11-25 — ChatGPT, D133: detached ci-bekle.exe starts use the prescribed CI titles, 120-second update budget, shared workspace log containment and reparse-point check, and the log's EXIT line rather than the process exit code; green/red duration and redacted bounded evidence are parsed, no-verdict outcomes cancel without a generic timeout title. The tool guide now documents direct log following. RED: D133(a1) initially showed `ci-bekle.exe arka planda başladı`; GREEN: D133_CI_BEKLE_FOLLOW_GREEN (a1–g, including missing/panic EXIT and outside path), unchanged D62/D72/D46/D101, DESKTOP_PROGRESS_BEHAVIOR_GREEN; modern-tara exit 0; signed-in Full gate 76 checks, 0 errors, 'Hepsi geçti.' Context7: noLookup (card's measured log format, no new library/platform API). Baseline CI 45661984870 green. Clean-HEAD installer build, deployment, both installed smokes and GitHub CI follow this commit. Visual verification and design-spec reconciliation remain Claude's.
+  Self-review — cosmetics: no layout, colour, font, or code-terminal changes; titles use only card-approved copy.
+  Self-review — usability: launch, running, success, failure, timeout and unavailable verdicts have distinct states, with duration from the CI log when present.
+  Self-review — Turkish: titles, reasons and evidence labels match D133 literally.
+  Self-review — correctness and security: shared containment/reparse checks, bounded redacted evidence, no CI process exit code, no actual GitHub or ci-bekle invocation in tests; the legacy CI path remains for D134.
 
 - 2026-11-25 — ChatGPT, P-58 (D127 blocked): SDK 11.0.100 already installed (P-57). RED: ModernizationPolicyRegression rejected the .NET 10 pin. GREEN: seven .NET 11 lock graphs, eight platform packages 11.0.0, MSBuild 18.12.2, Release build 0 warnings/errors, four prescribed regressions, pruned-package grep empty, modern-tara exit 0. Signed-in Full gate: 68 checks, 4 failures (InteractiveRunnerParentAccessRegression, ProcessRunnerRegression, R2StdinRegression, StorageMaintenanceBehaviorRegression); PowerShell 7.6.10 hosts .NET 10.0.15 and cannot load System.Runtime 11.0.0.0. Context7: noLookup (card's vendor evidence). All tracked D127 changes reverted, both SDKs retained; no D127 deployment or CI. Gitea #9 comment 294.
   Self-review — cosmetics: no product UI or layout changes.

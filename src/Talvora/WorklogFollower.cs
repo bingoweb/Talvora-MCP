@@ -7,7 +7,7 @@ using Talvora.Shared;
 namespace Talvora;
 
 /// <summary>Reads only a started job's bounded log and observed exit status (§6.4 WL6).</summary>
-internal static class WorklogFollower
+internal static partial class WorklogFollower
 {
     internal const int MaximumLogBytes = 64 * 1024;
     internal static readonly TimeSpan ProcessInterval = TimeSpan.FromSeconds(2);
@@ -16,7 +16,7 @@ internal static class WorklogFollower
     internal static readonly TimeSpan CiLimit = TimeSpan.FromMinutes(30);
     internal const string PendingDeployPath = @"C:\ProgramData\Talvora\Worklog\pending-deploy.json";
 
-    internal enum JobKind { Other, QualityGate, Smoke, MetadataSmoke, InstallerBuild }
+    internal enum JobKind { Other, QualityGate, Smoke, MetadataSmoke, InstallerBuild, Ci }
 
     internal sealed record Outcome(
         bool Succeeded, string Title, string? Fact, string? Reason,
@@ -62,8 +62,11 @@ internal static class WorklogFollower
             ? "PowerShell test betiği · " + name[3..] + ".ps1"
             : null;
 
-    internal static JobKind Classify(IReadOnlyList<string> args)
+    internal static JobKind Classify(string executable, IReadOnlyList<string> args)
     {
+        if (string.Equals(Path.GetFileName(executable.Trim().Trim('"')), "ci-bekle.exe",
+                StringComparison.OrdinalIgnoreCase))
+            return JobKind.Ci;
         var command = string.Join(' ', args);
         if (command.Contains("Invoke-QualityGate.ps1", StringComparison.OrdinalIgnoreCase))
             return JobKind.QualityGate;
@@ -81,8 +84,45 @@ internal static class WorklogFollower
         var match = Regex.Match(string.Join(' ', args),
             @"(?:\*>\s*|(?<=\s)>\s*)(?<path>""[^""]+""|'[^']+'|[^\s;&|]+)",
             RegexOptions.CultureInvariant);
-        if (!match.Success || !Directory.Exists(workspace)) return null;
+        if (!match.Success) return null;
         var candidate = match.Groups["path"].Value.Trim('"', '\'');
+        return ResolveContainedLogPath(candidate, workspace);
+    }
+
+    internal static string? ResolveCiLogPath(IReadOnlyList<string> args, string workingDirectory)
+    {
+        var candidate = OptionValue(args, "--log");
+        if (string.IsNullOrWhiteSpace(candidate)) return null;
+        var repoDirectory = OptionValue(args, "--repo-dir");
+        try
+        {
+            var root = repoDirectory is null ? workingDirectory
+                : Path.IsPathFullyQualified(repoDirectory) ? repoDirectory
+                : Path.GetFullPath(repoDirectory, Path.GetFullPath(workingDirectory));
+            return ResolveContainedLogPath(candidate, root);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or
+                                   IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static string? OptionValue(IReadOnlyList<string> args, string option)
+    {
+        for (var i = 0; i < args.Count; i++)
+        {
+            if (string.Equals(args[i], option, StringComparison.Ordinal))
+                return i + 1 < args.Count ? args[i + 1] : null;
+            if (args[i].StartsWith(option + "=", StringComparison.Ordinal))
+                return args[i][(option.Length + 1)..];
+        }
+        return null;
+    }
+
+    private static string? ResolveContainedLogPath(string candidate, string workspace)
+    {
+        if (!Directory.Exists(workspace)) return null;
         try
         {
             var root = Path.GetFullPath(workspace).TrimEnd(Path.DirectorySeparatorChar);
@@ -141,6 +181,7 @@ internal static class WorklogFollower
     internal static string LiveFact(JobKind kind, string log, DateTimeOffset started)
     {
         var elapsed = Duration(started);
+        if (kind == JobKind.Ci) return "GitHub denetimi sürüyor · " + elapsed;
         if (kind != JobKind.QualityGate) return elapsed;
         var stages = Regex.Matches(log,
             @"(?m)^START\s+(?<name>[A-Za-z]+)(?:\s+(?<count>\d+))?\s*$",
@@ -179,6 +220,7 @@ internal static class WorklogFollower
         JobKind kind, string log, int? exitCode, DateTimeOffset started)
     {
         var duration = Duration(started);
+        if (kind == JobKind.Ci) return FinishCiProcess(log, duration);
         var validExit = exitCode == 0;
         if (kind == JobKind.QualityGate)
         {
@@ -230,6 +272,53 @@ internal static class WorklogFollower
                 ? "Sonuç: tamamlanamadı  //  kod " + code : null);
     }
 
+    [GeneratedRegex(@"^EXIT:[0-9]+$", RegexOptions.CultureInvariant)]
+    private static partial Regex CiExitPattern();
+
+    [GeneratedRegex(@"^✓ .+ \((?<duration>[^,)]+)\)$", RegexOptions.CultureInvariant)]
+    private static partial Regex CiSuccessDurationPattern();
+
+    [GeneratedRegex(@"^✗ .+ \((?<duration>[^,)]+)(?:,[^)]*)?\)$", RegexOptions.CultureInvariant)]
+    private static partial Regex CiFailureDurationPattern();
+
+    private static Outcome FinishCiProcess(string log, string elapsed)
+    {
+        var lines = log.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var exit = lines.LastOrDefault(line => CiExitPattern().IsMatch(line));
+        if (exit == "EXIT:0")
+        {
+            var measured = lines.Select(line => CiSuccessDurationPattern().Match(line))
+                .FirstOrDefault(match => match.Success);
+            return new Outcome(true, "GitHub denetimi geçti",
+                measured?.Groups["duration"].Value ?? elapsed, null);
+        }
+        if (exit == "EXIT:1")
+        {
+            var detail = lines.FirstOrDefault(line => line.StartsWith("✗ ", StringComparison.Ordinal));
+            var measured = CiFailureDurationPattern().Match(detail ?? "");
+            return new Outcome(false, "GitHub denetimi başarısız",
+                measured.Success ? measured.Groups["duration"].Value : elapsed,
+                "GitHub denetimi başarısız oldu; ayrıntılar CI günlüğünde.",
+                TechnicalResult: CiTechnicalResult(detail));
+        }
+        var result = exit == "EXIT:2"
+            ? lines.FirstOrDefault(line => line.StartsWith("Sonuç:", StringComparison.Ordinal))
+            : null;
+        var timedOut = result?.Contains("dakikada bitmedi", StringComparison.Ordinal) == true;
+        return new Outcome(false, timedOut
+                ? "GitHub denetimi henüz bitmemişti"
+                : "GitHub denetiminin sonucu alınamadı", elapsed,
+            timedOut ? "GitHub denetimi henüz bitmedi; sonucu bir sonraki adımda okunacak."
+                : "GitHub denetiminin sonucu alınamadı; ayrıntılar CI günlüğünde.",
+            TimedOut: true, TechnicalResult: CiTechnicalResult(result));
+    }
+
+    private static string? CiTechnicalResult(string? line)
+    {
+        var safe = line is null ? null : FileLog.RedactSensitiveData(line);
+        return safe is { Length: > 160 } ? safe[..160] : safe;
+    }
+
     private static string? SmokeFailureLine(string log)
     {
         const string marker = "TALVORA MCP SMOKE RED";
@@ -257,7 +346,12 @@ internal static class WorklogFollower
             {
                 token.ThrowIfCancellationRequested();
                 if (DateTimeOffset.UtcNow - started >= limit)
-                    return new Outcome(false, "İzleme süresi doldu", Duration(started), null, true);
+                {
+                    if (kind != JobKind.Ci)
+                        return new Outcome(false, "İzleme süresi doldu", Duration(started), null, true);
+                    if (logPath is not null) observed = await ReadTailAsync(logPath, token);
+                    return FinishProcess(kind, observed, null, started);
+                }
                 if (logPath is not null) observed = await ReadTailAsync(logPath, token);
                 onProgress(LiveFact(kind, observed, started));
                 await Task.WhenAny(process, Task.Delay(interval, token));
@@ -370,7 +464,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             ? structured : JsonSerializer.SerializeToElement(result);
 
     private static async Task<int?> WaitForObservedExitAsync(
-        int processId, DateTimeOffset started, CancellationToken token)
+        int processId, DateTimeOffset started, bool readExitCode, CancellationToken token)
     {
         try
         {
@@ -378,7 +472,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
             if (process.StartTime.ToUniversalTime() < started.UtcDateTime.AddMinutes(-1))
                 return null; // The PID may have been reused.
             await process.WaitForExitAsync(token);
-            return process.ExitCode;
+            return readExitCode ? process.ExitCode : null;
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or
                                    System.ComponentModel.Win32Exception)
@@ -395,16 +489,20 @@ internal sealed partial class TalvoraDesktopProgressNotifier
         var pid = FactNumber(ResultJson(result), "processId");
         if (pid is null or <= 0) return false;
         var arguments = GetArgumentArray(args, "arguments");
-        var kind = WorklogFollower.Classify(arguments);
+        var executable = GetArgumentText(args, "executable");
+        var kind = WorklogFollower.Classify(executable, arguments);
         var workspace = GetArgumentText(args, "workingDirectory");
-        var log = WorklogFollower.ResolveLogPath(arguments, workspace);
+        var log = kind == WorklogFollower.JobKind.Ci
+            ? WorklogFollower.ResolveCiLogPath(arguments, workspace)
+            : WorklogFollower.ResolveLogPath(arguments, workspace);
         MarkFollowedWorklog(operationId);
         _ = Task.Run(async () =>
         {
             try
             {
                 var outcome = await WorklogFollower.FollowProcessAsync(
-                    ct => WaitForObservedExitAsync(pid.Value, started, ct),
+                    ct => WaitForObservedExitAsync(pid.Value, started,
+                        kind != WorklogFollower.JobKind.Ci, ct),
                     log, kind,
                     fact => TryUpdateFollowedWorklog(operationId, fact,
                         DateTimeOffset.UtcNow - started),
@@ -428,7 +526,7 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 TryEndWorklog(operationId,
                     outcome.TimedOut ? DesktopProgressKind.Cancelled
                         : outcome.Succeeded ? DesktopProgressKind.Completed : DesktopProgressKind.Failed,
-                    outcome.TimedOut ? "İzleme süresi doldu" : title,
+                    outcome.TimedOut && kind != WorklogFollower.JobKind.Ci ? "İzleme süresi doldu" : title,
                     outcome.Reason ?? (outcome.Succeeded
                         ? WorklogCopy.SucceededFallback : "İşlem hata ile bitti."),
                     new DesktopProgressEvidence(Summary: outcome.Fact,

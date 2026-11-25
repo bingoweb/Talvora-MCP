@@ -153,6 +153,11 @@ internal static partial class WorklogSubject
     /// <summary>Detached start acknowledges launch, never the child's eventual outcome.</summary>
     internal static Description ForDetachedStart(string executable, IReadOnlyList<string> arguments)
     {
+        if (string.Equals(Path.GetFileName(executable.Trim().Trim('"')), "ci-bekle.exe",
+                StringComparison.OrdinalIgnoreCase))
+            return new(new WorklogTitles("GitHub denetimi sürüyor",
+                "GitHub denetimi arka planda başladı", "GitHub denetimi başlatılamadı"),
+                "ci-bekle.exe", OperationKind.Program);
         var description = ForExecutable(executable, arguments);
         if (string.Equals(description.Subject, "Invoke-QualityGate.ps1", StringComparison.OrdinalIgnoreCase))
         {

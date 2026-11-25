@@ -219,6 +219,7 @@ internal static partial class Program
         await AssertD101FollowedStepsStayFreshAsync();
         await AssertWl5MeasuredTitlesAsync();
         await AssertWl6FollowerAsync();
+        await AssertD133CiBekleFollowedAsync();
         await AssertD82CompactDeployAsync();
         await AssertRl5ReleaseCheckAsync();
         await AssertN8NotificationsInChildAsync();

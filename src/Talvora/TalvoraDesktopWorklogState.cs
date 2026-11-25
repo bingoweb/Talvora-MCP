@@ -193,8 +193,10 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                 session.Elapsed = elapsed;
                 session.Kind = DesktopProgressKind.Running;
                 session.Title = current.Followed &&
-                    string.Equals(current.Narrative.Subject, "Get-CiStatus.ps1",
-                        StringComparison.OrdinalIgnoreCase)
+                    (string.Equals(current.Narrative.Subject, "Get-CiStatus.ps1",
+                        StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(current.Narrative.Subject, "ci-bekle.exe",
+                        StringComparison.OrdinalIgnoreCase))
                     ? "GitHub denetimi sürüyor" : current.Narrative.Titles.Running;
                 session.ToolName = current.ToolName;
                 Enqueue(session.Id, current.ToolName, session.Title,
@@ -625,6 +627,8 @@ internal sealed partial class TalvoraDesktopProgressNotifier
                     item.Sequence == session.LastStartedSequence &&
                     (item.Narrative.Category == OperationCategory.Deployment ||
                      string.Equals(item.Narrative.Subject, "Get-CiStatus.ps1",
+                         StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(item.Narrative.Subject, "ci-bekle.exe",
                          StringComparison.OrdinalIgnoreCase)));
             return new DesktopWorklogFrame(
                 session.Id, sequence, DateTimeOffset.UtcNow,
