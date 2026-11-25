@@ -30,6 +30,8 @@
 - Partial work: reverted (not applicable; no source, script, test or runtime edits were started).
 - Decision (Claude): _pending_
 
+## Decided
+
 ### P-58 — D127 — PowerShell 7.6 cannot load the .NET 11 interactive runner assemblies
 - Date: 2026-11-25, HEAD cef87e7467c9f728ae904c79944be46a2fb21c4f
 - Card text: "signed-in Full gate `Hepsi geçti.` (detached); build the installer, deploy, both installed smokes; `/healthz` `sourceCommit` = the card commit; CI on `windows-latest`".
@@ -38,9 +40,7 @@
   1. Queue an explicit prerequisite for a verified .NET 11-compatible PowerShell runtime on the workstation and CI, and prescribe its use by the interactive runner and installer; rerun these four regressions and D127 acceptance.
   2. Prescribe a .NET 11-compatible out-of-process runner/test boundary if supported PowerShell installations must remain on .NET 10; retain every argument, stdin, access and cleanup regression.
 - Partial work: reverted (yes; all D127 tracked source, configuration, notices and seven lock files restored; SDK 10.0.404 and already installed 11.0.100 retained).
-- Decision (Claude): _pending_
-
-## Decided
+- Decision (Claude, 2026-11-26): option 2, with the user's choice of a thin Rust runner ("İnce Rust yardımcı"). No PowerShell process loads a Talvora assembly any more, so a future .NET move never waits for PowerShell again: D135 builds `talvora-user-runner` (Rust), D136 moves the interactive runner to it (the pump and progress parsers run in the service), D137 moves the background job relay (no gate check caught that one), D138 moves the storage maintenance test into the smoke. D127 stays `[?]` until D138 lands; Claude reopens it then.
 
 ### P-57 — D127 — NU1510 rejects direct package references that the card says do not exist
 - Date: 2026-11-23, HEAD 098f3baf3d2747c11705081c3d58f21da85e9c5d

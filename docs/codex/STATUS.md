@@ -37,7 +37,11 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 - [x] D111 — a failed Dependabot apply never leaves a half-applied tree or a RUNNING result (audit 69; GitHub CI 45040101059 green; script/test-only card, no deployment)
 - [x] D113 — ast-grep 0.51.3: the bundled structural-edit engine leaves the vulnerable range (installed e3fcac6; version 0.51.3, both installed smokes and CI 45054245830 green)
 - [x] D114 — PowerShell 7.7.0 official zip (installed 098f3ba, both installed smokes green, GitHub CI 45071840580 green)
-- [?] D127 — .NET 11: SDK 11.0.100, `net11.0-windows`, C# 15 (waiting for Claude: P-58; PowerShell 7.6.10 hosts .NET 10 and four Full gate checks fail)
+- [?] D127 — .NET 11: SDK 11.0.100, `net11.0-windows`, C# 15 (waiting for D135–D138, P-58 decided; Claude reopens it after D138)
+- [ ] D135 — the Rust user-session runner `talvora-user-runner` (crate, gate, toolchain)
+- [ ] D136 — the service runs user-session commands through `talvora-user-runner`
+- [ ] D137 — background user jobs run through `talvora-user-runner relay`
+- [ ] D138 — the storage maintenance test runs in the smoke instead of a PowerShell `Add-Type`
 - [~] D133 — the worklog follows the shared CI wait tool `ci-bekle` (visual pending (Claude): the CI card of the next real push in the live worklog, running, green and red forms)
 - [?] D134 — `Get-CiStatus.ps1` and its worklog path retire (waiting for Claude: P-59; Claude-owned document edits and D133 visual-pending dependency)
 - [~] D115 — a tunnel-only Gitea failure never restarts the healthy Gitea chain (live pending (Claude): next audit verifies tray.log contains no full-chain restart after a tunnel-only failure)
@@ -76,6 +80,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` done but waiting for user evidence · 
 
 ## Log
 
+- 2026-11-26 — Claude, P-58 decided and D135–D138 queued before D116 (user: Rust survey, "İlk üçü için hazırla", "İnce Rust yardımcı"). Every user-session command cold-starts pwsh, which loads `Talvora.Shared.dll`; that ties the runner to PowerShell's .NET and blocks D127. D135 builds the Rust runner `talvora-user-runner` (gate check `RustUserRunner`, `rust-toolchain.toml` 1.100.0), D136 moves the interactive runner to it with the pump and progress parsers in the service and ships it in the installer, D137 moves the background job relay, D138 moves the storage maintenance test into the smoke. Facts read by Opus agents, crate and CI facts checked by a researcher (serde 1.0.229, serde_json 1.0.154, windows-2025 image with Rust 1.100.0); prova read the batch twice and its stops were fixed. D127 stays `[?]` until D138. GitHub sayfası: değişiklik gerekmedi (only cards; nothing shipped).
 - 2026-11-25 — ChatGPT, D115: post-targeted-repair probes classify all five layers before escalation; a healthy chain returns without restarting, tunnel-only failure throws the prescribed exception and keeps the existing retry/backoff under `recovery:gitea:tunnel-only`, other failures retain the full restart. RED: CS0246 GiteaChainProbe, CS0103 GiteaRepairEscalation, CS0117 DecideRepairEscalation. GREEN: all 32 combinations D115_GITEA_ESCALATION_GREEN, DESKTOP_PROGRESS_BEHAVIOR_GREEN, CONTROL_CENTER_REPAIR_SOURCE_GREEN, GITEA_STOP_CHAIN_TERMINAL_GREEN, GITEA_PROTOCOL_READINESS_GREEN; modern-tara exit 0; signed-in Full gate 76 checks, 0 errors, 'Hepsi geçti.' Context7: noLookup (own decision, no new API). Prior D133 installed eed8438, both smokes and CI 45668174540 green; P-59 CI 45672135105 green. Clean-HEAD installer, deployment, both smokes and CI follow this commit; next-audit tray.log check remains Claude's.
   Self-review — cosmetics: no layout, icon, timing, or code-terminal changes.
   Self-review — usability: a tunnel-only failure no longer disrupts healthy local services; automatic retries retain existing backoff.
