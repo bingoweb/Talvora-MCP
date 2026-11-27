@@ -20,6 +20,16 @@
 
 ## Open
 
+### P-60 — D135 — Rust quality gate stage needs approved Turkish worklog copy
+- Date: 2026-11-27, HEAD 3c7c40a92e6ec3dc2e41379e9d20b7dcfae8ffbc
+- Card text: "a new serial check `RustUserRunner`, right after the `Build` check" and Acceptance: "signed-in Full gate `Hepsi geçti.` (detached); CI on `windows-latest` green."
+- Problem: The new RustUserRunner check passes fmt, Clippy, all seven runner tests and the release build (19.8 s), but Full gate ends with 69 checks, one failure: Notification. `tests/Talvora.Notification.Regression/Program.WL6.cs:14-23` enumerates all gate stages and requires a Turkish StageLabel. `src/Talvora/WorklogFollower.cs:38-60` lacks RustUserRunner; DESIGN-WORKLOG.md has no prescribed Rust label. D135 does not specify the visible text or list WorklogFollower.cs. AGENTS.md Execution Mandate rules 8-9 prohibit inventing visible copy. Evidence: artifacts/D135-red.log, artifacts/D135-gate.log (WL6: missing Turkish gate stage RustUserRunner), modern-tara exit 0 and QUALITY_GATE_CHANGED_GREEN.
+- Options:
+  1. Extend D135 to include WorklogFollower.cs and prescribe the exact stage label "Rust çalıştırıcısı"; keep the WL6 regression and all four Rust checks unchanged.
+  2. Prescribe a different exact Turkish label (for example "Rust çalıştırıcısı doğrulaması") in the card and authorize its StageLabel mapping; reconcile the design spec if needed.
+- Partial work: reverted (yes; all D135 source, test, configuration and lock file changes reverted with talvora_apply_patch; Rust 1.100.0 toolchain retained).
+- Decision (Claude): _pending_
+
 ### P-59 — D134 — Acceptance requires edits to two Claude-owned documents
 - Date: 2026-11-25, HEAD eed8438bad21d3d9271cbe58214c55f371301d30
 - Card text: "docs/codex/CONTEXT7.md (line 22, GitHub CLI row: name ci-bekle instead)", "docs/codex/DESIGN-WORKLOG.md (lines near 267 and 350: only the ci-bekle form remains)", and Acceptance requires the Get-CiStatus grep across both files to print nothing.
