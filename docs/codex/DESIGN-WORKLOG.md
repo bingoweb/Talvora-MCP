@@ -264,7 +264,8 @@ The user's complaint, verbatim in spirit: *"İşlem yürütülüyor… hangi iş
 | Step | Title (running → succeeded) | Subject source |
 |---|---|---|
 | quality gate (`Invoke-QualityGate.ps1`, any runner) | Kalite kontrolü çalışıyor · tam → Kalite kontrolü geçti · tam | script name; `-Scope Full` or no `-Scope` → "tam" (the gate's default scope is `Full`), `-Scope Fast` → "hızlı", `-Scope Changed` → "değişenler" (audit 55: a full gate started without `-Scope` read "hızlı") |
-| installer build / deploy / Dependabot / CI / context scripts | Kurulum paketi hazırlanıyor, Yeni sürüm kuruluyor, Paket güncellemesi hazırlanıyor, GitHub denetimi okunuyor, Görev bağlamı hazırlanıyor (and their done/failed forms) | script name (`WorklogSubject.KnownScripts`) |
+| installer build / deploy / Dependabot / context scripts | Kurulum paketi hazırlanıyor, Yeni sürüm kuruluyor, Paket güncellemesi hazırlanıyor, Görev bağlamı hazırlanıyor (and their done/failed forms) | script name (`WorklogSubject.KnownScripts`) |
+| CI wait (`ci-bekle.exe`, started detached) | GitHub denetimi sürüyor → GitHub denetimi arka planda başladı (no process id) · could not start: GitHub denetimi başlatılamadı | file name `ci-bekle.exe` (D133); the end forms are in §6 |
 | any other script | `Build-Foo.ps1 çalışıyor → bitti → hata ile bitti` | script file name |
 | `dotnet build/test/restore/publish` (tool or runner) | Derleniyor · Talvora.slnx → Derleme başarılı · Talvora.slnx | target/project file name |
 | npm/pnpm/yarn/bun/npx | `npm build çalışıyor → bitti` | program + script name |
@@ -347,7 +348,7 @@ Measured on the 73 stored sessions before this section: 654 steps, the most freq
 | other git subcommands | Depo işlemi yapılıyor | Depo işlemi tamamlandı | Depo işlemi tamamlanamadı | `{süre}`; subcommand under "Teknik kanıt" |
 | background start (`talvora_user_process_start`, `talvora_job_start`) | the started script's own running title (`KnownScripts` or the rows above) | → stays running until the process ends (WL6) | | live line (below) |
 | deploy (`Deploy-Windows-Installer.ps1`) | Yeni sürüm kuruluyor | Yeni sürüm çalışıyor · {kısa sürüm} | Yeni sürüm kurulamadı | WL6: the new service finishes the step at start-up from `pending-deploy.json` → `{süre}` since the deploy started; its commit differs (rollback) → failed, reason "Yeni sürüm kurulamadı; önceki sürüm çalışıyor." |
-| CI check that answered "still running" (`Get-CiStatus.ps1` exit 2) | GitHub denetimi sürüyor | GitHub denetimi geçti | GitHub denetimi başarısız | WL6: followed until the run completes (at most 30 minutes) → `{süre}` of the run itself, read from `Get-CiStatus.ps1`'s verdict line (`CI başarılı ({süre}): …`, D72), never the time Talvora followed it; failed → reason "GitHub denetimi başarısız oldu; ayrıntılar CI günlüğünde.", the first failing line in the technical result; a check that could not run (exit 1 without `CI başarısız`, three times in a row) → cancelled "GitHub denetiminin sonucu alınamadı" with reason "GitHub'a ulaşılamadı; sonuç bir sonraki denetimde okunacak."; after 30 minutes the step ends as `GitHub denetimi henüz bitmemişti` (cancelled state) |
+| CI wait (`ci-bekle.exe --log <path>`, D133) | GitHub denetimi sürüyor · {süre} | GitHub denetimi geçti | GitHub denetimi başarısız | decided from the log's last `EXIT:<n>` line only, never the exit code: `EXIT:0` → `{süre}` of the run itself from the first `✓ … ({süre})` line, else the elapsed time; `EXIT:1` → reason "GitHub denetimi başarısız oldu; ayrıntılar CI günlüğünde.", the first `✗ ` line (redacted, 160 characters) in the technical result; `EXIT:2` with `dakikada bitmedi` in the `Sonuç:` line → cancelled `GitHub denetimi henüz bitmemişti`, reason "GitHub denetimi henüz bitmedi; sonucu bir sonraki adımda okunacak."; any other `EXIT:2`, another number or no `EXIT:` line → cancelled `GitHub denetiminin sonucu alınamadı`, reason "GitHub denetiminin sonucu alınamadı; ayrıntılar CI günlüğünde."; the `Sonuç:` line is the technical result of both cancelled forms |
 
 **Live line of a followed background job** (shown as the running fact, refreshed at most every 2 s, from the job's own log, read-only and bounded to its last 64 KB):
 
@@ -365,6 +366,7 @@ Measured on the 73 stored sessions before this section: 654 steps, the most freq
 |---|---|
 | Restore | Paketlerin geri yüklenmesi |
 | Build | Derleme |
+| RustUserRunner | Kullanıcı oturumu çalıştırıcısı (Rust) |
 | PowerShellParse | PowerShell sözdizimi |
 | PackageManager | Paket yöneticisi kuralları |
 | Context7 | Context7 kanıtı |

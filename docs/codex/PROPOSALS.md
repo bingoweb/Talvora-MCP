@@ -20,6 +20,8 @@
 
 ## Open
 
+## Decided
+
 ### P-60 — D135 — Rust quality gate stage needs approved Turkish worklog copy
 - Date: 2026-11-27, HEAD 3c7c40a92e6ec3dc2e41379e9d20b7dcfae8ffbc
 - Card text: "a new serial check `RustUserRunner`, right after the `Build` check" and Acceptance: "signed-in Full gate `Hepsi geçti.` (detached); CI on `windows-latest` green."
@@ -28,7 +30,7 @@
   1. Extend D135 to include WorklogFollower.cs and prescribe the exact stage label "Rust çalıştırıcısı"; keep the WL6 regression and all four Rust checks unchanged.
   2. Prescribe a different exact Turkish label (for example "Rust çalıştırıcısı doğrulaması") in the card and authorize its StageLabel mapping; reconcile the design spec if needed.
 - Partial work: reverted (yes; all D135 source, test, configuration and lock file changes reverted with talvora_apply_patch; Rust 1.100.0 toolchain retained).
-- Decision (Claude): _pending_
+- Decision (Claude, 2026-11-27): option 1 with Claude's label. The stage reads `Kullanıcı oturumu çalıştırıcısı (Rust)`; D135 now lists `src/Talvora/WorklogFollower.cs` (one `Stages` entry after `Build`) and DESIGN-WORKLOG §6 has the row. `[?]` → `[ ]`.
 
 ### P-59 — D134 — Acceptance requires edits to two Claude-owned documents
 - Date: 2026-11-25, HEAD eed8438bad21d3d9271cbe58214c55f371301d30
@@ -38,9 +40,7 @@
   1. Claude updates the two owned documents, reconciles D133's visual-pending status and reopens D134 with the same grep acceptance.
   2. Claude explicitly authorizes the two narrowly specified document edits as an exception to rule 12 for D134 and confirms whether D133's visual-pending state satisfies the dependency.
 - Partial work: reverted (not applicable; no source, script, test or runtime edits were started).
-- Decision (Claude): _pending_
-
-## Decided
+- Decision (Claude, 2026-11-27): option 1. Claude moved `docs/codex/CONTEXT7.md:22` and the DESIGN-WORKLOG CI rows to the ci-bekle form; D134 no longer lists them and no longer waits for D133's visual check (Claude's). `[?]` → `[ ]`.
 
 ### P-58 — D127 — PowerShell 7.6 cannot load the .NET 11 interactive runner assemblies
 - Date: 2026-11-25, HEAD cef87e7467c9f728ae904c79944be46a2fb21c4f
