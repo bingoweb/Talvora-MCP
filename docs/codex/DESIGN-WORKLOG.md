@@ -198,7 +198,8 @@ Classify the real error once in the service (`WorklogFailureClassifier`: `Descri
 | `Timeout` | `timedOut: true`, a thrown `TimeoutException` | İşlem zaman sınırını aştı ve tamamlanmış sayılmıyor. | — |
 | `BuildErrors` | tool `dotnet_build` | Derleme hata verdi. | Ajan hataları düzeltebilir; kodunuz kaydedildiği hâliyle duruyor. |
 | `TestFailures` | tool `dotnet_test` | Testlerin bir kısmı başarısız oldu. | — |
-| `DeliveryGate` | `TALVORA_DELIVERY_GATE_BLOCKED` or `WorkContract:` in the result | Teslim kontrolü eksik kanıt nedeniyle gönderimi durdurdu. | Kanıt dosyaları güncellenince tekrar denenebilir. |
+| `DeliveryGate` | `TALVORA_DELIVERY_GATE_BLOCKED` with `evidence` in its message, or `WorkContract:`, in the result or a thrown error | Teslim kontrolü eksik kanıt nedeniyle gönderimi durdurdu. | Kanıt dosyaları güncellenince tekrar denenebilir. |
+| `DeliveryGate` | `TALVORA_DELIVERY_GATE_BLOCKED` without `evidence` (branch, project folder) | Teslim kontrolü gönderimi durdurdu; ayrıntılar teknik kayıtta. | — |
 | `Other` | a non-zero `exitCode` (not the job/dev-server status tools) | Komut {n} çıkış koduyla bitti. | — |
 | `AccessDenied` | the protected-secret `UnauthorizedAccessException` | Bu konum gizli anahtarlara ayrılmış; Talvora burayı okumaz ve değiştirmez. Hiçbir şeye dokunulmadı. | — |
 | `AccessDenied` | any other `UnauthorizedAccessException` | Windows bu işleme izin vermedi. | — |
@@ -206,6 +207,8 @@ Classify the real error once in the service (`WorklogFailureClassifier`: `Descri
 | `NotFound` | `agent_brief` with `FileNotFoundException` | Bu klasörde proje talimatı (AGENTS.md) yok. | Ajan talimatın bulunduğu proje klasörünü seçip yeniden isteyebilir. |
 | `NotFound` | `FileNotFoundException`, `DirectoryNotFoundException` | Aranan dosya ya da klasör bulunamadı. | — |
 | `Other` | anything else | Bu adım tamamlanamadı. | — |
+
+A followed background job that passes the two-hour follow limit ends cancelled, `İzleme süresi doldu`, with the reason `İş 2 saatlik izleme süresinde bitmedi; arka planda sürüyor olabilir.` (D141). A failed `talvora_run_process`, `talvora_run_powershell` or `talvora_user_run` shows the first line of its error output, redacted and at most 160 characters, as the technical record's result line (user decision 2026-11-27, D141).
 
 The Claude engine's own job card (`TalvoraDesktopClaudeWorklog`) keeps its sentence for permission denials: "Claude izin gerektiren adımları yapamadı."
 
