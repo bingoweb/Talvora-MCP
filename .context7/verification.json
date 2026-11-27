@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "verifiedAtUtc": "2026-11-25T18:12:36.9672126Z",
-  "scope": "D115: Gitea tunnel-only repair escalation",
+  "verifiedAtUtc": "2026-11-27T14:57:48Z",
+  "scope": "D144: manual release from an earlier main commit",
   "libraries": [],
-  "noLookup": "D115: Talvora's own repair decision; no new API.",
+  "noLookup": "D144: GitHub CLI release create --target and git ls-remote are used as documented in their manuals; no library API.",
   "vendorSources": []
 }

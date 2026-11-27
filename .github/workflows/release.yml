@@ -6,9 +6,14 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Deneme sürümü (0.0.x.x)'
+        description: 'Sürüm (0.0.x.x)'
         required: true
         type: string
+      commit:
+        description: "Yayımlanacak main commit'i (40 karakter; boşsa çalışmanın kendi commit'i)"
+        required: false
+        type: string
+        default: ''
       dry_run:
         description: 'Yayımlamadan paketi ve SHA-256 değerini doğrula'
         required: true
@@ -38,6 +43,7 @@ jobs:
         env:
           REQUESTED_VERSION: ${{ inputs.version }}
           REQUESTED_DRY_RUN: ${{ inputs.dry_run }}
+          REQUESTED_COMMIT: ${{ inputs.commit }}
           DISPATCH_EVENT: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           $ErrorActionPreference = 'Stop'
@@ -50,6 +56,10 @@ jobs:
           }
           elseif ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
             $version = $env:REQUESTED_VERSION
+            $commit = $env:REQUESTED_COMMIT
+            if ($commit -and $commit -cnotmatch '^[0-9a-f]{40}$') {
+              throw "Commit biçimi geçersiz: $commit"
+            }
           }
           else {
             throw 'Yayımlama için etiket veya elle başlatılan deneme gerekir.'
@@ -63,37 +73,46 @@ jobs:
           }
           $dryRun = $env:GITHUB_EVENT_NAME -eq 'workflow_dispatch' -and
             $env:REQUESTED_DRY_RUN -eq 'true'
-          # A real release is authorized only by a tag push, not by an untagged manual run.
+          # A real release comes from a tag push, or from a manual run on main that names an earlier main commit.
           if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch' -and -not $dryRun) {
-            throw 'Gerçek sürüm yalnızca v0.0.x.x etiketi gönderilerek yayımlanır.'
+            if ($env:GITHUB_REF -cne 'refs/heads/main') { throw 'Elle yayın yalnızca main üzerinden başlatılır.' }
+            if (-not $commit) { throw 'Elle yayın için commit gerekir.' }
+            $existingTag = @(& git ls-remote --tags origin "refs/tags/$tag")
+            if ($LASTEXITCODE -ne 0) { throw 'Uzak sürüm etiketleri okunamadı.' }
+            if ($existingTag.Count -gt 0) { throw "Bu sürüm etiketi zaten var: $tag" }
           }
+          $buildSha = if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch' -and $commit) { $commit } else { $env:GITHUB_SHA }
           "version=$version" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "tag=$tag" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "build_sha=$buildSha" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "dry_run=$($dryRun.ToString().ToLowerInvariant())" |
             Out-File -LiteralPath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Require an ancestor of main
         shell: pwsh
+        env:
+          BUILD_SHA: ${{ steps.release.outputs.build_sha }}
         run: |
           $ErrorActionPreference = 'Stop'
           & git fetch origin main --no-tags
           if ($LASTEXITCODE -ne 0) { throw 'main geçmişi okunamadı.' }
-          & git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+          & git merge-base --is-ancestor $env:BUILD_SHA origin/main
           if ($LASTEXITCODE -ne 0) {
-            throw "Sürüm commit'i origin/main geçmişinde bulunmuyor: $env:GITHUB_SHA"
+            throw "Sürüm commit'i origin/main geçmişinde bulunmuyor: $env:BUILD_SHA"
           }
 
       - name: Require successful windows-ci for this commit
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          BUILD_SHA: ${{ steps.release.outputs.build_sha }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $raw = @(& gh run list --workflow windows-ci.yml --commit $env:GITHUB_SHA --json conclusion --limit 100)
+          $raw = @(& gh run list --workflow windows-ci.yml --commit $env:BUILD_SHA --json conclusion --limit 100)
           if ($LASTEXITCODE -ne 0) { throw 'windows-ci çalışmaları okunamadı.' }
           $runs = @(ConvertFrom-Json -InputObject ($raw -join [Environment]::NewLine))
           if (@($runs | Where-Object { $_.conclusion -eq 'success' }).Count -eq 0) {
-            throw "Bu commit için başarılı windows-ci çalışması bulunamadı: $env:GITHUB_SHA"
+            throw "Bu commit için başarılı windows-ci çalışması bulunamadı: $env:BUILD_SHA"
           }
 
       - name: Require release notes
@@ -107,6 +126,20 @@ jobs:
           if (-not (Test-Path -LiteralPath $notes -PathType Leaf)) {
             throw "Sürüm notu yok: $notes"
           }
+          Copy-Item -LiteralPath $notes -Destination "$env:RUNNER_TEMP/release-notes.md"
+
+      - name: Check out the release commit
+        if: steps.release.outputs.build_sha != github.sha
+        shell: pwsh
+        env:
+          BUILD_SHA: ${{ steps.release.outputs.build_sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & git checkout --detach $env:BUILD_SHA
+          if ($LASTEXITCODE -ne 0) { throw "Sürüm commit'ine geçilemedi: $env:BUILD_SHA" }
+          $head = (& git rev-parse HEAD).Trim()
+          Write-Output "Sürüm commit'i: $head"
+          if ($head -cne $env:BUILD_SHA) { throw "Sürüm commit'i beklenenden farklı: $head" }
 
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
@@ -147,10 +180,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          BUILD_SHA: ${{ steps.release.outputs.build_sha }}
         run: |
           $ErrorActionPreference = 'Stop'
           $tag = "v$($env:RELEASE_VERSION)"
           $installer = "artifacts/installer/Talvora-Kurulum-$($env:RELEASE_VERSION).exe"
-          $notes = "docs/releases/$($env:RELEASE_VERSION).md"
-          & gh release create $tag $installer SHA256SUMS.txt --title "Talvora $($env:RELEASE_VERSION)" --notes-file $notes --latest
+          & gh release create $tag $installer SHA256SUMS.txt --title "Talvora $($env:RELEASE_VERSION)" --notes-file "$env:RUNNER_TEMP/release-notes.md" --target $env:BUILD_SHA --latest
           if ($LASTEXITCODE -ne 0) { throw 'GitHub sürümü yayımlanamadı.' }

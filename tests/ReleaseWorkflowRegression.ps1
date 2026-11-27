@@ -23,6 +23,24 @@ function Assert-Pattern([string] $Pattern, [string] $Description) {
 Assert-Pattern "(?s)on:\n\s+push:\n\s+tags:\s*\[\s*'v0\.0\.\*\.\*'\s*\]" 'v0.0.*.* tag trigger is missing.'
 Assert-Pattern "workflow_dispatch:\s*\n\s+inputs:" 'Manual dispatch is missing.'
 Assert-Pattern "version:\s*\n(?:.*\n){0,5}\s+type:\s+string" 'Manual version must be a string.'
+Assert-Pattern "commit:\s*\n(?:.*\n){0,5}\s+type:\s+string" 'Manual commit must be a string.'
+Assert-Pattern '\^\[0-9a-f\]\{40\}\$' 'Commit must be a full lowercase SHA.'
+Assert-Pattern 'refs/heads/main' 'Real dispatch must use main.'
+Assert-Pattern 'Elle yayın için commit gerekir\.' 'Real dispatch must require a commit.'
+Assert-Pattern 'git\s+ls-remote\s+--tags' 'Existing remote tags must be checked.'
+Assert-Pattern 'build_sha' 'The build SHA must be an output.'
+Assert-Pattern 'git\s+checkout\s+--detach' 'The release commit must be checked out.'
+Assert-Pattern 'RUNNER_TEMP/release-notes\.md' 'Release notes must be preserved.'
+Assert-Pattern '--target' 'Release target must be specified.'
+Assert-Pattern 'merge-base\s+--is-ancestor\s+\$env:BUILD_SHA' 'Ancestry must check the build SHA.'
+Assert-Pattern '--commit\s+\$env:BUILD_SHA' 'CI must check the build SHA.'
+if ($release -cnotmatch 'is-ancestor\s+\$env:GITHUB_SHA' -and
+    $release -cnotmatch '--commit\s+\$env:GITHUB_SHA') {
+    # Both checks use the selected commit.
+}
+else {
+    throw 'RL4: ancestry and CI must not use GITHUB_SHA.'
+}
 Assert-Pattern "dry_run:\s*\n(?:.*\n){0,5}\s+type:\s+boolean" 'Manual dry_run must be boolean.'
 Assert-Pattern 'dry_run:[\s\S]{0,180}default:\s*true' 'Manual dispatch must default to dry run.'
 Assert-Pattern '(?s)permissions:\s*\n\s+contents:\s*write\s*\n\s+actions:\s*read' 'Minimal release permissions must be declared.'
